@@ -6,9 +6,9 @@ Read VEP related entities from Episense format and data-structures
 
 import os
 import h5py
-from vep.base.model_vep import Connectivity, Surface, Sensors, Head
-from vep.base.readers import ABCReader
-from vep.base.utils import calculate_projection, initialize_logger
+from tvb.epilepsy.base.model_vep import Connectivity, Surface, Sensors, Head
+from tvb.epilepsy.base.readers import ABCReader
+from tvb.epilepsy.base.utils import calculate_projection, initialize_logger
 
 
 class EpisenseReader(ABCReader):

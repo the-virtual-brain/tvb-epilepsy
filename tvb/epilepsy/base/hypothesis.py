@@ -7,7 +7,7 @@ It should contain everything for later configuring an Epileptor Model from this 
 """
 
 import numpy as np
-from vep.base.utils import reg_dict, formal_repr, vector2scalar
+from tvb.epilepsy.base.utils import reg_dict, formal_repr, vector2scalar
 
 from collections import OrderedDict
 

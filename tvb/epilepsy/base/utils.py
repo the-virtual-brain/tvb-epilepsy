@@ -7,8 +7,8 @@ import logging
 import numpy as np
 from itertools import product
 from scipy.signal import butter, lfilter
-from vep.base.constants import *
 from collections import OrderedDict
+from tvb.epilepsy.base.constants import *
 
 def initialize_logger(name, target_folder=FOLDER_LOGS):
     """

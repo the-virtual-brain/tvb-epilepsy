@@ -6,8 +6,8 @@ Various plotting tools will be placed here.
 
 import numpy as np
 from scipy.stats.mstats import zscore
-from vep.base.constants import *
-from vep.base.utils import calculate_in_degree
+from tvb.epilepsy.base.constants import *
+from tvb.epilepsy.base.utils import calculate_in_degree
 import matplotlib as mp
 from matplotlib import pyplot, gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable

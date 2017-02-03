@@ -5,9 +5,9 @@ Mechanism for launching and configuring generic Simulations (it will have TVB or
 """
 
 from abc import ABCMeta, abstractmethod
-from vep.base.model_vep import formal_repr
+from tvb.epilepsy.base.model_vep import formal_repr
+from tvb.epilepsy.base.constants import NOISE_SEED
 from collections import OrderedDict
-from vep.base.constants import NOISE_SEED
 
 
 class SimulationSettings(object):

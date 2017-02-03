@@ -8,10 +8,9 @@ from tvb.basic.profile import TvbProfile
 TvbProfile.set_profile(TvbProfile.LIBRARY_PROFILE)
 
 import os
-from vep.base.model_vep import Connectivity, Surface, Sensors, Head
-from vep.base.readers import ABCReader
 from tvb.datatypes import connectivity, surfaces, region_mapping, sensors, structural, projections
-
+from tvb.epilepsy.base.model_vep import Connectivity, Surface, Sensors, Head
+from tvb.epilepsy.base.readers import ABCReader
 
 class TVBReader(ABCReader):
         

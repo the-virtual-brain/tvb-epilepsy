@@ -6,7 +6,6 @@ Extend TVB Models, with new ones, specific for Epilepsy.
 """
 
 import numpy
-import numpy as np
 from tvb.simulator.common import get_logger
 import tvb.datatypes.arrays as arrays
 import tvb.basic.traits.types_basic as basic
@@ -117,8 +116,8 @@ class EpileptorDP(Model):
 
     zmode = arrays.FloatArray(
         label="zmode",
-        default=np.array("lin"),
-        doc="zmode = np.array(""lin"") for linear and np.array(""sig"") for sigmoidal z dynamics",
+        default=numpy.array("lin"),
+        doc="zmode = numpy.array(""lin"") for linear and numpy.array(""sig"") for sigmoidal z dynamics",
         order=-1)
 
 #    a = arrays.FloatArray(
@@ -335,7 +334,7 @@ class EpileptorDP(Model):
         if self.zmode=='lin':
             fz = 4*(y[0] - self.r * self.x0 + self.x0cr)
         elif self.zmode=='sig':
-            fz = 3 / (1 + np.exp(-10*(y[0] - c76)) ) - self.r * self.x0 + self.x0cr
+            fz = 3 / (1 + numpy.exp(-10*(y[0] - c76)) ) - self.r * self.x0 + self.x0cr
         else:
             print "ERROR: zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively"
         ydot[2] = self.tau1*(( fz - y[2] + where(y[2] < 0., if_ydot2, else_ydot2) + self.K*c_pop1)/self.tau0)
@@ -456,13 +455,13 @@ class EpileptorDPrealistic(Model):
 
     zmode = arrays.FloatArray(
         label="zmode",
-        default=np.array("lin"),
-        doc="zmode = np.array(""lin"") for linear and np.array(""sig"") for sigmoidal z dynamics",
+        default=numpy.array("lin"),
+        doc="zmode = np.array(""lin"") for linear and numpy.array(""sig"") for sigmoidal z dynamics",
         order=-1)
         
     pmode = arrays.FloatArray(
         label="pmode",
-        default=np.array("const"),
+        default=numpy.array("const"),
         doc="pmode = numpy.array(""g""), numpy.array(""z""), numpy.array(""z*g"") or numpy.array(""const"") parameters following the g, z, z*g dynamics or staying constamt, respectively",
         order=-1)   
 
@@ -694,7 +693,7 @@ class EpileptorDPrealistic(Model):
         if self.zmode=='lin':
             fz = 4*(y[0] - self.r * x0 + self.x0cr)
         elif self.zmode=='sig':
-            fz = 3 / (1 + np.exp(-10*(y[0] - c76)) ) - self.r * x0 + self.x0cr
+            fz = 3 / (1 + numpy.exp(-10*(y[0] - c76)) ) - self.r * x0 + self.x0cr
         else:
             print "ERROR: zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively"
         ydot[2] = self.tau1*(( fz - y[2] + where(y[2] < 0., if_ydot2, else_ydot2) + K*c_pop1)/self.tau0)
@@ -708,13 +707,13 @@ class EpileptorDPrealistic(Model):
         # filter
         ydot[5] = self.tau1*(-0.01*(y[5] - 0.1*x1))
         
-        if (self.pmode==np.array(['g','z','z*g'])).any():
+        if (self.pmode==numpy.array(['g','z','z*g'])).any():
             if self.pmode=='g':
-                xp = 1/(1+np.exp(-10*(y[5]+0.0)))
+                xp = 1/(1+numpy.exp(-10*(y[5]+0.0)))
                 xp1 = 0#-0.175
                 xp2 = 1#0.025
             elif self.pmode=='z':  
-                xp = 1/(1+np.exp(-10*(y[2]-3.00)))
+                xp = 1/(1+numpy.exp(-10*(y[2]-3.00)))
                 xp1 = 0
                 xp2 = 1
             elif self.pmode=='z*g':  
@@ -835,8 +834,8 @@ class EpileptorDP2D(Model):
 
     zmode = arrays.FloatArray(
         label="zmode",
-        default=np.array("lin"),
-        doc="zmode = np.array(""lin"") for linear and np.array(""sig"") for sigmoidal z dynamics",
+        default=numpy.array("lin"),
+        doc="zmode = numpy.array(""lin"") for linear and numpy.array(""sig"") for sigmoidal z dynamics",
         order=-1)
 
 #    a = arrays.FloatArray(
@@ -1016,7 +1015,7 @@ class EpileptorDP2D(Model):
         if self.zmode=='lin':
             fz = 4*(y[0] - self.r * self.x0 + self.x0cr)
         elif self.zmode=='sig':
-            fz = 3 / (1 + np.exp(-10*(y[0] - c76)) ) - self.r * self.x0 + self.x0cr
+            fz = 3 / (1 + numpy.exp(-10*(y[0] - c76)) ) - self.r * self.x0 + self.x0cr
         else:
             print "ERROR: zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively"
         ydot[1] = self.tau1*(( fz - y[1] + where(y[1] < 0., if_ydot1, else_ydot1) + self.K*c_pop1)/self.tau0)

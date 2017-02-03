@@ -7,8 +7,8 @@ Mechanism for launching TVB simulations.
 import numpy as np
 from tvb.datatypes import connectivity
 from tvb.simulator import coupling, integrators, models, monitors, noise, simulator
-from vep.base.simulators import ABCSimulator, SimulationSettings
-from vep.tvb_api import epileptor_models
+from tvb.epilepsy.tvb_api import epileptor_models
+from tvb.epilepsy.base.simulators import ABCSimulator, SimulationSettings
 
 
 class SimulatorTVB(ABCSimulator):

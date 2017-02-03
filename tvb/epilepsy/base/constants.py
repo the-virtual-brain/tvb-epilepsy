@@ -49,9 +49,6 @@ MODEL = '6v'
 SIMULATION_MODE = 'tvb'  # 'ep' or 'tvb
 DATA_MODE = 'ep'  # 'ep' or 'tvb'
 
-# DATA_EPISENSE = "/WORK/episense/root-episense/trunk/demo-data"
-# DATA_TVB = "/WORK/TVB/tvb-root/tvb_data/tvb_data"
-
 # Normalization configuration:
 WEIGHTS_NORM_PERCENT = 95
 

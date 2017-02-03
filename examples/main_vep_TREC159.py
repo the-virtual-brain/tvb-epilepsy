@@ -8,13 +8,13 @@ import os
 import numpy as np
 import copy as cp
 from scipy.io import savemat
-from vep.base.constants import *
-from vep.base.hypothesis import Hypothesis, X0_DEF
-from vep.base.utils import initialize_logger, filter_data, calculate_projection
-from vep.base.plot_tools import plot_head, plot_hypothesis, plot_timeseries, plot_raster
-from vep.episense.readers_episense import EpisenseReader
-from vep.tvb_api.readers_tvb import TVBReader
-        
+from tvb.epilepsy.base.constants import *
+from tvb.epilepsy.base.hypothesis import Hypothesis, X0_DEF
+from tvb.epilepsy.base.utils import initialize_logger, filter_data, calculate_projection
+from tvb.epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_timeseries, plot_raster
+from tvb.epilepsy.tvb_api.readers_tvb import TVBReader
+from tvb.epilepsy.custom.readers_episense import EpisenseReader
+
 SHOW_FLAG=False
 SHOW_FLAG_SIM=True
 SAVE_FLAG=True
@@ -27,11 +27,9 @@ Khyp = 5.0
 
 if __name__ == "__main__":
 
-
 #-------------------------------Reading data-----------------------------------
     logger = initialize_logger(__name__)
 
-    
     data_folder = os.path.join(DATA_TRECHH, 'Head_TREC') #Head_TREC 'Head_JUNCH'
     reader = EpisenseReader()
     logger.info("We will be reading from location " + data_folder)
@@ -150,16 +148,13 @@ if __name__ == "__main__":
 #------------------------------Simulation--------------------------------------
     
     # Now Simulate
-    if SIMULATION_MODE == 'ep':
-        from vep.episense.simulator_episense import SimulatorEpisense
-        simulator_instance = SimulatorEpisense(data_folder)
-    else:
-        from vep.tvb_api.simulator_tvb import *
-        # Choosing the model:           epileptor model,      history
-        #simulator_instance = SimulatorTVB(build_ep_6sv_model, prepare_for_6sv_model)
-        # simulator_instance = SimulatorTVB(build_ep_2sv_model, prepare_for_2sv_model)
-        simulator_instance = SimulatorTVB(build_ep_11sv_model, prepare_for_11sv_model)
-        # simulator_instance = SimulatorTVB(build_tvb_model, prepare_for_tvb_model)
+    from tvb.epilepsy.tvb_api.simulator_tvb import *
+    # Choosing the model:           epileptor model,      history
+    #simulator_instance = SimulatorTVB(build_ep_6sv_model, prepare_for_6sv_model)
+    # simulator_instance = SimulatorTVB(build_ep_2sv_model, prepare_for_2sv_model)
+    simulator_instance = SimulatorTVB(build_ep_11sv_model, prepare_for_11sv_model)
+    # simulator_instance = SimulatorTVB(build_tvb_model, prepare_for_tvb_model)
+
     #Monitor adjusted to the model    
     nvar = 11
     monitor_expr=["y3-y0"]

@@ -8,7 +8,7 @@ class Connectivity
 class Surface
 class Sensors
 """
-from vep.base.utils import reg_dict, formal_repr, normalize_weights
+from tvb.epilepsy.base.utils import reg_dict, formal_repr, normalize_weights
 from collections import OrderedDict
 
 
@@ -138,7 +138,7 @@ class Sensors(object):
     orientations = None
     s_type = None
 
-    def __init__(self, labels, locations, orientations=None, s_type=TYPE_EEG):
+    def __init__(self, labels, locations, orientations=None, s_type=TYPE_SEEG):
         self.labels = labels
         self.locations = locations
         self.orientations = orientations

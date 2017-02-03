@@ -7,15 +7,16 @@
 import os
 import numpy
 from scipy.io import loadmat
-from read_write import read_sensors, write_sensors, write_ts, write_ts_seeg, PATIENT_VIRTUAL_HEAD
-
+from read_write import write_sensors, write_ts, write_ts_seeg, PATIENT_VIRTUAL_HEAD
+from vep.episense.readers_episense import EpisenseReader
 
 def correlate_sensors(empirical_file="/Users/lia.domide/Downloads/TRECempirical/110223B-EEX_0004.EEG.mat",
                       existing_ep_file="/WORK/episense/episense-root/trunk/demo-data/SensorsSEEG_125.h5"):
     data = loadmat(empirical_file)
     desired_labels = [str(i).strip().lower() for i in data["channel_names"]]
 
-    labels, locations = read_sensors(existing_ep_file)
+    reader = EpisenseReader()
+    labels, locations = reader.read_sensors(existing_ep_file,"SEEG")
 
     new_labels = []
     new_locations = []
