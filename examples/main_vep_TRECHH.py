@@ -3,25 +3,30 @@
 
 Entry point for working with VEP
 """
-
 import os
 import numpy as np
 import copy as cp
 from scipy.io import savemat
-from tvb.epilepsy.base.constants import *
-from tvb.epilepsy.base.hypothesis import Hypothesis, X0_DEF
-from tvb.epilepsy.base.utils import initialize_logger, filter_data, calculate_projection
-from tvb.epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_timeseries, plot_raster
-from tvb.epilepsy.tvb_api.readers_tvb import TVBReader
-from tvb.epilepsy.custom.readers_episense import EpisenseReader
+from tvb_epilepsy.base.constants import *
+from tvb_epilepsy.base.hypothesis import Hypothesis, X0_DEF
+from tvb_epilepsy.base.utils import initialize_logger, filter_data, calculate_projection
+from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_timeseries, plot_raster
+from tvb_epilepsy.tvb_api.readers_tvb import TVBReader
+from tvb_epilepsy.tvb_api.simulator_tvb import *
+from tvb_epilepsy.custom.readers_episense import EpisenseReader
+from tvb.simulator import noise
+from tvb.datatypes import equations
 
 SHOW_FLAG=False
 SHOW_FLAG_SIM=True
 SAVE_FLAG=True
 
+#Modify data folders for this example:
 DATA_TRECHH = '/Users/dionperd/Dropbox/Work/VBtech/DenisVEP/Results/TRECHH'
 #CON_DATA = 'connectivity_2_hypo.zip'
 CONNECT_DATA = 'connectivity_hypo.zip'
+
+#Set a special scaling for HH regions, for this example:
 #Set Khyp >=1.0     
 Khyp = 5.0
 
@@ -29,6 +34,17 @@ if __name__ == "__main__":
 
 #-------------------------------Reading data-----------------------------------
     logger = initialize_logger(__name__)
+
+    # if DATA_MODE == 'ep':
+    #     logger.info("Reading from EPISENSE")
+    #     data_folder = os.path.join(DATA_EPISENSE, 'Head_TREC')  # Head_TREC 'Head_JUNCH'
+    #     from tvb_epilepsy.custom.readers_episense import EpisenseReader
+    #
+    #     reader = EpisenseReader()
+    # else:
+    #     logger.info("Reading from TVB")
+    #     data_folder = DATA_TVB
+    #     reader = TVBReader()
 
     data_folder = os.path.join(DATA_TRECHH, 'Head_TREC') #Head_TREC 'Head_JUNCH'
     reader = EpisenseReader()
@@ -115,8 +131,8 @@ if __name__ == "__main__":
     
     hyp_ep = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, "EP Hypothesis")
     hyp_ep.K = 0.1*hyp_ep.K # 1.0/np.max(head.connectivity.normalized_weights)
-    iE = np.array(     [1,    3,   7,   8,  15,  16,  25,  50, 88,  89])
-    E = 0*np.array([0.7, 0.8, 0.9, 0.8, 0.7, 0.8, 0.8, 0.9, 0.8, 0.8], dtype=np.float32)
+    iE = np.array([1,    3,   7,   8,  15,  16,  25,  50, 88,  89])
+    E = 0*np.array(iE, dtype=np.float32)
     E[7]=0.65
     E[2]=0.800
     E[4]=0.3775
@@ -148,7 +164,6 @@ if __name__ == "__main__":
 #------------------------------Simulation--------------------------------------
     
     # Now Simulate
-    from tvb.epilepsy.tvb_api.simulator_tvb import *
     # Choosing the model:           epileptor model,      history
     #simulator_instance = SimulatorTVB(build_ep_6sv_model, prepare_for_6sv_model)
     # simulator_instance = SimulatorTVB(build_ep_2sv_model, prepare_for_2sv_model)
@@ -168,7 +183,6 @@ if __name__ == "__main__":
     fsSEEG = fsAVG
     
     #Noise configuration
-    from tvb.simulator import noise
     #                                 x1  y1   z     x2   y2   g 
     #noise_intensity=0.1**numpy.array([0., 0., 5e-5, 0.0, 5e-5, 0.])    
     noise_intensity=np.array([0., 0., 1e-6, 0.0, 1e-6, 0., 
@@ -177,7 +191,6 @@ if __name__ == "__main__":
     #Preconfigured noise                                     
     #Colored noise:
     dtN = 1000.0/fsAVG
-    from tvb.datatypes import equations
     eq=equations.Linear(parameters={"a": 0.0, "b": 1.0}) #default = a*y+b
     noise_color=noise.Multiplicative(ntau = 10, nsig=noise_intensity, b=eq,
                      random_stream=np.random.RandomState(seed=NOISE_SEED))

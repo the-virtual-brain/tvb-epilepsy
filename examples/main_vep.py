@@ -4,15 +4,24 @@
 Entry point for working with VEP
 """
 import os
+import copy as cp
 import numpy as np
-from vep.base.constants import *
+from scipy.io import savemat
+from tvb_epilepsy.base.constants import *
+from tvb_epilepsy.base.hypothesis import Hypothesis, X0_DEF
+from tvb_epilepsy.base.utils import filter_data
+from tvb_epilepsy.base.utils import initialize_logger
+from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_timeseries, plot_raster, plot_trajectories
+from tvb_epilepsy.tvb_api.simulator_tvb import *
+from tvb.simulator import noise
+from tvb.datatypes import equations
 
 SHOW_FLAG=True
 SAVE_FLAG=True
 
 if __name__ == "__main__":
 
-    from vep.base.utils import initialize_logger
+
     logger = initialize_logger(__name__)
     
 #-------------------------------Reading data-----------------------------------    
@@ -20,12 +29,12 @@ if __name__ == "__main__":
     if DATA_MODE == 'ep':
         logger.info("Reading from EPISENSE")
         data_folder = os.path.join(DATA_EPISENSE, 'Head_TREC') #Head_TREC 'Head_JUNCH'
-        from vep.episense.readers_episense import EpisenseReader
+        from tvb_epilepsy.custom.readers_episense import EpisenseReader
         reader = EpisenseReader()
     else:
         logger.info("Reading from TVB")
         data_folder = DATA_TVB
-        from vep.tvb_api.readers_tvb import TVBReader
+        from tvb_epilepsy.tvb_api.readers_tvb import TVBReader
         reader = TVBReader()
 
     logger.info("We will be reading from location " + data_folder)
@@ -37,7 +46,6 @@ if __name__ == "__main__":
 
     
     # Next configure two seizure hypothesis
-    from vep.base.hypothesis import Hypothesis, X0_DEF
     # Create a new hypothesis for this Head:
     hyp_ep = Hypothesis(head.number_of_regions, head.connectivity.weights, "EP Hypothesis")
     hyp_ep.K = 0.1*hyp_ep.K
@@ -61,7 +69,6 @@ if __name__ == "__main__":
 
     # Create a new hypothesis for this Head:
     #hyp_exc = Hypothesis(head.number_of_regions, head.connectivity.weights, "Excitability Hypothesis")
-    import copy as cp
     hyp_exc = cp.deepcopy(hyp_ep)
     print 'Configure the hypothesis...'
     print '...by defining the indices of all regions assumed to neither generate nor propagate the seizure...'
@@ -79,12 +86,7 @@ if __name__ == "__main__":
     print hyp_exc
 
 #------------------------------Simulation--------------------------------------
-    # Now Simulate
-    #    if SIMULATION_MODE == 'ep':
-    #        from vep.episense.simulator_episense import SimulatorEpisense
-    #        simulator_instance = SimulatorEpisense(data_folder)
-    #    else:
-    
+
     print "Getting SEEG sensors and projections from head"
     sensorsSEEG=[]
     projections=[]    
@@ -96,22 +98,18 @@ if __name__ == "__main__":
             projections.append(projection) 
             
     print 'Select TVB or Episense simulator and the desired Epileptor model, as well as set simulations settings'
-    SIMULATION_MODE ='tvb' #'ep'
+    SIMULATION_MODE ='tvb_epilepsy' #'ep'
     print 'Selected simulator: '+SIMULATION_MODE
-    
-    #    if SIMULATION_MODE == 'ep':
-    #        from vep.episense.simulator_episense import SimulatorEpisense
-    #        simulator_instance = SimulatorEpisense(data_folder)
-    #    else:
-    MODEL = '11v' #'6v','2v','11v','tvb'
+
+    MODEL = '11v' #'6v','2v','11v','tvb_epilepsy'
     print 'Selected model: '+MODEL
     
     #Monitor adjusted to the model    
-    nvar = {'tvb':6,
+    nvar = {'tvb_epilepsy':6,
             '6v':6,
             '2v':2,
             '11v':11}
-    monitor_expr = {'tvb':['x2 - x1','x1', 'y1', 'z', 'x2', 'y2', 'g' ],
+    monitor_expr = {'tvb_epilepsy':['x2 - x1','x1', 'y1', 'z', 'x2', 'y2', 'g' ],
                     '6v':["y3 - y0","y0", "y1", "y2", "y3", "y4", "y5"],
                     '2v':["y0", "y1"],
                     '11v':["y3 - y0","y0", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8", "y9", "y10"]}          
@@ -131,16 +129,14 @@ if __name__ == "__main__":
     
     
     #Noise configuration
-    from tvb.simulator import noise
     #                                  x1  y1   z     x2   y2   g 
-    noise_intensity = {'tvb':np.array([0., 0., 5e-8, 0.0, 5e-8, 0.]),
+    noise_intensity = {'tvb_epilepsy':np.array([0., 0., 5e-8, 0.0, 5e-8, 0.]),
                         '6v':np.array([ 0., 0., 5e-8, 0.0, 5e-8, 0.]),
                         '2v':np.array([ 0.,     5e-8]) ,
                         '11v':np.array([0., 0., 1e-5, 0.0, 1e-5, 0., 
     #                                   #x0   slope Iext1 Iext2 K 
                                         1e-7, 1e-2, 1e-7, 1e-2, 1e-8])} 
-    #Preconfigured noise                                     
-    from tvb.datatypes import equations
+    #Preconfigured noise
     eq=equations.Linear(parameters={"a": 0.0, "b": 1.0}) #default = a*y+b
     noise=noise.Multiplicative(nsig=noise_intensity[MODEL], b=eq,
                                random_stream=np.random.RandomState(seed=NOISE_SEED)) #define ntau for colored noise: ntau = 10, 
@@ -153,19 +149,19 @@ if __name__ == "__main__":
     print "Summary of noise settings: "
     print noise
          
-    from vep.tvb_api.simulator_tvb import SimulationSettings
+
     settings = SimulationSettings(length=10000,integration_step=dt, monitor_sampling_period=fs/fsSEEG*dt,
                                   noise_preconfig=noise, monitor_expr=monitor_expr[MODEL]) #noise_intensity=noise_intensity, 
     #print "Summary of simulation settings: "
     #print settings
     
     #Build the model
-    from vep.tvb_api.simulator_tvb import *
-    build_model = {'tvb':build_tvb_model,
+
+    build_model = {'tvb_epilepsy':build_tvb_model,
                     '6v':build_ep_6sv_model,
                     '2v':build_ep_2sv_model,
                     '11v':build_ep_11sv_model}
-    prepare_model = {'tvb':prepare_for_tvb_model,
+    prepare_model = {'tvb_epilepsy':prepare_for_tvb_model,
                      '6v':prepare_for_6sv_model,
                      '2v':prepare_for_2sv_model,
                      '11v':prepare_for_11sv_model}        
@@ -193,10 +189,7 @@ if __name__ == "__main__":
             Iext1ts=dict()
             Iext2ts=dict()
             Kts=dict()  
-            
-            
-    from scipy.io import savemat
-    from vep.base.utils import filter_data
+
     
     hyps = {'ep':hyp_ep,'exc':hyp_exc}
     
@@ -207,7 +200,7 @@ if __name__ == "__main__":
         print "Summary of simulation configuration: "
         print sim
         print "Further specifying parameters of the model"
-        if MODEL=='tvb':
+        if MODEL=='tvb_epilepsy':
                 sim.model.tt = 0.25*sim.model.tt
                 sim.model.r = 0.001
         else:
@@ -285,8 +278,7 @@ if __name__ == "__main__":
         #del tavg_data
          
     #-------------------------------Plotting---------------------------------------
-           
-    from vep.base.plot_tools import plot_head, plot_hypothesis, plot_timeseries, plot_raster, plot_trajectories
+
     # Figures related settings:
     VERY_LARGE_SIZE = (30, 15)
     LARGE_SIZE = (20, 15)
