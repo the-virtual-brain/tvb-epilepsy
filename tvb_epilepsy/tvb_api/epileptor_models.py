@@ -830,7 +830,7 @@ class EpileptorDP2D(Model):
     """
 
     _ui_name = "EpileptorDP2D"
-    ui_configurable_parameters = ["Iext1", "Iext2", "tau0", "x0", "slope"]
+    ui_configurable_parameters = ["Iext1", "tau0", "x0", "slope"]
 
     zmode = arrays.FloatArray(
         label="zmode",
@@ -959,7 +959,7 @@ class EpileptorDP2D(Model):
         with respect to time.
 
         Implementation note: we expect this version of the Epileptor to be used
-        in a vectorized manner. Concretely, y has a shape of (6, n) where n is
+        in a vectorized manner. Concretely, y has a shape of (2, n) where n is
         the number of nodes in the network. An consequence is that
         the original use of if/else is translated by calculated both the true
         and false forms and mixing them using a boolean mask.
@@ -1017,8 +1017,79 @@ class EpileptorDP2D(Model):
         elif self.zmode=='sig':
             fz = 3 / (1 + numpy.exp(-10*(y[0] - c76)) ) - self.r * self.x0 + self.x0cr
         else:
-            print "ERROR: zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively"
+            raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
         ydot[1] = self.tau1*(( fz - y[1] + where(y[1] < 0., if_ydot1, else_ydot1) + self.K*c_pop1)/self.tau0)
 
 
         return ydot
+
+    def jacobian(self, state_variables, coupling, local_coupling=0.0,
+            array=numpy.array, where=numpy.where, concat=numpy.concatenate):
+        r"""
+        Computes the Jacobian of the state variables of the Epileptor
+        with respect to time.
+
+        Implementation note: we expect this version of the Epileptor to be used
+        in a vectorized manner. Concretely, y has a shape of (2, n) where n is
+        the number of nodes in the network. An consequence is that
+        the original use of if/else is translated by calculated both the true
+        and false forms and mixing them using a boolean mask.
+
+        Variables of interest to be used by monitors: -y[0] + y[3]
+
+            .. math::
+            \dot{y_{0}} &=& yc - f_{1}(y_{0}, y_{1}) - y_{2} + I_{ext1} \\
+            \dot{y_{1}} &=&
+            \begin{cases}
+            (f_z(y_{0}) - y_{1}-0.1 y_{1}^{7})/tau0 & \text{if } y_{0}<5/3 \\
+            (f_z(y_{0}) - y_{1})/tau0           & \text{if } y_{0} \geq 5/3
+            \end{cases} \\
+
+        where:
+            .. math::
+                f_{1}(y_{0}, y_{3}) =
+                \begin{cases}
+                a ( y_{0} -5/3 )^{3} - b ( y_{0} -5/3 )^2 & \text{if } y_{0} <5/3\\
+                ( 5*( y_{0} -5/3 ) - 0.6(y_{1}-4)^2 -slope) ( y_{0} - 5/3 ) &\text{if }y_{0} \geq 5/3
+                \end{cases}
+        and:
+
+            .. math::
+                f_z(y_{0})  =
+                \begin{cases}
+                4 * (y_{0} - r*x0 + x0_{cr}) & \text{linear} \\
+                \frac{3}{1+e^{-10*(y_{0}-7/6)}} - r*x0 + x0_{cr} & \text{sigmoidal} \\
+                \end{cases}
+
+
+        """
+
+        y = state_variables
+
+        # To use later:
+        c53 = 5.0 / 3.0
+        c76 = 7.0 / 6.0
+        x1 = y[0] - c53  # center x1 to -5/3
+
+        n_ep = state_variables.shape[1]
+        # population 1
+        jac_xx = where(y[0] < c53, numpy.diag(3*x1**2 + 4.0*x1), numpy.diag(15*x1**2-self.slope))
+        jac_xz = where(y[0] < c53, numpy.diag(numpy.zeros((n_ep,), dtype=y.dtype)), numpy.diag(1.2*(y[1]-4.0)*x1))
+
+        # energy
+        jac_zx = numpy.zeros((n_ep, n_ep), dtype=y.dtype)
+        jac_zz = -numpy.diag(numpy.ones((n_ep,)), dtype=y.dtype)
+
+        # energy
+        if_ydot1 = - 0.1 * y[1] ** 7
+        else_ydot1 = 0
+        if self.zmode == 'lin':
+            fz = 4 * (y[0] - self.r * self.x0 + self.x0cr)
+        elif self.zmode == 'sig':
+            fz = 3 / (1 + numpy.exp(-10 * (y[0] - c76))) - self.r * self.x0 + self.x0cr
+        else:
+            raise ValueError(
+                'zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
+        ydot[1] = self.tau1 * ((fz - y[1] + where(y[1] < 0., if_ydot1, else_ydot1) + self.K * c_pop1) / self.tau0)
+
+        #return jac
