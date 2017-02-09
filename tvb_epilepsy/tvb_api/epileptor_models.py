@@ -66,7 +66,7 @@ class EpileptorDP(Model):
 
     .. [Proixetal_2014] Proix, T., Bartolomei, F., Chauvel, P., Bernard, C.,
                        & Jirsa, V. K. (2014).
-                       Permitau1ivity Coupling across Brain Regions Determines
+                       Permitivity Coupling across Brain Regions Determines
                        Seizure Recruitment in Partial Epilepsy.
                        Journal of Neuroscience, 34(45), 15009–15021.
                        htau1p://doi.org/10.1523/JNEUROSCI.1570-14.2014
@@ -332,12 +332,12 @@ class EpileptorDP(Model):
         if_ydot2 = - 0.1*y[2]**7
         else_ydot2 = 0
         if self.zmode=='lin':
-            fz = 4*(y[0] - self.r * self.x0 + self.x0cr)
+            fz = 4*(y[0] - self.r * self.x0 + self.x0cr) + where(y[2] < 0., if_ydot2, else_ydot2)
         elif self.zmode=='sig':
             fz = 3 / (1 + numpy.exp(-10*(y[0] - c76)) ) - self.r * self.x0 + self.x0cr
         else:
             print "ERROR: zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively"
-        ydot[2] = self.tau1*(( fz - y[2] + where(y[2] < 0., if_ydot2, else_ydot2) + self.K*c_pop1)/self.tau0)
+        ydot[2] = self.tau1*(( fz - y[2] + self.K*c_pop1)/self.tau0)
 
         # population 2
         ydot[3] = self.tau1*(-y[4] + y[3] - y[3]**3 + self.Iext2 + 2*y[5] - 0.3*(y[2] - 3.5) + self.Kf*c_pop2)
@@ -349,6 +349,12 @@ class EpileptorDP(Model):
         ydot[5] = self.tau1*(-0.01*(y[5] - 0.1*x1))
 
         return ydot
+
+    def jacobian(self, state_variables, coupling, local_coupling=0.0,
+                 array=numpy.array, where=numpy.where, concat=numpy.concatenate):
+
+        return None
+
 
 
 class EpileptorDPrealistic(Model):
@@ -691,12 +697,12 @@ class EpileptorDPrealistic(Model):
         if_ydot2 = - 0.1*y[2]**7
         else_ydot2 = 0
         if self.zmode=='lin':
-            fz = 4*(y[0] - self.r * x0 + self.x0cr)
+            fz = 4*(y[0] - self.r * x0 + self.x0cr) + where(y[2] < 0., if_ydot2, else_ydot2)
         elif self.zmode=='sig':
             fz = 3 / (1 + numpy.exp(-10*(y[0] - c76)) ) - self.r * x0 + self.x0cr
         else:
             print "ERROR: zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively"
-        ydot[2] = self.tau1*(( fz - y[2] + where(y[2] < 0., if_ydot2, else_ydot2) + K*c_pop1)/self.tau0)
+        ydot[2] = self.tau1*(( fz - y[2] + K*c_pop1)/self.tau0)
 
         # population 2
         ydot[3] = self.tau1*(-y[4] + y[3] - y[3]**3 + Iext2 + 2*y[5] - 0.3*(y[2] - 3.5) + self.Kf*c_pop2)
@@ -740,6 +746,12 @@ class EpileptorDPrealistic(Model):
         ydot[10] = self.tau1*(-y[10] + self.K)/self.tau0
 
         return ydot
+
+
+    def jacobian(self, state_variables, coupling, local_coupling=0.0,
+                 array=numpy.array, where=numpy.where, concat=numpy.concatenate):
+
+        return None
 
 
 class EpileptorDP2D(Model):
@@ -1010,15 +1022,15 @@ class EpileptorDP2D(Model):
         ydot[0] = self.tau1*(self.yc - y[1] + Iext1 + self.Kvf*c_pop1 - where(y[0] < c53, if_ydot0, else_ydot0) * x1)
 
         # energy
-        if_ydot1 = - 0.1*y[1]**7
-        else_ydot1 = 0
+        if_ydot2 = - 0.1 * y[2] ** 7
+        else_ydot2 = 0
         if self.zmode=='lin':
-            fz = 4*(y[0] - self.r * self.x0 + self.x0cr)
+            fz = 4*(y[0] - self.r * self.x0 + self.x0cr) + where(y[1] < 0., if_ydot2, else_ydot2)
         elif self.zmode=='sig':
             fz = 3 / (1 + numpy.exp(-10*(y[0] - c76)) ) - self.r * self.x0 + self.x0cr
         else:
             raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
-        ydot[1] = self.tau1*(( fz - y[1] + where(y[1] < 0., if_ydot1, else_ydot1) + self.K*c_pop1)/self.tau0)
+        ydot[1] = self.tau1*(( fz - y[1] + self.K*c_pop1)/self.tau0)
 
 
         return ydot
@@ -1077,19 +1089,15 @@ class EpileptorDP2D(Model):
         jac_xz = where(y[0] < c53, numpy.diag(numpy.zeros((n_ep,), dtype=y.dtype)), numpy.diag(1.2*(y[1]-4.0)*x1))
 
         # energy
-        jac_zx = numpy.zeros((n_ep, n_ep), dtype=y.dtype)
-        jac_zz = -numpy.diag(numpy.ones((n_ep,)), dtype=y.dtype)
-
-        # energy
-        if_ydot1 = - 0.1 * y[1] ** 7
-        else_ydot1 = 0
+        # The terms resulting from coupling from other regions, have to be added later on
+        jac_zz = -numpy.diag(numpy.ones((n_ep,)), dtype=y.dtype) / self.tau0
         if self.zmode == 'lin':
-            fz = 4 * (y[0] - self.r * self.x0 + self.x0cr)
+            jac_zx = numpy.diag(4.0)/self.tau0
+            jac_zz -= numpy.diag(where(y[1] < 0., 0.7*y[1]**6, 0.0))
         elif self.zmode == 'sig':
-            fz = 3 / (1 + numpy.exp(-10 * (y[0] - c76))) - self.r * self.x0 + self.x0cr
+            exp_fun = numpy.exp(-10.0*(y[0]-c76))
+            jac_zx = numpy.diag(30.0*exp_fun/(1+exp_fun)**2)/self.tau0
         else:
-            raise ValueError(
-                'zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
-        ydot[1] = self.tau1 * ((fz - y[1] + where(y[1] < 0., if_ydot1, else_ydot1) + self.K * c_pop1) / self.tau0)
+            raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
 
-        #return jac
+        return concat([numpy.hstack([jac_xx, jac_xz]),numpy.hstack([jac_zx, jac_zz])],axis=0)
