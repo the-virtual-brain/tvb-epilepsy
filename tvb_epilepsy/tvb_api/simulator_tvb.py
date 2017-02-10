@@ -62,43 +62,6 @@ class SimulatorTVB(ABCSimulator):
         raise NotImplementedError()
 
 
-
-def get_y1eq(x1eq,y0,d):
-    return y0-d*x1eq**2
-    
-def get_2eq(n_regions,x1eq,zeq,Iext2):
-    #g_eq = 0.1*x1eq (1)
-    #y2eq = 0 (2)
-    y2eq = np.zeros((n_regions,1))
-    #-x2eq**3 + x2eq -y2eq+2*g_eq-0.3*(zeq-3.5)+Iext2 =0=> (1),(2)
-    #-x2eq**3 + x2eq +2*0.1*x1eq-0.3*(zeq-3.5)+Iext2 =0=>
-    #p3        p1                   p0 
-    #-x2eq**3 + x2eq +0.2*x1eq-0.3*(zeq-3.5)+Iext2 =0
-    p0 = 0.2*x1eq-0.3*(zeq-3.5)+Iext2  
-    x2eq = np.zeros((n_regions,1))
-    for i in range(n_regions):
-        x2eq[i,0] = np.min( np.real( np.roots([-1.0, 0.0, 1.0, p0[i,0] ]) ) )   
-    return (x2eq, y2eq)
-    
-#def get_2eq(n_regions,x1eq,zeq,Iext2):
-#    #g_eq = 0.1*x1eq (1)
-#    #y2eq = 6*(x2eq+0.25)*x1eq (2)
-#    #-x2eq**3 + x2eq -y2eq+2*g_eq-0.3*(zeq-3.5)+Iext2 =0=> (1),(2)
-#    #-x2eq**3 + x2eq -6*(x2eq+0.25)*x1eq+2*0.1*x1eq-0.3*(zeq-3.5)+Iext2 =0=>
-#    #-x2eq**3 + (1.0-6*x1eq)*x2eq -1.5*x1eq+ 0.2*x1eq-0.3*(zeq-3.5)+Iext2 =0
-#    #p3                p1                           p0   
-#    #-x2eq**3 + (1.0-6*x1eq)*x2eq -1.3*x1eq -0.3*(zeq-3.5) +Iext2 =0
-#    p0 = -1.3*x1eq-0.3*(zeq-3.5)+Iext2  
-#    p1 = 1.0-6*x1eq
-#    x2eq = np.zeros((n_regions,1))
-#    for i in range(n_regions):
-#        x2eq[i,0] = np.min( np.real( np.roots([-1.0, 0.0, p1[i,0], p0[i,0] ]) ) )   
-#    #(2):
-#    y2eq = 6*(x2eq+0.25)*x1eq
-#    return (x2eq, y2eq)    
-
-def get_geq(x1eq):
-    return 0.1*x1eq
 ###
 # Prepare for TVB configuration
 ###
@@ -152,8 +115,7 @@ def build_ep_2sv_model(hypothesis,variables_of_interest=["y0", "y1"]):
 
 def prepare_for_2sv_model(hypothesis, model, history_length):
     initial_conditions = np.array((hypothesis.x1EQ.T,
-                                   hypothesis.zEQ.T
-                                   ))
+                                   hypothesis.zEQ.T))
     initial_conditions = np.tile(initial_conditions, (history_length, 1, 1, 1))
     return initial_conditions
 

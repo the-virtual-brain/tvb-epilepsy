@@ -7,9 +7,10 @@ It should contain everything for later configuring an Epileptor Model from this 
 """
 
 import numpy as np
+from collections import OrderedDict
+from tvb.epilepsy.base.equilibrium_computation import zeq_def
 from tvb_epilepsy.base.utils import reg_dict, formal_repr, vector2scalar
 
-from collections import OrderedDict
 
 # Default model parameters
 X0_DEF = 0.0
@@ -17,11 +18,13 @@ E_DEF = 0.0
 K_DEF = 1.0
 I_EXT1_DEF = 3.1
 Y0_DEF = 1.0
+X1_DEF = 0.0
 X1_EQ_CR_DEF = 1.0 / 3.0
-X1_LIN_DEF = 0.5 / 3.0
+X1_LIN_DEF = (X1_EQ_CR_DEF-X1_DEF)/2.0
 X1_SQ_DEF = X1_EQ_CR_DEF
 
-
+#Currently we assume only difference coupling (permittivity coupling following Proix et al 2014
+#TODO: to generalize for different coupling functions
 class Hypothesis(object):
     def __init__(self, n_regions, normalized_weights, name="",
                  e_def=E_DEF, k_def=K_DEF, i_ext1_def=I_EXT1_DEF, y0_def=Y0_DEF,
@@ -108,13 +111,14 @@ class Hypothesis(object):
     def _calculate_equilibria_x1(self, i=None):
         if i is None:
             i = np.ones((1, self.n_regions), dtype=np.float32)
-
         return (self.E / 3.0) * i
         # return self.E[1, i] / 3.0
         # return ((self.E - 4.0) / 3.0) * i
 
     def _calculate_equilibria_z(self):
-        return self.y0 + self.Iext1 - self.x1EQ ** 3 + 3.0 * self.x1EQ ** 2 - 5.0 * self.x1EQ/3.0 -25.0/27.0
+        # y0 + Iext1 - x1eq ** 3 + 3.0 * x1eq ** 2 - 5.0 * x1eq/3.0 -25.0/27.0
+        return zeq_def(self.x1EQ, self.y0, self.Iext1)
+        #non centered x1:
         # return self.y0 + self.Iext1 - self.x1EQ ** 3 - 2.0 * self.x1EQ ** 2
 
     def _calculate_coupling_at_equilibrium(self, i, w):
