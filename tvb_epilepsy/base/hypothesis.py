@@ -8,7 +8,8 @@ It should contain everything for later configuring an Epileptor Model from this 
 
 import numpy as np
 from collections import OrderedDict
-from tvb.epilepsy.base.equilibrium_computation import zeq_def
+from tvb_epilepsy.base.equilibrium_computation import zeq_2d_calc, y1eq_calc,\
+                                                      x1eq_x0_hypo_linTaylor, x1eq_x0_hypo_optimize
 from tvb_epilepsy.base.utils import reg_dict, formal_repr, vector2scalar
 
 
@@ -26,11 +27,13 @@ X1_SQ_DEF = X1_EQ_CR_DEF
 #Currently we assume only difference coupling (permittivity coupling following Proix et al 2014
 #TODO: to generalize for different coupling functions
 class Hypothesis(object):
-    def __init__(self, n_regions, normalized_weights, name="",
+    def __init__(self, n_regions, normalized_weights, name="", x1eq_mode = "optimize",
                  e_def=E_DEF, k_def=K_DEF, i_ext1_def=I_EXT1_DEF, y0_def=Y0_DEF,
                  x1_eq_cr_def=X1_EQ_CR_DEF, x1_lin_def=X1_LIN_DEF, x1_sq_def=X1_SQ_DEF):
+
+        #TODO: question the course below. Maybe use the opposite one?
         """
-        At initalization we follow the course::
+        At initalization we follow the course:
 
             E->equilibria->x0
 
@@ -51,6 +54,7 @@ class Hypothesis(object):
 
         self.x0cr = self._calculate_critical_x0()
         self.rx0 = self._calculate_x0_scaling()
+        self.x1eq_mode = x1eq_mode
         self.x1EQ = self._calculate_equilibria_x1(i)
         self.zEQ = self._calculate_equilibria_z()
         self.Ceq = self._calculate_coupling_at_equilibrium(i, normalized_weights)
@@ -77,7 +81,8 @@ class Hypothesis(object):
              "14. x1LIN": vector2scalar(self.x1LIN),
              "15. x11SQ": vector2scalar(self.x1SQ),
              "16. x0cr": vector2scalar(self.x0cr),
-             "17. rx0": vector2scalar(self.rx0)}
+             "17. rx0": vector2scalar(self.rx0),
+             "18. x1eq_mode": self.x1eq_mode}
         return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ))
                                                                
 
@@ -117,7 +122,7 @@ class Hypothesis(object):
 
     def _calculate_equilibria_z(self):
         # y0 + Iext1 - x1eq ** 3 + 3.0 * x1eq ** 2 - 5.0 * x1eq/3.0 -25.0/27.0
-        return zeq_def(self.x1EQ, self.y0, self.Iext1)
+        return zeq_2d_calc(self.x1EQ, self.y0, self.Iext1)
         #non centered x1:
         # return self.y0 + self.Iext1 - self.x1EQ ** 3 - 2.0 * self.x1EQ ** 2
 
@@ -132,16 +137,8 @@ class Hypothesis(object):
         return 3.0 * self.x1EQ
 
     def get_yeq(self):
-        return self.y0 - 5*(self.x1EQ-5.0/3.0) ** 2
+        return y1eq_calc(self.x1EQ)
 
-    def get_geq(self):
-        return 0.1 * self.x1EQ
-
-#    def get_x2eq(self):
-#        return np.zeros((1, self.n_regions))
-#
-#    def get_y2eq(self):
-#        return np.zeros((1, self.n_regions))
 
     def _update_parameters(self, seizure_indices):
         """
@@ -158,6 +155,7 @@ class Hypothesis(object):
         self.seizure_indices = seizure_indices
         if self.n_seizure_nodes > 0:
             self._run_lsa(seizure_indices)
+
 
     def _run_lsa(self, seizure_indices):
 
@@ -186,6 +184,7 @@ class Hypothesis(object):
         #Calculate the propagation strength index by summing all eigenvectors
         self.lsa_ps_tot = np.expand_dims(np.sum(np.abs(self.lsa_eigvects), axis=1), 1).T
 
+
     def _check_hypothesis(self, seizure_indices):
         """
          LSA doesn't work well if there are some E>1 (i.e., x1EQ>1/3),
@@ -202,6 +201,7 @@ class Hypothesis(object):
             # Now that equilibria are OK, update the hypothesis to get the actual x0, E etc
             self._update_parameters(seizure_indices)
 
+
     # The two hypothesis modes below could be combined (but always starting from "E" first, if any)
 
     def configure_e_hypothesis(self, ie, e, seizure_indices):
@@ -217,6 +217,7 @@ class Hypothesis(object):
 
         self._update_parameters(seizure_indices)
 
+
     def configure_x0_hypothesis(self, ix0, x0, seizure_indices):
         """
         Hypothesis starting from Excitabilities x0
@@ -224,70 +225,23 @@ class Hypothesis(object):
         :param x0: the x0 hypothesis for the regions of ix0 indices
         :param seizure_indices: Indices where seizure starts
         """
-        no_x0 = len(ix0)  # the number of these regions
-
         # Create region indices:
         # All regions
         ii = np.array(range(self.n_regions), dtype=np.int32)
         # All regions with an Epileptogenicity hypothesis:
         iE = np.delete(ii, ix0)  # their indices
-        no_e = len(iE)  # their number
 
         # ...and the resulting equilibria
         x1_eq = self.x1EQ[:, iE]
         z_eq = self.zEQ[:, iE]
 
-        # Prepare and solve a linear system AX=B to find the new equilibria
-        w = self.weights
+        if self.self.x1eq_mode=="linTaylor":
+            self.x1EQ = x1eq_x0_hypo_linTaylor(ix0, iE, self.x1EQ, x1_eq, z_eq, x0, self.x0cr, self.x1LIN, self.rx0,
+                                           self.y0, self.Iext1, self.K, self.weights)
+        else:
+            self.x1EQ = x1eq_x0_hypo_optimize(ix0, iE, self.x1EQ, x1_eq, z_eq, x0, self.x0cr, self.rx0, self.y0,
+                                              self.Iext1, self.K, self.weights)
 
-        # ...for regions of fixed equilibria:
-        ii_e = np.ones((1, no_e), dtype=np.float32)
-        we_to_e = np.expand_dims(np.sum(w[iE][:, iE] * (np.dot(ii_e.T, x1_eq) -
-                                                        np.dot(x1_eq.T, ii_e)), axis=1), 1).T
-        wx0_to_e = -x1_eq * np.expand_dims(np.sum(w[ix0][:, iE], axis=0), 0)
-        be = 4.0 * (x1_eq + self.x0cr[:, iE]) - z_eq - self.K[:, iE] * (we_to_e + wx0_to_e)
-
-        # ...for regions of fixed x0:
-        ii_x0 = np.ones((1, no_x0), dtype=np.float32)
-        we_to_x0 = np.expand_dims(np.sum(w[ix0][:, iE] * np.dot(ii_x0.T, x1_eq), axis=1), 1).T
-        #        bx0 = 4 * (self.x0cr[:, ix0] - x0) - self.y0[:, ix0] - self.Iext1[:, ix0] \
-        #            - 2 * self.x1LIN[:, ix0] ** 3 - 2 * self.x1LIN[:, ix0] ** 2 - self.K[:, ix0] * we_to_x0
-        bx0 = 4.0 * (self.x0cr[:, ix0] - self.rx0[:, ix0] * x0) - self.y0[:, ix0] - self.Iext1[:, ix0] \
-            - 2.0 * self.x1LIN[:, ix0] ** 3 + 3.0 * self.x1LIN[:, ix0] ** 2 + 25.0 / 27.0 - self.K[:, ix0] * we_to_x0
-
-        # Concatenate B vector:
-        b = -np.concatenate((be, bx0), axis=1).T
-
-        # From-to Epileptogenicity-fixed regions
-        # ae_to_e = -4 * np.eye( no_e, dtype=np.float32 )
-        ae_to_e = -4 * np.diag(self.rx0[0, iE])
-
-        # From x0-fixed regions to Epileptogenicity-fixed regions
-        ax0_to_e = -np.dot(self.K[:, iE].T, ii_x0) * w[iE][:, ix0]
-
-        # From Epileptogenicity-fixed regions to x0-fixed regions
-        ae_to_x0 = np.zeros((no_x0, no_e), dtype=np.float32)
-
-        # From-to x0-fixed regions
-        #        ax0_to_x0 = np.diag((4 + 3 * self.x1LIN[:, ix0] ** 2 + 4 * self.x1LIN[:, ix0]  \
-        #                  + self.K[0, ix0] *np.expand_dims(np.sum(w[ix0][:, ix0], axis=0), 0)).T[:, 0])  \
-        #                  - np.dot(self.K[:, ix0].T, ii_x0) * w[ix0][:, ix0]
-        ax0_to_x0 = np.diag((4.0 + 3.0 * (self.x1LIN[:, ix0] ** 2 - 2.0 * self.x1LIN[:, ix0] + 5.0 / 9.0) +
-                             self.K[0, ix0] * np.expand_dims(np.sum(w[ix0][:, ix0], axis=0), 0)).T[:, 0]) \
-            - np.dot(self.K[:, ix0].T, ii_x0) * w[ix0][:, ix0]
-
-        # Concatenate A matrix
-        a = np.concatenate((np.concatenate((ae_to_e, ax0_to_e), axis=1),
-                            np.concatenate((ae_to_x0, ax0_to_x0), axis=1)),
-                           axis=0)
-
-        # Solve the system
-        x = np.dot(np.linalg.inv(a), b).T
-
-        # Unpack solution:
-        # The equilibria of the regions with fixed E have not changed:
-        # The equilibria of the regions with fixed x0:
-        self.x1EQ[0, ix0] = x[0, no_e:]
         self.zEQ = self._calculate_equilibria_z()
 
         # Now that equilibria are OK, update the hypothesis to get the actual x0, E etc

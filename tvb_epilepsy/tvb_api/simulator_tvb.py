@@ -9,7 +9,7 @@ from tvb.datatypes import connectivity
 from tvb.simulator import coupling, integrators, models, monitors, noise, simulator
 from tvb_epilepsy.tvb_api import epileptor_models
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
-
+from tvb_epilepsy.base.equilibrium_computation import calc_equilibrium_point
 
 class SimulatorTVB(ABCSimulator):
 
@@ -88,12 +88,7 @@ def _rescale_x0(x0_orig, r, x0cr):
 
 
 def prepare_for_tvb_model(hypothesis, model, history_length):
-    x1EQ = hypothesis.x1EQ.T-5.0/3.0
-    y1EQ = get_y1eq(x1EQ,hypothesis.y0.T,model.d)
-    zEQ = hypothesis.zEQ.T
-    (x2EQ, y2EQ) = get_2eq(hypothesis.n_regions,x1EQ,zEQ,model.Iext2)
-    gEQ = get_geq(x1EQ)
-    initial_conditions = np.array((x1EQ, y1EQ, zEQ, x2EQ, y2EQ, gEQ ))
+    initial_conditions = np.array(calc_equilibrium_point(model, hypothesis))
     initial_conditions = np.tile(initial_conditions, (history_length, 1, 1, 1))
     return initial_conditions
 
@@ -114,8 +109,7 @@ def build_ep_2sv_model(hypothesis,variables_of_interest=["y0", "y1"]):
 
 
 def prepare_for_2sv_model(hypothesis, model, history_length):
-    initial_conditions = np.array((hypothesis.x1EQ.T,
-                                   hypothesis.zEQ.T))
+    initial_conditions = np.array(calc_equilibrium_point(model, hypothesis))
     initial_conditions = np.tile(initial_conditions, (history_length, 1, 1, 1))
     return initial_conditions
 
@@ -137,13 +131,7 @@ def build_ep_6sv_model(hypothesis,variables_of_interest=["y3 - y0", "y2"]):
 
 
 def prepare_for_6sv_model(hypothesis, model, history_length):
-    x1EQ = hypothesis.x1EQ.T
-    x1EQ53 = x1EQ-5.0/3.0
-    zEQ = hypothesis.zEQ.T
-    y1EQ = get_y1eq(x1EQ53,hypothesis.y0.T,5.0)
-    (x2EQ, y2EQ) = get_2eq(hypothesis.n_regions,x1EQ53,zEQ,model.Iext2)
-    gEQ = get_geq(x1EQ53)
-    initial_conditions = np.array((x1EQ, y1EQ, zEQ, x2EQ, y2EQ, gEQ))
+    initial_conditions = np.array(calc_equilibrium_point(model, hypothesis))
     initial_conditions = np.tile(initial_conditions, (history_length, 1, 1, 1))
     return initial_conditions
 
@@ -165,12 +153,8 @@ def build_ep_11sv_model(hypothesis,variables_of_interest=["y3 - y0", "y2"]):
 
 
 def prepare_for_11sv_model(hypothesis, model, history_length):
-    x1EQ = hypothesis.x1EQ.T
-    x1EQ53 = x1EQ-5.0/3.0
-    zEQ = hypothesis.zEQ.T
-    y1EQ = get_y1eq(x1EQ53,hypothesis.y0.T,5.0)
-    (x2EQ, y2EQ) = get_2eq(hypothesis.n_regions,x1EQ53,zEQ,model.Iext2)
-    gEQ = get_geq(x1EQ53)
+    (x1EQ, y1EQ, zEQ, x2EQ, y2EQ, gEQ,  \
+                                   x0o, slope0, Iext1o, Iext2o, Ko)=calc_equilibrium_point(model, hypothesis)
     x0o = 0.0** np.ones((hypothesis.n_regions,1)) # hypothesis.x0.T
     slope0 = 1.0 * np.ones((hypothesis.n_regions,1))#model.slope * np.ones((hypothesis.n_regions,1))
     Iext1o = hypothesis.Iext1.T
