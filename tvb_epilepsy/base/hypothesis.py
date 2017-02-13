@@ -8,7 +8,7 @@ It should contain everything for later configuring an Epileptor Model from this 
 
 import numpy as np
 from collections import OrderedDict
-from tvb_epilepsy.base.equilibrium_computation import zeq_2d_calc, y1eq_calc,\
+from tvb_epilepsy.base.equilibrium_computation import zeq_2d_calc, y1eq_calc, coupling_calc, x0_calc, x0cr_rx0_calc, \
                                                       x1eq_x0_hypo_linTaylor, x1eq_x0_hypo_optimize
 from tvb_epilepsy.base.utils import reg_dict, formal_repr, vector2scalar
 
@@ -52,10 +52,11 @@ class Hypothesis(object):
         self.x1SQ = x1_sq_def * i
         self.E = e_def * i
 
-        self.x0cr = self._calculate_critical_x0()
-        self.rx0 = self._calculate_x0_scaling()
+        (self.x0cr, self.rx0)= self._calculate_critical_x0_scaling()
+        # self.x0cr = self._calculate_critical_x0()
+        # self.rx0 = self._calculate_x0_scaling()
         self.x1eq_mode = x1eq_mode
-        self.x1EQ = self._calculate_equilibria_x1(i)
+        self.x1EQ = self._set_equilibria_x1(i)
         self.zEQ = self._calculate_equilibria_z()
         self.Ceq = self._calculate_coupling_at_equilibrium(i, normalized_weights)
         self.x0 = self._calculate_x0()
@@ -104,6 +105,9 @@ class Hypothesis(object):
         """
         return self.weights[:, self.seizure_indices]
 
+    def _calculate_critical_x0_scaling(self):
+        return x0cr_rx0_calc(self.y0, self.Iext1, epileptor_model="2d", zmode="lin")
+
     def _calculate_critical_x0(self):
         # At the hypothesis level, we assume linear z function
         return self.Iext1 / 4.0 + self.y0 / 4.0 - 25.0 / 108.0  # for linear z dfun
@@ -113,7 +117,7 @@ class Hypothesis(object):
         # At the hypothesis level, we assume linear z function
         return -self.Iext1 / 4.0 - self.y0 / 4.0 + 1537.0 / 1080.0  # for linear z dfun
 
-    def _calculate_equilibria_x1(self, i=None):
+    def _set_equilibria_x1(self, i=None):
         if i is None:
             i = np.ones((1, self.n_regions), dtype=np.float32)
         return (self.E / 3.0) * i
@@ -126,11 +130,14 @@ class Hypothesis(object):
         #non centered x1:
         # return self.y0 + self.Iext1 - self.x1EQ ** 3 - 2.0 * self.x1EQ ** 2
 
-    def _calculate_coupling_at_equilibrium(self, i, w):
-        return self.K * (np.expand_dims(np.sum(w * ( np.dot(i.T, self.x1EQ) - np.dot(self.x1EQ.T, i)), axis=1), 1).T)
+    def _calculate_coupling_at_equilibrium(self):
+        return coupling_calc(self.x1EQ, self.K, self.weights)
+        #i = np.ones((1, self.n_regions), dtype=np.float32)
+        #return self.K * (np.expand_dims(np.sum(self.weights * ( np.dot(i.T, self.x1EQ) - np.dot(self.x1EQ.T, i)), axis=1), 1).T)
 
     def _calculate_x0(self):
-        return (self.x1EQ + self.x0cr - (self.zEQ + self.Ceq) / 4.0) / self.rx0
+        return x0_calc(self.x1EQ, self.zEQ, self.x0cr, self.rx0, self.Ceq, zmode="lin")
+        #return (self.x1EQ + self.x0cr - (self.zEQ + self.Ceq) / 4.0) / self.rx0
         # return self.x1EQ + self.x0cr - (self.zEQ + self.Ceq) / 4.0
 
     def _calculate_e(self):
@@ -145,10 +152,10 @@ class Hypothesis(object):
         Updating hypothesis always starts from a new equilibrium point
         :param seizure_indices: numpy array with conn region indices where we think the seizure starts
         """
-        i = np.ones((1, self.n_regions), dtype=np.float32)
-        self.x0cr = self._calculate_critical_x0()
-        self.rx0 = self._calculate_x0_scaling()
-        self.Ceq = self._calculate_coupling_at_equilibrium(i, self.weights)
+        (self.x0cr, self.rx0) = self._calculate_critical_x0_scaling()
+        # self.x0cr = self._calculate_critical_x0()
+        # self.rx0 = self._calculate_x0_scaling()
+        self.Ceq = self._calculate_coupling_at_equilibrium()
         self.x0 = self._calculate_x0()
         self.E = self._calculate_e()
 
@@ -158,6 +165,8 @@ class Hypothesis(object):
 
 
     def _run_lsa(self, seizure_indices):
+
+        #TODO: automatically choose the number of eigenvalue to sum via a cutting criterion
 
         self._check_hypothesis(seizure_indices)
         i = np.ones((1, self.n_regions), dtype=np.float32)
@@ -192,6 +201,7 @@ class Hypothesis(object):
          Suggested correction for the moment to ceil x1EQ to the critical x1EQcr = 1/3,
         and then update the whole hypothesis accordingly. We should ask the user for this..
         """
+        #TODO: deal with super-critical equilibria...
 
         temp = self.x1EQ > self.x1EQcr
         if temp.any():
@@ -212,7 +222,7 @@ class Hypothesis(object):
         :param seizure_indices: Indices where seizure starts
         """
         self.E[0, ie] = e
-        self.x1EQ = self._calculate_equilibria_x1()
+        self.x1EQ = self._set_equilibria_x1()
         self.zEQ = self._calculate_equilibria_z()
 
         self._update_parameters(seizure_indices)
