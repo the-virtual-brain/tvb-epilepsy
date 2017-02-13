@@ -18,20 +18,103 @@ from tvb.simulator.models import Epileptor
 def x1eq_def(X1_DEF, X1_EQ_CR_DEF, n_regions):
     return numpy.repeat((X1_EQ_CR_DEF - X1_DEF) / 2.0, n_regions)
 
+
 def fx1_2d_calc(x1):
     return x1**3 + 2*x1**2
+
 
 def fx1_6d_calc(x1):
     return x1**3 - 3*x1**2
 
-def x1eq_x0_hypo_optimize(ix0,iE,x1EQ,x1_eq,z_eq,x0,x0cr,rx0,y0,Iext1,K,w):
-    #fun =
-    pass
 
-def x1eq_x0_hypo_linTaylor(ix0,iE,x1EQ,x1_eq,z_eq,x0,x0cr,x1LIN,rx0,y0,Iext1,K,w):
+def fz_lin_calc(x1,x0,x0cr,r):
+    return 4*(x1-r*x0+x0cr)
+
+
+def x1eq_x0_hypo_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w):
 
     no_x0 = len(ix0)
     no_e = len(iE)
+
+    type = x1EQ.dtype
+    i_e = numpy.ones((no_e,1), dtype=type)
+    i_x0 = numpy.ones((no_x0,1), dtype=type)
+
+    #Coupling                        to   from           from                    to
+    w_e_to_e = numpy.sum(numpy.dot(w[iE][:,iE],    numpy.dot(i_e, x1EQ[:,iE]) - numpy.dot(i_e, x1EQ[:,iE]).T), axis=1)
+    w_x0_to_e = numpy.sum(numpy.dot(w[iE][:, ix0], numpy.dot(i_e, x0) - numpy.dot(i_x0, x1EQ[:,iE]).T), axis=1)
+
+    w_e_to_x0 = numpy.sum(numpy.dot(w[ix0][:,iE],  numpy.dot(i_x0, x1EQ[:,iE]) - numpy.dot(i_e, x0).T), axis=1)
+    w_x0_to_x0 = numpy.sum(numpy.dot(w[ix0][:,ix0], numpy.dot(i_x0, x0) - numpy.dot(i_x0, x0).T), axis=1)
+
+    fun = numpy.array(x1EQ.shape)
+    #Known x1eq, unknown x0:
+    fun[iE] = fz_lin_calc(x1EQ[iE], x[iE], x0cr[iE], rx0[iE]) - zEQ[iE] \
+                                         - K[iE] * (w_e_to_e + w_x0_to_e)
+    # Known x0, unknown x1eq:
+    fun[ix0] = fz_lin_calc(x[ix0], x0, x0cr[ix0], rx0[ix0]) - zeq_2d_calc(x[ix0]-5.0/3, y0[ix0], Iext1[ix0]) \
+                                        - K[ix0] * (w_e_to_x0 + w_x0_to_x0)
+
+    return fun
+
+
+def x1eq_x0_hypo_optimize_jac(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w):
+
+    no_x0 = len(ix0)
+    no_e = len(iE)
+
+    n_regions = no_e + no_x0
+
+    type = x1EQ.dtype
+    i_x0 = numpy.ones((no_x0, 1), dtype=type)
+
+    jac_e_x0e = numpy.diag(- 4 * rx0[iE])
+    jac_e_x1o = -numpy.dot(i_x0, K[:,iE]) * w[iE][:,ix0]
+    jac_x0_x0e = numpy.zeros((no_x0,no_e),dtype = type)
+    x53 = x[ix0] - 5.0 / 3
+    jac_x0_x1o = numpy.diag(4 + 3 * x53 ** 2 + 4 * x53 + K[ix0] * numpy.sum(w[ix0][:,ix0], axis=1)) \
+                 - numpy.dot(i_x0, K[:, ix0]) * w[ix0][:, ix0]
+
+    jac = numpy.zeros((n_regions,n_regions), dtype=type)
+    jac[iE][:,iE] = jac_e_x0e
+    jac[iE][:, ix0] = jac_e_x1o
+    jac[ix0][:, iE] = jac_x0_x0e
+    jac[ix0][:, ix0] = jac_x0_x1o
+
+    return jac
+
+
+def x1eq_x0_hypo_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w):
+
+    xinit = numpy.zeros(x1EQ.shape, dtype = x1EQ.dtype)
+
+    #Set initial conditions for the optimization algorithm, by ignoring coupling
+    # fz = 4 * (x1 - r * x0 + x0cr) - z -coupling = 0
+    #x0init = x1 + x0cr -z/(4*rx0)
+    xinit[:,iE] = x1EQ[:, iE] + x0cr[:, iE] - zEQ[:, iE] / (4 * rx0[:, iE])
+    #x1eqinit = x0cr-rx0*x0 +z/4
+    xinit[:, ix0] = x0cr[:,ix0] - rx0[:,ix0]*x0 + zEQ[:,ix0]/4
+
+    #Solve:
+    sol = root(x1eq_x0_hypo_optimize_fun, xinit, args=(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w),
+               method='lm', jac=x1eq_x0_hypo_optimize_jac, tol=10**(-6), callback=None, options=None) #method='hybr'
+
+    if sol.success:
+        x1EQ[:,ix0] = sol.x[:,ix0]
+        return x1EQ
+    else:
+        raise ValueError(sol.message)
+
+
+
+def x1eq_x0_hypo_linTaylor(ix0,iE,x1EQ,zEQ,x0,x0cr,x1LIN,rx0,y0,Iext1,K,w):
+
+    no_x0 = len(ix0)
+    no_e = len(iE)
+
+    # The equilibria of the nodes of fixed epileptogenicity
+    x1_eq = x1EQ[:, iE]
+    z_eq = zEQ[:, iE]
 
     #Prepare linear system to solve:
 
@@ -86,16 +169,21 @@ def x1eq_x0_hypo_linTaylor(ix0,iE,x1EQ,x1_eq,z_eq,x0,x0cr,x1LIN,rx0,y0,Iext1,K,w
 
     return x1EQ
 
+
 #In all cases below, x1eq is already de-centered, i.e., x1eq - 5/3 -> x1eq
+
 
 def zeq_2d_calc(x1eq, y0, Iext1):
     return y0 + Iext1 -x1eq**3 - 2*x1eq**2
 
+
 def zeq_6d_calc(x1eq, y0, Iext1):
     return y0 + Iext1 -x1eq**3 + 3*x1eq**2
 
+
 def y1eq_calc(x1eq, y0, d=5.0):
     return y0 - d * x1eq ** 2
+
 
 def pop2eq_calc(x1eq, zeq, Iext2):
     n_regions = len(Iext2)
@@ -180,10 +268,11 @@ def x0cr_rx0_calc(y0, Iext1, epileptor_model="2d", zmode=numpy.array("lin")):
 def coupling_calc(x1, K, w):
     # Only difference coupling for the moment.
     # TODO: Extend for different coupling forms
-    n_regions = len(x1)
-    x11 = numpy.expand_dims(x1, 1)
-    i_n = numpy.ones((1, n_regions), dtype='f')
-    return K*numpy.sum(numpy.dot(w, numpy.dot(x11, i_n).T - numpy.dot(x11, i_n)), axis=1)
+    n_regions = x1.size
+    i_n = numpy.ones((n_regions,1), dtype='f')
+    # Coupling                         from                    to
+    return K*numpy.sum(numpy.dot(w, numpy.dot(i_n,x1) - numpy.dot(i_n,x1).T), axis=1)
+
 
 def x0_calc(x1, z, x0cr, rx0, coupl, zmode=numpy.array("lin")):
 
@@ -195,7 +284,7 @@ def x0_calc(x1, z, x0cr, rx0, coupl, zmode=numpy.array("lin")):
         raise ValueError('zmode is neither "lin" nor "sig"')
 
 
-def calc_equilibrium_point(epileptor_model,hypothesis):
+def calc_equilibrium_point(epileptor_model, hypothesis):
 
     #Get the x1 equilibria from the hypothesis:
     x1eq =  hypothesis.x1EQ

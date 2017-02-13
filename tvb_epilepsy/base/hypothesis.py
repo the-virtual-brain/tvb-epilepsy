@@ -6,7 +6,7 @@ It should contain everything for later configuring an Epileptor Model from this 
 
 """
 
-import numpy as np
+import numpy
 from collections import OrderedDict
 from tvb_epilepsy.base.equilibrium_computation import zeq_2d_calc, y1eq_calc, coupling_calc, x0_calc, x0cr_rx0_calc, \
                                                       x1eq_x0_hypo_linTaylor, x1eq_x0_hypo_optimize
@@ -43,7 +43,7 @@ class Hypothesis(object):
         self.n_regions = n_regions
         self.weights = normalized_weights
 
-        i = np.ones((1, self.n_regions), dtype=np.float32)
+        i = numpy.ones((1, self.n_regions), dtype=numpy.float32)
         self.K = k_def * i
         self.Iext1 = i_ext1_def * i
         self.y0 = y0_def * i
@@ -62,7 +62,7 @@ class Hypothesis(object):
         self.x0 = self._calculate_x0()
 
         # Region indices assumed to start the seizure
-        self.seizure_indices = np.array([], dtype=np.int32)
+        self.seizure_indices = numpy.array([], dtype=numpy.int32)
         self.lsa_ps = []
 
     def __repr__(self):
@@ -119,7 +119,7 @@ class Hypothesis(object):
 
     def _set_equilibria_x1(self, i=None):
         if i is None:
-            i = np.ones((1, self.n_regions), dtype=np.float32)
+            i = numpy.ones((1, self.n_regions), dtype=numpy.float32)
         return (self.E / 3.0) * i
         # return self.E[1, i] / 3.0
         # return ((self.E - 4.0) / 3.0) * i
@@ -132,8 +132,8 @@ class Hypothesis(object):
 
     def _calculate_coupling_at_equilibrium(self):
         return coupling_calc(self.x1EQ, self.K, self.weights)
-        #i = np.ones((1, self.n_regions), dtype=np.float32)
-        #return self.K * (np.expand_dims(np.sum(self.weights * ( np.dot(i.T, self.x1EQ) - np.dot(self.x1EQ.T, i)), axis=1), 1).T)
+        #i = numpy.ones((1, self.n_regions), dtype=numpy.float32)
+        #return self.K * (numpy.expand_dims(numpy.sum(self.weights * ( numpy.dot(i.T, self.x1EQ) - numpy.dot(self.x1EQ.T, i)), axis=1), 1).T)
 
     def _calculate_x0(self):
         return x0_calc(self.x1EQ, self.zEQ, self.x0cr, self.rx0, self.Ceq, zmode="lin")
@@ -169,29 +169,29 @@ class Hypothesis(object):
         #TODO: automatically choose the number of eigenvalue to sum via a cutting criterion
 
         self._check_hypothesis(seizure_indices)
-        i = np.ones((1, self.n_regions), dtype=np.float32)
+        i = numpy.ones((1, self.n_regions), dtype=numpy.float32)
         # The z derivative of the x1 = F(z) function
-        # dfz = (3.0 / 4.0 * np.sqrt(6 / (27.0 * (self.zEQ - self.y0 - self.Iext1 + 32)))) * i
-        dfz = (1.0 / np.sqrt(8 * (self.zEQ - self.y0 - self.Iext1) + 256.0 / 27.0)) * i
+        # dfz = (3.0 / 4.0 * numpy.sqrt(6 / (27.0 * (self.zEQ - self.y0 - self.Iext1 + 32)))) * i
+        dfz = (1.0 / numpy.sqrt(8 * (self.zEQ - self.y0 - self.Iext1) + 256.0 / 27.0)) * i
 
         # Jacobian: diagonal elements at first row
-        jacobian = np.diag((dfz * 4.0 + self.K * np.expand_dims(np.sum(self.weights, axis=1), 1).T).T[:, 0]) \
-            - np.dot(self.K.T, i) * np.dot(i.T, dfz) * (1 - np.eye(self.n_regions))
+        jacobian = numpy.diag((dfz * 4.0 + self.K * numpy.expand_dims(numpy.sum(self.weights, axis=1), 1).T).T[:, 0]) \
+            - numpy.dot(self.K.T, i) * numpy.dot(i.T, dfz) * (1 - numpy.eye(self.n_regions))
 
         # Perform eigenvalue decomposition
-        (eigvals, eigvects) = np.linalg.eig(jacobian)
+        (eigvals, eigvects) = numpy.linalg.eig(jacobian)
         
         # Sort eigenvalues in descending order... 
-        ind = np.argsort(eigvals, kind='mergesort')[::-1]
+        ind = numpy.argsort(eigvals, kind='mergesort')[::-1]
         self.lsa_eigvals = eigvals[ind]
         #...and eigenvectors accordingly
         self.lsa_eigvects = eigvects[:, ind]
         
         #Calculate the propagation strength index by summing the first n_seizure_nodes eigenvectors
-        self.lsa_ps = np.expand_dims(np.sum(np.abs(self.lsa_eigvects[:, :self.n_seizure_nodes]), axis=1), 1).T
+        self.lsa_ps = numpy.expand_dims(numpy.sum(numpy.abs(self.lsa_eigvects[:, :self.n_seizure_nodes]), axis=1), 1).T
         
         #Calculate the propagation strength index by summing all eigenvectors
-        self.lsa_ps_tot = np.expand_dims(np.sum(np.abs(self.lsa_eigvects), axis=1), 1).T
+        self.lsa_ps_tot = numpy.expand_dims(numpy.sum(numpy.abs(self.lsa_eigvects), axis=1), 1).T
 
 
     def _check_hypothesis(self, seizure_indices):
@@ -237,19 +237,18 @@ class Hypothesis(object):
         """
         # Create region indices:
         # All regions
-        ii = np.array(range(self.n_regions), dtype=np.int32)
+        ii = numpy.array(range(self.n_regions), dtype=numpy.int32)
         # All regions with an Epileptogenicity hypothesis:
-        iE = np.delete(ii, ix0)  # their indices
+        iE = numpy.delete(ii, ix0)  # their indices
 
-        # ...and the resulting equilibria
-        x1_eq = self.x1EQ[:, iE]
-        z_eq = self.zEQ[:, iE]
-
+        #Convert x0 to an array of (1,len(ix0)) shape
+        x0 = numpy.expand_dims(numpy.array(x0),1).T
+        
         if self.self.x1eq_mode=="linTaylor":
-            self.x1EQ = x1eq_x0_hypo_linTaylor(ix0, iE, self.x1EQ, x1_eq, z_eq, x0, self.x0cr, self.x1LIN, self.rx0,
+            self.x1EQ = x1eq_x0_hypo_linTaylor(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.x1LIN, self.rx0,
                                            self.y0, self.Iext1, self.K, self.weights)
         else:
-            self.x1EQ = x1eq_x0_hypo_optimize(ix0, iE, self.x1EQ, x1_eq, z_eq, x0, self.x0cr, self.rx0, self.y0,
+            self.x1EQ = x1eq_x0_hypo_optimize(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0, self.y0,
                                               self.Iext1, self.K, self.weights)
 
         self.zEQ = self._calculate_equilibria_z()
