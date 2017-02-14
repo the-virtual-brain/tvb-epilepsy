@@ -8,7 +8,6 @@ import numpy
 from scipy.optimize import root
 from sympy import symbols, exp, solve, lambdify
 from tvb_epilepsy.tvb_api.epileptor_models import *
-from tvb_epilepsy.tvb_api.simulator_tvb import *
 from tvb.simulator.models import Epileptor
 
 
@@ -174,11 +173,13 @@ def x1eq_x0_hypo_linTaylor(ix0,iE,x1EQ,zEQ,x0,x0cr,x1LIN,rx0,y0,Iext1,K,w):
 
 
 def zeq_2d_calc(x1eq, y0, Iext1):
-    return y0 + Iext1 -x1eq**3 - 2*x1eq**2
+    x1eq2 = x1eq ** 2
+    return y0 + Iext1 -x1eq * x1eq2 - 2 * x1eq2
 
 
 def zeq_6d_calc(x1eq, y0, Iext1):
-    return y0 + Iext1 -x1eq**3 + 3*x1eq**2
+    x1eq2 = x1eq**2
+    return y0 + Iext1 -x1eq * x1eq2 + 3 * x1eq2
 
 
 def y1eq_calc(x1eq, y0, d=5.0):
@@ -186,22 +187,25 @@ def y1eq_calc(x1eq, y0, d=5.0):
 
 
 def pop2eq_calc(x1eq, zeq, Iext2):
-    n_regions = len(Iext2)
+    shape = x1eq.shape
+    type = x1eq.dtype
     # g_eq = 0.1*x1eq (1)
     # y2eq = 0 (2)
-    y2eq = numpy.zeros((n_regions, 1))
+    y2eq = numpy.zeros(shape, dtype=type)
     # -x2eq**3 + x2eq -y2eq+2*g_eq-0.3*(zeq-3.5)+Iext2 =0=> (1),(2)
     # -x2eq**3 + x2eq +2*0.1*x1eq-0.3*(zeq-3.5)+Iext2 =0=>
     # p3        p1                   p0
     # -x2eq**3 + x2eq +0.2*x1eq-0.3*(zeq-3.5)+Iext2 =0
     p0 = 0.2 * x1eq - 0.3 * (zeq - 3.5) + Iext2
-    x2eq = numpy.zeros((n_regions, 1))
-    for i in range(n_regions):
-        x2eq[i, 0] = numpy.min(numpy.real(numpy.roots([-1.0, 0.0, 1.0, p0[i, 0]])))
-    return (x2eq, y2eq)
+    x2eq = numpy.zeros(shape, dtype=type)
+    for i in range(shape[1]):
+        x2eq[0 ,i] = numpy.min(numpy.real(numpy.roots([-1.0, 0.0, 1.0, p0[0 ,i]])))
+    return x2eq, y2eq
 
 
 # def pop2eq_calc(n_regions,x1eq,zeq,Iext2):
+#    shape = x1eq.shape
+#    type = x1eq.dtype
 #    #g_eq = 0.1*x1eq (1)
 #    #y2eq = 6*(x2eq+0.25)*x1eq (2)
 #    #-x2eq**3 + x2eq -y2eq+2*g_eq-0.3*(zeq-3.5)+Iext2 =0=> (1),(2)
@@ -211,12 +215,12 @@ def pop2eq_calc(x1eq, zeq, Iext2):
 #    #-x2eq**3 + (1.0-6*x1eq)*x2eq -1.3*x1eq -0.3*(zeq-3.5) +Iext2 =0
 #    p0 = -1.3*x1eq-0.3*(zeq-3.5)+Iext2
 #    p1 = 1.0-6*x1eq
-#    x2eq = numpy.zeros((n_regions,1))
-#    for i in range(n_regions):
-#        x2eq[i,0] = numpy.min( numpy.real( numpy.roots([-1.0, 0.0, p1[i,0], p0[i,0] ]) ) )
+#    x2eq = numpy.zeros(shape, dtype=type)
+#    for i in range(shape[1]):
+#        x2eq[0 ,i] = numpy.min( numpy.real( numpy.roots([-1.0, 0.0, p1[i,0], p0[i,0] ]) ) )
 #    #(2):
 #    y2eq = 6*(x2eq+0.25)*x1eq
-#    return (x2eq, y2eq)
+#    return x2eq, y2eq
 
 def geq_calc(x1eq):
     return 0.1 * x1eq
@@ -239,7 +243,7 @@ def x0cr_rx0_calc(y0, Iext1, epileptor_model="2d", zmode=numpy.array("lin")):
     z = y01 - fx1 + I1
 
     #Define the fz expression...
-    if zmode=='lin':
+    if zmode == 'lin':
         #...for linear...
         fz = 4 * (x1 - r * x0 + x0cr ) - z
     elif zmode == 'sig':
@@ -271,14 +275,14 @@ def coupling_calc(x1, K, w):
     n_regions = x1.size
     i_n = numpy.ones((n_regions,1), dtype='f')
     # Coupling                         from                    to
-    return K*numpy.sum(numpy.dot(w, numpy.dot(i_n,x1) - numpy.dot(i_n,x1).T), axis=1)
+    return K*numpy.sum(numpy.dot(w, numpy.dot(i_n, x1) - numpy.dot(i_n, x1).T), axis=1)
 
 
 def x0_calc(x1, z, x0cr, rx0, coupl, zmode=numpy.array("lin")):
 
-    if zmode=='lin':
+    if zmode == 'lin':
         return x1 + x0cr - (z+coupl) / (4 * rx0)
-    elif zmode=='sig':
+    elif zmode == 'sig':
         return 3/(1+numpy.exp(-10*(x1-7.0/6))) + x0cr - (z + coupl) / (4 * rx0)
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
@@ -291,24 +295,31 @@ def calc_equilibrium_point(epileptor_model, hypothesis):
     #De-center them:
     x1eq53 = x1eq - 5.0 / 3.0
     if isinstance(epileptor_model,EpileptorDP2D):
-        if epileptor_model.zmode=='sig':
+        if epileptor_model.zmode == 'sig':
             #2D approximation, Proix et al 2014
-            zeq = zeq_2d_calc(x1eq53, epileptor_model.y0, epileptor_model.Iext1)
-        return (x1eq,zeq)
+            zeq = zeq_2d_calc(x1eq53, epileptor_model.yc.T, epileptor_model.Iext1.T)
+        else:
+            zeq = hypothesis.zEQ
+        return x1eq, zeq
     else:
         #all other >=6D models
-        zeq = zeq_6d_calc(x1eq53, epileptor_model.y0, epileptor_model.Iext1)
-        y1eq=y1eq_calc(x1eq53, epileptor_model.y0)
-        (x2eq,y2eq)=pop2eq_calc(x1eq53, zeq, epileptor_model.Iext2)
-        geq=geq_calc(x1eq)
+        if isinstance(epileptor_model, Epileptor):
+            #tvb
+            zeq = zeq_6d_calc(x1eq53, epileptor_model.c.T, epileptor_model.Iext.T)
+            y1eq = y1eq_calc(x1eq53, epileptor_model.c.T)
+        else:
+            zeq = zeq_6d_calc(x1eq53, epileptor_model.yc.T, epileptor_model.Iext1.T)
+            y1eq = y1eq_calc(x1eq53, epileptor_model.yc.T)
+        (x2eq, y2eq) = pop2eq_calc(x1eq53, zeq, epileptor_model.Iext2.T)
+        geq = geq_calc(x1eq)
         if isinstance(epileptor_model, EpileptorDPrealistic):
             #the 11D "realistic" simulations model
-            return (x1eq, y1eq, zeq, x2eq, y2eq, epileptor_model.x0, epileptor_model.slope,
-                    epileptor_model.Iext1, geq, epileptor_model.Iext2, epileptor_model.K)
+            return x1eq, y1eq, zeq, x2eq, y2eq, geq, epileptor_model.x0.T, epileptor_model.slope.T,   \
+                    epileptor_model.Iext1.T, epileptor_model.Iext2.T, epileptor_model.K.T
         elif isinstance(epileptor_model, Epileptor):
             #the original 6D TVB model with de-centered x1
-            return (x1eq53, y1eq, zeq, x2eq, y2eq, geq)
+            return x1eq53, y1eq, zeq, x2eq, y2eq, geq
         else:
             #the default 6D model we use for tvb-epilepsy
-            return (x1eq, y1eq, zeq, x2eq, y2eq, geq)
+            return x1eq, y1eq, zeq, x2eq, y2eq, geq
 

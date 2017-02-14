@@ -863,7 +863,7 @@ class EpileptorDP2D(Model):
 #        order=-1)
 
     yc = arrays.FloatArray(
-        label="yc",
+        label="y0",
         default=numpy.array([1]),
         doc="Additive coefficient for the second state variable",
         order=-1)
@@ -875,10 +875,10 @@ class EpileptorDP2D(Model):
 #        order=-1)
 
     tau0 = arrays.FloatArray(
-        label="r",
+        label="tau0",
         range=basic.Range(lo=100.0, hi=5000, step=10),
         default=numpy.array([2857.0]),
-        doc="Temporal scaling in the third state variable",
+        doc="Temporal scaling in the z state variable",
         order=4)
 
 #    s = arrays.FloatArray(
@@ -1022,15 +1022,15 @@ class EpileptorDP2D(Model):
         ydot[0] = self.tau1*(self.yc - y[1] + Iext1 + self.Kvf*c_pop1 - where(y[0] < c53, if_ydot0, else_ydot0) * x1)
 
         # energy
-        if_ydot2 = - 0.1 * y[2] ** 7
+        if_ydot2 = - 0.1 * y[1] ** 7
         else_ydot2 = 0
         if self.zmode=='lin':
             fz = 4*(y[0] - self.r * self.x0 + self.x0cr) + where(y[1] < 0., if_ydot2, else_ydot2)
         elif self.zmode=='sig':
-            fz = 3 / (1 + numpy.exp(-10*(y[0] - c76)) ) - self.r * self.x0 + self.x0cr
+            fz = 3 / (1 + numpy.exp(-10*(y[0] - c76))) - self.r * self.x0 + self.x0cr
         else:
             raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
-        ydot[1] = self.tau1*(( fz - y[1] + self.K*c_pop1)/self.tau0)
+        ydot[1] = self.tau1*( fz - y[1] + self.K*c_pop1)/self.tau0
 
 
         return ydot

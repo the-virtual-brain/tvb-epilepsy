@@ -13,8 +13,10 @@ from tvb_epilepsy.base.utils import initialize_logger, filter_data, calculate_pr
 from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_timeseries, plot_raster
 from tvb_epilepsy.tvb_api.readers_tvb import TVBReader
 from tvb_epilepsy.tvb_api.simulator_tvb import *
+from tvb_epilepsy.tvb_api.epileptor_models import *
 from tvb_epilepsy.custom.readers_episense import EpisenseReader
 from tvb.simulator import noise
+from tvb.simulator.models.epileptor import *
 from tvb.datatypes import equations
 
 SHOW_FLAG=False
@@ -164,17 +166,31 @@ if __name__ == "__main__":
 #------------------------------Simulation--------------------------------------
     
     # Now Simulate
-    # Choosing the model:           epileptor model,      history
-    #simulator_instance = SimulatorTVB(build_ep_6sv_model, prepare_for_6sv_model)
-    # simulator_instance = SimulatorTVB(build_ep_2sv_model, prepare_for_2sv_model)
-    simulator_instance = SimulatorTVB(build_ep_11sv_model, prepare_for_11sv_model)
-    # simulator_instance = SimulatorTVB(build_tvb_model, prepare_for_tvb_model)
+    # Choosing the model:
+    model='2D' #'6D', '2D', '11D', 'tvb'
+    if model == '6D':
+        #                                        epileptor model,      history
+        simulator_instance = SimulatorTVB(build_ep_6sv_model, prepare_for_6sv_model)
+        nvar = 6
+    elif model == '2D':
+        simulator_instance = SimulatorTVB(build_ep_2sv_model, prepare_for_2sv_model)
+        nvar = 2
+    elif model == '11D':
+        simulator_instance = SimulatorTVB(build_ep_11sv_model, prepare_for_11sv_model)
+        nvar = 11
+    elif model == 'tvb':
+        simulator_instance = SimulatorTVB(build_tvb_model, prepare_for_tvb_model)
+        nvar = 6
 
-    #Monitor adjusted to the model    
-    nvar = 11
-    monitor_expr=["y3-y0"]
-    for i in range(nvar):
-        monitor_expr.append("y"+str(i))
+    #Monitor adjusted to the model
+    if model != '2D':
+        monitor_expr = ["y3-y0"]
+        for i in range(nvar):
+            monitor_expr.append("y" + str(i))
+    else:
+        monitor_expr = []
+        for i in range(nvar):
+            monitor_expr.append("y" + str(i))
         
     #Time scales:    
     fs = 2*1024.0
@@ -183,11 +199,16 @@ if __name__ == "__main__":
     fsSEEG = fsAVG
     
     #Noise configuration
-    #                                 x1  y1   z     x2   y2   g 
-    #noise_intensity=0.1**numpy.array([0., 0., 5e-5, 0.0, 5e-5, 0.])    
-    noise_intensity=np.array([0., 0., 1e-6, 0.0, 1e-6, 0., 
-                                          #x0   slope Iext1 Iext2 K 
-                                          1e-7, 1e-2, 1e-7, 1e-2, 1e-8])
+
+    if model == '11D':
+        #                             x1  y1   z     x2   y2   g   x0   slope Iext1 Iext2  K
+        noise_intensity=0.1*np.array([0., 0., 1e-6, 0.0, 1e-6, 0., 1e-7, 1e-2, 1e-7, 1e-2, 1e-8])
+    elif model == '2D':
+        #                                     x1   z
+        noise_intensity = 0.1 ** numpy.array([0., 5e-5])
+    else:
+        #                                     x1  y1   z     x2   y2   g
+        noise_intensity = 0.1 ** numpy.array([0., 0., 5e-5, 0.0, 5e-5, 0.])
     #Preconfigured noise                                     
     #Colored noise:
     dtN = 1000.0/fsAVG
@@ -206,53 +227,65 @@ if __name__ == "__main__":
                                       monitor_expr=monitor_expr) #noise_intensity=noise_intensity, 
         sim= simulator_instance.config_simulation(hyp, head, settings)
         #Here make all changes you want to the model and simulator
-        sim.model.pmode=np.array("z") #"z","g","z*g", default="const"
         sim.model.slope = 0.25
-        sim.model.tau0 = 10000
-        sim.model.tau1 = 0.25*sim.model.tau1 
+        if isinstance(sim.model,Epileptor):
+            sim.model.tt = 0.25*sim.model.tt
+            sim.model.r = 1.0/10000
+        else:
+            sim.model.tau0 = 10000
+            sim.model.tau1 = 0.25*sim.model.tau1
+        if isinstance(sim.model, EpileptorDPrealistic):
+            sim.model.pmode = np.array("z")  # "z","g","z*g", default="const"
         #sim.model.zmode = np.array("sig")
         ttavg, tavg_data = simulator_instance.launch_simulation(sim,hyp)
         logger.info("Simulated signal return shape: " + str(tavg_data.shape))
         logger.info("Time: " + str(ttavg[0]) + " - " + str(ttavg[-1]))
         logger.info("Values: " + str(tavg_data.min()) + " - " + str(tavg_data.max()))
-        lfp = np.array(tavg_data[:, 0, :, 0],dtype='float32')
-        z = np.array(tavg_data[:, 3, :, 0],dtype='float32')
-        x1 = np.array(tavg_data[:, 1, :, 0],dtype='float32')
-        y1 = np.array(tavg_data[:, 2, :, 0],dtype='float32')
-        x2 = np.array(tavg_data[:, 4, :, 0],dtype='float32')
-        y2 = np.array(tavg_data[:, 5, :, 0],dtype='float32')
-        g = np.array(tavg_data[:, 6, :, 0],dtype='float32')
-        x0ts=np.array(tavg_data[:, 7, :, 0],dtype='float32')
-        slopeTS=np.array(tavg_data[:, 8, :, 0],dtype='float32')
-        Iext1ts=np.array(tavg_data[:, 9, :, 0],dtype='float32')
-        Iext2ts=np.array(tavg_data[:, 10, :, 0],dtype='float32')
-        Kts=np.array(tavg_data[:, 11, :, 0],dtype='float32')
+        if ~isinstance(sim.model, EpileptorDP2D):
+            lfp = np.array(tavg_data[:, 0, :, 0], dtype='float32')
+            z = np.array(tavg_data[:, 3, :, 0], dtype='float32')
+            x1 = np.array(tavg_data[:, 1, :, 0], dtype='float32')
+            y1 = np.array(tavg_data[:, 2, :, 0],dtype='float32')
+            x2 = np.array(tavg_data[:, 4, :, 0],dtype='float32')
+            y2 = np.array(tavg_data[:, 5, :, 0],dtype='float32')
+            g = np.array(tavg_data[:, 6, :, 0],dtype='float32')
+        else:
+            lfp = np.array(tavg_data[:, 0, :, 0], dtype='float32')
+            z = np.array(tavg_data[:, 1, :, 0], dtype='float32')
+        if isinstance(sim.model,EpileptorDPrealistic):
+            x0ts=np.array(tavg_data[:, 7, :, 0],dtype='float32')
+            slopeTS=np.array(tavg_data[:, 8, :, 0],dtype='float32')
+            Iext1ts=np.array(tavg_data[:, 9, :, 0],dtype='float32')
+            Iext2ts=np.array(tavg_data[:, 10, :, 0],dtype='float32')
+            Kts=np.array(tavg_data[:, 11, :, 0],dtype='float32')
         hpf = np.empty((ttavg.size,hyp.n_regions)).astype(np.float32)
         for i in range(hyp.n_regions):
             hpf[:,i] = filter_data(lfp[:,i], 10, 250, fsAVG)#.astype(np.float32) #.transpose()
         hpf=np.array(hpf,dtype='float32')   
         ttavg = np.array(ttavg,dtype='float32')
         #hpf = filter_data(lfp, fsAVG/30, fsAVG/3, fsAVG)
-        plot_timeseries(ttavg, {'LFP = x2(t) - x1(t)': lfp, 'z(t)': z, 'HPF LFP': hpf},
+        plot_timeseries(ttavg, {'LFP': lfp, 'z(t)': z, 'HPF LFP': hpf},
                         seizure_indices, title=" Simulated TAVG for " + hyp.name,
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES, 
                         labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
-        plot_timeseries(ttavg, {'x1(t)': x1, 'y1(t)': y1, 'z(t)': z},
+        if ~isinstance(sim.model, EpileptorDP2D):
+            plot_timeseries(ttavg, {'x1(t)': x1, 'y1(t)': y1, 'z(t)': z},
                         seizure_indices, title=" Simulated pop1-z for " + hyp.name,
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES, 
                         labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
-        plot_timeseries(ttavg, {'x2(t)': x2, 'y2(t)': y2, 'g(t)': g},seizure_indices, 
+            plot_timeseries(ttavg, {'x2(t)': x2, 'y2(t)': y2, 'g(t)': g},seizure_indices,
                         title=" Simulated pop2-g for " + hyp.name,
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES, 
-                        labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE) 
-        plot_timeseries(ttavg, {'1/(1+exp(-10(z-3.03))': 1/(1+np.exp(-10*(z-3.03))), 'slope': slopeTS, 'Iext2': Iext2ts},
+                        labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+        if isinstance(sim.model, EpileptorDPrealistic):
+            plot_timeseries(ttavg, {'1/(1+exp(-10(z-3.03))': 1/(1+np.exp(-10*(z-3.03))), 'slope': slopeTS, 'Iext2': Iext2ts},
                         seizure_indices, title=" Simulated controlled parameters for " + hyp.name,
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES, 
-                        labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)               
-        plot_timeseries(ttavg, {'x0': x0ts, 'Iext1': Iext1ts,'K': Kts},
+                        labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+            plot_timeseries(ttavg, {'x0': x0ts, 'Iext1': Iext1ts,'K': Kts},
                         seizure_indices, title=" Simulated parameters for " + hyp.name,
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES, 
-                        labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)                  
+                        labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
                        
         #for i in range(len(projections)):
         i=1
@@ -267,21 +300,31 @@ if __name__ == "__main__":
         plot_raster(ttavg[100:], {'hpf': hpf[100:,:]}, seizure_indices,
                         title=" Simulated hfp"+str(i)+" rasterplot for " + hyp.name,offset=10.0,
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES, 
-                        labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)                
-        
-        savemat(os.path.join(FOLDER_RES, hyp.name+"_ts.mat"),{'lfp':lfp,
-                                                              'seeg':seeg,
-                                                              'hpf':hpf,
-                                                              'z':z,
-                                                              'x1':x1,
-                                                              'x2':x2,
-                                                              'y1':y1,
-                                                              'y2':y2,
-                                                              'g':g,
-                                                              'x0ts':x0ts,
-                                                              'slopeTS':slopeTS,
-                                                              'Iext1ts':Iext1ts,
-                                                              'Iext2ts':Iext2ts,
-                                                              'Kts':Kts,
-                                                              'time_in_ms':ttavg})
-                                                              
+                        labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+        if isinstance(sim.model, EpileptorDPrealistic):
+            savemat(os.path.join(FOLDER_RES, hyp.name+"_ts.mat"),{'lfp':lfp,
+                                                                  'seeg': seeg,
+                                                                  'hpf': hpf,
+                                                                  'z': z,
+                                                                  'x1': x1,
+                                                                  'x2': x2,
+                                                                  'y1': y1,
+                                                                  'y2': y2,
+                                                                  'g': g,
+                                                                  'x0ts': x0ts,
+                                                                  'slopeTS': slopeTS,
+                                                                  'Iext1ts': Iext1ts,
+                                                                  'Iext2ts': Iext2ts,
+                                                                  'Kts': Kts,
+                                                                  'time_in_ms': ttavg})
+        else:
+            savemat(os.path.join(FOLDER_RES, hyp.name + "_ts.mat"), {'lfp': lfp,
+                                                                     'seeg': seeg,
+                                                                     'hpf': hpf,
+                                                                     'z': z,
+                                                                     'x1': x1,
+                                                                     'x2': x2,
+                                                                     'y1': y1,
+                                                                     'y2': y2,
+                                                                     'g': g,
+                                                                     'time_in_ms': ttavg})

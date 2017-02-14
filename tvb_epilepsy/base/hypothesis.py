@@ -58,7 +58,7 @@ class Hypothesis(object):
         self.x1eq_mode = x1eq_mode
         self.x1EQ = self._set_equilibria_x1(i)
         self.zEQ = self._calculate_equilibria_z()
-        self.Ceq = self._calculate_coupling_at_equilibrium(i, normalized_weights)
+        self.Ceq = self._calculate_coupling_at_equilibrium()
         self.x0 = self._calculate_x0()
 
         # Region indices assumed to start the seizure
@@ -126,7 +126,7 @@ class Hypothesis(object):
 
     def _calculate_equilibria_z(self):
         # y0 + Iext1 - x1eq ** 3 + 3.0 * x1eq ** 2 - 5.0 * x1eq/3.0 -25.0/27.0
-        return zeq_2d_calc(self.x1EQ, self.y0, self.Iext1)
+        return zeq_2d_calc(self.x1EQ-5.0/3, self.y0, self.Iext1)
         #non centered x1:
         # return self.y0 + self.Iext1 - self.x1EQ ** 3 - 2.0 * self.x1EQ ** 2
 
@@ -142,10 +142,6 @@ class Hypothesis(object):
 
     def _calculate_e(self):
         return 3.0 * self.x1EQ
-
-    def get_yeq(self):
-        return y1eq_calc(self.x1EQ)
-
 
     def _update_parameters(self, seizure_indices):
         """

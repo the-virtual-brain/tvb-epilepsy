@@ -68,7 +68,7 @@ class SimulatorTVB(ABCSimulator):
 ###
 
 
-def build_tvb_model(hypothesis,variables_of_interest=["y3 - y0", "y2"]):
+def build_tvb_model(hypothesis,variables_of_interest=["y3 - y0", "y2"], zmode="lin"):
     x0_transformed = _rescale_x0(hypothesis.x0, hypothesis.rx0, hypothesis.x0cr)
     model_instance = models.Epileptor(x0=x0_transformed,
                                       Iext=hypothesis.Iext1, 
@@ -91,7 +91,8 @@ def _rescale_x0(x0_orig, r, x0cr):
 def prepare_for_tvb_model(hypothesis, model, history_length):
     #Set default initial conditions right on the resting equilibrium point of the model...
     #...after computing the equilibrium point (and correct it for zeq, and for x1eq for original tvb model) for a >=6D model
-    initial_conditions = numpy.array(calc_equilibrium_point(model, hypothesis))
+    (x1EQ, y1EQ, zEQ, x2EQ, y2EQ, gEQ) = calc_equilibrium_point(model, hypothesis)
+    initial_conditions = numpy.expand_dims(numpy.r_[x1EQ, y1EQ, zEQ, x2EQ, y2EQ, gEQ],2)
     initial_conditions = numpy.tile(initial_conditions, (history_length, 1, 1, 1))
     return initial_conditions
 
@@ -126,7 +127,8 @@ def build_ep_2sv_model(hypothesis, variables_of_interest=["y0", "y1"], zmode=num
 def prepare_for_2sv_model(hypothesis, model, history_length):
     # Set default initial conditions right on the resting equilibrium point of the model...
     # ...after computing it
-    initial_conditions = numpy.array(calc_equilibrium_point(model, hypothesis))
+    (x1EQ, zEQ) = calc_equilibrium_point(model, hypothesis)
+    initial_conditions = numpy.expand_dims(numpy.r_[x1EQ, zEQ],2)
     initial_conditions = numpy.tile(initial_conditions, (history_length, 1, 1, 1))
     return initial_conditions
 
@@ -156,7 +158,8 @@ def build_ep_6sv_model(hypothesis,variables_of_interest=["y3 - y0", "y2"],zmode=
 def prepare_for_6sv_model(hypothesis, model, history_length):
     # Set default initial conditions right on the resting equilibrium point of the model...
     # ...after computing the equilibrium point (and correct it for zeql for a >=6D model
-    initial_conditions = numpy.array(calc_equilibrium_point(model, hypothesis))
+    (x1EQ, y1EQ, zEQ, x2EQ, y2EQ, gEQ) = calc_equilibrium_point(model, hypothesis)
+    initial_conditions = numpy.expand_dims(numpy.r_[x1EQ, y1EQ, zEQ, x2EQ, y2EQ, gEQ],2)
     initial_conditions = numpy.tile(initial_conditions, (history_length, 1, 1, 1))
     return initial_conditions
 
@@ -166,7 +169,7 @@ def prepare_for_6sv_model(hypothesis, model, history_length):
 ###
 
 
-def build_ep_11sv_model(hypothesis,variables_of_interest=["y3 - y0", "y2"],zmode=numpy.array("lin")):
+def build_ep_11sv_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmode=numpy.array("lin")):
     # Correct Ceq, x0cr, rx0, zeq and x0 for >=6D model
     ceq = coupling_calc(hypothesis.x1EQ, hypothesis.K, hypothesis.weights)
     (x0cr, r) = x0cr_rx0_calc(hypothesis.y0, hypothesis.Iext1, epileptor_model="11d", zmode=zmode)
@@ -187,15 +190,15 @@ def prepare_for_11sv_model(hypothesis, model, history_length):
     # Set default initial conditions right on the resting equilibrium point of the model...
     # ...after computing the equilibrium point (and correct it for zeql for a >=6D model
     (x1EQ, y1EQ, zEQ, x2EQ, y2EQ, gEQ,  \
-                                   x0o, slope0, Iext1o, Iext2o, Ko)=calc_equilibrium_point(model, hypothesis)
+                                   x0o, slope0, Iext1, Iext2o, K) = calc_equilibrium_point(model, hypothesis)
     #-------------------The lines below are for a specific "realistic" demo simulation:---------------------------------
-    x0o = 0.0** numpy.ones((hypothesis.n_regions,1)) # hypothesis.x0.T
-    slope0 = 1.0 * numpy.ones((hypothesis.n_regions,1))#model.slope * numpy.ones((hypothesis.n_regions,1))
-    Iext1o = hypothesis.Iext1.T
-    Iext2o = 0.0 * numpy.ones((hypothesis.n_regions,1))#model.Iext2.T * numpy.ones((hypothesis.n_regions,1))
-    Ko = hypothesis.K.T
+    shape = x1EQ.shape
+    type = x1EQ.dtype
+    x0o = 0.0** numpy.ones(shape,dtype=type) # hypothesis.x0.T
+    slope0 = 1.0 * numpy.ones((1,hypothesis.n_regions))#model.slope * numpy.ones((hypothesis.n_regions,1))
+    Iext2o = 0.0 * numpy.ones((1,hypothesis.n_regions))#model.Iext2.T * numpy.ones((hypothesis.n_regions,1))
     # ------------------------------------------------------------------------------------------------------------------
-    initial_conditions = numpy.array((x1EQ, y1EQ, zEQ, x2EQ, y2EQ, gEQ, x0o, slope0, Iext1o, Iext2o,Ko))
+    initial_conditions = numpy.expand_dims(numpy.r_[x1EQ, y1EQ, zEQ, x2EQ, y2EQ, gEQ, x0o, slope0, Iext1, Iext2o, K],2)
     initial_conditions = numpy.tile(initial_conditions, (history_length, 1, 1, 1))
     return initial_conditions
 
