@@ -44,6 +44,15 @@ SAVE_FLAG = True
 SHOW_FLAG = False
 MOUSEHOOVER = False
 
+# Default model parameters
+X0_DEF = 0.0
+E_DEF = 0.0
+K_DEF = 1.0
+I_EXT1_DEF = 3.1
+Y0_DEF = 1.0
+X1_DEF = -5.0 / 3.0
+X1_EQ_CR_DEF = -4.0 / 3.0
+
 # Simulation and data read folder amd flags:
 MODEL = '6v'
 SIMULATION_MODE = 'tvb'  # 'ep' or 'tvb

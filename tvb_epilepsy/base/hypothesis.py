@@ -8,19 +8,12 @@ It should contain everything for later configuring an Epileptor Model from this 
 
 import numpy
 from collections import OrderedDict
+from tvb_epilepsy.base.constants import X0_DEF, E_DEF, K_DEF, I_EXT1_DEF, Y0_DEF, X1_DEF, X1_EQ_CR_DEF
 from tvb_epilepsy.base.equilibrium_computation import zeq_2d_calc, coupling_calc, x0_calc, x0cr_rx0_calc, \
-                                                      x1eq_x0_hypo_linTaylor, x1eq_x0_hypo_optimize
+                                                      x1eq_x0_hypo_linTaylor, x1eq_x0_hypo_optimize, x1_lin_def
 from tvb_epilepsy.base.utils import reg_dict, formal_repr, vector2scalar
 
 
-# Default model parameters
-X0_DEF = 0.0
-E_DEF = 0.0
-K_DEF = 1.0
-I_EXT1_DEF = 3.1
-Y0_DEF = 1.0
-X1_DEF = -5.0 / 3.0
-X1_EQ_CR_DEF = -4.0 / 3.0
 
 #Currently we assume only difference coupling (permittivity coupling following Proix et al 2014
 #TODO: to generalize for different coupling functions
@@ -48,6 +41,9 @@ class Hypothesis(object):
         self.x1EQcr = x1_eq_cr_def
         self.E = e_def * i
 
+        self.x1LIN = x1_lin_def(X1_DEF, X1_EQ_CR_DEF, n_regions)
+        self.x1SQ = X1_EQ_CR_DEF
+
         (self.x0cr, self.rx0)= self._calculate_critical_x0_scaling()
         self.x1eq_mode = x1eq_mode
         self.x1EQ = self._set_equilibria_x1(i)
@@ -74,7 +70,7 @@ class Hypothesis(object):
              "12. weights for seizure nodes": self.weights_for_seizure_nodes,
              "13. x1EQcr": vector2scalar(self.x1EQcr),
              "14. x1LIN": vector2scalar(self.x1LIN),
-             "15. x11SQ": vector2scalar(self.x1SQ),
+             "15. x1SQ": vector2scalar(self.x1SQ),
              "16. x0cr": vector2scalar(self.x0cr),
              "17. rx0": vector2scalar(self.rx0),
              "18. x1eq_mode": self.x1eq_mode}

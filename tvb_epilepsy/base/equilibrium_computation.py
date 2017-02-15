@@ -7,8 +7,8 @@ Module to compute the resting equilibrium point of a Virtual Epileptic Patient m
 import numpy
 from scipy.optimize import root
 from sympy import symbols, exp, solve, lambdify
+from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF
 from tvb_epilepsy.tvb_api.epileptor_models import *
-from tvb_epilepsy.base.hypothesis import X1_EQ_CR_DEF, X1_DEF
 from tvb.simulator.models import Epileptor
 
 

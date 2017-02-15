@@ -20,7 +20,6 @@ class EpileptorDP(Model):
     The Epileptor is a composite neural mass model of six dimensions which
     has been crafted to model the phenomenology of epileptic seizures.
     (see [Jirsaetal_2014]_). 
-    ->x1 is shifted by the substitution x -> x-5/3
     ->x0 parameters are shifted for the bifurcation
       to be at x0=1, where x0>1 is the supercritical region.
     ->there is a choice for linear or sigmoidal z dynamics (see [Proixetal_2014]_)
@@ -77,29 +76,29 @@ class EpileptorDP(Model):
 
         .. math::
             \dot{x_{1}} &=& y_{1} - f_{1}(x_{1}, x_{2}) - z + I_{ext1} \\
-            \dot{y_{1}} &=& yc - d (x_{1} -5/3)^{2} - y{1} \\
+            \dot{y_{1}} &=& yc - d x_{1}^{2} - y{1} \\
             \dot{z} &=&
             \begin{cases}
-            (f_z(x_{1}) - z-0.1 z^{7})/tau0 & \text{if } x<5/3 \\
-            (f_z(x_{1}) - z)/tau0           & \text{if } x \geq 5/3
+            (f_z(x_{1}) - z-0.1 z^{7})/tau0 & \text{if } x<0 \\
+            (f_z(x_{1}) - z)/tau0           & \text{if } x \geq 0
             \end{cases} \\
             \dot{x_{2}} &=& -y_{2} + x_{2} - x_{2}^{3} + I_{ext2} + 0.002 g - 0.3 (z-3.5) \\
             \dot{y_{2}} &=& 1 / \tau2 (-y_{2} + f_{2}(x_{2}))\\
-            \dot{g} &=& -0.01 (g - 0.1 ( x_{1} -5/3 ) )
+            \dot{g} &=& -0.01 (g - 0.1 x_{1} )
 
     where:
         .. math::
             f_{1}(x_{1}, x_{2}) =
             \begin{cases}
-            a ( x_{1} -5/3 )^{3} - b ( x_{1} -5/3 )^2 & \text{if } x_{1} <5/3\\
-            ( x_{2} - 0.6(z-4)^2 -slope ) ( x_{1} - 5/3 ) &\text{if }x_{1} \geq 5/3
+            a x_{1}^{3} - b x_{1}^2 & \text{if } x_{1} <0\\
+            ( x_{2} - 0.6(z-4)^2 -slope ) x_{1}  &\text{if }x_{1} \geq 0
             \end{cases}
 
         .. math::
             f_z(x_{1})  =
             \begin{cases}
             4 * (x_{1} - r_{x0}*x0 + x0_{cr}) & \text{linear} \\
-            \frac{3}{1+e^{-10*(x_{1}-7/6)}} - r_{x0}*x0 + x0_{cr} & \text{sigmoidal} \\
+            \frac{3}{1+e^{-10*(x_{1}+0.5)}} - r_{x0}*x0 + x0_{cr} & \text{sigmoidal} \\
             \end{cases}
     and:
 
@@ -135,7 +134,7 @@ class EpileptorDP(Model):
     yc = arrays.FloatArray(
         label="yc",
         default=numpy.array([1]),
-        doc="Additive coefficient for the first state variable",
+        doc="Additive coefficient for the second state variable",
         order=-1)
 
 #    d = arrays.FloatArray(
@@ -167,14 +166,14 @@ class EpileptorDP(Model):
     x0cr = arrays.FloatArray(
         label="x0cr",
         range=basic.Range(lo=-1.0, hi=1.0, step=0.1),
-        default=numpy.array([857.0/1080.0]),
+        default=numpy.array([5.93240740740741]),
         doc="Critical excitability parameter",
         order=-1)
 
     r = arrays.FloatArray(
         label="r",
         range=basic.Range(lo=0.0, hi=1.0, step=0.1),
-        default=numpy.array([43.0/108.0]),
+        default=numpy.array([1.64814814814815]),
         doc="Excitability parameter scaling",
         order=-1)
 
@@ -235,9 +234,9 @@ class EpileptorDP(Model):
 
     state_variable_range = basic.Dict(
         label="State variable ranges [lo, hi]",
-        default={"y0": numpy.array([-1., 3.]),
+        default={"y0": numpy.array([-2., 2.]),
                  "y1": numpy.array([-20., 2.]),
-                 "y2": numpy.array([2.0, 5.0]),
+                 "y2": numpy.array([2.0, 20.0]),
                  "y3": numpy.array([-2., 0.]),
                  "y4": numpy.array([0., 2.]),
                  "y5": numpy.array([-1., 1.])},
@@ -275,29 +274,29 @@ class EpileptorDP(Model):
 
             .. math::
             \dot{y_{0}} &=& y_{1} - f_{1}(y_{0}, y_{3}) - y_{2} + I_{ext1} \\
-            \dot{y_{1}} &=& yc - d (y_{0} -5/3)^{2} - y{1} \\
+            \dot{y_{1}} &=& yc - d y_{0}^{2} - y{1} \\
             \dot{y_{2}} &=&
             \begin{cases}
-            (f_z(y_{0}) - y_{2}-0.1 y_{2}^{7})/tau0 & \text{if } y_{0}<5/3 \\
-            (f_z(y_{0}) - y_{2})/tau0           & \text{if } y_{0} \geq 5/3
+            (f_z(y_{0}) - y_{2}-0.1 y_{2}^{7})/tau0 & \text{if } y_{0}<0 \\
+            (f_z(y_{0}) - y_{2})/tau0           & \text{if } y_{0} \geq 0
             \end{cases} \\
             \dot{y_{3}} &=& -y_{4} + y_{3} - y_{3}^{3} + I_{ext2} + 0.002 y_{5} - 0.3 (y_{2}-3.5) \\
             \dot{y_{4}} &=& 1 / \tau2 (-y_{4} + f_{2}(y_{3}))\\
-            \dot{y_{5}} &=& -0.01 (y_{5} - 0.1 ( y_{0} -5/3 ) )
+            \dot{y_{5}} &=& -0.01 (y_{5} - 0.1 y_{0} )
 
         where:
             .. math::
                 f_{1}(y_{0}, y_{3}) =
                 \begin{cases}
-                a ( y_{0} -5/3 )^{3} - b ( y_{0} -5/3 )^2 & \text{if } y_{0} <5/3\\
-                (y_{3} - 0.6(y_{2}-4)^2 slope) ( y_{0} - 5/3 ) &\text{if }y_{0} \geq 5/3
+                a y_{0}^{3} - by_{0}^2 & \text{if } y_{0} <0\\
+                (y_{3} - 0.6(y_{2}-4)^2 slope)y_{0} &\text{if }y_{0} \geq 0
                 \end{cases}
 
             .. math::
                 f_z(y_{0})  =
                 \begin{cases}
                 4 * (y_{0} - r*x0 + x0_{cr}) & \text{linear} \\
-                \frac{3}{1+e^{-10*(y_{0}-7/6)}} - r*x0 + x0_{cr} & \text{sigmoidal} \\
+                \frac{3}{1+e^{-10*(y_{0}+0.5)}} - r*x0 + x0_{cr} & \text{sigmoidal} \\
                 \end{cases}
         and:
 
@@ -320,8 +319,8 @@ class EpileptorDP(Model):
         # population 1
         if_ydot0 = y[0]**2 - 3.0*y[0] #self.a=1.0, self.b=3.0
         else_ydot0 = y[3] - 0.6*(y[2]-4.0)**2 - self.slope
-        ydot[0] = self.tau1*(y[1] - y[2] + self.yc + Iext1 + self.Kvf*c_pop1 - where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
-        ydot[1] = self.tau1*(1.0 - 5.0*y[0]**2 - y[1]) #self.d=5
+        ydot[0] = self.tau1*(y[1] - y[2] + Iext1 + self.Kvf*c_pop1 - where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
+        ydot[1] = self.tau1*(self.yc - 5.0*y[0]**2 - y[1]) #self.d=5
 
         # energy
         if_ydot2 = - 0.1*y[2]**7
@@ -329,7 +328,7 @@ class EpileptorDP(Model):
         if self.zmode=='lin':
             fz = 4*(y[0] - self.r * self.x0 + self.x0cr) + where(y[2] < 0., if_ydot2, else_ydot2)
         elif self.zmode=='sig':
-            fz = 3 / (1 + numpy.exp(-10*(y[0] + 0.5)) ) - self.r * self.x0 + self.x0cr
+            fz = 3 / (1 + numpy.exp(-10*(y[0] + 0.5))) - self.r * self.x0 + self.x0cr
         else:
             print "ERROR: zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively"
         ydot[2] = self.tau1*(( fz - y[2] + self.K*c_pop1)/self.tau0)
@@ -357,7 +356,6 @@ class EpileptorDPrealistic(Model):
     The Epileptor is a composite neural mass model of six dimensions which
     has been crafted to model the phenomenology of epileptic seizures.
     (see [Jirsaetal_2014]_).
-    ->x1 is shifted by the substitution x -> x-5/3
     ->x0 parameters are shifted for the bifurcation
       to be at x0=1, where x0>1 is the supercritical region.
     ->there is a choice for linear or sigmoidal z dynamics (see [Proixetal_2014]_).
@@ -417,29 +415,29 @@ class EpileptorDPrealistic(Model):
 
         .. math::
             \dot{x_{1}} &=& y_{1} - f_{1}(x_{1}, x_{2}) - z + I_{ext1} \\
-            \dot{y_{1}} &=& yc - d (x_{1} -5/3)^{2} - y{1} \\
+            \dot{y_{1}} &=& yc - d x_{1}^{2} - y{1} \\
             \dot{z} &=&
             \begin{cases}
-            (f_z(x_{1}) - z-0.1 z^{7})/tau0 & \text{if } x<5/3 \\
-            (f_z(x_{1}) - z)/tau0           & \text{if } x \geq 5/3
+            (f_z(x_{1}) - z-0.1 z^{7})/tau0 & \text{if } x<0 \\
+            (f_z(x_{1}) - z)/tau0           & \text{if } x \geq 0
             \end{cases} \\
             \dot{x_{2}} &=& -y_{2} + x_{2} - x_{2}^{3} + I_{ext2} + 0.002 g - 0.3 (z-3.5) \\
             \dot{y_{2}} &=& 1 / \tau2 (-y_{2} + f_{2}(x_{2}))\\
-            \dot{g} &=& -0.01 (g - 0.1 ( x_{1} -5/3 ) )
+            \dot{g} &=& -0.01 (g - 0.1 x_{1} )
 
     where:
         .. math::
             f_{1}(x_{1}, x_{2}) =
             \begin{cases}
-            a ( x_{1} -5/3 )^{3} - b ( x_{1} -5/3 )^2 & \text{if } x_{1} <5/3\\
-            (x_{2} - 0.6(z-4)^2 -slope) ( x_{1} - 5/3 ) &\text{if }x_{1} \geq 5/3
+            a x_{1}^{3} - b x_{1}^2 & \text{if } x_{1} <0\\
+            (x_{2} - 0.6(z-4)^2 -slope) x_{1} &\text{if }x_{1} \geq 0
             \end{cases}
 
         .. math::
             f_z(x_{1})  =
             \begin{cases}
             4 * (x_{1} - r_{x0}*x0 + x0_{cr}) & \text{linear} \\
-            \frac{3}{1+e^{-10*(x_{1}-7/6)}} - r_{x0}*x0 + x0_{cr} & \text{sigmoidal} \\
+            \frac{3}{1+e^{-10*(x_{1}+0.5)}} - r_{x0}*x0 + x0_{cr} & \text{sigmoidal} \\
             \end{cases}
     and:
 
@@ -481,7 +479,7 @@ class EpileptorDPrealistic(Model):
     yc = arrays.FloatArray(
         label="yc",
         default=numpy.array([1]),
-        doc="Additive coefficient for the first state variable",
+        doc="Additive coefficient for the second state variable",
         order=-1)
 
 #    d = arrays.FloatArray(
@@ -513,14 +511,14 @@ class EpileptorDPrealistic(Model):
     x0cr = arrays.FloatArray(
         label="x0cr",
         range=basic.Range(lo=-1.0, hi=1.0, step=0.1),
-        default=numpy.array([857.0/1080.0]),
+        default=numpy.array([5.93240740740741]),
         doc="Critical excitability parameter",
         order=-1)
 
     r = arrays.FloatArray(
         label="r",
         range=basic.Range(lo=0.0, hi=1.0, step=0.1),
-        default=numpy.array([43.0/108.0]),
+        default=numpy.array([1.64814814814815]),
         doc="Excitability parameter scaling",
         order=-1)
 
@@ -581,9 +579,9 @@ class EpileptorDPrealistic(Model):
 
     state_variable_range = basic.Dict(
         label="State variable ranges [lo, hi]",
-        default={"y0": numpy.array([-1., 3.]), #x1
+        default={"y0": numpy.array([-2., 2.]), #x1
                  "y1": numpy.array([-20., 2.]), #y1
-                 "y2": numpy.array([2.0, 5.0]), #z
+                 "y2": numpy.array([2.0, 20.0]), #z
                  "y3": numpy.array([-2., 0.]), #x2
                  "y4": numpy.array([0., 2.]), #y2
                  "y5": numpy.array([-1., 1.]), #g
@@ -682,8 +680,8 @@ class EpileptorDPrealistic(Model):
         # population 1
         if_ydot0 = y[0]**2 - 3.0*y[0] #self.a=1.0, self.b=3.0
         else_ydot0 = y[3] - 0.6*(y[2]-4.0)**2 - slope
-        ydot[0] = self.tau1*(y[1] - y[2] + Iext1 + self.yc + self.Kvf*c_pop1 - where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
-        ydot[1] = self.tau1*(1 - 5.0*y[0]**2 - y[1]) #self.d=5
+        ydot[0] = self.tau1*(y[1] - y[2] + Iext1 + self.Kvf*c_pop1 - where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
+        ydot[1] = self.tau1*(self.yc - 5.0*y[0]**2 - y[1]) #self.d=5
 
         # energy
         if_ydot2 = - 0.1*y[2]**7
@@ -753,8 +751,6 @@ class EpileptorDP2D(Model):
     has been crafted to model the phenomenology of epileptic seizures in a
     reduced form. This model is used for Linear Stability Analysis
     (see [Proixetal_2014]_).
-
-    ->x1 is shifted by the substitution x -> x-5/3
     ->x0 parameters are shifted for the bifurcation
       to be at x0=1, where x0>1 is the supercritical region.
     ->there is a choice for linear or sigmoidal z dynamics (see [Proixetal_2014]_)
@@ -889,7 +885,7 @@ class EpileptorDP2D(Model):
     x0cr = arrays.FloatArray(
         label="x0cr",
         range=basic.Range(lo=-1.0, hi=1.0, step=0.1),
-        default=numpy.array([857.0/1080.0]),
+        default=numpy.array([2.46018518518519]),
         doc="Critical excitability parameter",
         order=-1)
 
@@ -937,7 +933,7 @@ class EpileptorDP2D(Model):
 
     state_variable_range = basic.Dict(
         label="State variable ranges [lo, hi]",
-        default={"y0": numpy.array([-1., 3.]),
+        default={"y0": numpy.array([-2., 2.]),
                  "y1": numpy.array([-2.0, 5.0])},
         doc="n/a",
         order=16
@@ -1000,7 +996,7 @@ class EpileptorDP2D(Model):
         y = state_variables
         ydot = numpy.empty_like(state_variables)
 
-        Iext1 = self.Iext1 + local_coupling * x1
+        Iext1 = self.Iext1 + local_coupling * y[0]
         c_pop1 = coupling[0, :]
 
         # population 1

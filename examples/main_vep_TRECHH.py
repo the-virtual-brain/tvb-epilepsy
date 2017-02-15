@@ -167,7 +167,7 @@ if __name__ == "__main__":
     
     # Now Simulate
     # Choosing the model:
-    model='2D' #'6D', '2D', '11D', 'tvb'
+    model='6D' #'6D', '2D', '11D', 'tvb'
     if model == '6D':
         #                                        epileptor model,      history
         simulator_instance = SimulatorTVB(build_ep_6sv_model, prepare_for_6sv_model)
