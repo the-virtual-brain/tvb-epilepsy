@@ -8,7 +8,7 @@ It should contain everything for later configuring an Epileptor Model from this 
 
 import numpy
 from collections import OrderedDict
-from tvb_epilepsy.base.equilibrium_computation import zeq_2d_calc, y1eq_calc, coupling_calc, x0_calc, x0cr_rx0_calc, \
+from tvb_epilepsy.base.equilibrium_computation import zeq_2d_calc, coupling_calc, x0_calc, x0cr_rx0_calc, \
                                                       x1eq_x0_hypo_linTaylor, x1eq_x0_hypo_optimize
 from tvb_epilepsy.base.utils import reg_dict, formal_repr, vector2scalar
 
@@ -19,17 +19,15 @@ E_DEF = 0.0
 K_DEF = 1.0
 I_EXT1_DEF = 3.1
 Y0_DEF = 1.0
-X1_DEF = 0.0
-X1_EQ_CR_DEF = 1.0 / 3.0
-X1_LIN_DEF = (X1_EQ_CR_DEF-X1_DEF)/2.0
-X1_SQ_DEF = X1_EQ_CR_DEF
+X1_DEF = -5.0 / 3.0
+X1_EQ_CR_DEF = -4.0 / 3.0
 
 #Currently we assume only difference coupling (permittivity coupling following Proix et al 2014
 #TODO: to generalize for different coupling functions
 class Hypothesis(object):
     def __init__(self, n_regions, normalized_weights, name="", x1eq_mode = "optimize",
                  e_def=E_DEF, k_def=K_DEF, i_ext1_def=I_EXT1_DEF, y0_def=Y0_DEF,
-                 x1_eq_cr_def=X1_EQ_CR_DEF, x1_lin_def=X1_LIN_DEF, x1_sq_def=X1_SQ_DEF):
+                 x1_eq_cr_def=X1_EQ_CR_DEF):
 
         #TODO: question the course below. Maybe use the opposite one?
         """
@@ -48,13 +46,9 @@ class Hypothesis(object):
         self.Iext1 = i_ext1_def * i
         self.y0 = y0_def * i
         self.x1EQcr = x1_eq_cr_def
-        self.x1LIN = x1_lin_def * i
-        self.x1SQ = x1_sq_def * i
         self.E = e_def * i
 
         (self.x0cr, self.rx0)= self._calculate_critical_x0_scaling()
-        # self.x0cr = self._calculate_critical_x0()
-        # self.rx0 = self._calculate_x0_scaling()
         self.x1eq_mode = x1eq_mode
         self.x1EQ = self._set_equilibria_x1(i)
         self.zEQ = self._calculate_equilibria_z()
@@ -108,25 +102,13 @@ class Hypothesis(object):
     def _calculate_critical_x0_scaling(self):
         return x0cr_rx0_calc(self.y0, self.Iext1, epileptor_model="2d", zmode="lin")
 
-    def _calculate_critical_x0(self):
-        # At the hypothesis level, we assume linear z function
-        return self.Iext1 / 4.0 + self.y0 / 4.0 - 25.0 / 108.0  # for linear z dfun
-        # return self.Iext1 / 4 + self.y0 / 4 + 28.0 / 27.0  # for linear z dfun
-
-    def _calculate_x0_scaling(self):
-        # At the hypothesis level, we assume linear z function
-        return -self.Iext1 / 4.0 - self.y0 / 4.0 + 1537.0 / 1080.0  # for linear z dfun
-
     def _set_equilibria_x1(self, i=None):
         if i is None:
             i = numpy.ones((1, self.n_regions), dtype=numpy.float32)
-        return (self.E / 3.0) * i
-        # return self.E[1, i] / 3.0
-        # return ((self.E - 4.0) / 3.0) * i
+        return ((self.E - 5.0) / 3.0) * i
 
     def _calculate_equilibria_z(self):
-        # y0 + Iext1 - x1eq ** 3 + 3.0 * x1eq ** 2 - 5.0 * x1eq/3.0 -25.0/27.0
-        return zeq_2d_calc(self.x1EQ-5.0/3, self.y0, self.Iext1)
+        return zeq_2d_calc(self.x1EQ, self.y0, self.Iext1)
         #non centered x1:
         # return self.y0 + self.Iext1 - self.x1EQ ** 3 - 2.0 * self.x1EQ ** 2
 
@@ -138,10 +120,22 @@ class Hypothesis(object):
     def _calculate_x0(self):
         return x0_calc(self.x1EQ, self.zEQ, self.x0cr, self.rx0, self.Ceq, zmode="lin")
         #return (self.x1EQ + self.x0cr - (self.zEQ + self.Ceq) / 4.0) / self.rx0
-        # return self.x1EQ + self.x0cr - (self.zEQ + self.Ceq) / 4.0
+
+    def _dfz_square_taylor(self):
+        # The z derivative of the function
+        # x1 = F(z) = -4/3 -1/2*sqrt(2(z-y0-Iext1)+64/27)
+        return -(0.5 / numpy.sqrt(2 * (self.zEQ - self.y0 - self.Iext1) + 64.0 / 27.0))
+
+    def _fz_jac(self, dfz):
+        i = numpy.ones((1, self.n_regions), dtype=numpy.float32)
+        # Jacobian: diagonal elements at first row
+        #Diagonal elements: -1 + dfz_i * (4 + K_i * sum_j_not_i{wij})
+        return numpy.diag(-1 + dfz * ( 4.0 + self.K * numpy.expand_dims(numpy.sum(self.weights, axis=1), 1).T).T[:, 0]) \
+            - numpy.dot(self.K.T, i) * numpy.dot(i.T, dfz) * (1 - numpy.eye(self.n_regions))
+
 
     def _calculate_e(self):
-        return 3.0 * self.x1EQ
+        return 3.0 * self.x1EQ + 5.0
 
     def _update_parameters(self, seizure_indices):
         """
@@ -149,8 +143,6 @@ class Hypothesis(object):
         :param seizure_indices: numpy array with conn region indices where we think the seizure starts
         """
         (self.x0cr, self.rx0) = self._calculate_critical_x0_scaling()
-        # self.x0cr = self._calculate_critical_x0()
-        # self.rx0 = self._calculate_x0_scaling()
         self.Ceq = self._calculate_coupling_at_equilibrium()
         self.x0 = self._calculate_x0()
         self.E = self._calculate_e()
@@ -165,17 +157,16 @@ class Hypothesis(object):
         #TODO: automatically choose the number of eigenvalue to sum via a cutting criterion
 
         self._check_hypothesis(seizure_indices)
-        i = numpy.ones((1, self.n_regions), dtype=numpy.float32)
-        # The z derivative of the x1 = F(z) function
-        # dfz = (3.0 / 4.0 * numpy.sqrt(6 / (27.0 * (self.zEQ - self.y0 - self.Iext1 + 32)))) * i
-        dfz = (1.0 / numpy.sqrt(8 * (self.zEQ - self.y0 - self.Iext1) + 256.0 / 27.0)) * i
 
-        # Jacobian: diagonal elements at first row
-        jacobian = numpy.diag((dfz * 4.0 + self.K * numpy.expand_dims(numpy.sum(self.weights, axis=1), 1).T).T[:, 0]) \
-            - numpy.dot(self.K.T, i) * numpy.dot(i.T, dfz) * (1 - numpy.eye(self.n_regions))
+        # The z derivative of the function...
+        # x1 = F(z) = -4/3 -1/2*sqrt(2(z-y0-Iext1)+64/27)
+        dfz = self._dfz_square_taylor()
+
+        #...and the respective Jacobian
+        fz_jac = self._fz_jac(dfz)
 
         # Perform eigenvalue decomposition
-        (eigvals, eigvects) = numpy.linalg.eig(jacobian)
+        (eigvals, eigvects) = numpy.linalg.eig(fz_jac)
         
         # Sort eigenvalues in descending order... 
         ind = numpy.argsort(eigvals, kind='mergesort')[::-1]
@@ -241,7 +232,7 @@ class Hypothesis(object):
         x0 = numpy.expand_dims(numpy.array(x0),1).T
         
         if self.self.x1eq_mode=="linTaylor":
-            self.x1EQ = x1eq_x0_hypo_linTaylor(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.x1LIN, self.rx0,
+            self.x1EQ = x1eq_x0_hypo_linTaylor(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0,
                                            self.y0, self.Iext1, self.K, self.weights)
         else:
             self.x1EQ = x1eq_x0_hypo_optimize(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0, self.y0,

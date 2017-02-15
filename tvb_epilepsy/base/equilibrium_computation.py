@@ -8,6 +8,7 @@ import numpy
 from scipy.optimize import root
 from sympy import symbols, exp, solve, lambdify
 from tvb_epilepsy.tvb_api.epileptor_models import *
+from tvb_epilepsy.base.hypothesis import X1_EQ_CR_DEF, X1_DEF
 from tvb.simulator.models import Epileptor
 
 
@@ -15,7 +16,13 @@ from tvb.simulator.models import Epileptor
 #TODO: to generalize for different coupling functions
 
 def x1eq_def(X1_DEF, X1_EQ_CR_DEF, n_regions):
-    return numpy.repeat((X1_EQ_CR_DEF - X1_DEF) / 2.0, n_regions)
+    #The default initial condition for x1 equilibrium search
+    return numpy.repeat(numpy.array((X1_EQ_CR_DEF - X1_DEF) / 2.0), n_regions)
+
+
+def x1_lin_def(X1_DEF, X1_EQ_CR_DEF, n_regions):
+    # The point of the linear Taylor expansion
+    return numpy.repeat(numpy.array((X1_EQ_CR_DEF - X1_DEF) / 2.0), n_regions)
 
 
 def fx1_2d_calc(x1):
@@ -70,8 +77,7 @@ def x1eq_x0_hypo_optimize_jac(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K
     jac_e_x0e = numpy.diag(- 4 * rx0[iE])
     jac_e_x1o = -numpy.dot(i_x0, K[:,iE]) * w[iE][:,ix0]
     jac_x0_x0e = numpy.zeros((no_x0,no_e),dtype = type)
-    x53 = x[ix0] - 5.0 / 3
-    jac_x0_x1o = numpy.diag(4 + 3 * x53 ** 2 + 4 * x53 + K[ix0] * numpy.sum(w[ix0][:,ix0], axis=1)) \
+    jac_x0_x1o = numpy.diag(4 + 3 * x[ix0] ** 2 + 4 * x[ix0] + K[ix0] * numpy.sum(w[ix0][:,ix0], axis=1)) \
                  - numpy.dot(i_x0, K[:, ix0]) * w[ix0][:, ix0]
 
     jac = numpy.zeros((n_regions,n_regions), dtype=type)
@@ -106,16 +112,21 @@ def x1eq_x0_hypo_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w):
 
 
 
-def x1eq_x0_hypo_linTaylor(ix0,iE,x1EQ,zEQ,x0,x0cr,x1LIN,rx0,y0,Iext1,K,w):
+def x1eq_x0_hypo_linTaylor(ix0,iE,x1EQ,zEQ,x0,x0cr,rx0,y0,Iext1,K,w):
 
     no_x0 = len(ix0)
     no_e = len(iE)
+
+    n_regions = no_e + no_x0
 
     # The equilibria of the nodes of fixed epileptogenicity
     x1_eq = x1EQ[:, iE]
     z_eq = zEQ[:, iE]
 
     #Prepare linear system to solve:
+
+    #The point of the linear Taylor expansion
+    x1LIN = x1_lin_def(X1_DEF, X1_EQ_CR_DEF, n_regions)
 
     # For regions of fixed equilibria:
     ii_e = numpy.ones((1, no_e), dtype=numpy.float32)
@@ -127,10 +138,8 @@ def x1eq_x0_hypo_linTaylor(ix0,iE,x1EQ,zEQ,x0,x0cr,x1LIN,rx0,y0,Iext1,K,w):
     # For regions of fixed x0:
     ii_x0 = numpy.ones((1, no_x0), dtype=numpy.float32)
     we_to_x0 = numpy.expand_dims(numpy.sum(w[ix0][:, iE] * numpy.dot(ii_x0.T, x1_eq), axis=1), 1).T
-    #        bx0 = 4 * (self.x0cr[:, ix0] - x0) - self.y0[:, ix0] - self.Iext1[:, ix0] \
-    #            - 2 * self.x1LIN[:, ix0] ** 3 - 2 * self.x1LIN[:, ix0] ** 2 - self.K[:, ix0] * we_to_x0
     bx0 = 4.0 * (x0cr[:, ix0] - rx0[:, ix0] * x0) - y0[:, ix0] - Iext1[:, ix0] \
-          - 2.0 * x1LIN[:, ix0] ** 3 + 3.0 * x1LIN[:, ix0] ** 2 + 25.0 / 27.0 - K[:, ix0] * we_to_x0
+          - 2.0 * x1LIN[:, ix0] ** 3 - 2.0 * x1LIN[:, ix0] ** 2 - K[:, ix0] * we_to_x0
 
     # Concatenate B vector:
     b = -numpy.concatenate((be, bx0), axis=1).T
@@ -146,17 +155,14 @@ def x1eq_x0_hypo_linTaylor(ix0,iE,x1EQ,zEQ,x0,x0cr,x1LIN,rx0,y0,Iext1,K,w):
     ae_to_x0 = numpy.zeros((no_x0, no_e), dtype=numpy.float32)
 
     # From-to x0-fixed regions
-    #        ax0_to_x0 = numpy.diag((4 + 3 * self.x1LIN[:, ix0] ** 2 + 4 * self.x1LIN[:, ix0]  \
-    #                  + self.K[0, ix0] *numpy.expand_dims(numpy.sum(w[ix0][:, ix0], axis=0), 0)).T[:, 0])  \
-    #                  - numpy.dot(self.K[:, ix0].T, ii_x0) * w[ix0][:, ix0]
-    ax0_to_x0 = numpy.diag((4.0 + 3.0 * (x1LIN[:, ix0] ** 2 - 2.0 * x1LIN[:, ix0] + 5.0 / 9.0) +
-                         K[0, ix0] * numpy.expand_dims(numpy.sum(w[ix0][:, ix0], axis=0), 0)).T[:, 0]) \
+
+    ax0_to_x0 = numpy.diag((4.0 + 3.0 * (x1LIN[:, ix0] ** 2 + 4.0 * x1LIN[:, ix0]) +
+                K[0, ix0] * numpy.expand_dims(numpy.sum(w[ix0][:, ix0], axis=0), 0)).T[:, 0]) \
                 - numpy.dot(K[:, ix0].T, ii_x0) * w[ix0][:, ix0]
 
     # Concatenate A matrix
     a = numpy.concatenate((numpy.concatenate((ae_to_e, ax0_to_e), axis=1),
-                        numpy.concatenate((ae_to_x0, ax0_to_x0), axis=1)),
-                       axis=0)
+                           numpy.concatenate((ae_to_x0, ax0_to_x0), axis=1)), axis=0)
 
     # Solve the system
     x = numpy.dot(numpy.linalg.inv(a), b).T
@@ -169,9 +175,6 @@ def x1eq_x0_hypo_linTaylor(ix0,iE,x1EQ,zEQ,x0,x0cr,x1LIN,rx0,y0,Iext1,K,w):
     return x1EQ
 
 
-#In all cases below, x1eq is already de-centered, i.e., x1eq - 5/3 -> x1eq
-
-
 def zeq_2d_calc(x1eq, y0, Iext1):
     x1eq2 = x1eq ** 2
     return y0 + Iext1 -x1eq * x1eq2 - 2 * x1eq2
@@ -182,8 +185,8 @@ def zeq_6d_calc(x1eq, y0, Iext1):
     return y0 + Iext1 -x1eq * x1eq2 + 3 * x1eq2
 
 
-def y1eq_calc(x1eq, y0, d=5.0):
-    return y0 - d * x1eq ** 2
+def y1eq_calc(x1eq, d=5.0):
+    return 1 - d * x1eq ** 2
 
 
 def pop2eq_calc(x1eq, zeq, Iext2):
@@ -234,10 +237,10 @@ def x0cr_rx0_calc(y0, Iext1, epileptor_model="2d", zmode=numpy.array("lin")):
     #Define the fx1(x1) expression (assuming centered x1 in all cases)...
     if isinstance(epileptor_model,EpileptorDP2D) or  epileptor_model=="2d":
         #...for the 2D permittivity coupling approximation, Proix et al 2014
-        fx1 = (x1 - 5.0 / 3) ** 3 + 2 * (x1 - 5.0 / 3) ** 2
+        fx1 = x1 ** 3 + 2 * x1 ** 2
     else:
         #...or for the original (>=6D) epileptor
-        fx1 = (x1 - 5.0 / 3) ** 3 - 3 * (x1 - 5.0 / 3) ** 2
+        fx1 = x1 ** 3 - 3 * x1 ** 2
 
     #...and the z expression, coming from solving dx1/dt=f1(x1,z)=0
     z = y01 - fx1 + I1
@@ -245,19 +248,21 @@ def x0cr_rx0_calc(y0, Iext1, epileptor_model="2d", zmode=numpy.array("lin")):
     #Define the fz expression...
     if zmode == 'lin':
         #...for linear...
-        fz = 4 * (x1 - r * x0 + x0cr ) - z
+        fz = 4 * (x1 - r * x0 + x0cr) - z
     elif zmode == 'sig':
         #...and sigmoidal versions
-        fz = 4 * ((1+exp(-10*(x1-7.0/6))) - r * x0 + x0cr) - z
+        fz = 4 * ((1+exp(-10*(x1+0.5))) - r * x0 + x0cr) - z
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
 
-    #Solve the fz expression for rx0 and x0cr, assuming the following two points (x1eq,x0) = [(0.0,0.0),(1/3,1.0)]...
+    #Solve the fz expression for rx0 and x0cr, assuming the following two points (x1eq,x0) = [(-5/3,0.0),(-4/3,1.0)]...
     #...and WITHOUT COUPLING
-    fz_sol = solve([fz.subs([(x1, 0.0), (x0, 0.0), (z, z.subs(x1, 0.0))]),
-                       fz.subs([(x1, 1.0 / 3), (x0, 1.0), (z, z.subs(x1, 1.0 / 3))])], r, x0cr)
+    x1rest = -5.0 / 3
+    x1cr = -4.0 / 3
+    fz_sol = solve([fz.subs([(x1, x1rest), (x0, 0.0), (z, z.subs(x1, x1rest))]),
+                       fz.subs([(x1, x1cr), (x0, 1.0), (z, z.subs(x1, x1cr))])], r, x0cr)
 
-    #Convert the solutions from expressions to functions that accept numpy arrays as inputs:
+    #Convert the solution of x0cr from expression to function that accepts numpy arrays as inputs:
     x0cr = lambdify((y01,I1),fz_sol[x0cr],'numpy')
 
     #Compute the actual x0cr now given the inputs y0 and Iext1
@@ -270,6 +275,7 @@ def x0cr_rx0_calc(y0, Iext1, epileptor_model="2d", zmode=numpy.array("lin")):
 
 
 def coupling_calc(x1, K, w):
+    #Note that for difference coupling it doesn't matter whether we use centered x1 or decentered x1-5/3
     # Only difference coupling for the moment.
     # TODO: Extend for different coupling forms
     n_regions = x1.size
@@ -283,43 +289,37 @@ def x0_calc(x1, z, x0cr, rx0, coupl, zmode=numpy.array("lin")):
     if zmode == 'lin':
         return x1 + x0cr - (z+coupl) / (4 * rx0)
     elif zmode == 'sig':
-        return 3/(1+numpy.exp(-10*(x1-7.0/6))) + x0cr - (z + coupl) / (4 * rx0)
+        return 3/(1+numpy.exp(-10*(x1+0.5))) + x0cr - (z + coupl) / (4 * rx0)
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
 
 
 def calc_equilibrium_point(epileptor_model, hypothesis):
 
-    #Get the x1 equilibria from the hypothesis:
-    x1eq =  hypothesis.x1EQ
     #De-center them:
-    x1eq53 = x1eq - 5.0 / 3.0
     if isinstance(epileptor_model,EpileptorDP2D):
         if epileptor_model.zmode == 'sig':
             #2D approximation, Proix et al 2014
-            zeq = zeq_2d_calc(x1eq53, epileptor_model.yc.T, epileptor_model.Iext1.T)
+            zeq = zeq_2d_calc(hypothesis.x1EQ, epileptor_model.yc.T, epileptor_model.Iext1.T)
         else:
             zeq = hypothesis.zEQ
-        return x1eq, zeq
+        return hypothesis.x1EQ, zeq
     else:
-        #all other >=6D models
+        #all >=6D models
         if isinstance(epileptor_model, Epileptor):
             #tvb
-            zeq = zeq_6d_calc(x1eq53, epileptor_model.c.T, epileptor_model.Iext.T)
-            y1eq = y1eq_calc(x1eq53, epileptor_model.c.T)
+            zeq = zeq_6d_calc(hypothesis.x1EQ, epileptor_model.c.T, epileptor_model.Iext.T)
+            y1eq = y1eq_calc(hypothesis.x1EQ, epileptor_model.c.T)
         else:
-            zeq = zeq_6d_calc(x1eq53, epileptor_model.yc.T, epileptor_model.Iext1.T)
-            y1eq = y1eq_calc(x1eq53, epileptor_model.yc.T)
-        (x2eq, y2eq) = pop2eq_calc(x1eq53, zeq, epileptor_model.Iext2.T)
-        geq = geq_calc(x1eq)
+            zeq = zeq_6d_calc(hypothesis.x1EQ, epileptor_model.yc.T, epileptor_model.Iext1.T)
+            y1eq = y1eq_calc(hypothesis.x1EQ, epileptor_model.yc.T)
+        (x2eq, y2eq) = pop2eq_calc(hypothesis.x1EQ, zeq, epileptor_model.Iext2.T)
+        geq = geq_calc(hypothesis.x1EQ)
         if isinstance(epileptor_model, EpileptorDPrealistic):
             #the 11D "realistic" simulations model
-            return x1eq, y1eq, zeq, x2eq, y2eq, geq, epileptor_model.x0.T, epileptor_model.slope.T,   \
+            return hypothesis.x1EQ, y1eq, zeq, x2eq, y2eq, geq, epileptor_model.x0.T, epileptor_model.slope.T,   \
                     epileptor_model.Iext1.T, epileptor_model.Iext2.T, epileptor_model.K.T
-        elif isinstance(epileptor_model, Epileptor):
-            #the original 6D TVB model with de-centered x1
-            return x1eq53, y1eq, zeq, x2eq, y2eq, geq
         else:
-            #the default 6D model we use for tvb-epilepsy
-            return x1eq, y1eq, zeq, x2eq, y2eq, geq
+            #all >=6D models
+            return hypothesis.x1EQ, y1eq, zeq, x2eq, y2eq, geq
 

@@ -135,7 +135,7 @@ class EpileptorDP(Model):
     yc = arrays.FloatArray(
         label="yc",
         default=numpy.array([1]),
-        doc="Additive coefficient for the second state variable",
+        doc="Additive coefficient for the first state variable",
         order=-1)
 
 #    d = arrays.FloatArray(
@@ -313,20 +313,15 @@ class EpileptorDP(Model):
         y = state_variables
         ydot = numpy.empty_like(state_variables)
 
-        #To use later:
-        c53 = 5.0/3.0
-        c76 = 7.0/6.0
-        x1 = y[0]-c53 #center x1 to -5/3
-
-        Iext1 = self.Iext1 + local_coupling * x1
+        Iext1 = self.Iext1 + local_coupling * y[0]
         c_pop1 = coupling[0, :]
         c_pop2 = coupling[1, :]
 
         # population 1
-        if_ydot0 =  x1**2 - 3.0*x1 #self.a=1.0, self.b=3.0
+        if_ydot0 = y[0]**2 - 3.0*y[0] #self.a=1.0, self.b=3.0
         else_ydot0 = y[3] - 0.6*(y[2]-4.0)**2 - self.slope
-        ydot[0] = self.tau1*(y[1] - y[2] + Iext1 + self.Kvf*c_pop1 - where(y[0] < c53, if_ydot0, else_ydot0) * x1)
-        ydot[1] = self.tau1*(self.yc - 5.0*x1**2 - y[1]) #self.d=5
+        ydot[0] = self.tau1*(y[1] - y[2] + self.yc + Iext1 + self.Kvf*c_pop1 - where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
+        ydot[1] = self.tau1*(1.0 - 5.0*y[0]**2 - y[1]) #self.d=5
 
         # energy
         if_ydot2 = - 0.1*y[2]**7
@@ -334,7 +329,7 @@ class EpileptorDP(Model):
         if self.zmode=='lin':
             fz = 4*(y[0] - self.r * self.x0 + self.x0cr) + where(y[2] < 0., if_ydot2, else_ydot2)
         elif self.zmode=='sig':
-            fz = 3 / (1 + numpy.exp(-10*(y[0] - c76)) ) - self.r * self.x0 + self.x0cr
+            fz = 3 / (1 + numpy.exp(-10*(y[0] + 0.5)) ) - self.r * self.x0 + self.x0cr
         else:
             print "ERROR: zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively"
         ydot[2] = self.tau1*(( fz - y[2] + self.K*c_pop1)/self.tau0)
@@ -342,11 +337,11 @@ class EpileptorDP(Model):
         # population 2
         ydot[3] = self.tau1*(-y[4] + y[3] - y[3]**3 + self.Iext2 + 2*y[5] - 0.3*(y[2] - 3.5) + self.Kf*c_pop2)
         if_ydot4 = 0
-        else_ydot4 = 6.0*(y[3] + 0.25) #*x1,  self.s = 6.0
+        else_ydot4 = 6.0*(y[3] + 0.25) #,  self.s = 6.0
         ydot[4] = self.tau1*((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4))/self.tau2)
 
         # filter
-        ydot[5] = self.tau1*(-0.01*(y[5] - 0.1*x1))
+        ydot[5] = self.tau1*(-0.01*(y[5] - 0.1*y[0]))
 
         return ydot
 
@@ -486,7 +481,7 @@ class EpileptorDPrealistic(Model):
     yc = arrays.FloatArray(
         label="yc",
         default=numpy.array([1]),
-        doc="Additive coefficient for the second state variable",
+        doc="Additive coefficient for the first state variable",
         order=-1)
 
 #    d = arrays.FloatArray(
@@ -679,19 +674,16 @@ class EpileptorDPrealistic(Model):
         Iext1 = y[8]
         Iext2 = y[9]
         K = y[10]
-        c53 = 5.0/3.0
-        c76 = 7.0/6.0
-        x1 = y[0]-c53 #center x1 to -5/3
 
-        Iext1 = Iext1 + local_coupling * x1
+        Iext1 = Iext1 + local_coupling * y[0]
         c_pop1 = coupling[0, :]
         c_pop2 = coupling[1, :]
 
         # population 1
-        if_ydot0 = x1**2 - 3.0*x1 #self.a=1.0, self.b=3.0
+        if_ydot0 = y[0]**2 - 3.0*y[0] #self.a=1.0, self.b=3.0
         else_ydot0 = y[3] - 0.6*(y[2]-4.0)**2 - slope
-        ydot[0] = self.tau1*(y[1] - y[2] + Iext1 + self.Kvf*c_pop1 - where(y[0] < c53, if_ydot0, else_ydot0) * x1)
-        ydot[1] = self.tau1*(self.yc - 5.0*x1**2 - y[1]) #self.d=5
+        ydot[0] = self.tau1*(y[1] - y[2] + Iext1 + self.yc + self.Kvf*c_pop1 - where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
+        ydot[1] = self.tau1*(1 - 5.0*y[0]**2 - y[1]) #self.d=5
 
         # energy
         if_ydot2 = - 0.1*y[2]**7
@@ -699,10 +691,10 @@ class EpileptorDPrealistic(Model):
         if self.zmode=='lin':
             fz = 4*(y[0] - self.r * x0 + self.x0cr) + where(y[2] < 0., if_ydot2, else_ydot2)
         elif self.zmode=='sig':
-            fz = 3 / (1 + numpy.exp(-10*(y[0] - c76)) ) - self.r * x0 + self.x0cr
+            fz = 3 / (1 + numpy.exp(-10*(y[0] + 0.5)) ) - self.r * x0 + self.x0cr
         else:
             print "ERROR: zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively"
-        ydot[2] = self.tau1*(( fz - y[2] + K*c_pop1)/self.tau0)
+        ydot[2] = self.tau1*((fz - y[2] + K*c_pop1)/self.tau0)
 
         # population 2
         ydot[3] = self.tau1*(-y[4] + y[3] - y[3]**3 + Iext2 + 2*y[5] - 0.3*(y[2] - 3.5) + self.Kf*c_pop2)
@@ -711,7 +703,7 @@ class EpileptorDPrealistic(Model):
         ydot[4] = self.tau1*((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4))/self.tau2)
 
         # filter
-        ydot[5] = self.tau1*(-0.01*(y[5] - 0.1*x1))
+        ydot[5] = self.tau1*(-0.01*(y[5] - 0.1*y[0]))
         
         if (self.pmode==numpy.array(['g','z','z*g'])).any():
             if self.pmode=='g':
@@ -1008,18 +1000,13 @@ class EpileptorDP2D(Model):
         y = state_variables
         ydot = numpy.empty_like(state_variables)
 
-        #To use later:
-        c53 = 5.0/3.0
-        c76 = 7.0/6.0
-        x1 = y[0]-c53 #center x1 to -5/3
-
         Iext1 = self.Iext1 + local_coupling * x1
         c_pop1 = coupling[0, :]
 
         # population 1
-        if_ydot0 = x1**2 + 2.0*x1 #self.a=1.0, self.b=-2.0
-        else_ydot0 = 5*x1 - 0.6*(y[1]-4.0)**2 -self.slope
-        ydot[0] = self.tau1*(self.yc - y[1] + Iext1 + self.Kvf*c_pop1 - where(y[0] < c53, if_ydot0, else_ydot0) * x1)
+        if_ydot0 = y[0]**2 + 2.0*y[0] #self.a=1.0, self.b=-2.0
+        else_ydot0 = 5*y[0] - 0.6*(y[1]-4.0)**2 -self.slope
+        ydot[0] = self.tau1*(self.yc - y[1] + Iext1 + self.Kvf*c_pop1 - where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
 
         # energy
         if_ydot2 = - 0.1 * y[1] ** 7
@@ -1027,7 +1014,7 @@ class EpileptorDP2D(Model):
         if self.zmode=='lin':
             fz = 4*(y[0] - self.r * self.x0 + self.x0cr) + where(y[1] < 0., if_ydot2, else_ydot2)
         elif self.zmode=='sig':
-            fz = 3 / (1 + numpy.exp(-10*(y[0] - c76))) - self.r * self.x0 + self.x0cr
+            fz = 3 / (1 + numpy.exp(-10*(y[0] + 0.5))) - self.r * self.x0 + self.x0cr
         else:
             raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
         ydot[1] = self.tau1*( fz - y[1] + self.K*c_pop1)/self.tau0
@@ -1078,15 +1065,10 @@ class EpileptorDP2D(Model):
 
         y = state_variables
 
-        # To use later:
-        c53 = 5.0 / 3.0
-        c76 = 7.0 / 6.0
-        x1 = y[0] - c53  # center x1 to -5/3
-
         n_ep = state_variables.shape[1]
         # population 1
-        jac_xx = where(y[0] < c53, numpy.diag(3*x1**2 + 4.0*x1), numpy.diag(15*x1**2-self.slope))
-        jac_xz = where(y[0] < c53, numpy.diag(numpy.zeros((n_ep,), dtype=y.dtype)), numpy.diag(1.2*(y[1]-4.0)*x1))
+        jac_xx = where(y[0] < 0.0, numpy.diag(3*y[0]**2 + 4.0*y[0]), numpy.diag(5*y[0]+0.6*(y[1]-4.0)**2-self.slope))
+        jac_xz = where(y[0] < 0.0, numpy.diag(numpy.zeros((n_ep,), dtype=y.dtype)), numpy.diag(1.2*(y[1]-4.0)*y[0]))
 
         # energy
         # The terms resulting from coupling from other regions, have to be added later on
@@ -1095,7 +1077,7 @@ class EpileptorDP2D(Model):
             jac_zx = numpy.diag(4.0)/self.tau0
             jac_zz -= numpy.diag(where(y[1] < 0., 0.7*y[1]**6, 0.0))
         elif self.zmode == 'sig':
-            exp_fun = numpy.exp(-10.0*(y[0]-c76))
+            exp_fun = numpy.exp(-10.0*(y[0]+0.5))
             jac_zx = numpy.diag(30.0*exp_fun/(1+exp_fun)**2)/self.tau0
         else:
             raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')

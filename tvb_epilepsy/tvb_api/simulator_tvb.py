@@ -69,7 +69,7 @@ class SimulatorTVB(ABCSimulator):
 
 
 def build_tvb_model(hypothesis,variables_of_interest=["y3 - y0", "y2"], zmode="lin"):
-    x0_transformed = _rescale_x0(hypothesis.x0, hypothesis.rx0, hypothesis.x0cr)
+    x0_transformed = _rescale_x0(hypothesis.y0, hypothesis.Iext1)
     model_instance = models.Epileptor(x0=x0_transformed,
                                       Iext=hypothesis.Iext1, 
                                       Ks=hypothesis.K,
@@ -78,8 +78,9 @@ def build_tvb_model(hypothesis,variables_of_interest=["y3 - y0", "y2"], zmode="l
     return model_instance
 
 
-def _rescale_x0(x0_orig, r, x0cr):
-    return r*x0_orig-x0cr-5.0/3.0
+def _rescale_x0(x0_orig, y0, Iext1):
+    (x0cr, r) = x0cr_rx0_calc(y0, Iext1, epileptor_model="6d", zmode="lin")
+    return r*x0_orig-x0cr
     
 #def _rescale_x0(original, to_min=-5, to_max=-1):
 #    current_min = original.min()
