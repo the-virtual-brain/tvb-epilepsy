@@ -134,15 +134,15 @@ if __name__ == "__main__":
     hyp_ep = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, \
                         "EP Hypothesis", x1eq_mode = "linTaylor")  #"optimize"
     hyp_ep.K = 0.1*hyp_ep.K # 1.0/np.max(head.connectivity.normalized_weights)
-    iE = np.array([1,    3,   7,   8,  15,  16,  25,  50, 88,  89])
-    E = 0*np.array(iE, dtype=np.float32)
-    E[7]=0.65
-    E[2]=0.800
-    E[4]=0.3775
-    E[8]=0.425
-    E[9]=0.900
-#    iE = np.array([50])
-#    E = np.array[0.8], dtype=np.float32)
+    # iE = np.array([1,    3,   7,   8,  15,  16,  25,  50, 88,  89])
+    # E = 0*np.array(iE, dtype=np.float32)
+    # E[7]=0.65
+    # E[2]=0.800
+    # E[4]=0.3775
+    # E[8]=0.425
+    # E[9]=0.900
+    iE = np.array([50])
+    E = np.array([0.8], dtype=numpy.float32)
     hyp_ep.configure_e_hypothesis(iE, E, seizure_indices)
     logger.debug(str(hyp_ep))
     plot_hypothesis(hyp_ep, head.connectivity.region_labels,
@@ -165,10 +165,10 @@ if __name__ == "__main__":
 
     
 #------------------------------Simulation--------------------------------------
-    
-    # Now Simulate
+    hyp_ep.K = 0.0*hyp_ep.K
+     # Now Simulate
     # Choosing the model:
-    model='6D' #'6D', '2D', '11D', 'tvb'
+    model='2D' #'6D', '2D', '11D', 'tvb'
     if model == '6D':
         #                                        epileptor model,      history
         simulator_instance = SimulatorTVB(build_ep_6sv_model, prepare_for_6sv_model)
@@ -195,40 +195,41 @@ if __name__ == "__main__":
         
     #Time scales:    
     fs = 2*1024.0
-    dt = 1000.0/fs
+    dt = 500.0/fs #1000.0/fs
     fsAVG = 512.0 #fs/10
     fsSEEG = fsAVG
     
     #Noise configuration
-
     if model == '11D':
         #                             x1  y1   z     x2   y2   g   x0   slope Iext1 Iext2  K
         noise_intensity=0.1*np.array([0., 0., 1e-6, 0.0, 1e-6, 0., 1e-7, 1e-2, 1e-7, 1e-2, 1e-8])
     elif model == '2D':
         #                                     x1   z
-        noise_intensity = 0.1 ** numpy.array([0., 5e-5])
+        noise_intensity = 0.01 ** numpy.array([0., 5e-5])
     else:
         #                                     x1  y1   z     x2   y2   g
         noise_intensity = 0.1 ** numpy.array([0., 0., 5e-5, 0.0, 5e-5, 0.])
+
     #Preconfigured noise                                     
-    #Colored noise:
     dtN = 1000.0/fsAVG
-    eq=equations.Linear(parameters={"a": 0.0, "b": 1.0}) #default = a*y+b
-    noise_color=noise.Multiplicative(ntau = 10, nsig=noise_intensity, b=eq,
-                     random_stream=np.random.RandomState(seed=NOISE_SEED))
-    noise_shape = noise_color.nsig.shape    
-    noise_color.configure_coloured(dt=dt,shape=noise_shape)
-    #White noise:
-    #noise_white.configure_white(dt=dt)
+    if model == '11D':\
+        #Colored noise for realistic simulations
+        eq=equations.Linear(parameters={"a": 0.0, "b": 1.0}) #default = a*y+b
+        this_noise=noise.Multiplicative(ntau = 10, nsig=noise_intensity, b=eq,
+                         random_stream=np.random.RandomState(seed=NOISE_SEED))
+        noise_shape = this_noise.nsig.shape
+        this_noise.configure_coloured(dt=dt,shape=noise_shape)
+    else:
+        #White noise as a default choice:
+        this_noise = noise.Additive(nsig=noise_intensity, random_stream=np.random.RandomState(seed=NOISE_SEED))
+        this_noise.configure_white(dt=dt)
     
     #Now simulate and plot
-    for hyp in (hyp_ep,): # ,hyp_exc
-        settings = SimulationSettings(length=30000,integration_step=dt, monitor_sampling_period=fs/fsSEEG*dt,
-                                      noise_preconfig=noise_color,
-                                      monitor_expr=monitor_expr) #noise_intensity=noise_intensity, 
+    for hyp in (hyp_ep,): # ,hyp_exc #length=30000
+        settings = SimulationSettings(length=1000,integration_step=dt, monitor_sampling_period=fs/fsSEEG*dt,
+                                      noise_preconfig=this_noise, monitor_expr=monitor_expr)
         sim= simulator_instance.config_simulation(hyp, head, settings)
         #Here make all changes you want to the model and simulator
-        sim.model.slope = 0.25
         if isinstance(sim.model,Epileptor):
             sim.model.tt = 0.25*sim.model.tt
             sim.model.r = 1.0/10000
@@ -236,6 +237,9 @@ if __name__ == "__main__":
             sim.model.tau0 = 10000
             sim.model.tau1 = 0.25*sim.model.tau1
         if isinstance(sim.model, EpileptorDPrealistic):
+            # sim.model.tau0 = 10000
+            # sim.model.tau1 = 0.25 * sim.model.tau1
+            sim.model.slope = 0.25
             sim.model.pmode = np.array("z")  # "z","g","z*g", default="const"
         #sim.model.zmode = np.array("sig")
         ttavg, tavg_data = simulator_instance.launch_simulation(sim,hyp)

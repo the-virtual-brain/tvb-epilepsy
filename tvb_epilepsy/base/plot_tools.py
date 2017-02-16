@@ -273,14 +273,14 @@ def plot_nullclines_eq(hypothesis,region_labels,special_idx=None, x0ne = X0_DEF,
     mp.pyplot.legend(handles=[x1null, zE1null, zE2null, lin, sq])
     
     ii=range(hypothesis.n_regions)
-    if special_idx!=None:
+    if np.all(special_idx!=None):
         ii = np.delete(ii, special_idx)
         
     points =[]    
     for i in ii:
         point, = mp.pyplot.plot(hypothesis.x1EQ[0,i], hypothesis.zEQ[0,i], '*', mfc='k', mec='k', ms=10,  alpha=0.3, label=str(i)+'.'+region_labels[i])
         points.append(point)
-    if special_idx!=None:  
+    if np.all(special_idx!=None):
         for i in special_idx:
             point, = mp.pyplot.plot(hypothesis.x1EQ[0,i], hypothesis.zEQ[0,i], '*', mfc='r', mec='r', ms=10, alpha=0.8, label=str(i)+'.'+region_labels[i])
             points.append(point)
