@@ -131,7 +131,8 @@ if __name__ == "__main__":
     #seizure_indices = np.array([1,    3,   7,   8,  15,  16,  25,  50,   88, 89], dtype=np.int32)
     seizure_indices = np.array([50], dtype=np.int32)
     
-    hyp_ep = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, "EP Hypothesis")
+    hyp_ep = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, \
+                        "EP Hypothesis", x1eq_mode = "linTaylor")  #"optimize"
     hyp_ep.K = 0.1*hyp_ep.K # 1.0/np.max(head.connectivity.normalized_weights)
     iE = np.array([1,    3,   7,   8,  15,  16,  25,  50, 88,  89])
     E = 0*np.array(iE, dtype=np.float32)

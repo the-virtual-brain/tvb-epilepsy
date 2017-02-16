@@ -7,7 +7,7 @@ Module to compute the resting equilibrium point of a Virtual Epileptic Patient m
 import numpy
 from scipy.optimize import root
 from sympy import symbols, exp, solve, lambdify
-from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF
+from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_DEF, X0_CR_DEF
 from tvb_epilepsy.tvb_api.epileptor_models import *
 from tvb.simulator.models import Epileptor
 
@@ -17,24 +17,82 @@ from tvb.simulator.models import Epileptor
 
 def x1eq_def(X1_DEF, X1_EQ_CR_DEF, n_regions):
     #The default initial condition for x1 equilibrium search
-    return numpy.repeat(numpy.array((X1_EQ_CR_DEF - X1_DEF) / 2.0), n_regions)
+    return numpy.repeat(numpy.array((X1_EQ_CR_DEF + X1_DEF) / 2.0), n_regions)
 
 
 def x1_lin_def(X1_DEF, X1_EQ_CR_DEF, n_regions):
     # The point of the linear Taylor expansion
-    return numpy.repeat(numpy.array((X1_EQ_CR_DEF - X1_DEF) / 2.0), n_regions)
+    return numpy.repeat(numpy.array((X1_EQ_CR_DEF + X1_DEF) / 2.0), n_regions)
 
 
-def fx1_2d_calc(x1):
-    return x1**3 + 2*x1**2
+def fx1_2d_calc(x1, z=0, y0=0, Iext1=0):
+    x12 = x1 ** 2
+    return -x1 * x12 - 2 * x12 - z + y0 + Iext1
 
 
-def fx1_6d_calc(x1):
-    return x1**3 - 3*x1**2
+def fx1_6d_calc(x1, z=0, y0=0, Iext1=0):
+    x12 = x1 ** 2
+    return -x1 * x12 + 3 * x12 - z + y0 + Iext1
 
 
-def fz_lin_calc(x1,x0,x0cr,r):
-    return 4*(x1-r*x0+x0cr)
+def fz_lin_calc(x1, x0, x0cr, r, z=0, coupl=0):
+    return 4 * (x1 - r * x0 + x0cr) - z - coupl
+
+
+def fz_sig_calc(x1, x0, x0cr, r, z=0, coupl=0):
+    return 3/(1 + exp(-10 * (x1 + 0.5))) - r * x0 + x0cr - z - coupl
+
+
+def zeq_2d_calc(x1eq, y0, Iext1):
+    return fx1_2d_calc(x1eq, z=0, y0=y0, Iext1=Iext1)
+
+
+def zeq_6d_calc(x1eq, y0, Iext1):
+    return fx1_6d_calc(x1eq, z=0, y0=y0, Iext1=Iext1)
+
+
+def y1eq_calc(x1eq, d=5.0):
+    return 1 - d * x1eq ** 2
+
+
+def pop2eq_calc(x1eq, zeq, Iext2):
+    shape = x1eq.shape
+    type = x1eq.dtype
+    # g_eq = 0.1*x1eq (1)
+    # y2eq = 0 (2)
+    y2eq = numpy.zeros(shape, dtype=type)
+    # -x2eq**3 + x2eq -y2eq+2*g_eq-0.3*(zeq-3.5)+Iext2 =0=> (1),(2)
+    # -x2eq**3 + x2eq +2*0.1*x1eq-0.3*(zeq-3.5)+Iext2 =0=>
+    # p3        p1                   p0
+    # -x2eq**3 + x2eq +0.2*x1eq-0.3*(zeq-3.5)+Iext2 =0
+    p0 = 0.2 * x1eq - 0.3 * (zeq - 3.5) + Iext2
+    x2eq = numpy.zeros(shape, dtype=type)
+    for i in range(shape[1]):
+        x2eq[0 ,i] = numpy.min(numpy.real(numpy.roots([-1.0, 0.0, 1.0, p0[0 ,i]])))
+    return x2eq, y2eq
+
+
+# def pop2eq_calc(n_regions,x1eq,zeq,Iext2):
+#    shape = x1eq.shape
+#    type = x1eq.dtype
+#    #g_eq = 0.1*x1eq (1)
+#    #y2eq = 6*(x2eq+0.25)*x1eq (2)
+#    #-x2eq**3 + x2eq -y2eq+2*g_eq-0.3*(zeq-3.5)+Iext2 =0=> (1),(2)
+#    #-x2eq**3 + x2eq -6*(x2eq+0.25)*x1eq+2*0.1*x1eq-0.3*(zeq-3.5)+Iext2 =0=>
+#    #-x2eq**3 + (1.0-6*x1eq)*x2eq -1.5*x1eq+ 0.2*x1eq-0.3*(zeq-3.5)+Iext2 =0
+#    #p3                p1                           p0
+#    #-x2eq**3 + (1.0-6*x1eq)*x2eq -1.3*x1eq -0.3*(zeq-3.5) +Iext2 =0
+#    p0 = -1.3*x1eq-0.3*(zeq-3.5)+Iext2
+#    p1 = 1.0-6*x1eq
+#    x2eq = numpy.zeros(shape, dtype=type)
+#    for i in range(shape[1]):
+#        x2eq[0 ,i] = numpy.min( numpy.real( numpy.roots([-1.0, 0.0, p1[i,0], p0[i,0] ]) ) )
+#    #(2):
+#    y2eq = 6*(x2eq+0.25)*x1eq
+#    return x2eq, y2eq
+
+def geq_calc(x1eq):
+    return 0.1 * x1eq
 
 
 def x1eq_x0_hypo_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w):
@@ -55,11 +113,10 @@ def x1eq_x0_hypo_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K
 
     fun = numpy.array(x1EQ.shape)
     #Known x1eq, unknown x0:
-    fun[iE] = fz_lin_calc(x1EQ[iE], x[iE], x0cr[iE], rx0[iE]) - zEQ[iE] \
-                                         - K[iE] * (w_e_to_e + w_x0_to_e)
+    fun[iE] = fz_lin_calc(x1EQ[iE], x[iE], x0cr[iE], rx0[iE], z=zEQ[iE], coupl=K[iE] * (w_e_to_e + w_x0_to_e))
     # Known x0, unknown x1eq:
-    fun[ix0] = fz_lin_calc(x[ix0], x0, x0cr[ix0], rx0[ix0]) - zeq_2d_calc(x[ix0]-5.0/3, y0[ix0], Iext1[ix0]) \
-                                        - K[ix0] * (w_e_to_x0 + w_x0_to_x0)
+    fun[ix0] = fz_lin_calc(x[ix0], x0, x0cr[ix0], rx0[ix0], z=zeq_2d_calc(x[ix0], y0[ix0], Iext1[ix0]),
+                           coupl=K[ix0] * (w_e_to_x0 + w_x0_to_x0))
 
     return fun
 
@@ -93,19 +150,19 @@ def x1eq_x0_hypo_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w):
 
     xinit = numpy.zeros(x1EQ.shape, dtype = x1EQ.dtype)
 
-    #Set initial conditions for the optimization algorithm, by ignoring coupling
+    #Set initial conditions for the optimization algorithm, by ignoring coupling (=0)
     # fz = 4 * (x1 - r * x0 + x0cr) - z -coupling = 0
-    #x0init = x1 + x0cr -z/(4*rx0)
-    xinit[:,iE] = x1EQ[:, iE] + x0cr[:, iE] - zEQ[:, iE] / (4 * rx0[:, iE])
-    #x1eqinit = x0cr-rx0*x0 +z/4
-    xinit[:, ix0] = x0cr[:,ix0] - rx0[:,ix0]*x0 + zEQ[:,ix0]/4
+    #x0init = (x1 + x0cr -z/4) / rx0
+    xinit[:, iE] = x0_calc(x1EQ[:, iE], zEQ[:, iE], x0cr[:, iE],  rx0[:, iE], 0.0)
+    #x1eqinit = rx0 * x0 - x0cr + z / 4
+    xinit[:, ix0] = rx0[:, ix0] * x0 - x0cr[:, ix0] + zEQ[:, ix0] / 4
 
     #Solve:
     sol = root(x1eq_x0_hypo_optimize_fun, xinit, args=(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w),
                method='lm', jac=x1eq_x0_hypo_optimize_jac, tol=10**(-6), callback=None, options=None) #method='hybr'
 
     if sol.success:
-        x1EQ[:,ix0] = sol.x[:,ix0]
+        x1EQ[:,ix0] = sol.x[:, ix0]
         return x1EQ
     else:
         raise ValueError(sol.message)
@@ -155,7 +212,6 @@ def x1eq_x0_hypo_linTaylor(ix0,iE,x1EQ,zEQ,x0,x0cr,rx0,y0,Iext1,K,w):
     ae_to_x0 = numpy.zeros((no_x0, no_e), dtype=numpy.float32)
 
     # From-to x0-fixed regions
-
     ax0_to_x0 = numpy.diag((4.0 + 3.0 * (x1LIN[:, ix0] ** 2 + 4.0 * x1LIN[:, ix0]) +
                 K[0, ix0] * numpy.expand_dims(numpy.sum(w[ix0][:, ix0], axis=0), 0)).T[:, 0]) \
                 - numpy.dot(K[:, ix0].T, ii_x0) * w[ix0][:, ix0]
@@ -175,61 +231,8 @@ def x1eq_x0_hypo_linTaylor(ix0,iE,x1EQ,zEQ,x0,x0cr,rx0,y0,Iext1,K,w):
     return x1EQ
 
 
-def zeq_2d_calc(x1eq, y0, Iext1):
-    x1eq2 = x1eq ** 2
-    return y0 + Iext1 -x1eq * x1eq2 - 2 * x1eq2
-
-
-def zeq_6d_calc(x1eq, y0, Iext1):
-    x1eq2 = x1eq**2
-    return y0 + Iext1 -x1eq * x1eq2 + 3 * x1eq2
-
-
-def y1eq_calc(x1eq, d=5.0):
-    return 1 - d * x1eq ** 2
-
-
-def pop2eq_calc(x1eq, zeq, Iext2):
-    shape = x1eq.shape
-    type = x1eq.dtype
-    # g_eq = 0.1*x1eq (1)
-    # y2eq = 0 (2)
-    y2eq = numpy.zeros(shape, dtype=type)
-    # -x2eq**3 + x2eq -y2eq+2*g_eq-0.3*(zeq-3.5)+Iext2 =0=> (1),(2)
-    # -x2eq**3 + x2eq +2*0.1*x1eq-0.3*(zeq-3.5)+Iext2 =0=>
-    # p3        p1                   p0
-    # -x2eq**3 + x2eq +0.2*x1eq-0.3*(zeq-3.5)+Iext2 =0
-    p0 = 0.2 * x1eq - 0.3 * (zeq - 3.5) + Iext2
-    x2eq = numpy.zeros(shape, dtype=type)
-    for i in range(shape[1]):
-        x2eq[0 ,i] = numpy.min(numpy.real(numpy.roots([-1.0, 0.0, 1.0, p0[0 ,i]])))
-    return x2eq, y2eq
-
-
-# def pop2eq_calc(n_regions,x1eq,zeq,Iext2):
-#    shape = x1eq.shape
-#    type = x1eq.dtype
-#    #g_eq = 0.1*x1eq (1)
-#    #y2eq = 6*(x2eq+0.25)*x1eq (2)
-#    #-x2eq**3 + x2eq -y2eq+2*g_eq-0.3*(zeq-3.5)+Iext2 =0=> (1),(2)
-#    #-x2eq**3 + x2eq -6*(x2eq+0.25)*x1eq+2*0.1*x1eq-0.3*(zeq-3.5)+Iext2 =0=>
-#    #-x2eq**3 + (1.0-6*x1eq)*x2eq -1.5*x1eq+ 0.2*x1eq-0.3*(zeq-3.5)+Iext2 =0
-#    #p3                p1                           p0
-#    #-x2eq**3 + (1.0-6*x1eq)*x2eq -1.3*x1eq -0.3*(zeq-3.5) +Iext2 =0
-#    p0 = -1.3*x1eq-0.3*(zeq-3.5)+Iext2
-#    p1 = 1.0-6*x1eq
-#    x2eq = numpy.zeros(shape, dtype=type)
-#    for i in range(shape[1]):
-#        x2eq[0 ,i] = numpy.min( numpy.real( numpy.roots([-1.0, 0.0, p1[i,0], p0[i,0] ]) ) )
-#    #(2):
-#    y2eq = 6*(x2eq+0.25)*x1eq
-#    return x2eq, y2eq
-
-def geq_calc(x1eq):
-    return 0.1 * x1eq
-
-
-def x0cr_rx0_calc(y0, Iext1, epileptor_model="2d", zmode=numpy.array("lin")):
+def x0cr_rx0_calc(y0, Iext1, epileptor_model = "2d", zmode = numpy.array("lin"),
+                  x1rest = X1_DEF, x1cr = X1_EQ_CR_DEF, x0def = X0_DEF, x0cr_def = X0_CR_DEF):
 
     #Define the symbolic variables we need:
     (y01, I1, x1, z, x0, r, x0cr, f1, fz) = symbols('y01 I1 x1 z x0 r x0cr f1 fz')
@@ -251,16 +254,14 @@ def x0cr_rx0_calc(y0, Iext1, epileptor_model="2d", zmode=numpy.array("lin")):
         fz = 4 * (x1 - r * x0 + x0cr) - z
     elif zmode == 'sig':
         #...and sigmoidal versions
-        fz = 4 * ((1+exp(-10*(x1+0.5))) - r * x0 + x0cr) - z
+        fz = 3/(1 + exp(-10 * (x1 + 0.5))) - r * x0 + x0cr - z
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
 
     #Solve the fz expression for rx0 and x0cr, assuming the following two points (x1eq,x0) = [(-5/3,0.0),(-4/3,1.0)]...
     #...and WITHOUT COUPLING
-    x1rest = -5.0 / 3
-    x1cr = -4.0 / 3
-    fz_sol = solve([fz.subs([(x1, x1rest), (x0, 0.0), (z, z.subs(x1, x1rest))]),
-                       fz.subs([(x1, x1cr), (x0, 1.0), (z, z.subs(x1, x1cr))])], r, x0cr)
+    fz_sol = solve([fz.subs([(x1, x1rest), (x0, x0def), (z, z.subs(x1, x1rest))]),
+                       fz.subs([(x1, x1cr), (x0, x0cr_def), (z, z.subs(x1, x1cr))])], r, x0cr)
 
     #Convert the solution of x0cr from expression to function that accepts numpy arrays as inputs:
     x0cr = lambdify((y01,I1),fz_sol[x0cr],'numpy')
@@ -287,9 +288,9 @@ def coupling_calc(x1, K, w):
 def x0_calc(x1, z, x0cr, rx0, coupl, zmode=numpy.array("lin")):
 
     if zmode == 'lin':
-        return x1 + x0cr - (z+coupl) / (4 * rx0)
+        return (x1 + x0cr - (z+coupl) / 4) / rx0
     elif zmode == 'sig':
-        return 3/(1+numpy.exp(-10*(x1+0.5))) + x0cr - (z + coupl) / (4 * rx0)
+        return (3 / (1 + numpy.exp(-10 * (x1 + 0.5))) + x0cr - z + coupl) / rx0
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
 

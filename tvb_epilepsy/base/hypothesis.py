@@ -228,8 +228,8 @@ class Hypothesis(object):
         x0 = numpy.expand_dims(numpy.array(x0),1).T
         
         if self.self.x1eq_mode=="linTaylor":
-            self.x1EQ = x1eq_x0_hypo_linTaylor(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0,
-                                           self.y0, self.Iext1, self.K, self.weights)
+            self.x1EQ = x1eq_x0_hypo_linTaylor(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0, self.y0,
+                                               self.Iext1, self.K, self.weights)
         else:
             self.x1EQ = x1eq_x0_hypo_optimize(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0, self.y0,
                                               self.Iext1, self.K, self.weights)

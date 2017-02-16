@@ -46,6 +46,7 @@ MOUSEHOOVER = False
 
 # Default model parameters
 X0_DEF = 0.0
+X0_CR_DEF = 1.0
 E_DEF = 0.0
 K_DEF = 1.0
 I_EXT1_DEF = 3.1

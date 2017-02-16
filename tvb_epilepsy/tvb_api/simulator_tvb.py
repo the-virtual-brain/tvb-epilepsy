@@ -110,7 +110,7 @@ def build_ep_2sv_model(hypothesis, variables_of_interest=["y0", "y1"], zmode=num
     elif zmode == 'sig':
         #Correct Ceq, x0cr, rx0 and x0 for sigmoidal fz(x1)
         ceq = coupling_calc(hypothesis.x1EQ, hypothesis.K, hypothesis.weights)
-        (x0cr,r)=x0cr_rx0_calc(hypothesis.y0, hypothesis.Iext1, epileptor_model="2d", zmode=zmode)
+        (x0cr,r) = x0cr_rx0_calc(hypothesis.y0, hypothesis.Iext1, epileptor_model="2d", zmode=zmode)
         x0 = x0_calc(hypothesis.x1EQ, hypothesis.zEQ, x0cr, r, ceq, zmode=zmode)
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
@@ -142,8 +142,8 @@ def prepare_for_2sv_model(hypothesis, model, history_length):
 def build_ep_6sv_model(hypothesis,variables_of_interest=["y3 - y0", "y2"],zmode=numpy.array("lin")):
     #Correct Ceq, x0cr, rx0, zeq and x0 for 6D model
     ceq = coupling_calc(hypothesis.x1EQ, hypothesis.K, hypothesis.weights)
-    (x0cr,r)=x0cr_rx0_calc(hypothesis.y0, hypothesis.Iext1, epileptor_model="6d", zmode=zmode)
-    zeq=zeq_6d_calc(hypothesis.x1EQ, hypothesis.y0, hypothesis.Iext1)
+    (x0cr,r) = x0cr_rx0_calc(hypothesis.y0, hypothesis.Iext1, epileptor_model="6d", zmode=zmode)
+    zeq = zeq_6d_calc(hypothesis.x1EQ, hypothesis.y0, hypothesis.Iext1)
     x0 = x0_calc(hypothesis.x1EQ, zeq, x0cr, r, ceq, zmode=zmode)
     model = epileptor_models.EpileptorDP(x0=x0,
                                          Iext1=hypothesis.Iext1, 

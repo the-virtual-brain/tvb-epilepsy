@@ -11,6 +11,7 @@ from matplotlib import pyplot, gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.utils import calculate_in_degree
+from tvb_epilepsy.base.equilibrium_computation import fz_lin_calc
 
 try:
     #https://github.com/joferkington/mpldatacursor
@@ -224,7 +225,7 @@ def _plot_projection(proj, connectivity, sensors, figure=None, title="Projection
     return figure
 
 
-def plot_nullclines_eq(hypothesis,region_labels,special_idx=None,
+def plot_nullclines_eq(hypothesis,region_labels,special_idx=None, x0ne = X0_DEF, x0e = X0_CR_DEF,
                        figure_name='Nullclines and equilibria', show_flag=SHOW_FLAG,
                        save_flag=False, figure_dir=FOLDER_FIGURES, 
                        figure_format=FIG_FORMAT, figsize=SMALL_SIZE):
@@ -234,32 +235,32 @@ def plot_nullclines_eq(hypothesis,region_labels,special_idx=None,
     Iext1 = np.mean(hypothesis.Iext1)
     x0cr = np.mean(hypothesis.x0cr)  # Critical x0
     r = np.mean(hypothesis.rx0) 
-    x0ne = 0.0  # Default x0 for non epileptogenic regions
-    x0e = 1.0  # Default x0 for epileptogenic regions
+    #x0ne = 0.0  # Default x0 for non epileptogenic regions
+    #x0e = 1.0  # Default x0 for epileptogenic regions
     x1lin0 = np.mean(hypothesis.x1LIN)  # The point of the linear approximation (1st order Taylor expansion)
     #x1sq0 = np.mean(hypothesis.x1SQ)  # The point of the square (parabolic) approximation (2nd order Taylor expansion)
     
     # Lines:
-    x1 = np.expand_dims(np.linspace(-1.0 / 3.0, 6.0 / 3.0, 100), 1).T
+    x1 = np.expand_dims(np.linspace(-2.0, 2.0 / 3.0, 100), 1).T
     # x1 nullcline:
-    zX1 = y0 + Iext1 - (x1 - 5.0 / 3.0) ** 3 - 2.0 * (x1 - 5.0 / 3.0) ** 2
+    zX1 = y0 + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
     # z nullcline:
-    zZe = 4.0 * (x1 - r * x0e + x0cr)  # for epileptogenic regions
-    zZne = 4.0 * (x1 - r * x0ne + x0cr)  # for non-epileptogenic regions
+    zZe = fz_lin_calc(x1,x0e,x0cr,r)   # for epileptogenic regions
+    zZne = fz_lin_calc(x1,x0ne,x0cr,r)  # for non-epileptogenic regions
     # approximations:
     # linear:
-    x1lin = np.expand_dims(np.linspace(-0.0 / 3.0, 1.0 / 3.0, 30), 1).T
+    x1lin = np.expand_dims(np.linspace(-5.5 / 3.0, -3.5/3 , 30), 1).T
     # x1 nullcline after linear approximation
-    zX1lin = y0 + Iext1 + 2.0 * x1lin0 ** 3 - 3.0 * x1lin0 ** 2 - 25.0 / 27.0 + \
-             (-3.0 * x1lin0 ** 2 + 6.0 * x1lin0 - 5.0 / 3.0) * x1lin  # x1 nullcline after linear approximation
+    zX1lin = y0 + Iext1 + 2.0 * x1lin0 ** 3 + 2.0 * x1lin0 ** 2 - \
+             (3.0 * x1lin0 ** 2 + 4.0 * x1lin0) * x1lin  # x1 nullcline after linear approximation
     # center point without approximation:
-    #zlin0 = y0 + Iext1 - (x1lin0 - 5.0 / 3.0) ** 3 - 2.0 * (x1lin0 - 5.0 / 3.0) ** 2
+    #zlin0 = y0 + Iext1 - x1lin0 ** 3 - 2.0 * x1lin0 ** 2
     # square:
-    x1sq = np.expand_dims(np.linspace(1.5 / 6.0, 1.5 / 3.0, 30), 1).T
+    x1sq = np.expand_dims(np.linspace(-5.0 / 3, -1.0, 30), 1).T
     # x1 nullcline after parabolic approximation
-    zX1sq = + 2.0 * x1sq ** 2 - 4.0 * x1sq / 3.0 + y0 + Iext1 - 26.0 / 27.0
+    zX1sq = + 2.0 * x1sq ** 2 + 16.0 * x1sq / 3.0 + y0 + Iext1 + 64.0 / 27.0
     # center point (critical equilibrium point) without approximation:
-    #zsq0 = y0 + Iext1 - (x1sq0 - 5.0 / 3.0) ** 3 - 2.0 * (x1sq0 - 5.0 / 3.0) ** 2
+    #zsq0 = y0 + Iext1 - x1sq0 ** 3 - 2.0 * x1sq0 ** 2
     
     fig=mp.pyplot.figure(figure_name, figsize=figsize)
     x1null, =mp.pyplot.plot(x1[0, :], zX1[0, :], 'b-', label='x1 nullcline', linewidth=1)
@@ -267,8 +268,8 @@ def plot_nullclines_eq(hypothesis,region_labels,special_idx=None,
     ax.axes.hold(True)
     zE1null, =mp.pyplot.plot(x1[0, :], zZe[0, :], 'g-', label='z nullcline at critical point (E=1)', linewidth=1)
     zE2null, =mp.pyplot.plot(x1[0, :], zZne[0, :], 'g--', label='z nullcline for E=0', linewidth=1)
-    lin, =mp.pyplot.plot(x1lin[0, :], zX1lin[0, :], 'c--', label='Linear local approximation', linewidth=2)
-    sq, =mp.pyplot.plot(x1sq[0, :], zX1sq[0, :], 'm--', label='Parabolic local approximation', linewidth=2)
+    sq, = mp.pyplot.plot(x1sq[0, :], zX1sq[0, :], 'm--', label='Parabolic local approximation', linewidth=2)
+    lin, = mp.pyplot.plot(x1lin[0, :], zX1lin[0, :], 'c--', label='Linear local approximation', linewidth=2)
     mp.pyplot.legend(handles=[x1null, zE1null, zE2null, lin, sq])
     
     ii=range(hypothesis.n_regions)
