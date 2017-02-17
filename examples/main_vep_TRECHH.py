@@ -142,7 +142,7 @@ if __name__ == "__main__":
     # E[8]=0.425
     # E[9]=0.900
     iE = np.array([50])
-    E = np.array([0.8], dtype=numpy.float32)
+    E = np.array([0.99], dtype=numpy.float32)
     hyp_ep.configure_e_hypothesis(iE, E, seizure_indices)
     logger.debug(str(hyp_ep))
     plot_hypothesis(hyp_ep, head.connectivity.region_labels,
@@ -195,7 +195,7 @@ if __name__ == "__main__":
         
     #Time scales:    
     fs = 2*1024.0
-    dt = 500.0/fs #1000.0/fs
+    dt = 50.0/fs #1000.0/fs
     fsAVG = 512.0 #fs/10
     fsSEEG = fsAVG
     
