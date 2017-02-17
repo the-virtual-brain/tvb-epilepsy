@@ -246,42 +246,56 @@ if __name__ == "__main__":
         logger.info("Simulated signal return shape: " + str(tavg_data.shape))
         logger.info("Time: " + str(ttavg[0]) + " - " + str(ttavg[-1]))
         logger.info("Values: " + str(tavg_data.min()) + " - " + str(tavg_data.max()))
-        if ~isinstance(sim.model, EpileptorDP2D):
+        if isinstance(sim.model, EpileptorDP2D):
+            x1 = np.array(tavg_data[:, 0, :, 0], dtype='float32')
+            z = np.array(tavg_data[:, 1, :, 0], dtype='float32')
+            i=1
+            seeg = np.dot(x1, projections[i].T)
+        else:
             lfp = np.array(tavg_data[:, 0, :, 0], dtype='float32')
             z = np.array(tavg_data[:, 3, :, 0], dtype='float32')
             x1 = np.array(tavg_data[:, 1, :, 0], dtype='float32')
-            y1 = np.array(tavg_data[:, 2, :, 0],dtype='float32')
-            x2 = np.array(tavg_data[:, 4, :, 0],dtype='float32')
-            y2 = np.array(tavg_data[:, 5, :, 0],dtype='float32')
-            g = np.array(tavg_data[:, 6, :, 0],dtype='float32')
-        else:
-            lfp = np.array(tavg_data[:, 0, :, 0], dtype='float32')
-            z = np.array(tavg_data[:, 1, :, 0], dtype='float32')
+            y1 = np.array(tavg_data[:, 2, :, 0], dtype='float32')
+            x2 = np.array(tavg_data[:, 4, :, 0], dtype='float32')
+            y2 = np.array(tavg_data[:, 5, :, 0], dtype='float32')
+            g = np.array(tavg_data[:, 6, :, 0], dtype='float32')
+            hpf = np.empty((ttavg.size, hyp.n_regions)).astype(np.float32)
+            for i in range(hyp.n_regions):
+                hpf[:, i] = filter_data(lfp[:, i], 10, 250, fsAVG)  # .astype(np.float32) #.transpose()
+            hpf = np.array(hpf, dtype='float32')
+            i = 1
+            seeg = np.dot(hpf, projections[i].T)
         if isinstance(sim.model,EpileptorDPrealistic):
             x0ts=np.array(tavg_data[:, 7, :, 0],dtype='float32')
             slopeTS=np.array(tavg_data[:, 8, :, 0],dtype='float32')
             Iext1ts=np.array(tavg_data[:, 9, :, 0],dtype='float32')
             Iext2ts=np.array(tavg_data[:, 10, :, 0],dtype='float32')
             Kts=np.array(tavg_data[:, 11, :, 0],dtype='float32')
-        hpf = np.empty((ttavg.size,hyp.n_regions)).astype(np.float32)
-        for i in range(hyp.n_regions):
-            hpf[:,i] = filter_data(lfp[:,i], 10, 250, fsAVG)#.astype(np.float32) #.transpose()
-        hpf=np.array(hpf,dtype='float32')   
         ttavg = np.array(ttavg,dtype='float32')
         #hpf = filter_data(lfp, fsAVG/30, fsAVG/3, fsAVG)
-        plot_timeseries(ttavg, {'LFP': lfp, 'z(t)': z, 'HPF LFP': hpf},
-                        seizure_indices, title=" Simulated TAVG for " + hyp.name,
+
+        if isinstance(sim.model, EpileptorDP2D):
+            plot_timeseries(ttavg, {'x1': x1, 'z(t)': z},
+                            seizure_indices, title=" Simulated TAVG for " + hyp.name,
+                            save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES,
+                            labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+        else:
+            plot_timeseries(ttavg, {'LFP(t)': lfp,  'z(t)': z},
+                        seizure_indices, title=" Simulated LFP-z for " + hyp.name,
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES, 
                         labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
-        if ~isinstance(sim.model, EpileptorDP2D):
-            plot_timeseries(ttavg, {'x1(t)': x1, 'y1(t)': y1, 'z(t)': z},
-                        seizure_indices, title=" Simulated pop1-z for " + hyp.name,
-                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES, 
-                        labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+            plot_timeseries(ttavg, {'x1(t)': x1, 'y1(t)': y1},
+                            seizure_indices, title=" Simulated pop1 for " + hyp.name,
+                            save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES,
+                            labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
             plot_timeseries(ttavg, {'x2(t)': x2, 'y2(t)': y2, 'g(t)': g},seizure_indices,
                         title=" Simulated pop2-g for " + hyp.name,
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES, 
                         labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+            plot_raster(ttavg[100:], {'hpf': hpf[100:, :]}, seizure_indices,
+                        title=" Simulated hfp" + str(i) + " rasterplot for " + hyp.name, offset=10.0,
+                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES,
+                        labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
         if isinstance(sim.model, EpileptorDPrealistic):
             plot_timeseries(ttavg, {'1/(1+exp(-10(z-3.03))': 1/(1+np.exp(-10*(z-3.03))), 'slope': slopeTS, 'Iext2': Iext2ts},
                         seizure_indices, title=" Simulated controlled parameters for " + hyp.name,
@@ -291,21 +305,14 @@ if __name__ == "__main__":
                         seizure_indices, title=" Simulated parameters for " + hyp.name,
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES, 
                         labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
-                       
-        #for i in range(len(projections)):
-        i=1
-        seeg = np.dot(hpf,projections[i].T)
+
 #            plot_timeseries(ttavg[100:], {'SEEG': seeg[100:,:]}, title=" Simulated SEEG"+str(i)+" for " + hyp.name,
 #                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES, 
 #                        labels = sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
         plot_raster(ttavg[100:], {'SEEG': seeg[100:,:]}, title=" Simulated SEEG"+str(i)+" rasterplot for " + hyp.name,
                         offset=10.0,save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES, 
                         labels = sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
-                        
-        plot_raster(ttavg[100:], {'hpf': hpf[100:,:]}, seizure_indices,
-                        title=" Simulated hfp"+str(i)+" rasterplot for " + hyp.name,offset=10.0,
-                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES, 
-                        labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+
         if isinstance(sim.model, EpileptorDPrealistic):
             savemat(os.path.join(FOLDER_RES, hyp.name+"_ts.mat"),{'lfp':lfp,
                                                                   'seeg': seeg,
@@ -322,6 +329,11 @@ if __name__ == "__main__":
                                                                   'Iext2ts': Iext2ts,
                                                                   'Kts': Kts,
                                                                   'time_in_ms': ttavg})
+        elif isinstance(sim.model, EpileptorDP2D):
+            savemat(os.path.join(FOLDER_RES, hyp.name + "_ts.mat"), {'seeg': seeg,
+                                                                     'z': z,
+                                                                     'x1': x1,
+                                                                     'time_in_ms': ttavg})
         else:
             savemat(os.path.join(FOLDER_RES, hyp.name + "_ts.mat"), {'lfp': lfp,
                                                                      'seeg': seeg,
