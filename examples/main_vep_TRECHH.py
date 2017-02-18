@@ -296,6 +296,7 @@ if __name__ == "__main__":
                         title=" Simulated hfp" + str(i) + " rasterplot for " + hyp.name, offset=10.0,
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+
         if isinstance(sim.model, EpileptorDPrealistic):
             plot_timeseries(ttavg, {'1/(1+exp(-10(z-3.03))': 1/(1+np.exp(-10*(z-3.03))), 'slope': slopeTS, 'Iext2': Iext2ts},
                         seizure_indices, title=" Simulated controlled parameters for " + hyp.name,
