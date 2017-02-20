@@ -184,11 +184,11 @@ class Hypothesis(object):
          Suggested correction for the moment to ceil x1EQ to the critical x1EQcr = 1/3,
         and then update the whole hypothesis accordingly. We should ask the user for this..
         """
-        #TODO: deal with super-critical equilibria...
+        #TODO: deal with super-critical equilibria better than the way done below...
 
-        temp = self.x1EQ > self.x1EQcr
+        temp = self.x1EQ > self.x1EQcr - 10 ** (-3) #numpy.nextafter(0., 1.)
         if temp.any():
-            self.x1EQ[temp] = self.x1EQcr
+            self.x1EQ[temp] = self.x1EQcr - 10 ** (-3) #numpy.nextafter(0., 1.)
             self.zEQ = self._calculate_equilibria_z()
 
             # Now that equilibria are OK, update the hypothesis to get the actual x0, E etc

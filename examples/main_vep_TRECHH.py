@@ -142,7 +142,7 @@ if __name__ == "__main__":
     # E[8]=0.425
     # E[9]=0.900
     iE = np.array([50])
-    E = np.array([0.99], dtype=numpy.float32)
+    E = np.array([0.9], dtype=numpy.float32)
     hyp_ep.configure_e_hypothesis(iE, E, seizure_indices)
     logger.debug(str(hyp_ep))
     plot_hypothesis(hyp_ep, head.connectivity.region_labels,
@@ -165,10 +165,10 @@ if __name__ == "__main__":
 
     
 #------------------------------Simulation--------------------------------------
-    hyp_ep.K = 0.0*hyp_ep.K
+    hyp_ep.K = hyp_ep.K
      # Now Simulate
     # Choosing the model:
-    model='2D' #'6D', '2D', '11D', 'tvb'
+    model = '11D' #'6D', '2D', '11D', 'tvb'
     if model == '6D':
         #                                        epileptor model,      history
         simulator_instance = SimulatorTVB(build_ep_6sv_model, prepare_for_6sv_model)
@@ -195,8 +195,8 @@ if __name__ == "__main__":
         
     #Time scales:    
     fs = 2*1024.0
-    dt = 50.0/fs #1000.0/fs
-    fsAVG = 512.0 #fs/10
+    dt = 512.0 / fs
+    fsAVG = fs/10
     fsSEEG = fsAVG
     
     #Noise configuration
@@ -205,14 +205,13 @@ if __name__ == "__main__":
         noise_intensity=0.1*np.array([0., 0., 1e-6, 0.0, 1e-6, 0., 1e-7, 1e-2, 1e-7, 1e-2, 1e-8])
     elif model == '2D':
         #                                     x1   z
-        noise_intensity = 0.01 ** numpy.array([0., 5e-5])
+        noise_intensity = 1.0 * numpy.array([0., 5e-5])
     else:
         #                                     x1  y1   z     x2   y2   g
-        noise_intensity = 0.1 ** numpy.array([0., 0., 5e-5, 0.0, 5e-5, 0.])
+        noise_intensity = 0.1 * numpy.array([0., 0., 5e-5, 0.0, 5e-5, 0.])
 
     #Preconfigured noise                                     
-    dtN = 1000.0/fsAVG
-    if model == '11D':\
+    if model == '11D':
         #Colored noise for realistic simulations
         eq=equations.Linear(parameters={"a": 0.0, "b": 1.0}) #default = a*y+b
         this_noise=noise.Multiplicative(ntau = 10, nsig=noise_intensity, b=eq,
@@ -226,7 +225,7 @@ if __name__ == "__main__":
     
     #Now simulate and plot
     for hyp in (hyp_ep,): # ,hyp_exc #length=30000
-        settings = SimulationSettings(length=1000,integration_step=dt, monitor_sampling_period=fs/fsSEEG*dt,
+        settings = SimulationSettings(length=30000,integration_step=dt, monitor_sampling_period=fs/fsSEEG*dt,
                                       noise_preconfig=this_noise, monitor_expr=monitor_expr)
         sim= simulator_instance.config_simulation(hyp, head, settings)
         #Here make all changes you want to the model and simulator
