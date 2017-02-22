@@ -227,7 +227,7 @@ class EpileptorDP(Model):
 
     tau1 = arrays.FloatArray(
         label="tau1",
-        default=numpy.array([1.0]),
+        default=numpy.array([0.25]),
         range=basic.Range(lo=0.001, hi=10.0, step=0.001),
         doc="Time scaling of the whole system",
         order=9)
@@ -506,7 +506,7 @@ class EpileptorDPrealistic(Model):
     tau0 = arrays.FloatArray(
         label="r",
         range=basic.Range(lo=100.0, hi=5000, step=10),
-        default=numpy.array([4000.0]),
+        default=numpy.array([10000.0]),
         doc="Temporal scaling in the third state variable",
         order=4)
 
@@ -587,7 +587,7 @@ class EpileptorDPrealistic(Model):
 
     tau1 = arrays.FloatArray(
         label="tau1",
-        default=numpy.array([1.0]),
+        default=numpy.array([0.25]),
         range=basic.Range(lo=0.001, hi=10.0, step=0.001),
         doc="Time scaling of the whole system",
         order=9)
@@ -941,7 +941,7 @@ class EpileptorDP2D(Model):
 
     tau1 = arrays.FloatArray(
         label="tau1",
-        default=numpy.array([1.0]),
+        default=numpy.array([0.25]),
         range=basic.Range(lo=0.001, hi=10.0, step=0.001),
         doc="Time scaling of the whole system",
         order=9)

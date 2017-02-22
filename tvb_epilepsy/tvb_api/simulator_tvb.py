@@ -4,6 +4,8 @@
 Mechanism for launching TVB simulations.
 """
 
+import sys
+import time
 import numpy
 from tvb.datatypes import connectivity
 from tvb.simulator import coupling, integrators, models, monitors, noise, simulator
@@ -25,7 +27,7 @@ class SimulatorTVB(ABCSimulator):
                                          centres=vep_conn.centers, hemispheres=vep_conn.hemispheres,
                                          orientations=vep_conn.orientations, areas=vep_conn.areas)
 
-    def config_simulation(self, hypothesis, head, vep_settings=SimulationSettings(),zmode=numpy.array("lin")):
+    def config_simulation(self, hypothesis, head, vep_settings=SimulationSettings(), zmode=numpy.array("lin")):
 
         tvb_conn = self._vep2tvb_connectivity(head.connectivity)
         self.model = self.builder_model(hypothesis,variables_of_interest=vep_settings.monitor_expr, zmode=zmode)
@@ -51,13 +53,44 @@ class SimulatorTVB(ABCSimulator):
                                   integrator=integrator, monitors=what_to_watch,
                                   simulation_length=vep_settings.simulated_period)        
         return sim
-        
-    def launch_simulation(self, sim, hypothesis):
+
+
+    def launch_simulation(self, sim, hypothesis, n_report_blocks=1):
         sim.configure()
         self.initial_conditions = self.builder_initial_conditions(hypothesis, self.model, sim.good_history_shape[0])
         sim._configure_history(initial_conditions=self.initial_conditions)
-        tavg_time, tavg_data = sim.run()[0]
-        return tavg_time, tavg_data
+        if n_report_blocks<2:
+            tavg_time, tavg_data = sim.run()[0]
+            return tavg_time, tavg_data
+        else:
+            sim_length = sim.simulation_length / sim.monitors[0].period
+            block_length = sim_length / n_report_blocks
+            curr_time_step = 0.0
+            curr_block = 1.0
+
+            # Perform the simulation
+            tavg_data, tavg_time = [], []
+
+            start = time.time()
+
+            for tavg in sim():
+
+                curr_time_step += 1.0
+
+                if not tavg is None:
+                    tavg_time.append(tavg[0][0])
+                    tavg_data.append(tavg[0][1])
+
+                if curr_time_step >= curr_block * block_length:
+                    end_block = time.time()
+                    print_this = "\r" + "..." + str(100 * curr_time_step / sim_length) + "% done in " +\
+                                 str(end_block-start) + " secs"
+                    sys.stdout.write(print_this)
+                    sys.stdout.flush()
+                    curr_block += 1.0
+
+            return numpy.array(tavg_time), numpy.array(tavg_data)
+
 
     def launch_pse(self, hypothesis, head, vep_settings=SimulationSettings()):
         raise NotImplementedError()
@@ -66,7 +99,6 @@ class SimulatorTVB(ABCSimulator):
 ###
 # Prepare for TVB configuration
 ###
-
 
 def build_tvb_model(hypothesis,variables_of_interest=["y3 - y0", "y2"], zmode="lin"):
     x0_transformed = _rescale_x0(hypothesis.y0, hypothesis.Iext1)
@@ -137,7 +169,6 @@ def prepare_for_2sv_model(hypothesis, model, history_length):
 ###
 # Prepare for epileptor_models.EpileptorDP
 ###
-
 
 def build_ep_6sv_model(hypothesis,variables_of_interest=["y3 - y0", "y2"],zmode=numpy.array("lin")):
     #Correct Ceq, x0cr, rx0, zeq and x0 for 6D model
