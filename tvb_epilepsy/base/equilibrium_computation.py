@@ -8,8 +8,6 @@ import numpy
 from scipy.optimize import root
 from sympy import symbols, exp, solve, lambdify
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_DEF, X0_CR_DEF
-from tvb_epilepsy.tvb_api.epileptor_models import *
-from tvb.simulator.models import Epileptor
 
 
 #Currently we assume only difference coupling (permittivity coupling following Proix et al 2014)
@@ -234,6 +232,8 @@ def x1eq_x0_hypo_linTaylor(ix0,iE,x1EQ,zEQ,x0,x0cr,rx0,y0,Iext1,K,w):
 def x0cr_rx0_calc(y0, Iext1, epileptor_model = "2d", zmode = numpy.array("lin"),
                   x1rest = X1_DEF, x1cr = X1_EQ_CR_DEF, x0def = X0_DEF, x0cr_def = X0_CR_DEF):
 
+    from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
+
     #Define the symbolic variables we need:
     (y01, I1, x1, z, x0, r, x0cr, f1, fz) = symbols('y01 I1 x1 z x0 r x0cr f1 fz')
 
@@ -296,6 +296,8 @@ def x0_calc(x1, z, x0cr, rx0, coupl, zmode=numpy.array("lin")):
 
 
 def calc_equilibrium_point(epileptor_model, hypothesis):
+    from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic, EpileptorDP2D
+    from tvb.simulator.models import Epileptor
 
     #De-center them:
     if isinstance(epileptor_model,EpileptorDP2D):

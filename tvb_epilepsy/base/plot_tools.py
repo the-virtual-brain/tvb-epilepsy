@@ -4,7 +4,7 @@
 Various plotting tools will be placed here.
 """
 
-import numpy as np
+import numpy 
 from scipy.stats.mstats import zscore
 import matplotlib as mp
 from matplotlib import pyplot, gridspec
@@ -12,6 +12,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.utils import calculate_in_degree
 from tvb_epilepsy.base.equilibrium_computation import fz_lin_calc
+from tvb_epilepsy.tvb_api.epileptor_models import *
 
 try:
     #https://github.com/joferkington/mpldatacursor
@@ -89,9 +90,9 @@ def _plot_vector(vector, labels, subplot, title, show_y_labels=True, indices_red
     mp.pyplot.title(title)
     n_vector = labels.shape[0]
 
-    y_ticks = np.array(range(n_vector), dtype=np.int32)
+    y_ticks = numpy.array(range(n_vector), dtype=numpy.int32)
     color = 'k'
-    colors = np.repeat([color], n_vector)
+    colors = numpy.repeat([color], n_vector)
     if indices_red is None:
         indices_red = y_ticks
         coldif = False
@@ -106,7 +107,7 @@ def _plot_vector(vector, labels, subplot, title, show_y_labels=True, indices_red
     ax.grid(True, color='grey')
     ax.set_yticks(y_ticks)
     if show_y_labels:
-        region_labels = np.array(["%d. %s" % l for l in zip(range(n_vector), labels)])
+        region_labels = numpy.array(["%d. %s" % l for l in zip(range(n_vector), labels)])
         ax.set_yticklabels(region_labels)
         if coldif:
             labels = ax.yaxis.get_ticklabels()
@@ -127,7 +128,7 @@ def _plot_regions2regions(adj, labels, subplot, title, show_y_labels=True, show_
 
     y_color = 'k'
     adj_size = adj.shape[0]
-    y_ticks = np.array(range(adj_size), dtype=np.int32)
+    y_ticks = numpy.array(range(adj_size), dtype=numpy.int32)
     if indices_red_x is None:
         indices_red_x = y_ticks
         x_ticks = indices_red_x
@@ -135,14 +136,14 @@ def _plot_regions2regions(adj, labels, subplot, title, show_y_labels=True, show_
     else:
         x_color = 'r'
         x_ticks = range(len(indices_red_x))
-    region_labels = np.array(["%d. %s" % l for l in zip(range(adj_size), labels)])
+    region_labels = numpy.array(["%d. %s" % l for l in zip(range(adj_size), labels)])
     cmap = mp.pyplot.set_cmap('autumn_r')
     img = ax.imshow(adj[indices_red_x, :].T, cmap=cmap, interpolation='none')
     ax.set_xticks(x_ticks)
     ax.grid(True, color='grey')
 
     if show_y_labels:
-        region_labels = np.array(["%d. %s" % l for l in zip(range(adj_size), labels)])
+        region_labels = numpy.array(["%d. %s" % l for l in zip(range(adj_size), labels)])
         ax.set_yticks(y_ticks)
         ax.set_yticklabels(region_labels)
         if not (x_color == y_color):
@@ -190,20 +191,20 @@ def _plot_projection(proj, connectivity, sensors, figure=None, title="Projection
     n_sensors = sensors.number_of_sensors
     n_regions = connectivity.number_of_regions
     if x_ticks is None:
-        x_ticks = np.array(range(n_sensors), dtype=np.int32)
+        x_ticks = numpy.array(range(n_sensors), dtype=numpy.int32)
     if y_ticks is None:
-        y_ticks = np.array(range(n_regions), dtype=np.int32)
+        y_ticks = numpy.array(range(n_regions), dtype=numpy.int32)
 
     cmap = mp.pyplot.set_cmap('autumn_r')
     img = mp.pyplot.imshow(proj[x_ticks][:, y_ticks].T, cmap=cmap, interpolation='none')
     mp.pyplot.grid(True, color='black')
     if y_labels > 0:
-        region_labels = np.array(["%d. %s" % l for l in zip(range(n_regions), connectivity.region_labels)])
+        region_labels = numpy.array(["%d. %s" % l for l in zip(range(n_regions), connectivity.region_labels)])
         mp.pyplot.yticks(y_ticks, region_labels[y_ticks])
     else:
         mp.pyplot.yticks(y_ticks)
     if x_labels > 0:
-        sensor_labels = np.array(["%d. %s" % l for l in zip(range(n_sensors), sensors.labels)])
+        sensor_labels = numpy.array(["%d. %s" % l for l in zip(range(n_sensors), sensors.labels)])
         mp.pyplot.xticks(x_ticks, sensor_labels[x_ticks], rotation=90)
     else:
         mp.pyplot.xticks(x_ticks)
@@ -231,17 +232,17 @@ def plot_nullclines_eq(hypothesis,region_labels,special_idx=None, x0ne = X0_DEF,
                        figure_format=FIG_FORMAT, figsize=SMALL_SIZE):
                     
     #Fixed parameters for all regions:
-    y0 = np.mean(hypothesis.y0)
-    Iext1 = np.mean(hypothesis.Iext1)
-    x0cr = np.mean(hypothesis.x0cr)  # Critical x0
-    r = np.mean(hypothesis.rx0) 
+    y0 = numpy.mean(hypothesis.y0)
+    Iext1 = numpy.mean(hypothesis.Iext1)
+    x0cr = numpy.mean(hypothesis.x0cr)  # Critical x0
+    r = numpy.mean(hypothesis.rx0) 
     #x0ne = 0.0  # Default x0 for non epileptogenic regions
     #x0e = 1.0  # Default x0 for epileptogenic regions
-    x1lin0 = np.mean(hypothesis.x1LIN)  # The point of the linear approximation (1st order Taylor expansion)
-    #x1sq0 = np.mean(hypothesis.x1SQ)  # The point of the square (parabolic) approximation (2nd order Taylor expansion)
+    x1lin0 = numpy.mean(hypothesis.x1LIN)  # The point of the linear approximation (1st order Taylor expansion)
+    #x1sq0 = numpy.mean(hypothesis.x1SQ)  # The point of the square (parabolic) approximation (2nd order Taylor expansion)
     
     # Lines:
-    x1 = np.expand_dims(np.linspace(-2.0, 2.0 / 3.0, 100), 1).T
+    x1 = numpy.expand_dims(numpy.linspace(-2.0, 2.0 / 3.0, 100), 1).T
     # x1 nullcline:
     zX1 = y0 + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
     # z nullcline:
@@ -249,14 +250,14 @@ def plot_nullclines_eq(hypothesis,region_labels,special_idx=None, x0ne = X0_DEF,
     zZne = fz_lin_calc(x1,x0ne,x0cr,r)  # for non-epileptogenic regions
     # approximations:
     # linear:
-    x1lin = np.expand_dims(np.linspace(-5.5 / 3.0, -3.5/3 , 30), 1).T
+    x1lin = numpy.expand_dims(numpy.linspace(-5.5 / 3.0, -3.5/3 , 30), 1).T
     # x1 nullcline after linear approximation
     zX1lin = y0 + Iext1 + 2.0 * x1lin0 ** 3 + 2.0 * x1lin0 ** 2 - \
              (3.0 * x1lin0 ** 2 + 4.0 * x1lin0) * x1lin  # x1 nullcline after linear approximation
     # center point without approximation:
     #zlin0 = y0 + Iext1 - x1lin0 ** 3 - 2.0 * x1lin0 ** 2
     # square:
-    x1sq = np.expand_dims(np.linspace(-5.0 / 3, -1.0, 30), 1).T
+    x1sq = numpy.expand_dims(numpy.linspace(-5.0 / 3, -1.0, 30), 1).T
     # x1 nullcline after parabolic approximation
     zX1sq = + 2.0 * x1sq ** 2 + 16.0 * x1sq / 3.0 + y0 + Iext1 + 64.0 / 27.0
     # center point (critical equilibrium point) without approximation:
@@ -273,14 +274,14 @@ def plot_nullclines_eq(hypothesis,region_labels,special_idx=None, x0ne = X0_DEF,
     mp.pyplot.legend(handles=[x1null, zE1null, zE2null, lin, sq])
     
     ii=range(hypothesis.n_regions)
-    if np.all(special_idx!=None):
-        ii = np.delete(ii, special_idx)
+    if numpy.all(special_idx!=None):
+        ii = numpy.delete(ii, special_idx)
         
     points =[]    
     for i in ii:
         point, = mp.pyplot.plot(hypothesis.x1EQ[0,i], hypothesis.zEQ[0,i], '*', mfc='k', mec='k', ms=10,  alpha=0.3, label=str(i)+'.'+region_labels[i])
         points.append(point)
-    if np.all(special_idx!=None):
+    if numpy.all(special_idx!=None):
         for i in special_idx:
             point, = mp.pyplot.plot(hypothesis.x1EQ[0,i], hypothesis.zEQ[0,i], '*', mfc='r', mec='r', ms=10, alpha=0.8, label=str(i)+'.'+region_labels[i])
             points.append(point)
@@ -355,7 +356,7 @@ def plot_hypothesis(hypothesis, region_labels, figure_name='', show_flag=SHOW_FL
 
 def _set_axis_labels(fig, sub, n_regions, region_labels, indices2emphasize, color='k', position='left'):
     y_ticks = range(n_regions)
-    region_labels = np.array(["%d. %s" % l for l in zip(y_ticks, region_labels)])
+    region_labels = numpy.array(["%d. %s" % l for l in zip(y_ticks, region_labels)])
     big_ax = fig.add_subplot(sub, frameon=False)
     if position == 'right':
         big_ax.yaxis.tick_right()
@@ -386,15 +387,15 @@ def plot_timeseries(time, data_dict, special_idx=None, title='Time Series', show
         data = data_dict[subtitle]
         nTS = data.shape[1]
         if labels is None: 
-            labels = np.array(range(nTS)).astype(str)
+            labels = numpy.array(range(nTS)).astype(str)
         lines.append([])
         if special_idx is None:
             for iTS in range(nTS):
                 line, = mp.pyplot.plot(time, data[:,iTS], 'k', alpha=0.3, label = labels[iTS])
                 lines[i].append(line)
         else:
-            mask = np.array(range(nTS))
-            mask = np.delete(mask,special_idx)
+            mask = numpy.array(range(nTS))
+            mask = numpy.delete(mask,special_idx)
             for iTS in special_idx:
                 line, = mp.pyplot.plot(time, data[:, iTS], 'r', alpha=0.7, label = labels[iTS])
                 lines[i].append(line)
@@ -436,15 +437,15 @@ def plot_raster(time, data_dict, special_idx=None, title='Time Series', offset=3
         data = zscore(data,axis=None)
         nTS = data.shape[1]
         if labels is None: 
-            labels = np.array(range(nTS)).astype(str)
+            labels = numpy.array(range(nTS)).astype(str)
         lines.append([])
         if special_idx is None:
             for iTS in range(nTS):
                 line, = mp.pyplot.plot(time, data[:,iTS]+offset*iTS, 'k', label = labels[iTS])
                 lines[i].append(line)
         else:
-            mask = np.array(range(nTS))
-            mask = np.delete(mask,special_idx)
+            mask = numpy.array(range(nTS))
+            mask = numpy.delete(mask,special_idx)
             for iTS in special_idx:
                 line, = mp.pyplot.plot(time, data[:, iTS]+offset*iTS, 'r', label = labels[iTS])
                 lines[i].append(line)
@@ -494,7 +495,7 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
         data.append(data_dict[var])
     nTS = data[0].shape[1]
     if labels is None: 
-        labels = np.array(range(nTS)).astype(str)
+        labels = numpy.array(range(nTS)).astype(str)
     lines.append([])
     if special_idx is None:
         for iTS in range(nTS):
@@ -504,8 +505,8 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
                 line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], 'k', alpha=0.3, label = labels[iTS])
             lines.append(line)
     else:
-        mask = np.array(range(nTS))
-        mask = np.delete(mask,special_idx)
+        mask = numpy.array(range(nTS))
+        mask = numpy.delete(mask,special_idx)
         for iTS in special_idx:
             if no_dims>2:
                 line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], data[2][:,iTS], 'r', alpha=0.7, label = labels[iTS])
@@ -536,3 +537,48 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
             figure_name = fig.get_label().replace(" ", "_").replace("\t", "_")
         _save_figure(figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
     _check_show(show_flag)
+
+
+def plot_sim_results(model, hyp, head, res, sensorsSEEG, SHOW_FLAG_SIM=True):
+
+    if isinstance(model, EpileptorDP2D):
+        plot_timeseries(res['time'], {'x1': res['x1'], 'z(t)': res['z']},
+                        hyp.seizure_indices, title=" Simulated TAVG for " + hyp.name,
+                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES,
+                        labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+    else:
+        plot_timeseries(res['time'], {'LFP(t)': res['lfp'], 'z(t)': res['z']},
+                        hyp.seizure_indices, title=" Simulated LFP-z for " + hyp.name,
+                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES,
+                        labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+        plot_timeseries(res['time'], {'x1(t)': res['x1'], 'y1(t)': res['y1']},
+                        hyp.seizure_indices, title=" Simulated pop1 for " + hyp.name,
+                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES,
+                        labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+        plot_timeseries(res['time'], {'x2(t)': res['x2'], 'y2(t)': res['y2'], 'g(t)': res['g']}, hyp.seizure_indices,
+                        title=" Simulated pop2-g for " + hyp.name,
+                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES,
+                        labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+        start_plot = numpy.round(0.01 * res['hpf'].shape[0])
+        plot_raster(res['time'][start_plot:], {'hpf': res['hpf'][start_plot:, :]}, hyp.seizure_indices,
+                    title=" Simulated hfp rasterplot for " + hyp.name, offset=10.0,
+                    save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES,
+                    labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+
+    if isinstance(model, EpileptorDPrealistic):
+        plot_timeseries(res['time'], {'1/(1+exp(-10(z-3.03))': 1 / (1 + numpy.exp(-10 * (res['z'] - 3.03))),
+                                      'slope': res['slopeTS'], 'Iext2': res['Iext2ts']},
+                        hyp.seizure_indices, title=" Simulated controlled parameters for " + hyp.name,
+                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES,
+                        labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+        plot_timeseries(res['time'], {'x0': res['x0ts'], 'Iext1':  res['Iext1ts'] , 'K': res['Kts']},
+                        hyp.seizure_indices, title=" Simulated parameters for " + hyp.name,
+                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES,
+                        labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+
+    for i in range(len(sensorsSEEG)):
+        start_plot = numpy.round(0.01*res['seeg'+str(i)].shape[0])
+        plot_raster(res['time'][start_plot:], {'SEEG': res['seeg'+str(i)][start_plot:, :]},
+                    title=" Simulated SEEG" + str(i) + " raster plot for " + hyp.name,
+                    offset=10.0, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG_SIM, figure_dir=FOLDER_FIGURES,
+                    labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)

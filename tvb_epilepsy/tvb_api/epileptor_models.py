@@ -9,8 +9,8 @@ import numpy
 from tvb.simulator.common import get_logger
 import tvb.datatypes.arrays as arrays
 import tvb.basic.traits.types_basic as basic
-from tvb.simulator.models import Model
-
+from tvb.simulator.models import Model, Epileptor
+from tvb_epilepsy.base.equilibrium_computation import coupling_calc, x0_calc, x0cr_rx0_calc, zeq_6d_calc
 
 LOG = get_logger(__name__)
 
@@ -1099,3 +1099,69 @@ class EpileptorDP2D(Model):
             raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
 
         return concat([numpy.hstack([jac_xx, jac_xz]),numpy.hstack([jac_zx, jac_zz])],axis=0)
+
+
+###
+# Build TVB Epileptor
+###
+
+def _rescale_x0(x0_orig, y0, Iext1):
+    (x0cr, r) = x0cr_rx0_calc(y0, Iext1, epileptor_model="6d", zmode="lin")
+    return r*x0_orig-x0cr
+
+def build_tvb_model(hypothesis,variables_of_interest=["y3 - y0", "y2"], zmode="lin"):
+    x0_transformed = _rescale_x0(hypothesis.y0, hypothesis.Iext1)
+    model_instance = Epileptor(x0=x0_transformed, Iext=hypothesis.Iext1, Ks=hypothesis.K, yc =hypothesis.y0,
+                               variables_of_interest=variables_of_interest)
+    return model_instance
+
+
+###
+#Build EpileptorDP2D
+###
+
+def build_ep_2sv_model(hypothesis, variables_of_interest=["y0", "y1"], zmode=numpy.array("lin")):
+    if zmode=="lin":
+        x0 = hypothesis.x0
+        x0cr = hypothesis.x0cr
+        r = hypothesis.rx0
+    elif zmode == 'sig':
+        #Correct Ceq, x0cr, rx0 and x0 for sigmoidal fz(x1)
+        ceq = coupling_calc(hypothesis.x1EQ, hypothesis.K, hypothesis.weights)
+        (x0cr,r) = x0cr_rx0_calc(hypothesis.y0, hypothesis.Iext1, epileptor_model="2d", zmode=zmode)
+        x0 = x0_calc(hypothesis.x1EQ, hypothesis.zEQ, x0cr, r, ceq, zmode=zmode)
+    else:
+        raise ValueError('zmode is neither "lin" nor "sig"')
+    model = EpileptorDP2D(x0=x0, Iext1=hypothesis.Iext1, K=hypothesis.K, yc =hypothesis.y0, r=r, x0cr=x0cr,
+                          variables_of_interest=variables_of_interest, zmode=zmode)
+    return model
+
+
+###
+# Build EpileptorDP
+###
+
+def build_ep_6sv_model(hypothesis,variables_of_interest=["y3 - y0", "y2"],zmode=numpy.array("lin")):
+    #Correct Ceq, x0cr, rx0, zeq and x0 for 6D model
+    ceq = coupling_calc(hypothesis.x1EQ, hypothesis.K, hypothesis.weights)
+    (x0cr,r) = x0cr_rx0_calc(hypothesis.y0, hypothesis.Iext1, epileptor_model="6d", zmode=zmode)
+    zeq = zeq_6d_calc(hypothesis.x1EQ, hypothesis.y0, hypothesis.Iext1)
+    x0 = x0_calc(hypothesis.x1EQ, zeq, x0cr, r, ceq, zmode=zmode)
+    model = EpileptorDP(x0=x0, Iext1=hypothesis.Iext1, K=hypothesis.K, yc =hypothesis.y0, r=r, x0cr=x0cr,
+                        variables_of_interest=variables_of_interest, zmode=zmode)
+    return model
+
+
+###
+# Build EpileptorDPrealistic
+###
+
+def build_ep_11sv_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmode=numpy.array("lin")):
+    # Correct Ceq, x0cr, rx0, zeq and x0 for >=6D model
+    ceq = coupling_calc(hypothesis.x1EQ, hypothesis.K, hypothesis.weights)
+    (x0cr, r) = x0cr_rx0_calc(hypothesis.y0, hypothesis.Iext1, epileptor_model="11d", zmode=zmode)
+    zeq = zeq_6d_calc(hypothesis.x1EQ, hypothesis.y0, hypothesis.Iext1)
+    x0 = x0_calc(hypothesis.x1EQ, zeq, x0cr, r, ceq, zmode=zmode)
+    model = EpileptorDPrealistic(x0=x0, Iext1=hypothesis.Iext1, K=hypothesis.K, yc =hypothesis.y0, r=r, x0cr=x0cr,
+                                 variables_of_interest=variables_of_interest, zmode=zmode)
+    return model

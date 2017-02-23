@@ -7,17 +7,18 @@ Mechanism for launching TVB simulations.
 import sys
 import time
 import numpy
-from tvb.datatypes import connectivity
-from tvb.simulator import coupling, integrators, models, monitors, noise, simulator
-from tvb_epilepsy.tvb_api import epileptor_models
+from tvb.datatypes import connectivity, equations
+from tvb.simulator import coupling, integrators, monitors, noise, simulator
+from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
-from tvb_epilepsy.base.equilibrium_computation import coupling_calc, x0_calc, x0cr_rx0_calc, zeq_6d_calc,\
-                                                      calc_equilibrium_point
+from tvb_epilepsy.base.equilibrium_computation import calc_equilibrium_point
+from tvb_epilepsy.tvb_api.epileptor_models import *
+
 
 class SimulatorTVB(ABCSimulator):
 
-    def __init__(self, builder_model, builder_initial_conditions):
-        self.builder_model = builder_model
+    def __init__(self, model_instance, builder_initial_conditions):
+        self.model = model_instance
         self.builder_initial_conditions = builder_initial_conditions
 
     @staticmethod
@@ -27,10 +28,9 @@ class SimulatorTVB(ABCSimulator):
                                          centres=vep_conn.centers, hemispheres=vep_conn.hemispheres,
                                          orientations=vep_conn.orientations, areas=vep_conn.areas)
 
-    def config_simulation(self, hypothesis, head, vep_settings=SimulationSettings(), zmode=numpy.array("lin")):
+    def config_simulation(self, head, vep_settings=SimulationSettings()):
 
         tvb_conn = self._vep2tvb_connectivity(head.connectivity)
-        self.model = self.builder_model(hypothesis,variables_of_interest=vep_settings.monitor_expr, zmode=zmode)
         coupl = coupling.Difference(a=1.)
         
         if isinstance(vep_settings.noise_preconfig,noise.Noise):
@@ -96,30 +96,10 @@ class SimulatorTVB(ABCSimulator):
         raise NotImplementedError()
 
 
+
 ###
 # Prepare for TVB configuration
 ###
-
-def build_tvb_model(hypothesis,variables_of_interest=["y3 - y0", "y2"], zmode="lin"):
-    x0_transformed = _rescale_x0(hypothesis.y0, hypothesis.Iext1)
-    model_instance = models.Epileptor(x0=x0_transformed,
-                                      Iext=hypothesis.Iext1, 
-                                      Ks=hypothesis.K,
-                                      c =hypothesis.y0,
-                                      variables_of_interest=variables_of_interest)
-    return model_instance
-
-
-def _rescale_x0(x0_orig, y0, Iext1):
-    (x0cr, r) = x0cr_rx0_calc(y0, Iext1, epileptor_model="6d", zmode="lin")
-    return r*x0_orig-x0cr
-    
-#def _rescale_x0(original, to_min=-5, to_max=-1):
-#    current_min = original.min()
-#    current_max = original.max()
-#    scaling_factor = (to_max - to_min) / (current_max - current_min)
-#    return to_min + (original - current_min) * scaling_factor
-
 
 def prepare_for_tvb_model(hypothesis, model, history_length):
     #Set default initial conditions right on the resting equilibrium point of the model...
@@ -129,33 +109,10 @@ def prepare_for_tvb_model(hypothesis, model, history_length):
     initial_conditions = numpy.tile(initial_conditions, (history_length, 1, 1, 1))
     return initial_conditions
 
+
 ###
 # Prepare for epileptor_models.EpileptorDP2D
 ###
-
-
-def build_ep_2sv_model(hypothesis, variables_of_interest=["y0", "y1"], zmode=numpy.array("lin")):
-    if zmode=="lin":
-        x0 = hypothesis.x0
-        x0cr = hypothesis.x0cr
-        r = hypothesis.rx0
-    elif zmode == 'sig':
-        #Correct Ceq, x0cr, rx0 and x0 for sigmoidal fz(x1)
-        ceq = coupling_calc(hypothesis.x1EQ, hypothesis.K, hypothesis.weights)
-        (x0cr,r) = x0cr_rx0_calc(hypothesis.y0, hypothesis.Iext1, epileptor_model="2d", zmode=zmode)
-        x0 = x0_calc(hypothesis.x1EQ, hypothesis.zEQ, x0cr, r, ceq, zmode=zmode)
-    else:
-        raise ValueError('zmode is neither "lin" nor "sig"')
-    model = epileptor_models.EpileptorDP2D(x0=x0,
-                                           Iext1=hypothesis.Iext1, 
-                                           K=hypothesis.K,
-                                           yc =hypothesis.y0,
-                                           r=r,
-                                           x0cr=x0cr,
-                                           variables_of_interest=variables_of_interest,
-                                           zmode=zmode)
-    return model
-
 
 def prepare_for_2sv_model(hypothesis, model, history_length):
     # Set default initial conditions right on the resting equilibrium point of the model...
@@ -170,23 +127,6 @@ def prepare_for_2sv_model(hypothesis, model, history_length):
 # Prepare for epileptor_models.EpileptorDP
 ###
 
-def build_ep_6sv_model(hypothesis,variables_of_interest=["y3 - y0", "y2"],zmode=numpy.array("lin")):
-    #Correct Ceq, x0cr, rx0, zeq and x0 for 6D model
-    ceq = coupling_calc(hypothesis.x1EQ, hypothesis.K, hypothesis.weights)
-    (x0cr,r) = x0cr_rx0_calc(hypothesis.y0, hypothesis.Iext1, epileptor_model="6d", zmode=zmode)
-    zeq = zeq_6d_calc(hypothesis.x1EQ, hypothesis.y0, hypothesis.Iext1)
-    x0 = x0_calc(hypothesis.x1EQ, zeq, x0cr, r, ceq, zmode=zmode)
-    model = epileptor_models.EpileptorDP(x0=x0,
-                                         Iext1=hypothesis.Iext1, 
-                                         K=hypothesis.K,
-                                         yc =hypothesis.y0,
-                                         r=r,
-                                         x0cr=x0cr,
-                                         variables_of_interest=variables_of_interest,
-                                         zmode=zmode)
-    return model
-
-
 def prepare_for_6sv_model(hypothesis, model, history_length):
     # Set default initial conditions right on the resting equilibrium point of the model...
     # ...after computing the equilibrium point (and correct it for zeql for a >=6D model
@@ -199,24 +139,6 @@ def prepare_for_6sv_model(hypothesis, model, history_length):
 ###
 # Prepare for epileptor_models.EpileptorDPrealistic
 ###
-
-
-def build_ep_11sv_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmode=numpy.array("lin")):
-    # Correct Ceq, x0cr, rx0, zeq and x0 for >=6D model
-    ceq = coupling_calc(hypothesis.x1EQ, hypothesis.K, hypothesis.weights)
-    (x0cr, r) = x0cr_rx0_calc(hypothesis.y0, hypothesis.Iext1, epileptor_model="11d", zmode=zmode)
-    zeq = zeq_6d_calc(hypothesis.x1EQ, hypothesis.y0, hypothesis.Iext1)
-    x0 = x0_calc(hypothesis.x1EQ, zeq, x0cr, r, ceq, zmode=zmode)
-    model = epileptor_models.EpileptorDPrealistic(x0=x0,
-                                                  Iext1=hypothesis.Iext1, 
-                                                  K=hypothesis.K,
-                                                  yc =hypothesis.y0,
-                                                  r=r,
-                                                  x0cr=x0cr,
-                                                  variables_of_interest=variables_of_interest,
-                                                  zmode=zmode)
-    return model
-
 
 def prepare_for_11sv_model(hypothesis, model, history_length):
     # Set default initial conditions right on the resting equilibrium point of the model...
@@ -234,3 +156,61 @@ def prepare_for_11sv_model(hypothesis, model, history_length):
     initial_conditions = numpy.tile(initial_conditions, (history_length, 1, 1, 1))
     return initial_conditions
 
+
+def setup_simulation(model,dt, sim_length, monitor_period, noise_instance=None, noise_intensity=None, monitor_exr=None):
+
+    if isinstance(model,EpileptorDP):
+        #                                               history
+        simulator_instance = SimulatorTVB(model, prepare_for_6sv_model)
+    elif isinstance(model,EpileptorDP2D):
+        simulator_instance = SimulatorTVB(model, prepare_for_2sv_model)
+    elif isinstance(model,EpileptorDPrealistic):
+        simulator_instance = SimulatorTVB(model, prepare_for_11sv_model)
+    elif isinstance(model,Epileptor):
+        simulator_instance = SimulatorTVB(model, prepare_for_tvb_model)
+
+    if monitor_exr == None:
+        # Monitor adjusted to the model
+        if isinstance(model,EpileptorDP2D):
+            monitor_expr = []
+            for i in range(model._nvar):
+                monitor_expr.append("y" + str(i))
+        else:
+            monitor_expr = ["y3-y0"]
+            for i in range(model._nvar):
+                monitor_expr.append("y" + str(i))
+
+    if noise is None:
+        if noise_intensity is None:
+            if numpy.all(noise_intensity is None):
+                # Noise configuration
+                if isinstance(model,EpileptorDPrealistic):
+                    #                             x1  y1   z     x2   y2    g   x0   slope  Iext1 Iext2 K
+                    noise_intensity = numpy.array([0., 0., 1e-7, 0.0, 1e-7, 0., 1e-8, 1e-3, 1e-8, 1e-3, 1e-9])
+                elif isinstance(model,EpileptorDP2D):
+                    #                              x1   z
+                    noise_intensity = numpy.array([0., 5e-5])
+                else:
+                    #                              x1  y1   z     x2   y2   g
+                    noise_intensity = numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.])
+
+        # Preconfigured noise
+        if isinstance(model,EpileptorDPrealistic):
+            # Colored noise for realistic simulations
+            eq = equations.Linear(parameters={"a": 0.0, "b": 1.0})  # default = a*y+b
+            noise_instance = noise.Multiplicative(ntau=10, nsig=noise_intensity, b=eq,
+                                                  random_stream=numpy.random.RandomState(seed=NOISE_SEED))
+            noise_shape = noise_instance.nsig.shape
+            noise_instance.configure_coloured(dt=dt, shape=noise_shape)
+        else:
+            # White noise as a default choice:
+            noise_instance = noise.Additive(nsig=noise_intensity, random_stream=numpy.random.RandomState(seed=NOISE_SEED))
+            noise_instance.configure_white(dt=dt)
+    else:
+        if noise_intensity is not None:
+            noise_instance.nsig = noise_intensity
+
+    settings = SimulationSettings(length=sim_length, integration_step=dt, monitor_sampling_period=monitor_period,
+                                  noise_preconfig=noise_instance, monitor_expr=monitor_expr)
+
+    return simulator_instance, settings

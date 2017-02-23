@@ -4,11 +4,13 @@
 Various transformation/computation functions will be placed here.
 """
 import logging
-import numpy as np
+import numpy 
 from itertools import product
 from scipy.signal import butter, lfilter
 from collections import OrderedDict
 from tvb_epilepsy.base.constants import *
+from tvb_epilepsy.tvb_api.epileptor_models import *
+
 
 def initialize_logger(name, target_folder=FOLDER_LOGS):
     """
@@ -38,7 +40,7 @@ def obj_to_dict(obj):
 
     if isinstance(obj, (str, int, float)):
         return obj
-    if isinstance(obj, (np.float32,)):
+    if isinstance(obj, (numpy.float32,)):
         return float(obj)
 
     if isinstance(obj, list):
@@ -54,10 +56,10 @@ def obj_to_dict(obj):
     return ret
 
 def vector2scalar(x):
-    if not (isinstance(x, np.ndarray)):
+    if not (isinstance(x, numpy.ndarray)):
         return x
     else:
-        y=np.squeeze(x)
+        y=numpy.squeeze(x)
     if all(y.squeeze()==y[0]): 
         return y[0]
     else: 
@@ -70,23 +72,23 @@ def reg_dict(x, lbl=None, sort=None):
     :return: dictionary 
     """
 
-    if not (isinstance(x, (str, int, float, list, np.ndarray))):
+    if not (isinstance(x, (str, int, float, list, numpy.ndarray))):
         return x
     else:
         if not (isinstance(x, list)):
-            x = np.squeeze(x)
+            x = numpy.squeeze(x)
         x_no = len(x)
-        if not (isinstance(lbl, (list, np.ndarray))):
-            lbl = np.repeat('', x_no)
+        if not (isinstance(lbl, (list, numpy.ndarray))):
+            lbl = numpy.repeat('', x_no)
         else:
-            lbl = np.squeeze(lbl)
+            lbl = numpy.squeeze(lbl)
         labels_no = len(lbl)
         total_no = min(labels_no, x_no)
         if x_no <= labels_no:
             if sort=='ascend':
-                ind = np.argsort(x).tolist()
+                ind = numpy.argsort(x).tolist()
             elif sort == 'descend':
-                ind = np.argsort(x)
+                ind = numpy.argsort(x)
                 ind = ind[::-1].tolist()
             else:
                 ind = range(x_no)
@@ -96,11 +98,11 @@ def reg_dict(x, lbl=None, sort=None):
         for i in ind:
             d[str(i) + '.' + str(lbl[i])] = x[i]
         if labels_no > total_no:
-            ind_lbl = np.delete(np.array(range(labels_no)),ind).tolist()
+            ind_lbl = numpy.delete(numpy.array(range(labels_no)),ind).tolist()
             for i in ind_lbl:
                 d[str(i) + '.' + str(lbl[i])] = None
         if x_no > total_no:
-            ind_x = np.delete(np.array(range(x_no)),ind).tolist()
+            ind_x = numpy.delete(numpy.array(range(x_no)),ind).tolist()
             for i in ind_x:
                 d[str(i) + '.'] = x[i]
         return d
@@ -127,17 +129,17 @@ def formal_repr(instance, attr_dict):
 def normalize_weights(weights, percentile=WEIGHTS_NORM_PERCENT):  # , max_w=1.0
     # Create the normalized connectivity weights:
 
-    normalized_w = np.array(weights)
+    normalized_w = numpy.array(weights)
 
     # Remove diagonal elements
     n_regions = normalized_w.shape[0]
-    normalized_w *= 1 - np.eye(n_regions)
+    normalized_w *= 1 - numpy.eye(n_regions)
 
     # Normalize with the 95th percentile
-    # if np.max(normalized_w) - max_w > 1e-6:
-    normalized_w = np.array(normalized_w / np.percentile(normalized_w, percentile))
+    # if numpy.max(normalized_w) - max_w > 1e-6:
+    normalized_w = numpy.array(normalized_w / numpy.percentile(normalized_w, percentile))
     #    else:
-    #        normalized_w = np.array(weights)
+    #        normalized_w = numpy.array(weights)
 
     # normalized_w[normalized_w > max_w] = max_w
 
@@ -145,20 +147,20 @@ def normalize_weights(weights, percentile=WEIGHTS_NORM_PERCENT):  # , max_w=1.0
 
 
 def calculate_in_degree(weights):
-    return np.expand_dims(np.sum(weights, axis=1), 1).T
+    return numpy.expand_dims(numpy.sum(weights, axis=1), 1).T
 
 
 def calculate_projection(sensors, connectivity):
     n_sensors = sensors.number_of_sensors
     n_regions = connectivity.number_of_regions
-    projection = np.zeros((n_sensors, n_regions))
-    dist = np.zeros((n_sensors, n_regions))
+    projection = numpy.zeros((n_sensors, n_regions))
+    dist = numpy.zeros((n_sensors, n_regions))
 
     for iS, iR in product(range(n_sensors), range(n_regions)):
-        dist[iS, iR] = np.sqrt(np.sum((sensors.locations[iS, :] - connectivity.centers[iR, :]) ** 2))
+        dist[iS, iR] = numpy.sqrt(numpy.sum((sensors.locations[iS, :] - connectivity.centers[iR, :]) ** 2))
         projection[iS, iR] = 1 / dist[iS, iR] ** 2
 
-    projection /= np.percentile(projection, 95)
+    projection /= numpy.percentile(projection, 95)
     #projection[projection > 1.0] = 1.0
     return projection
 
@@ -180,3 +182,25 @@ def filter_data(data, lowcut, highcut, fs, order=3):
     # filter data
     y = lfilter(b, a, data)
     return y
+
+
+def set_time_scales(fs=4096.0, dt=None, time_length=1000.0, scale_time=1.0, scale_fsavg=8.0,
+                    hpf_low=None, hpf_high=None, report_percentage=10,):
+    if dt is None:
+        dt = 1000.0 / fs / scale_time # msec
+    else:
+        dt /= scale_time
+
+    fsAVG = fs / scale_fsavg
+    monitor_period = scale_fsavg * dt
+    sim_length = time_length / scale_time
+    time_length_avg = numpy.round(sim_length / monitor_period)
+    n_report_blocks = max(report_percentage * numpy.round(time_length_avg / 100), 1.0)
+
+    hpf_fs = fsAVG
+    if hpf_low is None:
+        hpf_low = max(16.0, 1000.0 / time_length)   # msec
+    if hpf_high is None:
+        hpf_high = min(250.0 , hpf_fs)
+
+    return fs, dt, fsAVG, scale_time, sim_length, monitor_period, n_report_blocks, hpf_fs, hpf_low, hpf_high
