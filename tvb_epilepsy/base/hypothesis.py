@@ -120,14 +120,23 @@ class Hypothesis(object):
     def _dfz_square_taylor(self):
         # The z derivative of the function
         # x1 = F(z) = -4/3 -1/2*sqrt(2(z-y0-Iext1)+64/27)
-        return -(0.5 / numpy.sqrt(2 * (self.zEQ - self.y0 - self.Iext1) + 64.0 / 27.0))
+        dfz = -(0.5 / numpy.sqrt(2 * (self.zEQ - self.y0 - self.Iext1) + 64.0 / 27.0))
+        if numpy.any([numpy.any(numpy.isnan(dfz)), numpy.any(numpy.isinf(dfz))]):
+            raise ValueError("nan or inf values in dfz")
+        else:
+            return dfz
 
     def _fz_jac(self, dfz):
         i = numpy.ones((1, self.n_regions), dtype=numpy.float32)
         # Jacobian: diagonal elements at first row
         #Diagonal elements: -1 + dfz_i * (4 + K_i * sum_j_not_i{wij})
-        return numpy.diag(-1 + dfz * ( 4.0 + self.K * numpy.expand_dims(numpy.sum(self.weights, axis=1), 1).T).T[:, 0]) \
-            - numpy.dot(self.K.T, i) * numpy.dot(i.T, dfz) * (1 - numpy.eye(self.n_regions))
+        fz_jac = numpy.diag(-1 + dfz * (4.0 + self.K * numpy.expand_dims(numpy.sum(self.weights, axis=1), 1).T).T[:, 0]) \
+        - numpy.dot(self.K.T, i) * numpy.dot(i.T, dfz) * (1 - numpy.eye(self.n_regions))
+        if numpy.any([numpy.any(numpy.isnan(fz_jac.flatten())), numpy.any(numpy.isinf(fz_jac.flatten()))]):
+            raise ValueError("nan or inf values in dfz")
+        else:
+            return fz_jac
+        return fz_jac
 
 
     def _calculate_e(self):
@@ -225,9 +234,9 @@ class Hypothesis(object):
         iE = numpy.delete(ii, ix0)  # their indices
 
         #Convert x0 to an array of (1,len(ix0)) shape
-        x0 = numpy.expand_dims(numpy.array(x0),1).T
+        x0 = numpy.expand_dims(numpy.array(x0), 1).T
         
-        if self.self.x1eq_mode=="linTaylor":
+        if self.x1eq_mode=="linTaylor":
             self.x1EQ = x1eq_x0_hypo_linTaylor(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0, self.y0,
                                                self.Iext1, self.K, self.weights)
         else:

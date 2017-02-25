@@ -30,6 +30,11 @@ def initialize_logger(name, target_folder=FOLDER_LOGS):
     return logger
 
 
+def linear_scaling(x,x1,x2,y1,y2):
+        scaling_factor = (y2 - y1) / (x2 - x1)
+        return y1 + (x - x1) * scaling_factor
+
+
 def obj_to_dict(obj):
     """
     :param obj: Python object to introspect
@@ -185,7 +190,7 @@ def filter_data(data, lowcut, highcut, fs, order=3):
 
 
 def set_time_scales(fs=4096.0, dt=None, time_length=1000.0, scale_time=1.0, scale_fsavg=8.0,
-                    hpf_low=None, hpf_high=None, report_percentage=10,):
+                    hpf_low=None, hpf_high=None, report_every_n_monitor_steps=10,):
     if dt is None:
         dt = 1000.0 / fs / scale_time # msec
     else:
@@ -195,7 +200,7 @@ def set_time_scales(fs=4096.0, dt=None, time_length=1000.0, scale_time=1.0, scal
     monitor_period = scale_fsavg * dt
     sim_length = time_length / scale_time
     time_length_avg = numpy.round(sim_length / monitor_period)
-    n_report_blocks = max(report_percentage * numpy.round(time_length_avg / 100), 1.0)
+    n_report_blocks = max(report_every_n_monitor_steps * numpy.round(time_length_avg / 100), 1.0)
 
     hpf_fs = fsAVG
     if hpf_low is None:

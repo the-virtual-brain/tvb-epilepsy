@@ -320,28 +320,32 @@ class EpileptorDP(Model):
 
         # population 1
         #if_ydot0 = - self.a * y[0] ** 2 + self.b * y[0]
-        if_ydot0 = y[0]**2 - 3.0*y[0] #self.a=1.0, self.b=3.0
-        # else_ydot0 = self.slope - y[3] + 0.6 * (y[2] - 4.0) ** 2
-        else_ydot0 = y[3] - 0.6*(y[2]-4.0)**2 - self.slope
+        if_ydot0 = -y[0]**2 + 3.0*y[0] #self.a=1.0, self.b=3.0
+        #else_ydot0 = self.slope - y[3] + 0.6 * (y[2] - 4.0) ** 2
+        else_ydot0 = self.slope - y[3] + 0.6 * (y[2]-4.0) ** 2
         # ydot[0] = self.tt * (y[1] - y[2] + Iext + self.Kvf * c_pop1 + where(y[0] < 0., if_ydot0, else_ydot0) * y[0])
-        ydot[0] = self.tau1*(y[1] - y[2] + Iext1 + self.Kvf*c_pop1 - where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
+        ydot[0] = self.tau1 * (y[1] - y[2] + Iext1 + self.Kvf * c_pop1 + where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
         # ydot[1] = self.tt * (self.c - self.d * y[0] ** 2 - y[1])
-        ydot[1] = self.tau1*(self.yc - 5.0*y[0]**2 - y[1]) #self.d=5
+        ydot[1] = self.tau1 * (self.yc - 5.0 * y[0] ** 2 - y[1]) #self.d=5
 
         # energy
         #if_ydot2 = - 0.1 * y[2] ** 7
         if_ydot2 = - 0.1 * y[2] ** 7
         #else_ydot2 = 0
         else_ydot2 = 0
-        # ydot[2] = self.tt * (
-        if self.zmode=='lin':
-            # self.r * (4 * (y[0] - self.x0) - y[2]      + where(y[2] < 0., if_ydot2, else_ydot2) + self.Ks * c_pop1))
+
+        if self.zmode == 'lin':
+            # self.r * (4 * (y[0] - self.x0) - y[2]      + where(y[2] < 0., if_ydot2, else_ydot2)
             fz = 4*(y[0] - self.r * self.x0 + self.x0cr) + where(y[2] < 0., if_ydot2, else_ydot2)
-        elif self.zmode=='sig':
-            fz = 3 / (1 + numpy.exp(-10*(y[0] + 0.5))) - self.r * self.x0 + self.x0cr
+
+        elif self.zmode == 'sig':
+            fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.r * self.x0 + self.x0cr
+
         else:
-            print "ERROR: zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively"
-        ydot[2] = self.tau1*((fz - y[2] + self.K*c_pop1)/self.tau0)
+            raise ValueError("zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), " +
+                             "respectively")
+        # ydot[2] = self.tt * (        ...+ self.Ks * c_pop1))
+        ydot[2] = self.tau1 * ((fz - y[2] + self.K * c_pop1) / self.tau0)
 
         # population 2
         # ydot[3] = self.tt * (-y[4] + y[3] - y[3] ** 3 + self.Iext2 + 2 * y[5] - 0.3 * (y[2] - 3.5) + self.Kf * c_pop2)
@@ -351,7 +355,7 @@ class EpileptorDP(Model):
         # else_ydot4 = self.aa * (y[3] + 0.25)
         else_ydot4 = 6.0 * (y[3] + 0.25) #self.s = 6.0
         # ydot[4] = self.tt * ((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4)) / self.tau)
-        ydot[4] = self.tau1*((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4)) / self.tau2)
+        ydot[4] = self.tau1 * ((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4)) / self.tau2)
 
         # filter
         #ydot[5] = self.tt * (-0.01 * (y[5] - 0.1 * y[0]))
@@ -622,9 +626,35 @@ class EpileptorDPrealistic(Model):
     _nvar = 11
     cvar = numpy.array([0, 3], dtype=numpy.int32)
 
-    def linear_scaling(self,x,x1,x2,y1,y2):
-        scaling_factor = (y2 - y1) / (x2 - x1)
-        return y1 + (x - x1) * scaling_factor
+    def fun_slope_Iext2(self, z, g):
+
+        from tvb_epilepsy.base.utils import linear_scaling
+
+        if (self.pmode == numpy.array(['g','z','z*g'])).any():
+
+            if self.pmode == 'g':
+                xp = 1.0/ (1.0 + numpy.exp(-10 * (g + 0.0)))
+                xp1 = 0#-0.175
+                xp2 = 1#0.025
+
+            elif self.pmode == 'z':
+                xp = 1.0 / (1.0 + numpy.exp(-10 * (z - 3.00)))
+                xp1 = 0
+                xp2 = 1
+
+            elif self.pmode == 'z*g':
+                xp = z * g
+                xp1 = -0.7
+                xp2 = 0.1
+            slope_eq = linear_scaling(xp, xp1, xp2, 1.0, self.slope)
+            #slope_eq = self.slope
+            Iext2_eq = linear_scaling(xp, xp1, xp2, 0.0, self.Iext2)
+
+        else:
+            slope_eq = self.slope
+            Iext2_eq = self.Iext2
+
+        return slope_eq, Iext2_eq
         
     def dfun(self, state_variables, coupling, local_coupling=0.0,
              array=numpy.array, where=numpy.where, concat=numpy.concatenate):
@@ -688,67 +718,51 @@ class EpileptorDPrealistic(Model):
         Iext2 = y[9]
         K = y[10]
 
-        Iext1 = Iext1 + local_coupling * y[0]
+        Iext1 = self.Iext1 + local_coupling * y[0]
         c_pop1 = coupling[0, :]
         c_pop2 = coupling[1, :]
 
         # population 1
-        if_ydot0 = y[0]**2 - 3.0*y[0] #self.a=1.0, self.b=3.0
-        else_ydot0 = y[3] - 0.6*(y[2]-4.0)**2 - slope
-        ydot[0] = self.tau1*(y[1] - y[2] + Iext1 + self.Kvf*c_pop1 - where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
-        ydot[1] = self.tau1*(self.yc - 5.0*y[0]**2 - y[1]) #self.d=5
+        if_ydot0 = -y[0]**2 + 3.0*y[0] #self.a=1.0, self.b=3.0
+        else_ydot0 = slope - y[3] + 0.6*(y[2]-4.0)**2
+        ydot[0] = self.tau1 * (y[1] - y[2] + Iext1 + self.Kvf * c_pop1 + where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
+        ydot[1] = self.tau1 * (self.yc - 5.0 * y[0] ** 2 - y[1]) #self.d=5
 
         # energy
         if_ydot2 = - 0.1*y[2]**7
         else_ydot2 = 0
-        if self.zmode=='lin':
+
+        if self.zmode == 'lin':
             fz = 4*(y[0] - self.r * x0 + self.x0cr) + where(y[2] < 0., if_ydot2, else_ydot2)
-        elif self.zmode=='sig':
-            fz = 3 / (1 + numpy.exp(-10 * (y[0] + 0.5))) - self.r * x0 + self.x0cr
+
+        elif self.zmode == 'sig':
+            fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.r * x0 + self.x0cr
+
         else:
-            print "ERROR: zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively"
-        ydot[2] = self.tau1*((fz - y[2] + K*c_pop1)/self.tau0)
+            raise ValueError("zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively")
+        ydot[2] = self.tau1 * ((fz - y[2] + K * c_pop1) / self.tau0)
 
         # population 2
-        ydot[3] = self.tau1*(-y[4] + y[3] - y[3]**3 + Iext2 + 2*y[5] - 0.3*(y[2] - 3.5) + self.Kf*c_pop2)
+        ydot[3] = self.tau1 * (-y[4] + y[3] - y[3] ** 3 + Iext2 + 2*y[5] - 0.3 * (y[2] - 3.5) + self.Kf * c_pop2)
         if_ydot4 = 0
-        else_ydot4 = 6.0*(y[3] + 0.25) #self.s = 6.0
-        ydot[4] = self.tau1*((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4))/self.tau2)
+        else_ydot4 = 6.0 * (y[3] + 0.25) #self.s = 6.0
+        ydot[4] = self.tau1 * ((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4)) / self.tau2)
 
         # filter
-        ydot[5] = self.tau1*(-0.01*(y[5] - 0.1*y[0]))
-        
-        if (self.pmode == numpy.array(['g','z','z*g'])).any():
-            if self.pmode == 'g':
-                xp = 1/(1+numpy.exp(-10*(y[5]+0.0)))
-                xp1 = 0#-0.175
-                xp2 = 1#0.025
-            elif self.pmode == 'z':
-                xp = 1/(1+numpy.exp(-10*(y[2]-3.00)))
-                xp1 = 0
-                xp2 = 1
-            elif self.pmode == 'z*g':
-                xp = y[2]*y[5]
-                xp1 = -0.7
-                xp2 = 0.1    
-            slope_eq = self.linear_scaling(xp,xp1,xp2,1.0,self.slope)
-            #slope_eq = self.slope    
-            Iext2_eq = self.linear_scaling(xp,xp1,xp2,0.0,self.Iext2)    
-        else:
-             slope_eq = self.slope
-             Iext2_eq = self.Iext2                   
-            
+        ydot[5] = self.tau1 * (-0.01 * (y[5] - 0.1 * y[0]))
+
+        slope_eq, Iext2_eq = self.fun_slope_Iext2(y[2], y[5])
         
         # x0
-        ydot[6] = self.tau1*(-y[6] + self.x0)
+        ydot[6] = self.tau1 * (-y[6] + self.x0)
         # slope
-        ydot[7] = 10*self.tau1*(-y[7] + slope_eq) #5*
+        ydot[7] = 10 * self.tau1 * (-y[7] + slope_eq) #5*
         # Iext1
-        ydot[8] = self.tau1*(-y[8] + self.Iext1)/self.tau0
+        ydot[8] = self.tau1 * (-y[8] + self.Iext1) / self.tau0
         # Iext2
-        ydot[9] = 5*self.tau1*(-y[9] + Iext2_eq)
+        ydot[9] = 5 * self.tau1*(-y[9] + Iext2_eq)
         # K
-        ydot[10] = self.tau1*(-y[10] + self.K)/self.tau0
+        ydot[10] = self.tau1*(-y[10] + self.K) / self.tau0
 
         return ydot
 
@@ -1016,21 +1030,22 @@ class EpileptorDP2D(Model):
 
         # population 1
         if_ydot0 = y[0] ** 2 + 2.0 * y[0] #self.a=1.0, self.b=-2.0
-        else_ydot0 = 5 * y[0] - 0.6 * (y[1] - 4.0) ** 2 -self.slope
-        ydot[0] = self.tau1 * (self.yc - y[1] + Iext1 + self.Kvf*c_pop1 - where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
-
-        if numpy.any(ydot[0] == numpy.nan) or numpy.any(ydot[0] == numpy.inf):
-            print "error"
+        else_ydot0 = 5 * y[0] - 0.6 * (y[1] - 4.0) ** 2 - self.slope
+        ydot[0] = self.tau1 * (self.yc - y[1] + Iext1 + self.Kvf * c_pop1 - where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
 
         # energy
         if_ydot1 = - 0.1 * y[1] ** 7
         else_ydot1 = 0
+
         if self.zmode == 'lin':
             fz = 4 * (y[0] - self.r * self.x0 + self.x0cr) + where(y[1] < 0.0, if_ydot1, else_ydot1) #self.x0
+
         elif self.zmode == 'sig':
-            fz = 3 / (1 + numpy.exp(-10*(y[0] + 0.5))) - self.r * self.x0 + self.x0cr
+            fz = 3.0 / (1.0 + numpy.exp(-10*(y[0] + 0.5))) - self.r * self.x0 + self.x0cr
+
         else:
             raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
+
         ydot[1] = self.tau1*(fz - y[1] + self.K * c_pop1)/self.tau0
 
         return ydot
@@ -1080,6 +1095,7 @@ class EpileptorDP2D(Model):
         y = state_variables
 
         n_ep = state_variables.shape[1]
+
         # population 1
         jac_xx = where(y[0] < 0.0, numpy.diag(3*y[0]**2 + 4.0*y[0]), numpy.diag(5*y[0]+0.6*(y[1]-4.0)**2-self.slope))
         jac_xz = where(y[0] < 0.0, numpy.diag(numpy.zeros((n_ep,), dtype=y.dtype)), numpy.diag(1.2*(y[1]-4.0)*y[0]))
@@ -1090,11 +1106,11 @@ class EpileptorDP2D(Model):
         else_fz = 0
         jac_zz = -numpy.diag(numpy.ones((n_ep,)), dtype=y.dtype) / self.tau0
         if self.zmode == 'lin':
-            jac_zx = numpy.diag(4.0)/self.tau0
+            jac_zx = numpy.diag(4.0) / self.tau0
             jac_zz -= numpy.diag(where(y[1] < 0.0, if_fz, else_fz))
         elif self.zmode == 'sig':
-            exp_fun = numpy.exp(-10.0*(y[0]+0.5))
-            jac_zx = numpy.diag(30.0*exp_fun/(1+exp_fun)**2)/self.tau0
+            exp_fun = numpy.exp(-10.0 * (y[0] + 0.5))
+            jac_zx = numpy.diag(30.0 * exp_fun / (1.0 + exp_fun) ** 2)/ self.tau0
         else:
             raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
 
@@ -1105,13 +1121,14 @@ class EpileptorDP2D(Model):
 # Build TVB Epileptor
 ###
 
-def _rescale_x0(x0_orig, y0, Iext1):
+def _rescale_tvb_x0(x0_orig, y0, Iext1):
     (x0cr, r) = x0cr_rx0_calc(y0, Iext1, epileptor_model="6d", zmode="lin")
     return r*x0_orig-x0cr
 
 def build_tvb_model(hypothesis,variables_of_interest=["y3 - y0", "y2"], zmode="lin"):
-    x0_transformed = _rescale_x0(hypothesis.y0, hypothesis.Iext1)
-    model_instance = Epileptor(x0=x0_transformed, Iext=hypothesis.Iext1, Ks=hypothesis.K, yc =hypothesis.y0,
+    x0_transformed = _rescale_tvb_x0(hypothesis.y0, hypothesis.Iext1)
+    model_instance = Epileptor(x0=numpy.squeeze(x0_transformed), Iext=numpy.squeeze(hypothesis.Iext1),
+                               Ks=numpy.squeeze(hypothesis.K), yc=numpy.squeeze(hypothesis.y0),
                                variables_of_interest=variables_of_interest)
     return model_instance
 
@@ -1128,11 +1145,11 @@ def build_ep_2sv_model(hypothesis, variables_of_interest=["y0", "y1"], zmode=num
     elif zmode == 'sig':
         #Correct Ceq, x0cr, rx0 and x0 for sigmoidal fz(x1)
         ceq = coupling_calc(hypothesis.x1EQ, hypothesis.K, hypothesis.weights)
-        (x0cr,r) = x0cr_rx0_calc(hypothesis.y0, hypothesis.Iext1, epileptor_model="2d", zmode=zmode)
+        (x0cr, r) = x0cr_rx0_calc(hypothesis.y0, hypothesis.Iext1, epileptor_model="2d", zmode=zmode)
         x0 = x0_calc(hypothesis.x1EQ, hypothesis.zEQ, x0cr, r, ceq, zmode=zmode)
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
-    model = EpileptorDP2D(x0=x0, Iext1=hypothesis.Iext1, K=hypothesis.K, yc =hypothesis.y0, r=r, x0cr=x0cr,
+    model = EpileptorDP2D(x0=x0.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.y0.T, r=r.T, x0cr=x0cr.T,
                           variables_of_interest=variables_of_interest, zmode=zmode)
     return model
 
@@ -1144,10 +1161,10 @@ def build_ep_2sv_model(hypothesis, variables_of_interest=["y0", "y1"], zmode=num
 def build_ep_6sv_model(hypothesis,variables_of_interest=["y3 - y0", "y2"],zmode=numpy.array("lin")):
     #Correct Ceq, x0cr, rx0, zeq and x0 for 6D model
     ceq = coupling_calc(hypothesis.x1EQ, hypothesis.K, hypothesis.weights)
-    (x0cr,r) = x0cr_rx0_calc(hypothesis.y0, hypothesis.Iext1, epileptor_model="6d", zmode=zmode)
+    (x0cr, r) = x0cr_rx0_calc(hypothesis.y0, hypothesis.Iext1, epileptor_model="6d", zmode=zmode)
     zeq = zeq_6d_calc(hypothesis.x1EQ, hypothesis.y0, hypothesis.Iext1)
     x0 = x0_calc(hypothesis.x1EQ, zeq, x0cr, r, ceq, zmode=zmode)
-    model = EpileptorDP(x0=x0, Iext1=hypothesis.Iext1, K=hypothesis.K, yc =hypothesis.y0, r=r, x0cr=x0cr,
+    model = EpileptorDP(x0=x0.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.y0.T, r=r.T, x0cr=x0cr.T,
                         variables_of_interest=variables_of_interest, zmode=zmode)
     return model
 
@@ -1162,6 +1179,6 @@ def build_ep_11sv_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmo
     (x0cr, r) = x0cr_rx0_calc(hypothesis.y0, hypothesis.Iext1, epileptor_model="11d", zmode=zmode)
     zeq = zeq_6d_calc(hypothesis.x1EQ, hypothesis.y0, hypothesis.Iext1)
     x0 = x0_calc(hypothesis.x1EQ, zeq, x0cr, r, ceq, zmode=zmode)
-    model = EpileptorDPrealistic(x0=x0, Iext1=hypothesis.Iext1, K=hypothesis.K, yc =hypothesis.y0, r=r, x0cr=x0cr,
-                                 variables_of_interest=variables_of_interest, zmode=zmode)
+    model = EpileptorDPrealistic(x0=x0.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.y0.T,
+                                 r=r.T, x0cr=x0cr.T, variables_of_interest=variables_of_interest, zmode=zmode)
     return model
