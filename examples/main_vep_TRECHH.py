@@ -139,10 +139,10 @@ if __name__ == "__main__":
     # E[4]=0.3775
     # E[8]=0.425
     # E[9]=0.900
-    iE = np.array([50])
-    E = np.array([0.25], dtype=numpy.float32)
-    # iE = np.array(range(hyp_ep.n_regions))
-    # E = (-0.5 * np.ones((1,hyp_ep.n_regions))).tolist()
+    #iE = np.array([50])
+    #E = np.array([0.25], dtype=numpy.float32)
+    iE = np.array(range(hyp_ep.n_regions))
+    E = (0.5 * np.ones((1,hyp_ep.n_regions))).tolist()
     hyp_ep.configure_e_hypothesis(iE, E, seizure_indices)
     logger.debug(str(hyp_ep))
     #plot_hypothesis(hyp_ep, head.connectivity.region_labels, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
@@ -156,11 +156,25 @@ if __name__ == "__main__":
 
     hyp_exc = cp.deepcopy(hyp_ep)
     hyp_exc.name = "EP & x0 Hypothesis"
-    hyp_exc.x1eq_mode = "linTaylor"
-    ix0 = [51, 52]
+    #hyp_exc.x1eq_mode = "linTaylor"
+    ix0 = [51]
     x0 = (0.5 * numpy.ones((len(ix0),), dtype='float32')).tolist()
 
     hyp_exc.configure_x0_hypothesis(ix0, x0, seizure_indices)
+
+    x0_opt = numpy.array(hyp_exc.x0)
+    x1EQ_opt = numpy.array(hyp_exc.x1EQ)
+    E_opt = numpy.array(hyp_exc.E)
+
+    hyp_exc = cp.deepcopy(hyp_ep)
+    hyp_exc.name = "EP & x0 Hypothesis"
+    hyp_exc.x1eq_mode = "linTaylor"
+    ix0 = [51]
+    x0 = (0.5 * numpy.ones((len(ix0),), dtype='float32')).tolist()
+
+    hyp_exc.configure_x0_hypothesis(ix0, x0, seizure_indices)
+
+
     logger.debug(str(hyp_exc))
     plot_hypothesis(hyp_exc, head.connectivity.region_labels,
                     save_flag=SAVE_FLAG, show_flag=True,
