@@ -1,13 +1,14 @@
 """
     @version $Id: read_write.py 1517 2016-07-27 09:04:07Z denis $
 
-    Python Demo for reading and writing Episense entities
+    Python Demo for reading and writing
 """
 
 import os
 import h5py
 import numpy
 from datetime import datetime
+from tvb_epilepsy.base.hypothesis import Hypothesis
 
 PATIENT_VIRTUAL_HEAD = "/WORK/episense/episense-root/trunk/demo-data/Head_TREC"
 
@@ -64,8 +65,8 @@ def generate_connectivity_variant(uq_name, new_weights, new_tracts, description,
 
 def read_epileptogenicity(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ep.h5")):
     """
-    :param path: Path towards a valid Episense TimeSeries H5 file
-    :return: Timeseries in a numpy array
+    :param path: Path towards an epileptogenicity H5 file
+    :return: epileptogenicity in a numpy array
     """
     print "Reading Epileptogenicity from:", path
     h5_file = h5py.File(path, 'r', libver='latest')
@@ -81,21 +82,103 @@ def read_epileptogenicity(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ep.h5")
     return values
 
 
-def define_epileptogenicity_hypothesis(file_name, ep_vector):
+def write_epileptogenicity_hypothesis(ep_vector, folder_name=None, file_name=None):
     """
-    Store in a similar manner as Episense does X0 values to be used when launching simulations
+    Store X0 values to be used when launching simulations
     """
-    path = os.path.join(PATIENT_VIRTUAL_HEAD, file_name, file_name + ".h5")
+
+    if file_name is None:
+        file_name = "ep"
+
+    if folder_name is None:
+        folder_name = file_name
+
+    path = os.path.join(PATIENT_VIRTUAL_HEAD, folder_name, file_name + ".h5")
     if os.path.exists(path):
         print "Ep file %s already exists. Use a different name!" % path
         return
     os.makedirs(os.path.dirname(path))
+
     print "Writing an Epileptogenicity at:", path
     h5_file = h5py.File(path, 'a', libver='latest')
 
-    _write_metadata({KEY_TYPE: "EpileptogenicityModel", KEY_NODES: ep_vector.shape[0]}, h5_file)
+    _write_metadata({KEY_TYPE: "ModelEpileptogenicity", KEY_NODES: ep_vector.shape[0]}, h5_file)
     h5_file.create_dataset("/values", data=ep_vector)
     h5_file.close()
+
+
+def write_hypothesis(hypothesis, folder_name=None, file_name=None, attributes=None):
+    """
+    Store an hypothesis object to a hd5 file
+    """
+    #TODO: confirm that this code can save a file with different fields
+
+    if folder_name is None:
+        folder_name = hypothesis.name.replace(" ", "_")
+
+    if file_name is None:
+        file_name = "hypo_" + hypothesis.name.replace(" ", "_") + ".h5"
+
+    path = os.path.join(PATIENT_VIRTUAL_HEAD, folder_name)
+    if os.path.exists(path):
+        print "Hypothesis folder %s already exists. Adding files!" % path
+    else:
+        os.makedirs(path)
+
+    path = os.path.join(path, file_name)
+    # TODO: handle better this case. Sometimes we only want to add results. Otherwise we might be modifying the initial
+    # hypothesis, i.e., overwriting, or adding a new one...
+    if os.path.exists(path):
+        print "Hypothesis file %s already exists. Use a different name!" % path
+        return
+
+    if not(isinstance(attributes,dict)):
+        attributes = dict()
+        attributes["Model Epileptogenicity"] = hypothesis.E
+        attributes["Pathological Excitability"] = hypothesis.x0
+        attributes["LSA Propagation Strength"] = hypothesis.lsa_ps
+        attributes["x1 Equilibria"] = hypothesis.x1EQ
+        attributes["z Equilibria"] = hypothesis.zEQ
+        attributes["Afferent coupling at equilibrium"] = hypothesis.Ceq
+        attributes["weights"] = hypothesis.weights
+        attributes["Coupling Global Scaling"] = hypothesis.K
+        attributes["Iext1"] = hypothesis.Iext1
+        attributes["y0"] = hypothesis.y0
+        attributes["x0cr"] = hypothesis.x0cr
+        attributes["rx0"] = hypothesis.rx0
+
+    print "Writing an hypothesis at:", path
+    h5_file = h5py.File(path, 'a', libver='latest')
+    for attr in attributes:
+        _write_metadata({KEY_TYPE: attr.replace(" ",""), KEY_NODES: attributes[attr].shape[0]}, h5_file)
+        h5_file.create_dataset("/values", data=attributes[attr])
+
+    h5_file.close()
+
+
+def read_hypothesis(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "hypo_ep.h5")):
+    """
+    :param path: Path towards an hypothesis H5 file
+    :return: hypothesis object
+    """
+    print "Reading Hypothesis from:", path
+    h5_file = h5py.File(path, 'r', libver='latest')
+
+    #TODO: read the attributes, if they exist, from the file and create an hypothesis object accordingly.
+    #Whatever attribute is not present, just takes the default values, upon creation of the object
+    # _print_metadata(h5_file)
+    # print "Structures:", h5_file["/"].keys()
+    # print "Values expected shape:", h5_file['/values'].shape
+    #
+    # values = h5_file['/values'][()]
+    # print "Actual values shape", values.shape
+    #
+    # h5_file.close()
+    #
+    # hyp = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, \
+    #                     "EP Hypothesis", x1eq_mode="optimize")
+
+    #return hyp
 
 
 def import_sensors(src_txt_file):
@@ -128,7 +211,7 @@ def write_sensors(labels, locations, file_name=None):
 
 def read_ts(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5")):
     """
-    :param path: Path towards a valid Episense TimeSeries H5 file
+    :param path: Path towards a valid TimeSeries H5 file
     :return: Timeseries in a numpy array
     """
     print "Reading TimeSeries from:", path
@@ -213,7 +296,7 @@ if __name__ == "__main__":
 
     # Define the X0 vector, that can be later used as input in a simulation from GUI
     random_x0 = numpy.random.random((88,))
-    define_epileptogenicity_hypothesis("ep-random", random_x0)
+    write_epileptogenicity_hypothesis("ep-random", random_x0)
     print "----------------"
 
     # Write TS

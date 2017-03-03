@@ -28,7 +28,8 @@ class EpisenseReader(ABCReader):
 
         weights = h5_file['/weights'][()]
         tract_lengths = h5_file['/tract_lengths'][()]
-        region_centers = h5_file['/centres'][()] #should change to centers!
+        #TODO: should change to English centers than French centres!
+        region_centers = h5_file['/centres'][()]
         region_labels = h5_file['/region_labels'][()]
         orientations = h5_file['/orientations'][()]
         hemispheres = h5_file['/hemispheres'][()]
@@ -89,3 +90,26 @@ class EpisenseReader(ABCReader):
         meg_sensors_dict = {}
 
         return Head(conn, srf, rm, vm, t1, name, eeg_sensors_dict, meg_sensors_dict, seeg_sensors_dict)
+
+    def read_epileptogenicity(self, root_folder, name="ep"):
+        """
+        :param
+            root_folder: Path towards a valid Episense Epileptogenicity H5 file
+            name: the name of the hypothesis
+        :return: Timeseries in a numpy array
+        """
+        path = os.path.join(root_folder, name, name + ".h5")
+
+        print "Reading Epileptogenicity from:", path
+        h5_file = h5py.File(path, 'r', libver='latest')
+
+        print "Structures:", h5_file["/"].keys()
+        print "Values expected shape:", h5_file['/values'].shape
+
+        values = h5_file['/values'][()]
+        print "Actual values shape", values.shape
+
+        h5_file.close()
+        return values
+
+
