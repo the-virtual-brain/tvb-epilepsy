@@ -1,7 +1,5 @@
 # coding=utf-8
 """
-@version $Id: epileptor_models.py 1651 2016-09-01 17:47:05Z denis $
-
 Extend TVB Models, with new ones, specific for Epilepsy.
 """
 

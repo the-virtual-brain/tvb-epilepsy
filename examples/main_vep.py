@@ -1,6 +1,4 @@
 """
-@version $Id: main_vep.py 1664 2016-09-05 16:13:48Z denis $
-
 Entry point for working with VEP
 """
 import os

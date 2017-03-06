@@ -1,6 +1,4 @@
 """
-@version $Id: constants.py 1651 2016-09-01 17:47:05Z denis $
-
 Various configurations witch might or might not be system based, should be specified here.
 """
 

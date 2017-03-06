@@ -1,6 +1,4 @@
 """
-@version $Id: plot_tools.py 1664 2016-09-05 16:13:48Z denis $
-
 Various plotting tools will be placed here.
 """
 

@@ -1,6 +1,4 @@
 """
-    @version $Id: read_write.py 1517 2016-07-27 09:04:07Z denis $
-
     Python Demo for reading and writing
 """
 

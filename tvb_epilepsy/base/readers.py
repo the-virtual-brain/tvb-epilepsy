@@ -1,6 +1,4 @@
 """
-@version $Id: readers.py 1428 2016-06-29 07:45:02Z lia.domide $
-
 Abstract Reading mechanism for VEP related entities
 """
 

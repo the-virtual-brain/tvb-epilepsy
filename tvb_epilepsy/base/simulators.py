@@ -1,6 +1,4 @@
 """
-@version $Id: simulators.py 1588 2016-08-18 23:44:14Z denis $
-
 Mechanism for launching and configuring generic Simulations (it will have TVB or Episense implementations)
 """
 

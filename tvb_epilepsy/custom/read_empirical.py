@@ -1,6 +1,4 @@
 """
-    @version $Id: read_empirical.py 1401 2016-06-23 10:10:56Z lia.domide $
-
     Python Demo for reading and writing Episense entities
 """
 

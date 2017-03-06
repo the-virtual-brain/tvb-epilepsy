@@ -1,6 +1,4 @@
 """
-@version $Id: equilibrium_computation.py 2017-02-10 16:08 denis $
-
 Module to compute the resting equilibrium point of a Virtual Epileptic Patient module
 """
 import warnings

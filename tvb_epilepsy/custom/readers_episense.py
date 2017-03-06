@@ -1,6 +1,4 @@
 """
-@version $Id: readers_episense.py 1569 2016-08-12 21:43:16Z denis $
-
 Read VEP related entities from Episense format and data-structures
 """
 

@@ -1,6 +1,4 @@
 """
-@version $Id: simulator_tvb.py 1664 2016-09-05 16:13:48Z denis $
-
 Mechanism for launching TVB simulations.
 """
 

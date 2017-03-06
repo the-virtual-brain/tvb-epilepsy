@@ -1,6 +1,4 @@
 """
-@version $Id: utils.py 1588 2016-08-18 23:44:14Z denis $
-
 Various transformation/computation functions will be placed here.
 """
 import logging

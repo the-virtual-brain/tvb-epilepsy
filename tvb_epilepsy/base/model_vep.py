@@ -1,6 +1,4 @@
 """
-@version $Id: model_vep.py 1570 2016-08-12 21:44:03Z denis $
-
 A module for Virtual Epileptic Patient model classes
 
 class Head

@@ -1,6 +1,4 @@
 """
-@version $Id: hypothesis.py 1588 2016-08-18 23:44:14Z denis $
-
 Class for defining and configuring disease hypothesis (epilepsy hypothesis).
 It should contain everything for later configuring an Epileptor Model from this hypothesis.
 

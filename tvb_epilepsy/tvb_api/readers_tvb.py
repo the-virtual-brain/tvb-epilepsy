@@ -1,6 +1,4 @@
 """
-@version $Id: readers_tvb.py 1524 2016-07-27 14:11:08Z lia.domide $
-
 Read VEP related entities from TVB format and data-structures
 """
 
