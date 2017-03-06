@@ -258,7 +258,7 @@ def x0cr_rx0_calc(y0, Iext1, epileptor_model = "2d", zmode = numpy.array("lin"),
     (y01, I1, x1, z, x0, r, x0cr, f1, fz) = symbols('y01 I1 x1 z x0 r x0cr f1 fz')
 
     #Define the fx1(x1) expression (assuming centered x1 in all cases)...
-    if isinstance(epileptor_model,EpileptorDP2D) or  epileptor_model=="2d":
+    if isinstance(epileptor_model,EpileptorDP2D) or epileptor_model=="2d":
         #...for the 2D permittivity coupling approximation, Proix et al 2014
         fx1 = x1 ** 3 + 2 * x1 ** 2
 
