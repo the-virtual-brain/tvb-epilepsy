@@ -11,7 +11,7 @@ from tvb_epilepsy.base.utils import initialize_logger, calculate_projection, set
 from tvb_epilepsy.tvb_api.readers_tvb import TVBReader
 from tvb_epilepsy.tvb_api.simulator_tvb import *
 from tvb_epilepsy.tvb_api.epileptor_models import *
-from tvb_epilepsy.custom.readers_episense import EpisenseReader
+from tvb_epilepsy.custom.readers_custom import CustomReader
 from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_sim_results
 
 
@@ -36,18 +36,18 @@ if __name__ == "__main__":
     logger = initialize_logger(__name__)
 
     # if DATA_MODE == 'ep':
-    #     logger.info("Reading from EPISENSE")
-    #     data_folder = os.path.join(DATA_EPISENSE, 'Head_TREC')  # Head_TREC 'Head_JUNCH'
-    #     from tvb_epilepsy.custom.readers_episense import EpisenseReader
+    #     logger.info("Reading from cutsom")
+    #     data_folder = os.path.join(DATA_CUSTOM, 'Head_TREC')  # Head_TREC 'Head_JUNCH'
+    #     from tvb_epilepsy.custom.readers_custom import CustomReader
     #
-    #     reader = EpisenseReader()
+    #     reader = CustomReader()
     # else:
     #     logger.info("Reading from TVB")
     #     data_folder = DATA_TVB
     #     reader = TVBReader()
 
     data_folder = os.path.join(DATA_TRECHH, 'Head_TREC') #Head_TREC 'Head_JUNCH'
-    reader = EpisenseReader()
+    reader = CustomReader()
     logger.info("We will be reading from location " + data_folder)
     #Read standard TREC head
     logger.info("We will be reading from location " + data_folder)

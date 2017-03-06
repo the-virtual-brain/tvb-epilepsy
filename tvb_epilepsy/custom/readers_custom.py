@@ -1,5 +1,5 @@
 """
-Read VEP related entities from Episense format and data-structures
+Read VEP related entities from custom format and data-structures
 """
 
 import os
@@ -9,13 +9,13 @@ from tvb_epilepsy.base.readers import ABCReader
 from tvb_epilepsy.base.utils import calculate_projection, initialize_logger
 
 
-class EpisenseReader(ABCReader):
+class CustomReader(ABCReader):
 
     LOG = initialize_logger(__name__)
     
     def read_connectivity(self, h5_path):
         """
-        :param h5_path: Path towards an Episense Connectivity H5 file
+        :param h5_path: Path towards a custom Connectivity H5 file
         :return: Weights, Tracts, Region centers
         """
         self.LOG.info("Reading a Connectivity from: " + h5_path)
@@ -92,7 +92,7 @@ class EpisenseReader(ABCReader):
     def read_epileptogenicity(self, root_folder, name="ep"):
         """
         :param
-            root_folder: Path towards a valid Episense Epileptogenicity H5 file
+            root_folder: Path towards a valid custom Epileptogenicity H5 file
             name: the name of the hypothesis
         :return: Timeseries in a numpy array
         """

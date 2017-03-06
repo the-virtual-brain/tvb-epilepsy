@@ -1,5 +1,5 @@
 """
-Mechanism for launching and configuring generic Simulations (it will have TVB or Episense implementations)
+Mechanism for launching and configuring generic Simulations (it will have TVB or custom implementations)
 """
 
 from abc import ABCMeta, abstractmethod

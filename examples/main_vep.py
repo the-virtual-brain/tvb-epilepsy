@@ -25,10 +25,10 @@ if __name__ == "__main__":
 #-------------------------------Reading data-----------------------------------    
 
     if DATA_MODE == 'ep':
-        logger.info("Reading from EPISENSE")
-        data_folder = os.path.join(DATA_EPISENSE, 'Head_TREC') #Head_TREC 'Head_JUNCH'
-        from tvb_epilepsy.custom.readers_episense import EpisenseReader
-        reader = EpisenseReader()
+        logger.info("Reading from custom")
+        data_folder = os.path.join(DATA_CUSTOM, 'Head_TREC') #Head_TREC 'Head_JUNCH'
+        from tvb_epilepsy.custom.readers_custom import CustomReader
+        reader = CustomReader()
     else:
         logger.info("Reading from TVB")
         data_folder = DATA_TVB
@@ -95,7 +95,7 @@ if __name__ == "__main__":
             sensorsSEEG.append(sensors)
             projections.append(projection) 
             
-    print 'Select TVB or Episense simulator and the desired Epileptor model, as well as set simulations settings'
+    print 'Select TVB or custom simulator and the desired Epileptor model, as well as set simulations settings'
     SIMULATION_MODE ='tvb_epilepsy' #'ep'
     print 'Selected simulator: '+SIMULATION_MODE
 
