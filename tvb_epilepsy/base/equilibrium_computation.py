@@ -21,22 +21,84 @@ def x1_lin_def(X1_DEF, X1_EQ_CR_DEF, n_regions):
     return (X1_EQ_CR_DEF + X1_DEF) / 2.0 * numpy.ones((1,n_regions), dtype='float32')
 
 
-def fx1_2d_calc(x1, z=0, y0=0, Iext1=0):
-    x12 = x1 ** 2
-    return y0 - x1 * x12 - 2 * x12 - z + Iext1
+def fx1_calc(x1, z=0, y1=0.0, x2=0, Iext1=0, slope=0.0, a=1.0, b=-2.0, tau1=1.0):
+
+    # if_ydot0 = - self.a * y[0] ** 2 + self.b * y[0]
+    if_ydot0 = - a * x1 ** 2 + b * x1  # self.a=1.0, self.b=3.0
+
+    # else_ydot0 = self.slope - y[3] + 0.6 * (y[2] - 4.0) ** 2
+    else_ydot0 = slope - x2 + 0.6 * (z - 4.0) ** 2
+
+    return tau1*(y1 - z + Iext1 + numpy.where(x1 < 0.0, if_ydot0, else_ydot0) * x1)
 
 
-def fx1_6d_calc(x1, z=0, y1=0, Iext1=0):
-    x12 = x1 ** 2
-    return y1 - x1 * x12 + 3 * x12 - z + Iext1
+def fx1_6d_calc(x1, z=0.0, y1=0.0, x2=0.0, Iext1=0.0, slope=0.0, a=1.0, b=3.0, tau1=1.0):
+    return fx1_calc(x1, z=z, y1=y1, x2=x2, Iext1=Iext1, slope=slope, tau1=tau1, a=a, b=b)
 
 
-def fz_lin_calc(x1, x0, x0cr, r, z=0, coupl=0):
-    return 4 * (x1 - r * x0 + x0cr) - z - coupl
+def fx1_2d_calc(x1, z=0, y0=0.0, x2=0.0, Iext1=0.0, slope=0.0, a=1.0, b=-2.0, tau1=1.0):
+    return fx1_calc(x1, z=z, y1=y0, x2=x2, Iext1=Iext1, slope=slope, tau1=tau1, a=a, b=b)
 
 
-def fz_sig_calc(x1, x0, x0cr, r, z=0, coupl=0):
-    return 3/(1 + exp(-10 * (x1 + 0.5))) - r * x0 + x0cr - z - coupl
+def y1_calc(x1, yc, y1=0, d=5.0, tau1=1.0):
+    return tau1 * (yc - d * x1 ** 2 - y1)
+
+
+def fz_lin_calc(x1, x0, x0cr, r, z=0, coupl=0, tau0=1.0):
+    return (4 * (x1 - r * x0 + x0cr) - z - coupl) / tau0
+
+
+def fz_sig_calc(x1, x0, x0cr, r, z=0, coupl=0, tau0=1.0):
+    return (3/(1 + exp(-10 * (x1 + 0.5))) - r * x0 + x0cr - z - coupl) / tau0
+
+
+def pop2_calc(x2, y2=0.0, g=0.0, z=0.0, Iext2=0.45, s=6.0, tau1=1.0, tau2=10.0):
+
+    # ydot[3] = self.tt * (-y[4] + y[3] - y[3] ** 3 + self.Iext2 + 2 * y[5] - 0.3 * (y[2] - 3.5) + self.Kf * c_pop2)
+    fx2 = tau1 * (-y2 + x2 - x2 ** 3 + Iext2 + 2 * g - 0.3 * (z - 3.5))
+
+    # if_ydot4 = 0
+    if_ydot4 = 0
+    # else_ydot4 = self.aa * (y[3] + 0.25)
+    else_ydot4 = s * (x2 + 0.25)  # self.s = 6.0
+
+    # ydot[4] = self.tt * ((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4)) / self.tau)
+    fy2 = tau1 * ((-y2 + numpy.where(x2 < -0.25, if_ydot4, else_ydot4)) / tau2)
+
+    return fx2, fy2
+
+
+def g_calc(x1, g=0, gamma=0.01, tau1=1.0):
+    #ydot[5] = self.tt * (-0.01 * (y[5] - 0.1 * y[0]))
+    return -tau1 * gamma * (g - 0.1 * x1)
+
+
+def dfun(x1, z, yc, Iext1, x0, x0cr, rx0, K, w, model="2d", zmode="lin",
+         y1=None, x2=None, y2=None, g=None,
+         Iext2=0.45, slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0,
+         tau1=1.0, tau2=10.0, tau0=2857.0):
+
+    n_regions = x1.size
+    x1_type = x1.dtype
+
+    if model == "2d":
+        f = numpy.zeros((2,n_regions),dtype=x1_type)
+        f[0,:] = fx1_2d_calc(x1, z, yc, Iext1, tau1)
+        iz = 1
+
+    else:
+        f = numpy.zeros((6, n_regions), dtype=x1_type)
+        f[0, :] = fx1_6d_calc(x1, z, y1, Iext1, tau1)
+        iz = 2
+        f[1, :] = y1_calc(x1, yc, y1, d, tau1)
+        f[3, :], f[4, :] = pop2_calc(x1, x2, y2, g, z, Iext2, s, tau1, tau2)
+
+    if zmode == "lin":
+        f[iz, :] = fz_lin_calc(x1, x0, x0cr, rx0, z, coupling_calc(x1, K, w), tau0)
+    elif zmode == "lin":
+        f[iz, :] = fz_sig_calc(x1, x0, x0cr, rx0, z, coupling_calc(x1, K, w), tau0)
+    else:
+        raise ValueError('zmode is neither "lin" nor "sig"')
 
 
 def zeq_2d_calc(x1eq, y0, Iext1):
@@ -48,75 +110,86 @@ def zeq_6d_calc(x1eq, y1, Iext1):
 
 
 def y1eq_calc(x1eq, yc, d=5.0):
-    return yc - d * x1eq ** 2
+    return y1_calc(x1eq, yc, y1=0, d=d, tau1=1.0)
 
 
 def pop2eq_calc(x1eq, zeq, Iext2):
-    shape = x1eq.shape
-    x1_type = x1eq.dtype
-    # g_eq = 0.1*x1eq (1)
-    # y2eq = 0 (2)
-    y2eq = numpy.zeros(shape, dtype=x1_type)
-    # -x2eq**3 + x2eq -y2eq+2*g_eq-0.3*(zeq-3.5)+Iext2 =0=> (1),(2)
-    # -x2eq**3 + x2eq +2*0.1*x1eq-0.3*(zeq-3.5)+Iext2 =0=>
-    # p3        p1                   p0
-    # -x2eq**3 + x2eq +0.2*x1eq-0.3*(zeq-3.5)+Iext2 =0
-    p0 = 0.2 * x1eq - 0.3 * (zeq - 3.5) + Iext2
-    x2eq = numpy.zeros(shape, dtype=x1_type)
-    for i in range(shape[1]):
-        x2eq[0 ,i] = numpy.min(numpy.real(numpy.roots([-1.0, 0.0, 1.0, p0[0, i]])))
-    return x2eq, y2eq
 
+    y2eq = numpy.zeros((x1eq.size,), dtype=x1eq.dtype)
 
-# def pop2eq_calc(n_regions,x1eq,zeq,Iext2):
-#    shape = x1eq.shape
-#    type = x1eq.dtype
-#    #g_eq = 0.1*x1eq (1)
-#    #y2eq = 6*(x2eq+0.25)*x1eq (2)
-#    #-x2eq**3 + x2eq -y2eq+2*g_eq-0.3*(zeq-3.5)+Iext2 =0=> (1),(2)
-#    #-x2eq**3 + x2eq -6*(x2eq+0.25)*x1eq+2*0.1*x1eq-0.3*(zeq-3.5)+Iext2 =0=>
-#    #-x2eq**3 + (1.0-6*x1eq)*x2eq -1.5*x1eq+ 0.2*x1eq-0.3*(zeq-3.5)+Iext2 =0
-#    #p3                p1                           p0
-#    #-x2eq**3 + (1.0-6*x1eq)*x2eq -1.3*x1eq -0.3*(zeq-3.5) +Iext2 =0
-#    p0 = -1.3*x1eq-0.3*(zeq-3.5)+Iext2
-#    p1 = 1.0-6*x1eq
-#    x2eq = numpy.zeros(shape, dtype=type)
-#    for i in range(shape[1]):
-#        x2eq[0 ,i] = numpy.min( numpy.real( numpy.roots([-1.0, 0.0, p1[i,0], p0[i,0] ]) ) )
-#    #(2):
-#    y2eq = 6*(x2eq+0.25)*x1eq
-#    return x2eq, y2eq
+    # # -x2eq**3 + x2eq -y2eq+2*g_eq-0.3*(zeq-3.5)+Iext2 =0=> (1),(2)
+    # # -x2eq**3 + x2eq +2*0.1*x1eq-0.3*(zeq-3.5)+Iext2 =0=>
+    # # p3        p1                   p0
+    # # -x2eq**3 + x2eq +0.2*x1eq-0.3*(zeq-3.5)+Iext2 =0
+    # p0 = 0.2 * x1eq - 0.3 * (zeq - 3.5) + Iext2
+    # x2eq = numpy.zeros(x1eq.shape, dtype=x1eq.dtype)
+    # for i in range(shape[1]):
+    #     x2eq[0 ,i] = numpy.min(numpy.real(numpy.roots([-1.0, 0.0, 1.0, p0[0, i]])))
+
+    g_eq = numpy.squeeze(geq_calc(x1eq))
+
+    (x2, fx2) = symbols('x2 fx2')
+
+    #TODO: use symbolic vectors and functions, and define them as negative, so that to resolve the where() statement
+    fx2 = -y2eq + x2 - x2 ** 3 + numpy.squeeze(Iext2) + 2 * g_eq - 0.3 * (numpy.squeeze(zeq) - 3.5)
+
+    x2eq = []
+    for ii in range(y2eq.size):
+        x2eq.append(numpy.min(numpy.real(numpy.array(solve(fx2[ii], x2),dtype="complex"))))
+
+    return numpy.reshape(numpy.array(x2eq, dtype=x1eq.dtype), x1eq.shape),  numpy.reshape(y2eq, x1eq.shape)
+
 
 def geq_calc(x1eq):
-    return 0.1 * x1eq
+    return g_calc(x1eq, g=0.0, gamma=1.0, tau1=1.0)
 
 
 def x1eq_x0_hypo_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w):
 
-    x = numpy.expand_dims(x,1).T
-
-    no_x0 = len(ix0)
-    no_e = len(iE)
-
     x1_type = x1EQ.dtype
-    i_e = numpy.ones((no_e,1), dtype=x1_type)
-    i_x0 = numpy.ones((no_x0,1), dtype=x1_type)
 
-    #Coupling                        to   from           from                    to
-    w_e_to_e = numpy.sum(numpy.dot(w[iE][:,iE],    numpy.dot(i_e, x1EQ[:,iE]) - numpy.dot(i_e, x1EQ[:,iE]).T), axis=1)
-    w_x0_to_e = numpy.sum(numpy.dot(w[iE][:, ix0], (numpy.dot(i_e, x0) - numpy.dot(i_x0, x1EQ[:,iE]).T).T), axis=1)
+    # #Coupling                        to   from           from                    to
+    # no_x0 = len(ix0)
+    # no_e = len(iE)
+    # i_e = numpy.ones((no_e,1), dtype=x1_type)
+    # i_x0 = numpy.ones((no_x0,1), dtype=x1_type)
+    # # w_e_to_e = numpy.sum(numpy.dot(w[iE][:,iE],    numpy.dot(i_e, x1EQ[:,iE]) - numpy.dot(i_e, x1EQ[:,iE]).T), axis=1)
+    # # w_x0_to_e = numpy.sum(numpy.dot(w[iE][:, ix0], (numpy.dot(i_e, x[:,ix0]) - numpy.dot(i_x0, x1EQ[:,iE]).T).T), axis=1)
+    # Coupl_to_e = coupling_calc(x1EQ, K, w, ix=iE)
+    #
+    # # w_e_to_x0 = numpy.sum(numpy.dot(w[ix0][:, iE], (numpy.dot(i_x0, x1EQ[:, iE]) - numpy.dot(i_e, x[:,ix0]).T).T), axis=1)
+    # # w_x0_to_x0 = numpy.sum(numpy.dot(w[ix0][:,ix0], numpy.dot(i_x0, x[:,ix0]) - numpy.dot(i_x0, x[:,ix0]).T), axis=1)
+    # Coupl_to_x0 = coupling_calc(x1EQ, K, w, ix=ix0)
+    #
+    # fun = numpy.zeros(x1EQ.shape).astype(x1_type)
+    # #Known x1eq, unknown x0:
+    # # fun[:,iE] = fz_lin_calc(x1EQ[:,iE], x0[:,iE], x0cr[:,iE], rx0[:,iE], z=zEQ[:,iE],
+    # #                         coupl=K[:,iE] * (w_e_to_e + w_x0_to_e)).astype(x1_type)
+    # fun[:, iE] = fz_lin_calc(x1EQ[:, iE], x0[:, iE], x0cr[:, iE], rx0[:, iE], z=zEQ[:, iE],
+    #                          coupl=coupling_calc(x1EQ, K, w, ix=i_x0)).astype(x1_type)
+    #
+    # # Known x0, unknown x1eq:
+    # # fun[:,ix0] = fz_lin_calc(x[:, ix0], x0, x0cr[:, ix0], rx0[:, ix0],
+    # #                          z=zeq_2d_calc(x[:, ix0], y0[:, ix0], Iext1[:, ix0]),
+    # #                          coupl=K[:, ix0] * (w_e_to_x0 + w_x0_to_x0)).astype(x1_type)
+    # fun[:, ix0] = fz_lin_calc(x1EQ[:, ix0], x0, x0cr[:, ix0], rx0[:, ix0],
+    #                           z=zeq_2d_calc(x[:, ix0], y0[:, ix0], Iext1[:, ix0]),
+    #                           coupl=Coupl_to_x0).astype(x1_type)
 
-    w_e_to_x0 = numpy.sum(numpy.dot(w[ix0][:, iE], (numpy.dot(i_x0, x1EQ[:, iE]) - numpy.dot(i_e, x0).T).T), axis=1)
-    w_x0_to_x0 = numpy.sum(numpy.dot(w[ix0][:,ix0], numpy.dot(i_x0, x0) - numpy.dot(i_x0, x0).T), axis=1)
+    # Construct the x1 and z vectors, comprising of the current x1EQ, zEQ values for i_e regions,
+    # and the unknown x1 values for x1EQ and respective zEQ for the i_x0 regions
+    x1EQ[:, ix0] = numpy.array(x[ix0])
+    zEQ[:, ix0] = numpy.array(zeq_2d_calc(x1EQ[:, ix0], y0[:, ix0], Iext1[:, ix0]))
 
-    fun = numpy.zeros(x1EQ.shape).astype(x1_type)
-    #Known x1eq, unknown x0:
-    fun[:,iE] = fz_lin_calc(x1EQ[:,iE], x[:,iE], x0cr[:,iE], rx0[:,iE], z=zEQ[:,iE],
-                            coupl=K[:,iE] * (w_e_to_e + w_x0_to_e)).astype(x1_type)
-    # Known x0, unknown x1eq:
-    fun[:,ix0] = fz_lin_calc(x[:, ix0], x0, x0cr[:, ix0], rx0[:, ix0],
-                             z=zeq_2d_calc(x[:, ix0], y0[:, ix0], Iext1[:, ix0]),
-                             coupl=K[:, ix0] * (w_e_to_x0 + w_x0_to_x0)).astype(x1_type)
+    # Construct the x0 vector, comprising of the current x0 values for i_x0 regions,
+    # and the unknown x0 values for the i_e regions
+    x0_dummy = numpy.array(x0)
+    x0 = numpy.array(x1EQ)
+    x0[:, iE] = numpy.array(x[iE])
+    x0[:, ix0] = numpy.array(x0_dummy)
+    del x0_dummy
+
+    fun = fz_lin_calc(x1EQ, x0, x0cr, rx0, z=zEQ, coupl=coupling_calc(x1EQ, K, w)).astype(x1_type)
 
     # if numpy.any([numpy.any(numpy.isnan(x)), numpy.any(numpy.isinf(x)),
     #               numpy.any(numpy.isnan(fun)), numpy.any(numpy.isinf(fun))]):
@@ -140,9 +213,9 @@ def x1eq_x0_hypo_optimize_jac(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K
 
     jac_e_x0e = numpy.diag(- 4 * rx0[:, iE]).astype(x1_type)
     jac_e_x1o = -numpy.dot(numpy.dot(i_e, K[:,iE]), w[iE][:,ix0]).astype(x1_type)
-    jac_x0_x0e = numpy.zeros((no_x0,no_e),dtype = type).astype(x1_type)
+    jac_x0_x0e = numpy.zeros((no_x0, no_e)).astype(x1_type)
     jac_x0_x1o = (numpy.diag(4 + 3 * x[:, ix0] ** 2 + 4 * x[:, ix0] + K[:, ix0] * numpy.sum(w[ix0][:,ix0], axis=1)) - \
-                 numpy.dot(i_x0, K[:, ix0]) * w[ix0][:, ix0]).astype(x1_type)
+                  numpy.dot(i_x0, K[:, ix0]) * w[ix0][:, ix0]).astype(x1_type)
 
     jac = numpy.zeros((n_regions,n_regions), dtype=x1_type)
     jac[numpy.ix_(iE, iE)] = jac_e_x0e
@@ -260,23 +333,29 @@ def x0cr_rx0_calc(y0, Iext1, epileptor_model = "2d", zmode = numpy.array("lin"),
     #Define the fx1(x1) expression (assuming centered x1 in all cases)...
     if isinstance(epileptor_model,EpileptorDP2D) or epileptor_model=="2d":
         #...for the 2D permittivity coupling approximation, Proix et al 2014
-        fx1 = x1 ** 3 + 2 * x1 ** 2
+        #fx1 = x1 ** 3 + 2 * x1 ** 2
+        # #...and the z expression, coming from solving dx1/dt=f1(x1,z)=0
+        # z = y01 - fx1 + I1
+        z = zeq_2d_calc(x1, y01, I1)
 
     else:
         #...or for the original (>=6D) epileptor
-        fx1 = x1 ** 3 - 3 * x1 ** 2
-
-    #...and the z expression, coming from solving dx1/dt=f1(x1,z)=0
-    z = y01 - fx1 + I1
+        # fx1 = x1 ** 3 - 3 * x1 ** 2
+        # #...and the z expression, coming from solving dx1/dt=f1(x1,z)=0
+        # y1 = y01 - 5.0 * x1 ** 2
+        # z = y1 - fx1 + I1
+        z = zeq_6d_calc(x1, y1eq_calc(x1, y01, d=5.0), I1)
 
     #Define the fz expression...
     if zmode == 'lin':
         #...for linear...
-        fz = 4 * (x1 - r * x0 + x0cr) - z
+        #fz = 4 * (x1 - r * x0 + x0cr) - z
+        fz = fz_lin_calc(x1, x0, x0cr, r, z=z, coupl=0)
 
     elif zmode == 'sig':
         #...and sigmoidal versions
-        fz = 3/(1 + exp(-10 * (x1 + 0.5))) - r * x0 + x0cr - z
+        #fz = 3/(1 + exp(-10 * (x1 + 0.5))) - r * x0 + x0cr - z
+        z = fz_sig_calc(x1, x0, x0cr, r, z=z, coupl=0)
 
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
@@ -298,23 +377,33 @@ def x0cr_rx0_calc(y0, Iext1, epileptor_model = "2d", zmode = numpy.array("lin"),
     return x0cr, rx0
 
 
-def coupling_calc(x1, K, w):
-    #Note that for difference coupling it doesn't matter whether we use centered x1 or decentered x1-5/3
+def coupling_calc(x1, K, w, ix=None, jx=None):
+    # Note that for difference coupling it doesn't matter whether we use centered x1 or decentered x1-5/3
     # Only difference coupling for the moment.
     # TODO: Extend for different coupling forms
+
     n_regions = x1.size
-    i_n = numpy.ones((n_regions, 1), dtype='float32')
-    # Coupling                         from                    to
-    return K*numpy.sum(numpy.dot(w, numpy.dot(i_n, x1) - numpy.dot(i_n, x1).T), axis=1)
+
+    if ix is None:
+        ix = range(n_regions)
+
+    if jx is None:
+        jx = range(n_regions)
+
+    i_n = numpy.ones((ix.size, 1), dtype='float32')
+    j_n = numpy.ones((jx.size, 1), dtype='float32')
+
+    # Coupling                                                 from                      to
+    return K[:,ix]*numpy.sum(numpy.dot(w[ix][:, jx], numpy.dot(i_n, x1[jx]) - numpy.dot(j_n, x1[ix]).T), axis=1)
 
 
 def x0_calc(x1, z, x0cr, rx0, coupl, zmode=numpy.array("lin")):
 
     if zmode == 'lin':
-        return (x1 + x0cr - (z+coupl) / 4) / rx0
+        return (x1 + x0cr - (z+coupl) / 4.0) / rx0
 
     elif zmode == 'sig':
-        return (3 / (1 + numpy.exp(-10 * (x1 + 0.5))) + x0cr - z + coupl) / rx0
+        return (3.0 / (1.0 + numpy.exp(-10.0 * (x1 + 0.5))) + x0cr - z + coupl) / rx0
 
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
