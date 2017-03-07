@@ -7,8 +7,8 @@ It should contain everything for later configuring an Epileptor Model from this 
 import numpy
 from collections import OrderedDict
 from tvb_epilepsy.base.constants import X0_DEF, E_DEF, K_DEF, I_EXT1_DEF, Y0_DEF, X1_DEF, X1_EQ_CR_DEF
-from tvb_epilepsy.base.equilibrium_computation import zeq_2d_calc, coupling_calc, x0_calc, x0cr_rx0_calc, \
-                                                      x1eq_x0_hypo_linTaylor, x1eq_x0_hypo_optimize, x1_lin_def
+from tvb_epilepsy.base.equilibrium_computation import calc_eq_z_2d, calc_coupling, calc_x0, calc_x0cr_rx0, \
+                                                      eq_x1_hypo_x0_linTaylor, eq_x1_hypo_x0_optimize, def_x1lin
 from tvb_epilepsy.base.utils import reg_dict, formal_repr, vector2scalar
 
 
@@ -39,7 +39,7 @@ class Hypothesis(object):
         self.x1EQcr = x1_eq_cr_def
         self.E = e_def * i
 
-        self.x1LIN = x1_lin_def(X1_DEF, X1_EQ_CR_DEF, n_regions)
+        self.x1LIN = def_x1lin(X1_DEF, X1_EQ_CR_DEF, n_regions)
         self.x1SQ = X1_EQ_CR_DEF
 
         (self.x0cr, self.rx0)= self._calculate_critical_x0_scaling()
@@ -94,7 +94,7 @@ class Hypothesis(object):
         return self.weights[:, self.seizure_indices]
 
     def _calculate_critical_x0_scaling(self):
-        return x0cr_rx0_calc(self.y0, self.Iext1, epileptor_model="2d", zmode="lin")
+        return calc_x0cr_rx0(self.y0, self.Iext1, epileptor_model="2d", zmode="lin")
 
     def _set_equilibria_x1(self, i=None):
         if i is None:
@@ -102,17 +102,17 @@ class Hypothesis(object):
         return ((self.E - 5.0) / 3.0) * i
 
     def _calculate_equilibria_z(self):
-        return zeq_2d_calc(self.x1EQ, self.y0, self.Iext1)
+        return calc_eq_z_2d(self.x1EQ, self.y0, self.Iext1)
         #non centered x1:
         # return self.y0 + self.Iext1 - self.x1EQ ** 3 - 2.0 * self.x1EQ ** 2
 
     def _calculate_coupling_at_equilibrium(self):
-        return coupling_calc(self.x1EQ, self.K, self.weights)
+        return calc_coupling(self.x1EQ, self.K, self.weights)
         #i = numpy.ones((1, self.n_regions), dtype=numpy.float32)
         #return self.K * (numpy.expand_dims(numpy.sum(self.weights * ( numpy.dot(i.T, self.x1EQ) - numpy.dot(self.x1EQ.T, i)), axis=1), 1).T)
 
     def _calculate_x0(self):
-        return x0_calc(self.x1EQ, self.zEQ, self.x0cr, self.rx0, self.Ceq, zmode="lin")
+        return calc_x0(self.x1EQ, self.zEQ, self.x0cr, self.rx0, self.Ceq, zmode="lin")
         #return (self.x1EQ + self.x0cr - (self.zEQ + self.Ceq) / 4.0) / self.rx0
 
     def _dfz_square_taylor(self):
@@ -235,10 +235,10 @@ class Hypothesis(object):
         x0 = numpy.expand_dims(numpy.array(x0), 1).T
         
         if self.x1eq_mode=="linTaylor":
-            self.x1EQ = x1eq_x0_hypo_linTaylor(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0, self.y0,
+            self.x1EQ = eq_x1_hypo_x0_linTaylor(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0, self.y0,
                                                self.Iext1, self.K, self.weights)
         else:
-            self.x1EQ = x1eq_x0_hypo_optimize(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0, self.y0,
+            self.x1EQ = eq_x1_hypo_x0_optimize(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0, self.y0,
                                               self.Iext1, self.K, self.weights)
 
         self.zEQ = self._calculate_equilibria_z()

@@ -9,7 +9,7 @@ from tvb.datatypes import connectivity, equations
 from tvb.simulator import coupling, integrators, monitors, noise, simulator
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
-from tvb_epilepsy.base.equilibrium_computation import y1eq_calc, pop2eq_calc, geq_calc, \
+from tvb_epilepsy.base.equilibrium_computation import calc_eq_y1, calc_eq_pop2, calc_eq_g, \
                                                       calc_equilibrium_point, assert_equilibrium_point
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
@@ -116,12 +116,12 @@ class SimulatorTVB(ABCSimulator):
 ###
 
 def calc_tvb_equilibrium_point(epileptor_model, hypothesis):
-    y1eq = y1eq_calc(hypothesis.x1EQ, epileptor_model.c.T)
-    zeq = zeq_6d_calc(hypothesis.x1EQ, epileptor_model.c.T, epileptor_model.Iext.T)
+    y1eq = calc_eq_y1(hypothesis.x1EQ, epileptor_model.c.T)
+    zeq = calc_eq_z_6d(hypothesis.x1EQ, epileptor_model.c.T, epileptor_model.Iext.T)
     if epileptor_model.Iext2.size == 1:
         epileptor_model.Iext2 = epileptor_model.Iext2[0] * numpy.ones((hypothesis.n_regions, 1))
-    (x2eq, y2eq) = pop2eq_calc(hypothesis.x1EQ, zeq, epileptor_model.Iext2.T)
-    geq = geq_calc(hypothesis.x1EQ)
+    (x2eq, y2eq) = calc_eq_pop2(hypothesis.x1EQ, zeq, epileptor_model.Iext2.T)
+    geq = calc_eq_g(hypothesis.x1EQ)
 
     equilibrium_point = numpy.r_[hypothesis.x1EQ, y1eq, zeq, x2eq, y2eq, geq].astype('float32')
 

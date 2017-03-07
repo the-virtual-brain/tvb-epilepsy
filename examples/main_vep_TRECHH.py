@@ -143,8 +143,8 @@ if __name__ == "__main__":
     E = (0.5 * np.ones((1,hyp_ep.n_regions))).tolist()
     hyp_ep.configure_e_hypothesis(iE, E, seizure_indices)
     logger.debug(str(hyp_ep))
-    #plot_hypothesis(hyp_ep, head.connectivity.region_labels, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
-    #               figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
+    plot_hypothesis(hyp_ep, head.connectivity.region_labels, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
+                   figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
 
     # hyp_exc = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights,
     #                     "x0 Hypothesis", x1eq_mode="optimize")  #"optimize" or "linTaylor"
@@ -152,31 +152,34 @@ if __name__ == "__main__":
     # ix0 =range(head.number_of_regions)
     # x0 = (X0_DEF * numpy.ones((len(ix0),), dtype='float32')).tolist()
 
-    hyp_exc = cp.deepcopy(hyp_ep)
-    hyp_exc.name = "EP & x0 Hypothesis"
-    #hyp_exc.x1eq_mode = "linTaylor"
-    ix0 = [51]
-    x0 = (0.5 * numpy.ones((len(ix0),), dtype='float32')).tolist()
+    # hyp_exc = cp.deepcopy(hyp_ep)
+    # hyp_exc.name = "EP & x0 Hypothesis"
+    # hyp_exc.x1eq_mode = "linTaylor"
+    # ix0 = [51]
+    # x0 = (0.5 * numpy.ones((len(ix0),), dtype='float32')).tolist()
+    #
+    # hyp_exc.configure_x0_hypothesis(ix0, x0, seizure_indices)
+    #
+    # plot_hypothesis(hyp_exc, head.connectivity.region_labels,
+    #                 save_flag=SAVE_FLAG, show_flag=True,
+    #                 figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
+    #
+    # x0_opt = numpy.array(hyp_exc.x0)
+    # x1EQ_opt = numpy.array(hyp_exc.x1EQ)
+    # E_opt = numpy.array(hyp_exc.E)
 
-    hyp_exc.configure_x0_hypothesis(ix0, x0, seizure_indices)
-
-    x0_opt = numpy.array(hyp_exc.x0)
-    x1EQ_opt = numpy.array(hyp_exc.x1EQ)
-    E_opt = numpy.array(hyp_exc.E)
-
-    hyp_exc = cp.deepcopy(hyp_ep)
-    hyp_exc.name = "EP & x0 Hypothesis"
-    hyp_exc.x1eq_mode = "linTaylor"
-    ix0 = [51]
-    x0 = (0.5 * numpy.ones((len(ix0),), dtype='float32')).tolist()
-
-    hyp_exc.configure_x0_hypothesis(ix0, x0, seizure_indices)
-
-
-    logger.debug(str(hyp_exc))
-    plot_hypothesis(hyp_exc, head.connectivity.region_labels,
-                    save_flag=SAVE_FLAG, show_flag=True,
-                    figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
+    # hyp_exc = cp.deepcopy(hyp_ep)
+    # hyp_exc.name = "EP & x0 Hypothesis"
+    # hyp_exc.x1eq_mode = "optimize"
+    # ix0 = [51]
+    # x0 = (0.5 * numpy.ones((len(ix0),), dtype='float32')).tolist()
+    #
+    # hyp_exc.configure_x0_hypothesis(ix0, x0, seizure_indices)
+    #
+    # logger.debug(str(hyp_exc))
+    # plot_hypothesis(hyp_exc, head.connectivity.region_labels,
+    #                 save_flag=SAVE_FLAG, show_flag=True,
+    #                 figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
 
     
 #------------------------------Simulation--------------------------------------
