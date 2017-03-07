@@ -4,7 +4,7 @@ Module to compute the resting equilibrium point of a Virtual Epileptic Patient m
 import warnings
 import numpy
 from scipy.optimize import root
-from sympy import symbols, exp, solve, lambdify
+from sympy import symbols, exp, solve, lambdify, MatrixSymbol, diff
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_DEF, X0_CR_DEF
 
 
@@ -114,32 +114,39 @@ def calc_fg(x1, g=0, gamma=0.01, tau1=1.0):
     return -tau1 * gamma * (g - 0.1 * x1)
 
 
-def calc_dfun(x1, z, yc, Iext1, x0, x0cr, rx0, K, w, model="2d", zmode="lin", pmode="const", x1_neg=None,
+def calc_dfun(x1, z, yc, Iext1, x0, x0cr, rx0, K, w, model_vars=2, zmode="lin", pmode="const", x1_neg=None,
               y1=None, x2=None, y2=None, g=None, x2_neg=None,
               x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
-              Iext2=0.45, slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0,
+              slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.01,
               tau1=1.0, tau0=2857.0, tau2=10.0):
 
-    n_regions = x1.size
-    x1_type = x1.dtype
+    n_regions = x0.size
+    x0_type = x0.dtype
 
-    if model == "2d":
-        f = numpy.zeros((2,n_regions),dtype=x1_type)
+    f = numpy.zeros((model_vars, n_regions), dtype=x0_type)
+
+    if model_vars == 2:
+
         f[0,:] = calc_fx1_2d(x1, z, yc, Iext1=Iext1, slope=slope, a=a, b=b, tau1=tau1, x1_neg=x1_neg)
         iz = 1
 
     else:
-        f = numpy.zeros((6, n_regions), dtype=x1_type)
-        f[0, :] = calc_fx1_6d(x1, z, y1, x2, Iext1, slope, a, b, tau1, x1_neg)
         iz = 2
-        f[1, :] = calc_fy1(x1, yc, y1, d, tau1)
-        f[3, :], f[4, :] = calc_fpop2(x2, y2, g, z, Iext2, s, tau1, tau2, x2_neg)
 
-        if  model=="11d":
+        f[1, :] = calc_fy1(x1, yc, y1, d, tau1)
+        f[5, :] = calc_fg(x1, g, gamma, tau1)
+
+        if model_vars == 6:
+            f[0, :] = calc_fx1_6d(x1, z, y1, x2, Iext1, slope, a, b, tau1, x1_neg)
+            f[3, :], f[4, :] = calc_fpop2(x2, y2, g, z, Iext2, s, tau1, tau2, x2_neg)
+
+        elif model_vars == 11:
+            f[0, :] = calc_fx1_6d(x1, z, y1, x2, Iext1_var, slope_var, a, b, tau1, x1_neg)
+            f[3, :], f[4, :] = calc_fpop2(x2, y2, g, z, Iext2_var, s, tau1, tau2, x2_neg)
             from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic
             #ydot[6] = self.tau1 * (-y[6] + self.x0)
             f[6, :] = tau1 * (-x0_var + x0)
-            slope_eq, Iext2_eq = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode)
+            slope_eq, Iext2_eq = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, slope, Iext2)
             # slope
             #ydot[7] = 10 * self.tau1 * (-y[7] + slope_eq)  # 5*
             f[7, :] = 10 * tau1 * (-slope_var + slope_eq)
@@ -152,6 +159,8 @@ def calc_dfun(x1, z, yc, Iext1, x0, x0cr, rx0, K, w, model="2d", zmode="lin", pm
             # K
             #ydot[10] = self.tau1 * (-y[10] + self.K) / self.tau0
             f[10,:] = tau1 * (-K_var + K) / tau0
+            x0 = x0_var
+            K = K_var
 
     if zmode == "lin":
         f[iz, :] = calc_fz_lin(x1, x0, x0cr, rx0, z, calc_coupling(x1, K, w), tau0)
@@ -163,20 +172,45 @@ def calc_dfun(x1, z, yc, Iext1, x0, x0cr, rx0, K, w, model="2d", zmode="lin", pm
     return f
 
 
-def calc_eq_z_2d(x1eq, y0, Iext1, x1_neg=True):
+# def calc_dfun_jac_2d_lin(x1, z, yc, Iext1, x0, x0cr, rx0, K, w, x1_neg=True,
+#                          slope=0.0, tau1=1.0, tau0=2857.0):
+#
+#     # Define the symbolic variables we need:
+#     x1, z = symbols('x1 z')
+#     f1 = calc_fx1_2d(x1, z, yc, Iext1=Iext1, slope=slope, a=1.0, b=-2.0, tau1=tau1, x1_neg=x1_neg)
+#     fz = calc_fz_lin(x1, x0, x0cr, rx0, z, calc_coupling(x1, K, w), tau0)
+#
+#     r = x0.shape[0]
+#     c = x0.shape[1]
+#     x1v = MatrixSymbol('x1v', r, c)
+#     zv = MatrixSymbol('zv', r, c)
+#
+#     for ii in range(x0.size):
+#         f1x1 = diff(f1, x1)
+#         f1z = diff(f1, z)
+#         fzx1 = diff(fz, x1)
+#         fzz = diff(fz, z)
+#
+#     jac = numpy.concatenate([numpy.hstack([f1x1, f1z]),numpy.hstack([fzx1, fzz])],axis=0)
+#     jac = lambdify((x1, z), jac, 'numpy')
+#
+#     return jac
 
-    return calc_fx1_2d(x1eq, z=0, y0=y0, Iext1=Iext1, x1_neg=x1_neg)
+
+def calc_eq_z_2d(x1eq, y0, Iext1, slope=0.0, a=1.0, b=-2.0, x1_neg=True):
+
+    return calc_fx1_2d(x1eq, z=0, y0=y0, Iext1=Iext1, slope=slope, a=a, b=b, x1_neg=x1_neg)
 
 
-def calc_eq_z_6d(x1eq, y1, Iext1, x1_neg=True):
-    return calc_fx1_6d(x1eq, z=0, y1=y1, Iext1=Iext1, x1_neg=x1_neg)
+def calc_eq_z_6d(x1eq, y1, Iext1, slope=0.0, a=1.0, b=3.0, x1_neg=True):
+    return calc_fx1_6d(x1eq, z=0, y1=y1, Iext1=Iext1, slope=slope, a=a, b=b, x1_neg=x1_neg)
 
 
 def calc_eq_y1(x1eq, yc, d=5.0):
     return calc_fy1(x1eq, yc, y1=0, d=d, tau1=1.0)
 
 
-def calc_eq_pop2(x1eq, zeq, Iext2):
+def calc_eq_pop2(x1eq, zeq, Iext2, s=6.0, tau1=1.0, tau2=1.0, x2_neg=True):
 
     y2eq = numpy.zeros((x1eq.size,), dtype=x1eq.dtype)
 
@@ -195,8 +229,7 @@ def calc_eq_pop2(x1eq, zeq, Iext2):
 
     #TODO: use symbolic vectors and functions
     #fx2 = -y2eq + x2 - x2 ** 3 + numpy.squeeze(Iext2) + 2 * g_eq - 0.3 * (numpy.squeeze(zeq) - 3.5)
-    fx2 = numpy.squeeze(calc_fpop2(x2, y2eq, g_eq, zeq, Iext2, s=6.0, tau1=1.0, tau2=10.0,
-                                  x2_neg=numpy.ones((x1eq.size,), dtype='bool'))[0])
+    fx2 = numpy.squeeze(calc_fpop2(x2, y2eq, g_eq, zeq, Iext2, s, tau1, tau2, x2_neg)[0])
 
     x2eq = []
     for ii in range(y2eq.size):
@@ -387,16 +420,14 @@ def eq_x1_hypo_x0_linTaylor(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w):
     return x1EQ
 
 
-def calc_x0cr_rx0(y0, Iext1, epileptor_model = "2d", zmode = numpy.array("lin"),
-                  x1rest = X1_DEF, x1cr = X1_EQ_CR_DEF, x0def = X0_DEF, x0cr_def = X0_CR_DEF):
-
-    from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
+def calc_x0cr_rx0(y0, Iext1, epileptor_model="2d", zmode=numpy.array("lin"),
+                  x1rest=X1_DEF, x1cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF):
 
     #Define the symbolic variables we need:
     (y01, I1, x1, z, x0, r, x0cr, f1, fz) = symbols('y01 I1 x1 z x0 r x0cr f1 fz')
 
     #Define the fx1(x1) expression (assuming centered x1 in all cases)...
-    if isinstance(epileptor_model,EpileptorDP2D) or epileptor_model=="2d":
+    if epileptor_model == "2d":
         #...for the 2D permittivity coupling approximation, Proix et al 2014
         #fx1 = x1 ** 3 + 2 * x1 ** 2
         # #...and the z expression, coming from solving dx1/dt=f1(x1,z)=0
@@ -444,73 +475,67 @@ def calc_x0cr_rx0(y0, Iext1, epileptor_model = "2d", zmode = numpy.array("lin"),
 
 def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
 
-    from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic
-
     n_dim = equilibrium_point.shape[0]
 
     coupl = calc_coupling(hypothesis.x1EQ, epileptor_model.K.T, hypothesis.weights)
     coupl = numpy.expand_dims(numpy.r_[coupl, 0.0 * coupl], 2).astype('float32')
 
     dfun = epileptor_model.dfun(numpy.expand_dims(equilibrium_point, 2).astype('float32'), coupl).squeeze()
+    dfun_max = numpy.max(dfun, axis=1)
+    dfun_max_cr = 10 ** -6 * numpy.ones(dfun_max.shape)
 
-    dfun_max = numpy.max(dfun)
-
-    if dfun_max > 10 ** -2:
-
-        if (isinstance(epileptor_model, EpileptorDPrealistic) and
-                    epileptor_model.pmode == numpy.array(['g', 'z', 'z*g'])).any():
-            warnings.warn("Equilibrium point for initial condition not accurate enough!\n" \
-                          + "max(dfun) = " + str(dfun_max))
-
-        else:
-            raise ValueError("Equilibrium point for initial condition not accurate enough!\n" \
-                             + "max(dfun) = " + str(dfun_max))
-
-    if n_dim == 2:
-
-        dfun2 = calc_dfun(equilibrium_point[0].squeeze(), equilibrium_point[2].squeeze(),
+    if epileptor_model._ui_name == "EpileptorDP2D":
+        dfun2 = calc_dfun(equilibrium_point[0].squeeze(), equilibrium_point[1].squeeze(),
                           epileptor_model.yc.squeeze(), epileptor_model.Iext1.squeeze(), epileptor_model.x0.squeeze(),
                           epileptor_model.x0cr.squeeze(), epileptor_model.r.squeeze(), epileptor_model.K.squeeze(),
-                          hypothesis.weights, model=str(n_dim)+"d", zmode=epileptor_model.zmode,
+                          hypothesis.weights, model_vars=n_dim, zmode=epileptor_model.zmode,
                           slope=epileptor_model.slope.squeeze(), a=1.0, b=-2.0,
                           tau1=epileptor_model.tau1, tau0=epileptor_model.tau0)
 
-    elif n_dim == 6:
-
+    elif epileptor_model._ui_name == "EpileptorDP":
+        dfun_max_cr[2] = 10 ** -2
         dfun2 = calc_dfun(equilibrium_point[0].squeeze(), equilibrium_point[2].squeeze(),
                           epileptor_model.yc.squeeze(), epileptor_model.Iext1.squeeze(), epileptor_model.x0.squeeze(),
                           epileptor_model.x0cr.squeeze(), epileptor_model.r.squeeze(), epileptor_model.K.squeeze(),
-                          hypothesis.weights, model=str(n_dim)+"d", zmode=epileptor_model.zmode,
+                          hypothesis.weights, model_vars=n_dim, zmode=epileptor_model.zmode,
                           y1=equilibrium_point[1].squeeze(), x2=equilibrium_point[3].squeeze(),
                           y2=equilibrium_point[4].squeeze(), g=equilibrium_point[5].squeeze(),
-                          Iext2=epileptor_model.Iext2.squeeze(), slope=epileptor_model.slope.squeeze(), a=1.0, b=3.0,
+                          slope=epileptor_model.slope.squeeze(), a=1.0, b=3.0, Iext2=epileptor_model.Iext2.squeeze(),
                           tau1=epileptor_model.tau1, tau0=epileptor_model.tau0, tau2=epileptor_model.tau2)
 
-    elif n_dim == 11:
-
+    elif epileptor_model._ui_name == "EpileptorDPrealistic":
+        dfun_max_cr[2] = 10 ** -2
         dfun2 = calc_dfun(equilibrium_point[0].squeeze(), equilibrium_point[2].squeeze(),
                           epileptor_model.yc.squeeze(), epileptor_model.Iext1.squeeze(), epileptor_model.x0.squeeze(),
                           epileptor_model.x0cr.squeeze(), epileptor_model.r.squeeze(), epileptor_model.K.squeeze(),
-                          hypothesis.weights, model=str(n_dim)+"d", zmode=epileptor_model.zmode, pmode=epileptor_model.pmode,
+                          hypothesis.weights, model_vars=n_dim, zmode=epileptor_model.zmode, pmode=epileptor_model.pmode,
                           y1=equilibrium_point[1].squeeze(), x2=equilibrium_point[3].squeeze(),
                           y2=equilibrium_point[4].squeeze(), g=equilibrium_point[5].squeeze(),
                           x0_var=equilibrium_point[6].squeeze(), slope_var=equilibrium_point[7].squeeze(),
                           Iext1_var=equilibrium_point[8].squeeze(), Iext2_var=equilibrium_point[9].squeeze(),
-                          K_var=equilibrium_point[10].squeeze(), Iext2=epileptor_model.Iext2.squeeze(),
-                          slope=epileptor_model.slope.squeeze(), a=1.0, b=3.0,
+                          K_var=equilibrium_point[10].squeeze(),
+                          slope=epileptor_model.slope.squeeze(), a=1.0, b=3.0, Iext2=epileptor_model.Iext2.squeeze(),
                           tau1=epileptor_model.tau1, tau0=epileptor_model.tau0, tau2=epileptor_model.tau2)
 
-    if numpy.max(numpy.abs(dfun2 - dfun.squeeze())) > 10 ** -2:
+    max_dfun_diff  = numpy.max(numpy.abs(dfun2 - dfun.squeeze()), axis=1)
+    if numpy.any(max_dfun_diff > dfun_max_cr):
         warnings.warn("model dfun and calc_dfun functions do not return the same results!\n"
+                      + "maximum difference = " + str(max_dfun_diff) + "\n"
                       + "model dfun = " + str(dfun) + "\n"
                       + "calc_dfun = " + str(dfun2))
+
+    if numpy.any(dfun_max > dfun_max_cr):
+        # raise ValueError("Equilibrium point for initial condition not accurate enough!\n" \
+        #                  + "max(dfun) = " + str(dfun_max) + "\n"
+        #                  + "model dfun = " + str(dfun))
+        warnings.warn("Equilibrium point for initial condition not accurate enough!\n"
+                      + "max(dfun) = " + str(dfun_max) + "\n"
+                      + "model dfun = " + str(dfun))
 
 
 def calc_equilibrium_point(epileptor_model, hypothesis):
 
-    from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic, EpileptorDP2D
-
-    if isinstance(epileptor_model,EpileptorDP2D):
+    if epileptor_model._ui_name == "EpileptorDP2D":
         if epileptor_model.zmode == 'sig':
             #2D approximation, Proix et al 2014
             zeq = calc_eq_z_2d(hypothesis.x1EQ, epileptor_model.yc.T, epileptor_model.Iext1.T)
@@ -523,18 +548,21 @@ def calc_equilibrium_point(epileptor_model, hypothesis):
         zeq = calc_eq_z_6d(hypothesis.x1EQ, y1eq, epileptor_model.Iext1.T)
         if epileptor_model.Iext2.size == 1:
             epileptor_model.Iext2 = epileptor_model.Iext2[0] * numpy.ones((hypothesis.n_regions, 1))
-        (x2eq, y2eq) = calc_eq_pop2(hypothesis.x1EQ, zeq, epileptor_model.Iext2.T)
         geq = calc_eq_g(hypothesis.x1EQ)
-        if isinstance(epileptor_model, EpileptorDPrealistic):
+
+        if epileptor_model._ui_name == "EpileptorDPrealistic":
             # the 11D "realistic" simulations model
             if epileptor_model.slope.size == 1:
                 epileptor_model.slope = epileptor_model.slope[0] * numpy.ones((hypothesis.n_regions, 1))
-            slope_eq, Iext2_eq = epileptor_model.fun_slope_Iext2(zeq.T, geq.T)
+            slope_eq, Iext2_eq = epileptor_model.fun_slope_Iext2(zeq.T, geq.T, epileptor_model.pmode,
+                                                                 epileptor_model.slope, epileptor_model.Iext2)
+            (x2eq, y2eq) = calc_eq_pop2(hypothesis.x1EQ, zeq, Iext2_eq.T)
             equilibrium_point = numpy.r_[hypothesis.x1EQ, y1eq, zeq, x2eq, y2eq, geq,
                                           epileptor_model.x0.T, slope_eq.T, epileptor_model.Iext1.T, Iext2_eq.T,
                                           epileptor_model.K.T].astype('float32')
         else:
             #all >=6D models
+            (x2eq, y2eq) = calc_eq_pop2(hypothesis.x1EQ, zeq, epileptor_model.Iext2.T)
             equilibrium_point = numpy.r_[hypothesis.x1EQ, y1eq, zeq, x2eq, y2eq, geq].astype('float32')
 
     assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point)

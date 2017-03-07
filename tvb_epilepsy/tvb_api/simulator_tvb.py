@@ -4,12 +4,13 @@ Mechanism for launching TVB simulations.
 
 import sys
 import time
+import warnings
 import numpy
 from tvb.datatypes import connectivity, equations
 from tvb.simulator import coupling, integrators, monitors, noise, simulator
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
-from tvb_epilepsy.base.equilibrium_computation import calc_eq_y1, calc_eq_pop2, calc_eq_g, \
+from tvb_epilepsy.base.equilibrium_computation import calc_eq_y1, calc_eq_pop2, calc_eq_g, calc_dfun, \
                                                       calc_equilibrium_point, assert_equilibrium_point
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
@@ -116,16 +117,55 @@ class SimulatorTVB(ABCSimulator):
 ###
 
 def calc_tvb_equilibrium_point(epileptor_model, hypothesis):
-    y1eq = calc_eq_y1(hypothesis.x1EQ, epileptor_model.c.T)
-    zeq = calc_eq_z_6d(hypothesis.x1EQ, epileptor_model.c.T, epileptor_model.Iext.T)
+
+    #Calculate equilibrium point
+    y1eq = calc_eq_y1(hypothesis.x1EQ, epileptor_model.c.T, d=epileptor_model.d)
+    zeq = calc_eq_z_6d(hypothesis.x1EQ, epileptor_model.c.T, epileptor_model.Iext.T, a=epileptor_model.a,
+                       b=epileptor_model.b)
     if epileptor_model.Iext2.size == 1:
         epileptor_model.Iext2 = epileptor_model.Iext2[0] * numpy.ones((hypothesis.n_regions, 1))
-    (x2eq, y2eq) = calc_eq_pop2(hypothesis.x1EQ, zeq, epileptor_model.Iext2.T)
+    (x2eq, y2eq) = calc_eq_pop2(hypothesis.x1EQ, zeq, epileptor_model.Iext2.T, s=epileptor_model.aa)
     geq = calc_eq_g(hypothesis.x1EQ)
 
     equilibrium_point = numpy.r_[hypothesis.x1EQ, y1eq, zeq, x2eq, y2eq, geq].astype('float32')
 
-    assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point)
+    #Assert equilibrium point
+    coupl = calc_coupling(hypothesis.x1EQ, epileptor_model.Ks.T, hypothesis.weights)
+    coupl = numpy.expand_dims(numpy.r_[coupl, 0.0 * coupl], 2).astype('float32')
+
+    dfun = epileptor_model.dfun(numpy.expand_dims(equilibrium_point, 2).astype('float32'), coupl).squeeze()
+    dfun_max = numpy.max(dfun, axis=1)
+
+    dfun_max_cr = 10 ** -6 * numpy.ones(dfun_max.shape)
+    dfun_max_cr[2] = 10 ** -2
+
+    dfun2 = calc_dfun(equilibrium_point[0].squeeze(), equilibrium_point[2].squeeze(),
+                      epileptor_model.c.squeeze(), epileptor_model.Iext.squeeze(), epileptor_model.x0.squeeze(),
+                      numpy.zeros((hypothesis.n_regions,), dtype=epileptor_model.x0.type),
+                      numpy.ones((hypothesis.n_regions,), dtype=epileptor_model.x0.type), epileptor_model.Ks.squeeze(),
+                      hypothesis.weights, model="6d", zmode="lin",
+                      y1=equilibrium_point[1].squeeze(), x2=equilibrium_point[3].squeeze(),
+                      y2=equilibrium_point[4].squeeze(), g=equilibrium_point[5].squeeze(),
+                      slope=epileptor_model.slope.squeeze(), a=1.0, b=3.0, d=epileptor_model.d,
+                      s=epileptor_model.aa, Iext2=epileptor_model.Iext2.squeeze(),
+                      tau1=epileptor_model.tt, tau0=1.0 / epileptor_model.r, tau2=epileptor_model.tau)
+
+    max_dfun_diff = numpy.max(numpy.abs(dfun2 - dfun.squeeze()), axis=1)
+    if numpy.any(max_dfun_diff > dfun_max_cr):
+        warnings.warn("model dfun and calc_dfun functions do not return the same results!\n"
+                      + "maximum difference = " + str(max_dfun_diff) + "\n"
+                      + "model dfun = " + str(dfun) + "\n"
+                      + "calc_dfun = " + str(dfun2))
+
+    if numpy.any(dfun_max > dfun_max_cr):
+        # raise ValueError("Equilibrium point for initial condition not accurate enough!\n" \
+        #                  + "max(dfun) = " + str(dfun_max) + "\n"
+        #                  + "model dfun = " + str(dfun))
+        warnings.warn("Equilibrium point for initial condition not accurate enough!\n"
+                         + "max(dfun) = " + str(dfun_max) + "\n"
+                         + "model dfun = " + str(dfun))
+
+
 
     return hypothesis.x1EQ, y1eq, zeq, x2eq, y2eq, geq
 

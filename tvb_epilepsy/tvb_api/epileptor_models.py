@@ -624,10 +624,8 @@ class EpileptorDPrealistic(Model):
     _nvar = 11
     cvar = numpy.array([0, 3], dtype=numpy.int32)
 
-    def fun_slope_Iext2(self, z, g, pmode=None):
-
-        if pmode is None:
-            pmode = self.pmode
+    @staticmethod
+    def fun_slope_Iext2(z, g, pmode, slope, Iext2):
 
         from tvb_epilepsy.base.utils import linear_scaling
 
@@ -647,13 +645,13 @@ class EpileptorDPrealistic(Model):
                 xp = z * g
                 xp1 = -0.7
                 xp2 = 0.1
-            slope_eq = linear_scaling(xp, xp1, xp2, 1.0, self.slope)
+            slope_eq = linear_scaling(xp, xp1, xp2, 1.0, slope)
             #slope_eq = self.slope
-            Iext2_eq = linear_scaling(xp, xp1, xp2, 0.0, self.Iext2)
+            Iext2_eq = linear_scaling(xp, xp1, xp2, 0.0, Iext2)
 
         else:
-            slope_eq = self.slope
-            Iext2_eq = self.Iext2
+            slope_eq = slope
+            Iext2_eq = Iext2
 
         return slope_eq, Iext2_eq
         
@@ -752,7 +750,7 @@ class EpileptorDPrealistic(Model):
         # filter
         ydot[5] = self.tau1 * (-0.01 * (y[5] - 0.1 * y[0]))
 
-        slope_eq, Iext2_eq = self.fun_slope_Iext2(y[2], y[5])
+        slope_eq, Iext2_eq = self.fun_slope_Iext2(y[2], y[5], self.pmode, self.slope, self.Iext2)
         
         # x0
         ydot[6] = self.tau1 * (-y[6] + self.x0)
@@ -1125,6 +1123,7 @@ class EpileptorDP2D(Model):
 def _rescale_tvb_x0(x0_orig, y0, Iext1):
     (x0cr, r) = calc_x0cr_rx0(y0, Iext1, epileptor_model="6d", zmode="lin")
     return r*x0_orig-x0cr
+
 
 def build_tvb_model(hypothesis,variables_of_interest=["y3 - y0", "y2"], zmode="lin"):
     x0_transformed = _rescale_tvb_x0(hypothesis.y0, hypothesis.Iext1)
