@@ -6,7 +6,9 @@ import os
 import h5py
 import numpy
 from datetime import datetime
-from tvb_epilepsy.base.hypothesis import Hypothesis
+from tvb_epilepsy.base.utils import get_logger, ensure_unique_file
+
+logger = get_logger()
 
 PATIENT_VIRTUAL_HEAD = "/WORK/episense/episense-root/trunk/demo-data/Head_TREC"
 
@@ -105,51 +107,27 @@ def write_epileptogenicity_hypothesis(ep_vector, folder_name=None, file_name=Non
     h5_file.close()
 
 
-def write_hypothesis(hypothesis, folder_name=None, file_name=None, attributes=None):
+def write_hypothesis(hypothesis, folder_name=None, file_name=None):
     """
-    Store an hypothesis object to a hd5 file
+    Store an hypothesis object to a hdf5 file
     """
-    #TODO: confirm that this code can save a file with different fields
+    final_path = ensure_unique_file(folder_name, file_name)
 
-    if folder_name is None:
-        folder_name = hypothesis.name.replace(" ", "_")
+    attributes = {"Model Epileptogenicity": hypothesis.E,
+                  "Pathological Excitability": numpy.array(hypothesis.x0, dtype=float),
+                  "LSA Propagation Strength": hypothesis.lsa_ps, "x1 Equilibria": hypothesis.x1EQ,
+                  "z Equilibria": hypothesis.zEQ, "Afferent coupling at equilibrium": hypothesis.Ceq,
+                  "weights": hypothesis.weights, "Coupling Global Scaling": hypothesis.K, "Iext1": hypothesis.Iext1,
+                  "y0": hypothesis.y0, "x0cr": hypothesis.x0cr, "rx0": numpy.array(hypothesis.rx0, dtype=float)}
 
-    if file_name is None:
-        file_name = "hypo_" + hypothesis.name.replace(" ", "_") + ".h5"
+    logger.info("Writing a hypothesis at: %s" % final_path)
 
-    path = os.path.join(PATIENT_VIRTUAL_HEAD, folder_name)
-    if os.path.exists(path):
-        print "Hypothesis folder %s already exists. Adding files!" % path
-    else:
-        os.makedirs(path)
+    h5_file = h5py.File(final_path, 'a', libver='latest')
+    h5_file.attrs.create("EPI_Type", "HypothesisModel")
 
-    path = os.path.join(path, file_name)
-    # TODO: handle better this case. Sometimes we only want to add results. Otherwise we might be modifying the initial
-    # hypothesis, i.e., overwriting, or adding a new one...
-    if os.path.exists(path):
-        print "Hypothesis file %s already exists. Use a different name!" % path
-        return
-
-    if not(isinstance(attributes,dict)):
-        attributes = dict()
-        attributes["Model Epileptogenicity"] = hypothesis.E
-        attributes["Pathological Excitability"] = hypothesis.x0
-        attributes["LSA Propagation Strength"] = hypothesis.lsa_ps
-        attributes["x1 Equilibria"] = hypothesis.x1EQ
-        attributes["z Equilibria"] = hypothesis.zEQ
-        attributes["Afferent coupling at equilibrium"] = hypothesis.Ceq
-        attributes["weights"] = hypothesis.weights
-        attributes["Coupling Global Scaling"] = hypothesis.K
-        attributes["Iext1"] = hypothesis.Iext1
-        attributes["y0"] = hypothesis.y0
-        attributes["x0cr"] = hypothesis.x0cr
-        attributes["rx0"] = hypothesis.rx0
-
-    print "Writing an hypothesis at:", path
-    h5_file = h5py.File(path, 'a', libver='latest')
-    for attr in attributes:
-        _write_metadata({KEY_TYPE: attr.replace(" ",""), KEY_NODES: attributes[attr].shape[0]}, h5_file)
-        h5_file.create_dataset("/values", data=attributes[attr])
+    for attribute in attributes:
+        logger.debug("dataset %s value %s" % (attribute, attributes[attribute]))
+        h5_file.create_dataset("/" + attribute, data=attributes[attribute])
 
     h5_file.close()
 
@@ -162,8 +140,8 @@ def read_hypothesis(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "hypo_ep.h5"))
     print "Reading Hypothesis from:", path
     h5_file = h5py.File(path, 'r', libver='latest')
 
-    #TODO: read the attributes, if they exist, from the file and create an hypothesis object accordingly.
-    #Whatever attribute is not present, just takes the default values, upon creation of the object
+    # TODO: read the attributes, if they exist, from the file and create an hypothesis object accordingly.
+    # Whatever attribute is not present, just takes the default values, upon creation of the object
     # _print_metadata(h5_file)
     # print "Structures:", h5_file["/"].keys()
     # print "Values expected shape:", h5_file['/values'].shape
@@ -176,7 +154,7 @@ def read_hypothesis(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "hypo_ep.h5"))
     # hyp = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, \
     #                     "EP Hypothesis", x1eq_mode="optimize")
 
-    #return hyp
+    # return hyp
 
 
 def import_sensors(src_txt_file):
@@ -204,7 +182,6 @@ def write_sensors(labels, locations, file_name=None):
     h5_file.create_dataset("/labels", data=labels)
     h5_file.create_dataset("/locations", data=locations)
     h5_file.close()
-
 
 
 def read_ts(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5")):

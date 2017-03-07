@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+import setuptools
 
-setup(name='tvb_epilepsy',
-      version='0.0',
-      description='TVB epilepsy applications',
-      author='Denis Perdikis',
-      author_email='<insert here>',
-      url='https://github.com/the-virtual-brain/tvb_epilepsy-epilepsy',
-      packages=['tvb_epilepsy.epilepsy'], requires=['numpy']
-      )
+setuptools.setup(name='tvb_epilepsy',
+                 version='0.1',
+                 description='TVB epilepsy applications',
+                 author='Denis Perdikis, Paula Popa, Lia Domide',
+                 author_email='<insert here>',
+                 url='https://github.com/the-virtual-brain/tvb_epilepsy-epilepsy',
+                 packages=['tvb_epilepsy'], requires=['numpy', 'tvb']
+                 )

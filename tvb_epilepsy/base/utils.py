@@ -2,7 +2,7 @@
 Various transformation/computation functions will be placed here.
 """
 import logging
-import numpy 
+import numpy
 from itertools import product
 from scipy.signal import butter, lfilter
 from collections import OrderedDict
@@ -63,11 +63,11 @@ def vector2scalar(x):
         return x
     else:
         y=numpy.squeeze(x)
-    if all(y.squeeze()==y[0]): 
+    if all(y.squeeze()==y[0]):
         return y[0]
-    else: 
+    else:
         return reg_dict(x)
-        
+
 def reg_dict(x, lbl=None, sort=None):
     """
     :x: a list or numpy vector 
@@ -95,7 +95,7 @@ def reg_dict(x, lbl=None, sort=None):
                 ind = ind[::-1].tolist()
             else:
                 ind = range(x_no)
-        else: 
+        else:
             ind = range(total_no)
         d = OrderedDict()
         for i in ind:
@@ -207,3 +207,13 @@ def set_time_scales(fs=4096.0, dt=None, time_length=1000.0, scale_time=1.0, scal
         hpf_high = min(250.0 , hpf_fs)
 
     return fs, dt, fsAVG, scale_time, sim_length, monitor_period, n_report_blocks, hpf_fs, hpf_low, hpf_high
+
+
+def ensure_unique_file(parent_folder, filename):
+    final_path = os.path.join(parent_folder, filename)
+
+    while os.path.exists(final_path):
+        filename = raw_input("File %s already exists. Enter a different name: " % parent_folder)
+        final_path = os.path.join(parent_folder, filename)
+
+    return final_path
