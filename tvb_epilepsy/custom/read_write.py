@@ -124,6 +124,7 @@ def write_hypothesis(hypothesis, folder_name=None, file_name=None):
 
     h5_file = h5py.File(final_path, 'a', libver='latest')
     h5_file.attrs.create("EPI_Type", "HypothesisModel")
+    h5_file.attrs.create("Number_of_nodes", hypothesis.n_regions)
 
     for attribute in attributes:
         logger.debug("dataset %s value %s" % (attribute, attributes[attribute]))
