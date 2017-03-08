@@ -47,10 +47,10 @@ def calc_coupling(x1, K, w, ix=None, jx=None):
 def calc_x0(x1, z, x0cr, rx0, coupl, zmode=numpy.array("lin")):
 
     if zmode == 'lin':
-        return (x1 + x0cr - (z+coupl) / 4.0) / rx0
+        return numpy.array((x1 + x0cr - (z+coupl) / 4.0) / rx0, dtype="float32")
 
     elif zmode == 'sig':
-        return (3.0 / (1.0 + numpy.exp(-10.0 * (x1 + 0.5))) + x0cr - z + coupl) / rx0
+        return numpy.array((3.0 / (1.0 + numpy.exp(-10.0 * (x1 + 0.5))) + x0cr - z + coupl) / rx0, dtype="float32")
 
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
@@ -74,8 +74,8 @@ def calc_fx1_6d(x1, z=0.0, y1=0.0, x2=0.0, Iext1=0.0, slope=0.0, a=1.0, b=3.0, t
     return calc_fx1(x1, z, y1, x2, Iext1, slope, a, b, tau1, x1_neg)
 
 
-def calc_fx1_2d(x1, z=0, y0=0.0, x2=0.0, Iext1=0.0, slope=0.0, a=1.0, b=-2.0, tau1=1.0, x1_neg=None):
-    return calc_fx1(x1, z, y0, x2, Iext1, slope, a, b, tau1, x1_neg)
+def calc_fx1_2d(x1, z=0, yc=0.0, x2=0.0, Iext1=0.0, slope=0.0, a=1.0, b=-2.0, tau1=1.0, x1_neg=None):
+    return calc_fx1(x1, z, yc, x2, Iext1, slope, a, b, tau1, x1_neg)
 
 
 def calc_fy1(x1, yc, y1=0, d=5.0, tau1=1.0):
@@ -197,9 +197,9 @@ def calc_dfun(x1, z, yc, Iext1, x0, x0cr, rx0, K, w, model_vars=2, zmode="lin", 
 #     return jac
 
 
-def calc_eq_z_2d(x1eq, y0, Iext1, slope=0.0, a=1.0, b=-2.0, x1_neg=True):
+def calc_eq_z_2d(x1eq, yc, Iext1, slope=0.0, a=1.0, b=-2.0, x1_neg=True):
 
-    return calc_fx1_2d(x1eq, z=0, y0=y0, Iext1=Iext1, slope=slope, a=a, b=b, x1_neg=x1_neg)
+    return calc_fx1_2d(x1eq, z=0, yc=yc, Iext1=Iext1, slope=slope, a=a, b=b, x1_neg=x1_neg)
 
 
 def calc_eq_z_6d(x1eq, y1, Iext1, slope=0.0, a=1.0, b=3.0, x1_neg=True):
@@ -242,7 +242,7 @@ def calc_eq_g(x1eq):
     return calc_fg(x1eq, g=0.0, gamma=1.0, tau1=1.0)
 
 
-def eq_x1_hypo_x0_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w):
+def eq_x1_hypo_x0_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w):
 
     x1_type = x1EQ.dtype
 
@@ -268,16 +268,16 @@ def eq_x1_hypo_x0_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, 
     #
     # # Known x0, unknown x1eq:
     # # fun[:,ix0] = calc_fz_lin(x[:, ix0], x0, x0cr[:, ix0], rx0[:, ix0],
-    # #                          z=calc_eq_z_2d(x[:, ix0], y0[:, ix0], Iext1[:, ix0]),
+    # #                          z=calc_eq_z_2d(x[:, ix0], yc[:, ix0], Iext1[:, ix0]),
     # #                          coupl=K[:, ix0] * (w_e_to_x0 + w_x0_to_x0)).astype(x1_type)
     # fun[:, ix0] = calc_fz_lin(x1EQ[:, ix0], x0, x0cr[:, ix0], rx0[:, ix0],
-    #                           z=calc_eq_z_2d(x[:, ix0], y0[:, ix0], Iext1[:, ix0]),
+    #                           z=calc_eq_z_2d(x[:, ix0], yc[:, ix0], Iext1[:, ix0]),
     #                           coupl=Coupl_to_x0).astype(x1_type)
 
     # Construct the x1 and z vectors, comprising of the current x1EQ, zEQ values for i_e regions,
     # and the unknown x1 values for x1EQ and respective zEQ for the i_x0 regions
     x1EQ[:, ix0] = numpy.array(x[ix0])
-    zEQ[:, ix0] = numpy.array(calc_eq_z_2d(x1EQ[:, ix0], y0[:, ix0], Iext1[:, ix0]))
+    zEQ[:, ix0] = numpy.array(calc_eq_z_2d(x1EQ[:, ix0], yc[:, ix0], Iext1[:, ix0]))
 
     # Construct the x0 vector, comprising of the current x0 values for i_x0 regions,
     # and the unknown x0 values for the i_e regions
@@ -296,7 +296,7 @@ def eq_x1_hypo_x0_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, 
     return numpy.squeeze(fun)
 
 
-def eq_x1_hypo_x0_optimize_jac(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w):
+def eq_x1_hypo_x0_optimize_jac(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w):
 
     x = numpy.expand_dims(x, 1).T
 
@@ -328,7 +328,7 @@ def eq_x1_hypo_x0_optimize_jac(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, 
     return jac
 
 
-def eq_x1_hypo_x0_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w):
+def eq_x1_hypo_x0_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w):
 
     xinit = numpy.zeros(x1EQ.shape, dtype = x1EQ.dtype)
 
@@ -340,7 +340,7 @@ def eq_x1_hypo_x0_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w):
     xinit[:, ix0] = rx0[:, ix0] * x0 - x0cr[:, ix0] + zEQ[:, ix0] / 4
 
     #Solve:
-    sol = root(eq_x1_hypo_x0_optimize_fun, xinit, args=(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w),
+    sol = root(eq_x1_hypo_x0_optimize_fun, xinit, args=(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w),
                method='lm', jac=eq_x1_hypo_x0_optimize_jac, tol=10**(-6), callback=None, options=None) #method='hybr'
 
     if sol.success:
@@ -354,7 +354,7 @@ def eq_x1_hypo_x0_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w):
 
 
 
-def eq_x1_hypo_x0_linTaylor(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w):
+def eq_x1_hypo_x0_linTaylor(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w):
 
     no_x0 = len(ix0)
     no_e = len(iE)
@@ -382,7 +382,7 @@ def eq_x1_hypo_x0_linTaylor(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w):
     # For regions of fixed x0:
     ii_x0 = numpy.ones((1, no_x0), dtype=x1_type)
     we_to_x0 = numpy.expand_dims(numpy.sum(w[ix0][:, iE] * numpy.dot(ii_x0.T, x1_eq), axis=1), 1).T.astype(x1_type)
-    bx0 = 4.0 * (x0cr[:, ix0] - rx0[:, ix0] * x0) - y0[:, ix0] - Iext1[:, ix0] \
+    bx0 = 4.0 * (x0cr[:, ix0] - rx0[:, ix0] * x0) - yc[:, ix0] - Iext1[:, ix0] \
           - 2.0 * x1LIN[:, ix0] ** 3 - 2.0 * x1LIN[:, ix0] ** 2 - K[:, ix0] * we_to_x0
 
     # Concatenate B vector:
@@ -420,27 +420,27 @@ def eq_x1_hypo_x0_linTaylor(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, y0, Iext1, K, w):
     return x1EQ
 
 
-def calc_x0cr_rx0(y0, Iext1, epileptor_model="2d", zmode=numpy.array("lin"),
+def calc_x0cr_rx0(yc, Iext1, epileptor_model="2d", zmode=numpy.array("lin"),
                   x1rest=X1_DEF, x1cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF):
 
     #Define the symbolic variables we need:
-    (y01, I1, x1, z, x0, r, x0cr, f1, fz) = symbols('y01 I1 x1 z x0 r x0cr f1 fz')
+    (yc1, I1, x1, z, x0, r, x0cr, f1, fz) = symbols('yc1 I1 x1 z x0 r x0cr f1 fz')
 
     #Define the fx1(x1) expression (assuming centered x1 in all cases)...
     if epileptor_model == "2d":
         #...for the 2D permittivity coupling approximation, Proix et al 2014
         #fx1 = x1 ** 3 + 2 * x1 ** 2
         # #...and the z expression, coming from solving dx1/dt=f1(x1,z)=0
-        # z = y01 - fx1 + I1
-        z = calc_eq_z_2d(x1, y01, I1)
+        # z = yc1 - fx1 + I1
+        z = calc_eq_z_2d(x1, yc1, I1)
 
     else:
         #...or for the original (>=6D) epileptor
         # fx1 = x1 ** 3 - 3 * x1 ** 2
         # #...and the z expression, coming from solving dx1/dt=f1(x1,z)=0
-        # y1 = y01 - 5.0 * x1 ** 2
+        # y1 = yc1 - 5.0 * x1 ** 2
         # z = y1 - fx1 + I1
-        z = calc_eq_z_6d(x1, calc_eq_y1(x1, y01, d=5.0), I1)
+        z = calc_eq_z_6d(x1, calc_eq_y1(x1, yc1, d=5.0), I1)
 
     #Define the fz expression...
     if zmode == 'lin':
@@ -462,13 +462,13 @@ def calc_x0cr_rx0(y0, Iext1, epileptor_model="2d", zmode=numpy.array("lin"),
                     fz.subs([(x1, x1cr), (x0, x0cr_def), (z, z.subs(x1, x1cr))])], r, x0cr)
 
     #Convert the solution of x0cr from expression to function that accepts numpy arrays as inputs:
-    x0cr = lambdify((y01,I1), fz_sol[x0cr], 'numpy')
+    x0cr = lambdify((yc1,I1), fz_sol[x0cr], 'numpy')
 
-    #Compute the actual x0cr now given the inputs y0 and Iext1
-    x0cr = x0cr(y0, Iext1)
+    #Compute the actual x0cr now given the inputs yc and Iext1
+    x0cr = x0cr(yc, Iext1).astype('float32')
 
-    #The rx0 doesn' depend on y0 and Iext1, therefore...
-    rx0 = fz_sol[r]*numpy.ones(shape=x0cr.shape)
+    #The rx0 doesn' depend on yc and Iext1, therefore...
+    rx0 = numpy.array(fz_sol[r]*numpy.ones(shape=x0cr.shape), dtype="float32")
 
     return x0cr, rx0
 

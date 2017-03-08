@@ -48,7 +48,7 @@ X0_CR_DEF = 1.0
 E_DEF = 0.0
 K_DEF = 1.0
 I_EXT1_DEF = 3.1
-Y0_DEF = 1.0
+YC_DEF = 1.0
 X1_DEF = -5.0 / 3.0
 X1_EQ_CR_DEF = -4.0 / 3.0
 
@@ -61,4 +61,13 @@ DATA_MODE = 'ep'  # 'ep' or 'tvb'
 WEIGHTS_NORM_PERCENT = 95
 
 NOISE_SEED = 42
+
+#Attributes to be read or written for hypothesis object and files:
+hyp_attributes_dict = {"Hypothesis name": "name", "Model Epileptogenicity": "E", "Pathological Excitability": "x0",
+                       "LSA Propagation Strength": "lsa_ps", "x1 Equilibria": "x1EQ",
+                       "z Equilibria": "zEQ", "Afferent coupling at equilibrium": "Ceq",
+                       "Connectivity": "weights", "Permittivity Coupling": "K", "Iext1": "Iext1",
+                       "yc": "yc", "Critical x0": "x0cr", "x0 scaling": "rx0", "EZ hypothesis": "seizure_indices",
+                       "x1EQcr": "x1EQcr", "x1LIN": "x1LIN", "x1SQ": "x1SQ",
+                       "lsa_eigvals": "lsa_eigvals", "lsa_eigvects": "lsa_eigvects", "lsa_ps_tot": "lsa_ps_tot"}
 

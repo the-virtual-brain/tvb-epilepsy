@@ -7,6 +7,8 @@ import h5py
 import numpy
 from datetime import datetime
 from tvb_epilepsy.base.utils import get_logger, ensure_unique_file
+from tvb_epilepsy.base.hypothesis import Hypothesis
+from tvb_epilepsy.base.constants import hyp_attributes_dict
 
 logger = get_logger()
 
@@ -107,54 +109,106 @@ def write_epileptogenicity_hypothesis(ep_vector, folder_name=None, file_name=Non
     h5_file.close()
 
 
-def write_hypothesis(hypothesis, folder_name=None, file_name=None):
+def write_hypothesis(hypothesis, folder_name=None, file_name=None, hypo_name=None):
     """
     Store an hypothesis object to a hdf5 file
     """
-    final_path = ensure_unique_file(folder_name, file_name)
 
-    attributes = {"Model Epileptogenicity": hypothesis.E,
-                  "Pathological Excitability": numpy.array(hypothesis.x0, dtype=float),
-                  "LSA Propagation Strength": hypothesis.lsa_ps, "x1 Equilibria": hypothesis.x1EQ,
-                  "z Equilibria": hypothesis.zEQ, "Afferent coupling at equilibrium": hypothesis.Ceq,
-                  "weights": hypothesis.weights, "Coupling Global Scaling": hypothesis.K, "Iext1": hypothesis.Iext1,
-                  "y0": hypothesis.y0, "x0cr": hypothesis.x0cr, "rx0": numpy.array(hypothesis.rx0, dtype=float)}
+    if not(isinstance(hypo_name, basestring)):
+        hypo_name = hypothesis.name
+
+    final_path = ensure_unique_file(folder_name, file_name)
 
     logger.info("Writing a hypothesis at: %s" % final_path)
 
     h5_file = h5py.File(final_path, 'a', libver='latest')
     h5_file.attrs.create("EPI_Type", "HypothesisModel")
 
-    for attribute in attributes:
-        logger.debug("dataset %s value %s" % (attribute, attributes[attribute]))
-        h5_file.create_dataset("/" + attribute, data=attributes[attribute])
+    for attribute in hyp_attributes_dict:
+        print "Values shape:", numpy.array(getattr(hypothesis, hyp_attributes_dict[attribute])).shape
+        try:
+            if attribute == "EZ hypothesis":
+                seizure_indices = numpy.zeros((hypothesis.n_regions,))
+                seizure_indices[hypothesis.seizure_indices] = 1
+                h5_file.create_dataset("/" + attribute, data=seizure_indices.astype("float32"))
+            elif attribute == "Hypothesis name":
+                h5_file.create_dataset("/" + attribute, data=hypo_name)
+            else:
+                h5_file.create_dataset("/" + attribute,
+                                data=numpy.array(getattr(hypothesis, hyp_attributes_dict[attribute])).astype("float32"))
+        except:
+            raise ValueError(attribute + " not found in the hypothesis object!")
+        print "Values written shape:", numpy.array(h5_file['/' + attribute][()]).shape
+        logger.debug("dataset %s value %s" % (attribute, h5_file['/' + attribute][()]))
 
     h5_file.close()
 
 
-def read_hypothesis(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "hypo_ep.h5")):
+def read_hypothesis(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "hypo_ep.h5"), output="object", hypo_name=None,
+                    update_hypothesis=True):
+
     """
     :param path: Path towards an hypothesis H5 file
     :return: hypothesis object
     """
+
     print "Reading Hypothesis from:", path
     h5_file = h5py.File(path, 'r', libver='latest')
 
-    # TODO: read the attributes, if they exist, from the file and create an hypothesis object accordingly.
-    # Whatever attribute is not present, just takes the default values, upon creation of the object
-    # _print_metadata(h5_file)
-    # print "Structures:", h5_file["/"].keys()
-    # print "Values expected shape:", h5_file['/values'].shape
-    #
-    # values = h5_file['/values'][()]
-    # print "Actual values shape", values.shape
-    #
-    # h5_file.close()
-    #
-    # hyp = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, \
-    #                     "EP Hypothesis", x1eq_mode="optimize")
+    _print_metadata(h5_file)
+    attributes = h5_file["/"].keys()
+    print "Attributes:", attributes
 
-    # return hyp
+    if not(isinstance(hypo_name, basestring)):
+        hypo_name = h5_file['/Hypothesis name'][()]
+
+    if output == "object":
+
+        hyp = Hypothesis(h5_file['/Connectivity'][()].shape[0], h5_file['/Connectivity'][()], hypo_name)
+
+        for attribute in attributes:
+            print "Values read shape:", numpy.array(h5_file['/' + attribute][()]).shape
+            try:
+                if attribute == "EZ hypothesis":
+                    setattr(hyp, hyp_attributes_dict[attribute],
+                            numpy.array(numpy.where(h5_file['/' + attribute][()] > 0)).astype("int32").squeeze())
+                elif attribute == "Hypothesis name" or attribute == "Connectivity":
+                    pass
+                else:
+                    setattr(hyp, hyp_attributes_dict[attribute], h5_file['/' + attribute][()])
+            except:
+                raise ValueError(attribute + " not found in the attributes dictionary!")
+            print "Values set shape:", numpy.array(getattr(hyp, hyp_attributes_dict[attribute])).shape
+            logger.debug("dataset %s value %s" % (attribute, getattr(hyp, hyp_attributes_dict[attribute])))
+
+        if update_hypothesis:
+            hyp._update_parameters(hyp.seizure_indices)
+
+    else:
+
+        hyp = dict()
+
+        for attribute in attributes:
+            print "Values read shape:", numpy.array(h5_file['/' + attribute][()]).shape
+            try:
+                if attribute == "EZ hypothesis":
+                    seizure_indices = numpy.where(h5_file['/' + attribute][()] > 0)
+                    hyp[hyp_attributes_dict[attribute]] = numpy.array(seizure_indices).astype('int32').squeeze()
+                    hyp["n_"+hyp_attributes_dict[attribute]] = len(seizure_indices)
+                elif attribute == "Hypothesis name":
+                    hyp[hyp_attributes_dict[attribute]] = hypo_name
+                else:
+                    hyp[hyp_attributes_dict[attribute]] = h5_file['/'+attribute][()]
+            except:
+                raise ValueError(attribute + " not found in the attributes dictionary!")
+            print "Values set shape:", numpy.array(hyp[hyp_attributes_dict[attribute]]).shape
+            logger.debug("dataset %s value %s" % (attribute, hyp[hyp_attributes_dict[attribute]]))
+
+        hyp["n_regions"] = hyp["x0"].size
+
+    h5_file.close()
+
+    return hyp
 
 
 def import_sensors(src_txt_file):
@@ -213,9 +267,9 @@ def write_ts(raw_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, 
         return
 
     print "Writing a TS at:", path
-    y0 = raw_data[:, :, 0]
+    yc = raw_data[:, :, 0]
     y2 = raw_data[:, :, 2]
-    lfp_data = y2 - y0
+    lfp_data = y2 - yc
     lfp_data = lfp_data.reshape((lfp_data.shape[0], lfp_data.shape[1], 1))
 
     h5_file = h5py.File(path, 'a', libver='latest')

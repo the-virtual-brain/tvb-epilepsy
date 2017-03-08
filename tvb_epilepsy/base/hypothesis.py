@@ -6,7 +6,7 @@ It should contain everything for later configuring an Epileptor Model from this 
 
 import numpy
 from collections import OrderedDict
-from tvb_epilepsy.base.constants import X0_DEF, E_DEF, K_DEF, I_EXT1_DEF, Y0_DEF, X1_DEF, X1_EQ_CR_DEF
+from tvb_epilepsy.base.constants import X0_DEF, E_DEF, K_DEF, I_EXT1_DEF, YC_DEF, X1_DEF, X1_EQ_CR_DEF
 from tvb_epilepsy.base.equilibrium_computation import calc_eq_z_2d, calc_coupling, calc_x0, calc_x0cr_rx0, \
                                                       eq_x1_hypo_x0_linTaylor, eq_x1_hypo_x0_optimize, def_x1lin
 from tvb_epilepsy.base.utils import reg_dict, formal_repr, vector2scalar
@@ -17,7 +17,7 @@ from tvb_epilepsy.base.utils import reg_dict, formal_repr, vector2scalar
 #TODO: to generalize for different coupling functions
 class Hypothesis(object):
     def __init__(self, n_regions, normalized_weights, name="", x1eq_mode = "optimize",
-                 e_def=E_DEF, k_def=K_DEF, i_ext1_def=I_EXT1_DEF, y0_def=Y0_DEF,
+                 e_def=E_DEF, k_def=K_DEF, i_ext1_def=I_EXT1_DEF, yc_def=YC_DEF,
                  x1_eq_cr_def=X1_EQ_CR_DEF):
 
         #TODO: question the course below. Maybe use the opposite one?
@@ -35,7 +35,7 @@ class Hypothesis(object):
         i = numpy.ones((1, self.n_regions), dtype=numpy.float32)
         self.K = k_def * i
         self.Iext1 = i_ext1_def * i
-        self.y0 = y0_def * i
+        self.yc = yc_def * i
         self.x1EQcr = x1_eq_cr_def
         self.E = e_def * i
 
@@ -84,7 +84,7 @@ class Hypothesis(object):
         :return: The number of hypothesized epileptogenic regions is also
         the number of eigenectors used for the calculation of the Propagation Strength index
         """
-        return len(self.seizure_indices)
+        return self.seizure_indices.size
 
     @property
     def weights_for_seizure_nodes(self):
@@ -94,7 +94,7 @@ class Hypothesis(object):
         return self.weights[:, self.seizure_indices]
 
     def _calculate_critical_x0_scaling(self):
-        return calc_x0cr_rx0(self.y0, self.Iext1, epileptor_model="2d", zmode="lin")
+        return calc_x0cr_rx0(self.yc, self.Iext1, epileptor_model="2d", zmode="lin")
 
     def _set_equilibria_x1(self, i=None):
         if i is None:
@@ -102,9 +102,9 @@ class Hypothesis(object):
         return ((self.E - 5.0) / 3.0) * i
 
     def _calculate_equilibria_z(self):
-        return calc_eq_z_2d(self.x1EQ, self.y0, self.Iext1)
+        return calc_eq_z_2d(self.x1EQ, self.yc, self.Iext1)
         #non centered x1:
-        # return self.y0 + self.Iext1 - self.x1EQ ** 3 - 2.0 * self.x1EQ ** 2
+        # return self.yc + self.Iext1 - self.x1EQ ** 3 - 2.0 * self.x1EQ ** 2
 
     def _calculate_coupling_at_equilibrium(self):
         return calc_coupling(self.x1EQ, self.K, self.weights)
@@ -117,8 +117,8 @@ class Hypothesis(object):
 
     def _dfz_square_taylor(self):
         # The z derivative of the function
-        # x1 = F(z) = -4/3 -1/2*sqrt(2(z-y0-Iext1)+64/27)
-        dfz = -(0.5 / numpy.sqrt(2 * (self.zEQ - self.y0 - self.Iext1) + 64.0 / 27.0))
+        # x1 = F(z) = -4/3 -1/2*sqrt(2(z-yc-Iext1)+64/27)
+        dfz = -(0.5 / numpy.sqrt(2 * (self.zEQ - self.yc - self.Iext1) + 64.0 / 27.0))
         if numpy.any([numpy.any(numpy.isnan(dfz)), numpy.any(numpy.isinf(dfz))]):
             raise ValueError("nan or inf values in dfz")
         else:
@@ -162,7 +162,7 @@ class Hypothesis(object):
         self._check_hypothesis(seizure_indices)
 
         # The z derivative of the function...
-        # x1 = F(z) = -4/3 -1/2*sqrt(2(z-y0-Iext1)+64/27)
+        # x1 = F(z) = -4/3 -1/2*sqrt(2(z-yc-Iext1)+64/27)
         dfz = self._dfz_square_taylor()
 
         #...and the respective Jacobian
@@ -235,10 +235,10 @@ class Hypothesis(object):
         x0 = numpy.expand_dims(numpy.array(x0), 1).T
         
         if self.x1eq_mode=="linTaylor":
-            self.x1EQ = eq_x1_hypo_x0_linTaylor(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0, self.y0,
+            self.x1EQ = eq_x1_hypo_x0_linTaylor(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0, self.yc,
                                                self.Iext1, self.K, self.weights)
         else:
-            self.x1EQ = eq_x1_hypo_x0_optimize(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0, self.y0,
+            self.x1EQ = eq_x1_hypo_x0_optimize(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0, self.yc,
                                               self.Iext1, self.K, self.weights)
 
         self.zEQ = self._calculate_equilibria_z()

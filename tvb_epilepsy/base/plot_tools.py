@@ -230,7 +230,7 @@ def plot_nullclines_eq(hypothesis,region_labels,special_idx=None, x0ne = X0_DEF,
                        figure_format=FIG_FORMAT, figsize=SMALL_SIZE):
                     
     #Fixed parameters for all regions:
-    y0 = numpy.mean(hypothesis.y0)
+    yc = numpy.mean(hypothesis.yc)
     Iext1 = numpy.mean(hypothesis.Iext1)
     x0cr = numpy.mean(hypothesis.x0cr)  # Critical x0
     r = numpy.mean(hypothesis.rx0) 
@@ -242,7 +242,7 @@ def plot_nullclines_eq(hypothesis,region_labels,special_idx=None, x0ne = X0_DEF,
     # Lines:
     x1 = numpy.expand_dims(numpy.linspace(-2.0, 2.0 / 3.0, 100), 1).T
     # x1 nullcline:
-    zX1 = y0 + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
+    zX1 = yc + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
     # z nullcline:
     zZe = calc_fz_lin(x1,x0e,x0cr,r)   # for epileptogenic regions
     zZne = calc_fz_lin(x1,x0ne,x0cr,r)  # for non-epileptogenic regions
@@ -250,16 +250,16 @@ def plot_nullclines_eq(hypothesis,region_labels,special_idx=None, x0ne = X0_DEF,
     # linear:
     x1lin = numpy.expand_dims(numpy.linspace(-5.5 / 3.0, -3.5/3 , 30), 1).T
     # x1 nullcline after linear approximation
-    zX1lin = y0 + Iext1 + 2.0 * x1lin0 ** 3 + 2.0 * x1lin0 ** 2 - \
+    zX1lin = yc + Iext1 + 2.0 * x1lin0 ** 3 + 2.0 * x1lin0 ** 2 - \
              (3.0 * x1lin0 ** 2 + 4.0 * x1lin0) * x1lin  # x1 nullcline after linear approximation
     # center point without approximation:
-    #zlin0 = y0 + Iext1 - x1lin0 ** 3 - 2.0 * x1lin0 ** 2
+    #zlin0 = yc + Iext1 - x1lin0 ** 3 - 2.0 * x1lin0 ** 2
     # square:
     x1sq = numpy.expand_dims(numpy.linspace(-5.0 / 3, -1.0, 30), 1).T
     # x1 nullcline after parabolic approximation
-    zX1sq = + 2.0 * x1sq ** 2 + 16.0 * x1sq / 3.0 + y0 + Iext1 + 64.0 / 27.0
+    zX1sq = + 2.0 * x1sq ** 2 + 16.0 * x1sq / 3.0 + yc + Iext1 + 64.0 / 27.0
     # center point (critical equilibrium point) without approximation:
-    #zsq0 = y0 + Iext1 - x1sq0 ** 3 - 2.0 * x1sq0 ** 2
+    #zsq0 = yc + Iext1 - x1sq0 ** 3 - 2.0 * x1sq0 ** 2
     
     fig=mp.pyplot.figure(figure_name, figsize=figsize)
     x1null, =mp.pyplot.plot(x1[0, :], zX1[0, :], 'b-', label='x1 nullcline', linewidth=1)

@@ -12,6 +12,7 @@ from tvb_epilepsy.tvb_api.readers_tvb import TVBReader
 from tvb_epilepsy.tvb_api.simulator_tvb import *
 from tvb_epilepsy.tvb_api.epileptor_models import *
 from tvb_epilepsy.custom.readers_custom import CustomReader
+from tvb_epilepsy.custom.read_write import write_hypothesis, read_hypothesis
 from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_sim_results
 
 
@@ -146,6 +147,25 @@ if __name__ == "__main__":
     plot_hypothesis(hyp_ep, head.connectivity.region_labels, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
                    figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
 
+    write_hypothesis(hyp_ep, folder_name=FOLDER_RES, file_name="hyp_ep", hypo_name=None)
+    hyp_ep2 = read_hypothesis(path=os.path.join(FOLDER_RES, "hyp_ep"), output="dict",
+                              update_hypothesis=True, hypo_name=None)
+
+    # from tvb_epilepsy.base.constants import hyp_attributes_dict
+    # for attribute in hyp_attributes_dict:
+    #     print hyp_attributes_dict[attribute]
+    #     attr = getattr(hyp_ep, hyp_attributes_dict[attribute])
+    #     #attr2 = getattr(hyp_ep2, hyp_attributes_dict[attribute])
+    #     attr2 = hyp_ep2[hyp_attributes_dict[attribute]]
+    #     if isinstance(attr, basestring):
+    #         if attr != attr2:
+    #             warnings.warn("Original and read hypothesis field "
+    #                              + hyp_attributes_dict[attribute] + " not equal!")
+    #     else:
+    #         if numpy.any(numpy.float32(attr) - numpy.float32(attr2) > 0):
+    #             warnings.warn("Original and read hypothesis field "
+    #                                  + hyp_attributes_dict[attribute] + " not equal!")
+
     # hyp_exc = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights,
     #                     "x0 Hypothesis", x1eq_mode="optimize")  #"optimize" or "linTaylor"
     # hyp_exc.K = 0.1 * hyp_exc.K
@@ -163,6 +183,7 @@ if __name__ == "__main__":
     # plot_hypothesis(hyp_exc, head.connectivity.region_labels,
     #                 save_flag=SAVE_FLAG, show_flag=True,
     #                 figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
+    # write_hypothesis(hyp_exc, folder_name=FOLDER_RES, file_name="hyp_exc", hypo_name=None)
     #
     # x0_opt = numpy.array(hyp_exc.x0)
     # x1EQ_opt = numpy.array(hyp_exc.x1EQ)
@@ -180,14 +201,14 @@ if __name__ == "__main__":
     # plot_hypothesis(hyp_exc, head.connectivity.region_labels,
     #                 save_flag=SAVE_FLAG, show_flag=True,
     #                 figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
+    # write_hypothesis(hyp_exc, folder_name=FOLDER_RES, file_name="hyp_exc2", hypo_name=None)
 
-    
 #------------------------------Simulation--------------------------------------
 
     #We don't want any time delays for the moment
     head.connectivity.tract_lengths *= 0.0
 
-    # Set time scales (all times should be in msecs):
+    # Set time scales (all times should be in msecs and Hz):
     (fs, dt, fsAVG, scale_time, sim_length, monitor_period,
      n_report_blocks, hpf_fs, hpf_low, hpf_high) = set_time_scales(fs=2*4096.0, dt=None, time_length=1000.0,
                                                                    scale_time=2.0, scale_fsavg=2.0,
@@ -232,7 +253,7 @@ if __name__ == "__main__":
         sim = simulator_instance.config_simulation(head, settings=sim_settings)
 
         #Launch simulation
-        ttavg, tavg_data = simulator_instance.launch_simulation(sim, hyp, n_report_blocks=n_report_blocks)
+        ttavg, tavg_data, sim = simulator_instance.launch_simulation(sim, hyp, n_report_blocks=n_report_blocks)
         logger.info("Simulated signal return shape: " + str(tavg_data.shape))
         logger.info("Time: " + str(scale_time*ttavg[0]) + " - " + str(scale_time*ttavg[-1]))
         logger.info("Values: " + str(tavg_data.min()) + " - " + str(tavg_data.max()))

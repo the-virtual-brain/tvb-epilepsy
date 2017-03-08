@@ -104,7 +104,7 @@ class SimulatorTVB(ABCSimulator):
                     sys.stdout.flush()
                     curr_block += 1.0
 
-            return numpy.array(tavg_time), numpy.array(tavg_data)
+            return numpy.array(tavg_time), numpy.array(tavg_data), sim
 
 
     def launch_pse(self, hypothesis, head, settings=SimulationSettings()):
