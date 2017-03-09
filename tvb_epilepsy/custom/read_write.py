@@ -6,7 +6,7 @@ import os
 import h5py
 import numpy
 from datetime import datetime
-from tvb_epilepsy.base.utils import get_logger, ensure_unique_file
+from tvb_epilepsy.base.utils import get_logger, ensure_unique_file, write_object_to_hdf5_file, read_object_from_hdf5_file
 from tvb_epilepsy.base.hypothesis import Hypothesis
 from tvb_epilepsy.base.constants import hyp_attributes_dict
 
@@ -125,22 +125,27 @@ def write_hypothesis(hypothesis, folder_name=None, file_name=None, hypo_name=Non
     h5_file.attrs.create("EPI_Type", "HypothesisModel")
     h5_file.attrs.create("Number_of_nodes", hypothesis.n_regions)
 
-    for attribute in hyp_attributes_dict:
-        print "Values shape:", numpy.array(getattr(hypothesis, hyp_attributes_dict[attribute])).shape
-        try:
-            if attribute == "EZ hypothesis":
-                seizure_indices = numpy.zeros((hypothesis.n_regions,))
-                seizure_indices[hypothesis.seizure_indices] = 1
-                h5_file.create_dataset("/" + attribute, data=seizure_indices.astype("float32"))
-            elif attribute == "Hypothesis name":
-                h5_file.create_dataset("/" + attribute, data=hypo_name)
-            else:
-                h5_file.create_dataset("/" + attribute,
-                                data=numpy.array(getattr(hypothesis, hyp_attributes_dict[attribute])).astype("float32"))
-        except:
-            raise ValueError(attribute + " not found in the hypothesis object!")
-        print "Values written shape:", numpy.array(h5_file['/' + attribute][()]).shape
-        logger.debug("dataset %s value %s" % (attribute, h5_file['/' + attribute][()]))
+    seizure_indices = numpy.zeros((hypothesis.n_regions,))
+    seizure_indices[hypothesis.seizure_indices] = 1
+    add_overwrite_fields_dict = {"EZ hypothesis": seizure_indices, "Hypothesis name": hypo_name}
+    write_object_to_hdf5_file(hypothesis, hyp_attributes_dict, h5_file, add_overwrite_fields_dict=add_overwrite_fields_dict)
+
+    # for attribute in hyp_attributes_dict:
+    #     print "Values shape:", numpy.array(getattr(hypothesis, hyp_attributes_dict[attribute])).shape
+    #     try:
+    #         if attribute == "EZ hypothesis":
+    #             seizure_indices = numpy.zeros((hypothesis.n_regions,))
+    #             seizure_indices[hypothesis.seizure_indices] = 1
+    #             h5_file.create_dataset("/" + attribute, data=seizure_indices.astype("float32"))
+    #         elif attribute == "Hypothesis name":
+    #             h5_file.create_dataset("/" + attribute, data=hypo_name)
+    #         else:
+    #             h5_file.create_dataset("/" + attribute,
+    #                             data=numpy.array(getattr(hypothesis, hyp_attributes_dict[attribute])).astype("float32"))
+    #     except:
+    #         raise ValueError(attribute + " not found in the hypothesis object!")
+    #     print "Values written shape:", numpy.array(h5_file['/' + attribute][()]).shape
+    #     logger.debug("dataset %s value %s" % (attribute, h5_file['/' + attribute][()]))
 
     h5_file.close()
 
@@ -162,6 +167,8 @@ def read_hypothesis(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "hypo_ep.h5"),
 
     if not(isinstance(hypo_name, basestring)):
         hypo_name = h5_file['/Hypothesis name'][()]
+
+    #read_object_from_hdf5_file()
 
     if output == "object":
 

@@ -219,22 +219,27 @@ def ensure_unique_file(parent_folder, filename):
     return final_path
 
 
-def write_object_to_hd5_file(object, attributes_dict, h5_file):
+def write_object_to_hdf5_file(object, attributes_dict, h5_file, add_overwrite_fields_dict=None):
 
     logger = get_logger()
 
+    if isinstance(object, dict):
+        get_field = lambda object, key: object[key]
+    else:
+        get_field = lambda object, attribute: getattr(object, attribute)
+
     for attribute in attributes_dict:
 
-        field = getattr(object, attributes_dict[attribute])
+        field = get_field(object,attributes_dict[attribute])
 
         try:
 
-            if isinstance(attribute, basestring):
+            if isinstance(field, basestring):
                 print "String length: ", len(field)
                 h5_file.create_dataset("/" + attribute, data=field)
                 print "String written length: ", len(h5_file['/' + attribute][()])
 
-            elif isinstance(attribute, numpy.ndarray):
+            elif isinstance(field, numpy.ndarray):
                 print "Numpy array shape:", field.shape
                 h5_file.create_dataset("/" + attribute, data=field)
                 print "Numpy array written shape: ", h5_file['/' + attribute][()].shape
@@ -253,57 +258,80 @@ def write_object_to_hd5_file(object, attributes_dict, h5_file):
         logger.debug("dataset %s value %s" % (attribute, h5_file['/' + attribute][()]))
 
 
-def read_object_from_hd5_file(object, attributes_dict, h5_file, add_overwrite_fields_dict=None):
+    if isinstance(add_overwrite_fields_dict, dict):
+
+        for attribute in add_overwrite_fields_dict:
+
+            print "Adding or overwritting " + attribute + "... "
+
+            field = add_overwrite_fields_dict[attribute][0]
+            mode = add_overwrite_fields_dict[attribute][1]
+
+            if isinstance(field, basestring):
+                print "String length: ", len(field)
+                if mode == "overwrite":
+                    del h5_file["/" + attribute]
+                h5_file.create_dataset("/" + attribute, data=field)
+                print "String written length: ", len(h5_file['/' + attribute][()])
+
+            elif isinstance(field, numpy.ndarray):
+                print "Numpy array shape:", field.shape
+                if mode == "overwrite":
+                    del h5_file["/" + attribute]
+                h5_file.create_dataset("/" + attribute, data=field)
+                print "Numpy array written shape: ", h5_file['/' + attribute][()].shape
+
+            else:
+                #try to write a scalar value
+                try:
+                    print "Writing scalar value..."
+                    if mode == "overwrite":
+                        del h5_file["/" + attribute]
+                    h5_file.create_dataset("/" + attribute, data=field)
+                except:
+                    raise ValueError("Failed to write "+ attribute + " as a scalar value!")
+
+            logger.debug("dataset %s value %s" % (attribute, h5_file['/' + attribute][()]))
+
+
+
+def read_object_from_hdf5_file(object, attributes_dict, h5_file, add_overwrite_fields_dict=None):
 
     logger = get_logger()
 
-    if isinstance(object,dict):
+    if isinstance(object, dict):
+        set_field = lambda object, key, data: object.update({key: data})
+        get_field = lambda object, key: object[key]
+    else:
+        set_field = lambda object, attribute, data: setattr(object, attribute, data)
+        get_field = lambda object, attribute: getattr(object, attribute)
 
-        for attribute in attributes_dict:
-
-            print "Reading " + attributes_dict[attribute] + "... "
-            try:
-                object[attributes_dict[attribute]] = h5_file['/' + attribute][()]
-            except:
-                raise ValueError("Failed to read " + attribute + "!")
-
-            logger.debug("attribute %s value %s" % (attribute, object[attributes_dict[attribute]]))
-
-        if isinstance(add_overwrite_fields_dict, dict):
-
-            for attribute in add_overwrite_fields_dict:
-
-                print "Setting or overwritting " + attributes_dict[attribute] + "... "
-                try:
-                    object[attribute] = add_overwrite_fields_dict[attribute]
-                except:
-                    raise ValueError("Failed to set " + attribute + "!")
-
-                logger.debug("attribute %s value %s" % (attribute, object[attribute]))
+    if isinstance(object, dict):
+        get_field = lambda object, key, data: object.update({key: data})
 
     else:
+        set_field = lambda object, attribute, data: setattr(object, attribute, data)
 
-        for attribute in attributes_dict:
+    for attribute in attributes_dict:
 
-            print "Reading " + attributes_dict[attribute] + "... "
+        print "Reading " + attributes_dict[attribute] + "... "
+        try:
+            set_field(object, attributes_dict[attribute], h5_file['/' + attribute][()])
+        except:
+            raise ValueError("Failed to read " + attribute + "!")
+
+        logger.debug("attribute %s value %s" % (attribute, get_field(object,attributes_dict[attribute])))
+
+    if isinstance(add_overwrite_fields_dict, dict):
+
+        for attribute in add_overwrite_fields_dict:
+
+            print "Setting or overwritting " + attributes_dict[attribute] + "... "
             try:
-                setattr(object, attributes_dict[attribute], h5_file['/' + attribute][()])
+                set_field(object, attribute, add_overwrite_fields_dict[attribute])
             except:
-                raise ValueError("Failed to read " + attribute + "!")
+                raise ValueError("Failed to set " + attribute + "!")
 
-            logger.debug("attribute %s value %s" % (attribute, getattr(object, attributes_dict[attribute])))
-
-        if isinstance(add_overwrite_fields_dict, dict):
-
-            for attribute in add_overwrite_fields_dict:
-
-                print "Setting or overwritting " + attributes_dict[attribute] + "... "
-                try:
-                    setattr(object, attribute, add_overwrite_fields_dict[attribute])
-
-                except:
-                    raise ValueError("Failed to set " + attribute + "!")
-
-                logger.debug("attribute %s value %s" % (attribute, getattr(object, attribute)))
+            logger.debug("attribute %s value %s" % (attribute, get_field(object,attributes_dict[attribute])))
 
     return object
