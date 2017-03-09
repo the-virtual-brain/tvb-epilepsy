@@ -258,6 +258,7 @@ def setup_simulation(model, dt, sim_length, monitor_period, monitor_expr=None, m
             eq = equations.Linear(parameters={"a": 0.0, "b": 1.0})  # default = a*y+b
             noise_instance = noise.Multiplicative(ntau=10, nsig=noise_intensity, b=eq,
                                                   random_stream=numpy.random.RandomState(seed=NOISE_SEED))
+            noise_type = "Multiplicative"
             noise_shape = noise_instance.nsig.shape
             noise_instance.configure_coloured(dt=dt, shape=noise_shape)
         else:
@@ -265,6 +266,7 @@ def setup_simulation(model, dt, sim_length, monitor_period, monitor_expr=None, m
             noise_instance = noise.Additive(nsig=noise_intensity,
                                             random_stream=numpy.random.RandomState(seed=NOISE_SEED))
             noise_instance.configure_white(dt=dt)
+            noise_type = "Additive"
     else:
         if noise_intensity is not None:
             noise_instance.nsig = noise_intensity

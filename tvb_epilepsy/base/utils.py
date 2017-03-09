@@ -217,3 +217,93 @@ def ensure_unique_file(parent_folder, filename):
         final_path = os.path.join(parent_folder, filename)
 
     return final_path
+
+
+def write_object_to_hd5_file(object, attributes_dict, h5_file):
+
+    logger = get_logger()
+
+    for attribute in attributes_dict:
+
+        field = getattr(object, attributes_dict[attribute])
+
+        try:
+
+            if isinstance(attribute, basestring):
+                print "String length: ", len(field)
+                h5_file.create_dataset("/" + attribute, data=field)
+                print "String written length: ", len(h5_file['/' + attribute][()])
+
+            elif isinstance(attribute, numpy.ndarray):
+                print "Numpy array shape:", field.shape
+                h5_file.create_dataset("/" + attribute, data=field)
+                print "Numpy array written shape: ", h5_file['/' + attribute][()].shape
+
+            else:
+                #try to write a scalar value
+                try:
+                    print "Writing scalar value..."
+                    h5_file.create_dataset("/" + attribute, data=field)
+                except:
+                    raise ValueError("Failed to write "+ attribute + " as a scalar value!")
+
+        except:
+            raise ValueError(attribute + " not found in the object!")
+
+        logger.debug("dataset %s value %s" % (attribute, h5_file['/' + attribute][()]))
+
+
+def read_object_from_hd5_file(object, attributes_dict, h5_file, add_overwrite_fields_dict=None):
+
+    logger = get_logger()
+
+    if isinstance(object,dict):
+
+        for attribute in attributes_dict:
+
+            print "Reading " + attributes_dict[attribute] + "... "
+            try:
+                object[attributes_dict[attribute]] = h5_file['/' + attribute][()]
+            except:
+                raise ValueError("Failed to read " + attribute + "!")
+
+            logger.debug("attribute %s value %s" % (attribute, object[attributes_dict[attribute]]))
+
+        if isinstance(add_overwrite_fields_dict, dict):
+
+            for attribute in add_overwrite_fields_dict:
+
+                print "Setting or overwritting " + attributes_dict[attribute] + "... "
+                try:
+                    object[attribute] = add_overwrite_fields_dict[attribute]
+                except:
+                    raise ValueError("Failed to set " + attribute + "!")
+
+                logger.debug("attribute %s value %s" % (attribute, object[attribute]))
+
+    else:
+
+        for attribute in attributes_dict:
+
+            print "Reading " + attributes_dict[attribute] + "... "
+            try:
+                setattr(object, attributes_dict[attribute], h5_file['/' + attribute][()])
+            except:
+                raise ValueError("Failed to read " + attribute + "!")
+
+            logger.debug("attribute %s value %s" % (attribute, getattr(object, attributes_dict[attribute])))
+
+        if isinstance(add_overwrite_fields_dict, dict):
+
+            for attribute in add_overwrite_fields_dict:
+
+                print "Setting or overwritting " + attributes_dict[attribute] + "... "
+                try:
+                    setattr(object, attribute, add_overwrite_fields_dict[attribute])
+
+                except:
+                    raise ValueError("Failed to set " + attribute + "!")
+
+                logger.debug("attribute %s value %s" % (attribute, getattr(object, attribute)))
+
+    return object
