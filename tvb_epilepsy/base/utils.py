@@ -3,6 +3,8 @@ Various transformation/computation functions will be placed here.
 """
 import logging
 import numpy
+import h5py
+import warnings
 from itertools import product
 from scipy.signal import butter, lfilter
 from collections import OrderedDict
@@ -27,6 +29,11 @@ def initialize_logger(name, target_folder=FOLDER_LOGS):
     logger.addHandler(fh)
     return logger
 
+def list_of_strings_to_string(lstr, sep=","):
+    str = lstr[0]
+    for s in lstr[1:]:
+        str += sep+s
+    return str
 
 def linear_scaling(x,x1,x2,y1,y2):
         scaling_factor = (y2 - y1) / (x2 - x1)
@@ -219,14 +226,41 @@ def ensure_unique_file(parent_folder, filename):
     return final_path
 
 
-def write_object_to_hdf5_file(object, attributes_dict, h5_file, add_overwrite_fields_dict=None):
+def print_metadata(h5_file):
+    print "Metadata:"
+    for key, val in h5_file["/"].attrs.iteritems():
+        print "\t", key, val
+
+
+def write_metadata(meta_dict, h5_file, key_date, key_version, path="/"):
+    root = h5_file[path].attrs
+    root[key_date] = str(datetime.now())
+    root[key_version] = 2
+    for key, val in meta_dict.iteritems():
+        root[key] = val
+
+
+# TODO: modify functions to write and read h5 files recursively when objects to be read or written are dict()
+def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrite_fields_dict=None):
 
     logger = get_logger()
 
+    if isinstance(h5_file, basestring):
+        print "Reading from:", h5_file
+        h5_file = h5py.File(h5_file, 'a', libver='latest')
+
     if isinstance(object, dict):
         get_field = lambda object, key: object[key]
+        if not(isinstance(attributes_dict, dict)):
+            attributes_dict = dict()
+            for key in object.keys():
+                attributes_dict.update({key: key})
     else:
         get_field = lambda object, attribute: getattr(object, attribute)
+        if not(isinstance(attributes_dict, dict)):
+            attributes_dict = dict()
+            for key in object.__dict__.keys():
+                attributes_dict.update({key: key})
 
     for attribute in attributes_dict:
 
@@ -293,11 +327,23 @@ def write_object_to_hdf5_file(object, attributes_dict, h5_file, add_overwrite_fi
 
             logger.debug("dataset %s value %s" % (attribute, h5_file['/' + attribute][()]))
 
+    if isinstance(h5_file, basestring):
+        h5_file.close()
 
 
-def read_object_from_hdf5_file(object, attributes_dict, h5_file, add_overwrite_fields_dict=None):
+def read_object_from_h5_file(object, h5_file, attributes_dict=None, add_overwrite_fields_dict=None):
 
     logger = get_logger()
+
+    if isinstance(h5_file, basestring):
+        print "Reading from:", h5_file
+        h5_file = h5py.File(h5_file, 'r', libver='latest')
+        print_metadata(h5_file)
+
+    if not(isinstance(attributes_dict, dict)):
+        attributes_dict = dict()
+        for key in h5_file.keys():
+            attributes_dict.update({key: key})
 
     if isinstance(object, dict):
         set_field = lambda object, key, data: object.update({key: data})
@@ -305,12 +351,6 @@ def read_object_from_hdf5_file(object, attributes_dict, h5_file, add_overwrite_f
     else:
         set_field = lambda object, attribute, data: setattr(object, attribute, data)
         get_field = lambda object, attribute: getattr(object, attribute)
-
-    if isinstance(object, dict):
-        get_field = lambda object, key, data: object.update({key: data})
-
-    else:
-        set_field = lambda object, attribute, data: setattr(object, attribute, data)
 
     for attribute in attributes_dict:
 
@@ -320,18 +360,72 @@ def read_object_from_hdf5_file(object, attributes_dict, h5_file, add_overwrite_f
         except:
             raise ValueError("Failed to read " + attribute + "!")
 
-        logger.debug("attribute %s value %s" % (attribute, get_field(object,attributes_dict[attribute])))
+        logger.debug("attribute %s value %s" % (attribute, get_field(object, attributes_dict[attribute])))
+
+    if isinstance(h5_file, basestring):
+        h5_file.close()
 
     if isinstance(add_overwrite_fields_dict, dict):
 
         for attribute in add_overwrite_fields_dict:
 
-            print "Setting or overwritting " + attributes_dict[attribute] + "... "
+            print "Setting or overwritting " + attribute + "... "
             try:
                 set_field(object, attribute, add_overwrite_fields_dict[attribute])
             except:
                 raise ValueError("Failed to set " + attribute + "!")
 
-            logger.debug("attribute %s value %s" % (attribute, get_field(object,attributes_dict[attribute])))
+            logger.debug("attribute %s value %s" % (attribute, get_field(object, attribute)))
 
     return object
+
+
+def assert_equal_objects(object1, object2, attributes_dict=None):
+
+    if isinstance(object1, dict):
+        get_field1 = lambda object, key: object[key]
+        if not(isinstance(attributes_dict, dict)):
+            attributes_dict = dict()
+            for key in object1.keys():
+                attributes_dict.update({key: key})
+    else:
+        get_field1 = lambda object, attribute: getattr(object, attribute)
+        if not (isinstance(attributes_dict, dict)):
+            attributes_dict = dict()
+            for key in object1.__dict__.keys():
+                attributes_dict.update({key: key})
+
+    if isinstance(object2, dict):
+        get_field2 = lambda object, key: object[key]
+    else:
+        get_field2 = lambda object, attribute: getattr(object, attribute)
+
+    for attribute in attributes_dict:
+        print attributes_dict[attribute]
+        field1 = get_field1(object1, attributes_dict[attribute])
+        field2 = get_field2(object2, attributes_dict[attribute])
+
+        try:
+            #TODO: a better hack for the stupid case of an ndarray of a string, such as model.zmode or pmode
+
+            # For non numeric types
+            if isinstance(field1, basestring) or isinstance(field1, list) or isinstance(field1, dict) \
+                    or (isinstance(field1, numpy.ndarray) and field1.dtype.kind in 'OSU'):
+                if numpy.any(field1 != field2):
+                    raise ValueError("Original and read object field "
+                                     + attributes_dict[attribute] + " not equal!")
+
+            # For numeric types
+            elif isinstance(field1, (int, float, long, complex, numpy.number, numpy.ndarray)) \
+                and not (isinstance(field1, numpy.ndarray) and field1.dtype.kind in 'OSU'):
+                # TODO: handle better accuracy differences and complex numbers...
+                if numpy.any(numpy.float32(field1) - numpy.float32(field2) > 0):
+                    raise ValueError("Original and read object field "
+                                     + attributes_dict[attribute] + " not equal!")
+
+            else:
+                warnings.warn("No comparison made for field "
+                                 + attributes_dict[attribute] + " because is of unknown type!")
+        except:
+            raise ValueError("Something went wrong when trying to compare "
+                             + attributes_dict[attribute] + " !")
