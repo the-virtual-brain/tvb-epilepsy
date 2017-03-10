@@ -2,14 +2,17 @@ import numpy
 from sympy import Symbol, symbols, exp, solve, lambdify, MatrixSymbol, diff
 
 
-def calc_coupling(n, K="K", ix=None, jx=None):
+def eqtn_coupling(n, ix=None, jx=None, K="K"):
 
     # Only difference coupling for the moment.
     # TODO: Extend for different coupling forms
 
     x1 = numpy.array([Symbol('x1_%d' % i_n) for i_n in range(n)])
     K = numpy.array([Symbol(K+'_%d' % i_n) for i_n in range(n)])
-    w = numpy.array(MatrixSymbol('w',n,n))
+    w = []
+    for i_n in range(n):
+        w.append([Symbol('w_%d_%d' % (i_n, j_n)) for j_n in range(n)])
+    w = numpy.array(w)
 
     if ix is None:
         ix = range(n)
@@ -17,17 +20,18 @@ def calc_coupling(n, K="K", ix=None, jx=None):
     if jx is None:
         jx = range(n)
 
-    i_n = numpy.ones((len(ix), 1), dtype='float32')
-    j_n = numpy.ones((len(jx), 1), dtype='float32')
+    i_n = numpy.ones((len(ix), 1))
+    j_n = numpy.ones((len(jx), 1))
 
     x1 = numpy.expand_dims(x1.squeeze(), 1).T
     K = numpy.reshape(K, x1.shape)
 
-    # Coupling                                                     from                        to
+    # Coupling                                                         from           to
     coupling = (K[:, ix]*numpy.sum(numpy.dot(w[ix][:, jx], numpy.dot(i_n, x1[:, jx])
                                                                       - numpy.dot(j_n, x1[:, ix]).T), axis=1)).tolist()
 
     return lambdify([x1, K, w], coupling, "numpy"), coupling
+
 
 def eqtn_x0(n, zmode=numpy.array("lin")):
 
@@ -49,6 +53,28 @@ def eqtn_x0(n, zmode=numpy.array("lin")):
     return lambdify([x1, z, x0cr, r, coupl], x0, "numpy"), x0
 
 
+def eqtn_fx1_6d(n, x1_neg=True, slope="slope", Iext1="Iext1"):
+
+    a, b, tau1 = symbols('a b tau1')
+
+    x1 = numpy.array([Symbol('x1_%d' % i_n) for i_n in range(n)])
+    z = numpy.array([Symbol('z_%d' % i_n) for i_n in range(n)])
+    x2 = numpy.array([Symbol('x_%d' % i_n) for i_n in range(n)])
+    y1 = numpy.array([Symbol('y1_%d' % i_n) for i_n in range(n)])
+    slope = numpy.array([Symbol(slope+'_%d' % i_n) for i_n in range(n)])
+    Iext1 = numpy.array([Symbol(Iext1+'_%d' % i_n) for i_n in range(n)])
+
+    # if_ydot0 = - self.a * y[0] ** 2 + self.b * y[0]
+    if_ydot0 = - a * x1 ** 2 + b * x1  # self.a=1.0, self.b=-2.0
+
+    # else_ydot0 = self.slope - y[3] + 0.6 * (y[2] - 4.0) ** 2
+    else_ydot0 = slope - x2 + 0.6 * (z - 4.0) ** 2
+
+    fx1 = (tau1 * (y1 - z + Iext1 + numpy.where(x1_neg, if_ydot0, else_ydot0) * x1)).tolist()
+
+    return lambdify([x1, z, y1, x2, Iext1, slope, a, b, tau1], fx1, "numpy"), fx1
+
+
 def eqtn_fx1_2d(n, x1_neg=True):
 
     a, b, tau1 = symbols('a b tau1')
@@ -64,28 +90,6 @@ def eqtn_fx1_2d(n, x1_neg=True):
 
     # else_ydot0 = self.slope - 5 * y[0] + 0.6 * (y[2] - 4.0) ** 2
     else_ydot0 = slope - 5.0 * x1 + 0.6 * (z - 4.0) ** 2
-
-    fx1 = (tau1 * (yc - z + Iext1 + numpy.where(x1_neg, if_ydot0, else_ydot0) * x1)).tolist()
-
-    return lambdify([x1, z, yc, Iext1, slope, a, b, tau1], fx1, "numpy"), fx1
-
-
-def eqtn_fx1_6d(n, x1_neg=True, slope="slope", Iext1="Iext1"):
-
-    a, b, tau1 = symbols('a b tau1')
-
-    x1 = numpy.array([Symbol('x1_%d' % i_n) for i_n in range(n)])
-    z = numpy.array([Symbol('z_%d' % i_n) for i_n in range(n)])
-    x2 = numpy.array([Symbol('x_%d' % i_n) for i_n in range(n)])
-    yc = numpy.array([Symbol('yc_%d' % i_n) for i_n in range(n)])
-    slope = numpy.array([Symbol(slope+'_%d' % i_n) for i_n in range(n)])
-    Iext1 = numpy.array([Symbol(Iext1+'_%d' % i_n) for i_n in range(n)])
-
-    # if_ydot0 = - self.a * y[0] ** 2 + self.b * y[0]
-    if_ydot0 = - a * x1 ** 2 + b * x1  # self.a=1.0, self.b=-2.0
-
-    # else_ydot0 = self.slope - y[3] + 0.6 * (y[2] - 4.0) ** 2
-    else_ydot0 = slope - x2 + 0.6 * (z - 4.0) ** 2
 
     fx1 = (tau1 * (yc - z + Iext1 + numpy.where(x1_neg, if_ydot0, else_ydot0) * x1)).tolist()
 
@@ -120,7 +124,7 @@ def eqtn_fz(n, zmode=numpy.array("lin"), x0="x0"):
         fz = (tau1 * (4 * (x1 - r * x0 + x0cr) - z - coupl) / tau0).tolist()
 
     elif zmode == 'sig':
-        fz = ((3/(1 + numpy.exp(-10 * (x1 + 0.5))) - r * x0 + x0cr - z - coupl) / tau0).tolist()
+        fz = (tau1 * (3/(1 + numpy.exp(1.0) ** (-10.0 * (x1 + 0.5))) - r * x0 + x0cr - z - coupl) / tau0).tolist()
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
 
@@ -148,8 +152,8 @@ def eqtn_fpop2(n, x2_neg=True, Iext2="Iext2"):
     # ydot[4] = self.tt * ((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4)) / self.tau)
     fy2 = (tau1 * ((-y2 + numpy.where(x2_neg, if_ydot4, else_ydot4)) / tau2)).tolist()
 
-    return [lambdify([x2, y2, z, g, Iext2, s, tau1, tau2], fx2, "numpy"), \
-            lambdify([x2, y2, z, g, Iext2, s, tau1, tau2], fy2, "numpy")], [fx2, fy2]
+    return [lambdify([x2, y2, z, g, Iext2, tau1], fx2, "numpy"), \
+            lambdify([x2, y2, s, tau1, tau2], fy2, "numpy")], [fx2, fy2]
 
 
 def eqtn_fg(n):
@@ -189,26 +193,26 @@ def eqtn_fparam_vars(n, pmode=numpy.array("const")):
     slope_eq, Iext2_eq = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, slope, Iext2)
 
     # slope
-    # ydot[7] = 10 * self.tau1 * (-y[7] + slope_eq)  # 5*
-    fslope = 10.0 * tau1 * (-slope_var + slope_eq)
+    # ydot[7] = 10 * self.tau1 * (-y[7] + slope_eq)
+    fslope = (10.0 * tau1 * (-slope_var + slope_eq)).tolist()
     # Iext1
     # ydot[8] = self.tau1 * (-y[8] + self.Iext1) / self.tau0
-    fIext1 = tau1 * (-Iext1_var + Iext1) / tau0
+    fIext1 = (tau1 * (-Iext1_var + Iext1) / tau0).tolist()
     # Iext2
     # ydot[9] = 5 * self.tau1 * (-y[9] + Iext2_eq)
-    fIext2 = 5.0 * tau1 * (-Iext2_var + Iext2_eq)
+    fIext2 = (5.0 * tau1 * (-Iext2_var + Iext2_eq)).tolist()
     # K
     # ydot[10] = self.tau1 * (-y[10] + self.K) / self.tau0
-    fK = tau1 * (-K_var + K) / tau0
+    fK = (tau1 * (-K_var + K) / tau0).tolist()
 
     return [lambdify([x0, x0_var, tau1], fx0, "numpy"), \
             lambdify([slope, slope_var, tau1], fslope, "numpy"), \
             lambdify([Iext1, Iext1_var, tau1, tau0], fIext1, "numpy"), \
             lambdify([Iext2, Iext2_var, tau1], fIext2, "numpy"), \
-            lambdify([K, K_var, tau0], fK, "numpy")],[fx0, fslope, fIext1, fIext2, fK]
+            lambdify([K, K_var, tau1, tau0], fK, "numpy")],[fx0, fslope, fIext1, fIext2, fK]
 
 
-def calc_dfun(n_regions, model_vars, zmode=numpy.array("lin"), x1_neg=True, x2_neg=True, pmode=numpy.array("const")):
+def eqnt_dfun(n_regions, model_vars, zmode=numpy.array("lin"), x1_neg=True, x2_neg=True, pmode=numpy.array("const")):
 
     f_lambda = []
     f_sym = []

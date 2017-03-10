@@ -8,8 +8,7 @@ from sympy import symbols, solve, lambdify
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_DEF, X0_CR_DEF
 from tvb_epilepsy.base.equations import *
 
-#Currently we assume only difference coupling (permittivity coupling following Proix et al 2014)
-#TODO: to generalize for different coupling functions
+
 
 def def_x1eq(X1_DEF, X1_EQ_CR_DEF, n_regions):
     #The default initial condition for x1 equilibrium search
@@ -21,13 +20,13 @@ def def_x1lin(X1_DEF, X1_EQ_CR_DEF, n_regions):
     return (X1_EQ_CR_DEF + X1_DEF) / 2.0 * numpy.ones((1,n_regions), dtype='float32')
 
 
-def calc_eq_z_2d(x1eq, yc, Iext1, slope=0.0, a=1.0, b=-2.0, x1_neg=True):
-
-    return calc_fx1_2d(x1eq, z=0, yc=yc, Iext1=Iext1, slope=slope, a=a, b=b, x1_neg=x1_neg)
-
-
 def calc_eq_z_6d(x1eq, y1, Iext1, x2=0.0, slope=0.0, a=1.0, b=3.0, x1_neg=True):
     return calc_fx1_6d(x1eq, z=0.0, y1=y1, x2=x2, Iext1=Iext1, slope=slope, a=a, b=b, x1_neg=x1_neg)
+
+
+def calc_eq_z_2d(x1eq, yc, Iext1, slope=0.0, a=1.0, b=-2.0, x1_neg=True):
+
+    return calc_fx1_2d(x1eq, z=0, yc=yc, Iext1=Iext1, slope=slope, a=a, b=b, tau1=1.0, x1_neg=x1_neg)
 
 
 def calc_eq_y1(x1eq, yc, d=5.0):
@@ -53,7 +52,7 @@ def calc_eq_pop2(x1eq, zeq, Iext2, s=6.0, tau1=1.0, tau2=1.0, x2_neg=True):
 
     #TODO: use symbolic vectors and functions
     #fx2 = -y2eq + x2 - x2 ** 3 + numpy.squeeze(Iext2) + 2 * g_eq - 0.3 * (numpy.squeeze(zeq) - 3.5)
-    fx2 = numpy.squeeze(calc_fpop2(x2, y2eq, g_eq, zeq, Iext2, s, tau1, tau2, x2_neg)[0])
+    fx2 = numpy.squeeze(calc_fpop2(x2, y2eq, zeq, g_eq, Iext2, s, tau1, tau2, x2_neg)[0])
 
     x2eq = []
     for ii in range(y2eq.size):
@@ -111,7 +110,7 @@ def eq_x1_hypo_x0_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, 
     x0[:, ix0] = numpy.array(x0_dummy)
     del x0_dummy
 
-    fun = calc_fz_lin(x1EQ, x0, x0cr, rx0, z=zEQ, coupl=calc_coupling(x1EQ, K, w)).astype(x1_type)
+    fun = calc_fz(x1EQ, x0, x0cr, rx0, z=zEQ, coupl=calc_coupling(x1EQ, K, w)).astype(x1_type)
 
     # if numpy.any([numpy.any(numpy.isnan(x)), numpy.any(numpy.isinf(x)),
     #               numpy.any(numpy.isnan(fun)), numpy.any(numpy.isinf(fun))]):
@@ -267,18 +266,7 @@ def calc_x0cr_rx0(yc, Iext1, epileptor_model="2d", zmode=numpy.array("lin"),
         z = calc_eq_z_6d(x1, calc_eq_y1(x1, yc1, d=5.0), x2, I1)
 
     #Define the fz expression...
-    if zmode == 'lin':
-        #...for linear...
-        #fz = 4 * (x1 - r * x0 + x0cr) - z
-        fz = calc_fz_lin(x1, x0, x0cr, r, z=z, coupl=0)
-
-    elif zmode == 'sig':
-        #...and sigmoidal versions
-        #fz = 3/(1 + exp(-10 * (x1 + 0.5))) - r * x0 + x0cr - z
-        z = calc_fz_sig(x1, x0, x0cr, r, z=z, coupl=0)
-
-    else:
-        raise ValueError('zmode is neither "lin" nor "sig"')
+    fz = calc_fz(x1, x0, x0cr, r, z=z, coupl=0, zmode=zmode)
 
     #Solve the fz expression for rx0 and x0cr, assuming the following two points (x1eq,x0) = [(-5/3,0.0),(-4/3,1.0)]...
     #...and WITHOUT COUPLING
