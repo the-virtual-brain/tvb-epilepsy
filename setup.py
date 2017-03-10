@@ -8,5 +8,5 @@ setuptools.setup(name='tvb_epilepsy',
                  author='Denis Perdikis, Paula Popa, Lia Domide',
                  author_email='<insert here>',
                  url='https://github.com/the-virtual-brain/tvb_epilepsy-epilepsy',
-                 packages=['tvb_epilepsy'], requires=['numpy', 'tvb']
+                 packages=['tvb_epilepsy'], requires=["numpy", "sympy", "h5py", "tvb"]
                  )
