@@ -12,6 +12,7 @@ from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
 from tvb_epilepsy.base.equilibrium_computation import calc_eq_y1, calc_eq_pop2, calc_eq_g, calc_dfun, \
                                                       calc_equilibrium_point, assert_equilibrium_point
+from tvb_epilepsy.base.utils import list_of_strings_to_string
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
 
@@ -28,7 +29,7 @@ class SimulatorTVB(ABCSimulator):
                                          centres=vep_conn.centers, hemispheres=vep_conn.hemispheres,
                                          orientations=vep_conn.orientations, areas=vep_conn.areas)
 
-    def config_simulation(self, head, settings=SimulationSettings()):
+    def config_simulation(self, head, hypothesis, settings=SimulationSettings()):
 
         tvb_conn = self._vep2tvb_connectivity(head.connectivity)
         coupl = coupling.Difference(a=1.)
@@ -43,10 +44,12 @@ class SimulatorTVB(ABCSimulator):
                 settings.noise_intensity = numpy.repeat(numpy.squeeze(settings.noise_intensity),self.model.nvar)
             if numpy.min(settings.noise_intensity) > 0:
                     thisNoise = noise.Additive(nsig=settings.noise_intensity,
-                                               random_stream=numpy.random.RandomState(seed=settings.integration_noise_seed))
+                                               random_stream=numpy.random.RandomState(seed=settings.noise_seed))
+                    settings.noise_type = "Additive"
                     integrator = integrators.HeunStochastic(dt=settings.integration_step, noise=thisNoise)
             else:
                 integrator = integrators.HeunDeterministic(dt=settings.integration_step)
+                settings.noise_type = "None"
 
         #Set monitors:
 
@@ -58,22 +61,34 @@ class SimulatorTVB(ABCSimulator):
                 if isinstance(monitor, monitors.Monitor):
                     what_to_watch.append(monitor)
                 what_to_watch = tuple(what_to_watch)
-        if len(what_to_watch) == 0:
-            what_to_watch = monitors.TemporalAverage(period=settings.monitor_sampling_period)
 
         # TODO: Find a better way to define monitor expressions without the need to modify the model...
-        if settings.monitor_expr is not None:
-            self.model.variables_of_interest = settings.monitor_expr
+        if settings.monitor_expressions is not None:
+            self.model.variables_of_interest = settings.monitor_expressions
 
+        #Create and configure TVB simulator object
         sim = simulator.Simulator(model=self.model, connectivity=tvb_conn, coupling=coupl, integrator=integrator,
                                   monitors=what_to_watch, simulation_length=settings.simulated_period)
-        return sim
-
-
-    def launch_simulation(self, sim, hypothesis, n_report_blocks=1):
         sim.configure()
-        self.initial_conditions = self.builder_initial_conditions(hypothesis, self.model, sim.good_history_shape[0])
-        sim._configure_history(initial_conditions=self.initial_conditions)
+        sim.initial_conditions = self.builder_initial_conditions(hypothesis, sim.model, sim.good_history_shape[0])
+
+        #Update simulation settings
+        settings.integration_step = integrator.dt
+        settings.simulated_period = sim.simulation_length
+        settings.integrator_type = integrator._ui_name
+        settings.noise_ntau = integrator.noise.ntau
+        settings.noise_intensity = numpy.array(settings.noise_intensity)
+        settings.monitor_type = what_to_watch[0]._ui_name
+        # TODO: find a way to store more than one monitors settings
+        settings.monitor_sampling_period = what_to_watch[0].period
+        settings.monitor_expressions = self.model.variables_of_interest
+        settings.initial_conditions = sim.initial_conditions
+
+        return sim, settings
+
+
+    def launch_simulation(self, sim,  n_report_blocks=1):
+        sim._configure_history(initial_conditions=sim.initial_conditions)
         if n_report_blocks<2:
             tavg_time, tavg_data = sim.run()[0]
             return tavg_time, tavg_data
@@ -104,7 +119,7 @@ class SimulatorTVB(ABCSimulator):
                     sys.stdout.flush()
                     curr_block += 1.0
 
-            return numpy.array(tavg_time), numpy.array(tavg_data), sim
+            return numpy.array(tavg_time), numpy.array(tavg_data)
 
 
     def launch_pse(self, hypothesis, head, settings=SimulationSettings()):
@@ -203,8 +218,9 @@ def prepare_initial_conditionsl(hypothesis, model, history_length):
 # A helper function to make good choices for simulation settings, noise and monitors
 ###
 
-def setup_simulation(model, dt, sim_length, monitor_period, monitor_expr=None, monitors_instance=None,
-                     noise_instance=None, noise_intensity=None, variables_names=None):
+def setup_simulation(model, dt, sim_length, monitor_period, scale_time=1,
+                     noise_instance=None, noise_intensity=None,
+                     monitor_expressions=None, monitors_instance=None, variables_names=None):
 
     if isinstance(model,EpileptorDP):
         #                                               history
@@ -224,13 +240,13 @@ def setup_simulation(model, dt, sim_length, monitor_period, monitor_expr=None, m
         if variables_names is None:
             variables_names = ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp']
 
-    if monitor_expr is None:
-        monitor_expr = []
+    if monitor_expressions is None:
+        monitor_expressions = []
         for i in range(model._nvar):
-            monitor_expr.append("y" + str(i))
+            monitor_expressions.append("y" + str(i))
         # Monitor adjusted to the model
         if not(isinstance(model,EpileptorDP2D)):
-            monitor_expr.append("y3-y0")
+            monitor_expressions.append("y3 - y0")
 
     if monitors_instance is None:
         monitors_instance = monitors.TemporalAverage(period=monitor_period)
@@ -255,7 +271,7 @@ def setup_simulation(model, dt, sim_length, monitor_period, monitor_expr=None, m
         # Preconfigured noise
         if isinstance(model,EpileptorDPrealistic):
             # Colored noise for realistic simulations
-            eq = equations.Linear(parameters={"a": 0.0, "b": 1.0})  # default = a*y+b
+            eq = equations.Linear(parameters={"a": 1.0, "b": 0.0})  #  a*y+b, default = (1.0, 1.0)
             noise_instance = noise.Multiplicative(ntau=10, nsig=noise_intensity, b=eq,
                                                   random_stream=numpy.random.RandomState(seed=NOISE_SEED))
             noise_type = "Multiplicative"
@@ -272,9 +288,12 @@ def setup_simulation(model, dt, sim_length, monitor_period, monitor_expr=None, m
             noise_instance.nsig = noise_intensity
 
     settings = SimulationSettings(simulated_period=sim_length, integration_step=dt,
-                                  noise_preconfig=noise_instance, noise_intensity=noise_intensity,
-                                  integration_noise_seed=NOISE_SEED,
-                                  monitors_preconfig=monitors_instance,
-                                  monitor_sampling_period=monitor_period, monitor_expr=monitor_expr)
+                                  scale_time=scale_time,
+                                  noise_preconfig=noise_instance, noise_type=noise_type,
+                                  noise_intensity=noise_intensity, noise_ntau=noise_instance.ntau,
+                                  noise_seed=NOISE_SEED,
+                                  monitors_preconfig=monitors_instance, monitor_type=monitors_instance._ui_name,
+                                  monitor_sampling_period=monitor_period, monitor_expressions=monitor_expressions,
+                                  variables_names=variables_names)
 
     return simulator_instance, settings, variables_names

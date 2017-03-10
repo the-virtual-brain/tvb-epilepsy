@@ -12,7 +12,7 @@ from tvb_epilepsy.base.equilibrium_computation import calc_coupling, calc_x0, ca
 
 LOG = get_logger(__name__)
 
-        
+
 class EpileptorDP(Model):
     r"""
     The Epileptor is a composite neural mass model of six dimensions which
@@ -1121,7 +1121,7 @@ class EpileptorDP2D(Model):
 ###
 
 def _rescale_tvb_x0(x0_orig, yc, Iext1):
-    (x0cr, r) = calc_x0cr_rx0(yc, Iext1, epileptor_model="6d", zmode="lin")
+    (x0cr, r) = calc_x0cr_rx0(yc, Iext1, epileptor_model="6d", zmode=numpy.array("lin"))
     return r*x0_orig-x0cr
 
 
@@ -1158,7 +1158,7 @@ def build_ep_2sv_model(hypothesis, variables_of_interest=["yc", "y1"], zmode=num
 # Build EpileptorDP
 ###
 
-def build_ep_6sv_model(hypothesis,variables_of_interest=["y3 - y0", "y2"],zmode=numpy.array("lin")):
+def build_ep_6sv_model(hypothesis,variables_of_interest=["y3 - y0", "y2"], zmode=numpy.array("lin")):
     #Correct Ceq, x0cr, rx0, zeq and x0 for 6D model
     ceq = calc_coupling(hypothesis.x1EQ, hypothesis.K, hypothesis.weights)
     (x0cr, r) = calc_x0cr_rx0(hypothesis.yc, hypothesis.Iext1, epileptor_model="6d", zmode=zmode)
@@ -1182,3 +1182,9 @@ def build_ep_11sv_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmo
     model = EpileptorDPrealistic(x0=x0.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.yc.T,
                                  r=r.T, x0cr=x0cr.T, variables_of_interest=variables_of_interest, zmode=zmode)
     return model
+
+# Model creator functions dictionary
+model_build_dict = {"Epileptor": build_tvb_model,
+                    "EpileptorDP": build_ep_6sv_model,
+                    "EpileptorDPrealistic": build_ep_11sv_model,
+                    "EpileptorDP2D": build_ep_2sv_model}
