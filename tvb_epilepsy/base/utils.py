@@ -35,7 +35,7 @@ def list_of_strings_to_string(lstr, sep=","):
         str += sep+s
     return str
 
-def linear_scaling(x,x1,x2,y1,y2):
+def linear_scaling(x, x1, x2, y1, y2):
         scaling_factor = (y2 - y1) / (x2 - x1)
         return y1 + (x - x1) * scaling_factor
 

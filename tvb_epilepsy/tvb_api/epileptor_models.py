@@ -632,12 +632,12 @@ class EpileptorDPrealistic(Model):
         if (pmode == numpy.array(['g','z','z*g'])).any():
 
             if pmode == 'g':
-                xp = 1.0/ (1.0 + numpy.exp(-10 * (g + 0.0)))
+                xp = 1.0/ (1.0 + numpy.exp(1) ** (-10 * (g + 0.0)))
                 xp1 = 0#-0.175
                 xp2 = 1#0.025
 
             elif pmode == 'z':
-                xp = 1.0 / (1.0 + numpy.exp(-10 * (z - 3.00)))
+                xp = 1.0 / (1.0 + numpy.exp(1) ** (-10 * (z - 3.00)))
                 xp1 = 0
                 xp2 = 1
 
