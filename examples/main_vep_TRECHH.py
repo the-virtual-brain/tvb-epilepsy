@@ -7,12 +7,14 @@ import copy as cp
 from scipy.io import savemat
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.hypothesis import Hypothesis
-from tvb_epilepsy.base.utils import initialize_logger, calculate_projection, set_time_scales, filter_data
+from tvb_epilepsy.base.utils import initialize_logger, calculate_projection, set_time_scales, filter_data, \
+                                    write_object_to_h5_file
 from tvb_epilepsy.tvb_api.readers_tvb import TVBReader
 from tvb_epilepsy.tvb_api.simulator_tvb import *
 from tvb_epilepsy.tvb_api.epileptor_models import *
 from tvb_epilepsy.custom.readers_custom import CustomReader
-from tvb_epilepsy.custom.read_write import write_hypothesis, read_hypothesis
+from tvb_epilepsy.custom.read_write import write_hypothesis, read_hypothesis, write_simulation_settings, \
+                                           read_simulation_settings
 from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_sim_results
 
 
@@ -147,24 +149,14 @@ if __name__ == "__main__":
     plot_hypothesis(hyp_ep, head.connectivity.region_labels, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
                    figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
 
-    write_hypothesis(hyp_ep, folder_name=FOLDER_RES, file_name="hyp_ep", hypo_name=None)
-    hyp_ep2 = read_hypothesis(path=os.path.join(FOLDER_RES, "hyp_ep"), output="dict",
-                              update_hypothesis=True, hypo_name=None)
+    write_hypothesis(hyp_ep, folder_name=FOLDER_RES, file_name="hyp_ep.h5", hypo_name=None)
 
-    # from tvb_epilepsy.base.constants import hyp_attributes_dict
-    # for attribute in hyp_attributes_dict:
-    #     print hyp_attributes_dict[attribute]
-    #     attr = getattr(hyp_ep, hyp_attributes_dict[attribute])
-    #     #attr2 = getattr(hyp_ep2, hyp_attributes_dict[attribute])
-    #     attr2 = hyp_ep2[hyp_attributes_dict[attribute]]
-    #     if isinstance(attr, basestring):
-    #         if attr != attr2:
-    #             warnings.warn("Original and read hypothesis field "
-    #                              + hyp_attributes_dict[attribute] + " not equal!")
-    #     else:
-    #         if numpy.any(numpy.float32(attr) - numpy.float32(attr2) > 0):
-    #             warnings.warn("Original and read hypothesis field "
-    #                                  + hyp_attributes_dict[attribute] + " not equal!")
+    # # Test write, read and assert functions
+    # hyp_ep2 = read_hypothesis(path=os.path.join(FOLDER_RES, "hyp_ep.h5"), output="object",
+    #                           update_hypothesis=True, hypo_name=None)
+    # from tvb_epilepsy.base.utils import assert_equal_objects
+    # from tvb_epilepsy.custom.read_write import hyp_attributes_dict
+    # assert_equal_objects(hyp_ep, hyp_ep2, hyp_attributes_dict)
 
     # hyp_exc = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights,
     #                     "x0 Hypothesis", x1eq_mode="optimize")  #"optimize" or "linTaylor"
@@ -219,23 +211,20 @@ if __name__ == "__main__":
     for hyp in (hyp_ep,): # ,hyp_exc #length=30000
 
         # Choose the model and build it on top of the specific hypothesis, adjust parameters:
-        model = '6D'  # '6D', '2D', '11D', 'tvb'
-        if model == '6D':
-            model = build_ep_6sv_model(hyp_ep, zmode=numpy.array("lin"))
+        model_name = 'EpileptorDP'
+        model = model_build_dict[model_name](hyp_ep, zmode=numpy.array("lin"))
+        if model_name == 'EpileptorDP':
             # model.tau0 = 2857.0 # default = 2857.0
             model.tau1 *= scale_time  # default = 0.25
-        elif model == '2D':
-            model = build_ep_2sv_model(hyp_ep, zmode=numpy.array("lin"))
+        elif model_name == 'EpileptorDP2D':
             # model.tau0 = 2857.0 # default = 2857.0
             model.tau1 *= scale_time  # default = 0.25
-        elif model == '11D':
-            model = build_ep_11sv_model(hyp_ep, zmode=numpy.array("lin"))
+        elif model_name == 'EpileptorDPrealistic':
             # model.tau0 = 10000 # default = 10000
             model.tau1 *= scale_time  # default = 0.25
             model.slope = 0.25
             model.pmode = np.array("z")  # "z","g","z*g", default="cons
-        elif model == 'tvb':
-            model = build_tvb_model(hyp_ep, zmode=numpy.array("lin"))
+        elif model_name == 'Epileptor':
             model.tt *= scale_time * 0.25  # default = 1.0
             # model.r = 1.0/2857.0  # default = 1.0 / 2857.0
 
@@ -246,17 +235,30 @@ if __name__ == "__main__":
         # noise_intensity overwrites the one inside noise_instance if given additionally
         # monitor_period overwrites the one inside monitor_instance if given additionally
         (simulator_instance, sim_settings, vois) = setup_simulation(model, dt, sim_length, monitor_period,
-                                                                    monitor_expr=None, monitors_instance=None,
+                                                                    scale_time=scale_time,
                                                                     noise_instance=None, noise_intensity=10 ** -8,
+                                                                    monitor_expressions=None, monitors_instance=None,
                                                                     variables_names=None)
 
-        sim = simulator_instance.config_simulation(head, settings=sim_settings)
+        sim, sim_settings = simulator_instance.config_simulation(head, hyp, settings=sim_settings)
 
         #Launch simulation
-        ttavg, tavg_data, sim = simulator_instance.launch_simulation(sim, hyp, n_report_blocks=n_report_blocks)
+        ttavg, tavg_data = simulator_instance.launch_simulation(sim, n_report_blocks=n_report_blocks)
         logger.info("Simulated signal return shape: " + str(tavg_data.shape))
         logger.info("Time: " + str(scale_time*ttavg[0]) + " - " + str(scale_time*ttavg[-1]))
         logger.info("Values: " + str(tavg_data.min()) + " - " + str(tavg_data.max()))
+
+        write_simulation_settings(model, sim_settings, folder_name=FOLDER_RES, file_name=hyp.name+"sim_settings.h5")
+
+        # Test write, read and assert functions
+        # from tvb_epilepsy.base.utils import assert_equal_objects
+        # model2, sim_settings2 = read_simulation_settings(path=os.path.join(FOLDER_RES, hyp.name+"sim_settings.h5"),
+        #                                                  output="object", hypothesis=hyp)
+        #
+        # from tvb_epilepsy.custom.read_write import epileptor_model_attributes_dict, simulation_settings_attributes_dict
+        # assert_equal_objects(model, model2, epileptor_model_attributes_dict[model2._ui_name])
+        # #assert_equal_objects(model, model2, epileptor_model_attributes_dict[model2["_ui_name"]])
+        # assert_equal_objects(sim_settings, sim_settings2, simulation_settings_attributes_dict)
 
         #Pack results into a dictionary, high pass filter, and compute SEEG
         res = dict()
@@ -286,3 +288,9 @@ if __name__ == "__main__":
         #Save results
         res['time_units'] = 'msec'
         savemat(os.path.join(FOLDER_RES, hyp.name + "_ts.mat"), res)
+        write_object_to_h5_file(res, os.path.join(FOLDER_RES, hyp.name + "_ts.h5"))
+
+        # from tvb_epilepsy.base.utils import read_object_from_h5_file, assert_equal_objects
+        # res2 = read_object_from_h5_file(dict(), os.path.join(FOLDER_RES, hyp.name + "_ts.h5"),
+        #                                 attributes_dict=None, add_overwrite_fields_dict=None)
+        # assert_equal_objects(res, res2)

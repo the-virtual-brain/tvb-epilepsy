@@ -62,21 +62,9 @@ WEIGHTS_NORM_PERCENT = 95
 
 NOISE_SEED = 42
 
-#Attributes to be read or written for hypothesis object and files:
-hyp_attributes_dict = {"Hypothesis name": "name", "Model Epileptogenicity": "E", "Pathological Excitability": "x0",
-                       "LSA Propagation Strength": "lsa_ps", "x1 Equilibria": "x1EQ",
-                       "z Equilibria": "zEQ", "Afferent coupling at equilibrium": "Ceq",
-                       "Connectivity": "weights", "Permittivity Coupling": "K", "Iext1": "Iext1",
-                       "yc": "yc", "Critical x0": "x0cr", "x0 scaling": "rx0", "EZ hypothesis": "seizure_indices",
-                       "x1EQcr": "x1EQcr", "x1LIN": "x1LIN", "x1SQ": "x1SQ",
-                       "lsa_eigvals": "lsa_eigvals", "lsa_eigvects": "lsa_eigvects", "lsa_ps_tot": "lsa_ps_tot"}
 
-#Attributes to be read or written for Epileptor model object and files:
-# Epileptor_attributes_dict = {"Hypothesis name": "name", "Model Epileptogenicity": "E", "Pathological Excitability": "x0",
-#                        "LSA Propagation Strength": "lsa_ps", "x1 Equilibria": "x1EQ",
-#                        "z Equilibria": "zEQ", "Afferent coupling at equilibrium": "Ceq",
-#                        "Connectivity": "weights", "Permittivity Coupling": "K", "Iext1": "Iext1",
-#                        "yc": "yc", "Critical x0": "x0cr", "x0 scaling": "rx0", "EZ hypothesis": "seizure_indices",
-#                        "x1EQcr": "x1EQcr", "x1LIN": "x1LIN", "x1SQ": "x1SQ",
-#                        "lsa_eigvals": "lsa_eigvals", "lsa_eigvects": "lsa_eigvects", "lsa_ps_tot": "lsa_ps_tot"}
+
+
+
+
 
