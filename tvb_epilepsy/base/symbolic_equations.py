@@ -133,16 +133,16 @@ def eqtn_fz(n, zmode=numpy.array("lin"), x0="x0"):
 
 def eqtn_fpop2(n, x2_neg=True, Iext2="Iext2"):
 
-    s, tau1, tau2 = symbols('s tau1 tau0')
+    tau1, tau2, s = symbols('tau1 tau2 s')
 
     x2 = numpy.array([Symbol('x2_%d' % i_n) for i_n in range(n)])
     y2 = numpy.array([Symbol('y2_%d' % i_n) for i_n in range(n)])
     z = numpy.array([Symbol('z_%d' % i_n) for i_n in range(n)])
     g = numpy.array([Symbol('g_%d' % i_n) for i_n in range(n)])
-    Iext2 = numpy.array([Symbol(Iext2+'%d' % i_n) for i_n in range(n)])
+    Iext2 = numpy.array([Symbol(Iext2+'_%d' % i_n) for i_n in range(n)])
 
     # ydot[3] = self.tt * (-y[4] + y[3] - y[3] ** 3 + self.Iext2 + 2 * y[5] - 0.3 * (y[2] - 3.5) + self.Kf * c_pop2)
-    fx2 = tau1 * (-y2 + x2 - x2 ** 3 + Iext2 + 2 * g - 0.3 * (z - 3.5))
+    fx2 = (tau1 * (-y2 + x2 - x2 ** 3 + Iext2 + 2.0 * g - 0.3 * (z - 3.5))).tolist()
 
     # if_ydot4 = 0
     if_ydot4 = 0
@@ -150,7 +150,7 @@ def eqtn_fpop2(n, x2_neg=True, Iext2="Iext2"):
     else_ydot4 = s * (x2 + 0.25)  # self.s = 6.0
 
     # ydot[4] = self.tt * ((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4)) / self.tau)
-    fy2 = (tau1 * ((-y2 + numpy.where(x2_neg, if_ydot4, else_ydot4)) / tau2)).tolist()
+    fy2 = (tau1 * (-y2 + numpy.where(x2_neg, if_ydot4, else_ydot4)) / tau2).tolist()
 
     return [lambdify([x2, y2, z, g, Iext2, tau1], fx2, "numpy"), \
             lambdify([x2, y2, s, tau1, tau2], fy2, "numpy")], [fx2, fy2]
@@ -206,9 +206,9 @@ def eqtn_fparam_vars(n, pmode=numpy.array("const")):
     fK = (tau1 * (-K_var + K) / tau0).tolist()
 
     return [lambdify([x0, x0_var, tau1], fx0, "numpy"), \
-            lambdify([slope, slope_var, tau1], fslope, "numpy"), \
+            lambdify([z, g, slope, slope_var, tau1], fslope, "numpy"), \
             lambdify([Iext1, Iext1_var, tau1, tau0], fIext1, "numpy"), \
-            lambdify([Iext2, Iext2_var, tau1], fIext2, "numpy"), \
+            lambdify([z, g, Iext2, Iext2_var, tau1], fIext2, "numpy"), \
             lambdify([K, K_var, tau1, tau0], fK, "numpy")],[fx0, fslope, fIext1, fIext2, fK]
 
 
@@ -220,44 +220,56 @@ def eqnt_dfun(n_regions, model_vars, zmode=numpy.array("lin"), x1_neg=True, x2_n
     if model_vars == 2:
 
         fl, fs = eqtn_fx1_2d(n_regions, x1_neg)
-        f_lambda += fl
-        f_sym += fs
+        f_lambda.append(fl)
+        f_sym.append(fs)
 
         fl, fs = eqtn_fz(n_regions, zmode)
-        f_lambda += fl
-        f_sym += fs
+        f_lambda.append(fl)
+        f_sym.append(fs)
 
     elif model_vars == 6:
 
         fl, fs = eqtn_fx1_6d(n_regions, x1_neg)
-        f_lambda += fl
-        f_sym += fs
+        f_lambda.append(fl)
+        f_sym.append(fs)
 
         fl, fs = eqtn_fy1(n_regions)
-        f_lambda += fl
-        f_sym += fs
+        f_lambda.append(fl)
+        f_sym.append(fs)
+
+        fl, fs = eqtn_fz(n_regions, zmode)
+        f_lambda.append(fl)
+        f_sym.append(fs)
 
         fl, fs = eqtn_fpop2(n_regions, x2_neg)
         f_lambda += fl
         f_sym += fs
 
         fl, fs = eqtn_fg(n_regions)
-        f_lambda += fl
-        f_sym += fs
+        f_lambda.append(fl)
+        f_sym.append(fs)
 
     elif model_vars == 11:
 
         fl, fs = eqtn_fx1_6d(n_regions, x1_neg, "slope_var", "Iext1_var")
-        f_lambda += fl
-        f_sym += fs
+        f_lambda.append(fl)
+        f_sym.append(fs)
 
         fl, fs = eqtn_fy1(n_regions)
-        f_lambda += fl
-        f_sym += fs
+        f_lambda.append(fl)
+        f_sym.append(fs)
+
+        fl, fs = eqtn_fz(n_regions, zmode)
+        f_lambda.append(fl)
+        f_sym.append(fs)
 
         fl, fs = eqtn_fpop2(n_regions, x2_neg, "Iext2_var")
         f_lambda += fl
         f_sym += fs
+
+        fl, fs = eqtn_fg(n_regions)
+        f_lambda.append(fl)
+        f_sym.append(fs)
 
         fl, fs = eqtn_fparam_vars(n_regions, pmode)
         f_lambda += fl

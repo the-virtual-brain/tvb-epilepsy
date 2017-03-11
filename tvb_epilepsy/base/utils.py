@@ -29,11 +29,34 @@ def initialize_logger(name, target_folder=FOLDER_LOGS):
     logger.addHandler(fh)
     return logger
 
+
 def list_of_strings_to_string(lstr, sep=","):
     str = lstr[0]
     for s in lstr[1:]:
         str += sep+s
     return str
+
+
+def assert_array_shape(x, shape):
+
+    if isinstance(x, numpy.ndarray):
+
+        if x.shape == shape:
+            return x
+
+        else:
+            try:
+                return numpy.reshape(x, shape)
+            except:
+                raise ValueError("Input is a numpy.ndarray of shape " + str(x.shape) +
+                                 " that cannot be reshaped to the desired shape " + str(shape))
+
+    elif isinstance(x, (float, int, long, complex)):
+        return x * numpy.ones(shape, dtype=type(x))
+
+    else:
+        raise ValueError("Input of " + str() + " is neither numeric nor of type numpy.ndarray")
+
 
 def linear_scaling(x, x1, x2, y1, y2):
         scaling_factor = (y2 - y1) / (x2 - x1)
@@ -246,7 +269,7 @@ def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrit
     logger = get_logger()
 
     if isinstance(h5_file, basestring):
-        print "Reading from:", h5_file
+        print "Writing to: ", h5_file
         h5_file = h5py.File(h5_file, 'a', libver='latest')
 
     if isinstance(object, dict):

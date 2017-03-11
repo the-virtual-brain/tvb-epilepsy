@@ -1,11 +1,14 @@
-import numpy
 import warnings
+
+import numpy
+
 from tvb_epilepsy.base.constants import SYMBOLIC_EQUATIONS_FLAG
+# TODO: find out why I cannot import anything from utils here
+#from tvb_epilepsy.base.utils import assert_array_shape as sc2arr
 
 if SYMBOLIC_EQUATIONS_FLAG:
 
     try:
-
         from tvb_epilepsy.base.symbolic_equations import *
 
     except:
@@ -13,11 +16,32 @@ if SYMBOLIC_EQUATIONS_FLAG:
         SYMBOLIC_EQUATIONS_FLAG = False
 
 
+def sc2arr(x, shape):
+
+    if isinstance(x, numpy.ndarray):
+
+        if x.shape == shape:
+            return x
+
+        else:
+            try:
+                return numpy.reshape(x, shape)
+            except:
+                raise ValueError("Input is a numpy.ndarray of shape " + str(x.shape) +
+                                 " that cannot be reshaped to the desired shape " + str(shape))
+
+    elif isinstance(x, (float, int, long, complex)):
+        return x * numpy.ones(shape, dtype=type(x))
+
+    else:
+        raise ValueError("Input of " + str() + " is neither numeric nor of type numpy.ndarray")
+
+
 if SYMBOLIC_EQUATIONS_FLAG:
 
     def calc_coupling(x1, K, w, ix=None, jx=None):
 
-        return numpy.reshape(eqtn_coupling(x1.size, ix, jx)[0](x1, K, w), x1.shape).astype(x1.dtype)
+        return numpy.reshape(eqtn_coupling(x1.size, ix, jx)[0](x1, sc2arr(K, x1.shape), w), x1.shape).astype(x1.dtype)
 
 
     def calc_x0(x1, z, x0cr, r, coupl, zmode=numpy.array("lin")):
@@ -30,7 +54,10 @@ if SYMBOLIC_EQUATIONS_FLAG:
         if x1_neg is None:
             x1_neg = x1 < 0.0
 
-        return numpy.reshape(eqtn_fx1_6d(x1.size, x1_neg)[0](x1, z, y1, x2, Iext1, slope, a, b, tau1), x1.shape).astype(x1.dtype)
+        p = x1.shape
+
+        return numpy.reshape(eqtn_fx1_6d(x1.size, x1_neg)[0](x1, sc2arr(z,p), sc2arr(y1,p), sc2arr(x2,p), sc2arr(Iext1,p), \
+                                                             sc2arr(slope,p), a, b, tau1), x1.shape).astype(x1.dtype)
 
 
     def calc_fx1_2d(x1, z=0.0, yc=0.0, Iext1=0.0, slope=0.0, a=1.0, b=-2.0, tau1=1.0, x1_neg=None):
@@ -38,45 +65,62 @@ if SYMBOLIC_EQUATIONS_FLAG:
         if x1_neg is None:
             x1_neg = x1 < 0.0
 
-        return numpy.reshape(eqtn_fx1_2d(x1.size, x1_neg)[0](x1, z, yc, Iext1, slope, a, b, tau1), x1.shape).astype(x1.dtype)
+        p = x1.shape
+
+        return numpy.reshape(eqtn_fx1_2d(x1.size, x1_neg)[0](x1, sc2arr(z,p), sc2arr(yc,p), sc2arr(Iext1,p), \
+                                                             sc2arr(slope,p), a, b, tau1), x1.shape).astype(x1.dtype)
 
 
     def calc_fy1(x1, yc, y1=0, d=5.0, tau1=1.0):
 
-        return numpy.reshape(eqtn_fy1(x1.size)[0](x1, y1, yc, d, tau1), x1.shape).astype(x1.dtype)
+        p = x1.shape
+
+        return numpy.reshape(eqtn_fy1(x1.size)[0](x1, sc2arr(y1, p), sc2arr(yc, p), d, tau1), x1.shape).astype(x1.dtype)
 
 
     def calc_fz(x1, x0, x0cr, r, z=0, coupl=0, tau1=1.0, tau0=1.0, zmode=numpy.array("lin")):
 
-        return numpy.reshape(eqtn_fz(x1.size, zmode)[0](x1, z, x0, x0cr, r, coupl, tau1, tau0), x1.shape).astype(x1.dtype)
+        p = x1.shape
+
+        return numpy.reshape(eqtn_fz(x1.size, zmode)[0](x1, sc2arr(z, p), sc2arr(x0, p), sc2arr(x0cr, p), sc2arr(r, p),
+                                                        sc2arr(coupl, p), tau1, tau0), x1.shape).astype(x1.dtype)
 
 
     def calc_fpop2(x2, y2=0.0, z=0.0, g=0.0, Iext2=0.45, s=6.0, tau1=1.0, tau2=10.0, x2_neg=None):
+
+        p = x2.shape
 
         if x2_neg is None:
             x2_neg = x2 < -0.25
 
         fx2fy2 = eqtn_fpop2(x2.size, x2_neg)[0]
 
-        return numpy.reshape(fx2fy2[0](x2, y2, z, g, Iext2, tau1), x2.shape).astype(x2.dtype), \
-               numpy.reshape(fx2fy2[1](x2, y2, s, tau1, tau2), x2.shape).astype(x2.dtype)
+        return numpy.reshape(fx2fy2[0](x2, sc2arr(y2, p), sc2arr(z, p), sc2arr(g, p), sc2arr(Iext2, p), tau1), \
+                             x2.shape).astype(x2.dtype), \
+               numpy.reshape(fx2fy2[1](x2, sc2arr(y2, p), s, tau1, tau2), x2.shape).astype(x2.dtype)
 
 
-    def calc_fg(x1, g=0, gamma=0.01, tau1=1.0):
+    def calc_fg(x1, g=0.0, gamma=0.01, tau1=1.0):
 
-        return numpy.reshape(eqtn_fg(x1.size)[0](g, gamma, tau1), x1.shape).astype(x1.dtype)
+        p = x1.shape
+
+        return numpy.reshape(eqtn_fg(x1.size)[0](x1, sc2arr(g, p), gamma, tau1), x1.shape).astype(x1.dtype)
 
 
     def calc_fparams_var(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope, Iext1, Iext2, K, z=0.0, g=0.0,
                          tau1=1.0, tau0=1.0, pmode=numpy.array("const")):
 
+        p = x0_var.shape
+
         f = eqtn_fparam_vars(x0_var.size, pmode=numpy.array("const"))[0]
 
-        return numpy.reshape(f[0](x0, x0_var, tau1), x0_var.shape).astype(x0_var.dtype), \
-               numpy.reshape(f[1](slope, slope_var, tau1), slope_var.shape).astype(slope_var.dtype), \
-               numpy.reshape(f[2](Iext1, Iext1_var, tau1, tau0), Iext1_var.shape).astype(Iext1_var.dtype), \
-               numpy.reshape(f[3](Iext2, Iext2_var, tau1), Iext2_var.shape).astype(Iext2_var.dtype), \
-               numpy.reshape(f[4](K, K_var, tau1, tau0), K_var.shape).astype(K_var.dtype)
+        return numpy.reshape(f[0](sc2arr(x0, p), x0_var, tau1), x0_var.shape).astype(x0_var.dtype), \
+               numpy.reshape(f[1](sc2arr(z, p), sc2arr(g, p), sc2arr(slope, p), slope_var, tau1),
+                             slope_var.shape).astype(slope_var.dtype), \
+               numpy.reshape(f[2](sc2arr(Iext1, p), Iext1_var, tau1, tau0), Iext1_var.shape).astype(Iext1_var.dtype), \
+               numpy.reshape(f[3](sc2arr(z, p), sc2arr(g, p), sc2arr(Iext2, p), Iext2_var, tau1),
+                             Iext2_var.shape).astype(Iext2_var.dtype), \
+               numpy.reshape(f[4](sc2arr(K, p), K_var, tau1, tau0), K_var.shape).astype(K_var.dtype)
 
 
     def calc_dfun(x1, z, yc, Iext1, x0, x0cr, r, K, w, model_vars=2, zmode="lin", pmode="const", x1_neg=None,
@@ -84,6 +128,8 @@ if SYMBOLIC_EQUATIONS_FLAG:
                   x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
                   slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.01,
                   tau1=1.0, tau0=2857.0, tau2=10.0):
+
+        p = x1.shape
 
         if x1_neg is None:
             x1_neg = x1 < 0.0
@@ -101,12 +147,28 @@ if SYMBOLIC_EQUATIONS_FLAG:
 
         dfun = eqnt_dfun(x1.size, model_vars, zmode, x1_neg, x2_neg, pmode)[0]
 
+        p = x1.shape
+
+        z = sc2arr(z, p)
+        yc = sc2arr(yc, p)
+        Iext1 = sc2arr(Iext1, p)
+        slope = sc2arr(slope, p)
+        x0 = sc2arr(x0, p)
+        x0cr = sc2arr(x0cr, p)
+        r = sc2arr(r, p)
+
         if model_vars == 2:
 
             f[0,:] = numpy.array(dfun[0](x1, z, yc, Iext1, slope, a, b, tau1), dtype=x1.dtype)
             f[1, :] = numpy.array(dfun[1](x1, z, x0, x0cr, r, coupl, tau1, tau0), dtype=x1.dtype)
 
         elif model_vars == 6:
+
+            y1 = sc2arr(y1, p)
+            x2 = sc2arr(x2, p)
+            y2 = sc2arr(y2, p)
+            g = sc2arr(g, p)
+            Iext2 = sc2arr(Iext2, p)
 
             f[0, :] = numpy.array(dfun[0](x1, z, y1, x2, Iext1, slope, a, b, tau1), dtype=x1.dtype)
             f[1, :] = numpy.array(dfun[1](x1, y1, yc, d, tau1), dtype=x1.dtype)
@@ -117,6 +179,12 @@ if SYMBOLIC_EQUATIONS_FLAG:
 
         elif model_vars == 11:
 
+            x0_var = sc2arr(x0_var, p)
+            slope_var = sc2arr(slope_var, p)
+            Iext1_var = sc2arr(Iext1_var, p)
+            Iext2_var = sc2arr(Iext2_var, p)
+            K_var = sc2arr(K_var, p)
+
             f[0, :] = numpy.array(dfun[0](x1, z, y1, x2, Iext1_var, slope_var, a, b, tau1), dtype=x1.dtype)
             f[1, :] = numpy.array(dfun[1](x1, y1, yc, d, tau1), dtype=x1.dtype)
             f[2, :] = numpy.array(dfun[2](x1, z, x0_var, x0cr, r, coupl, tau1, tau0), dtype=x1.dtype)
@@ -124,9 +192,9 @@ if SYMBOLIC_EQUATIONS_FLAG:
             f[4, :] = numpy.array(dfun[4](x2, y2, s, tau1, tau2), dtype=x1.dtype)
             f[5, :] = numpy.array(dfun[5](x1, g, gamma, tau1), dtype=x1.dtype)
             f[6, :] = numpy.array(dfun[6](x0, x0_var, tau1), dtype=x1.dtype)
-            f[7, :] = numpy.array(dfun[7](slope, slope_var, tau1), dtype=x1.dtype)
+            f[7, :] = numpy.array(dfun[7](z, g, slope, slope_var, tau1), dtype=x1.dtype)
             f[8, :] = numpy.array(dfun[8](Iext1, Iext1_var, tau1, tau0), dtype=x1.dtype)
-            f[9, :] = numpy.array(dfun[9](Iext2, Iext2_var, tau1), dtype=x1.dtype)
+            f[9, :] = numpy.array(dfun[9](z, g, Iext2, Iext2_var, tau1), dtype=x1.dtype)
             f[10, :] = numpy.array(dfun[10](K, K_var, tau1, tau0), dtype=x1.dtype)
 
         return f
@@ -155,14 +223,15 @@ else:
         i_n = numpy.ones((n_ix, 1), dtype='float32')
         j_n = numpy.ones((n_jx, 1), dtype='float32')
 
-        x1_shape = x1.shape
+        x1_shape = list(x1.shape)
         x1_shape[numpy.argmax(x1_shape)] = n_ix
+        x1_shape = tuple(x1_shape)
         x1 = numpy.expand_dims(x1.squeeze(), 1).T
         K = numpy.reshape(K, x1.shape)
 
         # Coupling                                                           from
         return numpy.reshape(K[:, ix]*numpy.sum(numpy.dot(w[ix][:, jx], numpy.dot(i_n, x1[:, jx])
-                                                - numpy.dot(j_n, x1[:, ix]).T), axis=1), x1_shape, dtype=x1.type) #to
+                                                - numpy.dot(j_n, x1[:, ix]).T), axis=1), x1_shape).astype(x1.dtype) #to
 
 
     def calc_x0(x1, z, x0cr, r, coupl, zmode=numpy.array("lin")):

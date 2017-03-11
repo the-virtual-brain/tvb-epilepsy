@@ -4,9 +4,10 @@ Module to compute the resting equilibrium point of a Virtual Epileptic Patient m
 import warnings
 import numpy
 from scipy.optimize import root
-from sympy import symbols, solve, lambdify
+from sympy import symbols, Symbol, solve, lambdify
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_DEF, X0_CR_DEF
-from tvb_epilepsy.base.equations import *
+from tvb_epilepsy.base.equations import calc_fx1_6d, calc_fx1_2d, calc_fy1, calc_fz, calc_fpop2, calc_fg, calc_x0, \
+                                        calc_coupling, calc_dfun
 
 
 
@@ -48,7 +49,7 @@ def calc_eq_pop2(x1eq, zeq, Iext2, s=6.0, tau1=1.0, tau2=1.0, x2_neg=True):
 
     g_eq = numpy.squeeze(calc_eq_g(x1eq))
 
-    (x2, fx2) = symbols('x2 fx2')
+    x2 = numpy.array([Symbol('x2_%d' % i_n) for i_n in range(x1eq.size)])
 
     #TODO: use symbolic vectors and functions
     #fx2 = -y2eq + x2 - x2 ** 3 + numpy.squeeze(Iext2) + 2 * g_eq - 0.3 * (numpy.squeeze(zeq) - 3.5)
@@ -56,7 +57,7 @@ def calc_eq_pop2(x1eq, zeq, Iext2, s=6.0, tau1=1.0, tau2=1.0, x2_neg=True):
 
     x2eq = []
     for ii in range(y2eq.size):
-        x2eq.append(numpy.min(numpy.real(numpy.array(solve(fx2[ii], x2),dtype="complex"))))
+        x2eq.append(numpy.min(numpy.real(numpy.array(solve(fx2[ii], x2[ii]), dtype="complex"))))
 
     return numpy.reshape(numpy.array(x2eq, dtype=x1eq.dtype), x1eq.shape),  numpy.reshape(y2eq, x1eq.shape)
 
