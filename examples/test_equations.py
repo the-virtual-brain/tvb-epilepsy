@@ -33,12 +33,13 @@ if __name__ == "__main__":
     Iext2 = 0.45 * numpy.ones(x1.shape, dtype=x1.dtype)
 
     zmode = numpy.array("lin")
-    pmode  = numpy.array("const")
+    pmode = numpy.array("const")
 
-    model =  "EpileptorDP2D"
+    model = "EpileptorDP"
 
-    x1eq  = x1
+    x1eq = x1
     if model == "EpileptorDP2D":
+
         # 2D approximation, Proix et al 2014
         zeq = calc_eq_z_2d(x1eq, yc, Iext1)
         equilibrium_point = numpy.r_[x1eq, zeq].astype('float32')
@@ -48,12 +49,14 @@ if __name__ == "__main__":
                          slope=slope, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.01, tau1=1.0, tau0=2857.0,
                          tau2=10.0)
     else:
+
         # all >=6D models
         y1eq = calc_eq_y1(x1eq, yc)
         zeq = calc_eq_z_6d(x1eq, y1eq, Iext1)
         geq = calc_eq_g(x1eq)
 
         if model == "EpileptorDPrealistic":
+
             # the 11D "realistic" simulations model
             from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic
             slope_eq, Iext2_eq = EpileptorDPrealistic.fun_slope_Iext2(zeq, geq, pmode, slope, Iext2)
@@ -66,6 +69,7 @@ if __name__ == "__main__":
                              slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.01, tau1=1.0, tau0=2857.0,
                              tau2=10.0)
         else:
+
             # all >=6D models
             (x2eq, y2eq) = calc_eq_pop2(x1eq, zeq, Iext2)
             equilibrium_point = numpy.r_[x1eq, y1eq, zeq, x2eq, y2eq, geq].astype('float32')

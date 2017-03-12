@@ -41,12 +41,13 @@ if SYMBOLIC_EQUATIONS_FLAG:
 
     def calc_coupling(x1, K, w, ix=None, jx=None):
 
-        return numpy.reshape(eqtn_coupling(x1.size, ix, jx)[0](x1, sc2arr(K, x1.shape), w), x1.shape).astype(x1.dtype)
+        return numpy.reshape(eqtn_coupling(x1.size, ix, jx)[0](x1, sc2arr(K, x1.shape), sc2arr(w, (x1.size, x1.size))),
+                             x1.shape).astype(x1.dtype)
 
 
-    def calc_x0(x1, z, x0cr, r, coupl, zmode=numpy.array("lin")):
+    def calc_x0(x1, z, x0cr, r, K, w, zmode=numpy.array("lin")):
 
-        return numpy.reshape(eqtn_x0(x1.size, zmode)[0](x1, z, x0cr, r, coupl), x1.shape).astype(x1.dtype)
+        return numpy.reshape(eqtn_x0(x1.size, zmode)[0](x1, z, x0cr, r, K, w), x1.shape).astype(x1.dtype)
 
 
     def calc_fx1_6d(x1, z=0.0, y1=0.0, x2=0.0, Iext1=0.0, slope=0.0, a=1.0, b=3.0, tau1=1.0, x1_neg=None):
@@ -56,8 +57,10 @@ if SYMBOLIC_EQUATIONS_FLAG:
 
         p = x1.shape
 
-        return numpy.reshape(eqtn_fx1_6d(x1.size, x1_neg)[0](x1, sc2arr(z,p), sc2arr(y1,p), sc2arr(x2,p), sc2arr(Iext1,p), \
-                                                             sc2arr(slope,p), a, b, tau1), x1.shape).astype(x1.dtype)
+        return numpy.reshape(eqtn_fx1_6d(x1.size, x1_neg)[0](x1, sc2arr(z,p), sc2arr(y1,p), sc2arr(x2,p),
+                                                                 sc2arr(Iext1, p),sc2arr(slope,p), sc2arr(a, p),
+                                                                 sc2arr(b, p), sc2arr(tau1, p)),
+                                                             x1.shape).astype(x1.dtype)
 
 
     def calc_fx1_2d(x1, z=0.0, yc=0.0, Iext1=0.0, slope=0.0, a=1.0, b=-2.0, tau1=1.0, x1_neg=None):
@@ -67,23 +70,27 @@ if SYMBOLIC_EQUATIONS_FLAG:
 
         p = x1.shape
 
-        return numpy.reshape(eqtn_fx1_2d(x1.size, x1_neg)[0](x1, sc2arr(z,p), sc2arr(yc,p), sc2arr(Iext1,p), \
-                                                             sc2arr(slope,p), a, b, tau1), x1.shape).astype(x1.dtype)
+        return numpy.reshape(eqtn_fx1_2d(x1.size, x1_neg)[0](x1, sc2arr(z,p), sc2arr(yc,p), sc2arr(Iext1,p),
+                                                                 sc2arr(slope,p), sc2arr(a, p), sc2arr(b, p),
+                                                                 sc2arr(tau1, p)), x1.shape).astype(x1.dtype)
 
 
     def calc_fy1(x1, yc, y1=0, d=5.0, tau1=1.0):
 
         p = x1.shape
 
-        return numpy.reshape(eqtn_fy1(x1.size)[0](x1, sc2arr(y1, p), sc2arr(yc, p), d, tau1), x1.shape).astype(x1.dtype)
+        return numpy.reshape(eqtn_fy1(x1.size)[0](x1, sc2arr(y1, p), sc2arr(yc, p),
+                                                      sc2arr(d, p), sc2arr(tau1, p)), x1.shape).astype(x1.dtype)
 
 
-    def calc_fz(x1, x0, x0cr, r, z=0, coupl=0, tau1=1.0, tau0=1.0, zmode=numpy.array("lin")):
+    def calc_fz(x1, x0, x0cr, r, z=0, K=0, w=0.0, tau1=1.0, tau0=1.0, zmode=numpy.array("lin")):
 
         p = x1.shape
 
         return numpy.reshape(eqtn_fz(x1.size, zmode)[0](x1, sc2arr(z, p), sc2arr(x0, p), sc2arr(x0cr, p), sc2arr(r, p),
-                                                        sc2arr(coupl, p), tau1, tau0), x1.shape).astype(x1.dtype)
+                                                            sc2arr(K, p), sc2arr(w, (x1.size, x1.size)),
+                                                            sc2arr(tau1, p), sc2arr(tau0, p)),
+                                                            x1.shape).astype(x1.dtype)
 
 
     def calc_fpop2(x2, y2=0.0, z=0.0, g=0.0, Iext2=0.45, s=6.0, tau1=1.0, tau2=10.0, x2_neg=None):
@@ -104,7 +111,8 @@ if SYMBOLIC_EQUATIONS_FLAG:
 
         p = x1.shape
 
-        return numpy.reshape(eqtn_fg(x1.size)[0](x1, sc2arr(g, p), gamma, tau1), x1.shape).astype(x1.dtype)
+        return numpy.reshape(eqtn_fg(x1.size)[0](x1, sc2arr(g, p), sc2arr(gamma, p), sc2arr(tau1, p)),
+                             x1.shape).astype(x1.dtype)
 
 
     def calc_fparams_var(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope, Iext1, Iext2, K, z=0.0, g=0.0,
@@ -114,13 +122,16 @@ if SYMBOLIC_EQUATIONS_FLAG:
 
         f = eqtn_fparam_vars(x0_var.size, pmode=numpy.array("const"))[0]
 
-        return numpy.reshape(f[0](sc2arr(x0, p), x0_var, tau1), x0_var.shape).astype(x0_var.dtype), \
-               numpy.reshape(f[1](sc2arr(z, p), sc2arr(g, p), sc2arr(slope, p), slope_var, tau1),
+        return numpy.reshape(f[0](sc2arr(x0, p), sc2arr(x0_var, p), sc2arr(tau1, p)),
+                             x0_var.shape).astype(x0_var.dtype), \
+               numpy.reshape(f[1](sc2arr(z, p), sc2arr(g, p), sc2arr(slope, p), sc2arr(slope_var, p), sc2arr(tau1, p)),
                              slope_var.shape).astype(slope_var.dtype), \
-               numpy.reshape(f[2](sc2arr(Iext1, p), Iext1_var, tau1, tau0), Iext1_var.shape).astype(Iext1_var.dtype), \
-               numpy.reshape(f[3](sc2arr(z, p), sc2arr(g, p), sc2arr(Iext2, p), Iext2_var, tau1),
+               numpy.reshape(f[2](sc2arr(Iext1, p), sc2arr(Iext1_var, p), sc2arr(tau1, p), sc2arr(tau0, p)),
+                             Iext1_var.shape).astype(Iext1_var.dtype), \
+               numpy.reshape(f[3](sc2arr(z, p), sc2arr(g, p), sc2arr(Iext2, p), sc2arr(Iext2_var, p), sc2arr(tau1, p)),
                              Iext2_var.shape).astype(Iext2_var.dtype), \
-               numpy.reshape(f[4](sc2arr(K, p), K_var, tau1, tau0), K_var.shape).astype(K_var.dtype)
+               numpy.reshape(f[4](sc2arr(K, p), sc2arr(K_var, p), sc2arr(tau1, p), sc2arr(tau0, p)),
+                             K_var.shape).astype(K_var.dtype)
 
 
     def calc_dfun(x1, z, yc, Iext1, x0, x0cr, r, K, w, model_vars=2, zmode="lin", pmode="const", x1_neg=None,
@@ -138,10 +149,6 @@ if SYMBOLIC_EQUATIONS_FLAG:
             if x2_neg is None:
                 x2_neg = x2 < -0.25
 
-        if model_vars == 11:
-            coupl = calc_coupling(x1, K_var, w)
-        else:
-            coupl = calc_coupling(x1, K, w)
 
         f = numpy.zeros((model_vars, x1.size), dtype=x1.dtype)
 
@@ -156,46 +163,58 @@ if SYMBOLIC_EQUATIONS_FLAG:
         x0 = sc2arr(x0, p)
         x0cr = sc2arr(x0cr, p)
         r = sc2arr(r, p)
+        K = sc2arr(K, p)
+        w = sc2arr(w, (x1.size, x1.size))
+        a = sc2arr(a, p)
+        b = sc2arr(b, p)
+        tau1 = sc2arr(tau1, p)
+        tau0 = sc2arr(tau0, p)
 
         if model_vars == 2:
 
             f[0,:] = numpy.array(dfun[0](x1, z, yc, Iext1, slope, a, b, tau1), dtype=x1.dtype)
-            f[1, :] = numpy.array(dfun[1](x1, z, x0, x0cr, r, coupl, tau1, tau0), dtype=x1.dtype)
+            f[1, :] = numpy.array(dfun[1](x1, z, x0, x0cr, r, K, w, tau1, tau0), dtype=x1.dtype)
 
-        elif model_vars == 6:
+        else:
 
             y1 = sc2arr(y1, p)
             x2 = sc2arr(x2, p)
             y2 = sc2arr(y2, p)
             g = sc2arr(g, p)
             Iext2 = sc2arr(Iext2, p)
+            tau2 = sc2arr(tau2, p)
+            gamma = sc2arr(gamma, p)
+            d = sc2arr(d, p)
+            s = sc2arr(s, p)
 
-            f[0, :] = numpy.array(dfun[0](x1, z, y1, x2, Iext1, slope, a, b, tau1), dtype=x1.dtype)
-            f[1, :] = numpy.array(dfun[1](x1, y1, yc, d, tau1), dtype=x1.dtype)
-            f[2, :] = numpy.array(dfun[2](x1, z, x0, x0cr, r, coupl, tau1, tau0), dtype=x1.dtype)
-            f[3, :] = numpy.array(dfun[3](x2, y2, z, g, Iext2, tau1), dtype=x1.dtype)
-            f[4, :] = numpy.array(dfun[4](x2, y2, s, tau1, tau2), dtype=x1.dtype)
-            f[5, :] = numpy.array(dfun[5](x1, g, gamma, tau1), dtype=x1.dtype)
+            if model_vars == 6:
 
-        elif model_vars == 11:
+                f[0, :] = numpy.array(dfun[0](x1, z, y1, x2, Iext1, slope, a, b, tau1), dtype=x1.dtype)
+                f[1, :] = numpy.array(dfun[1](x1, y1, yc, d, tau1), dtype=x1.dtype)
+                f[2, :] = numpy.array(dfun[2](x1, z, x0, x0cr, r, K, w, tau1, tau0), dtype=x1.dtype)
+                f[3, :] = numpy.array(dfun[3](x2, y2, z, g, Iext2, tau1), dtype=x1.dtype)
+                f[4, :] = numpy.array(dfun[4](x2, y2, s, tau1, tau2), dtype=x1.dtype)
+                f[5, :] = numpy.array(dfun[5](x1, g, gamma, tau1), dtype=x1.dtype)
 
-            x0_var = sc2arr(x0_var, p)
-            slope_var = sc2arr(slope_var, p)
-            Iext1_var = sc2arr(Iext1_var, p)
-            Iext2_var = sc2arr(Iext2_var, p)
-            K_var = sc2arr(K_var, p)
+            elif model_vars == 11:
 
-            f[0, :] = numpy.array(dfun[0](x1, z, y1, x2, Iext1_var, slope_var, a, b, tau1), dtype=x1.dtype)
-            f[1, :] = numpy.array(dfun[1](x1, y1, yc, d, tau1), dtype=x1.dtype)
-            f[2, :] = numpy.array(dfun[2](x1, z, x0_var, x0cr, r, coupl, tau1, tau0), dtype=x1.dtype)
-            f[3, :] = numpy.array(dfun[3](x2, y2, z, g, Iext2_var, tau1), dtype=x1.dtype)
-            f[4, :] = numpy.array(dfun[4](x2, y2, s, tau1, tau2), dtype=x1.dtype)
-            f[5, :] = numpy.array(dfun[5](x1, g, gamma, tau1), dtype=x1.dtype)
-            f[6, :] = numpy.array(dfun[6](x0, x0_var, tau1), dtype=x1.dtype)
-            f[7, :] = numpy.array(dfun[7](z, g, slope, slope_var, tau1), dtype=x1.dtype)
-            f[8, :] = numpy.array(dfun[8](Iext1, Iext1_var, tau1, tau0), dtype=x1.dtype)
-            f[9, :] = numpy.array(dfun[9](z, g, Iext2, Iext2_var, tau1), dtype=x1.dtype)
-            f[10, :] = numpy.array(dfun[10](K, K_var, tau1, tau0), dtype=x1.dtype)
+                x0_var = sc2arr(x0_var, p)
+                slope_var = sc2arr(slope_var, p)
+                Iext1_var = sc2arr(Iext1_var, p)
+                Iext2_var = sc2arr(Iext2_var, p)
+                K_var = sc2arr(K_var, p)
+
+                f[0, :] = numpy.array(dfun[0](x1, z, y1, x2, Iext1_var, slope_var, a, b, tau1), dtype=x1.dtype)
+                f[1, :] = numpy.array(dfun[1](x1, y1, yc, d, tau1), dtype=x1.dtype)
+                f[2, :] = numpy.array(dfun[2](x1, z, x0_var, x0cr, r, K, w, tau1, tau0), dtype=x1.dtype)
+                f[3, :] = numpy.array(dfun[3](x2, y2, z, g, Iext2_var, tau1), dtype=x1.dtype)
+                f[4, :] = numpy.array(dfun[4](x2, y2, s, tau1, tau2), dtype=x1.dtype)
+                f[5, :] = numpy.array(dfun[5](x1, g, gamma, tau1), dtype=x1.dtype)
+                f[6, :] = numpy.array(dfun[6](x0, x0_var, tau1), dtype=x1.dtype)
+                f[7, :] = numpy.array(dfun[7](z, g, slope, slope_var, tau1), dtype=x1.dtype)
+                f[8, :] = numpy.array(dfun[8](Iext1, Iext1_var, tau1, tau0), dtype=x1.dtype)
+                f[9, :] = numpy.array(dfun[9](z, g, Iext2, Iext2_var, tau1), dtype=x1.dtype)
+                f[10, :] = numpy.array(dfun[10](K, K_var, tau1, tau0), dtype=x1.dtype)
 
         return f
 
@@ -234,7 +253,9 @@ else:
                                                 - numpy.dot(j_n, x1[:, ix]).T), axis=1), x1_shape).astype(x1.dtype) #to
 
 
-    def calc_x0(x1, z, x0cr, r, coupl, zmode=numpy.array("lin")):
+    def calc_x0(x1, z, x0cr, r, K, w, zmode=numpy.array("lin")):
+
+        coupl = calc_coupling(x1, K, w)
 
         if zmode == 'lin':
             return numpy.array((x1 + x0cr - (z+coupl) / 4.0) / r).astype(x1.dtype)
@@ -279,7 +300,12 @@ else:
         return (tau1 * (yc - d * x1 ** 2 - y1)).astype(x1.dtype)
 
 
-    def calc_fz(x1, x0, x0cr, r, z=0, coupl=0, tau1=1.0, tau0=1.0, zmode=numpy.array("lin")):
+    def calc_fz(x1, x0, x0cr, r, z=0, K=0.0, w=0.0, tau1=1.0, tau0=1.0, zmode=numpy.array("lin")):
+
+        if numpy.any(K> 0.0) and numpy.any(w> 0.0):
+            coupl = calc_coupling(x1, K, w)
+        else:
+            coupl = 0.0
 
         if zmode == 'lin':
             return (tau1 * (4 * (x1 - r * x0 + x0cr) - z - coupl) / tau0).astype(x1.dtype)
@@ -376,7 +402,7 @@ else:
                 x0 = x0_var
                 K = K_var
 
-        f[iz, :] = calc_fz(x1, x0, x0cr, r, z, calc_coupling(x1, K, w), tau1, tau0, zmode)
+        f[iz, :] = calc_fz(x1, x0, x0cr, r, z, K, w, tau1, tau0, zmode)
 
         return f.astype(x1.dtype)
 

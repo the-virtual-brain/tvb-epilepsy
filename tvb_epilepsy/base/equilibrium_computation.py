@@ -70,34 +70,6 @@ def eq_x1_hypo_x0_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, 
 
     x1_type = x1EQ.dtype
 
-    # #Coupling                        to   from           from                    to
-    # no_x0 = len(ix0)
-    # no_e = len(iE)
-    # i_e = numpy.ones((no_e,1), dtype=x1_type)
-    # i_x0 = numpy.ones((no_x0,1), dtype=x1_type)
-    # # w_e_to_e = numpy.sum(numpy.dot(w[iE][:,iE],    numpy.dot(i_e, x1EQ[:,iE]) - numpy.dot(i_e, x1EQ[:,iE]).T), axis=1)
-    # # w_x0_to_e = numpy.sum(numpy.dot(w[iE][:, ix0], numpy.dot(i_e, x[:,ix0]) - numpy.dot(i_x0, x1EQ[:,iE]).T), axis=1)
-    # Coupl_to_e = calc_coupling(x1EQ, K, w, ix=iE)
-    #
-    # # w_e_to_x0 = numpy.sum(numpy.dot(w[ix0][:, iE],  numpy.dot(i_x0, x1EQ[:, iE]) - numpy.dot(i_e, x[:,ix0]).T), axis=1)
-    # # w_x0_to_x0 = numpy.sum(numpy.dot(w[ix0][:,ix0], numpy.dot(i_x0, x[:,ix0]) - numpy.dot(i_x0, x[:,ix0]).T), axis=1)
-    # Coupl_to_x0 = calc_coupling(x1EQ, K, w, ix=ix0)
-    #
-    # fun = numpy.zeros(x1EQ.shape).astype(x1_type)
-    # #Known x1eq, unknown x0:
-    # # fun[:,iE] = calc_fz_lin(x1EQ[:,iE], x0[:,iE], x0cr[:,iE], rx0[:,iE], z=zEQ[:,iE],
-    # #                         coupl=K[:,iE] * (w_e_to_e + w_x0_to_e)).astype(x1_type)
-    # fun[:, iE] = calc_fz_lin(x1EQ[:, iE], x0[:, iE], x0cr[:, iE], rx0[:, iE], z=zEQ[:, iE],
-    #                          coupl=calc_coupling(x1EQ, K, w, ix=i_x0)).astype(x1_type)
-    #
-    # # Known x0, unknown x1eq:
-    # # fun[:,ix0] = calc_fz_lin(x[:, ix0], x0, x0cr[:, ix0], rx0[:, ix0],
-    # #                          z=calc_eq_z_2d(x[:, ix0], yc[:, ix0], Iext1[:, ix0]),
-    # #                          coupl=K[:, ix0] * (w_e_to_x0 + w_x0_to_x0)).astype(x1_type)
-    # fun[:, ix0] = calc_fz_lin(x1EQ[:, ix0], x0, x0cr[:, ix0], rx0[:, ix0],
-    #                           z=calc_eq_z_2d(x[:, ix0], yc[:, ix0], Iext1[:, ix0]),
-    #                           coupl=Coupl_to_x0).astype(x1_type)
-
     # Construct the x1 and z vectors, comprising of the current x1EQ, zEQ values for i_e regions,
     # and the unknown x1 values for x1EQ and respective zEQ for the i_x0 regions
     x1EQ[:, ix0] = numpy.array(x[ix0])
@@ -111,7 +83,7 @@ def eq_x1_hypo_x0_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, 
     x0[:, ix0] = numpy.array(x0_dummy)
     del x0_dummy
 
-    fun = calc_fz(x1EQ, x0, x0cr, rx0, z=zEQ, coupl=calc_coupling(x1EQ, K, w)).astype(x1_type)
+    fun = calc_fz(x1EQ, x0, x0cr, rx0, z=zEQ, K=K, w=w).astype(x1_type)
 
     # if numpy.any([numpy.any(numpy.isnan(x)), numpy.any(numpy.isinf(x)),
     #               numpy.any(numpy.isnan(fun)), numpy.any(numpy.isinf(fun))]):
@@ -159,7 +131,7 @@ def eq_x1_hypo_x0_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w):
     #Set initial conditions for the optimization algorithm, by ignoring coupling (=0)
     # fz = 4 * (x1 - r * x0 + x0cr) - z -coupling = 0
     #x0init = (x1 + x0cr -z/4) / rx0
-    xinit[:, iE] = calc_x0(x1EQ[:, iE], zEQ[:, iE], x0cr[:, iE],  rx0[:, iE], 0.0)
+    xinit[:, iE] = calc_x0(x1EQ[:, iE], zEQ[:, iE], x0cr[:, iE],  rx0[:, iE], 0.0, 0.0)
     #x1eqinit = rx0 * x0 - x0cr + z / 4
     xinit[:, ix0] = rx0[:, ix0] * x0 - x0cr[:, ix0] + zEQ[:, ix0] / 4
 
@@ -267,7 +239,7 @@ def calc_x0cr_rx0(yc, Iext1, epileptor_model="2d", zmode=numpy.array("lin"),
         z = calc_eq_z_6d(x1, calc_eq_y1(x1, yc1, d=5.0), x2, I1)
 
     #Define the fz expression...
-    fz = calc_fz(x1, x0, x0cr, r, z=z, coupl=0, zmode=zmode)
+    fz = calc_fz(x1, x0, x0cr, r, z=z, zmode=zmode)
 
     #Solve the fz expression for rx0 and x0cr, assuming the following two points (x1eq,x0) = [(-5/3,0.0),(-4/3,1.0)]...
     #...and WITHOUT COUPLING
