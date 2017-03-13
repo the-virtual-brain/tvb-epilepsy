@@ -9,7 +9,7 @@ from matplotlib import pyplot, gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.utils import calculate_in_degree
-from tvb_epilepsy.base.equilibrium_computation import calc_fz
+from tvb_epilepsy.base.equations import calc_fz
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
 try:

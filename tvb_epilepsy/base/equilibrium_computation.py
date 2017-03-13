@@ -4,11 +4,18 @@ Module to compute the resting equilibrium point of a Virtual Epileptic Patient m
 import warnings
 import numpy
 from scipy.optimize import root
-from sympy import symbols, Symbol, solve, lambdify
-from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_DEF, X0_CR_DEF
+from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, SOLVE_FLAG
 from tvb_epilepsy.base.equations import calc_fx1_6d, calc_fx1_2d, calc_fy1, calc_fz, calc_fpop2, calc_fg, calc_x0, \
                                         calc_coupling, calc_dfun
 
+if SOLVE_FLAG == "symbolic":
+
+    try:
+        from sympy import Symbol, solve
+
+    except:
+        warnings.warn("Unable to load sympy module. Turning to optimization root finding.")
+        SOLVE_FLAG = "optimization"
 
 
 def def_x1eq(X1_DEF, X1_EQ_CR_DEF, n_regions):
@@ -26,7 +33,6 @@ def calc_eq_z_6d(x1eq, y1, Iext1, x2=0.0, slope=0.0, a=1.0, b=3.0, x1_neg=True):
 
 
 def calc_eq_z_2d(x1eq, yc, Iext1, slope=0.0, a=1.0, b=-2.0, x1_neg=True):
-
     return calc_fx1_2d(x1eq, z=0, yc=yc, Iext1=Iext1, slope=slope, a=a, b=b, tau1=1.0, x1_neg=x1_neg)
 
 
@@ -38,26 +44,41 @@ def calc_eq_pop2(x1eq, zeq, Iext2, s=6.0, tau1=1.0, tau2=1.0, x2_neg=True):
 
     y2eq = numpy.zeros((x1eq.size,), dtype=x1eq.dtype)
 
-    # # -x2eq**3 + x2eq -y2eq+2*g_eq-0.3*(zeq-3.5)+Iext2 =0=> (1),(2)
-    # # -x2eq**3 + x2eq +2*0.1*x1eq-0.3*(zeq-3.5)+Iext2 =0=>
-    # # p3        p1                   p0
-    # # -x2eq**3 + x2eq +0.2*x1eq-0.3*(zeq-3.5)+Iext2 =0
-    # p0 = 0.2 * x1eq - 0.3 * (zeq - 3.5) + Iext2
-    # x2eq = numpy.zeros(x1eq.shape, dtype=x1eq.dtype)
-    # for i in range(shape[1]):
-    #     x2eq[0 ,i] = numpy.min(numpy.real(numpy.roots([-1.0, 0.0, 1.0, p0[0, i]])))
-
     g_eq = numpy.squeeze(calc_eq_g(x1eq))
+    zeq = numpy.squeeze(zeq)
+    Iext2 = numpy.squeeze(Iext2)
 
-    x2 = numpy.array([Symbol('x2_%d' % i_n) for i_n in range(x1eq.size)])
+    if SOLVE_FLAG == "symbolic":
 
-    #TODO: use symbolic vectors and functions
-    #fx2 = -y2eq + x2 - x2 ** 3 + numpy.squeeze(Iext2) + 2 * g_eq - 0.3 * (numpy.squeeze(zeq) - 3.5)
-    fx2 = numpy.squeeze(calc_fpop2(x2, y2eq, zeq, g_eq, Iext2, s, tau1, tau2, x2_neg)[0])
+        x2 = numpy.array([Symbol('x2_%d' % i_n) for i_n in range(x1eq.size)])
 
-    x2eq = []
-    for ii in range(y2eq.size):
-        x2eq.append(numpy.min(numpy.real(numpy.array(solve(fx2[ii], x2[ii]), dtype="complex"))))
+        #TODO: use symbolic vectors and functions
+        #fx2 = -y2eq + x2 - x2 ** 3 + numpy.squeeze(Iext2) + 2 * g_eq - 0.3 * (numpy.squeeze(zeq) - 3.5)
+        fx2 = numpy.squeeze(calc_fpop2(x2, y2eq, zeq, g_eq, Iext2, s, tau1, tau2, x2_neg)[0])
+
+        x2eq = []
+        for ii in range(y2eq.size):
+            x2eq.append(numpy.min(numpy.real(numpy.array(solve(fx2[ii], x2[ii]), dtype="complex"))))
+
+    elif SOLVE_FLAG == "optimization":
+
+        x2eq = []
+        for ii in range(y2eq.size):
+            fx2 = lambda x2: numpy.squeeze(calc_fpop2(x2,
+                                                      y2eq[ii], zeq[ii], g_eq[ii], Iext2[ii], s, tau1, tau2, x2_neg)[0])
+            jac = lambda x2: -3 * x2 ** 2 + 1.0
+            sol = root(fx2, -0.75, method='lm', jac=jac, tol=10 ** (-6), callback=None, options=None)
+            #args=(y2eq[ii], zeq[ii], g_eq[ii], Iext2[ii], s, tau1, tau2, x2_neg)  method='hybr'
+
+            if sol.success:
+                x2eq.append(numpy.min(numpy.real(numpy.array(sol.x))))
+                if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
+                    raise ValueError("nan or inf values in solution x\n" + sol.message)
+            else:
+                raise ValueError(sol.message)
+
+    else:
+        raise ValueError("SOLVE_FLAG = " + str(SOLVE_FLAG) + " is neither ""symbolic"" nor ""optimization""!")
 
     return numpy.reshape(numpy.array(x2eq, dtype=x1eq.dtype), x1eq.shape),  numpy.reshape(y2eq, x1eq.shape)
 
@@ -149,7 +170,6 @@ def eq_x1_hypo_x0_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w):
         raise ValueError(sol.message)
 
 
-
 def eq_x1_hypo_x0_linTaylor(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w):
 
     no_x0 = len(ix0)
@@ -214,48 +234,6 @@ def eq_x1_hypo_x0_linTaylor(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w):
     x1EQ[0, ix0] = x[0, no_e:]
 
     return x1EQ
-
-
-def calc_x0cr_rx0(yc, Iext1, epileptor_model="2d", zmode=numpy.array("lin"),
-                  x1rest=X1_DEF, x1cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF):
-
-    #Define the symbolic variables we need:
-    (yc1, I1, x1, z, x2, x0, r, x0cr, f1, fz) = symbols('yc1 I1 x1 z x2 x0 r x0cr f1 fz')
-
-    #Define the fx1(x1) expression (assuming centered x1 in all cases)...
-    if epileptor_model == "2d":
-        #...for the 2D permittivity coupling approximation, Proix et al 2014
-        #fx1 = x1 ** 3 + 2 * x1 ** 2
-        # #...and the z expression, coming from solving dx1/dt=f1(x1,z)=0
-        # z = yc1 - fx1 + I1
-        z = calc_eq_z_2d(x1, yc1, I1)
-
-    else:
-        #...or for the original (>=6D) epileptor
-        # fx1 = x1 ** 3 - 3 * x1 ** 2
-        # #...and the z expression, coming from solving dx1/dt=f1(x1,z)=0
-        # y1 = yc1 - 5.0 * x1 ** 2
-        # z = y1 - fx1 + I1
-        z = calc_eq_z_6d(x1, calc_eq_y1(x1, yc1, d=5.0), x2, I1)
-
-    #Define the fz expression...
-    fz = calc_fz(x1, x0, x0cr, r, z=z, zmode=zmode)
-
-    #Solve the fz expression for rx0 and x0cr, assuming the following two points (x1eq,x0) = [(-5/3,0.0),(-4/3,1.0)]...
-    #...and WITHOUT COUPLING
-    fz_sol = solve([fz.subs([(x1, x1rest), (x0, x0def), (z, z.subs(x1, x1rest))]),
-                    fz.subs([(x1, x1cr), (x0, x0cr_def), (z, z.subs(x1, x1cr))])], r, x0cr)
-
-    #Convert the solution of x0cr from expression to function that accepts numpy arrays as inputs:
-    x0cr = lambdify((yc1,I1), fz_sol[x0cr], 'numpy')
-
-    #Compute the actual x0cr now given the inputs yc and Iext1
-    x0cr = numpy.array(x0cr(yc, Iext1)).astype('float32')
-
-    #The rx0 doesn' depend on yc and Iext1, therefore...
-    rx0 = numpy.array(fz_sol[r]*numpy.ones(shape=x0cr.shape), dtype="float32")
-
-    return x0cr, rx0
 
 
 def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):

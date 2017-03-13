@@ -7,8 +7,9 @@ It should contain everything for later configuring an Epileptor Model from this 
 import numpy
 from collections import OrderedDict
 from tvb_epilepsy.base.constants import X0_DEF, E_DEF, K_DEF, I_EXT1_DEF, YC_DEF, X1_DEF, X1_EQ_CR_DEF
-from tvb_epilepsy.base.equilibrium_computation import calc_eq_z_2d, calc_coupling, calc_x0, calc_x0cr_rx0, \
-                                                      eq_x1_hypo_x0_linTaylor, eq_x1_hypo_x0_optimize, def_x1lin
+from tvb_epilepsy.base.equations import calc_x0cr_r, calc_coupling, calc_x0
+from tvb_epilepsy.base.equilibrium_computation import calc_eq_z_2d, eq_x1_hypo_x0_linTaylor, eq_x1_hypo_x0_optimize, \
+                                                      def_x1lin
 from tvb_epilepsy.base.utils import reg_dict, formal_repr, vector2scalar
 
 
@@ -94,7 +95,7 @@ class Hypothesis(object):
         return self.weights[:, self.seizure_indices]
 
     def _calculate_critical_x0_scaling(self):
-        return calc_x0cr_rx0(self.yc, self.Iext1, epileptor_model="2d", zmode="lin")
+        return calc_x0cr_r(self.yc, self.Iext1, epileptor_model="2d", zmode="lin")
 
     def _set_equilibria_x1(self, i=None):
         if i is None:

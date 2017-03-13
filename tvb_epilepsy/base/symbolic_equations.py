@@ -54,7 +54,7 @@ def eqtn_coupling(n, ix=None, jx=None, K="K"):
     i_n = numpy.ones((len(ix), 1))
     j_n = numpy.ones((len(jx), 1))
 
-    x1 = numpy.expand_dims(x1.squeeze(), 1).T
+    x1 = numpy.reshape(x1, (1, n))
     K = numpy.reshape(K, x1.shape)
 
     # Coupling                                                         from           to
@@ -127,8 +127,11 @@ def eqtn_fz(n, zmode=numpy.array("lin"), x0="x0", K="K"):
 
     x1, z, x0, x0cr, r,  tau1, tau0, vars_dict = sym_vars(n, ["x1", "z", "x0", "x0cr", "r", "tau1", "tau0"])
 
-    coupling, vars_dict_coupl = eqtn_coupling(n, K=K)[1:]
-    vars_dict.update(vars_dict_coupl)
+    if K != 0.0:
+        coupling, vars_dict_coupl = eqtn_coupling(n, K=K)[1:]
+        vars_dict.update(vars_dict_coupl)
+    else:
+        coupling = 0
 
     if zmode == 'lin':
         fz = (tau1 * (4 * (x1 - r * x0 + x0cr) - z - coupling) / tau0).tolist()
@@ -162,8 +165,6 @@ def eqtn_fpop2(n, x2_neg=True, Iext2="Iext2"):
 
 def eqtn_fg(n):
 
-    gamma, tau1, vars_dict = symbols('gamma tau1')
-
     x1, g, gamma, tau1, vars_dict = sym_vars(n, ["x1", "g", "gamma", "tau1"])
 
     x1 = numpy.array([Symbol('x1_%d' % i_n) for i_n in range(n)])
@@ -176,8 +177,6 @@ def eqtn_fg(n):
 
 
 def eqtn_fparam_vars(n, pmode=numpy.array("const")):
-
-    tau1, tau0, vars_dict = symbols('tau1 tau0')
 
     z, g, x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope, Iext1, Iext2, K, tau1, tau0, vars_dict \
         = sym_vars(n, ["z", "g", "x0_var", "slope_var", "Iext1_var", "Iext2_var", "K_var",

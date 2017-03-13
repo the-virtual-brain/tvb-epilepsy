@@ -62,7 +62,9 @@ WEIGHTS_NORM_PERCENT = 95
 
 NOISE_SEED = 42
 
-SYMBOLIC_EQUATIONS_FLAG = True
+SYMBOLIC_EQUATIONS_FLAG = False
+
+SOLVE_FLAG = "symbolic"  #"symbolic" or "optimization"
 
 
 

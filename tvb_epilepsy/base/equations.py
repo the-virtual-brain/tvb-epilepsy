@@ -2,11 +2,12 @@ import warnings
 
 import numpy
 
-from tvb_epilepsy.base.constants import SYMBOLIC_EQUATIONS_FLAG
+from tvb_epilepsy.base.constants import X0_DEF, X0_CR_DEF, X1_DEF, X1_EQ_CR_DEF, SYMBOLIC_EQUATIONS_FLAG, SOLVE_FLAG
+
 # TODO: find out why I cannot import anything from utils here
 #from tvb_epilepsy.base.utils import assert_array_shape as sc2arr
 
-if SYMBOLIC_EQUATIONS_FLAG:
+if SYMBOLIC_EQUATIONS_FLAG or SOLVE_FLAG == "symbolic":
 
     try:
         from tvb_epilepsy.base.symbolic_equations import *
@@ -14,6 +15,16 @@ if SYMBOLIC_EQUATIONS_FLAG:
     except:
         warnings.warn("Unable to load symbolic_equations module. Turning to non symbolic ones.")
         SYMBOLIC_EQUATIONS_FLAG = False
+
+if SOLVE_FLAG == "symbolic":
+
+    try:
+        from sympy import symbols, solve, lambdify
+
+    except:
+        warnings.warn("Unable to load sympy module. Turning to optimization root finding.")
+        SOLVE_FLAG = "optimization"
+        from scipy.optimize import root
 
 
 def sc2arr(x, shape):
@@ -39,15 +50,15 @@ def sc2arr(x, shape):
 
     else:
         try:
-            from sympy.core.symbol import Symbol
+            import sympy
         except:
             raise ImportError()
 
-        if isinstance(x, Symbol):
+        if isinstance(x, tuple(sympy.core.all_classes)):
             return numpy.tile(x, shape)
 
         else:
-            raise ValueError("Input of type " + str(type(x)) + " is not numeric, of type numpy.ndarray, nor Symbol")
+            raise ValueError("Input " + str(x) + " of type " + str(type(x)) + " is not numeric, of type numpy.ndarray, nor Symbol")
 
 
 if SYMBOLIC_EQUATIONS_FLAG:
@@ -58,7 +69,7 @@ if SYMBOLIC_EQUATIONS_FLAG:
 
         p = x1.shape
 
-        return numpy.reshape(eqtn_coupling(x1.size, ix, jx)[0](x1, sc2arr(K, p), sc2arr(w, (x1.size, x1.size))))\
+        return numpy.reshape(eqtn_coupling(x1.size, ix, jx)[0](x1, sc2arr(K, p), sc2arr(w, (x1.size, x1.size)))) \
                .astype(x1.dtype)
 
 
@@ -68,7 +79,8 @@ if SYMBOLIC_EQUATIONS_FLAG:
 
         p = x1.shape
 
-        return numpy.reshape(eqtn_x0(x1.size, zmode)[0](x1, z, x0cr, r, K, w), x1.shape).astype(x1.dtype)
+        return numpy.reshape(eqtn_x0(x1.size, zmode)[0](x1, sc2arr(z, p), sc2arr(x0cr, p), sc2arr(r, p), sc2arr(K, p),
+                                                            sc2arr(w, (x1.size, x1.size))), x1.shape).astype(x1.dtype)
 
 
     def calc_fx1_6d(x1, z=0.0, y1=0.0, x2=0.0, Iext1=0.0, slope=0.0, a=1.0, b=3.0, tau1=1.0, x1_neg=None):
@@ -110,7 +122,7 @@ if SYMBOLIC_EQUATIONS_FLAG:
                                                       sc2arr(d, p), sc2arr(tau1, p)), x1.shape).astype(x1.dtype)
 
 
-    def calc_fz(x1, x0, x0cr, r, z=0, K=0, w=0.0, tau1=1.0, tau0=1.0, zmode=numpy.array("lin")):
+    def calc_fz(x1, x0, x0cr, r, z=0, K=0.0, w=0.0, tau1=1.0, tau0=1.0, zmode=numpy.array("lin")):
 
         x1 = numpy.array(x1)
 
@@ -133,9 +145,10 @@ if SYMBOLIC_EQUATIONS_FLAG:
 
         fx2fy2 = eqtn_fpop2(x2.size, x2_neg)[0]
 
-        return numpy.reshape(fx2fy2[0](x2, sc2arr(y2, p), sc2arr(z, p), sc2arr(g, p), sc2arr(Iext2, p), tau1), \
-                             x2.shape).astype(x2.dtype), \
-               numpy.reshape(fx2fy2[1](x2, sc2arr(y2, p), s, tau1, tau2), x2.shape).astype(x2.dtype)
+        return numpy.reshape(fx2fy2[0](x2, sc2arr(y2, p), sc2arr(z, p), sc2arr(g, p), sc2arr(Iext2, p),
+                                           sc2arr(tau1, p)), x2.shape).astype(x2.dtype), \
+               numpy.reshape(fx2fy2[1](x2, sc2arr(y2, p), sc2arr(s, p), sc2arr(tau1, p), sc2arr(tau2, p)),
+                             x2.shape).astype(x2.dtype)
 
 
     def calc_fg(x1, g=0.0, gamma=0.01, tau1=1.0):
@@ -151,13 +164,13 @@ if SYMBOLIC_EQUATIONS_FLAG:
     def calc_fparams_var(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope, Iext1, Iext2, K, z=0.0, g=0.0,
                          tau1=1.0, tau0=1.0, pmode=numpy.array("const")):
 
-        x0_var =  numpy.arra(x0_var)
+        x0_var = numpy.array(x0_var)
 
         p = x0_var.shape
 
         f = eqtn_fparam_vars(x0_var.size, pmode=numpy.array("const"))[0]
 
-        return numpy.reshape(f[0](sc2arr(x0, p), sc2arr(x0_var, p), sc2arr(tau1, p)),
+        return numpy.reshape(f[0](sc2arr(x0, p), x0_var, sc2arr(tau1, p)),
                              x0_var.shape).astype(x0_var.dtype), \
                numpy.reshape(f[1](sc2arr(z, p), sc2arr(g, p), sc2arr(slope, p), sc2arr(slope_var, p), sc2arr(tau1, p)),
                              slope_var.shape).astype(slope_var.dtype), \
@@ -311,7 +324,7 @@ else:
         coupl = numpy.array(calc_coupling(x1, K, w))
 
         if zmode == 'lin':
-             x0 =  (x1 + x0cr - (z+coupl) / 4.0) / r
+             x0 = (x1 + x0cr - (z+coupl) / 4.0) / r
 
         elif zmode == 'sig':
             x0 = (3.0 / (1.0 + numpy.exp(-10.0 * (x1 + 0.5))) + x0cr - z + coupl) / r
@@ -320,8 +333,6 @@ else:
             raise ValueError('zmode is neither "lin" nor "sig"')
 
         return numpy.reshape(x0, x1.shape).astype(x1.dtype)
-
-
 
 
     def calc_fx1_6d(x1, z=0.0, y1=0.0, x2=0.0, Iext1=0.0, slope=0.0, a=1.0, b=3.0, tau1=1.0, x1_neg=None):
@@ -561,3 +572,95 @@ else:
 
             return numpy.array(jac_lambda([x1, y1, z, x2, y2, g, x0_var, slope_var, Iext1_var, Iext2_var, K_var]),
                                    dtype=x1.type)
+
+
+def calc_x0cr_r(yc, Iext1, epileptor_model="2d", zmode=numpy.array("lin"),
+                      x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF):
+
+    x1eq, x0, x0cr, r, yc1, I1 = symbols("x1eq x0 x0cr r yc1 I1")
+
+    Iext1 = numpy.array(Iext1)
+
+    p = Iext1.shape
+    Iext1 = numpy.squeeze(Iext1)
+    yc = sc2arr(yc, Iext1.shape)
+
+    if SOLVE_FLAG == "symbolic":
+
+        # Define the z equilibrium expression...
+        if epileptor_model == "2d":
+            zeq = calc_fx1_2d(x1eq, z=0.0, yc=yc1, Iext1=I1, x1_neg=True).tolist()
+
+        else:
+            zeq = calc_fx1_6d(x1eq, z=0.0, y1=calc_fy1(x1eq, yc1), Iext1=I1, x1_neg=True).tolist()
+
+        # Define the fz expression...
+        fz = calc_fz(x1eq, x0, x0cr, r, z=zeq, zmode=zmode).tolist()
+
+        # Solve the fz expression for rx0 and x0cr, assuming the following two points (x1eq,x0) = [(-5/3,0.0),(-4/3,1.0)]...
+        # ...and WITHOUT COUPLING
+        fz_sol = solve([fz.subs([(x1eq, x1_rest), (x0, x0def), (zeq, zeq.subs(x1eq, x1_rest))]),
+                        fz.subs([(x1eq, x1_cr), (x0, x0cr_def), (zeq, zeq.subs(x1eq, x1_cr))])], r, x0cr)
+
+        # Convert the solution of x0cr from expression to function that accepts numpy arrays as inputs:
+        x0cr = lambdify((yc1, I1), fz_sol[x0cr], 'numpy')
+
+        #Calculate x0cr from the lambda function
+        x0cr = numpy.reshape(x0cr(yc, Iext1), p).astype(Iext1.dtype)
+
+        #r is already given as independedn of yc and Iext1
+        r = numpy.tile(fz_sol[r], p).astype(Iext1.dtype)
+
+    elif SOLVE_FLAG == "optimization":
+
+        if numpy.all(Iext1 == Iext1[0]) and numpy.all(yc == yc[0]):
+            Iext1 = Iext1[0]
+            yc = yc[0]
+
+        p2 = Iext1.shape
+        x1_rest = sc2arr(x1_rest, p2)
+        x1_cr = sc2arr(x1_cr, p2)
+
+        # Define the z equilibrium expression...
+        if epileptor_model == "2d":
+            zeq_rest = calc_fx1_2d(x1_rest, z=0.0, yc=yc, Iext1=Iext1, x1_neg=True)
+            zeq_cr = calc_fx1_2d(x1_cr, z=0.0, yc=yc, Iext1=Iext1, x1_neg=True)
+            if zmode == numpy.array("lin"):
+                xinit = numpy.array([2.460, 0.398])
+            else:
+                xinit = numpy.array([3.174, 0.260])
+        else:
+            zeq_rest = calc_fx1_6d(x1_rest, z=0.0, y1=calc_fy1(x1_rest, yc), Iext1=Iext1, x1_neg=True)
+            zeq_cr = calc_fx1_6d(x1_cr, z=0.0, y1=calc_fy1(x1_cr, yc), Iext1=Iext1, x1_neg=True)
+            if zmode == numpy.array("lin"):
+                xinit = numpy.array([5.9320, 1.648])
+            else:
+                xinit = numpy.array([17.063, 5.260])
+
+        # Define the fz expression...
+        x0cr = []
+        r = []
+        for ii in range(Iext1.size):
+            fz = lambda x: numpy.array([calc_fz(x1_rest[ii], x0def, x[0], x[1], z=zeq[ii], zmode=zmode),
+                                        calc_fz(x1_cr[ii], x0cr_def, x[0], x[1], z=zeq[ii], zmode=zmode)])
+            sol = root(fz, xinit, method='lm', tol=10 ** (-6), callback=None, options=None)
+
+        if sol.success:
+            x0cr.append(sol.x[0])
+            r.append(sol.x[1])
+            if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
+                raise ValueError("nan or inf values in solution x\n" + sol.message)
+        else:
+            raise ValueError(sol.message)
+
+        if p2 != p:
+            x0cr = numpy.tile(x0cr[0], p).astype(Iext1.dtype)
+            r = numpy.tile(r[0], p).astype(Iext1.dtype)
+        else:
+            x0cr = numpy.reshape(x0cr, p).astype(Iext1.dtype)
+            r = numpy.reshape(r, p).astype(Iext1.dtype)
+
+    else:
+        raise ValueError("SOLVE_FLAG = " + str(SOLVE_FLAG) + " is neither ""symbolic"" nor ""optimization""!")
+
+    return x0cr, r
