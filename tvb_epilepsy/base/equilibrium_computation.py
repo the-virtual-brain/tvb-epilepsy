@@ -250,7 +250,7 @@ def calc_x0cr_rx0(yc, Iext1, epileptor_model="2d", zmode=numpy.array("lin"),
     x0cr = lambdify((yc1,I1), fz_sol[x0cr], 'numpy')
 
     #Compute the actual x0cr now given the inputs yc and Iext1
-    x0cr = x0cr(yc, Iext1).astype('float32')
+    x0cr = numpy.array(x0cr(yc, Iext1)).astype('float32')
 
     #The rx0 doesn' depend on yc and Iext1, therefore...
     rx0 = numpy.array(fz_sol[r]*numpy.ones(shape=x0cr.shape), dtype="float32")

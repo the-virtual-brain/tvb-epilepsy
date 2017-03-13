@@ -1,5 +1,5 @@
 import numpy
-from sympy import Symbol, symbols, exp, solve, lambdify, Matrix, jacobian, MatrixSymbol, diff
+from sympy import Symbol, symbols, exp, solve, lambdify, Matrix,MatrixSymbol, diff # jacobian,
 
 
 def sym_vars(n_regions, vars_str, dims=1, ind_str="_"):
@@ -34,7 +34,6 @@ def sym_vars(n_regions, vars_str, dims=1, ind_str="_"):
     vars_out.append(vars_dict)
 
     return tuple(vars_out)
-
 
 
 def eqtn_coupling(n, ix=None, jx=None, K="K"):
@@ -302,7 +301,7 @@ def eqnt_jac(n_regions, model_vars, zmode=numpy.array("lin"), x1_neg=True, x2_ne
 
     elif model_vars == 6:
 
-        x = Matrix([vars_dict['x1'], vars_dict['y1'], vars_dict['z'], vars_dict['x2'], vars_dict['y2'], vars_dict['g']])
+        x = [vars_dict['x1'], vars_dict['y1'], vars_dict['z'], vars_dict['x2'], vars_dict['y2'], vars_dict['g']]
 
     elif model_vars == 11:
 

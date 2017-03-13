@@ -9,7 +9,7 @@ from matplotlib import pyplot, gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.utils import calculate_in_degree
-from tvb_epilepsy.base.equilibrium_computation import calc_fz_lin
+from tvb_epilepsy.base.equilibrium_computation import calc_fz
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
 try:
@@ -244,8 +244,8 @@ def plot_nullclines_eq(hypothesis,region_labels,special_idx=None, x0ne = X0_DEF,
     # x1 nullcline:
     zX1 = yc + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
     # z nullcline:
-    zZe = calc_fz_lin(x1,x0e,x0cr,r)   # for epileptogenic regions
-    zZne = calc_fz_lin(x1,x0ne,x0cr,r)  # for non-epileptogenic regions
+    zZe = calc_fz(x1,x0e,x0cr,r)   # for epileptogenic regions
+    zZne = calc_fz(x1,x0ne,x0cr,r)  # for non-epileptogenic regions
     # approximations:
     # linear:
     x1lin = numpy.expand_dims(numpy.linspace(-5.5 / 3.0, -3.5/3 , 30), 1).T

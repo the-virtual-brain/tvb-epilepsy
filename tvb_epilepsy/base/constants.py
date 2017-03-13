@@ -57,12 +57,12 @@ MODEL = '6v'
 SIMULATION_MODE = 'tvb'  # 'ep' or 'tvb
 DATA_MODE = 'ep'  # 'ep' or 'tvb'
 
-# Normalization configuration:
+# Normalization configuration:rue
 WEIGHTS_NORM_PERCENT = 95
 
 NOISE_SEED = 42
 
-SYMBOLIC_EQUATIONS_FLAG = False
+SYMBOLIC_EQUATIONS_FLAG = True
 
 
 
