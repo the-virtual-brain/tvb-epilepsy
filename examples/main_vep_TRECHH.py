@@ -14,7 +14,7 @@ from tvb_epilepsy.tvb_api.simulator_tvb import *
 from tvb_epilepsy.tvb_api.epileptor_models import *
 from tvb_epilepsy.custom.readers_custom import CustomReader
 from tvb_epilepsy.custom.read_write import write_hypothesis, read_hypothesis, write_simulation_settings, \
-                                           read_simulation_settings, write_ts, write_ts_seeg
+                                           read_simulation_settings, write_ts, write_ts_epi, write_ts_seeg_epi
 from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_sim_results
 
 
@@ -279,18 +279,24 @@ if __name__ == "__main__":
                 res['hpf'][:, i] = filter_data(res['lfp'][:, i], hpf_low, hpf_high, hpf_fs)
                 res['hpf'] = numpy.array(res['hpf'], dtype='float32')
 
-        write_ts(res, dt, path=os.path.join(FOLDER_RES, hyp.name + "_ts.h5"))
+        #write_ts(res, dt, path=os.path.join(FOLDER_RES, hyp.name + "_ts.h5"))
 
         if isinstance(sim.model, EpileptorDP2D):
+            raw_data = numpy.dstack([res["x1"], res["z"], res["x1"]])
             for i in range(len(projections)):
                 res['seeg'+str(i)] = numpy.dot(res['z'], projections[i].T)
         else:
+            raw_data = numpy.dstack([res["x1"], res["z"], res["x2"]])
             for i in range(len(projections)):
                 res['seeg' + str(i)] = numpy.dot(res['hpf'], projections[i].T)
 
+        lfp_data = res["lfp"]
+        write_ts_epi(raw_data, dt, lfp_data, path=os.path.join(FOLDER_RES, hyp.name + "_ep_ts.h5"))
+        del raw_data, lfp_data
+
         for i in range(len(projections)):
-            write_ts_seeg(res['seeg' + str(i)], dt,
-                          path=os.path.join(FOLDER_RES, hyp.name + "_ts.h5"))
+            write_ts_seeg_epi(res['seeg' + str(i)], dt,
+                          path=os.path.join(FOLDER_RES, hyp.name + "_ep_ts.h5"))
 
         res['time'] = time
 

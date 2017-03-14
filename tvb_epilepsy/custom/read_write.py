@@ -346,18 +346,12 @@ def read_ts(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5"), data=None):
 
 
 def write_ts(raw_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts_from_python.h5")):
+
     if os.path.exists(path):
         print "TS file %s already exists. Use a different name!" % path
         return
-    # if raw_data is None or len(raw_data.shape) != 3:
-    #     print "Invalid TS data 3D (time, channels, sv) expected"
-    #     return
 
     print "Writing a TS at:", path
-    # yc = raw_data[:, :, 0]
-    # y2 = raw_data[:, :, 2]
-    # lfp_data = y2 - yc
-    # lfp_data = lfp_data.reshape((lfp_data.shape[0], lfp_data.shape[1], 1))
 
     h5_file = h5py.File(path, 'a', libver='latest')
     write_metadata({KEY_TYPE: "TimeSeries"}, h5_file, KEY_DATE, KEY_VERSION)
@@ -378,15 +372,10 @@ def write_ts(raw_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, 
     elif isinstance(raw_data, numpy.ndarray):
         if len(raw_data.shape) != 2 and str(raw_data.dtype)[0] != "f":
             h5_file.create_dataset("/data", data=raw_data)
-    #h5_file.create_dataset("/lfpdata", data=lfp_data)
             write_metadata({KEY_MAX: raw_data.max(), KEY_MIN: raw_data.min(),
                          KEY_STEPS: raw_data.shape[0], KEY_CHANNELS: raw_data.shape[1], KEY_SV: 1,
                          KEY_SAMPLING: sampling_period, KEY_START: 0.0
                          }, h5_file, KEY_DATE, KEY_VERSION, "/data")
-    # write_metadata({KEY_MAX: lfp_data.max(), KEY_MIN: lfp_data.min(),
-    #                  KEY_STEPS: lfp_data.shape[0], KEY_CHANNELS: lfp_data.shape[1], KEY_SV: 1,
-    #                  KEY_SAMPLING: sampling_period, KEY_START: 0.0
-    #                  }, h5_file, KEY_DATE, KEY_VERSION, "/lfpdata")
         else:
             raise ValueError("Invalid TS data. 2D (time, nodes) numpy.ndarray of floats expected")
 
@@ -396,8 +385,63 @@ def write_ts(raw_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, 
     h5_file.close()
 
 
-def write_ts_seeg(seeg_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts_from_python.h5")):
+def read_ts_epi(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5")):
+    """
+    :param path: Path towards a valid TimeSeries H5 file
+    :return: Timeseries in a numpy array
+    """
+    print "Reading TimeSeries from:", path
+    h5_file = h5py.File(path, 'r', libver='latest')
 
+    print_metadata(h5_file)
+    print "Structures:", h5_file["/"].keys()
+    print "Data expected shape:", h5_file['/data'].shape
+
+    data = h5_file['/data'][()]
+    print "Actual Data shape", data.shape
+    print "First Channel sv sum", numpy.sum(data[:, 0, :], axis=1)
+
+    h5_file.close()
+    return data
+
+
+def write_ts_epi(raw_data, sampling_period, lfp_data=None,
+                 path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts_from_python.h5")):
+    if os.path.exists(path):
+        print "TS file %s already exists. Use a different name!" % path
+        return
+    if raw_data is None or len(raw_data.shape) != 3:
+        print "Invalid TS data 3D (time, regions, sv) expected"
+        return
+
+    print "Writing a TS at:", path
+    if type(lfp_data) == int:
+        lfp_data = raw_data[:, :, lfp_data[1]]
+        raw_data[:, :, lfp_data[1]] = []
+    elif isinstance(lfp_data, list):
+        lfp_data = raw_data[:, :, lfp_data[1]] - raw_data[:, :, lfp_data[0]]
+    elif isinstance(lfp_data, numpy.ndarray):
+        lfp_data = lfp_data.reshape((lfp_data.shape[0], lfp_data.shape[1], 1))
+    else:
+        print "Invalid lfp_data 3D (time, regions, sv) expected"
+
+    h5_file = h5py.File(path, 'a', libver='latest')
+    h5_file.create_dataset("/data", data=raw_data)
+    h5_file.create_dataset("/lfpdata", data=lfp_data)
+
+    write_metadata({KEY_TYPE: "TimeSeries"}, h5_file, KEY_DATE, KEY_VERSION)
+    write_metadata({KEY_MAX: raw_data.max(), KEY_MIN: raw_data.min(),
+                     KEY_STEPS: raw_data.shape[0], KEY_CHANNELS: raw_data.shape[1], KEY_SV: raw_data.shape[2],
+                     KEY_SAMPLING: sampling_period, KEY_START: 0.0
+                     }, h5_file, KEY_DATE, KEY_VERSION, "/data")
+    write_metadata({KEY_MAX: lfp_data.max(), KEY_MIN: lfp_data.min(),
+                     KEY_STEPS: lfp_data.shape[0], KEY_CHANNELS: lfp_data.shape[1], KEY_SV: 1,
+                     KEY_SAMPLING: sampling_period, KEY_START: 0.0
+                     }, h5_file, KEY_DATE, KEY_VERSION, "/lfpdata")
+    h5_file.close()
+
+
+def write_ts_seeg_epi(seeg_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts_from_python.h5")):
     if not os.path.exists(path):
         print "TS file %s does exists. First define the raw data!" % path
         return
@@ -417,7 +461,6 @@ def write_ts_seeg(seeg_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_
     except Exception, e:
         print e
         print "Seeg dataset already written %s" % sensors_name
-
 
 if __name__ == "__main__":
     read_epileptogenicity()
