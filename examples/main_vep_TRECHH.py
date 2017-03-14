@@ -14,7 +14,7 @@ from tvb_epilepsy.tvb_api.simulator_tvb import *
 from tvb_epilepsy.tvb_api.epileptor_models import *
 from tvb_epilepsy.custom.readers_custom import CustomReader
 from tvb_epilepsy.custom.read_write import write_hypothesis, read_hypothesis, write_simulation_settings, \
-                                           read_simulation_settings
+                                           read_simulation_settings, write_ts, write_ts_seeg
 from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_sim_results
 
 
@@ -56,30 +56,36 @@ if __name__ == "__main__":
     logger.info("We will be reading from location " + data_folder)
     head = reader.read_head(data_folder)
     logger.debug("Loaded Head " + str(head))
-    
-    #Read TREC connectivity with hypothalamus pathology
-    data_folder = os.path.join(DATA_TRECHH, CONNECT_DATA) 
-    reader = TVBReader()
-    TRECHHcon = reader.read_connectivity(data_folder)
-    logger.debug("Loaded Connectivity " + str(head.connectivity))
 
-    #Create missing hemispheres:
-    nRegions = TRECHHcon.region_labels.shape[0]
-    TRECHHcon.hemispheres = np.ones((nRegions,),dtype='int')
-    for ii in range(nRegions):
-        if (TRECHHcon.region_labels[ii].find('Right') == -1) and \
-           (TRECHHcon.region_labels[ii].find('-rh-') == -1):  # -1 will be returned when a is not in b
-           TRECHHcon.hemispheres[ii]=0
-           
-    #Adjust pathological connectivity     
-    w_hyp = np.ones((nRegions,nRegions),dtype = 'float')
-    if Khyp>1.0:
-        w_hyp[(nRegions-2):,:] = Khyp 
-        w_hyp[:,(nRegions-2):] = Khyp 
-    TRECHHcon.normalized_weights = w_hyp*TRECHHcon.normalized_weights   
-    
-    #Update head with the correct connectivity and sensors' projections
-    head.connectivity = TRECHHcon
+    # ---------------------------------Hypothalamus pathology addition--------------------------------------------------
+
+    # #Read TREC connectivity with hypothalamus pathology
+    # data_folder = os.path.join(DATA_TRECHH, CONNECT_DATA)
+    # reader = TVBReader()
+    # TRECHHcon = reader.read_connectivity(data_folder)
+    # logger.debug("Loaded Connectivity " + str(head.connectivity))
+    #
+    # #Create missing hemispheres:
+    # nRegions = TRECHHcon.region_labels.shape[0]
+    # TRECHHcon.hemispheres = np.ones((nRegions,),dtype='int')
+    # for ii in range(nRegions):
+    #     if (TRECHHcon.region_labels[ii].find('Right') == -1) and \
+    #        (TRECHHcon.region_labels[ii].find('-rh-') == -1):  # -1 will be returned when a is not in b
+    #        TRECHHcon.hemispheres[ii]=0
+    #
+    # #Adjust pathological connectivity
+    # w_hyp = np.ones((nRegions,nRegions),dtype = 'float')
+    # if Khyp>1.0:
+    #     w_hyp[(nRegions-2):,:] = Khyp
+    #     w_hyp[:,(nRegions-2):] = Khyp
+    # TRECHHcon.normalized_weights = w_hyp*TRECHHcon.normalized_weights
+    #
+    # #Update head with the correct connectivity and sensors' projections
+    # head.connectivity = TRECHHcon
+
+    # ------------------------------------------------------------------------------------------------------------------
+
+    #Compute projections
     sensorsSEEG=[]
     projections=[]    
     for sensors, projection in head.sensorsSEEG.iteritems():
@@ -248,7 +254,7 @@ if __name__ == "__main__":
         logger.info("Time: " + str(scale_time*ttavg[0]) + " - " + str(scale_time*ttavg[-1]))
         logger.info("Values: " + str(tavg_data.min()) + " - " + str(tavg_data.max()))
 
-        write_simulation_settings(model, sim_settings, folder_name=FOLDER_RES, file_name=hyp.name+"sim_settings.h5")
+        write_simulation_settings(model, sim_settings, folder_name=FOLDER_RES, file_name=hyp.name+"_sim_settings.h5")
 
         # Test write, read and assert functions
         # from tvb_epilepsy.base.utils import assert_equal_objects
@@ -262,23 +268,31 @@ if __name__ == "__main__":
 
         #Pack results into a dictionary, high pass filter, and compute SEEG
         res = dict()
+        time = scale_time * numpy.array(ttavg, dtype='float32')
+        dt = numpy.min(numpy.diff(time))
         for iv in range(len(vois)):
             res[vois[iv]] = numpy.array(tavg_data[:, iv, :, 0], dtype='float32')
 
-        res['seeg'] = []
-        if isinstance(sim.model, EpileptorDP2D):
-            for i in range(len(projections)):
-                res['seeg'+str(i)] = numpy.dot(res['z'], projections[i].T)
-        else:
+        if not(isinstance(sim.model, EpileptorDP2D)):
             res['hpf'] = numpy.empty((ttavg.size, hyp.n_regions)).astype(numpy.float32)
             for i in range(hyp.n_regions):
                 res['hpf'][:, i] = filter_data(res['lfp'][:, i], hpf_low, hpf_high, hpf_fs)
                 res['hpf'] = numpy.array(res['hpf'], dtype='float32')
-                res['seeg'] = []
-                for i in range(len(projections)):
-                    res['seeg' + str(i)] = numpy.dot(res['hpf'], projections[i].T)
 
-        res['time'] = scale_time * numpy.array(ttavg, dtype='float32')
+        write_ts(res, dt, path=os.path.join(FOLDER_RES, hyp.name + "_ts.h5"))
+
+        if isinstance(sim.model, EpileptorDP2D):
+            for i in range(len(projections)):
+                res['seeg'+str(i)] = numpy.dot(res['z'], projections[i].T)
+        else:
+            for i in range(len(projections)):
+                res['seeg' + str(i)] = numpy.dot(res['hpf'], projections[i].T)
+
+        for i in range(len(projections)):
+            write_ts_seeg(res['seeg' + str(i)], dt,
+                          path=os.path.join(FOLDER_RES, hyp.name + "_ts.h5"))
+
+        res['time'] = time
 
         del ttavg, tavg_data
 
@@ -288,7 +302,9 @@ if __name__ == "__main__":
         #Save results
         res['time_units'] = 'msec'
         savemat(os.path.join(FOLDER_RES, hyp.name + "_ts.mat"), res)
-        write_object_to_h5_file(res, os.path.join(FOLDER_RES, hyp.name + "_ts.h5"))
+        #write_object_to_h5_file(res, os.path.join(FOLDER_RES, hyp.name + "_ts.h5"),
+                                # keys={"date": "EPI_Last_update", "version": "EPI_Version",
+                                #       "EPI_Type": "TimeSeries"})
 
         # from tvb_epilepsy.base.utils import read_object_from_h5_file, assert_equal_objects
         # res2 = read_object_from_h5_file(dict(), os.path.join(FOLDER_RES, hyp.name + "_ts.h5"),

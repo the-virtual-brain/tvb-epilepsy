@@ -239,9 +239,21 @@ def write_simulation_settings(model, sim_settings, folder_name=None, file_name=N
 
     h5_file = h5py.File(final_path, 'a', libver='latest')
     # TODO: confirm these keys
-    h5_file.attrs.create("EPI_Type", "SimulationSettings")
+    h5_file.attrs.create("EPI_Type", "HypothesisModel")
+    #h5_file.attrs.create("EPI_Type", "SimulationSettings")
 
-    write_object_to_h5_file(model, h5_file, epileptor_model_attributes_dict[model._ui_name])
+    # Convert some scalar model parameters to vectors to be viewable like the rest
+    attributes_dict = epileptor_model_attributes_dict[model._ui_name]
+    for attr in attributes_dict:
+        p = model.x0.shape
+        field = getattr(model, attributes_dict[attr])
+        if isinstance(field,(float, int, long, complex)) \
+            or (isinstance(field,(numpy.ndarray))
+                and numpy.all(str(field.dtype)[1] != numpy.array(["O", "S"])) and field.size == 1):
+            setattr(model, attributes_dict[attr], field * numpy.ones(p))
+
+    write_object_to_h5_file(model, h5_file, attributes_dict)
+
     # overwrite_fields_dict = \
     #     {"Monitor expressions": (list_of_strings_to_string(sim_settings.monitor_expressions), "overwrite"),
     #      "Variables names": (list_of_strings_to_string(sim_settings.variables_names), "overwrite")}
@@ -303,21 +315,31 @@ def read_simulation_settings(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "sim_
     return model, sim_settings
 
 
-def read_ts(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5")):
+def read_ts(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5"), data=None):
     """
     :param path: Path towards a valid TimeSeries H5 file
     :return: Timeseries in a numpy array
     """
     print "Reading TimeSeries from:", path
     h5_file = h5py.File(path, 'r', libver='latest')
-
     print_metadata(h5_file)
     print "Structures:", h5_file["/"].keys()
-    print "Data expected shape:", h5_file['/data'].shape
 
-    data = h5_file['/data'][()]
-    print "Actual Data shape", data.shape
-    print "First Channel sv sum", numpy.sum(data[:, 0, :], axis=1)
+    if isinstance(data, dict):
+
+        for key in data:
+            print "Data expected shape:", h5_file['/'+key].shape
+            data[key] = h5_file['/'+key][()]
+            print "Actual Data shape", data[key].shape
+            print "First Channel sv sum", numpy.sum(data[key][:, 0])
+
+    else:
+
+        print "Data expected shape:", h5_file['/data'].shape
+
+        data = h5_file['/data'][()]
+        print "Actual Data shape", data.shape
+        print "First Channel sv sum", numpy.sum(data[:, 0])
 
     h5_file.close()
     return data
@@ -327,33 +349,55 @@ def write_ts(raw_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, 
     if os.path.exists(path):
         print "TS file %s already exists. Use a different name!" % path
         return
-    if raw_data is None or len(raw_data.shape) != 3:
-        print "Invalid TS data 3D (time, channels, sv) expected"
-        return
+    # if raw_data is None or len(raw_data.shape) != 3:
+    #     print "Invalid TS data 3D (time, channels, sv) expected"
+    #     return
 
     print "Writing a TS at:", path
-    yc = raw_data[:, :, 0]
-    y2 = raw_data[:, :, 2]
-    lfp_data = y2 - yc
-    lfp_data = lfp_data.reshape((lfp_data.shape[0], lfp_data.shape[1], 1))
+    # yc = raw_data[:, :, 0]
+    # y2 = raw_data[:, :, 2]
+    # lfp_data = y2 - yc
+    # lfp_data = lfp_data.reshape((lfp_data.shape[0], lfp_data.shape[1], 1))
 
     h5_file = h5py.File(path, 'a', libver='latest')
-    h5_file.create_dataset("/data", data=raw_data)
-    h5_file.create_dataset("/lfpdata", data=lfp_data)
-
     write_metadata({KEY_TYPE: "TimeSeries"}, h5_file, KEY_DATE, KEY_VERSION)
-    write_metadata({KEY_MAX: raw_data.max(), KEY_MIN: raw_data.min(),
-                     KEY_STEPS: raw_data.shape[0], KEY_CHANNELS: raw_data.shape[1], KEY_SV: raw_data.shape[2],
-                     KEY_SAMPLING: sampling_period, KEY_START: 0.0
-                     }, h5_file, KEY_DATE, KEY_VERSION, "/data")
-    write_metadata({KEY_MAX: lfp_data.max(), KEY_MIN: lfp_data.min(),
-                     KEY_STEPS: lfp_data.shape[0], KEY_CHANNELS: lfp_data.shape[1], KEY_SV: 1,
-                     KEY_SAMPLING: sampling_period, KEY_START: 0.0
-                     }, h5_file, KEY_DATE, KEY_VERSION, "/lfpdata")
+
+    if isinstance(raw_data, dict):
+        for data in raw_data:
+            print "Writing " + data
+            if len(raw_data[data].shape) == 2 and str(raw_data[data].dtype)[0] == "f":
+                h5_file.create_dataset("/"+data, data=raw_data[data])
+                write_metadata({KEY_MAX: raw_data[data].max(), KEY_MIN: raw_data[data].min(),
+                                KEY_STEPS: raw_data[data].shape[0], KEY_CHANNELS: raw_data[data].shape[1],
+                                KEY_SV: 1,
+                                KEY_SAMPLING: sampling_period, KEY_START: 0.0
+                                }, h5_file, KEY_DATE, KEY_VERSION, "/"+data)
+            else:
+                raise ValueError("Invalid TS data. 2D (time, nodes) numpy.ndarray of floats expected")
+
+    elif isinstance(raw_data, numpy.ndarray):
+        if len(raw_data.shape) != 2 and str(raw_data.dtype)[0] != "f":
+            h5_file.create_dataset("/data", data=raw_data)
+    #h5_file.create_dataset("/lfpdata", data=lfp_data)
+            write_metadata({KEY_MAX: raw_data.max(), KEY_MIN: raw_data.min(),
+                         KEY_STEPS: raw_data.shape[0], KEY_CHANNELS: raw_data.shape[1], KEY_SV: 1,
+                         KEY_SAMPLING: sampling_period, KEY_START: 0.0
+                         }, h5_file, KEY_DATE, KEY_VERSION, "/data")
+    # write_metadata({KEY_MAX: lfp_data.max(), KEY_MIN: lfp_data.min(),
+    #                  KEY_STEPS: lfp_data.shape[0], KEY_CHANNELS: lfp_data.shape[1], KEY_SV: 1,
+    #                  KEY_SAMPLING: sampling_period, KEY_START: 0.0
+    #                  }, h5_file, KEY_DATE, KEY_VERSION, "/lfpdata")
+        else:
+            raise ValueError("Invalid TS data. 2D (time, nodes) numpy.ndarray of floats expected")
+
+    else:
+        raise ValueError("Invalid TS data. Dictionary or 2D (time, nodes) numpy.ndarray of floats expected")
+
     h5_file.close()
 
 
 def write_ts_seeg(seeg_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts_from_python.h5")):
+
     if not os.path.exists(path):
         print "TS file %s does exists. First define the raw data!" % path
         return

@@ -264,13 +264,15 @@ def write_metadata(meta_dict, h5_file, key_date, key_version, path="/"):
 
 
 # TODO: modify functions to write and read h5 files recursively when objects to be read or written are dict()
-def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrite_fields_dict=None):
+def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrite_fields_dict=None, keys=None):
 
     logger = get_logger()
 
     if isinstance(h5_file, basestring):
         print "Writing to: ", h5_file
         h5_file = h5py.File(h5_file, 'a', libver='latest')
+        if isinstance(keys, dict):
+            write_metadata(keys, h5_file, keys["date"], keys["version"], path="/")
 
     if isinstance(object, dict):
         get_field = lambda object, key: object[key]
