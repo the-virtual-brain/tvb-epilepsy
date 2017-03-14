@@ -37,7 +37,7 @@ def list_of_strings_to_string(lstr, sep=","):
     return str
 
 
-def assert_array_shape(x, shape):
+def sc2arr(x, shape):
 
     if isinstance(x, numpy.ndarray):
 
@@ -54,8 +54,22 @@ def assert_array_shape(x, shape):
     elif isinstance(x, (float, int, long, complex)):
         return x * numpy.ones(shape, dtype=type(x))
 
+    elif isinstance(x, list):
+        # assuming a list of symbols...
+        return numpy.array(x, dtype=type(x[0]))
+
     else:
-        raise ValueError("Input of " + str() + " is neither numeric nor of type numpy.ndarray")
+        try:
+            import sympy
+        except:
+            raise ImportError()
+
+        if isinstance(x, tuple(sympy.core.all_classes)):
+            return numpy.tile(x, shape)
+
+        else:
+            raise ValueError("Input " + str(x) + " of type " + str(type(x)) + " is not numeric, "
+                                                                              "of type numpy.ndarray, nor Symbol")
 
 
 def linear_scaling(x, x1, x2, y1, y2):
@@ -88,6 +102,7 @@ def obj_to_dict(obj):
         ret[key] = obj_to_dict(val)
     return ret
 
+
 def vector2scalar(x):
     if not (isinstance(x, numpy.ndarray)):
         return x
@@ -97,6 +112,7 @@ def vector2scalar(x):
         return y[0]
     else:
         return reg_dict(x)
+
 
 def reg_dict(x, lbl=None, sort=None):
     """

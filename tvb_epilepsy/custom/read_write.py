@@ -58,7 +58,7 @@ epileptorDPrealistic_attributes_dict = {"model.name": "_ui_name", "model.yc": "y
 
 epileptorDP2D_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0": "x0", "model.x0cr": "x0cr",
                                  "model.r": "r", "model.Iext1": "Iext1", "model.slope": "slope", "model.Kvf": "Kvf",
-                                 "model.Kf": "Kf", "model.K": "K", "model.tau1": "tau1", "model.zmode": "zmode"}
+                                 "model.K": "K", "model.tau1": "tau1", "model.zmode": "zmode"}
 
 epileptor_model_attributes_dict = {"Epileptor": epileptor_attributes_dict,
                                    "EpileptorDP": epileptorDP_attributes_dict,

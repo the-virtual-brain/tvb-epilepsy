@@ -58,7 +58,8 @@ def sc2arr(x, shape):
             return numpy.tile(x, shape)
 
         else:
-            raise ValueError("Input " + str(x) + " of type " + str(type(x)) + " is not numeric, of type numpy.ndarray, nor Symbol")
+            raise ValueError("Input " + str(x) + " of type " + str(type(x)) + " is not numeric, "
+                                                                              "of type numpy.ndarray, nor Symbol")
 
 
 if SYMBOLIC_EQUATIONS_FLAG:
@@ -170,15 +171,15 @@ if SYMBOLIC_EQUATIONS_FLAG:
 
         f = eqtn_fparam_vars(x0_var.size, pmode=numpy.array("const"))[0]
 
-        return numpy.reshape(f[0](sc2arr(x0, p), x0_var, sc2arr(tau1, p)),
+        return numpy.reshape(f[0](x0_var, sc2arr(x0, p), sc2arr(tau1, p)),
                              x0_var.shape).astype(x0_var.dtype), \
-               numpy.reshape(f[1](sc2arr(z, p), sc2arr(g, p), sc2arr(slope, p), sc2arr(slope_var, p), sc2arr(tau1, p)),
+               numpy.reshape(f[1](sc2arr(z, p), sc2arr(g, p), sc2arr(slope_var, p), sc2arr(slope, p), sc2arr(tau1, p)),
                              slope_var.shape).astype(slope_var.dtype), \
-               numpy.reshape(f[2](sc2arr(Iext1, p), sc2arr(Iext1_var, p), sc2arr(tau1, p), sc2arr(tau0, p)),
+               numpy.reshape(f[2](sc2arr(Iext1_var, p), sc2arr(Iext1, p), sc2arr(tau1, p), sc2arr(tau0, p)),
                              Iext1_var.shape).astype(Iext1_var.dtype), \
-               numpy.reshape(f[3](sc2arr(z, p), sc2arr(g, p), sc2arr(Iext2, p), sc2arr(Iext2_var, p), sc2arr(tau1, p)),
+               numpy.reshape(f[3](sc2arr(z, p), sc2arr(g, p), sc2arr(Iext2_var, p), sc2arr(Iext2, p), sc2arr(tau1, p)),
                              Iext2_var.shape).astype(Iext2_var.dtype), \
-               numpy.reshape(f[4](sc2arr(K, p), sc2arr(K_var, p), sc2arr(tau1, p), sc2arr(tau0, p)),
+               numpy.reshape(f[4](sc2arr(K_var, p), sc2arr(K, p), sc2arr(tau1, p), sc2arr(tau0, p)),
                              K_var.shape).astype(K_var.dtype)
 
 
@@ -256,15 +257,15 @@ if SYMBOLIC_EQUATIONS_FLAG:
 
                 f[0, :] = numpy.array(dfun[0](x1, z, y1, x2, Iext1_var, slope_var, a, b, tau1), dtype=x1.dtype)
                 f[1, :] = numpy.array(dfun[1](x1, y1, yc, d, tau1), dtype=x1.dtype)
-                f[2, :] = numpy.array(dfun[2](x1, z, x0_var, x0cr, r, K, w, tau1, tau0), dtype=x1.dtype)
+                f[2, :] = numpy.array(dfun[2](x1, z, x0_var, x0cr, r, K_var, w, tau1, tau0), dtype=x1.dtype)
                 f[3, :] = numpy.array(dfun[3](x2, y2, z, g, Iext2_var, tau1), dtype=x1.dtype)
                 f[4, :] = numpy.array(dfun[4](x2, y2, s, tau1, tau2), dtype=x1.dtype)
                 f[5, :] = numpy.array(dfun[5](x1, g, gamma, tau1), dtype=x1.dtype)
-                f[6, :] = numpy.array(dfun[6](x0, x0_var, tau1), dtype=x1.dtype)
-                f[7, :] = numpy.array(dfun[7](z, g, slope, slope_var, tau1), dtype=x1.dtype)
-                f[8, :] = numpy.array(dfun[8](Iext1, Iext1_var, tau1, tau0), dtype=x1.dtype)
-                f[9, :] = numpy.array(dfun[9](z, g, Iext2, Iext2_var, tau1), dtype=x1.dtype)
-                f[10, :] = numpy.array(dfun[10](K, K_var, tau1, tau0), dtype=x1.dtype)
+                f[6, :] = numpy.array(dfun[6](x0_var, x0, tau1), dtype=x1.dtype)
+                f[7, :] = numpy.array(dfun[7](z, g, slope_var, slope, tau1), dtype=x1.dtype)
+                f[8, :] = numpy.array(dfun[8](Iext1_var, Iext1, tau1, tau0), dtype=x1.dtype)
+                f[9, :] = numpy.array(dfun[9](z, g, Iext2_var, Iext2, tau1), dtype=x1.dtype)
+                f[10, :] = numpy.array(dfun[10](K_var, K, tau1, tau0), dtype=x1.dtype)
 
         return f
 
@@ -275,7 +276,111 @@ if SYMBOLIC_EQUATIONS_FLAG:
                  slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.01,
                  tau1=1.0, tau0=2857.0, tau2=10.0):
 
-        jac = eqnt_jac(x1.size, model_vars, zmode, x1_neg, x2_neg, pmode)[0]
+        x1 = numpy.array(x1)
+        n_regions = x1.size
+
+        p = x1.shape
+
+        if x1_neg is None:
+            x1_neg = x1 < 0.0
+
+        if model_vars > 2:
+            if x2_neg is None:
+                x2_neg = x2 < -0.25
+
+        n = model_vars * n_regions
+        jac = numpy.zeros((n,n), dtype=x1.dtype)
+
+        ind = lambda x: x * n_regions + numpy.array(range(n_regions))
+
+        jac_lambda = eqnt_jac(x1.size, model_vars, zmode, x1_neg, x2_neg, pmode)[0]
+
+        p = x1.shape
+
+        z = sc2arr(z, p)
+        yc = sc2arr(yc, p)
+        Iext1 = sc2arr(Iext1, p)
+        slope = sc2arr(slope, p)
+        x0 = sc2arr(x0, p)
+        x0cr = sc2arr(x0cr, p)
+        r = sc2arr(r, p)
+        K = sc2arr(K, p)
+        w = sc2arr(w, (x1.size, x1.size))
+        a = sc2arr(a, p)
+        b = sc2arr(b, p)
+        tau1 = sc2arr(tau1, p)
+        tau0 = sc2arr(tau0, p)
+
+        if model_vars == 2:
+
+            jac[ind(0), :] = numpy.array(jac_lambda[0](x1, z, yc, Iext1, slope, a, b, tau1), dtype=x1.dtype)
+            jac[ind(1), :] = numpy.array(jac_lambda[1](x1, z, x0, x0cr, r, K, w, tau1, tau0), dtype=x1.dtype)
+
+        else:
+
+            y1 = sc2arr(y1, p)
+            x2 = sc2arr(x2, p)
+            y2 = sc2arr(y2, p)
+            g = sc2arr(g, p)
+            Iext2 = sc2arr(Iext2, p)
+            tau2 = sc2arr(tau2, p)
+            gamma = sc2arr(gamma, p)
+            d = sc2arr(d, p)
+            s = sc2arr(s, p)
+
+            if model_vars == 6:
+
+                jac[ind(0), :] = numpy.array(jac_lambda[0](x1, y1, z, x2, y2, g, Iext1, slope, a, b, tau1),
+                                             dtype=x1.dtype)
+                jac[ind(1), :] = numpy.array(jac_lambda[1](x1, y1, z, x2, y2, g, yc, d, tau1), dtype=x1.dtype)
+                jac[ind(2), :] = numpy.array(jac_lambda[2](x1, y1, z, x2, y2, g, x0, x0cr, r, K, w, tau1, tau0),
+                                             dtype=x1.dtype)
+                jac[ind(3), :] = numpy.array(jac_lambda[3](x1, y1, z, x2, y2, g, Iext2, tau1), dtype=x1.dtype)
+                jac[ind(4), :] = numpy.array(jac_lambda[4](x1, y1, z, x2, y2, g, s, tau1, tau2), dtype=x1.dtype)
+                jac[ind(5), :] = numpy.array(jac_lambda[5](x1, y1, z, x2, y2, g, gamma, tau1), dtype=x1.dtype)
+
+
+            elif model_vars == 11:
+
+                x0_var = sc2arr(x0_var, p)
+                slope_var = sc2arr(slope_var, p)
+                Iext1_var = sc2arr(Iext1_var, p)
+                Iext2_var = sc2arr(Iext2_var, p)
+                K_var = sc2arr(K_var, p)
+
+                jac[ind(0), :] = numpy.array(jac_lambda[0](x1, y1, z, x2, y2, g,
+                                                           x0_var, slope_var, Iext1_var, Iext2_var, K_var,
+                                                           a, b, tau1), dtype=x1.dtype)
+                jac[ind(1), :] = numpy.array(jac_lambda[1](x1, y1, z, x2, y2, g,
+                                                           x0_var, slope_var, Iext1_var, Iext2_var, K_var,
+                                                           yc, d, tau1), dtype=x1.dtype)
+                jac[ind(2), :] = numpy.array(jac_lambda[2](x1, y1, z, x2, y2, g,
+                                                           x0_var, slope_var, Iext1_var, Iext2_var, K_var,
+                                                           x0cr, r, w, tau1, tau0), dtype=x1.dtype)
+                jac[ind(3), :] = numpy.array(jac_lambda[3](x1, y1, z, x2, y2, g,
+                                                           x0_var, slope_var, Iext1_var, Iext2_var, K_var,
+                                                           tau1), dtype=x1.dtype)
+                jac[ind(4), :] = numpy.array(jac_lambda[4](x1, y1, z, x2, y2, g,
+                                                           x0_var, slope_var, Iext1_var, Iext2_var, K_var,
+                                                           s, tau1, tau2), dtype=x1.dtype)
+                jac[ind(5), :] = numpy.array(jac_lambda[5](x1, y1, z, x2, y2, g,
+                                                           x0_var, slope_var, Iext1_var, Iext2_var, K_var,
+                                                           gamma, tau1), dtype=x1.dtype)
+                jac[ind(6), :] = numpy.array(jac_lambda[6](x1, y1, z, x2, y2, g,
+                                                           x0_var, slope_var, Iext1_var, Iext2_var, K_var,
+                                                           x0, tau1), dtype=x1.dtype)
+                jac[ind(7), :] = numpy.array(jac_lambda[7](x1, y1, z, x2, y2, g,
+                                                           x0_var, slope_var, Iext1_var, Iext2_var, K_var,
+                                                           slope, tau1), dtype=x1.dtype)
+                jac[ind(8), :] = numpy.array(jac_lambda[8](x1, y1, z, x2, y2, g,
+                                                           x0_var, slope_var, Iext1_var, Iext2_var, K_var,
+                                                           Iext1, tau1, tau0), dtype=x1.dtype)
+                jac[ind(9), :] = numpy.array(jac_lambda[9](x1, y1, z, x2, y2, g,
+                                                           x0_var, slope_var, Iext1_var, Iext2_var, K_var,
+                                                           Iext2, tau1), dtype=x1.dtype)
+                jac[ind(10), :] = numpy.array(jac_lambda[10](x1, y1, z, x2, y2, g,
+                                                             x0_var, slope_var, Iext1_var, Iext2_var, K_var,
+                                                             K, tau1, tau0), dtype=x1.dtype)
 
         return jac
 
@@ -386,7 +491,9 @@ else:
 
         x1 = numpy.array(x1)
 
-        if numpy.any(K> 0.0) and numpy.any(w> 0.0):
+        if isinstance(K, numpy.ndarray) or isinstance(w, numpy.ndarray) or \
+                (isinstance(K, (float, int, long, complex)) and K > 0.0) or \
+                (isinstance(w, (float, int, long, complex)) and w > 0.0):
             coupl = numpy.array(calc_coupling(x1, K, w))
         else:
             coupl = 0.0
@@ -462,7 +569,7 @@ else:
         # ydot[10] = self.tau1 * (-y[10] + self.K) / self.tau0
         fK = tau1 * (-K_var + K) / tau0
 
-        return numpy.array(fx0).astype(x0.dtype), numpy.array(fslope).astype(slope_var.dtype), \
+        return numpy.array(fx0).astype(x0_var.dtype), numpy.array(fslope).astype(slope_var.dtype), \
                numpy.array(fIext1).astype(Iext1_var.dtype), numpy.array(fIext2).astype(Iext2_var.dtype), \
                numpy.array(fK).astype(K_var.dtype)
 
@@ -475,7 +582,7 @@ else:
 
         x1 = numpy.array(x1)
 
-        f = numpy.empty((model_vars, x0.size), dtype=x1.dtype)
+        f = numpy.empty((model_vars, x1.size), dtype=x1.dtype)
 
         if model_vars == 2:
 
@@ -514,64 +621,64 @@ else:
 
         from tvb_epilepsy.base.symbolic_equations import sym_vars
 
-        if isinstance(x1, (float, int, long, complex, numpy.ndarray)):
-            n_regions = x1.size
-        else:
-            x1 = len(x1)
+        n_regions = numpy.array(x1).size
 
         if model_vars == 2:
 
-            x = [sym_vars(n_regions, 'x1'), sym_vars(n_regions, 'z')]
+            x = list(sym_vars(n_regions, ['x1', 'z'])[:2])
 
-            dfun_sym = calc_dfun(x[0], x[1], yc, Iext1, x0, x0cr, r, K, w, 2, zmode, pmode, x1_neg,
+            dfun_sym = calc_dfun(x[0], x[1], yc, Iext1, x0, x0cr, r, K, w, model_vars, zmode, pmode, x1_neg,
                                  y1, x2, y2, g, x2_neg,
                                  x0_var, slope_var, Iext1_var, Iext2_var, K_var,
                                  slope, a, b, d, s, Iext2, gamma,
                                  tau1, tau0, tau2)
 
-            jac_sym = dfun_sym.jacobian(Matrix(x))
+            dfun_sym = Matrix(Matrix(dfun_sym)[:])
+
+            jac_sym = dfun_sym.jacobian(Matrix(Matrix(x)[:]))
 
             jac_lambda = lambdify(x, jac_sym, "numpy")
 
-            return numpy.array(jac_lambda([x1, z]), dtype=x1.type)
+            return numpy.array(jac_lambda(x1, z), dtype=x1.dtype)
 
 
         elif model_vars == 6:
 
-            x = [sym_vars(n_regions, 'x1'), sym_vars(n_regions, 'y1'), sym_vars(n_regions, 'z'),
-                 sym_vars(n_regions, 'x2'), sym_vars(n_regions, 'y2'), sym_vars(n_regions, 'g')]
+            x = list(sym_vars(n_regions, ['x1', 'y1', 'z', 'x2', 'y2', 'g'])[:6])
 
-            dfun_sym = calc_dfun(x[0], x[2], yc, Iext1, x0, x0cr, r, K, w, 2, zmode, pmode, x1_neg,
+            dfun_sym = calc_dfun(x[0], x[2], yc, Iext1, x0, x0cr, r, K, w, model_vars, zmode, pmode, x1_neg,
                                  x[1], x[3], x[4], x[5], x2_neg,
                                  x0_var, slope_var, Iext1_var, Iext2_var, K_var,
                                  slope, a, b, d, s, Iext2, gamma,
                                  tau1, tau0, tau2)
 
-            jac_sym = dfun_sym.jacobian(Matrix(x))
+            dfun_sym = Matrix(Matrix(dfun_sym)[:])
+
+            jac_sym = dfun_sym.jacobian(Matrix(Matrix(x)[:]))
 
             jac_lambda = lambdify(x, jac_sym, "numpy")
 
-            return numpy.array(jac_lambda([x1, y1, z, x2, y2, g]), dtype=x1.type)
+            return numpy.array(jac_lambda(x1, y1, z, x2, y2, g), dtype=x1.dtype)
 
         elif model_vars == 11:
 
-            x = [sym_vars(n_regions, 'x1'), sym_vars(n_regions, 'y1'), sym_vars(n_regions, 'z'),
-                 sym_vars(n_regions, 'x2'), sym_vars(n_regions, 'y2'), sym_vars(n_regions, 'g'),
-                 sym_vars(n_regions, 'x0_var'), sym_vars(n_regions, 'slope_var'), sym_vars(n_regions, 'Iext1_var'),
-                 sym_vars(n_regions, 'Iext2_var'), sym_vars(n_regions, 'K_var')]
+            x = list(sym_vars(n_regions, ['x1', 'y1', 'z', 'x2', 'y2', 'g',
+                                          'x0_var', 'slope_var', 'Iext1_var', 'Iext2_var', 'K_var'])[:11])
 
-            dfun_sym = calc_dfun(x[0], x[2], yc, Iext1, x0, x0cr, r, K, w, 2, zmode, pmode, x1_neg,
+            dfun_sym = calc_dfun(x[0], x[2], yc, Iext1, x0, x0cr, r, K, w, model_vars, zmode, pmode, x1_neg,
                                  x[1], x[3], x[4], x[5], x2_neg,
                                  x[6], x[7], x[8], x[9], x[10],
                                  slope, a, b, d, s, Iext2, gamma,
                                  tau1, tau0, tau2)
 
-            jac_sym = dfun_sym.jacobian(Matrix(x))
+            dfun_sym = Matrix(Matrix(dfun_sym)[:])
+
+            jac_sym = dfun_sym.jacobian(Matrix(Matrix(x)[:]))
 
             jac_lambda = lambdify(x, jac_sym, "numpy")
 
-            return numpy.array(jac_lambda([x1, y1, z, x2, y2, g, x0_var, slope_var, Iext1_var, Iext2_var, K_var]),
-                                   dtype=x1.type)
+            return numpy.array(jac_lambda(x1, y1, z, x2, y2, g, x0_var, slope_var, Iext1_var, Iext2_var, K_var),
+                               dtype=x1.dtype)
 
 
 def calc_x0cr_r(yc, Iext1, epileptor_model="2d", zmode=numpy.array("lin"),

@@ -256,7 +256,7 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
                           tau1=epileptor_model.tau1, tau0=epileptor_model.tau0)
 
     elif epileptor_model._ui_name == "EpileptorDP":
-        dfun_max_cr[2] = 10 ** -2
+        dfun_max_cr[2] = 10 ** -3
         dfun2 = calc_dfun(equilibrium_point[0].squeeze(), equilibrium_point[2].squeeze(),
                           epileptor_model.yc.squeeze(), epileptor_model.Iext1.squeeze(), epileptor_model.x0.squeeze(),
                           epileptor_model.x0cr.squeeze(), epileptor_model.r.squeeze(), epileptor_model.K.squeeze(),
@@ -267,7 +267,7 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
                           tau1=epileptor_model.tau1, tau0=epileptor_model.tau0, tau2=epileptor_model.tau2)
 
     elif epileptor_model._ui_name == "EpileptorDPrealistic":
-        dfun_max_cr[2] = 10 ** -2
+        dfun_max_cr[2] = 10 ** -3
         dfun2 = calc_dfun(equilibrium_point[0].squeeze(), equilibrium_point[2].squeeze(),
                           epileptor_model.yc.squeeze(), epileptor_model.Iext1.squeeze(), epileptor_model.x0.squeeze(),
                           epileptor_model.x0cr.squeeze(), epileptor_model.r.squeeze(), epileptor_model.K.squeeze(),

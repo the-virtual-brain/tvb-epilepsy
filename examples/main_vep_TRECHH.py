@@ -283,14 +283,15 @@ if __name__ == "__main__":
 
         if isinstance(sim.model, EpileptorDP2D):
             raw_data = numpy.dstack([res["x1"], res["z"], res["x1"]])
+            lfp_data = res["x1"]
             for i in range(len(projections)):
                 res['seeg'+str(i)] = numpy.dot(res['z'], projections[i].T)
         else:
             raw_data = numpy.dstack([res["x1"], res["z"], res["x2"]])
+            lfp_data = res["lfp"]
             for i in range(len(projections)):
                 res['seeg' + str(i)] = numpy.dot(res['hpf'], projections[i].T)
 
-        lfp_data = res["lfp"]
         write_ts_epi(raw_data, dt, lfp_data, path=os.path.join(FOLDER_RES, hyp.name + "_ep_ts.h5"))
         del raw_data, lfp_data
 

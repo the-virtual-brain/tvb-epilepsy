@@ -3,7 +3,7 @@ import os
 import numpy
 from tvb_epilepsy.base.utils import get_logger, assert_equal_objects, write_object_to_h5_file, read_object_from_h5_file
 # from tvb_epilepsy.base.equations import *
-# from tvb_epilepsy.base.symbolic_equations import *
+from tvb_epilepsy.base.equations import calc_jac
 from tvb_epilepsy.base.equilibrium_computation import *
 from tvb_epilepsy.base.constants import FOLDER_RES, SYMBOLIC_EQUATIONS_FLAG
 
@@ -48,6 +48,12 @@ if __name__ == "__main__":
                          x2_neg=True, x0_var=x0, slope_var=slope, Iext1_var=Iext1, Iext2_var=Iext2, K_var=K,
                          slope=slope, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.01, tau1=1.0, tau0=2857.0,
                          tau2=10.0)
+
+        jac = calc_jac(x1eq, zeq, yc, Iext1, x0, x0cr, r, K, w, model_vars, zmode, pmode, x1_neg=True,
+                         x2_neg=True, x0_var=x0, slope_var=slope, Iext1_var=Iext1, Iext2_var=Iext2, K_var=K,
+                         slope=slope, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.01, tau1=1.0, tau0=2857.0,
+                         tau2=10.0)
+
     else:
 
         # all >=6D models
@@ -68,6 +74,13 @@ if __name__ == "__main__":
                              x0_var=x0, slope_var=slope_eq, Iext1_var=Iext1, Iext2_var=Iext2_eq, K_var=K,
                              slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.01, tau1=1.0, tau0=2857.0,
                              tau2=10.0)
+
+            jac = calc_jac(x1eq, zeq, yc, Iext1, x0, x0cr, r, K, w, model_vars, zmode, pmode, x1_neg=True,
+                             y1=y1eq, x2=x2eq, y2=y2eq, g=geq, x2_neg=True,
+                             x0_var=x0, slope_var=slope_eq, Iext1_var=Iext1, Iext2_var=Iext2_eq, K_var=K,
+                             slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.01, tau1=1.0, tau0=2857.0,
+                             tau2=10.0)
+
         else:
 
             # all >=6D models
@@ -80,10 +93,20 @@ if __name__ == "__main__":
                       slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.01, tau1=1.0, tau0=2857.0,
                       tau2=10.0)
 
+            jac = calc_jac(x1eq, zeq, yc, Iext1, x0, x0cr, r, K, w, model_vars, zmode, pmode, x1_neg=True,
+                      y1=y1eq, x2=x2eq, y2=y2eq, g=geq, x2_neg=True,
+                      x0_var=x0, slope_var=slope, Iext1_var=Iext1, Iext2_var=Iext2, K_var=K,
+                      slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.01, tau1=1.0, tau0=2857.0,
+                      tau2=10.0)
+
     print equilibrium_point
 
     print dfun
 
-    write_object_to_h5_file({"eq": equilibrium_point, "f": dfun},
+    print jac
+
+    write_object_to_h5_file({"eq": equilibrium_point, "dfun": dfun, "jac": jac},
                             os.path.join(FOLDER_RES, model+"Symbolic"+str(SYMBOLIC_EQUATIONS_FLAG)+".h5"))
+
+
 
