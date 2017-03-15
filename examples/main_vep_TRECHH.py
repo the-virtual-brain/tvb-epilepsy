@@ -181,7 +181,7 @@ if __name__ == "__main__":
     plot_hypothesis(hyp_exc, head.connectivity.region_labels,
                     save_flag=SAVE_FLAG, show_flag=True,
                     figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
-    write_hypothesis(hyp_exc, folder_name=FOLDER_RES, file_name="hyp_exc", hypo_name=None)
+    write_hypothesis(hyp_exc, folder_name=FOLDER_RES, file_name="hyp_exc.h5", hypo_name=None)
     #
     # x0_opt = numpy.array(hyp_exc.x0)
     # x1EQ_opt = numpy.array(hyp_exc.x1EQ)
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     # plot_hypothesis(hyp_exc, head.connectivity.region_labels,
     #                 save_flag=SAVE_FLAG, show_flag=True,
     #                 figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
-    # write_hypothesis(hyp_exc, folder_name=FOLDER_RES, file_name="hyp_exc2", hypo_name=None)
+    # write_hypothesis(hyp_exc, folder_name=FOLDER_RES, file_name="hyp_exc2.h5", hypo_name=None)
 
 #------------------------------Simulation--------------------------------------
 
