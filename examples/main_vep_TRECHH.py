@@ -170,18 +170,18 @@ if __name__ == "__main__":
     # ix0 =range(head.number_of_regions)
     # x0 = (X0_DEF * numpy.ones((len(ix0),), dtype='float32')).tolist()
 
-    # hyp_exc = cp.deepcopy(hyp_ep)
-    # hyp_exc.name = "EP & x0 Hypothesis"
-    # hyp_exc.x1eq_mode = "linTaylor"
-    # ix0 = [51]
-    # x0 = (0.5 * numpy.ones((len(ix0),), dtype='float32')).tolist()
-    #
-    # hyp_exc.configure_x0_hypothesis(ix0, x0, seizure_indices)
-    #
-    # plot_hypothesis(hyp_exc, head.connectivity.region_labels,
-    #                 save_flag=SAVE_FLAG, show_flag=True,
-    #                 figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
-    # write_hypothesis(hyp_exc, folder_name=FOLDER_RES, file_name="hyp_exc", hypo_name=None)
+    hyp_exc = cp.deepcopy(hyp_ep)
+    hyp_exc.name = "EP & x0 Hypothesis"
+    hyp_exc.x1eq_mode = "optimize"
+    ix0 = [51]
+    x0 = (0.5 * numpy.ones((len(ix0),), dtype='float32')).tolist()
+
+    hyp_exc.configure_x0_hypothesis(ix0, x0, seizure_indices)
+
+    plot_hypothesis(hyp_exc, head.connectivity.region_labels,
+                    save_flag=SAVE_FLAG, show_flag=True,
+                    figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
+    write_hypothesis(hyp_exc, folder_name=FOLDER_RES, file_name="hyp_exc", hypo_name=None)
     #
     # x0_opt = numpy.array(hyp_exc.x0)
     # x1EQ_opt = numpy.array(hyp_exc.x1EQ)
@@ -214,7 +214,7 @@ if __name__ == "__main__":
                                                                    report_every_n_monitor_steps=10.0)
 
     #Now simulate and plot for each hypothesis
-    for hyp in (hyp_ep,): # ,hyp_exc #length=30000
+    for hyp in (hyp_ep, hyp_exc): # ,hyp_exc #length=30000
 
         # Choose the model and build it on top of the specific hypothesis, adjust parameters:
         model_name = 'EpileptorDP'

@@ -1,5 +1,6 @@
 import numpy
-from sympy import Symbol, symbols, exp, solve, lambdify, Matrix,MatrixSymbol, diff # jacobian,
+from sympy import Symbol, symbols, exp, solve, lambdify, Matrix, series # diff, MatrixSymbol
+
 
 def sym_vars(n_regions, vars_str, dims=1, ind_str="_"):
 
@@ -17,7 +18,6 @@ def sym_vars(n_regions, vars_str, dims=1, ind_str="_"):
         for vs in vars_str:
             vars_out.append(Symbol(vs))
             vars_dict[vs] = vars_out[-1:][0]
-
 
     elif dims == 2:
 
@@ -56,9 +56,8 @@ def eqtn_coupling(n, ix=None, jx=None, K="K"):
     x1 = numpy.reshape(x1, (1, n))
     K = numpy.reshape(K, x1.shape)
 
-    # Coupling                                                         from           to
-    coupling = (K[:, ix]*numpy.sum(numpy.dot(w[ix][:, jx], numpy.dot(i_n, x1[:, jx])
-                                                                      - numpy.dot(j_n, x1[:, ix]).T), axis=1)).tolist()
+    # Coupling                                               from                 to
+    coupling = (K[:, ix]*numpy.sum(numpy.multiply(w[ix][:, jx], i_n * x1[:, jx] - (j_n * x1[:, ix]).T), axis=1))[0].tolist()
 
     return lambdify([x1, K, w], coupling, "numpy"), coupling, vars_dict
 
@@ -113,6 +112,21 @@ def eqtn_fx1_2d(n, x1_neg=True):
     return lambdify([x1, z, yc, Iext1, slope, a, b, tau1], fx1, "numpy"), fx1, vars_dict
 
 
+def eqtn_fx1_2d_taylor(n, x0="x1lin", order=2, x1_neg=True):
+
+    fx1lin, v = eqtn_fx1_2d(n, x1_neg)[1:]
+
+    v.update(sym_vars(n, [x0])[1])
+    x0 = v[x0]
+
+    for ix in range(v["x1"].size):
+        fx1lin[ix] = series(fx1lin[ix], x=v["x1"][ix], x0=x0[ix], n=order)\
+                    .removeO().expand(v["x1"][ix]).collect(v["x1"][ix]).collect(v["tau1"][ix])
+
+    return lambdify([v["x1"], x0, v["z"], v["yc"], v["Iext1"], v["slope"], v["a"], v["b"], v["tau1"]], fx1lin, "numpy"), \
+           fx1lin, v
+
+
 def eqtn_fy1(n):
 
     x1, y1, yc, d, tau1, vars_dict = sym_vars(n, ["x1", "y1", "yc", "d", "tau1"])
@@ -133,15 +147,41 @@ def eqtn_fz(n, zmode=numpy.array("lin"), x0="x0", K="K"):
         coupling = 0
 
     if zmode == 'lin':
-        fz = (tau1 * (4 * (x1 - r * x0 + x0cr) - z - numpy.array(coupling[0])) / tau0).tolist()
+        fz = (tau1 * (4 * (x1 - r * x0 + x0cr) - z - numpy.array(coupling)) / tau0).tolist()
 
     elif zmode == 'sig':
-        fz = (tau1 * (3/(1 + numpy.exp(1.0) ** (-10.0 * (x1 + 0.5))) - r * x0 + x0cr - z - numpy.array(coupling[0]))
+        fz = (tau1 * (3/(1 + numpy.exp(1.0) ** (-10.0 * (x1 + 0.5))) - r * x0 + x0cr - z - numpy.array(coupling))
               / tau0).tolist()
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
 
     return lambdify([x1, z, x0, x0cr, r, vars_dict[K], vars_dict["w"], tau1, tau0], fz, "numpy"), fz, vars_dict
+
+
+def eqtn_fx1z_2d_jac(n, ix0, iE):
+
+    fx1, v = eqtn_fx1_2d(n)[1:]
+
+    fz, vz = eqtn_fz(n)[1:]
+
+    v.update(vz)
+    del vz
+
+    x = numpy.empty_like(v["x1"])
+    x[iE] = v["x0"][iE]
+    x[ix0] = v["x1"][ix0]
+    x = Matrix(x.tolist()).T
+
+    jac = []
+    for ix in range(n):
+        fx1[ix] = fx1[ix].subs(v["tau1"][ix], 1.0).subs(v["a"][ix], 1.0).subs(v["b"][ix], -2.0).subs(v["z"][ix], 0.0)\
+            .expand(v["x1"][ix]).collect(v["x1"][ix])
+        fz[ix] = fz[ix].subs(v["tau1"][ix], 1.0).subs(v["tau0"][ix], 1.0).subs(v["z"][ix], fx1[ix])\
+            .expand(v["x1"][ix]).collect(v["x1"][ix])
+        jac.append(Matrix([fz[ix]]).jacobian(x)[:])
+
+    return lambdify([v["x1"], v["z"], v["x0"], v["x0cr"], v["r"], v["yc"], v["Iext1"], v["K"], v["w"]],
+                    jac, "numpy"), jac, v
 
 
 def eqtn_fpop2(n, x2_neg=True, Iext2="Iext2"):

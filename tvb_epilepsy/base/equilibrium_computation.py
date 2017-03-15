@@ -6,7 +6,7 @@ import numpy
 from scipy.optimize import root
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, SOLVE_FLAG
 from tvb_epilepsy.base.equations import calc_fx1_6d, calc_fx1_2d, calc_fy1, calc_fz, calc_fpop2, calc_fg, calc_x0, \
-                                        calc_coupling, calc_dfun
+                                        calc_coupling, calc_dfun, calc_fx1z_2d_jac
 
 if SOLVE_FLAG == "symbolic":
 
@@ -87,24 +87,24 @@ def calc_eq_g(x1eq):
     return calc_fg(x1eq, g=0.0, gamma=1.0, tau1=1.0)
 
 
-def eq_x1_hypo_x0_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w):
+def eq_x1_hypo_x0_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
 
     x1_type = x1EQ.dtype
 
-    # Construct the x1 and z vectors, comprising of the current x1EQ, zEQ values for i_e regions,
-    # and the unknown x1 values for x1EQ and respective zEQ for the i_x0 regions
+    # Construct the x1 and z equilibria vectors, comprising of the current x1EQ, zEQ values for i_e regions,
+    # and the unknown equilibria x1 and respective z values for the i_x0 regions
     x1EQ[:, ix0] = numpy.array(x[ix0])
     zEQ[:, ix0] = numpy.array(calc_eq_z_2d(x1EQ[:, ix0], yc[:, ix0], Iext1[:, ix0]))
 
     # Construct the x0 vector, comprising of the current x0 values for i_x0 regions,
     # and the unknown x0 values for the i_e regions
     x0_dummy = numpy.array(x0)
-    x0 = numpy.array(x1EQ)
+    x0 = numpy.empty_like(x1EQ)
     x0[:, iE] = numpy.array(x[iE])
     x0[:, ix0] = numpy.array(x0_dummy)
     del x0_dummy
 
-    fun = calc_fz(x1EQ, x0, x0cr, rx0, z=zEQ, K=K, w=w).astype(x1_type)
+    fun = calc_fz(x1EQ, x0, x0cr, r, z=zEQ, K=K, w=w).astype(x1_type)
 
     # if numpy.any([numpy.any(numpy.isnan(x)), numpy.any(numpy.isinf(x)),
     #               numpy.any(numpy.isnan(fun)), numpy.any(numpy.isinf(fun))]):
@@ -113,51 +113,37 @@ def eq_x1_hypo_x0_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, 
     return numpy.squeeze(fun)
 
 
-def eq_x1_hypo_x0_optimize_jac(x, ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w):
+def eq_x1_hypo_x0_optimize_jac(x, ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
 
-    x = numpy.expand_dims(x, 1).T
+    # Construct the x1 and z equilibria vectors, comprising of the current x1EQ, zEQ values for i_e regions,
+    # and the unknown equilibria x1 and respective z values for the i_x0 regions
+    x1EQ[:, ix0] = numpy.array(x[ix0])
+    zEQ[:, ix0] = numpy.array(calc_eq_z_2d(x1EQ[:, ix0], yc[:, ix0], Iext1[:, ix0]))
 
-    no_x0 = len(ix0)
-    no_e = len(iE)
+    # Construct the x0 vector, comprising of the current x0 values for i_x0 regions,
+    # and the unknown x0 values for the i_e regions
+    x0_dummy = numpy.array(x0)
+    x0 = numpy.empty_like(x1EQ)
+    x0[:, iE] = numpy.array(x[iE])
+    x0[:, ix0] = numpy.array(x0_dummy)
+    del x0_dummy
 
-    n_regions = no_e + no_x0
-
-    x1_type = x1EQ.dtype
-    i_x0 = numpy.ones((no_x0, 1), dtype=type)
-    i_e = numpy.ones((no_e, 1), dtype=type)
-
-    jac_e_x0e = numpy.diag(- 4 * rx0[:, iE]).astype(x1_type)
-    jac_e_x1o = -numpy.dot(numpy.dot(i_e, K[:,iE]), w[iE][:,ix0]).astype(x1_type)
-    jac_x0_x0e = numpy.zeros((no_x0, no_e)).astype(x1_type)
-    jac_x0_x1o = (numpy.diag(4 + 3 * x[:, ix0] ** 2 + 4 * x[:, ix0] + K[:, ix0] * numpy.sum(w[ix0][:,ix0], axis=1)) - \
-                  numpy.dot(i_x0, K[:, ix0]) * w[ix0][:, ix0]).astype(x1_type)
-
-    jac = numpy.zeros((n_regions,n_regions), dtype=x1_type)
-    jac[numpy.ix_(iE, iE)] = jac_e_x0e
-    jac[numpy.ix_(iE, ix0)] = jac_e_x1o
-    jac[numpy.ix_(ix0, iE)] = jac_x0_x0e
-    jac[numpy.ix_(ix0, ix0)] = jac_x0_x1o
-
-    # if numpy.any([ numpy.any(numpy.isnan(x)), numpy.any(numpy.isnan(x)),
-    #                numpy.any(numpy.isnan(jac.flatten())), numpy.any(numpy.isinf(jac.flatten()))]):
-    #     raise ValueError("nan or inf values in x or jac")
-
-    return jac
+    return calc_fx1z_2d_jac(x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w, ix0, iE)
 
 
-def eq_x1_hypo_x0_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w):
+def eq_x1_hypo_x0_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
 
     xinit = numpy.zeros(x1EQ.shape, dtype = x1EQ.dtype)
 
     #Set initial conditions for the optimization algorithm, by ignoring coupling (=0)
     # fz = 4 * (x1 - r * x0 + x0cr) - z -coupling = 0
-    #x0init = (x1 + x0cr -z/4) / rx0
-    xinit[:, iE] = calc_x0(x1EQ[:, iE], zEQ[:, iE], x0cr[:, iE],  rx0[:, iE], 0.0, 0.0)
-    #x1eqinit = rx0 * x0 - x0cr + z / 4
-    xinit[:, ix0] = rx0[:, ix0] * x0 - x0cr[:, ix0] + zEQ[:, ix0] / 4
+    #x0init = (x1 + x0cr -z/4) / r
+    xinit[:, iE] = calc_x0(x1EQ[:, iE], zEQ[:, iE], x0cr[:, iE],  r[:, iE], 0.0, 0.0)
+    #x1eqinit = r * x0 - x0cr + z / 4
+    xinit[:, ix0] = r[:, ix0] * x0 - x0cr[:, ix0] + zEQ[:, ix0] / 4
 
     #Solve:
-    sol = root(eq_x1_hypo_x0_optimize_fun, xinit, args=(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w),
+    sol = root(eq_x1_hypo_x0_optimize_fun, xinit, args=(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w),
                method='lm', jac=eq_x1_hypo_x0_optimize_jac, tol=10**(-6), callback=None, options=None) #method='hybr'
 
     if sol.success:
@@ -170,7 +156,7 @@ def eq_x1_hypo_x0_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w):
         raise ValueError(sol.message)
 
 
-def eq_x1_hypo_x0_linTaylor(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w):
+def eq_x1_hypo_x0_linTaylor(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
 
     no_x0 = len(ix0)
     no_e = len(iE)
@@ -198,7 +184,7 @@ def eq_x1_hypo_x0_linTaylor(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w):
     # For regions of fixed x0:
     ii_x0 = numpy.ones((1, no_x0), dtype=x1_type)
     we_to_x0 = numpy.expand_dims(numpy.sum(w[ix0][:, iE] * numpy.dot(ii_x0.T, x1_eq), axis=1), 1).T.astype(x1_type)
-    bx0 = 4.0 * (x0cr[:, ix0] - rx0[:, ix0] * x0) - yc[:, ix0] - Iext1[:, ix0] \
+    bx0 = 4.0 * (x0cr[:, ix0] - r[:, ix0] * x0) - yc[:, ix0] - Iext1[:, ix0] \
           - 2.0 * x1LIN[:, ix0] ** 3 - 2.0 * x1LIN[:, ix0] ** 2 - K[:, ix0] * we_to_x0
 
     # Concatenate B vector:
@@ -206,7 +192,7 @@ def eq_x1_hypo_x0_linTaylor(ix0, iE, x1EQ, zEQ, x0, x0cr, rx0, yc, Iext1, K, w):
 
     # From-to Epileptogenicity-fixed regions
     # ae_to_e = -4 * numpy.eye( no_e, dtype=numpy.float32 )
-    ae_to_e = -4 * numpy.diag(rx0[0, iE]).astype(x1_type)
+    ae_to_e = -4 * numpy.diag(r[0, iE].flatten()).astype(x1_type)
 
     # From x0-fixed regions to Epileptogenicity-fixed regions
     ax0_to_e = -numpy.dot(K[:, iE].T, ii_x0) * w[iE][:, ix0]
