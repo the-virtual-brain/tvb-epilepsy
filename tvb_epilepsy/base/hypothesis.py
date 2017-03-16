@@ -95,7 +95,7 @@ class Hypothesis(object):
         return self.weights[:, self.seizure_indices]
 
     def _calculate_critical_x0_scaling(self):
-        return calc_x0cr_r(self.yc, self.Iext1, epileptor_model="2d", zmode="lin")
+        return calc_x0cr_r(self.yc, self.Iext1, zmode="lin") #epileptor_model="2d",
 
     def _set_equilibria_x1(self, i=None):
         if i is None:
@@ -113,7 +113,7 @@ class Hypothesis(object):
         #return self.K * (numpy.expand_dims(numpy.sum(self.weights * ( numpy.dot(i.T, self.x1EQ) - numpy.dot(self.x1EQ.T, i)), axis=1), 1).T)
 
     def _calculate_x0(self):
-        return calc_x0(self.x1EQ, self.zEQ, self.x0cr, self.rx0, self.K, self.weights, zmode="lin")
+        return calc_x0(self.x1EQ, self.zEQ, self.K, self.weights, self.x0cr, self.rx0, model = "2d", zmode="lin")
         #return (self.x1EQ + self.x0cr - (self.zEQ + self.Ceq) / 4.0) / self.rx0
 
     def _dfz_square_taylor(self):
@@ -137,7 +137,6 @@ class Hypothesis(object):
             return fz_jac
         return fz_jac
 
-
     def _calculate_e(self):
         return 3.0 * self.x1EQ + 5.0
 
@@ -154,7 +153,6 @@ class Hypothesis(object):
         self.seizure_indices = seizure_indices
         if self.n_seizure_nodes > 0:
             self._run_lsa(seizure_indices)
-
 
     def _run_lsa(self, seizure_indices):
 
@@ -183,7 +181,6 @@ class Hypothesis(object):
         
         #Calculate the propagation strength index by summing all eigenvectors
         self.lsa_ps_tot = numpy.expand_dims(numpy.sum(numpy.abs(self.lsa_eigvects), axis=1), 1).T
-
 
     def _check_hypothesis(self, seizure_indices):
         """

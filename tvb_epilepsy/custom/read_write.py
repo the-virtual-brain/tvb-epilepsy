@@ -45,16 +45,15 @@ epileptor_attributes_dict = {"model.name": "_ui_name", "model.a": "a", "model.b"
                              "model.slope": "slope", "model.Iext2": "Iext2", "model.tau": "tau", "model.aa": "aa",
                              "model.Kvf": "Kvf", "model.Kf": "Kf", "model.Ks": "Ks", "model.tt": "tt"}
 
-epileptorDP_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0": "x0", "model.x0cr": "x0cr",
-                               "model.r": "r", "model.Iext1": "Iext1", "model.slope": "slope", "model.Iext2": "Iext2",
+epileptorDP_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0": "x0","model.Iext1": "Iext1",
+                               "model.slope": "slope", "model.Iext2": "Iext2",
                                "model.tau2": "tau2", "model.Kvf": "Kvf", "model.Kf": "Kf", "model.K": "K",
                                "model.tau1": "tau1", "model.zmode": "zmode"}
 
 epileptorDPrealistic_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0": "x0",
-                                        "model.x0cr": "x0cr", "model.r": "r","model.Iext1": "Iext1",
-                                        "model.slope": "slope", "model.Iext2": "Iext2", "model.tau2": "tau2",
-                                        "model.Kvf": "Kvf", "model.Kf": "Kf", "model.K": "K", "model.tau1": "tau1",
-                                        "model.zmode": "zmode", "model.pmode": "pmode"}
+                                        "model.Iext1": "Iext1", "model.slope": "slope", "model.Iext2": "Iext2",
+                                        "model.tau2": "tau2", "model.Kvf": "Kvf", "model.Kf": "Kf", "model.K": "K",
+                                        "model.tau1": "tau1", "model.zmode": "zmode", "model.pmode": "pmode"}
 
 epileptorDP2D_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0": "x0", "model.x0cr": "x0cr",
                                  "model.r": "r", "model.Iext1": "Iext1", "model.slope": "slope", "model.Kvf": "Kvf",
@@ -485,7 +484,7 @@ if __name__ == "__main__":
     write_ts(random_ts, sampling_period=0.5)
 
     random_seeg = numpy.random.random((1000, 50)).astype(numpy.float32)
-    write_ts_seeg(random_seeg, 2.0)
+    write_ts_seeg_epi(random_seeg, 2.0)
     print "-----------------"
 
     # Import Sensors from TXT file

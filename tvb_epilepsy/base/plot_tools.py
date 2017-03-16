@@ -9,7 +9,7 @@ from matplotlib import pyplot, gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.utils import calculate_in_degree
-from tvb_epilepsy.base.equations import calc_fx1_2d, calc_fx1_6d, calc_fz, calc_fx1_2d_taylor
+from tvb_epilepsy.base.equations import calc_fx1_2d, calc_fx1_6d, calc_fz_2d, calc_fz_6d, calc_fx1_2d_taylor
 from tvb_epilepsy.base.equilibrium_computation import calc_eq_y1
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
@@ -270,13 +270,18 @@ def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", z
                                    order=3)  # + 2.0 * x1sq ** 2 + 16.0 * x1sq / 3.0 + yc + Iext1 + 64.0 / 27.0
         # center point (critical equilibrium point) without approximation:
         # zsq0 = yc + Iext1 - x1sq0 ** 3 - 2.0 * x1sq0 ** 2
+
+        # z nullcline:
+        zZe = calc_fz_2d(x1, x0e, x0cr, r, zmode=zmode)  # for epileptogenic regions
+        zZne = calc_fz_2d(x1, x0ne, x0cr, r, zmode=zmode)  # for non-epileptogenic regions
+
     else:
         x1 = numpy.expand_dims(numpy.linspace(-2.0*10, 2.0*10 / 3.0, 100), 1).T
         zX1 = calc_fx1_6d(x1, z=0, y1=calc_eq_y1(x1eq, yc, d=5.0), Iext1=Iext1) #y1eq + Iext1 - x1 ** 3 + 3.0 * x1 ** 2
 
-    # z nullcline:
-    zZe = calc_fz(x1, x0e, x0cr, r, zmode=zmode)   # for epileptogenic regions
-    zZne = calc_fz(x1, x0ne, x0cr, r, zmode=zmode)  # for non-epileptogenic regions
+        # z nullcline:
+        zZe = calc_fz_6d(x1, x0e, zmode=zmode)   # for epileptogenic regions
+        zZne = calc_fz_6d(x1, x0ne, zmode=zmode)  # for non-epileptogenic regions
 
     fig=mp.pyplot.figure(figure_name, figsize=figsize)
     x1null, =mp.pyplot.plot(x1[0, :], zX1[0, :], 'b-', label='x1 nullcline', linewidth=1)

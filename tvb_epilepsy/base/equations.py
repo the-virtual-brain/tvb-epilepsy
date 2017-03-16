@@ -75,15 +75,21 @@ if SYMBOLIC_EQUATIONS_FLAG:
                .astype(x1.dtype)
 
 
-    def calc_x0(x1, z, x0cr, r, K, w, zmode=numpy.array("lin")):
+    def calc_x0(x1, z, K, w, x0cr=None, r=None, model="2d", zmode=numpy.array("lin")):
 
         if not (isinstance(x1, numpy.ndarray)):
             x1 = numpy.array(x1)
 
         p = x1.shape
 
-        return numpy.reshape(eqtn_x0(x1.size, zmode)[0](x1, sc2arr(z, p), sc2arr(x0cr, p), sc2arr(r, p), sc2arr(K, p),
-                                                            sc2arr(w, (x1.size, x1.size))), x1.shape).astype(x1.dtype)
+        if model == "2d":
+            return numpy.reshape(eqtn_x0_2d(x1.size, zmode)[0](x1, sc2arr(z, p), sc2arr(x0cr, p), sc2arr(r, p),
+                                                                   sc2arr(K, p), sc2arr(w, (x1.size, x1.size))),
+                                                                   x1.shape).astype(x1.dtype)
+        else:
+            return numpy.reshape(eqtn_x0_6d(x1.size, zmode)[0](x1, sc2arr(z, p), sc2arr(K, p),
+                                                                   sc2arr(w, (x1.size, x1.size))),
+                                                                   x1.shape).astype(x1.dtype)
 
 
     def calc_fx1_6d(x1, z=0.0, y1=0.0, x2=0.0, Iext1=0.0, slope=0.0, a=1.0, b=3.0, tau1=1.0, x1_neg=None):
@@ -144,17 +150,29 @@ if SYMBOLIC_EQUATIONS_FLAG:
                                                       sc2arr(d, p), sc2arr(tau1, p)), x1.shape).astype(x1.dtype)
 
 
-    def calc_fz(x1, x0, x0cr, r, z=0, K=0.0, w=0.0, tau1=1.0, tau0=1.0, zmode=numpy.array("lin")):
+    def calc_fz_2d(x1, x0, x0cr, r, z=0, K=0.0, w=0.0, tau1=1.0, tau0=1.0, zmode=numpy.array("lin")):
 
         if not (isinstance(x1, numpy.ndarray)):
             x1 = numpy.array(x1)
 
         p = x1.shape
 
-        return numpy.reshape(eqtn_fz(x1.size, zmode)[0](x1, sc2arr(z, p), sc2arr(x0, p), sc2arr(x0cr, p), sc2arr(r, p),
+        return numpy.reshape(eqtn_fz_2d(x1.size, zmode)[0](x1, sc2arr(z, p), sc2arr(x0, p), sc2arr(x0cr, p), sc2arr(r, p),
                                                             sc2arr(K, p), sc2arr(w, (x1.size, x1.size)),
                                                             sc2arr(tau1, p), sc2arr(tau0, p)),
                                                             x1.shape).astype(x1.dtype)
+
+
+    def calc_fz_6d(x1, x0, z=0, K=0.0, w=0.0, tau1=1.0, tau0=1.0, zmode=numpy.array("lin")):
+
+        if not (isinstance(x1, numpy.ndarray)):
+            x1 = numpy.array(x1)
+
+        p = x1.shape
+
+        return numpy.reshape(eqtn_fz_2d(x1.size, zmode)[0](x1, sc2arr(z, p), sc2arr(x0, p), sc2arr(K, p),
+                                                               sc2arr(w, (x1.size, x1.size)), sc2arr(tau1, p),
+                                                               sc2arr(tau0, p)), x1.shape).astype(x1.dtype)
 
 
     def calc_fx1z_2d_jac(x1, z, x0, x0cr, r, yc, Iext1, K, w, ix0, iE):
@@ -223,7 +241,7 @@ if SYMBOLIC_EQUATIONS_FLAG:
                              K_var.shape).astype(K_var.dtype)
 
 
-    def calc_dfun(x1, z, yc, Iext1, x0, x0cr, r, K, w, model_vars=2, zmode="lin", pmode="const", x1_neg=None,
+    def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None, zmode="lin", pmode="const", x1_neg=None,
                   y1=None, x2=None, y2=None, g=None, x2_neg=None,
                   x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
                   slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.01,
@@ -253,8 +271,6 @@ if SYMBOLIC_EQUATIONS_FLAG:
         Iext1 = sc2arr(Iext1, p)
         slope = sc2arr(slope, p)
         x0 = sc2arr(x0, p)
-        x0cr = sc2arr(x0cr, p)
-        r = sc2arr(r, p)
         K = sc2arr(K, p)
         w = sc2arr(w, (x1.size, x1.size))
         a = sc2arr(a, p)
@@ -263,6 +279,9 @@ if SYMBOLIC_EQUATIONS_FLAG:
         tau0 = sc2arr(tau0, p)
 
         if model_vars == 2:
+
+            x0cr = sc2arr(x0cr, p)
+            r = sc2arr(r, p)
 
             f[0,:] = numpy.array(dfun[0](x1, z, yc, Iext1, slope, a, b, tau1), dtype=x1.dtype)
             f[1, :] = numpy.array(dfun[1](x1, z, x0, x0cr, r, K, w, tau1, tau0), dtype=x1.dtype)
@@ -283,7 +302,7 @@ if SYMBOLIC_EQUATIONS_FLAG:
 
                 f[0, :] = numpy.array(dfun[0](x1, z, y1, x2, Iext1, slope, a, b, tau1), dtype=x1.dtype)
                 f[1, :] = numpy.array(dfun[1](x1, y1, yc, d, tau1), dtype=x1.dtype)
-                f[2, :] = numpy.array(dfun[2](x1, z, x0, x0cr, r, K, w, tau1, tau0), dtype=x1.dtype)
+                f[2, :] = numpy.array(dfun[2](x1, z, x0, K, w, tau1, tau0), dtype=x1.dtype)
                 f[3, :] = numpy.array(dfun[3](x2, y2, z, g, Iext2, tau1), dtype=x1.dtype)
                 f[4, :] = numpy.array(dfun[4](x2, y2, s, tau1, tau2), dtype=x1.dtype)
                 f[5, :] = numpy.array(dfun[5](x1, g, gamma, tau1), dtype=x1.dtype)
@@ -298,7 +317,7 @@ if SYMBOLIC_EQUATIONS_FLAG:
 
                 f[0, :] = numpy.array(dfun[0](x1, z, y1, x2, Iext1_var, slope_var, a, b, tau1), dtype=x1.dtype)
                 f[1, :] = numpy.array(dfun[1](x1, y1, yc, d, tau1), dtype=x1.dtype)
-                f[2, :] = numpy.array(dfun[2](x1, z, x0_var, x0cr, r, K_var, w, tau1, tau0), dtype=x1.dtype)
+                f[2, :] = numpy.array(dfun[2](x1, z, x0_var, K_var, w, tau1, tau0), dtype=x1.dtype)
                 f[3, :] = numpy.array(dfun[3](x2, y2, z, g, Iext2_var, tau1), dtype=x1.dtype)
                 f[4, :] = numpy.array(dfun[4](x2, y2, s, tau1, tau2), dtype=x1.dtype)
                 f[5, :] = numpy.array(dfun[5](x1, g, gamma, tau1), dtype=x1.dtype)
@@ -311,7 +330,7 @@ if SYMBOLIC_EQUATIONS_FLAG:
         return f
 
 
-    def calc_jac(x1, z, yc, Iext1, x0, x0cr, r, K, w, model_vars=2, zmode="lin", pmode="const", x1_neg=None,
+    def calc_jac(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None, zmode="lin", pmode="const", x1_neg=None,
                  y1=None, x2=None, y2=None, g=None, x2_neg=None,
                  x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
                  slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.01,
@@ -344,8 +363,6 @@ if SYMBOLIC_EQUATIONS_FLAG:
         Iext1 = sc2arr(Iext1, p)
         slope = sc2arr(slope, p)
         x0 = sc2arr(x0, p)
-        x0cr = sc2arr(x0cr, p)
-        r = sc2arr(r, p)
         K = sc2arr(K, p)
         w = sc2arr(w, (x1.size, x1.size))
         a = sc2arr(a, p)
@@ -354,6 +371,9 @@ if SYMBOLIC_EQUATIONS_FLAG:
         tau0 = sc2arr(tau0, p)
 
         if model_vars == 2:
+
+            x0cr = sc2arr(x0cr, p)
+            r = sc2arr(r, p)
 
             jac[ind(0), :] = numpy.array(jac_lambda[0](x1, z, yc, Iext1, slope, a, b, tau1), dtype=x1.dtype)
             jac[ind(1), :] = numpy.array(jac_lambda[1](x1, z, x0, x0cr, r, K, w, tau1, tau0), dtype=x1.dtype)
@@ -375,7 +395,7 @@ if SYMBOLIC_EQUATIONS_FLAG:
                 jac[ind(0), :] = numpy.array(jac_lambda[0](x1, y1, z, x2, y2, g, Iext1, slope, a, b, tau1),
                                              dtype=x1.dtype)
                 jac[ind(1), :] = numpy.array(jac_lambda[1](x1, y1, z, x2, y2, g, yc, d, tau1), dtype=x1.dtype)
-                jac[ind(2), :] = numpy.array(jac_lambda[2](x1, y1, z, x2, y2, g, x0, x0cr, r, K, w, tau1, tau0),
+                jac[ind(2), :] = numpy.array(jac_lambda[2](x1, y1, z, x2, y2, g, x0, K, w, tau1, tau0),
                                              dtype=x1.dtype)
                 jac[ind(3), :] = numpy.array(jac_lambda[3](x1, y1, z, x2, y2, g, Iext2, tau1), dtype=x1.dtype)
                 jac[ind(4), :] = numpy.array(jac_lambda[4](x1, y1, z, x2, y2, g, s, tau1, tau2), dtype=x1.dtype)
@@ -398,7 +418,7 @@ if SYMBOLIC_EQUATIONS_FLAG:
                                                            yc, d, tau1), dtype=x1.dtype)
                 jac[ind(2), :] = numpy.array(jac_lambda[2](x1, y1, z, x2, y2, g,
                                                            x0_var, slope_var, Iext1_var, Iext2_var, K_var,
-                                                           x0cr, r, w, tau1, tau0), dtype=x1.dtype)
+                                                           w, tau1, tau0), dtype=x1.dtype)
                 jac[ind(3), :] = numpy.array(jac_lambda[3](x1, y1, z, x2, y2, g,
                                                            x0_var, slope_var, Iext1_var, Iext2_var, K_var,
                                                            tau1), dtype=x1.dtype)
@@ -470,21 +490,32 @@ else:
         return numpy.reshape(coupling, p).astype(x1.dtype)
 
 
-    def calc_x0(x1, z, x0cr, r, K, w, zmode=numpy.array("lin")):
+    def calc_x0(x1, z, K, w, x0cr=None, r=None, model="2d", zmode=numpy.array("lin")):
 
         if not (isinstance(x1, numpy.ndarray)):
             x1 = numpy.array(x1)
 
         coupl = numpy.array(calc_coupling(x1, K, w))
 
-        if zmode == 'lin':
-             x0 = (x1 + x0cr - (z+coupl) / 4.0) / r
+        if model == "2d":
+            if zmode == 'lin':
+                 x0 = (x1 + x0cr - (z+coupl) / 4.0) / r
 
-        elif zmode == 'sig':
-            x0 = (3.0 / (1.0 + numpy.exp(1) ** (-10.0 * (x1 + 0.5))) + x0cr - z + coupl) / r
+            elif zmode == 'sig':
+                x0 = (3.0 / (1.0 + numpy.exp(1) ** (-10.0 * (x1 + 0.5))) + x0cr - z - coupl) / r
+
+            else:
+                raise ValueError('zmode is neither "lin" nor "sig"')
 
         else:
-            raise ValueError('zmode is neither "lin" nor "sig"')
+            if zmode == 'lin':
+                x0 = (x1 - (z + coupl) / 4.0)
+
+            elif zmode == 'sig':
+                x0 = (3.0 / (1.0 + numpy.exp(1) ** (-10.0 * (x1 + 0.5))) - z - coupl)
+
+            else:
+                raise ValueError('zmode is neither "lin" nor "sig"')
 
         return numpy.reshape(x0, x1.shape).astype(x1.dtype)
 
@@ -576,7 +607,7 @@ else:
         return numpy.reshape(fx1lin, p).astype(x1.dtype)
 
 
-    def calc_fz(x1, x0, x0cr, r, z=0, K=0.0, w=0.0, tau1=1.0, tau0=1.0, zmode=numpy.array("lin")):
+    def calc_fz_2d(x1, x0, x0cr, r, z=0, K=0.0, w=0.0, tau1=1.0, tau0=1.0, zmode=numpy.array("lin")):
 
         if not (isinstance(x1, numpy.ndarray)):
             x1 = numpy.array(x1)
@@ -593,6 +624,30 @@ else:
 
         elif zmode == 'sig':
             fz = tau1 * (3 / (1 + numpy.exp(1) ** (-10.0 * (x1 + 0.5))) - r * x0 + x0cr - z - coupl) / tau0
+
+        else:
+            raise ValueError('zmode is neither "lin" nor "sig"')
+
+        return numpy.reshape(fz, x1.shape).astype(x1.dtype)
+
+
+    def calc_fz_6d(x1, x0, z=0, K=0.0, w=0.0, tau1=1.0, tau0=1.0, zmode=numpy.array("lin")):
+
+        if not (isinstance(x1, numpy.ndarray)):
+            x1 = numpy.array(x1)
+
+        if isinstance(K, numpy.ndarray) or isinstance(w, numpy.ndarray) or \
+                (isinstance(K, (float, int, long, complex, numpy.number)) and K > 0.0) or \
+                (isinstance(w, (float, int, long, complex, numpy.number)) and w > 0.0):
+            coupl = numpy.array(calc_coupling(x1, K, w))
+        else:
+            coupl = 0.0
+
+        if zmode == 'lin':
+            fz = tau1 * (4 * (x1 - x0 ) - z - coupl) / tau0
+
+        elif zmode == 'sig':
+            fz = tau1 * (3 / (1 + numpy.exp(1) ** (-10.0 * (x1 + 0.5))) - x0 - z - coupl) / tau0
 
         else:
             raise ValueError('zmode is neither "lin" nor "sig"')
@@ -700,7 +755,7 @@ else:
                numpy.array(fK).astype(K_var.dtype)
 
 
-    def calc_dfun(x1, z, yc, Iext1, x0, x0cr, r, K, w, model_vars=2, zmode="lin", pmode="const", x1_neg=None,
+    def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None, zmode="lin", pmode="const", x1_neg=None,
                   y1=None, x2=None, y2=None, g=None, x2_neg=None,
                   x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
                   slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.01,
@@ -714,10 +769,9 @@ else:
         if model_vars == 2:
 
             f[0, :] = calc_fx1_2d(x1, z, yc, Iext1=Iext1, slope=slope, a=a, b=b, tau1=tau1, x1_neg=x1_neg)
-            iz = 1
+            f[1, :] = calc_fz_2d(x1, x0, x0cr, r, z, K, w, tau1, tau0, zmode)
 
         else:
-            iz = 2
 
             f[1, :] = calc_fy1(x1, yc, y1, d, tau1)
             f[5, :] = calc_fg(x1, g, gamma, tau1)
@@ -735,12 +789,12 @@ else:
                 x0 = x0_var
                 K = K_var
 
-        f[iz, :] = calc_fz(x1, x0, x0cr, r, z, K, w, tau1, tau0, zmode)
+            f[2, :] = calc_fz_6d(x1, x0, z, K, w, tau1, tau0, zmode)
 
         return f.astype(x1.dtype)
 
 
-    def calc_jac(x1, z, yc, Iext1, x0, x0cr, r, K, w, model_vars=2, zmode="lin", pmode="const", x1_neg=None,
+    def calc_jac(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None, zmode="lin", pmode="const", x1_neg=None,
                   y1=None, x2=None, y2=None, g=None, x2_neg=None,
                   x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
                   slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.01,
@@ -754,7 +808,7 @@ else:
 
             x = list(sym_vars(n_regions, ['x1', 'z'])[:2])
 
-            dfun_sym = calc_dfun(x[0], x[1], yc, Iext1, x0, x0cr, r, K, w, model_vars, zmode, pmode, x1_neg,
+            dfun_sym = calc_dfun(x[0], x[1], yc, Iext1, x0, K, w, model_vars, x0cr, r, zmode, pmode, x1_neg,
                                  y1, x2, y2, g, x2_neg,
                                  x0_var, slope_var, Iext1_var, Iext2_var, K_var,
                                  slope, a, b, d, s, Iext2, gamma,
@@ -773,7 +827,7 @@ else:
 
             x = list(sym_vars(n_regions, ['x1', 'y1', 'z', 'x2', 'y2', 'g'])[:6])
 
-            dfun_sym = calc_dfun(x[0], x[2], yc, Iext1, x0, x0cr, r, K, w, model_vars, zmode, pmode, x1_neg,
+            dfun_sym = calc_dfun(x[0], x[2], yc, Iext1, x0, K, w, model_vars, x0cr, r, zmode, pmode, x1_neg,
                                  x[1], x[3], x[4], x[5], x2_neg,
                                  x0_var, slope_var, Iext1_var, Iext2_var, K_var,
                                  slope, a, b, d, s, Iext2, gamma,
@@ -792,7 +846,7 @@ else:
             x = list(sym_vars(n_regions, ['x1', 'y1', 'z', 'x2', 'y2', 'g',
                                           'x0_var', 'slope_var', 'Iext1_var', 'Iext2_var', 'K_var'])[:11])
 
-            dfun_sym = calc_dfun(x[0], x[2], yc, Iext1, x0, x0cr, r, K, w, model_vars, zmode, pmode, x1_neg,
+            dfun_sym = calc_dfun(x[0], x[2], yc, Iext1, x0, K, w, model_vars, x0cr, r, zmode, pmode, x1_neg,
                                  x[1], x[3], x[4], x[5], x2_neg,
                                  x[6], x[7], x[8], x[9], x[10],
                                  slope, a, b, d, s, Iext2, gamma,
@@ -808,8 +862,8 @@ else:
                                dtype=x1.dtype)
 
 
-def calc_x0cr_r(yc, Iext1, epileptor_model="2d", zmode=numpy.array("lin"),
-                      x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF):
+def calc_x0cr_r(yc, Iext1, zmode=numpy.array("lin"),
+                      x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF):  #epileptor_model="2d",
 
     x1eq, x0, x0cr, r, yc1, I1 = symbols("x1eq x0 x0cr r yc1 I1")
 
@@ -823,14 +877,14 @@ def calc_x0cr_r(yc, Iext1, epileptor_model="2d", zmode=numpy.array("lin"),
     if SOLVE_FLAG == "symbolic":
 
         # Define the z equilibrium expression...
-        if epileptor_model == "2d":
-            zeq = calc_fx1_2d(x1eq, z=0.0, yc=yc1, Iext1=I1, x1_neg=True).tolist()
+        #if epileptor_model == "2d":
+        zeq = calc_fx1_2d(x1eq, z=0.0, yc=yc1, Iext1=I1, x1_neg=True).tolist()
 
-        else:
-            zeq = calc_fx1_6d(x1eq, z=0.0, y1=calc_fy1(x1eq, yc1), Iext1=I1, x1_neg=True).tolist()
+        # else:
+        #     zeq = calc_fx1_6d(x1eq, z=0.0, y1=calc_fy1(x1eq, yc1), Iext1=I1, x1_neg=True).tolist()
 
         # Define the fz expression...
-        fz = calc_fz(x1eq, x0, x0cr, r, z=zeq, zmode=zmode).tolist()
+        fz = calc_fz_2d(x1eq, x0, x0cr, r, z=zeq, zmode=zmode).tolist()
 
         # Solve the fz expression for rx0 and x0cr, assuming the following two points (x1eq,x0) = [(-5/3,0.0),(-4/3,1.0)]...
         # ...and WITHOUT COUPLING
@@ -857,27 +911,27 @@ def calc_x0cr_r(yc, Iext1, epileptor_model="2d", zmode=numpy.array("lin"),
         x1_cr = sc2arr(x1_cr, p2)
 
         # Define the z equilibrium expression...
-        if epileptor_model == "2d":
-            zeq_rest = calc_fx1_2d(x1_rest, z=0.0, yc=yc, Iext1=Iext1, x1_neg=True)
-            zeq_cr = calc_fx1_2d(x1_cr, z=0.0, yc=yc, Iext1=Iext1, x1_neg=True)
-            if zmode == numpy.array("lin"):
-                xinit = numpy.array([2.460, 0.398])
-            else:
-                xinit = numpy.array([3.174, 0.260])
+        #if epileptor_model == "2d":
+        zeq_rest = calc_fx1_2d(x1_rest, z=0.0, yc=yc, Iext1=Iext1, x1_neg=True)
+        zeq_cr = calc_fx1_2d(x1_cr, z=0.0, yc=yc, Iext1=Iext1, x1_neg=True)
+        if zmode == numpy.array("lin"):
+            xinit = numpy.array([2.460, 0.398])
         else:
-            zeq_rest = calc_fx1_6d(x1_rest, z=0.0, y1=calc_fy1(x1_rest, yc), Iext1=Iext1, x1_neg=True)
-            zeq_cr = calc_fx1_6d(x1_cr, z=0.0, y1=calc_fy1(x1_cr, yc), Iext1=Iext1, x1_neg=True)
-            if zmode == numpy.array("lin"):
-                xinit = numpy.array([5.9320, 1.648])
-            else:
-                xinit = numpy.array([17.063, 5.260])
+            xinit = numpy.array([3.174, 0.260])
+        # else:
+        #     zeq_rest = calc_fx1_6d(x1_rest, z=0.0, y1=calc_fy1(x1_rest, yc), Iext1=Iext1, x1_neg=True)
+        #     zeq_cr = calc_fx1_6d(x1_cr, z=0.0, y1=calc_fy1(x1_cr, yc), Iext1=Iext1, x1_neg=True)
+        #     if zmode == numpy.array("lin"):
+        #         xinit = numpy.array([5.9320, 1.648])
+        #     else:
+        #         xinit = numpy.array([17.063, 5.260])
 
         # Define the fz expression...
         x0cr = []
         r = []
         for ii in range(Iext1.size):
-            fz = lambda x: numpy.array([calc_fz(x1_rest[ii], x0def, x[0], x[1], z=zeq[ii], zmode=zmode),
-                                        calc_fz(x1_cr[ii], x0cr_def, x[0], x[1], z=zeq[ii], zmode=zmode)])
+            fz = lambda x: numpy.array([calc_fz_2d(x1_rest[ii], x0def, x[0], x[1], z=zeq[ii], zmode=zmode),
+                                        calc_fz_2d(x1_cr[ii], x0cr_def, x[0], x[1], z=zeq[ii], zmode=zmode)])
             sol = root(fz, xinit, method='lm', tol=10 ** (-6), callback=None, options=None)
 
         if sol.success:
@@ -899,3 +953,16 @@ def calc_x0cr_r(yc, Iext1, epileptor_model="2d", zmode=numpy.array("lin"),
         raise ValueError("SOLVE_FLAG = " + str(SOLVE_FLAG) + " is neither ""symbolic"" nor ""optimization""!")
 
     return x0cr, r
+
+
+def rescale_x0(x0_2d, yc, Iext1, zmode=numpy.array("lin")):
+
+    p = x0_2d.shape
+
+    yc = sc2arr(yc, p)
+    Iext1 = sc2arr(Iext1, p)
+
+    if zmode != numpy.array("lin"):
+        (x0cr, r) = calc_x0cr_r(yc, Iext1, zmode=zmode) #epileptor_model="6d",
+
+    return numpy.reshape(r * x0_2d - x0cr, p).astype(x0_2d.type)

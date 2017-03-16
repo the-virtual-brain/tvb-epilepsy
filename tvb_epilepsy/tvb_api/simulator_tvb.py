@@ -10,8 +10,9 @@ from tvb.datatypes import connectivity, equations
 from tvb.simulator import coupling, integrators, monitors, noise, simulator
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
-from tvb_epilepsy.base.equations import calc_dfun
-from tvb_epilepsy.base.equilibrium_computation import calc_eq_y1, calc_eq_pop2, calc_eq_g, calc_equilibrium_point
+from tvb_epilepsy.base.equations import calc_dfun, calc_coupling
+from tvb_epilepsy.base.equilibrium_computation import calc_eq_y1, calc_eq_pop2, calc_eq_g, calc_equilibrium_point, \
+                                                     calc_eq_z_6d
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
 

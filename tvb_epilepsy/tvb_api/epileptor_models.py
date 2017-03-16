@@ -8,8 +8,7 @@ from tvb.simulator.common import get_logger
 import tvb.datatypes.arrays as arrays
 import tvb.basic.traits.types_basic as basic
 from tvb.simulator.models import Model, Epileptor
-from tvb_epilepsy.base.equations import calc_coupling, calc_x0, calc_x0cr_r
-from tvb_epilepsy.base.equilibrium_computation import calc_eq_z_6d
+from tvb_epilepsy.base.equations import calc_x0, calc_x0cr_r, rescale_x0
 
 LOG = get_logger(__name__)
 
@@ -96,8 +95,8 @@ class EpileptorDP(Model):
         .. math::
             f_z(x_{1})  =
             \begin{cases}
-            4 * (x_{1} - r_{x0}*x0 + x0_{cr}) & \text{linear} \\
-            \frac{3}{1+e^{-10*(x_{1}+0.5)}} - r_{x0}*x0 + x0_{cr} & \text{sigmoidal} \\
+            4 * (x_{1} - x0) & \text{linear} \\
+            \frac{3}{1+e^{-10*(x_{1}+0.5)}} - x0  & \text{sigmoidal} \\
             \end{cases}
     and:
 
@@ -161,20 +160,6 @@ class EpileptorDP(Model):
         default=numpy.array([0.0]),
         doc="Excitability parameter",
         order=3)
-
-    x0cr = arrays.FloatArray(
-        label="x0cr",
-        range=basic.Range(lo=-1.0, hi=1.0, step=0.1),
-        default=numpy.array([5.93240740740741]),
-        doc="Critical excitability parameter",
-        order=-1)
-
-    r = arrays.FloatArray(
-        label="r",
-        range=basic.Range(lo=0.0, hi=1.0, step=0.1),
-        default=numpy.array([1.64814814814815]),
-        doc="Excitability parameter scaling",
-        order=-1)
 
     Iext1 = arrays.FloatArray(
         label="Iext1",
@@ -294,8 +279,8 @@ class EpileptorDP(Model):
             .. math::
                 f_z(y_{0})  =
                 \begin{cases}
-                4 * (y_{0} - r*x0 + x0_{cr}) & \text{linear} \\
-                \frac{3}{1+e^{-10*(y_{0}+0.5)}} - r*x0 + x0_{cr} & \text{sigmoidal} \\
+                4 * (y_{0} - x0) & \text{linear} \\
+                \frac{3}{1+e^{-10*(y_{0}+0.5)}} - x0 & \text{sigmoidal} \\
                 \end{cases}
         and:
 
@@ -335,10 +320,10 @@ class EpileptorDP(Model):
 
         if self.zmode == 'lin':
             # self.r * (4 * (y[0] - self.x0) - y[2]      + where(y[2] < 0., if_ydot2, else_ydot2)
-            fz = 4*(y[0] - self.r * self.x0 + self.x0cr) + where(y[2] < 0., if_ydot2, else_ydot2)
+            fz = 4*(y[0] - self.x0) + where(y[2] < 0., if_ydot2, else_ydot2)
 
         elif self.zmode == 'sig':
-            fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.r * self.x0 + self.x0cr
+            fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.x0
 
         else:
             raise ValueError("zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), " +
@@ -454,8 +439,8 @@ class EpileptorDPrealistic(Model):
         .. math::
             f_z(x_{1})  =
             \begin{cases}
-            4 * (x_{1} - r_{x0}*x0 + x0_{cr}) & \text{linear} \\
-            \frac{3}{1+e^{-10*(x_{1}+0.5)}} - r_{x0}*x0 + x0_{cr} & \text{sigmoidal} \\
+            4 * (x_{1} - x0) & \text{linear} \\
+            \frac{3}{1+e^{-10*(x_{1}+0.5)}} - x0 & \text{sigmoidal} \\
             \end{cases}
     and:
 
@@ -525,20 +510,6 @@ class EpileptorDPrealistic(Model):
         default=numpy.array([0.0]),
         doc="Excitability parameter",
         order=3)
-
-    x0cr = arrays.FloatArray(
-        label="x0cr",
-        range=basic.Range(lo=-1.0, hi=1.0, step=0.1),
-        default=numpy.array([5.93240740740741]),
-        doc="Critical excitability parameter",
-        order=-1)
-
-    r = arrays.FloatArray(
-        label="r",
-        range=basic.Range(lo=0.0, hi=1.0, step=0.1),
-        default=numpy.array([1.64814814814815]),
-        doc="Excitability parameter scaling",
-        order=-1)
 
     Iext1 = arrays.FloatArray(
         label="Iext1",
@@ -693,8 +664,8 @@ class EpileptorDPrealistic(Model):
             .. math::
                 f_z(y_{0})  =
                 \begin{cases}
-                4 * (y_{0} - r*x0 + x0_{cr}) & \text{linear} \\
-                \frac{3}{1+e^{-10*(y_{0}-7/6)}} - r*x0 + x0_{cr} & \text{sigmoidal} \\
+                4 * (y_{0} - x0) & \text{linear} \\
+                \frac{3}{1+e^{-10*(y_{0}-7/6)}} - x0 & \text{sigmoidal} \\
                 \end{cases}
         and:
 
@@ -733,10 +704,10 @@ class EpileptorDPrealistic(Model):
         else_ydot2 = 0
 
         if self.zmode == 'lin':
-            fz = 4*(y[0] - self.r * x0 + self.x0cr) + where(y[2] < 0., if_ydot2, else_ydot2)
+            fz = 4*(y[0] - x0) + where(y[2] < 0., if_ydot2, else_ydot2)
 
         elif self.zmode == 'sig':
-            fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.r * x0 + self.x0cr
+            fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - x0
 
         else:
             raise ValueError("zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively")
@@ -1121,15 +1092,11 @@ class EpileptorDP2D(Model):
 # Build TVB Epileptor
 ###
 
-def _rescale_tvb_x0(x0_orig, yc, Iext1):
-    (x0cr, r) = calc_x0cr_r(yc, Iext1, epileptor_model="6d", zmode=numpy.array("lin"))
-    return r*x0_orig-x0cr
-
 
 def build_tvb_model(hypothesis,variables_of_interest=["y3 - y0", "y2"], zmode="lin"):
-    x0_transformed = _rescale_tvb_x0(hypothesis.yc, hypothesis.Iext1)
-    model_instance = Epileptor(x0=numpy.squeeze(x0_transformed), Iext=numpy.squeeze(hypothesis.Iext1),
-                               Ks=numpy.squeeze(hypothesis.K), yc=numpy.squeeze(hypothesis.y0),
+    x0_transformed = rescale_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1)
+    model_instance = Epileptor(x0=x0_transformed.flatten(), Iext=hypothesis.Iext1.flatten(),
+                               Ks=hypothesis.K.flatten(), yc=hypothesis.yc.flatten(),
                                variables_of_interest=variables_of_interest)
     return model_instance
 
@@ -1145,7 +1112,6 @@ def build_ep_2sv_model(hypothesis, variables_of_interest=["yc", "y1"], zmode=num
         r = hypothesis.rx0
     elif zmode == 'sig':
         #Correct Ceq, x0cr, rx0 and x0 for sigmoidal fz(x1)
-        ceq = calc_coupling(hypothesis.x1EQ, hypothesis.K, hypothesis.weights)
         (x0cr, r) = calc_x0cr_r(hypothesis.yc, hypothesis.Iext1, epileptor_model="2d", zmode=zmode)
         x0 = calc_x0(hypothesis.x1EQ, hypothesis.zEQ, x0cr, r, hypothesis.K, hypothesis.weights, zmode)
     else:
@@ -1160,11 +1126,9 @@ def build_ep_2sv_model(hypothesis, variables_of_interest=["yc", "y1"], zmode=num
 ###
 
 def build_ep_6sv_model(hypothesis,variables_of_interest=["y3 - y0", "y2"], zmode=numpy.array("lin")):
-    #Correct Ceq, x0cr, rx0, zeq and x0 for 6D model
-    (x0cr, r) = calc_x0cr_r(hypothesis.yc, hypothesis.Iext1, epileptor_model="6d", zmode=zmode)
-    zeq = calc_eq_z_6d(hypothesis.x1EQ, hypothesis.yc, hypothesis.Iext1)
-    x0 = calc_x0(hypothesis.x1EQ, zeq, x0cr, r, hypothesis.K, hypothesis.weights, zmode)
-    model = EpileptorDP(x0=x0.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.yc.T, r=r.T, x0cr=x0cr.T,
+    #Correct x0 for 6D model
+    x0_transformed = rescale_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1)
+    model = EpileptorDP(x0=x0_transformed.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.yc.T,
                         variables_of_interest=variables_of_interest, zmode=zmode)
     return model
 
@@ -1174,13 +1138,9 @@ def build_ep_6sv_model(hypothesis,variables_of_interest=["y3 - y0", "y2"], zmode
 ###
 
 def build_ep_11sv_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmode=numpy.array("lin")):
-    # Correct Ceq, x0cr, rx0, zeq and x0 for >=6D model
-    ceq = calc_coupling(hypothesis.x1EQ, hypothesis.K, hypothesis.weights)
-    (x0cr, r) = calc_x0cr_r(hypothesis.yc, hypothesis.Iext1, epileptor_model="11d", zmode=zmode)
-    zeq = calc_eq_z_6d(hypothesis.x1EQ, hypothesis.yc, hypothesis.Iext1)
-    x0 = calc_x0(hypothesis.x1EQ, zeq, x0cr, r, hypothesis.K, hypothesis.weights, zmode)
-    model = EpileptorDPrealistic(x0=x0.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.yc.T,
-                                 r=r.T, x0cr=x0cr.T, variables_of_interest=variables_of_interest, zmode=zmode)
+    x0_transformed = rescale_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1)
+    model = EpileptorDPrealistic(x0=x0_transformed.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.yc.T,
+                                 variables_of_interest=variables_of_interest, zmode=zmode)
     return model
 
 # Model creator functions dictionary

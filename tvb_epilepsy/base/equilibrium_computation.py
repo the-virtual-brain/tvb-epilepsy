@@ -5,8 +5,8 @@ import warnings
 import numpy
 from scipy.optimize import root
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, SOLVE_FLAG
-from tvb_epilepsy.base.equations import calc_fx1_6d, calc_fx1_2d, calc_fy1, calc_fz, calc_fpop2, calc_fg, calc_x0, \
-                                        calc_coupling, calc_dfun, calc_fx1z_2d_jac
+from tvb_epilepsy.base.equations import calc_fx1_6d, calc_fx1_2d, calc_fy1, calc_fz_2d, calc_fz_6d, calc_fpop2, calc_fg,\
+                                        calc_coupling, calc_dfun, calc_fx1z_2d_jac, calc_x0
 
 if SOLVE_FLAG == "symbolic":
 
@@ -34,6 +34,12 @@ def calc_eq_z_6d(x1eq, y1, Iext1, x2=0.0, slope=0.0, a=1.0, b=3.0, x1_neg=True):
 
 def calc_eq_z_2d(x1eq, yc, Iext1, slope=0.0, a=1.0, b=-2.0, x1_neg=True):
     return calc_fx1_2d(x1eq, z=0, yc=yc, Iext1=Iext1, slope=slope, a=a, b=b, tau1=1.0, x1_neg=x1_neg)
+
+
+def calc_eq_6d(x1, z, yc, Iext1, x0, K, w, x0cr=None, r=None, zmode="lin", y1=None, x2=None, y2=None, g=None,
+               slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.01, tau1=1.0, tau0=2857.0, tau2=10.0):
+
+    pass
 
 
 def calc_eq_y1(x1eq, yc, d=5.0):
@@ -104,7 +110,7 @@ def eq_x1_hypo_x0_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K,
     x0[:, ix0] = numpy.array(x0_dummy)
     del x0_dummy
 
-    fun = calc_fz(x1EQ, x0, x0cr, r, z=zEQ, K=K, w=w).astype(x1_type)
+    fun = calc_fz_2d(x1EQ, x0, x0cr, r, z=zEQ, K=K, w=w).astype(x1_type)
 
     # if numpy.any([numpy.any(numpy.isnan(x)), numpy.any(numpy.isinf(x)),
     #               numpy.any(numpy.isnan(fun)), numpy.any(numpy.isinf(fun))]):
@@ -138,7 +144,7 @@ def eq_x1_hypo_x0_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
     #Set initial conditions for the optimization algorithm, by ignoring coupling (=0)
     # fz = 4 * (x1 - r * x0 + x0cr) - z -coupling = 0
     #x0init = (x1 + x0cr -z/4) / r
-    xinit[:, iE] = calc_x0(x1EQ[:, iE], zEQ[:, iE], x0cr[:, iE],  r[:, iE], 0.0, 0.0)
+    xinit[:, iE] = calc_x0(x1EQ[:, iE], zEQ[:, iE], 0.0, 0.0, x0cr[:, iE], r[:, iE], "2d")
     #x1eqinit = r * x0 - x0cr + z / 4
     xinit[:, ix0] = r[:, ix0] * x0 - x0cr[:, ix0] + zEQ[:, ix0] / 4
 
@@ -236,8 +242,9 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
     if epileptor_model._ui_name == "EpileptorDP2D":
         dfun2 = calc_dfun(equilibrium_point[0].squeeze(), equilibrium_point[1].squeeze(),
                           epileptor_model.yc.squeeze(), epileptor_model.Iext1.squeeze(), epileptor_model.x0.squeeze(),
-                          epileptor_model.x0cr.squeeze(), epileptor_model.r.squeeze(), epileptor_model.K.squeeze(),
-                          hypothesis.weights, model_vars=n_dim, zmode=epileptor_model.zmode,
+                          epileptor_model.K.squeeze(), hypothesis.weights, model_vars=n_dim,
+                          x0cr=epileptor_model.x0cr.squeeze(), r=epileptor_model.r.squeeze(),
+                          zmode=epileptor_model.zmode,
                           slope=epileptor_model.slope.squeeze(), a=1.0, b=-2.0,
                           tau1=epileptor_model.tau1, tau0=epileptor_model.tau0)
 
@@ -245,8 +252,8 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
         dfun_max_cr[2] = 10 ** -3
         dfun2 = calc_dfun(equilibrium_point[0].squeeze(), equilibrium_point[2].squeeze(),
                           epileptor_model.yc.squeeze(), epileptor_model.Iext1.squeeze(), epileptor_model.x0.squeeze(),
-                          epileptor_model.x0cr.squeeze(), epileptor_model.r.squeeze(), epileptor_model.K.squeeze(),
-                          hypothesis.weights, model_vars=n_dim, zmode=epileptor_model.zmode,
+                          epileptor_model.K.squeeze(), hypothesis.weights, model_vars=n_dim,
+                          zmode=epileptor_model.zmode,
                           y1=equilibrium_point[1].squeeze(), x2=equilibrium_point[3].squeeze(),
                           y2=equilibrium_point[4].squeeze(), g=equilibrium_point[5].squeeze(),
                           slope=epileptor_model.slope.squeeze(), a=1.0, b=3.0, Iext2=epileptor_model.Iext2.squeeze(),
@@ -256,8 +263,8 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
         dfun_max_cr[2] = 10 ** -3
         dfun2 = calc_dfun(equilibrium_point[0].squeeze(), equilibrium_point[2].squeeze(),
                           epileptor_model.yc.squeeze(), epileptor_model.Iext1.squeeze(), epileptor_model.x0.squeeze(),
-                          epileptor_model.x0cr.squeeze(), epileptor_model.r.squeeze(), epileptor_model.K.squeeze(),
-                          hypothesis.weights, model_vars=n_dim, zmode=epileptor_model.zmode, pmode=epileptor_model.pmode,
+                          epileptor_model.K.squeeze(), hypothesis.weights, model_vars=n_dim,
+                          zmode=epileptor_model.zmode, pmode=epileptor_model.pmode,
                           y1=equilibrium_point[1].squeeze(), x2=equilibrium_point[3].squeeze(),
                           y2=equilibrium_point[4].squeeze(), g=equilibrium_point[5].squeeze(),
                           x0_var=equilibrium_point[6].squeeze(), slope_var=equilibrium_point[7].squeeze(),
@@ -285,14 +292,18 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
 def calc_equilibrium_point(epileptor_model, hypothesis):
 
     if epileptor_model._ui_name == "EpileptorDP2D":
+
         if epileptor_model.zmode == 'sig':
             #2D approximation, Proix et al 2014
             zeq = calc_eq_z_2d(hypothesis.x1EQ, epileptor_model.yc.T, epileptor_model.Iext1.T)
         else:
             zeq = hypothesis.zEQ
         equilibrium_point = numpy.r_[hypothesis.x1EQ, zeq].astype('float32')
+
     else:
+
         #all >=6D models
+        #x1eq = calc_eq_x1_6d(epileptor_model.)
         y1eq = calc_eq_y1(hypothesis.x1EQ, epileptor_model.yc.T)
         zeq = calc_eq_z_6d(hypothesis.x1EQ, y1eq, epileptor_model.Iext1.T)
         if epileptor_model.Iext2.size == 1:

@@ -62,7 +62,7 @@ def eqtn_coupling(n, ix=None, jx=None, K="K"):
     return lambdify([x1, K, w], coupling, "numpy"), coupling, vars_dict
 
 
-def eqtn_x0(n, zmode=numpy.array("lin"), K="K"):
+def eqtn_x0_2d(n, zmode=numpy.array("lin"), K="K"):
 
     x1, z, x0cr, r, vars_dict = sym_vars(n, ["x1", "z", "x0cr", "r"])
 
@@ -70,15 +70,34 @@ def eqtn_x0(n, zmode=numpy.array("lin"), K="K"):
     vars_dict.update(vars_dict_coupl)
 
     if zmode == 'lin':
-        x0 = (x1 + x0cr - (z + numpy.array(coupling[0])) / 4.0) / r
+        x0 = (x1 + x0cr - (z + numpy.array(coupling)) / 4.0) / r
 
     elif zmode == 'sig':
-        x0 = (3.0 / (1.0 + numpy.exp(1) ** (-10.0 * (x1 + 0.5))) + x0cr - z + numpy.array(coupling[0])) / r
+        x0 = (3.0 / (1.0 + numpy.exp(1) ** (-10.0 * (x1 + 0.5))) + x0cr - z - numpy.array(coupling)) / r
 
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
 
-    return lambdify([x1, z, x0cr, r, vars_dict[K], vars_dict["w"]], x0, "numpy"), x0, {"x1": x1, "z": z, "x0cr": x0cr, "r": r}
+    return lambdify([x1, z, x0cr, r, vars_dict[K], vars_dict["w"]], x0, "numpy"), x0, vars_dict
+
+
+def eqtn_x0_6d(n, zmode=numpy.array("lin"), K="K"):
+
+    x1, z, vars_dict = sym_vars(n, ["x1", "z"])
+
+    coupling, vars_dict_coupl = eqtn_coupling(n, K=K)[1:]
+    vars_dict.update(vars_dict_coupl)
+
+    if zmode == 'lin':
+        x0 = (x1 - (z + numpy.array(coupling)) / 4.0)
+
+    elif zmode == 'sig':
+        x0 = (3.0 / (1.0 + numpy.exp(1) ** (-10.0 * (x1 + 0.5))) - z - numpy.array(coupling))
+
+    else:
+        raise ValueError('zmode is neither "lin" nor "sig"')
+
+    return lambdify([x1, z, vars_dict[K], vars_dict["w"]], x0, "numpy"), x0, vars_dict
 
 
 def eqtn_fx1_6d(n, x1_neg=True, slope="slope", Iext1="Iext1"):
@@ -136,7 +155,7 @@ def eqtn_fy1(n):
     return lambdify([x1, y1, yc, d, tau1], fy1, "numpy"), fy1, vars_dict
 
 
-def eqtn_fz(n, zmode=numpy.array("lin"), x0="x0", K="K"):
+def eqtn_fz_2d(n, zmode=numpy.array("lin"), x0="x0", K="K"):
 
     x1, z, x0, x0cr, r,  tau1, tau0, vars_dict = sym_vars(n, ["x1", "z", x0, "x0cr", "r", "tau1", "tau0"])
 
@@ -158,11 +177,33 @@ def eqtn_fz(n, zmode=numpy.array("lin"), x0="x0", K="K"):
     return lambdify([x1, z, x0, x0cr, r, vars_dict[K], vars_dict["w"], tau1, tau0], fz, "numpy"), fz, vars_dict
 
 
+def eqtn_fz_6d(n, zmode=numpy.array("lin"), x0="x0", K="K"):
+
+    x1, z, x0, tau1, tau0, vars_dict = sym_vars(n, ["x1", "z", x0, "tau1", "tau0"])
+
+    if K != 0.0:
+        coupling, vars_dict_coupl = eqtn_coupling(n, K=K)[1:]
+        vars_dict.update(vars_dict_coupl)
+    else:
+        coupling = 0
+
+    if zmode == 'lin':
+        fz = (tau1 * (4 * (x1 - x0) - z - numpy.array(coupling)) / tau0).tolist()
+
+    elif zmode == 'sig':
+        fz = (tau1 * (3/(1 + numpy.exp(1.0) ** (-10.0 * (x1 + 0.5))) - x0 - z - numpy.array(coupling))
+              / tau0).tolist()
+    else:
+        raise ValueError('zmode is neither "lin" nor "sig"')
+
+    return lambdify([x1, z, x0, vars_dict[K], vars_dict["w"], tau1, tau0], fz, "numpy"), fz, vars_dict
+
+
 def eqtn_fx1z_2d_jac(n, ix0, iE):
 
     fx1, v = eqtn_fx1_2d(n)[1:]
 
-    fz, vz = eqtn_fz(n)[1:]
+    fz, vz = eqtn_fz_2d(n)[1:]
 
     v.update(vz)
     del vz
@@ -260,7 +301,7 @@ def eqnt_dfun(n_regions, model_vars, zmode=numpy.array("lin"), x1_neg=True, x2_n
         f_lambda.append(fl)
         f_sym.append(fs)
 
-        fl, fs, sv_z = eqtn_fz(n_regions, zmode) # sv_z = [x1, z, x0, x0cr, r, K, w, tau1, tau0]
+        fl, fs, sv_z = eqtn_fz_2d(n_regions, zmode) # sv_z = [x1, z, x0, x0cr, r, K, w, tau1, tau0]
         f_lambda.append(fl)
         f_sym.append(fs)
 
@@ -278,7 +319,7 @@ def eqnt_dfun(n_regions, model_vars, zmode=numpy.array("lin"), x1_neg=True, x2_n
         f_sym.append(fs)
         symvars.update(vs_y1)
 
-        fl, fs, vs_z = eqtn_fz(n_regions, zmode)
+        fl, fs, vs_z = eqtn_fz_6d(n_regions, zmode)
         f_lambda.append(fl)
         f_sym.append(fs)
         symvars.update(vs_z)
@@ -304,7 +345,7 @@ def eqnt_dfun(n_regions, model_vars, zmode=numpy.array("lin"), x1_neg=True, x2_n
         f_sym.append(fs)
         symvars.update(vs_y1)
 
-        fl, fs, vs_z = eqtn_fz(n_regions, zmode, "x0_var", "K_var")
+        fl, fs, vs_z = eqtn_fz_6d(n_regions, zmode, "x0_var", "K_var")
         f_lambda.append(fl)
         f_sym.append(fs)
         symvars.update(vs_z)
@@ -356,7 +397,7 @@ def eqnt_jac(n_regions, model_vars, zmode=numpy.array("lin"), x1_neg=True, x2_ne
         jac_lambda.append(lambdify([v["x1"], v["y1"], v["z"], v["x2"], v["y2"], v["g"],
                                     v["yc"], v["d"], v["tau1"]], jac_sym[ind(1), :], "numpy"))
         jac_lambda.append(lambdify([v["x1"], v["y1"], v["z"], v["x2"], v["y2"], v["g"],
-                                    v["x0"], v["x0cr"], v["r"], v["K"], v["w"], v["tau1"], v["tau0"]],
+                                    v["x0"], v["K"], v["w"], v["tau1"], v["tau0"]],
                                    jac_sym[ind(2), :], "numpy"))
         jac_lambda.append(lambdify([v["x1"], v["y1"], v["z"], v["x2"], v["y2"], v["g"],
                                     v["Iext2"], v["tau1"]], jac_sym[ind(3), :], "numpy"))
@@ -378,7 +419,7 @@ def eqnt_jac(n_regions, model_vars, zmode=numpy.array("lin"), x1_neg=True, x2_ne
                                v["yc"], v["d"], v["tau1"]], jac_sym[ind(1), :], "numpy"))
         jac_lambda.append(lambdify([v["x1"], v["y1"], v["z"], v["x2"], v["y2"], v["g"],
                                v["x0_var"], v["Iext1_var"], v["Iext2_var"], v["slope_var"], v["K_var"],
-                               v["x0cr"], v["r"], v["w"], v["tau1"], v["tau0"]], jac_sym[ind(2), :], "numpy"))
+                               v["w"], v["tau1"], v["tau0"]], jac_sym[ind(2), :], "numpy"))
         jac_lambda.append(lambdify([v["x1"], v["y1"], v["z"], v["x2"], v["y2"], v["g"],
                                v["x0_var"], v["Iext1_var"], v["Iext2_var"], v["slope_var"], v["K_var"],
                                v["tau1"]], jac_sym[ind(3), :], "numpy"))
