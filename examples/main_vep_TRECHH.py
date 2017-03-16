@@ -152,10 +152,10 @@ if __name__ == "__main__":
     E = (0.5 * np.ones((1,hyp_ep.n_regions))).tolist()
     hyp_ep.configure_e_hypothesis(iE, E, seizure_indices)
     logger.debug(str(hyp_ep))
-    plot_hypothesis(hyp_ep, head.connectivity.region_labels, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
-                   figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
-
-    write_hypothesis(hyp_ep, folder_name=FOLDER_RES, file_name="hyp_ep.h5", hypo_name=None)
+    # plot_hypothesis(hyp_ep, head.connectivity.region_labels, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
+    #                figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
+    #
+    # write_hypothesis(hyp_ep, folder_name=FOLDER_RES, file_name="hyp_ep.h5", hypo_name=None)
 
     # # Test write, read and assert functions
     # hyp_ep2 = read_hypothesis(path=os.path.join(FOLDER_RES, "hyp_ep.h5"), output="object",
@@ -179,7 +179,7 @@ if __name__ == "__main__":
     hyp_exc.configure_x0_hypothesis(ix0, x0, seizure_indices)
 
     plot_hypothesis(hyp_exc, head.connectivity.region_labels,
-                    save_flag=SAVE_FLAG, show_flag=True,
+                    save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
                     figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
     write_hypothesis(hyp_exc, folder_name=FOLDER_RES, file_name="hyp_exc.h5", hypo_name=None)
     #
@@ -197,7 +197,7 @@ if __name__ == "__main__":
     #
     # logger.debug(str(hyp_exc))
     # plot_hypothesis(hyp_exc, head.connectivity.region_labels,
-    #                 save_flag=SAVE_FLAG, show_flag=True,
+    #                 save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
     #                 figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
     # write_hypothesis(hyp_exc, folder_name=FOLDER_RES, file_name="hyp_exc2.h5", hypo_name=None)
 

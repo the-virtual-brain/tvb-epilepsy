@@ -9,7 +9,8 @@ from matplotlib import pyplot, gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.utils import calculate_in_degree
-from tvb_epilepsy.base.equations import calc_fz
+from tvb_epilepsy.base.equations import calc_fx1_2d, calc_fx1_6d, calc_fz, calc_fx1_2d_taylor
+from tvb_epilepsy.base.equilibrium_computation import calc_eq_y1
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
 try:
@@ -224,52 +225,71 @@ def _plot_projection(proj, connectivity, sensors, figure=None, title="Projection
     return figure
 
 
-def plot_nullclines_eq(hypothesis,region_labels,special_idx=None, x0ne = X0_DEF, x0e = X0_CR_DEF,
-                       figure_name='Nullclines and equilibria', show_flag=SHOW_FLAG,
-                       save_flag=False, figure_dir=FOLDER_FIGURES, 
-                       figure_format=FIG_FORMAT, figsize=SMALL_SIZE):
-                    
+def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", zmode=numpy.array("lin"),
+                       x0ne=X0_DEF, x0e=X0_CR_DEF, figure_name='Nullclines and equilibria',
+                       show_flag=SHOW_FLAG, save_flag=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
+                       figsize=SMALL_SIZE):
+
+    add_name = " " + "Epileptor " + model + " z-" + str(zmode)
+    figure_name = hypothesis.name + " " + figure_name + add_name
+
     #Fixed parameters for all regions:
+    x1eq = numpy.mean(hypothesis.x1EQ)
     yc = numpy.mean(hypothesis.yc)
     Iext1 = numpy.mean(hypothesis.Iext1)
     x0cr = numpy.mean(hypothesis.x0cr)  # Critical x0
-    r = numpy.mean(hypothesis.rx0) 
-    #x0ne = 0.0  # Default x0 for non epileptogenic regions
-    #x0e = 1.0  # Default x0 for epileptogenic regions
+    r = numpy.mean(hypothesis.rx0)
+    if model != "2d" or zmode != numpy.array("lin"):
+        x0cr, r = calc_x0cr_r(yc, Iext1, epileptor_model=model, zmode=zmode, x1_rest=X1_DEF,
+                                              x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF)
+
     x1lin0 = numpy.mean(hypothesis.x1LIN)  # The point of the linear approximation (1st order Taylor expansion)
-    #x1sq0 = numpy.mean(hypothesis.x1SQ)  # The point of the square (parabolic) approximation (2nd order Taylor expansion)
+    x1sq0 = numpy.mean(hypothesis.x1SQ)  # The point of the square (parabolic) approximation (2nd order Taylor expansion)
     
     # Lines:
-    x1 = numpy.expand_dims(numpy.linspace(-2.0, 2.0 / 3.0, 100), 1).T
+
     # x1 nullcline:
-    zX1 = yc + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
+    if model == "2d":
+        x1 = numpy.expand_dims(numpy.linspace(-2.0, 2.0 / 3.0, 100), 1).T
+        zX1 = calc_fx1_2d(x1, z=0, yc=yc, Iext1=Iext1) #yc + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
+        # approximations:
+        # linear:
+        x1lin = numpy.expand_dims(numpy.linspace(-5.5 / 3.0, -3.5 / 3, 30), 1).T
+        # x1 nullcline after linear approximation
+        zX1lin = calc_fx1_2d_taylor(x1lin, x1lin0, z=0, yc=yc, Iext1=Iext1, slope=0.0, a=1.0, b=-2.0, tau1=1.0,
+                                    x1_neg=None,
+                                    order=2)  # yc + Iext1 + 2.0 * x1lin0 ** 3 + 2.0 * x1lin0 ** 2 - \
+        # (3.0 * x1lin0 ** 2 + 4.0 * x1lin0) * x1lin  # x1 nullcline after linear approximation
+        # center point without approximation:
+        # zlin0 = yc + Iext1 - x1lin0 ** 3 - 2.0 * x1lin0 ** 2
+        # square:
+        x1sq = numpy.expand_dims(numpy.linspace(-5.0 / 3, -1.0, 30), 1).T
+        # x1 nullcline after parabolic approximation
+        zX1sq = calc_fx1_2d_taylor(x1sq, x1sq0, z=0, yc=yc, Iext1=Iext1, slope=0.0, a=1.0, b=-2.0, tau1=1.0,
+                                   x1_neg=None,
+                                   order=3)  # + 2.0 * x1sq ** 2 + 16.0 * x1sq / 3.0 + yc + Iext1 + 64.0 / 27.0
+        # center point (critical equilibrium point) without approximation:
+        # zsq0 = yc + Iext1 - x1sq0 ** 3 - 2.0 * x1sq0 ** 2
+    else:
+        x1 = numpy.expand_dims(numpy.linspace(-2.0*10, 2.0*10 / 3.0, 100), 1).T
+        zX1 = calc_fx1_6d(x1, z=0, y1=calc_eq_y1(x1eq, yc, d=5.0), Iext1=Iext1) #y1eq + Iext1 - x1 ** 3 + 3.0 * x1 ** 2
+
     # z nullcline:
-    zZe = calc_fz(x1,x0e,x0cr,r)   # for epileptogenic regions
-    zZne = calc_fz(x1,x0ne,x0cr,r)  # for non-epileptogenic regions
-    # approximations:
-    # linear:
-    x1lin = numpy.expand_dims(numpy.linspace(-5.5 / 3.0, -3.5/3 , 30), 1).T
-    # x1 nullcline after linear approximation
-    zX1lin = yc + Iext1 + 2.0 * x1lin0 ** 3 + 2.0 * x1lin0 ** 2 - \
-             (3.0 * x1lin0 ** 2 + 4.0 * x1lin0) * x1lin  # x1 nullcline after linear approximation
-    # center point without approximation:
-    #zlin0 = yc + Iext1 - x1lin0 ** 3 - 2.0 * x1lin0 ** 2
-    # square:
-    x1sq = numpy.expand_dims(numpy.linspace(-5.0 / 3, -1.0, 30), 1).T
-    # x1 nullcline after parabolic approximation
-    zX1sq = + 2.0 * x1sq ** 2 + 16.0 * x1sq / 3.0 + yc + Iext1 + 64.0 / 27.0
-    # center point (critical equilibrium point) without approximation:
-    #zsq0 = yc + Iext1 - x1sq0 ** 3 - 2.0 * x1sq0 ** 2
-    
+    zZe = calc_fz(x1, x0e, x0cr, r, zmode=zmode)   # for epileptogenic regions
+    zZne = calc_fz(x1, x0ne, x0cr, r, zmode=zmode)  # for non-epileptogenic regions
+
     fig=mp.pyplot.figure(figure_name, figsize=figsize)
     x1null, =mp.pyplot.plot(x1[0, :], zX1[0, :], 'b-', label='x1 nullcline', linewidth=1)
     ax = mp.pyplot.gca()
     ax.axes.hold(True)
     zE1null, =mp.pyplot.plot(x1[0, :], zZe[0, :], 'g-', label='z nullcline at critical point (E=1)', linewidth=1)
     zE2null, =mp.pyplot.plot(x1[0, :], zZne[0, :], 'g--', label='z nullcline for E=0', linewidth=1)
-    sq, = mp.pyplot.plot(x1sq[0, :], zX1sq[0, :], 'm--', label='Parabolic local approximation', linewidth=2)
-    lin, = mp.pyplot.plot(x1lin[0, :], zX1lin[0, :], 'c--', label='Linear local approximation', linewidth=2)
-    mp.pyplot.legend(handles=[x1null, zE1null, zE2null, lin, sq])
+    if model == "2d":
+        sq, = mp.pyplot.plot(x1sq[0, :], zX1sq[0, :], 'm--', label='Parabolic local approximation', linewidth=2)
+        lin, = mp.pyplot.plot(x1lin[0, :], zX1lin[0, :], 'c--', label='Linear local approximation', linewidth=2)
+        mp.pyplot.legend(handles=[x1null, zE1null, zE2null, lin, sq])
+    else:
+        mp.pyplot.legend(handles=[x1null, zE1null, zE2null])
     
     ii=range(hypothesis.n_regions)
     if special_idx is None:
@@ -277,18 +297,23 @@ def plot_nullclines_eq(hypothesis,region_labels,special_idx=None, x0ne = X0_DEF,
         
     points =[]    
     for i in ii:
-        point, = mp.pyplot.plot(hypothesis.x1EQ[0,i], hypothesis.zEQ[0,i], '*', mfc='k', mec='k', ms=10,  alpha=0.3, label=str(i)+'.'+region_labels[i])
+        point, = mp.pyplot.plot(hypothesis.x1EQ[0,i], hypothesis.zEQ[0,i], '*', mfc='k', mec='k', ms=10,  alpha=0.3,
+                                label=str(i)+'.'+region_labels[i])
         points.append(point)
     if special_idx is None:
         for i in special_idx:
-            point, = mp.pyplot.plot(hypothesis.x1EQ[0,i], hypothesis.zEQ[0,i], '*', mfc='r', mec='r', ms=10, alpha=0.8, label=str(i)+'.'+region_labels[i])
+            point, = mp.pyplot.plot(hypothesis.x1EQ[0,i], hypothesis.zEQ[0,i], '*', mfc='r', mec='r', ms=10, alpha=0.8,
+                                    label=str(i)+'.'+region_labels[i])
             points.append(point)
     #ax.plot(x1lin0, zlin0, '*', mfc='r', mec='r', ms=10)
     #ax.axes.text(x1lin0 - 0.1, zlin0 + 0.2, 'E=0.0', fontsize=10, color='r')
     #ax.plot(x1sq0, zsq0, '*', mfc='m', mec='m', ms=10)
     #ax.axes.text(x1sq0, zsq0 - 0.2, 'E=1.0', fontsize=10, color='m')
-    ax.set_title(
-        'Equilibria, nullclines and Taylor series approximations \n at the x1-z phase plane of the 2D Epileptor for x1<0')
+    if model == "2d":
+        ax.set_title("Equilibria, nullclines and Taylor series approximations \n at the x1-z phase plane of the" +
+                     add_name + " for x1<0")
+    else:
+        ax.set_title("Equilibria, nullclines at the x1-z phase plane of the" + add_name + " for x1<0")
     ax.axes.autoscale(tight=True)
     ax.axes.set_xlabel('x1')
     ax.axes.set_ylabel('z')
@@ -306,7 +331,8 @@ def plot_nullclines_eq(hypothesis,region_labels,special_idx=None, x0ne = X0_DEF,
             figure_name = fig.get_label().replace(" ", "_").replace("\t", "_")
         _save_figure(figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
     _check_show(show_flag)
-                     
+
+
 def plot_hypothesis(hypothesis, region_labels, figure_name='', show_flag=SHOW_FLAG,
                     save_flag=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
     fig = mp.pyplot.figure('Hypothesis ' + hypothesis.name, frameon=False, figsize=figsize)
@@ -346,10 +372,23 @@ def plot_hypothesis(hypothesis, region_labels, figure_name='', show_flag=SHOW_FL
         _save_figure(figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
     _check_show(show_flag)
     
-    plot_nullclines_eq(hypothesis,region_labels,special_idx=hypothesis.seizure_indices,
-                       figure_name='Nullclines and equilibria', show_flag=show_flag,
-                       save_flag=save_flag, figure_dir=figure_dir, 
-                       figure_format=figure_format, figsize=figsize)
+    plot_nullclines_eq(hypothesis,region_labels,special_idx=hypothesis.seizure_indices, model="2d",
+                       zmode=numpy.array("lin"), figure_name='Nullclines and equilibria', show_flag=show_flag,
+                       save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
+
+    plot_nullclines_eq(hypothesis, region_labels, special_idx=hypothesis.seizure_indices, model="2d",
+                       zmode=numpy.array("sig"), figure_name='Nullclines and equilibria', show_flag=show_flag,
+                       save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
+
+    plot_nullclines_eq(hypothesis, region_labels, special_idx=hypothesis.seizure_indices, model="6d",
+                       zmode=numpy.array("lin"), figure_name='Nullclines and equilibria', show_flag=show_flag,
+                       save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
+
+    plot_nullclines_eq(hypothesis, region_labels, special_idx=hypothesis.seizure_indices, model="6d",
+                      zmode=numpy.array("sig"), figure_name='Nullclines and equilibria', show_flag=show_flag,
+                      save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
+
+
                        
 
 def _set_axis_labels(fig, sub, n_regions, region_labels, indices2emphasize, color='k', position='left'):

@@ -41,7 +41,7 @@ def sc2arr(x, shape):
                 raise ValueError("Input is a numpy.ndarray of shape " + str(x.shape) +
                                  " that cannot be reshaped to the desired shape " + str(shape))
 
-    elif isinstance(x, (float, int, long, complex)):
+    elif isinstance(x, (float, int, long, complex, numpy.number)):
         return x * numpy.ones(shape, dtype=type(x))
 
     elif isinstance(x, list):
@@ -481,7 +481,7 @@ else:
              x0 = (x1 + x0cr - (z+coupl) / 4.0) / r
 
         elif zmode == 'sig':
-            x0 = (3.0 / (1.0 + numpy.exp(-10.0 * (x1 + 0.5))) + x0cr - z + coupl) / r
+            x0 = (3.0 / (1.0 + numpy.exp(1) ** (-10.0 * (x1 + 0.5))) + x0cr - z + coupl) / r
 
         else:
             raise ValueError('zmode is neither "lin" nor "sig"')
@@ -571,7 +571,7 @@ else:
 
             for ix in range(x1.size):
                 fx1lin[ix] = series(fx1lin[ix], x=x, x0=x_taylor, n=order).removeO().simplify().\
-                             subs(x, x1.x1.flatten()[ix])
+                             subs(x, x1.flatten()[ix])
 
         return numpy.reshape(fx1lin, p).astype(x1.dtype)
 
@@ -592,7 +592,7 @@ else:
             fz = tau1 * (4 * (x1 - r * x0 + x0cr) - z - coupl) / tau0
 
         elif zmode == 'sig':
-            fz = tau1 * (3 / (1 + numpy.exp(-10.0 * (x1 + 0.5))) - r * x0 + x0cr - z - coupl) / tau0
+            fz = tau1 * (3 / (1 + numpy.exp(1) ** (-10.0 * (x1 + 0.5))) - r * x0 + x0cr - z - coupl) / tau0
 
         else:
             raise ValueError('zmode is neither "lin" nor "sig"')
@@ -817,7 +817,7 @@ def calc_x0cr_r(yc, Iext1, epileptor_model="2d", zmode=numpy.array("lin"),
         Iext1 = numpy.array(Iext1)
 
     p = Iext1.shape
-    Iext1 = numpy.squeeze(Iext1)
+    Iext1 = Iext1.flatten()
     yc = sc2arr(yc, Iext1.shape)
 
     if SOLVE_FLAG == "symbolic":
