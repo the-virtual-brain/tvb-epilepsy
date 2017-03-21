@@ -8,7 +8,7 @@ from tvb.simulator.common import get_logger
 import tvb.datatypes.arrays as arrays
 import tvb.basic.traits.types_basic as basic
 from tvb.simulator.models import Model, Epileptor
-from tvb_epilepsy.base.equations import calc_x0, calc_x0cr_r, rescale_x0
+from tvb_epilepsy.base.calculations import calc_x0, calc_x0cr_r, rescale_x0
 
 LOG = get_logger(__name__)
 
@@ -1112,8 +1112,8 @@ def build_ep_2sv_model(hypothesis, variables_of_interest=["yc", "y1"], zmode=num
         r = hypothesis.rx0
     elif zmode == 'sig':
         #Correct Ceq, x0cr, rx0 and x0 for sigmoidal fz(x1)
-        (x0cr, r) = calc_x0cr_r(hypothesis.yc, hypothesis.Iext1, epileptor_model="2d", zmode=zmode)
-        x0 = calc_x0(hypothesis.x1EQ, hypothesis.zEQ, x0cr, r, hypothesis.K, hypothesis.weights, zmode)
+        (x0cr, r) = calc_x0cr_r(hypothesis.yc, hypothesis.Iext1, zmode=zmode) #epileptor_model="2d",
+        x0 = calc_x0(hypothesis.x1EQ, hypothesis.zEQ,hypothesis.K, hypothesis.weights, x0cr, r, model="2d", zmode=zmode)
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
     model = EpileptorDP2D(x0=x0.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.yc.T, r=r.T, x0cr=x0cr.T,

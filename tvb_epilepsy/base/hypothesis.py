@@ -113,7 +113,8 @@ class Hypothesis(object):
         #return self.K * (numpy.expand_dims(numpy.sum(self.weights * ( numpy.dot(i.T, self.x1EQ) - numpy.dot(self.x1EQ.T, i)), axis=1), 1).T)
 
     def _calculate_x0(self):
-        return calc_x0(self.x1EQ, self.zEQ, self.K, self.weights, self.x0cr, self.rx0, model = "2d", zmode="lin")
+        return calc_x0(self.x1EQ, self.zEQ, self.K, self.weights, self.x0cr, self.rx0, model="2d", zmode=numpy.array("lin"),
+                       z_pos=True)
         #return (self.x1EQ + self.x0cr - (self.zEQ + self.Ceq) / 4.0) / self.rx0
 
     def _dfz_square_taylor(self):

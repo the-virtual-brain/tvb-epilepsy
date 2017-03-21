@@ -9,7 +9,6 @@ from itertools import product
 from scipy.signal import butter, lfilter
 from collections import OrderedDict
 from tvb_epilepsy.base.constants import *
-from tvb_epilepsy.tvb_api.epileptor_models import *
 
 
 def initialize_logger(name, target_folder=FOLDER_LOGS):
@@ -37,39 +36,55 @@ def list_of_strings_to_string(lstr, sep=","):
     return str
 
 
-def sc2arr(x, shape):
+def assert_arrays(params, shape=None):
 
-    if isinstance(x, numpy.ndarray):
+    for ip in range(len(params)):
 
-        if x.shape == shape:
-            return x
+        if isinstance(params[ip], numpy.ndarray):
+            if shape is None:
+                shape = params[ip].shape
+            elif params[ip].shape != shape:
+                if params[ip].size == 1:
+                    params[ip] = numpy.tile(params[ip], shape)
+                else:
+                    params[ip] = numpy.reshape(params[ip], shape)
+
+        elif isinstance(params[ip], list):
+            # assuming a list of symbols...
+            params[ip] = numpy.array(params[ip]).astype(type(params[ip][0]))
+            if shape is None:
+                shape = params[ip].shape
+            elif params[ip].shape != shape:
+                if params[ip].size == 1:
+                    params[ip] = numpy.tile(params[ip], shape)
+                else:
+                    params[ip] = numpy.reshape(params[ip], shape)
+
+        elif isinstance(params[ip], (float, int, long, complex, numpy.number)):
+            if shape is not None:
+                params[ip] = numpy.tile(params[ip], shape)
+            else:
+                params[ip] = numpy.array(params[ip])
 
         else:
             try:
-                return numpy.reshape(x, shape)
+                import sympy
             except:
-                raise ValueError("Input is a numpy.ndarray of shape " + str(x.shape) +
-                                 " that cannot be reshaped to the desired shape " + str(shape))
+                raise ImportError()
 
-    elif isinstance(x, (float, int, long, complex)):
-        return x * numpy.ones(shape, dtype=type(x))
+            if isinstance(params[ip], tuple(sympy.core.all_classes)):
+                if shape is not None:
+                    params[ip] = numpy.tile(params[ip], shape)
+                else:
+                    params[ip] = numpy.array(params[ip])
+            else:
+                raise ValueError("Input " + str(params[ip]) + " of type " + str(type(params[ip])) + " is not numeric, "
+                                                                                  "of type numpy.ndarray, nor Symbol")
 
-    elif isinstance(x, list):
-        # assuming a list of symbols...
-        return numpy.array(x, dtype=type(x[0]))
-
+    if len(params) == 1:
+        return params[0]
     else:
-        try:
-            import sympy
-        except:
-            raise ImportError()
-
-        if isinstance(x, tuple(sympy.core.all_classes)):
-            return numpy.tile(x, shape)
-
-        else:
-            raise ValueError("Input " + str(x) + " of type " + str(type(x)) + " is not numeric, "
-                                                                              "of type numpy.ndarray, nor Symbol")
+        return tuple(params)
 
 
 def linear_scaling(x, x1, x2, y1, y2):
@@ -282,7 +297,6 @@ def write_metadata(meta_dict, h5_file, key_date, key_version, path="/"):
 # TODO: modify functions to write and read h5 files recursively when objects to be read or written are dict()
 def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrite_fields_dict=None, keys=None):
 
-    logger = get_logger()
 
     if isinstance(h5_file, basestring):
         print "Writing to: ", h5_file
@@ -330,7 +344,7 @@ def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrit
         except:
             raise ValueError(attribute + " not found in the object!")
 
-        logger.debug("dataset %s value %s" % (attribute, h5_file['/' + attribute][()]))
+        print "dataset %s value %s" % (attribute, h5_file['/' + attribute][()])
 
 
     if isinstance(add_overwrite_fields_dict, dict):
@@ -366,7 +380,7 @@ def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrit
                 except:
                     raise ValueError("Failed to write "+ attribute + " as a scalar value!")
 
-            logger.debug("dataset %s value %s" % (attribute, h5_file['/' + attribute][()]))
+            print "dataset %s value %s" % (attribute, h5_file['/' + attribute][()])
 
     if isinstance(h5_file, basestring):
         h5_file.close()
@@ -374,7 +388,6 @@ def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrit
 
 def read_object_from_h5_file(object, h5_file, attributes_dict=None, add_overwrite_fields_dict=None):
 
-    logger = get_logger()
 
     if isinstance(h5_file, basestring):
         print "Reading from:", h5_file
@@ -401,7 +414,7 @@ def read_object_from_h5_file(object, h5_file, attributes_dict=None, add_overwrit
         except:
             raise ValueError("Failed to read " + attribute + "!")
 
-        logger.debug("attribute %s value %s" % (attribute, get_field(object, attributes_dict[attribute])))
+        print "attribute %s value %s" % (attribute, get_field(object, attributes_dict[attribute]))
 
     if isinstance(h5_file, basestring):
         h5_file.close()
@@ -416,7 +429,7 @@ def read_object_from_h5_file(object, h5_file, attributes_dict=None, add_overwrit
             except:
                 raise ValueError("Failed to set " + attribute + "!")
 
-            logger.debug("attribute %s value %s" % (attribute, get_field(object, attribute)))
+            print "attribute %s value %s" % (attribute, get_field(object, attribute))
 
     return object
 
