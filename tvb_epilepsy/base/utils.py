@@ -36,50 +36,105 @@ def list_of_strings_to_string(lstr, sep=","):
     return str
 
 
+def shape_to_size(shape):
+    shape = numpy.array(shape)
+    shape = shape[shape>0]
+    return shape.prod()
+
+
 def assert_arrays(params, shape=None):
+
+    if shape is None or \
+        not(isinstance(shape, tuple)
+            and len(shape) in range(3) and numpy.all([isinstance(s, (int, numpy.int)) for s in shape])):
+        shape = None
+        shapes = [] # list of all unique shapes
+        n_shapes = []   # list of all unique shapes' frequencies
+        size = 0    # initial shape
+
+    else:
+        size = shape_to_size(shape)
 
     for ip in range(len(params)):
 
-        if isinstance(params[ip], numpy.ndarray):
-            if shape is None:
-                shape = params[ip].shape
-            elif params[ip].shape != shape:
-                if params[ip].size == 1:
-                    params[ip] = numpy.tile(params[ip], shape)
-                else:
-                    params[ip] = numpy.reshape(params[ip], shape)
+        # Convert all accepted types to numpy arrays:
 
-        elif isinstance(params[ip], list):
-            # assuming a list of symbols...
+        if isinstance(params[ip], numpy.ndarray):
+            pass
+
+        elif isinstance(params[ip], (list, tuple)):
+            # assuming a list or tuple of symbols...
             params[ip] = numpy.array(params[ip]).astype(type(params[ip][0]))
-            if shape is None:
-                shape = params[ip].shape
-            elif params[ip].shape != shape:
-                if params[ip].size == 1:
-                    params[ip] = numpy.tile(params[ip], shape)
-                else:
-                    params[ip] = numpy.reshape(params[ip], shape)
 
         elif isinstance(params[ip], (float, int, long, complex, numpy.number)):
-            if shape is not None:
-                params[ip] = numpy.tile(params[ip], shape)
-            else:
-                params[ip] = numpy.array(params[ip])
+            params[ip] = numpy.array(params[ip])
 
         else:
             try:
                 import sympy
             except:
-                raise ImportError()
+                raise ImportError("sympy import failed")
 
             if isinstance(params[ip], tuple(sympy.core.all_classes)):
-                if shape is not None:
-                    params[ip] = numpy.tile(params[ip], shape)
-                else:
-                    params[ip] = numpy.array(params[ip])
+                params[ip] = numpy.array(params[ip])
+
             else:
                 raise ValueError("Input " + str(params[ip]) + " of type " + str(type(params[ip])) + " is not numeric, "
                                                                                   "of type numpy.ndarray, nor Symbol")
+
+        if shape is None:
+
+            # Only one size > 1 is acceptable
+
+            if params[ip].size != size:
+
+                if size > 1 and params[ip].size > 1:
+
+                    raise ValueError("Inputs are of at least two distinct sizes > 1")
+
+                elif params[ip].size > size:
+
+                    size = params[ip].size
+
+            # Construct a kind of histogram of all different shapes of the inputs:
+
+            ind = [(x == params[ip].shape) for x in shapes]
+
+            if numpy.any(ind):
+                ind, = numpy.where(ind)
+                n_shapes[ind] += 1
+            else:
+                shapes.append(params[ip].shape)
+                n_shapes.append(1)
+        else:
+
+            if params[ip].size > size:
+
+                raise ValueError("At least one input is of a greater size than the one given!")
+
+    if shape is None:
+
+        # Keep only shapes of the correct size
+        ind = numpy.array([shape_to_size(s) == size for s in shapes])
+        shapes = numpy.array(shapes)[ind]
+        n_shapes = numpy.array(n_shapes)[ind]
+
+        # Find the most frequent shape
+        ind = numpy.argmax(n_shapes)
+        shape = tuple(shapes[ind])
+
+    # Now reshape or tile when necessary
+    for ip in range(len(params)):
+
+        try:
+            if params[ip].shape != shape:
+
+                if params[ip].size in [0, 1]:
+                    params[ip] = numpy.tile(params[ip], shape)
+                else:
+                    params[ip] = numpy.reshape(params[ip], shape)
+        except:
+            print "what the fuck??"
 
     if len(params) == 1:
         return params[0]

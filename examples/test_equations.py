@@ -25,6 +25,9 @@ if __name__ == "__main__":
     slope = 0.0 * numpy.ones(x1.shape, dtype=x1.dtype)
     Iext2 = 0.45 * numpy.ones(x1.shape, dtype=x1.dtype)
 
+    x1, K = assert_arrays([x1, K])
+    w = assert_arrays([w]) #, (x1.size, x1.size)
+
     # Update zeq given the specific model, and assuming the hypothesis x1eq for the moment in the context of a 2d model:
     # It is assumed that the model.x0 has been adjusted already at the phase of model creation
     zeq = calc_eq_z_2d(x1eq, yc, Iext1)
@@ -50,13 +53,13 @@ if __name__ == "__main__":
         eq = numpy.r_[x1eq, zeq].astype('float32')
         model_vars = 2
         dfun = calc_dfun(x1eq, zeq, yc, Iext1, x0, K, w, model_vars, x0cr=x0cr, r=r,
-                         zmode=zmode, pmode=pmode, x1_neg=True, x2_neg=True, z_pos=True, 
+                         zmode=zmode, pmode=pmode,
                          x0_var=x0, slope_var=slope, Iext1_var=Iext1, Iext2_var=Iext2, K_var=K, slope=slope, 
                          a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0, tau2=10.0, 
                          output_mode="arrays")
 
         jac = calc_jac(x1eq, zeq, yc, Iext1, x0, K, w, model_vars, x0cr=x0cr, r=r, 
-                       zmode=zmode, pmode=pmode, x1_neg=True, x2_neg=True, z_pos=True, 
+                       zmode=zmode, pmode=pmode, x1_neg=True, z_pos=True, x2_neg=True,
                        x0_var=x0, slope_var=slope, Iext1_var=Iext1, Iext2_var=Iext2, K_var=K,
                        slope=slope, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
                        tau2=10.0)
@@ -76,36 +79,32 @@ if __name__ == "__main__":
                                                                 EpileptorDPrealistic.fun_slope_Iext2, a=1.0, b=-2.0,
                                                                 d=0.5, gamma=0.1, pmode=pmode)
             model_vars = 11
-            dfun = calc_dfun(x1eq, zeq, yc, Iext1, r, K, w, model_vars, 
-                             zmode, pmode, x1_neg=True, x2_neg=True, z_pos=True, 
-                             y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5], 
-                             x0_var=x0_6d, slope_var=slope_eq, Iext1_var=Iext1, Iext2_var=Iext2_eq, K_var=K,
+            dfun = calc_dfun(x1eq, zeq, yc, Iext1, r, K, w, model_vars, zmode, pmode,
+                             y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5],
+                             x0_var=eq[6], slope_var=eq[7], Iext1_var=eq[8], Iext2_var=eq[9], K_var=eq[10],
                              slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
                              tau2=10.0, output_mode="arrays")
 
-            jac = calc_jac(x1eq, zeq, yc, Iext1, r, K, w, model_vars, 
-                           zmode, pmode, x1_neg=True, x2_neg=True, z_pos=True,
-                             y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5], 
-                             x0_var=x0_6d, slope_var=slope_eq, Iext1_var=Iext1, Iext2_var=Iext2_eq, K_var=K,
-                             slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
-                             tau2=10.0)
+            jac = calc_jac(x1eq, zeq, yc, Iext1, x0, K, w, model_vars,
+                           zmode, pmode, x1_neg=True, z_pos=True, x2_neg=True,
+                           y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5],
+                           x0_var=eq[6], slope_var=eq[7], Iext1_var=eq[8], Iext2_var=eq[9], K_var=eq[10],
+                           slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
+                           tau2=10.0)
 
         else:
 
             # all >=6D models
             eq = calc_eq_6d(zeq, yc.T, Iext1.T, Iext2.T, a=1.0, b=3.0, d=0.5, gamma=0.1)
             model_vars = 6
-            dfun=calc_dfun(x1eq, zeq, yc, Iext1, r, K, w, model_vars, 
-                           zmode, pmode, x1_neg=True, x2_neg=True, z_pos=True,
-                           y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5], 
-                           x0_var=eq[6], slope_var=eq[7], Iext1_var=eq[8], Iext2_var=eq[9], K_var=eq[10],
-                           slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
-                           tau2=10.0, output_mode="arrays")
+            dfun = calc_dfun(x1eq, zeq, yc, Iext1, r, K, w, model_vars, zmode,
+                             y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5],
+                             slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
+                             tau2=10.0, output_mode="arrays")
 
-            jac = calc_jac(x1eq, zeq, yc, Iext1, x0, K, w, model_vars, 
-                           zmode, pmode, x1_neg=True, x2_neg=True, z_pos=True,
-                           y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5], 
-                           x0_var=x0_6d, slope_var=slope, Iext1_var=Iext1, Iext2_var=Iext2, K_var=K,
+            jac = calc_jac(x1eq, zeq, yc, Iext1, r, K, w, model_vars,
+                           zmode, x1_neg=True, z_pos=True, x2_neg=True,
+                           y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5],
                            slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
                            tau2=10.0)
 
@@ -145,7 +144,10 @@ if __name__ == "__main__":
     x[iE] = vz["x0"][iE]
     p = x1.shape
     numpy.fill_diagonal(vz["w"], 0.0)
-    jac = eq_x1_hypo_x0_optimize_jac(x, ix0, iE, vx["x1"], vx["z"], vz["x0"][ix0], vz["x0cr"], vz["r"], vx["yc"],
+    vx["x1"], vx["z"], vz["x0"][ix0], vz["x0cr"], vz["r"], vx["y1"], vx["Iext1"], vz["K"] = \
+        assert_arrays([vx["x1"], vx["z"], vz["x0"][ix0], vz["x0cr"], vz["r"], vx["y1"], vx["Iext1"], vz["K"]],
+                      (1, vx["x1"].size))
+    jac = eq_x1_hypo_x0_optimize_jac(x, ix0, iE, vx["x1"], vx["z"], vz["x0"][ix0], vz["x0cr"], vz["r"], vx["y1"],
                                      vx["Iext1"], vz["K"], vz["w"])
 
     print jac

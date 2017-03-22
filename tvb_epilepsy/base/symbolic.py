@@ -62,7 +62,7 @@ def symbol_vars(n_regions, vars_str, dims=1, ind_str="_", shape=None, numpy_flag
     return tuple(vars_out)
 
 
-def symbol_eqtn_coupling(n, ix, jx, K="K", shape=None):
+def symbol_eqtn_coupling(n, ix=None, jx=None, K="K", shape=None):
 
     # Only difference coupling for the moment.
     # TODO: Extend for different coupling forms
@@ -71,9 +71,15 @@ def symbol_eqtn_coupling(n, ix, jx, K="K", shape=None):
     w, vars_dict_w = symbol_vars(n, ["w"], dims=2)
     vars_dict.update(vars_dict_w)
 
+    if ix is None:
+        ix = range(n)
+
+    if jx is None:
+        jx = range(n)
+
     coupling = eqtn_coupling(x1, K, w, ix, jx)
 
-    return lambdify([x1, K, w], coupling, "numpy"), coupling, vars_dict
+    return lambdify([x1, K, w], coupling.tolist(), "numpy"), coupling, vars_dict
 
 
 def symbol_eqtn_x0(n, zmode=numpy.array("lin"), z_pos=True, model="2d", K="K", shape=None):
@@ -91,13 +97,13 @@ def symbol_eqtn_x0(n, zmode=numpy.array("lin"), z_pos=True, model="2d", K="K", s
 
         x0 = eqtn_x0(x1, z, model, zmode, z_pos, K, w, x0cr, r)
 
-        return lambdify([x1, z, x0cr, r, K, w], x0, "numpy"), x0, vars_dict
+        return lambdify([x1, z, x0cr, r, K, w], x0.tolist(), "numpy"), x0, vars_dict
 
     else:
 
         x0 = eqtn_x0(x1, z, model, zmode, z_pos, K, w)
 
-        return lambdify([x1, z, K, w], x0, "numpy"), x0, vars_dict
+        return lambdify([x1, z, K, w], x0.tolist(), "numpy"), x0, vars_dict
 
 
 def symbol_eqtn_fx1(n, model="2d", x1_neg=True, slope="slope", Iext1="Iext1", shape=None):
@@ -109,7 +115,7 @@ def symbol_eqtn_fx1(n, model="2d", x1_neg=True, slope="slope", Iext1="Iext1", sh
 
         fx1 = eqtn_fx1(x1, z, y1, Iext1, slope, a, b, tau1, x1_neg, model, x2=None)
 
-        return lambdify([x1, z, y1, Iext1, slope, a, b, tau1], fx1, "numpy"), fx1, vars_dict
+        return lambdify([x1, z, y1, Iext1, slope, a, b, tau1], fx1.tolist(), "numpy"), fx1, vars_dict
 
     else:
 
@@ -118,7 +124,7 @@ def symbol_eqtn_fx1(n, model="2d", x1_neg=True, slope="slope", Iext1="Iext1", sh
 
         fx1 = eqtn_fx1(x1, z, y1, Iext1, slope, a, b, tau1, x1_neg, model, x2=x2)
 
-        return lambdify([x1, z, y1, x2, Iext1, slope, a, b, tau1], fx1, "numpy"), fx1, vars_dict
+        return lambdify([x1, z, y1, x2, Iext1, slope, a, b, tau1], fx1.tolist(), "numpy"), fx1, vars_dict
 
 
 
@@ -128,7 +134,7 @@ def symbol_eqtn_fy1(n, shape=None):
 
     fy1 = eqtn_fy1(x1, yc, y1, d, tau1)
 
-    return lambdify([x1, y1, yc, d, tau1], fy1, "numpy"), fy1, vars_dict
+    return lambdify([x1, y1, yc, d, tau1], fy1.tolist(), "numpy"), fy1, vars_dict
 
 
 def symbol_eqtn_fz(n, zmode=numpy.array("lin"), z_pos=True, model="2d", x0="x0", K="K", shape=None):
@@ -146,13 +152,13 @@ def symbol_eqtn_fz(n, zmode=numpy.array("lin"), z_pos=True, model="2d", x0="x0",
 
         fz = eqtn_fz(x1, z, x0, tau1, tau0, model, zmode, z_pos, K=K, w=w, x0cr=x0cr, r=r)
 
-        return lambdify([x1, z, x0, x0cr, r, K, w], x0, "numpy"), fz, vars_dict
+        return lambdify([x1, z, x0, x0cr, r, K, w], x0.tolist(), "numpy"), fz, vars_dict
 
     else:
 
         fz = eqtn_fz(x1, z, x0, tau1, tau0, model, zmode, z_pos, K=K, w=w, x0cr=None, r=None)
 
-        return lambdify([x1, z, x0, K, w], x0, "numpy"), fz, vars_dict
+        return lambdify([x1, z, x0, K, w], x0.tolist(), "numpy"), fz, vars_dict
 
 
 def symbol_eqtn_fx2(n, Iext2="Iext2", shape=None):
@@ -161,7 +167,7 @@ def symbol_eqtn_fx2(n, Iext2="Iext2", shape=None):
 
     fx2 = eqtn_fx2(x2, y2, z, g, Iext2, tau1)
 
-    return lambdify([x2, y2, z, g, Iext2, tau1], fx2, "numpy"), fx2, vars_dict
+    return lambdify([x2, y2, z, g, Iext2, tau1], fx2.tolist(), "numpy"), fx2, vars_dict
 
 
 def symbol_eqtn_fy2(n, x2_neg=True, shape=None):
@@ -170,7 +176,7 @@ def symbol_eqtn_fy2(n, x2_neg=True, shape=None):
 
     fy2 = eqtn_fy2(x2, y2, s, tau1, tau2, x2_neg)
 
-    return lambdify([x2, y2, s, tau1, tau2], fy2, "numpy"), fy2, vars_dict
+    return lambdify([x2, y2, s, tau1, tau2], fy2.tolist(), "numpy"), fy2, vars_dict
 
 
 def symbol_eqtn_fg(n, shape=None):
@@ -179,7 +185,7 @@ def symbol_eqtn_fg(n, shape=None):
 
     fg = eqtn_fg(x1, g, gamma, tau1)
 
-    return lambdify([x1, g, gamma, tau1], fg, "numpy"), fg, vars_dict
+    return lambdify([x1, g, gamma, tau1], fg.tolist(), "numpy"), fg, vars_dict
 
 
 def symbol_eqtn_fx0(n, shape=None):
@@ -188,7 +194,7 @@ def symbol_eqtn_fx0(n, shape=None):
 
     fx0 = eqtn_fx0(x0_var, x0, tau1)
 
-    return lambdify([x0_var, x0, tau1], fx0, "numpy"), fx0, vars_dict
+    return lambdify([x0_var, x0, tau1], fx0.tolist(), "numpy"), fx0, vars_dict
 
 
 def symbol_eqtn_fslope(n, pmode=array("const"), shape=None):
@@ -203,13 +209,13 @@ def symbol_eqtn_fslope(n, pmode=array("const"), shape=None):
     vars_dict["pmode"] = pmode
 
     if pmode=="z":
-        return lambdify([slope_var, z, tau1], fslope, "numpy"), fslope, vars_dict
+        return lambdify([slope_var, z, tau1], fslope.tolist(), "numpy"), fslope, vars_dict
     elif pmode == "g":
-        return lambdify([slope_var, g, tau1], fslope, "numpy"), fslope, vars_dict
+        return lambdify([slope_var, g, tau1], fslope.tolist(), "numpy"), fslope, vars_dict
     elif pmode == "z*g":
-        return lambdify([slope_var, z, g, tau1], fslope, "numpy"), fslope, vars_dict
+        return lambdify([slope_var, z, g, tau1], fslope.tolist(), "numpy"), fslope, vars_dict
     else:
-        return lambdify([slope_var, slope, tau1], fslope, "numpy"), fslope, vars_dict
+        return lambdify([slope_var, slope, tau1], fslope.tolist(), "numpy"), fslope, vars_dict
 
 
 def symbol_eqtn_fIext1(n, shape=None):
@@ -218,7 +224,7 @@ def symbol_eqtn_fIext1(n, shape=None):
 
     fIext1 = eqtn_fIext1(Iext1_var, Iext1, tau1, tau0)
 
-    return lambdify([Iext1_var, Iext1, tau1, tau0], fIext1, "numpy"), fIext1, vars_dict
+    return lambdify([Iext1_var, Iext1, tau1, tau0], fIext1.tolist(), "numpy"), fIext1, vars_dict
 
 
 def symbol_eqtn_fIext2(n, pmode=array("const"), shape=None):
@@ -233,13 +239,13 @@ def symbol_eqtn_fIext2(n, pmode=array("const"), shape=None):
     vars_dict["pmode"] = pmode
 
     if pmode=="z":
-        return lambdify([Iext2_var, z, tau1], fIext2, "numpy"), fIext2, vars_dict
+        return lambdify([Iext2_var, z, tau1], fIext2.tolist(), "numpy"), fIext2, vars_dict
     elif pmode == "g":
-        return lambdify([Iext2_var, g, tau1], fIext2, "numpy"), fIext2, vars_dict
+        return lambdify([Iext2_var, g, tau1], fIext2.tolist(), "numpy"), fIext2, vars_dict
     elif pmode == "z*g":
-        return lambdify([Iext2_var, z, g, tau1], fIext2, "numpy"), fIext2, vars_dict
+        return lambdify([Iext2_var, z, g, tau1], fIext2.tolist(), "numpy"), fIext2, vars_dict
     else:
-        return lambdify([Iext2_var, Iext2, tau1], fIext2, "numpy"), fIext2, vars_dict
+        return lambdify([Iext2_var, Iext2, tau1], fIext2.tolist(), "numpy"), fIext2, vars_dict
 
 
 def symbol_eqtn_fK(n, shape=None):
@@ -248,7 +254,7 @@ def symbol_eqtn_fK(n, shape=None):
 
     fK = eqtn_fK(K_var, K, tau1, tau0)
 
-    return lambdify([K_var, K, tau1, tau0], fK, "numpy"), fK, vars_dict
+    return lambdify([K_var, K, tau1, tau0], fK.tolist(), "numpy"), fK, vars_dict
 
 
 def symbol_eqtn_fparam_vars(n, pmode=array("const"), shape=None):
@@ -371,7 +377,7 @@ def symbol_calc_2d_taylor(n, x_taylor="x1lin", order=2, x1_neg=True, slope="slop
     for ix in range(v["x1"].size):
         fx1lin[ix] = series(fx1lin[ix], x=x, x0=x_taylor, n=order).removeO().simplify().subs(x, v["x1"]).flatten()[ix]
 
-    return lambdify([v["x1"], v["z"], v["y1"], v[Iext1], v[slope], v["a"], v["b"], v["tau1"]], fx1lin, "numpy"), \
+    return lambdify([v["x1"], v["z"], v["y1"], v[Iext1], v[slope], v["a"], v["b"], v["tau1"]], fx1lin.tolist(), "numpy"), \
            fx1lin, v
 
 
@@ -395,7 +401,7 @@ def symbol_calc_fx1z_2d_x1neg_zpos_jac(n, ix0, iE):
         fz[ix] = fz[ix].subs(v["z"][ix], fx1[ix]).expand(v["x1"][ix]).collect(v["x1"][ix])
         jac.append(Matrix([fz[ix]]).jacobian(x)[:])
 
-    jac = array(jac)
+    #jac = array(jac)
 
     return lambdify([v["x1"], v["z"], v["x0"], v["x0cr"], v["r"], v["yc"], v["Iext1"], v["K"], v["w"], v["a"], v["b"],
                      v["tau1"], v["tau0"]], jac, "numpy"), jac, v

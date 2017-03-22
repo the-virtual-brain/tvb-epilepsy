@@ -1,5 +1,6 @@
 import numpy
-from numpy import array, empty, ones, zeros, multiply, dot, power, divide, sum, exp, reshape, concatenate, diag, where
+from numpy import array, empty, ones, zeros, multiply, dot, power, divide, sum, exp, reshape, concatenate, diag, \
+                  where, argmax, repeat
 
 
 def if_ydot0(x1, a, b):
@@ -24,7 +25,9 @@ def eqtn_coupling(x1, K, w, ix, jx):
     # Only difference coupling for the moment.
     # TODO: Extend for different coupling forms
 
-    x1, K = assert_arrays([x1, K],  x1.shape)
+    shape = x1.shape
+
+    x1, K = assert_arrays([x1, K],  (1, x1.size))
 
     i_n = ones((len(ix), 1), dtype='float32')
     j_n = ones((len(jx), 1), dtype='float32')
@@ -33,7 +36,7 @@ def eqtn_coupling(x1, K, w, ix, jx):
     #                                                            from (jx)                to (ix)
     coupling = multiply(K[:, ix], sum(multiply(w[ix][:, jx], dot(i_n, x1[:, jx]) - dot(j_n, x1[:, ix]).T), axis=1))
 
-    return reshape(coupling,  x1.shape)
+    return reshape(coupling, shape)
 
 
 def eqtn_x0(x1, z, model="2d", zmode=array("lin"), z_pos=True, K=None, w=None, coupl=None, x0cr=None, r=None):
@@ -86,12 +89,15 @@ def eqtn_fx1_2d_taylor_lin(x1, x_taylor, z, yc, Iext1, a, b, tau1):
 def eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg):
 
 
-    jac_x1 = numpy.where(x1_neg, multiply(-3.0 * multiply(a, x1) - 2.0 * multiply(b, x1), x1),
-                                 else_ydot0_2d(x1, z, slope))
+    jac_x1 = numpy.multiply(numpy.where(x1_neg, multiply(-3.0 * multiply(a, x1) - 2.0 * multiply(b, x1), x1),
+                                 else_ydot0_2d(x1, z, slope)), tau1)
 
-    jac_z = -ones(x1.shape, dtype=x1.dtype)
+    jac_z = numpy.multiply(-ones(x1.shape, dtype=x1.dtype), tau1)
 
-    return multiply(reshape(concatenate(jac_x1.flatten(), jac_z.flatten()), x1.shape), tau1)
+    shape = array(x1.shape)
+    shape[argmax(shape)] *= 2
+    shape = tuple(shape)
+    return reshape(concatenate([jac_x1.flatten(), jac_z.flatten()]), shape)
 
 
 
@@ -136,7 +142,7 @@ def eqtn_fz(x1, z, x0, tau1, tau0, model="2d", zmode=array("lin"), z_pos=True, K
 
 def eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode=array("lin"), z_pos=True, K=None, w=None):
 
-    tau = divide(tau1, tau0)
+    tau = repeat(divide(tau1, tau0).flatten(), (2,))
 
     jac_z = - ones(z.shape, dtype=z.dtype)
 
@@ -153,7 +159,11 @@ def eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode=array("lin"), z_pos=True, K=None, w=
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
 
-    return multiply(reshape(concatenate(jac_x1.flatten(), jac_z.flatten()), z.shape), tau)
+    shape = array(z.shape)
+    shape[argmax(shape)] *= 2
+    shape = tuple(shape)
+
+    return reshape(multiply(concatenate([jac_x1.flatten(), jac_z.flatten()]), tau.flatten()),  shape)
 
 
 def eqtn_fx1z_2d_zpos_jac(x1, r, K, w, ix0, iE, a, b, tau1, tau0): #

@@ -1,9 +1,10 @@
 import warnings
 import numpy
-from numpy import array, ones, zeros, multiply, dot, power, divide, sum, exp, reshape, diag, expand_dims, where
+from numpy import empty, array, ones, zeros, multiply, dot, power, divide, sum, exp, reshape, diag, expand_dims, where
 from tvb_epilepsy.base.constants import X0_DEF, X0_CR_DEF, X1_DEF, X1_EQ_CR_DEF, SYMBOLIC_CALCULATIONS_FLAG
 from tvb_epilepsy.base.utils import assert_arrays
 from tvb_epilepsy.base.equations import *
+from tvb_epilepsy.base.symbolic import *
 
 # TODO: find out why I cannot import anything from utils here
 # from tvb_epilepsy.base.utils import assert_array_shape as sc2arr
@@ -40,7 +41,7 @@ if SYMBOLIC_CALCULATIONS_FLAG:
         if jx is None:
             jx = range(n_regions)
 
-        return symbol_eqtn_coupling(x1.size, ix, jx, x1.shape)[0](x1, K, w)
+        return reshape(symbol_eqtn_coupling(x1.size, ix, jx, shape=x1.shape)[0](x1, K, w), x1.shape)
 
 
     def calc_x0(x1, z, K=0.0, w=0.0, x0cr=0.0, r=1.0, model="2d", zmode=array("lin"), z_pos=True, shape=None):
@@ -52,11 +53,11 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
             x0cr, r = assert_arrays([x0cr, r], z.shape)
 
-            return symbol_eqtn_x0(z.size, zmode, z_pos, model, "K", z.shape)[0](x1, z, x0cr, r, K, w)
+            return reshape(symbol_eqtn_x0(z.size, zmode, z_pos, model, "K", z.shape)[0](x1, z, x0cr, r, K, w), z.shape)
 
         else:
 
-            return symbol_eqtn_x0(z.size, zmode, z_pos, model, "K", z.shape)[0](x1, z, K, w)
+            return reshape(symbol_eqtn_x0(z.size, zmode, z_pos, model, "K", z.shape)[0](x1, z, K, w), z.shape)
 
 
     def calc_fx1(x1=0.0, z=0.0, y1=0.0, Iext1=0.0, slope=0.0, a=1.0, b=-2.0, tau1=1.0, x2=0.0, model="2d", x1_neg=True,
@@ -66,70 +67,68 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
         if model == "2d":
 
-            return symbol_eqtn_fx1(x1.size, model, x1_neg, slope="slope", Iext1="Iext1", shape=x1.shape)[0](x1, z, y1,
-                                                                                                            Iext1,
-                                                                                                            slope, a, b,
-                                                                                                            tau1)
+            return reshape(symbol_eqtn_fx1(x1.size, model, x1_neg, slope="slope", Iext1="Iext1", shape=x1.shape)[0]
+                           (x1, z, y1, Iext1, slope, a, b, tau1), x1.shape)
         else:
 
             x2 = assert_arrays([x2], x1.shape)
 
-            return symbol_eqtn_fx1(x1.size, model, x1_neg, slope="slope", Iext1="Iext1", shape=x1.shape)[0](x1, z, y1,
-                                                                                                            x2, Iext1,
-                                                                                                            slope, a, b,
-                                                                                                            tau1)
+            return reshape(symbol_eqtn_fx1(x1.size, model, x1_neg, slope="slope", Iext1="Iext1", shape=x1.shape)[0]
+                           (x1, z, y1, x2, Iext1, slope, a, b, tau1), x1.shape)
 
 
     def calc_fy1(x1, yc, y1=0, d=5.0, tau1=1.0, shape=None):
 
         x1, yc, y1, d, tau1 = assert_arrays([x1, yc, y1, d, tau1], shape)
 
-        return symbol_eqtn_fy1(x1.size, x1.shape)[0](x1, y1, yc, d, tau1)
+        return reshape(symbol_eqtn_fy1(x1.size, x1.shape)[0](x1, y1, yc, d, tau1), x1.shape)
 
 
     def calc_fz(x1=0.0, z=0, x0=0.0, K=0.0, w=0.0, tau1=1.0, tau0=1.0, x0cr=0.0, r=1.0, zmode=array("lin"), z_pos=True,
                    model="2d", shape=None):
 
-        z, x1, K, tau1, tau0 = assert_arrays([x1, z, K, tau1, tau0], shape)
+        z, x1, x0, K, tau1, tau0 = assert_arrays([z, x1, x0, K, tau1, tau0], shape)
+        w = assert_arrays([w], (z.size, z.size))
 
         if model == "2d":
 
             x0cr, r = assert_arrays([x0cr, r], z.shape)
 
-            return symbol_eqtn_fz(z.size, zmode, z_pos, model, x0="x0", K="K", shape=z.shape)[0](x1, z, x0, x0cr, r, K,
-                                                                                                w)
+            return reshape(symbol_eqtn_fz(z.size, zmode, z_pos, model, x0="x0", K="K", shape=z.shape)[0](x1, z, x0,
+                                                                                                         x0cr, r, K, w), z.shape)
 
         else:
 
-            return symbol_eqtn_fz(z.size, zmode, z_pos, model, x0="x0", K="K", shape=z.shape)[0](x1, z, x0, K, w)
+            return reshape(symbol_eqtn_fz(z.size, zmode, z_pos, model, x0="x0", K="K", shape=z.shape)[0](x1, z, x0,
+                                                                                                         K, w), z.shape)
 
 
     def calc_fx2(x2, y2=0.0, z=0.0, g=0.0, Iext2=0.45, tau1=1.0, shape=None):
 
         x2, y2, z, g, Iext2, tau1 = assert_arrays([x2, y2, z, g, Iext2, tau1], shape)
 
-        return symbol_eqtn_fx2(x2.size, Iext2="Iext2", shape=x2.shape)[0](x2, y2, z, g, Iext2, tau1)
+        return reshape(symbol_eqtn_fx2(x2.size, Iext2="Iext2", shape=x2.shape)[0](x2, y2, z, g, Iext2, tau1), x2.shape)
 
 
     def calc_fy2(x2, y2=0.0, s=6.0, tau1=1.0, tau2=1.0, x2_neg=True, shape=None):
 
         x2, y2, s, tau1, tau2 = assert_arrays([x2, y2, s, tau1, tau2], shape)
 
-        return symbol_eqtn_fy2(x2.size, x2_neg=x2_neg, shape=x2.shape)[0](x2, y2, s, tau1, tau2)
+        return reshape(symbol_eqtn_fy2(x2.size, x2_neg=x2_neg, shape=x2.shape)[0](x2, y2, s, tau1, tau2), x2.shape)
 
 
     def calc_fg(x1, g=0.0, gamma=0.1, tau1=1.0, shape=None):
 
         x1, g, gamma, tau1 = assert_arrays([x1, g, gamma, tau1], shape)
 
-        return symbol_eqtn_fg(x1.size, shape=None)[0](x1, g, gamma, tau1)
+        return reshape(symbol_eqtn_fg(x1.size, shape=None)[0](x1, g, gamma, tau1), x1.shape)
 
 
     def calc_fx0(x0_var, x0, tau1=1.0, shape=None):
 
         x0_var, x0, tau1 = assert_arrays([x0_var, x0, tau1], shape)
 
-        return symbol_eqtn_fx0(x0.size, shape)[0](x0_var, x0, tau1)
+        return reshape(symbol_eqtn_fx0(x0.size, shape)[0](x0_var, x0, tau1), x0_var.shape)
 
 
     def calc_fslope(slope_var, slope, z=0.0, g=0.0, tau1=1.0, pmode=array("const"), shape=None):
@@ -138,23 +137,23 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
         if pmode == "z":
             z = assert_arrays([z], slope.shape)
-            return symbol_eqtn_fslope(slope.size, pmode, shape)[0](slope_var, z, tau1)
+            return reshape(symbol_eqtn_fslope(slope.size, pmode, shape)[0](slope_var, z, tau1), slope_var.shape)
         elif pmode == "g":
             g = assert_arrays([g], slope.shape)
-            return symbol_eqtn_fslope(slope.size, pmode, shape)[0](slope_var, g, tau1)
+            return reshape(symbol_eqtn_fslope(slope.size, pmode, shape)[0](slope_var, g, tau1), slope_var.shape)
         elif pmode == "z*g":
             z = assert_arrays([z], slope.shape)
             g = assert_arrays([g], slope.shape)
-            return symbol_eqtn_fslope(slope.size, pmode, shape)[0](slope_var, z, g, tau1)
+            return reshape(symbol_eqtn_fslope(slope.size, pmode, shape)[0](slope_var, z, g, tau1), slope_var.shape)
         else:
-            return symbol_eqtn_fslope(slope.size, pmode, shape)[0](slope_var, slope, tau1)
+            return reshape(symbol_eqtn_fslope(slope.size, pmode, shape)[0](slope_var, slope, tau1), slope_var.shape)
 
 
     def calc_fIext1(Iext1_var, Iext1, tau1=1.0, tau0=1.0, shape=None):
 
         Iext1_var, Iext1, tau1, tau0 = assert_arrays([Iext1_var, Iext1, tau1, tau0], shape)
 
-        return symbol_eqtn_fIext1(Iext1.size, shape)[0](Iext1_var, Iext1, tau1, tau0)
+        return reshape(symbol_eqtn_fIext1(Iext1.size, shape)[0](Iext1_var, Iext1, tau1, tau0), Iext1_var.shape)
 
 
     def calc_fIext2(Iext2_var, Iext2, z=0.0, g=0.0, tau1=1.0, pmode=array("const"), shape=None):
@@ -163,41 +162,41 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
         if pmode == "z":
             z = assert_arrays([z], Iext2.shape)
-            return symbol_eqtn_fIext2(Iext2.size, pmode, shape)[0](Iext2_var, z, tau1)
+            return reshape(symbol_eqtn_fIext2(Iext2.size, pmode, shape)[0](Iext2_var, z, tau1), Iext2_var.shape)
         elif pmode == "g":
             g = assert_arrays([g], Iext2.shape)
-            return symbol_eqtn_fIext2(Iext2.size, pmode, shape)[0](Iext2_var, g, tau1)
+            return reshape(symbol_eqtn_fIext2(Iext2.size, pmode, shape)[0](Iext2_var, g, tau1), Iext2_var.shape)
         elif pmode == "z*g":
             z = assert_arrays([z], Iext2.shape)
             g = assert_arrays([g], Iext2.shape)
-            return symbol_eqtn_fIext2(Iext2.size, pmode, shape)[0](Iext2_var, z, g, tau1)
+            return reshape(symbol_eqtn_fIext2(Iext2.size, pmode, shape)[0](Iext2_var, z, g, tau1), Iext2_var.shape)
         else:
-            return symbol_eqtn_fIext2(Iext2.size, pmode, shape)[0](Iext2_var, Iext2, tau1)
+            return reshape(symbol_eqtn_fIext2(Iext2.size, pmode, shape)[0](Iext2_var, Iext2, tau1), Iext2_var.shape)
 
 
     def calc_fK(K_var, K, tau1=1.0, tau0=1.0, shape=None):
 
         K_var, K, tau1, tau0 = assert_arrays([K_var, K, tau1, tau0], shape)
 
-        return symbol_eqtn_fK(K.size, shape)[0](K_var, K, tau1, tau0)
+        return reshape(symbol_eqtn_fK(K.size, shape)[0](K_var, K, tau1, tau0), K_var.shape)
 
 
     def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
-                  zmode="lin", pmode="const", x1_neg=True, z_pos=True,
-                  y1=None, x2=None, y2=None, g=None, x2_neg=True,
+                  zmode="lin", pmode="const", x1_neg=True, z_pos=True, x2_neg=True,
+                  y1=None, x2=None, y2=None, g=None,
                   x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
                   slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.1,
                   tau1=1.0, tau0=2857.0, tau2=10.0, shape=None, output_mode="array"):
 
         if output_mode == "array":
 
-            return calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars, x0cr, r, zmode, pmode, x1_neg, z_pos,
-                                   y1, x2, y2, g, x2_neg, x0_var, slope_var, Iext1_var, Iext2_var, K_var,
+            return calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars, x0cr, r, zmode, pmode, x1_neg, z_pos, x2_neg,
+                                   y1, x2, y2, g, x0_var, slope_var, Iext1_var, Iext2_var, K_var,
                                    slope, a, b, d, s, Iext2, gamma, tau1, tau0, tau2)
 
         else:
 
-            dfun_sym = symbol_eqnt_dfun(x1.size, model_vars, zmode, x1_neg, x2_neg, z_pos, pmode, shape)[0]
+            dfun_sym = symbol_eqnt_dfun(x1.size, model_vars, zmode, x1_neg, z_pos, x2_neg, pmode, shape)[0]
 
             if model_vars == 2:
 
@@ -245,8 +244,8 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
 
     def calc_jac(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
-                 zmode="lin", pmode="const", x1_neg=True, z_pos=True,
-                 y1=None, x2=None, y2=None, g=None, x2_neg=True,
+                 zmode="lin", pmode="const", x1_neg=True, z_pos=True, x2_neg=True,
+                 y1=None, x2=None, y2=None, g=None,
                  x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
                  slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.1,
                  tau1=1.0, tau0=2857.0, tau2=10.0):
@@ -260,7 +259,7 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
         ind = lambda x: x * n_regions + array(range(n_regions))
 
-        jac_lambda = symbol_calc_jac(n_regions, model_vars, zmode, x1_neg, x2_neg, z_pos, pmode)[0]
+        jac_lambda = symbol_calc_jac(n_regions, model_vars, zmode, x1_neg, z_pos, x2_neg, pmode)[0]
 
         if model_vars == 2:
 
@@ -325,8 +324,8 @@ if SYMBOLIC_CALCULATIONS_FLAG:
         x1, x_taylor, z, y1, Iext1, slope, a, b, tau1 = \
             assert_arrays([x1, x_taylor, z, y1, Iext1, slope, a, b, tau1], shape)
 
-        return symbol_calc_2d_taylor(x1.size, order=order, x1_neg=x1_neg, slope="slope", Iext1="Iext1", shape=shape)[0] \
-            (x1, z, y1, Iext1, slope, a, b, tau1)
+        return reshape(symbol_calc_2d_taylor(x1.size, order=order, x1_neg=x1_neg, slope="slope", Iext1="Iext1", shape=shape)[0] \
+            (x1, z, y1, Iext1, slope, a, b, tau1), x1.shape)
 
 
     def calc_fx1z_2d_x1neg_zpos_jac(x1, z, x0, x0cr, r, yc, Iext1, K, w, ix0, iE, a=1.0, b=-2.0, tau1=1.0, tau0=1.0):
@@ -336,15 +335,15 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
         w = assert_arrays([w], (x1.size, x1.size))
 
-        return symbol_calc_fx1z_2d_x1neg_zpos_jac(x1.size, ix0, iE)[0](x1, z, x0, x0cr, r, yc, Iext1, K, w, a, b, tau1,
-                                                                       tau0)
+        return reshape(symbol_calc_fx1z_2d_x1neg_zpos_jac(x1.size, ix0, iE)[0](x1, z, x0, x0cr, r, yc, Iext1, K, w,
+                                                                               a, b, tau1, tau0), x1.shape)
 
 
     def calc_fx1y1_6d_diff_x1(x1, yc, Iext1, a=1.0, b=3.0, d=5.0, tau1=1.0, shape=None):
 
         x1, yc, Iext1, a, b, d, tau1 = assert_arrays([ x1, yc, Iext1, a, b, d, tau1], shape)
 
-        return symbol_calc_fx1y1_6d_diff_x1(x1.size)[0](x1, yc, Iext1, a, b, d, tau1)
+        return reshape(symbol_calc_fx1y1_6d_diff_x1(x1.size)[0](x1, yc, Iext1, a, b, d, tau1), x1.shape)
 
 
     def calc_x0cr_r(yc, Iext1, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
@@ -356,14 +355,14 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
         # Define the z equilibrium expression...
         # if epileptor_model == "2d":
-        zeq = calc_fx1(x1eq, z=0.0, y1=yc1, Iext1=I1, model="2d", x1_neg=True, shape=Iext1.shape).tolist()
+        zeq = calc_fx1(x1eq, z=0.0, y1=yc1, Iext1=I1, model="2d", x1_neg=True, shape=Iext1.shape)
 
         # else:
         # zeq = calc_fx1(x1eq, z=0.0, y1=y1=calc_fy1(x1eq, yc1), Iext1=I1, model="6d", x1_neg=True,
         # shape=Iext1.shape).tolist()
 
         # Define the fz expression...
-        fz = calc_fz(x1eq, x0=x0, x0cr=x0cr, r=r, zmode=zmode, z_pos=True, model="2d", shape=Iext1.shape).tolist()
+        fz = calc_fz(x1eq, z=zeq, x0=x0, x0cr=x0cr, r=r, zmode=zmode, z_pos=True, model="2d", shape=Iext1.shape).tolist()
 
         # Solve the fz expression for rx0 and x0cr, assuming the following two points (x1eq,x0) = [(-5/3,0.0),(-4/3,1.0)]...
         # ...and WITHOUT COUPLING
@@ -400,12 +399,12 @@ else:
         return eqtn_coupling(x1, K, w, ix, jx)
 
 
-    def calc_x0(x1, z, K=0.0, w=0.0, x0cr=0.0, r=1.0, model="2d", zmode=array("lin"), z_pos=True, shape=None):
+    def calc_x0(x1, z, K=0.0, w=0.0, x0cr=0.0, r=1.0, model="2d", zmode=array("lin"), z_pos=None, shape=None):
 
         z, x1, K = assert_arrays([z, x1, K], shape)
         w = assert_arrays([w], (z.size, z.size))
 
-        if zmode == array("lin") and numpy.all(z_pos != True and z_pos != False):
+        if zmode == array("lin") and z_pos is None:
             z_pos = z > 0.0
 
         if model == "2d":
@@ -419,10 +418,10 @@ else:
             return eqtn_x0(x1, z, model, zmode, z_pos, K, w)
 
 
-    def calc_fx1(x1=0.0, z=0.0, y1=0.0, Iext1=0.0, slope=0.0, a=1.0, b=-2.0, tau1=1.0, x2=0.0, model="2d", x1_neg=True,
+    def calc_fx1(x1=0.0, z=0.0, y1=0.0, Iext1=0.0, slope=0.0, a=1.0, b=-2.0, tau1=1.0, x2=0.0, model="2d", x1_neg=None,
                  shape=None):
 
-        if numpy.all(numpy.all(x1_neg != True and x1_neg != False)):
+        if x1_neg is None:
             x1_neg = x1 < 0.0
 
         x1, z, y1, Iext1, slope, a, b, tau1 = assert_arrays([x1, z, y1, Iext1, slope, a, b, tau1], shape)
@@ -445,12 +444,12 @@ else:
         return eqtn_fy1(x1, yc, y1, d, tau1)
 
 
-    def calc_fz(x1=0.0, z=0, x0=0.0, K=0.0, w=0.0, tau1=1.0, tau0=1.0, x0cr=0.0, r=1.0, zmode=array("lin"), z_pos=True,
+    def calc_fz(x1=0.0, z=0, x0=0.0, K=0.0, w=0.0, tau1=1.0, tau0=1.0, x0cr=0.0, r=1.0, zmode=array("lin"), z_pos=None,
                 model="2d",  shape=None):
 
         z, x1, K, tau1, tau0 = assert_arrays([x1, z, K, tau1, tau0], shape)
 
-        if zmode == array("lin") and numpy.all(z_pos != True and z_pos != False):
+        if zmode == array("lin") and z_pos is None:
             z_pos = z > 0.0
 
         if model == "2d":
@@ -471,9 +470,9 @@ else:
         return eqtn_fx2(x2, y2, z, g, Iext2, tau1)
 
 
-    def calc_fy2(x2, y2=0.0, s=6.0, tau1=1.0, tau2=1.0, x2_neg=True, shape=None):
+    def calc_fy2(x2, y2=0.0, s=6.0, tau1=1.0, tau2=1.0, x2_neg=None, shape=None):
 
-        if numpy.all(numpy.all(x2_neg != True and x2_neg != False)):
+        if x2_neg is None:
             x2_neg = x2 < -0.25
 
         x2, y2, s, tau1, tau2 = assert_arrays([x2, y2, s, tau1, tau2], shape)
@@ -543,15 +542,15 @@ else:
         x1, x_taylor, z, y1, Iext1, slope, a, b, tau1 = \
             assert_arrays([x1, x_taylor, z, y1, Iext1, slope, a, b, tau1], shape)
 
-        if order == 2 and numpy.all(x1_neg==True):
+        if x1_neg is None:
+            x1_neg = x1 < 0.0
+
+        if order == 2 and numpy.all( x1_neg == True):
 
             fx1lin = multiply(Iext1+ 2 * multiply(power(x_taylor, 3), a) - multiply(power(x_taylor, 2), b) + y1 - z +
                              multiply(x1, (-3 * multiply(power(x_taylor, 2), a) + 2 * multiply(x_taylor, b))), tau1)
 
         else:
-
-            if numpy.all(numpy.all(x1_neg != True and x1_neg != False)):
-                x1_neg = x1 < 0.0
 
             try:
                 from sympy import Symbol, series
@@ -600,7 +599,7 @@ else:
                                  multiply(K[:, ix0], sum(w[ix0], axis=1)))).flatten()) -
                       multiply(dot(i_x0, multiply(tau[:,ix0], K[:, ix0])).T,  w[ix0][:, ix0]))
 
-        jac = zeros((x1.size, x1.size))
+        jac = empty((x1.size, x1.size), dtype=type(jac_e_x0e.dtype))
         jac[numpy.ix_(iE, iE)] = jac_e_x0e
         jac[numpy.ix_(iE, ix0)] = jac_e_x1o
         jac[numpy.ix_(ix0, iE)] = jac_x0_x0e
@@ -612,7 +611,7 @@ else:
     def calc_fx1y1_6d_diff_x1(x1, yc, Iext1, a=1.0, b=3.0, d=5.0, tau1=1.0, shape=None):
 
         x1 = assert_arrays([x1], shape)
-        shape= x1.shape
+        shape = x1.shape
 
         if x1.shape != (1, x1.size):
             x1 = expand_dims(x1.flatten(), 1).T
@@ -627,24 +626,24 @@ else:
 
 
     def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
-                  zmode="lin", pmode="const", x1_neg=True, z_pos=True,
-                  y1=None, x2=None, y2=None, g=None, x2_neg=True,
+                  zmode="lin", pmode="const", x1_neg=None, z_pos=None, x2_neg=None,
+                  y1=None, x2=None, y2=None, g=None,
                   x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
                   slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.1,
                   tau1=1.0, tau0=2857.0, tau2=10.0, shape=None, output_mode="array"):
 
         if output_mode == "array":
 
-            return calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars, x0cr, r, zmode, pmode, x1_neg, z_pos,
-                                   y1, x2, y2, g, x2_neg, x0_var, slope_var, Iext1_var, Iext2_var, K_var,
+            return calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars, x0cr, r, zmode, pmode, x1_neg, z_pos, x2_neg,
+                                   y1, x2, y2, g, x0_var, slope_var, Iext1_var, Iext2_var, K_var,
                                    slope, a, b, d, s, Iext2, gamma, tau1, tau0, tau2, shape)
 
         else:
 
-            if numpy.all(numpy.all(x1_neg != True and x1_neg != False)):
+            if x1_neg is None:
                 x1_neg = x1 < 0.0
 
-            if zmode == array("lin") and numpy.all(z_pos != True and z_pos != False):
+            if zmode == array("lin") and z_pos is None:
                 z_pos = z > 0.0
 
             z, x1, yc, Iext1, x0, K, slope, a, b, tau1, tau0 = \
@@ -662,7 +661,7 @@ else:
 
             else:
 
-                if numpy.all(numpy.all(x2_neg != True and x2_neg != False)):
+                if x2_neg is None:
                     x2_neg = x2 < -0.25
 
                 y1, x2, y2, g, Iext2, d, s, gamma, tau2 = \
@@ -706,8 +705,8 @@ else:
 
 
     def calc_jac(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
-                 zmode="lin", pmode="const", x1_neg=None, z_pos=True,
-                 y1=None, x2=None, y2=None, g=None, x2_neg=None,
+                 zmode="lin", pmode="const", x1_neg=None, z_pos=None, x2_neg=None,
+                 y1=None, x2=None, y2=None, g=None,
                  x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
                  slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.1,
                  tau1=1.0, tau0=2857.0, tau2=10.0, shape=None):
@@ -716,10 +715,10 @@ else:
 
         if model_vars == 2:
 
-            if numpy.all(numpy.all(x1_neg != True and x1_neg != False)):
+            if x1_neg is None:
                 x1_neg = x1 < 0.0
 
-            if zmode == array("lin") and numpy.all(z_pos != True and z_pos != False):
+            if z_pos is None:
                 z_pos = z > 0.0
 
             z, x1, yc, Iext1, x0, K, slope, a, b, tau1, tau0 = \
@@ -727,8 +726,8 @@ else:
 
             w = assert_arrays([w], (n_regions, n_regions))
 
-            return concatenate(reshape(eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg), (1, n_regions)),
-                               reshape(eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode, z_pos, K, w), (1, n_regions)))
+            return concatenate([reshape(eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg), (1, 2*n_regions)),
+                               reshape(eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode, z_pos, K, w), (1, 2*n_regions))])
 
         else:
 
@@ -745,8 +744,8 @@ else:
                 x = list(symbol_vars(n_regions, ['x1', 'y1', 'z', 'x2', 'y2', 'g'])[:6])
 
                 dfun_sym = calc_dfun_array(x[0], x[2], yc, Iext1, x0, K, w, model_vars, x0cr, r,
-                                           zmode, pmode, x1_neg, z_pos,
-                                           x[1], x[3], x[4], x[5], x2_neg, z_pos,
+                                           zmode, pmode, x1_neg, z_pos, x2_neg,
+                                           x[1], x[3], x[4], x[5],
                                            x0_var, slope_var, Iext1_var, Iext2_var, K_var,
                                            slope, a, b, d, s, Iext2, gamma, tau1, tau0, tau2)
 
@@ -764,8 +763,8 @@ else:
                                                  'x0_var', 'slope_var', 'Iext1_var', 'Iext2_var', 'K_var'])[:11])
 
                 dfun_sym = calc_dfun_array(x[0], x[2], yc, Iext1, x0, K, w, model_vars, x0cr, r,
-                                           zmode, pmode, x1_neg, z_pos,
-                                           x[1], x[3], x[4], x[5], x2_neg,
+                                           zmode, pmode, x1_neg, z_pos,  x2_neg,
+                                           x[1], x[3], x[4], x[5],
                                            x[6], x[7], x[8], x[9], x[10],
                                            slope, a, b, d, s, Iext2, gamma, tau1, tau0, tau2)
 
@@ -852,11 +851,12 @@ def calc_fparams_var(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope, 
            calc_fK(K_var, K, tau1, tau0, shape)
 
 
-def calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None, zmode="lin", pmode="const", x1_neg=None,
-              y1=None, x2=None, y2=None, g=None, x2_neg=None,
-              x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
-              slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.1,
-              tau1=1.0, tau0=2857.0, tau2=10.0):
+def calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
+                    zmode="lin", pmode="const", x1_neg=None, z_pos=None, x2_neg=None,
+                    y1=None, x2=None, y2=None, g=None,
+                    x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
+                    slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.1,
+                    tau1=1.0, tau0=2857.0, tau2=10.0):
 
     n_regions = max(z.size, x1.size)
 
@@ -867,13 +867,13 @@ def calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
     if model_vars == 2:
 
         f[0, :] = calc_fx1(x1, z, yc, Iext1, slope, a, b, tau1, x2, model="2d", x1_neg=x1_neg, shape=shape)
-        f[1, :] = calc_fz(x1, z, x0, K, w, tau1, tau0, x0cr, r, zmode, model="2d", shape=shape)
+        f[1, :] = calc_fz(x1, z, x0, K, w, tau1, tau0, x0cr, r, zmode, z_pos, model="2d", shape=shape)
 
     elif model_vars == 6:
 
         f[0, :] = calc_fx1(x1, z, y1, Iext1, slope, a, b, tau1, x2, model="6d", x1_neg=x1_neg, shape=shape)
         f[1, :] = calc_fy1(x1, yc, y1, d, tau1, shape)
-        f[2, :] = calc_fz(x1, z, x0, K, w, tau1, tau0, x0cr, r, zmode, model="6d", shape=shape)
+        f[2, :] = calc_fz(x1, z, x0, K, w, tau1, tau0, x0cr, r, zmode, z_pos, model="6d", shape=shape)
         f[3, :] = calc_fx2(x2, y2, z, g, Iext2, tau1, shape)
         f[4, :] = calc_fy2(x2, y2, s, tau1, tau2, x2_neg, shape)
         f[5, :] = calc_fg(x1, g, gamma, tau1, shape)
@@ -883,7 +883,7 @@ def calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
         f[0, :] = calc_fx1(x1, z, y1, Iext1_var, slope_var, a, b, tau1, x2, model="6d", x1_neg=x1_neg,
                            shape=shape)
         f[1, :] = calc_fy1(x1, yc, y1, d, tau1, shape)
-        f[2, :] = calc_fz(x1, z, x0_var, K_var, w, tau1, tau0, x0cr, r, zmode, model="6d", shape=shape)
+        f[2, :] = calc_fz(x1, z, x0_var, K_var, w, tau1, tau0, x0cr, r, zmode, z_pos, model="6d", shape=shape)
         f[3, :] = calc_fx2(x2, y2, z, g, Iext2_var, tau1, shape)
         f[4, :] = calc_fy2(x2, y2, s, tau1, tau2, x2_neg, shape)
         f[5, :] = calc_fg(x1, g, gamma, tau1, shape)

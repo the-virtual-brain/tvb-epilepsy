@@ -4,6 +4,7 @@ Module to compute the resting equilibrium point of a Virtual Epileptic Patient m
 import warnings
 import numpy
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, SYMBOLIC_CALCULATIONS_FLAG
+from tvb_epilepsy.base.utils import assert_arrays
 from tvb_epilepsy.base.calculations import calc_x0, calc_fx1, calc_fy1, calc_fz, calc_fx2, calc_fg, calc_coupling, \
                                            calc_dfun, calc_fx1z_2d_x1neg_zpos_jac, calc_fx1y1_6d_diff_x1
 
@@ -64,14 +65,17 @@ def calc_eq_x1_6d(z, yc, Iext1, slope=0.0, a=1.0, b=3.0, d=5.0, x1_neg=True):
 
     else:
 
+        z, yc, Iext1, slope, a, b,  d= assert_arrays([ z, yc, Iext1, slope, a, b, d], (z.size,))
+
         x1eq = []
 
         for ii in range(z.size):
 
-            fx1 = lambda x1: calc_fx1(x1, z=z, y1=calc_eq_y1(x1, yc, d=d), Iext1=Iext1, slope=slope, a=a, b=b,
-                                       tau1=1.0, x2=0.0, model="6d", x1_neg=x1_neg, shape=(z.size, ))
+            fx1 = lambda x1: calc_fx1(x1, z=z[ii], y1=calc_eq_y1(x1, yc[ii], d=d[ii]), Iext1=Iext1[ii], slope=slope[ii],
+                                      a=a[ii], b=b[ii], tau1=1.0, x2=0.0, model="6d", x1_neg=x1_neg, shape=(1, ))
 
-            jac = lambda x1: calc_fx1y1_6d_diff_x1(x1, yc, Iext1, a=a, b=b, d=d, tau1=1.0,  shape=(z.size, ))
+            jac = lambda x1: calc_fx1y1_6d_diff_x1(x1, yc[ii], Iext1[ii], a=a[ii], b=b[ii], d=d[ii], tau1=1.0,
+                                                   shape=(1, ))
 
             sol = root(fx1, -2.0, method='lm', jac=jac, tol=10 ** (-6), callback=None, options=None)
             #args=(y2eq[ii], zeq[ii], g_eq[ii], Iext2[ii], s, tau1, tau2, x2_neg)  method='hybr'
@@ -98,7 +102,7 @@ def calc_eq_pop2(zeq, x1eq, Iext2, geq=None, s=6.0, g=0.0, gamma=0.1):
     y2eq = numpy.zeros(shape)
 
     if geq is None:
-        g_eq = calc_eq_g(x1eq, gamma)
+        geq = calc_eq_g(x1eq, gamma)
 
     if SYMBOLIC_CALCULATIONS_FLAG:
 
@@ -114,12 +118,14 @@ def calc_eq_pop2(zeq, x1eq, Iext2, geq=None, s=6.0, g=0.0, gamma=0.1):
 
     else:
 
+        zeq, y2eq, geq, Iext2 = assert_arrays([zeq, y2eq, geq, Iext2], (zeq.size,))
+
         x2eq = []
         jac = lambda x2: -3 * x2 ** 2 + 1.0
         for ii in range(zeq.size):
 
             fx2 = lambda x2: \
-                calc_fx2(x2, y2=y2eq[ii], z=zeq[ii], g=geq[ii], Iext2=Iext2[ii], tau1=1.0, shape=(zeq.size, ))
+                calc_fx2(x2, y2=y2eq[ii], z=zeq[ii], g=geq[ii], Iext2=Iext2[ii], tau1=1.0, shape=(1, ))
 
             sol = root(fx2, -0.75, method='lm', jac=jac, tol=10 ** (-6), callback=None, options=None)
             #args=(y2eq[ii], zeq[ii], g_eq[ii], Iext2[ii], s, tau1, tau2, x2_neg)  method='hybr'
@@ -181,6 +187,10 @@ def eq_x1_hypo_x0_optimize_jac(x, ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K,
 
 
 def eq_x1_hypo_x0_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
+
+    x1EQ, zEQ, x0, r, yc, Iext1, K = assert_arrays([x1EQ, zEQ, x0, r, yc, Iext1, K], (1, x1EQ.size))
+
+    w = assert_arrays([w], (x1EQ.size, x1EQ.size))
 
     xinit = numpy.zeros(x1EQ.shape, dtype = x1EQ.dtype)
 
@@ -342,7 +352,7 @@ def calc_eq_6d(zeq, yc, Iext1, Iext2,  slope=0.0, a=1.0, b=3.0, d=5.0, gamma=0.1
     y1eq = calc_eq_y1(x1eq, yc, d)
     geq = calc_eq_g(x1eq, gamma)
 
-    (x2eq, y2eq) = calc_eq_pop2(x1eq, zeq, Iext2)
+    (x2eq, y2eq) = calc_eq_pop2(x1eq, zeq, Iext2, geq)
 
     equilibrium_point = numpy.r_[x1eq, y1eq, zeq, x2eq, y2eq, geq].astype('float32')
 
@@ -356,13 +366,11 @@ def calc_eq_11d(zeq, yc, Iext1, Iext2, slope, x0, K, fun_slope_Iext2, a=1.0, b=3
     geq = calc_eq_g(x1eq, gamma)
     y1eq = calc_eq_y1(x1eq, yc, d)
 
-    slope_eq, Iext2_eq = fun_slope_Iext2(zeq. geq, pmode, slope, Iext2)
+    slope_eq, Iext2_eq = fun_slope_Iext2(zeq, geq, pmode, slope, Iext2)
 
-    (x2eq, y2eq) = calc_eq_pop2(x1eq, zeq, Iext2_eq)
+    (x2eq, y2eq) = calc_eq_pop2(x1eq, zeq, Iext2_eq, geq)
 
-    equilibrium_point = numpy.r_[x1eq, y1eq, zeq, x2eq, y2eq, geq,
-                                 x0, slope_eq, Iext1, Iext2_eq,
-                                 K.T].astype('float32')
+    equilibrium_point = numpy.r_[x1eq, y1eq, zeq, x2eq, y2eq, geq, x0, slope_eq, Iext1, Iext2_eq, K].astype('float32')
 
     return equilibrium_point, slope_eq, Iext2_eq
 
