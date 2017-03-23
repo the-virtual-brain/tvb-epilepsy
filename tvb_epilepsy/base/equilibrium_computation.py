@@ -53,9 +53,9 @@ def calc_eq_x1_6d(z, yc, Iext1, slope=0.0, a=1.0, b=3.0, d=5.0, x1_neg=True):
 
     if SYMBOLIC_CALCULATIONS_FLAG:
 
-        x1 = symbol_vars(["x1"], (z.size, ))[0]
+        x1 = symbol_vars(z.size, ["x1"], shape=(z.size, ))[0]
 
-        y1eq = calc_eq_y1(x1, yc, d=d, shape=(z.size, ))
+        y1eq = calc_eq_y1(x1, yc, d=d)
         fx1 = calc_fx1(x1, z=z, y1=y1eq, Iext1=Iext1, slope=slope, a=a, b=b, tau1=1.0, x2=0.0, model="6d",
                         x1_neg=x1_neg, shape=(z.size, ))
 
@@ -106,7 +106,7 @@ def calc_eq_pop2(zeq, x1eq, Iext2, geq=None, s=6.0, g=0.0, gamma=0.1):
 
     if SYMBOLIC_CALCULATIONS_FLAG:
 
-        x2 = symbol_vars(["x2"], (zeq.size,))
+        x2 = symbol_vars(zeq.size, ["x2"], shape=(zeq.size,))
 
         #TODO: use symbolic vectors and functions
         #fx2 = -y2eq + x2 - x2 ** 3 + numpy.squeeze(Iext2) + 2 * g_eq - 0.3 * (numpy.squeeze(zeq) - 3.5)
