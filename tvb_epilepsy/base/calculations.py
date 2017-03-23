@@ -95,12 +95,15 @@ if SYMBOLIC_CALCULATIONS_FLAG:
             x0cr, r = assert_arrays([x0cr, r], z.shape)
 
             return reshape(symbol_eqtn_fz(z.size, zmode, z_pos, model, x0="x0", K="K", shape=z.shape)[0](x1, z, x0,
-                                                                                                         x0cr, r, K, w), z.shape)
+                                                                                                         x0cr, r, K, w,
+                                                                                                         tau1, tau0),
+                                                                                                         z.shape)
 
         else:
 
             return reshape(symbol_eqtn_fz(z.size, zmode, z_pos, model, x0="x0", K="K", shape=z.shape)[0](x1, z, x0,
-                                                                                                         K, w), z.shape)
+                                                                                                         K, w, tau1,
+                                                                                                         tau0), z.shape)
 
 
     def calc_fx2(x2, y2=0.0, z=0.0, g=0.0, Iext2=0.45, tau1=1.0, shape=None):
@@ -346,37 +349,17 @@ if SYMBOLIC_CALCULATIONS_FLAG:
         return reshape(symbol_calc_fx1y1_6d_diff_x1(x1.size)[0](x1, yc, Iext1, a, b, d, tau1), x1.shape)
 
 
-    def calc_x0cr_r(yc, Iext1, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
+    def calc_x0cr_r(yc, Iext1, a=1.0, b=-2.0, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
                     x0cr_def=X0_CR_DEF, shape=None):  #epileptor_model="2d",
 
-        Iext1, yc = assert_arrays([Iext1, yc], shape)
+        yc, Iext1, a, b = assert_arrays([yc, Iext1, a, b], shape)
 
-        x1eq, x0, x0cr, r, yc1, I1 = symbols("x1eq x0 x0cr r yc1 I1")
-
-        # Define the z equilibrium expression...
-        # if epileptor_model == "2d":
-        zeq = calc_fx1(x1eq, z=0.0, y1=yc1, Iext1=I1, model="2d", x1_neg=True, shape=Iext1.shape)
-
-        # else:
-        # zeq = calc_fx1(x1eq, z=0.0, y1=y1=calc_fy1(x1eq, yc1), Iext1=I1, model="6d", x1_neg=True,
-        # shape=Iext1.shape).tolist()
-
-        # Define the fz expression...
-        fz = calc_fz(x1eq, z=zeq, x0=x0, x0cr=x0cr, r=r, zmode=zmode, z_pos=True, model="2d", shape=Iext1.shape).tolist()
-
-        # Solve the fz expression for rx0 and x0cr, assuming the following two points (x1eq,x0) = [(-5/3,0.0),(-4/3,1.0)]...
-        # ...and WITHOUT COUPLING
-        fz_sol = solve([fz.subs([(x1eq, x1_rest), (x0, x0def), (zeq, zeq.subs(x1eq, x1_rest))]),
-                        fz.subs([(x1eq, x1_cr), (x0, x0cr_def), (zeq, zeq.subs(x1eq, x1_cr))])], r, x0cr)
-
-        # Convert the solution of x0cr from expression to function that accepts numpy arrays as inputs:
-        x0cr = lambdify((yc1, I1), fz_sol[x0cr], 'numpy')
+        x0cr, r = symbol_calc_x0cr_r(Iext1.size, zmode, x1_rest, x1_cr, x0def, x0cr_def, Iext1.shape)
 
         # Calculate x0cr from the lambda function
-        x0cr = reshape(x0cr(yc, Iext1), Iext1.shape)
+        x0cr = x0cr(yc, Iext1, a, b)
 
-        # r is already given as independedn of yc and Iext1
-        r = numpy.tile(fz_sol[r], Iext1.shape)
+        # r is already given as independent of yc and Iext1
 
         return x0cr, r
 
@@ -777,7 +760,7 @@ else:
                 return array(jac_lambda(x1, y1, z, x2, y2, g, x0_var, slope_var, Iext1_var, Iext2_var, K_var))
 
 
-    def calc_x0cr_r(yc, Iext1, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
+    def calc_x0cr_r(yc, Iext1, a=1.0, b=-2.0, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
                     x0cr_def=X0_CR_DEF, shape=None):  # epileptor_model="2d",
 
         Iext1, yc = assert_arrays([Iext1, yc], shape)
@@ -792,9 +775,9 @@ else:
 
         # Define the z equilibrium expression...
         # if epileptor_model == "2d":
-        zeq_rest = calc_fx1(x1_rest, z=0.0, y1=yc, Iext1=Iext1, a=1.0, b=-2.0, tau1=1.0, x2=0.0, model="2d",
+        zeq_rest = calc_fx1(x1_rest, z=0.0, y1=yc, Iext1=Iext1, a=a, b=b, tau1=1.0, x2=0.0, model="2d",
                             x1_neg=True)
-        zeq_cr = calc_fx1(x1_cr, z=0.0, y1=yc, Iext1=Iext1, a=1.0, b=-2.0, tau1=1.0, x2=0.0, model="2d", x1_neg=True)
+        zeq_cr = calc_fx1(x1_cr, z=0.0, y1=yc, Iext1=Iext1, a=a, b=b, tau1=1.0, x2=0.0, model="2d", x1_neg=True)
         if zmode == array("lin"):
             xinit = array([2.460, 0.398])
         else:

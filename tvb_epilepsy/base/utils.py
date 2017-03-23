@@ -96,6 +96,7 @@ def assert_arrays(params, shape=None):
 
                     size = params[ip].size
 
+
             # Construct a kind of histogram of all different shapes of the inputs:
 
             ind = [(x == params[ip].shape) for x in shapes]
