@@ -5,6 +5,7 @@ from tvb_epilepsy.base.constants import X0_DEF, X0_CR_DEF, X1_DEF, X1_EQ_CR_DEF
 from tvb_epilepsy.base.utils import assert_arrays
 from tvb_epilepsy.base.equations import *
 
+
 def symbol_vars(n_regions, vars_str, dims=1, ind_str="_", shape=None, numpy_flag=None):
 
     vars_out = list()
@@ -541,12 +542,40 @@ def symbol_calc_x0cr_r(n, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF
     # Convert the solution of x0cr from expression to function that accepts numpy arrays as inputs:
     if shape is not None:
 
-        x0cr = Matrix(reshape(fz[v["x0cr"]]), shape)
+        x0cr = Matrix(reshape(fz[v["x0cr"]], shape))
         r, v["yc"], v["Iext1"], v["a"], v["b"] = assert_arrays([fz[v["r"]],  v["yc"], v["Iext1"], v["a"], v["b"]],
+                                                               shape)
+
+    else:
+        x0cr = Matrix(array(fz[v["x0cr"]]))
+        r = array(fz[v["r"]])
+
+    return lambdify([v["yc"], v["Iext1"], v["a"], v["b"]], x0cr, 'numpy'), r
+
+
+def symbol_calc_eq_x1_6d(n, x1_neg=True, shape=None):
+
+    y1eq, vy = symbol_eqtn_fy1(n, shape=shape)[1:]
+
+    for iv in range(n):
+        y1eq[iv] = y1eq[iv].subs([(vy["tau1"][iv], 1.0), (vy["y1"][iv], 0.0)])
+
+    fx1, v = symbol_eqtn_fx1(n, model="6d", x1_neg=x1_neg, slope="slope", Iext1="Iext1", shape=shape)[1:]
+
+    for iv in range(n):
+        fx1[iv] = fx1[iv].subs([(v["tau1"][iv], 1.0), (v["y1"][iv], y1eq[iv])])
+
+    x1eq = []
+    for iv in range(n):
+        x1eq.append(numpy.min(numpy.real(numpy.array(solve(fx1[iv], v["x1"][iv]), dtype="complex"))))
+
+    # Convert the solution of x0cr from expression to function that accepts numpy arrays as inputs:
+    if shape is not None:
+
+        x1eq = Matrix(reshape(x1eq, shape))
+        r, v["yc"], v["Iext1"], v["a"], v["b"] = assert_arrays([fz[v["r"]], v["yc"], v["Iext1"], v["a"], v["b"]],
                                                                shape)
 
     else:
         x0cr = Matrix(reshape(fz[v["x0cr"]]))
         r = array(fz[v["r"]])
-
-    return lambdify([v["yc"], v["Iext1"], v["a"], v["b"]], x0cr, 'numpy'), r
