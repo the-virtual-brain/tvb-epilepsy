@@ -354,7 +354,7 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
         yc, Iext1, a, b = assert_arrays([yc, Iext1, a, b], shape)
 
-        x0cr, r = symbol_calc_x0cr_r(Iext1.size, zmode, x1_rest, x1_cr, x0def, x0cr_def, Iext1.shape)
+        x0cr, r = symbol_calc_x0cr_r(Iext1.size, zmode, x1_rest, x1_cr, x0def, x0cr_def, Iext1.shape)[0]
 
         # Calculate x0cr from the lambda function
         x0cr = x0cr(yc, Iext1, a, b)

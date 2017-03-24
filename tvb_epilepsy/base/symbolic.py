@@ -528,9 +528,11 @@ def symbol_calc_x0cr_r(n, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF
 
     # Define the fz expression...
     # fz = calc_fz(x1eq, z=zeq, x0=x0, x0cr=x0cr, r=r, zmode=zmode, z_pos=True, model="2d", shape=Iext1.shape).tolist()
-    fz, vz = symbol_eqtn_fz(n, zmode, z_pos=True, model="2d", x0="x0", K="K")[1:]
+    fz, v = symbol_eqtn_fz(n, zmode, z_pos=True, model="2d", x0="x0", K="K")[1:]
     for iv in range(n):
-        fz[iv] = fz[iv].subs([(vz['K'][iv], 0.0), (vz["tau1"][iv], 1.0), (vz["tau0"][iv], 1.0), (vz["z"][iv], zeq[iv])])
+        fz[iv] = fz[iv].subs([(v['K'][iv], 0.0), (v["tau1"][iv], 1.0), (v["tau0"][iv], 1.0), (v["z"][iv], zeq[iv])])
+
+    v.update(vx)
 
     # Solve the fz expression for rx0 and x0cr, assuming the following two points (x1eq,x0) = [(-5/3,0.0),(-4/3,1.0)]...
     # ...and WITHOUT COUPLING
@@ -538,27 +540,27 @@ def symbol_calc_x0cr_r(n, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF
     r = []
     for iv in range(n):
         fz_sol = \
-            solve([fz[iv].subs([(vz["x1"][iv], x1_rest), (vz["x0"][iv], x0def),
-                                (zeq[iv], zeq[iv].subs(vz["x1"][iv], x1_rest))]),
-                   fz[iv].subs([(vz["x1"][iv], x1_cr), (vz["x0"][iv], x0cr_def),
-                                (zeq[iv], zeq[iv].subs(vz["x1"][iv], x1_cr))])],
-                vz["x0cr"][iv], vz["r"][iv])
-        x0cr.append(fz_sol[vz["x0cr"][iv]])
-        r.append(fz_sol[vz["r"][iv]])
+            solve([fz[iv].subs([(v["x1"][iv], x1_rest), (v["x0"][iv], x0def),
+                                (zeq[iv], zeq[iv].subs(v["x1"][iv], x1_rest))]),
+                   fz[iv].subs([(v["x1"][iv], x1_cr), (v["x0"][iv], x0cr_def),
+                                (zeq[iv], zeq[iv].subs(v["x1"][iv], x1_cr))])],
+                v["x0cr"][iv], v["r"][iv])
+        x0cr.append(fz_sol[v["x0cr"][iv]])
+        r.append(fz_sol[v["r"][iv]])
+
     # Convert the solution of x0cr from expression to function that accepts numpy arrays as inputs:
     if shape is not None:
 
         x0cr = Matrix(reshape(x0cr, shape))
         r = Matrix(reshape(r, shape))
-        vx["y1"], vx["Iext1"], vx["a"], vx["b"] = assert_arrays([vx["y1"], vx["Iext1"], vx["a"], vx["b"]], shape)
+        v["y1"], v["Iext1"], v["a"], v["b"] = assert_arrays([v["y1"], v["Iext1"], v["a"], v["b"]], shape)
 
     else:
         x0cr = Matrix(array(x0cr))
         r = Matrix(array(r))
 
-    return lambdify([vx["y1"], vx["Iext1"], vx["a"], vx["b"]], x0cr, 'numpy'), \
-           lambdify([vx["y1"], vx["Iext1"], vx["a"], vx["b"]], r, 'numpy')
-    return lambdify([v["yc"], v["Iext1"], v["a"], v["b"]], x0cr, 'numpy'), r
+    return (lambdify([v["y1"], v["Iext1"], v["a"], v["b"]], x0cr, 'numpy'), \
+           lambdify([v["y1"], v["Iext1"], v["a"], v["b"]], r, 'numpy')), (x0cr, r), v
 
 
 def symbol_calc_eq_x1_6d(n, x1_neg=True, shape=None):
@@ -570,6 +572,9 @@ def symbol_calc_eq_x1_6d(n, x1_neg=True, shape=None):
 
     fx1, v = symbol_eqtn_fx1(n, model="6d", x1_neg=x1_neg, slope="slope", Iext1="Iext1", shape=shape)[1:]
 
+    v.update(vy)
+    del vy
+
     for iv in range(n):
         fx1[iv] = fx1[iv].subs([(v["tau1"][iv], 1.0), (v["y1"][iv], y1eq[iv])])
 
@@ -577,13 +582,14 @@ def symbol_calc_eq_x1_6d(n, x1_neg=True, shape=None):
     for iv in range(n):
         x1eq.append(numpy.min(numpy.real(numpy.array(solve(fx1[iv], v["x1"][iv]), dtype="complex"))))
 
-    # Convert the solution of x0cr from expression to function that accepts numpy arrays as inputs:
+     # Convert the solution of x0cr from expression to function that accepts numpy arrays as inputs:
     if shape is not None:
 
         x1eq = Matrix(reshape(x1eq, shape))
-        r, v["yc"], v["Iext1"], v["a"], v["b"] = assert_arrays([fz[v["r"]], v["yc"], v["Iext1"], v["a"], v["b"]],
-                                                               shape)
+        v["z"], v["yc"], v["Iext1"], v["slope"], v["a"], v["b"], vy["d"] = \
+            assert_arrays([v["z"], v["yc"], v["Iext1"], v["slope"], v["a"], v["b"], vy["d"]], shape)
 
     else:
-        x0cr = Matrix(reshape(fz[v["x0cr"]]))
-        r = array(fz[v["r"]])
+        x1eq = Matrix(array(x1eq))
+
+    return lambdify([v["z"], v["yc"], v["Iext1"], v["slope"], v["a"], v["b"], vy["d"]], x1eq, 'numpy'), x1eq, v
