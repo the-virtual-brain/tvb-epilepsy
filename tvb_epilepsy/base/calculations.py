@@ -360,6 +360,7 @@ if SYMBOLIC_CALCULATIONS_FLAG:
         x0cr = x0cr(yc, Iext1, a, b)
 
         # r is already given as independent of yc and Iext1
+        r = r(yc, Iext1, a, b)
 
         return x0cr, r
 

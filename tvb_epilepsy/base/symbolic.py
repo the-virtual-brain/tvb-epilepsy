@@ -98,7 +98,7 @@ def symbol_eqtn_x0(n, zmode=numpy.array("lin"), z_pos=True, model="2d", K="K", s
 
         vars_dict.update(temp)
 
-        x0 = Matrix(eqtn_x0(x1, z, model, zmode, z_pos, K, w, x0cr, r))
+        x0 = Matrix(eqtn_x0(x1, z, model, zmode, z_pos, K, w, coupl=None, x0cr=x0cr, r=r))
 
         return lambdify([x1, z, x0cr, r, K, w], x0, "numpy"), x0, vars_dict
 
@@ -517,39 +517,47 @@ def symbol_calc_x0cr_r(n, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF
 
     # Define the z equilibrium expression...
     # if epileptor_model == "2d":
-    zeq, v = symbol_eqtn_fx1(n, model="2d", x1_neg=True, slope="slope", Iext1="Iext1")[1:]
+    zeq, vx = symbol_eqtn_fx1(n, model="2d", x1_neg=True, slope="slope", Iext1="Iext1")[1:]
 
     for iv in range(n):
-        zeq[iv] = zeq[iv].subs(v["z"][iv], 0.0).subs(v["tau1"][iv], 1.0).simplify()
+        zeq[iv] = zeq[iv].subs([(vx["z"][iv], 0.0), (vx["tau1"][iv], 1.0)])
 
     # else:
-    # zeq = calc_fx1(x1eq, z=0.0, y1=y1=calc_fy1(x1eq, yc1), Iext1=I1, model="6d", x1_neg=True,
+    # zeq = calc_fx1(x1eq, z=0.0, y1=y1=calc_fy1(x1eq, y11), Iext1=I1, model="6d", x1_neg=True,
     # shape=Iext1.shape).tolist()
 
     # Define the fz expression...
     # fz = calc_fz(x1eq, z=zeq, x0=x0, x0cr=x0cr, r=r, zmode=zmode, z_pos=True, model="2d", shape=Iext1.shape).tolist()
-    fz, v = symbol_eqtn_fz(n, zmode, z_pos=True, model="2d", x0="x0", K="K")[1:]
+    fz, vz = symbol_eqtn_fz(n, zmode, z_pos=True, model="2d", x0="x0", K="K")[1:]
     for iv in range(n):
-        fz[iv] = fz[iv].subs(v['K'][iv], 0.0).subs(v["tau1"][iv], 1.0).subs(v["tau0"][iv], 1.0).\
-                        subs(v["z"][iv], zeq[iv]).simplify()
+        fz[iv] = fz[iv].subs([(vz['K'][iv], 0.0), (vz["tau1"][iv], 1.0), (vz["tau0"][iv], 1.0), (vz["z"][iv], zeq[iv])])
 
     # Solve the fz expression for rx0 and x0cr, assuming the following two points (x1eq,x0) = [(-5/3,0.0),(-4/3,1.0)]...
     # ...and WITHOUT COUPLING
-    fz = solve([fz.subs([(v["x1"], x1_rest), (v["x0"], x0def), (zeq, zeq.subs(v["x1"], x1_rest))]),
-                fz.subs([(v["x1"], x1_cr), (v["x0"], x0cr_def), (zeq, zeq.subs(v["x1"], x1_cr))])],
-                v["x0cr"], v["r"])
-
+    x0cr = []
+    r = []
+    for iv in range(n):
+        fz_sol = \
+            solve([fz[iv].subs([(vz["x1"][iv], x1_rest), (vz["x0"][iv], x0def),
+                                (zeq[iv], zeq[iv].subs(vz["x1"][iv], x1_rest))]),
+                   fz[iv].subs([(vz["x1"][iv], x1_cr), (vz["x0"][iv], x0cr_def),
+                                (zeq[iv], zeq[iv].subs(vz["x1"][iv], x1_cr))])],
+                vz["x0cr"][iv], vz["r"][iv])
+        x0cr.append(fz_sol[vz["x0cr"][iv]])
+        r.append(fz_sol[vz["r"][iv]])
     # Convert the solution of x0cr from expression to function that accepts numpy arrays as inputs:
     if shape is not None:
 
-        x0cr = Matrix(reshape(fz[v["x0cr"]], shape))
-        r, v["yc"], v["Iext1"], v["a"], v["b"] = assert_arrays([fz[v["r"]],  v["yc"], v["Iext1"], v["a"], v["b"]],
-                                                               shape)
+        x0cr = Matrix(reshape(x0cr, shape))
+        r = Matrix(reshape(r, shape))
+        vx["y1"], vx["Iext1"], vx["a"], vx["b"] = assert_arrays([vx["y1"], vx["Iext1"], vx["a"], vx["b"]], shape)
 
     else:
-        x0cr = Matrix(array(fz[v["x0cr"]]))
-        r = array(fz[v["r"]])
+        x0cr = Matrix(array(x0cr))
+        r = Matrix(array(r))
 
+    return lambdify([vx["y1"], vx["Iext1"], vx["a"], vx["b"]], x0cr, 'numpy'), \
+           lambdify([vx["y1"], vx["Iext1"], vx["a"], vx["b"]], r, 'numpy')
     return lambdify([v["yc"], v["Iext1"], v["a"], v["b"]], x0cr, 'numpy'), r
 
 

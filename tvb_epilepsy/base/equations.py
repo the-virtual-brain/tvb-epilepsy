@@ -50,7 +50,7 @@ def eqtn_x0(x1, z, model="2d", zmode=array("lin"), z_pos=True, K=None, w=None, c
 
     if model == "2d":
         if zmode == 'lin':
-            return divide((x1 + x0cr - -z - (where(z_pos, z, 0.1 * power(z, 7.0)) + coupl) / 4.0), r)
+            return divide((x1 + x0cr -z - (where(z_pos, z, 0.1 * power(z, 7.0)) + coupl) / 4.0), r)
 
         elif zmode == 'sig':
             return divide((divide(3.0 / (1.0 + power(exp(1), -10.0 * (x1 + 0.5)))) + x0cr - z - coupl), r)
