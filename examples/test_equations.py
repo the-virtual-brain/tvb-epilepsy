@@ -45,7 +45,7 @@ if __name__ == "__main__":
     zmode = numpy.array("lin")
     pmode = numpy.array("const")
 
-    model = "EpileptorDPrealistic"
+    model = "EpileptorDP2D"
 
     if model == "EpileptorDP2D":
 
@@ -83,7 +83,7 @@ if __name__ == "__main__":
                              y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5],
                              x0_var=eq[6], slope_var=eq[7], Iext1_var=eq[8], Iext2_var=eq[9], K_var=eq[10],
                              slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
-                             tau2=10.0, output_mode="arrays")
+                             tau2=10.0, output_mode="array")
 
             jac = calc_jac(x1eq, zeq, yc, Iext1, x0, K, w, model_vars,
                            zmode, pmode, x1_neg=True, z_pos=True, x2_neg=True,
@@ -100,7 +100,7 @@ if __name__ == "__main__":
             dfun = calc_dfun(x1eq, zeq, yc, Iext1, r, K, w, model_vars, zmode,
                              y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5],
                              slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
-                             tau2=10.0, output_mode="arrays")
+                             tau2=10.0, output_mode="array")
 
             jac = calc_jac(x1eq, zeq, yc, Iext1, r, K, w, model_vars,
                            zmode, x1_neg=True, z_pos=True, x2_neg=True,
@@ -108,7 +108,7 @@ if __name__ == "__main__":
                            slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
                            tau2=10.0)
 
-    write_object_to_h5_file({"eq": eq, "dfun": dfun, "jac": jac},
+    write_object_to_h5_file({"eq": eq, "dfun": numpy.array(dfun), "jac": numpy.array(jac)},
                             os.path.join(FOLDER_RES, model+"Symbolic"+str(SYMBOLIC_CALCULATIONS_FLAG)+".h5"))
 
     # Test coupling:

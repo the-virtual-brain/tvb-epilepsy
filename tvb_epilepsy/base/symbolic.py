@@ -235,7 +235,7 @@ def symbol_eqtn_fIext2(n, pmode=array("const"), shape=None):
     Iext2_var, z, g, Iext2, tau1, vars_dict = symbol_vars(n, ["Iext2_var", "z", "g", "Iext2", "tau1"], shape=shape)
 
     from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic
-    Iext2_eq = EpileptorDPrealistic.fun_Iext2_Iext2(z, g, pmode, 0.0, Iext2)[1]
+    Iext2_eq = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, 0.0, Iext2)[1]
 
     fIext2 = Matrix(eqtn_fIext2(Iext2_var, Iext2_eq, tau1))
 
@@ -276,8 +276,8 @@ def symbol_eqtn_fparam_vars(n, pmode=array("const"), shape=None):
     K_lambda, fK, temp = symbol_eqtn_fK(n, shape)
     vars_dict.update(temp)
 
-    return [fx0_lambda, slope_lambda, Iext1_lambda, Iext2_lambda, K_lambda], \
-           [fx0, fslope, fIext1, fIext2, fK], vars_dict
+    return (fx0_lambda, slope_lambda, Iext1_lambda, Iext2_lambda, K_lambda), \
+           (fx0, fslope, fIext1, fIext2, fK), vars_dict
 
 
 def symbol_eqnt_dfun(n, model_vars, zmode=array("lin"), x1_neg=True, x2_neg=True, z_pos=True,
@@ -316,13 +316,13 @@ def symbol_eqnt_dfun(n, model_vars, zmode=array("lin"), x1_neg=True, x2_neg=True
         symvars.update(temp)
 
         fl, fs, temp = symbol_eqtn_fx2(n, Iext2="Iext2", shape=shape)
-        f_lambda += fl
-        f_sym += fs
+        f_lambda.append(fl)
+        f_sym.append(fs)
         symvars.update(temp)
 
         fl, fs, temp = symbol_eqtn_fy2(n, x2_neg, shape)
-        f_lambda += fl
-        f_sym += fs
+        f_lambda.append(fl)
+        f_sym.append(fs)
         symvars.update(temp)
 
         fl, fs, temp = symbol_eqtn_fg(n, shape)
@@ -336,7 +336,7 @@ def symbol_eqnt_dfun(n, model_vars, zmode=array("lin"), x1_neg=True, x2_neg=True
         f_lambda.append(fl)
         f_sym.append(fs)
 
-        fl, fs, temp = eqtn_fy1(n, shape)
+        fl, fs, temp = symbol_eqtn_fy1(n, shape)
         f_lambda.append(fl)
         f_sym.append(fs)
         symvars.update(temp)
@@ -347,13 +347,13 @@ def symbol_eqnt_dfun(n, model_vars, zmode=array("lin"), x1_neg=True, x2_neg=True
         symvars.update(temp)
 
         fl, fs, temp = symbol_eqtn_fx2(n, Iext2="Iext2_var", shape=shape)
-        f_lambda += fl
-        f_sym += fs
+        f_lambda.append(fl)
+        f_sym.append(fs)
         symvars.update(temp)
 
         fl, fs, temp = symbol_eqtn_fy2(n, x2_neg, shape)
-        f_lambda += fl
-        f_sym += fs
+        f_lambda.append(fl)
+        f_sym.append(fs)
         symvars.update(temp)
 
         fl, fs, temp = symbol_eqtn_fg(n, shape)
@@ -362,8 +362,8 @@ def symbol_eqnt_dfun(n, model_vars, zmode=array("lin"), x1_neg=True, x2_neg=True
         symvars.update(temp)
 
         fl, fs, temp = symbol_eqtn_fparam_vars(n, pmode, shape)
-        f_lambda += fl
-        f_sym += fs
+        f_lambda += list(fl)
+        f_sym += list(fs)
         symvars.update(temp)
 
     return f_lambda, f_sym, symvars
@@ -378,7 +378,7 @@ def symbol_calc_2d_taylor(n, x_taylor="x1lin", order=2, x1_neg=True, slope="slop
     v.update({"x_taylor": x_taylor})
 
     for ix in range(v["x1"].size):
-        fx1lin[ix] = series(fx1lin[ix], x=x, x0=x_taylor, n=order).removeO().simplify().subs(x, v["x1"]).flatten()[ix]
+        fx1lin[ix] = series(fx1lin[ix], x=x, x0=x_taylor, n=order).removeO().simplify().subs(x, v["x1"][ix])
 
     return lambdify([v["x1"], v["z"], v["y1"], v[Iext1], v[slope], v["a"], v["b"], v["tau1"]], fx1lin, "numpy"), \
            fx1lin, v
@@ -388,7 +388,7 @@ def symbol_calc_fx1z_2d_x1neg_zpos_jac(n, ix0, iE):
 
     fx1, v = symbol_eqtn_fx1(n, model="2d", x1_neg=True, slope="slope", Iext1="Iext1", shape=None)[1:]
 
-    fz, vz = symbol_eqtn_fz(n, zmode=array("lin"), zpos=True, model="2d", x0="x0", K="K", shape=None)[1:]
+    fz, vz = symbol_eqtn_fz(n, zmode=array("lin"), z_pos=True, model="2d", x0="x0", K="K", shape=None)[1:]
 
     v.update(vz)
     del vz
@@ -406,7 +406,7 @@ def symbol_calc_fx1z_2d_x1neg_zpos_jac(n, ix0, iE):
 
     jac = Matrix(jac[:])
 
-    return lambdify([v["x1"], v["z"], v["x0"], v["x0cr"], v["r"], v["yc"], v["Iext1"], v["K"], v["w"], v["a"], v["b"],
+    return lambdify([v["x1"], v["z"], v["x0"], v["x0cr"], v["r"], v["y1"], v["Iext1"], v["K"], v["w"], v["a"], v["b"],
                      v["tau1"], v["tau0"]], jac, "numpy"), jac, v
 
 
@@ -419,13 +419,11 @@ def symbol_calc_fx1y1_6d_diff_x1(n):
     v.update(vy)
     del vy
 
-    x = Matrix(v["x1"]).T
-
     dfx1 = []
     for ix in range(n):
-        fy1[ix] = fy1[ix].subs(v["y1"], 0.0).subs(v["tau1"], 1.0)
-        fx1[ix] = fx1[ix].subs(v["y1"], fy1).expand(v["x1"][ix]).collect(v["x1"][ix])
-        dfx1.append(Matrix([fx1[ix]]).jacobian(x)[:])
+        fy1[ix] = fy1[ix].subs(v["y1"][ix], 0.0).subs(v["tau1"][ix], 1.0)
+        fx1[ix] = fx1[ix].subs(v["y1"][ix], fy1[ix]).expand(v["x1"][ix]).collect(v["x1"][ix])
+        dfx1.append(fx1[ix].diff(v["x1"][ix]))
 
     dfx1 = Matrix(reshape(dfx1, v["x1"].shape)[:])
 
@@ -447,7 +445,7 @@ def symbol_calc_jac(n_regions, model_vars, zmode=array("lin"), x1_neg=True, x2_n
 
         jac_sym = dfun_sym.jacobian(Matrix(Matrix([v["x1"], v["z"]])[:]))
 
-        jac_lambda.append(lambdify([v["x1"], v["z"], v["yc"], v["Iext1"], v["slope"], v["a"], v["b"], v["tau1"]],
+        jac_lambda.append(lambdify([v["x1"], v["z"], v["y1"], v["Iext1"], v["slope"], v["a"], v["b"], v["tau1"]],
                           jac_sym[ind(0), :], "numpy"))
         jac_lambda.append(lambdify([v["x1"], v["z"], v["x0"], v["x0cr"], v["r"], v["K"], v["w"], v["tau1"], v["tau0"]],
                           jac_sym[ind(1), :], "numpy"))
@@ -466,7 +464,7 @@ def symbol_calc_jac(n_regions, model_vars, zmode=array("lin"), x1_neg=True, x2_n
         jac_lambda.append(lambdify([v["x1"], v["y1"], v["z"], v["x2"], v["y2"], v["g"],
                                     v["Iext2"], v["tau1"]], jac_sym[ind(3), :], "numpy"))
         jac_lambda.append(lambdify([v["x1"], v["y1"], v["z"], v["x2"], v["y2"], v["g"],
-                                    v["s"], v["tau1"], v["tau0"]], jac_sym[ind(4), :], "numpy"))
+                                    v["s"], v["tau1"], v["tau2"]], jac_sym[ind(4), :], "numpy"))
         jac_lambda.append(lambdify([v["x1"], v["y1"], v["z"], v["x2"], v["y2"], v["g"],
                                     v["gamma"], v["tau1"]], jac_sym[ind(5), :], "numpy"))
 
@@ -489,7 +487,7 @@ def symbol_calc_jac(n_regions, model_vars, zmode=array("lin"), x1_neg=True, x2_n
                                v["tau1"]], jac_sym[ind(3), :], "numpy"))
         jac_lambda.append(lambdify([v["x1"], v["y1"], v["z"], v["x2"], v["y2"], v["g"],
                                v["x0_var"], v["Iext1_var"], v["Iext2_var"], v["slope_var"], v["K_var"],
-                               v["s"], v["tau1"], v["tau0"]], jac_sym[ind(4), :], "numpy"))
+                               v["s"], v["tau1"], v["tau2"]], jac_sym[ind(4), :], "numpy"))
         jac_lambda.append(lambdify([v["x1"], v["y1"], v["z"], v["x2"], v["y2"], v["g"],
                                v["x0_var"], v["Iext1_var"], v["Iext2_var"], v["slope_var"], v["K_var"],
                                v["gamma"], v["tau1"]], jac_sym[ind(5), :], "numpy"))
@@ -563,14 +561,14 @@ def symbol_calc_x0cr_r(n, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF
            lambdify([v["y1"], v["Iext1"], v["a"], v["b"]], r, 'numpy')), (x0cr, r), v
 
 
-def symbol_calc_eq_x1_6d(n, x1_neg=True, shape=None):
+def symbol_calc_eq_x1_6d(n, x1_neg=True):
 
-    y1eq, vy = symbol_eqtn_fy1(n, shape=shape)[1:]
+    y1eq, vy = symbol_eqtn_fy1(n)[1:]
 
     for iv in range(n):
         y1eq[iv] = y1eq[iv].subs([(vy["tau1"][iv], 1.0), (vy["y1"][iv], 0.0)])
 
-    fx1, v = symbol_eqtn_fx1(n, model="6d", x1_neg=x1_neg, slope="slope", Iext1="Iext1", shape=shape)[1:]
+    fx1, v = symbol_eqtn_fx1(n, model="6d", x1_neg=x1_neg, slope="slope", Iext1="Iext1")[1:]
 
     v.update(vy)
     del vy
@@ -580,16 +578,33 @@ def symbol_calc_eq_x1_6d(n, x1_neg=True, shape=None):
 
     x1eq = []
     for iv in range(n):
-        x1eq.append(numpy.min(numpy.real(numpy.array(solve(fx1[iv], v["x1"][iv]), dtype="complex"))))
+        x1eq.append(solve(fx1[iv], v["x1"][iv]))
 
      # Convert the solution of x0cr from expression to function that accepts numpy arrays as inputs:
-    if shape is not None:
+    x1eq = Matrix(array(x1eq))
 
-        x1eq = Matrix(reshape(x1eq, shape))
-        v["z"], v["yc"], v["Iext1"], v["slope"], v["a"], v["b"], vy["d"] = \
-            assert_arrays([v["z"], v["yc"], v["Iext1"], v["slope"], v["a"], v["b"], vy["d"]], shape)
+    return lambdify([v["z"], v["yc"], v["Iext1"], v["slope"], v["a"], v["b"], v["d"]], x1eq, 'numpy'), x1eq, v
 
-    else:
-        x1eq = Matrix(array(x1eq))
 
-    return lambdify([v["z"], v["yc"], v["Iext1"], v["slope"], v["a"], v["b"], vy["d"]], x1eq, 'numpy'), x1eq, v
+def symbol_calc_eq_x2(n, x2_neg=True):
+
+    y2eq, vy = symbol_eqtn_fy2(n, x2_neg=x2_neg)[1:]
+
+    for iv in range(n):
+        y2eq[iv] = y2eq[iv].subs([(vy["tau1"][iv], 1.0), (vy["tau2"][iv], 1.0), (vy["y2"][iv], 0.0)])
+
+    fx2, v = symbol_eqtn_fx2(n, Iext2="Iext2")[1:]
+
+    v.update(vy)
+    del vy
+
+    for iv in range(n):
+        fx2[iv] = fx2[iv].subs([(v["tau1"][iv], 1.0), (v["y2"][iv], y2eq[iv])])
+
+    x2eq = []
+    for iv in range(n):
+        x2eq.append(solve(fx2[iv], v["x2"][iv]))
+
+    x2eq = Matrix(array(x2eq))
+
+    return lambdify([v["z"], v["g"], v["Iext2"], v["s"]], x2eq, 'numpy'), x2eq, v

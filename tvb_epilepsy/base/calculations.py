@@ -201,47 +201,61 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
             dfun_sym = symbol_eqnt_dfun(x1.size, model_vars, zmode, x1_neg, z_pos, x2_neg, pmode, shape)[0]
 
+            z, x1, yc, Iext1, x0, K, slope, a, b, tau1, tau0 = \
+                assert_arrays([z, x1, yc, Iext1, x0, K, slope, a, b, tau1, tau0], shape)
+
+            w = assert_arrays([w], (z.size, z.size))
+
             if model_vars == 2:
 
-                return dfun_sym[0][0](x1, z, yc, Iext1, slope, a, b, tau1), \
-                       dfun_sym[0][1](x1, z, x0, x0cr, r, K, w)
+                x0cr, r = assert_arrays([x0cr, r], z.shape)
+
+                return dfun_sym[0](x1, z, yc, Iext1, slope, a, b, tau1), \
+                       dfun_sym[1](x1, z, x0, x0cr, r, K, w, tau1, tau0)
 
             elif model_vars == 6:
 
-                return dfun_sym[0][0](x1, z, y1, Iext1, slope, a, b, tau1), \
-                       dfun_sym[0][1](x1, y1, yc, d, tau1), \
-                       dfun_sym[0][2](x1, z, x0, K, w), \
-                       dfun_sym[0][3](x2, y2, z, g, Iext2, tau1), \
-                       dfun_sym[0][4](x2, y2, s, tau1, tau2), \
-                       dfun_sym[0][5](x1, g, gamma, tau1)
+                y1, x2, y2, g, Iext2, d, s, gamma, tau2 = \
+                    assert_arrays([y1, x2, y2, g, Iext2, d, s, gamma, tau2], z.shape)
+
+                return dfun_sym[0](x1, z, y1, x2, Iext1, slope, a, b, tau1), \
+                       dfun_sym[1](x1, y1, yc, d, tau1), \
+                       dfun_sym[2](x1, z, x0, K, w, tau1, tau0), \
+                       dfun_sym[3](x2, y2, z, g, Iext2, tau1), \
+                       dfun_sym[4](x2, y2, s, tau1, tau2), \
+                       dfun_sym[5](x1, g, gamma, tau1)
 
             elif model_vars == 11:
 
-                dfun = [dfun_sym[0][0](x1, z, y1, Iext1_var, slope_var, a, b, tau1),
-                        dfun_sym[0][1](x1, y1, yc, d, tau1),
-                        dfun_sym[0][2](x1, z, x0_var, K_var, w),
-                        dfun_sym[0][3](x2, y2, z, g, Iext2_var, tau1),
-                        dfun_sym[0][4](x2, y2, s, tau1, tau2),
-                        dfun_sym[0][5](x1, g, gamma, tau1),
-                        dfun_sym[0][6](x0_var, x0, tau1)]
+                y1, x2, y2, g, x0_var, slope_var, Iext1_var, Iext2_var, K_var, Iext2, d, s, gamma, tau2 = \
+                    assert_arrays([y1, x2, y2, g, x0_var, slope_var, Iext1_var, Iext2_var, K_var, Iext2,
+                                   d, s, gamma, tau2], z.shape)
+
+                dfun = [dfun_sym[0](x1, z, y1, x2, Iext1_var, slope_var, a, b, tau1),
+                        dfun_sym[1](x1, y1, yc, d, tau1),
+                        dfun_sym[2](x1, z, x0_var, K_var, w, tau1, tau0),
+                        dfun_sym[3](x2, y2, z, g, Iext2_var, tau1),
+                        dfun_sym[4](x2, y2, s, tau1, tau2),
+                        dfun_sym[5](x1, g, gamma, tau1),
+                        dfun_sym[6](x0_var, x0, tau1)]
 
                 if pmode == "z":
-                    dfun7 = dfun_sym[0][7](slope_var, z, tau1)
-                    dfun9 = dfun_sym[0][9](Iext2_var, z, tau1)
+                    dfun7 = dfun_sym[7](slope_var, z, tau1)
+                    dfun9 = dfun_sym[9](Iext2_var, z, tau1)
                 elif pmode == "g":
-                    dfun7 = dfun_sym[0][7](slope_var, g, tau1)
-                    dfun9 = dfun_sym[0][9](Iext2_var, g, tau1)
+                    dfun7 = dfun_sym[7](slope_var, g, tau1)
+                    dfun9 = dfun_sym[9](Iext2_var, g, tau1)
                 elif pmode == "z*g":
-                    dfun7 = dfun_sym[0][7](slope_var, z, g, tau1)
-                    dfun9 = dfun_sym[0][9](Iext2_var, z, g, tau1)
+                    dfun7 = dfun_sym[7](slope_var, z, g, tau1)
+                    dfun9 = dfun_sym[9](Iext2_var, z, g, tau1)
                 else:
-                    dfun7 = dfun_sym[0][7](slope_var, slope, tau1)
-                    dfun9 = dfun_sym[0][9](Iext2_var, Iext2, tau1)
+                    dfun7 = dfun_sym[7](slope_var, slope, tau1)
+                    dfun9 = dfun_sym[9](Iext2_var, Iext2, tau1)
 
                 dfun.append(dfun7)
-                dfun.append(dfun_sym[0][8](Iext1_var, Iext1, tau1, tau0))
+                dfun.append(dfun_sym[8](Iext1_var, Iext1, tau1, tau0))
                 dfun.append(dfun9)
-                dfun.append(dfun_sym[0][10](K_var, K, tau1, tau0))
+                dfun.append(dfun_sym[10](K_var, K, tau1, tau0))
 
                 return tuple(dfun)
 
@@ -255,21 +269,29 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
         n_regions = z.size
 
-        z, x1 = assert_arrays([z, x1], (1, n_regions))
+        z, x1, yc, Iext1, x0, K, slope, a, b, tau1, tau0 = \
+            assert_arrays([z, x1, yc, Iext1, x0, K, slope, a, b, tau1, tau0], z.shape)
+
+        w = assert_arrays([w], (z.size, z.size))
 
         n = model_vars * n_regions
         jac = zeros((n,n), dtype=z.dtype)
 
         ind = lambda x: x * n_regions + array(range(n_regions))
 
-        jac_lambda = symbol_calc_jac(n_regions, model_vars, zmode, x1_neg, z_pos, x2_neg, pmode)[0]
+        jac_lambda, jac_sym = symbol_calc_jac(n_regions, model_vars, zmode, x1_neg, z_pos, x2_neg, pmode)[:2]
 
         if model_vars == 2:
+
+            x0cr, r = assert_arrays([x0cr, r], z.shape)
 
             jac[ind(0), :] = array(jac_lambda[0](x1, z, yc, Iext1, slope, a, b, tau1))
             jac[ind(1), :] = array(jac_lambda[1](x1, z, x0, x0cr, r, K, w, tau1, tau0))
 
         else:
+
+            y1, x2, y2, g, Iext2, d, s, gamma, tau2 = \
+                assert_arrays([y1, x2, y2, g, Iext2, d, s, gamma, tau2], z.shape)
 
             if model_vars == 6:
 
@@ -283,6 +305,8 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
             elif model_vars == 11:
 
+                x0_var, slope_var, Iext1_var, Iext2_var, K_var = \
+                    assert_arrays([x0_var, slope_var, Iext1_var, Iext2_var, K_var], z.shape)
 
                 jac[ind(0), :] = array(jac_lambda[0](x1, y1, z, x2, y2, g,
                                                      x0_var, slope_var, Iext1_var, Iext2_var, K_var,
@@ -338,8 +362,8 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
         w = assert_arrays([w], (x1.size, x1.size))
 
-        return reshape(symbol_calc_fx1z_2d_x1neg_zpos_jac(x1.size, ix0, iE)[0](x1, z, x0, x0cr, r, yc, Iext1, K, w,
-                                                                               a, b, tau1, tau0), x1.shape)
+        return symbol_calc_fx1z_2d_x1neg_zpos_jac(x1.size, ix0, iE)[0](x1, z, x0, x0cr, r, yc, Iext1, K, w, a, b, tau1,
+                                                                       tau0)
 
 
     def calc_fx1y1_6d_diff_x1(x1, yc, Iext1, a=1.0, b=3.0, d=5.0, tau1=1.0, shape=None):
@@ -620,7 +644,7 @@ else:
 
             return calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars, x0cr, r, zmode, pmode, x1_neg, z_pos, x2_neg,
                                    y1, x2, y2, g, x0_var, slope_var, Iext1_var, Iext2_var, K_var,
-                                   slope, a, b, d, s, Iext2, gamma, tau1, tau0, tau2, shape)
+                                   slope, a, b, d, s, Iext2, gamma, tau1, tau0, tau2)
 
         else:
 
@@ -855,7 +879,7 @@ def calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
 
     elif model_vars == 6:
 
-        f[0, :] = calc_fx1(x1, z, y1, Iext1, slope, a, b, tau1, x2, model="6d", x1_neg=x1_neg, shape=shape)
+        f[0, :] = calc_fx1(x1, z, y1, Iext1, slope, a, b, tau1, x2=x2, model="6d", x1_neg=x1_neg, shape=shape)
         f[1, :] = calc_fy1(x1, yc, y1, d, tau1, shape)
         f[2, :] = calc_fz(x1, z, x0, K, w, tau1, tau0, x0cr, r, zmode, z_pos, model="6d", shape=shape)
         f[3, :] = calc_fx2(x2, y2, z, g, Iext2, tau1, shape)
@@ -864,7 +888,7 @@ def calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
 
     elif model_vars == 11:
 
-        f[0, :] = calc_fx1(x1, z, y1, Iext1_var, slope_var, a, b, tau1, x2, model="6d", x1_neg=x1_neg,
+        f[0, :] = calc_fx1(x1, z, y1, Iext1_var, slope_var, a, b, tau1, x2=x2, model="6d", x1_neg=x1_neg,
                            shape=shape)
         f[1, :] = calc_fy1(x1, yc, y1, d, tau1, shape)
         f[2, :] = calc_fz(x1, z, x0_var, K_var, w, tau1, tau0, x0cr, r, zmode, z_pos, model="6d", shape=shape)

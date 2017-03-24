@@ -7,7 +7,7 @@ from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, SYMBOLIC_CALCULATI
 from tvb_epilepsy.base.utils import assert_arrays
 from tvb_epilepsy.base.calculations import calc_x0, calc_fx1, calc_fy1, calc_fz, calc_fx2, calc_fg, calc_coupling, \
                                            calc_dfun, calc_fx1z_2d_x1neg_zpos_jac, calc_fx1y1_6d_diff_x1
-from tvb_epilepsy.base.symbolic import symbol_calc_eq_x1_6d
+from tvb_epilepsy.base.symbolic import symbol_calc_eq_x1_6d, symbol_calc_eq_x2
 
 
 if SYMBOLIC_CALCULATIONS_FLAG :
@@ -48,22 +48,31 @@ def calc_eq_y1(x1eq, yc, d=5.0):
     return calc_fy1(x1eq, yc, y1=0, d=d, tau1=1.0)
 
 
-def calc_eq_x1_6d(z, yc, Iext1, slope=0.0, a=1.0, b=3.0, d=5.0, x1_neg=True):
+def calc_eq_x1_6d(zeq, yc, Iext1, slope=0.0, a=1.0, b=3.0, d=5.0, x1_neg=True):
 
-    z, yc, Iext1, slope, a, b, d = assert_arrays([z, yc, Iext1, slope, a, b, d], (z.size,))
+    shape = zeq.shape
+
+    zeq, yc, Iext1, slope, a, b, d = assert_arrays([zeq, yc, Iext1, slope, a, b, d], (zeq.size,))
 
     if SYMBOLIC_CALCULATIONS_FLAG:
 
-        x1eq = symbol_calc_eq_x1_6d(z.size, x1_neg=True, shape=None)[0](z, yc, Iext1, slope, a, b, d)
+        temp = symbol_calc_eq_x1_6d(zeq.size, x1_neg=x1_neg)[0] (zeq, yc, Iext1, slope, a, b, d)
+
+        x1eq = []
+        for ii in range(zeq.size):
+
+            temp2 = numpy.real(temp[ii][numpy.abs(numpy.imag(temp[ii])) < 10 ** -6])
+            x1eq.append(numpy.min(temp2))
 
     else:
 
         x1eq = []
 
-        for ii in range(z.size):
+        for ii in range(zeq.size):
 
-            fx1 = lambda x1: calc_fx1(x1, z=z[ii], y1=calc_eq_y1(x1, yc[ii], d=d[ii]), Iext1=Iext1[ii], slope=slope[ii],
-                                      a=a[ii], b=b[ii], tau1=1.0, x2=0.0, model="6d", x1_neg=x1_neg, shape=(1, ))
+            fx1 = lambda x1: calc_fx1(x1, z=zeq[ii], y1=calc_eq_y1(x1, yc[ii], d=d[ii]), Iext1=Iext1[ii],
+                                      slope=slope[ii], a=a[ii], b=b[ii], tau1=1.0, x2=0.0, model="6d", x1_neg=x1_neg,
+                                      shape=(1, ))
 
             jac = lambda x1: calc_fx1y1_6d_diff_x1(x1, yc[ii], Iext1[ii], a=a[ii], b=b[ii], d=d[ii], tau1=1.0,
                                                    shape=(1, ))
@@ -78,10 +87,14 @@ def calc_eq_x1_6d(z, yc, Iext1, slope=0.0, a=1.0, b=3.0, d=5.0, x1_neg=True):
             else:
                 raise ValueError(sol.message)
 
-    return numpy.reshape(x1eq, z.shape).astype(z.dtype)
+    x1eq = numpy.reshape(x1eq, shape)
+
+    return x1eq
 
 
 def calc_eq_y2(x2eq, x2_neg=True):
+
+    x2eq = assert_arrays([x2eq])
 
     return numpy.where(x2_neg, numpy.zeros(x2eq.shape), 6.0 * (x2eq + 0.25))
 
@@ -90,93 +103,83 @@ def calc_eq_g(x1eq, gamma=0.1):
     return calc_fg(x1eq, 0.0, gamma, tau1=1.0)
 
 
-def calc_eq_x2(zeq, x1eq, Iext2,  y2eq=None, geq=None, s=6.0, g=0.0, gamma=0.1, x2_neg=True):
+def calc_eq_x2(zeq, x1eq, Iext2,  y2eq=None, geq=None, s=6.0, gamma=0.1, x2_neg=True):
 
-    y2eq = numpy.zeros(zeq.shape)
-
-    if geq is None:
-        geq = calc_eq_g(x1eq, gamma)
-
-    if SYMBOLIC_CALCULATIONS_FLAG:
-
-        x2 = symbol_vars(zeq.size, ["x2"], shape=(zeq.size,))
-
-        # TODO: use symbolic vectors and functions
-        # fx2 = -y2eq + x2 - x2 ** 3 + numpy.squeeze(Iext2) + 2 * g_eq - 0.3 * (numpy.squeeze(zeq) - 3.5)
-        fx2 = calc_fx2(x2, y2=y2eq, z=zeq, g=geq, Iext2=Iext2, tau1=1.0, shape=(zeq.size,))
-
-        x2eq = []
-        for ii in range(y2eq.size):
-            x2eq.append(numpy.min(numpy.real(numpy.array(solve(fx2[ii], x2[ii]), dtype="complex"))))
-
-    else:
-
-        zeq, y2eq, geq, Iext2 = assert_arrays([zeq, y2eq, geq, Iext2], (zeq.size,))
-
-        x2eq = []
-        jac = lambda x2: -3 * x2 ** 2 + 1.0
-        for ii in range(zeq.size):
-
-            fx2 = lambda x2: \
-                calc_fx2(x2, y2=y2eq[ii], z=zeq[ii], g=geq[ii], Iext2=Iext2[ii], tau1=1.0, shape=(1,))
-
-            sol = root(fx2, -0.75, method='lm', jac=jac, tol=10 ** (-6), callback=None, options=None)
-            # args=(y2eq[ii], zeq[ii], g_eq[ii], Iext2[ii], s, tau1, tau2, x2_neg)  method='hybr'
-
-            if sol.success:
-                x2eq.append(numpy.min(numpy.real(numpy.array(sol.x))))
-                if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
-                    raise ValueError("nan or inf values in solution x\n" + sol.message)
-            else:
-                raise ValueError(sol.message)
-
-    return numpy.reshape(numpy.array(x2eq), zeq.shape)
-
-
-def calc_eq_pop2(zeq, x1eq, Iext2, geq=None, s=6.0, g=0.0, gamma=0.1):
-
-    # We assume here that x2_neg is True, i.e., all x2eq < -0.25
     shape = zeq.shape
 
-    y2eq = numpy.zeros(shape)
-
     if geq is None:
         geq = calc_eq_g(x1eq, gamma)
 
+    zeq, x1eq, Iext2, s, geq, gamma = assert_arrays([zeq, x1eq, Iext2, s, geq, gamma], (zeq.size,))
+
     if SYMBOLIC_CALCULATIONS_FLAG:
 
-        x2 = symbol_vars(zeq.size, ["x2"], shape=(zeq.size,))
-
-        #TODO: use symbolic vectors and functions
-        #fx2 = -y2eq + x2 - x2 ** 3 + numpy.squeeze(Iext2) + 2 * g_eq - 0.3 * (numpy.squeeze(zeq) - 3.5)
-        fx2 = calc_fx2(x2, y2=y2eq, z=zeq, g=geq, Iext2=Iext2, tau1=1.0, shape=(zeq.size, ))
+        temp = symbol_calc_eq_x2(zeq.size, x2_neg=x2_neg)[0](zeq, geq, Iext2, s)
 
         x2eq = []
-        for ii in range(y2eq.size):
-            x2eq.append(numpy.min(numpy.real(numpy.array(solve(fx2[ii], x2[ii]), dtype="complex"))))
+        for ii in range(zeq.size):
+            temp2 = numpy.real(temp[ii][numpy.abs(numpy.imag(temp[ii])) < 10 ** -6])
+            x2eq.append(numpy.min(temp2))
 
     else:
 
-        zeq, y2eq, geq, Iext2 = assert_arrays([zeq, y2eq, geq, Iext2], (zeq.size,))
-
         x2eq = []
-        jac = lambda x2: -3 * x2 ** 2 + 1.0
-        for ii in range(zeq.size):
 
-            fx2 = lambda x2: \
-                calc_fx2(x2, y2=y2eq[ii], z=zeq[ii], g=geq[ii], Iext2=Iext2[ii], tau1=1.0, shape=(1, ))
+        x2_neg = numpy.array(x2_neg)
+        if x2_neg.size == 1:
+
+            if numpy.all(zeq == zeq[0]) and numpy.all(geq == geq[0]) and numpy.all(Iext2 == Iext2[0]) and \
+                numpy.all(s == s[0]):
+
+                zeq = zeq[0]
+                geq = geq[0]
+                Iext2 = Iext2[0]
+                s = s[0]
+
+                n=1
+
+            else:
+                n = zeq.size
+                x2_neg = numpy.tile(x2_neg, (n,))
+
+        for ii in range(n):
+
+            if y2eq is None:
+
+                fx2 = lambda x2: calc_fx2(x2, y2=calc_eq_y2(x2, x2_neg=x2_neg[ii]), z=zeq[ii], g=geq[ii],
+                                          Iext2=Iext2[ii], tau1=1.0, shape=(1,))
+
+                jac = lambda x2: -3 * x2 ** 2 + 1.0 - numpy.where(x2_neg[ii], 0.0, -6.0)
+
+            else:
+
+                fx2 = lambda x2: calc_fx2(x2, y2=0.0, z=zeq[ii], g=geq[ii], Iext2=Iext2[ii], tau1=1.0, shape=(1,))
+                jac = lambda x2: -3 * x2 ** 2 + 1.0
 
             sol = root(fx2, -0.75, method='lm', jac=jac, tol=10 ** (-6), callback=None, options=None)
-            #args=(y2eq[ii], zeq[ii], g_eq[ii], Iext2[ii], s, tau1, tau2, x2_neg)  method='hybr'
 
             if sol.success:
-                x2eq.append(numpy.min(numpy.real(numpy.array(sol.x))))
+
                 if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
                     raise ValueError("nan or inf values in solution x\n" + sol.message)
+
+                x2eq.append(numpy.min(numpy.real(numpy.array(sol.x))))
+
             else:
                 raise ValueError(sol.message)
 
-    return numpy.reshape(numpy.array(x2eq), shape), numpy.reshape(y2eq, shape)
+    x2eq = numpy.reshape(x2eq, shape)
+
+    return x2eq
+
+
+def calc_eq_pop2(zeq, x1eq, Iext2, geq=None, s=6.0, gamma=0.1, x2_neg=True):
+
+    x2eq = calc_eq_x2(zeq, x1eq, Iext2,  y2eq=None, geq=geq, s=s, gamma=gamma, x2_neg=x2_neg)
+
+    y2eq = calc_eq_y2(x2eq, x2_neg=x2_neg)
+
+    return x2eq, y2eq
 
 
 def eq_x1_hypo_x0_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
@@ -391,7 +394,7 @@ def calc_eq_6d(zeq, yc, Iext1, Iext2,  slope=0.0, a=1.0, b=3.0, d=5.0, gamma=0.1
     y1eq = calc_eq_y1(x1eq, yc, d)
     geq = calc_eq_g(x1eq, gamma)
 
-    (x2eq, y2eq) = calc_eq_pop2(x1eq, zeq, Iext2, geq)
+    (x2eq, y2eq) = calc_eq_pop2(zeq, x1eq, Iext2, geq)
 
     equilibrium_point = numpy.r_[x1eq, y1eq, zeq, x2eq, y2eq, geq].astype('float32')
 
@@ -407,7 +410,7 @@ def calc_eq_11d(zeq, yc, Iext1, Iext2, slope, x0, K, fun_slope_Iext2, a=1.0, b=3
 
     slope_eq, Iext2_eq = fun_slope_Iext2(zeq, geq, pmode, slope, Iext2)
 
-    (x2eq, y2eq) = calc_eq_pop2(x1eq, zeq, Iext2_eq, geq)
+    (x2eq, y2eq) = calc_eq_pop2(zeq, x1eq, Iext2_eq, geq)
 
     equilibrium_point = numpy.r_[x1eq, y1eq, zeq, x2eq, y2eq, geq, x0, slope_eq, Iext1, Iext2_eq, K].astype('float32')
 

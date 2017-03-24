@@ -43,6 +43,7 @@ def shape_to_size(shape):
 
 
 def assert_arrays(params, shape=None):
+    # type: (object, object) -> object
 
     if shape is None or \
         not(isinstance(shape, tuple)
