@@ -1022,70 +1022,70 @@ class EpileptorDP2D(Model):
         return ydot
 
 
-    def jacobian(self, state_variables, coupling, local_coupling=0.0,
-            array=numpy.array, where=numpy.where, concat=numpy.concatenate):
-        r"""
-        Computes the Jacobian of the state variables of the Epileptor
-        with respect to time.
-
-        Implementation note: we expect this version of the Epileptor to be used
-        in a vectorized manner. Concretely, y has a shape of (2, n) where n is
-        the number of nodes in the network. An consequence is that
-        the original use of if/else is translated by calculated both the true
-        and false forms and mixing them using a boolean mask.
-
-        Variables of interest to be used by monitors: -y[0] + y[3]
-
-            .. math::
-            \dot{y_{0}} &=& yc - f_{1}(y_{0}, y_{1}) - y_{2} + I_{ext1} \\
-            \dot{y_{1}} &=&
-            \begin{cases}
-            (f_z(y_{0}) - y_{1}-0.1 y_{1}^{7})/tau0 & \text{if } y_{0}<5/3 \\
-            (f_z(y_{0}) - y_{1})/tau0           & \text{if } y_{0} \geq 5/3
-            \end{cases} \\
-
-        where:
-            .. math::
-                f_{1}(y_{0}, y_{3}) =
-                \begin{cases}
-                a ( y_{0} -5/3 )^{3} - b ( y_{0} -5/3 )^2 & \text{if } y_{0} <5/3\\
-                ( 5*( y_{0} -5/3 ) - 0.6(y_{1}-4)^2 -slope) ( y_{0} - 5/3 ) &\text{if }y_{0} \geq 5/3
-                \end{cases}
-        and:
-
-            .. math::
-                f_z(y_{0})  =
-                \begin{cases}
-                4 * (y_{0} - r*x0 + x0_{cr}) & \text{linear} \\
-                \frac{3}{1+e^{-10*(y_{0}-7/6)}} - r*x0 + x0_{cr} & \text{sigmoidal} \\
-                \end{cases}
-
-
-        """
-
-        y = state_variables
-
-        n_ep = state_variables.shape[1]
-
-        # population 1
-        jac_xx = where(y[0] < 0.0, numpy.diag(3*y[0]**2 + 4.0*y[0]), numpy.diag(5*y[0]+0.6*(y[1]-4.0)**2-self.slope))
-        jac_xz = where(y[0] < 0.0, numpy.diag(numpy.zeros((n_ep,), dtype=y.dtype)), numpy.diag(1.2*(y[1]-4.0)*y[0]))
-
-        # energy
-        # The terms resulting from coupling from other regions, have to be added later on
-        if_fz = - 0.1 * y[1] ** 7
-        else_fz = 0
-        jac_zz = -numpy.diag(numpy.ones((n_ep,)), dtype=y.dtype) / self.tau0
-        if self.zmode == 'lin':
-            jac_zx = numpy.diag(4.0) / self.tau0
-            jac_zz -= numpy.diag(where(y[1] < 0.0, if_fz, else_fz))
-        elif self.zmode == 'sig':
-            exp_fun = numpy.exp(-10.0 * (y[0] + 0.5))
-            jac_zx = numpy.diag(30.0 * exp_fun / (1.0 + exp_fun) ** 2)/ self.tau0
-        else:
-            raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
-
-        return concat([numpy.hstack([jac_xx, jac_xz]),numpy.hstack([jac_zx, jac_zz])],axis=0)
+    # def jacobian(self, state_variables, coupling, local_coupling=0.0,
+    #         array=numpy.array, where=numpy.where, concat=numpy.concatenate):
+    #     r"""
+    #     Computes the Jacobian of the state variables of the Epileptor
+    #     with respect to time.
+    #
+    #     Implementation note: we expect this version of the Epileptor to be used
+    #     in a vectorized manner. Concretely, y has a shape of (2, n) where n is
+    #     the number of nodes in the network. An consequence is that
+    #     the original use of if/else is translated by calculated both the true
+    #     and false forms and mixing them using a boolean mask.
+    #
+    #     Variables of interest to be used by monitors: -y[0] + y[3]
+    #
+    #         .. math::
+    #         \dot{y_{0}} &=& yc - f_{1}(y_{0}, y_{1}) - y_{2} + I_{ext1} \\
+    #         \dot{y_{1}} &=&
+    #         \begin{cases}
+    #         (f_z(y_{0}) - y_{1}-0.1 y_{1}^{7})/tau0 & \text{if } y_{0}<5/3 \\
+    #         (f_z(y_{0}) - y_{1})/tau0           & \text{if } y_{0} \geq 5/3
+    #         \end{cases} \\
+    #
+    #     where:
+    #         .. math::
+    #             f_{1}(y_{0}, y_{3}) =
+    #             \begin{cases}
+    #             a ( y_{0} -5/3 )^{3} - b ( y_{0} -5/3 )^2 & \text{if } y_{0} <5/3\\
+    #             ( 5*( y_{0} -5/3 ) - 0.6(y_{1}-4)^2 -slope) ( y_{0} - 5/3 ) &\text{if }y_{0} \geq 5/3
+    #             \end{cases}
+    #     and:
+    #
+    #         .. math::
+    #             f_z(y_{0})  =
+    #             \begin{cases}
+    #             4 * (y_{0} - r*x0 + x0_{cr}) & \text{linear} \\
+    #             \frac{3}{1+e^{-10*(y_{0}-7/6)}} - r*x0 + x0_{cr} & \text{sigmoidal} \\
+    #             \end{cases}
+    #
+    #
+    #     """
+    #
+    #     y = state_variables
+    #
+    #     n_ep = state_variables.shape[1]
+    #
+    #     # population 1
+    #     jac_xx = where(y[0] < 0.0, numpy.diag(3*y[0]**2 + 4.0*y[0]), numpy.diag(5*y[0]+0.6*(y[1]-4.0)**2-self.slope))
+    #     jac_xz = where(y[0] < 0.0, numpy.diag(numpy.zeros((n_ep,), dtype=y.dtype)), numpy.diag(1.2*(y[1]-4.0)*y[0]))
+    #
+    #     # energy
+    #     # The terms resulting from coupling from other regions, have to be added later on
+    #     if_fz = - 0.1 * y[1] ** 7
+    #     else_fz = 0
+    #     jac_zz = -numpy.diag(numpy.ones((n_ep,)), dtype=y.dtype) / self.tau0
+    #     if self.zmode == 'lin':
+    #         jac_zx = numpy.diag(4.0) / self.tau0
+    #         jac_zz -= numpy.diag(where(y[1] < 0.0, if_fz, else_fz))
+    #     elif self.zmode == 'sig':
+    #         exp_fun = numpy.exp(-10.0 * (y[0] + 0.5))
+    #         jac_zx = numpy.diag(30.0 * exp_fun / (1.0 + exp_fun) ** 2)/ self.tau0
+    #     else:
+    #         raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
+    #
+    #     return concat([numpy.hstack([jac_xx, jac_xz]),numpy.hstack([jac_zx, jac_zz])],axis=0)
 
 
 ###
@@ -1093,7 +1093,7 @@ class EpileptorDP2D(Model):
 ###
 
 
-def build_tvb_model(hypothesis,variables_of_interest=["y3 - y0", "y2"], zmode="lin"):
+def build_tvb_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmode="lin"):
     x0_transformed = rescale_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1)
     model_instance = Epileptor(x0=x0_transformed.flatten(), Iext=hypothesis.Iext1.flatten(),
                                Ks=hypothesis.K.flatten(), yc=hypothesis.yc.flatten(),
@@ -1106,14 +1106,14 @@ def build_tvb_model(hypothesis,variables_of_interest=["y3 - y0", "y2"], zmode="l
 ###
 
 def build_ep_2sv_model(hypothesis, variables_of_interest=["yc", "y1"], zmode=numpy.array("lin")):
-    if zmode=="lin":
+    if zmode == "lin" :
         x0 = hypothesis.x0
         x0cr = hypothesis.x0cr
         r = hypothesis.rx0
-    elif zmode == 'sig':
+    elif zmode == "sig":
         #Correct Ceq, x0cr, rx0 and x0 for sigmoidal fz(x1)
         (x0cr, r) = calc_x0cr_r(hypothesis.yc, hypothesis.Iext1, zmode=zmode) #epileptor_model="2d",
-        x0 = calc_x0(hypothesis.x1EQ, hypothesis.zEQ,hypothesis.K, hypothesis.weights, x0cr, r, model="2d", zmode=zmode)
+        x0 = calc_x0(hypothesis.x1EQ, hypothesis.zEQ, hypothesis.K, hypothesis.weights, x0cr, r, model="2d", zmode=zmode)
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
     model = EpileptorDP2D(x0=x0.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.yc.T, r=r.T, x0cr=x0cr.T,
@@ -1125,7 +1125,7 @@ def build_ep_2sv_model(hypothesis, variables_of_interest=["yc", "y1"], zmode=num
 # Build EpileptorDP
 ###
 
-def build_ep_6sv_model(hypothesis,variables_of_interest=["y3 - y0", "y2"], zmode=numpy.array("lin")):
+def build_ep_6sv_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmode=numpy.array("lin")):
     #Correct x0 for 6D model
     x0_transformed = rescale_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1)
     model = EpileptorDP(x0=x0_transformed.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.yc.T,
@@ -1137,7 +1137,8 @@ def build_ep_6sv_model(hypothesis,variables_of_interest=["y3 - y0", "y2"], zmode
 # Build EpileptorDPrealistic
 ###
 
-def build_ep_11sv_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmode=numpy.array("lin")):
+def build_ep_11sv_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmode=numpy.array("lin"),
+                        pmode=numpy.array("const")):
     x0_transformed = rescale_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1)
     model = EpileptorDPrealistic(x0=x0_transformed.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.yc.T,
                                  variables_of_interest=variables_of_interest, zmode=zmode)

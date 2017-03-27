@@ -56,7 +56,7 @@ def calc_eq_x1_6d(zeq, yc, Iext1, slope=0.0, a=1.0, b=3.0, d=5.0, x1_neg=True):
 
     if SYMBOLIC_CALCULATIONS_FLAG:
 
-        temp = symbol_calc_eq_x1_6d(zeq.size, x1_neg=x1_neg)[0] (zeq, yc, Iext1, slope, a, b, d)
+        temp = symbol_calc_eq_x1_6d(zeq.size, x1_neg=x1_neg)[0](zeq, yc, Iext1, slope, a, b, d)
 
         x1eq = []
         for ii in range(zeq.size):
@@ -66,26 +66,59 @@ def calc_eq_x1_6d(zeq, yc, Iext1, slope=0.0, a=1.0, b=3.0, d=5.0, x1_neg=True):
 
     else:
 
+        #            a                          b       c=0           d
+        # fx1_6d = - 1.0*a*x1**3 + x1**2*(1.0*b - 1.0*d) + 1.0*Iext1 + 1.0*yc - 1.0*z  = 0
+        # which by dividing with -1/a gives us:
+        #                               a2         a1=0             a0
+        # fx1_6d = x1**3 - x1**2*(1.0*b - 1.0*d)/a - (1.0*Iext1 + 1.0*yc - 1.0*z)/a  = 0
+
+        #From  http://mathworld.wolfram.com/CubicFormula.html for: x^3 + a2x^2 + a1*x + a0 = 0
+        a2 = ((d-b) / a).flatten()
+        a23 = 1.0/3 * a2
+        #a1 = 0
+        a0 = ((-Iext1 - yc + zeq) / a).flatten()
+        # then p = (3a1-a2^2)/3 and q = (9a1a2 - 27a0 - 2a2^3)/27
+        # and Q = 1/3*p and R = 1/2*q, so that:
+        # Q = (3a1-a2^2)/9 and R = (9a1a2 - 27a0 - 2a2^3)/54 and for a1=0
+        # Q = -a2^2/9 and R = -a0/2 - a2^3/27
+        Q = -a2 ** 2 / 9.0
+        R = - a0 / 2.0 - (a2 ** 3) / 27.0
+        # and the determinant:
+        # delta = Q^3 + R^3 =>
+        delta = (Q ** 3 + R ** 2).astype("complex")
+        S = (R + numpy.sqrt(delta)) ** (1.0 / 3)
+        T = (R - numpy.sqrt(delta)) ** (1.0 / 3)
+        B = S + T
+        A = S - T
+        BB = a23 - B / 2
+        AA = 1.0 / 2 * numpy.sqrt(3) * A * numpy.ones(A.shape, dtype="complex")
+        sol = numpy.concatenate([[a23 + B], [BB + AA], [BB - AA]]).T
         x1eq = []
+        for ii in range(delta.size):
+            temp = sol[ii, numpy.abs(numpy.imag(sol[ii])) < 10 ** (-6)]
+            x1eq.append(numpy.min(numpy.real(temp)))
 
-        for ii in range(zeq.size):
 
-            fx1 = lambda x1: calc_fx1(x1, z=zeq[ii], y1=calc_eq_y1(x1, yc[ii], d=d[ii]), Iext1=Iext1[ii],
-                                      slope=slope[ii], a=a[ii], b=b[ii], tau1=1.0, x2=0.0, model="6d", x1_neg=x1_neg,
-                                      shape=(1, ))
-
-            jac = lambda x1: calc_fx1y1_6d_diff_x1(x1, yc[ii], Iext1[ii], a=a[ii], b=b[ii], d=d[ii], tau1=1.0,
-                                                   shape=(1, ))
-
-            sol = root(fx1, -2.0, method='lm', jac=jac, tol=10 ** (-6), callback=None, options=None)
-            #args=(y2eq[ii], zeq[ii], g_eq[ii], Iext2[ii], s, tau1, tau2, x2_neg)  method='hybr'
-
-            if sol.success:
-                x1eq.append(numpy.min(numpy.real(numpy.array(sol.x))))
-                if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
-                    raise ValueError("nan or inf values in solution x\n" + sol.message)
-            else:
-                raise ValueError(sol.message)
+    # x1eq = []
+        #
+        # for ii in range(zeq.size):
+        #
+        #     fx1 = lambda x1: calc_fx1(x1, z=zeq[ii], y1=calc_eq_y1(x1, yc[ii], d=d[ii]), Iext1=Iext1[ii],
+        #                               slope=slope[ii], a=a[ii], b=b[ii], tau1=1.0, x2=0.0, model="6d", x1_neg=x1_neg,
+        #                               shape=(1, ))
+        #
+        #     jac = lambda x1: calc_fx1y1_6d_diff_x1(x1, yc[ii], Iext1[ii], a=a[ii], b=b[ii], d=d[ii], tau1=1.0,
+        #                                            shape=(1, ))
+        #
+        #     sol = root(fx1, -2.0, method='lm', jac=jac, tol=10 ** (-6), callback=None, options=None)
+        #     #args=(y2eq[ii], zeq[ii], g_eq[ii], Iext2[ii], s, tau1, tau2, x2_neg)  method='hybr'
+        #
+        #     if sol.success:
+        #         x1eq.append(numpy.min(numpy.real(numpy.array(sol.x))))
+        #         if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
+        #             raise ValueError("nan or inf values in solution x\n" + sol.message)
+        #     else:
+        #         raise ValueError(sol.message)
 
     x1eq = numpy.reshape(x1eq, shape)
 

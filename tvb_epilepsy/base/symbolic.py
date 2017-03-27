@@ -20,7 +20,7 @@ def symbol_vars(n_regions, vars_str, dims=1, ind_str="_", shape=None, numpy_flag
             shape = (n_regions,)
 
         for vs in vars_str:
-            temp = [Symbol(vs+ind_str+'%d' % i_n) for i_n in range(n_regions)]
+            temp = [Symbol(vs+ind_str+'%d' % i_n, real=True) for i_n in range(n_regions)]
             if numpy_flag:
                 temp = reshape(temp, shape)
             vars_out.append(temp)
@@ -35,7 +35,7 @@ def symbol_vars(n_regions, vars_str, dims=1, ind_str="_", shape=None, numpy_flag
             shape = (1,)
 
         for vs in vars_str:
-            temp = Symbol(vs)
+            temp = Symbol(vs, real=True)
             if numpy_flag:
                 temp = reshape(temp, shape)
             vars_out.append(temp)
@@ -52,7 +52,8 @@ def symbol_vars(n_regions, vars_str, dims=1, ind_str="_", shape=None, numpy_flag
         for vs in vars_str:
             temp = []
             for i_n in range(n_regions):
-                temp.append([Symbol(vs + ind_str + '%d' % i_n + ind_str + '%d' % j_n) for j_n in range(n_regions)])
+                temp.append([Symbol(vs + ind_str + '%d' % i_n + ind_str + '%d' % j_n, real=True)
+                             for j_n in range(n_regions)])
             if numpy_flag:
                 temp = reshape(temp, shape)
             vars_out.append(temp)
@@ -371,14 +372,14 @@ def symbol_eqnt_dfun(n, model_vars, zmode=array("lin"), x1_neg=True, x2_neg=True
 
 def symbol_calc_2d_taylor(n, x_taylor="x1lin", order=2, x1_neg=True, slope="slope", Iext1="Iext1", shape=None):
 
-    x, x_taylor = symbols("x " + x_taylor)
+    x_taylor = symbols(x_taylor)
 
     fx1lin, v = symbol_eqtn_fx1(n, model="2d", x1_neg=x1_neg, slope=slope, Iext1=Iext1, shape=shape)[1:]
 
     v.update({"x_taylor": x_taylor})
 
     for ix in range(v["x1"].size):
-        fx1lin[ix] = series(fx1lin[ix], x=x, x0=x_taylor, n=order).removeO().simplify().subs(x, v["x1"][ix])
+        fx1lin[ix] = series(fx1lin[ix], x=v["x1"][ix], x0=x_taylor, n=order).removeO()  #
 
     return lambdify([v["x1"], v["z"], v["y1"], v[Iext1], v[slope], v["a"], v["b"], v["tau1"]], fx1lin, "numpy"), \
            fx1lin, v
@@ -400,8 +401,8 @@ def symbol_calc_fx1z_2d_x1neg_zpos_jac(n, ix0, iE):
 
     jac = []
     for ix in range(n):
-        fx1[ix] = fx1[ix].subs(v["tau1"][ix], 1.0).subs(v["z"][ix], 0.0).expand(v["x1"][ix]).collect(v["x1"][ix])
-        fz[ix] = fz[ix].subs(v["z"][ix], fx1[ix]).expand(v["x1"][ix]).collect(v["x1"][ix])
+        fx1[ix] = fx1[ix].subs(v["tau1"][ix], 1.0).subs(v["z"][ix], 0.0)
+        fz[ix] = fz[ix].subs(v["z"][ix], fx1[ix])
         jac.append(Matrix([fz[ix]]).jacobian(x)[:])
 
     jac = Matrix(jac[:])
@@ -422,7 +423,7 @@ def symbol_calc_fx1y1_6d_diff_x1(n):
     dfx1 = []
     for ix in range(n):
         fy1[ix] = fy1[ix].subs(v["y1"][ix], 0.0).subs(v["tau1"][ix], 1.0)
-        fx1[ix] = fx1[ix].subs(v["y1"][ix], fy1[ix]).expand(v["x1"][ix]).collect(v["x1"][ix])
+        fx1[ix] = fx1[ix].subs(v["y1"][ix], fy1[ix])
         dfx1.append(fx1[ix].diff(v["x1"][ix]))
 
     dfx1 = Matrix(reshape(dfx1, v["x1"].shape)[:])

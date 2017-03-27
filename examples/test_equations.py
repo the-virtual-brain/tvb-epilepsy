@@ -31,6 +31,8 @@ if __name__ == "__main__":
     # Update zeq given the specific model, and assuming the hypothesis x1eq for the moment in the context of a 2d model:
     # It is assumed that the model.x0 has been adjusted already at the phase of model creation
     zeq = calc_eq_z_2d(x1eq, yc, Iext1)
+    print "zeq="
+    print zeq
     z = zeq
 
     x0cr, r = calc_x0cr_r(yc, Iext1, zmode=numpy.array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
@@ -45,7 +47,7 @@ if __name__ == "__main__":
     zmode = numpy.array("lin")
     pmode = numpy.array("const")
 
-    model = "EpileptorDP2D"
+    model = "EpileptorDP"
 
     if model == "EpileptorDP2D":
 
@@ -95,7 +97,7 @@ if __name__ == "__main__":
         else:
 
             # all >=6D models
-            eq = calc_eq_6d(zeq, yc.T, Iext1.T, Iext2.T, a=1.0, b=3.0, d=0.5, gamma=0.1)
+            eq = calc_eq_6d(zeq, yc.T, Iext1.T, Iext2.T, a=1.0, b=3.0, d=5.0, gamma=0.1)
             model_vars = 6
             dfun = calc_dfun(x1eq, zeq, yc, Iext1, r, K, w, model_vars, zmode,
                              y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5],
@@ -122,13 +124,15 @@ if __name__ == "__main__":
     # Test calc_fx1_2d_taylor
     x = symbol_vars(3, ["x1"])[0]
     x_taylor = symbol_vars(3, ["x1lin"])[0]  # x_taylor = -4.5/3 (=x1lin)
-    fx1lin = calc_fx1_2d_taylor(x, x_taylor, z, yc, Iext1, slope, a=1.0, b=-2, tau1=1.0, x1_neg=True, order=2) 
-    print fx1lin
+    fx1lin = calc_fx1_2d_taylor(x, x_taylor, z, yc, Iext1, slope, a=1.0, b=-2, tau1=1.0, x1_neg=True, order=2).flatten()
+    for ii in range(3):
+        print fx1lin[ii].expand(x[ii]).collect(x[ii])
 
-    # Test calc_fx1_2d_taylor
+    # Test calc_fx1y1_6d_diff_x1
     x = symbol_vars(3, ["x1"])[0]
-    fx1y1_6d_diff_x1 = calc_fx1y1_6d_diff_x1(x, yc, Iext1, a=1.0, b=3.0, d=5.0, tau1=1.0)
-    print fx1y1_6d_diff_x1
+    fx1y1_6d_diff_x1 = calc_fx1y1_6d_diff_x1(x, yc, Iext1, a=1.0, b=3.0, d=5.0, tau1=1.0).flatten()
+    for ii in range(3):
+        print fx1y1_6d_diff_x1[ii].expand(x[ii]).collect(x[ii])
 
     # test eq_x1_hypo_x0_optimize_jac
     ix0 = numpy.array([1, 2])
@@ -144,8 +148,8 @@ if __name__ == "__main__":
     x[iE] = vz["x0"][iE]
     p = x1.shape
     numpy.fill_diagonal(vz["w"], 0.0)
-    vx["x1"], vx["z"], vz["x0"][ix0], vz["x0cr"], vz["r"], vx["y1"], vx["Iext1"], vz["K"] = \
-        assert_arrays([vx["x1"], vx["z"], vz["x0"][ix0], vz["x0cr"], vz["r"], vx["y1"], vx["Iext1"], vz["K"]],
+    vx["x1"], vx["z"], vz["x0cr"], vz["r"], vx["y1"], vx["Iext1"], vz["K"] = \
+        assert_arrays([vx["x1"], vx["z"], vz["x0cr"], vz["r"], vx["y1"], vx["Iext1"], vz["K"]],
                       (1, vx["x1"].size))
     jac = eq_x1_hypo_x0_optimize_jac(x, ix0, iE, vx["x1"], vx["z"], vz["x0"][ix0], vz["x0cr"], vz["r"], vx["y1"],
                                      vx["Iext1"], vz["K"], vz["w"])

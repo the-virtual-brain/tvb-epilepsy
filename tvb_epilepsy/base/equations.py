@@ -5,7 +5,7 @@ from numpy import array, empty, ones, zeros, multiply, dot, power, divide, sum, 
 
 def if_ydot0(x1, a, b):
     # if_ydot0 = - self.a * y[0] ** 2 + self.b * y[0]
-    return multiply(pow(x1, 2), a) + multiply(x1, b)
+    return -multiply(pow(x1, 2), a) + multiply(x1, b)
 
 
 def else_ydot0_6d(x2, z, slope):
@@ -50,7 +50,7 @@ def eqtn_x0(x1, z, model="2d", zmode=array("lin"), z_pos=True, K=None, w=None, c
 
     if model == "2d":
         if zmode == 'lin':
-            return divide((x1 + x0cr -z - (where(z_pos, z, 0.1 * power(z, 7.0)) + coupl) / 4.0), r)
+            return divide((x1 + x0cr - (where(z_pos, z, z + 0.1 * power(z, 7.0)) + coupl) / 4.0), r)
 
         elif zmode == 'sig':
             return divide((divide(3.0 / (1.0 + power(exp(1), -10.0 * (x1 + 0.5)))) + x0cr - z - coupl), r)
@@ -89,15 +89,13 @@ def eqtn_fx1_2d_taylor_lin(x1, x_taylor, z, yc, Iext1, a, b, tau1):
 def eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg):
 
 
-    jac_x1 = numpy.multiply(numpy.where(x1_neg, multiply(-3.0 * multiply(a, x1) - 2.0 * multiply(b, x1), x1),
-                                 else_ydot0_2d(x1, z, slope)), tau1)
+    jac_x1 = diag(numpy.multiply(numpy.where(x1_neg, multiply(-3.0 * multiply(a, x1)+ 2.0 * multiply(b, 1.0), x1),
+                                                     + else_ydot0_2d(x1, z, slope)), tau1).flatten())
 
-    jac_z = numpy.multiply(-ones(x1.shape, dtype=x1.dtype), tau1)
+    jac_z = - diag(numpy.multiply(ones(x1.shape, dtype=x1.dtype) +
+                                  numpy.where(x1_neg, 0.0, 1.2 * multiply(z - 4.0, x1)), tau1).flatten())
 
-    shape = array(x1.shape)
-    shape[argmax(shape)] *= 2
-    shape = tuple(shape)
-    return reshape(concatenate([jac_x1.flatten(), jac_z.flatten()]), shape)
+    return concatenate([jac_x1, jac_z], axis=1)
 
 
 
@@ -119,7 +117,7 @@ def eqtn_fz(x1, z, x0, tau1, tau0, model="2d", zmode=array("lin"), z_pos=True, K
     if model == "2d":
 
         if zmode == 'lin':
-            return divide(multiply((4 * (x1 - multiply(r, x0) + x0cr) - z - where(z_pos, z, 0.1 * power(z, 7.0))
+            return divide(multiply((4 * (x1 - multiply(r, x0) + x0cr) - where(z_pos, z, z + 0.1 * power(z, 7.0))
                                     - coupl), tau1), tau0)
 
         elif zmode == 'sig':
@@ -131,18 +129,18 @@ def eqtn_fz(x1, z, x0, tau1, tau0, model="2d", zmode=array("lin"), z_pos=True, K
     else:
 
         if zmode == 'lin':
-            return divide(multiply((4 * (x1 - x0) - z - where(z_pos, z, 0.1 * power(z, 7.0)) - coupl), tau1), tau0)
+            return divide(multiply((4 * (x1 - x0) - where(z_pos, z, z + 0.1 * power(z, 7.0)) - coupl), tau1), tau0)
 
         elif zmode == 'sig':
-            return divide(multiply((4 * divide(3.0, (1 + multiply(exp(1), (-10.0 * (x1 + 0.5)))) - x0)
-                           - z - coupl), tau1), tau0)
+            return divide(multiply((4 * divide(3.0, (1 + multiply(exp(1), (-10.0 * (x1 + 0.5)))) - x0) - z - coupl),
+                                   tau1), tau0)
         else:
             raise ValueError('zmode is neither "lin" nor "sig"')
 
 
 def eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode=array("lin"), z_pos=True, K=None, w=None):
 
-    tau = repeat(divide(tau1, tau0).flatten(), (2,))
+    tau = divide(tau1, tau0)
 
     jac_z = - ones(z.shape, dtype=z.dtype)
 
@@ -154,16 +152,19 @@ def eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode=array("lin"), z_pos=True, K=None, w=
             jac_z -= 0.7 * power(z, 6.0)
 
     elif zmode == 'sig':
-        jac_x1 = divide(30 * multiply(exp(1), (-10.0 * (x1 + 0.5))), (1 + multiply(exp(1), (-10.0 * (x1 + 0.5))))) - \
-                 multiply(K, sum(w, axis=1))
+        jac_x1 = divide(30 * multiply(exp(1), (-10.0 * (x1 + 0.5))), (1 + multiply(exp(1), (-10.0 * (x1 + 0.5)))))
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
 
-    shape = array(z.shape)
-    shape[argmax(shape)] *= 2
-    shape = tuple(shape)
+    # Assuming that wii = 0
+    jac_x1 += multiply(K, sum(w, 1))
+    jac_x1 = diag(jac_x1.flatten()) - multiply(repeat(reshape(K, (x1.size, 1)), 3, axis=1), w)
+    jac_x1 *= repeat(reshape(tau, (x1.size, 1)), 3, axis=1)
 
-    return reshape(multiply(concatenate([jac_x1.flatten(), jac_z.flatten()]), tau.flatten()),  shape)
+    jac_z *= tau
+    jac_z = diag(jac_z.flatten())
+
+    return concatenate([jac_x1, jac_z], axis=1)
 
 
 def eqtn_fx1z_2d_zpos_jac(x1, r, K, w, ix0, iE, a, b, tau1, tau0): #
@@ -317,10 +318,10 @@ def eqtn_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None, zmode
         return fx1, fy1, fz, fx2, fy2, fg, fx0, fslope, fIext1, fIext2, fK
 
 
-def eqtn_jac_2d(x1, z, K, w, slope, a, b, tau1, tau0, zmode=array("lind"), x1_neg=True, z_pos=True):
+def eqtn_jac_2d(x1, z, K, w, slope, a, b, tau1, tau0, zmode=array("lin"), x1_neg=True, z_pos=True):
 
-    jac_x1 = eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg)
+    jac_fx1 = eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg)
 
-    jac_z = eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode, z_pos, K, w)
+    jac_fz = eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode, z_pos, K, w)
 
-    return jac_x1, jac_z
+    return jac_fx1, jac_fz

@@ -455,7 +455,7 @@ else:
     def calc_fz(x1=0.0, z=0, x0=0.0, K=0.0, w=0.0, tau1=1.0, tau0=1.0, x0cr=0.0, r=1.0, zmode=array("lin"), z_pos=None,
                 model="2d",  shape=None):
 
-        z, x1, K, tau1, tau0 = assert_arrays([x1, z, K, tau1, tau0], shape)
+        z, x1, K, tau1, tau0 = assert_arrays([z, x1, K, tau1, tau0], shape)
 
         if zmode == array("lin") and z_pos is None:
             z_pos = z > 0.0
@@ -721,6 +721,7 @@ else:
 
         n_regions = max(z.size, x1.size)
 
+
         if model_vars == 2:
 
             if x1_neg is None:
@@ -734,18 +735,12 @@ else:
 
             w = assert_arrays([w], (n_regions, n_regions))
 
-            return concatenate([reshape(eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg), (1, 2*n_regions)),
-                               reshape(eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode, z_pos, K, w), (1, 2*n_regions))])
+            return concatenate([eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg),
+                                eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode, z_pos, K, w)])
 
         else:
 
-            try:
-                from tvb_epilepsy.base.symbolic import symbol_vars
-                from sympy import Matrix, lambdify
 
-            except:
-                raise ImportError("Unable to load symbolic_equations module. Jacobian calculation is not supported \
-                                  non-symbolically for Epileptor models beyond 2 dimensions.")
 
             if model_vars == 6:
 

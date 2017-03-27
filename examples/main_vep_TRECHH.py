@@ -218,7 +218,7 @@ if __name__ == "__main__":
 
         # Choose the model and build it on top of the specific hypothesis, adjust parameters:
         model_name = 'EpileptorDP'
-        model = model_build_dict[model_name](hyp_ep, zmode=numpy.array("lin"))
+        model = model_build_dict[model_name](hyp_ep, scale_time, zmode=numpy.array("lin"))
         if model_name == 'EpileptorDP':
             # model.tau0 = 2857.0 # default = 2857.0
             model.tau1 *= scale_time  # default = 0.25
