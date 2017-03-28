@@ -58,7 +58,6 @@ def eqtn_coupling_diff(K, w, ix, jx):
     return dcoupl_dx1
 
 
-
 def eqtn_x0(x1, z, model="2d", zmode=array("lin"), z_pos=True, K=None, w=None, coupl=None, x0cr=None, r=None):
 
     if coupl is None:

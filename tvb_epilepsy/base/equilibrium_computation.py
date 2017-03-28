@@ -6,7 +6,7 @@ import numpy
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, SYMBOLIC_CALCULATIONS_FLAG
 from tvb_epilepsy.base.utils import assert_arrays
 from tvb_epilepsy.base.calculations import calc_x0, calc_fx1, calc_fx1z, calc_fy1, calc_fz, calc_fx2, calc_fg, \
-                                           calc_coupling, calc_dfun, calc_fx1z_2d_x1neg_zpos_jac, calc_fx1y1_6d_diff_x1
+                                           calc_coupling, calc_dfun, calc_fx1z_2d_x1neg_zpos_jac, calc_fx1z_diff
 from tvb_epilepsy.base.symbolic import symbol_calc_eq_x1, symbol_calc_eq_x2
 
 
@@ -60,19 +60,21 @@ def calc_eq_x1(yc, Iext1, x0, K, w, a=1.0, b=3.0, d=5.0, x0cr=0.0, r=1.0, zmode=
 
     else:
 
-        fx1z = lambda x1: calc_fx1z(x1, x0, K, w, yc, Iext1, x0cr=x0cr, r=r, a=a, b=b, d=d, tau1=1.0, tau0=1.0, x2=0.0,
+        fx1z = lambda x1: calc_fx1z(x1, x0, K, w, yc, Iext1, x0cr=x0cr, r=r, a=a, b=b, d=d, tau1=1.0, tau0=1.0,
                                     model=model, zmode=zmode)
 
-        jac = lambda x1: calc_fx1y1_6d_diff_x1(x1, yc[ii], Iext1[ii], a=a[ii], b=b[ii], d=d[ii], tau1=1.0,
-                                               shape=(1, ))
+        jac = lambda x1: calc_fx1z_diff(x1, K, w, a, b, d, tau1=1.0, tau0=1.0, model=model, zmode=zmode)
 
-        sol = root(fx1z, -2.0, method='lm', jac=jac, tol=10 ** (-6), callback=None, options=None)
+        sol = root(fx1z, -1.5, method='lm', jac=jac, tol=10 ** (-6), callback=None, options=None)
         #args=(y2eq[ii], zeq[ii], g_eq[ii], Iext2[ii], s, tau1, tau2, x2_neg)  method='hybr'
 
         if sol.success:
-            x1eq.append(numpy.min(numpy.real(numpy.array(sol.x))))
+
             if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
                 raise ValueError("nan or inf values in solution x\n" + sol.message)
+
+            x1eq = sol.x
+
         else:
             raise ValueError(sol.message)
 
@@ -92,83 +94,6 @@ def calc_eq_z_2d(x1eq, yc, Iext1, slope=0.0, a=1.0, b=-2.0, x1_neg=True):
 
 def calc_eq_y1(x1eq, yc, d=5.0):
     return calc_fy1(x1eq, yc, y1=0, d=d, tau1=1.0)
-
-
-def calc_eq_x1(zeq, yc, Iext1, slope=0.0, a=1.0, b=3.0, d=5.0, model="6d", x1_neg=True):
-
-    shape = zeq.shape
-
-    zeq, yc, Iext1, slope, a, b, d = assert_arrays([zeq, yc, Iext1, slope, a, b, d], (zeq.size,))
-
-    if SYMBOLIC_CALCULATIONS_FLAG:
-
-        temp = symbol_calc_eq_x1_6d(zeq.size, model, x1_neg=x1_neg)[0](zeq, yc, Iext1, slope, a, b, d)
-
-        x1eq = []
-        for ii in range(zeq.size):
-
-            temp2 = numpy.real(temp[ii][numpy.abs(numpy.imag(temp[ii])) < 10 ** -6])
-            x1eq.append(numpy.min(temp2))
-
-    else:
-
-        #            a                          b       c=0           d
-        # fx1_6d = - 1.0*a*x1**3 + x1**2*(1.0*b - 1.0*d) + 1.0*Iext1 + 1.0*yc - 1.0*z  = 0
-        # which by dividing with -1/a gives us:
-        #                               a2         a1=0             a0
-        # fx1_6d = x1**3 - x1**2*(1.0*b - 1.0*d)/a - (1.0*Iext1 + 1.0*yc - 1.0*z)/a  = 0
-
-        #From  http://mathworld.wolfram.com/CubicFormula.html for: x^3 + a2x^2 + a1*x + a0 = 0
-        a2 = ((d-b) / a).flatten()
-        a23 = 1.0/3 * a2
-        #a1 = 0
-        a0 = ((-Iext1 - yc + zeq) / a).flatten()
-        # then p = (3a1-a2^2)/3 and q = (9a1a2 - 27a0 - 2a2^3)/27
-        # and Q = 1/3*p and R = 1/2*q, so that:
-        # Q = (3a1-a2^2)/9 and R = (9a1a2 - 27a0 - 2a2^3)/54 and for a1=0
-        # Q = -a2^2/9 and R = -a0/2 - a2^3/27
-        Q = -a2 ** 2 / 9.0
-        R = - a0 / 2.0 - (a2 ** 3) / 27.0
-        # and the determinant:
-        # delta = Q^3 + R^3 =>
-        delta = (Q ** 3 + R ** 2).astype("complex")
-        S = (R + numpy.sqrt(delta)) ** (1.0 / 3)
-        T = (R - numpy.sqrt(delta)) ** (1.0 / 3)
-        B = S + T
-        A = S - T
-        BB = a23 - B / 2
-        AA = 1.0 / 2 * numpy.sqrt(3) * A * numpy.ones(A.shape, dtype="complex")
-        sol = numpy.concatenate([[a23 + B], [BB + AA], [BB - AA]]).T
-        x1eq = []
-        for ii in range(delta.size):
-            temp = sol[ii, numpy.abs(numpy.imag(sol[ii])) < 10 ** (-6)]
-            x1eq.append(numpy.min(numpy.real(temp)))
-
-
-    # x1eq = []
-        #
-        # for ii in range(zeq.size):
-        #
-        #     fx1 = lambda x1: calc_fx1(x1, z=zeq[ii], y1=calc_eq_y1(x1, yc[ii], d=d[ii]), Iext1=Iext1[ii],
-        #                               slope=slope[ii], a=a[ii], b=b[ii], tau1=1.0, x2=0.0, model="6d", x1_neg=x1_neg,
-        #                               shape=(1, ))
-        #
-        #     jac = lambda x1: calc_fx1y1_6d_diff_x1(x1, yc[ii], Iext1[ii], a=a[ii], b=b[ii], d=d[ii], tau1=1.0,
-        #                                            shape=(1, ))
-        #
-        #     sol = root(fx1, -2.0, method='lm', jac=jac, tol=10 ** (-6), callback=None, options=None)
-        #     #args=(y2eq[ii], zeq[ii], g_eq[ii], Iext2[ii], s, tau1, tau2, x2_neg)  method='hybr'
-        #
-        #     if sol.success:
-        #         x1eq.append(numpy.min(numpy.real(numpy.array(sol.x))))
-        #         if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
-        #             raise ValueError("nan or inf values in solution x\n" + sol.message)
-        #     else:
-        #         raise ValueError(sol.message)
-
-    x1eq = numpy.reshape(x1eq, shape)
-
-    return x1eq
 
 
 def calc_eq_y2(x2eq, x2_neg=True):
@@ -193,7 +118,7 @@ def calc_eq_x2(zeq, x1eq, Iext2,  y2eq=None, geq=None, s=6.0, gamma=0.1, x2_neg=
 
     if SYMBOLIC_CALCULATIONS_FLAG:
 
-        temp = symbol_calc_eq_x2(zeq.size, x2_neg=x2_neg)[0](zeq, geq, Iext2, s)
+        temp = symbol_calc_eq_x2(zeq.size, x2_neg)[0](zeq, geq, Iext2, s)
 
         x2eq = []
         for ii in range(zeq.size):
@@ -246,6 +171,32 @@ def calc_eq_x2(zeq, x1eq, Iext2,  y2eq=None, geq=None, s=6.0, gamma=0.1, x2_neg=
 
             else:
                 raise ValueError(sol.message)
+
+            # # From  http://mathworld.wolfram.com/CubicFormula.html for: x^3 + a2x^2 + a1*x + a0 = 0
+            # a2 = ((d - b) / a).flatten()
+            # a23 = 1.0 / 3 * a2
+            # # a1 = 0
+            # a0 = ((-Iext1 - yc + zeq) / a).flatten()
+            # # then p = (3a1-a2^2)/3 and q = (9a1a2 - 27a0 - 2a2^3)/27
+            # # and Q = 1/3*p and R = 1/2*q, so that:
+            # # Q = (3a1-a2^2)/9 and R = (9a1a2 - 27a0 - 2a2^3)/54 and for a1=0
+            # # Q = -a2^2/9 and R = -a0/2 - a2^3/27
+            # Q = -a2 ** 2 / 9.0
+            # R = - a0 / 2.0 - (a2 ** 3) / 27.0
+            # # and the determinant:
+            # # delta = Q^3 + R^3 =>
+            # delta = (Q ** 3 + R ** 2).astype("complex")
+            # S = (R + numpy.sqrt(delta)) ** (1.0 / 3)
+            # T = (R - numpy.sqrt(delta)) ** (1.0 / 3)
+            # B = S + T
+            # A = S - T
+            # BB = a23 - B / 2
+            # AA = 1.0 / 2 * numpy.sqrt(3) * A * numpy.ones(A.shape, dtype="complex")
+            # sol = numpy.concatenate([[a23 + B], [BB + AA], [BB - AA]]).T
+            # x1eq = []
+            # for ii in range(delta.size):
+            #     temp = sol[ii, numpy.abs(numpy.imag(sol[ii])) < 10 ** (-6)]
+            #     x1eq.append(numpy.min(numpy.real(temp)))
 
     x2eq = numpy.reshape(x2eq, shape)
 
@@ -466,9 +417,13 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
                       + "model dfun = " + str(dfun))
 
 
-def calc_eq_6d(yc, Iext1, Iext2,  a=1.0, b=3.0, d=5.0, gamma=0.1):
+def calc_eq_6d(x0, K, w, yc, Iext1, Iext2, x1eqhyp = 0.0, bhyp=-2, a=1.0, b=3.0, d=5.0, gamma=0.1,
+               zmode=numpy.array("lin")):
 
-    x1eq = calc_eq_x1(yc, Iext1, a=a, b=b, d=d, model="6d")
+    if numpy.all(b - d == bhyp):
+        x1eq = x1eqhyp
+    else:
+        x1eq = calc_eq_x1(yc, Iext1, x0, K, w, a, b, d, zmode=zmode, model="11d")
 
     y1eq = calc_eq_y1(x1eq, yc, d)
 
@@ -483,9 +438,13 @@ def calc_eq_6d(yc, Iext1, Iext2,  a=1.0, b=3.0, d=5.0, gamma=0.1):
     return equilibrium_point
 
 
-def calc_eq_11d(yc, Iext1, Iext2, slope, x0, K, fun_slope_Iext2, a=1.0, b=3.0, d=5.0, gamma=0.1, pmode="const"):
+def calc_eq_11d(x0, K, w, yc, Iext1, Iext2, slope, fun_slope_Iext2,  x1eqhyp = 0.0, bhyp=-2, a=1.0, b=3.0, d=5.0,
+                gamma=0.1, zmode=numpy.array("lin"), pmode="const"):
 
-    x1eq = calc_eq_x1(yc, Iext1, a=a, b=b, d=d, model="11d")
+    if numpy.all(b - d == bhyp):
+        x1eq = x1eqhyp
+    else:
+        x1eq = calc_eq_x1(yc, Iext1, x0, K, w, a, b, d, zmode=zmode, model="11d")
 
     y1eq = calc_eq_y1(x1eq, yc, d)
 
@@ -506,26 +465,38 @@ def calc_equilibrium_point(epileptor_model, hypothesis):
 
     # Update zeq given the specific model, and assuming the hypothesis x1eq for the moment in the context of a 2d model:
     # It is assumed that the model.x0 has been adjusted already at the phase of model creation
-    zeq = calc_eq_z_2d(hypothesis.x1EQ, epileptor_model.yc.T, epileptor_model.Iext1.T)
+
 
     if epileptor_model._ui_name == "EpileptorDP2D":
-        equilibrium_point = numpy.r_[hypothesis.x1EQ, zeq].astype('float32')
+
+        if numpy.all(epileptor_model.b == -2.0):
+            x1eq = hypothesis.x1EQ
+            zeq = hypothesis.zEQ
+        else:
+            x1eq = calc_eq_x1(epileptor_model.yc.T, epileptor_model.Iext1.T, epileptor_model.x0.T, epileptor_model.K.T,
+                              hypothesis.weights, a=epileptor_model.a.T, b=epileptor_model.b.T,
+                              zmode=epileptor_model.zmode, model="2d")
+
+            zeq = calc_eq_z_2d(hypothesis.x1EQ, epileptor_model.yc.T, epileptor_model.Iext1.T)
+
+        equilibrium_point = numpy.r_[x1eq, zeq].astype('float32')
 
     else:
 
-        #all >=6D models
-
         if epileptor_model._ui_name == "EpileptorDPrealistic":
 
-            equilibrium_point = calc_eq_11d(zeq, epileptor_model.yc, epileptor_model.Iext1, epileptor_model.Iext2,
-                                                 epileptor_model.slope, epileptor_model.x0, epileptor_model.K,
-                                                 epileptor_model.fun_slope_Iext2, epileptor_model.a, epileptor_model.b,
-                                                 epileptor_model.d, gamma=0.1, pmode=epileptor_model.pmode)[0]
+            equilibrium_point = calc_eq_11d(epileptor_model.x0.T, epileptor_model.K.T, hypothesis.weights,
+                                            epileptor_model.yc.T, epileptor_model.Iext1.T, epileptor_model.Iext2.T,
+                                            epileptor_model.slope.T,  epileptor_model.fun_slope_Iext2, hypothesis.x1EQ,
+                                            -2.0, epileptor_model.a.T, epileptor_model.b.T, epileptor_model.d.T,
+                                            gamma=0.1, zmode=epileptor_model.zmode, pmode=epileptor_model.pmode)[0]
         else:
 
             #all >=6D models
-            equilibrium_point = calc_eq_6d(zeq, epileptor_model.yc.T, epileptor_model.Iext1.T, epileptor_model.Iext2.T,
-                                                epileptor_model.a, epileptor_model.b, epileptor_model.d, gamma=0.1)
+            equilibrium_point = calc_eq_6d(epileptor_model.x0.T, epileptor_model.K.T, hypothesis.weights,
+                                           epileptor_model.yc.T, epileptor_model.Iext1.T, epileptor_model.Iext2.T,
+                                           hypothesis.x1EQ, -2.0, epileptor_model.a.T, epileptor_model.b.T,
+                                           epileptor_model.d.T, gamma=0.1, zmode=epileptor_model.zmode)
 
     assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point)
 

@@ -28,19 +28,14 @@ if __name__ == "__main__":
     x1, K = assert_arrays([x1, K])
     w = assert_arrays([w]) #, (x1.size, x1.size)
 
-    # Update zeq given the specific model, and assuming the hypothesis x1eq for the moment in the context of a 2d model:
-    # It is assumed that the model.x0 has been adjusted already at the phase of model creation
-    zeq = calc_eq_z_2d(x1eq, yc, Iext1)
-    print "zeq="
-    print zeq
-    z = zeq
+    z = calc_eq_z_2d(x1, yc, Iext1)
 
     x0cr, r = calc_x0cr_r(yc, Iext1, zmode=numpy.array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
                            x0cr_def=X0_CR_DEF)
     print "x0cr, r="
     print x0cr, r
 
-    x0 = calc_x0(x1eq, zeq, K, w, x0cr, r, model="2d", zmode=numpy.array("lin"), z_pos=True)
+    x0 = calc_x0(x1, z, K, w, x0cr, r, model="2d", zmode=numpy.array("lin"), z_pos=True)
     print "x0="
     print x0
 
@@ -49,18 +44,28 @@ if __name__ == "__main__":
 
     model = "EpileptorDP"
 
+    b = -2.0
+
     if model == "EpileptorDP2D":
 
         # 2D approximation, Proix et al 2014
+        if numpy.all(b == -2.0):
+            x1eq = x1
+            zeq = z
+        else:
+            x1eq = calc_eq_x1(yc, Iext1, x0, K, w, a=1.0, b=-2.0, zmode=zmode, model="2d")
+            z = calc_eq_z_2d(x1, x1eq, Iext1)
+
         eq = numpy.r_[x1eq, zeq].astype('float32')
+
         model_vars = 2
-        dfun = calc_dfun(x1eq, zeq, yc, Iext1, x0, K, w, model_vars, x0cr=x0cr, r=r,
+        dfun = calc_dfun(eq[0], eq[1], yc, Iext1, x0, K, w, model_vars, x0cr=x0cr, r=r,
                          zmode=zmode, pmode=pmode,
                          x0_var=x0, slope_var=slope, Iext1_var=Iext1, Iext2_var=Iext2, K_var=K, slope=slope, 
                          a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0, tau2=10.0, 
                          output_mode="arrays")
 
-        jac = calc_jac(x1eq, zeq, yc, Iext1, x0, K, w, model_vars, x0cr=x0cr, r=r, 
+        jac = calc_jac(eq[0], eq[1], yc, Iext1, x0, K, w, model_vars, x0cr=x0cr, r=r,
                        zmode=zmode, pmode=pmode, x1_neg=True, z_pos=True, x2_neg=True,
                        x0_var=x0, slope_var=slope, Iext1_var=Iext1, Iext2_var=Iext2, K_var=K,
                        slope=slope, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
@@ -77,17 +82,17 @@ if __name__ == "__main__":
             # the 11D "realistic" simulations model
             from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic
 
-            eq, slope_eq, Iext2_eq = calc_eq_11d(zeq, yc, Iext1, Iext2, slope, x0_6d, K,
-                                                                EpileptorDPrealistic.fun_slope_Iext2, a=1.0, b=-2.0,
-                                                                d=0.5, gamma=0.1, pmode=pmode)
+            eq, slope_eq, Iext2_eq = calc_eq_11d(x0_6d, K, w, yc, Iext1, Iext2, slope,
+                                                 EpileptorDPrealistic.fun_slope_Iext2, x1, -2.0, a=1.0, b=3.0, d=5.0,
+                                                 gamma=0.1, zmode=zmode, pmode=pmode)
             model_vars = 11
-            dfun = calc_dfun(x1eq, zeq, yc, Iext1, r, K, w, model_vars, zmode, pmode,
+            dfun = calc_dfun(eq[0], eq[2], yc, Iext1, r, K, w, model_vars, zmode, pmode,
                              y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5],
                              x0_var=eq[6], slope_var=eq[7], Iext1_var=eq[8], Iext2_var=eq[9], K_var=eq[10],
                              slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
                              tau2=10.0, output_mode="array")
 
-            jac = calc_jac(x1eq, zeq, yc, Iext1, x0, K, w, model_vars,
+            jac = calc_jac(eq[0], eq[2], yc, Iext1, x0, K, w, model_vars,
                            zmode, pmode, x1_neg=True, z_pos=True, x2_neg=True,
                            y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5],
                            x0_var=eq[6], slope_var=eq[7], Iext1_var=eq[8], Iext2_var=eq[9], K_var=eq[10],
@@ -97,14 +102,15 @@ if __name__ == "__main__":
         else:
 
             # all >=6D models
-            eq = calc_eq_6d(zeq, yc.T, Iext1.T, Iext2.T, a=1.0, b=3.0, d=5.0, gamma=0.1)
+            eq = calc_eq_6d(x0_6d, K, w,  yc, Iext1, Iext2, x1, -2.0, a=1.0, b=3.0, d=5.0, gamma=0.1,
+                            zmode=zmode)
             model_vars = 6
-            dfun = calc_dfun(x1eq, zeq, yc, Iext1, r, K, w, model_vars, zmode,
+            dfun = calc_dfun(eq[0], eq[2], yc, Iext1, r, K, w, model_vars, zmode,
                              y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5],
                              slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
                              tau2=10.0, output_mode="array")
 
-            jac = calc_jac(x1eq, zeq, yc, Iext1, r, K, w, model_vars,
+            jac = calc_jac(eq[0], eq[2], yc, Iext1, r, K, w, model_vars,
                            zmode, x1_neg=True, z_pos=True, x2_neg=True,
                            y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5],
                            slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,

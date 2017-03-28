@@ -104,7 +104,7 @@ def assert_arrays(params, shape=None):
 
             if numpy.any(ind):
                 ind, = numpy.where(ind)
-                n_shapes[ind] += 1
+                n_shapes[ind.flatten()] += 1
             else:
                 shapes.append(params[ip].shape)
                 n_shapes.append(1)

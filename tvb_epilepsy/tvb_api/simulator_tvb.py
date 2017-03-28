@@ -133,16 +133,12 @@ class SimulatorTVB(ABCSimulator):
 def calc_tvb_equilibrium_point(epileptor_model, hypothesis):
 
     #Calculate equilibrium point
-
-    # Update zeq given the specific model, and assuming the hypothesis x1eq for the moment in the context of a 2d model:
-    # It is assumed that the model.x0 has been adjusted already at the phase of model creation
-    zeq = calc_eq_z_2d(hypothesis.x1EQ, epileptor_model.c.T, epileptor_model.Iext.T)
-
-    eq = calc_eq_6d(zeq, epileptor_model.c.T, epileptor_model.Iext.T, epileptor_model.Iext2.T, epileptor_model.slope,
-                                                epileptor_model.a, epileptor_model.b, epileptor_model.d, gamma=0.1)
+    eq = calc_eq_6d(epileptor_model.x0, epileptor_model.Ks, hypothesis.weights,
+                    epileptor_model.c, epileptor_model.Iext, epileptor_model.Iext2, hypothesis.x1EQ.T, -2.0,
+                    epileptor_model.a, epileptor_model.b, epileptor_model.d, gamma=0.1)
 
     #Assert equilibrium point
-    coupl = calc_coupling(eq[0], epileptor_model.Ks.T, hypothesis.weights)
+    coupl = calc_coupling(eq[0], epileptor_model.Ks, hypothesis.weights)
     coupl = numpy.expand_dims(numpy.r_[coupl, 0.0 * coupl], 2).astype('float32')
 
     dfun = epileptor_model.dfun(numpy.expand_dims(eq, 2).astype('float32'), coupl).flatten()

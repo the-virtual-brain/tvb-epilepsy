@@ -371,40 +371,41 @@ if SYMBOLIC_CALCULATIONS_FLAG:
             (x1, z, y1, Iext1, slope, a, b, tau1), x1.shape)
 
 
-    def calc_fx1z(x1, x0, K, w, yc, Iext1, slope=0.0, x0cr=0.0, r=1.0, a=1.0, b=-2.0, d=5.0, tau1=1.0, tau0=1.0, x2=0.0,
-                  model="6d", zmode=array("lin"), x1_neg=True, z_pos=True):
+    def calc_fx1z(x1, x0, K, w, yc, Iext1, x0cr=0.0, r=1.0, a=1.0, b=-2.0, d=5.0, tau1=1.0, tau0=1.0, model="6d",
+                  zmode=array("lin"), z_pos=True): #slope=0.0, x2=0.0, x1_neg=True,
 
-        x1, x0, K, yc,Iext1, slope, a, b, tau1, tau0 = assert_arrays([x1, x0, K, yc, Iext1, slope, a, b, tau1, tau0])
+        # TODO: for the extreme x1_neg = False case where we have to solve for x2 as well
 
-        w = assert_arrays([w], (x1.size, x1.size))
-
-        if model == "2d":
-            x0cr, r = assert_arrays([x0cr, r], x1.shape)
-            return reshape(symbol_eqtn_fx1z(x1.size, model, zmode, x1_neg, z_pos)[0](x1, x0, K, w, x0cr, r, yc, Iext1,
-                                                                                     slope, a, b, tau1, tau0), x1.shape)
-        else:
-            d = assert_arrays([d], x1.shape)
-            return reshape(symbol_eqtn_fx1z(x1.size, model, zmode, x1_neg, z_pos)[0](x1, x2, x0, K, w, yc, Iext1, slope,
-                                                                                     a, b, d, tau1, tau0), x1.shape)
-
-
-    def calc_fx1z_diff(x1, x0, K, w, yc, Iext1, slope=0.0, x0cr=0.0, r=1.0, a=1.0, b=-2.0, d=5.0, tau1=1.0, tau0=1.0,
-                       x2=0.0, model="6d", zmode=array("lin"), x1_neg=True, z_pos=True):
-
-        x1, x0, K, yc,Iext1, slope, a, b, tau1, tau0 = assert_arrays([x1, x0, K, yc, Iext1, slope, a, b, tau1, tau0])
+        x1, x0, K, yc, Iext1, a, b, tau1, tau0 = assert_arrays([x1, x0, K, yc, Iext1, a, b, tau1, tau0])
 
         w = assert_arrays([w], (x1.size, x1.size))
 
         if model == "2d":
             x0cr, r = assert_arrays([x0cr, r], x1.shape)
-            return reshape(symbol_eqtn_fx1z_diff(x1.size, model, zmode, x1_neg, z_pos)[0](x1, x0, K, w, x0cr, r, yc,
-                                                                                          Iext1, slope, a, b, tau1,
-                                                                                          tau0), x1.shape)
+            return reshape(symbol_eqtn_fx1z(x1.size, model, zmode, z_pos)[0](x1, x0, K, w, x0cr, r, yc, Iext1, a, b,
+                                                                             tau1, tau0), x1.shape)
         else:
             d = assert_arrays([d], x1.shape)
-            return reshape(symbol_eqtn_fx1z_diff(x1.size, model, zmode, x1_neg, z_pos)[0](x1, x2, x0, K, w, yc, Iext1,
-                                                                                          slope, a, b, d, tau1, tau0),
-                                                                                          x1.shape)
+            return reshape(symbol_eqtn_fx1z(x1.size, model, zmode, z_pos)[0](x1, x0, K, w, yc, Iext1, a, b, d, tau1,
+                                                                             tau0), x1.shape)
+
+
+    def calc_fx1z_diff(x1, K, w, a=1.0, b=-2.0, d=5.0, tau1=1.0, tau0=1.0, model="6d", zmode=array("lin"), yc=0.0,
+                       Iext1=0.0, z_pos=True): # slope=0.0, x2=0.0, x1_neg=True,
+
+        # TODO: for the extreme x1_neg = False case where we have to solve for x2 as well
+
+        x1, K, yc, Iext1, a, b, tau1, tau0 = assert_arrays([x1, K, yc, Iext1, a, b, tau1, tau0])
+
+        w = assert_arrays([w], (x1.size, x1.size))
+
+        if model == "2d":
+            return reshape(symbol_eqtn_fx1z_diff(x1.size, model, zmode, z_pos)[0](x1, K, w, yc, Iext1, a, b, tau1,
+                                                                                  tau0), x1.shape)
+        else:
+            d = assert_arrays([d], x1.shape)
+            return reshape(symbol_eqtn_fx1z_diff(x1.size, model, zmode,  z_pos)[0](x1, K, w, yc, Iext1, a, b, d,
+                                                                                   tau1, tau0), x1.shape)
 
 
     def calc_fx1z_2d_x1neg_zpos_jac(x1, z, x0, x0cr, r, yc, Iext1, K, w, ix0, iE, a=1.0, b=-2.0, tau1=1.0, tau0=1.0):
@@ -822,10 +823,11 @@ else:
 
             z = calc_fx1(x1, 0.0, y1, Iext1, 0.0, a, b, tau1=1.0, x2=0.0, model=model, x1_neg=True, shape=x1.shape)
 
-            return eqtn_fz(x1, z, x0, tau1, tau0, model, zmode, z_pos=True, K=K, w=w, coupl=None, x0cr=0.0, r=1.0)
+            return eqtn_fz(x1, z, x0, tau1, tau0, model, zmode, z_pos=True, K=K, w=w , coupl=None, x0cr=0.0, r=1.0)
 
 
-    def calc_fx1z_diff(x1, K, w, a=1.0, b=-2.0, d=5.0, tau1=1.0, tau0=1.0, model="6d", zmode=array("lin")): #, x1_neg=None, z_pos=True
+    def calc_fx1z_diff(x1, K, w, a=1.0, b=-2.0, d=5.0, tau1=1.0, tau0=1.0, model="6d", zmode=array("lin")):
+        #, x1_neg=None, z_pos=True
 
         # TODO: for the extreme z_pos = False case where we have terms like 0.1 * z ** 7
         # TODO: for the extreme x1_neg = False case where we have to solve for x2 as well
