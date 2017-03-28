@@ -345,6 +345,22 @@ if SYMBOLIC_CALCULATIONS_FLAG:
         return jac
 
 
+    def calc_coupling_diff(K, w, ix=None, jx=None, shape=None):
+
+        K = assert_arrays([K], shape)
+        n_regions = K.size
+
+        w = assert_arrays([w], (K.size, K.size))
+
+        if ix is None:
+            ix = range(n_regions)
+
+        if jx is None:
+            jx = range(n_regions)
+
+        return symbol_calc_coupling_diff(K.size, ix, jx, K="K", shape=shape)[0](K, w)
+
+
     def calc_fx1_2d_taylor(x1, x_taylor, z=0, y1=0.0, Iext1=0.0, slope=0.0, a=1.0, b=-2.0, tau1=1.0, x1_neg=True,
                            order=2, shape=None):
 
@@ -353,6 +369,42 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
         return reshape(symbol_calc_2d_taylor(x1.size, order=order, x1_neg=x1_neg, slope="slope", Iext1="Iext1", shape=shape)[0] \
             (x1, z, y1, Iext1, slope, a, b, tau1), x1.shape)
+
+
+    def calc_fx1z(x1, x0, K, w, yc, Iext1, slope=0.0, x0cr=0.0, r=1.0, a=1.0, b=-2.0, d=5.0, tau1=1.0, tau0=1.0, x2=0.0,
+                  model="6d", zmode=array("lin"), x1_neg=True, z_pos=True):
+
+        x1, x0, K, yc,Iext1, slope, a, b, tau1, tau0 = assert_arrays([x1, x0, K, yc, Iext1, slope, a, b, tau1, tau0])
+
+        w = assert_arrays([w], (x1.size, x1.size))
+
+        if model == "2d":
+            x0cr, r = assert_arrays([x0cr, r], x1.shape)
+            return reshape(symbol_eqtn_fx1z(x1.size, model, zmode, x1_neg, z_pos)[0](x1, x0, K, w, x0cr, r, yc, Iext1,
+                                                                                     slope, a, b, tau1, tau0), x1.shape)
+        else:
+            d = assert_arrays([d], x1.shape)
+            return reshape(symbol_eqtn_fx1z(x1.size, model, zmode, x1_neg, z_pos)[0](x1, x2, x0, K, w, yc, Iext1, slope,
+                                                                                     a, b, d, tau1, tau0), x1.shape)
+
+
+    def calc_fx1z_diff(x1, x0, K, w, yc, Iext1, slope=0.0, x0cr=0.0, r=1.0, a=1.0, b=-2.0, d=5.0, tau1=1.0, tau0=1.0,
+                       x2=0.0, model="6d", zmode=array("lin"), x1_neg=True, z_pos=True):
+
+        x1, x0, K, yc,Iext1, slope, a, b, tau1, tau0 = assert_arrays([x1, x0, K, yc, Iext1, slope, a, b, tau1, tau0])
+
+        w = assert_arrays([w], (x1.size, x1.size))
+
+        if model == "2d":
+            x0cr, r = assert_arrays([x0cr, r], x1.shape)
+            return reshape(symbol_eqtn_fx1z_diff(x1.size, model, zmode, x1_neg, z_pos)[0](x1, x0, K, w, x0cr, r, yc,
+                                                                                          Iext1, slope, a, b, tau1,
+                                                                                          tau0), x1.shape)
+        else:
+            d = assert_arrays([d], x1.shape)
+            return reshape(symbol_eqtn_fx1z_diff(x1.size, model, zmode, x1_neg, z_pos)[0](x1, x2, x0, K, w, yc, Iext1,
+                                                                                          slope, a, b, d, tau1, tau0),
+                                                                                          x1.shape)
 
 
     def calc_fx1z_2d_x1neg_zpos_jac(x1, z, x0, x0cr, r, yc, Iext1, K, w, ix0, iE, a=1.0, b=-2.0, tau1=1.0, tau0=1.0):
@@ -544,95 +596,6 @@ else:
         return eqtn_fK(K_var, K, tau1, tau0)
 
 
-    def calc_fx1_2d_taylor(x1, x_taylor, z=0, y1=0.0, Iext1=0.0, slope=0.0, a=1.0, b=-2.0, tau1=1.0, x1_neg=True,
-                       order=2, shape=None):
-
-        x1, x_taylor, z, y1, Iext1, slope, a, b, tau1 = \
-            assert_arrays([x1, x_taylor, z, y1, Iext1, slope, a, b, tau1], shape)
-
-        if x1_neg is None:
-            x1_neg = x1 < 0.0
-
-        if order == 2 and numpy.all( x1_neg == True):
-
-            fx1lin = multiply(Iext1+ 2 * multiply(power(x_taylor, 3), a) - multiply(power(x_taylor, 2), b) + y1 - z +
-                             multiply(x1, (-3 * multiply(power(x_taylor, 2), a) + 2 * multiply(x_taylor, b))), tau1)
-
-        else:
-
-            try:
-                from sympy import Symbol, series
-
-            except:
-                raise ImportError("Unable to load symbolic_equations module. Taylor expansion calculation is not  \
-                                  supported non-symbolically for order of expansion >2 and/or when any x1 > 0.")
-
-            from sympy import Symbol, series
-
-            x = Symbol("x")
-
-            fx1lin = calc_fx1(x1, z, y1, Iext1, slope, a, b, tau1, x1_neg).flatten()
-
-            for ix in range(x1.size):
-                fx1lin[ix] = series(fx1lin[ix], x=x, x0=x_taylor, n=order).removeO().simplify(). \
-                             subs(x, x1.flatten()[ix])
-
-        return reshape(fx1lin, shape)
-
-#
-    def calc_fx1z_2d_x1neg_zpos_jac(x1, z, x0, x0cr, r, yc, Iext1, K, w, ix0, iE, a=1.0, b=-2.0, tau1=1.0, tau0=1.0):
-
-        if x1.shape != (1, x1.size):
-            x1 = expand_dims(x1.flatten(), 1).T
-
-        x1, z, x0, x0cr, r, yc, Iext1, K, a, b, tau1, tau0 = \
-            assert_arrays([x1, z, x0, x0cr, r, yc, Iext1, K, a, b, tau1, tau0], x1.shape)
-
-        w = assert_arrays([w], (x1.size, x1.size))
-
-        tau = divide(tau1, tau0)
-
-        no_x0 = len(ix0)
-        no_e = len(iE)
-
-        i_x0 = ones((no_x0, 1))
-        i_e = ones((no_e, 1))
-
-        jac_e_x0e = diag(multiply(tau[:,iE],(- 4 * r[:, iE])).flatten())
-        jac_e_x1o = -dot(dot(i_e, multiply(tau[:,iE], K[:, iE])), w[iE][:, ix0])
-        jac_x0_x0e = zeros((no_x0, no_e))
-        jac_x0_x1o = (diag(multiply(tau[:,ix0],
-                                                (4 + 3 * multiply(a[:, ix0], power(x1[:, ix0], 2))
-                                                 - 2 * multiply(b[:, ix0],  x1[:, ix0]) +
-                                 multiply(K[:, ix0], sum(w[ix0], axis=1)))).flatten()) -
-                      multiply(dot(i_x0, multiply(tau[:,ix0], K[:, ix0])).T,  w[ix0][:, ix0]))
-
-        jac = empty((x1.size, x1.size), dtype=type(jac_e_x0e.dtype))
-        jac[numpy.ix_(iE, iE)] = jac_e_x0e
-        jac[numpy.ix_(iE, ix0)] = jac_e_x1o
-        jac[numpy.ix_(ix0, iE)] = jac_x0_x0e
-        jac[numpy.ix_(ix0, ix0)] = jac_x0_x1o
-
-        return jac
-
-
-    def calc_fx1y1_6d_diff_x1(x1, yc, Iext1, a=1.0, b=3.0, d=5.0, tau1=1.0, shape=None):
-
-        x1 = assert_arrays([x1], shape)
-        shape = x1.shape
-
-        if x1.shape != (1, x1.size):
-            x1 = expand_dims(x1.flatten(), 1).T
-
-        p = x1.shape
-
-        yc, Iext1, a, b, d, tau1 = assert_arrays([yc, Iext1, a, b, d, tau1], shape)
-
-        dfx1 = multiply(multiply(-3 * multiply(x1, a) + 2 * (b - d), x1), tau1)
-
-        return reshape(dfx1, shape)
-
-
     def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
                   zmode="lin", pmode="const", x1_neg=None, z_pos=None, x2_neg=None,
                   y1=None, x2=None, y2=None, g=None,
@@ -778,6 +741,158 @@ else:
                 jac_lambda = lambdify(x, jac_sym, "numpy")
 
                 return array(jac_lambda(x1, y1, z, x2, y2, g, x0_var, slope_var, Iext1_var, Iext2_var, K_var))
+
+
+    def calc_coupling_diff(K, w, ix=None, jx=None, shape=None):
+
+        K = assert_arrays([K], shape)
+
+        w = assert_arrays([w], (K.size, K.size))
+
+        n_regions = K.size
+
+        if ix is None:
+            ix = range(n_regions)
+
+        if jx is None:
+            jx = range(n_regions)
+
+        return eqtn_coupling_diff(K, w, ix, jx)
+
+
+    def calc_fx1_2d_taylor(x1, x_taylor, z=0, y1=0.0, Iext1=0.0, slope=0.0, a=1.0, b=-2.0, tau1=1.0, x1_neg=True,
+                           order=2, shape=None):
+
+        x1, x_taylor, z, y1, Iext1, slope, a, b, tau1 = \
+            assert_arrays([x1, x_taylor, z, y1, Iext1, slope, a, b, tau1], shape)
+
+        if x1_neg is None:
+            x1_neg = x1 < 0.0
+
+        if order == 2 and numpy.all(x1_neg == True):
+
+            fx1lin = multiply(Iext1 + 2 * multiply(power(x_taylor, 3), a) - multiply(power(x_taylor, 2), b) + y1 - z +
+                              multiply(x1, (-3 * multiply(power(x_taylor, 2), a) + 2 * multiply(x_taylor, b))), tau1)
+
+        else:
+
+            try:
+                from sympy import Symbol, series
+
+            except:
+                raise ImportError("Unable to load symbolic_equations module. Taylor expansion calculation is not  \
+                                  supported non-symbolically for order of expansion >2 and/or when any x1 > 0.")
+
+            from sympy import Symbol, series
+
+            x = Symbol("x")
+
+            fx1lin = calc_fx1(x1, z, y1, Iext1, slope, a, b, tau1, x1_neg).flatten()
+
+            for ix in range(x1.size):
+                fx1lin[ix] = series(fx1lin[ix], x=x, x0=x_taylor, n=order).removeO().simplify(). \
+                    subs(x, x1.flatten()[ix])
+
+        return reshape(fx1lin, shape)
+
+
+    def calc_fx1z(x1, x0, K, w, yc, Iext1, x0cr=0.0, r=1.0, a=1.0, b=-2.0, d=5.0, tau1=1.0, tau0=1.0,
+                  model="6d", zmode=array("lin")):  #, slope=0.0, x2=0.0, x1_neg=None, z_pos=True
+
+        # TODO: for the extreme z_pos = False case where we have terms like 0.1 * z ** 7
+        # TODO: for the extreme x1_neg = False case where we have to solve for x2 as well
+
+        x1, x0, K, yc, Iext1, a, b, tau1, tau0 = assert_arrays([x1, x0, K, yc, Iext1, a, b, tau1, tau0])
+
+        w = assert_arrays([w], (x1.size, x1.size))
+
+        if model == "2d":
+
+            x0cr, r = assert_arrays([x0cr, r], x1.shape)
+
+            z = calc_fx1(x1, 0.0, yc, Iext1, 0.0, a, b, tau1=1.0, x2=0.0, model=model, x1_neg=True, shape=x1.shape)
+
+            return eqtn_fz(x1, z, x0, tau1, tau0, model, zmode, z_pos=True, K=K, w=w, coupl=None, x0cr=x0cr, r=r)
+
+        else:
+
+            d = assert_arrays([d], x1.shape)
+
+            y1 = calc_fy1(x1, yc, 0.0, d, tau1=1.0, shape=x1.shape)
+
+            z = calc_fx1(x1, 0.0, y1, Iext1, 0.0, a, b, tau1=1.0, x2=0.0, model=model, x1_neg=True, shape=x1.shape)
+
+            return eqtn_fz(x1, z, x0, tau1, tau0, model, zmode, z_pos=True, K=K, w=w, coupl=None, x0cr=0.0, r=1.0)
+
+
+    def calc_fx1z_diff(x1, K, w, a=1.0, b=-2.0, d=5.0, tau1=1.0, tau0=1.0, model="6d", zmode=array("lin")): #, x1_neg=None, z_pos=True
+
+        # TODO: for the extreme z_pos = False case where we have terms like 0.1 * z ** 7
+        # TODO: for the extreme x1_neg = False case where we have to solve for x2 as well
+
+        x1, K, a, b, tau1, tau0 = assert_arrays([x1, K, a, b, tau1, tau0])
+
+        w = assert_arrays([w], (x1.size, x1.size))
+
+        if model != "2d":
+            d = assert_arrays([d], x1.shape)
+
+        ix = range(x1.size)
+
+        return eqtn_fx1z_diff(x1, K, w, ix, ix, a, b, d, tau1, tau0, model, zmode)
+
+
+    def calc_fx1z_2d_x1neg_zpos_jac(x1, z, x0, x0cr, r, yc, Iext1, K, w, ix0, iE, a=1.0, b=-2.0, tau1=1.0, tau0=1.0):
+
+        if x1.shape != (1, x1.size):
+            x1 = expand_dims(x1.flatten(), 1).T
+
+        x1, z, x0, x0cr, r, yc, Iext1, K, a, b, tau1, tau0 = \
+            assert_arrays([x1, z, x0, x0cr, r, yc, Iext1, K, a, b, tau1, tau0], x1.shape)
+
+        w = assert_arrays([w], (x1.size, x1.size))
+
+        tau = divide(tau1, tau0)
+
+        no_x0 = len(ix0)
+        no_e = len(iE)
+
+        i_x0 = ones((no_x0, 1))
+        i_e = ones((no_e, 1))
+
+        jac_e_x0e = diag(multiply(tau[:, iE], (- 4 * r[:, iE])).flatten())
+        jac_e_x1o = -dot(dot(i_e, multiply(tau[:, iE], K[:, iE])), w[iE][:, ix0])
+        jac_x0_x0e = zeros((no_x0, no_e))
+        jac_x0_x1o = (diag(multiply(tau[:, ix0],
+                                    (4 + 3 * multiply(a[:, ix0], power(x1[:, ix0], 2))
+                                     - 2 * multiply(b[:, ix0], x1[:, ix0]) +
+                                     multiply(K[:, ix0], sum(w[ix0], axis=1)))).flatten()) -
+                      multiply(dot(i_x0, multiply(tau[:, ix0], K[:, ix0])).T, w[ix0][:, ix0]))
+
+        jac = empty((x1.size, x1.size), dtype=type(jac_e_x0e.dtype))
+        jac[numpy.ix_(iE, iE)] = jac_e_x0e
+        jac[numpy.ix_(iE, ix0)] = jac_e_x1o
+        jac[numpy.ix_(ix0, iE)] = jac_x0_x0e
+        jac[numpy.ix_(ix0, ix0)] = jac_x0_x1o
+
+        return jac
+
+
+    def calc_fx1y1_6d_diff_x1(x1, yc, Iext1, a=1.0, b=3.0, d=5.0, tau1=1.0, shape=None):
+
+        x1 = assert_arrays([x1], shape)
+        shape = x1.shape
+
+        if x1.shape != (1, x1.size):
+            x1 = expand_dims(x1.flatten(), 1).T
+
+        p = x1.shape
+
+        yc, Iext1, a, b, d, tau1 = assert_arrays([yc, Iext1, a, b, d, tau1], shape)
+
+        dfx1 = multiply(multiply(-3 * multiply(x1, a) + 2 * (b - d), x1), tau1)
+
+        return reshape(dfx1, shape)
 
 
     def calc_x0cr_r(yc, Iext1, a=1.0, b=-2.0, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,

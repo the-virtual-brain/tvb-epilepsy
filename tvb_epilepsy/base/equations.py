@@ -39,6 +39,26 @@ def eqtn_coupling(x1, K, w, ix, jx):
     return reshape(coupling, shape)
 
 
+def eqtn_coupling_diff(K, w, ix, jx):
+
+    # Only difference coupling for the moment.
+    # TODO: Extend for different coupling forms
+
+    K = reshape(K, (K.size, ))
+
+    dcoupl_dx1 = empty((len(ix), len(jx)))
+    for ii in ix:
+        for ij in jx:
+
+            if ii == ij:
+                dcoupl_dx1[ii, ij] = -multiply(K[ii], sum(w[ii][:, jx], axis=1))
+            else:
+                dcoupl_dx1[ii, ij] = multiply(K[ii], w[ii][:, ij])
+
+    return dcoupl_dx1
+
+
+
 def eqtn_x0(x1, z, model="2d", zmode=array("lin"), z_pos=True, K=None, w=None, coupl=None, x0cr=None, r=None):
 
     if coupl is None:
@@ -70,7 +90,7 @@ def eqtn_x0(x1, z, model="2d", zmode=array("lin"), z_pos=True, K=None, w=None, c
 
 
 
-def eqtn_fx1(x1, z, y1, Iext1, slope, a, b, tau1, x1_neg, model="2d", x2=None):
+def eqtn_fx1(x1, z, y1, Iext1, slope, a, b, tau1, x1_neg=True, model="2d", x2=0.0):
 
     if model == "2d":
         return multiply(y1 - z + Iext1 + multiply(x1, where(x1_neg, if_ydot0(x1, a, b), else_ydot0_2d(x1, z, slope))),
@@ -86,7 +106,7 @@ def eqtn_fx1_2d_taylor_lin(x1, x_taylor, z, yc, Iext1, a, b, tau1):
                     multiply(x1, (-3 * multiply(power(x_taylor, 2), a) + 2 * multiply(x_taylor, b))), tau1)
 
 
-def eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg):
+def eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg=True):
 
 
     jac_x1 = diag(numpy.multiply(numpy.where(x1_neg, multiply(-3.0 * multiply(a, x1)+ 2.0 * multiply(b, 1.0), x1),
@@ -97,6 +117,29 @@ def eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg):
 
     return concatenate([jac_x1, jac_z], axis=1)
 
+
+def eqtn_fx1z_diff(x1,K, w, ix, jx, a, b, d, tau1, tau0, model="6d", zmode=numpy.array("lin")): #, z_pos=True
+
+    # TODO: for the extreme z_pos = False case where we have terms like 0.1 * z ** 7. See below eqtn_fz()
+    # TODO: for the extreme x1_neg = False case where we have to solve for x2 as well
+
+    tau = divide(tau1, tau0)
+
+    dcoupl_dx = eqtn_coupling_diff(K, w, ix, jx)
+
+    if zmode == 'lin':
+        dfx1_1_dx1 = 4.0
+    elif zmode == 'sig':
+        dfx1_1_dx1 = divide(30 * multiply(exp(1), (-10.0 * (x1 + 0.5))), (1 + multiply(exp(1), (-10.0 * (x1 + 0.5)))))
+    else:
+        raise ValueError('zmode is neither "lin" nor "sig"')
+
+    if model == "2d":
+        dfx1_3_dx1 = 3 * multiply(power(x1, 2.0), a) - 2 * multiply(x1, b)
+    else:
+        dfx1_3_dx1 = 3 * multiply(power(x1, 2.0), a) + 2 * multiply(x1, d - b)
+
+    return multiply((dfx1_3_dx1 + dfx1_1_dx1 - dcoupl_dx), tau)
 
 
 def eqtn_fy1(x1, yc, y1, d, tau1):
@@ -114,26 +157,26 @@ def eqtn_fz(x1, z, x0, tau1, tau0, model="2d", zmode=array("lin"), z_pos=True, K
             from tvb_epilepsy.base.calculations import calc_coupling
             coupl = calc_coupling(x1, K, w)
 
+    tau = divide(tau1, tau0)
+
     if model == "2d":
 
         if zmode == 'lin':
-            return divide(multiply((4 * (x1 - multiply(r, x0) + x0cr) - where(z_pos, z, z + 0.1 * power(z, 7.0))
-                                    - coupl), tau1), tau0)
+            return multiply((4 * (x1 - multiply(r, x0) + x0cr) - where(z_pos, z, z + 0.1 * power(z, 7.0)) - coupl), tau)
 
         elif zmode == 'sig':
-            return divide(multiply((4 * divide(3.0, (1 + multiply(exp(1), (-10.0 * (x1 + 0.5))))
-                          - multiply(r, x0) + x0cr) - z - coupl), tau1), tau0)
+            return multiply((4 * divide(3.0, (1 + multiply(exp(1), (-10.0 * (x1 + 0.5))))
+                                        - multiply(r, x0) + x0cr) - z - coupl), tau)
         else:
             raise ValueError('zmode is neither "lin" nor "sig"')
 
     else:
 
         if zmode == 'lin':
-            return divide(multiply((4 * (x1 - x0) - where(z_pos, z, z + 0.1 * power(z, 7.0)) - coupl), tau1), tau0)
+            return multiply((4 * (x1 - x0) - where(z_pos, z, z + 0.1 * power(z, 7.0)) - coupl), tau)
 
         elif zmode == 'sig':
-            return divide(multiply((4 * divide(3.0, (1 + multiply(exp(1), (-10.0 * (x1 + 0.5)))) - x0) - z - coupl),
-                                   tau1), tau0)
+            return multiply((4 * divide(3.0, (1 + multiply(exp(1), (-10.0 * (x1 + 0.5)))) - x0) - z - coupl), tau)
         else:
             raise ValueError('zmode is neither "lin" nor "sig"')
 
