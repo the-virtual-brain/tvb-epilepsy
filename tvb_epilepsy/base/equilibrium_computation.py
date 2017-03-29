@@ -63,9 +63,9 @@ def calc_eq_x1(yc, Iext1, x0, K, w, a=1.0, b=3.0, d=5.0, x0cr=0.0, r=1.0, zmode=
         fx1z = lambda x1: calc_fx1z(x1, x0, K, w, yc, Iext1, x0cr=x0cr, r=r, a=a, b=b, d=d, tau1=1.0, tau0=1.0,
                                     model=model, zmode=zmode)
 
-        jac = lambda x1: calc_fx1z_diff(x1, K, w, a, b, d, tau1=1.0, tau0=1.0, model=model, zmode=zmode)
-
-        sol = root(fx1z, -1.5, method='lm', jac=jac, tol=10 ** (-6), callback=None, options=None)
+        #jac = lambda x1: calc_fx1z_diff(x1, K, w, a, b, d, tau1=1.0, tau0=1.0, model=model, zmode=zmode)
+        #jac=jac,
+        sol = root(fx1z, -1.5*numpy.ones((Iext1.size, )), method='lm', tol=10 ** (-6), callback=None, options=None)
         #args=(y2eq[ii], zeq[ii], g_eq[ii], Iext2[ii], s, tau1, tau2, x2_neg)  method='hybr'
 
         if sol.success:

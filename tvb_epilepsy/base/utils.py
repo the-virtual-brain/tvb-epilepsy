@@ -387,6 +387,11 @@ def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrit
 
             elif isinstance(field, numpy.ndarray):
                 print "Numpy array shape:", field.shape
+                #TODO: deal with arrays of more than 2 dimensions
+                if len(field.shape) > 2:
+                    field = field.squeeze()
+                    if len(field.shape) > 2:
+                        field = field.flatten()
                 h5_file.create_dataset("/" + attribute, data=field)
                 print "Numpy array written shape: ", h5_file['/' + attribute][()].shape
 

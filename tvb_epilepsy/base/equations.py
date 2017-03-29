@@ -1,6 +1,7 @@
 import numpy
-from numpy import array, empty, ones, zeros, multiply, dot, power, divide, sum, exp, reshape, concatenate, diag, \
-                  where, argmax, repeat
+from numpy import array, empty, empty_like, ones, zeros, multiply, dot, power, divide, sum, exp, reshape, concatenate, \
+                  diag, where, repeat
+from tvb_epilepsy.base.utils import assert_arrays
 
 
 def if_ydot0(x1, a, b):
@@ -46,14 +47,21 @@ def eqtn_coupling_diff(K, w, ix, jx):
 
     K = reshape(K, (K.size, ))
 
-    dcoupl_dx1 = empty((len(ix), len(jx)))
+    if K.dtype == "object" or w.dtype == "object":
+        dtype = "object"
+    else:
+        dtype = K.dtype
+
+    dcoupl_dx1 = empty((len(ix), len(jx)), dtype=dtype)
+
     for ii in ix:
         for ij in jx:
 
             if ii == ij:
-                dcoupl_dx1[ii, ij] = -multiply(K[ii], sum(w[ii][:, jx], axis=1))
+                dcoupl_dx1[ii, ij] = -multiply(K[ii], sum(w[ii, jx]))
             else:
-                dcoupl_dx1[ii, ij] = multiply(K[ii], w[ii][:, ij])
+                dcoupl_dx1[ii, ij] = multiply(K[ii], w[ii, ij])
+
 
     return dcoupl_dx1
 
@@ -117,28 +125,41 @@ def eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg=True):
     return concatenate([jac_x1, jac_z], axis=1)
 
 
-def eqtn_fx1z_diff(x1,K, w, ix, jx, a, b, d, tau1, tau0, model="6d", zmode=numpy.array("lin")): #, z_pos=True
+def eqtn_fx1z_diff(x1, K, w, ix, jx, a, b, d, tau1, tau0, model="6d", zmode=numpy.array("lin")): #, z_pos=True
 
     # TODO: for the extreme z_pos = False case where we have terms like 0.1 * z ** 7. See below eqtn_fz()
     # TODO: for the extreme x1_neg = False case where we have to solve for x2 as well
+
+    shape = x1.shape
+
+    x1, K, ix, jx, a, b, d, tau1, tau0 = assert_arrays([x1, K, ix, jx, a, b, d, tau1, tau0], (x1.size, ))
 
     tau = divide(tau1, tau0)
 
     dcoupl_dx = eqtn_coupling_diff(K, w, ix, jx)
 
     if zmode == 'lin':
-        dfx1_1_dx1 = 4.0
+        dfx1_1_dx1 = 4.0 * ones(x1[ix].shape)
     elif zmode == 'sig':
-        dfx1_1_dx1 = divide(30 * multiply(exp(1), (-10.0 * (x1 + 0.5))), (1 + multiply(exp(1), (-10.0 * (x1 + 0.5)))))
+        dfx1_1_dx1 = divide(30 * multiply(exp(1), (-10.0 * (x1[ix] + 0.5))),
+                            (1 + multiply(exp(1), (-10.0 * (x1[ix] + 0.5)))))
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
 
     if model == "2d":
-        dfx1_3_dx1 = 3 * multiply(power(x1, 2.0), a) - 2 * multiply(x1, b)
+        dfx1_3_dx1 = 3 * multiply(power(x1[ix], 2.0), a[ix]) - 2 * multiply(x1[ix], b[ix])
     else:
-        dfx1_3_dx1 = 3 * multiply(power(x1, 2.0), a) + 2 * multiply(x1, d - b)
+        dfx1_3_dx1 = 3 * multiply(power(x1[ix], 2.0), a[ix]) + 2 * multiply(x1[ix], d[ix] - b[ix])
 
-    return multiply((dfx1_3_dx1 + dfx1_1_dx1 - dcoupl_dx), tau)
+    fx1z_diff = empty_like(dcoupl_dx, dtype=dcoupl_dx.dtype)
+    for xi in ix:
+        for xj in jx:
+            if xj == xi:
+                fx1z_diff[xi, xj] = multiply(dfx1_3_dx1[xi] + dfx1_1_dx1[xi] - dcoupl_dx[xi, xj], tau[xi])
+            else:
+                fx1z_diff[xi, xj] = multiply(- dcoupl_dx[xi, xj], tau[xi])
+
+    return fx1z_diff
 
 
 def eqtn_fy1(x1, yc, y1, d, tau1):

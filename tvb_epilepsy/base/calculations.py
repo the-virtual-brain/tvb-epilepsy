@@ -41,7 +41,7 @@ if SYMBOLIC_CALCULATIONS_FLAG:
         if jx is None:
             jx = range(n_regions)
 
-        return reshape(symbol_eqtn_coupling(x1.size, ix, jx, shape=x1.shape)[0](x1, K, w), x1.shape)
+        return symbol_eqtn_coupling(x1.size, ix, jx, shape=x1.shape)[0](x1, K, w)
 
 
     def calc_x0(x1, z, K=0.0, w=0.0, x0cr=0.0, r=1.0, model="2d", zmode=array("lin"), z_pos=True, shape=None):
@@ -345,9 +345,9 @@ if SYMBOLIC_CALCULATIONS_FLAG:
         return jac
 
 
-    def calc_coupling_diff(K, w, ix=None, jx=None, shape=None):
+    def calc_coupling_diff(K, w, ix=None, jx=None):
 
-        K = assert_arrays([K], shape)
+        K = assert_arrays([K])
         n_regions = K.size
 
         w = assert_arrays([w], (K.size, K.size))
@@ -358,7 +358,7 @@ if SYMBOLIC_CALCULATIONS_FLAG:
         if jx is None:
             jx = range(n_regions)
 
-        return symbol_calc_coupling_diff(K.size, ix, jx, K="K", shape=shape)[0](K, w)
+        return symbol_calc_coupling_diff(K.size, ix, jx, K="K")[0](K, w)
 
 
     def calc_fx1_2d_taylor(x1, x_taylor, z=0, y1=0.0, Iext1=0.0, slope=0.0, a=1.0, b=-2.0, tau1=1.0, x1_neg=True,
@@ -372,7 +372,7 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
 
     def calc_fx1z(x1, x0, K, w, yc, Iext1, x0cr=0.0, r=1.0, a=1.0, b=-2.0, d=5.0, tau1=1.0, tau0=1.0, model="6d",
-                  zmode=array("lin"), z_pos=True): #slope=0.0, x2=0.0, x1_neg=True,
+                  zmode=array("lin")): #slope=0.0, x2=0.0, z_pos=True, x1_neg=True,
 
         # TODO: for the extreme x1_neg = False case where we have to solve for x2 as well
 
@@ -382,30 +382,27 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
         if model == "2d":
             x0cr, r = assert_arrays([x0cr, r], x1.shape)
-            return reshape(symbol_eqtn_fx1z(x1.size, model, zmode, z_pos)[0](x1, x0, K, w, x0cr, r, yc, Iext1, a, b,
-                                                                             tau1, tau0), x1.shape)
+            return symbol_eqtn_fx1z(x1.size, model, zmode, x1.shape)[0](x1, x0, K, w, x0cr, r, yc, Iext1, a, b, tau1,
+                                                                        tau0)
         else:
             d = assert_arrays([d], x1.shape)
-            return reshape(symbol_eqtn_fx1z(x1.size, model, zmode, z_pos)[0](x1, x0, K, w, yc, Iext1, a, b, d, tau1,
-                                                                             tau0), x1.shape)
+            return symbol_eqtn_fx1z(x1.size, model, zmode, x1.shape)[0](x1, x0, K, w, yc, Iext1, a, b, d, tau1, tau0)
 
 
-    def calc_fx1z_diff(x1, K, w, a=1.0, b=-2.0, d=5.0, tau1=1.0, tau0=1.0, model="6d", zmode=array("lin"), yc=0.0,
-                       Iext1=0.0, z_pos=True): # slope=0.0, x2=0.0, x1_neg=True,
+    def calc_fx1z_diff(x1, K, w, a=1.0, b=-2.0, d=5.0, tau1=1.0, tau0=1.0, model="6d", zmode=array("lin")): # , yc=0.0,
+                       #Iext1=0.0, z_pos=True, slope=0.0, x2=0.0, x1_neg=True,
 
         # TODO: for the extreme x1_neg = False case where we have to solve for x2 as well
 
-        x1, K, yc, Iext1, a, b, tau1, tau0 = assert_arrays([x1, K, yc, Iext1, a, b, tau1, tau0])
+        x1, K, a, b, tau1, tau0 = assert_arrays([x1, K, a, b, tau1, tau0])
 
         w = assert_arrays([w], (x1.size, x1.size))
 
         if model == "2d":
-            return reshape(symbol_eqtn_fx1z_diff(x1.size, model, zmode, z_pos)[0](x1, K, w, yc, Iext1, a, b, tau1,
-                                                                                  tau0), x1.shape)
+            return reshape(symbol_eqtn_fx1z_diff(x1.size, model, zmode)[0](x1, K, w, a, b, tau1, tau0), x1.shape)
         else:
             d = assert_arrays([d], x1.shape)
-            return reshape(symbol_eqtn_fx1z_diff(x1.size, model, zmode,  z_pos)[0](x1, K, w, yc, Iext1, a, b, d,
-                                                                                   tau1, tau0), x1.shape)
+            return reshape(symbol_eqtn_fx1z_diff(x1.size, model, zmode)[0](x1, K, w, a, b, d, tau1, tau0), x1.shape)
 
 
     def calc_fx1z_2d_x1neg_zpos_jac(x1, z, x0, x0cr, r, yc, Iext1, K, w, ix0, iE, a=1.0, b=-2.0, tau1=1.0, tau0=1.0):
@@ -423,7 +420,7 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
         x1, yc, Iext1, a, b, d, tau1 = assert_arrays([ x1, yc, Iext1, a, b, d, tau1], shape)
 
-        return reshape(symbol_calc_fx1y1_6d_diff_x1(x1.size)[0](x1, yc, Iext1, a, b, d, tau1), x1.shape)
+        return symbol_calc_fx1y1_6d_diff_x1(x1.size, x1.shape)[0](x1, yc, Iext1, a, b, d, tau1)
 
 
     def calc_x0cr_r(yc, Iext1, a=1.0, b=-2.0, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
@@ -744,9 +741,9 @@ else:
                 return array(jac_lambda(x1, y1, z, x2, y2, g, x0_var, slope_var, Iext1_var, Iext2_var, K_var))
 
 
-    def calc_coupling_diff(K, w, ix=None, jx=None, shape=None):
+    def calc_coupling_diff(K, w, ix=None, jx=None):
 
-        K = assert_arrays([K], shape)
+        K = assert_arrays([K])
 
         w = assert_arrays([w], (K.size, K.size))
 
@@ -794,7 +791,9 @@ else:
                 fx1lin[ix] = series(fx1lin[ix], x=x, x0=x_taylor, n=order).removeO().simplify(). \
                     subs(x, x1.flatten()[ix])
 
-        return reshape(fx1lin, shape)
+            fx1lin = reshape(fx1lin, shape)
+
+        return fx1lin
 
 
     def calc_fx1z(x1, x0, K, w, yc, Iext1, x0cr=0.0, r=1.0, a=1.0, b=-2.0, d=5.0, tau1=1.0, tau0=1.0,
