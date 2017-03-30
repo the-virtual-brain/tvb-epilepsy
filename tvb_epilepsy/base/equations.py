@@ -274,7 +274,7 @@ def eqtn_fx2(x2, y2, z, g, Iext2, tau1):
     return multiply(-y2 + x2 - power(x2, 3) + Iext2 + 2 * g - 0.3 * (z - 3.5), tau1)
 
 
-def eqtn_fy2(x2, y2, s, tau1, tau2, x2_neg=True):
+def eqtn_fy2(x2, y2, s, tau1, tau2, x2_neg=False):
 
     # ydot[4] = self.tt * ((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4)) / self.tau)
     return divide(multiply(-y2 + where(x2_neg, 0.0, multiply(x2 + 0.25, s)), tau1), tau2)
@@ -282,7 +282,7 @@ def eqtn_fy2(x2, y2, s, tau1, tau2, x2_neg=True):
 
 def eqtn_fg(x1, g, gamma, tau1):
 
-    return multiply(multiply(g - 0.1 * x1, gamma), tau1)
+    return multiply(multiply(-g + 0.1 * x1, gamma), tau1)
 
 
 def eqtn_fx0(x0_var, x0, tau1):
@@ -330,7 +330,7 @@ def eqtn_fparams_vars(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope,
 
 
 def eqtn_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None, zmode="lin", pmode="const", x1_neg=True,
-                  y1=None, x2=None, y2=None, g=None, x2_neg=True,
+                  y1=None, x2=None, y2=None, g=None, x2_neg=False,
                   x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
                   slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.1,
                   tau1=1.0, tau0=2857.0, tau2=10.0):

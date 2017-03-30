@@ -43,7 +43,7 @@ if __name__ == "__main__":
     zmode = numpy.array("lin")
     pmode = numpy.array("const")
 
-    model = "EpileptorDP"
+    model = "EpileptorDPrealistic"
     print model
 
     b = -2.0
@@ -68,7 +68,7 @@ if __name__ == "__main__":
                          output_mode="arrays")
 
         jac = calc_jac(eq[0], eq[1], yc, Iext1, x0, K, w, model_vars, x0cr=x0cr, r=r,
-                       zmode=zmode, pmode=pmode, x1_neg=True, z_pos=True, x2_neg=True,
+                       zmode=zmode, pmode=pmode, x1_neg=True, z_pos=True, x2_neg=False,
                        x0_var=x0, slope_var=slope, Iext1_var=Iext1, Iext2_var=Iext2, K_var=K,
                        slope=slope, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
                        tau2=10.0)
@@ -86,16 +86,16 @@ if __name__ == "__main__":
 
             eq, slope_eq, Iext2_eq = calc_eq_11d(x0_6d, K, w, yc, Iext1, Iext2, slope,
                                                  EpileptorDPrealistic.fun_slope_Iext2, x1, -2.0, a=1.0, b=3.0, d=5.0,
-                                                 gamma=0.1, zmode=zmode, pmode=pmode)
+                                                 zmode=zmode, pmode=pmode)
             model_vars = 11
-            dfun = calc_dfun(eq[0], eq[2], yc, Iext1, r, K, w, model_vars, zmode, pmode,
+            dfun = calc_dfun(eq[0], eq[2], yc, Iext1, x0_6d, K, w, model_vars, x0cr, r, zmode, pmode,
                              y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5],
                              x0_var=eq[6], slope_var=eq[7], Iext1_var=eq[8], Iext2_var=eq[9], K_var=eq[10],
                              slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
                              tau2=10.0, output_mode="array")
 
             jac = calc_jac(eq[0], eq[2], yc, Iext1, x0, K, w, model_vars,
-                           zmode, pmode, x1_neg=True, z_pos=True, x2_neg=True,
+                           zmode, pmode, x1_neg=True, z_pos=True, x2_neg=False,
                            y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5],
                            x0_var=eq[6], slope_var=eq[7], Iext1_var=eq[8], Iext2_var=eq[9], K_var=eq[10],
                            slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
@@ -104,16 +104,15 @@ if __name__ == "__main__":
         else:
 
             # all >=6D models
-            eq = calc_eq_6d(x0_6d, K, w,  yc, Iext1, Iext2, x1, -2.0, a=1.0, b=3.0, d=5.0, gamma=0.1,
-                            zmode=zmode)
+            eq = calc_eq_6d(x0_6d, K, w,  yc, Iext1, Iext2, x1, -2.0, a=1.0, b=3.0, d=5.0, zmode=zmode)
             model_vars = 6
-            dfun = calc_dfun(eq[0], eq[2], yc, Iext1, r, K, w, model_vars, zmode,
+            dfun = calc_dfun(eq[0], eq[2], yc, Iext1, x0_6d, K, w, model_vars, x0cr, r, zmode,
                              y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5],
                              slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
                              tau2=10.0, output_mode="array")
 
             jac = calc_jac(eq[0], eq[2], yc, Iext1, r, K, w, model_vars,
-                           zmode, x1_neg=True, z_pos=True, x2_neg=True,
+                           zmode, x1_neg=True, z_pos=True, x2_neg=False,
                            y1=eq[1], x2=eq[3], y2=eq[4], g=eq[5],
                            slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
                            tau2=10.0)
@@ -135,6 +134,7 @@ if __name__ == "__main__":
     b2 = -2.0 * a
     b6 = 3.0 * a
     d = 5.0 * a
+    s = 6.0 * a
     tau1 = a
     tau0 = a
     tau2 = a
@@ -151,6 +151,12 @@ if __name__ == "__main__":
             Iext1_var = eq[8]
             Iext2_var = eq[9]
             K_var = eq[10]
+
+    print "\nTest symbolic x0cr, r calculation:"
+    lcalc_x0cr_r, scalc_x0cr_r = symbol_calc_x0cr_r(n, zmode, x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
+                                                    x0cr_def=X0_CR_DEF, shape=(1, 3))[:2]
+    for ii in range(2):
+        print scalc_x0cr_r[ii], scalc_x0cr_r[ii].shape, lcalc_x0cr_r[ii](yc, Iext1, a, b2)
 
     print "\nTest coupling:"
     coupling = calc_coupling(sx1, sK, sw)
@@ -204,6 +210,13 @@ if __name__ == "__main__":
         print sfx1z_diff[1].shape, sfx1z_diff[0](x1, K, w, a, b2, tau1, tau0)
     else:
         print sfx1z_diff[1].shape, sfx1z_diff[0](x1, K, w, a, b6, d, tau1, tau0)
+
+    if model != "2d":
+        print "\nTest the symbolic fx2 with substitution of y2 via fy2"
+        sfx2y2 = symbol_eqtn_fx2y2(n, x2_neg=False, shape=(1, n))[:2]
+        for ii in range(n):
+            print sfx2y2[1][0, ii]
+        print sfx2y2[1].shape, sfx2y2[0](x2, z, g, Iext2, s, tau1)
 
     print "\nTest calc_fx1_2d_taylor"
     x_taylor = symbol_vars(n, ["x1lin"], shape=(1, n))[0]  # x_taylor = -4.5/3 (=x1lin)

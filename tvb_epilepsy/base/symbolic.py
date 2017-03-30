@@ -178,7 +178,7 @@ def symbol_eqtn_fx2(n, Iext2="Iext2", shape=None):
     return lambdify([x2, y2, z, g, Iext2, tau1], fx2, "numpy"), fx2, vars_dict
 
 
-def symbol_eqtn_fy2(n, x2_neg=True, shape=None):
+def symbol_eqtn_fy2(n, x2_neg=False, shape=None):
 
     x2, y2, s, tau1, tau2, vars_dict = symbol_vars(n, ["x2", "y2", "s", "tau1", "tau2"], shape=shape)
 
@@ -288,7 +288,7 @@ def symbol_eqtn_fparam_vars(n, pmode=array("const"), shape=None):
            (fx0, fslope, fIext1, fIext2, fK), vars_dict
 
 
-def symbol_eqnt_dfun(n, model_vars, zmode=array("lin"), x1_neg=True, x2_neg=True, z_pos=True,
+def symbol_eqnt_dfun(n, model_vars, zmode=array("lin"), x1_neg=True, x2_neg=False, z_pos=True,
                      pmode=array("const"), shape=None):
 
     f_lambda = []
@@ -377,7 +377,7 @@ def symbol_eqnt_dfun(n, model_vars, zmode=array("lin"), x1_neg=True, x2_neg=True
     return f_lambda, f_sym, symvars
 
 
-def symbol_calc_jac(n_regions, model_vars, zmode=array("lin"), x1_neg=True, x2_neg=True, z_pos=True,
+def symbol_calc_jac(n_regions, model_vars, zmode=array("lin"), x1_neg=True, x2_neg=False, z_pos=True,
                     pmode=array("const")):
 
     dfun_sym, v = symbol_eqnt_dfun(n_regions, model_vars, zmode, x1_neg, x2_neg, z_pos, pmode)[1:]
@@ -657,7 +657,7 @@ def symbol_eqtn_fx1z_diff(n, model="6d", zmode=array("lin")): #x1_neg=True, , z_
     return dfx1z_dx1_lambda, dfx1z_dx1, v
 
 
-def symbol_eqtn_fx2y2(n, x2_neg=True):
+def symbol_eqtn_fx2y2(n, x2_neg=False, shape=None):
 
     y2eq, vy = symbol_eqtn_fy2(n, x2_neg=x2_neg)[1:]
 
@@ -671,6 +671,9 @@ def symbol_eqtn_fx2y2(n, x2_neg=True):
 
     for iv in range(n):
         fx2[iv] = fx2[iv].subs(v["y2"][iv], y2eq[iv])
+
+    if shape is not None:
+        fx2 = fx2.reshape(shape[0], shape[1])
 
     return lambdify([v["x2"], v["z"], v["g"], v["Iext2"], v["s"], v["tau1"]], fx2, 'numpy'), fx2, v
 
@@ -698,7 +701,7 @@ def symbol_calc_eq_x1(n, model="6d", zmode=array("lin")):
     return x1eq_lambda, x1eq, v
 
 
-def symbol_calc_eq_x2(n, x2_neg=True):
+def symbol_calc_eq_x2(n, x2_neg=False):
 
     fx2, v = symbol_eqtn_fx2y2(n, x2_neg=x2_neg)[1:]
 

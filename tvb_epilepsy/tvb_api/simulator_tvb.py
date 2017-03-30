@@ -135,7 +135,7 @@ def calc_tvb_equilibrium_point(epileptor_model, hypothesis):
     #Calculate equilibrium point
     eq = calc_eq_6d(epileptor_model.x0, epileptor_model.Ks, hypothesis.weights,
                     epileptor_model.c, epileptor_model.Iext, epileptor_model.Iext2, hypothesis.x1EQ.T, -2.0,
-                    epileptor_model.a, epileptor_model.b, epileptor_model.d, gamma=0.1)
+                    epileptor_model.a, epileptor_model.b, epileptor_model.d)
 
     #Assert equilibrium point
     coupl = calc_coupling(eq[0], epileptor_model.Ks, hypothesis.weights)
@@ -151,7 +151,7 @@ def calc_tvb_equilibrium_point(epileptor_model, hypothesis):
                       epileptor_model.Ks.flatten(), hypothesis.weights, model="6d", zmode="lin",
                       y1=eq[1].flatten(), x2=eq[3].flatten(), y2=eq[4].flatten(), g=eq[5].flatten(),
                       slope=epileptor_model.slope.flatten(), a=epileptor_model.a, b=epileptor_model.b,
-                      d=epileptor_model.d, s=epileptor_model.aa, Iext2=epileptor_model.Iext2.flatten(), gamma=0.1,
+                      d=epileptor_model.d, s=epileptor_model.aa, Iext2=epileptor_model.Iext2.flatten(),
                       tau1=epileptor_model.tt, tau0=1.0 / epileptor_model.r, tau2=epileptor_model.tau,
                       output_mode="array")
 

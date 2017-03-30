@@ -96,25 +96,30 @@ def calc_eq_y1(x1eq, yc, d=5.0):
     return calc_fy1(x1eq, yc, y1=0, d=d, tau1=1.0)
 
 
-def calc_eq_y2(x2eq, x2_neg=True):
+def calc_eq_y2(x2eq, x2_neg=False):
 
     x2eq = assert_arrays([x2eq])
 
     return numpy.where(x2_neg, numpy.zeros(x2eq.shape), 6.0 * (x2eq + 0.25))
 
 
-def calc_eq_g(x1eq, gamma=0.1):
-    return calc_fg(x1eq, 0.0, gamma, tau1=1.0)
+def calc_eq_g(x1eq):
+    return calc_fg(x1eq, 0.0, gamma=1.0, tau1=1.0)
 
 
-def calc_eq_x2(zeq, x1eq, Iext2,  y2eq=None, geq=None, s=6.0, gamma=0.1, x2_neg=True):
-
-    shape = zeq.shape
+def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, y1eq=None, s=6.0, Iext1=None, x2=0.0,
+               slope=0.0, a=1.0, b=3.0, x1_neg=True, x2_neg=False):
 
     if geq is None:
-        geq = calc_eq_g(x1eq, gamma)
+        geq = calc_eq_g(x1eq)
 
-    zeq, x1eq, Iext2, s, geq, gamma = assert_arrays([zeq, x1eq, Iext2, s, geq, gamma], (zeq.size,))
+    if zeq is None:
+        zeq = calc_eq_z_6d(x1eq, y1eq, Iext1, x2, slope, a, b, x1_neg)
+
+    zeq, geq, Iext2, s = assert_arrays([zeq, geq, Iext2, s])
+
+    shape = zeq.shape
+    n = zeq.size
 
     if SYMBOLIC_CALCULATIONS_FLAG:
 
@@ -127,85 +132,95 @@ def calc_eq_x2(zeq, x1eq, Iext2,  y2eq=None, geq=None, s=6.0, gamma=0.1, x2_neg=
 
     else:
 
+        # fx2 = tau1 * (-y2 + Iext2 + 2 * g - x2 ** 3 + x2 - 0.3 * z + 1.05)
+        # if x2_neg = True, so that y2eq = 0.0:
+        #   fx2 = tau1 * (Iext2 + 2 * g - x2 ** 3 + x2 - 0.3 * z + 1.05) =>
+        #     0 = x2eq ** 3 - x2eq - (Iext2 + 2 * geq -0.3 * zeq + 1.05)
+        # if x2_neg = False , so that y2eq = s*(x2+0.25):
+        #   fx2 = tau1 * (-s * (x2 + 0.25) + Iext2 + 2 * g - x2 ** 3 + x2 - 0.3 * z + 1.05) =>
+        #   fx2 = tau1 * (-0.25 * s  + Iext2 + 2 * g - x2 ** 3 + (1 - s) * x2 - 0.3 * z + 1.05 =>
+        #     0 = x2eq ** 3 + (s - 1) * x2eq - (Iext2 + 2 * geq -0.3 * zeq - 0.25 * s + 1.05)
+
+        # According to http://mathworld.wolfram.com/CubicFormula.html
+        # and given that there is no square term (x2eq^2; "depressed cubic"), we write the equation in the form:
+        # x^3 + 3 * Q * x -2 * R = 0
+        Q = -numpy.ones(shape)/3.0
+        R = (Iext2 + 2.0 * geq - 0.3 * zeq + 1.05) / 2
+        if y2eq is None:
+            ss = numpy.where(x2_neg, 0.0, s)
+            Q += ss / 3
+            R -= 0.25 * ss / 2
+        else:
+            y2eq = assert_arrays([y2eq], shape)
+            R += y2eq / 2
+
+        # Then the determinant is :
+        # delta = Q^3 + R^2 =>
+        delta = Q ** 3 + R ** 2
+        # and S = cubic_root(R+sqrt(D), T = cubic_root(R-sqrt(D)
+        delta_sq = numpy.sqrt(delta)
+        ST = [R + delta_sq, R - delta_sq]
+        for ii in range(2):
+            ST[ii] = numpy.sign(ST[ii]) * numpy.power(numpy.abs(ST[ii]), 1.0/3)
+        # and B = S+T, A = S-T
+        B = ST[0]+ST[1]
+        A = ST[0]-ST[1]
+        # The roots then are:
+        # x1 = -1/3 * a2 + B
+        # x21 = -1/3 * a2 - 1/2 * B + 1/2 * sqrt(3) * A * j
+        # x22 = -1/3 * a2 - 1/2 * B - 1/2 * sqrt(3) * A * j
+        # where j = sqrt(-1)
+        # But, in our case a2 = 0.0, so that:
+        B2 = - 0.5 *B.flatten()
+        AA = (0.5 * numpy.sqrt(3.0) * A * 1j).flatten()
+        sol = numpy.concatenate([[B.flatten()], [B2 + AA], [B2 - AA]]).T
         x2eq = []
-
-        x2_neg = numpy.array(x2_neg)
-        if x2_neg.size == 1:
-
-            if numpy.all(zeq == zeq[0]) and numpy.all(geq == geq[0]) and numpy.all(Iext2 == Iext2[0]) and \
-                numpy.all(s == s[0]):
-
-                zeq = zeq[0]
-                geq = geq[0]
-                Iext2 = Iext2[0]
-                s = s[0]
-
-                n=1
-
+        for ii in range(delta.size):
+            temp = sol[ii, numpy.abs(numpy.imag(sol[ii])) < 10 ** (-6)]
+            if temp.size == 0:
+                raise ValueError("No real roots for x2eq_" + str(ii))
             else:
-                n = zeq.size
-                x2_neg = numpy.tile(x2_neg, (n,))
+                x2eq.append(numpy.min(numpy.real(temp)))
 
-        for ii in range(n):
-
-            if y2eq is None:
-
-                fx2 = lambda x2: calc_fx2(x2, y2=calc_eq_y2(x2, x2_neg=x2_neg[ii]), z=zeq[ii], g=geq[ii],
-                                          Iext2=Iext2[ii], tau1=1.0, shape=(1,))
-
-                jac = lambda x2: -3 * x2 ** 2 + 1.0 - numpy.where(x2_neg[ii], 0.0, -6.0)
-
-            else:
-
-                fx2 = lambda x2: calc_fx2(x2, y2=0.0, z=zeq[ii], g=geq[ii], Iext2=Iext2[ii], tau1=1.0, shape=(1,))
-                jac = lambda x2: -3 * x2 ** 2 + 1.0
-
-            sol = root(fx2, -0.75, method='lm', jac=jac, tol=10 ** (-6), callback=None, options=None)
-
-            if sol.success:
-
-                if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
-                    raise ValueError("nan or inf values in solution x\n" + sol.message)
-
-                x2eq.append(numpy.min(numpy.real(numpy.array(sol.x))))
-
-            else:
-                raise ValueError(sol.message)
-
-            # # From  http://mathworld.wolfram.com/CubicFormula.html for: x^3 + a2x^2 + a1*x + a0 = 0
-            # a2 = ((d - b) / a).flatten()
-            # a23 = 1.0 / 3 * a2
-            # # a1 = 0
-            # a0 = ((-Iext1 - yc + zeq) / a).flatten()
-            # # then p = (3a1-a2^2)/3 and q = (9a1a2 - 27a0 - 2a2^3)/27
-            # # and Q = 1/3*p and R = 1/2*q, so that:
-            # # Q = (3a1-a2^2)/9 and R = (9a1a2 - 27a0 - 2a2^3)/54 and for a1=0
-            # # Q = -a2^2/9 and R = -a0/2 - a2^3/27
-            # Q = -a2 ** 2 / 9.0
-            # R = - a0 / 2.0 - (a2 ** 3) / 27.0
-            # # and the determinant:
-            # # delta = Q^3 + R^3 =>
-            # delta = (Q ** 3 + R ** 2).astype("complex")
-            # S = (R + numpy.sqrt(delta)) ** (1.0 / 3)
-            # T = (R - numpy.sqrt(delta)) ** (1.0 / 3)
-            # B = S + T
-            # A = S - T
-            # BB = a23 - B / 2
-            # AA = 1.0 / 2 * numpy.sqrt(3) * A * numpy.ones(A.shape, dtype="complex")
-            # sol = numpy.concatenate([[a23 + B], [BB + AA], [BB - AA]]).T
-            # x1eq = []
-            # for ii in range(delta.size):
-            #     temp = sol[ii, numpy.abs(numpy.imag(sol[ii])) < 10 ** (-6)]
-            #     x1eq.append(numpy.min(numpy.real(temp)))
+        # zeq = zeq.flatten()
+        # geq = geq.flatten()
+        # Iext2 = Iext2.flatten()
+        # x2eq = []
+        # for ii in range(n):
+        #
+        #     if y2eq is None:
+        #
+        #         fx2 = lambda x2: calc_fx2(x2, y2=calc_eq_y2(x2, x2_neg=x2_neg), z=zeq[ii], g=geq[ii],
+        #                                   Iext2=Iext2[ii], tau1=1.0)
+        #
+        #         jac = lambda x2: -3 * x2 ** 2 + 1.0 - numpy.where(x2_neg, 0.0, -s)
+        #
+        #     else:
+        #
+        #         fx2 = lambda x2: calc_fx2(x2, y2=0.0, z=zeq[ii], g=geq[ii], Iext2=Iext2[ii], tau1=1.0)
+        #         jac = lambda x2: -3 * x2 ** 2 + 1.0
+        #
+        #     sol = root(fx2, -0.5, method='lm', jac=jac, tol=10 ** (-6), callback=None, options=None)
+        #
+        #     if sol.success:
+        #
+        #         if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
+        #             raise ValueError("nan or inf values in solution x\n" + sol.message)
+        #
+        #         x2eq.append(numpy.min(numpy.real(numpy.array(sol.x))))
+        #
+        #     else:
+        #         raise ValueError(sol.message)
 
     x2eq = numpy.reshape(x2eq, shape)
 
     return x2eq
 
 
-def calc_eq_pop2(zeq, x1eq, Iext2, geq=None, s=6.0, gamma=0.1, x2_neg=True):
+def calc_eq_pop2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, y1eq=None, s=6.0, Iext1=None, x2=0.0,
+               slope=0.0, a=1.0, b=3.0, x1_neg=True, x2_neg=False):
 
-    x2eq = calc_eq_x2(zeq, x1eq, Iext2,  y2eq=None, geq=geq, s=s, gamma=gamma, x2_neg=x2_neg)
+    x2eq =  calc_eq_x2(Iext2, y2eq, zeq, geq, x1eq, y1eq, s,  Iext1, x2, slope, a, b, x1_neg, x2_neg)
 
     y2eq = calc_eq_y2(x2eq, x2_neg=x2_neg)
 
@@ -417,8 +432,7 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
                       + "model dfun = " + str(dfun))
 
 
-def calc_eq_6d(x0, K, w, yc, Iext1, Iext2, x1eqhyp = 0.0, bhyp=-2, a=1.0, b=3.0, d=5.0, gamma=0.1,
-               zmode=numpy.array("lin")):
+def calc_eq_6d(x0, K, w, yc, Iext1, Iext2, x1eqhyp = 0.0, bhyp=-2, a=1.0, b=3.0, d=5.0, zmode=numpy.array("lin")):
 
     if numpy.all(b - d == bhyp):
         x1eq = x1eqhyp
@@ -429,17 +443,17 @@ def calc_eq_6d(x0, K, w, yc, Iext1, Iext2, x1eqhyp = 0.0, bhyp=-2, a=1.0, b=3.0,
 
     zeq = calc_eq_z_6d(x1eq, y1eq, Iext1, x2=0.0, a=a, b=b)
 
-    geq = calc_eq_g(x1eq, gamma)
+    geq = calc_eq_g(x1eq)
 
-    (x2eq, y2eq) = calc_eq_pop2(zeq, x1eq, Iext2, geq)
+    (x2eq, y2eq) = calc_eq_pop2(Iext2, y2eq=None, zeq=zeq, geq=geq, x1eq=None, y1eq=None, x2_neg=False)
 
-    equilibrium_point = numpy.r_[x1eq, y1eq, zeq, x2eq, y2eq, geq].astype('float32')
+    equilibrium_point = numpy.r_[x1eq, y1eq, zeq, x2eq, y2eq, geq]
 
     return equilibrium_point
 
 
 def calc_eq_11d(x0, K, w, yc, Iext1, Iext2, slope, fun_slope_Iext2,  x1eqhyp = 0.0, bhyp=-2, a=1.0, b=3.0, d=5.0,
-                gamma=0.1, zmode=numpy.array("lin"), pmode="const"):
+                zmode=numpy.array("lin"), pmode="const"):
 
     if numpy.all(b - d == bhyp):
         x1eq = x1eqhyp
@@ -450,13 +464,13 @@ def calc_eq_11d(x0, K, w, yc, Iext1, Iext2, slope, fun_slope_Iext2,  x1eqhyp = 0
 
     zeq = calc_eq_z_6d(x1eq, y1eq, Iext1, x2=0.0, a=a, b=b)
 
-    geq = calc_eq_g(x1eq, gamma)
+    geq = calc_eq_g(x1eq)
 
     slope_eq, Iext2_eq = fun_slope_Iext2(zeq, geq, pmode, slope, Iext2)
 
-    (x2eq, y2eq) = calc_eq_pop2(zeq, x1eq, Iext2_eq, geq)
+    (x2eq, y2eq) = calc_eq_pop2(Iext2, y2eq=None, zeq=zeq, geq=geq, x1eq=None, y1eq=None, x2_neg=False)
 
-    equilibrium_point = numpy.r_[x1eq, y1eq, zeq, x2eq, y2eq, geq, x0, slope_eq, Iext1, Iext2_eq, K].astype('float32')
+    equilibrium_point = numpy.r_[x1eq, y1eq, zeq, x2eq, y2eq, geq, x0, slope_eq, Iext1, Iext2_eq, K]
 
     return equilibrium_point, slope_eq, Iext2_eq
 
@@ -479,7 +493,7 @@ def calc_equilibrium_point(epileptor_model, hypothesis):
 
             zeq = calc_eq_z_2d(hypothesis.x1EQ, epileptor_model.yc.T, epileptor_model.Iext1.T)
 
-        equilibrium_point = numpy.r_[x1eq, zeq].astype('float32')
+        equilibrium_point = numpy.r_[x1eq, zeq]
 
     else:
 
@@ -489,14 +503,14 @@ def calc_equilibrium_point(epileptor_model, hypothesis):
                                             epileptor_model.yc.T, epileptor_model.Iext1.T, epileptor_model.Iext2.T,
                                             epileptor_model.slope.T,  epileptor_model.fun_slope_Iext2, hypothesis.x1EQ,
                                             -2.0, epileptor_model.a.T, epileptor_model.b.T, epileptor_model.d.T,
-                                            gamma=0.1, zmode=epileptor_model.zmode, pmode=epileptor_model.pmode)[0]
+                                            zmode=epileptor_model.zmode, pmode=epileptor_model.pmode)[0]
         else:
 
             #all >=6D models
             equilibrium_point = calc_eq_6d(epileptor_model.x0.T, epileptor_model.K.T, hypothesis.weights,
                                            epileptor_model.yc.T, epileptor_model.Iext1.T, epileptor_model.Iext2.T,
                                            hypothesis.x1EQ, -2.0, epileptor_model.a.T, epileptor_model.b.T,
-                                           epileptor_model.d.T, gamma=0.1, zmode=epileptor_model.zmode)
+                                           epileptor_model.d.T, zmode=epileptor_model.zmode)
 
     assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point)
 
