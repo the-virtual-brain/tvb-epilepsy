@@ -3,49 +3,50 @@ from numpy import array, empty, empty_like, ones, zeros, multiply, dot, power, d
 from sympy import Symbol, symbols, exp, solve, solveset, solve_poly_system, Interval, S, lambdify,series, Matrix, oo # diff, ArraySymbol
 from sympy.tensor.array import Array
 from tvb_epilepsy.base.constants import X0_DEF, X0_CR_DEF, X1_DEF, X1_EQ_CR_DEF
-from tvb_epilepsy.base.utils import assert_arrays
+from tvb_epilepsy.base.utils import assert_arrays, shape_to_size
 from tvb_epilepsy.base.equations import *
 
 
-def symbol_vars(n_regions, vars_str, dims=1, ind_str="_", shape=None, numpy_flag=None):
+def symbol_vars(n_regions, vars_str, dims=1, ind_str="_", shape=None, output_flag="numpy_array"):
 
     vars_out = list()
     vars_dict = {}
 
     if dims == 1:
 
-        if numpy_flag is None:
-            numpy_flag = True
-
         if shape is None:
-            shape = (n_regions,)
+            if output_flag == "sympy_array":
+                shape = (n_regions, 1)
+            else:
+                shape = (n_regions, )
 
         for vs in vars_str:
             temp = [Symbol(vs+ind_str+'%d' % i_n, real=True) for i_n in range(n_regions)]
-            if numpy_flag:
+            if output_flag == "numpy_array":
                 temp = reshape(temp, shape)
+            elif output_flag == "sympy_array":
+                temp = Array(temp).reshape(shape[0], shape[1])
             vars_out.append(temp)
             vars_dict[vs] = vars_out[-1:][0]
 
     elif dims == 0:
 
-        if numpy_flag is None:
-            numpy_flag = False
-
         if shape is None:
-            shape = (1,)
+            if output_flag == "sympy_array":
+                shape = (1, 1)
+            else:
+                shape = (1, )
 
         for vs in vars_str:
             temp = Symbol(vs, real=True)
-            if numpy_flag:
+            if output_flag == "numpy_array":
                 temp = reshape(temp, shape)
+            elif output_flag == "sympy_array":
+                temp = Array(temp).reshape(shape[0], shape[1])
             vars_out.append(temp)
             vars_dict[vs] = vars_out[-1:][0]
 
     elif dims == 2:
-
-        if numpy_flag is None:
-            numpy_flag = True
 
         if shape is None:
             shape = (n_regions, n_regions)
@@ -55,8 +56,10 @@ def symbol_vars(n_regions, vars_str, dims=1, ind_str="_", shape=None, numpy_flag
             for i_n in range(n_regions):
                 temp.append([Symbol(vs + ind_str + '%d' % i_n + ind_str + '%d' % j_n, real=True)
                              for j_n in range(n_regions)])
-            if numpy_flag:
+            if output_flag == "numpy_array":
                 temp = reshape(temp, shape)
+            elif output_flag == "sympy_array":
+                temp = Array(temp).reshape(shape[0], shape[1])
             vars_out.append(temp)
             vars_dict[vs] = vars_out[-1:][0]
     else:
@@ -293,7 +296,7 @@ def symbol_eqnt_dfun(n, model_vars, zmode=array("lin"), x1_neg=True, x2_neg=Fals
                      pmode=array("const"), output_mode="array", shape=None):
 
     f_sym = []
-    if output_mode != "Array":
+    if output_mode != "array":
         f_lambda = []
 
     if model_vars == 2:
@@ -405,7 +408,7 @@ def symbol_calc_jac(n_regions, model_vars, zmode=array("lin"), x1_neg=True, x2_n
 
     if model_vars == 2:
 
-        jac_sym = dfun_sym.jacobian((Matrix([v["x1"], v["z"]])))
+        jac_sym = dfun_sym.jacobian((Matrix([v["x1"], v["z"]]).reshape(2 * n_regions, 1)))
 
         jac_lambda.append(lambdify([v["x1"], v["z"], v["y1"], v["Iext1"], v["slope"], v["a"], v["b"], v["tau1"]],
                           jac_sym[ind(0), :], "numpy"))
@@ -414,7 +417,8 @@ def symbol_calc_jac(n_regions, model_vars, zmode=array("lin"), x1_neg=True, x2_n
 
     elif model_vars == 6:
 
-        jac_sym = dfun_sym.jacobian(Matrix([v["x1"], v["y1"], v["z"], v["x2"], v["y2"], v["g"]]))
+        jac_sym = dfun_sym.jacobian(Matrix([v["x1"], v["y1"], v["z"], v["x2"], v["y2"], v["g"]]).
+                                    reshape(6 * n_regions, 1))
 
         jac_lambda.append(lambdify([v["x1"], v["y1"], v["z"], v["x2"], v["y2"], v["g"],
                                     v["Iext1"], v["slope"], v["a"], v["b"], v["tau1"]], jac_sym[ind(0), :], "numpy"))
@@ -433,7 +437,8 @@ def symbol_calc_jac(n_regions, model_vars, zmode=array("lin"), x1_neg=True, x2_n
     elif model_vars == 11:
 
         jac_sym = dfun_sym.jacobian(Matrix([v["x1"], v["y1"], v["z"], v["x2"], v["y2"], v["g"],
-                                            v["x0_var"], v["slope_var"], v["Iext1_var"], v["Iext2_var"], v["K_var"]]))
+                                            v["x0_var"], v["slope_var"], v["Iext1_var"], v["Iext2_var"], v["K_var"]])
+                                    .reshape(11 * n_regions, 1))
 
         jac_lambda.append(lambdify([v["x1"], v["y1"], v["z"], v["x2"], v["y2"], v["g"],
                                     v["x0_var"], v["Iext1_var"], v["Iext2_var"], v["slope_var"], v["K_var"],
@@ -482,8 +487,8 @@ def symbol_calc_coupling_diff(n, ix=None, jx=None, K="K"):
 
     coupl, v = symbol_eqtn_coupling(n, ix, jx, K)[1:]
 
-    x = Array(v["x1"][jx].tolist())
-    dcoupl_dx = coupl.jacobian(x)
+    x = Matrix(v["x1"][jx])
+    dcoupl_dx = Array(Matrix(coupl).jacobian(x))
 
     return lambdify([v["K"], v["w"]], dcoupl_dx, "numpy"), dcoupl_dx, v
 
@@ -497,7 +502,7 @@ def symbol_calc_2d_taylor(n, x_taylor="x1lin", order=2, x1_neg=True, slope="slop
 
     v.update({"x_taylor": x_taylor})
 
-    for ix in range(v["x1"].size):
+    for ix in range(shape_to_size(v["x1"].shape)):
         fx1lin[ix] = series(fx1lin[ix], x=v["x1"][ix], x0=x_taylor[ix], n=order).removeO()  #
 
     fx1lin = Array(fx1lin)
@@ -522,13 +527,13 @@ def symbol_calc_fx1z_2d_x1neg_zpos_jac(n, ix0, iE):
     x = empty_like(v["x1"])
     x[iE] = v["x0"][iE]
     x[ix0] = v["x1"][ix0]
-    x = Array(x.tolist()).T
+    x = Matrix(x)
 
     jac = []
     for ix in range(n):
         fx1[ix] = fx1[ix].subs(v["tau1"][ix], 1.0).subs(v["z"][ix], 0.0)
         fz[ix] = fz[ix].subs(v["z"][ix], fx1[ix])
-        jac.append(Array([fz[ix]]).jacobian(x)[:])
+        jac.append(Matrix([fz[ix]]).jacobian(x)[:])
 
     jac = Array(jac)
 
@@ -717,7 +722,7 @@ def symbol_calc_eq_x1(n, model="6d", zmode=array("lin")):
     for iv in range(n):
         fsolve.append(fx1z[iv].subs([(v["tau1"][iv], 1.0), (v["tau0"][iv], 1.0)]))
 
-    x1 = [Symbol("x_" + '%d' % i_n, real=True, negative=True) for i_n in range(v["x1"].size)]
+    x1 = [Symbol("x_" + '%d' % i_n, real=True, negative=True) for i_n in range(shape_to_size(v["x1"].shape))]
 
     x1eq = solve_poly_system(fsolve, x1[:])
 
@@ -745,7 +750,7 @@ def symbol_calc_eq_x2(n, x2_neg=False):
     for iv in range(n):
         x2eq.append(solve(fx2[iv], v["x2"][iv]))
 
-    x2eq = Array(array(x2eq))
+    x2eq = Array(x2eq)
 
     return lambdify([v["z"], v["g"], v["Iext2"], v["s"]], x2eq, 'numpy'), x2eq, v
 

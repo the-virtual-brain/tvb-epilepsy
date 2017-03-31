@@ -55,6 +55,7 @@ def calc_eq_x1(yc, Iext1, x0, K, w, a=1.0, b=3.0, d=5.0, x0cr=0.0, r=1.0, zmode=
 
         x1eq = []
         for ii in range(Iext1.size):
+            temp2 = numpy.array(temp[ii])
             temp2 = numpy.real(temp[ii][numpy.abs(numpy.imag(temp[ii])) < 10 ** -6])
             x1eq.append(numpy.min(temp2))
 
@@ -127,7 +128,8 @@ def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, y1eq=None, s=6.0
 
         x2eq = []
         for ii in range(zeq.size):
-            temp2 = numpy.real(temp[ii][numpy.abs(numpy.imag(temp[ii])) < 10 ** -6])
+            temp2 = numpy.array(temp[ii])
+            temp2 = numpy.real(temp2[numpy.abs(numpy.imag(temp2)) < 10 ** -6])
             x2eq.append(numpy.min(temp2))
 
     else:

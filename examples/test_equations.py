@@ -43,7 +43,7 @@ if __name__ == "__main__":
     zmode = numpy.array("lin")
     pmode = numpy.array("const")
 
-    model = "EpileptorDPrealistic"
+    model = "EpileptorDP"
     print model
 
     b = -2.0
@@ -65,7 +65,7 @@ if __name__ == "__main__":
                          zmode=zmode, pmode=pmode,
                          x0_var=x0, slope_var=slope, Iext1_var=Iext1, Iext2_var=Iext2, K_var=K, slope=slope, 
                          a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0, tau2=10.0, 
-                         output_mode="arrays")
+                         output_mode="array")
 
         jac = calc_jac(eq[0], eq[1], yc, Iext1, x0, K, w, model_vars, x0cr=x0cr, r=r,
                        zmode=zmode, pmode=pmode, x1_neg=True, z_pos=True, x2_neg=False,
@@ -125,10 +125,11 @@ if __name__ == "__main__":
     sx1, sy1, sz, sx2, sy2, sg, sx0, sx0cr, sr, sK, syc, sIext1, sIext2, sslope, sa, sb, sd, stau1, stau0, stau2, v = \
     symbol_vars(n, ["x1", "y1", "z", "x2", "y2", "g", "x0", "x0cr", "r", "K", "yc", "Iext1", "Iext2",
                     "slope", "a", "b", "d", "tau1", "tau0", "tau2"], shape=(1, 3))
-    sw, vw = symbol_vars(n, ["w"], dims=2)
+    sw, vw = symbol_vars(n, ["w"], dims=2, output_flag="numpy_array")
     v.update(vw)
     del vw
-    numpy.fill_diagonal(sw, 0.0)
+    numpy.fill_diagonal(w, 0.0)
+    sw = Array(sw)
 
     a = numpy.ones((1,n))
     b2 = -2.0 * a
@@ -220,14 +221,15 @@ if __name__ == "__main__":
 
     print "\nTest calc_fx1_2d_taylor"
     x_taylor = symbol_vars(n, ["x1lin"], shape=(1, n))[0]  # x_taylor = -4.5/3 (=x1lin)
-    fx1lin = calc_fx1_2d_taylor(sx1, x_taylor, sz, syc, sIext1, sslope, sa, sb, stau1, x1_neg=True, order=2)
+    fx1lin = calc_fx1_2d_taylor(sx1, x_taylor, sz, syc, sIext1, sslope, sa, sb, stau1, x1_neg=True, order=2,
+                                shape=(1,n))
     sfx1lin = symbol_calc_2d_taylor(n, "x1lin", order=2, x1_neg=True, slope="slope", Iext1="Iext1", shape=(1, n))[:2]
-    print fx1lin.shape, calc_fx1_2d_taylor(x1, -1.5, z, yc, Iext1, slope, a=1.0, b=-2, tau1=1.0,
-                                                   x1_neg=True, order=2)
+    print fx1lin.shape, calc_fx1_2d_taylor(x1, -1.5, z, yc, Iext1, slope, a=1.0, b=-2, tau1=1.0, x1_neg=True, order=2,
+                                           shape=(1,n))
     for ii in range(3):
         print fx1lin[0, ii].expand(sx1[0, ii]).collect(sx1[0, ii])
         print sfx1lin[1][0, ii].expand(sx1[0, ii]).collect(sx1[0, ii])
-    print sfx1lin[1].shape, sfx1lin[0](x1, -1.5*numpy.ones(x1.shape), z, y1, Iext1, slope, a, b2, tau1)
+    print sfx1lin[1].shape, sfx1lin[0](x1, -1.5*numpy.ones(x1.shape), z, yc, Iext1, slope, a, b2, tau1)
 
     print "\nTest calc_fx1y1_6d_diff_x1"
     fx1y1_6d_diff_x1 = calc_fx1y1_6d_diff_x1(sx1, syc, sIext1, sa, sb, sd, stau1, stau0)

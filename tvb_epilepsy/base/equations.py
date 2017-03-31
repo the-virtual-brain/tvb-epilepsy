@@ -6,7 +6,7 @@ from tvb_epilepsy.base.utils import assert_arrays
 
 def if_ydot0(x1, a, b):
     # if_ydot0 = - self.a * y[0] ** 2 + self.b * y[0]
-    return -multiply(pow(x1, 2), a) + multiply(x1, b)
+    return -multiply(power(x1, 2), a) + multiply(x1, b)
 
 
 def else_ydot0_6d(x2, z, slope):
