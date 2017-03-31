@@ -713,9 +713,7 @@ else:
                                            x0_var, slope_var, Iext1_var, Iext2_var, K_var,
                                            slope, a, b, d, s, Iext2, gamma, tau1, tau0, tau2)
 
-                dfun_sym = Matrix(Matrix(dfun_sym)[:])
-
-                jac_sym = dfun_sym.jacobian(Matrix(Matrix(x)[:]))
+                jac_sym = Matrix(dfun_sym).jacobian(Matrix(x))
 
                 jac_lambda = lambdify(x, jac_sym, "numpy")
 
@@ -732,9 +730,7 @@ else:
                                            x[6], x[7], x[8], x[9], x[10],
                                            slope, a, b, d, s, Iext2, gamma, tau1, tau0, tau2)
 
-                dfun_sym = Matrix(Matrix(dfun_sym)[:])
-
-                jac_sym = dfun_sym.jacobian(Matrix(Matrix(x)[:]))
+                jac_sym = Matrix(dfun_sym).jacobian(Matrix(x))
 
                 jac_lambda = lambdify(x, jac_sym, "numpy")
 
