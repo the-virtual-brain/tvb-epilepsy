@@ -1094,7 +1094,7 @@ class EpileptorDP2D(Model):
 
 
 def build_tvb_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmode="lin"):
-    x0_transformed = rescale_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1)
+    x0_transformed = rescale_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1, zmode=zmode)
     model_instance = Epileptor(x0=x0_transformed.flatten(), Iext=hypothesis.Iext1.flatten(),
                                Ks=hypothesis.K.flatten(), yc=hypothesis.yc.flatten(),
                                variables_of_interest=variables_of_interest)

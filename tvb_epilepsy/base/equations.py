@@ -66,6 +66,43 @@ def eqtn_coupling_diff(K, w, ix, jx):
     return dcoupl_dx1
 
 
+def eqtn_x0cr_r(Iext1, yc, a, b, x1_rest, x1_cr, x0_rest, x0_cr, zmode=array("lin")):
+
+    if zmode == 'lin':
+
+        return 0.25*(x0_rest*(a*x1_cr**3 - a*x1_rest**3 - b*x1_cr**2 + b*x1_rest**2 + 4.0*x1_cr - 4.0*x1_rest) +
+                     (x0_cr - x0_rest)*(Iext1 - a*x1_rest**3 + b*x1_rest**2 - 4.0*x1_rest + yc))/(x0_cr - x0_rest), \
+               0.25 * (a * x1_cr ** 3 - a * x1_rest ** 3 - b * x1_cr ** 2 + b * x1_rest ** 2 + 4.0 * x1_cr -
+                       4.0 * x1_rest) / (x0_cr - x0_rest)
+
+    elif zmode == 'sig':
+
+        return (-x0_cr*(3.2e+66*20000000000000.0**(10*x1_cr) + 4.74922109128249e+68*54365636569181.0**(10*x1_cr))
+                *(3.2e+66*1.024e+133**x1_rest*(Iext1 - a*x1_rest**3 + b*x1_rest**2 + yc)
+                + 4.74922109128249e+68*2.25551009738825e+137**x1_rest*(Iext1 - a*x1_rest**3 + b*x1_rest**2 + yc - 3.0))
+                + x0_rest*(3.2e+66*20000000000000.0**(10*x1_rest) +
+                4.74922109128249e+68*54365636569181.0**(10*x1_rest))*(3.2e+66*1.024e+133**x1_cr*(Iext1 - a*x1_cr**3 +
+                b*x1_cr**2 + yc) + 4.74922109128249e+68*2.25551009738825e+137**x1_cr*(Iext1 - a*x1_cr**3 + b*x1_cr**2 +
+                yc - 3.0)))/((3.2e+66*20000000000000.0**(10.0*x1_cr) +
+                4.74922109128249e+68*54365636569181.0**(10.0*x1_cr))*(3.2e+66*20000000000000.0**(10.0*x1_rest) +
+                4.74922109128249e+68*54365636569181.0**(10.0*x1_rest))*(-x0_cr + x0_rest)), \
+                (-(3.2e+66 * 20000000000000.0 ** (10 * x1_cr) +
+                   4.74922109128249e+68 * 54365636569181.0 ** (10 * x1_cr)) * (3.2e+66 * 1.024e+133 ** x1_rest * (
+                Iext1 - a * x1_rest ** 3 + b * x1_rest ** 2 + yc) +
+                4.74922109128249e+68 * 2.25551009738825e+137 ** x1_rest * (
+                Iext1 - a * x1_rest ** 3 + b * x1_rest ** 2 + yc - 3.0)) + (
+                3.2e+66 * 20000000000000.0 ** (10 * x1_rest) + 4.74922109128249e+68 * 54365636569181.0 ** (
+                10 * x1_rest)) * (3.2e+66 * 1.024e+133 ** x1_cr * (Iext1 - a * x1_cr ** 3 + b * x1_cr ** 2 + yc) +
+                                     4.74922109128249e+68 * 2.25551009738825e+137 ** x1_cr * (
+                                     Iext1 - a * x1_cr ** 3 + b * x1_cr ** 2 + yc - 3.0))) / \
+                 ((3.2e+66 * 20000000000000.0 ** (10.0 * x1_cr) + 4.74922109128249e+68 * 54365636569181.0 ** (
+                   10.0 * x1_cr)) * (3.2e+66 * 20000000000000.0 ** (10.0 * x1_rest) +
+                                   4.74922109128249e+68 * 54365636569181.0 ** (10.0 * x1_rest)) * (-x0_cr + x0_rest))
+
+    else:
+        raise ValueError('zmode is neither "lin" nor "sig"')
+
+
 def eqtn_x0(x1, z, model="2d", zmode=array("lin"), z_pos=True, K=None, w=None, coupl=None, x0cr=None, r=None):
 
     if coupl is None:
@@ -80,7 +117,7 @@ def eqtn_x0(x1, z, model="2d", zmode=array("lin"), z_pos=True, K=None, w=None, c
             return divide((x1 + x0cr - (where(z_pos, z, z + 0.1 * power(z, 7.0)) + coupl) / 4.0), r)
 
         elif zmode == 'sig':
-            return divide((divide(3.0 / (1.0 + power(exp(1), -10.0 * (x1 + 0.5)))) + x0cr - z - coupl), r)
+            return divide(divide(3.0, 1.0 + power(exp(1), -10.0 * (x1 + 0.5))) + x0cr - z - coupl, r)
 
         else:
             raise ValueError('zmode is neither "lin" nor "sig"')
@@ -90,7 +127,7 @@ def eqtn_x0(x1, z, model="2d", zmode=array("lin"), z_pos=True, K=None, w=None, c
             return x1 - (z + where(z_pos, z, 0.1 * power(z, 7.0)) + coupl) / 4.0
 
         elif zmode == 'sig':
-            return divide(3.0, (1.0 + power(exp(1), -10.0 * (x1 + 0.5)))) - z - coupl
+            return divide(3.0, 1.0 + power(exp(1), -10.0 * (x1 + 0.5))) - z - coupl
 
         else:
             raise ValueError('zmode is neither "lin" nor "sig"')
@@ -141,8 +178,8 @@ def eqtn_fx1z_diff(x1, K, w, ix, jx, a, b, d, tau1, tau0, model="6d", zmode=nump
     if zmode == 'lin':
         dfx1_1_dx1 = 4.0 * ones(x1[ix].shape)
     elif zmode == 'sig':
-        dfx1_1_dx1 = divide(30 * multiply(exp(1), (-10.0 * (x1[ix] + 0.5))),
-                            (1 + multiply(exp(1), (-10.0 * (x1[ix] + 0.5)))))
+        dfx1_1_dx1 = divide(30 * power(exp(1), (-10.0 * (x1[ix] + 0.5))),
+                            power(1 + power(exp(1), (-10.0 * (x1[ix] + 0.5))), 2))
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
 
@@ -185,8 +222,8 @@ def eqtn_fz(x1, z, x0, tau1, tau0, model="2d", zmode=array("lin"), z_pos=True, K
             return multiply((4 * (x1 - multiply(r, x0) + x0cr) - where(z_pos, z, z + 0.1 * power(z, 7.0)) - coupl), tau)
 
         elif zmode == 'sig':
-            return multiply((4 * divide(3.0, (1 + multiply(exp(1), (-10.0 * (x1 + 0.5))))
-                                        - multiply(r, x0) + x0cr) - z - coupl), tau)
+            return multiply(divide(3.0, (1 + power(exp(1), (-10.0 * (x1 + 0.5))))) -
+                            multiply(r, x0) + x0cr - z - coupl, tau)
         else:
             raise ValueError('zmode is neither "lin" nor "sig"')
 
@@ -196,7 +233,7 @@ def eqtn_fz(x1, z, x0, tau1, tau0, model="2d", zmode=array("lin"), z_pos=True, K
             return multiply((4 * (x1 - x0) - where(z_pos, z, z + 0.1 * power(z, 7.0)) - coupl), tau)
 
         elif zmode == 'sig':
-            return multiply((4 * divide(3.0, (1 + multiply(exp(1), (-10.0 * (x1 + 0.5)))) - x0) - z - coupl), tau)
+            return multiply(divide(3.0, (1 + power(exp(1), (-10.0 * (x1 + 0.5))))) - x0 - z - coupl, tau)
         else:
             raise ValueError('zmode is neither "lin" nor "sig"')
 
@@ -215,7 +252,7 @@ def eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode=array("lin"), z_pos=True, K=None, w=
             jac_z -= 0.7 * power(z, 6.0)
 
     elif zmode == 'sig':
-        jac_x1 = divide(30 * multiply(exp(1), (-10.0 * (x1 + 0.5))), (1 + multiply(exp(1), (-10.0 * (x1 + 0.5)))))
+        jac_x1 = divide(30 * power(exp(1), (-10.0 * (x1 + 0.5))), 1 + power(exp(1), (-10.0 * (x1 + 0.5))))
     else:
         raise ValueError('zmode is neither "lin" nor "sig"')
 

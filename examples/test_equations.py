@@ -29,19 +29,21 @@ if __name__ == "__main__":
     x1, K = assert_arrays([x1, K])
     w = assert_arrays([w]) #, (x1.size, x1.size)
 
+    zmode = numpy.array("lin")
+    pmode = numpy.array("const")
+
     z = calc_eq_z_2d(x1, yc, Iext1)
 
-    x0cr, r = calc_x0cr_r(yc, Iext1, zmode=numpy.array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
-                           x0cr_def=X0_CR_DEF)
+    x0cr, r = calc_x0cr_r(yc, Iext1, zmode=zmode, x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
+                           x0cr_def=X0_CR_DEF)  #test=True
     print "x0cr, r="
     print x0cr, r
 
-    x0 = calc_x0(x1, z, K, w, x0cr, r, model="2d", zmode=numpy.array("lin"), z_pos=True)
+    x0 = calc_x0(x1, z, K, w, x0cr, r, model="2d", zmode=zmode, z_pos=True)
     print "x0="
     print x0
 
-    zmode = numpy.array("lin")
-    pmode = numpy.array("const")
+
 
     model = "EpileptorDP"
     print model
@@ -55,8 +57,8 @@ if __name__ == "__main__":
             x1eq = x1
             zeq = z
         else:
-            x1eq = calc_eq_x1(yc, Iext1, x0, K, w, a=1.0, b=-2.0, zmode=zmode, model="2d")
-            z = calc_eq_z_2d(x1, x1eq, Iext1)
+            x1eq = calc_eq_x1(yc, Iext1, x0, K, w, a=1.0, b=-2.0, d=5.0, x0cr=x0cr, r=r, zmode=zmode, model="2d")
+            zeq = calc_eq_z_2d(x1eq, yc, Iext1)
 
         eq = numpy.r_[x1eq, zeq].astype('float32')
 
@@ -75,7 +77,7 @@ if __name__ == "__main__":
 
     else:
 
-        x0_6d = rescale_x0(x0, yc, Iext1, zmode=numpy.array("lin"))
+        x0_6d = rescale_x0(x0, yc, Iext1, zmode=zmode)
         print "x0_6d="
         print x0_6d
 
@@ -154,10 +156,22 @@ if __name__ == "__main__":
             K_var = eq[10]
 
     print "\nTest symbolic x0cr, r calculation:"
-    lcalc_x0cr_r, scalc_x0cr_r = symbol_calc_x0cr_r(n, zmode, x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
-                                                    x0cr_def=X0_CR_DEF, shape=(1, 3))[:2]
+    x0cr2, r2 = calc_x0cr_r(syc, sIext1, zmode=zmode, x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
+                              x0cr_def=X0_CR_DEF) #test=True
+    print x0cr2, x0cr2.shape
+    print r2, r2.shape
+    print calc_x0cr_r(yc, Iext1, zmode=zmode, x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF)
+    lx0cr_r, sx0cr_r, v = symbol_eqtn_x0cr_r(n, zmode=zmode, shape=(1, 3))  #symbol_calc_x0cr_r(n, zmode=zmode, shape=(1, 3))
+    sx0cr_r = list(sx0cr_r)
     for ii in range(2):
-        print scalc_x0cr_r[ii], scalc_x0cr_r[ii].shape, lcalc_x0cr_r[ii](yc, Iext1, a, b2)
+        sx0cr_r[ii] = Matrix(sx0cr_r[ii])
+        for iv in range(n):
+            sx0cr_r[ii][iv] = sx0cr_r[ii][iv].subs([(v["a"][0, iv], a[0, iv]), (v["b"][0, iv], b2[0, iv]),
+                                                    (v["x1_rest"][0, iv], X1_DEF), (v["x0_rest"][0, iv], X0_DEF),
+                                                    (v["x1_cr"][0, iv], X1_EQ_CR_DEF), (v["x0_cr"][0, iv], X0_CR_DEF)])
+            print sx0cr_r[ii][iv]
+        print sx0cr_r[ii].shape
+        print lx0cr_r[ii](yc, Iext1, a, b2, X1_DEF*a, X1_EQ_CR_DEF*a, X0_DEF*a, X0_CR_DEF*a)
 
     print "\nTest coupling:"
     coupling = calc_coupling(sx1, sK, sw)

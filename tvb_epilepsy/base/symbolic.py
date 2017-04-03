@@ -90,6 +90,22 @@ def symbol_eqtn_coupling(n, ix=None, jx=None, K="K", shape=None):
     return lambdify([x1, K, w], coupling, "numpy"), coupling, vars_dict
 
 
+def symbol_eqtn_x0cr_r(n, zmode=numpy.array("lin"), shape=None):
+
+    Iext1, yc, a, b, x1_rest, x1_cr, x0_rest, x0_cr, vars_dict = \
+        symbol_vars(n, ["Iext1", "yc", "a", "b", "x1_rest", "x1_cr", "x0_rest", "x0_cr"], shape=shape)
+
+    x0cr, r = eqtn_x0cr_r(yc, Iext1, a, b, x1_rest, x1_cr, x0_rest, x0_cr, zmode=zmode)
+
+    x0cr = Array(x0cr)
+    r = Array(r)
+
+    x0cr_lambda = lambdify([yc, Iext1, a, b, x1_rest, x1_cr, x0_rest, x0_cr,], x0cr, "numpy")
+    r_lambda = lambdify([yc, Iext1, a, b, x1_rest, x1_cr, x0_rest, x0_cr,], r, "numpy")
+
+    return (x0cr_lambda, r_lambda), (x0cr, r), vars_dict
+
+
 def symbol_eqtn_x0(n, zmode=numpy.array("lin"), z_pos=True, model="2d", K="K", shape=None):
 
     x1, z, K, vars_dict = symbol_vars(n, ["x1", "z", K], shape=shape)
@@ -507,7 +523,10 @@ def symbol_calc_2d_taylor(n, x_taylor="x1lin", order=2, x1_neg=True, slope="slop
 
     fx1lin = Array(fx1lin)
     if shape is not None:
-        fx1lin = fx1lin.reshape(shape[0],shape[1])
+        if len(shape) > 1:
+            fx1lin = fx1lin.reshape(shape[0],shape[1])
+        else:
+            fx1lin = fx1lin.reshape(shape[0], )
 
     return lambdify([v["x1"], x_taylor, v["z"], v["y1"], v[Iext1], v[slope], v["a"], v["b"], v["tau1"]], fx1lin, "numpy"), \
            fx1lin, v
@@ -560,13 +579,15 @@ def symbol_calc_fx1y1_6d_diff_x1(n, shape=None):
 
     dfx1 = Array(dfx1)
     if shape is not None:
-        dfx1 = dfx1.reshape(shape[0],shape[1])
+        if len(shape) > 1:
+            dfx1 = dfx1.reshape(shape[0], shape[1])
+        else:
+            dfx1 = dfx1.reshape(shape[0], )
 
     return lambdify([v["x1"], v["yc"], v["Iext1"], v["a"], v["b"], v["d"], v["tau1"]], dfx1, "numpy"), dfx1, v
 
 
-def symbol_calc_x0cr_r(n, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF,
-                       shape=None):
+def symbol_calc_x0cr_r(n, zmode=array("lin"), shape=None):
 
     # Define the z equilibrium expression...
     # if epileptor_model == "2d":
@@ -589,16 +610,22 @@ def symbol_calc_x0cr_r(n, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF
         fz[iv] = fz[iv].subs([(v['K'][iv], 0.0), (v["tau1"][iv], 1.0), (v["tau0"][iv], 1.0), (v["z"][iv], zeq[iv])])
 
     v.update(vx)
+    del vx
+
+    x1_rest, x1_cr, x0_rest, x0_cr, vv = symbol_vars(len(zeq), ["x1_rest", "x1_cr", "x0_rest", "x0_cr"],
+                                                     shape=v["x1"].shape)
+    v.update(vv)
+    del vv
 
     # solve the fz expression for rx0 and x0cr, assuming the following two points (x1eq,x0) = [(-5/3,0.0),(-4/3,1.0)]...
     # ...and WITHOUT COUPLING
     x0cr = []
     r = []
     for iv in range(n):
-        fz_sol = solve([fz[iv].subs([(v["x1"][iv], x1_rest), (v["x0"][iv], x0def),
-                                (zeq[iv], zeq[iv].subs(v["x1"][iv], x1_rest))]),
-                        fz[iv].subs([(v["x1"][iv], x1_cr), (v["x0"][iv], x0cr_def),
-                                (zeq[iv], zeq[iv].subs(v["x1"][iv], x1_cr))])],
+        fz_sol = solve([fz[iv].subs([(v["x1"][iv], x1_rest[iv]), (v["x0"][iv], x0_rest[iv]),
+                                (zeq[iv], zeq[iv].subs(v["x1"][iv], x1_rest[iv]))]),
+                        fz[iv].subs([(v["x1"][iv], x1_cr[iv]), (v["x0"][iv], x0_cr[iv]),
+                                (zeq[iv], zeq[iv].subs(v["x1"][iv], x1_cr[iv]))])],
                         v["x0cr"][iv], v["r"][iv])
         x0cr.append(fz_sol[v["x0cr"][iv]])
         r.append(fz_sol[v["r"][iv]])
@@ -607,11 +634,18 @@ def symbol_calc_x0cr_r(n, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF
     x0cr = Array(x0cr)
     r = Array(r)
     if shape is not None:
-        x0cr = x0cr.reshape(shape[0], shape[1])
-        r = r.reshape(shape[0], shape[1])
+        if len(shape) > 1:
+            x0cr = x0cr.reshape(shape[0], shape[1])
+            r = r.reshape(shape[0], shape[1])
+        else:
+            x0cr = x0cr.reshape(shape[0], )
+            r = r.reshape(shape[0], )
 
-    return (lambdify([v["y1"], v["Iext1"], v["a"], v["b"]], x0cr, 'numpy'),
-           lambdify([v["y1"], v["Iext1"], v["a"], v["b"]], r, 'numpy')), (x0cr, r), v
+    return (lambdify([v["y1"], v["Iext1"], v["a"], v["b"], v["x1_rest"], v["x1_cr"], v["x0_rest"], v["x0_cr"]],
+                     x0cr, 'numpy'),
+           lambdify([v["y1"], v["Iext1"], v["a"], v["b"], v["x1_rest"], v["x1_cr"], v["x0_rest"], v["x0_cr"]],
+                    r, 'numpy')), \
+           (x0cr, r), v
 
 
 def symbol_eqtn_fx1z(n, model="6d", zmode=array("lin"), shape=None):  #x1_neg=True, z_pos=True,
@@ -656,7 +690,10 @@ def symbol_eqtn_fx1z(n, model="6d", zmode=array("lin"), shape=None):  #x1_neg=Tr
     # Convert the solution of x0cr from expression to function that accepts numpy arrays as inputs:
     fx1z = Array(fx1z)
     if shape is not None:
-        fx1z = fx1z.reshape(shape[0], shape[1])
+        if len(shape) > 1:
+            fx1z = fx1z.reshape(shape[0], shape[1])
+        else:
+            fx1z = fx1z.reshape(shape[0], )
 
     if model == "2d":
         fx1z_lambda = lambdify([v["x1"], v["x0"], v["K"], v["w"], v["x0cr"], v["r"], v["y1"], v["Iext1"], v["a"],
@@ -708,34 +745,42 @@ def symbol_eqtn_fx2y2(n, x2_neg=False, shape=None):
 
     fx2 = Array(fx2)
     if shape is not None:
-        fx2 = fx2.reshape(shape[0], shape[1])
+        if len(shape) > 1:
+            fx2 = fx2.reshape(shape[0], shape[1])
+        else:
+            fx2 = fx2.reshape(shape[0], )
 
     return lambdify([v["x2"], v["z"], v["g"], v["Iext2"], v["s"], v["tau1"]], fx2, 'numpy'), fx2, v
 
 
 def symbol_calc_eq_x1(n, model="6d", zmode=array("lin")):
 
-    fx1z, v = symbol_eqtn_fx1z(n, model, zmode, x1_neg=True, z_pos=True)[1:]
+
+
+    fx1z, v = symbol_eqtn_fx1z(n, model, zmode)[1:]    #, x1_neg=True, z_pos=True
     fx1z = fx1z.tolist()
 
     fsolve = []
     for iv in range(n):
         fsolve.append(fx1z[iv].subs([(v["tau1"][iv], 1.0), (v["tau0"][iv], 1.0)]))
 
-    x1 = [Symbol("x_" + '%d' % i_n, real=True, negative=True) for i_n in range(shape_to_size(v["x1"].shape))]
+    # TODO: find how we can solve the system here
+    # x1 = [Symbol("x_" + '%d' % i_n, real=True, negative=True) for i_n in range(shape_to_size(v["x1"].shape))]
+    #
+    # x1eq = solve_poly_system(fsolve, x1[:])
+    #
+    # # Convert the solution of x0cr from expression to function that accepts numpy arrays as inputs:
+    # x1eq = Array(x1eq)
+    #
+    # if model == "2d":
+    #     x1eq_lambda = lambdify([v["x0"], v["K"], v["w"], v["x0cr"], v["r"], v["yc"], v["Iext1"], v["a"], v["b"]], x1eq,
+    #                            'numpy')
+    # else:
+    #     x1eq_lambda = lambdify([v["x0"], v["K"], v["w"], v["yc"], v["Iext1"], v["a"], v["b"], v["d"]], x1eq, 'numpy')
+    #
+    # return x1eq_lambda, x1eq, v
 
-    x1eq = solve_poly_system(fsolve, x1[:])
-
-    # Convert the solution of x0cr from expression to function that accepts numpy arrays as inputs:
-    x1eq = Array(x1eq)
-
-    if model == "2d":
-        x1eq_lambda = lambdify([v["x0"], v["K"], v["w"], v["x0cr"], v["r"], v["yc"], v["Iext1"], v["a"], v["b"]], x1eq,
-                               'numpy')
-    else:
-        x1eq_lambda = lambdify([v["x0"], v["K"], v["w"], v["yc"], v["Iext1"], v["a"], v["b"], v["d"]], x1eq, 'numpy')
-
-    return x1eq_lambda, x1eq, v
+    return fsolve, v
 
 
 def symbol_calc_eq_x2(n, x2_neg=False):

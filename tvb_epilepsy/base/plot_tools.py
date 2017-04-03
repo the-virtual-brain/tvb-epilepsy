@@ -249,8 +249,8 @@ def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", z
     # Lines:
 
     # x1 nullcline:
+    x1 = numpy.expand_dims(numpy.linspace(-2.0, 2.0 / 3.0, 100), 1).T
     if model == "2d":
-        x1 = numpy.expand_dims(numpy.linspace(-2.0, 2.0 / 3.0, 100), 1).T
         zX1 = calc_fx1(x1, z=0, y1=yc, Iext1=Iext1, x1_neg=None) #yc + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
         # approximations:
         # linear:
@@ -274,9 +274,7 @@ def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", z
         zZne = calc_fz(x1, z=0.0, x0=x0ne, x0cr=x0cr, r=r, zmode=zmode)  # for non-epileptogenic regions
 
     else:
-        x1 = numpy.expand_dims(numpy.linspace(-2.0*10, 2.0*10 / 3.0, 100), 1).T
         zX1 = calc_fx1(x1, z=0.0, y1=calc_eq_y1(x1eq, yc, d=5.0), Iext1=Iext1, model="2d", x1_neg=None) #y1eq + Iext1 - x1 ** 3 + 3.0 * x1 ** 2
-
         # z nullcline:
         zZe = calc_fz(x1, z=0.0, x0=x0e, zmode=zmode, model="2d")   # for epileptogenic regions
         zZne = calc_fz(x1, z=0.0, x0=x0ne, zmode=zmode, model="2d")  # for non-epileptogenic regions

@@ -371,11 +371,11 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
 
     def calc_fx1z(x1, x0, K, w, yc, Iext1, x0cr=0.0, r=1.0, a=1.0, b=-2.0, d=5.0, tau1=1.0, tau0=1.0, model="6d",
-                  zmode=array("lin")): #slope=0.0, x2=0.0, z_pos=True, x1_neg=True,
+                  zmode=array("lin"), shape=None): #slope=0.0, x2=0.0, z_pos=True, x1_neg=True,
 
         # TODO: for the extreme x1_neg = False case where we have to solve for x2 as well
 
-        x1, x0, K, yc, Iext1, a, b, tau1, tau0 = assert_arrays([x1, x0, K, yc, Iext1, a, b, tau1, tau0])
+        x1, x0, K, yc, Iext1, a, b, tau1, tau0 = assert_arrays([x1, x0, K, yc, Iext1, a, b, tau1, tau0], shape)
 
         w = assert_arrays([w], (x1.size, x1.size))
 
@@ -424,17 +424,21 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
 
     def calc_x0cr_r(yc, Iext1, a=1.0, b=-2.0, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
-                    x0cr_def=X0_CR_DEF, shape=None):  #epileptor_model="2d",
+                    x0cr_def=X0_CR_DEF, test=False, shape=None):  #epileptor_model="2d",
 
-        yc, Iext1, a, b = assert_arrays([yc, Iext1, a, b], shape)
+        yc, Iext1, a, b, x1_rest, x1_cr, x0def, x0cr_def \
+            = assert_arrays([yc, Iext1, a, b, x1_rest, x1_cr, x0def, x0cr_def], shape)
 
-        x0cr, r = symbol_calc_x0cr_r(Iext1.size, zmode, x1_rest, x1_cr, x0def, x0cr_def, Iext1.shape)[0]
+        if test:
+            x0cr, r = symbol_calc_x0cr_r(Iext1.size, zmode, Iext1.shape)[0]
+        else:
+            x0cr, r = symbol_eqtn_x0cr_r(Iext1.size, zmode, Iext1.shape)[0]
 
         # Calculate x0cr from the lambda function
-        x0cr = array(x0cr(yc, Iext1, a, b))
+        x0cr = array(x0cr(yc, Iext1, a, b, x1_rest, x1_cr, x0def, x0cr_def))
 
         # r is already given as independent of yc and Iext1
-        r = array(r(yc, Iext1, a, b))
+        r = array(r(yc, Iext1, a, b, x1_rest, x1_cr, x0def, x0cr_def))
 
         return x0cr, r
 
@@ -797,12 +801,12 @@ else:
 
 
     def calc_fx1z(x1, x0, K, w, yc, Iext1, x0cr=0.0, r=1.0, a=1.0, b=-2.0, d=5.0, tau1=1.0, tau0=1.0,
-                  model="6d", zmode=array("lin")):  #, slope=0.0, x2=0.0, x1_neg=None, z_pos=True
+                  model="6d", zmode=array("lin"), shape=None):  #, slope=0.0, x2=0.0, x1_neg=None, z_pos=True
 
         # TODO: for the extreme z_pos = False case where we have terms like 0.1 * z ** 7
         # TODO: for the extreme x1_neg = False case where we have to solve for x2 as well
 
-        x1, x0, K, yc, Iext1, a, b, tau1, tau0 = assert_arrays([x1, x0, K, yc, Iext1, a, b, tau1, tau0])
+        x1, x0, K, yc, Iext1, a, b, tau1, tau0 = assert_arrays([x1, x0, K, yc, Iext1, a, b, tau1, tau0], shape)
 
         w = assert_arrays([w], (x1.size, x1.size))
 
@@ -897,60 +901,68 @@ else:
 
 
     def calc_x0cr_r(yc, Iext1, a=1.0, b=-2.0, zmode=array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
-                    x0cr_def=X0_CR_DEF, shape=None):  # epileptor_model="2d",
+                    x0cr_def=X0_CR_DEF, test=False, shape=None):  # epileptor_model="2d",
 
-        Iext1, yc = assert_arrays([Iext1, yc], shape)
+        Iext1, yc, a, b = assert_arrays([Iext1, yc, a, b], shape)
         shape = Iext1.shape
 
-        if numpy.all(Iext1 == Iext1[0]) and numpy.all(yc == yc[0]):
-            Iext1 = Iext1[0]
-            yc = yc[0]
+        if test:
+            if numpy.all(Iext1 == Iext1[0]) and numpy.all(yc == yc[0]) \
+                    and numpy.all(a == a[0]) and numpy.all(b == b[0]):
+                Iext1 = Iext1[0]
+                yc = yc[0]
+                a = a[0]
+                b = b[0]
 
-        p2 = Iext1.shape
-        x1_rest, x1_cr = assert_arrays([x1_rest, x1_cr], p2)
+            p2 = Iext1.shape
+            x1_rest, x1_cr = assert_arrays([x1_rest, x1_cr], p2)
 
-        # Define the z equilibrium expression...
-        # if epileptor_model == "2d":
-        zeq_rest = calc_fx1(x1_rest, z=0.0, y1=yc, Iext1=Iext1, a=a, b=b, tau1=1.0, x2=0.0, model="2d",
-                            x1_neg=True)
-        zeq_cr = calc_fx1(x1_cr, z=0.0, y1=yc, Iext1=Iext1, a=a, b=b, tau1=1.0, x2=0.0, model="2d", x1_neg=True)
-        if zmode == array("lin"):
-            xinit = array([2.460, 0.398])
-        else:
-            xinit = array([3.174, 0.260])
-        # else:
-        #     zeq_rest = calc_fx1(x1_rest, z=0.0, y1=calc_fy1(x1_rest, yc), Iext1=Iext1, x1_neg=True)
-        #     zeq_cr = calc_fx1(x1_cr, z=0.0, y1=calc_fy1(x1_cr, yc), Iext1=Iext1, x1_neg=True)
-        #     if zmode == array("lin"):
-        #         xinit = array([5.9320, 1.648])
-        #     else:
-        #         xinit = array([17.063, 5.260])
-
-        # Define the fz expression...
-        x0cr = []
-        r = []
-        for ii in range(Iext1.size):
-            fz = lambda x: array([calc_fz(x1_rest[ii], z=zeq_rest[ii], x0=x0def, K=0.0, w=0.0, tau1=1.0, tau0=1.0,
-                                          x0cr=x[0], r=x[1], zmode=zmode, z_pos=True, model="2d", shape=None),
-                                  calc_fz(x1_cr[ii], z=zeq_cr[ii], x0=x0cr_def, K=0.0, w=0.0, tau1=1.0, tau0=1.0,
-                                          x0cr=x[0], r=x[1], zmode=zmode, z_pos=True, model="2d", shape=None)])
-
-            sol = root(fz, xinit, method='lm', tol=10 ** (-6), callback=None, options=None)
-
-            if sol.success:
-                if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
-                    raise ValueError("nan or inf values in solution x\n" + sol.message)
-                x0cr.append(sol.x[0])
-                r.append(sol.x[1])
+            # Define the z equilibrium expression...
+            # if epileptor_model == "2d":
+            zeq_rest = calc_fx1(x1_rest, z=0.0, y1=yc, Iext1=Iext1, a=a, b=b, tau1=1.0, x2=0.0, model="2d",
+                                x1_neg=True)
+            zeq_cr = calc_fx1(x1_cr, z=0.0, y1=yc, Iext1=Iext1, a=a, b=b, tau1=1.0, x2=0.0, model="2d", x1_neg=True)
+            if zmode == array("lin"):
+                xinit = array([2.460, 0.398])
             else:
-                raise ValueError(sol.message)
+                xinit = array([3.174, 0.260])
+            # else:
+            #     zeq_rest = calc_fx1(x1_rest, z=0.0, y1=calc_fy1(x1_rest, yc), Iext1=Iext1, x1_neg=True)
+            #     zeq_cr = calc_fx1(x1_cr, z=0.0, y1=calc_fy1(x1_cr, yc), Iext1=Iext1, x1_neg=True)
+            #     if zmode == array("lin"):
+            #         xinit = array([5.9320, 1.648])
+            #     else:
+            #         xinit = array([17.063, 5.260])
 
-        if p2 != shape:
-            x0cr = numpy.tile(x0cr[0], shape)
-            r = numpy.tile(r[0], shape)
+            # Define the fz expression...
+            x0cr = []
+            r = []
+            for ii in range(Iext1.size):
+                fz = lambda x: array([calc_fz(x1_rest[ii], z=zeq_rest[ii], x0=x0def, K=0.0, w=0.0, tau1=1.0, tau0=1.0,
+                                              x0cr=x[0], r=x[1], zmode=zmode, z_pos=True, model="2d", shape=None),
+                                      calc_fz(x1_cr[ii], z=zeq_cr[ii], x0=x0cr_def, K=0.0, w=0.0, tau1=1.0, tau0=1.0,
+                                              x0cr=x[0], r=x[1], zmode=zmode, z_pos=True, model="2d", shape=None)])
+
+                sol = root(fz, xinit, method='lm', tol=10 ** (-12), callback=None, options=None)
+
+                if sol.success:
+                    if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
+                        raise ValueError("nan or inf values in solution x\n" + sol.message)
+                    x0cr.append(sol.x[0])
+                    r.append(sol.x[1])
+                else:
+                    raise ValueError(sol.message)
+
+            if p2 != shape:
+                x0cr = numpy.tile(x0cr[0], shape)
+                r = numpy.tile(r[0], shape)
+            else:
+                x0cr = reshape(x0cr, shape)
+                r = reshape(r, shape)
+
         else:
-            x0cr = reshape(x0cr, shape)
-            r = reshape(r, shape)
+
+            x0cr, r = eqtn_x0cr_r(yc, Iext1, a, b, x1_rest, x1_cr, x0def, x0cr_def, zmode=zmode)
 
         return x0cr, r
 
@@ -1015,10 +1027,10 @@ def calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
     return f
 
 
-def rescale_x0(x0_2d, yc, Iext1, zmode=array("lin"), shape=None):
+def rescale_x0(x0_2d, yc, Iext1, a=1.0, b=-2.0, zmode=array("lin"), shape=None):
 
-    x0_2d, yc, Iext1 = assert_arrays([x0_2d, yc, Iext1], shape)
+    x0_2d, yc, Iext1, a, b = assert_arrays([x0_2d, yc, Iext1, a, b ], shape)
 
-    (x0cr, r) = calc_x0cr_r(yc, Iext1, zmode=zmode) #epileptor_model="6d",
+    x0cr, r = calc_x0cr_r(yc, Iext1, a, b, zmode=zmode) #epileptor_model="6d",
 
     return multiply(r, x0_2d) - x0cr

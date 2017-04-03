@@ -145,7 +145,7 @@ def calc_tvb_equilibrium_point(epileptor_model, hypothesis):
     dfun_max = numpy.max(dfun, axis=1)
 
     dfun_max_cr = 10 ** -6 * numpy.ones(dfun_max.shape)
-    dfun_max_cr[2] = 10 ** -3
+    #dfun_max_cr[2] = 10 ** -3
     dfun2 = calc_dfun(eq[0].flatten(), eq[2].flatten(),
                       epileptor_model.c.flatten(), epileptor_model.Iext.flatten(), epileptor_model.x0.flatten(),
                       epileptor_model.Ks.flatten(), hypothesis.weights, model="6d", zmode="lin",
