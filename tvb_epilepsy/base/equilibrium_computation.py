@@ -11,8 +11,9 @@ from tvb_epilepsy.base.calculations import calc_x0, calc_fx1, calc_fx1z, calc_fy
 if SYMBOLIC_CALCULATIONS_FLAG :
 
     try:
-        from sympy import solve, solve_poly_system, lambdify
-        from tvb_epilepsy.base.symbolic import symbol_vars, symbol_calc_eq_x1, symbol_calc_eq_x2, symbol_eqtn_fx1z_diff
+        from sympy import solve, solve_poly_system, solveset, S, lambdify
+        from mpmath import re, im
+        from tvb_epilepsy.base.symbolic import symbol_vars, symbol_eqtn_fx1z, symbol_eqtn_fx2y2, symbol_eqtn_fx1z_diff
 
     except:
         warnings.warn("Unable to load sympy. Turning to scipy.optimization.")
@@ -34,31 +35,42 @@ def def_x1lin(X1_DEF, X1_EQ_CR_DEF, n_regions):
 
 def calc_eq_x1(yc, Iext1, x0, K, w, a=1.0, b=3.0, d=5.0, x0cr=0.0, r=1.0, zmode=numpy.array("lin"), model="6d"):
 
-    shape = Iext1.shape
+    x0, K, yc, Iext1, a, b = assert_arrays([x0, K, yc, Iext1, a, b])
 
-    x0, K, yc, Iext1, a, b = assert_arrays([x0, K, yc, Iext1, a, b], (Iext1.size,))
+    n = x0.size
+    shape = x0.shape
 
-    if model != "2d":
-        d = assert_arrays([d], (Iext1.size,))
+    x0, K, yc, Iext1, a, b = assert_arrays([x0, K, yc, Iext1, a, b], (n,))
+    w = assert_arrays([w], (n, n))
+
+    if model == "2d":
+        x0cr, r = assert_arrays([x0cr, r], (n,))
     else:
-        x0cr, r = assert_arrays([x0cr, r], (Iext1.size,))
+        d = assert_arrays([d], (n,))
 
-    #if SYMBOLIC_CALCULATIONS_FLAG:
-
-        # TODO: solve the system symbolically
-
-        # if model != "2d":
-        #     temp = symbol_calc_eq_x1(Iext1.size, model, zmode)[0](x0, K, w, yc, Iext1, a, b, d)
-        # else:
-        #     temp = symbol_calc_eq_x1(Iext1.size, model, zmode)[0](x0, K, w, x0cr, r, yc, Iext1, a, b)
-        #
-        # x1eq = []
-        # for ii in range(Iext1.size):
-        #     temp2 = numpy.array(temp[ii])
-        #     temp2 = numpy.real(temp2[ii][numpy.abs(numpy.imag(temp2[ii])) < 10 ** -6])
-        #     x1eq.append(numpy.min(temp2))
-
-    #else:
+    # if SYMBOLIC_CALCULATIONS_FLAG:
+    #
+    #     fx1z, v = symbol_eqtn_fx1z(n, model, zmode)[1:]  # , x1_neg=True, z_pos=True
+    #     fx1z = fx1z.tolist()
+    #
+    #
+    #     for iv in range(n):
+    #         if model == "2d":
+    #             fx1z[iv] = fx1z[iv].subs([(v["x0"][iv], x0[iv]), (v["K"][iv], K[iv]), (v["y1"][iv], yc[iv]),
+    #                                       (v["Iext1"][iv], Iext1[iv]), (v["a"][iv], a[iv]), (v["b"][iv], b[iv]),
+    #                                       (v["x0cr"][iv],x0cr[iv]), (v["r"][iv], r[iv]), (v["tau1"][iv], 1.0),
+    #                                       (v["tau0"][iv], 1.0)])
+    #         else:
+    #             fx1z[iv] = fx1z[iv].subs([(v["x0"][iv], x0[iv]), (v["K"][iv], K[iv]), (v["y1"][iv], yc[iv]),
+    #                                       (v["Iext1"][iv], Iext1[iv]), (v["a"][iv], a[iv]), (v["b"][iv], b[iv]),
+    #                                       (v["d"][iv], d[iv]), (v["tau1"][iv], 1.0), (v["tau0"][iv], 1.0)])
+    #         for jv in range(n):
+    #             fx1z[iv] = fx1z[iv].subs(v["w"][iv, jv], w[iv, jv])
+    #
+    #     # TODO: solve symbolically if possible...
+    #     # xeq = list(solve(fx1z, v["x1"].tolist()))
+    #
+    # else:
 
     fx1z = lambda x1: calc_fx1z(x1, x0, K, w, yc, Iext1, x0cr=x0cr, r=r, a=a, b=b, d=d, tau1=1.0, tau0=1.0,
                                     model=model, zmode=zmode, shape=(Iext1.size, ))
@@ -66,12 +78,12 @@ def calc_eq_x1(yc, Iext1, x0, K, w, a=1.0, b=3.0, d=5.0, x0cr=0.0, r=1.0, zmode=
     jac = lambda x1: calc_fx1z_diff(x1, K, w, a, b, d, tau1=1.0, tau0=1.0, model=model, zmode=zmode)
 
     sol = root(fx1z, -1.5*numpy.ones((Iext1.size, )), jac=jac, method='lm', tol=10 ** (-12), callback=None, options=None)
-        #args=(y2eq[ii], zeq[ii], g_eq[ii], Iext2[ii], s, tau1, tau2, x2_neg)  method='hybr'
+    #args=(y2eq[ii], zeq[ii], g_eq[ii], Iext2[ii], s, tau1, tau2, x2_neg)  method='hybr'
 
     if sol.success:
 
         if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
-             raise ValueError("nan or inf values in solution x\n" + sol.message)
+            raise ValueError("nan or inf values in solution x\n" + sol.message)
 
         x1eq = sol.x
 
@@ -128,13 +140,17 @@ def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, y1eq=None, s=6.0
 
         # TODO: to make it work for x2_neg = True
 
-        temp = symbol_calc_eq_x2(zeq.size, x2_neg)[0](zeq, geq, Iext2, s)
+        zeq, geq, Iext2, s = assert_arrays([zeq, geq, Iext2, s], (n, ))
+
+        fx2y2, v = symbol_eqtn_fx2y2(n, x2_neg)[1:]
+        fx2y2 = fx2y2.tolist()
 
         x2eq = []
-        for ii in range(zeq.size):
-            temp2 = numpy.array(temp[ii])
-            temp2 = numpy.real(temp2[numpy.abs(numpy.imag(temp2)) < 10 ** -6])
-            x2eq.append(numpy.min(temp2))
+        for iv in range(n):
+            fx2y2[iv] = fx2y2[iv].subs([(v["z"][iv], zeq[iv]), (v["g"][iv], geq[iv]), (v["Iext2"][iv], Iext2[iv]),
+                                      (v["s"][iv], s[iv]), (v["tau1"][iv], 1.0)])
+            fx2y2[iv] = list(solveset(fx2y2[iv], v["x2"][iv], S.Reals))
+            x2eq.append(numpy.min(numpy.array(fx2y2[iv], dtype=zeq.dtype)))
 
     else:
 

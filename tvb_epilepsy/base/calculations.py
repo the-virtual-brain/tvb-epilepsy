@@ -112,9 +112,17 @@ if SYMBOLIC_CALCULATIONS_FLAG:
         return array(symbol_eqtn_fx2(x2.size, Iext2="Iext2", shape=x2.shape)[0](x2, y2, z, g, Iext2, tau1))
 
 
-    def calc_fy2(x2, y2=0.0, s=6.0, tau1=1.0, tau2=1.0, x2_neg=False, shape=None):
+    def calc_fy2(x2, y2=0.0, s=6.0, tau1=1.0, tau2=1.0, x2_neg=None, shape=None):
 
         x2, y2, s, tau1, tau2 = assert_arrays([x2, y2, s, tau1, tau2], shape)
+
+        if numpy.any(x2_neg is None):
+            try:
+                x2_neg = x2 < -0.25
+            except:
+                x2_neg = False
+                warnings.warn("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
+                              "\nSetting default x2_neg = False")
 
         return array(symbol_eqtn_fy2(x2.size, x2_neg=x2_neg, shape=x2.shape)[0](x2, y2, s, tau1, tau2))
 
@@ -184,11 +192,20 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
 
     def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
-                  zmode="lin", pmode="const", x1_neg=True, z_pos=True, x2_neg=False,
+                  zmode="lin", pmode="const", x1_neg=True, z_pos=True, x2_neg=None,
                   y1=None, x2=None, y2=None, g=None,
                   x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
                   slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.01,
                   tau1=1.0, tau0=2857.0, tau2=10.0, shape=None, output_mode="array"):
+
+        if model_vars > 2:
+            if numpy.any(x2_neg is None):
+                try:
+                    x2_neg = x2 < -0.25
+                except:
+                    x2_neg = False
+                    warnings.warn("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
+                                  "\nSetting default x2_neg = False")
 
         if output_mode == "array":
 
@@ -260,11 +277,20 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
 
     def calc_jac(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
-                 zmode="lin", pmode="const", x1_neg=True, z_pos=True, x2_neg=False,
+                 zmode="lin", pmode="const", x1_neg=True, z_pos=True, x2_neg=None,
                  y1=None, x2=None, y2=None, g=None,
                  x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
                  slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.01,
                  tau1=1.0, tau0=2857.0, tau2=10.0):
+
+        if model_vars > 2:
+            if numpy.any(x2_neg is None):
+                try:
+                    x2_neg = x2 < -0.25
+                except:
+                    x2_neg = False
+                    warnings.warn("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
+                                  "\nSetting default x2_neg = False")
 
         n_regions = max(shape_to_size(x1.shape), shape_to_size(z.shape))
 
