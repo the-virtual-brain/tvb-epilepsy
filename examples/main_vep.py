@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     if DATA_MODE == 'ep':
         logger.info("Reading from custom")
-        data_folder = os.path.join(DATA_CUSTOM, 'Head_TREC') #Head_TREC 'Head_JUNCH'
+        data_folder = os.path.join(DATA_CUSTOM, 'Head')
         from tvb_epilepsy.custom.readers_custom import CustomReader
         reader = CustomReader()
     else:

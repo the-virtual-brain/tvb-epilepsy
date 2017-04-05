@@ -239,24 +239,24 @@ def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", z
     Iext1 = numpy.mean(hypothesis.Iext1)
     x0cr = numpy.mean(hypothesis.x0cr)  # Critical x0
     r = numpy.mean(hypothesis.rx0)
+    # The point of the linear approximation (1st order Taylor expansion)
+    x1lin0 = numpy.mean(hypothesis.x1LIN)
+    # The point of the square (parabolic) approximation (2nd order Taylor expansion)
+    x1sq0 = numpy.mean(hypothesis.x1SQ)
     if model != "2d" or zmode != numpy.array("lin"):
         x0cr, r = calc_x0cr_r(yc, Iext1, zmode=zmode, x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
                               x0cr_def=X0_CR_DEF)
 
-    if model=="2d":
-        y1 = yc
-        b = -2.0
-    else:
-        y1 = calc_eq_y1(x1eq, yc, d=5.0)
-        b = 3.0
-
-    x1lin0 = numpy.mean(hypothesis.x1LIN)  # The point of the linear approximation (1st order Taylor expansion)
-    x1sq0 = numpy.mean(hypothesis.x1SQ)  # The point of the square (parabolic) approximation (2nd order Taylor expansion)
-    
     # Lines:
 
     # x1 nullcline:
     x1 = numpy.expand_dims(numpy.linspace(-2.0, 2.0 / 3.0, 100), 1).T
+    if model == "2d":
+        y1 = yc
+        b = -2.0
+    else:
+        y1 = calc_eq_y1(x1, yc, d=5.0)
+        b = 3.0
     zX1 = calc_fx1(x1, z=0, y1=y1, Iext1=Iext1, x1_neg=None, model=model, b=b)  # yc + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
     # approximations:
     # linear:
@@ -381,17 +381,17 @@ def plot_hypothesis(hypothesis, region_labels, figure_name='', show_flag=SHOW_FL
                        zmode=numpy.array("lin"), figure_name='Nullclines and equilibria', show_flag=show_flag,
                        save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
 
-    plot_nullclines_eq(hypothesis, region_labels, special_idx=hypothesis.seizure_indices, model="2d",
-                       zmode=numpy.array("sig"), figure_name='Nullclines and equilibria', show_flag=show_flag,
-                       save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
-
-    plot_nullclines_eq(hypothesis, region_labels, special_idx=hypothesis.seizure_indices, model="6d",
-                       zmode=numpy.array("lin"), figure_name='Nullclines and equilibria', show_flag=show_flag,
-                       save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
-
-    plot_nullclines_eq(hypothesis, region_labels, special_idx=hypothesis.seizure_indices, model="6d",
-                      zmode=numpy.array("sig"), figure_name='Nullclines and equilibria', show_flag=show_flag,
-                      save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
+    # plot_nullclines_eq(hypothesis, region_labels, special_idx=hypothesis.seizure_indices, model="2d",
+    #                    zmode=numpy.array("sig"), figure_name='Nullclines and equilibria', show_flag=show_flag,
+    #                    save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
+    #
+    # plot_nullclines_eq(hypothesis, region_labels, special_idx=hypothesis.seizure_indices, model="6d",
+    #                    zmode=numpy.array("lin"), figure_name='Nullclines and equilibria', show_flag=show_flag,
+    #                    save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
+    #
+    # plot_nullclines_eq(hypothesis, region_labels, special_idx=hypothesis.seizure_indices, model="6d",
+    #                   zmode=numpy.array("sig"), figure_name='Nullclines and equilibria', show_flag=show_flag,
+    #                   save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
 
 
                        
@@ -416,7 +416,8 @@ def _set_axis_labels(fig, sub, n_regions, region_labels, indices2emphasize, colo
 
 
 def plot_timeseries(time, data_dict, special_idx=None, title='Time Series', show_flag=SHOW_FLAG,
-                    save_flag=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name='TimeSeries',labels=None,figsize=LARGE_SIZE):
+                    save_flag=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name='TimeSeries',
+                    labels=None,figsize=LARGE_SIZE):
                        
     mp.pyplot.figure(title, figsize=figsize)
     no_rows = len(data_dict)
@@ -433,7 +434,7 @@ def plot_timeseries(time, data_dict, special_idx=None, title='Time Series', show
         lines.append([])
         if special_idx is None:
             for iTS in range(nTS):
-                line, = mp.pyplot.plot(time, data[:,iTS], 'k', alpha=0.3, label = labels[iTS])
+                line, = mp.pyplot.plot(time, data[:, iTS], 'k', alpha=0.3, label = labels[iTS])
                 lines[i].append(line)
         else:
             mask = numpy.array(range(nTS))
@@ -516,7 +517,8 @@ def plot_raster(time, data_dict, special_idx=None, title='Time Series', offset=3
 
 
 def plot_trajectories(data_dict, special_idx=None, title='State space trajectories', show_flag=SHOW_FLAG,
-                    save_flag=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name='Trajectories',labels=None,figsize=LARGE_SIZE):
+                      save_flag=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name='Trajectories',
+                      labels=None,figsize=LARGE_SIZE):
                        
     mp.pyplot.figure(title, figsize=figsize)
     ax = mp.pyplot.subplot(111)
@@ -542,24 +544,27 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
     if special_idx is None:
         for iTS in range(nTS):
             if no_dims>2:
-                line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], data[2][:,iTS],  'k', alpha=0.3, label = labels[iTS])
+                line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], data[2][:,iTS],  'k', alpha=0.3,
+                                       label=labels[iTS])
             else:
-                line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], 'k', alpha=0.3, label = labels[iTS])
+                line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], 'k', alpha=0.3, label=labels[iTS])
             lines.append(line)
     else:
         mask = numpy.array(range(nTS))
         mask = numpy.delete(mask,special_idx)
         for iTS in special_idx:
             if no_dims>2:
-                line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], data[2][:,iTS], 'r', alpha=0.7, label = labels[iTS])
+                line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], data[2][:,iTS], 'r', alpha=0.7,
+                                       label=labels[iTS])
             else:
                 line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], 'r', alpha=0.7, label = labels[iTS])
             lines.append(line)
         for iTS in mask:
             if no_dims>2:
-                line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], data[2][:,iTS], 'k', alpha=0.3, label = labels[iTS])
+                line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], data[2][:,iTS], 'k', alpha=0.3,
+                                       label=labels[iTS])
             else:
-                line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], 'k', alpha=0.3, label = labels[iTS])
+                line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], 'k', alpha=0.3, label=labels[iTS])
             lines.append(line)
     mp.pyplot.xlabel(ax_labels[0])        
     mp.pyplot.ylabel(ax_labels[1])
@@ -581,7 +586,7 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
     _check_show(show_flag)
 
 
-def plot_sim_results(model, hyp, head, res, sensorsSEEG):
+def plot_sim_results(model, hyp, head, res, sensorsSEEG, hpf_flag=False):
 
     if isinstance(model, EpileptorDP2D):
         plot_timeseries(res['time'], {'x1': res['x1'], 'z(t)': res['z']},
@@ -602,8 +607,8 @@ def plot_sim_results(model, hyp, head, res, sensorsSEEG):
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
         start_plot = int(numpy.round(0.01 * res['hpf'].shape[0]))
-        plot_raster(res['time'][start_plot:], {'hpf': res['hpf'][start_plot:, :]}, hyp.seizure_indices,
-                    title=" Simulated hfp rasterplot for " + hyp.name, offset=10.0,
+        plot_raster(res['time'][start_plot:], {'lfp': res['lfp'][start_plot:, :]}, hyp.seizure_indices,
+                    title=" Simulated LFP rasterplot for " + hyp.name, offset=10.0,
                     save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
                     labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
 
@@ -624,3 +629,8 @@ def plot_sim_results(model, hyp, head, res, sensorsSEEG):
                     title=" Simulated SEEG" + str(i) + " raster plot for " + hyp.name,
                     offset=10.0, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
                     labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
+        if hpf_flag:
+            plot_raster(res['time'][start_plot:], {'SEEG hpf': res['seeg_hpf' + str(i)][start_plot:, :]},
+                        title=" Simulated high pass filtered SEEG" + str(i) + " raster plot for " + hyp.name,
+                        offset=10.0, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
+                        labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)

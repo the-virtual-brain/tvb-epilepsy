@@ -7,7 +7,7 @@ It should contain everything for later configuring an Epileptor Model from this 
 import numpy
 from collections import OrderedDict
 from tvb_epilepsy.base.constants import E_DEF, K_DEF, I_EXT1_DEF, YC_DEF, X1_DEF, X1_EQ_CR_DEF
-from tvb_epilepsy.base.calculations import calc_x0cr_r, calc_coupling, calc_x0
+from tvb_epilepsy.base.calculations import calc_x0cr_r, calc_coupling, calc_x0, calc_fz_jac_square_taylor
 from tvb_epilepsy.base.equilibrium_computation import calc_eq_z_2d, eq_x1_hypo_x0_linTaylor, eq_x1_hypo_x0_optimize, \
                                                       def_x1lin
 from tvb_epilepsy.base.utils import reg_dict, formal_repr, vector2scalar
@@ -130,12 +130,14 @@ class Hypothesis(object):
         i = numpy.ones((1, self.n_regions), dtype=numpy.float32)
         # Jacobian: diagonal elements at first row
         #Diagonal elements: -1 + dfz_i * (4 + K_i * sum_j_not_i{wij})
-        fz_jac = numpy.diag(-1 + dfz * (4.0 + self.K * numpy.expand_dims(numpy.sum(self.weights, axis=1), 1).T).T[:, 0]) \
-        - numpy.dot(self.K.T, i) * numpy.dot(i.T, dfz) * (1 - numpy.eye(self.n_regions))
+        # fz_jac = numpy.diag(-1 + dfz * (4.0 + self.K * numpy.expand_dims(numpy.sum(self.weights, axis=1), 1).T).T[:, 0]) \
+        # - numpy.dot(self.K.T, i) * numpy.dot(i.T, dfz) * (1 - numpy.eye(self.n_regions))
+        fz_jac = numpy.diag((-1.0 + dfz * (4.0 + self.K * numpy.expand_dims(numpy.sum(self.weights, axis=1), 1).T)).T[:, 0]) \
+                  - numpy.dot(self.K.T, i) * numpy.dot(i.T, dfz) * (1 - numpy.eye(self.n_regions))
         if numpy.any([numpy.any(numpy.isnan(fz_jac.flatten())), numpy.any(numpy.isinf(fz_jac.flatten()))]):
             raise ValueError("nan or inf values in dfz")
-        else:
-            return fz_jac
+
+        fz_jac2 = calc_fz_jac_square_taylor(self.zEQ, self.yc, self.Iext1, self.K, self.weights)
         return fz_jac
 
     def _calculate_e(self):

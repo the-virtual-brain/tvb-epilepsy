@@ -1,6 +1,6 @@
 import numpy
-from numpy import array, empty, empty_like, ones, zeros, multiply, dot, power, divide, sum, exp, reshape, concatenate, \
-                  diag, where, repeat
+from numpy import array, empty, empty_like, ones, eye, zeros, multiply, dot, power, sqrt, divide, sum, exp, reshape, \
+                  concatenate, diag, where, repeat
 from tvb_epilepsy.base.utils import assert_arrays
 
 
@@ -425,3 +425,35 @@ def eqtn_jac_2d(x1, z, K, w, slope, a, b, tau1, tau0, zmode=array("lin"), x1_neg
     jac_fz = eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode, z_pos, K, w)
 
     return jac_fx1, jac_fz
+
+
+def eqtn_fz_square_taylor(zeq, yc, Iext1, K, w, tau1, tau0):
+
+    n_regions = zeq.size
+
+    tau = divide(tau1, tau0)
+    tau = repeat(tau.T, n_regions, 1)
+
+    # The z derivative of the function
+    # x1 = F(z) = -4/3 -1/2*sqrt(2(z-yc-Iext1)+64/27)
+    dfz = -divide(0.5, power(2.0 * (zeq - yc - Iext1) + 64.0 / 27.0, 0.5))
+
+    try:
+        if numpy.any([numpy.any(numpy.isnan(dfz)), numpy.any(numpy.isinf(dfz))]):
+            raise ValueError("nan or inf values in dfz")
+    except:
+        pass
+
+    i = ones((1, n_regions), dtype=numpy.float32)
+    # Jacobian: diagonal elements at first row
+    # Diagonal elements: -1 + dfz_i * (4 + K_i * sum_j_not_i{wij})
+    fz_jac = diag((-1.0 + multiply(dfz, (4.0 + K * numpy.expand_dims(sum(w, axis=1), 1).T))).T[:, 0]) \
+             - multiply(multiply(dot(K.T, i), dot(i.T, dfz)), (1 - eye(n_regions)))
+
+    try:
+        if numpy.any([numpy.any(numpy.isnan(fz_jac.flatten())), numpy.any(numpy.isinf(fz_jac.flatten()))]):
+            raise ValueError("nan or inf values in dfz")
+    except:
+        pass
+
+    return numpy.multiply(fz_jac, tau)

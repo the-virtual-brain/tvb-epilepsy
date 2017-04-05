@@ -24,17 +24,17 @@ if not (os.path.isdir(FOLDER_VEP)):
 FOLDER_DATA = os.path.join(FOLDER_VEP, 'data')
 
 # Folder where logs will be written
-FOLDER_LOGS = os.path.join(FOLDER_VEP, 'logs'+datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M')  )
+FOLDER_LOGS = os.path.join(FOLDER_VEP, 'logs'+datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M'))
 
 # Folder where results will be saved
-FOLDER_RES = os.path.join(FOLDER_VEP, 'results'+datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M') ) 
+FOLDER_RES = os.path.join(FOLDER_VEP, 'results'+datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M'))
 if not (os.path.isdir(FOLDER_RES)):
         os.mkdir(FOLDER_RES)
 # Figures related settings:
 VERY_LARGE_SIZE = (30, 15)
 LARGE_SIZE = (20, 15)
 SMALL_SIZE = (15, 10)
-FOLDER_FIGURES = os.path.join(FOLDER_VEP, 'figures'+datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M') ) 
+FOLDER_FIGURES = os.path.join(FOLDER_VEP, 'figures'+datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M'))
 if not (os.path.isdir(FOLDER_FIGURES)):
         os.mkdir(FOLDER_FIGURES)
 FIG_FORMAT = 'png'

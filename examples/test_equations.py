@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
 
 
-    model = "EpileptorDP2D"
+    model = "EpileptorDP"
     print model
 
     b = -2.0
@@ -141,6 +141,7 @@ if __name__ == "__main__":
     tau1 = a
     tau0 = a
     tau2 = a
+    x1sq = -4.0/3 * a
     if model == "2d":
         y1 = yc
     else:
@@ -227,7 +228,7 @@ if __name__ == "__main__":
         print sfx1z_diff[1].shape, sfx1z_diff[0](x1, K, w, a, b6, d, tau1, tau0)
 
     if model != "2d":
-        print "\nTest the symbolic fx2 with substitution of y2 via fy2"
+        print "\nTest symbolic fx2 with substitution of y2 via fy2"
         sfx2y2 = symbol_eqtn_fx2y2(n, x2_neg=False, shape=(1, n))[:2]
         for ii in range(n):
             print sfx2y2[1][0, ii]
@@ -280,3 +281,21 @@ if __name__ == "__main__":
     print "Solution with linear Taylor approximation:"
     print "x1EQ: ", x1EQlinTaylor
     print "x0sol: ", x0sollinTaylor
+
+    print "\nTest calc_fz_jac_square_taylor"
+    fz_jac_square_taylor = calc_fz_jac_square_taylor(sz, syc, sIext1, sK, sw, tau1=1.0, tau0=1.0)
+    print "fz_jac_square_taylor:"
+    print fz_jac_square_taylor
+    print calc_fz_jac_square_taylor(z, yc, Iext1, K, w, tau1=1.0, tau0=1.0)
+
+    lfz_jac_square_taylor, sfz_jac_square_taylor, v = symbol_calc_fz_jac_square_taylor(n)
+    sfz_jac_square_taylor = Matrix(sfz_jac_square_taylor).reshape(n, n)
+    print "fz_jac_square_taylor:"
+    for iv in range(n):
+        for jv in range(n):
+            sfz_jac_square_taylor[iv, jv] = sfz_jac_square_taylor[iv, jv].subs([(v["x_taylor"][iv], x1sq[0, iv]),
+                                                                                (v["a"][iv], 1.0), (v["b"][iv], -2),
+                                                                                (v["tau1"][iv], 1.0),
+                                                                                (v["tau0"][iv], 1.0)])
+        print sfz_jac_square_taylor[iv, :]
+    print lfz_jac_square_taylor(zeq, yc, Iext1, K, w, a, b2, tau1, tau0, x1sq)

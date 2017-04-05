@@ -468,6 +468,17 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
         return x0cr, r
 
+
+    def calc_fz_jac_square_taylor(zeq, yc, Iext1, K, w, a=1.0, b=-2.0, tau1=1.0, tau0=1.0, x_taylor=X1_EQ_CR_DEF):
+
+        zeq, yc, Iext1, K, a, b, tau1, tau0, x_taylor =\
+            assert_arrays([zeq, yc, Iext1, K, a, b, tau1, tau0, x_taylor], (1, zeq.size))
+
+        w = assert_arrays([w], (zeq.size, zeq.size))
+
+        return symbol_calc_fz_jac_square_taylor(zeq.size)[0](zeq, yc, Iext1, K, w, a, b, tau1, tau0, x_taylor)
+
+
 else:
 
     def calc_coupling(x1, K, w, ix=None, jx=None, shape=None):
@@ -991,6 +1002,16 @@ else:
             x0cr, r = eqtn_x0cr_r(yc, Iext1, a, b, x1_rest, x1_cr, x0def, x0cr_def, zmode=zmode)
 
         return x0cr, r
+
+
+    def calc_fz_jac_square_taylor(zeq, yc, Iext1, K, w, a=1.0, b=-2.0, tau1=1.0, tau0=1.0, x_taylor=X1_EQ_CR_DEF):
+
+        zeq, yc, Iext1, K, tau1, tau0, x_taylor =\
+            assert_arrays([zeq, yc, Iext1, K, tau1, tau0, x_taylor], (1, zeq.size))
+
+        w = assert_arrays([w], (zeq.size, zeq.size))
+
+        return eqtn_fz_square_taylor(zeq, yc, Iext1, K, w, tau1, tau0)
 
 
 def calc_fpop2(x2, y2=0.0, z=0.0, g=0.0, Iext2=0.45, s=6.0, tau1=1.0, tau2=1.0, x2_neg=None, shape=None):

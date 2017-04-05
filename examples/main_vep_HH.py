@@ -15,7 +15,7 @@ from tvb_epilepsy.tvb_api.epileptor_models import *
 from tvb_epilepsy.custom.readers_custom import CustomReader
 from tvb_epilepsy.custom.read_write import write_hypothesis, read_hypothesis, write_simulation_settings, \
                                            read_simulation_settings, write_ts, write_ts_epi, write_ts_seeg_epi
-from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_sim_results
+from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_sim_results, plot_nullclines_eq
 
 
 SHOW_FLAG = False
@@ -23,7 +23,7 @@ SAVE_FLAG = True
 SHOW_FLAG_SIM = False
 
 #Modify data folders for this example:
-DATA_TRECHH = '/Users/dionperd/Dropbox/Work/VBtech/DenisVEP/Results/TRECHH'
+DATA_HH = '/Users/dionperd/Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH'
 #CON_DATA = 'connectivity_2_hypo.zip'
 CONNECT_DATA = 'connectivity_hypo.zip'
 
@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     # if DATA_MODE == 'ep':
     #     logger.info("Reading from cutsom")
-    #     data_folder = os.path.join(DATA_CUSTOM, 'Head_TREC')  # Head_TREC 'Head_JUNCH'
+    #     data_folder = os.path.join(DATA_CUSTOM, 'Head')
     #     from tvb_epilepsy.custom.readers_custom import CustomReader
     #
     #     reader = CustomReader()
@@ -49,39 +49,39 @@ if __name__ == "__main__":
     #     data_folder = DATA_TVB
     #     reader = TVBReader()
 
-    data_folder = os.path.join(DATA_TRECHH, 'Head_TREC') #Head_TREC 'Head_JUNCH'
+    data_folder = os.path.join(DATA_HH, 'Head_HH') #
     reader = CustomReader()
     logger.info("We will be reading from location " + data_folder)
-    #Read standard TREC head
+    #Read standard  head
     logger.info("We will be reading from location " + data_folder)
     head = reader.read_head(data_folder)
     logger.debug("Loaded Head " + str(head))
 
     # ---------------------------------Hypothalamus pathology addition--------------------------------------------------
 
-    # #Read TREC connectivity with hypothalamus pathology
-    # data_folder = os.path.join(DATA_TRECHH, CONNECT_DATA)
+    # #Read  connectivity with hypothalamus pathology
+    # data_folder = os.path.join(DATA_HH, CONNECT_DATA)
     # reader = TVBReader()
-    # TRECHHcon = reader.read_connectivity(data_folder)
+    # HHcon = reader.read_connectivity(data_folder)
     # logger.debug("Loaded Connectivity " + str(head.connectivity))
     #
     # #Create missing hemispheres:
-    # nRegions = TRECHHcon.region_labels.shape[0]
-    # TRECHHcon.hemispheres = np.ones((nRegions,),dtype='int')
+    # nRegions = HHcon.region_labels.shape[0]
+    # HHcon.hemispheres = np.ones((nRegions,),dtype='int')
     # for ii in range(nRegions):
-    #     if (TRECHHcon.region_labels[ii].find('Right') == -1) and \
-    #        (TRECHHcon.region_labels[ii].find('-rh-') == -1):  # -1 will be returned when a is not in b
-    #        TRECHHcon.hemispheres[ii]=0
+    #     if (HHcon.region_labels[ii].find('Right') == -1) and \
+    #        (HHcon.region_labels[ii].find('-rh-') == -1):  # -1 will be returned when a is not in b
+    #        HHcon.hemispheres[ii]=0
     #
     # #Adjust pathological connectivity
     # w_hyp = np.ones((nRegions,nRegions),dtype = 'float')
     # if Khyp>1.0:
     #     w_hyp[(nRegions-2):,:] = Khyp
     #     w_hyp[:,(nRegions-2):] = Khyp
-    # TRECHHcon.normalized_weights = w_hyp*TRECHHcon.normalized_weights
+    # HHcon.normalized_weights = w_hyp*HHcon.normalized_weights
     #
     # #Update head with the correct connectivity and sensors' projections
-    # head.connectivity = TRECHHcon
+    # head.connectivity = HHcon
 
     # ------------------------------------------------------------------------------------------------------------------
 
@@ -152,10 +152,10 @@ if __name__ == "__main__":
     E = (0.5 * np.ones((1,hyp_ep.n_regions))).tolist()
     hyp_ep.configure_e_hypothesis(iE, E, seizure_indices)
     logger.debug(str(hyp_ep))
-    # plot_hypothesis(hyp_ep, head.connectivity.region_labels, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
-    #                figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
-    #
-    # write_hypothesis(hyp_ep, folder_name=FOLDER_RES, file_name="hyp_ep.h5", hypo_name=None)
+    plot_hypothesis(hyp_ep, head.connectivity.region_labels, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
+                   figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
+
+    write_hypothesis(hyp_ep, folder_name=FOLDER_RES, file_name="hyp_ep.h5", hypo_name=None)
 
     # # Test write, read and assert functions
     # hyp_ep2 = read_hypothesis(path=os.path.join(FOLDER_RES, "hyp_ep.h5"), output="object",
@@ -208,17 +208,18 @@ if __name__ == "__main__":
 
     # Set time scales (all times should be in msecs and Hz):
     (fs, dt, fsAVG, scale_time, sim_length, monitor_period,
-     n_report_blocks, hpf_fs, hpf_low, hpf_high) = set_time_scales(fs=2*4096.0, dt=None, time_length=1000.0,
+     n_report_blocks, hpf_fs, hpf_low, hpf_high) = set_time_scales(fs=2*4096.0, dt=None, time_length=3000.0,
                                                                    scale_time=2.0, scale_fsavg=2.0,
                                                                    hpf_low=None, hpf_high=None,
                                                                    report_every_n_monitor_steps=10.0)
 
     #Now simulate and plot for each hypothesis
+    hpf_flag = False #Flag to compute and plot high pass filtered SEEG
     for hyp in (hyp_ep, hyp_exc): # ,hyp_exc #length=30000
 
         # Choose the model and build it on top of the specific hypothesis, adjust parameters:
         model_name = 'EpileptorDP'
-        model = model_build_dict[model_name](hyp_ep, scale_time, zmode=numpy.array("lin"))
+        model = model_build_dict[model_name](hyp, scale_time, zmode=numpy.array("lin"))
         if model_name == 'EpileptorDP':
             # model.tau0 = 2857.0 # default = 2857.0
             model.tau1 *= scale_time  # default = 0.25
@@ -273,12 +274,6 @@ if __name__ == "__main__":
         for iv in range(len(vois)):
             res[vois[iv]] = numpy.array(tavg_data[:, iv, :, 0], dtype='float32')
 
-        if not(isinstance(sim.model, EpileptorDP2D)):
-            res['hpf'] = numpy.empty((ttavg.size, hyp.n_regions)).astype(numpy.float32)
-            for i in range(hyp.n_regions):
-                res['hpf'][:, i] = filter_data(res['lfp'][:, i], hpf_low, hpf_high, hpf_fs)
-                res['hpf'] = numpy.array(res['hpf'], dtype='float32')
-
         #write_ts(res, dt, path=os.path.join(FOLDER_RES, hyp.name + "_ts.h5"))
 
         if isinstance(sim.model, EpileptorDP2D):
@@ -290,7 +285,10 @@ if __name__ == "__main__":
             raw_data = numpy.dstack([res["x1"], res["z"], res["x2"]])
             lfp_data = res["lfp"]
             for i in range(len(projections)):
-                res['seeg' + str(i)] = numpy.dot(res['hpf'], projections[i].T)
+                res['seeg' + str(i)] = numpy.dot(res['lfp'], projections[i].T)
+                if hpf_flag:
+                    for i in range(res['seeg'].shape[0]):
+                        res['seeg_hpf'+ str(i)][:, i] = filter_data(res['seeg' + str(i)][:, i], hpf_low, hpf_high, hpf_fs)
 
         write_ts_epi(raw_data, dt, lfp_data, path=os.path.join(FOLDER_RES, hyp.name + "_ep_ts.h5"))
         del raw_data, lfp_data
@@ -304,7 +302,12 @@ if __name__ == "__main__":
         del ttavg, tavg_data
 
         #Plot results
-        plot_sim_results(model, hyp_ep, head, res, sensorsSEEG)
+        plot_nullclines_eq(hyp, head.connectivity.region_labels, special_idx=hyp.seizure_indices,
+                           model=str(model.nvar) + "d", zmode=model.zmode,
+                           figure_name="Hypothesis " + hyp.name + " in model " + model._ui_name +
+                                       "\nNullclines and equilibria", save_flag=SAVE_FLAG,
+                           show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES)
+        plot_sim_results(model, hyp, head, res, sensorsSEEG, hpf_flag)
 
         #Save results
         res['time_units'] = 'msec'

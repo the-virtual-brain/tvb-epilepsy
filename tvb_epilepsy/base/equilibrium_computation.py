@@ -123,7 +123,7 @@ def calc_eq_g(x1eq):
 
 
 def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, y1eq=None, s=6.0, Iext1=None, x2=0.0,
-               slope=0.0, a=1.0, b=3.0, x1_neg=True, x2_neg=False):
+               slope=0.0, a=1.0, b=3.0, x1_neg=True, x2_neg=True):
 
     if geq is None:
         geq = calc_eq_g(x1eq)
@@ -136,11 +136,9 @@ def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, y1eq=None, s=6.0
     shape = zeq.shape
     n = zeq.size
 
+    zeq, geq, Iext2, s = assert_arrays([zeq, geq, Iext2, s], (n,))
+
     if SYMBOLIC_CALCULATIONS_FLAG:
-
-        # TODO: to make it work for x2_neg = True
-
-        zeq, geq, Iext2, s = assert_arrays([zeq, geq, Iext2, s], (n, ))
 
         fx2y2, v = symbol_eqtn_fx2y2(n, x2_neg)[1:]
         fx2y2 = fx2y2.tolist()
@@ -166,14 +164,14 @@ def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, y1eq=None, s=6.0
         # According to http://mathworld.wolfram.com/CubicFormula.html
         # and given that there is no square term (x2eq^2; "depressed cubic"), we write the equation in the form:
         # x^3 + 3 * Q * x -2 * R = 0
-        Q = (-numpy.ones(shape)/3.0).flatten()
-        R = ((Iext2 + 2.0 * geq - 0.3 * zeq + 1.05) / 2).flatten()
+        Q = (-numpy.ones((n, ))/3.0)
+        R = ((Iext2 + 2.0 * geq - 0.3 * zeq + 1.05) / 2)
         if y2eq is None:
-            ss = numpy.where(x2_neg, 0.0, s.flatten())
+            ss = numpy.where(x2_neg, 0.0, s)
             Q += ss / 3
             R -= 0.25 * ss / 2
         else:
-            y2eq = (assert_arrays([y2eq], shape)).flatten()
+            y2eq = (assert_arrays([y2eq], (n, )))
             R += y2eq / 2
 
         # Then the determinant is :
@@ -240,9 +238,10 @@ def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, y1eq=None, s=6.0
 
     if numpy.array(x2_neg).size == 1:
         x2_neg = numpy.tile(x2_neg, (n, ))
+
     for iv in range(n):
+
         if x2_neg[iv] == False and x2eq[iv] < -0.25:
-            zeq, geq, Iext2, s = assert_arrays([zeq, geq, Iext2, s], shape=(n, ))
             warnings.warn("\nx2eq["+str(iv)+"] = " + str(x2eq[iv]) + " < -0.25, although x2_neg[" + str(iv)+"] = False!" +
                           "\n" + "Rerunning with x2_neg[" + str(iv)+"] = True...")
             temp, _ = calc_eq_x2(Iext2[iv], zeq=zeq[iv], geq=geq[iv], s=s[iv], x2_neg=True)
@@ -254,13 +253,25 @@ def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, y1eq=None, s=6.0
                               "is " + str(temp) + ">= -0.25!" +
                               "\n" + "We will use the original x2eq!")
 
+        if x2_neg[iv] == True and x2eq[iv] > -0.25:
+            warnings.warn("\nx2eq["+str(iv)+"] = " + str(x2eq[iv]) + " > -0.25, although x2_neg[" + str(iv)+"] = True!" +
+                          "\n" + "Rerunning with x2_neg[" + str(iv)+"] = False...")
+            temp, _ = calc_eq_x2(Iext2[iv], zeq=zeq[iv], geq=geq[iv], s=s[iv], x2_neg=False)
+            if temp > -0.25:
+                x2eq[iv] = temp
+                x2_neg[iv] = True
+            else:
+                warnings.warn("\nThe value of x2eq returned after rerunning with x2_neg[" + str(iv)+"] = False, " +
+                              "is " + str(temp) + "=< -0.25!" +
+                              "\n" + "We will use the original x2eq!")
+
     x2eq = numpy.reshape(x2eq, shape)
 
     return x2eq, x2_neg
 
 
 def calc_eq_pop2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, y1eq=None, s=6.0, Iext1=None, x2=0.0,
-               slope=0.0, a=1.0, b=3.0, x1_neg=True, x2_neg=False):
+               slope=0.0, a=1.0, b=3.0, x1_neg=True, x2_neg=True):
 
     x2eq, x2_neg =  calc_eq_x2(Iext2, y2eq, zeq, geq, x1eq, y1eq, s,  Iext1, x2, slope, a, b, x1_neg, x2_neg)
 
@@ -335,7 +346,7 @@ def eq_x1_hypo_x0_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
 
     #Solve:
     sol = root(eq_x1_hypo_x0_optimize_fun, xinit, args=(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w),
-               method='lm', jac=eq_x1_hypo_x0_optimize_jac, tol=10**(-6), callback=None, options=None) #method='hybr'
+               method='lm', jac=eq_x1_hypo_x0_optimize_jac, tol=10**(-12), callback=None, options=None) #method='hybr'
 
     if sol.success:
         x1EQ[:, ix0] = sol.x[ix0]
@@ -426,7 +437,7 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
     n_dim = equilibrium_point.shape[0]
 
     coupl = calc_coupling(equilibrium_point[0], epileptor_model.K.T, hypothesis.weights)
-    coupl = numpy.expand_dims(numpy.r_[coupl, 0.0 * coupl], 2).astype('float32')
+    coupl = numpy.expand_dims((numpy.c_[coupl, 0.0 * coupl]).T, 2).astype('float32')
 
     dfun = epileptor_model.dfun(numpy.expand_dims(equilibrium_point, 2).astype('float32'), coupl).flatten()
     dfun_max = numpy.max(dfun)
@@ -497,7 +508,7 @@ def calc_eq_6d(x0, K, w, yc, Iext1, Iext2, x1eqhyp = 0.0, bhyp=-2, a=1.0, b=3.0,
 
     geq = calc_eq_g(x1eq)
 
-    x2eq, y2eq = calc_eq_pop2(Iext2, y2eq=None, zeq=zeq, geq=geq, x1eq=None, y1eq=None, x2_neg=False)
+    x2eq, y2eq = calc_eq_pop2(Iext2, y2eq=None, zeq=zeq, geq=geq, x1eq=None, y1eq=None, x2_neg=True)
 
     equilibrium_point = numpy.r_[x1eq, y1eq, zeq, x2eq, y2eq, geq]
 
@@ -520,7 +531,7 @@ def calc_eq_11d(x0, K, w, yc, Iext1, Iext2, slope, fun_slope_Iext2,  x1eqhyp = 0
 
     slope_eq, Iext2_eq = fun_slope_Iext2(zeq, geq, pmode, slope, Iext2)
 
-    x2eq, y2eq = calc_eq_pop2(Iext2, y2eq=None, zeq=zeq, geq=geq, x1eq=None, y1eq=None, x2_neg=False)
+    x2eq, y2eq = calc_eq_pop2(Iext2, y2eq=None, zeq=zeq, geq=geq, x1eq=None, y1eq=None, x2_neg=True)
 
     equilibrium_point = numpy.r_[x1eq, y1eq, zeq, x2eq, y2eq, geq, x0, slope_eq, Iext1, Iext2_eq, K]
 

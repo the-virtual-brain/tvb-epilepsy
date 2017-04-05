@@ -511,25 +511,26 @@ def symbol_calc_coupling_diff(n, ix=None, jx=None, K="K"):
 
 def symbol_calc_2d_taylor(n, x_taylor="x1lin", order=2, x1_neg=True, slope="slope", Iext1="Iext1", shape=None):
 
-    fx1lin, v = symbol_eqtn_fx1(n, model="2d", x1_neg=x1_neg, slope=slope, Iext1=Iext1)[1:]
-    fx1lin = fx1lin.tolist()
+    fx1ser, v = symbol_eqtn_fx1(n, model="2d", x1_neg=x1_neg, slope=slope, Iext1=Iext1)[1:]
+    fx1ser = fx1ser.tolist()
 
     x_taylor= symbol_vars(n, [x_taylor])[0]
 
     v.update({"x_taylor": x_taylor})
 
     for ix in range(shape_to_size(v["x1"].shape)):
-        fx1lin[ix] = series(fx1lin[ix], x=v["x1"][ix], x0=x_taylor[ix], n=order).removeO()  #
+        fx1ser[ix] = series(fx1ser[ix], x=v["x1"][ix], x0=x_taylor[ix], n=order).removeO()  #
 
-    fx1lin = Array(fx1lin)
+    fx1ser = Array(fx1ser)
+
     if shape is not None:
         if len(shape) > 1:
-            fx1lin = fx1lin.reshape(shape[0],shape[1])
+            fx1ser = fx1ser.reshape(shape[0],shape[1])
         else:
-            fx1lin = fx1lin.reshape(shape[0], )
+            fx1ser = fx1ser.reshape(shape[0], )
 
-    return lambdify([v["x1"], x_taylor, v["z"], v["y1"], v[Iext1], v[slope], v["a"], v["b"], v["tau1"]], fx1lin, "numpy"), \
-           fx1lin, v
+    return lambdify([v["x1"], x_taylor, v["z"], v["y1"], v[Iext1], v[slope], v["a"], v["b"], v["tau1"]], fx1ser, "numpy"), \
+           fx1ser, v
 
 
 def symbol_calc_fx1z_2d_x1neg_zpos_jac(n, ix0, iE):
@@ -751,3 +752,29 @@ def symbol_eqtn_fx2y2(n, x2_neg=False, shape=None):
             fx2 = fx2.reshape(shape[0], )
 
     return lambdify([v["x2"], v["z"], v["g"], v["Iext2"], v["s"], v["tau1"]], fx2, 'numpy'), fx2, v
+
+
+def symbol_calc_fz_jac_square_taylor(n):
+
+    fx1sq, v = symbol_calc_2d_taylor(n, x_taylor="x1sq", order=3, x1_neg=True, slope="slope", Iext1="Iext1")[1:]
+    fx1sq = fx1sq.tolist()
+
+    fz, vz = symbol_eqtn_fz(n, zmode=array("lin"), z_pos=True, model="2d")[1:]
+    fz = fz.tolist()
+    v.update(vz)
+    del vz
+
+    x1 = []
+    for iv in range(n):
+        x1.append(list(solveset(fx1sq[iv], v["x1"][iv]))[0])
+
+    for iv in range(n):
+        for jv in range(n):
+            fz[iv] = fz[iv].subs(v["x1"][jv], x1[jv])
+
+    fz_jac = Array(Matrix(fz).jacobian(Matrix([v["z"]])))
+
+    fz_jac_lambda = lambdify([v["z"], v["y1"], v["Iext1"], v["K"], v["w"], v["a"], v["b"], v["tau1"], v["tau0"],
+                              v["x_taylor"]], fz_jac, 'numpy')
+
+    return fz_jac_lambda, fz_jac, v

@@ -139,7 +139,7 @@ def calc_tvb_equilibrium_point(epileptor_model, hypothesis):
 
     #Assert equilibrium point
     coupl = calc_coupling(eq[0], epileptor_model.Ks, hypothesis.weights)
-    coupl = numpy.expand_dims(numpy.r_[coupl, 0.0 * coupl], 2).astype('float32')
+    coupl = numpy.expand_dims((numpy.c_[coupl, 0.0 * coupl]).T, 2).astype('float32')
 
     dfun = epileptor_model.dfun(numpy.expand_dims(eq, 2).astype('float32'), coupl).flatten()
     dfun_max = numpy.max(dfun)
