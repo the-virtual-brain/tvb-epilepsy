@@ -245,8 +245,10 @@ def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", z
 
     if model=="2d":
         y1 = yc
+        b = -2.0
     else:
         y1 = calc_eq_y1(x1eq, yc, d=5.0)
+        b = 3.0
 
     x1lin0 = numpy.mean(hypothesis.x1LIN)  # The point of the linear approximation (1st order Taylor expansion)
     x1sq0 = numpy.mean(hypothesis.x1SQ)  # The point of the square (parabolic) approximation (2nd order Taylor expansion)
@@ -255,7 +257,7 @@ def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", z
 
     # x1 nullcline:
     x1 = numpy.expand_dims(numpy.linspace(-2.0, 2.0 / 3.0, 100), 1).T
-    zX1 = calc_fx1(x1, z=0, y1=y1, Iext1=Iext1, x1_neg=None, model=model)  # yc + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
+    zX1 = calc_fx1(x1, z=0, y1=y1, Iext1=Iext1, x1_neg=None, model=model, b=b)  # yc + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
     # approximations:
     # linear:
     x1lin = numpy.expand_dims(numpy.linspace(-5.5 / 3.0, -3.5 / 3, 30), 1).T
