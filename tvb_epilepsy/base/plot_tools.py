@@ -240,8 +240,13 @@ def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", z
     x0cr = numpy.mean(hypothesis.x0cr)  # Critical x0
     r = numpy.mean(hypothesis.rx0)
     if model != "2d" or zmode != numpy.array("lin"):
-        x0cr, r = calc_x0cr_r(yc, Iext1, epileptor_model=model, zmode=zmode, x1_rest=X1_DEF,
-                                              x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF)
+        x0cr, r = calc_x0cr_r(yc, Iext1, zmode=zmode, x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
+                              x0cr_def=X0_CR_DEF)
+
+    if model=="2d":
+        y1 = yc
+    else:
+        y1 = calc_eq_y1(x1eq, yc, d=5.0)
 
     x1lin0 = numpy.mean(hypothesis.x1LIN)  # The point of the linear approximation (1st order Taylor expansion)
     x1sq0 = numpy.mean(hypothesis.x1SQ)  # The point of the square (parabolic) approximation (2nd order Taylor expansion)
@@ -250,34 +255,34 @@ def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", z
 
     # x1 nullcline:
     x1 = numpy.expand_dims(numpy.linspace(-2.0, 2.0 / 3.0, 100), 1).T
+    zX1 = calc_fx1(x1, z=0, y1=y1, Iext1=Iext1, x1_neg=None, model=model)  # yc + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
+    # approximations:
+    # linear:
+    x1lin = numpy.expand_dims(numpy.linspace(-5.5 / 3.0, -3.5 / 3, 30), 1).T
+    # x1 nullcline after linear approximation
+    zX1lin = calc_fx1_2d_taylor(x1lin, x1lin0, z=0, y1=yc, Iext1=Iext1, slope=0.0, a=1.0, b=-2.0, tau1=1.0,
+                                x1_neg=None, order=2)  # yc + Iext1 + 2.0 * x1lin0 ** 3 + 2.0 * x1lin0 ** 2 - \
+    # (3.0 * x1lin0 ** 2 + 4.0 * x1lin0) * x1lin  # x1 nullcline after linear approximation
+    # center point without approximation:
+    # zlin0 = yc + Iext1 - x1lin0 ** 3 - 2.0 * x1lin0 ** 2
+    # square:
+    x1sq = numpy.expand_dims(numpy.linspace(-5.0 / 3, -1.0, 30), 1).T
+    # x1 nullcline after parabolic approximation
+    zX1sq = calc_fx1_2d_taylor(x1sq, x1sq0, z=0, y1=yc, Iext1=Iext1, slope=0.0, a=1.0, b=-2.0, tau1=1.0,
+                               x1_neg=None, order=3,
+                               shape=x1sq.shape)  # + 2.0 * x1sq ** 2 + 16.0 * x1sq / 3.0 + yc + Iext1 + 64.0 / 27.0
+    # center point (critical equilibrium point) without approximation:
+    # zsq0 = yc + Iext1 - x1sq0 ** 3 - 2.0 * x1sq0 ** 2
     if model == "2d":
-        zX1 = calc_fx1(x1, z=0, y1=yc, Iext1=Iext1, x1_neg=None) #yc + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
-        # approximations:
-        # linear:
-        x1lin = numpy.expand_dims(numpy.linspace(-5.5 / 3.0, -3.5 / 3, 30), 1).T
-        # x1 nullcline after linear approximation
-        zX1lin = calc_fx1_2d_taylor(x1lin, x1lin0, z=0, yc=yc, Iext1=Iext1, slope=0.0, a=1.0, b=-2.0, tau1=1.0,
-                                    x1_neg=None, order=2)  # yc + Iext1 + 2.0 * x1lin0 ** 3 + 2.0 * x1lin0 ** 2 - \
-        # (3.0 * x1lin0 ** 2 + 4.0 * x1lin0) * x1lin  # x1 nullcline after linear approximation
-        # center point without approximation:
-        # zlin0 = yc + Iext1 - x1lin0 ** 3 - 2.0 * x1lin0 ** 2
-        # square:
-        x1sq = numpy.expand_dims(numpy.linspace(-5.0 / 3, -1.0, 30), 1).T
-        # x1 nullcline after parabolic approximation
-        zX1sq = calc_fx1_2d_taylor(x1sq, x1sq0, z=0, yc=yc, Iext1=Iext1, slope=0.0, a=1.0, b=-2.0, tau1=1.0,
-                                   x1_neg=None, order=3)  # + 2.0 * x1sq ** 2 + 16.0 * x1sq / 3.0 + yc + Iext1 + 64.0 / 27.0
-        # center point (critical equilibrium point) without approximation:
-        # zsq0 = yc + Iext1 - x1sq0 ** 3 - 2.0 * x1sq0 ** 2
-
         # z nullcline:
         zZe = calc_fz(x1, z=0.0, x0=x0e, x0cr=x0cr, r=r, zmode=zmode)  # for epileptogenic regions
         zZne = calc_fz(x1, z=0.0, x0=x0ne, x0cr=x0cr, r=r, zmode=zmode)  # for non-epileptogenic regions
-
     else:
-        zX1 = calc_fx1(x1, z=0.0, y1=calc_eq_y1(x1eq, yc, d=5.0), Iext1=Iext1, model="2d", x1_neg=None) #y1eq + Iext1 - x1 ** 3 + 3.0 * x1 ** 2
+        x0e_6d = rescale_x0(x0e, yc, Iext1, zmode=zmode)
+        x0ne_6d = rescale_x0(x0ne, yc, Iext1, zmode=zmode)
         # z nullcline:
-        zZe = calc_fz(x1, z=0.0, x0=x0e, zmode=zmode, model="2d")   # for epileptogenic regions
-        zZne = calc_fz(x1, z=0.0, x0=x0ne, zmode=zmode, model="2d")  # for non-epileptogenic regions
+        zZe = calc_fz(x1, z=0.0, x0=x0e_6d, zmode=zmode, model="2d")   # for epileptogenic regions
+        zZne = calc_fz(x1, z=0.0, x0=x0ne_6d, zmode=zmode, model="2d")  # for non-epileptogenic regions
 
     fig = mp.pyplot.figure(figure_name, figsize=figsize)
     x1null, = mp.pyplot.plot(x1[0, :], zX1[0, :], 'b-', label='x1 nullcline', linewidth=1)
@@ -285,12 +290,9 @@ def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", z
     ax.axes.hold(True)
     zE1null, = mp.pyplot.plot(x1[0, :], zZe[0, :], 'g-', label='z nullcline at critical point (E=1)', linewidth=1)
     zE2null, = mp.pyplot.plot(x1[0, :], zZne[0, :], 'g--', label='z nullcline for E=0', linewidth=1)
-    if model == "2d":
-        sq, = mp.pyplot.plot(x1sq[0, :], zX1sq[0, :], 'm--', label='Parabolic local approximation', linewidth=2)
-        lin, = mp.pyplot.plot(x1lin[0, :], zX1lin[0, :], 'c--', label='Linear local approximation', linewidth=2)
-        mp.pyplot.legend(handles=[x1null, zE1null, zE2null, lin, sq])
-    else:
-        mp.pyplot.legend(handles=[x1null, zE1null, zE2null])
+    sq, = mp.pyplot.plot(x1sq[0, :], zX1sq[0, :], 'm--', label='Parabolic local approximation', linewidth=2)
+    lin, = mp.pyplot.plot(x1lin[0, :], zX1lin[0, :], 'c--', label='Linear local approximation', linewidth=2)
+    mp.pyplot.legend(handles=[x1null, zE1null, zE2null, lin, sq])
     
     ii=range(hypothesis.n_regions)
     if special_idx is None:

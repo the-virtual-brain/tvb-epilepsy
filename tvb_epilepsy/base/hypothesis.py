@@ -6,8 +6,8 @@ It should contain everything for later configuring an Epileptor Model from this 
 
 import numpy
 from collections import OrderedDict
-from tvb_epilepsy.base.constants import X0_DEF, E_DEF, K_DEF, I_EXT1_DEF, YC_DEF, X1_DEF, X1_EQ_CR_DEF
-from tvb_epilepsy.base.equations import calc_x0cr_r, calc_coupling, calc_x0
+from tvb_epilepsy.base.constants import E_DEF, K_DEF, I_EXT1_DEF, YC_DEF, X1_DEF, X1_EQ_CR_DEF
+from tvb_epilepsy.base.calculations import calc_x0cr_r, calc_coupling, calc_x0
 from tvb_epilepsy.base.equilibrium_computation import calc_eq_z_2d, eq_x1_hypo_x0_linTaylor, eq_x1_hypo_x0_optimize, \
                                                       def_x1lin
 from tvb_epilepsy.base.utils import reg_dict, formal_repr, vector2scalar
@@ -235,10 +235,10 @@ class Hypothesis(object):
         
         if self.x1eq_mode=="linTaylor":
             self.x1EQ = eq_x1_hypo_x0_linTaylor(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0, self.yc,
-                                               self.Iext1, self.K, self.weights)
+                                               self.Iext1, self.K, self.weights)[0]
         else:
             self.x1EQ = eq_x1_hypo_x0_optimize(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0, self.yc,
-                                              self.Iext1, self.K, self.weights)
+                                              self.Iext1, self.K, self.weights)[0]
 
         self.zEQ = self._calculate_equilibria_z()
 

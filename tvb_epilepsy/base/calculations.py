@@ -900,7 +900,7 @@ else:
                                      multiply(K[:, ix0], sum(w[ix0], axis=1)))).flatten()) -
                       multiply(dot(i_x0, multiply(tau[:, ix0], K[:, ix0])).T, w[ix0][:, ix0]))
 
-        jac = empty((x1.size, x1.size), dtype=type(jac_e_x0e.dtype))
+        jac = empty((x1.size, x1.size), dtype=jac_e_x0e.dtype)
         jac[numpy.ix_(iE, iE)] = jac_e_x0e
         jac[numpy.ix_(iE, ix0)] = jac_e_x1o
         jac[numpy.ix_(ix0, iE)] = jac_x0_x0e

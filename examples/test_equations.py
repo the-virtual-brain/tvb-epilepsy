@@ -45,20 +45,20 @@ if __name__ == "__main__":
 
 
 
-    model = "EpileptorDP"
+    model = "EpileptorDP2D"
     print model
 
     b = -2.0
 
-    if model == "EpileptorDP2D":
+    # 2D approximation, Proix et al 2014
+    if numpy.all(b == -2.0):
+        x1eq = x1
+        zeq = z
+    else:
+        x1eq = calc_eq_x1(yc, Iext1, x0, K, w, a=1.0, b=-2.0, d=5.0, x0cr=x0cr, r=r, zmode=zmode, model="2d")
+        zeq = calc_eq_z_2d(x1eq, yc, Iext1)
 
-        # 2D approximation, Proix et al 2014
-        if numpy.all(b == -2.0):
-            x1eq = x1
-            zeq = z
-        else:
-            x1eq = calc_eq_x1(yc, Iext1, x0, K, w, a=1.0, b=-2.0, d=5.0, x0cr=x0cr, r=r, zmode=zmode, model="2d")
-            zeq = calc_eq_z_2d(x1eq, yc, Iext1)
+    if model == "EpileptorDP2D":
 
         eq = numpy.r_[x1eq, zeq].astype('float32')
 
@@ -236,14 +236,14 @@ if __name__ == "__main__":
     print "\nTest calc_fx1_2d_taylor"
     x_taylor = symbol_vars(n, ["x1lin"], shape=(1, n))[0]  # x_taylor = -4.5/3 (=x1lin)
     fx1lin = calc_fx1_2d_taylor(sx1, x_taylor, sz, syc, sIext1, sslope, sa, sb, stau1, x1_neg=True, order=2,
-                                shape=(1,n))
+                                shape=(1, n))
     sfx1lin = symbol_calc_2d_taylor(n, "x1lin", order=2, x1_neg=True, slope="slope", Iext1="Iext1", shape=(1, n))[:2]
     print fx1lin.shape, calc_fx1_2d_taylor(x1, -1.5, z, yc, Iext1, slope, a=1.0, b=-2, tau1=1.0, x1_neg=True, order=2,
-                                           shape=(1,n))
+                                           shape=(1, n))
     for ii in range(3):
         print fx1lin[0, ii].expand(sx1[0, ii]).collect(sx1[0, ii])
         print sfx1lin[1][0, ii].expand(sx1[0, ii]).collect(sx1[0, ii])
-    print sfx1lin[1].shape, sfx1lin[0](x1, -1.5*numpy.ones(x1.shape), z, yc, Iext1, slope, a, b2, tau1)
+    print sfx1lin[1].shape, sfx1lin[0](x1, -1.5 * numpy.ones(x1.shape), z, yc, Iext1, slope, a, b2, tau1)
 
     print "\nTest calc_fx1y1_6d_diff_x1"
     fx1y1_6d_diff_x1 = calc_fx1y1_6d_diff_x1(sx1, syc, sIext1, sa, sb, sd, stau1, stau0)
@@ -254,7 +254,7 @@ if __name__ == "__main__":
         print sfx1y1_6d_diff_x1[1][0, ii].expand(sx1[0, ii]).collect(sx1[0, ii])
     print sfx1y1_6d_diff_x1[1].shape, sfx1y1_6d_diff_x1[0](x1, yc, Iext1, a, b2, d, tau1)
 
-    print "\nTest eq_x1_hypo_x0_optimize_jac"
+    print "\nTest eq_x1_hypo_x0_optimize_fun & eq_x1_hypo_x0_optimize_jac"
     ix0 = numpy.array([1, 2])
     iE = numpy.array([0])
     # x = numpy.empty_like(x1).flatten()
@@ -266,5 +266,17 @@ if __name__ == "__main__":
     vz = symbol_eqtn_fz(n, zmode=numpy.array("lin"), z_pos=True, model="2d", x0="x0", K="K")[2]
     x[iE] = sx0[0, iE]
     p = x1.shape
-    jac = eq_x1_hypo_x0_optimize_jac(x, ix0, iE, sx1, sz, sx0[0, ix0], sx0cr, sr, sy1, sIext1, sK, sw)
-    print jac
+    opt_fun = eq_x1_hypo_x0_optimize_fun(x, ix0, iE, sx1, sz, sx0[0, ix0], sx0cr, sr, syc, sIext1, sK, sw)
+    print "opt_fun: ", opt_fun
+    opt_jac = eq_x1_hypo_x0_optimize_jac(x, ix0, iE, sx1, sz, sx0[0, ix0], sx0cr, sr, sy1, sIext1, sK, sw)
+    print "opt_jac: ", opt_jac
+
+    x1EQopt, x0solopt = eq_x1_hypo_x0_optimize(ix0, iE, x1eq, zeq, x0[:, ix0], x0cr, r, yc, Iext1, K, w)
+    print "Solution with optimization:"
+    print "x1EQ: ", x1EQopt
+    print "x0sol: ", x0solopt
+
+    x1EQlinTaylor, x0sollinTaylor = eq_x1_hypo_x0_linTaylor(ix0, iE, x1eq, zeq, x0[:, ix0], x0cr, r, yc, Iext1, K, w)
+    print "Solution with linear Taylor approximation:"
+    print "x1EQ: ", x1EQlinTaylor
+    print "x0sol: ", x0sollinTaylor

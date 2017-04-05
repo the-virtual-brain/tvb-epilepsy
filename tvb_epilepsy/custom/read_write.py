@@ -7,15 +7,19 @@ import h5py
 import numpy
 import warnings
 from datetime import datetime
-from tvb_epilepsy.base.utils import get_logger, ensure_unique_file, write_object_to_h5_file, read_object_from_h5_file,\
-                                    print_metadata, write_metadata, list_of_strings_to_string
+from tvb_epilepsy.base.utils import ensure_unique_file, write_object_to_h5_file, read_object_from_h5_file,\
+                                    print_metadata, write_metadata
+# TODO: solve problems with setting up a logger
+from tvb_epilepsy.base.utils import initialize_logger
 from tvb_epilepsy.base.hypothesis import Hypothesis
 from tvb_epilepsy.tvb_api.epileptor_models import model_build_dict
 from tvb_epilepsy.base.simulators import SimulationSettings
 
-logger = get_logger()
-
 PATIENT_VIRTUAL_HEAD = "/WORK/episense/episense-root/trunk/demo-data/Head_TREC"
+
+import ntpath
+logger = initialize_logger("log_"+ntpath.split(PATIENT_VIRTUAL_HEAD)[1])
+
 
 KEY_TYPE = "EPI_Type"
 KEY_VERSION = "EPI_Version"

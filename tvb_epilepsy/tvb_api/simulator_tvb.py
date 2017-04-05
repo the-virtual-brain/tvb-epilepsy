@@ -142,7 +142,7 @@ def calc_tvb_equilibrium_point(epileptor_model, hypothesis):
     coupl = numpy.expand_dims(numpy.r_[coupl, 0.0 * coupl], 2).astype('float32')
 
     dfun = epileptor_model.dfun(numpy.expand_dims(eq, 2).astype('float32'), coupl).flatten()
-    dfun_max = numpy.max(dfun, axis=1)
+    dfun_max = numpy.max(dfun)
 
     dfun_max_cr = 10 ** -6 * numpy.ones(dfun_max.shape)
     #dfun_max_cr[2] = 10 ** -3
@@ -155,7 +155,7 @@ def calc_tvb_equilibrium_point(epileptor_model, hypothesis):
                       tau1=epileptor_model.tt, tau0=1.0 / epileptor_model.r, tau2=epileptor_model.tau,
                       output_mode="array")
 
-    max_dfun_diff = numpy.max(numpy.abs(dfun2 - dfun.flatten()), axis=1)
+    max_dfun_diff = numpy.max(numpy.abs(dfun2.flatten() - dfun))
     if numpy.any(max_dfun_diff > dfun_max_cr):
         warnings.warn("model dfun and calc_dfun functions do not return the same results!\n"
                       + "maximum difference = " + str(max_dfun_diff) + "\n"
