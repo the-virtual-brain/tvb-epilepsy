@@ -130,7 +130,7 @@ if __name__ == "__main__":
     sw, vw = symbol_vars(n, ["w"], dims=2, output_flag="numpy_array")
     v.update(vw)
     del vw
-    numpy.fill_diagonal(w, 0.0)
+    numpy.fill_diagonal(sw, 0.0)
     sw = Array(sw)
 
     a = numpy.ones((1,n))
@@ -267,9 +267,9 @@ if __name__ == "__main__":
     vz = symbol_eqtn_fz(n, zmode=numpy.array("lin"), z_pos=True, model="2d", x0="x0", K="K")[2]
     x[iE] = sx0[0, iE]
     p = x1.shape
-    opt_fun = eq_x1_hypo_x0_optimize_fun(x, ix0, iE, sx1, sz, sx0[0, ix0], sx0cr, sr, syc, sIext1, sK, sw)
+    opt_fun = eq_x1_hypo_x0_optimize_fun(x, ix0, iE, sx1, numpy.array(sz), sx0[0, ix0], sx0cr, sr, syc, sIext1, sK, sw)
     print "opt_fun: ", opt_fun
-    opt_jac = eq_x1_hypo_x0_optimize_jac(x, ix0, iE, sx1, sz, sx0[0, ix0], sx0cr, sr, sy1, sIext1, sK, sw)
+    opt_jac = eq_x1_hypo_x0_optimize_jac(x, ix0, iE, sx1, numpy.array(sz), sx0[0, ix0], sx0cr, sr, sy1, sIext1, sK, sw)
     print "opt_jac: ", opt_jac
 
     x1EQopt, x0solopt = eq_x1_hypo_x0_optimize(ix0, iE, x1eq, zeq, x0[:, ix0], x0cr, r, yc, Iext1, K, w)
@@ -283,7 +283,7 @@ if __name__ == "__main__":
     print "x0sol: ", x0sollinTaylor
 
     print "\nTest calc_fz_jac_square_taylor"
-    fz_jac_square_taylor = calc_fz_jac_square_taylor(sz, syc, sIext1, sK, sw, tau1=1.0, tau0=1.0)
+    fz_jac_square_taylor = calc_fz_jac_square_taylor(numpy.array(sz), syc, sIext1, sK, sw, tau1=1.0, tau0=1.0)
     print "fz_jac_square_taylor:"
     print fz_jac_square_taylor
     print calc_fz_jac_square_taylor(z, yc, Iext1, K, w, tau1=1.0, tau0=1.0)
@@ -293,9 +293,11 @@ if __name__ == "__main__":
     print "fz_jac_square_taylor:"
     for iv in range(n):
         for jv in range(n):
-            sfz_jac_square_taylor[iv, jv] = sfz_jac_square_taylor[iv, jv].subs([(v["x_taylor"][iv], x1sq[0, iv]),
-                                                                                (v["a"][iv], 1.0), (v["b"][iv], -2),
+            sfz_jac_square_taylor[iv, jv] = sfz_jac_square_taylor[iv, jv].subs([(v["x_taylor"][jv], x1sq[0, jv]),
+                                                                                (v["a"][jv], 1.0), (v["b"][jv], -2.0),
                                                                                 (v["tau1"][iv], 1.0),
                                                                                 (v["tau0"][iv], 1.0)])
         print sfz_jac_square_taylor[iv, :]
     print lfz_jac_square_taylor(zeq, yc, Iext1, K, w, a, b2, tau1, tau0, x1sq)
+
+    print "This is the end..."

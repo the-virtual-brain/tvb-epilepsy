@@ -1,5 +1,5 @@
 import numpy
-from numpy import array, empty, empty_like, ones, eye, zeros, multiply, dot, power, sqrt, divide, sum, exp, reshape, \
+from numpy import array, empty, empty_like, ones, eye, zeros, multiply, dot, power, divide, sum, exp, reshape, \
                   concatenate, diag, where, repeat
 from tvb_epilepsy.base.utils import assert_arrays
 
@@ -448,7 +448,7 @@ def eqtn_fz_square_taylor(zeq, yc, Iext1, K, w, tau1, tau0):
     # Jacobian: diagonal elements at first row
     # Diagonal elements: -1 + dfz_i * (4 + K_i * sum_j_not_i{wij})
     fz_jac = diag((-1.0 + multiply(dfz, (4.0 + K * numpy.expand_dims(sum(w, axis=1), 1).T))).T[:, 0]) \
-             - multiply(multiply(dot(K.T, i), dot(i.T, dfz)), (1 - eye(n_regions)))
+             - multiply(multiply(dot(K.T, i), dot(i.T, dfz)), w)
 
     try:
         if numpy.any([numpy.any(numpy.isnan(fz_jac.flatten())), numpy.any(numpy.isinf(fz_jac.flatten()))]):

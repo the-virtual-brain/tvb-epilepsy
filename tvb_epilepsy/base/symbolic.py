@@ -765,14 +765,22 @@ def symbol_calc_fz_jac_square_taylor(n):
     del vz
 
     x1 = []
+    #dfx1z = []
     for iv in range(n):
         x1.append(list(solveset(fx1sq[iv], v["x1"][iv]))[0])
+        #dfx1z.append(x1[iv].diff(v["z"][iv]))
 
     for iv in range(n):
         for jv in range(n):
             fz[iv] = fz[iv].subs(v["x1"][jv], x1[jv])
 
-    fz_jac = Array(Matrix(fz).jacobian(Matrix([v["z"]])))
+    fz_jac = Matrix(fz).jacobian(Matrix([v["z"]]))
+
+    # for iv in range(n):
+    #     for jv in range(n):
+    #         fz_jac[iv, jv].simplify().collect(dfx1z[jv])
+
+    fz_jac = Array(fz_jac)
 
     fz_jac_lambda = lambdify([v["z"], v["y1"], v["Iext1"], v["K"], v["w"], v["a"], v["b"], v["tau1"], v["tau0"],
                               v["x_taylor"]], fz_jac, 'numpy')
