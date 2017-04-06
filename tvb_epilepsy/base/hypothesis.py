@@ -117,27 +117,32 @@ class Hypothesis(object):
                        z_pos=True)
         #return (self.x1EQ + self.x0cr - (self.zEQ + self.Ceq) / 4.0) / self.rx0
 
-    def _dfz_square_taylor(self):
-        # The z derivative of the function
-        # x1 = F(z) = -4/3 -1/2*sqrt(2(z-yc-Iext1)+64/27)
-        dfz = -(0.5 / numpy.sqrt(2 * (self.zEQ - self.yc - self.Iext1) + 64.0 / 27.0))
-        if numpy.any([numpy.any(numpy.isnan(dfz)), numpy.any(numpy.isinf(dfz))]):
-            raise ValueError("nan or inf values in dfz")
-        else:
-            return dfz
+    # def _dfz_square_taylor(self):
+    #     # The z derivative of the function
+    #     # x1 = F(z) = -4/3 -1/2*sqrt(2(z-yc-Iext1)+64/27)
+    #     dfz = -(0.5 / numpy.sqrt(2 * (self.zEQ - self.yc - self.Iext1) + 64.0 / 27.0))
+    #     if numpy.any([numpy.any(numpy.isnan(dfz)), numpy.any(numpy.isinf(dfz))]):
+    #         raise ValueError("nan or inf values in dfz")
+    #     else:
+    #         return dfz
 
-    def _fz_jac(self, dfz):
-        i = numpy.ones((1, self.n_regions), dtype=numpy.float32)
+    def _fz_jac(self): #, dfz
+
+        # i = numpy.ones((1, self.n_regions), dtype=numpy.float32)
         # Jacobian: diagonal elements at first row
-        #Diagonal elements: -1 + dfz_i * (4 + K_i * sum_j_not_i{wij})
+        # Diagonal elements: -1 + dfz_i * (4 + K_i * sum_j_not_i{wij})
         # fz_jac = numpy.diag(-1 + dfz * (4.0 + self.K * numpy.expand_dims(numpy.sum(self.weights, axis=1), 1).T).T[:, 0]) \
         # - numpy.dot(self.K.T, i) * numpy.dot(i.T, dfz) * (1 - numpy.eye(self.n_regions))
-        fz_jac = numpy.diag((-1.0 + dfz * (4.0 + self.K * numpy.expand_dims(numpy.sum(self.weights, axis=1), 1).T)).T[:, 0]) \
-                  - numpy.dot(self.K.T, i) * numpy.dot(i.T, dfz) * (1 - numpy.eye(self.n_regions))
+        # fz_jac = numpy.diag((-1.0 +
+        #                      numpy.multiply(dfz,
+        #                              (4.0 + self.K * numpy.expand_dims(sum(self.weights, axis=1), 1).T))).T[:, 0]) - \
+        #          numpy.multiply(numpy.multiply(numpy.dot(self.K.T, i), numpy.dot(i.T, dfz)), self.weights)
+
+        fz_jac = calc_fz_jac_square_taylor(self.zEQ, self.yc, self.Iext1, self.K, self.weights)
+
         if numpy.any([numpy.any(numpy.isnan(fz_jac.flatten())), numpy.any(numpy.isinf(fz_jac.flatten()))]):
             raise ValueError("nan or inf values in dfz")
 
-        fz_jac2 = calc_fz_jac_square_taylor(self.zEQ, self.yc, self.Iext1, self.K, self.weights)
         return fz_jac
 
     def _calculate_e(self):
@@ -163,12 +168,12 @@ class Hypothesis(object):
 
         self._check_hypothesis(seizure_indices)
 
-        # The z derivative of the function...
-        # x1 = F(z) = -4/3 -1/2*sqrt(2(z-yc-Iext1)+64/27)
-        dfz = self._dfz_square_taylor()
+        # # The z derivative of the function...
+        # # x1 = F(z) = -4/3 -1/2*sqrt(2(z-yc-Iext1)+64/27)
+        # dfz = self._dfz_square_taylor()
 
         #...and the respective Jacobian
-        fz_jac = self._fz_jac(dfz)
+        fz_jac = self._fz_jac()  #dfz
 
         # Perform eigenvalue decomposition
         (eigvals, eigvects) = numpy.linalg.eig(fz_jac)

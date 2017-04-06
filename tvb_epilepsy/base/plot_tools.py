@@ -606,7 +606,7 @@ def plot_sim_results(model, hyp, head, res, sensorsSEEG, hpf_flag=False):
                         title=" Simulated pop2-g for " + hyp.name,
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
-        start_plot = int(numpy.round(0.01 * res['hpf'].shape[0]))
+        start_plot = int(numpy.round(0.01 * res['lfp'].shape[0]))
         plot_raster(res['time'][start_plot:], {'lfp': res['lfp'][start_plot:, :]}, hyp.seizure_indices,
                     title=" Simulated LFP rasterplot for " + hyp.name, offset=10.0,
                     save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
