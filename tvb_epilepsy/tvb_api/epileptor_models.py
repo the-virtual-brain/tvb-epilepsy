@@ -328,6 +328,7 @@ class EpileptorDP(Model):
         else:
             raise ValueError("zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), " +
                              "respectively")
+
         # ydot[2] = self.tt * (        ...+ self.Ks * c_pop1))
         ydot[2] = self.tau1 * ((fz - y[2] + self.K * c_pop1) / self.tau0)
 

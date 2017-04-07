@@ -8,7 +8,7 @@ from scipy.io import savemat
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.hypothesis import Hypothesis
 from tvb_epilepsy.base.utils import initialize_logger, calculate_projection, set_time_scales, filter_data, \
-                                    write_object_to_h5_file
+                                    write_object_to_h5_file, assert_equal_objects
 from tvb_epilepsy.tvb_api.readers_tvb import TVBReader
 from tvb_epilepsy.tvb_api.simulator_tvb import *
 from tvb_epilepsy.tvb_api.epileptor_models import *
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     #Read standard  head
     logger.info("We will be reading from location " + data_folder)
     head = reader.read_head(data_folder)
-    logger.debug("Loaded Head " + str(head))
+    #logger.debug("Loaded Head " + str(head))
 
     # ---------------------------------Hypothalamus pathology addition--------------------------------------------------
 
@@ -93,7 +93,7 @@ if __name__ == "__main__":
             continue
         else:
             projection = calculate_projection(sensors, head.connectivity)
-            head.sensorsSEEG[sensors]=projection
+            head.sensorsSEEG[sensors] = projection
             print projection.shape
             sensorsSEEG.append(sensors)
             projections.append(projection) 
@@ -138,7 +138,6 @@ if __name__ == "__main__":
     
     hyp_ep = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, \
                         "EP Hypothesis", x1eq_mode="optimize")  #"linTaylor"
-    hyp_ep.K = 0.1*hyp_ep.K # 1.0/np.max(head.connectivity.normalized_weights)
     # iE = np.array([1,    3,   7,   8,  15,  16,  25,  50, 88,  89])
     # E = 0*np.array(iE, dtype=np.float32)
     # E[7]=0.65
@@ -151,7 +150,7 @@ if __name__ == "__main__":
     iE = np.array(range(hyp_ep.n_regions))
     E = (0.5 * np.ones((1,hyp_ep.n_regions))).tolist()
     hyp_ep.configure_e_hypothesis(iE, E, seizure_indices)
-    logger.debug(str(hyp_ep))
+    #logger.debug(str(hyp_ep))
     # plot_hypothesis(hyp_ep, head.connectivity.region_labels, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
     #                figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
     #
@@ -217,7 +216,7 @@ if __name__ == "__main__":
 
     #Now simulate and plot for each hypothesis
     hpf_flag = False #Flag to compute and plot high pass filtered SEEG
-    for hyp in (hyp_exc, hyp_exc, hyp_ep): # ,hyp_exc #length=30000
+    for hyp in (hyp_exc, hyp_ep): # ,hyp_exc #length=30000
 
         # Choose the model and build it on top of the specific hypothesis, adjust parameters:
         model_name = 'EpileptorDP'
@@ -250,11 +249,11 @@ if __name__ == "__main__":
                                                                     variables_names=None)
 
         sim, sim_settings = simulator_instance.config_simulation(head, hyp, settings=sim_settings)
-        print "Initial conditions at equilibrium point: ", sim.initial_conditions
+        print "Initial conditions at equilibrium point: ", numpy.squeeze(sim.initial_conditions)
 
         #Launch simulation
-        ttavg, tavg_data = simulator_instance.launch_simulation(sim, n_report_blocks=n_report_blocks)
-        logger.info("Simulated signal return shape: " + str(tavg_data.shape))
+        ttavg, tavg_data = simulator_instance.launch_simulation(sim, hyp, n_report_blocks=n_report_blocks)
+        logger.info("\nSimulated signal return shape: " + str(tavg_data.shape))
         logger.info("Time: " + str(scale_time*ttavg[0]) + " - " + str(scale_time*ttavg[-1]))
         logger.info("Values: " + str(tavg_data.min()) + " - " + str(tavg_data.max()))
 
@@ -325,4 +324,16 @@ if __name__ == "__main__":
         # assert_equal_objects(res, res2)
 
         # TODO: find out what object is that distorts subsequent simulations after the first one...
-        del model, sim, sim_settings, simulator_instance, res
+        if hyp.name == hyp_ep.name:
+            try:
+                assert_equal_objects(hyp, hyp_ep, attributes_dict=None)
+            except:
+                print "Why?"
+        else:
+            try:
+                assert_equal_objects(hyp, hyp_exc, attributes_dict=None)
+            except:
+                print "Why?"
+
+        del hyp, model, sim, sim_settings, simulator_instance, res
+

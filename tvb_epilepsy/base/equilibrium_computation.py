@@ -437,11 +437,11 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
     n_dim = equilibrium_point.shape[0]
 
     coupl = calc_coupling(equilibrium_point[0], epileptor_model.K.T, hypothesis.weights)
-    coupl = numpy.expand_dims((numpy.c_[coupl, 0.0 * coupl]).T, 2).astype('float32')
+    coupl = numpy.expand_dims((numpy.c_[coupl, 0.0 * coupl]).T, 2)
 
-    dfun = epileptor_model.dfun(numpy.expand_dims(equilibrium_point, 2).astype('float32'), coupl).flatten()
-    dfun_max = numpy.max(dfun)
-    dfun_max_cr = 10 ** -6 * numpy.ones(dfun_max.shape)
+    dfun = epileptor_model.dfun(numpy.expand_dims(equilibrium_point, 2).astype('float32'), coupl)
+    dfun_max = numpy.max(dfun.flatten())
+    dfun_max_cr = 10 ** -5 * numpy.ones(dfun_max.shape)
 
     if epileptor_model._ui_name == "EpileptorDP2D":
         dfun2 = calc_dfun(equilibrium_point[0].flatten(), equilibrium_point[1].flatten(),
@@ -479,20 +479,20 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
                           tau1=epileptor_model.tau1, tau0=epileptor_model.tau0, tau2=epileptor_model.tau2,
                           output_mode="array")
 
-    max_dfun_diff  = numpy.max(numpy.abs(dfun2.flatten() - dfun))
+    max_dfun_diff  = numpy.max(numpy.abs(dfun2.flatten() - dfun.flatten()))
     if numpy.any(max_dfun_diff > dfun_max_cr):
-        warnings.warn("model dfun and calc_dfun functions do not return the same results!\n"
-                      + "maximum difference = " + str(max_dfun_diff) + "\n"
-                      + "model dfun = " + str(dfun) + "\n"
-                      + "calc_dfun = " + str(dfun2))
+        warnings.warn("\nmodel dfun and calc_dfun functions do not return the same results!\n"
+                      + "maximum difference = " + str(max_dfun_diff))
+                      # + "\n" + "model dfun = " + str(dfun) + "\n"
+                      # + "calc_dfun = " + str(dfun2))
 
     if numpy.any(dfun_max > dfun_max_cr):
         # raise ValueError("Equilibrium point for initial condition not accurate enough!\n" \
-        #                  + "max(dfun) = " + str(dfun_max) + "\n"
-        #                  + "model dfun = " + str(dfun))
-        warnings.warn("Equilibrium point for initial condition not accurate enough!\n"
-                      + "max(dfun) = " + str(dfun_max) + "\n"
-                      + "model dfun = " + str(dfun))
+        #                  + "max(dfun) = " + str(dfun_max))
+        ##                  + "\n" + "model dfun = " + str(dfun))
+        warnings.warn("\nEquilibrium point for initial condition not accurate enough!\n"
+                      + "max(dfun) = " + str(dfun_max))
+        #              + "\n" + "model dfun = " + str(dfun))
 
 
 def calc_eq_6d(x0, K, w, yc, Iext1, Iext2, x1eqhyp = 0.0, bhyp=-2, a=1.0, b=3.0, d=5.0, zmode=numpy.array("lin")):

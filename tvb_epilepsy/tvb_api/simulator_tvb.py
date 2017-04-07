@@ -86,7 +86,7 @@ class SimulatorTVB(ABCSimulator):
         return sim, settings
 
 
-    def launch_simulation(self, sim,  n_report_blocks=1):
+    def launch_simulation(self, sim,  hypothesis, n_report_blocks=1):
         sim._configure_history(initial_conditions=sim.initial_conditions)
         if n_report_blocks<2:
             tavg_time, tavg_data = sim.run()[0]
@@ -102,21 +102,24 @@ class SimulatorTVB(ABCSimulator):
 
             start = time.time()
 
-            for tavg in sim():
+            try:
+                for tavg in sim():
 
-                curr_time_step += 1.0
+                    curr_time_step += 1.0
 
-                if not tavg is None:
-                    tavg_time.append(tavg[0][0])
-                    tavg_data.append(tavg[0][1])
+                    if not tavg is None:
+                        tavg_time.append(tavg[0][0])
+                        tavg_data.append(tavg[0][1])
 
-                if curr_time_step >= curr_block * block_length:
-                    end_block = time.time()
-                    print_this = "\r" + "..." + str(100 * curr_time_step / sim_length) + "% done in " +\
-                                 str(end_block-start) + " secs"
-                    sys.stdout.write(print_this)
-                    sys.stdout.flush()
-                    curr_block += 1.0
+                    if curr_time_step >= curr_block * block_length:
+                        end_block = time.time()
+                        print_this = "\r" + "..." + str(100 * curr_time_step / sim_length) + "% done in " +\
+                                     str(end_block-start) + " secs"
+                        sys.stdout.write(print_this)
+                        sys.stdout.flush()
+                        curr_block += 1.0
+            except:
+                print "WTF went wrong with this simulation?"
 
             return numpy.array(tavg_time), numpy.array(tavg_data)
 

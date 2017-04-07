@@ -100,11 +100,11 @@ def assert_arrays(params, shape=None):
 
             # Construct a kind of histogram of all different shapes of the inputs:
 
-            ind = [(x == params[ip].shape) for x in shapes]
+            ind = numpy.array([(x == params[ip].shape) for x in shapes])
 
             if numpy.any(ind):
-                ind, = numpy.where(ind)
-                n_shapes[ind.flatten()] += 1
+                ind = numpy.where(ind)[0]
+                n_shapes[ind] += 1
             else:
                 shapes.append(params[ip].shape)
                 n_shapes.append(1)
@@ -354,7 +354,6 @@ def write_metadata(meta_dict, h5_file, key_date, key_version, path="/"):
 # TODO: modify functions to write and read h5 files recursively when objects to be read or written are dict()
 def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrite_fields_dict=None, keys=None):
 
-
     if isinstance(h5_file, basestring):
         print "Writing to: ", h5_file
         h5_file = h5py.File(h5_file, 'a', libver='latest')
@@ -376,11 +375,14 @@ def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrit
 
     for attribute in attributes_dict:
 
-        field = get_field(object,attributes_dict[attribute])
+        field = get_field(object, attributes_dict[attribute])
 
         try:
 
+            print "Writing " + attributes_dict[attribute] + "..."
+
             if isinstance(field, basestring):
+
                 print "String length: ", len(field)
                 h5_file.create_dataset("/" + attribute, data=field)
                 print "String written length: ", len(h5_file['/' + attribute][()])
@@ -406,8 +408,7 @@ def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrit
         except:
             raise ValueError(attribute + " not found in the object!")
 
-        print "dataset %s value %s" % (attribute, h5_file['/' + attribute][()])
-
+        #print "dataset %s value %s" % (attribute, h5_file['/' + attribute][()])
 
     if isinstance(add_overwrite_fields_dict, dict):
 
@@ -442,14 +443,13 @@ def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrit
                 except:
                     raise ValueError("Failed to write "+ attribute + " as a scalar value!")
 
-            print "dataset %s value %s" % (attribute, h5_file['/' + attribute][()])
+            #print "dataset %s value %s" % (attribute, h5_file['/' + attribute][()])
 
     if isinstance(h5_file, basestring):
         h5_file.close()
 
 
 def read_object_from_h5_file(object, h5_file, attributes_dict=None, add_overwrite_fields_dict=None):
-
 
     if isinstance(h5_file, basestring):
         print "Reading from:", h5_file
@@ -471,12 +471,13 @@ def read_object_from_h5_file(object, h5_file, attributes_dict=None, add_overwrit
     for attribute in attributes_dict:
 
         print "Reading " + attributes_dict[attribute] + "... "
+
         try:
             set_field(object, attributes_dict[attribute], h5_file['/' + attribute][()])
         except:
             raise ValueError("Failed to read " + attribute + "!")
 
-        print "attribute %s value %s" % (attribute, get_field(object, attributes_dict[attribute]))
+        #print "attribute %s value %s" % (attribute, get_field(object, attributes_dict[attribute]))
 
     if isinstance(h5_file, basestring):
         h5_file.close()
@@ -486,12 +487,13 @@ def read_object_from_h5_file(object, h5_file, attributes_dict=None, add_overwrit
         for attribute in add_overwrite_fields_dict:
 
             print "Setting or overwritting " + attribute + "... "
+
             try:
                 set_field(object, attribute, add_overwrite_fields_dict[attribute])
             except:
                 raise ValueError("Failed to set " + attribute + "!")
 
-            print "attribute %s value %s" % (attribute, get_field(object, attribute))
+            #print "attribute %s value %s" % (attribute, get_field(object, attribute))
 
     return object
 
@@ -517,7 +519,7 @@ def assert_equal_objects(object1, object2, attributes_dict=None):
         get_field2 = lambda object, attribute: getattr(object, attribute)
 
     for attribute in attributes_dict:
-        print attributes_dict[attribute]
+        #print attributes_dict[attribute]
         field1 = get_field1(object1, attributes_dict[attribute])
         field2 = get_field2(object2, attributes_dict[attribute])
 
