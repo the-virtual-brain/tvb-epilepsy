@@ -152,10 +152,10 @@ if __name__ == "__main__":
     E = (0.5 * np.ones((1,hyp_ep.n_regions))).tolist()
     hyp_ep.configure_e_hypothesis(iE, E, seizure_indices)
     logger.debug(str(hyp_ep))
-    plot_hypothesis(hyp_ep, head.connectivity.region_labels, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
-                   figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
-
-    write_hypothesis(hyp_ep, folder_name=FOLDER_RES, file_name="hyp_ep.h5", hypo_name=None)
+    # plot_hypothesis(hyp_ep, head.connectivity.region_labels, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
+    #                figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
+    #
+    # write_hypothesis(hyp_ep, folder_name=FOLDER_RES, file_name="hyp_ep.h5", hypo_name=None)
 
     # # Test write, read and assert functions
     # hyp_ep2 = read_hypothesis(path=os.path.join(FOLDER_RES, "hyp_ep.h5"), output="object",
@@ -170,9 +170,11 @@ if __name__ == "__main__":
     # ix0 =range(head.number_of_regions)
     # x0 = (X0_DEF * numpy.ones((len(ix0),), dtype='float32')).tolist()
 
-    hyp_exc = cp.deepcopy(hyp_ep)
-    hyp_exc.name = "EP & x0 Hypothesis"
-    hyp_exc.x1eq_mode = "optimize"
+    hyp_exc = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, \
+                        "EP & x0 Hypothesis", x1eq_mode="optimize")  #"linTaylor"
+    iE = np.array(range(hyp_ep.n_regions))
+    E = (0.5 * np.ones((1, hyp_ep.n_regions))).tolist()
+    hyp_exc.configure_e_hypothesis(iE, E, seizure_indices)
     ix0 = [51]
     x0 = (0.5 * numpy.ones((len(ix0),), dtype='float32')).tolist()
 
@@ -215,7 +217,7 @@ if __name__ == "__main__":
 
     #Now simulate and plot for each hypothesis
     hpf_flag = False #Flag to compute and plot high pass filtered SEEG
-    for hyp in (hyp_ep, hyp_exc): # ,hyp_exc #length=30000
+    for hyp in (hyp_exc, hyp_exc, hyp_ep): # ,hyp_exc #length=30000
 
         # Choose the model and build it on top of the specific hypothesis, adjust parameters:
         model_name = 'EpileptorDP'
@@ -248,6 +250,7 @@ if __name__ == "__main__":
                                                                     variables_names=None)
 
         sim, sim_settings = simulator_instance.config_simulation(head, hyp, settings=sim_settings)
+        print "Initial conditions at equilibrium point: ", sim.initial_conditions
 
         #Launch simulation
         ttavg, tavg_data = simulator_instance.launch_simulation(sim, n_report_blocks=n_report_blocks)
@@ -320,3 +323,6 @@ if __name__ == "__main__":
         # res2 = read_object_from_h5_file(dict(), os.path.join(FOLDER_RES, hyp.name + "_ts.h5"),
         #                                 attributes_dict=None, add_overwrite_fields_dict=None)
         # assert_equal_objects(res, res2)
+
+        # TODO: find out what object is that distorts subsequent simulations after the first one...
+        del model, sim, sim_settings, simulator_instance, res
