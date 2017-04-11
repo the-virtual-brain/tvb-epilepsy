@@ -63,3 +63,9 @@ WEIGHTS_NORM_PERCENT = 95
 NOISE_SEED = 42
 
 SYMBOLIC_CALCULATIONS_FLAG = False
+
+# Information needed for the custom simulation
+HDF5_LIB="libjhdf5.dylib"
+LIB_PATH=""
+JAR_PATH=""
+JAVA_MAIN_SIM=""

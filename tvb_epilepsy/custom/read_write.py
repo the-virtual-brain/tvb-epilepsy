@@ -344,8 +344,15 @@ def read_ts(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5"), data=None):
         print "Actual Data shape", data.shape
         print "First Channel sv sum", numpy.sum(data[:, 0])
 
+    total_time = int(h5_file["/"].attrs["Simulated_period"][0])
+    nr_of_steps = int(h5_file["/data"].attrs["Number_of_steps"][0])
+    start_time = float(h5_file["/data"].attrs["Start_time"][0])
+
+    time = numpy.linspace(start_time, total_time, nr_of_steps)
+
+
     h5_file.close()
-    return data
+    return time, data
 
 
 def write_ts(raw_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts_from_python.h5")):
