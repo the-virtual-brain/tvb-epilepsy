@@ -188,21 +188,6 @@ if __name__ == "__main__":
 
         # Choose the model and build it on top of the specific hypothesis, adjust parameters:
         model_name = 'EpileptorDP'
-        model = model_build_dict[model_name](hyp, scale_time, zmode=numpy.array("lin"))
-        if model_name == 'EpileptorDP':
-            # model.tau0 = 2857.0 # default = 2857.0
-            model.tau1 *= scale_time  # default = 0.25
-        elif model_name == 'EpileptorDP2D':
-            # model.tau0 = 2857.0 # default = 2857.0
-            model.tau1 *= scale_time  # default = 0.25
-        elif model_name == 'EpileptorDPrealistic':
-            # model.tau0 = 10000 # default = 10000
-            model.tau1 *= scale_time  # default = 0.25
-            model.slope = 0.25
-            model.pmode = np.array("z")  # "z","g","z*g", default="cons
-        elif model_name == 'Epileptor':
-            model.tt *= scale_time * 0.25  # default = 1.0
-            # model.r = 1.0/2857.0  # default = 1.0 / 2857.0
 
         # Setup and configure the simulator according to the specific model (and, therefore, hypothesis)
         # Good choices for noise and monitor expressions are made in this helper function
@@ -210,11 +195,11 @@ if __name__ == "__main__":
         # monitor_expr and vois have to be list of strings of the same length
         # noise_intensity overwrites the one inside noise_instance if given additionally
         # monitor_period overwrites the one inside monitor_instance if given additionally
-        (simulator_instance, sim_settings, vois) = setup_simulation(model, dt, sim_length, monitor_period,
-                                                                    scale_time=scale_time,
-                                                                    noise_instance=None, noise_intensity=10 ** -8,
-                                                                    monitor_expressions=None, monitors_instance=None,
-                                                                    variables_names=None)
+        (simulator_instance, sim_settings, vois, model) = setup_simulation(model_name, hyp, dt, sim_length,
+                                                                           monitor_period, scale_time=scale_time,
+                                                                           noise_instance=None, noise_intensity=10**-8,
+                                                                           monitor_expressions=None,
+                                                                           monitors_instance=None, variables_names=None)
 
         sim, sim_settings = simulator_instance.config_simulation(head.connectivity, hyp, settings=sim_settings)
         print "Initial conditions at equilibrium point: ", numpy.squeeze(sim.initial_conditions)

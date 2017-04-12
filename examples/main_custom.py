@@ -9,9 +9,9 @@ import numpy
 from tvb_epilepsy.base.constants import X0_DEF
 from tvb_epilepsy.base.hypothesis import Hypothesis
 from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_timeseries, plot_trajectories
-from tvb_epilepsy.base.utils import initialize_logger
+from tvb_epilepsy.base.utils import initialize_logger, set_time_scales
 from tvb_epilepsy.custom.read_write import read_ts
-from tvb_epilepsy.custom.simulator_custom import SimulatorCustom
+from tvb_epilepsy.custom.simulator_custom import setup_simulation
 
 if __name__ == "__main__":
     logger = initialize_logger(__name__)
@@ -52,9 +52,16 @@ if __name__ == "__main__":
 
     # ------------------------------Simulation--------------------------------------
 
+    (fs, dt, fsAVG, scale_time, sim_length, monitor_period,
+     n_report_blocks, hpf_fs, hpf_low, hpf_high) = set_time_scales(fs=2 * 4096.0, dt=None, time_length=3000.0,
+                                                                   scale_time=2.0, scale_fsavg=2.0,
+                                                                   hpf_low=None, hpf_high=None)
+
     for hyp in (hyp_ep, hyp_exc):
-        simulator_instance = SimulatorCustom(data_folder)
-        simulator_instance.config_simulation(hypothesis=hyp, head=head)
+        simulator_instance, settings, variables_names, model = \
+            setup_simulation(data_folder, hyp, dt, sim_length, monitor_period, scale_time, noise_intensity=None)
+        simulator_instance.config_simulation(hyp, os.path.join(simulator_instance.path, "Coonnectivity.h5"),
+                                             vep_settings=settings)
         simulator_instance.launch_simulation(hyp)
 
     # -------------------------------Plotting---------------------------------------

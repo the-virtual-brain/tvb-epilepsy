@@ -66,24 +66,22 @@ class ABCSimulator(object):
     def launch_pse(self, hypothesis, head):
         pass
 
+    ###
+    # Prepare for tvb-epilepsy epileptor_models initial conditions
+    ###
 
-
-###
-# Prepare for tvb-epilepsy epileptor_models initial conditions
-###
-
-def prepare_initial_conditions(hypothesis, model, history_length=1):
-    # Set default initial conditions right on the resting equilibrium point of the model...
-    # ...after computing the equilibrium point (and correct it for zeql for a >=6D model
-    initial_conditions = calc_equilibrium_point(model, hypothesis)
-    #-------------------The lines below are for a specific "realistic" demo simulation:---------------------------------
-    #if isinstance(model,EpileptorDPrealistic):
-    #   shape = initial_conditions[6].shape
-    #   type = initial_conditions[6].dtype
-    #   initial_conditions[6] = 0.0** numpy.ones(shape,dtype=type) # hypothesis.x0.T
-    #   initial_conditions[7] = 1.0 * numpy.ones((1,hypothesis.n_regions))#model.slope * numpy.ones((hypothesis.n_regions,1))
-    #   initial_conditions[9] = 0.0 * numpy.ones((1,hypothesis.n_regions))#model.Iext2.T * numpy.ones((hypothesis.n_regions,1))
-    # ------------------------------------------------------------------------------------------------------------------
-    initial_conditions = numpy.expand_dims(initial_conditions, 2)
-    initial_conditions = numpy.tile(initial_conditions, (history_length, 1, 1, 1))
-    return initial_conditions
+    def prepare_initial_conditions(self, hypothesis, history_length=1):
+        # Set default initial conditions right on the resting equilibrium point of the model...
+        # ...after computing the equilibrium point (and correct it for zeql for a >=6D model
+        initial_conditions = calc_equilibrium_point(self.model, hypothesis)
+        #-------------------The lines below are for a specific "realistic" demo simulation:---------------------------------
+        #if isinstance(model,EpileptorDPrealistic):
+        #   shape = initial_conditions[6].shape
+        #   type = initial_conditions[6].dtype
+        #   initial_conditions[6] = 0.0** numpy.ones(shape,dtype=type) # hypothesis.x0.T
+        #   initial_conditions[7] = 1.0 * numpy.ones((1,hypothesis.n_regions))#model.slope * numpy.ones((hypothesis.n_regions,1))
+        #   initial_conditions[9] = 0.0 * numpy.ones((1,hypothesis.n_regions))#model.Iext2.T * numpy.ones((hypothesis.n_regions,1))
+        # ------------------------------------------------------------------------------------------------------------------
+        initial_conditions = numpy.expand_dims(initial_conditions, 2)
+        initial_conditions = numpy.tile(initial_conditions, (history_length, 1, 1, 1))
+        return initial_conditions
