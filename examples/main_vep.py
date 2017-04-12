@@ -216,7 +216,7 @@ if __name__ == "__main__":
                                                                     monitor_expressions=None, monitors_instance=None,
                                                                     variables_names=None)
 
-        sim, sim_settings = simulator_instance.config_simulation(head, hyp, settings=sim_settings)
+        sim, sim_settings = simulator_instance.config_simulation(head.connectivity, hyp, settings=sim_settings)
         print "Initial conditions at equilibrium point: ", numpy.squeeze(sim.initial_conditions)
 
         #Launch simulation

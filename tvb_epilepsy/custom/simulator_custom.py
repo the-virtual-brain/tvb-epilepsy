@@ -10,10 +10,14 @@ from copy import copy
 
 import subprocess
 
+import numpy
+
 from tvb_epilepsy.base.constants import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
 from tvb_epilepsy.base.utils import obj_to_dict
-from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
+from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings, prepare_initial_conditions
 from tvb_epilepsy.base.calculations import calc_rescaled_x0
+from tvb_epilepsy.tvb_api.epileptor_models import build_tvb_model
+
 
 class Settings(object):
     def __init__(self, integration_step=0.05, noise_seed=42, noise_intensity=0.0001, length=10000):
@@ -30,6 +34,7 @@ class EpileptorParams(object):
 
     def __init__(self, a=1.0, b=3.0, c=1.0, d=5.0, aa=6.0, r=0.00035, kvf=0.0, kf=0.0, ks=1.5, tau=10.0, iext=3.1,
                  iext2=0.45, slope=0.0, x0=-2.1, tt=1.0):
+        self._ui_name = "CustomModel"
         self.a = a
         self.b = b
         self.c = c
@@ -84,19 +89,27 @@ class SimulatorCustom(ABCSimulator):
         # rescale_x0(x0_2d, yc, Iext1, a=1.0, b=-2.0, zmode=array("lin"), shape=None)
         return calc_rescaled_x0(x0_hyp, self.c, self.Iext, self.a, self.b-self.d)
 
-    def config_simulation(self, hypothesis, head, vep_settings=SimulationSettings()):
+    def prepare_initial_conditions(self, hypothesis, model_params, history_length=1):
+        model = build_tvb_model(hypothesis, a=model_params.a, b=model_params.b, d=model_params.d)
+        return prepare_initial_conditions(hypothesis, model, history_length=history_length)
+
+    def config_simulation(self, hypothesis, head_connectivity, vep_settings=SimulationSettings()):
         ep_settings = Settings(vep_settings.integration_step, vep_settings.noise_seed,
                                vep_settings.noise_intensity, vep_settings.simulated_period)
 
-        self.ep_config = FullConfiguration(hypothesis.name, self.connectivity_path,
-                                           head.number_of_regions, ep_settings)
-        for i in xrange(head.number_of_regions):
+        self.ep_config = FullConfiguration(hypothesis.name, head_connectivity,
+                                           hypothesis.n_regions, ep_settings)
+        for i in xrange(hypothesis.n_regions):
             x0 = self.rescale_x0(hypothesis.x0.flatten())
             self.ep_config.set([i], EpileptorParams(iext=hypothesis.Iext1.flatten()[i],
                                                     x0=x0[i],
                                                     ks=hypothesis.K.flatten()[i],
                                                     c=hypothesis.yc.flatten()[i]))
 
+        # TODO: history length has to be computed given the time delays (i.e., the tract lengts...)
+        #history_length = ...
+        initial_conditions = self.prepare_initial_conditions(hypothesis, EpileptorParams, history_length=1)
+        # TODO: initial_conditions have to be written in the json configuration file
         hypothesis_path = os.path.join(self.head_path, hypothesis.name + ".json")
         self._save_serialized(self.ep_config, hypothesis_path)
 
@@ -112,3 +125,26 @@ class SimulatorCustom(ABCSimulator):
 
     def launch_pse(self, hypothesis, head, vep_settings=SimulationSettings()):
         raise NotImplementedError()
+
+
+def setup_simulation(model, dt, sim_length, monitor_period, scale_time=1,
+                     noise_instance=None, noise_intensity=None,
+                     monitor_expressions=None, monitors_instance=None, variables_names=None):
+
+    variables_names = ['lfp', 'x1', 'z']
+
+    if noise_intensity is  None:
+        noise_intensity = numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.])
+
+    settings = SimulationSettings(simulated_period=sim_length, integration_step=dt,
+                                  scale_time=scale_time,
+                                  noise_preconfig=noise_instance, noise_type=noise_type,
+                                  noise_intensity=noise_intensity, noise_ntau=noise_instance.ntau,
+                                  noise_seed=NOISE_SEED,
+                                  monitors_preconfig=monitors_instance, monitor_type=monitors_instance._ui_name,
+                                  monitor_sampling_period=monitor_period, monitor_expressions=monitor_expressions,
+                                  variables_names=variables_names)
+
+    simulator_instance = SimulatorCustom(data_folder)
+
+    return simulator_instance, settings, variables_names
