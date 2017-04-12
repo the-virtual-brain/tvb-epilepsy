@@ -14,9 +14,8 @@ import numpy
 
 from tvb_epilepsy.base.constants import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
 from tvb_epilepsy.base.utils import obj_to_dict, assert_arrays
-from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
 from tvb_epilepsy.base.calculations import calc_rescaled_x0
-from tvb_epilepsy.tvb_api.epileptor_models import build_tvb_model
+from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
 
 
 class Settings(object):
@@ -38,7 +37,7 @@ class EpileptorModel(object):
         a, b, c, d, aa, r, kvf, kf, ks, tau, iext, iext2 , slope, x0, tt = \
             assert_arrays([a, b, c, d, aa, r, kvf, kf, ks, tau, iext, iext2 , slope, x0, tt])
         # TODO: add desired shape as argument in assert_arrays
-        self._ui_name = "CustomModel"
+        self._ui_name = "CustomEpileptor"
         self.a = a
         self.b = b
         self.c = c
@@ -138,7 +137,7 @@ def setup_simulation(head_path, hypothesis, dt, sim_length, monitor_period, scal
     simulator_instance = SimulatorCustom(model, head_path)
 
     if variables_names is None:
-        variables_names = ['lfp', 'x1', 'z']
+        variables_names = [ 'x1', 'z', 'x2']
 
     if noise_intensity is None:
         noise_intensity = numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.])

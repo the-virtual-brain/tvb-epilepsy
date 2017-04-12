@@ -6,25 +6,22 @@ import numpy as np
 import copy as cp
 from scipy.io import savemat
 from tvb_epilepsy.base.constants import *
-from tvb_epilepsy.base.hypothesis import Hypothesis
 from tvb_epilepsy.base.utils import initialize_logger, calculate_projection, set_time_scales, filter_data, \
                                     write_object_to_h5_file, assert_equal_objects
-from tvb_epilepsy.tvb_api.readers_tvb import TVBReader
-from tvb_epilepsy.tvb_api.simulator_tvb import *
-from tvb_epilepsy.tvb_api.epileptor_models import *
-from tvb_epilepsy.custom.readers_custom import CustomReader
-from tvb_epilepsy.custom.read_write import write_hypothesis, read_hypothesis, write_simulation_settings, \
-                                           read_simulation_settings, write_ts, write_ts_epi, write_ts_seeg_epi
 from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_sim_results, plot_nullclines_eq
+from tvb_epilepsy.base.hypothesis import Hypothesis
+
+if SIMULATION_MODE == "custom":
+    from tvb_epilepsy.custom.simulator_custom import setup_simulation
+else:
+    from tvb_epilepsy.tvb_api.simulator_tvb import setup_simulation
+from tvb_epilepsy.custom.read_write import write_hypothesis, read_hypothesis, write_simulation_settings, \
+                                           read_simulation_settings, write_ts, read_ts, write_ts_epi, write_ts_seeg_epi
 
 
 SHOW_FLAG = False
 SAVE_FLAG = True
 SHOW_FLAG_SIM = False
-
-#Set a special scaling for HH regions, for this example:
-#Set Khyp >=1.0     
-Khyp = 5.0
 
 
 #The main function...
@@ -33,25 +30,59 @@ if __name__ == "__main__":
 #-------------------------------Reading data-----------------------------------
     logger = initialize_logger(__name__)
 
-    # if DATA_MODE == 'ep':
-    #     logger.info("Reading from cutsom")
-    #     data_folder = os.path.join(DATA_CUSTOM, 'Head')
-    #     from tvb_epilepsy.custom.readers_custom import CustomReader
-    #
-    #     reader = CustomReader()
-    # else:
-    #     logger.info("Reading from TVB")
-    #     data_folder = DATA_TVB
-    #     reader = TVBReader()
+    if DATA_MODE == 'custom':
+        logger.info("Reading from custom")
+        data_folder = os.path.join(DATA_CUSTOM, 'Head')
+        from tvb_epilepsy.custom.readers_custom import CustomReader
 
-    data_folder = DATA_CUSTOM #
-    reader = CustomReader()
-    logger.info("We will be reading from location " + data_folder)
+        reader = CustomReader()
+    else:
+        logger.info("Reading from TVB")
+        data_folder = DATA_TVB
+        from tvb_epilepsy.tvb_api.readers_tvb import TVBReader
+        reader = TVBReader()
+
     #Read standard  head
     logger.info("We will be reading from location " + data_folder)
     head = reader.read_head(data_folder)
     #logger.debug("Loaded Head " + str(head))
 
+# # ---------------------------------Hypothalamus pathology addition--------------------------------------------------
+# 
+# #Modify data folders for this example:
+# DATA_HH = '/Users/dionperd/Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH'
+# #CON_DATA = 'connectivity_2_hypo.zip'
+# CONNECT_DATA = 'connectivity_hypo.zip'
+# 
+# #Set a special scaling for HH regions, for this example:
+# #Set Khyp >=1.0     
+# Khyp = 5.0
+# 
+# # Read  connectivity with hypothalamus pathology
+# data_folder = os.path.join(DATA_HH, CONNECT_DATA)
+# reader = TVBReader()
+# HHcon = reader.read_connectivity(data_folder)
+# logger.debug("Loaded Connectivity " + str(head.connectivity))
+# 
+# # Create missing hemispheres:
+# nRegions = HHcon.region_labels.shape[0]
+# HHcon.hemispheres = np.ones((nRegions,), dtype='int')
+# for ii in range(nRegions):
+#     if (HHcon.region_labels[ii].find('Right') == -1) and \
+#             (HHcon.region_labels[ii].find('-rh-') == -1):  # -1 will be returned when a is not in b
+#         HHcon.hemispheres[ii] = 0
+# 
+# # Adjust pathological connectivity
+# w_hyp = np.ones((nRegions, nRegions), dtype='float')
+# if Khyp > 1.0:
+#     w_hyp[(nRegions - 2):, :] = Khyp
+#     w_hyp[:, (nRegions - 2):] = Khyp
+# HHcon.normalized_weights = w_hyp * HHcon.normalized_weights
+# 
+# # Update head with the correct connectivity and sensors' projections
+# head.connectivity = HHcon
+# 
+# # --------------------------------------------------------------------------------------------------------------------
 
     #Compute projections
     sensorsSEEG=[]
@@ -114,7 +145,7 @@ if __name__ == "__main__":
     # E[8]=0.425
     # E[9]=0.900
     #iE = np.array([50])
-    #E = np.array([0.25], dtype=numpy.float32)
+    #E = np.array([0.25], dtype=np.float32)
     iE = np.array(range(hyp_ep.n_regions))
     E = (0.5 * np.ones((1,hyp_ep.n_regions))).tolist()
     hyp_ep.configure_e_hypothesis(iE, E, seizure_indices)
@@ -135,7 +166,7 @@ if __name__ == "__main__":
     #                     "x0 Hypothesis", x1eq_mode="optimize")  #"optimize" or "linTaylor"
     # hyp_exc.K = 0.1 * hyp_exc.K
     # ix0 =range(head.number_of_regions)
-    # x0 = (X0_DEF * numpy.ones((len(ix0),), dtype='float32')).tolist()
+    # x0 = (X0_DEF * np.ones((len(ix0),), dtype='float32')).tolist()
 
     hyp_exc = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, \
                         "EP & x0 Hypothesis", x1eq_mode="optimize")  #"linTaylor"
@@ -143,7 +174,7 @@ if __name__ == "__main__":
     E = (0.5 * np.ones((1, hyp_ep.n_regions))).tolist()
     hyp_exc.configure_e_hypothesis(iE, E, seizure_indices)
     ix0 = [51]
-    x0 = (0.5 * numpy.ones((len(ix0),), dtype='float32')).tolist()
+    x0 = (0.5 * np.ones((len(ix0),), dtype='float32')).tolist()
 
     hyp_exc.configure_x0_hypothesis(ix0, x0, seizure_indices)
 
@@ -152,15 +183,15 @@ if __name__ == "__main__":
                     figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
     write_hypothesis(hyp_exc, folder_name=FOLDER_RES, file_name="hyp_exc.h5", hypo_name=None)
     #
-    # x0_opt = numpy.array(hyp_exc.x0)
-    # x1EQ_opt = numpy.array(hyp_exc.x1EQ)
-    # E_opt = numpy.array(hyp_exc.E)
+    # x0_opt = np.array(hyp_exc.x0)
+    # x1EQ_opt = np.array(hyp_exc.x1EQ)
+    # E_opt = np.array(hyp_exc.E)
 
     # hyp_exc = cp.deepcopy(hyp_ep)
     # hyp_exc.name = "EP & x0 Hypothesis"
     # hyp_exc.x1eq_mode = "optimize"
     # ix0 = [51]
-    # x0 = (0.5 * numpy.ones((len(ix0),), dtype='float32')).tolist()
+    # x0 = (0.5 * np.ones((len(ix0),), dtype='float32')).tolist()
     #
     # hyp_exc.configure_x0_hypothesis(ix0, x0, seizure_indices)
     #
@@ -187,7 +218,10 @@ if __name__ == "__main__":
     for hyp in (hyp_exc, hyp_ep): # ,hyp_exc #length=30000
 
         # Choose the model and build it on top of the specific hypothesis, adjust parameters:
-        model_name = 'EpileptorDP'
+        if SIMULATION_MODE == "custom":
+            model_name = 'CustomEpileptor'
+        else:
+            model_name = 'EpileptorDP'  # 'EpileptorDP2D', 'EpileptorDPrealistic', "Epileptor"
 
         # Setup and configure the simulator according to the specific model (and, therefore, hypothesis)
         # Good choices for noise and monitor expressions are made in this helper function
@@ -201,11 +235,17 @@ if __name__ == "__main__":
                                                                            monitor_expressions=None,
                                                                            monitors_instance=None, variables_names=None)
 
-        sim, sim_settings = simulator_instance.config_simulation(head.connectivity, hyp, settings=sim_settings)
-        print "Initial conditions at equilibrium point: ", numpy.squeeze(sim.initial_conditions)
-
         #Launch simulation
-        ttavg, tavg_data = simulator_instance.launch_simulation(sim, hyp, n_report_blocks=n_report_blocks)
+        if SIMULATION_MODE == "custom":
+            simulator_instance.config_simulation(head.connectivity, hyp, settings=sim_settings)
+            simulator_instance.launch_simulation(hyp)
+            ttavg, tavg_data = read_ts(os.path.join(data_folder, hyp.name, "ts.h5"), data="data")
+        else:
+            sim, sim_settings = simulator_instance.config_simulation(head.connectivity, hyp, settings=sim_settings)
+            print "Initial conditions at equilibrium point: ", np.squeeze(sim.initial_conditions)
+            ttavg, tavg_data = simulator_instance.launch_simulation(sim, hyp, n_report_blocks=n_report_blocks)
+            tavg_data = tavg_data[:,:,:,0]
+            del sim
         logger.info("\nSimulated signal return shape: " + str(tavg_data.shape))
         logger.info("Time: " + str(scale_time*ttavg[0]) + " - " + str(scale_time*ttavg[-1]))
         logger.info("Values: " + str(tavg_data.min()) + " - " + str(tavg_data.max()))
@@ -224,23 +264,27 @@ if __name__ == "__main__":
 
         #Pack results into a dictionary, high pass filter, and compute SEEG
         res = dict()
-        time = scale_time * numpy.array(ttavg, dtype='float32')
-        dt = numpy.min(numpy.diff(time))
+        time = scale_time * np.array(ttavg, dtype='float32')
+        dt = np.min(np.diff(time))
         for iv in range(len(vois)):
-            res[vois[iv]] = numpy.array(tavg_data[:, iv, :, 0], dtype='float32')
+            res[vois[iv]] = np.array(tavg_data[:, iv, :], dtype='float32')
 
         #write_ts(res, dt, path=os.path.join(FOLDER_RES, hyp.name + "_ts.h5"))
 
-        if isinstance(sim.model, EpileptorDP2D):
-            raw_data = numpy.dstack([res["x1"], res["z"], res["x1"]])
+        if sim.model._ui_name == "EpileptorDP2D":
+            raw_data = np.dstack([res["x1"], res["z"], res["x1"]])
             lfp_data = res["x1"]
             for i in range(len(projections)):
-                res['seeg'+str(i)] = numpy.dot(res['z'], projections[i].T)
+                res['seeg'+str(i)] = np.dot(res['z'], projections[i].T)
         else:
-            raw_data = numpy.dstack([res["x1"], res["z"], res["x2"]])
-            lfp_data = res["lfp"]
+            if sim.model._ui_name == "CustomEpileptor":
+                raw_data = np.dstack([res["x1"], res["z"], res["x2"]])
+                lfp_data = res["x2"] - res["x1"]
+            else:
+                raw_data = np.dstack([res["x1"], res["z"], res["x2"]])
+                lfp_data = res["lfp"]
             for i in range(len(projections)):
-                res['seeg' + str(i)] = numpy.dot(res['lfp'], projections[i].T)
+                res['seeg' + str(i)] = np.dot(res['lfp'], projections[i].T)
                 if hpf_flag:
                     for i in range(res['seeg'].shape[0]):
                         res['seeg_hpf'+ str(i)][:, i] = filter_data(res['seeg' + str(i)][:, i], hpf_low, hpf_high, hpf_fs)
@@ -249,8 +293,7 @@ if __name__ == "__main__":
         del raw_data, lfp_data
 
         for i in range(len(projections)):
-            write_ts_seeg_epi(res['seeg' + str(i)], dt,
-                          path=os.path.join(FOLDER_RES, hyp.name + "_ep_ts.h5"))
+            write_ts_seeg_epi(res['seeg' + str(i)], dt, path=os.path.join(FOLDER_RES, hyp.name + "_ep_ts.h5"))
 
         res['time'] = time
 
@@ -288,5 +331,5 @@ if __name__ == "__main__":
             except:
                 print "Why?"
 
-        del hyp, model, sim, sim_settings, simulator_instance, res
+        del hyp, model, sim_settings, simulator_instance, res
 

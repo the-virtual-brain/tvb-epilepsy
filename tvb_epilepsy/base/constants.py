@@ -12,12 +12,12 @@ if platform.node()=='dionperdMBP':
     FOLDER_VEP = os.path.join(USER_HOME, 'CBR','VEP')
     #DATA_CUSTOM = os.path.join(USER_HOME, 'CBR', 'svn', 'episense', 'demo-data')
     DATA_TVB = os.path.join(USER_HOME, 'CBR','svn','tvb', 'tvb-data', 'tvb-data')
-    DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH/Head_HH')
+    DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH')
 else:
     FOLDER_VEP = os.path.join(USER_HOME, 'VEP')
     #DATA_CUSTOM = os.path.join(USER_HOME, 'CBR_software', 'svn-episense', 'demo-data')
     DATA_TVB = os.path.join(USER_HOME,'CBR_software', 'svn-tvb', 'tvb-data', 'tvb-data')
-    DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH/Head_HH')
+    DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH')
 
 if not (os.path.isdir(FOLDER_VEP)):
     os.mkdir(FOLDER_VEP)
@@ -56,8 +56,8 @@ X1_EQ_CR_DEF = -4.0 / 3.0
 
 # Simulation and data read folder amd flags:
 MODEL = '6v'
-SIMULATION_MODE = 'tvb'  # 'ep' or 'tvb
-DATA_MODE = 'ep'  # 'ep' or 'tvb'
+SIMULATION_MODE = 'tvb'  # 'custom' or 'tvb
+DATA_MODE = 'custom'  # 'custom' or 'tvb'
 
 # Normalization configuration:rue
 WEIGHTS_NORM_PERCENT = 95

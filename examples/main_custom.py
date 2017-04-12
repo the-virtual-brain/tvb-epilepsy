@@ -75,7 +75,7 @@ if __name__ == "__main__":
         plot_hypothesis(hyp, head.connectivity.region_labels, save_flag=SAVE_FLAG, figsize=VERY_LARGE_SIZE)
 
         ts_time, ts_data = read_ts(os.path.join(data_folder, hyp.name, "ts.h5"), data="data")
-
+        ts_time *= scale_time
         plot_timeseries(ts_time, {'ts0': ts_data[:, :, 0], 'ts1': ts_data[:, :, 1], 'ts2': ts_data[:, :, 2]},
                         save_flag=True, title="Ts_" + hyp.name)
 
