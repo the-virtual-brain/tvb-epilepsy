@@ -66,6 +66,6 @@ SYMBOLIC_CALCULATIONS_FLAG = False
 
 # Information needed for the custom simulation
 HDF5_LIB="libjhdf5.dylib"
-LIB_PATH=""
-JAR_PATH=""
-JAVA_MAIN_SIM=""
+LIB_PATH="/Applications/Episense.app/Contents/Java"
+JAR_PATH="/Applications/Episense.app/Contents/Java/episense-fx-app.jar"
+JAVA_MAIN_SIM="de.codebox.episense.fx.StartSimulation"
