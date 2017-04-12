@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
     else:
 
-        x0_6d = rescale_x0(x0, yc, Iext1, zmode=zmode)
+        x0_6d = calc_rescaled_x0(x0, yc, Iext1, zmode=zmode)
         print "x0_6d="
         print x0_6d
 

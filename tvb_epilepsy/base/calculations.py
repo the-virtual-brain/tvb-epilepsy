@@ -1074,10 +1074,11 @@ def calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
     return f
 
 
-def rescale_x0(x0_2d, yc, Iext1, a=1.0, b=-2.0, zmode=array("lin"), shape=None):
+def calc_rescaled_x0(hyp_x0, model_yc, model_Iext1, model_a=1.0, model_bd=-2.0, model_zmode=array("lin"), shape=None):
 
-    x0_2d, yc, Iext1, a, b = assert_arrays([x0_2d, yc, Iext1, a, b ], shape)
+    hyp_x0, model_yc, model_Iext1, model_a, model_bd = \
+        assert_arrays([hyp_x0, model_yc, model_Iext1, model_a, model_bd], shape)
 
-    x0cr, r = calc_x0cr_r(yc, Iext1, a, b, zmode=zmode) #epileptor_model="6d",
+    x0cr, r = calc_x0cr_r(model_yc, model_Iext1, model_a, model_bd, zmode=model_zmode) #epileptor_model="6d",
 
-    return multiply(r, x0_2d) - x0cr
+    return multiply(r, hyp_x0) - x0cr

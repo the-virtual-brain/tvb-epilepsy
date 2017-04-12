@@ -8,7 +8,7 @@ from tvb.simulator.common import get_logger
 import tvb.datatypes.arrays as arrays
 import tvb.basic.traits.types_basic as basic
 from tvb.simulator.models import Model, Epileptor
-from tvb_epilepsy.base.calculations import calc_x0, calc_x0cr_r, rescale_x0
+from tvb_epilepsy.base.calculations import calc_x0, calc_x0cr_r, calc_rescaled_x0
 
 LOG = get_logger(__name__)
 
@@ -1094,8 +1094,8 @@ class EpileptorDP2D(Model):
 ###
 
 
-def build_tvb_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmode="lin"):
-    x0_transformed = rescale_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1, zmode=zmode)
+def build_tvb_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], a=1.0, b=3.0, d=5.0, zmode="lin"):
+    x0_transformed = calc_rescaled_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1, a, b - d, zmode=zmode)
     model_instance = Epileptor(x0=x0_transformed.flatten(), Iext=hypothesis.Iext1.flatten(),
                                Ks=hypothesis.K.flatten(), yc=hypothesis.yc.flatten(),
                                variables_of_interest=variables_of_interest)
@@ -1128,7 +1128,7 @@ def build_ep_2sv_model(hypothesis, variables_of_interest=["yc", "y1"], zmode=num
 
 def build_ep_6sv_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmode=numpy.array("lin")):
     #Correct x0 for 6D model
-    x0_transformed = rescale_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1)
+    x0_transformed = calc_rescaled_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1)
     model = EpileptorDP(x0=x0_transformed.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.yc.T,
                         variables_of_interest=variables_of_interest, zmode=zmode)
     return model
@@ -1140,7 +1140,7 @@ def build_ep_6sv_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmod
 
 def build_ep_11sv_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmode=numpy.array("lin"),
                         pmode=numpy.array("const")):
-    x0_transformed = rescale_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1)
+    x0_transformed = calc_rescaled_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1)
     model = EpileptorDPrealistic(x0=x0_transformed.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.yc.T,
                                  variables_of_interest=variables_of_interest, zmode=zmode)
     return model

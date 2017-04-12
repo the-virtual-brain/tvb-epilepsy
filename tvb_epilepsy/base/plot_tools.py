@@ -9,7 +9,7 @@ from matplotlib import pyplot, gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.utils import calculate_in_degree
-from tvb_epilepsy.base.calculations import calc_fx1, calc_fx1, calc_fz, calc_fz, calc_fx1_2d_taylor
+from tvb_epilepsy.base.calculations import calc_fx1, calc_fx1, calc_fz, calc_fz, calc_fx1_2d_taylor, calc_rescaled_x0
 from tvb_epilepsy.base.equilibrium_computation import calc_eq_y1
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
@@ -280,8 +280,8 @@ def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", z
         zZe = calc_fz(x1, z=0.0, x0=x0e, x0cr=x0cr, r=r, zmode=zmode)  # for epileptogenic regions
         zZne = calc_fz(x1, z=0.0, x0=x0ne, x0cr=x0cr, r=r, zmode=zmode)  # for non-epileptogenic regions
     else:
-        x0e_6d = rescale_x0(x0e, yc, Iext1, zmode=zmode)
-        x0ne_6d = rescale_x0(x0ne, yc, Iext1, zmode=zmode)
+        x0e_6d = calc_rescaled_x0(x0e, yc, Iext1, zmode=zmode)
+        x0ne_6d = calc_rescaled_x0(x0ne, yc, Iext1, zmode=zmode)
         # z nullcline:
         zZe = calc_fz(x1, z=0.0, x0=x0e_6d, zmode=zmode, model="2d")   # for epileptogenic regions
         zZne = calc_fz(x1, z=0.0, x0=x0ne_6d, zmode=zmode, model="2d")  # for non-epileptogenic regions
