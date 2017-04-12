@@ -327,7 +327,7 @@ def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", z
         #datacursor( lines[0], formatter='{label}'.format, bbox=dict(fc='white'), 
         #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
         HighlightingDataCursor(points[0], formatter='{label}'.format, bbox=dict(fc='white'), 
-                                   arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )
+                                   arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5))
 
     if save_flag:
         if len(fig.get_label())==0:

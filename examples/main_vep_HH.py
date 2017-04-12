@@ -49,7 +49,7 @@ if __name__ == "__main__":
     #     data_folder = DATA_TVB
     #     reader = TVBReader()
 
-    data_folder = os.path.join(DATA_HH, 'Head_HH') #
+    data_folder = DATA_CUSTOM #
     reader = CustomReader()
     logger.info("We will be reading from location " + data_folder)
     #Read standard  head
@@ -57,47 +57,47 @@ if __name__ == "__main__":
     head = reader.read_head(data_folder)
     #logger.debug("Loaded Head " + str(head))
 
-    # ---------------------------------Hypothalamus pathology addition--------------------------------------------------
+# ---------------------------------Hypothalamus pathology addition--------------------------------------------------
 
-    # #Read  connectivity with hypothalamus pathology
-    # data_folder = os.path.join(DATA_HH, CONNECT_DATA)
-    # reader = TVBReader()
-    # HHcon = reader.read_connectivity(data_folder)
-    # logger.debug("Loaded Connectivity " + str(head.connectivity))
-    #
-    # #Create missing hemispheres:
-    # nRegions = HHcon.region_labels.shape[0]
-    # HHcon.hemispheres = np.ones((nRegions,),dtype='int')
-    # for ii in range(nRegions):
-    #     if (HHcon.region_labels[ii].find('Right') == -1) and \
-    #        (HHcon.region_labels[ii].find('-rh-') == -1):  # -1 will be returned when a is not in b
-    #        HHcon.hemispheres[ii]=0
-    #
-    # #Adjust pathological connectivity
-    # w_hyp = np.ones((nRegions,nRegions),dtype = 'float')
-    # if Khyp>1.0:
-    #     w_hyp[(nRegions-2):,:] = Khyp
-    #     w_hyp[:,(nRegions-2):] = Khyp
-    # HHcon.normalized_weights = w_hyp*HHcon.normalized_weights
-    #
-    # #Update head with the correct connectivity and sensors' projections
-    # head.connectivity = HHcon
+# Read  connectivity with hypothalamus pathology
+data_folder = os.path.join(DATA_HH, CONNECT_DATA)
+reader = TVBReader()
+HHcon = reader.read_connectivity(data_folder)
+logger.debug("Loaded Connectivity " + str(head.connectivity))
 
-    # ------------------------------------------------------------------------------------------------------------------
+# Create missing hemispheres:
+nRegions = HHcon.region_labels.shape[0]
+HHcon.hemispheres = np.ones((nRegions,), dtype='int')
+for ii in range(nRegions):
+    if (HHcon.region_labels[ii].find('Right') == -1) and \
+            (HHcon.region_labels[ii].find('-rh-') == -1):  # -1 will be returned when a is not in b
+        HHcon.hemispheres[ii] = 0
 
-    #Compute projections
-    sensorsSEEG=[]
-    projections=[]    
-    for sensors, projection in head.sensorsSEEG.iteritems():
-        if projection is None:
-            continue
-        else:
-            projection = calculate_projection(sensors, head.connectivity)
-            head.sensorsSEEG[sensors] = projection
-            print projection.shape
-            sensorsSEEG.append(sensors)
-            projections.append(projection) 
-    #plot_head(head, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
+# Adjust pathological connectivity
+w_hyp = np.ones((nRegions, nRegions), dtype='float')
+if Khyp > 1.0:
+    w_hyp[(nRegions - 2):, :] = Khyp
+    w_hyp[:, (nRegions - 2):] = Khyp
+HHcon.normalized_weights = w_hyp * HHcon.normalized_weights
+
+# Update head with the correct connectivity and sensors' projections
+head.connectivity = HHcon
+
+# ------------------------------------------------------------------------------------------------------------------
+
+# Compute projections
+sensorsSEEG = []
+projections = []
+for sensors, projection in head.sensorsSEEG.iteritems():
+    if projection is None:
+        continue
+    else:
+        projection = calculate_projection(sensors, head.connectivity)
+        head.sensorsSEEG[sensors] = projection
+        print projection.shape
+        sensorsSEEG.append(sensors)
+        projections.append(projection)
+        # plot_head(head, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
              
 #--------------------------Hypothesis and LSA-----------------------------------
        

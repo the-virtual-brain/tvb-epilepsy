@@ -10,12 +10,14 @@ USER_HOME = os.path.expanduser("~")
 
 if platform.node()=='dionperdMBP':
     FOLDER_VEP = os.path.join(USER_HOME, 'CBR','VEP')
-    DATA_CUSTOM = os.path.join(USER_HOME, 'CBR', 'svn', 'episense', 'demo-data')
+    #DATA_CUSTOM = os.path.join(USER_HOME, 'CBR', 'svn', 'episense', 'demo-data')
     DATA_TVB = os.path.join(USER_HOME, 'CBR','svn','tvb', 'tvb-data', 'tvb-data')
+    DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH/Head_HH')
 else:
     FOLDER_VEP = os.path.join(USER_HOME, 'VEP')
-    DATA_CUSTOM = os.path.join(USER_HOME, 'CBR_software', 'svn-episense', 'demo-data')
+    #DATA_CUSTOM = os.path.join(USER_HOME, 'CBR_software', 'svn-episense', 'demo-data')
     DATA_TVB = os.path.join(USER_HOME,'CBR_software', 'svn-tvb', 'tvb-data', 'tvb-data')
+    DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH/Head_HH')
 
 if not (os.path.isdir(FOLDER_VEP)):
     os.mkdir(FOLDER_VEP)

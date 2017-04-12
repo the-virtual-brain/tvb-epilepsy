@@ -2,357 +2,306 @@
 Entry point for working with VEP
 """
 import os
-import copy as cp
 import numpy as np
+import copy as cp
 from scipy.io import savemat
 from tvb_epilepsy.base.constants import *
-from tvb_epilepsy.base.hypothesis import Hypothesis, X0_DEF
-from tvb_epilepsy.base.utils import filter_data
-from tvb_epilepsy.base.utils import initialize_logger
-from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_timeseries, plot_raster, plot_trajectories
+from tvb_epilepsy.base.hypothesis import Hypothesis
+from tvb_epilepsy.base.utils import initialize_logger, calculate_projection, set_time_scales, filter_data, \
+                                    write_object_to_h5_file, assert_equal_objects
+from tvb_epilepsy.tvb_api.readers_tvb import TVBReader
 from tvb_epilepsy.tvb_api.simulator_tvb import *
-from tvb.simulator import noise
-from tvb.datatypes import equations
+from tvb_epilepsy.tvb_api.epileptor_models import *
+from tvb_epilepsy.custom.readers_custom import CustomReader
+from tvb_epilepsy.custom.read_write import write_hypothesis, read_hypothesis, write_simulation_settings, \
+                                           read_simulation_settings, write_ts, write_ts_epi, write_ts_seeg_epi
+from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_sim_results, plot_nullclines_eq
 
-SHOW_FLAG=True
-SAVE_FLAG=True
 
+SHOW_FLAG = False
+SAVE_FLAG = True
+SHOW_FLAG_SIM = False
+
+#Set a special scaling for HH regions, for this example:
+#Set Khyp >=1.0     
+Khyp = 5.0
+
+
+#The main function...
 if __name__ == "__main__":
 
-
+#-------------------------------Reading data-----------------------------------
     logger = initialize_logger(__name__)
-    
-#-------------------------------Reading data-----------------------------------    
 
-    if DATA_MODE == 'ep':
-        logger.info("Reading from custom")
-        data_folder = os.path.join(DATA_CUSTOM, 'Head')
-        from tvb_epilepsy.custom.readers_custom import CustomReader
-        reader = CustomReader()
-    else:
-        logger.info("Reading from TVB")
-        data_folder = DATA_TVB
-        from tvb_epilepsy.tvb_api.readers_tvb import TVBReader
-        reader = TVBReader()
+    # if DATA_MODE == 'ep':
+    #     logger.info("Reading from cutsom")
+    #     data_folder = os.path.join(DATA_CUSTOM, 'Head')
+    #     from tvb_epilepsy.custom.readers_custom import CustomReader
+    #
+    #     reader = CustomReader()
+    # else:
+    #     logger.info("Reading from TVB")
+    #     data_folder = DATA_TVB
+    #     reader = TVBReader()
 
+    data_folder = DATA_CUSTOM #
+    reader = CustomReader()
+    logger.info("We will be reading from location " + data_folder)
+    #Read standard  head
     logger.info("We will be reading from location " + data_folder)
     head = reader.read_head(data_folder)
-    logger.debug("Loaded Head " + str(head))
-    logger.debug("Loaded Connectivity " + str(head.connectivity))
+    #logger.debug("Loaded Head " + str(head))
 
-#--------------------------Hypotheis and LSA-----------------------------------
 
-    
-    # Next configure two seizure hypothesis
-    # Create a new hypothesis for this Head:
-    hyp_ep = Hypothesis(head.number_of_regions, head.connectivity.weights, "EP Hypothesis")
-    hyp_ep.K = 0.1*hyp_ep.K
-    print 'Configure the hypothesis...'
-    print '...by defining the indices...'
-    print 'iE:'
-    iE = np.array([7, 50])
-    print iE
-    print '...the epileptogenicity values of the regions of interest...'
-    print 'E:'
-    E = np.array([0.5,0.8], dtype=np.float32)
-    print E
-    print '...as well as the regions of reference (e.g., the regions the seizure is starting from):'
-    seizure_indices = np.array([7, 50], dtype=np.int32)
-    print seizure_indices
-    
-    hyp_ep.configure_e_hypothesis(iE, E, seizure_indices)
-    logger.debug(str(hyp_ep))
-    print 'Printing a summary of this hypothesis, together with the result of the Linear Stability Analysis:'
-    print hyp_ep
-
-    # Create a new hypothesis for this Head:
-    #hyp_exc = Hypothesis(head.number_of_regions, head.connectivity.weights, "Excitability Hypothesis")
-    hyp_exc = cp.deepcopy(hyp_ep)
-    print 'Configure the hypothesis...'
-    print '...by defining the indices of all regions assumed to neither generate nor propagate the seizure...'
-    ii = np.array(range(head.number_of_regions), dtype=np.int32)
-    ix0 = np.delete(ii, iE)
-    print 'ix0:'
-    print ix0
-    print '...and setting their excitability values x0 equal to the default "healthy" one:'
-    print 'x0:' 
-    print X0_DEF
-    
-    hyp_exc.configure_x0_hypothesis(ix0, X0_DEF, seizure_indices)
-    logger.debug(str(hyp_exc))
-    print 'Printing a summary of this hypothesis, together with the result of the Linear Stability Analysis:'
-    print hyp_exc
-
-#------------------------------Simulation--------------------------------------
-
-    print "Getting SEEG sensors and projections from head"
+    #Compute projections
     sensorsSEEG=[]
     projections=[]    
     for sensors, projection in head.sensorsSEEG.iteritems():
         if projection is None:
             continue
         else:
+            projection = calculate_projection(sensors, head.connectivity)
+            head.sensorsSEEG[sensors] = projection
+            print projection.shape
             sensorsSEEG.append(sensors)
             projections.append(projection) 
-            
-    print 'Select TVB or custom simulator and the desired Epileptor model, as well as set simulations settings'
-    SIMULATION_MODE ='tvb_epilepsy' #'ep'
-    print 'Selected simulator: '+SIMULATION_MODE
+    #plot_head(head, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
+             
+#--------------------------Hypothesis and LSA-----------------------------------
+       
+    # Next configure two seizure hypothesis
+       
+    #%Tim:
+    #% EZ:
+    #% 10 ctx-lh-entorhinal -1.7          15
+    #% 11 ctx-lh-entorhinal -1.7          15
+    #% 146 Left-Hippocampus -1.7          7  
+    #% 147 Left-Amygdala -1.7             8
+    #% 154 Right-Hippocampus -1.2        50
+    #% 157 Left-Hypothalamus -1.7        88
+    #% 158 Right-Hypothalamus -1.7       89
+    #%  
+    #% PZ:
+    #% 31 ctx-lh-parahippocampal -1.74   25
+    #% 13 ctx-lh-fusiform -1.74          16
+    #% 30 ctx-lh-parahippocampal -1.98   25
+    #% 140 Brain-Stem -1.93              1
+    #% 142 Left-Thalamus-Proper -1.93    3
+    #
+    #%Denis:
+    #% PZ=Ev:
+    #%     'Left-Thalamus-Proper'      3
+    #%     'Right-Thalamus-Proper'     46
+    #%     'ctx-lh-parahippocampal'    25
+    #%     'ctx-lh-fusiform           16
+    #%     'Brain-Stem'                1
+    #%     'ctx-lh-parahippocampal'   25
+    #%     'ctx-rh-entorhinal'        58
+    #%     'ctx-rh-parahippocampal'   68
+    #%     'Right-Cerebellum-Cortex'   45
+    #%     'ctx-rh-fusiform'           59   
+       
+    #seizure_indices = np.array([1,    3,   7,   8,  15,  16,  25,  50,   88, 89], dtype=np.int32)
+    seizure_indices = np.array([50], dtype=np.int32)
+    
+    hyp_ep = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, \
+                        "EP Hypothesis", x1eq_mode="optimize")  #"linTaylor"
+    # iE = np.array([1,    3,   7,   8,  15,  16,  25,  50, 88,  89])
+    # E = 0*np.array(iE, dtype=np.float32)
+    # E[7]=0.65
+    # E[2]=0.800
+    # E[4]=0.3775
+    # E[8]=0.425
+    # E[9]=0.900
+    #iE = np.array([50])
+    #E = np.array([0.25], dtype=numpy.float32)
+    iE = np.array(range(hyp_ep.n_regions))
+    E = (0.5 * np.ones((1,hyp_ep.n_regions))).tolist()
+    hyp_ep.configure_e_hypothesis(iE, E, seizure_indices)
+    #logger.debug(str(hyp_ep))
+    # plot_hypothesis(hyp_ep, head.connectivity.region_labels, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
+    #                figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
+    #
+    # write_hypothesis(hyp_ep, folder_name=FOLDER_RES, file_name="hyp_ep.h5", hypo_name=None)
 
-    MODEL = '11v' #'6v','2v','11v','tvb_epilepsy'
-    print 'Selected model: '+MODEL
-    
-    #Monitor adjusted to the model    
-    nvar = {'tvb_epilepsy':6,
-            '6v':6,
-            '2v':2,
-            '11v':11}
-    monitor_expr = {'tvb_epilepsy':['x2 - x1','x1', 'y1', 'z', 'x2', 'y2', 'g' ],
-                    '6v':["y3 - y0","y0", "y1", "y2", "y3", "y4", "y5"],
-                    '2v':["y0", "y1"],
-                    '11v':["y3 - y0","y0", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8", "y9", "y10"]}          
-    #print "Expressions monitored: "
-    #for expr in monitor_expr[MODEL]:
-    #    print expr
-    
-    #Time scales:    
-    fs = 2*1024.0
-    dt = 1000.0/fs
-    print "Integration (sampling) frequency: "+str(fs)
-    print "...and time step: "+ str(dt) 
-    fsAVG = 512.0 #fs/10
-    fsSEEG = fsAVG
-    print "Monitor (moving average) frequency: "+str(fsAVG)
-    print "...SEEG frequency: "+ str(fsSEEG) 
-    
-    
-    #Noise configuration
-    #                                  x1  y1   z     x2   y2   g 
-    noise_intensity = {'tvb_epilepsy':np.array([0., 0., 5e-8, 0.0, 5e-8, 0.]),
-                        '6v':np.array([ 0., 0., 5e-8, 0.0, 5e-8, 0.]),
-                        '2v':np.array([ 0.,     5e-8]) ,
-                        '11v':np.array([0., 0., 1e-5, 0.0, 1e-5, 0., 
-    #                                   #x0   slope Iext1 Iext2 K 
-                                        1e-7, 1e-2, 1e-7, 1e-2, 1e-8])} 
-    #Preconfigured noise
-    eq=equations.Linear(parameters={"a": 0.0, "b": 1.0}) #default = a*y+b
-    noise=noise.Multiplicative(nsig=noise_intensity[MODEL], b=eq,
-                               random_stream=np.random.RandomState(seed=NOISE_SEED)) #define ntau for colored noise: ntau = 10, 
-    noise_shape = noise.nsig.shape                    
-    #Colored noise:                
-    #noise.configure_coloured(dt=dt,shape=noise_shape)
-    #White noise:               
-    noise.configure_white(dt=dt)
-    #Get sensors and projections:
-    print "Summary of noise settings: "
-    print noise
-         
+    # # Test write, read and assert functions
+    # hyp_ep2 = read_hypothesis(path=os.path.join(FOLDER_RES, "hyp_ep.h5"), output="object",
+    #                           update_hypothesis=True, hypo_name=None)
+    # from tvb_epilepsy.base.utils import assert_equal_objects
+    # from tvb_epilepsy.custom.read_write import hyp_attributes_dict
+    # assert_equal_objects(hyp_ep, hyp_ep2, hyp_attributes_dict)
 
-    settings = SimulationSettings(length=10000,integration_step=dt, monitor_sampling_period=fs/fsSEEG*dt,
-                                  noise_preconfig=noise, monitor_expr=monitor_expr[MODEL]) #noise_intensity=noise_intensity, 
-    #print "Summary of simulation settings: "
-    #print settings
-    
-    #Build the model
+    # hyp_exc = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights,
+    #                     "x0 Hypothesis", x1eq_mode="optimize")  #"optimize" or "linTaylor"
+    # hyp_exc.K = 0.1 * hyp_exc.K
+    # ix0 =range(head.number_of_regions)
+    # x0 = (X0_DEF * numpy.ones((len(ix0),), dtype='float32')).tolist()
 
-    build_model = {'tvb_epilepsy':build_tvb_model,
-                    '6v':build_ep_6sv_model,
-                    '2v':build_ep_2sv_model,
-                    '11v':build_ep_11sv_model}
-    prepare_model = {'tvb_epilepsy':prepare_for_tvb_model,
-                     '6v':prepare_for_6sv_model,
-                     '2v':prepare_for_2sv_model,
-                     '11v':prepare_for_11sv_model}        
-    # Choosing the model:           epileptor model,      history
-    simulator_instance = SimulatorTVB(build_model[MODEL], prepare_model[MODEL])
-    print "Simulator instance: "
-    print settings  
-    
-    #Prepare output
-    save_dict = dict()
-    seeg=dict()
-    x1=dict()
-    z=dict()
-    if MODEL!='2v':
-        lfp=dict()
-        y1=dict()
-        x2=dict()
-        y2=dict()
-        g=dict()
-        hpf=dict()   
-    
-        if MODEL=='11v':       
-            x0ts=dict()
-            slopeTS=dict()
-            Iext1ts=dict()
-            Iext2ts=dict()
-            Kts=dict()  
+    hyp_exc = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, \
+                        "EP & x0 Hypothesis", x1eq_mode="optimize")  #"linTaylor"
+    iE = np.array(range(hyp_ep.n_regions))
+    E = (0.5 * np.ones((1, hyp_ep.n_regions))).tolist()
+    hyp_exc.configure_e_hypothesis(iE, E, seizure_indices)
+    ix0 = [51]
+    x0 = (0.5 * numpy.ones((len(ix0),), dtype='float32')).tolist()
 
-    
-    hyps = {'ep':hyp_ep,'exc':hyp_exc}
-    
-    for hyp in ('ep','exc'):
-        
-        print "Configuring simulation for hypothesis "+hyps[hyp].name
-        sim= simulator_instance.config_simulation(hyps[hyp], head, settings)
-        print "Summary of simulation configuration: "
-        print sim
-        print "Further specifying parameters of the model"
-        if MODEL=='tvb_epilepsy':
-                sim.model.tt = 0.25*sim.model.tt
-                sim.model.r = 0.001
-        else:
-            #sim.model.zmode = np.array("sig")
-            sim.model.tau0 = 10000.0
-            sim.model.tau1 = 0.25*sim.model.tau1
-            if MODEL=='11v':    
-                sim.model.pmode=np.array("z") #"z","g","z*g", default="const"
-                sim.model.slope = 0.25
-                
-        print "Integration..."        
-        ttavg, tavg_data = simulator_instance.launch_simulation(sim,hyps[hyp])
-        print "Simulated signal return shape: " + str(tavg_data.shape)
-        print "Time: " + str(ttavg[0]) + " - " + str(ttavg[-1])
-        print "Values: " + str(tavg_data.min()) + " - " + str(tavg_data.max())
-        print "Simulated signal return shape: " + str(tavg_data.shape)
-        print "Time: " + str(ttavg[0]) + " - " + str(ttavg[-1])
-        print "Values: " + str(tavg_data.min()) + " - " + str(tavg_data.max())
-    
-        print "Unpacking state variables, calculating observables (lfp, hpf, seeg) and saving results..."        
-        #Unpacking state variables, calculating observables (lfp, hpf, seeg) and saving results...
-        #Time:
-        ttavg = np.array(ttavg,dtype='float32')
-    
-        if MODEL=='2v':
-            x1[hyp] = np.array(tavg_data[:, 0, :, 0],dtype='float32')
-            z[hyp] = np.array(tavg_data[:, 1, :, 0],dtype='float32')
-            save_dict = {'x1':x1[hyp],'z':z[hyp],'time_in_ms':ttavg}
-    
-            seeg[hyp]=[]                    
+    hyp_exc.configure_x0_hypothesis(ix0, x0, seizure_indices)
+
+    plot_hypothesis(hyp_exc, head.connectivity.region_labels,
+                    save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
+                    figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
+    write_hypothesis(hyp_exc, folder_name=FOLDER_RES, file_name="hyp_exc.h5", hypo_name=None)
+    #
+    # x0_opt = numpy.array(hyp_exc.x0)
+    # x1EQ_opt = numpy.array(hyp_exc.x1EQ)
+    # E_opt = numpy.array(hyp_exc.E)
+
+    # hyp_exc = cp.deepcopy(hyp_ep)
+    # hyp_exc.name = "EP & x0 Hypothesis"
+    # hyp_exc.x1eq_mode = "optimize"
+    # ix0 = [51]
+    # x0 = (0.5 * numpy.ones((len(ix0),), dtype='float32')).tolist()
+    #
+    # hyp_exc.configure_x0_hypothesis(ix0, x0, seizure_indices)
+    #
+    # logger.debug(str(hyp_exc))
+    # plot_hypothesis(hyp_exc, head.connectivity.region_labels,
+    #                 save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
+    #                 figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
+    # write_hypothesis(hyp_exc, folder_name=FOLDER_RES, file_name="hyp_exc2.h5", hypo_name=None)
+
+#------------------------------Simulation--------------------------------------
+
+    #We don't want any time delays for the moment
+    head.connectivity.tract_lengths *= 0.0
+
+    # Set time scales (all times should be in msecs and Hz):
+    (fs, dt, fsAVG, scale_time, sim_length, monitor_period,
+     n_report_blocks, hpf_fs, hpf_low, hpf_high) = set_time_scales(fs=2*4096.0, dt=None, time_length=3000.0,
+                                                                   scale_time=2.0, scale_fsavg=2.0,
+                                                                   hpf_low=None, hpf_high=None,
+                                                                   report_every_n_monitor_steps=10.0)
+
+    #Now simulate and plot for each hypothesis
+    hpf_flag = False #Flag to compute and plot high pass filtered SEEG
+    for hyp in (hyp_exc, hyp_ep): # ,hyp_exc #length=30000
+
+        # Choose the model and build it on top of the specific hypothesis, adjust parameters:
+        model_name = 'EpileptorDP'
+        model = model_build_dict[model_name](hyp, scale_time, zmode=numpy.array("lin"))
+        if model_name == 'EpileptorDP':
+            # model.tau0 = 2857.0 # default = 2857.0
+            model.tau1 *= scale_time  # default = 0.25
+        elif model_name == 'EpileptorDP2D':
+            # model.tau0 = 2857.0 # default = 2857.0
+            model.tau1 *= scale_time  # default = 0.25
+        elif model_name == 'EpileptorDPrealistic':
+            # model.tau0 = 10000 # default = 10000
+            model.tau1 *= scale_time  # default = 0.25
+            model.slope = 0.25
+            model.pmode = np.array("z")  # "z","g","z*g", default="cons
+        elif model_name == 'Epileptor':
+            model.tt *= scale_time * 0.25  # default = 1.0
+            # model.r = 1.0/2857.0  # default = 1.0 / 2857.0
+
+        # Setup and configure the simulator according to the specific model (and, therefore, hypothesis)
+        # Good choices for noise and monitor expressions are made in this helper function
+        # It returns name strings for the variables of interest (vois) accordingly
+        # monitor_expr and vois have to be list of strings of the same length
+        # noise_intensity overwrites the one inside noise_instance if given additionally
+        # monitor_period overwrites the one inside monitor_instance if given additionally
+        (simulator_instance, sim_settings, vois) = setup_simulation(model, dt, sim_length, monitor_period,
+                                                                    scale_time=scale_time,
+                                                                    noise_instance=None, noise_intensity=10 ** -8,
+                                                                    monitor_expressions=None, monitors_instance=None,
+                                                                    variables_names=None)
+
+        sim, sim_settings = simulator_instance.config_simulation(head, hyp, settings=sim_settings)
+        print "Initial conditions at equilibrium point: ", numpy.squeeze(sim.initial_conditions)
+
+        #Launch simulation
+        ttavg, tavg_data = simulator_instance.launch_simulation(sim, hyp, n_report_blocks=n_report_blocks)
+        logger.info("\nSimulated signal return shape: " + str(tavg_data.shape))
+        logger.info("Time: " + str(scale_time*ttavg[0]) + " - " + str(scale_time*ttavg[-1]))
+        logger.info("Values: " + str(tavg_data.min()) + " - " + str(tavg_data.max()))
+
+        write_simulation_settings(model, sim_settings, folder_name=FOLDER_RES, file_name=hyp.name+"_sim_settings.h5")
+
+        # Test write, read and assert functions
+        # from tvb_epilepsy.base.utils import assert_equal_objects
+        # model2, sim_settings2 = read_simulation_settings(path=os.path.join(FOLDER_RES, hyp.name+"sim_settings.h5"),
+        #                                                  output="object", hypothesis=hyp)
+        #
+        # from tvb_epilepsy.custom.read_write import epileptor_model_attributes_dict, simulation_settings_attributes_dict
+        # assert_equal_objects(model, model2, epileptor_model_attributes_dict[model2._ui_name])
+        # #assert_equal_objects(model, model2, epileptor_model_attributes_dict[model2["_ui_name"]])
+        # assert_equal_objects(sim_settings, sim_settings2, simulation_settings_attributes_dict)
+
+        #Pack results into a dictionary, high pass filter, and compute SEEG
+        res = dict()
+        time = scale_time * numpy.array(ttavg, dtype='float32')
+        dt = numpy.min(numpy.diff(time))
+        for iv in range(len(vois)):
+            res[vois[iv]] = numpy.array(tavg_data[:, iv, :, 0], dtype='float32')
+
+        #write_ts(res, dt, path=os.path.join(FOLDER_RES, hyp.name + "_ts.h5"))
+
+        if isinstance(sim.model, EpileptorDP2D):
+            raw_data = numpy.dstack([res["x1"], res["z"], res["x1"]])
+            lfp_data = res["x1"]
             for i in range(len(projections)):
-                seeg_i = np.dot(x1[hyp],projections[i].T)
-                seeg.append(seeg_i)
-                save_dict['seeg'+str(i)]=seeg_i
-            savemat(os.path.join(FOLDER_RES, hyps[hyp].name+"_ts.mat"),save_dict) 
-            del save_dict
-            #del tavg_data
-    
+                res['seeg'+str(i)] = numpy.dot(res['z'], projections[i].T)
         else:
-            lfp[hyp] = np.array(tavg_data[:, 0, :, 0],dtype='float32')
-            z[hyp] = np.array(tavg_data[:, 3, :, 0],dtype='float32')
-            x1[hyp] = np.array(tavg_data[:, 1, :, 0],dtype='float32')
-            y1[hyp] = np.array(tavg_data[:, 2, :, 0],dtype='float32')
-            x2[hyp] = np.array(tavg_data[:, 4, :, 0],dtype='float32')
-            y2[hyp] = np.array(tavg_data[:, 5, :, 0],dtype='float32')
-            g[hyp] = np.array(tavg_data[:, 6, :, 0],dtype='float32')
-            hpf[hyp] = np.empty((ttavg.size,hyps[hyp].n_regions)).astype(np.float32)
-            for i in range(hyps[hyp].n_regions):
-                hpf[hyp][:,i] = filter_data(lfp[hyp][:,i], 10, 250, fsAVG)#.astype(np.float32) #.transpose()
-            hpf[hyp]=np.array(hpf[hyp],dtype='float32')   
-            hpf[hyp] = filter_data(lfp[hyp], fsAVG/30, fsAVG/3, fsAVG)
-            save_dict = {'lfp':lfp[hyp],'hpf':hpf[hyp],'x1':x1[hyp],'y1':y1[hyp],'z':z[hyp],
-                         'x2':x2[hyp],'y2':y2[hyp],'g':g[hyp],'time_in_ms':ttavg}
-    
-            seeg[hyp]=[]                    
+            raw_data = numpy.dstack([res["x1"], res["z"], res["x2"]])
+            lfp_data = res["lfp"]
             for i in range(len(projections)):
-                seeg_i = np.dot(hpf[hyp],projections[i].T)
-                seeg[hyp].append(seeg_i)
-                save_dict['seeg'+str(i)]=seeg_i
-    
-            if MODEL=='11v':       
-                x0ts[hyp]=np.array(tavg_data[:, 7, :, 0],dtype='float32')
-                slopeTS[hyp]=np.array(tavg_data[:, 8, :, 0],dtype='float32')
-                Iext1ts[hyp]=np.array(tavg_data[:, 9, :, 0],dtype='float32')
-                Iext2ts[hyp]=np.array(tavg_data[:, 10, :, 0],dtype='float32')
-                Kts[hyp]=np.array(tavg_data[:, 11, :, 0],dtype='float32')
-                save_dict['x0']=x0ts[hyp]
-                save_dict['slope']=slopeTS[hyp]
-                save_dict['Iext1']=Iext1ts[hyp]
-                save_dict['Iext2']=Iext2ts[hyp]
-                save_dict['K']=Kts[hyp]
-    
-        savemat(os.path.join(FOLDER_RES, hyps[hyp].name+"_ts.mat"),save_dict)  
-        del save_dict
-        #del tavg_data
-         
-    #-------------------------------Plotting---------------------------------------
+                res['seeg' + str(i)] = numpy.dot(res['lfp'], projections[i].T)
+                if hpf_flag:
+                    for i in range(res['seeg'].shape[0]):
+                        res['seeg_hpf'+ str(i)][:, i] = filter_data(res['seeg' + str(i)][:, i], hpf_low, hpf_high, hpf_fs)
 
-    # Figures related settings:
-    VERY_LARGE_SIZE = (30, 15)
-    LARGE_SIZE = (20, 15)
-    SMALL_SIZE = (15, 10)
-    FOLDER_FIGURES = os.path.join(FOLDER_VEP, 'figures')
-    FIG_FORMAT = 'eps'
-    SAVE_FLAG = True
-    SHOW_FLAG = True
-    
-    print 'Plotting the Head connectivity and statistics'
-    plot_head(head, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, 
-                  figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
-    
-    for hyp in ('ep','exc'):
-    
-        print 'Plotting the epileptogenicity hypothesis '+hyps[hyp].name
-        plot_hypothesis(hyps[hyp], head.connectivity.region_labels,
-                            save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, 
-                            figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
-    
-        print '...and the respective simulated time series and trajectories:'
-        #Plotting
-        if MODEL=='2v':
-            plot_timeseries(ttavg, {'x1(t)': x1[hyp], 'z(t)': z[hyp]},
-                            seizure_indices, title=" Simulated time series for " + hyps[hyp].name,
-                            save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, 
-                            labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
-            plot_trajectories({'x1(t)': x1[hyp], 'z(t)': z[hyp]},
-                            seizure_indices, title=" Simulated x1-z trajectories for " + hyps[hyp].name,
-                            save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, 
-                            labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)            
-                  
-        else:
-            plot_timeseries(ttavg, {'LFP = x2(t) - x1(t)': lfp[hyp], 'z(t)': z[hyp], 'HPF LFP': hpf[hyp]},
-                            seizure_indices, title=" Simulated TAVG for " + hyps[hyp].name,
-                            save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, 
-                            labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
-            plot_timeseries(ttavg, {'x1(t)': x1[hyp], 'y1(t)': y1[hyp], 'z(t)': z[hyp]},
-                                seizure_indices, title=" Simulated pop1-z for " + hyps[hyp].name,
-                                save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, 
-                                labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
-            plot_timeseries(ttavg, {'x2(t)': x2[hyp], 'y2(t)': y2[hyp], 'g(t)': g[hyp]},seizure_indices, 
-                                title=" Simulated pop2-g for " + hyps[hyp].name,
-                                save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, 
-                                labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE) 
-            plot_raster(ttavg[100:], {'hpf': hpf[hyp][100:,:]}, seizure_indices,
-                                title=" Simulated hfp"+str(i)+" rasterplot for " + hyps[hyp].name,offset=10.0,
-                                save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, 
-                                labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
-            plot_trajectories({'x1(t)': x1[hyp], 'y1(t)': y1[hyp],'z(t)': z[hyp]},
-                            seizure_indices, title=" Simulated x1-y1-z trajectories for " + hyps[hyp].name,
-                            save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, 
-                            labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
-            plot_trajectories({'x2(t)': x2[hyp], 'y2(t)': y2[hyp],'z(t)': z[hyp]},
-                            seizure_indices, title=" Simulated x2-y2-z trajectories for " + hyps[hyp].name,
-                            save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, 
-                            labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE) 
-            plot_trajectories({'LFP = x2(t) - x1(t)': lfp[hyp], 'z(t)': z[hyp]},
-                            seizure_indices, title=" Simulated lfp-z trajectories for " + hyps[hyp].name,
-                            save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, 
-                            labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)             
-                    
-            if MODEL=='11v':       
-                plot_timeseries(ttavg, {'1/(1+exp(-10(z-3.03))': 1/(1+np.exp(-10*(z[hyp]-3.03))), 'slope': slopeTS[hyp], 'Iext2': Iext2ts[hyp]},
-                                    seizure_indices, title=" Simulated controlled parameters for " + hyps[hyp].name,
-                                    save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, 
-                                    labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)               
-                plot_timeseries(ttavg, {'x0': x0ts[hyp], 'Iext1': Iext1ts[hyp],'K': Kts[hyp]},
-                                    seizure_indices, title=" Simulated parameters for " + hyps[hyp].name,
-                                    save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, 
-                                    labels = head.connectivity.region_labels, figsize=VERY_LARGE_SIZE) 
-    
+        write_ts_epi(raw_data, dt, lfp_data, path=os.path.join(FOLDER_RES, hyp.name + "_ep_ts.h5"))
+        del raw_data, lfp_data
+
         for i in range(len(projections)):
-        #            plot_timeseries(ttavg[100:], {'SEEG': seeg[hyp][i][100:,:]}, title=" Simulated SEEG"+str(i)+" for " + hyps[hyp].name,
-        #                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, 
-        #                        labels = sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
-            plot_raster(ttavg[100:], {'SEEG': seeg[hyp][i][100:,:]}, title=" Simulated SEEG"+str(i)+" rasterplot for " + hyps[hyp].name,
-                                offset=10.0,save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, 
-                                labels = sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE) 
+            write_ts_seeg_epi(res['seeg' + str(i)], dt,
+                          path=os.path.join(FOLDER_RES, hyp.name + "_ep_ts.h5"))
+
+        res['time'] = time
+
+        del ttavg, tavg_data
+
+        #Plot results
+        plot_nullclines_eq(hyp, head.connectivity.region_labels, special_idx=hyp.seizure_indices,
+                           model=str(model.nvar) + "d", zmode=model.zmode,
+                           figure_name="Hypothesis " + hyp.name + " in model " + model._ui_name +
+                                       "\nNullclines and equilibria", save_flag=SAVE_FLAG,
+                           show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES)
+        plot_sim_results(model, hyp, head, res, sensorsSEEG, hpf_flag)
+
+        #Save results
+        res['time_units'] = 'msec'
+        savemat(os.path.join(FOLDER_RES, hyp.name + "_ts.mat"), res)
+        #write_object_to_h5_file(res, os.path.join(FOLDER_RES, hyp.name + "_ts.h5"),
+                                # keys={"date": "EPI_Last_update", "version": "EPI_Version",
+                                #       "EPI_Type": "TimeSeries"})
+
+        # from tvb_epilepsy.base.utils import read_object_from_h5_file, assert_equal_objects
+        # res2 = read_object_from_h5_file(dict(), os.path.join(FOLDER_RES, hyp.name + "_ts.h5"),
+        #                                 attributes_dict=None, add_overwrite_fields_dict=None)
+        # assert_equal_objects(res, res2)
+
+        # TODO: find out what object is that distorts subsequent simulations after the first one...
+        if hyp.name == hyp_ep.name:
+            try:
+                assert_equal_objects(hyp, hyp_ep, attributes_dict=None)
+            except:
+                print "Why?"
+        else:
+            try:
+                assert_equal_objects(hyp, hyp_exc, attributes_dict=None)
+            except:
+                print "Why?"
+
+        del hyp, model, sim, sim_settings, simulator_instance, res
+
