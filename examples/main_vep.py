@@ -223,25 +223,32 @@ if __name__ == "__main__":
         else:
             model_name = 'EpileptorDP'  # 'EpileptorDP2D', 'EpileptorDPrealistic', "Epileptor"
 
-        # Setup and configure the simulator according to the specific model (and, therefore, hypothesis)
-        # Good choices for noise and monitor expressions are made in this helper function
-        # It returns name strings for the variables of interest (vois) accordingly
-        # monitor_expr and vois have to be list of strings of the same length
-        # noise_intensity overwrites the one inside noise_instance if given additionally
-        # monitor_period overwrites the one inside monitor_instance if given additionally
-        (simulator_instance, sim_settings, vois, model) = setup_simulation(model_name, hyp, dt, sim_length,
-                                                                           monitor_period, scale_time=scale_time,
-                                                                           noise_instance=None, noise_intensity=10**-8,
-                                                                           monitor_expressions=None,
-                                                                           monitors_instance=None, variables_names=None)
+
 
         #Launch simulation
         if SIMULATION_MODE == "custom":
-            simulator_instance.config_simulation(head.connectivity, hyp, settings=sim_settings)
+            (simulator_instance, sim_settings, vois, model) = setup_simulation(model_name, hyp, dt, sim_length,
+                                                                               monitor_period, scale_time=scale_time,
+                                                                               noise_intensity=10 ** -8,
+                                                                               variables_names=None)
+            custom_settings=simulator_instance.config_simulation(hyp, head.connectivity, settings=sim_settings)
             simulator_instance.launch_simulation(hyp)
             ttavg, tavg_data = read_ts(os.path.join(data_folder, hyp.name, "ts.h5"), data="data")
         else:
-            sim, sim_settings = simulator_instance.config_simulation(head.connectivity, hyp, settings=sim_settings)
+            # Setup and configure the simulator according to the specific model (and, therefore, hypothesis)
+            # Good choices for noise and monitor expressions are made in this helper function
+            # It returns name strings for the variables of interest (vois) accordingly
+            # monitor_expr and vois have to be list of strings of the same length
+            # noise_intensity overwrites the one inside noise_instance if given additionally
+            # monitor_period overwrites the one inside monitor_instance if given additionally
+            (simulator_instance, sim_settings, vois, model) = setup_simulation(model_name, hyp, dt, sim_length,
+                                                                               monitor_period, scale_time=scale_time,
+                                                                               noise_instance=None,
+                                                                               noise_intensity=10 ** -8,
+                                                                               monitor_expressions=None,
+                                                                               monitors_instance=None,
+                                                                               variables_names=None)
+            sim, sim_settings = simulator_instance.config_simulation(hyp, head.connectivity, settings=sim_settings)
             print "Initial conditions at equilibrium point: ", np.squeeze(sim.initial_conditions)
             ttavg, tavg_data = simulator_instance.launch_simulation(sim, hyp, n_report_blocks=n_report_blocks)
             tavg_data = tavg_data[:,:,:,0]
@@ -271,13 +278,13 @@ if __name__ == "__main__":
 
         #write_ts(res, dt, path=os.path.join(FOLDER_RES, hyp.name + "_ts.h5"))
 
-        if sim.model._ui_name == "EpileptorDP2D":
+        if model._ui_name == "EpileptorDP2D":
             raw_data = np.dstack([res["x1"], res["z"], res["x1"]])
             lfp_data = res["x1"]
             for i in range(len(projections)):
                 res['seeg'+str(i)] = np.dot(res['z'], projections[i].T)
         else:
-            if sim.model._ui_name == "CustomEpileptor":
+            if model._ui_name == "CustomEpileptor":
                 raw_data = np.dstack([res["x1"], res["z"], res["x2"]])
                 lfp_data = res["x2"] - res["x1"]
             else:

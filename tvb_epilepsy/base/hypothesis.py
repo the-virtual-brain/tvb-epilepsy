@@ -33,7 +33,7 @@ class Hypothesis(object):
         self.n_regions = n_regions
         self.weights = normalized_weights
 
-        i = numpy.ones((1, self.n_regions), dtype=numpy.float32)
+        i = numpy.ones((self.n_regions, ), dtype=numpy.float32)
         self.K = k_def * i
         self.Iext1 = i_ext1_def * i
         self.yc = yc_def * i
@@ -43,7 +43,7 @@ class Hypothesis(object):
         self.x1LIN = def_x1lin(X1_DEF, X1_EQ_CR_DEF, n_regions)
         self.x1SQ = X1_EQ_CR_DEF
 
-        (self.x0cr, self.rx0)= self._calculate_critical_x0_scaling()
+        (self.x0cr, self.rx0) = self._calculate_critical_x0_scaling()
         self.x1eq_mode = x1eq_mode
         self.x1EQ = self._set_equilibria_x1(i)
         self.zEQ = self._calculate_equilibria_z()
@@ -99,7 +99,7 @@ class Hypothesis(object):
 
     def _set_equilibria_x1(self, i=None):
         if i is None:
-            i = numpy.ones((1, self.n_regions), dtype=numpy.float32)
+            i = numpy.ones((self.n_regions, ), dtype=numpy.float32)
         return ((self.E - 5.0) / 3.0) * i
 
     def _calculate_equilibria_z(self):
@@ -185,10 +185,10 @@ class Hypothesis(object):
         self.lsa_eigvects = eigvects[:, ind]
         
         #Calculate the propagation strength index by summing the first n_seizure_nodes eigenvectors
-        self.lsa_ps = numpy.expand_dims(numpy.sum(numpy.abs(self.lsa_eigvects[:, :self.n_seizure_nodes]), axis=1), 1).T
+        self.lsa_ps = numpy.sum(numpy.abs(self.lsa_eigvects[:, :self.n_seizure_nodes]), axis=1)
         
         #Calculate the propagation strength index by summing all eigenvectors
-        self.lsa_ps_tot = numpy.expand_dims(numpy.sum(numpy.abs(self.lsa_eigvects), axis=1), 1).T
+        self.lsa_ps_tot = numpy.sum(numpy.abs(self.lsa_eigvects), axis=1)
 
     def _check_hypothesis(self, seizure_indices):
         """
@@ -217,7 +217,7 @@ class Hypothesis(object):
         :param ie: indices where the new E should be set
         :param seizure_indices: Indices where seizure starts
         """
-        self.E[0, ie] = e
+        self.E[ie] = e
         self.x1EQ = self._set_equilibria_x1()
         self.zEQ = self._calculate_equilibria_z()
 

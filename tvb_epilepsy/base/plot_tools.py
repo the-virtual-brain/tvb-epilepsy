@@ -250,7 +250,7 @@ def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", z
     # Lines:
 
     # x1 nullcline:
-    x1 = numpy.expand_dims(numpy.linspace(-2.0, 2.0 / 3.0, 100), 1).T
+    x1 = numpy.linspace(-2.0, 2.0 / 3.0, 100)
     if model == "2d":
         y1 = yc
         b = -2.0
@@ -260,7 +260,7 @@ def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", z
     zX1 = calc_fx1(x1, z=0, y1=y1, Iext1=Iext1, x1_neg=None, model=model, b=b)  # yc + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
     # approximations:
     # linear:
-    x1lin = numpy.expand_dims(numpy.linspace(-5.5 / 3.0, -3.5 / 3, 30), 1).T
+    x1lin = numpy.linspace(-5.5 / 3.0, -3.5 / 3, 30)
     # x1 nullcline after linear approximation
     zX1lin = calc_fx1_2d_taylor(x1lin, x1lin0, z=0, y1=yc, Iext1=Iext1, slope=0.0, a=1.0, b=-2.0, tau1=1.0,
                                 x1_neg=None, order=2)  # yc + Iext1 + 2.0 * x1lin0 ** 3 + 2.0 * x1lin0 ** 2 - \
@@ -268,7 +268,7 @@ def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", z
     # center point without approximation:
     # zlin0 = yc + Iext1 - x1lin0 ** 3 - 2.0 * x1lin0 ** 2
     # square:
-    x1sq = numpy.expand_dims(numpy.linspace(-5.0 / 3, -1.0, 30), 1).T
+    x1sq = numpy.linspace(-5.0 / 3, -1.0, 30)
     # x1 nullcline after parabolic approximation
     zX1sq = calc_fx1_2d_taylor(x1sq, x1sq0, z=0, y1=yc, Iext1=Iext1, slope=0.0, a=1.0, b=-2.0, tau1=1.0,
                                x1_neg=None, order=3,
@@ -287,13 +287,13 @@ def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", z
         zZne = calc_fz(x1, z=0.0, x0=x0ne_6d, zmode=zmode, model="2d")  # for non-epileptogenic regions
 
     fig = mp.pyplot.figure(figure_name, figsize=figsize)
-    x1null, = mp.pyplot.plot(x1[0, :], zX1[0, :], 'b-', label='x1 nullcline', linewidth=1)
+    x1null, = mp.pyplot.plot(x1, zX1, 'b-', label='x1 nullcline', linewidth=1)
     ax = mp.pyplot.gca()
     ax.axes.hold(True)
-    zE1null, = mp.pyplot.plot(x1[0, :], zZe[0, :], 'g-', label='z nullcline at critical point (E=1)', linewidth=1)
-    zE2null, = mp.pyplot.plot(x1[0, :], zZne[0, :], 'g--', label='z nullcline for E=0', linewidth=1)
-    sq, = mp.pyplot.plot(x1sq[0, :], zX1sq[0, :], 'm--', label='Parabolic local approximation', linewidth=2)
-    lin, = mp.pyplot.plot(x1lin[0, :], zX1lin[0, :], 'c--', label='Linear local approximation', linewidth=2)
+    zE1null, = mp.pyplot.plot(x1, zZe, 'g-', label='z nullcline at critical point (E=1)', linewidth=1)
+    zE2null, = mp.pyplot.plot(x1, zZne, 'g--', label='z nullcline for E=0', linewidth=1)
+    sq, = mp.pyplot.plot(x1sq, zX1sq, 'm--', label='Parabolic local approximation', linewidth=2)
+    lin, = mp.pyplot.plot(x1lin, zX1lin, 'c--', label='Linear local approximation', linewidth=2)
     mp.pyplot.legend(handles=[x1null, zE1null, zE2null, lin, sq])
     
     ii=range(hypothesis.n_regions)
@@ -302,12 +302,12 @@ def plot_nullclines_eq(hypothesis,region_labels, special_idx=None, model="2d", z
         
     points =[]    
     for i in ii:
-        point, = mp.pyplot.plot(hypothesis.x1EQ[0,i], hypothesis.zEQ[0,i], '*', mfc='k', mec='k', ms=10,  alpha=0.3,
+        point, = mp.pyplot.plot(hypothesis.x1EQ[i], hypothesis.zEQ[i], '*', mfc='k', mec='k', ms=10,  alpha=0.3,
                                 label=str(i)+'.'+region_labels[i])
         points.append(point)
     if special_idx is None:
         for i in special_idx:
-            point, = mp.pyplot.plot(hypothesis.x1EQ[0,i], hypothesis.zEQ[0,i], '*', mfc='r', mec='r', ms=10, alpha=0.8,
+            point, = mp.pyplot.plot(hypothesis.x1EQ[i], hypothesis.zEQ[i], '*', mfc='r', mec='r', ms=10, alpha=0.8,
                                     label=str(i)+'.'+region_labels[i])
             points.append(point)
     #ax.plot(x1lin0, zlin0, '*', mfc='r', mec='r', ms=10)

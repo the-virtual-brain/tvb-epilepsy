@@ -56,7 +56,7 @@ X1_EQ_CR_DEF = -4.0 / 3.0
 
 # Simulation and data read folder amd flags:
 MODEL = '6v'
-SIMULATION_MODE = 'tvb'  # 'custom' or 'tvb
+SIMULATION_MODE = 'custom'  # 'custom' or 'tvb
 DATA_MODE = 'custom'  # 'custom' or 'tvb'
 
 # Normalization configuration:rue

@@ -12,7 +12,6 @@ from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
 from tvb_epilepsy.base.calculations import calc_dfun, calc_coupling
 from tvb_epilepsy.base.equilibrium_computation import calc_equilibrium_point, calc_eq_6d, calc_eq_z_2d
-from tvb_epilepsy.base.simulators import prepare_initial_conditions
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
 
@@ -140,26 +139,26 @@ def setup_simulation(model_name, hypothesis, dt, sim_length, monitor_period, zmo
 
     if isinstance(model, EpileptorDP):
         #                                               history
-        simulator_instance = SimulatorTVB(model, prepare_initial_conditions)
+        simulator_instance = SimulatorTVB(model)
         model.tau1 *= scale_time
         if variables_names is None:
             variables_names = ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp']
     elif isinstance(model, EpileptorDP2D):
         model.tau1 *= scale_time
-        simulator_instance = SimulatorTVB(model, prepare_initial_conditions)
+        simulator_instance = SimulatorTVB(model)
         if variables_names is None:
             variables_names = ['x1', 'z']
     elif isinstance(model, EpileptorDPrealistic):
         model.tau1 *= scale_time  # default = 0.25
         model.slope = 0.25
         model.pmode = numpy.array("z")  #
-        simulator_instance = SimulatorTVB(model, prepare_initial_conditions)
+        simulator_instance = SimulatorTVB(model)
         if variables_names is None:
             variables_names = ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'x0ts', 'slopeTS', 'Iext1ts', 'Iext2ts', 'Kts', 'lfp']
     elif isinstance(model, Epileptor):
         model.tt *= scale_time * 0.25
         # model.r = 1.0/2857.0  # default = 1.0 / 2857.0
-        simulator_instance = SimulatorTVB(model, prepare_initial_conditions)
+        simulator_instance = SimulatorTVB(model)
         if variables_names is None:
             variables_names = ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp']
 

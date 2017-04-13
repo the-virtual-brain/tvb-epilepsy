@@ -16,9 +16,10 @@ from tvb_epilepsy.base.constants import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_
 from tvb_epilepsy.base.utils import obj_to_dict, assert_arrays
 from tvb_epilepsy.base.calculations import calc_rescaled_x0
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
+from tvb_epilepsy.tvb_api.epileptor_models import build_tvb_model
 
 
-class Settings(object):
+class CustomSettings(object):
     def __init__(self, integration_step=0.01220703125, noise_seed=42, noise_intensity=10 ** -6, simulated_period=5000,
                  downsampling_period=0.9765625):
         self.integration_step = integration_step
@@ -38,6 +39,7 @@ class EpileptorModel(object):
             assert_arrays([a, b, c, d, aa, r, kvf, kf, ks, tau, iext, iext2 , slope, x0, tt])
         # TODO: add desired shape as argument in assert_arrays
         self._ui_name = "CustomEpileptor"
+        self.nvar = 6
         self.a = a
         self.b = b
         self.c = c
@@ -53,11 +55,12 @@ class EpileptorModel(object):
         self.slope = slope
         self.x0 = x0
         self.tt = tt
+        self.dfun = []
 
 
 class FullConfiguration(object):
     def __init__(self, name="FromPython", connectivity_path="Connectivity.h5", no_regions=88, model=None,
-                 settings=Settings()):
+                 settings=CustomSettings()):
         self.configurationName = name
         self.connectivityPath = connectivity_path
         self.settings = settings
@@ -90,11 +93,10 @@ class SimulatorCustom(ABCSimulator):
         result_file.write(json_text)
         result_file.close()
 
-    def config_simulation(self, hypothesis, head_connectivity, vep_settings=SimulationSettings()):
+    def config_simulation(self, hypothesis, head_connectivity, settings=SimulationSettings()):
 
-        ep_settings = Settings(vep_settings.integration_step, vep_settings.noise_seed,
-                               vep_settings.noise_intensity, vep_settings.simulated_period,
-                               vep_settings.monitor_sampling_period)
+        ep_settings = CustomSettings(settings.integration_step, settings.noise_seed, settings.noise_intensity,
+                                     settings.simulated_period, settings.monitor_sampling_period)
 
         self.ep_config = FullConfiguration(hypothesis.name, head_connectivity,
                                            hypothesis.n_regions, self.model, ep_settings)
@@ -105,6 +107,8 @@ class SimulatorCustom(ABCSimulator):
         # TODO: initial_conditions have to be written in the json configuration file
         hypothesis_path = os.path.join(self.path, hypothesis.name + ".json")
         self._save_serialized(self.ep_config, hypothesis_path)
+
+        return ep_settings
 
     def launch_simulation(self, hypothesis):
         hypothesis_file = os.path.join(self.head_path, hypothesis.name + ".json")
@@ -124,8 +128,13 @@ class SimulatorCustom(ABCSimulator):
 
 def custom_model_builder(hypothesis, a=1.0, b=3.0, d=5.0):
     x0 = calc_rescaled_x0(hypothesis.x0.flatten(), hypothesis.yc.flatten(), hypothesis.Iext1.flatten(), a, b - d)
-    model = EpileptorModel(x0=x0, iext=hypothesis.Iext1.flatten(), ks=hypothesis.K.flatten(), c=hypothesis.yc.flatten(),
-                           a=a, b=b, d=d)
+    model = EpileptorModel(a=1.0, b=3.0, d=5.0)
+    dummy_tvb_model = build_tvb_model(hypothesis, a=1.0, b=3.0, d=5.0, zmode="lin")
+
+    for attr, value in model.__dict__.iteritems():
+        if not(numpy.all(attr == "_ui_name")):
+            setattr(model, attr, getattr(dummy_tvb_model, attr))
+
     return model
 
 

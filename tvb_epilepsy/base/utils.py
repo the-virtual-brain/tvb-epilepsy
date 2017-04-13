@@ -149,20 +149,32 @@ def linear_scaling(x, x1, x2, y1, y2):
         return y1 + (x - x1) * scaling_factor
 
 
-def obj_to_dict(obj):
+def obj_to_dict(obj, name=None):
     """
     :param obj: Python object to introspect
     :return: dictionary after recursively taking obj fields and their values
     """
+    # TODO: maybe handle complex numbers...
     if obj is None:
         return obj
 
-    if isinstance(obj, (str, int, float)):
+    if isinstance(obj, (str, numpy.str, int, long, numpy.int)):
         return obj
-    if isinstance(obj, (numpy.float32,)):
+
+    if isinstance(obj, (numpy.float, float)):
         return float(obj)
 
+    if isinstance(obj, numpy.ndarray):
+        if str(obj.dtype)[0] == "O":
+            return obj_to_dict(list(obj))
+        else:
+            if name is None:
+                name = "unnamed_numpy_array"
+            return {name: obj}
+
     if isinstance(obj, list):
+        if str(numpy.array(obj).dtype)[0] != "O":
+            return obj_to_dict(numpy.array(obj), name)
         ret = []
         for val in obj:
             ret.append(obj_to_dict(val))

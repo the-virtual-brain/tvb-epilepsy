@@ -286,15 +286,15 @@ def eq_x1_hypo_x0_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K,
 
     # Construct the x1 and z equilibria vectors, comprising of the current x1EQ, zEQ values for i_e regions,
     # and the unknown equilibria x1 and respective z values for the i_x0 regions
-    x1EQ[:, ix0] = numpy.array(x[ix0])
-    zEQ[:, ix0] = numpy.array(calc_eq_z_2d(x1EQ[:, ix0], yc[:, ix0], Iext1[:, ix0]))
+    x1EQ[ix0] = numpy.array(x[ix0])
+    zEQ[ix0] = numpy.array(calc_eq_z_2d(x1EQ[ix0], yc[ix0], Iext1[ix0]))
 
     # Construct the x0 vector, comprising of the current x0 values for i_x0 regions,
     # and the unknown x0 values for the i_e regions
     x0_dummy = numpy.array(x0)
     x0 = numpy.empty_like(x1EQ)
-    x0[:, iE] = numpy.array(x[iE])
-    x0[:, ix0] = numpy.array(x0_dummy)
+    x0[iE] = numpy.array(x[iE])
+    x0[ix0] = numpy.array(x0_dummy)
     del x0_dummy
 
     fun = calc_fz(x1EQ, zEQ, x0, K, w, tau1=1.0, tau0=1.0, x0cr=x0cr, r=r, zmode=numpy.array("lin"), z_pos=True,
@@ -304,22 +304,22 @@ def eq_x1_hypo_x0_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K,
     #               numpy.any(numpy.isnan(fun)), numpy.any(numpy.isinf(fun))]):
     #     raise ValueError("nan or inf values in x or fun")
 
-    return fun.flatten()
+    return fun
 
 
 def eq_x1_hypo_x0_optimize_jac(x, ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
 
     # Construct the x1 and z equilibria vectors, comprising of the current x1EQ, zEQ values for i_e regions,
     # and the unknown equilibria x1 and respective z values for the i_x0 regions
-    x1EQ[:, ix0] = numpy.array(x[ix0])
-    zEQ[:, ix0] = numpy.array(calc_eq_z_2d(x1EQ[:, ix0], yc[:, ix0], Iext1[:, ix0]))
+    x1EQ[ix0] = numpy.array(x[ix0])
+    zEQ[ix0] = numpy.array(calc_eq_z_2d(x1EQ[ix0], yc[ix0], Iext1[ix0]))
 
     # Construct the x0 vector, comprising of the current x0 values for i_x0 regions,
     # and the unknown x0 values for the i_e regions
     x0_dummy = numpy.array(x0)
     x0 = numpy.empty_like(x1EQ)
-    x0[:, iE] = numpy.array(x[iE])
-    x0[:, ix0] = numpy.array(x0_dummy)
+    x0[iE] = numpy.array(x[iE])
+    x0[ix0] = numpy.array(x0_dummy)
     del x0_dummy
 
     return calc_fx1z_2d_x1neg_zpos_jac(x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w, ix0, iE, a=1.0, b=-2.0, tau1=1.0,
@@ -328,9 +328,9 @@ def eq_x1_hypo_x0_optimize_jac(x, ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K,
 
 def eq_x1_hypo_x0_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
 
-    x1EQ, zEQ, r, yc, Iext1, K = assert_arrays([x1EQ, zEQ, r, yc, Iext1, K], (1, x1EQ.size))
+    x1EQ, zEQ, x0cr, r, yc, Iext1, K = assert_arrays([x1EQ, zEQ, x0cr, r, yc, Iext1, K], (x1EQ.size, ))
 
-    x0 = assert_arrays([x0],  (1, len(ix0)))
+    x0 = assert_arrays([x0],  (len(ix0, )))
 
     w = assert_arrays([w], (x1EQ.size, x1EQ.size))
 
@@ -339,17 +339,17 @@ def eq_x1_hypo_x0_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
     #Set initial conditions for the optimization algorithm, by ignoring coupling (=0)
     # fz = 4 * (x1 - r * x0 + x0cr) - z -coupling = 0
     #x0init = (x1 + x0cr -z/4) / r
-    xinit[:, iE] = calc_x0(x1EQ[:, iE], zEQ[:, iE], 0.0, 0.0, x0cr[:, iE], r[:, iE], model="2d",
+    xinit[iE] = calc_x0(x1EQ[iE], zEQ[iE], 0.0, 0.0, x0cr[iE], r[iE], model="2d",
                            zmode=numpy.array("lin"), z_pos=True, shape=None)
     #x1eqinit = r * x0 - x0cr + z / 4
-    xinit[:, ix0] = r[:, ix0] * x0 - x0cr[:, ix0] + zEQ[:, ix0] / 4
+    xinit[ix0] = r[ix0] * x0 - x0cr[ix0] + zEQ[ix0] / 4
 
     #Solve:
     sol = root(eq_x1_hypo_x0_optimize_fun, xinit, args=(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w),
                method='lm', jac=eq_x1_hypo_x0_optimize_jac, tol=10**(-12), callback=None, options=None) #method='hybr'
 
     if sol.success:
-        x1EQ[:, ix0] = sol.x[ix0]
+        x1EQ[ix0] = sol.x[ix0]
         x0sol = sol.x[iE]
         if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
             raise ValueError("nan or inf values in solution x\n" + sol.message)
@@ -361,7 +361,7 @@ def eq_x1_hypo_x0_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
 
 def eq_x1_hypo_x0_linTaylor(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
 
-    x1EQ, zEQ, r, yc, Iext1, K = assert_arrays([x1EQ, zEQ, r, yc, Iext1, K], (1, x1EQ.size))
+    x1EQ, zEQ, x0cr, r, yc, Iext1, K = assert_arrays([x1EQ, zEQ, x0cr, r, yc, Iext1, K], (1, x1EQ.size))
 
     x0 = assert_arrays([x0], (1, len(ix0)))
 
@@ -429,7 +429,7 @@ def eq_x1_hypo_x0_linTaylor(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
     x1EQ[0, ix0] = x[0, no_e:]
 
     #Return also the solution of x0s for the regions of fixed E (equilibria):
-    return x1EQ, x[0, :no_e]
+    return x1EQ.flatten(), x[0, :no_e].flatten()
 
 
 def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
@@ -480,7 +480,7 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
         K = epileptor_model.Ks
         dfun2 = calc_dfun(equilibrium_point[0].flatten(), equilibrium_point[2].flatten(),
                           epileptor_model.c, epileptor_model.Iext, epileptor_model.x0,
-                          epileptor_model.Ks, hypothesis.weights, model="6d",
+                          epileptor_model.Ks, hypothesis.weights, model_vars=n_dim,
                           y1=equilibrium_point[1].flatten(), x2=equilibrium_point[3].flatten(),
                           y2=equilibrium_point[4].flatten(), g=equilibrium_point[5].flatten(),
                           slope=epileptor_model.slope, a=epileptor_model.a, b=epileptor_model.b,
@@ -488,19 +488,23 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
                           tau1=epileptor_model.tt, tau0=1.0 / epileptor_model.r, tau2=epileptor_model.tau,
                           output_mode="array")
 
-    coupl = calc_coupling(equilibrium_point[0], K.T, hypothesis.weights)
-    coupl = numpy.expand_dims((numpy.c_[coupl, 0.0 * coupl]).T, 2)
+    if hasattr(epileptor_model, 'dfun'):
+        coupl = calc_coupling(equilibrium_point[0], K, hypothesis.weights)
+        coupl = numpy.expand_dims((numpy.c_[coupl, 0.0 * coupl]).T, 2)
 
-    dfun = epileptor_model.dfun(numpy.expand_dims(equilibrium_point, 2).astype('float32'), coupl)
-    dfun_max = numpy.max(dfun.flatten())
-    dfun_max_cr = 10 ** -5 * numpy.ones(dfun_max.shape)
+        dfun = epileptor_model.dfun(numpy.expand_dims(equilibrium_point, 2).astype('float32'), coupl)
+        dfun_max = numpy.max(numpy.abs(dfun.flatten()))
+        dfun_max_cr = 10 ** -5 * numpy.ones(dfun_max.shape)
 
-    max_dfun_diff  = numpy.max(numpy.abs(dfun2.flatten() - dfun.flatten()))
-    if numpy.any(max_dfun_diff > dfun_max_cr):
-        warnings.warn("\nmodel dfun and calc_dfun functions do not return the same results!\n"
-                      + "maximum difference = " + str(max_dfun_diff))
-                      # + "\n" + "model dfun = " + str(dfun) + "\n"
-                      # + "calc_dfun = " + str(dfun2))
+        max_dfun_diff = numpy.max(numpy.abs(dfun2.flatten() - dfun.flatten()))
+        if numpy.any(max_dfun_diff > dfun_max_cr):
+            warnings.warn("\nmodel dfun and calc_dfun functions do not return the same results!\n"
+                          + "maximum difference = " + str(max_dfun_diff))
+                          # + "\n" + "model dfun = " + str(dfun) + "\n"
+                          # + "calc_dfun = " + str(dfun2))
+    else:
+        dfun_max = numpy.max(numpy.abs(dfun2.flatten()))
+        dfun_max_cr = 10 ** -5 * numpy.ones(dfun_max.shape)
 
     if numpy.any(dfun_max > dfun_max_cr):
         # raise ValueError("Equilibrium point for initial condition not accurate enough!\n" \
@@ -526,7 +530,7 @@ def calc_eq_6d(x0, K, w, yc, Iext1, Iext2, x1eqhyp = 0.0, bhyp=-2, a=1.0, b=3.0,
 
     x2eq, y2eq = calc_eq_pop2(Iext2, y2eq=None, zeq=zeq, geq=geq, x1eq=None, y1eq=None, x2_neg=True)
 
-    equilibrium_point = numpy.r_[x1eq, y1eq, zeq, x2eq, y2eq, geq]
+    equilibrium_point = numpy.c_[x1eq, y1eq, zeq, x2eq, y2eq, geq].T
 
     return equilibrium_point
 
@@ -549,7 +553,7 @@ def calc_eq_11d(x0, K, w, yc, Iext1, Iext2, slope, fun_slope_Iext2,  x1eqhyp = 0
 
     x2eq, y2eq = calc_eq_pop2(Iext2, y2eq=None, zeq=zeq, geq=geq, x1eq=None, y1eq=None, x2_neg=True)
 
-    equilibrium_point = numpy.r_[x1eq, y1eq, zeq, x2eq, y2eq, geq, x0, slope_eq, Iext1, Iext2_eq, K]
+    equilibrium_point = numpy.c_[x1eq, y1eq, zeq, x2eq, y2eq, geq, x0, slope_eq, Iext1, Iext2_eq, K].T
 
     return equilibrium_point, slope_eq, Iext2_eq
 
@@ -566,35 +570,35 @@ def calc_equilibrium_point(epileptor_model, hypothesis):
         x1eq = hypothesis.x1EQ
         zeq = hypothesis.zEQ
         # else:
-        #     x1eq = calc_eq_x1(epileptor_model.yc.T, epileptor_model.Iext1.T, epileptor_model.x0.T, epileptor_model.K.T,
+        #     x1eq = calc_eq_x1(epileptor_model.yc, epileptor_model.Iext1, epileptor_model.x0, epileptor_model.K,
         #                       hypothesis.weights, a=1.0, b=-2.0,
         #                       zmode=epileptor_model.zmode, model="2d")
         #
-        #     zeq = calc_eq_z_2d(hypothesis.x1EQ, epileptor_model.yc.T, epileptor_model.Iext1.T)
+        #     zeq = calc_eq_z_2d(hypothesis.x1EQ, epileptor_model.yc, epileptor_model.Iext1)
 
-        equilibrium_point = numpy.r_[x1eq, zeq]
+        equilibrium_point = numpy.c_[x1eq, zeq].T
 
     elif epileptor_model._ui_name == "EpileptorDP":
 
         #EpileptorDP
-        equilibrium_point = calc_eq_6d(epileptor_model.x0.T, epileptor_model.K.T, hypothesis.weights,
-                                        epileptor_model.yc.T, epileptor_model.Iext1.T, epileptor_model.Iext2.T,
+        equilibrium_point = calc_eq_6d(epileptor_model.x0, epileptor_model.K, hypothesis.weights,
+                                        epileptor_model.yc, epileptor_model.Iext1, epileptor_model.Iext2,
                                         hypothesis.x1EQ, -2.0, 1.0, 3.0, 5.0, zmode=epileptor_model.zmode)
 
     elif epileptor_model._ui_name == "EpileptorDPrealistic":
 
-            equilibrium_point = calc_eq_11d(epileptor_model.x0.T, epileptor_model.K.T, hypothesis.weights,
-                                            epileptor_model.yc.T, epileptor_model.Iext1.T, epileptor_model.Iext2.T,
-                                            epileptor_model.slope.T,  epileptor_model.fun_slope_Iext2, hypothesis.x1EQ,
+            equilibrium_point = calc_eq_11d(epileptor_model.x0, epileptor_model.K, hypothesis.weights,
+                                            epileptor_model.yc, epileptor_model.Iext1, epileptor_model.Iext2,
+                                            epileptor_model.slope,  epileptor_model.fun_slope_Iext2, hypothesis.x1EQ,
                                             -2.0, 1.0, 3.0, 5.0, zmode=epileptor_model.zmode,
                                             pmode=epileptor_model.pmode)[0]
 
     else:
         # all 6D models (tvb, custom)
-        equilibrium_point = calc_eq_6d(epileptor_model.x0.T, epileptor_model.Ks.T, hypothesis.weights,
-                                       epileptor_model.c.T, epileptor_model.Iext.T, epileptor_model.Iext2.T,
-                                       hypothesis.x1EQ, -2.0, epileptor_model.a.T, epileptor_model.b.T,
-                                       epileptor_model.d.T, zmode=numpy.array("lin"))
+        equilibrium_point = calc_eq_6d(epileptor_model.x0, epileptor_model.Ks, hypothesis.weights,
+                                       epileptor_model.c, epileptor_model.Iext, epileptor_model.Iext2,
+                                       hypothesis.x1EQ, -2.0, epileptor_model.a, epileptor_model.b,
+                                       epileptor_model.d, zmode=numpy.array("lin"))
 
     assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point)
 
