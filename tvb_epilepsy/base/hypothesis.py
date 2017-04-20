@@ -8,8 +8,8 @@ import numpy
 from collections import OrderedDict
 from tvb_epilepsy.base.constants import E_DEF, K_DEF, I_EXT1_DEF, YC_DEF, X1_DEF, X1_EQ_CR_DEF
 from tvb_epilepsy.base.calculations import calc_x0cr_r, calc_coupling, calc_x0, calc_fz_jac_square_taylor
-from tvb_epilepsy.base.equilibrium_computation import calc_eq_z_2d, eq_x1_hypo_x0_linTaylor, eq_x1_hypo_x0_optimize, \
-                                                      def_x1lin
+from tvb_epilepsy.base.equilibrium_computation import calc_eq_z_2d, eq_x1_hypo_x0_linTaylor, eq_x1_hypo_x0_optimize, def_x1lin
+from tvb_epilepsy.base.h5_model import prepare_for_h5
 from tvb_epilepsy.base.utils import reg_dict, formal_repr, vector2scalar
 
 
@@ -54,6 +54,18 @@ class Hypothesis(object):
         self.seizure_indices = numpy.array([], dtype=numpy.int32)
         self.lsa_ps = []
 
+    def prepare_for_h5(self):
+
+        h5_model = prepare_for_h5(self)
+        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
+        h5_model.add_or_update_metadata_attribute("Number_of_nodes", self.n_regions)
+
+        seizure_indices = numpy.zeros((self.n_regions,))
+        seizure_indices[self.seizure_indices] = 1
+        h5_model.add_or_update_datasets_attribute("seizure_indices", seizure_indices)
+
+        return h5_model
+
     def __repr__(self):
         d = {"01.name": self.name,
              "02.K": vector2scalar(self.K),
@@ -74,7 +86,7 @@ class Hypothesis(object):
              "17. rx0": vector2scalar(self.rx0),
              "18. x1eq_mode": self.x1eq_mode}
         return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ))
-                                                               
+
 
     def __str__(self):
         return self.__repr__()
@@ -177,16 +189,16 @@ class Hypothesis(object):
 
         # Perform eigenvalue decomposition
         (eigvals, eigvects) = numpy.linalg.eig(fz_jac)
-        
+
         # Sort eigenvalues in descending order... 
         ind = numpy.argsort(eigvals, kind='mergesort')[::-1]
         self.lsa_eigvals = eigvals[ind]
         #...and eigenvectors accordingly
         self.lsa_eigvects = eigvects[:, ind]
-        
+
         #Calculate the propagation strength index by summing the first n_seizure_nodes eigenvectors
         self.lsa_ps = numpy.sum(numpy.abs(self.lsa_eigvects[:, :self.n_seizure_nodes]), axis=1)
-        
+
         #Calculate the propagation strength index by summing all eigenvectors
         self.lsa_ps_tot = numpy.sum(numpy.abs(self.lsa_eigvects), axis=1)
 
@@ -239,7 +251,7 @@ class Hypothesis(object):
 
         #Convert x0 to an array of (1,len(ix0)) shape
         x0 = numpy.expand_dims(numpy.array(x0), 1).T
-        
+
         if self.x1eq_mode=="linTaylor":
             self.x1EQ = eq_x1_hypo_x0_linTaylor(ix0, iE, self.x1EQ, self.zEQ, x0, self.x0cr, self.rx0, self.yc,
                                                self.Iext1, self.K, self.weights)[0]

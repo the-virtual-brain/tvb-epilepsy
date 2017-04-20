@@ -10,7 +10,7 @@ from tvb_epilepsy.base.constants import X0_DEF
 from tvb_epilepsy.base.hypothesis import Hypothesis
 from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_timeseries, plot_trajectories
 from tvb_epilepsy.base.utils import initialize_logger, set_time_scales
-from tvb_epilepsy.custom.read_write import read_ts
+from tvb_epilepsy.custom.read_write import read_ts, write_h5_model
 from tvb_epilepsy.custom.simulator_custom import setup_simulation
 
 if __name__ == "__main__":
@@ -20,6 +20,8 @@ if __name__ == "__main__":
 
     logger.info("Reading from custom")
     data_folder = os.path.join("/WORK/Episense/trunk/demo-data", 'Head_TREC')
+    ep_folder = os.path.join(data_folder, "epHH")
+
     from tvb_epilepsy.custom.readers_custom import CustomReader
 
     reader = CustomReader()
@@ -41,6 +43,9 @@ if __name__ == "__main__":
     hyp_ep.configure_e_hypothesis(iE, E, seizure_indices)
     logger.debug(str(hyp_ep))
 
+    hyp_ep_h5_model = hyp_ep.prepare_for_h5()
+    write_h5_model(hyp_ep_h5_model, file_name=hyp_ep.name + ".h5", folder_name=ep_folder)
+
     hyp_exc = copy.deepcopy(hyp_ep)
     hyp_exc.name = "Exc_Hypothesis"
     logger.info("Configure the hypothesis x0...")
@@ -48,7 +53,9 @@ if __name__ == "__main__":
     ix0 = numpy.delete(ii, iE)
 
     hyp_exc.configure_x0_hypothesis(ix0, X0_DEF, seizure_indices)
-    logger.debug(str(hyp_exc))
+
+    hyp_exc_h5_model = hyp_exc.prepare_for_h5()
+    write_h5_model(hyp_exc_h5_model, file_name=hyp_exc.name + ".h5", folder_name=ep_folder)
 
     # ------------------------------Simulation--------------------------------------
 
@@ -60,9 +67,13 @@ if __name__ == "__main__":
     for hyp in (hyp_ep, hyp_exc):
         simulator_instance, settings, variables_names, model = \
             setup_simulation(data_folder, hyp, dt, sim_length, monitor_period, scale_time, noise_intensity=None)
-        simulator_instance.config_simulation(hyp, os.path.join(simulator_instance.path, "Coonnectivity.h5"),
-                                             vep_settings=settings)
+        ep_settings = simulator_instance.config_simulation(hyp, os.path.join(simulator_instance.head_path,
+                                                                             "Connectivity.h5"), settings)
         simulator_instance.launch_simulation(hyp)
+
+        simulator_h5_model = simulator_instance.prepare_for_h5(ep_settings, settings.monitor_expressions,
+                                                               settings.variables_names)
+        write_h5_model(simulator_h5_model, ep_folder, file_name=hyp.name + "sim_settings.h5")
 
     # -------------------------------Plotting---------------------------------------
 
@@ -76,7 +87,9 @@ if __name__ == "__main__":
 
         ts_time, ts_data = read_ts(os.path.join(data_folder, hyp.name, "ts.h5"), data="data")
         ts_time *= scale_time
-        plot_timeseries(ts_time, {'ts0': ts_data[:, :, 0], 'ts1': ts_data[:, :, 1], 'ts2': ts_data[:, :, 2]},
+        plot_timeseries(ts_time,
+                        {'ts0': ts_data[:, :, 0][:ts_time.shape[0], :], 'ts1': ts_data[:, :, 1][:ts_time.shape[0], :],
+                         'ts2': ts_data[:, :, 2][:ts_time.shape[0], :]},
                         save_flag=True, title="Ts_" + hyp.name)
 
         plot_trajectories({'ts0': ts_data[:, :, 0], 'ts1': ts_data[:, :, 1], 'ts2': ts_data[:, :, 2]}, save_flag=True,

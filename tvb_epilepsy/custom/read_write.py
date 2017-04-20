@@ -6,20 +6,18 @@ import os
 import h5py
 import numpy
 import warnings
-from datetime import datetime
-from tvb_epilepsy.base.utils import ensure_unique_file, write_object_to_h5_file, read_object_from_h5_file,\
-                                    print_metadata, write_metadata
+from tvb_epilepsy.base.hypothesis import Hypothesis
+from tvb_epilepsy.base.utils import ensure_unique_file, read_object_from_h5_file, print_metadata, write_metadata
 # TODO: solve problems with setting up a logger
 from tvb_epilepsy.base.utils import initialize_logger
-from tvb_epilepsy.base.hypothesis import Hypothesis
 from tvb_epilepsy.tvb_api.epileptor_models import model_build_dict
 from tvb_epilepsy.base.simulators import SimulationSettings
 
 PATIENT_VIRTUAL_HEAD = "/WORK/episense/episense-root/trunk/demo-data/Head_TREC"
 
 import ntpath
-logger = initialize_logger("log_"+ntpath.split(PATIENT_VIRTUAL_HEAD)[1])
 
+logger = initialize_logger("log_" + ntpath.split(PATIENT_VIRTUAL_HEAD)[1])
 
 KEY_TYPE = "EPI_Type"
 KEY_VERSION = "EPI_Version"
@@ -43,13 +41,13 @@ hyp_attributes_dict = {"Hypothesis name": "name", "Model Epileptogenicity": "E",
                        "x1EQcr": "x1EQcr", "x1LIN": "x1LIN", "x1SQ": "x1SQ",
                        "lsa_eigvals": "lsa_eigvals", "lsa_eigvects": "lsa_eigvects", "lsa_ps_tot": "lsa_ps_tot"}
 
-#Attributes to be read or written for Epileptor models object and files:
+# Attributes to be read or written for Epileptor models object and files:
 epileptor_attributes_dict = {"model.name": "_ui_name", "model.a": "a", "model.b": "b", "model.c": "c", "model.d": "d",
                              "model.r": "r", "model.s": "s", "model.x0": "x0", "model.Iext": "Iext",
                              "model.slope": "slope", "model.Iext2": "Iext2", "model.tau": "tau", "model.aa": "aa",
                              "model.Kvf": "Kvf", "model.Kf": "Kf", "model.Ks": "Ks", "model.tt": "tt"}
 
-epileptorDP_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0": "x0","model.Iext1": "Iext1",
+epileptorDP_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0": "x0", "model.Iext1": "Iext1",
                                "model.slope": "slope", "model.Iext2": "Iext2",
                                "model.tau2": "tau2", "model.Kvf": "Kvf", "model.Kf": "Kf", "model.K": "K",
                                "model.tau1": "tau1", "model.zmode": "zmode"}
@@ -68,13 +66,15 @@ epileptor_model_attributes_dict = {"Epileptor": epileptor_attributes_dict, "Cust
                                    "EpileptorDPrealistic": epileptorDPrealistic_attributes_dict,
                                    "EpileptorDP2D": epileptorDP2D_attributes_dict}
 
-#Attributes to be read or written for noise object and files:
-simulation_settings_attributes_dict = {"Simulated length (ms)": "simulated_period", "Integrator type": "integrator_type",
+# Attributes to be read or written for noise object and files:
+simulation_settings_attributes_dict = {"Simulated length (ms)": "simulated_period",
+                                       "Integrator type": "integrator_type",
                                        "Integration time step (ms)": "integration_step", "Time scaling": "scale_time",
                                        "Noise type": "noise_type", "Noise time scale": "noise_ntau",
                                        "Noise intensity": "noise_intensity", "Noise random seed": "noise_seed",
                                        "Monitor type": "monitor_type", "Monitor period (ms)": "monitor_sampling_period",
-                                       "Monitor expressions": "monitor_expressions", "Variables names": "variables_names",
+                                       "Monitor expressions": "monitor_expressions",
+                                       "Variables names": "variables_names",
                                        "Initial conditions": "initial_conditions"}
 
 
@@ -145,34 +145,27 @@ def write_epileptogenicity_hypothesis(ep_vector, folder_name=None, file_name=Non
     h5_file.close()
 
 
-def write_hypothesis(hypothesis, folder_name=None, file_name=None, hypo_name=None):
+def write_h5_model(h5_model, folder_name, file_name):
     """
-    Store an hypothesis object to a hdf5 file
+    Store H5Model object to a hdf5 file
     """
-
-    if not(isinstance(hypo_name, basestring)):
-        hypo_name = hypothesis.name
-
     final_path = ensure_unique_file(folder_name, file_name)
 
-    logger.info("Writing a hypothesis at: %s" % final_path)
+    logger.info("Writing %s at: %s" % (h5_model, final_path))
 
     h5_file = h5py.File(final_path, 'a', libver='latest')
-    h5_file.attrs.create("EPI_Type", "HypothesisModel")
-    h5_file.attrs.create("Number_of_nodes", hypothesis.n_regions)
 
-    seizure_indices = numpy.zeros((hypothesis.n_regions,))
-    seizure_indices[hypothesis.seizure_indices] = 1
-    overwrite_fields_dict = {"EZ hypothesis": (seizure_indices, "overwrite"),
-                             "Hypothesis name": (hypo_name, "overwrite")}
-    write_object_to_h5_file(hypothesis, h5_file, hyp_attributes_dict, add_overwrite_fields_dict=overwrite_fields_dict)
+    for attribute, field in h5_model.datasets_dict.iteritems():
+        h5_file.create_dataset("/" + attribute, data=field)
+
+    for meta, val in h5_model.metadata_dict.iteritems():
+        h5_file.attrs.create(meta, val)
 
     h5_file.close()
 
 
 def read_hypothesis(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "hypo_ep.h5"), output="object", hypo_name=None,
                     update_hypothesis=True):
-
     """
     :param path: Path towards an hypothesis H5 file
     :return: hypothesis object
@@ -184,7 +177,7 @@ def read_hypothesis(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "hypo_ep.h5"),
     print_metadata(h5_file)
 
     overwrite_fields_dict = {"seizure_indices":
-                             numpy.array(numpy.where(h5_file["/EZ hypothesis"][()] > 0)).astype("i").squeeze()}
+                                 numpy.array(numpy.where(h5_file["/EZ hypothesis"][()] > 0)).astype("i").squeeze()}
 
     if isinstance(hypo_name, basestring):
         overwrite_fields_dict.update({"name": hypo_name})
@@ -231,47 +224,8 @@ def write_sensors(labels, locations, file_name=None):
     h5_file.close()
 
 
-def write_simulation_settings(model, sim_settings, folder_name=None, file_name=None):
-    """
-    Store a model and a simulation settigns object to a hdf5 file
-    """
-
-    final_path = ensure_unique_file(folder_name, file_name)
-
-    logger.info("Writing simulation settings at: %s" % final_path)
-
-    h5_file = h5py.File(final_path, 'a', libver='latest')
-    # TODO: confirm these keys
-    h5_file.attrs.create("EPI_Type", "HypothesisModel")
-    #h5_file.attrs.create("EPI_Type", "SimulationSettings")
-
-    # Convert some scalar model parameters to vectors to be viewable like the rest
-    attributes_dict = epileptor_model_attributes_dict[model._ui_name]
-    for attr in attributes_dict:
-        p = model.x0.shape
-        field = getattr(model, attributes_dict[attr])
-        if isinstance(field,(float, int, long, complex)) \
-            or (isinstance(field,(numpy.ndarray))
-                and numpy.all(str(field.dtype)[1] != numpy.array(["O", "S"])) and field.size == 1):
-            setattr(model, attributes_dict[attr], field * numpy.ones(p))
-
-    write_object_to_h5_file(model, h5_file, attributes_dict)
-
-    # overwrite_fields_dict = \
-    #     {"Monitor expressions": (list_of_strings_to_string(sim_settings.monitor_expressions), "overwrite"),
-    #      "Variables names": (list_of_strings_to_string(sim_settings.variables_names), "overwrite")}
-    overwrite_fields_dict = \
-        {"Monitor expressions": (numpy.array(sim_settings.monitor_expressions), "overwrite"),
-         "Variables names": (numpy.array(sim_settings.variables_names), "overwrite")}
-    write_object_to_h5_file(sim_settings, h5_file, simulation_settings_attributes_dict,
-                             add_overwrite_fields_dict=overwrite_fields_dict)
-
-    h5_file.close()
-
-
 def read_simulation_settings(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "sim_ep.h5"), output="object",
                              hypothesis=None):
-
     """
     :param path: Path towards an hypothesis H5 file
     :return: hypothesis object
@@ -282,7 +236,7 @@ def read_simulation_settings(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "sim_
 
     print_metadata(h5_file)
 
-    if output == "dict" or not(isinstance(hypothesis, Hypothesis)):
+    if output == "dict" or not (isinstance(hypothesis, Hypothesis)):
         model = dict()
         if hypothesis is not None:
             warnings.warn("hypothesis is not a Hypothesis object. Returning a dictionary for model.")
@@ -290,7 +244,8 @@ def read_simulation_settings(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "sim_
         if h5_file['/' + "model.name"][()] == "Epileptor":
             model = model_build_dict[h5_file['/' + "model.name"][()]](hypothesis)
         else:
-            model = model_build_dict[h5_file['/' + "model.name"][()]](hypothesis, zmode=h5_file['/' + "model.zmode"][()])
+            model = model_build_dict[h5_file['/' + "model.name"][()]](hypothesis,
+                                                                      zmode=h5_file['/' + "model.zmode"][()])
 
     if h5_file['/' + "model.name"][()] != "Epileptor":
         overwrite_fields_dict = {"zmode": numpy.array(h5_file['/' + "model.zmode"][()])}
@@ -300,7 +255,7 @@ def read_simulation_settings(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "sim_
     read_object_from_h5_file(model, h5_file, epileptor_model_attributes_dict[h5_file['/' + "model.name"][()]],
                              add_overwrite_fields_dict=overwrite_fields_dict)
 
-    if output == "dict" :
+    if output == "dict":
         sim_settings = dict()
     else:
         sim_settings = SimulationSettings()
@@ -331,8 +286,8 @@ def read_ts(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5"), data=None):
     if isinstance(data, dict):
 
         for key in data:
-            print "Data expected shape:", h5_file['/'+key].shape
-            data[key] = h5_file['/'+key][()]
+            print "Data expected shape:", h5_file['/' + key].shape
+            data[key] = h5_file['/' + key][()]
             print "Actual Data shape", data[key].shape
             print "First Channel sv sum", numpy.sum(data[key][:, 0])
 
@@ -350,13 +305,11 @@ def read_ts(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5"), data=None):
 
     time = numpy.linspace(start_time, total_time, nr_of_steps)
 
-
     h5_file.close()
     return time, data
 
 
 def write_ts(raw_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts_from_python.h5")):
-
     if os.path.exists(path):
         print "TS file %s already exists. Use a different name!" % path
         return
@@ -370,12 +323,12 @@ def write_ts(raw_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, 
         for data in raw_data:
             print "Writing " + data
             if len(raw_data[data].shape) == 2 and str(raw_data[data].dtype)[0] == "f":
-                h5_file.create_dataset("/"+data, data=raw_data[data])
+                h5_file.create_dataset("/" + data, data=raw_data[data])
                 write_metadata({KEY_MAX: raw_data[data].max(), KEY_MIN: raw_data[data].min(),
                                 KEY_STEPS: raw_data[data].shape[0], KEY_CHANNELS: raw_data[data].shape[1],
                                 KEY_SV: 1,
                                 KEY_SAMPLING: sampling_period, KEY_START: 0.0
-                                }, h5_file, KEY_DATE, KEY_VERSION, "/"+data)
+                                }, h5_file, KEY_DATE, KEY_VERSION, "/" + data)
             else:
                 raise ValueError("Invalid TS data. 2D (time, nodes) numpy.ndarray of floats expected")
 
@@ -383,9 +336,9 @@ def write_ts(raw_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, 
         if len(raw_data.shape) != 2 and str(raw_data.dtype)[0] != "f":
             h5_file.create_dataset("/data", data=raw_data)
             write_metadata({KEY_MAX: raw_data.max(), KEY_MIN: raw_data.min(),
-                         KEY_STEPS: raw_data.shape[0], KEY_CHANNELS: raw_data.shape[1], KEY_SV: 1,
-                         KEY_SAMPLING: sampling_period, KEY_START: 0.0
-                         }, h5_file, KEY_DATE, KEY_VERSION, "/data")
+                            KEY_STEPS: raw_data.shape[0], KEY_CHANNELS: raw_data.shape[1], KEY_SV: 1,
+                            KEY_SAMPLING: sampling_period, KEY_START: 0.0
+                            }, h5_file, KEY_DATE, KEY_VERSION, "/data")
         else:
             raise ValueError("Invalid TS data. 2D (time, nodes) numpy.ndarray of floats expected")
 
@@ -441,13 +394,13 @@ def write_ts_epi(raw_data, sampling_period, lfp_data=None,
 
     write_metadata({KEY_TYPE: "TimeSeries"}, h5_file, KEY_DATE, KEY_VERSION)
     write_metadata({KEY_MAX: raw_data.max(), KEY_MIN: raw_data.min(),
-                     KEY_STEPS: raw_data.shape[0], KEY_CHANNELS: raw_data.shape[1], KEY_SV: raw_data.shape[2],
-                     KEY_SAMPLING: sampling_period, KEY_START: 0.0
-                     }, h5_file, KEY_DATE, KEY_VERSION, "/data")
+                    KEY_STEPS: raw_data.shape[0], KEY_CHANNELS: raw_data.shape[1], KEY_SV: raw_data.shape[2],
+                    KEY_SAMPLING: sampling_period, KEY_START: 0.0
+                    }, h5_file, KEY_DATE, KEY_VERSION, "/data")
     write_metadata({KEY_MAX: lfp_data.max(), KEY_MIN: lfp_data.min(),
-                     KEY_STEPS: lfp_data.shape[0], KEY_CHANNELS: lfp_data.shape[1], KEY_SV: 1,
-                     KEY_SAMPLING: sampling_period, KEY_START: 0.0
-                     }, h5_file, KEY_DATE, KEY_VERSION, "/lfpdata")
+                    KEY_STEPS: lfp_data.shape[0], KEY_CHANNELS: lfp_data.shape[1], KEY_SV: 1,
+                    KEY_SAMPLING: sampling_period, KEY_START: 0.0
+                    }, h5_file, KEY_DATE, KEY_VERSION, "/lfpdata")
     h5_file.close()
 
 
@@ -464,13 +417,14 @@ def write_ts_seeg_epi(seeg_data, sampling_period, path=os.path.join(PATIENT_VIRT
         h5_file.create_dataset("/" + sensors_name, data=seeg_data)
 
         write_metadata({KEY_MAX: seeg_data.max(), KEY_MIN: seeg_data.min(),
-                         KEY_STEPS: seeg_data.shape[0], KEY_CHANNELS: seeg_data.shape[1], KEY_SV: 1,
-                         KEY_SAMPLING: sampling_period, KEY_START: 0.0
-                         }, h5_file, KEY_DATE, KEY_VERSION, "/" + sensors_name)
+                        KEY_STEPS: seeg_data.shape[0], KEY_CHANNELS: seeg_data.shape[1], KEY_SV: 1,
+                        KEY_SAMPLING: sampling_period, KEY_START: 0.0
+                        }, h5_file, KEY_DATE, KEY_VERSION, "/" + sensors_name)
         h5_file.close()
     except Exception, e:
         print e
         print "Seeg dataset already written %s" % sensors_name
+
 
 if __name__ == "__main__":
     read_epileptogenicity()
