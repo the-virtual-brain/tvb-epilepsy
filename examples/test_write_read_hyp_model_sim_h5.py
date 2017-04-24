@@ -1,11 +1,11 @@
 import os
 import numpy
 from tvb_epilepsy.base.utils import get_logger, set_time_scales, assert_equal_objects, \
-                                    write_object_to_h5_file, read_object_from_h5_file
+    write_object_to_h5_file, read_object_from_h5_file
 from tvb_epilepsy.base.hypothesis import Hypothesis
-from tvb_epilepsy.custom.read_write import write_hypothesis, read_hypothesis, hyp_attributes_dict, \
-                                           write_simulation_settings, read_simulation_settings, \
-                                           epileptor_model_attributes_dict, simulation_settings_attributes_dict
+from tvb_epilepsy.custom.read_write import write_h5_model, read_hypothesis, hyp_attributes_dict, \
+    read_simulation_settings, \
+    epileptor_model_attributes_dict, simulation_settings_attributes_dict
 from tvb_epilepsy.custom.readers_custom import CustomReader
 from tvb_epilepsy.tvb_api.epileptor_models import model_build_dict
 from tvb_epilepsy.tvb_api.simulator_tvb import setup_simulation
@@ -35,7 +35,8 @@ if __name__ == "__main__":
 
     hypothesis_name = "hypo.h5"
 
-    write_hypothesis(hypothesis, epi_complete_path, hypothesis_name)
+    hypo_h5_model = hypothesis.prepare_for_h5()
+    write_h5_model(hypo_h5_model, epi_complete_path, hypothesis_name)
 
     hypothesis2 = read_hypothesis(path=os.path.join(epi_complete_path, hypothesis_name), output="object",
                                   update_hypothesis=True)
@@ -63,21 +64,24 @@ if __name__ == "__main__":
 
     sim, sim_settings = simulator_instance.config_simulation(head, hypothesis, settings=sim_settings)
 
-    write_simulation_settings(model, sim_settings, epi_complete_path, hypothesis.name + "sim_settings.h5")
+    sim_h5_model = simulator_instance.prepare_for_h5(sim_settings)
+    write_h5_model(sim_h5_model, epi_complete_path, hypothesis.name + "sim_settings.h5")
 
-    model2, sim_settings2 = read_simulation_settings(path=os.path.join(epi_complete_path, hypothesis.name + "sim_settings.h5"),
-                                                     output="object", hypothesis=hypothesis)
+    model2, sim_settings2 = read_simulation_settings(
+        path=os.path.join(epi_complete_path, hypothesis.name + "sim_settings.h5"),
+        output="object", hypothesis=hypothesis)
 
     assert_equal_objects(model, model2, epileptor_model_attributes_dict[model2._ui_name])
     assert_equal_objects(sim_settings, sim_settings2, simulation_settings_attributes_dict)
 
     model2, sim_settings2 = read_simulation_settings(
-                             path=os.path.join(epi_complete_path, hypothesis.name + "sim_settings.h5"), output="dict")
+        path=os.path.join(epi_complete_path, hypothesis.name + "sim_settings.h5"), output="dict")
 
     assert_equal_objects(model, model2, epileptor_model_attributes_dict[model2["_ui_name"]])
     assert_equal_objects(sim_settings, sim_settings2, simulation_settings_attributes_dict)
 
+    # TODO: use write_h5_model
     write_object_to_h5_file(model2, os.path.join(epi_complete_path, hypothesis.name + "model_dict.h5"))
     model3 = read_object_from_h5_file(dict(), os.path.join(epi_complete_path, hypothesis.name + "model_dict.h5"),
-                                       attributes_dict=None, add_overwrite_fields_dict=None)
+                                      attributes_dict=None, add_overwrite_fields_dict=None)
     assert_equal_objects(model2, model3)

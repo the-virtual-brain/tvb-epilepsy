@@ -104,7 +104,8 @@ def assert_arrays(params, shape=None):
 
             if numpy.any(ind):
                 ind = numpy.where(ind)[0]
-                n_shapes[ind] += 1
+                #TODO: handle this properly
+                n_shapes[int(ind)] += 1
             else:
                 shapes.append(params[ip].shape)
                 n_shapes.append(1)
@@ -149,32 +150,20 @@ def linear_scaling(x, x1, x2, y1, y2):
         return y1 + (x - x1) * scaling_factor
 
 
-def obj_to_dict(obj, name=None):
+def obj_to_dict(obj):
     """
     :param obj: Python object to introspect
     :return: dictionary after recursively taking obj fields and their values
     """
-    # TODO: maybe handle complex numbers...
     if obj is None:
         return obj
 
-    if isinstance(obj, (str, numpy.str, int, long, numpy.int)):
+    if isinstance(obj, (str, int, float)):
         return obj
-
-    if isinstance(obj, (numpy.float, float)):
+    if isinstance(obj, (numpy.float32,)):
         return float(obj)
 
-    if isinstance(obj, numpy.ndarray):
-        if str(obj.dtype)[0] == "O":
-            return obj_to_dict(list(obj))
-        else:
-            if name is None:
-                name = "unnamed_numpy_array"
-            return {name: obj}
-
     if isinstance(obj, list):
-        if str(numpy.array(obj).dtype)[0] != "O":
-            return obj_to_dict(numpy.array(obj), name)
         ret = []
         for val in obj:
             ret.append(obj_to_dict(val))
@@ -343,7 +332,7 @@ def ensure_unique_file(parent_folder, filename):
     final_path = os.path.join(parent_folder, filename)
 
     while os.path.exists(final_path):
-        filename = raw_input("File %s already exists. Enter a different name: " % parent_folder)
+        filename = raw_input("File %s already exists. Enter a different name: " % final_path)
         final_path = os.path.join(parent_folder, filename)
 
     return final_path
@@ -363,7 +352,7 @@ def write_metadata(meta_dict, h5_file, key_date, key_version, path="/"):
         root[key] = val
 
 
-# TODO: modify functions to write and read h5 files recursively when objects to be read or written are dict()
+# TODO: Will we need any of this?
 def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrite_fields_dict=None, keys=None):
 
     if isinstance(h5_file, basestring):

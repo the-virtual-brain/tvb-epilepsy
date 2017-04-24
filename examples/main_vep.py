@@ -15,9 +15,8 @@ if SIMULATION_MODE == "custom":
     from tvb_epilepsy.custom.simulator_custom import setup_simulation
 else:
     from tvb_epilepsy.tvb_api.simulator_tvb import setup_simulation
-from tvb_epilepsy.custom.read_write import write_hypothesis, read_hypothesis, write_simulation_settings, \
-                                           read_simulation_settings, write_ts, read_ts, write_ts_epi, write_ts_seeg_epi
-
+from tvb_epilepsy.custom.read_write import read_hypothesis, read_simulation_settings, write_ts, read_ts, write_ts_epi, write_ts_seeg_epi, \
+    write_h5_model
 
 SHOW_FLAG = False
 SAVE_FLAG = True
@@ -181,7 +180,8 @@ if __name__ == "__main__":
     plot_hypothesis(hyp_exc, head.connectivity.region_labels,
                     save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
                     figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
-    write_hypothesis(hyp_exc, folder_name=FOLDER_RES, file_name="hyp_exc.h5", hypo_name=None)
+    h5_model = hyp_exc.prepare_for_h5()
+    write_h5_model(h5_model, folder_name=FOLDER_RES, file_name="hyp_exc.h5")
     #
     # x0_opt = np.array(hyp_exc.x0)
     # x1EQ_opt = np.array(hyp_exc.x1EQ)
@@ -257,7 +257,8 @@ if __name__ == "__main__":
         logger.info("Time: " + str(scale_time*ttavg[0]) + " - " + str(scale_time*ttavg[-1]))
         logger.info("Values: " + str(tavg_data.min()) + " - " + str(tavg_data.max()))
 
-        write_simulation_settings(model, sim_settings, folder_name=FOLDER_RES, file_name=hyp.name+"_sim_settings.h5")
+        simulation_h5_model = simulator_instance.prepare_for_h5(sim_settings)
+        write_h5_model(simulation_h5_model, folder_name=FOLDER_RES, file_name=hyp.name+"_sim_settings.h5")
 
         # Test write, read and assert functions
         # from tvb_epilepsy.base.utils import assert_equal_objects
