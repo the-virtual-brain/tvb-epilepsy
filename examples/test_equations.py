@@ -43,9 +43,7 @@ if __name__ == "__main__":
     print "x0="
     print x0
 
-
-
-    model = "EpileptorDP"
+    model = "EpileptorDPrealistic"
     print model
 
     b = -2.0

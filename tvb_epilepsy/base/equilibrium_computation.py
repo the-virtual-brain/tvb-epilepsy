@@ -3,10 +3,12 @@ Module to compute the resting equilibrium point of a Virtual Epileptic Patient m
 """
 import warnings
 import numpy
+from scipy.optimize import root
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, SYMBOLIC_CALCULATIONS_FLAG
 from tvb_epilepsy.base.utils import assert_arrays
 from tvb_epilepsy.base.calculations import calc_x0, calc_fx1, calc_fx1z, calc_fy1, calc_fz, calc_fx2, calc_fg, \
                                            calc_coupling, calc_dfun, calc_fx1z_2d_x1neg_zpos_jac, calc_fx1z_diff
+
 
 if SYMBOLIC_CALCULATIONS_FLAG :
 
@@ -18,9 +20,6 @@ if SYMBOLIC_CALCULATIONS_FLAG :
     except:
         warnings.warn("Unable to load sympy. Turning to scipy.optimization.")
         SYMBOLIC_CALCULATIONS_FLAG = False
-        from scipy.optimize import root
-#else:
-from scipy.optimize import root
 
 
 def def_x1eq(X1_DEF, X1_EQ_CR_DEF, n_regions):
