@@ -75,12 +75,16 @@ class EpileptorModel(object):
 
 
 class FullConfiguration(object):
-    def __init__(self, name="FromPython", connectivity_path="Connectivity.h5", model=[], settings=Settings()):
+    def __init__(self, name="FromPython", connectivity_path="Connectivity.h5", epileptor_paramses=[],
+                 settings=Settings(), initial_states=None, initial_states_shape=None):
         self.configurationName = name
         self.connectivityPath = connectivity_path
         self.settings = settings
         self.variantName = None
-        self.epileptorParamses = model
+        self.epileptorParamses = epileptor_paramses
+        if initial_states is not None and initial_states_shape is not None:
+            self.initialStates = initial_states
+            self.initialStatesShape = initial_states_shape
 
     def set(self, at_indices, ep_param):
         for i in at_indices:
@@ -93,9 +97,10 @@ class SimulatorCustom(ABCSimulator):
     To run a simulation, we can also open a GUI and import the resulted JSON file.
     """
 
-    def __init__(self, model, head_path):
+    def __init__(self, model, head_path, json_config_file):
         self.head_path = head_path
         self.model = model
+        self.json_config_file = json_config_file
 
     @staticmethod
     def _save_serialized(ep_full_config, result_path):
@@ -104,24 +109,26 @@ class SimulatorCustom(ABCSimulator):
         result_file.write(json_text)
         result_file.close()
 
-    def config_simulation(self, hypothesis, head_connectivity, settings=SimulationSettings()):
+    def config_simulation(self, hypothesis, head_connectivity, settings=SimulationSettings(), no_of_regions=88):
         ep_settings = Settings(settings.integration_step, settings.noise_seed, settings.noise_intensity,
                                settings.simulated_period, settings.monitor_sampling_period)
 
-        self.ep_config = FullConfiguration(hypothesis.name, head_connectivity,
-                                           self.prepare_epileptor_model_for_json(88), ep_settings)
-
         # TODO: history length has to be computed given the time delays (i.e., the tract lengts...)
         # history_length = ...
-        # TODO: initial_conditions have to be written in the json configuration file
-        # initial_conditions = self.prepare_initial_conditions(hypothesis, history_length=1)
-        hypothesis_path = os.path.join(self.head_path, hypothesis.name + ".json")
-        self._save_serialized(self.ep_config, hypothesis_path)
+        initial_conditions = self.prepare_initial_conditions(hypothesis, history_length=1)
+
+        self.ep_config = FullConfiguration(hypothesis.name, head_connectivity,
+                                           self.prepare_epileptor_model_for_json(no_of_regions), ep_settings,
+                                           initial_conditions.flatten(),
+                                           numpy.array(initial_conditions.shape))
+
+        json_config_path = os.path.join(self.head_path, self.json_config_file)
+        self._save_serialized(self.ep_config, json_config_path)
 
         return ep_settings
 
-    def launch_simulation(self, hypothesis):
-        hypothesis_file = os.path.join(self.head_path, hypothesis.name + ".json")
+    def launch_simulation(self):
+        hypothesis_file = os.path.join(self.head_path, self.json_config_file)
         opts = "java -Dncsa.hdf.hdf5lib.H5.hdf5lib=" + os.path.join(LIB_PATH, HDF5_LIB) + " " + \
                "-Djava.library.path=" + LIB_PATH + " " + "-cp" + " " + JAR_PATH + " " + \
                JAVA_MAIN_SIM + " " + hypothesis_file + " " + self.head_path
@@ -172,7 +179,7 @@ def setup_simulation(head_path, hypothesis, dt, sim_length, monitor_period, scal
                      noise_intensity=None, variables_names=None):
     model = custom_model_builder(hypothesis)
 
-    simulator_instance = SimulatorCustom(model, head_path)
+    simulator_instance = SimulatorCustom(model, head_path, hypothesis.name + ".json")
 
     if variables_names is None:
         variables_names = ['x1', 'z', 'x2']

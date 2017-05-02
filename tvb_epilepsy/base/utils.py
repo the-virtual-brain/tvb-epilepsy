@@ -163,6 +163,9 @@ def obj_to_dict(obj):
     if isinstance(obj, (numpy.float32,)):
         return float(obj)
 
+    if isinstance(obj, (numpy.ndarray)):
+        return obj.tolist()
+
     if isinstance(obj, list):
         ret = []
         for val in obj:

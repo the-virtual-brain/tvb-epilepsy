@@ -599,6 +599,10 @@ def calc_equilibrium_point(epileptor_model, hypothesis):
                                        hypothesis.x1EQ, -2.0, epileptor_model.a, epileptor_model.b,
                                        epileptor_model.d, zmode=numpy.array("lin"))
 
-    assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point)
+    if (epileptor_model._ui_name != "CustomEpileptor"):
+        assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point)
+    else:
+        #TODO: Implement dfun for custom simulator
+        print "The dfun for custom simulator is not implemented yet!"
 
     return equilibrium_point

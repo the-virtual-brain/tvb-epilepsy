@@ -68,8 +68,8 @@ if __name__ == "__main__":
         simulator_instance, settings, variables_names, model = \
             setup_simulation(data_folder, hyp, dt, sim_length, monitor_period, scale_time, noise_intensity=None)
         ep_settings = simulator_instance.config_simulation(hyp, os.path.join(simulator_instance.head_path,
-                                                                             "Connectivity.h5"), settings)
-        simulator_instance.launch_simulation(hyp)
+                                                                             "Connectivity.h5"), settings, hyp.n_regions)
+        simulator_instance.launch_simulation()
 
         simulator_h5_model = simulator_instance.prepare_for_h5(ep_settings, settings.monitor_expressions,
                                                                settings.variables_names)
