@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import os
 import numpy
 from tvb_epilepsy.base.utils import get_logger, set_time_scales, assert_equal_objects, \
@@ -14,6 +16,7 @@ if __name__ == "__main__":
     logger = get_logger(__name__)
 
     logger.info("Reading from custom")
+    # data_folder = os.path.join("/WORK/Episense/root-episense/trunk/demo-data", 'Head_JUNCH')
     data_folder = os.path.join("/WORK/Episense/trunk/demo-data", 'Head_JUNCH')
     reader = CustomReader()
 
