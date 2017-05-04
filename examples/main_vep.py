@@ -231,7 +231,7 @@ if __name__ == "__main__":
                                                                                monitor_period, scale_time=scale_time,
                                                                                noise_intensity=10 ** -8,
                                                                                variables_names=None)
-            custom_settings=simulator_instance.config_simulation(hyp, head_connectivity_path, settings=sim_settings)
+            custom_settings = simulator_instance.config_simulation(hyp, head_connectivity_path, settings=sim_settings)
             simulator_instance.launch_simulation(hyp)
             ttavg, tavg_data = read_ts(os.path.join(data_folder, hyp.name, "ts.h5"), data="data")
         else:

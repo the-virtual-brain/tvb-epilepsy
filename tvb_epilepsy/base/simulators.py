@@ -33,22 +33,22 @@ class SimulationSettings(object):
         self.initial_conditions = initial_conditions
 
     def __repr__(self):
-        d =  {"01. integration_step": self.integration_step,
-              "02. simulated_period": self.simulated_period,
-              "03. scale_time": self.scale_time,
-              "04. integrator_type": self.integrator_type,
-              "05. noise_preconfig": self.noise_preconfig,
-              "06. noise_type": self.noise_type,
-              "07. noise_ntau": self.noise_ntau,
-              "08. noise_seed": self.noise_seed,
-              "09. noise_intensity": self.noise_intensity,
-              "10. monitors_preconfig": self.monitors_preconfig,
-              "11. monitor_type": self.monitor_type,
-              "12. monitor_sampling_period": self.monitor_sampling_period,
-              "13. monitor_expressions": self.monitor_expressions,
-              "14. variables_names": self.variables_names,
-              "15. initial_conditions": self.initial_conditions,
-                }
+        d = {"01. integration_step": self.integration_step,
+             "02. simulated_period": self.simulated_period,
+             "03. scale_time": self.scale_time,
+             "04. integrator_type": self.integrator_type,
+             "05. noise_preconfig": self.noise_preconfig,
+             "06. noise_type": self.noise_type,
+             "07. noise_ntau": self.noise_ntau,
+             "08. noise_seed": self.noise_seed,
+             "09. noise_intensity": self.noise_intensity,
+             "10. monitors_preconfig": self.monitors_preconfig,
+             "11. monitor_type": self.monitor_type,
+             "12. monitor_sampling_period": self.monitor_sampling_period,
+             "13. monitor_expressions": self.monitor_expressions,
+             "14. variables_names": self.variables_names,
+             "15. initial_conditions": self.initial_conditions,
+            }
         return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ) )
 
     def __str__(self):
