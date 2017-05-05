@@ -160,7 +160,7 @@ class Hypothesis(object):
     def _calculate_e(self):
         return 3.0 * self.x1EQ + 5.0
 
-    def _update_parameters(self, seizure_indices):
+    def _update_parameters(self, seizure_indices=[]):
         """
         Updating hypothesis always starts from a new equilibrium point
         :param seizure_indices: numpy array with conn region indices where we think the seizure starts
@@ -170,13 +170,14 @@ class Hypothesis(object):
         self.x0 = self._calculate_x0()
         self.E = self._calculate_e()
 
-        self.seizure_indices = seizure_indices
-        if self.n_seizure_nodes > 0:
-            self._run_lsa(seizure_indices)
+        if len(seizure_indices) > 0:
+            self.seizure_indices = seizure_indices
 
-    def _run_lsa(self, seizure_indices):
+        self._run_lsa(seizure_indices)
 
-        #TODO: automatically choose the number of eigenvalue to sum via a cutting criterion
+    def _run_lsa(self, seizure_indices=[]):
+
+        #TODO: automatically choose seizure_indices and the number of eigenvalues to sum via a cutting criterion
 
         self._check_hypothesis(seizure_indices)
 
@@ -197,12 +198,12 @@ class Hypothesis(object):
         self.lsa_eigvects = eigvects[:, ind]
 
         #Calculate the propagation strength index by summing the first n_seizure_nodes eigenvectors
-        self.lsa_ps = numpy.sum(numpy.abs(self.lsa_eigvects[:, :self.n_seizure_nodes]), axis=1)
+        self.lsa_ps = numpy.sum(numpy.abs(self.lsa_eigvects[:, :max(self.n_seizure_nodes, 1)]), axis=1)
 
         #Calculate the propagation strength index by summing all eigenvectors
         self.lsa_ps_tot = numpy.sum(numpy.abs(self.lsa_eigvects), axis=1)
 
-    def _check_hypothesis(self, seizure_indices):
+    def _check_hypothesis(self, seizure_indices=[]):
         """
          LSA doesn't work well if there are some E>1 (i.e., x1EQ>1/3),
         and at the same time the rest of the equilibria are not negative "enough"
@@ -222,7 +223,7 @@ class Hypothesis(object):
 
     # The two hypothesis modes below could be combined (but always starting from "E" first, if any)
 
-    def configure_e_hypothesis(self, ie, e, seizure_indices):
+    def configure_e_hypothesis(self, ie, e, seizure_indices=[]):
         """
         Configure hypothesis starting from Epileptogenicities E
         :param e: new Epileptogenicities E
@@ -236,7 +237,7 @@ class Hypothesis(object):
         self._update_parameters(seizure_indices)
 
 
-    def configure_x0_hypothesis(self, ix0, x0, seizure_indices):
+    def configure_x0_hypothesis(self, ix0, x0, seizure_indices=[]):
         """
         Hypothesis starting from Excitabilities x0
         :param ix0: indices of regions with a x0 hypothesis
@@ -263,3 +264,41 @@ class Hypothesis(object):
 
         # Now that equilibria are OK, update the hypothesis to get the actual x0, E etc
         self._update_parameters(seizure_indices)
+
+    def configure_hypothesis(self, ie=[], e=[], ix0=[], x0=[], seizure_indices=[]):
+
+        n_ie = len(ie)
+        n_e = len(e)
+        e_hypo = False
+
+        if n_ie > 0 or n_e > 0:
+
+            if n_e == 1 or n_e == n_ie:
+                self.configure_e_hypothesis(ie, e, self.seizure_indices)
+                e_hypo = True
+
+            else:
+                raise ValueError("The lenghts of ie and e, " + str(n_ie) + " and " + str(n_e)
+                                 + ", respectively, do not much!")
+
+        n_ix0 = len(ix0)
+        n_x0 = len(x0)
+        x0_hypo = False
+
+        if n_ix0 > 0 or n_x0 > 0:
+
+            if n_x0 == 1 or n_x0 == n_ix0:
+                self.configure_x0_hypothesis(ix0, x0, self.seizure_indices)
+                x0_hypo = True
+
+            else:
+                raise ValueError("The lenghts of ix0 and x0, " + str(n_ix0) + " and " + str(n_x0)
+                                 + ", respectively, do not much!")
+
+        # Default behavior is the x0 hypothesis, so that equilibria are recalculated, in case some other parameter has
+        # changed in the meantime (i.e., K).
+        # Otherwise, if E, and therefore equilibria are the same, no matter other parameter changes,
+        # the reconfiguration of the hypothesis is almost meaningless,
+        # since LSA depends mainly on the equilibrium point position.
+        if not(e_hypo or x0_hypo):
+            self.configure_x0_hypothesis(range(self.n_regions), self.x0, seizure_indices)

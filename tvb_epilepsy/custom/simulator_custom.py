@@ -51,12 +51,13 @@ class EpileptorParams(object):
 
 class EpileptorModel(object):
     def __init__(self, a=1.0, b=3.0, c=1.0, d=5.0, aa=6.0, r=0.00035, kvf=0.0, kf=0.0, ks=1.5, tau=10.0, iext=3.1,
-                 iext2=0.45, slope=0.0, x0=-2.1, tt=1.0):
+                 iext2=0.45, slope=0.0, x0=-2.1, tt=1.0, n_regions=88):
         a, b, c, d, aa, r, kvf, kf, ks, tau, iext, iext2, slope, x0, tt = \
             assert_arrays([a, b, c, d, aa, r, kvf, kf, ks, tau, iext, iext2, slope, x0, tt])
         # TODO: add desired shape as argument in assert_arrays
         self._ui_name = "CustomEpileptor"
         self.nvar = 6
+        self.n_regions = n_regions
         self.a = a
         self.b = b
         self.c = c
@@ -98,9 +99,11 @@ class SimulatorCustom(ABCSimulator):
     To run a simulation, we can also open a GUI and import the resulted JSON file.
     """
 
-    def __init__(self, model, head_path, json_config_file):
-        self.head_path = head_path
+    def __init__(self, hypothesis, model, head_path, json_config_file, head_connectivity_path="Connectivity.h5"):
+        self.hypothesis
         self.model = model
+        self.head_path = head_path
+        self.head_connectivity_path = head_connectivity_path  #os.path.join(self.head_path, head_connectivity_path)
         self.json_config_file = json_config_file
 
     @staticmethod
@@ -110,21 +113,24 @@ class SimulatorCustom(ABCSimulator):
         result_file.write(json_text)
         result_file.close()
 
-    def config_simulation(self, hypothesis, head_connectivity, settings=SimulationSettings(), no_of_regions=88):
+    def config_simulation(self, settings=SimulationSettings()):
+
         ep_settings = Settings(settings.integration_step, settings.noise_seed, settings.noise_intensity,
                                settings.simulated_period, settings.monitor_sampling_period)
 
         # TODO: history length has to be computed given the time delays (i.e., the tract lengts...)
         # history_length = ...
-        initial_conditions = self.prepare_initial_conditions(hypothesis, history_length=1)
+        initial_conditions = self.prepare_initial_conditions(self.hypothesis, history_length=1)
 
-        self.ep_config = FullConfiguration(hypothesis.name, head_connectivity,
-                                           self.prepare_epileptor_model_for_json(no_of_regions), ep_settings,
+        self.ep_config = FullConfiguration(self.hypothesis.name, self.head_connectivity_path,
+                                           self.prepare_epileptor_model_for_json(self.model.n_regions), ep_settings,
                                            initial_conditions.flatten(),
                                            numpy.array(initial_conditions.shape))
 
         json_config_path = os.path.join(self.head_path, self.json_config_file)
         self._save_serialized(self.ep_config, json_config_path)
+
+        self.ep_settings = ep_settings
 
         return ep_settings
 
@@ -180,16 +186,16 @@ class SimulatorCustom(ABCSimulator):
 def custom_model_builder(hypothesis, a=1.0, b=3.0, d=5.0):
     x0 = calc_rescaled_x0(hypothesis.x0.flatten(), hypothesis.yc.flatten(), hypothesis.Iext1.flatten(), a, b - d)
     model = EpileptorModel(a=a, b=b, d=d, x0=x0, iext=hypothesis.Iext1.flatten(), ks=hypothesis.K.flatten(),
-                           c=hypothesis.yc.flatten())
+                           c=hypothesis.yc.flatten(), n_regions=hypothesis.n_regions)
 
     return model
 
 
 def setup_simulation(head_path, hypothesis, dt, sim_length, monitor_period, scale_time=1,
                      noise_intensity=None, variables_names=None):
-    model = custom_model_builder(hypothesis)
 
-    simulator_instance = SimulatorCustom(model, head_path, hypothesis.name + ".json")
+    simulator_instance = SimulatorCustom(hypothesis, custom_model_builder(hypothesis), head_path,
+                                         hypothesis.name + ".json")
 
     if variables_names is None:
         variables_names = ['x1', 'z', 'x2']

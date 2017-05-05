@@ -12,60 +12,77 @@ from tvb_epilepsy.custom.simulator_custom import SimulatorCustom
 
 
 def hypo_out_fun(hypothesis, **kwargs):
-    pass
+    return hypothesis.lsa_ps
 
-def hypo_run_fun(hypothesis, param_names, param_values, param_indexes, out_fun, seizure_indices, iE=[], E=[], ix0=[],
-                 x0=[]):
 
+def hypo_run_fun(hypothesis, param_names, param_values, param_indexes, out_fun=hypo_out_fun, iE=[], E=[], ix0=[], x0=[],
+                 seizure_indices=[]):
 
     try:
+
         for ip in range(len(param_names)):
 
             if param_names[ip] is "E":
-                iE = param_indexes[ip]
-                E = param_values[ip]
+                iE.append(param_indexes[ip])
+                E.append(param_values[ip])
 
             elif param_names[ip] is "x0":
-                ix0 = param_indexes[ip]
-                x0 = param_values[ip]
-                x0_hypo = True
+                ix0.append(param_indexes[ip])
+                x0.append(param_values[ip])
 
             else:
                 temp = getattr(hypothesis, param_names[ip])
                 temp[param_indexes[ip]] = param_values[ip]
                 setattr(hypothesis, param_names[ip], temp)
 
-    except:
-        return False, None
+        hypothesis.configure_hypothesis(iE, E, ix0, x0, seizure_indices)
 
-    hypo_e = False
-    hypo_x0 = False
-
-    try:
-        hypothesis.configure_e_hypothesis(iE, E, seizure_indices)
-        hypo_e = True
-    except:
-        pass
-
-    try:
-        hypothesis.configure_x0_hypothesis(ix0, x0, seizure_indices)
-        hypo_x0 = True
-    except:
-        pass
-
-    try:
-        status = hypo_e or hypo_x0
         output = out_fun(hypothesis)
-        return status, output
+
+        return True, output
 
     except:
+
         return False, None
+
 
 def sim_run_fun(simulator, param_names, param_values, param_indexes, out_fun, **kwargs):
-    pass
+
+    try:
+
+        for ip in range(len(param_names)):
+            pass
+            # TODO: search for a parameter inside hypothesis and model, and change if it exists
+            # if param_names[ip] is "E":
+            #     iE.append(param_indexes[ip])
+            #     E.append(param_values[ip])
+            #
+            # elif param_names[ip] is "x0":
+            #     ix0.append(param_indexes[ip])
+            #     x0.append(param_values[ip])
+            #
+            # else:
+            #     temp = getattr(hypothesis, param_names[ip])
+            #     temp[param_indexes[ip]] = param_values[ip]
+            #     setattr(hypothesis, param_names[ip], temp)
+
+        # TODO: reconfigure hypothesis
+        # hypothesis.configure_hypothesis(iE, E, ix0, x0, seizure_indices)
+
+        _, _, status = simulator.launch()
+        #output = out_fun(hypothesis)
+
+        #return True, output
+        pass
+
+    except:
+
+        return False, None
+
 
 def sim_out_fun(simulator, **kwargs):
     pass
+
 
 class PSE(object):
 

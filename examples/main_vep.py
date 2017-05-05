@@ -11,13 +11,13 @@ from tvb_epilepsy.base.utils import initialize_logger, calculate_projection, set
                                     write_object_to_h5_file, assert_equal_objects
 from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_sim_results, plot_nullclines_eq
 from tvb_epilepsy.base.hypothesis import Hypothesis
-
+from tvb_epilepsy.custom.read_write import read_hypothesis, read_simulation_settings, write_ts, read_ts, write_ts_epi, \
+                                           write_ts_seeg_epi, write_h5_model
 if SIMULATION_MODE == "custom":
     from tvb_epilepsy.custom.simulator_custom import setup_simulation
 else:
     from tvb_epilepsy.tvb_api.simulator_tvb import setup_simulation
-from tvb_epilepsy.custom.read_write import read_hypothesis, read_simulation_settings, write_ts, read_ts, write_ts_epi, write_ts_seeg_epi, \
-    write_h5_model
+
 
 SHOW_FLAG = False
 SAVE_FLAG = True
@@ -232,8 +232,8 @@ if __name__ == "__main__":
                                                                                monitor_period, scale_time=scale_time,
                                                                                noise_intensity=10 ** -8,
                                                                                variables_names=None)
-            custom_settings = simulator_instance.config_simulation(hyp, head_connectivity_path, settings=sim_settings)
-            _, _, status = simulator_instance.launch_simulation(hyp)
+            custom_settings = simulator_instance.config_simulation(settings=sim_settings)
+            _, _, status = simulator_instance.launch_simulation()
             if status:
                 ttavg, tavg_data = read_ts(os.path.join(data_folder, hyp.name, "ts.h5"), data="data")
             else:
@@ -253,14 +253,14 @@ if __name__ == "__main__":
                                                                                monitor_expressions=None,
                                                                                monitors_instance=None,
                                                                                variables_names=None)
-            sim, sim_settings = simulator_instance.config_simulation(hyp, head.connectivity, settings=sim_settings)
-            print "Initial conditions at equilibrium point: ", np.squeeze(sim.initial_conditions)
-            ttavg, tavg_data, status = simulator_instance.launch_simulation(sim, hyp, n_report_blocks=n_report_blocks)
+            simTVB, sim_settings = simulator_instance.config_simulation(settings=sim_settings)
+            print "Initial conditions at equilibrium point: ", np.squeeze(simTVB.initial_conditions)
+            ttavg, tavg_data, status = simulator_instance.launch_simulation(n_report_blocks=n_report_blocks)
             if not(status):
                 warnings.warn("Simulation failed!")
             else:
                 tavg_data = tavg_data[:,:,:,0]
-            del sim
+            del simTVB
 
         if status:
 

@@ -15,8 +15,10 @@ from tvb_epilepsy.tvb_api.epileptor_models import *
 
 
 class SimulatorTVB(ABCSimulator):
-    def __init__(self, model_instance):
+    def __init__(self, hypothesis, model_instance, head_connectivity):
+        self.hypothesis = hypothesis
         self.model = model_instance
+        self.head_connectivity = head_connectivity
 
     @staticmethod
     def _vep2tvb_connectivity(vep_conn):
@@ -25,9 +27,9 @@ class SimulatorTVB(ABCSimulator):
                                          centres=vep_conn.centers, hemispheres=vep_conn.hemispheres,
                                          orientations=vep_conn.orientations, areas=vep_conn.areas)
 
-    def config_simulation(self, hypothesis, head_connectivity, settings=SimulationSettings()):
+    def config_simulation(self, settings=SimulationSettings()):
 
-        tvb_conn = self._vep2tvb_connectivity(head_connectivity)
+        tvb_conn = self._vep2tvb_connectivity(self.head_connectivity)
         coupl = coupling.Difference(a=1.)
 
         # Set noise:
@@ -63,14 +65,14 @@ class SimulatorTVB(ABCSimulator):
             self.model.variables_of_interest = settings.monitor_expressions
 
         # Create and configure TVB simulator object
-        sim = simulator.Simulator(model=self.model, connectivity=tvb_conn, coupling=coupl, integrator=integrator,
+        self.simTVB = simulator.Simulator(model=self.model, connectivity=tvb_conn, coupling=coupl, integrator=integrator,
                                   monitors=what_to_watch, simulation_length=settings.simulated_period)
-        sim.configure()
-        sim.initial_conditions = self.prepare_initial_conditions(hypothesis, sim.good_history_shape[0])
+        self.simTVB.configure()
+        self.simTVB.initial_conditions = self.prepare_initial_conditions(self.hypothesis, sim.good_history_shape[0])
 
         # Update simulation settings
         settings.integration_step = integrator.dt
-        settings.simulated_period = sim.simulation_length
+        settings.simulated_period = self.simTVB.simulation_length
         settings.integrator_type = integrator._ui_name
         settings.noise_ntau = integrator.noise.ntau
         settings.noise_intensity = numpy.array(settings.noise_intensity)
@@ -78,19 +80,19 @@ class SimulatorTVB(ABCSimulator):
         # TODO: find a way to store more than one monitors settings
         settings.monitor_sampling_period = what_to_watch[0].period
         settings.monitor_expressions = self.model.variables_of_interest
-        settings.initial_conditions = sim.initial_conditions
+        settings.initial_conditions = self.sim.initial_conditions
 
-        return sim, settings
+        return self.simTVB, settings
 
-    def launch_simulation(self, sim, hypothesis, n_report_blocks=1):
+    def launch_simulation(self, n_report_blocks=1):
 
-        sim._configure_history(initial_conditions=sim.initial_conditions)
+        self.simTVB._configure_history(initial_conditions=self.simTVB.initial_conditions)
 
         status = True
 
         if n_report_blocks < 2:
             try:
-                tavg_time, tavg_data = sim.run()[0]
+                tavg_time, tavg_data = self.simTVB.run()[0]
             except:
                 status = False
                 warnings.warn("Something went wrong with this simulation...")
@@ -100,7 +102,7 @@ class SimulatorTVB(ABCSimulator):
 
         else:
 
-            sim_length = sim.simulation_length / sim.monitors[0].period
+            sim_length = self.simTVB.simulation_length / self.simTVB.monitors[0].period
             block_length = sim_length / n_report_blocks
             curr_time_step = 0.0
             curr_block = 1.0
@@ -111,7 +113,7 @@ class SimulatorTVB(ABCSimulator):
             start = time.time()
 
             try:
-                for tavg in sim():
+                for tavg in self.simTVB():
 
                     curr_time_step += 1.0
 
@@ -165,30 +167,31 @@ class SimulatorTVB(ABCSimulator):
 def setup_simulation(model_name, hypothesis, dt, sim_length, monitor_period, zmode=numpy.array("lin"), scale_time=1,
                      noise_instance=None, noise_intensity=None,
                      monitor_expressions=None, monitors_instance=None, variables_names=None):
+
     model = model_build_dict[model_name](hypothesis, scale_time, zmode=zmode)
 
     if isinstance(model, EpileptorDP):
         #                                               history
-        simulator_instance = SimulatorTVB(model)
+        simulator_instance = SimulatorTVB(hypothesis, model)
         model.tau1 *= scale_time
         if variables_names is None:
             variables_names = ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp']
     elif isinstance(model, EpileptorDP2D):
         model.tau1 *= scale_time
-        simulator_instance = SimulatorTVB(model)
+        simulator_instance = SimulatorTVB(hypothesis, model)
         if variables_names is None:
             variables_names = ['x1', 'z']
     elif isinstance(model, EpileptorDPrealistic):
         model.tau1 *= scale_time  # default = 0.25
         model.slope = 0.25
         model.pmode = numpy.array("z")  #
-        simulator_instance = SimulatorTVB(model)
+        simulator_instance = SimulatorTVB(hypothesis, model)
         if variables_names is None:
             variables_names = ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'x0ts', 'slopeTS', 'Iext1ts', 'Iext2ts', 'Kts', 'lfp']
     elif isinstance(model, Epileptor):
         model.tt *= scale_time * 0.25
         # model.r = 1.0/2857.0  # default = 1.0 / 2857.0
-        simulator_instance = SimulatorTVB(model)
+        simulator_instance = SimulatorTVB(hypothesis, model)
         if variables_names is None:
             variables_names = ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp']
 
