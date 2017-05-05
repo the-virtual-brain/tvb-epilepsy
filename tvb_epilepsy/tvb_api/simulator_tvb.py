@@ -4,6 +4,7 @@ Mechanism for launching TVB simulations.
 
 import sys
 import time
+import warnings
 from tvb.datatypes import connectivity, equations
 from tvb.simulator import coupling, integrators, monitors, noise, simulator
 from tvb_epilepsy.base.constants import *
@@ -82,11 +83,23 @@ class SimulatorTVB(ABCSimulator):
         return sim, settings
 
     def launch_simulation(self, sim, hypothesis, n_report_blocks=1):
+
         sim._configure_history(initial_conditions=sim.initial_conditions)
+
+        status = True
+
         if n_report_blocks < 2:
-            tavg_time, tavg_data = sim.run()[0]
-            return tavg_time, tavg_data
+            try:
+                tavg_time, tavg_data = sim.run()[0]
+            except:
+                status = False
+                warnings.warn("Something went wrong with this simulation...")
+                return None, None, status
+
+            return tavg_time, tavg_data, status
+
         else:
+
             sim_length = sim.simulation_length / sim.monitors[0].period
             block_length = sim_length / n_report_blocks
             curr_time_step = 0.0
@@ -114,12 +127,14 @@ class SimulatorTVB(ABCSimulator):
                         sys.stdout.flush()
                         curr_block += 1.0
             except:
-                print "WTF went wrong with this simulation?"
+                status = False
+                warnings.warn("Something went wrong with this simulation...")
+                return None, None, status
 
-            return numpy.array(tavg_time), numpy.array(tavg_data)
+            return numpy.array(tavg_time), numpy.array(tavg_data), status
 
-    def launch_pse(self, hypothesis, head, settings=SimulationSettings()):
-        raise NotImplementedError()
+    # def launch_pse(self, hypothesis, head, settings=SimulationSettings()):
+    #     raise NotImplementedError()
 
     def prepare_for_h5(self, settings):
 

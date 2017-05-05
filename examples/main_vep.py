@@ -2,6 +2,7 @@
 Entry point for working with VEP
 """
 import os
+import warnings
 import numpy as np
 import copy as cp
 from scipy.io import savemat
@@ -232,8 +233,12 @@ if __name__ == "__main__":
                                                                                noise_intensity=10 ** -8,
                                                                                variables_names=None)
             custom_settings = simulator_instance.config_simulation(hyp, head_connectivity_path, settings=sim_settings)
-            simulator_instance.launch_simulation(hyp)
-            ttavg, tavg_data = read_ts(os.path.join(data_folder, hyp.name, "ts.h5"), data="data")
+            _, _, status = simulator_instance.launch_simulation(hyp)
+            if status:
+                ttavg, tavg_data = read_ts(os.path.join(data_folder, hyp.name, "ts.h5"), data="data")
+            else:
+                warnings.warn("Simulation failed!")
+
         else:
             # Setup and configure the simulator according to the specific model (and, therefore, hypothesis)
             # Good choices for noise and monitor expressions are made in this helper function
@@ -250,94 +255,100 @@ if __name__ == "__main__":
                                                                                variables_names=None)
             sim, sim_settings = simulator_instance.config_simulation(hyp, head.connectivity, settings=sim_settings)
             print "Initial conditions at equilibrium point: ", np.squeeze(sim.initial_conditions)
-            ttavg, tavg_data = simulator_instance.launch_simulation(sim, hyp, n_report_blocks=n_report_blocks)
-            tavg_data = tavg_data[:,:,:,0]
-            del sim
-        logger.info("\nSimulated signal return shape: " + str(tavg_data.shape))
-        logger.info("Time: " + str(scale_time*ttavg[0]) + " - " + str(scale_time*ttavg[-1]))
-        logger.info("Values: " + str(tavg_data.min()) + " - " + str(tavg_data.max()))
-
-        simulation_h5_model = simulator_instance.prepare_for_h5(sim_settings)
-        write_h5_model(simulation_h5_model, folder_name=FOLDER_RES, file_name=hyp.name+"_sim_settings.h5")
-
-        # Test write, read and assert functions
-        # from tvb_epilepsy.base.utils import assert_equal_objects
-        # model2, sim_settings2 = read_simulation_settings(path=os.path.join(FOLDER_RES, hyp.name+"sim_settings.h5"),
-        #                                                  output="object", hypothesis=hyp)
-        #
-        # from tvb_epilepsy.custom.read_write import epileptor_model_attributes_dict, simulation_settings_attributes_dict
-        # assert_equal_objects(model, model2, epileptor_model_attributes_dict[model2._ui_name])
-        # #assert_equal_objects(model, model2, epileptor_model_attributes_dict[model2["_ui_name"]])
-        # assert_equal_objects(sim_settings, sim_settings2, simulation_settings_attributes_dict)
-
-        #Pack results into a dictionary, high pass filter, and compute SEEG
-        res = dict()
-        time = scale_time * np.array(ttavg, dtype='float32')
-        dt = np.min(np.diff(time))
-        for iv in range(len(vois)):
-            res[vois[iv]] = np.array(tavg_data[:, iv, :], dtype='float32')
-
-        #write_ts(res, dt, path=os.path.join(FOLDER_RES, hyp.name + "_ts.h5"))
-
-        if model._ui_name == "EpileptorDP2D":
-            raw_data = np.dstack([res["x1"], res["z"], res["x1"]])
-            lfp_data = res["x1"]
-            for i in range(len(projections)):
-                res['seeg'+str(i)] = np.dot(res['z'], projections[i].T)
-        else:
-            if model._ui_name == "CustomEpileptor":
-                raw_data = np.dstack([res["x1"], res["z"], res["x2"]])
-                lfp_data = res["x2"] - res["x1"]
+            ttavg, tavg_data, status = simulator_instance.launch_simulation(sim, hyp, n_report_blocks=n_report_blocks)
+            if not(status):
+                warnings.warn("Simulation failed!")
             else:
-                raw_data = np.dstack([res["x1"], res["z"], res["x2"]])
-                lfp_data = res["lfp"]
+                tavg_data = tavg_data[:,:,:,0]
+            del sim
+
+        if status:
+
+            logger.info("\nSimulated signal return shape: " + str(tavg_data.shape))
+            logger.info("Time: " + str(scale_time*ttavg[0]) + " - " + str(scale_time*ttavg[-1]))
+            logger.info("Values: " + str(tavg_data.min()) + " - " + str(tavg_data.max()))
+
+            simulation_h5_model = simulator_instance.prepare_for_h5(sim_settings)
+            write_h5_model(simulation_h5_model, folder_name=FOLDER_RES, file_name=hyp.name+"_sim_settings.h5")
+
+            # Test write, read and assert functions
+            # from tvb_epilepsy.base.utils import assert_equal_objects
+            # model2, sim_settings2 = read_simulation_settings(path=os.path.join(FOLDER_RES, hyp.name+"sim_settings.h5"),
+            #                                                  output="object", hypothesis=hyp)
+            #
+            # from tvb_epilepsy.custom.read_write import epileptor_model_attributes_dict, simulation_settings_attributes_dict
+            # assert_equal_objects(model, model2, epileptor_model_attributes_dict[model2._ui_name])
+            # #assert_equal_objects(model, model2, epileptor_model_attributes_dict[model2["_ui_name"]])
+            # assert_equal_objects(sim_settings, sim_settings2, simulation_settings_attributes_dict)
+
+            #Pack results into a dictionary, high pass filter, and compute SEEG
+            res = dict()
+            time = scale_time * np.array(ttavg, dtype='float32')
+            dt = np.min(np.diff(time))
+            for iv in range(len(vois)):
+                res[vois[iv]] = np.array(tavg_data[:, iv, :], dtype='float32')
+
+            #write_ts(res, dt, path=os.path.join(FOLDER_RES, hyp.name + "_ts.h5"))
+
+            if model._ui_name == "EpileptorDP2D":
+                raw_data = np.dstack([res["x1"], res["z"], res["x1"]])
+                lfp_data = res["x1"]
+                for i in range(len(projections)):
+                    res['seeg'+str(i)] = np.dot(res['z'], projections[i].T)
+            else:
+                if model._ui_name == "CustomEpileptor":
+                    raw_data = np.dstack([res["x1"], res["z"], res["x2"]])
+                    lfp_data = res["x2"] - res["x1"]
+                else:
+                    raw_data = np.dstack([res["x1"], res["z"], res["x2"]])
+                    lfp_data = res["lfp"]
+                for i in range(len(projections)):
+                    res['seeg' + str(i)] = np.dot(res['lfp'], projections[i].T)
+                    if hpf_flag:
+                        for i in range(res['seeg'].shape[0]):
+                            res['seeg_hpf'+ str(i)][:, i] = filter_data(res['seeg' + str(i)][:, i], hpf_low, hpf_high, hpf_fs)
+
+            write_ts_epi(raw_data, dt, lfp_data, path=os.path.join(FOLDER_RES, hyp.name + "_ep_ts.h5"))
+            del raw_data, lfp_data
+
             for i in range(len(projections)):
-                res['seeg' + str(i)] = np.dot(res['lfp'], projections[i].T)
-                if hpf_flag:
-                    for i in range(res['seeg'].shape[0]):
-                        res['seeg_hpf'+ str(i)][:, i] = filter_data(res['seeg' + str(i)][:, i], hpf_low, hpf_high, hpf_fs)
+                write_ts_seeg_epi(res['seeg' + str(i)], dt, path=os.path.join(FOLDER_RES, hyp.name + "_ep_ts.h5"))
 
-        write_ts_epi(raw_data, dt, lfp_data, path=os.path.join(FOLDER_RES, hyp.name + "_ep_ts.h5"))
-        del raw_data, lfp_data
+            res['time'] = time
 
-        for i in range(len(projections)):
-            write_ts_seeg_epi(res['seeg' + str(i)], dt, path=os.path.join(FOLDER_RES, hyp.name + "_ep_ts.h5"))
+            del ttavg, tavg_data
 
-        res['time'] = time
+            #Plot results
+            plot_nullclines_eq(hyp, head.connectivity.region_labels, special_idx=hyp.seizure_indices,
+                               model=str(model.nvar) + "d", zmode=model.zmode,
+                               figure_name="Hypothesis " + hyp.name + " in model " + model._ui_name +
+                                           "\nNullclines and equilibria", save_flag=SAVE_FLAG,
+                               show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES)
+            plot_sim_results(model, hyp, head, res, sensorsSEEG, hpf_flag)
 
-        del ttavg, tavg_data
+            #Save results
+            res['time_units'] = 'msec'
+            savemat(os.path.join(FOLDER_RES, hyp.name + "_ts.mat"), res)
+            #write_object_to_h5_file(res, os.path.join(FOLDER_RES, hyp.name + "_ts.h5"),
+                                    # keys={"date": "EPI_Last_update", "version": "EPI_Version",
+                                    #       "EPI_Type": "TimeSeries"})
 
-        #Plot results
-        plot_nullclines_eq(hyp, head.connectivity.region_labels, special_idx=hyp.seizure_indices,
-                           model=str(model.nvar) + "d", zmode=model.zmode,
-                           figure_name="Hypothesis " + hyp.name + " in model " + model._ui_name +
-                                       "\nNullclines and equilibria", save_flag=SAVE_FLAG,
-                           show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES)
-        plot_sim_results(model, hyp, head, res, sensorsSEEG, hpf_flag)
+            # from tvb_epilepsy.base.utils import read_object_from_h5_file, assert_equal_objects
+            # res2 = read_object_from_h5_file(dict(), os.path.join(FOLDER_RES, hyp.name + "_ts.h5"),
+            #                                 attributes_dict=None, add_overwrite_fields_dict=None)
+            # assert_equal_objects(res, res2)
 
-        #Save results
-        res['time_units'] = 'msec'
-        savemat(os.path.join(FOLDER_RES, hyp.name + "_ts.mat"), res)
-        #write_object_to_h5_file(res, os.path.join(FOLDER_RES, hyp.name + "_ts.h5"),
-                                # keys={"date": "EPI_Last_update", "version": "EPI_Version",
-                                #       "EPI_Type": "TimeSeries"})
+            # TODO: find out what object is that distorts subsequent simulations after the first one...
+            if hyp.name == hyp_ep.name:
+                try:
+                    assert_equal_objects(hyp, hyp_ep, attributes_dict=None)
+                except:
+                    print "Why?"
+            else:
+                try:
+                    assert_equal_objects(hyp, hyp_exc, attributes_dict=None)
+                except:
+                    print "Why?"
 
-        # from tvb_epilepsy.base.utils import read_object_from_h5_file, assert_equal_objects
-        # res2 = read_object_from_h5_file(dict(), os.path.join(FOLDER_RES, hyp.name + "_ts.h5"),
-        #                                 attributes_dict=None, add_overwrite_fields_dict=None)
-        # assert_equal_objects(res, res2)
-
-        # TODO: find out what object is that distorts subsequent simulations after the first one...
-        if hyp.name == hyp_ep.name:
-            try:
-                assert_equal_objects(hyp, hyp_ep, attributes_dict=None)
-            except:
-                print "Why?"
-        else:
-            try:
-                assert_equal_objects(hyp, hyp_exc, attributes_dict=None)
-            except:
-                print "Why?"
-
-        del hyp, model, sim_settings, simulator_instance, res
+            del hyp, model, sim_settings, simulator_instance, res
 

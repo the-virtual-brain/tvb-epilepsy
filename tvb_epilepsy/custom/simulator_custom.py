@@ -8,6 +8,7 @@ import os
 import json
 from copy import copy
 import subprocess
+import warnings
 import numpy
 from tvb_epilepsy.base.constants import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
 from tvb_epilepsy.base.h5_model import prepare_for_h5
@@ -133,12 +134,21 @@ class SimulatorCustom(ABCSimulator):
                "-Djava.library.path=" + LIB_PATH + " " + "-cp" + " " + JAR_PATH + " " + \
                JAVA_MAIN_SIM + " " + hypothesis_file + " " + self.head_path
 
-        x = subprocess.call(opts, shell=True)
-        print x
-        return None, None
+        try:
+            status = subprocess.call(opts, shell=True)
+            print status
 
-    def launch_pse(self, hypothesis, head, vep_settings=SimulationSettings()):
-        raise NotImplementedError()
+        except:
+            warnings.warn("Something went wrong with this simulation...")
+            status = False
+
+        if not(status):
+            warnings.warn("Something went wrong with this simulation...")
+
+        return None, None, status
+
+    # def launch_pse(self, hypothesis, head, vep_settings=SimulationSettings()):
+    #     raise NotImplementedError()
 
     def prepare_epileptor_model_for_json(self, no_regions=88):
         epileptor_params_list = []

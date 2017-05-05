@@ -62,9 +62,9 @@ class ABCSimulator(object):
     def launch_simulation(self, hypothesis, head):
         pass
 
-    @abstractmethod
-    def launch_pse(self, hypothesis, head):
-        pass
+    # @abstractmethod
+    # def launch_pse(self, hypothesis, head):
+    #     pass
 
     ###
     # Prepare for tvb-epilepsy epileptor_models initial conditions

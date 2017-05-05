@@ -71,3 +71,8 @@ HDF5_LIB="libjhdf5.dylib"
 LIB_PATH="/Applications/Episense.app/Contents/Java"
 JAR_PATH="/Applications/Episense.app/Contents/Java/episense-fx-app.jar"
 JAVA_MAIN_SIM="de.codebox.episense.fx.StartSimulation"
+
+from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
+from tvb_epilepsy.custom.simulator_custom import SimulatorCustom
+
+AVAILABLE_SIMULATORS = (SimulatorTVB, SimulatorCustom)
