@@ -1106,7 +1106,7 @@ def build_tvb_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], a=1.0, 
 #Build EpileptorDP2D
 ###
 
-def build_ep_2sv_model(hypothesis, variables_of_interest=["yc", "y1"], zmode=numpy.array("lin")):
+def build_ep_2sv_model(hypothesis, variables_of_interest=["y0", "y1"], zmode=numpy.array("lin")):
     if zmode == "lin" :
         x0 = hypothesis.x0
         x0cr = hypothesis.x0cr

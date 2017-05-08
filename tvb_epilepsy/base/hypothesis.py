@@ -274,7 +274,7 @@ class Hypothesis(object):
         if n_ie > 0 or n_e > 0:
 
             if n_e == 1 or n_e == n_ie:
-                self.configure_e_hypothesis(ie, e, self.seizure_indices)
+                self.configure_e_hypothesis(ie, e, seizure_indices)
                 e_hypo = True
 
             else:
@@ -288,7 +288,7 @@ class Hypothesis(object):
         if n_ix0 > 0 or n_x0 > 0:
 
             if n_x0 == 1 or n_x0 == n_ix0:
-                self.configure_x0_hypothesis(ix0, x0, self.seizure_indices)
+                self.configure_x0_hypothesis(ix0, x0, seizure_indices)
                 x0_hypo = True
 
             else:

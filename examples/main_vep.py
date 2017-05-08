@@ -27,8 +27,9 @@ SHOW_FLAG_SIM = False
 #The main function...
 if __name__ == "__main__":
 
-#-------------------------------Reading data-----------------------------------
     logger = initialize_logger(__name__)
+
+    # -------------------------------Reading data-----------------------------------
 
     if DATA_MODE == 'custom':
         logger.info("Reading from custom")
@@ -228,16 +229,13 @@ if __name__ == "__main__":
 
         #Launch simulation
         if SIMULATION_MODE == "custom":
-            (simulator_instance, sim_settings, vois, model) = setup_simulation(model_name, hyp, dt, sim_length,
-                                                                               monitor_period, scale_time=scale_time,
-                                                                               noise_intensity=10 ** -8,
-                                                                               variables_names=None)
+            (simulator_instance, sim_settings, vois) = setup_simulation(hyp, data_folder, dt, sim_length,
+                                                                        monitor_period, scale_time=scale_time,
+                                                                        noise_intensity=10 ** -8, variables_names=None)
             custom_settings = simulator_instance.config_simulation(settings=sim_settings)
-            _, _, status = simulator_instance.launch_simulation()
-            if status:
-                ttavg, tavg_data = read_ts(os.path.join(data_folder, hyp.name, "ts.h5"), data="data")
-            else:
-                warnings.warn("Simulation failed!")
+            ttavg, tavg_data, status = simulator_instance.launch_simulation() #return_output=True
+            if status and tavg_data is None:
+                ttavg, tavg_data = read_ts(simulator_instance.results_path, data="data")
 
         else:
             # Setup and configure the simulator according to the specific model (and, therefore, hypothesis)
@@ -246,13 +244,13 @@ if __name__ == "__main__":
             # monitor_expr and vois have to be list of strings of the same length
             # noise_intensity overwrites the one inside noise_instance if given additionally
             # monitor_period overwrites the one inside monitor_instance if given additionally
-            (simulator_instance, sim_settings, vois, model) = setup_simulation(model_name, hyp, dt, sim_length,
-                                                                               monitor_period, scale_time=scale_time,
-                                                                               noise_instance=None,
-                                                                               noise_intensity=10 ** -8,
-                                                                               monitor_expressions=None,
-                                                                               monitors_instance=None,
-                                                                               variables_names=None)
+            (simulator_instance, sim_settings, vois) = setup_simulation(hyp, head.connectivity, dt, sim_length,
+                                                                        monitor_period, model_name=model_name,
+                                                                        scale_time=scale_time,
+                                                                        noise_instance=None, noise_intensity=10 ** -8,
+                                                                        monitor_expressions=None,
+                                                                        monitors_instance=None, variables_names=None)
+
             simTVB, sim_settings = simulator_instance.config_simulation(settings=sim_settings)
             print "Initial conditions at equilibrium point: ", np.squeeze(simTVB.initial_conditions)
             ttavg, tavg_data, status = simulator_instance.launch_simulation(n_report_blocks=n_report_blocks)
@@ -263,6 +261,8 @@ if __name__ == "__main__":
             del simTVB
 
         if status:
+
+            model = simulator_instance.model
 
             logger.info("\nSimulated signal return shape: " + str(tavg_data.shape))
             logger.info("Time: " + str(scale_time*ttavg[0]) + " - " + str(scale_time*ttavg[-1]))
@@ -352,3 +352,5 @@ if __name__ == "__main__":
 
             del hyp, model, sim_settings, simulator_instance, res
 
+        else:
+            warnings.warn("Simulation failed!")

@@ -68,7 +68,9 @@ class SimulatorTVB(ABCSimulator):
         self.simTVB = simulator.Simulator(model=self.model, connectivity=tvb_conn, coupling=coupl, integrator=integrator,
                                   monitors=what_to_watch, simulation_length=settings.simulated_period)
         self.simTVB.configure()
-        self.simTVB.initial_conditions = self.prepare_initial_conditions(self.hypothesis, sim.good_history_shape[0])
+
+        # Configure initial conditions
+        self.conifigure_initial_conditions()
 
         # Update simulation settings
         settings.integration_step = integrator.dt
@@ -80,7 +82,7 @@ class SimulatorTVB(ABCSimulator):
         # TODO: find a way to store more than one monitors settings
         settings.monitor_sampling_period = what_to_watch[0].period
         settings.monitor_expressions = self.model.variables_of_interest
-        settings.initial_conditions = self.sim.initial_conditions
+        settings.initial_conditions = self.simTVB.initial_conditions
 
         return self.simTVB, settings
 
@@ -123,6 +125,7 @@ class SimulatorTVB(ABCSimulator):
 
                     if curr_time_step >= curr_block * block_length:
                         end_block = time.time()
+                        # TODO: correct this part to print percentage of simulation at the same line by erasing previous
                         print_this = "\r" + "..." + str(100 * curr_time_step / sim_length) + "% done in " + \
                                      str(end_block - start) + " secs"
                         sys.stdout.write(print_this)
@@ -159,39 +162,54 @@ class SimulatorTVB(ABCSimulator):
 
         return epileptor_model_h5_model
 
+    def configure_model(self, hypothesis=None, **kwargs):
+
+        if hypothesis is None:
+            hypothesis = self.hypothesis
+
+        self.model = model_build_dict[self.model._ui_name](hypothesis, **kwargs)
+
+    def conifigure_initial_conditions(self, initial_conditions=None):
+
+        if isinstance(initial_conditions, numpy.ndarray):
+            self.simTVB.initial_conditions = initial_conditions
+
+        else:
+            self.simTVB.initial_conditions = self.prepare_initial_conditions(self.hypothesis,
+                                                                             self.simTVB.good_history_shape[0])
 
 ###
 # A helper function to make good choices for simulation settings, noise and monitors
 ###
 
-def setup_simulation(model_name, hypothesis, dt, sim_length, monitor_period, zmode=numpy.array("lin"), scale_time=1,
-                     noise_instance=None, noise_intensity=None,
+def setup_simulation(hypothesis, head_connectivity, dt, sim_length, monitor_period, model_name="EpileptorDP",
+                     zmode=numpy.array("lin"), scale_time=1, noise_instance=None, noise_intensity=None,
                      monitor_expressions=None, monitors_instance=None, variables_names=None):
 
-    model = model_build_dict[model_name](hypothesis, scale_time, zmode=zmode)
+    model = model_build_dict[model_name](hypothesis, zmode=zmode)
 
     if isinstance(model, EpileptorDP):
         #                                               history
-        simulator_instance = SimulatorTVB(hypothesis, model)
+        simulator_instance = SimulatorTVB(hypothesis, model, head_connectivity)
         model.tau1 *= scale_time
         if variables_names is None:
             variables_names = ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp']
     elif isinstance(model, EpileptorDP2D):
         model.tau1 *= scale_time
-        simulator_instance = SimulatorTVB(hypothesis, model)
+        simulator_instance = SimulatorTVB(hypothesis, model, head_connectivity)
         if variables_names is None:
             variables_names = ['x1', 'z']
     elif isinstance(model, EpileptorDPrealistic):
         model.tau1 *= scale_time  # default = 0.25
         model.slope = 0.25
         model.pmode = numpy.array("z")  #
-        simulator_instance = SimulatorTVB(hypothesis, model)
+        simulator_instance = SimulatorTVB(hypothesis, model, head_connectivity)
         if variables_names is None:
             variables_names = ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'x0ts', 'slopeTS', 'Iext1ts', 'Iext2ts', 'Kts', 'lfp']
     elif isinstance(model, Epileptor):
         model.tt *= scale_time * 0.25
         # model.r = 1.0/2857.0  # default = 1.0 / 2857.0
-        simulator_instance = SimulatorTVB(hypothesis, model)
+        simulator_instance = SimulatorTVB(hypothesis, model, head_connectivity)
         if variables_names is None:
             variables_names = ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp']
 
@@ -251,4 +269,4 @@ def setup_simulation(model_name, hypothesis, dt, sim_length, monitor_period, zmo
                                   monitor_sampling_period=monitor_period, monitor_expressions=monitor_expressions,
                                   variables_names=variables_names)
 
-    return simulator_instance, settings, variables_names, model
+    return simulator_instance, settings, variables_names

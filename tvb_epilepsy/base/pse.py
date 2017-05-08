@@ -7,8 +7,26 @@ import warnings
 import numpy
 from tvb_epilepsy.base.constants import AVAILABLE_SIMULATORS
 from tvb_epilepsy.base.hypothesis import Hypothesis
-from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
-from tvb_epilepsy.custom.simulator_custom import SimulatorCustom
+# from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
+# from tvb_epilepsy.custom.simulator_custom import SimulatorCustom
+from tvb_epilepsy.custom.read_write import read_ts
+
+
+def set_object_attribute_recursively(object, name, values, indexes):
+
+    # Convert the parameter's name to a list of strings separated by "."
+    name = name.split(".")
+
+    # If there is more than one levels...
+    if len(name) > 1:
+        #...call the function recursively
+        set_object_attribute_recursively(getattr(object, name[0]), ".".join(name[1:]), values, indexes)
+
+    else:
+        # ...else, set the parameter values for the specified indexes
+        temp = getattr(object, name[0])
+        temp[indexes] = values #index has to be linear... i.e., 1D...
+        setattr(object, name[0], temp)
 
 
 def hypo_out_fun(hypothesis, **kwargs):
@@ -31,13 +49,14 @@ def hypo_run_fun(hypothesis, param_names, param_values, param_indexes, out_fun=h
                 x0.append(param_values[ip])
 
             else:
-                temp = getattr(hypothesis, param_names[ip])
-                temp[param_indexes[ip]] = param_values[ip]
-                setattr(hypothesis, param_names[ip], temp)
+                set_object_attribute_recursively(hypothesis, param_names[ip], param_values[ip], param_indexes[ip])
 
         hypothesis.configure_hypothesis(iE, E, ix0, x0, seizure_indices)
 
-        output = out_fun(hypothesis)
+        if callable(hypothesis):
+            output = out_fun(hypothesis)
+        else:
+            output = hypothesis
 
         return True, output
 
@@ -46,42 +65,77 @@ def hypo_run_fun(hypothesis, param_names, param_values, param_indexes, out_fun=h
         return False, None
 
 
-def sim_run_fun(simulator, param_names, param_values, param_indexes, out_fun, **kwargs):
+def sim_out_fun(simulator, time, data, **kwargs):
+
+    if data is None:
+        time, data = read_ts(simulator.results_path, data="data")
+
+    return {"time": time, "data": data}
+
+
+def sim_run_fun(simulator, param_names, param_values, param_indexes, out_fun=sim_out_fun, hypothesis_update=True,
+                model_update=True, initial_conditions_update=True):
 
     try:
 
+        # First, update hypothesis and regenerate the model accordingly...
+        if hypothesis_update:
+
+            hypo_param_names = []
+            hypo_param_values = []
+            hypo_param_indexes = []
+
+            for ip in range(len(param_names)):
+
+                if param_names[ip].split(".")[0] == "hypothesis":
+
+                    hypo_param_names.append(param_names.pop(ip).split(".")[1])
+                    hypo_param_values.append(param_values.pop(ip))
+                    hypo_param_indexes.append(param_indexes.pop(ip))
+
+            if len(hypo_param_names) > 0:
+                simulator.hypothesis = hypo_run_fun(simulator.hypothesis, hypo_param_names, hypo_param_values,
+                                                    hypo_param_indexes, out_fun=None)
+                simulator.configure_model()
+
+        # Then, update the model...
+        if model_update:
+
+            model_param_names = []
+            model_param_values = []
+            model_param_indexes = []
+
+            for ip in range(len(param_names)):
+
+                if param_names[ip].split(".")[0] == "model":
+
+                    model_param_names.append(param_names.pop(ip).split(".")[1])
+                    model_param_values.append(param_values.pop(ip))
+                    model_param_indexes.append(param_indexes.pop(ip))
+
+            if len(model_param_names) > 0:
+                set_object_attribute_recursively(simulator.model, model_param_names, model_param_values,
+                                                  model_param_indexes)
+
+        # Now, update other possible remaining parameters, i.e., concerning the integrator, noise etc...
         for ip in range(len(param_names)):
-            pass
-            # TODO: search for a parameter inside hypothesis and model, and change if it exists
-            # if param_names[ip] is "E":
-            #     iE.append(param_indexes[ip])
-            #     E.append(param_values[ip])
-            #
-            # elif param_names[ip] is "x0":
-            #     ix0.append(param_indexes[ip])
-            #     x0.append(param_values[ip])
-            #
-            # else:
-            #     temp = getattr(hypothesis, param_names[ip])
-            #     temp[param_indexes[ip]] = param_values[ip]
-            #     setattr(hypothesis, param_names[ip], temp)
+            set_object_attribute_recursively(simulator, param_names[ip], param_values[ip], param_indexes[ip])
 
-        # TODO: reconfigure hypothesis
-        # hypothesis.configure_hypothesis(iE, E, ix0, x0, seizure_indices)
+        # Now, recalculate the default initial conditions...
+        # If initial conditions were parameters, then, this flag can be set to False
+        if initial_conditions_update:
+            simulator.configure_initial_conditions()
 
-        _, _, status = simulator.launch()
-        #output = out_fun(hypothesis)
+        time, data, status = simulator.launch()
 
-        #return True, output
-        pass
+        if status:
+            output = out_fun(time, data, simulator)
+
+        return True, output
 
     except:
 
         return False, None
-
-
-def sim_out_fun(simulator, **kwargs):
-    pass
 
 
 class PSE(object):
@@ -116,8 +170,8 @@ class PSE(object):
                 raise ValueError("\ntask = 'SIMULATION'" + str(task) + " but simulator is not an object of" +
                                  " one of the available simulator classes!")
 
-            def_run_fun = hypo_run_fun
-            def_out_fun = hypo_out_fun
+            def_run_fun = sim_run_fun
+            def_out_fun = sim_out_fun
 
         if not (callable(run_fun)):
             warnings.warn("\nUser defined run_fun is not callable. Using default one for task " + str(task) +"!")
@@ -152,7 +206,7 @@ class PSE(object):
                     temp[ip] = numpy.flatten(temp[ip])
 
             else:
-                if not(numpy.all(self.params_names_list == self.params_names_list[0])):
+                if not(numpy.all(self.n_params_vals == self.n_params_vals[0])):
                     raise ValueError("\ngrid_mode = False but not all parameters have the same number of values!: " +
                                      "\n" + str(self.params_names_list) + " = " + str( self.n_params_vals))
 
@@ -185,7 +239,7 @@ class PSE(object):
 
             try:
                 status, output = self.run_fun(self.pse_object, self.params_names_list, params, self.param_indexes,
-                                              self.out_fun, kwargs)
+                                              self.out_fun, **kwargs)
 
             except:
                 pass
