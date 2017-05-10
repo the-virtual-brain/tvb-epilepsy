@@ -332,7 +332,7 @@ def curve_elbow_point(vals, plot_flag=False):
                     self.x = None
                     #self.y = None
                     self.ax = ax
-                    title = "Mouse lef-click please to select the elbow point (i.e., last point to be kept)..." + \
+                    title = "Mouse lef-click please to select the elbow point or click ENTER to continue..." + \
                             "\n(You can see in red our automatic choice)"
                     self.set_title(title)
 
@@ -364,15 +364,18 @@ def curve_elbow_point(vals, plot_flag=False):
 
             click_image = MyClickableImage(fig, ax, lines)
 
-            while click_image.x is None:
+            while click_image.x is None and not raw_input('\nPress ENTER to continue...'):
                 sleep(1)
 
-            elbow = click_image.x
+            if click_image.x is not None:
+                elbow = click_image.x
 
         else:
             ax.set_title("You can see in red our automatic choice for an elbow point." +
-                         "Press any key to continue...")
-            input("Press ENTER to continue...")
+                         "\nPress any key to continue...")
+
+            raw_input('\nPress ENTER to continue...')
+
 
         return elbow, ax
 
