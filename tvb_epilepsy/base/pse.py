@@ -5,7 +5,7 @@ Mechanism for parameter search exploration for LSA and simulations (it will have
 import subprocess
 import warnings
 import numpy
-from tvb_epilepsy.base.constants import AVAILABLE_SIMULATORS
+from tvb_epilepsy.base.sumlators import ABCSimulator
 from tvb_epilepsy.base.hypothesis import Hypothesis
 # from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
 # from tvb_epilepsy.custom.simulator_custom import SimulatorCustom
@@ -163,7 +163,7 @@ class PSE(object):
 
         else:
 
-            if isinstance(simulator, AVAILABLE_SIMULATORS):
+            if isinstance(simulator, ABCSimulator):
                 self.pse_object = simulator
 
             else:

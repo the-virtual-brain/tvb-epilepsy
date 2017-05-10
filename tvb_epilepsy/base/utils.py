@@ -1,14 +1,18 @@
 """
 Various transformation/computation functions will be placed here.
 """
+import os
 import logging
+from datetime import datetime
+from time import sleep
 import numpy
 import h5py
 import warnings
 from itertools import product
 from scipy.signal import butter, lfilter
 from collections import OrderedDict
-from tvb_epilepsy.base.constants import *
+from tvb_epilepsy.base.constants import FOLDER_LOGS, WEIGHTS_NORM_PERCENT
+from matplotlib import pyplot
 
 
 def initialize_logger(name, target_folder=FOLDER_LOGS):
@@ -288,6 +292,93 @@ def calculate_projection(sensors, connectivity):
     projection /= numpy.percentile(projection, 95)
     #projection[projection > 1.0] = 1.0
     return projection
+
+
+def curve_elbow_point(vals, plot_flag=False):
+
+    vals = numpy.array(vals).flatten()
+
+    if numpy.any(vals[0:-1] - vals[1:] < 0):
+        warnings.warn("Sorting vals in descending order...")
+        vals = numpy.sort(vals, order="descend")
+
+    cumsum_vals = numpy.cumsum(vals)
+
+    grad = numpy.gradient(numpy.gradient(numpy.gradient(cumsum_vals)))
+
+    elbow = numpy.argmax(grad)
+
+    if plot_flag:
+
+        fig, ax = pyplot.subplots()
+
+        xdata = range(len(vals))
+        lines=[]
+        lines.append(ax.plot(xdata, vals, 'b', picker=None, label="values in descending order")[0])
+        lines.append(ax.plot(xdata, cumsum_vals, 'g', picker=None, label="values' cumulative sum")[0])
+
+        lines.append(ax.plot(elbow, vals[elbow], "ro",
+                             label="suggested elbow point (maximum of third central difference)")[0])
+
+        lines.append(ax.plot(elbow, cumsum_vals[elbow], "ro")[0])
+
+        pyplot.legend(handles=lines[:2])
+
+        if plot_flag is "interactive":
+
+            class MyClickableImage(object):
+
+                def __init__(self, fig, ax, lines):
+                    self.x = None
+                    #self.y = None
+                    self.ax = ax
+                    title = "Mouse lef-click please to select the elbow point (i.e., last point to be kept)..." + \
+                            "\n(You can see in red our automatic choice)"
+                    self.set_title(title)
+
+                    self.lines = lines
+                    self.lines[0].picker = self.point_picker
+                    self.lines[1].picker = self.point_picker
+
+                    self.fig = fig
+                    self.fig.canvas.mpl_connect('pick_event', self.onpick)
+
+                def point_picker(self, line, mouseevent):
+                    """
+                    """
+                    if mouseevent.xdata is None:
+                        return False, dict()
+
+                    xdata = line.get_xdata()
+                    # ydata = line.get_ydata()
+                    dist = numpy.sqrt((xdata - mouseevent.xdata) ** 2.0)  # + (ydata - mouseevent.ydata) ** 2.)
+                    ind = numpy.argmin(dist)
+
+                    return True, {"elbow": ind}
+
+                def onpick(self, event):
+                    try:
+                        self.x = event.elbow
+                    except:
+                        pass
+
+            click_image = MyClickableImage(fig, ax, lines)
+
+            while click_image.x is None:
+                sleep(1)
+
+            elbow = click_image.x
+
+        else:
+            ax.set_title("You can see in red our automatic choice for an elbow point." +
+                         "Press any key to continue...")
+            input("Press ENTER to continue...")
+
+        return elbow, ax
+
+    else:
+
+        return elbow
 
 
 def _butterworth_bandpass(lowcut, highcut, fs, order=3):

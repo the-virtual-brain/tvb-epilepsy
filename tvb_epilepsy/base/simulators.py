@@ -59,7 +59,7 @@ class ABCSimulator(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def launch_simulation(self, hypothesis, head):
+    def launch_simulation(self, **kwargs):
         pass
 
     # @abstractmethod

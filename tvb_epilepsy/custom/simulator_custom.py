@@ -105,7 +105,7 @@ class SimulatorCustom(ABCSimulator):
         self.hypothesis = hypothesis
         self.model = model
         self.head_path = head_path
-        self.head_connectivity_path = head_connectivity_path  #os.path.join(self.head_path, head_connectivity_path)
+        self.head_connectivity_path = os.path.join(self.head_path, head_connectivity_path)
         self.json_config_file = json_config_file
         if len(results_path) == 0:
             self.results_path = os.path.join(self.head_path, self.hypothesis.name, "ts.h5")
