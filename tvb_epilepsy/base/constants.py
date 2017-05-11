@@ -53,13 +53,14 @@ I_EXT1_DEF = 3.1
 YC_DEF = 1.0
 X1_DEF = -5.0 / 3.0
 X1_EQ_CR_DEF = -4.0 / 3.0
+DEF_EIGENVECTORS_NUMBER = "auto" # or "all", "seizure_indices", or a number from 1 to hypothesis.n_regions
 
 # Simulation and data read folder amd flags:
 MODEL = '6v'
 SIMULATION_MODE = 'tvb'  # 'custom' or 'tvb
 DATA_MODE = 'custom'  # 'custom' or 'tvb'
 
-# Normalization configuration:rue
+# Normalization configuration
 WEIGHTS_NORM_PERCENT = 95
 
 NOISE_SEED = 42

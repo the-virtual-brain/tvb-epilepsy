@@ -12,8 +12,9 @@ from itertools import product
 from scipy.signal import butter, lfilter
 from collections import OrderedDict
 from tvb_epilepsy.base.constants import FOLDER_LOGS, WEIGHTS_NORM_PERCENT
+from matplotlib import use
+use('Qt4Agg')
 from matplotlib import pyplot
-
 
 def initialize_logger(name, target_folder=FOLDER_LOGS):
     """
@@ -311,6 +312,8 @@ def curve_elbow_point(vals, interactive=False):
 
     if interactive:
 
+        pyplot.ion()
+
         fig, ax = pyplot.subplots()
 
         xdata = range(len(vals))
@@ -325,67 +328,47 @@ def curve_elbow_point(vals, interactive=False):
 
         pyplot.legend(handles=lines[:2])
 
-        if interactive is "manual":
+        class MyClickableLines(object):
 
-            class MyClickableImage(object):
+            def __init__(self, fig, ax, lines):
+                self.x = None
+                #self.y = None
+                self.ax = ax
+                title = "Mouse lef-click please to select the elbow point..." + \
+                        "\n...or click ENTER to continue accepting our automatic choice in red..."
+                self.ax.set_title(title)
+                self.lines = lines
+                self.fig = fig
 
-                def __init__(self, fig, ax, lines):
-                    self.x = None
-                    #self.y = None
-                    self.ax = ax
-                    title = "Mouse lef-click please to select the elbow point or click ENTER to continue..." + \
-                            "\n(You can see in red our automatic choice)"
-                    self.ax.set_title(title)
+            def event_loop(self):
+                self.fig.canvas.mpl_connect('button_press_event', self.onclick)
+                self.fig.canvas.mpl_connect('key_press_event', self.onkey)
+                self.fig.canvas.draw_idle()
+                self.fig.canvas.start_event_loop(timeout=-1)
+                return
 
-                    self.lines = lines
-                    self.lines[0]._picker = self.point_picker
-                    self.lines[1]._picker = self.point_picker
+            def onkey(self, event):
+                if event.key == "enter":
+                    self.fig.canvas.stop_event_loop()
+                return
 
-                    self.fig = fig
-                    self.fig.canvas.mpl_connect('pick_event', self.onpick)
+            def onclick(self, event):
+                if event.inaxes != self.lines[0].axes: return
+                dist = numpy.sqrt((self.lines[0].get_xdata() - event.xdata) ** 2.0)  # + (self.lines[0].get_ydata() - event.ydata) ** 2.)
+                self.x = numpy.argmin(dist)
+                self.fig.canvas.stop_event_loop()
+                return
 
-                def point_picker(self, line, mouseevent):
-                    """
-                    """
-                    if mouseevent.xdata is None:
-                        return False, dict()
+        click_point = MyClickableLines(fig, ax, lines)
+        click_point.event_loop()
 
-                    xdata = line.get_xdata()
-                    # ydata = line.get_ydata()
-                    dist = numpy.sqrt((xdata - mouseevent.xdata) ** 2.0)  # + (ydata - mouseevent.ydata) ** 2.)
-                    ind = numpy.argmin(dist)
-
-                    return True, {"elbow": ind}
-
-                def onpick(self, event):
-                    try:
-                        self.x = event.elbow
-                    except:
-                        pass
-
-            click_image = MyClickableImage(fig, ax, lines)
-
-            pyplot.show()
-
-            while click_image.x is None:
-                sleep(1)
-
-            if click_image.x is not None:
-                elbow = click_image.x
-
+        if click_point.x is not None:
+            elbow = click_point.x
+            print "manual selection: ", elbow
         else:
-            ax.set_title("You can see in red our automatic choice for an elbow point." +
-                         "\nPress any key to continue...")
+            print "automatic selection: ", elbow
 
-            pyplot.show()
-
-            sleep(5)
-
-            raw_input('\nPress ENTER to continue...')
-
-            pyplot.close()
-
-        return elbow, ax
+        return elbow
 
     else:
 
