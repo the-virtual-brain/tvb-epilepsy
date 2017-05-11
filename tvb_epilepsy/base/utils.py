@@ -294,13 +294,14 @@ def calculate_projection(sensors, connectivity):
     return projection
 
 
-def curve_elbow_point(vals, plot_flag=False):
+def curve_elbow_point(vals, interactive=False):
 
     vals = numpy.array(vals).flatten()
 
     if numpy.any(vals[0:-1] - vals[1:] < 0):
         warnings.warn("Sorting vals in descending order...")
-        vals = numpy.sort(vals, order="descend")
+        vals = numpy.sort(vals)
+        vals = vals[::-1]
 
     cumsum_vals = numpy.cumsum(vals)
 
@@ -308,7 +309,7 @@ def curve_elbow_point(vals, plot_flag=False):
 
     elbow = numpy.argmax(grad)
 
-    if plot_flag:
+    if interactive:
 
         fig, ax = pyplot.subplots()
 
@@ -324,7 +325,7 @@ def curve_elbow_point(vals, plot_flag=False):
 
         pyplot.legend(handles=lines[:2])
 
-        if plot_flag is "interactive":
+        if interactive is "manual":
 
             class MyClickableImage(object):
 
@@ -334,11 +335,11 @@ def curve_elbow_point(vals, plot_flag=False):
                     self.ax = ax
                     title = "Mouse lef-click please to select the elbow point or click ENTER to continue..." + \
                             "\n(You can see in red our automatic choice)"
-                    self.set_title(title)
+                    self.ax.set_title(title)
 
                     self.lines = lines
-                    self.lines[0].picker = self.point_picker
-                    self.lines[1].picker = self.point_picker
+                    self.lines[0]._picker = self.point_picker
+                    self.lines[1]._picker = self.point_picker
 
                     self.fig = fig
                     self.fig.canvas.mpl_connect('pick_event', self.onpick)
@@ -364,7 +365,9 @@ def curve_elbow_point(vals, plot_flag=False):
 
             click_image = MyClickableImage(fig, ax, lines)
 
-            while click_image.x is None and not raw_input('\nPress ENTER to continue...'):
+            pyplot.show()
+
+            while click_image.x is None:
                 sleep(1)
 
             if click_image.x is not None:
@@ -374,8 +377,13 @@ def curve_elbow_point(vals, plot_flag=False):
             ax.set_title("You can see in red our automatic choice for an elbow point." +
                          "\nPress any key to continue...")
 
+            pyplot.show()
+
+            sleep(5)
+
             raw_input('\nPress ENTER to continue...')
 
+            pyplot.close()
 
         return elbow, ax
 
