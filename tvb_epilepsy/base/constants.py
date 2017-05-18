@@ -12,12 +12,15 @@ if platform.node()=='dionperdMBP':
     FOLDER_VEP = os.path.join(USER_HOME, 'CBR','VEP')
     #DATA_CUSTOM = os.path.join(USER_HOME, 'CBR', 'svn', 'episense', 'demo-data')
     DATA_TVB = os.path.join(USER_HOME, 'CBR','svn','tvb', 'tvb-data', 'tvb-data')
-    DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH')
+    #DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH')
+    DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/JUNCH')
+
 else:
     FOLDER_VEP = os.path.join(USER_HOME, 'VEP')
     #DATA_CUSTOM = os.path.join(USER_HOME, 'CBR_software', 'svn-episense', 'demo-data')
     DATA_TVB = os.path.join(USER_HOME,'CBR_software', 'svn-tvb', 'tvb-data', 'tvb-data')
-    DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH')
+    #DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH')
+    DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/JUNCH')
 
 if not (os.path.isdir(FOLDER_VEP)):
     os.mkdir(FOLDER_VEP)
@@ -48,7 +51,7 @@ MOUSEHOOVER = False
 X0_DEF = 0.0
 X0_CR_DEF = 1.0
 E_DEF = 0.0
-K_DEF = 1.0
+K_DEF = 10
 I_EXT1_DEF = 3.1
 YC_DEF = 1.0
 X1_DEF = -5.0 / 3.0
@@ -57,7 +60,7 @@ DEF_EIGENVECTORS_NUMBER = "auto" # or "all", "seizure_indices", or a number from
 
 # Simulation and data read folder amd flags:
 MODEL = '6v'
-SIMULATION_MODE = 'tvb'  # 'custom' or 'tvb
+SIMULATION_MODE = 'custom'  # 'custom' or 'tvb
 DATA_MODE = 'custom'  # 'custom' or 'tvb'
 
 # Normalization configuration

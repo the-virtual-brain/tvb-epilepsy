@@ -5,7 +5,8 @@ Mechanism for parameter search exploration for LSA and simulations (it will have
 import subprocess
 import warnings
 import numpy
-from tvb_epilepsy.base.sumlators import ABCSimulator
+from tvb_epilepsy.base.constants import DEF_EIGENVECTORS_NUMBER
+from tvb_epilepsy.base.simulators import ABCSimulator
 from tvb_epilepsy.base.hypothesis import Hypothesis
 # from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
 # from tvb_epilepsy.custom.simulator_custom import SimulatorCustom
@@ -33,25 +34,28 @@ def hypo_out_fun(hypothesis, **kwargs):
     return hypothesis.lsa_ps
 
 
-def hypo_run_fun(hypothesis, param_names, param_values, param_indexes, out_fun=hypo_out_fun, iE=[], E=[], ix0=[], x0=[],
-                 seizure_indices=[]):
+def hypo_run_fun(hypothesis, param_names, param_values, param_indexes, out_fun=hypo_out_fun, seizure_indices=[],
+                 n_eigenvectors=DEF_EIGENVECTORS_NUMBER):
 
     try:
-
+        iE = []
+        E = []
+        ix0 = []
+        x0 = []
         for ip in range(len(param_names)):
 
             if param_names[ip] is "E":
-                iE.append(param_indexes[ip])
-                E.append(param_values[ip])
+                iE = param_indexes[ip]
+                E = param_values[ip]
 
             elif param_names[ip] is "x0":
-                ix0.append(param_indexes[ip])
-                x0.append(param_values[ip])
+                ix0 = param_indexes[ip]
+                x0 = param_values[ip]
 
             else:
                 set_object_attribute_recursively(hypothesis, param_names[ip], param_values[ip], param_indexes[ip])
 
-        hypothesis.configure_hypothesis(iE, E, ix0, x0, seizure_indices)
+        hypothesis.configure_hypothesis(iE, E, ix0, x0, seizure_indices, n_eigenvectors)
 
         if callable(hypothesis):
             output = out_fun(hypothesis)
@@ -74,7 +78,8 @@ def sim_out_fun(simulator, time, data, **kwargs):
 
 
 def sim_run_fun(simulator, param_names, param_values, param_indexes, out_fun=sim_out_fun, hypothesis_update=True,
-                model_update=True, initial_conditions_update=True):
+                model_update=True, initial_conditions_update=True, seizure_indices=[],
+                n_eigenvectors=DEF_EIGENVECTORS_NUMBER):
 
     try:
 
@@ -95,7 +100,7 @@ def sim_run_fun(simulator, param_names, param_values, param_indexes, out_fun=sim
 
             if len(hypo_param_names) > 0:
                 simulator.hypothesis = hypo_run_fun(simulator.hypothesis, hypo_param_names, hypo_param_values,
-                                                    hypo_param_indexes, out_fun=None)
+                                                    hypo_param_indexes, None, seizure_indices, n_eigenvectors)
                 simulator.configure_model()
 
         # Then, update the model...

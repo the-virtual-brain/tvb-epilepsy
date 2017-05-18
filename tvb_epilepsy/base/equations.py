@@ -1,5 +1,5 @@
 import numpy
-from numpy import array, empty, empty_like, ones, eye, zeros, multiply, dot, power, divide, sum, exp, reshape, \
+from numpy import array, empty, empty_like, ones, eye, zeros, multiply, dot, power, divide, sum, exp, reshape, tile, \
                   concatenate, diag, where, repeat
 from tvb_epilepsy.base.utils import assert_arrays
 
@@ -258,8 +258,8 @@ def eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode=array("lin"), z_pos=True, K=None, w=
 
     # Assuming that wii = 0
     jac_x1 += multiply(K, sum(w, 1))
-    jac_x1 = diag(jac_x1.flatten()) - multiply(repeat(reshape(K, (x1.size, 1)), 3, axis=1), w)
-    jac_x1 *= repeat(reshape(tau, (x1.size, 1)), 3, axis=1)
+    jac_x1 = diag(jac_x1.flatten()) - multiply(repeat(reshape(K, (x1.size, 1)), x1.size, axis=1), w)
+    jac_x1 *= repeat(reshape(tau, (x1.size, 1)), x1.size, axis=1)
 
     jac_z *= tau
     jac_z = diag(jac_z.flatten())
@@ -437,6 +437,7 @@ def eqtn_fz_square_taylor(zeq, yc, Iext1, K, w, tau1, tau0):
     # The z derivative of the function
     # x1 = F(z) = -4/3 -1/2*sqrt(2(z-yc-Iext1)+64/27)
     dfz = -divide(0.5, power(2.0 * (zeq - yc - Iext1) + 64.0 / 27.0, 0.5))
+    # Tim Proix: dfz = -divide(1, power(8.0 * zeq - 629.6/27, 0.5))
 
     try:
         if numpy.any([numpy.any(numpy.isnan(dfz)), numpy.any(numpy.isinf(dfz))]):
@@ -444,10 +445,12 @@ def eqtn_fz_square_taylor(zeq, yc, Iext1, K, w, tau1, tau0):
     except:
         pass
 
-    i = ones((1, n_regions), dtype=numpy.float32)
+
     # Jacobian: diagonal elements at first row
     # Diagonal elements: -1 + dfz_i * (4 + K_i * sum_j_not_i{wij})
-    fz_jac = diag((-1.0 + multiply(dfz, (4.0 + K * numpy.expand_dims(sum(w, axis=1), 1).T))).T[:, 0]) \
+    # Off diagonal elements: -K_i * wij_not_i * dfz_j_not_i
+    i = ones((1, n_regions), dtype=numpy.float32)
+    fz_jac = diag((-1.0 + multiply(dfz, (4.0 + multiply(K, numpy.expand_dims(sum(w, axis=1), 1).T)))).T[:, 0]) \
              - multiply(multiply(dot(K.T, i), dot(i.T, dfz)), w)
 
     try:

@@ -8,10 +8,11 @@ import warnings
 import numpy
 from collections import OrderedDict
 from tvb_epilepsy.base.constants import E_DEF, K_DEF, I_EXT1_DEF, YC_DEF, X1_DEF, X1_EQ_CR_DEF, DEF_EIGENVECTORS_NUMBER
-from tvb_epilepsy.base.calculations import calc_x0cr_r, calc_coupling, calc_x0, calc_fz_jac_square_taylor
-from tvb_epilepsy.base.equilibrium_computation import calc_eq_z_2d, eq_x1_hypo_x0_linTaylor, eq_x1_hypo_x0_optimize, def_x1lin
+from tvb_epilepsy.base.calculations import calc_x0cr_r, calc_coupling, calc_x0, calc_fz_jac_square_taylor, calc_jac
+from tvb_epilepsy.base.equilibrium_computation import calc_eq_z_2d, eq_x1_hypo_x0_linTaylor, eq_x1_hypo_x0_optimize, \
+                                                      def_x1lin
 from tvb_epilepsy.base.h5_model import prepare_for_h5
-from tvb_epilepsy.base.utils import reg_dict, formal_repr, vector2scalar, curve_elbow_point
+from tvb_epilepsy.base.utils import reg_dict, formal_repr, vector2scalar, curve_elbow_point, weighted_vector_sum
 
 
 
@@ -35,7 +36,7 @@ class Hypothesis(object):
         self.weights = normalized_weights
 
         i = numpy.ones((self.n_regions, ), dtype=numpy.float32)
-        self.K = k_def * i
+        self.K = k_def * i / self.n_regions
         self.Iext1 = i_ext1_def * i
         self.yc = yc_def * i
         self.x1EQcr = x1_eq_cr_def
@@ -56,8 +57,8 @@ class Hypothesis(object):
         self.iE = range(self.n_regions)
         self.seizure_indices = numpy.array([], dtype=numpy.int32)
         self.n_eigenvectors = def_eigenvectors_number
-        self.lsa_ps = []
-        self.lsa_ps_tot = []
+        self.lsa_ps = None
+        self.lsa_ps_tot = None
 
         self.interactive = interactive
 
@@ -79,12 +80,12 @@ class Hypothesis(object):
              "03.Iext1": vector2scalar(self.Iext1),
              "04.seizure indices": self.seizure_indices,
              "05. no of seizure nodes": self.seizure_indices.size,
-             "06. x0": reg_dict(self.x0, sort = 'descend'),
-             "07. E": reg_dict(self.E, sort = 'descend'),
-             "08. PSlsa": reg_dict(self.lsa_ps, sort = 'descend'),
-             "09. x1EQ": reg_dict(self.x1EQ, sort = 'descend'),
-             "10. zEQ": reg_dict(self.zEQ, sort = 'ascend'),
-             "11. Ceq": reg_dict(self.Ceq, sort = 'descend'),
+             "06. x0": reg_dict(self.x0, sort='descend'),
+             "07. E": reg_dict(self.E, sort='descend'),
+             "08. PSlsa": reg_dict(self.lsa_ps, sort='descend'),
+             "09. x1EQ": reg_dict(self.x1EQ, sort='descend'),
+             "10. zEQ": reg_dict(self.zEQ, sort='ascend'),
+             "11. Ceq": reg_dict(self.Ceq, sort='descend'),
              "12. weights for seizure nodes": self.weights_for_seizure_nodes,
              "13. x1EQcr": vector2scalar(self.x1EQcr),
              "14. x1LIN": vector2scalar(self.x1LIN),
@@ -129,11 +130,12 @@ class Hypothesis(object):
     def _calculate_coupling_at_equilibrium(self):
         return calc_coupling(self.x1EQ, self.K, self.weights)
         #i = numpy.ones((1, self.n_regions), dtype=numpy.float32)
-        #return self.K * (numpy.expand_dims(numpy.sum(self.weights * ( numpy.dot(i.T, self.x1EQ) - numpy.dot(self.x1EQ.T, i)), axis=1), 1).T)
+        #return self.K * (numpy.expand_dims(numpy.sum(self.weights *
+        # ( numpy.dot(i.T, self.x1EQ) - numpy.dot(self.x1EQ.T, i)), axis=1), 1).T)
 
     def _calculate_x0(self):
-        return calc_x0(self.x1EQ, self.zEQ, self.K, self.weights, self.x0cr, self.rx0, model="2d", zmode=numpy.array("lin"),
-                       z_pos=True)
+        return calc_x0(self.x1EQ, self.zEQ, self.K, self.weights, self.x0cr, self.rx0, model="2d",
+                       zmode=numpy.array("lin"), z_pos=True)
         #return (self.x1EQ + self.x0cr - (self.zEQ + self.Ceq) / 4.0) / self.rx0
 
     # def _dfz_square_taylor(self):
@@ -178,82 +180,6 @@ class Hypothesis(object):
         self.x0 = self._calculate_x0()
         self.E = self._calculate_e()
 
-
-    def _update_hypothesis(self, seizure_indices=[], n_eigenvectors=DEF_EIGENVECTORS_NUMBER):
-        """
-        Updating hypothesis always starts from a new equilibrium point
-        :param seizure_indices: numpy array with conn region indices where we think the seizure starts
-        """
-        self._update_parameters()
-
-        self._run_lsa(seizure_indices, n_eigenvectors)
-
-
-    def _run_lsa(self, seizure_indices=[], n_eigenvectors=DEF_EIGENVECTORS_NUMBER):
-
-        #TODO: automatically choose seizure_indices and the number of eigenvalues to sum via a cutting criterion
-
-        self._check_hypothesis()
-
-        # # The z derivative of the function...
-        # # x1 = F(z) = -4/3 -1/2*sqrt(2(z-yc-Iext1)+64/27)
-        # dfz = self._dfz_square_taylor()
-
-        #...and the respective Jacobian
-        fz_jac = self._fz_jac()  #dfz
-
-        # Perform eigenvalue decomposition
-        (eigvals, eigvects) = numpy.linalg.eig(fz_jac)
-
-        # Sort eigenvalues in descending order... 
-        ind = numpy.argsort(eigvals, kind='mergesort')[::-1]
-        self.lsa_eigvals = eigvals[ind]
-        #...and eigenvectors accordingly
-        self.lsa_eigvects = eigvects[:, ind]
-
-        # Calculate the propagation strength index by summing all eigenvectors
-        self.lsa_ps_tot = numpy.sum(numpy.abs(self.lsa_eigvects), axis=1)
-
-        if len(seizure_indices) > 1:
-            self.seizure_indices = seizure_indices
-
-        if n_eigenvectors is "auto":
-            elbow = curve_elbow_point(self.lsa_ps_tot, interactive=self.interactive)
-            self.n_eigenvectors = elbow + 1
-
-        elif  n_eigenvectors is "seizure_indices" and self.n_seizure_indices() > 0:
-            self.n_eigenvectors = self.n_seizure_indices
-
-        else:
-
-            try:
-                # assuming an integer in [1, n_regions]....
-                if int(n_eigenvectors) > 0 and int(n_eigenvectors) < self.n_regions:
-                    pass
-                self.n_eigenvectors = n_eigenvectors
-
-            except:
-                # default behavior if not "auto" is "all"
-                self.n_eigenvectors = self.n_regions
-                self.lsa_ps = self.lsa_ps_tot
-
-        if not(self.n_eigenvectors == self.n_regions):
-            # Calculate the propagation strength index by summing the first n_eigenvectors eigenvectors
-            self.lsa_ps = numpy.sum(numpy.abs(self.lsa_eigvects[:, :max(self.n_eigenvectors, 1)]), axis=1)
-
-        # if seizure_indices are still unset...
-        if self.n_seizure_indices() == 0:
-            if self.n_eigenvectors < self.n_regions:
-                warnings.warn("Setting seizure_indices by picking the largest self.eigenvectors = "
-                              + str(self.eigenvectors) + " LSA eigenvector elements...")
-                self.seizure_indices = self.lsa_ps.argsort()[-self.n_eigenvectors:]
-            else:
-                elbow = curve_elbow_point(self.E, interactive=self.interactive) + 1
-                warnings.warn("Setting seizure_indices by picking the largest "
-                              + str(elbow) + " LSA eigenvector elements...")
-                self.seizure_indices = self.lsa_ps.argsort()[-(elbow):]
-
-
     def _check_hypothesis(self):
         """
          LSA doesn't work well if there are some E>1 (i.e., x1EQ>1/3),
@@ -271,10 +197,107 @@ class Hypothesis(object):
             # Now that equilibria are OK, update the hypothesis to get the actual x0, E etc
             self._update_parameters()
 
+    def _update_seizure_indices(self, seizure_indices=[]):
+
+        if len(seizure_indices) > 0:
+            self.seizure_indices = seizure_indices
+
+        # if seizure_indices are still unset...
+        elif self.n_seizure_nodes == 0:
+
+            if self.n_eigenvectors < self.n_regions:
+                warnings.warn("Setting seizure_indices by picking the largest " + str(self.n_eigenvectors) +
+                              " LSA eigenvector elements, based on LSA propagation strength (lsa_ps) values...")
+                self.seizure_indices = self.lsa_ps.argsort()[-self.n_eigenvectors:]
+            else:
+                elbow = curve_elbow_point(self.E, interactive=self.interactive) + 1
+                warnings.warn("Setting seizure_indices by picking the largest " + str(elbow)
+                              + " LSA eigenvector elements, based on model epileptogenicity (E) values...")
+                self.seizure_indices = self.lsa_ps.argsort()[-(elbow):]
+
+    def _update_eigenvectors_number(self, n_eigenvectors=DEF_EIGENVECTORS_NUMBER, n_seizure_nodes=0):
+
+        if n_eigenvectors is "auto":
+            elbow = curve_elbow_point(self.lsa_ps_tot, interactive=self.interactive)
+            self.n_eigenvectors = elbow + 1
+
+        elif n_eigenvectors is "seizure_indices" and n_seizure_nodes > 0:
+            self.n_eigenvectors = self.n_seizure_nodes
+
+        else:
+
+            try:
+                # assuming an integer in [1, n_regions]....
+                if int(n_eigenvectors) > 0 and int(n_eigenvectors) < self.n_regions:
+                    pass
+                self.n_eigenvectors = n_eigenvectors
+
+            except:
+                # default behavior if not "auto" is "all"
+                self.n_eigenvectors = self.n_regions
+
+    def _run_lsa(self, n_seizure_indices=0, n_eigenvectors=DEF_EIGENVECTORS_NUMBER):
+
+        #TODO: automatically choose seizure_indices and the number of eigenvalues to sum via a cutting criterion
+
+        self._check_hypothesis()
+
+        # jac = calc_jac(self.x1EQ, self.zEQ, self.yc, self.Iext1, self.x0, self.K, self.weights, model_vars=2,
+        #                tau1=1.0, tau0=2857.0, calc_mode="non_symbol")
+        #
+        # # Perform eigenvalue decomposition
+        # eigvals, eigvects = numpy.linalg.eig(jac)
+
+        # # The z derivative of the function...
+        # # x1 = F(z) = -4/3 -1/2*sqrt(2(z-yc-Iext1)+64/27)
+        # dfz = self._dfz_square_taylor()
+
+        #...and the respective Jacobian
+        fz_jac = self._fz_jac()  #dfz
+
+        # Perform eigenvalue decomposition
+        eigvals, eigvects = numpy.linalg.eig(fz_jac)
+
+        # Sort eigenvalues in descending order... 
+        inds = numpy.argsort(eigvals, kind='mergesort') #[::-1]
+        self.lsa_eigvals = eigvals[inds]
+        #...and eigenvectors accordingly
+        self.lsa_eigvects = eigvects[:, inds]
+
+
+        # Calculate the propagation strength index by summing all eigenvectors
+        self.lsa_ps_tot = numpy.abs(numpy.sum(self.lsa_eigvects, axis=1))
+        #self.lsa_ps_tot = numpy.abs(weighted_vector_sum(numpy.abs(self.lsa_eigvals), self.lsa_eigvects.T,
+        #                                                normalize=True))
+        self.lsa_ps_tot /= numpy.max(self.lsa_ps_tot)
+
+        self._update_eigenvectors_number(n_eigenvectors, n_seizure_indices)
+
+        if not(self.n_eigenvectors == self.n_regions):
+            inds = max(self.n_eigenvectors, 1)
+            # Calculate the propagation strength index by summing the first n eigenvectors (minimum 1)
+            self.lsa_ps = numpy.abs(numpy.sum(self.lsa_eigvects[:, :inds], axis=1))  #numpy.abs()
+            #self.lsa_ps = numpy.abs(weighted_vector_sum(numpy.abs(self.lsa_eigvals[:inds]),
+            #                                            self.lsa_eigvects[:, :inds].T, normalize=True))
+            self.lsa_ps /= numpy.max(self.lsa_ps)
+
+        else:
+            self.lsa_ps = self.lsa_ps_tot
+
+    def _update_hypothesis(self, seizure_indices=[], n_eigenvectors=DEF_EIGENVECTORS_NUMBER):
+        """
+        Updating hypothesis always starts from a new equilibrium point
+        :param seizure_indices: numpy array with conn region indices where we think the seizure starts
+        """
+        self._update_parameters()
+
+        self._run_lsa(len(seizure_indices), n_eigenvectors)
+
+        self._update_seizure_indices(seizure_indices)
 
     # The two hypothesis modes below could be combined (but always starting from "E" first, if any)
 
-    def configure_e_hypothesis(self, ie, e, seizure_indices=[], n_eigenvectors=DEF_EIGENVECTORS_NUMBER):
+    def _configure_e_hypothesis(self, ie, e, seizure_indices=[], n_eigenvectors=DEF_EIGENVECTORS_NUMBER):
         """
         Configure hypothesis starting from Epileptogenicities E
         :param e: new Epileptogenicities E
@@ -289,7 +312,7 @@ class Hypothesis(object):
         self._update_hypothesis(seizure_indices, n_eigenvectors)
 
 
-    def configure_x0_hypothesis(self, ix0, x0, seizure_indices=[], n_eigenvectors=DEF_EIGENVECTORS_NUMBER):
+    def _configure_x0_hypothesis(self, ix0, x0, seizure_indices=[], n_eigenvectors=DEF_EIGENVECTORS_NUMBER):
         """
         Hypothesis starting from Excitabilities x0
         :param ix0: indices of regions with a x0 hypothesis
@@ -329,7 +352,7 @@ class Hypothesis(object):
         if n_ie > 0 or n_e > 0:
 
             if n_e == 1 or n_e == n_ie:
-                self.configure_e_hypothesis(ie, e, seizure_indices, n_eigenvectors)
+                self._configure_e_hypothesis(ie, e, seizure_indices, n_eigenvectors)
                 e_hypo = True
 
             else:
@@ -343,7 +366,7 @@ class Hypothesis(object):
         if n_ix0 > 0 or n_x0 > 0:
 
             if n_x0 == 1 or n_x0 == n_ix0:
-                self.configure_x0_hypothesis(ix0, x0, seizure_indices, n_eigenvectors)
+                self._configure_x0_hypothesis(ix0, x0, seizure_indices, n_eigenvectors)
                 x0_hypo = True
 
             else:

@@ -47,7 +47,7 @@ def shape_to_size(shape):
     return shape.prod()
 
 
-def assert_arrays(params, shape=None):
+def assert_arrays(params, shape=None, transpose=False):
     # type: (object, object) -> object
 
     if shape is None or \
@@ -131,6 +131,16 @@ def assert_arrays(params, shape=None):
         ind = numpy.argmax(n_shapes)
         shape = tuple(shapes[ind])
 
+    if transpose and len(shape) > 1:
+
+        if (transpose is "horizontal" or "row" and shape[0] > shape[1]) or \
+           (transpose is "vertical" or "column" and shape[0] < shape[1]):
+            shape = list(shape)
+            temp = shape[1]
+            shape[1] = shape[0]
+            shape[0] = temp
+            shape = tuple(shape)
+
     # Now reshape or tile when necessary
     for ip in range(len(params)):
 
@@ -151,9 +161,23 @@ def assert_arrays(params, shape=None):
 
 
 def linear_scaling(x, x1, x2, y1, y2):
-        scaling_factor = (y2 - y1) / (x2 - x1)
-        return y1 + (x - x1) * scaling_factor
+    scaling_factor = (y2 - y1) / (x2 - x1)
+    return y1 + (x - x1) * scaling_factor
 
+
+def weighted_vector_sum(weights, vectors, normalize=True):
+
+    if isinstance(vectors, numpy.ndarray):
+        vectors = list(vectors)
+
+    if normalize:
+        weights /= numpy.sum(weights)
+
+    vector_sum = weights[0] * vectors[0]
+    for iv in range(1, len(weights)):
+        vector_sum += weights[iv] * vectors[iv]
+
+    return numpy.array(vector_sum)
 
 def obj_to_dict(obj):
     """
@@ -318,8 +342,8 @@ def curve_elbow_point(vals, interactive=False):
 
         xdata = range(len(vals))
         lines=[]
-        lines.append(ax.plot(xdata, vals, 'b', picker=None, label="values in descending order")[0])
-        lines.append(ax.plot(xdata, cumsum_vals, 'g', picker=None, label="values' cumulative sum")[0])
+        lines.append(ax.plot(xdata, vals, 'bo', picker=None, label="values in descending order")[0])
+        lines.append(ax.plot(xdata, cumsum_vals, 'go', picker=None, label="values' cumulative sum")[0])
 
         lines.append(ax.plot(elbow, vals[elbow], "ro",
                              label="suggested elbow point (maximum of third central difference)")[0])

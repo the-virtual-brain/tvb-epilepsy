@@ -6,7 +6,8 @@ import warnings
 import numpy as np
 import copy as cp
 from scipy.io import savemat
-from tvb_epilepsy.base.constants import *
+from tvb_epilepsy.base.constants import SIMULATION_MODE, DATA_MODE, DATA_TVB, DATA_CUSTOM, FOLDER_RES, FOLDER_FIGURES, \
+                                        VERY_LARGE_SIZE, X0_DEF, DEF_EIGENVECTORS_NUMBER
 from tvb_epilepsy.base.utils import initialize_logger, calculate_projection, set_time_scales, filter_data
 from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_sim_results, plot_nullclines_eq
 from tvb_epilepsy.base.hypothesis import Hypothesis
@@ -55,8 +56,8 @@ if __name__ == "__main__":
 # CONNECT_DATA = 'connectivity_hypo.zip'
 # 
 # #Set a special scaling for HH regions, for this example:
-# #Set Khyp >=1.0     
-# Khyp = 5.0
+# #Set Khyp >=10.0 / hypothesis.n_regions
+# Khyp = 15.0 / hypothesis.n_regions
 # 
 # # Read  connectivity with hypothalamus pathology
 # data_folder = os.path.join(DATA_HH, CONNECT_DATA)
@@ -74,7 +75,7 @@ if __name__ == "__main__":
 # 
 # # Adjust pathological connectivity
 # w_hyp = np.ones((nRegions, nRegions), dtype='float')
-# if Khyp > 1.0:
+# if Khyp > 10.0 / hypothesis.n_regions:
 #     w_hyp[(nRegions - 2):, :] = Khyp
 #     w_hyp[:, (nRegions - 2):] = Khyp
 # HHcon.normalized_weights = w_hyp * HHcon.normalized_weights
@@ -125,70 +126,92 @@ if __name__ == "__main__":
     #%     'Right-Thalamus-Proper'     46
     #%     'ctx-lh-parahippocampal'    25
     #%     'ctx-lh-fusiform           16
-    #%     'Brain-Stem'                1
+    #%     'Brain-Stem'                1 (This should be wrong...)
     #%     'ctx-lh-parahippocampal'   25
     #%     'ctx-rh-entorhinal'        58
     #%     'ctx-rh-parahippocampal'   68
     #%     'Right-Cerebellum-Cortex'   45
-    #%     'ctx-rh-fusiform'           59   
-       
-    #seizure_indices = np.array([1,    3,   7,   8,  15,  16,  25,  50,   88, 89], dtype=np.int32)
-    seizure_indices = np.array([50], dtype=np.int32)
-    
-    hyp_ep = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, "EP Hypothesis",
-                        x1eq_mode="optimize")    #"optimize" or "linTaylor"
-    # iE = np.array([1,    3,   7,   8,  15,  16,  25,  50, 88,  89])
-    # E = 0*np.array(iE, dtype=np.float32)
-    # E[7]=0.65
-    # E[2]=0.800
-    # E[4]=0.3775
-    # E[8]=0.425
-    # E[9]=0.900
-    iE = np.array([50])
-    E = np.array([0.5], dtype=np.float32).tolist()
-    hyp_ep.configure_e_hypothesis(iE, E, seizure_indices)
-    #logger.debug(str(hyp_ep))
-    plot_hypothesis(hyp_ep, head.connectivity.region_labels, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
-                   figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
-    write_h5_model(hyp_ep.prepare_for_h5(), folder_name=FOLDER_RES, file_name="hyp_ep.h5")
+    #%     'ctx-rh-fusiform'           59
+
+    # iE = [20]; %JUCH, cj-p04
+    # EZ: lLOC: left occipital
+    # PZ: lFuG [16]: fuciform,
+    # lSPC [38]: superior parietal,
+    # lITG [18]: inferior temporal,
+    # lIPC [17]: inferior parietal,
+    # lPC [30]: pericalcarine,
+    # lLgG [22]: Lingual
+    # perfect repetition of Tim's result with Tim's connectome
+    # perfect repetition of Tim's result with MY connectome as well
+
+    EZ = [20] #[7, 8, 15, 50]  #7, 8, 15, 50
+    seizure_indices = np.array([16, 17, 18, 20, 22, 30, 38], dtype=np.int32)
+    #seizure_indices = np.array([7, 8, 15, 16, 25, 45, 50, 59, 68], dtype=np.int32)
+    #seizure_indices = np.array([50], dtype=np.int32)
+    n_eigenvectors = "auto" # len(EZ), "auto", "all" #DEF_EIGENVECTORS_NUMBER
+
+    # hyp_ep = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, "EP Hypothesis",
+    #                     x1eq_mode="optimize")    #"optimize" or "linTaylor"
+    # # iE = np.array([1,    3,   7,   8,  15,  16,  25,  50, 88,  89])
+    # # E = 0*np.array(iE, dtype=np.float32)
+    # # E[7]=0.65
+    # # E[2]=0.800
+    # # E[4]=0.3775
+    # # E[8]=0.425
+    # # E[9]=0.900
+    # iE = seizure_indices
+    # #E = np.array([0.85], dtype=np.float32)
+    # E = np.random.normal(0.85, 0.02, (len(iE), ))
+    # hyp_ep.configure_hypothesis(ie=iE, e=E, seizure_indices=seizure_indices, n_eigenvectors=n_eigenvectors)
+    # #logger.debug(str(hyp_ep))
+    # plot_hypothesis(hyp_ep, head.connectivity.region_labels, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
+    #                figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
+    # write_h5_model(hyp_ep.prepare_for_h5(), folder_name=FOLDER_RES, file_name="hyp_ep.h5")
 
     hyp_exc = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, "x0 Hypothesis",
                          x1eq_mode="optimize")
-    ix0 = range(head.number_of_regions)
-    x0 = (X0_DEF * np.ones((len(ix0),), dtype='float32')).tolist()
-    x0[51] = 0.5
-    seizure_indices = np.array([51], dtype=np.int32)
-    hyp_exc.configure_x0_hypothesis(ix0, x0, seizure_indices)
+    #hyp_exc.K = 0.0
+    hyp_exc.interactive = True
+    ix0 = range(hyp_exc.n_regions)
+    x0 = (X0_DEF * np.ones((len(ix0),), dtype='float32'))
+    #x0[51] = 0.5
+    #seizure_indices = np.array([51], dtype=np.int32)
+    x0[EZ] = np.random.normal(0.85, 0.02, (len(EZ), ))
+
+    hyp_exc.configure_hypothesis(ix0=ix0, x0=x0, seizure_indices=seizure_indices,
+                                 n_eigenvectors=n_eigenvectors)
     # logger.debug(str(hyp_exc))
     plot_hypothesis(hyp_exc, head.connectivity.region_labels,
                     save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
                     figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
     write_h5_model(hyp_exc.prepare_for_h5(), folder_name=FOLDER_RES, file_name="hyp_exc.h5")
 
-    hyp_ep_exc = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, "EP & x0 Hypothesis",
-                            x1eq_mode="optimize")
-    iE = np.array([50])
-    E = np.array([0.5], dtype=np.float32).tolist()
-    # or create the new hypothesis as a deep copy of the previous one:
-    # hyp_ep_exc = cp.deepcopy(hyp_ep)
-    # hyp_ep_exc.name = "EP & x0 Hypothesis"
-    # seizure_indices = np.array([50], dtype=np.int32)
-
-    #configure first the EP, and then the x0 hypothesis,
-    # hyp_ep_exc.configure_e_hypothesis(iE, E, seizure_indices)
-    ix0 = [51]
-    x0 = (0.5 * np.ones((len(ix0),), dtype='float32')).tolist()
-    seizure_indices = np.array([50, 51], dtype=np.int32)
-    # hyp_ep_exc.configure_x0_hypothesis(ix0, x0, seizure_indices)
-
-    # or configure them with one line:
-    hyp_ep_exc.configure_hypothesis(iE, E, ix0, x0, seizure_indices)
-
-    #logger.debug(str(hyp_ep_exc))
-    plot_hypothesis(hyp_ep_exc, head.connectivity.region_labels,
-                    save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
-                    figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
-    write_h5_model(hyp_ep_exc.prepare_for_h5(), folder_name=FOLDER_RES, file_name="hyp_ep_exc.h5")
+    # hyp_ep_exc = Hypothesis(head.number_of_regions, head.connectivity.normalized_weights, "EP & x0 Hypothesis",
+    #                         x1eq_mode="optimize")
+    # iE = np.array([3, 7, 8, 15, 16, 25])
+    # #E = np.array([0.5], dtype=np.float32)
+    # E = np.random.normal(0.85, 0.02, (len(iE), ))
+    # # or create the new hypothesis as a deep copy of the previous one:
+    # # hyp_ep_exc = cp.deepcopy(hyp_ep)
+    # # hyp_ep_exc.name = "EP & x0 Hypothesis"
+    # # seizure_indices = np.array([50], dtype=np.int32)
+    #
+    # #configure first the EP, and then the x0 hypothesis,
+    # # hyp_ep_exc.configure_hypothesis(ie=iE, e=E, seizure_indices=seizure_indices)
+    # #x0 = (0.5 * np.ones((len(ix0),), dtype='float32'))
+    # #seizure_indices = np.array([50, 51], dtype=np.int32)
+    # ix0 = [45, 50, 59, 68]
+    # x0 = np.random.normal(0.85, 0.02, (len(ix0), ))
+    # # hyp_ep_exc.configure_hypothesis(ix0=ix0, x0=x0, seizure_indices=seizure_indices, n_eigenvectors=n_eigenvectors)
+    #
+    # # or configure them with one line:
+    # hyp_ep_exc.configure_hypothesis(iE, E, ix0, x0, seizure_indices, n_eigenvectors=n_eigenvectors)
+    #
+    # #logger.debug(str(hyp_ep_exc))
+    # plot_hypothesis(hyp_ep_exc, head.connectivity.region_labels,
+    #                 save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
+    #                 figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE)
+    # write_h5_model(hyp_ep_exc.prepare_for_h5(), folder_name=FOLDER_RES, file_name="hyp_ep_exc.h5")
 
 #------------------------------Simulation--------------------------------------
 
@@ -209,7 +232,7 @@ if __name__ == "__main__":
 
     #Now simulate and plot for each hypothesis
     hpf_flag = False #Flag to compute and plot high pass filtered SEEG
-    for hyp in (hyp_ep, hyp_exc, hyp_ep_exc):
+    for hyp in (hyp_exc, ): #hyp_ep,  hyp_ep_exc
 
         #Launch simulation
         if SIMULATION_MODE == "custom":

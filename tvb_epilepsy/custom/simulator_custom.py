@@ -108,7 +108,7 @@ class SimulatorCustom(ABCSimulator):
         self.head_connectivity_path = os.path.join(self.head_path, head_connectivity_path)
         self.json_config_file = json_config_file
         if len(results_path) == 0:
-            self.results_path = os.path.join(self.head_path, self.hypothesis.name, "ts.h5")
+            self.results_path = os.path.join(self.head_path, self.hypothesis.name, "_ts.h5")
         else:
             self.results_path = results_path
 
@@ -143,7 +143,7 @@ class SimulatorCustom(ABCSimulator):
     def launch_simulation(self, return_output=False):
 
         hypothesis_file = os.path.join(self.head_path, self.json_config_file)
-        opts = "java -Dncsa.hdf.hdf5lib.H5.hdf5lib=" + os.path.join(LIB_PATH, HDF5_LIB) + " " + \
+        opts = "/usr/bin/java -Dncsa.hdf.hdf5lib.H5.hdf5lib=" + os.path.join(LIB_PATH, HDF5_LIB) + " " + \
                "-Djava.library.path=" + LIB_PATH + " " + "-cp" + " " + JAR_PATH + " " + \
                JAVA_MAIN_SIM + " " + hypothesis_file + " " + self.head_path
 
