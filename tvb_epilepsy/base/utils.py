@@ -1,15 +1,20 @@
 """
 Various transformation/computation functions will be placed here.
 """
+import os
 import logging
+from datetime import datetime
+from time import sleep
 import numpy
 import h5py
 import warnings
 from itertools import product
 from scipy.signal import butter, lfilter
 from collections import OrderedDict
-from tvb_epilepsy.base.constants import *
-
+from tvb_epilepsy.base.constants import FOLDER_LOGS, WEIGHTS_NORM_PERCENT
+from matplotlib import use
+use('Qt4Agg')
+from matplotlib import pyplot
 
 def initialize_logger(name, target_folder=FOLDER_LOGS):
     """
@@ -42,7 +47,7 @@ def shape_to_size(shape):
     return shape.prod()
 
 
-def assert_arrays(params, shape=None):
+def assert_arrays(params, shape=None, transpose=False):
     # type: (object, object) -> object
 
     if shape is None or \
@@ -126,6 +131,16 @@ def assert_arrays(params, shape=None):
         ind = numpy.argmax(n_shapes)
         shape = tuple(shapes[ind])
 
+    if transpose and len(shape) > 1:
+
+        if (transpose is "horizontal" or "row" and shape[0] > shape[1]) or \
+           (transpose is "vertical" or "column" and shape[0] < shape[1]):
+            shape = list(shape)
+            temp = shape[1]
+            shape[1] = shape[0]
+            shape[0] = temp
+            shape = tuple(shape)
+
     # Now reshape or tile when necessary
     for ip in range(len(params)):
 
@@ -146,9 +161,23 @@ def assert_arrays(params, shape=None):
 
 
 def linear_scaling(x, x1, x2, y1, y2):
-        scaling_factor = (y2 - y1) / (x2 - x1)
-        return y1 + (x - x1) * scaling_factor
+    scaling_factor = (y2 - y1) / (x2 - x1)
+    return y1 + (x - x1) * scaling_factor
 
+
+def weighted_vector_sum(weights, vectors, normalize=True):
+
+    if isinstance(vectors, numpy.ndarray):
+        vectors = list(vectors)
+
+    if normalize:
+        weights /= numpy.sum(weights)
+
+    vector_sum = weights[0] * vectors[0]
+    for iv in range(1, len(weights)):
+        vector_sum += weights[iv] * vectors[iv]
+
+    return numpy.array(vector_sum)
 
 def obj_to_dict(obj):
     """
@@ -288,6 +317,86 @@ def calculate_projection(sensors, connectivity):
     projection /= numpy.percentile(projection, 95)
     #projection[projection > 1.0] = 1.0
     return projection
+
+
+def curve_elbow_point(vals, interactive=False):
+
+    vals = numpy.array(vals).flatten()
+
+    if numpy.any(vals[0:-1] - vals[1:] < 0):
+        warnings.warn("Sorting vals in descending order...")
+        vals = numpy.sort(vals)
+        vals = vals[::-1]
+
+    cumsum_vals = numpy.cumsum(vals)
+
+    grad = numpy.gradient(numpy.gradient(numpy.gradient(cumsum_vals)))
+
+    elbow = numpy.argmax(grad)
+
+    if interactive:
+
+        pyplot.ion()
+
+        fig, ax = pyplot.subplots()
+
+        xdata = range(len(vals))
+        lines=[]
+        lines.append(ax.plot(xdata, vals, 'bo', picker=None, label="values in descending order")[0])
+        lines.append(ax.plot(xdata, cumsum_vals, 'go', picker=None, label="values' cumulative sum")[0])
+
+        lines.append(ax.plot(elbow, vals[elbow], "ro",
+                             label="suggested elbow point (maximum of third central difference)")[0])
+
+        lines.append(ax.plot(elbow, cumsum_vals[elbow], "ro")[0])
+
+        pyplot.legend(handles=lines[:2])
+
+        class MyClickableLines(object):
+
+            def __init__(self, fig, ax, lines):
+                self.x = None
+                #self.y = None
+                self.ax = ax
+                title = "Mouse lef-click please to select the elbow point..." + \
+                        "\n...or click ENTER to continue accepting our automatic choice in red..."
+                self.ax.set_title(title)
+                self.lines = lines
+                self.fig = fig
+
+            def event_loop(self):
+                self.fig.canvas.mpl_connect('button_press_event', self.onclick)
+                self.fig.canvas.mpl_connect('key_press_event', self.onkey)
+                self.fig.canvas.draw_idle()
+                self.fig.canvas.start_event_loop(timeout=-1)
+                return
+
+            def onkey(self, event):
+                if event.key == "enter":
+                    self.fig.canvas.stop_event_loop()
+                return
+
+            def onclick(self, event):
+                if event.inaxes != self.lines[0].axes: return
+                dist = numpy.sqrt((self.lines[0].get_xdata() - event.xdata) ** 2.0)  # + (self.lines[0].get_ydata() - event.ydata) ** 2.)
+                self.x = numpy.argmin(dist)
+                self.fig.canvas.stop_event_loop()
+                return
+
+        click_point = MyClickableLines(fig, ax, lines)
+        click_point.event_loop()
+
+        if click_point.x is not None:
+            elbow = click_point.x
+            print "manual selection: ", elbow
+        else:
+            print "automatic selection: ", elbow
+
+        return elbow
+
+    else:
+
+        return elbow
 
 
 def _butterworth_bandpass(lowcut, highcut, fs, order=3):

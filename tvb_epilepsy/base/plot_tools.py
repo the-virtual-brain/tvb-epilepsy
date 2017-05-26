@@ -364,8 +364,13 @@ def plot_hypothesis(hypothesis, region_labels, figure_name='', show_flag=SHOW_FL
                               show_y_labels=False, show_x_labels=True,
                               indices_red_x=hypothesis.seizure_indices, sharey=ax0)
 
-    if len(hypothesis.lsa_ps) > 0:
-        _plot_vector(hypothesis.lsa_ps, region_labels, 177, 'LSA Propagation Strength',
+    if hypothesis.lsa_ps is not None:
+        if hypothesis.n_eigenvectors < hypothesis.n_regions:
+            n_eig = "first " + str(hypothesis.n_eigenvectors)
+        else:
+            n_eig = "all"
+        _plot_vector(hypothesis.lsa_ps, region_labels, 177,
+                     "LSA Propagation Strength:" + "\nabsolut sum of " + n_eig + " eigenvectors",
                      show_y_labels=False, indices_red=hypothesis.seizure_indices, sharey=ax0)
 
     _set_axis_labels(fig, 121, hypothesis.n_regions, region_labels, hypothesis.seizure_indices, 'r')

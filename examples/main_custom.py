@@ -6,7 +6,7 @@ import os
 import copy
 import numpy
 
-from tvb_epilepsy.base.constants import X0_DEF
+from tvb_epilepsy.base.constants import X0_DEF, DATA_CUSTOM, FOLDER_RES
 from tvb_epilepsy.base.hypothesis import Hypothesis
 from tvb_epilepsy.base.plot_tools import plot_head, plot_hypothesis, plot_timeseries, plot_trajectories
 from tvb_epilepsy.base.utils import initialize_logger, set_time_scales
@@ -19,8 +19,10 @@ if __name__ == "__main__":
     # -------------------------------Reading data-----------------------------------
 
     logger.info("Reading from custom")
-    data_folder = os.path.join("/WORK/Episense/trunk/demo-data", 'Head_TREC')
-    ep_folder = os.path.join(data_folder, "epHH")
+    #data_folder = os.path.join("/WORK/Episense/trunk/demo-data", 'Head_TREC')
+    data_folder = os.path.join(DATA_CUSTOM, 'Head')
+    #ep_folder = os.path.join(data_folder, "epHH")
+    ep_folder = FOLDER_RES
 
     from tvb_epilepsy.custom.readers_custom import CustomReader
 
@@ -65,15 +67,17 @@ if __name__ == "__main__":
                                                                    hpf_low=None, hpf_high=None)
 
     for hyp in (hyp_ep, hyp_exc):
-        simulator_instance, settings, variables_names, model = \
-            setup_simulation(data_folder, hyp, dt, sim_length, monitor_period, scale_time, noise_intensity=None)
-        ep_settings = simulator_instance.config_simulation(hyp, os.path.join(simulator_instance.head_path,
-                                                                             "Connectivity.h5"), settings, hyp.n_regions)
-        simulator_instance.launch_simulation()
+        simulator_instance, settings, variables_names = \
+            setup_simulation(hyp, data_folder, dt, sim_length, monitor_period, scale_time, noise_intensity=None)
+
+        ep_settings = simulator_instance.config_simulation(settings=settings)
 
         simulator_h5_model = simulator_instance.prepare_for_h5(ep_settings, settings.monitor_expressions,
                                                                settings.variables_names)
+
         write_h5_model(simulator_h5_model, ep_folder, file_name=hyp.name + "sim_settings.h5")
+
+        _, _, status = simulator_instance.launch_simulation()
 
     # -------------------------------Plotting---------------------------------------
 
