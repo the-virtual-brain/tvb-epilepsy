@@ -30,7 +30,7 @@ def eqtn_coupling(x1, K, w, ix, jx):
 
     # Coupling                 from (jx)                to (ix)
     coupling = np.multiply(K[:, ix],
-                           sum(np.multiply(w[ix][:, jx], np.dot(i_n, x1[:, jx]) - np.dot(j_n, x1[:, ix]).T), axis=1))
+                           np.sum(np.multiply(w[ix][:, jx], np.dot(i_n, x1[:, jx]) - np.dot(j_n, x1[:, ix]).T), axis=1))
 
     return np.reshape(coupling, shape)
 
@@ -52,7 +52,7 @@ def eqtn_coupling_diff(K, w, ix, jx):
         for ij in jx:
 
             if ii == ij:
-                dcoupl_dx1[ii, ij] = -np.multiply(K[ii], sum(w[ii, jx]))
+                dcoupl_dx1[ii, ij] = -np.multiply(K[ii], np.sum(w[ii, jx]))
             else:
                 dcoupl_dx1[ii, ij] = np.multiply(K[ii], w[ii, ij])
 
@@ -252,7 +252,7 @@ def eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode=np.array("lin"), z_pos=True, K=None,
         raise ValueError('zmode is neither "lin" nor "sig"')
 
     # Assuming that wii = 0
-    jac_x1 += np.multiply(K, sum(w, 1))
+    jac_x1 += np.multiply(K, np.sum(w, 1))
     jac_x1 = np.diag(jac_x1.flatten()) - np.multiply(np.repeat(np.reshape(K, (x1.size, 1)), x1.size, axis=1), w)
     jac_x1 *= np.repeat(np.reshape(tau, (x1.size, 1)), x1.size, axis=1)
 
@@ -282,7 +282,7 @@ def eqtn_fx1z_2d_zpos_jac(x1, r, K, w, ix0, iE, a, b, tau1, tau0):
     jac_x0_x1o = (np.diag(np.multiply(tau[:, ix0],
                                       (4 + 3 * np.multiply(a[:, ix0], np.power(x1[:, ix0], 2))
                                        - 2 * np.multiply(b[:, ix0], x1[:, ix0]) +
-                                       np.multiply(K[:, ix0], sum(w[ix0], axis=1)))).flatten()) -
+                                       np.multiply(K[:, ix0], np.sum(w[ix0], axis=1)))).flatten()) -
                   np.multiply(np.dot(i_x0, np.multiply(tau[:, ix0], K[:, ix0])).T, w[ix0][:, ix0]))
 
     jac = np.empty((x1.size, x1.size), dtype=type(jac_e_x0e))
@@ -443,8 +443,8 @@ def eqtn_fz_square_taylor(zeq, yc, Iext1, K, w, tau1, tau0):
     # Diagonal elements: -1 + dfz_i * (4 + K_i * sum_j_not_i{wij})
     # Off diagonal elements: -K_i * wij_not_i * dfz_j_not_i
     i = np.ones((1, n_regions), dtype=np.float32)
-    fz_jac = np.diag((-1.0 + np.multiply(dfz, (4.0 + np.multiply(K, np.expand_dims(sum(w, axis=1), 1).T)))).T[:, 0]) \
-             - np.multiply(np.multiply(np.dot(K.T, i), np.np.dot(i.T, dfz)), w)
+    fz_jac = np.diag((-1.0 + np.multiply(dfz, (4.0 + np.multiply(K, np.expand_dims(np.sum(w, axis=1), 1).T)))).T[:, 0]) \
+             - np.multiply(np.multiply(np.dot(K.T, i), np.dot(i.T, dfz)), w)
 
     try:
         if np.any([np.any(np.isnan(fz_jac.flatten())), np.any(np.isinf(fz_jac.flatten()))]):
