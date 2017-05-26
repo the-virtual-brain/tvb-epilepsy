@@ -31,11 +31,10 @@ if __name__ == "__main__":
 
     equilibrum_service = EquilibrumComputationService(hypothesis, epileptor_model)
 
-    configured_model, lsa_hypothesis, x0_values, x1EQ, zEQ, Ceq, E = equilibrum_service.configure_model_from_x0_hypothesis(
-        EpileptorDP)
+    model_configuration, lsa_hypothesis = equilibrum_service.configure_model_from_x0_hypothesis()
 
     write_h5_model(hypothesis.prepare_for_h5(), folder_name=data_folder, file_name=hypothesis.get_name() + ".h5")
     write_h5_model(lsa_hypothesis.prepare_for_h5(), folder_name=data_folder,
                    file_name=lsa_hypothesis.get_name() + ".h5")
 
-    # plot_hypothesis_equilibrium_and_lsa(lsa_hypothesis, x0_values, x1EQ, zEQ, Ceq, E, figure_dir=data_folder)
+    # plot_hypothesis_equilibrium_and_lsa(lsa_hypothesis, model_configuration, figure_dir=data_folder)

@@ -4,12 +4,12 @@ Service to do X0/E Hypothesis configuration.
 """
 import numpy
 
-from tvb_epilepsy.base.calculations import calc_x0cr_r, calc_coupling, calc_x0, calc_rescaled_x0
+from tvb_epilepsy.base.calculations import calc_x0cr_r, calc_coupling, calc_x0
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, E_DEF
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.equilibrium_computation import calc_eq_z_2d, eq_x1_hypo_x0_linTaylor, eq_x1_hypo_x0_optimize
 from tvb_epilepsy.base.lsa_service import LSAService
-from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP
+from tvb_epilepsy.base.model_configuration import ModelConfiguration
 
 
 class EquilibrumComputationService(object):
@@ -63,15 +63,13 @@ class EquilibrumComputationService(object):
 
         return x1EQ, zEQ
 
-    def configure_model_from_E_hypothesis(self, model_class):
+    def configure_model_from_E_hypothesis(self):
         x1EQ_temp, zEQ_temp = self._compute_x1_and_z_equilibrum(self.disease_hypothesis.get_regions_disease())
         x1EQ, zEQ = self._ensure_equilibrum(x1EQ_temp, zEQ_temp)
         x0cr, rx0, Ceq, x0_values, E_values = self._compute_params_after_equilibration(x1EQ, zEQ)
 
-        # configured_model = model_build_dict[model_class](x0cr, rx0, x1EQ, zEQ, x0_values, self.epileptor_model)
-        x0_rescaled = calc_rescaled_x0(x0_values, self.epileptor_model.yc, self.epileptor_model.Iext1)
-        configured_model = EpileptorDP(x0=x0_rescaled, Iext1=self.epileptor_model.Iext1, K=self.epileptor_model.K,
-                                       yc=self.epileptor_model.yc)
+        model_configuration = ModelConfiguration(x0_values, self.epileptor_model.yc, self.epileptor_model.Iext1,
+                                                 self.epileptor_model.K, x0cr, rx0, x1EQ, zEQ, Ceq, E_values)
 
         lsa_propagation_strength, eigen_vectors_number = self.lsa_service.run_lsa(self.disease_hypothesis,
                                                                                   self.epileptor_model, None, zEQ)
@@ -83,11 +81,10 @@ class EquilibrumComputationService(object):
                                            self.disease_hypothesis.get_disease_values(), propagation_indices,
                                            lsa_propagation_strength, "LSA_" + self.disease_hypothesis.get_name())
 
-        return configured_model, lsa_hypothesis, x0_values, x1EQ, zEQ, Ceq, E_values
+        return model_configuration, lsa_hypothesis
 
-    def configure_model_from_x0_hypothesis(self, model_class):
+    def configure_model_from_x0_hypothesis(self):
         # TODO: how to handle x0 and E indices for x1EQ computation?
-        # TODO: find a way to build a generic EPModel here.
 
         (x0cr, rx0) = self._compute_critical_x0_scaling()
         E_values = E_DEF * numpy.ones((self.disease_hypothesis.get_number_of_regions(),), dtype=numpy.float32)
@@ -121,10 +118,9 @@ class EquilibrumComputationService(object):
         x1EQ_final, zEQ_final = self._ensure_equilibrum(x1EQ, zEQ)
         x0cr, rx0, Ceq, eq_x0_values, E_values = self._compute_params_after_equilibration(x1EQ_final, zEQ_final)
 
-        # configured_model = model_build_dict[model_class](x0cr, rx0, x1EQ, zEQ, eq_x0_values, self.epileptor_model)
-        x0_rescaled = calc_rescaled_x0(eq_x0_values, self.epileptor_model.yc, self.epileptor_model.Iext1)
-        configured_model = EpileptorDP(x0=x0_rescaled, Iext1=self.epileptor_model.Iext1, K=self.epileptor_model.K,
-                                       yc=self.epileptor_model.yc)
+        model_configuration = ModelConfiguration(eq_x0_values, self.epileptor_model.yc, self.epileptor_model.Iext1,
+                                                 self.epileptor_model.K, x0cr, rx0, x1EQ_final, zEQ_final, Ceq,
+                                                 E_values)
 
         lsa_propagation_strength, eigen_vectors_number = self.lsa_service.run_lsa(self.disease_hypothesis,
                                                                                   self.epileptor_model, None,
@@ -137,4 +133,4 @@ class EquilibrumComputationService(object):
                                            self.disease_hypothesis.get_disease_values(), propagation_indices,
                                            lsa_propagation_strength, "LSA_" + self.disease_hypothesis.get_name())
 
-        return configured_model, lsa_hypothesis, eq_x0_values, x1EQ_final, zEQ_final, Ceq, E_values
+        return model_configuration, lsa_hypothesis
