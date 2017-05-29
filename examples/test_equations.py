@@ -11,7 +11,7 @@ from tvb_epilepsy.base.equilibrium_computation import *
 if __name__ == "__main__":
 
     n = 3
-    x1 = numpy.array([-4.1/3, -5.0/3, -5.0/3], dtype="float32")
+    x1 = numpy.array([-4.1/3, -4.9/3, -5.0/3], dtype="float32")
     x1eq = x1
     w = numpy.array([[0,0.1,0.9], [0.1,0,0.0], [0.9,0.0, 0]])
     n = x1.size
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # y2 = 0.0 * numpy.ones(x1.shape, dtype=x1.dtype)
     # g = 0.1*x1 # * numpy.ones(x1.shape, dtype=x1.dtype)
 
-    K = 1.0 * numpy.ones(x1.shape, dtype=x1.dtype)
+    K = 10.0 * numpy.ones(x1.shape, dtype=x1.dtype)
     yc = 1.0 * numpy.ones(x1.shape, dtype=x1.dtype)
     Iext1 = 3.1 * numpy.ones(x1.shape, dtype=x1.dtype)
     slope = 0.0 * numpy.ones(x1.shape, dtype=x1.dtype)
