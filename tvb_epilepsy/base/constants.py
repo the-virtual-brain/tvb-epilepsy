@@ -57,6 +57,8 @@ YC_DEF = 1.0
 X1_DEF = -5.0 / 3.0
 X1_EQ_CR_DEF = -4.0 / 3.0
 DEF_EIGENVECTORS_NUMBER = "auto" # or "all", "seizure_indices", or a number from 1 to hypothesis.n_regions
+ADDITIVE_NOISE="Additive"
+MULTIPLICATIVE_NOISE="Multiplicative"
 
 # Simulation and data read folder amd flags:
 MODEL = '6v'
