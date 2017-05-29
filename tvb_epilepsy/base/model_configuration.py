@@ -2,6 +2,10 @@
 """
 Model configuration POJO class.
 """
+from collections import OrderedDict
+
+from tvb_epilepsy.base.h5_model import prepare_for_h5
+from tvb_epilepsy.base.utils import formal_repr
 
 
 class ModelConfiguration(object):
@@ -18,6 +22,27 @@ class ModelConfiguration(object):
         self.zEQ = zEQ
         self.Ceq = Ceq
         self.E_values = E_values
+
+    def __repr__(self):
+        d = {
+            "01. x0 values": self.model_x0_values,
+            "02. yc": self.model_yc,
+            "03. Iext1": self.model_Iext1,
+            "04. K": self.model_K,
+            "05. xcr": self.model_xcr,
+            "06. rx0": self.model_rx0
+        }
+        return formal_repr(self, OrderedDict(sorted(d.items()), key=lambda t: t[0]))
+
+    def __str__(self):
+        return self.__repr__()
+
+    def prepare_for_h5(self):
+        h5_model = prepare_for_h5(self)
+        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
+        h5_model.add_or_update_metadata_attribute("Number_of_nodes", len(self.model_x0_values))
+
+        return h5_model
 
     def get_equilibrum_points(self):
         return self.x1EQ, self.zEQ, self.Ceq
