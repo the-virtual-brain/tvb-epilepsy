@@ -37,4 +37,6 @@ if __name__ == "__main__":
     write_h5_model(lsa_hypothesis.prepare_for_h5(), folder_name=data_folder,
                    file_name=lsa_hypothesis.get_name() + ".h5")
 
+    write_h5_model(model_configuration.prepare_for_h5(), folder_name=data_folder, file_name="Config.h5")
+
     # plot_hypothesis_equilibrium_and_lsa(lsa_hypothesis, model_configuration, figure_dir=data_folder)
