@@ -10,9 +10,9 @@ from tvb_epilepsy.base.equilibrium_computation import *
 if __name__ == "__main__":
 
     n = 3
-    x1 = numpy.array([-4.0/3, -1.5, -5.0/3], dtype="float32")
+    x1 = numpy.array([-4.1/3, -4.9/3, -5.0/3], dtype="float32")
     x1eq = x1
-    w = numpy.array([[0,0.45,0.5], [0.45,0,0.55], [0.5,0.55, 0]])
+    w = numpy.array([[0,0.1,0.9], [0.1,0.0,0.0], [0.9, 0.0, 0.0]])
     n = x1.size
 
     # y1 = 10.25 * numpy.ones(x1.shape, dtype=x1.dtype)
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     print "x0="
     print x0
 
-    model = "EpileptorDPrealistic"
+    model = "EpileptorDP2D"
     print model
 
     b = -2.0
@@ -117,6 +117,7 @@ if __name__ == "__main__":
                            slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
                            tau2=10.0)
 
+    eigvals, eigvects = numpy.linalg.eig(jac)
     write_object_to_h5_file({"eq": eq, "dfun": numpy.array(dfun), "jac": numpy.array(jac)},
                             os.path.join(FOLDER_RES, model+"Symbolic"+str(SYMBOLIC_CALCULATIONS_FLAG)+".h5"))
 
