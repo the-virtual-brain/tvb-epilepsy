@@ -1,6 +1,7 @@
 # coding=utf-8
 """
 Factory methods to build the wanted epileptor model.
+Also, dictionaries to keep noise intensity and type for each model type.
 """
 
 ###
@@ -8,8 +9,7 @@ Factory methods to build the wanted epileptor model.
 ###
 import numpy
 from tvb.simulator.models import Epileptor
-
-from tvb_epilepsy.base.calculations import calc_rescaled_x0, calc_x0cr_r, calc_x0
+from tvb_epilepsy.base.calculations import calc_rescaled_x0
 from tvb_epilepsy.base.constants import ADDITIVE_NOISE, MULTIPLICATIVE_NOISE
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D, EpileptorDP, EpileptorDPrealistic
 
@@ -20,36 +20,21 @@ def build_tvb_model(model_configuration, a=1.0, b=3.0, d=5.0, zmode="lin"):
     model_instance = Epileptor(x0=x0_transformed.flatten(), Iext=model_configuration.get_Iext1().flatten(),
                                Ks=model_configuration.get_K().flatten(), c=model_configuration.get_yc().flatten())
 
-    noise_intensity = numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.])
-    noise_type = ADDITIVE_NOISE
-
-    return model_instance, noise_intensity, noise_type
+    return model_instance
 
 
 ###
 # Build EpileptorDP2D
 ###
 def build_ep_2sv_model(model_configuration, zmode=numpy.array("lin")):
-    if zmode == "lin":
-        x0 = model_configuration.x0
-        x0cr = model_configuration.x0cr
-        rx0 = model_configuration.rx0
-        # elif zmode == "sig":
-        # Correct Ceq, x0cr, rx0 and x0 for sigmoidal fz(x1)
+    x0 = model_configuration.x0
+    x0cr = model_configuration.x0cr
+    rx0 = model_configuration.rx0
 
-        # TODO: is this needed? Do the yc, Iext1 ever change?
-        # (x0cr, rx0) = calc_x0cr_r(model_configuration.get_yc(), model_configuration.get_Iext1(), zmode=zmode)
-        # x1EQ, zEQ, = model_configuration.get_equilibrum_points()
-        # x0 = calc_x0(x1EQ, zEQ, model_configuration.get_K(), hypothesis.weights, x0cr, rx0, model="2d", zmode=zmode)
-    else:
-        raise ValueError('zmode is neither "lin" nor "sig"')
     model = EpileptorDP2D(x0=x0.T, Iext1=model_configuration.get_Iext1().T, K=model_configuration.get_K().T,
                           yc=model_configuration.get_yc().T, r=rx0.T, x0cr=x0cr.T, zmode=zmode)
 
-    noise_intensity = numpy.array([0., 5e-5])
-    noise_type = ADDITIVE_NOISE
-
-    return model, noise_intensity, noise_type
+    return model
 
 
 ###
@@ -61,10 +46,7 @@ def build_ep_6sv_model(model_configuration, zmode=numpy.array("lin")):
     model = EpileptorDP(x0=x0_transformed.T, Iext1=model_configuration.get_Iext1().T, K=model_configuration.get_K().T,
                         yc=model_configuration.get_yc().T, zmode=zmode)
 
-    noise_intensity = numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.])
-    noise_type = ADDITIVE_NOISE
-
-    return model, noise_intensity, noise_type
+    return model
 
 
 ###
@@ -76,14 +58,27 @@ def build_ep_11sv_model(model_configuration, zmode=numpy.array("lin")):
     model = EpileptorDPrealistic(x0=x0_transformed.T, Iext1=model_configuration.get_Iext1().T,
                                  K=model_configuration.get_K().T, yc=model_configuration.get_yc().T, zmode=zmode)
 
-    noise_intensity = numpy.array([0., 0., 1e-7, 0.0, 1e-7, 0., 1e-8, 1e-3, 1e-8, 1e-3, 1e-9])
-    noise_type = MULTIPLICATIVE_NOISE
-
-    return model, noise_intensity, noise_type
+    return model
 
 
 # Model creator functions dictionary (factory)
-model_build_dict = {"Epileptor": build_tvb_model,
-                    "EpileptorDP": build_ep_6sv_model,
-                    "EpileptorDPrealistic": build_ep_11sv_model,
-                    "EpileptorDP2D": build_ep_2sv_model}
+model_build_dict = {
+    "Epileptor": build_tvb_model,
+    "EpileptorDP": build_ep_6sv_model,
+    "EpileptorDPrealistic": build_ep_11sv_model,
+    "EpileptorDP2D": build_ep_2sv_model
+}
+
+model_noise_intensity_dict = {
+    "Epileptor": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
+    "EpileptorDP": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
+    "EpileptorDPrealistic": numpy.array([0., 0., 1e-7, 0.0, 1e-7, 0., 1e-8, 1e-3, 1e-8, 1e-3, 1e-9]),
+    "EpileptorDP2D": numpy.array([0., 5e-5])
+}
+
+model_noise_type_dict = {
+    "Epileptor": ADDITIVE_NOISE,
+    "EpileptorDP": ADDITIVE_NOISE,
+    "EpileptorDPrealistic": MULTIPLICATIVE_NOISE,
+    "EpileptorDP2D": ADDITIVE_NOISE
+}
