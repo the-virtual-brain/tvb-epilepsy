@@ -17,6 +17,7 @@ class Head(object):
 
     def __init__(self, connectivity, cortical_surface, rm, vm, t1, name='',
                  eeg_sensors_dict=None, meg_sensors_dict=None, seeg_sensors_dict=None):
+
         self.connectivity = connectivity
         self.cortical_surface = cortical_surface
         self.region_mapping = rm
