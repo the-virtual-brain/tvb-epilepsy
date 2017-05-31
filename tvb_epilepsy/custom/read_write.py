@@ -10,7 +10,7 @@ from tvb_epilepsy.base.hypothesis import Hypothesis
 from tvb_epilepsy.base.utils import ensure_unique_file, read_object_from_h5_file, print_metadata, write_metadata
 # TODO: solve problems with setting up a logger
 from tvb_epilepsy.base.utils import initialize_logger
-from tvb_epilepsy.tvb_api.epileptor_models import model_build_dict
+from tvb_epilepsy.base.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.base.simulators import SimulationSettings
 
 PATIENT_VIRTUAL_HEAD = "/WORK/episense/episense-root/trunk/demo-data/Head_TREC"
