@@ -3,6 +3,7 @@ Read VEP related entities from TVB format and data-structures
 """
 
 from tvb.basic.profile import TvbProfile
+
 TvbProfile.set_profile(TvbProfile.LIBRARY_PROFILE)
 
 import os
@@ -10,11 +11,11 @@ from tvb.datatypes import connectivity, surfaces, region_mapping, sensors, struc
 from tvb_epilepsy.base.model_vep import Connectivity, Surface, Sensors, Head
 from tvb_epilepsy.base.readers import ABCReader
 
+
 class TVBReader(ABCReader):
-        
     def read_connectivity(self, path):
         tvb_conn = connectivity.Connectivity.from_file(path)
-        return Connectivity(tvb_conn.weights, tvb_conn.tract_lengths,
+        return Connectivity(path, tvb_conn.weights, tvb_conn.tract_lengths,
                             tvb_conn.region_labels, tvb_conn.centres,
                             tvb_conn.hemispheres, tvb_conn.orientations, tvb_conn.areas)
 

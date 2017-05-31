@@ -10,9 +10,8 @@ from tvb_epilepsy.base.utils import calculate_projection, initialize_logger
 
 
 class CustomReader(ABCReader):
-
     LOG = initialize_logger(__name__)
-    
+
     def read_connectivity(self, h5_path):
         """
         :param h5_path: Path towards a custom Connectivity H5 file
@@ -26,14 +25,14 @@ class CustomReader(ABCReader):
 
         weights = h5_file['/weights'][()]
         tract_lengths = h5_file['/tract_lengths'][()]
-        #TODO: should change to English centers than French centres!
+        # TODO: should change to English centers than French centres!
         region_centers = h5_file['/centres'][()]
         region_labels = h5_file['/region_labels'][()]
         orientations = h5_file['/orientations'][()]
         hemispheres = h5_file['/hemispheres'][()]
 
         h5_file.close()
-        return Connectivity(weights, tract_lengths, region_labels, region_centers, hemispheres, orientations)
+        return Connectivity(h5_path, weights, tract_lengths, region_labels, region_centers, hemispheres, orientations)
 
     def read_cortical_surface(self, h5_path):
         self.LOG.info("Reading Surface from " + h5_path)
@@ -109,5 +108,3 @@ class CustomReader(ABCReader):
 
         h5_file.close()
         return values
-
-
