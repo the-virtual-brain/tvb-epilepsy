@@ -25,7 +25,7 @@ else:
 if not (os.path.isdir(FOLDER_VEP)):
     os.mkdir(FOLDER_VEP)
 
-# Folder where input data will be 
+# Folder where input data will be
 FOLDER_DATA = os.path.join(FOLDER_VEP, 'data')
 
 # Folder where logs will be written
@@ -62,8 +62,10 @@ MULTIPLICATIVE_NOISE="Multiplicative"
 
 # Simulation and data read folder amd flags:
 MODEL = '6v'
-SIMULATION_MODE = 'custom'  # 'custom' or 'tvb
-DATA_MODE = 'custom'  # 'custom' or 'tvb'
+CUSTOM = 'custom'
+TVB = 'tvb'
+SIMULATION_MODE = TVB
+DATA_MODE = CUSTOM
 
 # Normalization configuration
 WEIGHTS_NORM_PERCENT = 95
@@ -77,3 +79,11 @@ HDF5_LIB="libjhdf5.dylib"
 LIB_PATH="/Applications/Episense.app/Contents/Java"
 JAR_PATH="/Applications/Episense.app/Contents/Java/episense-fx-app.jar"
 JAVA_MAIN_SIM="de.codebox.episense.fx.StartSimulation"
+
+VOIS = {
+    "CustomEpileptor": ['x1', 'z', 'x2'],
+    "Epileptor": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp'],
+    "EpileptorDP": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp'],
+    "EpileptorDPrealistic": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'x0ts', 'slopeTS', 'Iext1ts', 'Iext2ts', 'Kts', 'lfp'],
+    "EpileptorDP2D": ['x1', 'z']
+}

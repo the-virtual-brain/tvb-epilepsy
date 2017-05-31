@@ -418,12 +418,11 @@ def filter_data(data, lowcut, highcut, fs, order=3):
     return y
 
 
-def set_time_scales(fs=4096.0, dt=None, time_length=1000.0, scale_time=1.0, scale_fsavg=8.0,
-                    hpf_low=None, hpf_high=None, report_every_n_monitor_steps=10,):
+def set_time_scales(fs=4096.0, dt=None, time_length=1000.0, scale_time=1.0, scale_fsavg=8.0, report_every_n_monitor_steps=10,):
     if dt is None:
-        dt = 1000.0 / fs / scale_time # msec
-    else:
-        dt /= scale_time
+        dt = 1000.0 / fs
+
+    dt /= scale_time
 
     fsAVG = fs / scale_fsavg
     monitor_period = scale_fsavg * dt
@@ -431,13 +430,7 @@ def set_time_scales(fs=4096.0, dt=None, time_length=1000.0, scale_time=1.0, scal
     time_length_avg = numpy.round(sim_length / monitor_period)
     n_report_blocks = max(report_every_n_monitor_steps * numpy.round(time_length_avg / 100), 1.0)
 
-    hpf_fs = fsAVG
-    if hpf_low is None:
-        hpf_low = max(16.0, 1000.0 / time_length)   # msec
-    if hpf_high is None:
-        hpf_high = min(250.0 , hpf_fs)
-
-    return fs, dt, fsAVG, scale_time, sim_length, monitor_period, n_report_blocks, hpf_fs, hpf_low, hpf_high
+    return dt, fsAVG, sim_length, monitor_period, n_report_blocks
 
 
 def ensure_unique_file(parent_folder, filename):
