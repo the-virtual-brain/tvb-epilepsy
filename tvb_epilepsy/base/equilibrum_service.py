@@ -89,29 +89,21 @@ class EquilibrumComputationService(object):
         (x0cr, rx0) = self._compute_critical_x0_scaling()
         E_values = E_DEF * numpy.ones((self.disease_hypothesis.get_number_of_regions(),), dtype=numpy.float32)
         x1EQ_temp, zEQ_temp = self._compute_x1_and_z_equilibrum(E_values)
-
-        all_regions_indices = numpy.array(range(self.disease_hypothesis.get_number_of_regions()), dtype=numpy.int32)
-        E_indices = []  # numpy.delete(all_regions_indices, self.disease_hypothesis.get_disease_indices())
+        E_indices = self.disease_hypothesis.get_E_indices_when_x0_are_defined()
 
         # Convert x0 to an array of (1,len(ix0)) shape
         x0_values = numpy.expand_dims(numpy.array(self.disease_hypothesis.get_regions_disease()), 1).T
 
         if self.x1eq_mode == "linTaylor":
             x1EQ = \
-                eq_x1_hypo_x0_linTaylor(all_regions_indices, E_indices, x1EQ_temp, zEQ_temp,
-                                        x0_values,
-                                        x0cr, rx0,
-                                        self.epileptor_model.yc,
-                                        self.epileptor_model.Iext1, self.epileptor_model.K,
-                                        self.disease_hypothesis.get_weights())[0]
+                eq_x1_hypo_x0_linTaylor(self.disease_hypothesis.get_disease_indices(), E_indices, x1EQ_temp, zEQ_temp,
+                                        x0_values, x0cr, rx0, self.epileptor_model.yc, self.epileptor_model.Iext1,
+                                        self.epileptor_model.K, self.disease_hypothesis.get_weights())[0]
         else:
             x1EQ = \
-                eq_x1_hypo_x0_optimize(all_regions_indices, E_indices, x1EQ_temp, zEQ_temp,
-                                       x0_values,
-                                       x0cr, rx0,
-                                       self.epileptor_model.yc,
-                                       self.epileptor_model.Iext1, self.epileptor_model.K,
-                                       self.disease_hypothesis.get_weights())[0]
+                eq_x1_hypo_x0_optimize(self.disease_hypothesis.get_disease_indices(), E_indices, x1EQ_temp, zEQ_temp,
+                                       x0_values, x0cr, rx0, self.epileptor_model.yc, self.epileptor_model.Iext1,
+                                       self.epileptor_model.K, self.disease_hypothesis.get_weights())[0]
 
         zEQ = self._compute_z_equilibrium(x1EQ)
 

@@ -82,3 +82,7 @@ class DiseaseHypothesis(object):
 
     def get_propagation_indices(self):
         return self.propagation_indices
+
+    def get_E_indices_when_x0_are_defined(self):
+        all_regions_indices = numpy.array(range(self.get_number_of_regions()), dtype=numpy.int32)
+        return numpy.delete(all_regions_indices, self.get_disease_indices())
