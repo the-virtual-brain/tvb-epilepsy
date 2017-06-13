@@ -11,24 +11,27 @@ from tvb_epilepsy.base.utils import formal_repr
 
 
 class DiseaseHypothesis(object):
-    def __init__(self, type, connectivity, disease_indices, disease_values, propagation_indices, propagation_strenghts,
+    def __init__(self, type, connectivity, disease_values, x0_indices, e_indices, propagation_indices,
+                 propagation_strenghts,
                  name="E_Hypothesis"):
         self.type = type
         self.connectivity = connectivity
-        self.disease_indices = disease_indices
         self.disease_values = disease_values
+        self.x0_indices = x0_indices
+        self.e_indices = e_indices
         self.propagation_indices = propagation_indices
         self.propagation_strenghts = propagation_strenghts
         self.name = name
 
     def __repr__(self):
         d = {"01. Type": self.type,
-             "02. Weights of disease nodes": self.get_weights()[:, self.disease_indices],
-             "03. Disease indices": self.disease_indices,
-             "04. Disease values": self.disease_values,
-             "05. Propagation indices": self.propagation_indices,
-             "06. Propagation strengths of indices": self.propagation_strenghts[self.propagation_indices],
-             "07. Name": self.name
+             "02. Weights of x0 nodes": self.get_weights()[:, self.x0_indices],
+             "03. X0 disease indices": self.x0_indices,
+             "04. E disease indices": self.e_indices,
+             "05. Disease values": self.disease_values,
+             "06. Propagation indices": self.propagation_indices,
+             "07. Propagation strengths of indices": self.propagation_strenghts[self.propagation_indices],
+             "08. Name": self.name
              }
         return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0])))
 
@@ -51,8 +54,9 @@ class DiseaseHypothesis(object):
         return h5_model
 
     def get_regions_disease(self):
+        # In case we need values for all regions, we can use this and have zeros where values are not defined
         regions_disease = numpy.zeros(self.get_number_of_regions())
-        regions_disease[self.disease_indices] = self.disease_values
+        regions_disease[sorted(self.x0_indices + self.e_indices)] = self.disease_values
 
         return regions_disease
 
@@ -62,17 +66,17 @@ class DiseaseHypothesis(object):
     def get_weights(self):
         return self.connectivity.normalized_weights
 
-    def get_type(self):
-        return self.type
-
     def get_connectivity(self):
         return self.connectivity
 
-    def get_disease_indices(self):
-        return self.disease_indices
+    def get_x0_indices(self):
+        return self.x0_indices
 
     def get_disease_values(self):
         return self.disease_values
+
+    def get_e_indices(self):
+        return self.e_indices
 
     def get_name(self):
         return self.name
@@ -83,6 +87,6 @@ class DiseaseHypothesis(object):
     def get_propagation_indices(self):
         return self.propagation_indices
 
-    def get_E_indices_when_x0_are_defined(self):
-        all_regions_indices = numpy.array(range(self.get_number_of_regions()), dtype=numpy.int32)
-        return numpy.delete(all_regions_indices, self.get_disease_indices())
+    def get_seizure_indices(self, seizure_threshold):
+        seizure_indices, = numpy.where(self.get_regions_disease() > seizure_threshold)
+        return seizure_indices

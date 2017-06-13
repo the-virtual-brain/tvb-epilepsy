@@ -341,6 +341,52 @@ def plot_nullclines_eq(model_configuration, region_labels, special_idx=None, mod
     _check_show(show_flag)
 
 
+#TODO: this has duplicated code with plot_hypothesis
+def plot_hypothesis_equilibrium_and_lsa(hypothesis, model_configuration, figure_name='', show_flag=False,
+                    save_flag=True, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
+    fig = mp.pyplot.figure('Hypothesis ' + hypothesis.get_name(), frameon=False, figsize=figsize)
+    mp.gridspec.GridSpec(1, 7, width_ratios=[1, 1, 1, 1, 1, 2, 1])
+
+    seizure_indices = hypothesis.get_seizure_indices(0)
+
+    ax0 = _plot_vector(model_configuration.get_x0_values(), hypothesis.get_region_labels(), 171, 'Excitabilities x0',
+                       show_y_labels=False, indices_red=seizure_indices)
+
+    _plot_vector(model_configuration.get_E_values(), hypothesis.get_region_labels(), 172, 'Epileptogenicities E',
+                 show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
+
+    x1EQ, zEQ, Ceq = model_configuration.get_equilibrum_points()
+
+    _plot_vector(x1EQ, hypothesis.get_region_labels(), 173, 'x1 Equilibria',
+                 show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
+
+    _plot_vector(zEQ, hypothesis.get_region_labels(), 174, 'z Equilibria',
+                 show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
+
+    _plot_vector(Ceq, hypothesis.get_region_labels(), 175, 'Total afferent coupling \n at equilibrium',
+                 show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
+
+    if len(hypothesis.get_x0_indices()) > 0:
+        _plot_regions2regions(hypothesis.get_weights(), hypothesis.get_region_labels(), 176,
+                              'Afferent connectivity \n from seizuring regions',
+                              show_y_labels=False, show_x_labels=True,
+                              indices_red_x=numpy.concatenate((seizure_indices, hypothesis.get_propagation_indices())), sharey=ax0)
+
+    if hypothesis.propagation_strenghts is not None:
+        _plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(), 177,
+                     "LSA Propagation Strength:" + "\nabsolut sum of eigenvectors",
+                     show_y_labels=False, indices_red=numpy.concatenate((seizure_indices, hypothesis.get_propagation_indices())), sharey=ax0)
+
+    _set_axis_labels(fig, 121, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(), seizure_indices, 'r')
+    _set_axis_labels(fig, 122, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(), seizure_indices, 'r', 'right')
+
+    if save_flag:
+        if figure_name == '':
+            figure_name = fig.get_label()
+        _save_figure(figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
+    _check_show(show_flag)
+
+
 def plot_hypothesis(hypothesis, region_labels, figure_name='', show_flag=SHOW_FLAG,
                     save_flag=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
     fig = mp.pyplot.figure('Hypothesis ' + hypothesis.name, frameon=False, figsize=figsize)

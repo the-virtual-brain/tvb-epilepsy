@@ -63,7 +63,7 @@ class EquilibrumComputationService(object):
 
         return x1EQ, zEQ
 
-    def configure_model_from_E_hypothesis(self):
+    def configure_model_from_E_hypothesis(self, lsa_eigen_vectors_number):
         x1EQ_temp, zEQ_temp = self._compute_x1_and_z_equilibrum(self.disease_hypothesis.get_regions_disease())
         x1EQ, zEQ = self._ensure_equilibrum(x1EQ_temp, zEQ_temp)
         x0cr, rx0, Ceq, x0_values, E_values = self._compute_params_after_equilibration(x1EQ, zEQ)
@@ -72,36 +72,37 @@ class EquilibrumComputationService(object):
                                                  self.epileptor_model.K, x0cr, rx0, x1EQ, zEQ, Ceq, E_values)
 
         lsa_propagation_strength, eigen_vectors_number = self.lsa_service.run_lsa(self.disease_hypothesis,
-                                                                                  self.epileptor_model, None, zEQ)
+                                                                                  self.epileptor_model,
+                                                                                  lsa_eigen_vectors_number, zEQ)
 
         propagation_indices = lsa_propagation_strength.argsort()[-eigen_vectors_number:]
 
         lsa_hypothesis = DiseaseHypothesis("E", self.disease_hypothesis.get_connectivity(),
-                                           self.disease_hypothesis.get_disease_indices(),
-                                           self.disease_hypothesis.get_disease_values(), propagation_indices,
+                                           self.disease_hypothesis.get_disease_values(),
+                                           self.disease_hypothesis.get_x0_indices(),
+                                           self.disease_hypothesis.get_e_indices(), propagation_indices,
                                            lsa_propagation_strength, "LSA_" + self.disease_hypothesis.get_name())
 
         return model_configuration, lsa_hypothesis
 
-    def configure_model_from_x0_hypothesis(self):
-        # TODO: how to handle x0 and E indices for x1EQ computation?
-
+    def configure_model_from_x0_hypothesis(self, lsa_eigen_vectors_number):
         (x0cr, rx0) = self._compute_critical_x0_scaling()
         E_values = E_DEF * numpy.ones((self.disease_hypothesis.get_number_of_regions(),), dtype=numpy.float32)
         x1EQ_temp, zEQ_temp = self._compute_x1_and_z_equilibrum(E_values)
-        E_indices = self.disease_hypothesis.get_E_indices_when_x0_are_defined()
 
         # Convert x0 to an array of (1,len(ix0)) shape
         x0_values = numpy.expand_dims(numpy.array(self.disease_hypothesis.get_regions_disease()), 1).T
 
         if self.x1eq_mode == "linTaylor":
             x1EQ = \
-                eq_x1_hypo_x0_linTaylor(self.disease_hypothesis.get_disease_indices(), E_indices, x1EQ_temp, zEQ_temp,
-                                        x0_values, x0cr, rx0, self.epileptor_model.yc, self.epileptor_model.Iext1,
+                eq_x1_hypo_x0_linTaylor(self.disease_hypothesis.get_x0_indices(),
+                                        self.disease_hypothesis.get_e_indices(), x1EQ_temp, zEQ_temp, x0_values, x0cr,
+                                        rx0, self.epileptor_model.yc, self.epileptor_model.Iext1,
                                         self.epileptor_model.K, self.disease_hypothesis.get_weights())[0]
         else:
             x1EQ = \
-                eq_x1_hypo_x0_optimize(self.disease_hypothesis.get_disease_indices(), E_indices, x1EQ_temp, zEQ_temp,
+                eq_x1_hypo_x0_optimize(self.disease_hypothesis.get_x0_indices(),
+                                       self.disease_hypothesis.get_e_indices(), x1EQ_temp, zEQ_temp,
                                        x0_values, x0cr, rx0, self.epileptor_model.yc, self.epileptor_model.Iext1,
                                        self.epileptor_model.K, self.disease_hypothesis.get_weights())[0]
 
@@ -115,14 +116,16 @@ class EquilibrumComputationService(object):
                                                  E_values)
 
         lsa_propagation_strength, eigen_vectors_number = self.lsa_service.run_lsa(self.disease_hypothesis,
-                                                                                  self.epileptor_model, None,
+                                                                                  self.epileptor_model,
+                                                                                  lsa_eigen_vectors_number,
                                                                                   zEQ_final)
 
         propagation_indices = lsa_propagation_strength.argsort()[-eigen_vectors_number:]
 
         lsa_hypothesis = DiseaseHypothesis("x0", self.disease_hypothesis.get_connectivity(),
-                                           self.disease_hypothesis.get_disease_indices(),
-                                           self.disease_hypothesis.get_disease_values(), propagation_indices,
+                                           self.disease_hypothesis.get_disease_values(),
+                                           self.disease_hypothesis.get_x0_indices(),
+                                           self.disease_hypothesis.get_e_indices(), propagation_indices,
                                            lsa_propagation_strength, "LSA_" + self.disease_hypothesis.get_name())
 
         return model_configuration, lsa_hypothesis

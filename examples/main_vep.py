@@ -11,7 +11,7 @@ from tvb_epilepsy.base.constants import FOLDER_RES, FOLDER_FIGURES, SAVE_FLAG, S
     TVB, DATA_MODE, VOIS
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.equilibrum_service import EquilibrumComputationService
-from tvb_epilepsy.base.plot_tools import plot_nullclines_eq, plot_sim_results
+from tvb_epilepsy.base.plot_tools import plot_nullclines_eq, plot_sim_results, plot_hypothesis_equilibrium_and_lsa
 from tvb_epilepsy.base.utils import initialize_logger, set_time_scales, calculate_projection, filter_data
 from tvb_epilepsy.custom.read_write import write_h5_model, write_ts_epi, write_ts_seeg_epi
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP
@@ -41,13 +41,17 @@ if __name__ == "__main__":
 
     # --------------------------Hypothesis and LSA-----------------------------------
 
+    SEIZURE_THRESHOLD = 0.5
+
+    # This is an example of x0 Hypothesis
+
     x0_indices = range(head.connectivity.number_of_regions)
     x0_values = numpy.zeros((len(x0_indices),), dtype='float32')
 
     x0_indices_to_put_random_vaues = [20]
-    x0_values[x0_indices_to_put_random_vaues] = numpy.random.normal(0.85, 0.02, (len(x0_indices_to_put_random_vaues),))
+    x0_values[x0_indices_to_put_random_vaues] = 0.85
 
-    hypothesis = DiseaseHypothesis("x0", head.connectivity, x0_indices, x0_values, [], [], "x0_Hypothesis")
+    hypothesis = DiseaseHypothesis("x0", head.connectivity, x0_values, x0_indices, [], [], [], "x0_Hypothesis")
 
     all_regions_one = numpy.ones((hypothesis.get_number_of_regions(),), dtype=numpy.float32)
 
@@ -56,7 +60,9 @@ if __name__ == "__main__":
 
     equilibrum_service = EquilibrumComputationService(hypothesis, epileptor_model)
 
-    model_configuration, lsa_hypothesis = equilibrum_service.configure_model_from_x0_hypothesis()
+    model_configuration, lsa_hypothesis = equilibrum_service.configure_model_from_x0_hypothesis(None)
+
+    plot_hypothesis_equilibrium_and_lsa(lsa_hypothesis, model_configuration, "x0_hypo")
 
     write_h5_model(hypothesis.prepare_for_h5(), folder_name=FOLDER_RES, file_name=hypothesis.get_name() + ".h5")
     write_h5_model(lsa_hypothesis.prepare_for_h5(), folder_name=FOLDER_RES, file_name=lsa_hypothesis.get_name() + ".h5")
@@ -157,14 +163,13 @@ if __name__ == "__main__":
         del ttavg, tavg_data
 
         # Plot results
+        seizure_indices = lsa_hypothesis.get_seizure_indices(SEIZURE_THRESHOLD)
         plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
-                           special_idx=numpy.concatenate((lsa_hypothesis.get_disease_indices(),
-                                                          lsa_hypothesis.get_propagation_indices())),
+                           special_idx=seizure_indices,
                            model=str(model.nvar) + "d", zmode=model.zmode,
                            figure_name="Nullclines and equilibria", save_flag=SAVE_FLAG,
                            show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES)
-        plot_sim_results(model, numpy.concatenate((lsa_hypothesis.get_disease_indices(),
-                                                   lsa_hypothesis.get_propagation_indices())),
+        plot_sim_results(model, seizure_indices,
                          hypothesis.name, head, res, sensorsSEEG, hpf_flag)
 
         # Save results

@@ -38,7 +38,7 @@ if __name__ == "__main__":
     x0_indices = [20]
     x0_values = numpy.random.normal(0.85, 0.02, (len(x0_indices),))
 
-    hypothesis = DiseaseHypothesis("x0", head.connectivity, x0_indices, x0_values, [], [], "x0_Hypothesis")
+    hypothesis = DiseaseHypothesis("x0", head.connectivity, x0_values, x0_indices, [], [], [], "x0_Hypothesis")
 
     all_regions_one = numpy.ones((hypothesis.get_number_of_regions(),), dtype=numpy.float32)
 
@@ -47,7 +47,7 @@ if __name__ == "__main__":
 
     equilibrum_service = EquilibrumComputationService(hypothesis, epileptor_model)
 
-    model_configuration, lsa_hypothesis = equilibrum_service.configure_model_from_x0_hypothesis()
+    model_configuration, lsa_hypothesis = equilibrum_service.configure_model_from_x0_hypothesis(None)
 
     write_h5_model(hypothesis.prepare_for_h5(), folder_name=data_folder, file_name=hypothesis.get_name() + ".h5")
     write_h5_model(lsa_hypothesis.prepare_for_h5(), folder_name=data_folder,
@@ -148,12 +148,12 @@ if __name__ == "__main__":
 
         # Plot results
         plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
-                           special_idx=numpy.concatenate((lsa_hypothesis.get_disease_indices(),
+                           special_idx=numpy.concatenate((lsa_hypothesis.get_x0_indices(),
                                                           lsa_hypothesis.get_propagation_indices())),
                            model=str(model.nvar) + "d", zmode=model.zmode,
                            figure_name="Nullclines and equilibria", save_flag=SAVE_FLAG,
                            show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES)
-        plot_sim_results(model, numpy.concatenate((lsa_hypothesis.get_disease_indices(),
+        plot_sim_results(model, numpy.concatenate((lsa_hypothesis.get_x0_indices(),
                                                    lsa_hypothesis.get_propagation_indices())),
                          hypothesis.name, head, res, sensorsSEEG, hpf_flag)
 
