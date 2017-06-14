@@ -15,10 +15,10 @@ from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D, EpileptorDP, Ep
 
 
 def build_tvb_model(model_configuration, a=1.0, b=3.0, d=5.0, zmode="lin"):
-    x0_transformed = calc_rescaled_x0(model_configuration.get_x0_values(), model_configuration.get_yc(),
-                                      model_configuration.get_Iext1(), a, b - d, zmode=zmode)
-    model_instance = Epileptor(x0=x0_transformed.flatten(), Iext=model_configuration.get_Iext1().flatten(),
-                               Ks=model_configuration.get_K().flatten(), c=model_configuration.get_yc().flatten())
+    x0_transformed = calc_rescaled_x0(model_configuration.x0_values, model_configuration.yc,
+                                      model_configuration.Iext1, a, b - d, zmode=zmode)
+    model_instance = Epileptor(x0=x0_transformed.flatten(), Iext=model_configuration.Iext1.flatten(),
+                               Ks=model_configuration.K.flatten(), c=model_configuration.yc.flatten())
 
     return model_instance
 
@@ -31,8 +31,8 @@ def build_ep_2sv_model(model_configuration, zmode=numpy.array("lin")):
     x0cr = model_configuration.x0cr
     rx0 = model_configuration.rx0
 
-    model = EpileptorDP2D(x0=x0.T, Iext1=model_configuration.get_Iext1().T, K=model_configuration.get_K().T,
-                          yc=model_configuration.get_yc().T, r=rx0.T, x0cr=x0cr.T, zmode=zmode)
+    model = EpileptorDP2D(x0=x0.T, Iext1=model_configuration.Iext1.T, K=model_configuration.K.T,
+                          yc=model_configuration.yc.T, r=rx0.T, x0cr=x0cr.T, zmode=zmode)
 
     return model
 
@@ -41,10 +41,10 @@ def build_ep_2sv_model(model_configuration, zmode=numpy.array("lin")):
 # Build EpileptorDP
 ###
 def build_ep_6sv_model(model_configuration, zmode=numpy.array("lin")):
-    x0_transformed = calc_rescaled_x0(model_configuration.get_x0_values(), model_configuration.get_yc(),
-                                      model_configuration.get_Iext1())
-    model = EpileptorDP(x0=x0_transformed.T, Iext1=model_configuration.get_Iext1().T, K=model_configuration.get_K().T,
-                        yc=model_configuration.get_yc().T, zmode=zmode)
+    x0_transformed = calc_rescaled_x0(model_configuration.x0_values, model_configuration.yc,
+                                      model_configuration.Iext1)
+    model = EpileptorDP(x0=x0_transformed.T, Iext1=model_configuration.Iext1.T, K=model_configuration.K.T,
+                        yc=model_configuration.yc.T, zmode=zmode)
 
     return model
 
@@ -53,10 +53,10 @@ def build_ep_6sv_model(model_configuration, zmode=numpy.array("lin")):
 # Build EpileptorDPrealistic
 ###
 def build_ep_11sv_model(model_configuration, zmode=numpy.array("lin")):
-    x0_transformed = calc_rescaled_x0(model_configuration.get_x0_values(), model_configuration.get_yc(),
-                                      model_configuration.get_Iext1())
-    model = EpileptorDPrealistic(x0=x0_transformed.T, Iext1=model_configuration.get_Iext1().T,
-                                 K=model_configuration.get_K().T, yc=model_configuration.get_yc().T, zmode=zmode)
+    x0_transformed = calc_rescaled_x0(model_configuration.x0_values, model_configuration.yc,
+                                      model_configuration.Iext1)
+    model = EpileptorDPrealistic(x0=x0_transformed.T, Iext1=model_configuration.Iext1.T,
+                                 K=model_configuration.K.T, yc=model_configuration.yc.T, zmode=zmode)
 
     return model
 

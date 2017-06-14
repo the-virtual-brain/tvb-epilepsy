@@ -64,8 +64,8 @@ if __name__ == "__main__":
 
     plot_hypothesis_equilibrium_and_lsa(lsa_hypothesis, model_configuration, "x0_hypo")
 
-    write_h5_model(hypothesis.prepare_for_h5(), folder_name=FOLDER_RES, file_name=hypothesis.get_name() + ".h5")
-    write_h5_model(lsa_hypothesis.prepare_for_h5(), folder_name=FOLDER_RES, file_name=lsa_hypothesis.get_name() + ".h5")
+    write_h5_model(hypothesis.prepare_for_h5(), folder_name=FOLDER_RES, file_name=hypothesis.name + ".h5")
+    write_h5_model(lsa_hypothesis.prepare_for_h5(), folder_name=FOLDER_RES, file_name=lsa_hypothesis.name + ".h5")
     write_h5_model(model_configuration.prepare_for_h5(), folder_name=FOLDER_RES, file_name="Config.h5")
 
     # ------------------------------Simulation--------------------------------------
@@ -124,7 +124,7 @@ if __name__ == "__main__":
         logger.info("Values: " + str(tavg_data.min()) + " - " + str(tavg_data.max()))
 
         write_h5_model(simulator_instance.prepare_for_h5(), folder_name=FOLDER_RES,
-                       file_name=hypothesis.get_name() + "_sim_settings.h5")
+                       file_name=hypothesis.name + "_sim_settings.h5")
 
         # Pack results into a dictionary, high pass filter, and compute SEEG
         res = dict()

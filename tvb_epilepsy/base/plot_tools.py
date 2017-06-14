@@ -236,10 +236,10 @@ def plot_nullclines_eq(model_configuration, region_labels, special_idx=None, mod
 
     #Fixed parameters for all regions:
     x1eq = numpy.mean(model_configuration.x1EQ)
-    yc = numpy.mean(model_configuration.get_yc())
-    Iext1 = numpy.mean(model_configuration.get_Iext1())
-    x0cr = numpy.mean(model_configuration.get_xcr())  # Critical x0
-    r = numpy.mean(model_configuration.get_rx0())
+    yc = numpy.mean(model_configuration.yc)
+    Iext1 = numpy.mean(model_configuration.Iext1)
+    x0cr = numpy.mean(model_configuration.x0cr)  # Critical x0
+    r = numpy.mean(model_configuration.rx0)
     # The point of the linear approximation (1st order Taylor expansion)
     x1LIN = def_x1lin(X1_DEF, X1_EQ_CR_DEF, len(region_labels))
     x1SQ = X1_EQ_CR_DEF
@@ -344,38 +344,36 @@ def plot_nullclines_eq(model_configuration, region_labels, special_idx=None, mod
 #TODO: this has duplicated code with plot_hypothesis
 def plot_hypothesis_equilibrium_and_lsa(hypothesis, model_configuration, figure_name='', show_flag=False,
                     save_flag=True, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
-    fig = mp.pyplot.figure('Hypothesis ' + hypothesis.get_name(), frameon=False, figsize=figsize)
+    fig = mp.pyplot.figure('Hypothesis ' + hypothesis.name, frameon=False, figsize=figsize)
     mp.gridspec.GridSpec(1, 7, width_ratios=[1, 1, 1, 1, 1, 2, 1])
 
     seizure_indices = hypothesis.get_seizure_indices(0)
 
-    ax0 = _plot_vector(model_configuration.get_x0_values(), hypothesis.get_region_labels(), 171, 'Excitabilities x0',
+    ax0 = _plot_vector(model_configuration.x0_values, hypothesis.get_region_labels(), 171, 'Excitabilities x0',
                        show_y_labels=False, indices_red=seizure_indices)
 
-    _plot_vector(model_configuration.get_E_values(), hypothesis.get_region_labels(), 172, 'Epileptogenicities E',
+    _plot_vector(model_configuration.E_values, hypothesis.get_region_labels(), 172, 'Epileptogenicities E',
                  show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
 
-    x1EQ, zEQ, Ceq = model_configuration.get_equilibrum_points()
-
-    _plot_vector(x1EQ, hypothesis.get_region_labels(), 173, 'x1 Equilibria',
+    _plot_vector(model_configuration.x1EQ, hypothesis.get_region_labels(), 173, 'x1 Equilibria',
                  show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
 
-    _plot_vector(zEQ, hypothesis.get_region_labels(), 174, 'z Equilibria',
+    _plot_vector(model_configuration.zEQ, hypothesis.get_region_labels(), 174, 'z Equilibria',
                  show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
 
-    _plot_vector(Ceq, hypothesis.get_region_labels(), 175, 'Total afferent coupling \n at equilibrium',
+    _plot_vector(model_configuration.Ceq, hypothesis.get_region_labels(), 175, 'Total afferent coupling \n at equilibrium',
                  show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
 
-    if len(hypothesis.get_x0_indices()) > 0:
+    if len(hypothesis.x0_indices) > 0:
         _plot_regions2regions(hypothesis.get_weights(), hypothesis.get_region_labels(), 176,
                               'Afferent connectivity \n from seizuring regions',
                               show_y_labels=False, show_x_labels=True,
-                              indices_red_x=numpy.concatenate((seizure_indices, hypothesis.get_propagation_indices())), sharey=ax0)
+                              indices_red_x=numpy.r_[seizure_indices, hypothesis.propagation_indices], sharey=ax0)
 
     if hypothesis.propagation_strenghts is not None:
         _plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(), 177,
                      "LSA Propagation Strength:" + "\nabsolut sum of eigenvectors",
-                     show_y_labels=False, indices_red=numpy.concatenate((seizure_indices, hypothesis.get_propagation_indices())), sharey=ax0)
+                     show_y_labels=False, indices_red=numpy.r_[seizure_indices, hypothesis.propagation_indices], sharey=ax0)
 
     _set_axis_labels(fig, 121, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(), seizure_indices, 'r')
     _set_axis_labels(fig, 122, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(), seizure_indices, 'r', 'right')
@@ -620,7 +618,7 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
             else:
                 line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], 'k', alpha=0.3, label=labels[iTS])
             lines.append(line)
-    mp.pyplot.xlabel(ax_labels[0])        
+    mp.pyplot.xlabel(ax_labels[0])
     mp.pyplot.ylabel(ax_labels[1])
     if no_dims>2:
         mp.pyplot.ylabel(ax_labels[2])

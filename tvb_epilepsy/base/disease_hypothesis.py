@@ -1,6 +1,6 @@
 # coding=utf-8
 """
-Hypothesis POJO class.
+Class for defining and storing the state of a hypothesis.
 """
 from collections import OrderedDict
 
@@ -26,12 +26,13 @@ class DiseaseHypothesis(object):
     def __repr__(self):
         d = {"01. Type": self.type,
              "02. Weights of x0 nodes": self.get_weights()[:, self.x0_indices],
-             "03. X0 disease indices": self.x0_indices,
-             "04. E disease indices": self.e_indices,
-             "05. Disease values": self.disease_values,
-             "06. Propagation indices": self.propagation_indices,
-             "07. Propagation strengths of indices": self.propagation_strenghts[self.propagation_indices],
-             "08. Name": self.name
+             "03. Weights of e nodes": self.get_weights()[:, self.e_indices],
+             "04. X0 disease indices": self.x0_indices,
+             "05. E disease indices": self.e_indices,
+             "06. Disease values": self.disease_values,
+             "07. Propagation indices": self.propagation_indices,
+             "08. Propagation strengths of indices": self.propagation_strenghts[self.propagation_indices],
+             "09. Name": self.name
              }
         return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0])))
 
@@ -66,26 +67,8 @@ class DiseaseHypothesis(object):
     def get_weights(self):
         return self.connectivity.normalized_weights
 
-    def get_connectivity(self):
-        return self.connectivity
-
-    def get_x0_indices(self):
-        return self.x0_indices
-
-    def get_disease_values(self):
-        return self.disease_values
-
-    def get_e_indices(self):
-        return self.e_indices
-
-    def get_name(self):
-        return self.name
-
     def get_region_labels(self):
         return self.connectivity.region_labels
-
-    def get_propagation_indices(self):
-        return self.propagation_indices
 
     def get_seizure_indices(self, seizure_threshold):
         seizure_indices, = numpy.where(self.get_regions_disease() > seizure_threshold)

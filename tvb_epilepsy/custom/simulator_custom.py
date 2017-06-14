@@ -195,11 +195,11 @@ class SimulatorCustom(ABCSimulator):
 
 # Some helper functions for model and simulator construction
 def custom_model_builder(model_configuration, a=1.0, b=3.0, d=5.0):
-    x0 = calc_rescaled_x0(model_configuration.get_x0_values().flatten(), model_configuration.get_yc().flatten(),
-                          model_configuration.get_Iext1().flatten(), a, b - d)
-    model = EpileptorModel(a=a, b=b, d=d, x0=x0, iext=model_configuration.get_Iext1().flatten(),
-                           ks=model_configuration.get_K().flatten(),
-                           c=model_configuration.get_yc().flatten())
+    x0 = calc_rescaled_x0(model_configuration.x0_values.flatten(), model_configuration.yc.flatten(),
+                          model_configuration.Iext1.flatten(), a, b - d)
+    model = EpileptorModel(a=a, b=b, d=d, x0=x0, iext=model_configuration.Iext1.flatten(),
+                           ks=model_configuration.K.flatten(),
+                           c=model_configuration.yc.flatten())
 
     return model
 
