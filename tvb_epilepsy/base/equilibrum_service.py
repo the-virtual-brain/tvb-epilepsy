@@ -71,11 +71,12 @@ class EquilibrumComputationService(object):
         model_configuration = ModelConfiguration(x0_values, self.epileptor_model.yc, self.epileptor_model.Iext1,
                                                  self.epileptor_model.K, x0cr, rx0, x1EQ, zEQ, Ceq, E_values)
 
-        lsa_propagation_strength, eigen_vectors_number = self.lsa_service.run_lsa(self.disease_hypothesis,
+        lsa_propagation_strength = self.lsa_service.run_lsa(self.disease_hypothesis,
                                                                                   self.epileptor_model,
                                                                                   lsa_eigen_vectors_number, zEQ)
 
-        propagation_indices = lsa_propagation_strength.argsort()[-eigen_vectors_number:]
+        propagation_strength_elbow = self.lsa_service.get_curve_elbow_point(lsa_propagation_strength)
+        propagation_indices = lsa_propagation_strength.argsort()[-propagation_strength_elbow:]
 
         lsa_hypothesis = DiseaseHypothesis("E", self.disease_hypothesis.connectivity,
                                            self.disease_hypothesis.disease_values,
@@ -115,12 +116,13 @@ class EquilibrumComputationService(object):
                                                  self.epileptor_model.K, x0cr, rx0, x1EQ_final, zEQ_final, Ceq,
                                                  E_values)
 
-        lsa_propagation_strength, eigen_vectors_number = self.lsa_service.run_lsa(self.disease_hypothesis,
+        lsa_propagation_strength = self.lsa_service.run_lsa(self.disease_hypothesis,
                                                                                   self.epileptor_model,
                                                                                   lsa_eigen_vectors_number,
                                                                                   zEQ_final)
 
-        propagation_indices = lsa_propagation_strength.argsort()[-eigen_vectors_number:]
+        propagation_strength_elbow = self.lsa_service.get_curve_elbow_point(lsa_propagation_strength)
+        propagation_indices = lsa_propagation_strength.argsort()[-propagation_strength_elbow:]
 
         lsa_hypothesis = DiseaseHypothesis("x0", self.disease_hypothesis.connectivity,
                                            self.disease_hypothesis.disease_values,

@@ -73,3 +73,9 @@ class DiseaseHypothesis(object):
     def get_seizure_indices(self, seizure_threshold):
         seizure_indices, = numpy.where(self.get_regions_disease() > seizure_threshold)
         return seizure_indices
+
+    def get_e_values_for_all_regions(self):
+        return self.get_regions_disease()[self.e_indices]
+
+    def get_x0_values_for_all_regions(self):
+        return self.get_regions_disease()[self.x0_indices]

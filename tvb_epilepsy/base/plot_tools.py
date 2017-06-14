@@ -364,19 +364,21 @@ def plot_hypothesis_equilibrium_and_lsa(hypothesis, model_configuration, figure_
     _plot_vector(model_configuration.Ceq, hypothesis.get_region_labels(), 175, 'Total afferent coupling \n at equilibrium',
                  show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
 
+    seizure_and_propagation_indices = numpy.unique(numpy.r_[seizure_indices, hypothesis.propagation_indices])
+
     if len(hypothesis.x0_indices) > 0:
         _plot_regions2regions(hypothesis.get_weights(), hypothesis.get_region_labels(), 176,
                               'Afferent connectivity \n from seizuring regions',
                               show_y_labels=False, show_x_labels=True,
-                              indices_red_x=numpy.r_[seizure_indices, hypothesis.propagation_indices], sharey=ax0)
+                              indices_red_x=seizure_and_propagation_indices, sharey=ax0)
 
     if hypothesis.propagation_strenghts is not None:
         _plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(), 177,
                      "LSA Propagation Strength:" + "\nabsolut sum of eigenvectors",
-                     show_y_labels=False, indices_red=numpy.r_[seizure_indices, hypothesis.propagation_indices], sharey=ax0)
+                     show_y_labels=False, indices_red=seizure_and_propagation_indices, sharey=ax0)
 
-    _set_axis_labels(fig, 121, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(), seizure_indices, 'r')
-    _set_axis_labels(fig, 122, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(), seizure_indices, 'r', 'right')
+    _set_axis_labels(fig, 121, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(), seizure_and_propagation_indices, 'r')
+    _set_axis_labels(fig, 122, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(), seizure_and_propagation_indices, 'r', 'right')
 
     if save_flag:
         if figure_name == '':

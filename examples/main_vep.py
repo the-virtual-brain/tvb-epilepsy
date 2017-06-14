@@ -8,7 +8,7 @@ import numpy
 from scipy.io import savemat
 
 from tvb_epilepsy.base.constants import FOLDER_RES, FOLDER_FIGURES, SAVE_FLAG, SHOW_FLAG, SIMULATION_MODE, \
-    TVB, DATA_MODE, VOIS
+    TVB, DATA_MODE, VOIS, DATA_CUSTOM
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.equilibrum_service import EquilibrumComputationService
 from tvb_epilepsy.base.plot_tools import plot_nullclines_eq, plot_sim_results, plot_hypothesis_equilibrium_and_lsa
@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     # -------------------------------Reading data-----------------------------------
 
-    data_folder = '/WORK/Episense/trunk/demo-data/Head_TREC'
+    data_folder = os.path.join(DATA_CUSTOM, 'Head')
 
     reader = Reader()
 

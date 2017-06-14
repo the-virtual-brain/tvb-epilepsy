@@ -11,7 +11,7 @@ import warnings
 from itertools import product
 from scipy.signal import butter, lfilter
 from collections import OrderedDict
-from tvb_epilepsy.base.constants import FOLDER_LOGS, WEIGHTS_NORM_PERCENT
+from tvb_epilepsy.base.constants import FOLDER_LOGS, WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
 from matplotlib import use
 use('Qt4Agg')
 from matplotlib import pyplot
@@ -319,7 +319,7 @@ def calculate_projection(sensors, connectivity):
     return projection
 
 
-def curve_elbow_point(vals, interactive=False):
+def curve_elbow_point(vals):
 
     vals = numpy.array(vals).flatten()
 
@@ -334,7 +334,7 @@ def curve_elbow_point(vals, interactive=False):
 
     elbow = numpy.argmax(grad)
 
-    if interactive:
+    if INTERACTIVE_ELBOW_POINT:
 
         pyplot.ion()
 
@@ -342,13 +342,13 @@ def curve_elbow_point(vals, interactive=False):
 
         xdata = range(len(vals))
         lines=[]
+        lines.append(ax.plot(xdata, cumsum_vals, 'g*', picker=None, label="values' cumulative sum")[0])
         lines.append(ax.plot(xdata, vals, 'bo', picker=None, label="values in descending order")[0])
-        lines.append(ax.plot(xdata, cumsum_vals, 'go', picker=None, label="values' cumulative sum")[0])
 
-        lines.append(ax.plot(elbow, vals[elbow], "ro",
+        lines.append(ax.plot(elbow, vals[elbow], "rd",
                              label="suggested elbow point (maximum of third central difference)")[0])
 
-        lines.append(ax.plot(elbow, cumsum_vals[elbow], "ro")[0])
+        lines.append(ax.plot(elbow, cumsum_vals[elbow], "rd")[0])
 
         pyplot.legend(handles=lines[:2])
 

@@ -1,5 +1,5 @@
 """
-Various configurations witch might or might not be system based, should be specified here.
+Various configurations which might or might not be system based, should be specified here.
 """
 
 import os
@@ -9,24 +9,26 @@ from datetime import datetime
 USER_HOME = os.path.expanduser("~")
 
 if platform.node()=='dionperdMBP':
-    FOLDER_VEP = os.path.join(USER_HOME, 'CBR','VEP')
-    #DATA_CUSTOM = os.path.join(USER_HOME, 'CBR', 'svn', 'episense', 'demo-data')
-    DATA_TVB = os.path.join(USER_HOME, 'CBR','svn','tvb', 'tvb-data', 'tvb-data')
-    #DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH')
-    DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/JUNCH')
+    FOLDER_VEP = os.path.join(USER_HOME, 'CBR', 'VEP')
+    # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR', 'svn', 'episense', 'demo-data')
+    DATA_TVB = os.path.join(USER_HOME, 'CBR', 'svn', 'tvb', 'tvb-data', 'tvb-data')
+    # DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH')
+    # DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/JUNCH')
+    DATA_CUSTOM = os.path.join(FOLDER_VEP, 'CC/TVB1')
 
 else:
     FOLDER_VEP = os.path.join(USER_HOME, 'VEP')
-    #DATA_CUSTOM = os.path.join(USER_HOME, 'CBR_software', 'svn-episense', 'demo-data')
-    DATA_TVB = os.path.join(USER_HOME,'CBR_software', 'svn-tvb', 'tvb-data', 'tvb-data')
-    #DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH')
-    DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/JUNCH')
+    # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR_software', 'svn-episense', 'demo-data')
+    DATA_TVB = os.path.join(USER_HOME, 'CBR_software', 'svn-tvb', 'tvb-data', 'tvb-data')
+    # DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH')
+    # DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/JUNCH')
+    DATA_CUSTOM = os.path.join(FOLDER_VEP, 'CC/TVB1')
 
 if not (os.path.isdir(FOLDER_VEP)):
     os.mkdir(FOLDER_VEP)
 
 # Folder where input data will be
-FOLDER_DATA = os.path.join(FOLDER_VEP, 'data')
+# FOLDER_DATA = os.path.join(FOLDER_VEP, 'data')
 
 # Folder where logs will be written
 FOLDER_LOGS = os.path.join(FOLDER_VEP, 'logs'+datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M'))
@@ -56,7 +58,6 @@ I_EXT1_DEF = 3.1
 YC_DEF = 1.0
 X1_DEF = -5.0 / 3.0
 X1_EQ_CR_DEF = -4.0 / 3.0
-DEF_EIGENVECTORS_NUMBER = "auto" # or "all", "seizure_indices", or a number from 1 to hypothesis.n_regions
 ADDITIVE_NOISE="Additive"
 MULTIPLICATIVE_NOISE="Multiplicative"
 
@@ -73,6 +74,10 @@ WEIGHTS_NORM_PERCENT = 95
 NOISE_SEED = 42
 
 SYMBOLIC_CALCULATIONS_FLAG = False
+
+EIGENVECTORS_NUMBER_SELECTION = "auto_eigenvals" # Options: "auto_eigenvals", "auto_epileptogenicity", "auto_x0", a number equal to seizure_indices or from 1 to hypothesis.n_regions
+INTERACTIVE_ELBOW_POINT=False
+
 
 # Information needed for the custom simulation
 HDF5_LIB="libjhdf5.dylib"

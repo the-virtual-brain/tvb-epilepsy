@@ -6,7 +6,6 @@ import os
 import h5py
 import numpy
 import warnings
-from tvb_epilepsy.base.hypothesis import Hypothesis
 from tvb_epilepsy.base.utils import ensure_unique_file, read_object_from_h5_file, print_metadata, write_metadata
 # TODO: solve problems with setting up a logger
 from tvb_epilepsy.base.utils import initialize_logger
@@ -164,6 +163,7 @@ def write_h5_model(h5_model, folder_name, file_name):
     h5_file.close()
 
 
+# TODO: read new hypothesis
 def read_hypothesis(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "hypo_ep.h5"), output="object", hypo_name=None,
                     update_hypothesis=True):
     """
@@ -184,8 +184,8 @@ def read_hypothesis(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "hypo_ep.h5"),
 
     if output == "dict":
         hyp = dict()
-    else:
-        hyp = Hypothesis(h5_file['/Connectivity'][()].shape[0], h5_file['/Connectivity'][()])
+    # else:
+    #     hyp = Hypothesis(h5_file['/Connectivity'][()].shape[0], h5_file['/Connectivity'][()])
 
     read_object_from_h5_file(hyp, h5_file, hyp_attributes_dict, add_overwrite_fields_dict=overwrite_fields_dict)
 
@@ -224,6 +224,7 @@ def write_sensors(labels, locations, file_name=None):
     h5_file.close()
 
 
+# TODO: use new hypothesis
 def read_simulation_settings(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "sim_ep.h5"), output="object",
                              hypothesis=None):
     """
@@ -236,7 +237,7 @@ def read_simulation_settings(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "sim_
 
     print_metadata(h5_file)
 
-    if output == "dict" or not (isinstance(hypothesis, Hypothesis)):
+    if output == "dict": #or not (isinstance(hypothesis, Hypothesis)):
         model = dict()
         if hypothesis is not None:
             warnings.warn("hypothesis is not a Hypothesis object. Returning a dictionary for model.")
