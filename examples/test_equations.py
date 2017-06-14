@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # y2 = 0.0 * numpy.ones(x1.shape, dtype=x1.dtype)
     # g = 0.1*x1 # * numpy.ones(x1.shape, dtype=x1.dtype)
 
-    K = 10.0 * numpy.ones(x1.shape, dtype=x1.dtype)
+    K = 0.1 * numpy.ones(x1.shape, dtype=x1.dtype)
     yc = 1.0 * numpy.ones(x1.shape, dtype=x1.dtype)
     Iext1 = 3.1 * numpy.ones(x1.shape, dtype=x1.dtype)
     slope = 0.0 * numpy.ones(x1.shape, dtype=x1.dtype)
@@ -118,10 +118,7 @@ if __name__ == "__main__":
                            slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
                            tau2=10.0)
 
-
-    eigvals, eigvects = eig(jac)
-    write_object_to_h5_file({"eq": eq, "dfun": numpy.array(dfun), "jac": numpy.array(jac),
-                             "eigvals": numpy.array(eigvals), "eigvects": numpy.array(eigvects)},
+    write_object_to_h5_file({"eq": eq, "dfun": numpy.array(dfun), "jac": numpy.array(jac)},
                             os.path.join(FOLDER_RES, model+"Symbolic"+str(SYMBOLIC_CALCULATIONS_FLAG)+".h5"))
 
     model = str(model_vars)+"d"
