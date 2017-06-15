@@ -9,19 +9,28 @@ import numpy
 from tvb_epilepsy.base.h5_model import prepare_for_h5
 from tvb_epilepsy.base.utils import formal_repr
 
+# NOTES:
+#  For the moment a hypothesis concerns the excitability and/or epileptogenicity of each brain region.
+# TODO: Generate a richer disease hypothesis as a combination of 4 kinds of hypotheses:
+# a. the existing excitability and/or epileptogenicity one
+# b. a connectivity one leading to changes to the connectivity matrix, and/or to the K global coupling scaling parameter
+# c. one that changes some of the parameters a, b, d, yc, Iext1 that belong to the x1, z state variable (sub)system
+# d. one that changes other parameters that do not affect lsa, but will have an effect for simulations of >2D model
 
 class DiseaseHypothesis(object):
-    def __init__(self, type, connectivity, disease_values, x0_indices, e_indices, propagation_indices,
-                 propagation_strenghts,
-                 name="E_Hypothesis"):
-        self.type = type
+    def __init__(self, connectivity, disease_values, x0_indices=[], e_indices=[], propagation_indices=[],
+                 propagation_strenghts=[], hypo_type="Excitability", name=""):
+        self.type = hypo_type
         self.connectivity = connectivity
         self.disease_values = disease_values
         self.x0_indices = x0_indices
         self.e_indices = e_indices
         self.propagation_indices = propagation_indices
         self.propagation_strenghts = propagation_strenghts
-        self.name = name
+        if name == "":
+            self.name = hypo_type + "_Hypothesis"
+        else:
+            self.name = name
 
     def __repr__(self):
         d = {"01. Type": self.type,

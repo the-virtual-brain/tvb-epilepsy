@@ -10,11 +10,11 @@ from scipy.io import savemat
 from tvb_epilepsy.base.constants import FOLDER_RES, FOLDER_FIGURES, SAVE_FLAG, SHOW_FLAG, SIMULATION_MODE, \
     TVB, DATA_MODE, VOIS, DATA_CUSTOM
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.base.equilibrum_service import EquilibrumComputationService
+from tvb_epilepsy.base.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.base.lsa_service import LSAService
 from tvb_epilepsy.base.plot_tools import plot_nullclines_eq, plot_sim_results, plot_hypothesis_equilibrium_and_lsa
 from tvb_epilepsy.base.utils import initialize_logger, set_time_scales, calculate_projection, filter_data
 from tvb_epilepsy.custom.read_write import write_h5_model, write_ts_epi, write_ts_seeg_epi
-from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
@@ -48,19 +48,22 @@ if __name__ == "__main__":
     x0_indices = range(head.connectivity.number_of_regions)
     x0_values = numpy.zeros((len(x0_indices),), dtype='float32')
 
-    x0_indices_to_put_random_vaues = [20]
-    x0_values[x0_indices_to_put_random_vaues] = 0.85
+    x0_indices_to_put_random_values = [20]
+    x0_values[x0_indices_to_put_random_values] = 0.85
 
-    hypothesis = DiseaseHypothesis("x0", head.connectivity, x0_values, x0_indices, [], [], [], "x0_Hypothesis")
+    hypothesis = DiseaseHypothesis(head.connectivity, x0_values, x0_indices, [], [], [],
+                                   "Excitability", "x0_Hypothesis")
 
     all_regions_one = numpy.ones((hypothesis.get_number_of_regions(),), dtype=numpy.float32)
 
-    epileptor_model = EpileptorDP(Iext1=3.1 * all_regions_one, yc=all_regions_one,
-                                  K=10 * all_regions_one / hypothesis.get_number_of_regions())
+    model_configuration_service = ModelConfigurationService()
+    model_configuration = model_configuration_service.configure_model_from_hypothesis(hypothesis)
 
-    equilibrum_service = EquilibrumComputationService(hypothesis, epileptor_model)
-
-    model_configuration, lsa_hypothesis = equilibrum_service.configure_model_from_x0_hypothesis(None)
+    # NOTES:
+    # Why not overwrite the input hypothesis with the output one?
+    # Anyway, the x0/E values and indices are not overwritten. Only the output is (propagation strength and indices).
+    lsa_service = LSAService()
+    lsa_hypothesis = lsa_service.run_lsa(hypothesis, model_configuration)
 
     plot_hypothesis_equilibrium_and_lsa(lsa_hypothesis, model_configuration, "x0_hypo")
 

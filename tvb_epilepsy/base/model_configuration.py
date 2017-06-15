@@ -7,15 +7,22 @@ from collections import OrderedDict
 
 from tvb_epilepsy.base.h5_model import prepare_for_h5
 from tvb_epilepsy.base.utils import formal_repr
+from tvb_epilepsy.base.constants import X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 
 
 class ModelConfiguration(object):
-    def __init__(self, x0_values, yc, Iext1, K, x0cr, rx0, x1EQ, zEQ, Ceq, E_values):
-        # These parameters are used for every Epileptor Model
+
+    def __init__(self, yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF,
+                       x0cr=None, rx0=None, x1EQ=None, zEQ=None, Ceq=None, x0_values=X0_DEF, E_values=None):
+
+        # These parameters are used for every Epileptor Model...
         self.x0_values = x0_values
         self.yc = yc
         self.Iext1 = Iext1
         self.K = K
+        # ...but these 2 have different values for models with more than 2 dimensions
+        self.a = a
+        self.b = b
 
         # These parameters are used only for EpileptorDP2D Model
         self.x0cr = x0cr
@@ -29,16 +36,18 @@ class ModelConfiguration(object):
 
     def __repr__(self):
         d = {
-            "01. x0 values": self.x0_values,
+            "01. Excitability": self.x0_values,
             "02. yc": self.yc,
             "03. Iext1": self.Iext1,
             "04. K": self.K,
-            "05. x0cr": self.x0cr,
-            "06. rx0": self.rx0,
-            "07. x1EQ": self.x1EQ,
-            "08. zEQ": self.zEQ,
-            "09. Ceq": self.Ceq,
-            "10. E values": self.E_values
+            "05. a": self.a,
+            "06. b": self.b,
+            "07. x0cr": self.x0cr,
+            "08. rx0": self.rx0,
+            "09. x1EQ": self.x1EQ,
+            "10. zEQ": self.zEQ,
+            "11. Ceq": self.Ceq,
+            "12. Epileptogenicity": self.E_values
         }
         return formal_repr(self, OrderedDict(sorted(d.items()), key=lambda t: t[0]))
 
@@ -51,3 +60,5 @@ class ModelConfiguration(object):
         h5_model.add_or_update_metadata_attribute("Number_of_nodes", len(self.x0_values))
 
         return h5_model
+
+

@@ -172,6 +172,7 @@ class SimulatorTVB(ABCSimulator):
 def setup_simulation(model_configuration, connectivity, dt, sim_length, monitor_period, model_name="EpileptorDP",
                      zmode=numpy.array("lin"), scale_time=1, noise_instance=None, noise_intensity=None,
                      monitor_expressions=None, monitors_instance=None):
+
     model = model_build_dict[model_name](model_configuration, zmode=zmode)
 
     if isinstance(model, Epileptor):

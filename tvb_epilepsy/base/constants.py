@@ -53,7 +53,9 @@ MOUSEHOOVER = False
 X0_DEF = 0.0
 X0_CR_DEF = 1.0
 E_DEF = 0.0
-K_DEF = 10
+A_DEF = 1.0
+B_DEF = -2.0
+K_DEF = 10.0
 I_EXT1_DEF = 3.1
 YC_DEF = 1.0
 X1_DEF = -5.0 / 3.0
@@ -75,8 +77,11 @@ NOISE_SEED = 42
 
 SYMBOLIC_CALCULATIONS_FLAG = False
 
-EIGENVECTORS_NUMBER_SELECTION = "auto_eigenvals" # Options: "auto_eigenvals", "auto_epileptogenicity", "auto_x0", a number equal to seizure_indices or from 1 to hypothesis.n_regions
-INTERACTIVE_ELBOW_POINT=False
+# Options: "auto_eigenvals", "auto_epileptogenicity", "auto_x0",
+# a number equal to seizure_indices or from 1 to hypothesis.n_regions
+EIGENVECTORS_NUMBER_SELECTION = "auto_eigenvals"
+
+INTERACTIVE_ELBOW_POINT = False
 
 
 # Information needed for the custom simulation
