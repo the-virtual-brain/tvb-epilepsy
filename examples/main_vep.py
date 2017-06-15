@@ -5,14 +5,15 @@ import os
 import warnings
 
 import numpy
-from scipy.io import savemat
 
+from tvb_epilepsy.base.h5_model import prepare_for_h5
 from tvb_epilepsy.base.constants import FOLDER_RES, FOLDER_FIGURES, SAVE_FLAG, SHOW_FLAG, SIMULATION_MODE, \
-    TVB, DATA_MODE, VOIS, DATA_CUSTOM
+    TVB, DATA_MODE, VOIS, DATA_CUSTOM, X0_DEF, E_DEF
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.base.lsa_service import LSAService
-from tvb_epilepsy.base.plot_tools import plot_nullclines_eq, plot_sim_results, plot_hypothesis_equilibrium_and_lsa
+from tvb_epilepsy.base.plot_tools import plot_nullclines_eq, plot_sim_results, \
+                                         plot_hypothesis_model_configuration_and_lsa
 from tvb_epilepsy.base.utils import initialize_logger, set_time_scales, calculate_projection, filter_data
 from tvb_epilepsy.custom.read_write import write_h5_model, write_ts_epi, write_ts_seeg_epi
 
@@ -41,35 +42,36 @@ if __name__ == "__main__":
 
     # --------------------------Hypothesis and LSA-----------------------------------
 
-    SEIZURE_THRESHOLD = 0.5
-
     # This is an example of x0 Hypothesis
 
-    x0_indices = range(head.connectivity.number_of_regions)
-    x0_values = numpy.zeros((len(x0_indices),), dtype='float32')
+    x0_indices = [20]
+    x0_values = [0.85]
+    E_indices = [70]
+    E_values = [0.85]
 
-    x0_indices_to_put_random_values = [20]
-    x0_values[x0_indices_to_put_random_values] = 0.85
-
-    hypothesis = DiseaseHypothesis(head.connectivity, x0_values, x0_indices, [], [], [],
-                                   "Excitability", "x0_Hypothesis")
+    hypothesis = DiseaseHypothesis(head.connectivity, numpy.array(x0_values+E_values), x0_indices, E_indices, [], [],
+                                   "Excitability", "x0_E_Hypothesis") #"x0_Hypothesis"
 
     all_regions_one = numpy.ones((hypothesis.get_number_of_regions(),), dtype=numpy.float32)
 
     model_configuration_service = ModelConfigurationService()
-    model_configuration = model_configuration_service.configure_model_from_hypothesis(hypothesis)
+    model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hypothesis)
 
     # NOTES:
     # Why not overwrite the input hypothesis with the output one?
     # Anyway, the x0/E values and indices are not overwritten. Only the output is (propagation strength and indices).
     lsa_service = LSAService()
-    lsa_hypothesis = lsa_service.run_lsa(hypothesis, model_configuration)
+    lsa_hypothesis = lsa_service.run_lsa(hypothesis, model_configuration, eigen_vectors_number=None,
+                                         weighted_eigenvector_sum=True)
 
-    plot_hypothesis_equilibrium_and_lsa(lsa_hypothesis, model_configuration, "x0_hypo")
+    plot_hypothesis_model_configuration_and_lsa(lsa_hypothesis, model_configuration,
+                                                n_eig=lsa_service.eigen_vectors_number,
+                                                weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum)
 
-    write_h5_model(hypothesis.prepare_for_h5(), folder_name=FOLDER_RES, file_name=hypothesis.name + ".h5")
+    # write_h5_model(hypothesis.prepare_for_h5(), folder_name=FOLDER_RES, file_name=hypothesis.name + ".h5")
     write_h5_model(lsa_hypothesis.prepare_for_h5(), folder_name=FOLDER_RES, file_name=lsa_hypothesis.name + ".h5")
-    write_h5_model(model_configuration.prepare_for_h5(), folder_name=FOLDER_RES, file_name="Config.h5")
+    write_h5_model(prepare_for_h5(lsa_service), folder_name=FOLDER_RES, file_name="LSAConfig.h5")
+    write_h5_model(model_configuration.prepare_for_h5(), folder_name=FOLDER_RES, file_name="ModelConfig.h5")
 
     # ------------------------------Simulation--------------------------------------
 
@@ -78,11 +80,10 @@ if __name__ == "__main__":
     time_length = 3000.0
     scale_fsavg = 2.0
     report_every_n_monitor_steps = 10.0
-    (dt, fsAVG, sim_length, monitor_period, n_report_blocks) = set_time_scales(fs=fs, dt=None,
-                                                                               time_length=time_length,
-                                                                               scale_time=scale_time,
-                                                                               scale_fsavg=scale_fsavg,
-                                                                               report_every_n_monitor_steps=report_every_n_monitor_steps)
+    (dt, fsAVG, sim_length, monitor_period, n_report_blocks) = \
+        set_time_scales(fs=fs, dt=None, time_length=time_length, scale_time=scale_time, scale_fsavg=scale_fsavg,
+                        report_every_n_monitor_steps=report_every_n_monitor_steps)
+
     model_name = "EpileptorDP"
 
     # We don't want any time delays for the moment
@@ -166,18 +167,18 @@ if __name__ == "__main__":
         del ttavg, tavg_data
 
         # Plot results
-        seizure_indices = lsa_hypothesis.get_seizure_indices(SEIZURE_THRESHOLD)
         plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
-                           special_idx=seizure_indices,
+                           special_idx=lsa_hypothesis.propagation_indices,
                            model=str(model.nvar) + "d", zmode=model.zmode,
                            figure_name="Nullclines and equilibria", save_flag=SAVE_FLAG,
                            show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES)
-        plot_sim_results(model, seizure_indices,
+        plot_sim_results(model, lsa_hypothesis.propagation_indices,
                          hypothesis.name, head, res, sensorsSEEG, hpf_flag)
 
         # Save results
         res['time_units'] = 'msec'
-        savemat(os.path.join(FOLDER_RES, hypothesis.name + "_ts.mat"), res)
+        # from scipy.io import savemat
+        # savemat(os.path.join(FOLDER_RES, hypothesis.name + "_ts.mat"), res)
 
     else:
         warnings.warn("Simulation failed!")

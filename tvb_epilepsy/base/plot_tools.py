@@ -342,43 +342,53 @@ def plot_nullclines_eq(model_configuration, region_labels, special_idx=None, mod
 
 
 #TODO: this has duplicated code with plot_hypothesis
-def plot_hypothesis_equilibrium_and_lsa(hypothesis, model_configuration, figure_name='', show_flag=False,
-                    save_flag=True, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
+def plot_hypothesis_model_configuration_and_lsa(hypothesis, model_configuration, n_eig=None,
+                                                weighted_eigenvector_sum=None,
+                                                figure_name='', show_flag=False, save_flag=True,
+                                                figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
+                                                figsize=VERY_LARGE_SIZE):
     fig = mp.pyplot.figure('Hypothesis ' + hypothesis.name, frameon=False, figsize=figsize)
     mp.gridspec.GridSpec(1, 7, width_ratios=[1, 1, 1, 1, 1, 2, 1])
 
-    seizure_indices = hypothesis.get_seizure_indices(0)
-
     ax0 = _plot_vector(model_configuration.x0_values, hypothesis.get_region_labels(), 171, 'Excitabilities x0',
-                       show_y_labels=False, indices_red=seizure_indices)
+                       show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices())
 
     _plot_vector(model_configuration.E_values, hypothesis.get_region_labels(), 172, 'Epileptogenicities E',
-                 show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
+                 show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
 
     _plot_vector(model_configuration.x1EQ, hypothesis.get_region_labels(), 173, 'x1 Equilibria',
-                 show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
+                 show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
 
     _plot_vector(model_configuration.zEQ, hypothesis.get_region_labels(), 174, 'z Equilibria',
-                 show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
+                 show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
 
     _plot_vector(model_configuration.Ceq, hypothesis.get_region_labels(), 175, 'Total afferent coupling \n at equilibrium',
-                 show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
+                 show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
 
-    seizure_and_propagation_indices = numpy.unique(numpy.r_[seizure_indices, hypothesis.propagation_indices])
+    seizure_and_propagation_indices = numpy.unique(numpy.r_[hypothesis.get_regions_disease_indices(),
+                                                            hypothesis.propagation_indices])
 
-    if len(hypothesis.x0_indices) > 0:
+    if len(seizure_and_propagation_indices) > 0:
         _plot_regions2regions(hypothesis.get_weights(), hypothesis.get_region_labels(), 176,
                               'Afferent connectivity \n from seizuring regions',
                               show_y_labels=False, show_x_labels=True,
                               indices_red_x=seizure_and_propagation_indices, sharey=ax0)
 
     if hypothesis.propagation_strenghts is not None:
-        _plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(), 177,
-                     "LSA Propagation Strength:" + "\nabsolut sum of eigenvectors",
+        title = "LSA Propagation Strength:\nabsolut "
+        if weighted_eigenvector_sum:
+            title += "eigenvalue-weighted "
+        title += "sum of first "
+        if n_eig is not None:
+            title += str(n_eig) + " "
+        title += "eigenvectors"
+        _plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(), 177, title,
                      show_y_labels=False, indices_red=seizure_and_propagation_indices, sharey=ax0)
 
-    _set_axis_labels(fig, 121, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(), seizure_and_propagation_indices, 'r')
-    _set_axis_labels(fig, 122, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(), seizure_and_propagation_indices, 'r', 'right')
+    _set_axis_labels(fig, 121, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(),
+                     hypothesis.get_regions_disease_indices(), 'r')
+    _set_axis_labels(fig, 122, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(),
+                     seizure_and_propagation_indices, 'r', 'right')
 
     if save_flag:
         if figure_name == '':
@@ -387,67 +397,30 @@ def plot_hypothesis_equilibrium_and_lsa(hypothesis, model_configuration, figure_
     _check_show(show_flag)
 
 
-def plot_hypothesis(hypothesis, region_labels, figure_name='', show_flag=SHOW_FLAG,
-                    save_flag=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
-    fig = mp.pyplot.figure('Hypothesis ' + hypothesis.name, frameon=False, figsize=figsize)
-    mp.gridspec.GridSpec(1, 7, width_ratios=[1, 1, 1, 1, 1, 2, 1])
+    plot_nullclines_eq(model_configuration, hypothesis.get_region_labels(),
+                       special_idx=seizure_and_propagation_indices,
+                       model="2d", zmode=numpy.array("lin"), figure_name='Nullclines and equilibria',
+                       show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format,
+                       figsize=figsize)
 
-    ax0 = _plot_vector(hypothesis.x0, region_labels, 171, 'Excitabilities x0',
-                       show_y_labels=False, indices_red=hypothesis.seizure_indices)
-
-    _plot_vector(hypothesis.E, region_labels, 172, 'Epileptogenicities E',
-                 show_y_labels=False, indices_red=hypothesis.seizure_indices, sharey=ax0)
-
-    _plot_vector(hypothesis.x1EQ, region_labels, 173, 'x1 Equilibria',
-                 show_y_labels=False, indices_red=hypothesis.seizure_indices, sharey=ax0)
-
-    _plot_vector(hypothesis.zEQ, region_labels, 174, 'z Equilibria',
-                 show_y_labels=True, indices_red=hypothesis.seizure_indices, sharey=ax0)
-
-    _plot_vector(hypothesis.Ceq, region_labels, 175, 'Total afferent coupling \n at equilibrium',
-                 show_y_labels=False, indices_red=hypothesis.seizure_indices, sharey=ax0)
-
-    if hypothesis.n_seizure_nodes > 0:
-        _plot_regions2regions(hypothesis.weights, region_labels, 176,
-                              'Afferent connectivity \n from seizuring regions',
-                              show_y_labels=False, show_x_labels=True,
-                              indices_red_x=hypothesis.seizure_indices, sharey=ax0)
-
-    if hypothesis.lsa_ps is not None:
-        if hypothesis.n_eigenvectors < hypothesis.n_regions:
-            n_eig = "first " + str(hypothesis.n_eigenvectors)
-        else:
-            n_eig = "all"
-        _plot_vector(hypothesis.lsa_ps, region_labels, 177,
-                     "LSA Propagation Strength:" + "\nabsolut sum of " + n_eig + " eigenvectors",
-                     show_y_labels=False, indices_red=hypothesis.seizure_indices, sharey=ax0)
-
-    _set_axis_labels(fig, 121, hypothesis.n_regions, region_labels, hypothesis.seizure_indices, 'r')
-    _set_axis_labels(fig, 122, hypothesis.n_regions, region_labels, hypothesis.seizure_indices, 'r', 'right')
-
-    if save_flag:
-        if figure_name == '':
-            figure_name = fig.get_label()
-        _save_figure(figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
-    _check_show(show_flag)
-
-    plot_nullclines_eq(hypothesis,region_labels,special_idx=hypothesis.seizure_indices, model="2d",
-                       zmode=numpy.array("lin"), figure_name='Nullclines and equilibria', show_flag=show_flag,
-                       save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
-
-    # plot_nullclines_eq(hypothesis, region_labels, special_idx=hypothesis.seizure_indices, model="2d",
+    # plot_nullclines_eq(model_configuration, hypothesis.get_region_labels(),
+    #                    special_idx=seizure_and_propagation_indices, model="2d",
     #                    zmode=numpy.array("sig"), figure_name='Nullclines and equilibria', show_flag=show_flag,
-    #                    save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
+    #                    save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format,
+    #                    figsize=figsize)
     #
-    # plot_nullclines_eq(hypothesis, region_labels, special_idx=hypothesis.seizure_indices, model="6d",
-    #                    zmode=numpy.array("lin"), figure_name='Nullclines and equilibria', show_flag=show_flag,
-    #                    save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
     #
-    # plot_nullclines_eq(hypothesis, region_labels, special_idx=hypothesis.seizure_indices, model="6d",
-    #                   zmode=numpy.array("sig"), figure_name='Nullclines and equilibria', show_flag=show_flag,
-    #                   save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
-
-
+    # plot_nullclines_eq(model_configuration, hypothesis.get_region_labels(),
+    #                    special_idx=seizure_and_propagation_indices,
+    #                    model="6d", zmode=numpy.array("lin"), figure_name='Nullclines and equilibria', show_flag=show_flag,
+    #                    save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format,
+    #                    figsize=figsize)
+    #
+    # plot_nullclines_eq(model_configuration, hypothesis.get_region_labels(),
+    #                    special_idx=seizure_and_propagation_indices,
+    #                    model="6d", zmode=numpy.array("sig"), figure_name='Nullclines and equilibria', show_flag=show_flag,
+    #                    save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format,
+    #                    figsize=figsize)
 
 
 def _set_axis_labels(fig, sub, n_regions, region_labels, indices2emphasize, color='k', position='left'):

@@ -168,7 +168,7 @@ def linear_scaling(x, x1, x2, y1, y2):
 def weighted_vector_sum(weights, vectors, normalize=True):
 
     if isinstance(vectors, numpy.ndarray):
-        vectors = list(vectors)
+        vectors = list(vectors.T)
 
     if normalize:
         weights /= numpy.sum(weights)
