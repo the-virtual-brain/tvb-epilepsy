@@ -115,7 +115,7 @@ class ModelConfigurationService(object):
         # ...and some  excitability-diseased ones:
         x0_values[disease_hypothesis.x0_indices] = disease[disease_hypothesis.x0_indices]
         # x0 values must have size of len(x0_indices):
-        x0_values[disease_hypothesis.e_indices] = []
+        x0_values = numpy.delete(x0_values, disease_hypothesis.e_indices)
 
         # There might be some epileptogenicity-diseased regions:
         E_values = E_DEF * numpy.ones((disease_hypothesis.get_number_of_regions(),), dtype=numpy.float32)
