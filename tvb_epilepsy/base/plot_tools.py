@@ -341,7 +341,6 @@ def plot_nullclines_eq(model_configuration, region_labels, special_idx=None, mod
     _check_show(show_flag)
 
 
-#TODO: this has duplicated code with plot_hypothesis
 def plot_hypothesis_equilibrium_and_lsa(hypothesis, model_configuration, figure_name='', show_flag=False,
                     save_flag=True, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
     fig = mp.pyplot.figure('Hypothesis ' + hypothesis.name, frameon=False, figsize=figsize)
@@ -385,69 +384,6 @@ def plot_hypothesis_equilibrium_and_lsa(hypothesis, model_configuration, figure_
             figure_name = fig.get_label()
         _save_figure(figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
     _check_show(show_flag)
-
-
-def plot_hypothesis(hypothesis, region_labels, figure_name='', show_flag=SHOW_FLAG,
-                    save_flag=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
-    fig = mp.pyplot.figure('Hypothesis ' + hypothesis.name, frameon=False, figsize=figsize)
-    mp.gridspec.GridSpec(1, 7, width_ratios=[1, 1, 1, 1, 1, 2, 1])
-
-    ax0 = _plot_vector(hypothesis.x0, region_labels, 171, 'Excitabilities x0',
-                       show_y_labels=False, indices_red=hypothesis.seizure_indices)
-
-    _plot_vector(hypothesis.E, region_labels, 172, 'Epileptogenicities E',
-                 show_y_labels=False, indices_red=hypothesis.seizure_indices, sharey=ax0)
-
-    _plot_vector(hypothesis.x1EQ, region_labels, 173, 'x1 Equilibria',
-                 show_y_labels=False, indices_red=hypothesis.seizure_indices, sharey=ax0)
-
-    _plot_vector(hypothesis.zEQ, region_labels, 174, 'z Equilibria',
-                 show_y_labels=True, indices_red=hypothesis.seizure_indices, sharey=ax0)
-
-    _plot_vector(hypothesis.Ceq, region_labels, 175, 'Total afferent coupling \n at equilibrium',
-                 show_y_labels=False, indices_red=hypothesis.seizure_indices, sharey=ax0)
-
-    if hypothesis.n_seizure_nodes > 0:
-        _plot_regions2regions(hypothesis.weights, region_labels, 176,
-                              'Afferent connectivity \n from seizuring regions',
-                              show_y_labels=False, show_x_labels=True,
-                              indices_red_x=hypothesis.seizure_indices, sharey=ax0)
-
-    if hypothesis.lsa_ps is not None:
-        if hypothesis.n_eigenvectors < hypothesis.n_regions:
-            n_eig = "first " + str(hypothesis.n_eigenvectors)
-        else:
-            n_eig = "all"
-        _plot_vector(hypothesis.lsa_ps, region_labels, 177,
-                     "LSA Propagation Strength:" + "\nabsolut sum of " + n_eig + " eigenvectors",
-                     show_y_labels=False, indices_red=hypothesis.seizure_indices, sharey=ax0)
-
-    _set_axis_labels(fig, 121, hypothesis.n_regions, region_labels, hypothesis.seizure_indices, 'r')
-    _set_axis_labels(fig, 122, hypothesis.n_regions, region_labels, hypothesis.seizure_indices, 'r', 'right')
-
-    if save_flag:
-        if figure_name == '':
-            figure_name = fig.get_label()
-        _save_figure(figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
-    _check_show(show_flag)
-
-    plot_nullclines_eq(hypothesis,region_labels,special_idx=hypothesis.seizure_indices, model="2d",
-                       zmode=numpy.array("lin"), figure_name='Nullclines and equilibria', show_flag=show_flag,
-                       save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
-
-    # plot_nullclines_eq(hypothesis, region_labels, special_idx=hypothesis.seizure_indices, model="2d",
-    #                    zmode=numpy.array("sig"), figure_name='Nullclines and equilibria', show_flag=show_flag,
-    #                    save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
-    #
-    # plot_nullclines_eq(hypothesis, region_labels, special_idx=hypothesis.seizure_indices, model="6d",
-    #                    zmode=numpy.array("lin"), figure_name='Nullclines and equilibria', show_flag=show_flag,
-    #                    save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
-    #
-    # plot_nullclines_eq(hypothesis, region_labels, special_idx=hypothesis.seizure_indices, model="6d",
-    #                   zmode=numpy.array("sig"), figure_name='Nullclines and equilibria', show_flag=show_flag,
-    #                   save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
-
-
 
 
 def _set_axis_labels(fig, sub, n_regions, region_labels, indices2emphasize, color='k', position='left'):

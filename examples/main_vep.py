@@ -15,6 +15,8 @@ from tvb_epilepsy.base.lsa_service import LSAService
 from tvb_epilepsy.base.plot_tools import plot_nullclines_eq, plot_sim_results, plot_hypothesis_equilibrium_and_lsa
 from tvb_epilepsy.base.utils import initialize_logger, set_time_scales, calculate_projection, filter_data
 from tvb_epilepsy.custom.read_write import write_h5_model, write_ts_epi, write_ts_seeg_epi
+from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP, EpileptorDP2D
+from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
@@ -26,13 +28,57 @@ if SIMULATION_MODE is TVB:
 else:
     from tvb_epilepsy.custom.simulator_custom import setup_simulation
 
+
+def prepare_vois_ts_dict(vois):
+    # Pack results into a dictionary, high pass filter, and compute SEEG
+    vois_ts_dict = dict()
+    for idx_voi, voi in enumerate(vois):
+        vois_ts_dict[voi] = tavg_data[:, idx_voi, :].astype('f')
+
+    return vois_ts_dict
+
+
+def prepare_ts_and_seeg_h5_file(model, projections, vois_ts_dict, hpf_flag, hpf_low, hpf_high, fsAVG, dt):
+    if isinstance(model, EpileptorDP2D):
+        raw_data = numpy.dstack(
+            [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x1"]])
+        lfp_data = vois_ts_dict["x1"]
+
+        for idx_proj, proj in enumerate(projections):
+            vois_ts_dict['seeg%d' % idx_proj] = vois_ts_dict['z'].dot(proj.T)
+
+    else:
+        if isinstance(model, EpileptorModel):
+            lfp_data = vois_ts_dict["x2"] - vois_ts_dict["x1"]
+
+        else:
+            lfp_data = vois_ts_dict["lfp"]
+
+        raw_data = numpy.dstack(
+            [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x2"]])
+
+        for idx_proj, proj in enumerate(projections):
+            vois_ts_dict['seeg%d' % idx_proj] = vois_ts_dict['lfp'].dot(proj.T)
+            if hpf_flag:
+                for i in range(vois_ts_dict['seeg'].shape[0]):
+                    vois_ts_dict['seeg_hpf%d' % i][:, i] = filter_data(
+                        vois_ts_dict['seeg%d' % i][:, i], hpf_low, hpf_high,
+                        fsAVG)
+
+    write_ts_epi(raw_data, dt, lfp_data, path=os.path.join(FOLDER_RES, hypothesis.name + "_ep_ts.h5"))
+
+    for i in range(len(projections)):
+        write_ts_seeg_epi(vois_ts_dict['seeg%d' % i], dt,
+                          path=os.path.join(FOLDER_RES, hypothesis.name + "_ep_ts.h5"))
+
+
 if __name__ == "__main__":
 
     logger = initialize_logger(__name__)
 
     # -------------------------------Reading data-----------------------------------
 
-    data_folder = os.path.join(DATA_CUSTOM, 'Head')
+    data_folder = os.path.join(DATA_CUSTOM, 'Head_TREC')
 
     reader = Reader()
 
@@ -73,6 +119,7 @@ if __name__ == "__main__":
 
     # ------------------------------Simulation--------------------------------------
 
+    # TODO: maybe use a custom Monitor class
     fs = 2 * 4096.0
     scale_time = 2.0
     time_length = 3000.0
@@ -94,76 +141,48 @@ if __name__ == "__main__":
     simulator_instance.config_simulation()
     ttavg, tavg_data, status = simulator_instance.launch_simulation(n_report_blocks)
 
+    write_h5_model(simulator_instance.prepare_for_h5(), folder_name=FOLDER_RES,
+                   file_name=hypothesis.name + "_sim_settings.h5")
+
     if not status:
         warnings.warn("Simulation failed!")
+
     else:
         tavg_data = tavg_data[:, :, :, 0]
 
-    vois = VOIS[model_name]
+        vois = VOIS[model_name]
 
-    # Compute projections
-    sensorsSEEG = []
-    projections = []
-    for sensors, projection in head.sensorsSEEG.iteritems():
-        if projection is None:
-            continue
-        else:
-            projection = calculate_projection(sensors, head.connectivity)
-            head.sensorsSEEG[sensors] = projection
-            print projection.shape
-            sensorsSEEG.append(sensors)
-            projections.append(projection)
+        # Compute projections
+        sensorsSEEG = []
+        projections = []
+        for sensors, projection in head.sensorsSEEG.iteritems():
+            if projection is None:
+                continue
+            else:
+                projection = calculate_projection(sensors, head.connectivity)
+                head.sensorsSEEG[sensors] = projection
+                print projection.shape
+                sensorsSEEG.append(sensors)
+                projections.append(projection)
 
-    hpf_flag = False
-    hpf_low = max(16.0, 1000.0 / time_length)  # msec
-    hpf_high = min(250.0, fsAVG)
-
-    if status:
+        hpf_flag = False
+        hpf_low = max(16.0, 1000.0 / time_length)  # msec
+        hpf_high = min(250.0, fsAVG)
 
         model = simulator_instance.model
 
-        logger.info("\nSimulated signal return shape: " + str(tavg_data.shape))
-        logger.info("Time: " + str(scale_time * ttavg[0]) + " - " + str(scale_time * ttavg[-1]))
-        logger.info("Values: " + str(tavg_data.min()) + " - " + str(tavg_data.max()))
+        logger.info("\nSimulated signal return shape: %s", tavg_data.shape)
+        logger.info("Time: %s - %s", scale_time * ttavg[0], scale_time * ttavg[-1])
+        logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
 
-        write_h5_model(simulator_instance.prepare_for_h5(), folder_name=FOLDER_RES,
-                       file_name=hypothesis.name + "_sim_settings.h5")
-
-        # Pack results into a dictionary, high pass filter, and compute SEEG
-        res = dict()
         time = scale_time * numpy.array(ttavg, dtype='float32')
         dt = numpy.min(numpy.diff(time))
-        for iv in range(len(vois)):
-            res[vois[iv]] = numpy.array(tavg_data[:, iv, :], dtype='float32')
 
-        if model._ui_name == "EpileptorDP2D":
-            raw_data = numpy.dstack([res["x1"], res["z"], res["x1"]])
-            lfp_data = res["x1"]
-            for i in range(len(projections)):
-                res['seeg' + str(i)] = numpy.dot(res['z'], projections[i].T)
-        else:
-            if model._ui_name == "CustomEpileptor":
-                raw_data = numpy.dstack([res["x1"], res["z"], res["x2"]])
-                lfp_data = res["x2"] - res["x1"]
-            else:
-                raw_data = numpy.dstack([res["x1"], res["z"], res["x2"]])
-                lfp_data = res["lfp"]
-            for i in range(len(projections)):
-                res['seeg' + str(i)] = numpy.dot(res['lfp'], projections[i].T)
-                if hpf_flag:
-                    for i in range(res['seeg'].shape[0]):
-                        res['seeg_hpf' + str(i)][:, i] = filter_data(res['seeg' + str(i)][:, i], hpf_low, hpf_high,
-                                                                     fsAVG)
+        vois_ts_dict = prepare_vois_ts_dict(vois)
 
-        write_ts_epi(raw_data, dt, lfp_data, path=os.path.join(FOLDER_RES, hypothesis.name + "_ep_ts.h5"))
-        del raw_data, lfp_data
+        prepare_ts_and_seeg_h5_file(model, projections, vois_ts_dict, hpf_flag, hpf_low, hpf_high, fsAVG, dt)
 
-        for i in range(len(projections)):
-            write_ts_seeg_epi(res['seeg' + str(i)], dt, path=os.path.join(FOLDER_RES, hypothesis.name + "_ep_ts.h5"))
-
-        res['time'] = time
-
-        del ttavg, tavg_data
+        vois_ts_dict['time'] = time
 
         # Plot results
         seizure_indices = lsa_hypothesis.get_seizure_indices(SEIZURE_THRESHOLD)
@@ -173,11 +192,8 @@ if __name__ == "__main__":
                            figure_name="Nullclines and equilibria", save_flag=SAVE_FLAG,
                            show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES)
         plot_sim_results(model, seizure_indices,
-                         hypothesis.name, head, res, sensorsSEEG, hpf_flag)
+                         hypothesis.name, head, vois_ts_dict, sensorsSEEG, hpf_flag)
 
         # Save results
-        res['time_units'] = 'msec'
-        savemat(os.path.join(FOLDER_RES, hypothesis.name + "_ts.mat"), res)
-
-    else:
-        warnings.warn("Simulation failed!")
+        vois_ts_dict['time_units'] = 'msec'
+        savemat(os.path.join(FOLDER_RES, hypothesis.name + "_ts.mat"), vois_ts_dict)
