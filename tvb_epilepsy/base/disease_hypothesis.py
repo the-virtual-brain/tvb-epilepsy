@@ -63,10 +63,13 @@ class DiseaseHypothesis(object):
 
         return h5_model
 
+    def get_regions_disease_indices(self):
+        return sorted(self.x0_indices + self.e_indices)
+
     def get_regions_disease(self):
         # In case we need values for all regions, we can use this and have zeros where values are not defined
         regions_disease = numpy.zeros(self.get_number_of_regions())
-        regions_disease[sorted(self.x0_indices + self.e_indices)] = self.disease_values
+        regions_disease[self.get_regions_disease_indices()] = self.disease_values
 
         return regions_disease
 
@@ -78,10 +81,6 @@ class DiseaseHypothesis(object):
 
     def get_region_labels(self):
         return self.connectivity.region_labels
-
-    def get_seizure_indices(self, seizure_threshold):
-        seizure_indices, = numpy.where(self.get_regions_disease() > seizure_threshold)
-        return seizure_indices
 
     def get_e_values_for_all_regions(self):
         return self.get_regions_disease()[self.e_indices]

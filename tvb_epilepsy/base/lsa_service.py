@@ -3,10 +3,12 @@
 Service to do LSA computation.
 """
 import numpy
-from tvb.basic.logger.builder import get_logger
+from collections import OrderedDict
 
+from tvb.basic.logger.builder import get_logger
+from tvb_epilepsy.base.utils import formal_repr, weighted_vector_sum
 from tvb_epilepsy.base.calculations import calc_fz_jac_square_taylor
-from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION
+from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM
 from tvb_epilepsy.base.utils import curve_elbow_point
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model_configuration import ModelConfiguration
@@ -23,26 +25,44 @@ LOG = get_logger(__name__)
 
 class LSAService(object):
 
-    def __init__(self, eigen_vectors_number_selection=EIGENVECTORS_NUMBER_SELECTION):
+    def __init__(self, eigen_vectors_number_selection=EIGENVECTORS_NUMBER_SELECTION,
+                 weighted_eigenvector_sum=WEIGHTED_EIGENVECTOR_SUM):
         self.eigen_vectors_number_selection = eigen_vectors_number_selection
         self.eigen_values = []
         self.eigen_vectors = []
+        self.eigen_vectors_number = None
+        self.weighted_eigenvector_sum=weighted_eigenvector_sum
+
+    def __repr__(self):
+        d = {"01. Eigenvectors' number selection mode": self.eigen_vectors_number_selection,
+             "02. Eigenvectors' number": self.eigen_vectors_number_selection,
+             "03. Eigen values": self.eigen_values,
+             "04. Eigen vectors": self.eigen_vectors
+             }
+        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0])))
 
     def get_curve_elbow_point(self, values_array):
         return curve_elbow_point(values_array)
 
-    def _ensure_eigen_vectors_number(self, eigen_vectors_number, eigen_values, e_values, x0_values):
-        if eigen_vectors_number is None:
+    def _ensure_eigen_vectors_number(self, eigen_values, e_values, x0_values, disease_indices):
+        if self.eigen_vectors_number is None:
             if self.eigen_vectors_number_selection is "auto_eigenvals":
-                eigen_vectors_number = self.get_curve_elbow_point(numpy.abs(eigen_values)) + 1
+                self.eigen_vectors_number = self.get_curve_elbow_point(numpy.abs(eigen_values)) + 1
+
+            elif self.eigen_vectors_number_selection is "auto_disease":
+                self.eigen_vectors_number = len(disease_indices)
 
             elif self.eigen_vectors_number_selection is "auto_epileptogenicity":
-                eigen_vectors_number = self.get_curve_elbow_point(e_values) + 1
+                self.eigen_vectors_number = self.get_curve_elbow_point(e_values) + 1
 
-            elif self.eigen_vectors_number_selection is "auto_x0":
-                eigen_vectors_number = self.get_curve_elbow_point(x0_values) + 1
+            elif self.eigen_vectors_number_selection is "auto_excitability":
+                self.eigen_vectors_number = self.get_curve_elbow_point(x0_values) + 1
 
-        return eigen_vectors_number
+            else:
+                raise ValueError("\n" + self.eigen_vectors_number_selection +
+                                 "is not a valid option when for automatic computation of self.eigen_vectors_number")
+        else:
+            self.eigen_vectors_number_selection = "user_defined"
 
     def _compute_jacobian(self, model_configuration, weights):
         fz_jacobian = calc_fz_jac_square_taylor(model_configuration.zEQ, model_configuration.yc,
@@ -54,7 +74,10 @@ class LSAService(object):
 
         return fz_jacobian
 
-    def run_lsa(self, disease_hypothesis, model_configuration, eigen_vectors_number=None):
+    def run_lsa(self, disease_hypothesis, model_configuration, eigen_vectors_number=None,
+                weighted_eigenvector_sum=WEIGHTED_EIGENVECTOR_SUM):
+        self.weighted_eigenvector_sum = weighted_eigenvector_sum
+        self.eigen_vectors_number = eigen_vectors_number
 
         jacobian = self._compute_jacobian(model_configuration, disease_hypothesis.get_weights())
 
@@ -65,21 +88,22 @@ class LSAService(object):
         self.eigen_values = eigen_values[sorted_indices]
         self.eigen_vectors = eigen_vectors[:, sorted_indices]
 
-        # Calculate the propagation strength index by summing all eigenvectors
-        propagation_strength_all = numpy.abs(numpy.sum(self.eigen_vectors, axis=1))
-        propagation_strength_all /= numpy.max(propagation_strength_all)
+        self._ensure_eigen_vectors_number(self.eigen_values, model_configuration.E_values,
+                                          model_configuration.x0_values, disease_hypothesis.get_regions_disease_indices)
 
-        eigen_vectors_number = self._ensure_eigen_vectors_number(eigen_vectors_number, self.eigen_values,
-                                                                 model_configuration.E_values,
-                                                                 model_configuration.x0_values)
-
-        if eigen_vectors_number == disease_hypothesis.get_number_of_regions():
-            lsa_propagation_strength = propagation_strength_all
+        if self.eigen_vectors_number == disease_hypothesis.get_number_of_regions():
+            # Calculate the propagation strength index by summing all eigenvectors
+            lsa_propagation_strength = numpy.abs(numpy.sum(self.eigen_vectors, axis=1))
+            lsa_propagation_strength /= numpy.max(lsa_propagation_strength)
 
         else:
-            sorted_indices = max(eigen_vectors_number, 1)
+            sorted_indices = max(self.eigen_vectors_number, 1)
             # Calculate the propagation strength index by summing the first n eigenvectors (minimum 1)
-            lsa_propagation_strength = numpy.abs(numpy.sum(self.eigen_vectors[:, :sorted_indices], axis=1))
+            if self.weighted_eigenvector_sum:
+                lsa_propagation_strength = numpy.abs(weighted_vector_sum(self.eigen_values[:sorted_indices],
+                                                           self.eigen_vectors[:, :sorted_indices], normalize=True))
+            else:
+                lsa_propagation_strength = numpy.abs(numpy.sum(self.eigen_vectors[:, :sorted_indices], axis=1))
             lsa_propagation_strength /= numpy.max(lsa_propagation_strength)
 
 

@@ -336,54 +336,90 @@ def plot_nullclines_eq(model_configuration, region_labels, special_idx=None, mod
         if len(fig.get_label())==0:
             fig.set_label(figure_name)
         else:
-            figure_name = fig.get_label().replace(" ", "_").replace("\t", "_")
+            figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
         _save_figure(figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
     _check_show(show_flag)
 
 
-def plot_hypothesis_equilibrium_and_lsa(hypothesis, model_configuration, figure_name='', show_flag=False,
-                    save_flag=True, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
-    fig = mp.pyplot.figure('Hypothesis ' + hypothesis.name, frameon=False, figsize=figsize)
+def plot_hypothesis_model_configuration_and_lsa(hypothesis, model_configuration, n_eig=None,
+                                                weighted_eigenvector_sum=None,
+                                                figure_name='', show_flag=False, save_flag=True,
+                                                figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
+                                                figsize=VERY_LARGE_SIZE):
+    fig = mp.pyplot.figure(hypothesis.name + ": Overview", frameon=False, figsize=figsize)
     mp.gridspec.GridSpec(1, 7, width_ratios=[1, 1, 1, 1, 1, 2, 1])
 
-    seizure_indices = hypothesis.get_seizure_indices(0)
-
     ax0 = _plot_vector(model_configuration.x0_values, hypothesis.get_region_labels(), 171, 'Excitabilities x0',
-                       show_y_labels=False, indices_red=seizure_indices)
+                       show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices())
 
     _plot_vector(model_configuration.E_values, hypothesis.get_region_labels(), 172, 'Epileptogenicities E',
-                 show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
+                 show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
 
     _plot_vector(model_configuration.x1EQ, hypothesis.get_region_labels(), 173, 'x1 Equilibria',
-                 show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
+                 show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
 
     _plot_vector(model_configuration.zEQ, hypothesis.get_region_labels(), 174, 'z Equilibria',
-                 show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
+                 show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
 
     _plot_vector(model_configuration.Ceq, hypothesis.get_region_labels(), 175, 'Total afferent coupling \n at equilibrium',
-                 show_y_labels=False, indices_red=seizure_indices, sharey=ax0)
+                 show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
 
-    seizure_and_propagation_indices = numpy.unique(numpy.r_[seizure_indices, hypothesis.propagation_indices])
+    seizure_and_propagation_indices = numpy.unique(numpy.r_[hypothesis.get_regions_disease_indices(),
+                                                            hypothesis.propagation_indices])
 
-    if len(hypothesis.x0_indices) > 0:
+    if len(seizure_and_propagation_indices) > 0:
         _plot_regions2regions(hypothesis.get_weights(), hypothesis.get_region_labels(), 176,
                               'Afferent connectivity \n from seizuring regions',
                               show_y_labels=False, show_x_labels=True,
                               indices_red_x=seizure_and_propagation_indices, sharey=ax0)
 
     if hypothesis.propagation_strenghts is not None:
-        _plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(), 177,
-                     "LSA Propagation Strength:" + "\nabsolut sum of eigenvectors",
+        title = "LSA Propagation Strength:\nabsolut "
+        if weighted_eigenvector_sum:
+            title += "eigenvalue-weighted "
+        title += "sum of first "
+        if n_eig is not None:
+            title += str(n_eig) + " "
+        title += "eigenvectors"
+        _plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(), 177, title,
                      show_y_labels=False, indices_red=seizure_and_propagation_indices, sharey=ax0)
 
-    _set_axis_labels(fig, 121, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(), seizure_and_propagation_indices, 'r')
-    _set_axis_labels(fig, 122, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(), seizure_and_propagation_indices, 'r', 'right')
+    _set_axis_labels(fig, 121, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(),
+                     hypothesis.get_regions_disease_indices(), 'r')
+    _set_axis_labels(fig, 122, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(),
+                     seizure_and_propagation_indices, 'r', 'right')
 
     if save_flag:
         if figure_name == '':
-            figure_name = fig.get_label()
+            figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
         _save_figure(figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
     _check_show(show_flag)
+
+
+    plot_nullclines_eq(model_configuration, hypothesis.get_region_labels(),
+                       special_idx=seizure_and_propagation_indices, model="2d", zmode=numpy.array("lin"),
+                       figure_name=hypothesis.name + ': Nullclines and equilibria',
+                       show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format,
+                       figsize=figsize)
+
+    # plot_nullclines_eq(model_configuration, hypothesis.get_region_labels(),
+    #                    special_idx=seizure_and_propagation_indices, model="2d",
+    #                    zmode=numpy.array("sig"), figure_name='Nullclines and equilibria', show_flag=show_flag,
+    #                    save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format,
+    #                    figsize=figsize)
+    #
+    #
+    # plot_nullclines_eq(model_configuration, hypothesis.get_region_labels(),
+    #                    special_idx=seizure_and_propagation_indices,
+    #                    model="6d", zmode=numpy.array("lin"), figure_name='Nullclines and equilibria', show_flag=show_flag,
+    #                    save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format,
+    #                    figsize=figsize)
+    #
+    # plot_nullclines_eq(model_configuration, hypothesis.get_region_labels(),
+    #                    special_idx=seizure_and_propagation_indices,
+    #                    model="6d", zmode=numpy.array("sig"), figure_name='Nullclines and equilibria', show_flag=show_flag,
+    #                    save_flag=save_flag, figure_dir=figure_dir, figure_format=figure_format,
+    #                    figsize=figsize)
 
 
 def _set_axis_labels(fig, sub, n_regions, region_labels, indices2emphasize, color='k', position='left'):
@@ -450,7 +486,7 @@ def plot_timeseries(time, data_dict, special_idx=None, title='Time Series', show
         if len(fig.get_label())==0:
             fig.set_label(figure_name)
         else:
-            figure_name = fig.get_label().replace(" ", "_").replace("\t", "_")
+            figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
         _save_figure(figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
     _check_show(show_flag)
 
@@ -501,7 +537,7 @@ def plot_raster(time, data_dict, special_idx=None, title='Time Series', offset=3
         if len(fig.get_label())==0:
             fig.set_label(figure_name)
         else:
-            figure_name = fig.get_label().replace(" ", "_").replace("\t", "_")
+            figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
         _save_figure(figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
     _check_show(show_flag)
 
@@ -571,7 +607,7 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
         if len(fig.get_label())==0:
             fig.set_label(figure_name)
         else:
-            figure_name = fig.get_label().replace(" ", "_").replace("\t", "_")
+            figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
         _save_figure(figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
     _check_show(show_flag)
 
@@ -580,47 +616,47 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 
     if isinstance(model, EpileptorDP2D):
         plot_timeseries(res['time'], {'x1': res['x1'], 'z(t)': res['z']},
-                        seizure_indices, title=" Simulated TAVG for " + hyp_name,
+                        seizure_indices, title=hyp_name + ": Simulated TAVG",
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
     else:
         plot_timeseries(res['time'], {'LFP(t)': res['lfp'], 'z(t)': res['z']},
-                        seizure_indices, title=" Simulated LFP-z for " + hyp_name,
+                        seizure_indices, title=hyp_name + ": Simulated LFP-z",
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
         plot_timeseries(res['time'], {'x1(t)': res['x1'], 'y1(t)': res['y1']},
-                        seizure_indices, title=" Simulated pop1 for " + hyp_name,
+                        seizure_indices, title=hyp_name + ": Simulated pop1",
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
         plot_timeseries(res['time'], {'x2(t)': res['x2'], 'y2(t)': res['y2'], 'g(t)': res['g']}, seizure_indices,
-                        title=" Simulated pop2-g for " + hyp_name,
+                        title=hyp_name + ": Simulated pop2-g",
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
         start_plot = int(numpy.round(0.01 * res['lfp'].shape[0]))
         plot_raster(res['time'][start_plot:], {'lfp': res['lfp'][start_plot:, :]}, seizure_indices,
-                    title=" Simulated LFP rasterplot for " + hyp_name, offset=10.0,
+                    title=hyp_name + ": Simulated LFP rasterplot", offset=10.0,
                     save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
                     labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
 
     if isinstance(model, EpileptorDPrealistic):
         plot_timeseries(res['time'], {'1/(1+exp(-10(z-3.03))': 1 / (1 + numpy.exp(-10 * (res['z'] - 3.03))),
                                       'slope': res['slopeTS'], 'Iext2': res['Iext2ts']},
-                        seizure_indices, title=" Simulated controlled parameters for " + hyp_name,
+                        seizure_indices, title=hyp_name + ": Simulated controlled parameters",
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
         plot_timeseries(res['time'], {'x0': res['x0ts'], 'Iext1':  res['Iext1ts'] , 'K': res['Kts']},
-                        seizure_indices, title=" Simulated parameters for " + hyp_name,
+                        seizure_indices, title=hyp_name + ": Simulated parameters",
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
 
     for i in range(len(sensorsSEEG)):
         start_plot = int(numpy.round(0.01*res['seeg'+str(i)].shape[0]))
         plot_raster(res['time'][start_plot:], {'SEEG': res['seeg'+str(i)][start_plot:, :]},
-                    title=" Simulated SEEG" + str(i) + " raster plot for " + hyp_name,
+                    title=hyp_name + ": Simulated SEEG" + str(i) + " raster plot",
                     offset=10.0, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
                     labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
         if hpf_flag:
             plot_raster(res['time'][start_plot:], {'SEEG hpf': res['seeg_hpf' + str(i)][start_plot:, :]},
-                        title=" Simulated high pass filtered SEEG" + str(i) + " raster plot for " + hyp_name,
+                        title=hyp_name + ": Simulated high pass filtered SEEG" + str(i) + " raster plot",
                         offset=10.0, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
                         labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
