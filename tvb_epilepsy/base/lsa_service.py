@@ -25,12 +25,12 @@ LOG = get_logger(__name__)
 
 class LSAService(object):
 
-    def __init__(self, eigen_vectors_number_selection=EIGENVECTORS_NUMBER_SELECTION,
+    def __init__(self, eigen_vectors_number_selection=EIGENVECTORS_NUMBER_SELECTION, eigen_vectors_number=None,
                  weighted_eigenvector_sum=WEIGHTED_EIGENVECTOR_SUM):
         self.eigen_vectors_number_selection = eigen_vectors_number_selection
         self.eigen_values = []
         self.eigen_vectors = []
-        self.eigen_vectors_number = None
+        self.eigen_vectors_number = eigen_vectors_number
         self.weighted_eigenvector_sum=weighted_eigenvector_sum
 
     def __repr__(self):
@@ -74,10 +74,7 @@ class LSAService(object):
 
         return fz_jacobian
 
-    def run_lsa(self, disease_hypothesis, model_configuration, eigen_vectors_number=None,
-                weighted_eigenvector_sum=WEIGHTED_EIGENVECTOR_SUM):
-        self.weighted_eigenvector_sum = weighted_eigenvector_sum
-        self.eigen_vectors_number = eigen_vectors_number
+    def run_lsa(self, disease_hypothesis, model_configuration):
 
         jacobian = self._compute_jacobian(model_configuration, disease_hypothesis.get_weights())
 
