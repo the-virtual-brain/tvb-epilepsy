@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
     # This is an example of x0 Epileptogenicity Hypothesis:
     hyp_E = DiseaseHypothesis(head.connectivity, numpy.array(disease_values), [], disease_indices, [], [],
-                              "Excitability", "Epileptogenicity_Hypothesis")
+                              "Epileptogenicity", "Epileptogenicity_Hypothesis")
 
     if len(E_indices) > 0:
         # This is an example of x0 mixed Excitability and Epileptogenicity Hypothesis:
@@ -168,15 +168,16 @@ if __name__ == "__main__":
 
     for hyp in hypotheses:
         model_configuration_service = ModelConfigurationService()
-        model_configuration = model_configuration_service.configure_model_from_hypothesis(hyp)
+        if hyp.type == "Epileptogenicity":
+            model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hyp)
+        else:
+            model_configuration = model_configuration_service.configure_model_from_hypothesis(hyp)
 
-        lsa_service = LSAService()
-        lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration, eigen_vectors_number=None,
-                                             weighted_eigenvector_sum=True)
+        lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
+        lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
 
         plot_hypothesis_model_configuration_and_lsa(lsa_hypothesis, model_configuration,
-                                                    n_eig=lsa_service.eigen_vectors_number,
-                                                    weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum)
+                                                    n_eig=lsa_service.eigen_vectors_number)
 
         # write_h5_model(hyp.prepare_for_h5(), folder_name=FOLDER_RES, file_name=hyp.name + ".h5")
         write_h5_model(lsa_hypothesis.prepare_for_h5(), folder_name=FOLDER_RES, file_name=lsa_hypothesis.name + ".h5")
