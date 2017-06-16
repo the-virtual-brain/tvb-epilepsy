@@ -8,7 +8,7 @@ import numpy
 
 from tvb_epilepsy.base.h5_model import prepare_for_h5
 from tvb_epilepsy.base.constants import FOLDER_RES, FOLDER_FIGURES, SAVE_FLAG, SHOW_FLAG, SIMULATION_MODE, \
-    TVB, DATA_MODE, VOIS, DATA_CUSTOM
+    TVB, DATA_MODE, VOIS, DATA_CUSTOM, X0_DEF, E_DEF
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.base.lsa_service import LSAService
@@ -31,7 +31,7 @@ else:
 
 
 def prepare_vois_ts_dict(vois):
-    # Pack results into a dictionary, high pass filter, and compute SEEG
+    # Pack results into a dictionary:
     vois_ts_dict = dict()
     for idx_voi, voi in enumerate(vois):
         vois_ts_dict[voi] = tavg_data[:, idx_voi, :].astype('f')
@@ -40,6 +40,7 @@ def prepare_vois_ts_dict(vois):
 
 
 def prepare_ts_and_seeg_h5_file(hyp_name, model, projections, vois_ts_dict, hpf_flag, hpf_low, hpf_high, fsAVG, dt):
+    # High pass filter, and compute SEEG:
     if isinstance(model, EpileptorDP2D):
         raw_data = numpy.dstack(
             [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x1"]])
@@ -65,7 +66,7 @@ def prepare_ts_and_seeg_h5_file(hyp_name, model, projections, vois_ts_dict, hpf_
                     vois_ts_dict['seeg_hpf%d' % i][:, i] = filter_data(
                         vois_ts_dict['seeg%d' % i][:, i], hpf_low, hpf_high,
                         fsAVG)
-
+    # Write files:
     write_ts_epi(raw_data, dt, lfp_data, path=os.path.join(FOLDER_RES, hyp_name + "_ep_ts.h5"))
 
     for i in range(len(projections)):
@@ -87,20 +88,46 @@ if __name__ == "__main__":
 
     # --------------------------Hypothesis definition-----------------------------------
 
+    # Manual definition of hypothesis:
     x0_indices = [20]
     x0_values = [0.9]
     E_indices = [70]
     E_values = [0.9]
+    disease_values = x0_values + E_values
 
-    # This is an example of x0 Hypothesis
-    hyp_x0 = DiseaseHypothesis(head.connectivity, numpy.array(x0_values + E_values), x0_indices, [], [], [],
+    # Reading a custom file:
+    ep_name = "ep_test1"
+    FOLDER_RES = os.path.join(data_folder, 'ep_test1')
+    from tvb_epilepsy.custom.readers_custom import CustomReader
+    if not isinstance(reader, CustomReader):
+        reader = CustomReader()
+    disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
+    disease_indices, = numpy.where(disease_values > numpy.min([X0_DEF, E_DEF]))
+    disease_values = disease_values[disease_indices]
+    if disease_values.size > 1:
+        inds_split = numpy.ceil(disease_values.size * 1.0 / 2).astype("int")
+        x0_indices = disease_indices[:inds_split].tolist()
+        E_indices = disease_indices[inds_split+1:].tolist()
+    else:
+        x0_indices = disease_indices.tolist()
+        E_indices = []
+    disease_indices = list(disease_indices)
+
+    # This is an example of Excitability Hypothesis:
+    hyp_x0 = DiseaseHypothesis(head.connectivity, numpy.array(disease_values), disease_indices, [], [], [],
                                "Excitability", "Excitability_Hypothesis")
-    hyp_E = DiseaseHypothesis(head.connectivity, numpy.array(E_values), [], E_indices, [], [],
-                              "Excitability", "Epileptogenicity_Hypothesis")
-    hyp_x0_E = DiseaseHypothesis(head.connectivity, numpy.array(x0_values + E_values), x0_indices, E_indices, [], [],
-                                 "Excitability", "Mixed_x0_E_Hypothesis")
 
-    all_regions_one = numpy.ones((hyp_x0.get_number_of_regions(),), dtype=numpy.float32)
+    # This is an example of x0 Epileptogenicity Hypothesis:
+    hyp_E = DiseaseHypothesis(head.connectivity, numpy.array(disease_values), [], disease_indices, [], [],
+                              "Excitability", "Epileptogenicity_Hypothesis")
+
+    if len(E_indices) > 0:
+        # This is an example of x0 mixed Excitability and Epileptogenicity Hypothesis:
+        hyp_x0_E = DiseaseHypothesis(head.connectivity, numpy.array(disease_values), x0_indices, E_indices, [], [],
+                                     "Excitability", "Mixed_x0_E_Hypothesis")
+        hypotheses = (hyp_x0, hyp_E, hyp_x0_E)
+    else:
+        hypotheses = (hyp_x0, hyp_E)
 
     # --------------------------Projections computations-----------------------------------
 
@@ -139,7 +166,7 @@ if __name__ == "__main__":
 
     # --------------------------Hypothesis and LSA-----------------------------------
 
-    for hyp in (hyp_x0, hyp_E, hyp_x0_E):
+    for hyp in hypotheses:
         model_configuration_service = ModelConfigurationService()
         model_configuration = model_configuration_service.configure_model_from_hypothesis(hyp)
 
