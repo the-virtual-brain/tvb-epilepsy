@@ -155,7 +155,7 @@ def _plot_regions2regions(adj, labels, subplot, title, show_y_labels=True, show_
         ax.set_yticklabels([])
 
     if show_x_labels:
-        ax.set_xticklabels(region_labels[indices_red_x], rotation=90, color=x_color)
+        ax.set_xticklabels(region_labels[indices_red_x], rotation=270, color=x_color)
     else:
         ax.set_xticklabels([])
 
@@ -350,10 +350,10 @@ def plot_hypothesis_model_configuration_and_lsa(hypothesis, model_configuration,
     mp.gridspec.GridSpec(1, 7, width_ratios=[1, 1, 1, 1, 1, 2, 1])
 
     ax0 = _plot_vector(model_configuration.x0_values, hypothesis.get_region_labels(), 171, 'Excitabilities x0',
-                       show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices())
+                       show_y_labels=False, indices_red=hypothesis.x0_indices)
 
     _plot_vector(model_configuration.E_values, hypothesis.get_region_labels(), 172, 'Epileptogenicities E',
-                 show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
+                 show_y_labels=False, indices_red=hypothesis.e_indices, sharey=ax0)
 
     _plot_vector(model_configuration.x1EQ, hypothesis.get_region_labels(), 173, 'x1 Equilibria',
                  show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
