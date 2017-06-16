@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     # Reading a custom file:
     ep_name = "ep_test1"
-    FOLDER_RES = os.path.join(data_folder, 'ep_test1')
+    FOLDER_RES = os.path.join(data_folder, ep_name)
     from tvb_epilepsy.custom.readers_custom import CustomReader
     if not isinstance(reader, CustomReader):
         reader = CustomReader()
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     if disease_values.size > 1:
         inds_split = numpy.ceil(disease_values.size * 1.0 / 2).astype("int")
         x0_indices = disease_indices[:inds_split].tolist()
-        E_indices = disease_indices[inds_split+1:].tolist()
+        E_indices = disease_indices[inds_split:].tolist()
     else:
         x0_indices = disease_indices.tolist()
         E_indices = []
