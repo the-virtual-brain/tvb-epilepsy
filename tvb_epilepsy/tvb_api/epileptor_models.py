@@ -8,7 +8,6 @@ from tvb.simulator.common import get_logger
 import tvb.datatypes.arrays as arrays
 import tvb.basic.traits.types_basic as basic
 from tvb.simulator.models import Model, Epileptor
-from tvb_epilepsy.base.calculations import calc_x0, calc_x0cr_r, calc_rescaled_x0
 
 LOG = get_logger(__name__)
 
@@ -226,7 +225,7 @@ class EpileptorDP(Model):
                  "y5": numpy.array([-1., 1.])},
         doc="n/a",
         order=16
-        )
+    )
 
     variables_of_interest = basic.Enumerate(
         label="Variables watched by Monitors",
@@ -240,7 +239,6 @@ class EpileptorDP(Model):
 
     _nvar = 6
     cvar = numpy.array([0, 3], dtype=numpy.int32)
-
 
     def dfun(self, state_variables, coupling, local_coupling=0.0,
              array=numpy.array, where=numpy.where, concat=numpy.concatenate):
@@ -300,27 +298,27 @@ class EpileptorDP(Model):
         c_pop1 = coupling[0, :]
         c_pop2 = coupling[1, :]
 
-        #TVB Epileptor in commented lines below
+        # TVB Epileptor in commented lines below
 
         # population 1
-        #if_ydot0 = - self.a * y[0] ** 2 + self.b * y[0]
-        if_ydot0 = -y[0]**2 + 3.0*y[0] #self.a=1.0, self.b=3.0
-        #else_ydot0 = self.slope - y[3] + 0.6 * (y[2] - 4.0) ** 2
-        else_ydot0 = self.slope - y[3] + 0.6 * (y[2]-4.0) ** 2
+        # if_ydot0 = - self.a * y[0] ** 2 + self.b * y[0]
+        if_ydot0 = -y[0] ** 2 + 3.0 * y[0]  # self.a=1.0, self.b=3.0
+        # else_ydot0 = self.slope - y[3] + 0.6 * (y[2] - 4.0) ** 2
+        else_ydot0 = self.slope - y[3] + 0.6 * (y[2] - 4.0) ** 2
         # ydot[0] = self.tt * (y[1] - y[2] + Iext + self.Kvf * c_pop1 + where(y[0] < 0., if_ydot0, else_ydot0) * y[0])
         ydot[0] = self.tau1 * (y[1] - y[2] + Iext1 + self.Kvf * c_pop1 + where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
         # ydot[1] = self.tt * (self.c - self.d * y[0] ** 2 - y[1])
-        ydot[1] = self.tau1 * (self.yc - 5.0 * y[0] ** 2 - y[1]) #self.d=5
+        ydot[1] = self.tau1 * (self.yc - 5.0 * y[0] ** 2 - y[1])  # self.d=5
 
         # energy
-        #if_ydot2 = - 0.1 * y[2] ** 7
+        # if_ydot2 = - 0.1 * y[2] ** 7
         if_ydot2 = - 0.1 * y[2] ** 7
-        #else_ydot2 = 0
+        # else_ydot2 = 0
         else_ydot2 = 0
 
         if self.zmode == 'lin':
             # self.r * (4 * (y[0] - self.x0) - y[2]      + where(y[2] < 0., if_ydot2, else_ydot2)
-            fz = 4*(y[0] - self.x0) + where(y[2] < 0., if_ydot2, else_ydot2)
+            fz = 4 * (y[0] - self.x0) + where(y[2] < 0., if_ydot2, else_ydot2)
 
         elif self.zmode == 'sig':
             fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.x0
@@ -338,13 +336,13 @@ class EpileptorDP(Model):
         # if_ydot4 = 0
         if_ydot4 = 0
         # else_ydot4 = self.aa * (y[3] + 0.25)
-        else_ydot4 = 6.0 * (y[3] + 0.25) #self.s = 6.0
+        else_ydot4 = 6.0 * (y[3] + 0.25)  # self.s = 6.0
         # ydot[4] = self.tt * ((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4)) / self.tau)
         ydot[4] = self.tau1 * ((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4)) / self.tau2)
 
         # filter
-        #ydot[5] = self.tt * (-0.01 * (y[5] - 0.1 * y[0]))
-        ydot[5] = self.tau1*(-0.01 * (y[5] - 0.1 * y[0]))
+        # ydot[5] = self.tt * (-0.01 * (y[5] - 0.1 * y[0]))
+        ydot[5] = self.tau1 * (-0.01 * (y[5] - 0.1 * y[0]))
 
         return ydot
 
@@ -352,7 +350,6 @@ class EpileptorDP(Model):
                  array=numpy.array, where=numpy.where, concat=numpy.concatenate):
 
         return None
-
 
 
 class EpileptorDPrealistic(Model):
@@ -461,12 +458,12 @@ class EpileptorDPrealistic(Model):
         default=numpy.array("lin"),
         doc="zmode = np.array(""lin"") for linear and numpy.array(""sig"") for sigmoidal z dynamics",
         order=-1)
-        
+
     pmode = arrays.FloatArray(
         label="pmode",
         default=numpy.array("const"),
         doc="pmode = numpy.array(""g""), numpy.array(""z""), numpy.array(""z*g"") or numpy.array(""const"") parameters following the g, z, z*g dynamics or staying constamt, respectively",
-        order=-1)   
+        order=-1)
 
 #    a = arrays.FloatArray(
 #        label="a",
@@ -569,20 +566,20 @@ class EpileptorDPrealistic(Model):
 
     state_variable_range = basic.Dict(
         label="State variable ranges [lo, hi]",
-        default={"y0": numpy.array([-2., 2.]), #x1
-                 "y1": numpy.array([-20., 2.]), #y1
-                 "y2": numpy.array([2.0, 20.0]), #z
-                 "y3": numpy.array([-2., 0.]), #x2
-                 "y4": numpy.array([0., 2.]), #y2
-                 "y5": numpy.array([-1., 1.]), #g
-                 "y6": numpy.array([-2, 2]), #x0
-                 "y7": numpy.array([-20., 6.]), #slope
-                 "y8": numpy.array([1.5, 5.]), #Iext1
-                 "y9": numpy.array([0., 1.]), #Iext2
-                 "y10": numpy.array([-50., 50.])},#K
+        default={"y0": numpy.array([-2., 2.]),  # x1
+                 "y1": numpy.array([-20., 2.]),  # y1
+                 "y2": numpy.array([2.0, 20.0]),  # z
+                 "y3": numpy.array([-2., 0.]),  # x2
+                 "y4": numpy.array([0., 2.]),  # y2
+                 "y5": numpy.array([-1., 1.]),  # g
+                 "y6": numpy.array([-2, 2]),  # x0
+                 "y7": numpy.array([-20., 6.]),  # slope
+                 "y8": numpy.array([1.5, 5.]),  # Iext1
+                 "y9": numpy.array([0., 1.]),  # Iext2
+                 "y10": numpy.array([-50., 50.])},  # K
         doc="n/a",
         order=16
-        )
+    )
 
     variables_of_interest = basic.Enumerate(
         label="Variables watched by Monitors",
@@ -602,12 +599,12 @@ class EpileptorDPrealistic(Model):
 
         from tvb_epilepsy.base.utils import linear_scaling
 
-        if (pmode == numpy.array(['g','z','z*g'])).any():
+        if (pmode == numpy.array(['g', 'z', 'z*g'])).any():
 
             if pmode == 'g':
-                xp = 1.0/ (1.0 + numpy.exp(1) ** (-10 * (g + 0.0)))
-                xp1 = 0#-0.175
-                xp2 = 1#0.025
+                xp = 1.0 / (1.0 + numpy.exp(1) ** (-10 * (g + 0.0)))
+                xp1 = 0  # -0.175
+                xp2 = 1  # 0.025
 
             elif pmode == 'z':
                 xp = 1.0 / (1.0 + numpy.exp(1) ** (-10 * (z - 3.00)))
@@ -619,7 +616,7 @@ class EpileptorDPrealistic(Model):
                 xp1 = -0.7
                 xp2 = 0.1
             slope_eq = linear_scaling(xp, xp1, xp2, 1.0, slope)
-            #slope_eq = self.slope
+            # slope_eq = self.slope
             Iext2_eq = linear_scaling(xp, xp1, xp2, 0.0, Iext2)
 
         else:
@@ -627,7 +624,7 @@ class EpileptorDPrealistic(Model):
             Iext2_eq = Iext2
 
         return slope_eq, Iext2_eq
-        
+
     def dfun(self, state_variables, coupling, local_coupling=0.0,
              array=numpy.array, where=numpy.where, concat=numpy.concatenate):
         r"""
@@ -682,9 +679,8 @@ class EpileptorDPrealistic(Model):
         y = state_variables
         ydot = numpy.empty_like(state_variables)
 
-
-        #To use later:
-        x0=y[6]
+        # To use later:
+        x0 = y[6]
         slope = y[7]
         Iext1 = y[8]
         Iext2 = y[9]
@@ -695,17 +691,17 @@ class EpileptorDPrealistic(Model):
         c_pop2 = coupling[1, :]
 
         # population 1
-        if_ydot0 = -y[0]**2 + 3.0*y[0] #self.a=1.0, self.b=3.0
-        else_ydot0 = slope - y[3] + 0.6*(y[2]-4.0)**2
+        if_ydot0 = -y[0] ** 2 + 3.0 * y[0]  # self.a=1.0, self.b=3.0
+        else_ydot0 = slope - y[3] + 0.6 * (y[2] - 4.0) ** 2
         ydot[0] = self.tau1 * (y[1] - y[2] + Iext1 + self.Kvf * c_pop1 + where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
-        ydot[1] = self.tau1 * (self.yc - 5.0 * y[0] ** 2 - y[1]) #self.d=5
+        ydot[1] = self.tau1 * (self.yc - 5.0 * y[0] ** 2 - y[1])  # self.d=5
 
         # energy
-        if_ydot2 = - 0.1*y[2]**7
+        if_ydot2 = - 0.1 * y[2] ** 7
         else_ydot2 = 0
 
         if self.zmode == 'lin':
-            fz = 4*(y[0] - x0) + where(y[2] < 0., if_ydot2, else_ydot2)
+            fz = 4 * (y[0] - x0) + where(y[2] < 0., if_ydot2, else_ydot2)
 
         elif self.zmode == 'sig':
             fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - x0
@@ -715,29 +711,28 @@ class EpileptorDPrealistic(Model):
         ydot[2] = self.tau1 * ((fz - y[2] + K * c_pop1) / self.tau0)
 
         # population 2
-        ydot[3] = self.tau1 * (-y[4] + y[3] - y[3] ** 3 + Iext2 + 2*y[5] - 0.3 * (y[2] - 3.5) + self.Kf * c_pop2)
+        ydot[3] = self.tau1 * (-y[4] + y[3] - y[3] ** 3 + Iext2 + 2 * y[5] - 0.3 * (y[2] - 3.5) + self.Kf * c_pop2)
         if_ydot4 = 0
-        else_ydot4 = 6.0 * (y[3] + 0.25) #self.s = 6.0
+        else_ydot4 = 6.0 * (y[3] + 0.25)  # self.s = 6.0
         ydot[4] = self.tau1 * ((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4)) / self.tau2)
 
         # filter
         ydot[5] = self.tau1 * (-0.01 * (y[5] - 0.1 * y[0]))
 
         slope_eq, Iext2_eq = self.fun_slope_Iext2(y[2], y[5], self.pmode, self.slope, self.Iext2)
-        
+
         # x0
         ydot[6] = self.tau1 * (-y[6] + self.x0)
         # slope
-        ydot[7] = 10 * self.tau1 * (-y[7] + slope_eq) #5*
+        ydot[7] = 10 * self.tau1 * (-y[7] + slope_eq)  # 5*
         # Iext1
         ydot[8] = self.tau1 * (-y[8] + self.Iext1) / self.tau0
         # Iext2
-        ydot[9] = 5 * self.tau1*(-y[9] + Iext2_eq)
+        ydot[9] = 5 * self.tau1 * (-y[9] + Iext2_eq)
         # K
-        ydot[10] = self.tau1*(-y[10] + self.K) / self.tau0
+        ydot[10] = self.tau1 * (-y[10] + self.K) / self.tau0
 
         return ydot
-
 
     def jacobian(self, state_variables, coupling, local_coupling=0.0,
                  array=numpy.array, where=numpy.where, concat=numpy.concatenate):
@@ -746,7 +741,6 @@ class EpileptorDPrealistic(Model):
 
 
 class EpileptorDP2D(Model):
-
     r"""
     The Epileptor 2D is a composite neural mass model of two dimensions which
     has been crafted to model the phenomenology of epileptic seizures in a
@@ -893,7 +887,7 @@ class EpileptorDP2D(Model):
     r = arrays.FloatArray(
         label="r",
         range=basic.Range(lo=0.0, hi=1.0, step=0.1),
-        default=numpy.array([43.0/108.0]),
+        default=numpy.array([43.0 / 108.0]),
         doc="Excitability parameter scaling",
         order=-1)
 
@@ -938,7 +932,7 @@ class EpileptorDP2D(Model):
                  "y1": numpy.array([-2.0, 5.0])},
         doc="n/a",
         order=16
-        )
+    )
 
     variables_of_interest = basic.Enumerate(
         label="Variables watched by Monitors",
@@ -1001,24 +995,25 @@ class EpileptorDP2D(Model):
         c_pop1 = coupling[0, :]
 
         # population 1
-        if_ydot0 = y[0] ** 2 + 2.0 * y[0] #self.a=1.0, self.b=-2.0
+        if_ydot0 = y[0] ** 2 + 2.0 * y[0]  # self.a=1.0, self.b=-2.0
         else_ydot0 = 5 * y[0] - 0.6 * (y[1] - 4.0) ** 2 - self.slope
-        ydot[0] = self.tau1 * (self.yc - y[1] + Iext1 + self.Kvf * c_pop1 - where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
+        ydot[0] = self.tau1 * (
+        self.yc - y[1] + Iext1 + self.Kvf * c_pop1 - where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
 
         # energy
         if_ydot1 = - 0.1 * y[1] ** 7
         else_ydot1 = 0
 
         if self.zmode == 'lin':
-            fz = 4 * (y[0] - self.r * self.x0 + self.x0cr) + where(y[1] < 0.0, if_ydot1, else_ydot1) #self.x0
+            fz = 4 * (y[0] - self.r * self.x0 + self.x0cr) + where(y[1] < 0.0, if_ydot1, else_ydot1)  # self.x0
 
         elif self.zmode == 'sig':
-            fz = 3.0 / (1.0 + numpy.exp(-10*(y[0] + 0.5))) - self.r * self.x0 + self.x0cr
+            fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.r * self.x0 + self.x0cr
 
         else:
             raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
 
-        ydot[1] = self.tau1*(fz - y[1] + self.K * c_pop1)/self.tau0
+        ydot[1] = self.tau1 * (fz - y[1] + self.K * c_pop1) / self.tau0
 
         return ydot
 
@@ -1087,66 +1082,3 @@ class EpileptorDP2D(Model):
     #         raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
     #
     #     return concat([numpy.hstack([jac_xx, jac_xz]),numpy.hstack([jac_zx, jac_zz])],axis=0)
-
-
-###
-# Build TVB Epileptor
-###
-
-
-def build_tvb_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], a=1.0, b=3.0, d=5.0, zmode="lin"):
-    x0_transformed = calc_rescaled_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1, a, b - d, zmode=zmode)
-    model_instance = Epileptor(x0=x0_transformed.flatten(), Iext=hypothesis.Iext1.flatten(),
-                               Ks=hypothesis.K.flatten(), c=hypothesis.yc.flatten(),
-                               variables_of_interest=variables_of_interest)
-    return model_instance
-
-
-###
-#Build EpileptorDP2D
-###
-
-def build_ep_2sv_model(hypothesis, variables_of_interest=["y0", "y1"], zmode=numpy.array("lin")):
-    if zmode == "lin" :
-        x0 = hypothesis.x0
-        x0cr = hypothesis.x0cr
-        r = hypothesis.rx0
-    elif zmode == "sig":
-        #Correct Ceq, x0cr, rx0 and x0 for sigmoidal fz(x1)
-        (x0cr, r) = calc_x0cr_r(hypothesis.yc, hypothesis.Iext1, zmode=zmode) #epileptor_model="2d",
-        x0 = calc_x0(hypothesis.x1EQ, hypothesis.zEQ, hypothesis.K, hypothesis.weights, x0cr, r, model="2d", zmode=zmode)
-    else:
-        raise ValueError('zmode is neither "lin" nor "sig"')
-    model = EpileptorDP2D(x0=x0.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.yc.T, r=r.T, x0cr=x0cr.T,
-                          variables_of_interest=variables_of_interest, zmode=zmode)
-    return model
-
-
-###
-# Build EpileptorDP
-###
-
-def build_ep_6sv_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmode=numpy.array("lin")):
-    #Correct x0 for 6D model
-    x0_transformed = calc_rescaled_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1)
-    model = EpileptorDP(x0=x0_transformed.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.yc.T,
-                        variables_of_interest=variables_of_interest, zmode=zmode)
-    return model
-
-
-###
-# Build EpileptorDPrealistic
-###
-
-def build_ep_11sv_model(hypothesis, variables_of_interest=["y3 - y0", "y2"], zmode=numpy.array("lin"),
-                        pmode=numpy.array("const")):
-    x0_transformed = calc_rescaled_x0(hypothesis.x0, hypothesis.yc, hypothesis.Iext1)
-    model = EpileptorDPrealistic(x0=x0_transformed.T, Iext1=hypothesis.Iext1.T, K=hypothesis.K.T, yc=hypothesis.yc.T,
-                                 variables_of_interest=variables_of_interest, zmode=zmode)
-    return model
-
-# Model creator functions dictionary
-model_build_dict = {"Epileptor": build_tvb_model,
-                    "EpileptorDP": build_ep_6sv_model,
-                    "EpileptorDPrealistic": build_ep_11sv_model,
-                    "EpileptorDP2D": build_ep_2sv_model}

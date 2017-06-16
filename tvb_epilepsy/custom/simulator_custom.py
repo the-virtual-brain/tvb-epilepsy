@@ -51,14 +51,14 @@ class EpileptorParams(object):
 
 
 class EpileptorModel(object):
+    _ui_name = "CustomEpileptor"
+
     def __init__(self, a=1.0, b=3.0, c=1.0, d=5.0, aa=6.0, r=0.00035, kvf=0.0, kf=0.0, ks=1.5, tau=10.0, iext=3.1,
-                 iext2=0.45, slope=0.0, x0=-2.1, tt=1.0, n_regions=88):
+                 iext2=0.45, slope=0.0, x0=-2.1, tt=1.0):
         a, b, c, d, aa, r, kvf, kf, ks, tau, iext, iext2, slope, x0, tt = \
             assert_arrays([a, b, c, d, aa, r, kvf, kf, ks, tau, iext, iext2, slope, x0, tt])
         # TODO: add desired shape as argument in assert_arrays
-        self._ui_name = "CustomEpileptor"
         self.nvar = 6
-        self.n_regions = n_regions
         self.a = a
         self.b = b
         self.c = c
@@ -74,11 +74,10 @@ class EpileptorModel(object):
         self.slope = slope
         self.x0 = x0
         self.tt = tt
-        self.dfun = []
 
 
 class FullConfiguration(object):
-    def __init__(self, name="FromPython", connectivity_path="Connectivity.h5", epileptor_paramses=[],
+    def __init__(self, name="full-configuration", connectivity_path="Connectivity.h5", epileptor_paramses=[],
                  settings=Settings(), initial_states=None, initial_states_shape=None):
         self.configurationName = name
         self.connectivityPath = connectivity_path
@@ -100,17 +99,13 @@ class SimulatorCustom(ABCSimulator):
     To run a simulation, we can also open a GUI and import the resulted JSON file.
     """
 
-    def __init__(self, hypothesis, model, head_path, json_config_file, head_connectivity_path="Connectivity.h5",
-                 results_path=[]):
-        self.hypothesis = hypothesis
+    json_custom_config_file = "SimulationConfiguration.json"
+
+    def __init__(self, model, simulation_settings, model_configuration, connectivity):
         self.model = model
-        self.head_path = head_path
-        self.head_connectivity_path = os.path.join(self.head_path, head_connectivity_path)
-        self.json_config_file = json_config_file
-        if len(results_path) == 0:
-            self.results_path = os.path.join(self.head_path, self.hypothesis.name, "_ts.h5")
-        else:
-            self.results_path = results_path
+        self.simulation_settings = simulation_settings
+        self.model_configuration = model_configuration
+        self.connectivity = connectivity
 
     @staticmethod
     def _save_serialized(ep_full_config, result_path):
@@ -119,50 +114,42 @@ class SimulatorCustom(ABCSimulator):
         result_file.write(json_text)
         result_file.close()
 
-    def config_simulation(self, settings=SimulationSettings()):
+    def config_simulation(self):
 
-        ep_settings = Settings(settings.integration_step, settings.noise_seed, settings.noise_intensity,
-                               settings.simulated_period, settings.monitor_sampling_period)
+        ep_settings = Settings(self.simulation_settings.integration_step, self.simulation_settings.noise_seed,
+                               self.simulation_settings.noise_intensity, self.simulation_settings.simulated_period,
+                               self.simulation_settings.monitor_sampling_period)
+
+        json_model = self.prepare_epileptor_model_for_json(self.connectivity.number_of_regions)
 
         # TODO: history length has to be computed given the time delays (i.e., the tract lengts...)
         # history_length = ...
-        initial_conditions = self.prepare_initial_conditions(self.hypothesis, history_length=1)
+        initial_conditions = self.prepare_initial_conditions(history_length=1)
 
-        self.ep_config = FullConfiguration(self.hypothesis.name, self.head_connectivity_path,
-                                           self.prepare_epileptor_model_for_json(self.model.n_regions), ep_settings,
-                                           initial_conditions.flatten(),
-                                           numpy.array(initial_conditions.shape))
+        self.custom_config = FullConfiguration(connectivity_path=self.connectivity.file_path,
+                                               epileptor_paramses=json_model, settings=ep_settings,
+                                               initial_states=initial_conditions.flatten(),
+                                               initial_states_shape=numpy.array(initial_conditions.shape))
 
-        self.json_config_path = os.path.join(self.head_path, self.json_config_file)
-        self._save_serialized(self.ep_config, self.json_config_path)
+        self.head_path = os.path.dirname(self.connectivity.file_path)
+        self.json_config_path = os.path.join(self.head_path, self.json_custom_config_file)
+        self._save_serialized(self.custom_config, self.json_config_path)
 
-        self.ep_settings = ep_settings
-
-        return ep_settings
-
-    def launch_simulation(self, return_output=False):
-
-        hypothesis_file = os.path.join(self.head_path, self.json_config_file)
+    def launch_simulation(self, n_report_blocks=0):
         opts = "/usr/bin/java -Dncsa.hdf.hdf5lib.H5.hdf5lib=" + os.path.join(LIB_PATH, HDF5_LIB) + " " + \
                "-Djava.library.path=" + LIB_PATH + " " + "-cp" + " " + JAR_PATH + " " + \
-               JAVA_MAIN_SIM + " " + hypothesis_file + " " + self.head_path
+               JAVA_MAIN_SIM + " " + self.json_config_path + " " + self.head_path
 
-        try:
-            status = subprocess.call(opts, shell=True)
-            print status
+        # try:
+        status = subprocess.call(opts, shell=True)
+        print status
 
-        except:
-            status = False
+        # except:
+        #     status = False
+        #     warnings.warn("Something went wrong with this simulation...")
 
-        if not(status):
-            warnings.warn("Something went wrong with this simulation...")
-
-        if return_output:
-            time, data = read_ts(self.results_path, data="data")
-            return time, data, status
-
-        else:
-            return None, None, status
+        time, data = read_ts(os.path.join(self.head_path, "full-configuration", "ts.h5"), data="data")
+        return time, data, status
 
     # def launch_pse(self, hypothesis, head, vep_settings=SimulationSettings()):
     #     raise NotImplementedError()
@@ -179,52 +166,50 @@ class SimulatorCustom(ABCSimulator):
 
         return epileptor_params_list
 
-    def prepare_for_h5(self, settings, monitor_expressions, variables_names):
-        settings_h5_model = prepare_for_h5(settings)
+    def prepare_for_h5(self):
+        settings_h5_model = prepare_for_h5(self.simulation_settings)
         epileptor_model_h5_model = prepare_for_h5(self.model)
 
         epileptor_model_h5_model.append(settings_h5_model)
         epileptor_model_h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
 
-        epileptor_model_h5_model.add_or_update_metadata_attribute("Monitor expressions", monitor_expressions)
-        epileptor_model_h5_model.add_or_update_metadata_attribute("Variables names", variables_names)
+        epileptor_model_h5_model.add_or_update_metadata_attribute("Monitor expressions",
+                                                                  self.simulation_settings.monitor_expressions)
+        epileptor_model_h5_model.add_or_update_metadata_attribute("Variables names",
+                                                                  self.simulation_settings.variables_names)
 
         return epileptor_model_h5_model
 
-    def configure_model(self, hypothesis=None, **kwargs):
+    def configure_model(self, **kwargs):
+        self.model = custom_model_builder(self.model_configuration, **kwargs)
 
-        if hypothesis is None:
-            hypothesis = self.hypothesis
-
-        self.model = custom_model_builder(hypothesis, **kwargs)
-
-    def conifigure_initial_conditions(self, initial_conditions=None):
+    def configure_initial_conditions(self, initial_conditions=None):
 
         if isinstance(initial_conditions, numpy.ndarray):
             self.initial_conditions = initial_conditions
 
         else:
-            # TODO: have a function to calculate the correct history lenght when we have time delays
-            self.initial_conditions = self.prepare_initial_conditions(self.hypothesis, history_length=1)
+            # TODO: have a function to calculate the correct history length when we have time delays
+            self.initial_conditions = self.prepare_initial_conditions(history_length=1)
+
 
 # Some helper functions for model and simulator construction
-
-def custom_model_builder(hypothesis, a=1.0, b=3.0, d=5.0):
-    x0 = calc_rescaled_x0(hypothesis.x0.flatten(), hypothesis.yc.flatten(), hypothesis.Iext1.flatten(), a, b - d)
-    model = EpileptorModel(a=a, b=b, d=d, x0=x0, iext=hypothesis.Iext1.flatten(), ks=hypothesis.K.flatten(),
-                           c=hypothesis.yc.flatten(), n_regions=hypothesis.n_regions)
+def custom_model_builder(model_configuration, a=1.0, b=3.0, d=5.0):
+    x0 = calc_rescaled_x0(model_configuration.x0_values.flatten(), model_configuration.yc.flatten(),
+                          model_configuration.Iext1.flatten(), a, b - d)
+    model = EpileptorModel(a=a, b=b, d=d, x0=x0, iext=model_configuration.Iext1.flatten(),
+                           ks=model_configuration.K.flatten(),
+                           c=model_configuration.yc.flatten())
 
     return model
 
 
-def setup_simulation(hypothesis, head_path, dt, sim_length, monitor_period, scale_time=1,
-                     noise_intensity=None, variables_names=None):
+def setup_simulation(model_configuration, connectivity, dt, sim_length, monitor_period, model_name, scale_time=1,
+                     noise_intensity=None):
+    if model_name != EpileptorModel._ui_name:
+        print "You can use only " + EpileptorModel._ui_name + "for custom simulations!"
 
-    simulator_instance = SimulatorCustom(hypothesis, custom_model_builder(hypothesis), head_path,
-                                         hypothesis.name + ".json")
-
-    if variables_names is None:
-        variables_names = ['x1', 'z', 'x2']
+    model = custom_model_builder(model_configuration)
 
     if noise_intensity is None:
         noise_intensity = 0  # numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.])
@@ -232,7 +217,8 @@ def setup_simulation(hypothesis, head_path, dt, sim_length, monitor_period, scal
     settings = SimulationSettings(simulated_period=sim_length, integration_step=dt,
                                   scale_time=scale_time,
                                   noise_intensity=noise_intensity,
-                                  monitor_sampling_period=monitor_period,
-                                  variables_names=variables_names)
+                                  monitor_sampling_period=monitor_period)
 
-    return simulator_instance, settings, variables_names
+    simulator_instance = SimulatorCustom(model, settings, model_configuration, connectivity)
+
+    return simulator_instance

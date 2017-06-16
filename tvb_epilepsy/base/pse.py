@@ -5,7 +5,7 @@ Mechanism for parameter search exploration for LSA and simulations (it will have
 import subprocess
 import warnings
 import numpy
-from tvb_epilepsy.base.constants import DEF_EIGENVECTORS_NUMBER
+from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION
 from tvb_epilepsy.base.simulators import ABCSimulator
 from tvb_epilepsy.base.hypothesis import Hypothesis
 # from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
@@ -35,7 +35,7 @@ def hypo_out_fun(hypothesis, **kwargs):
 
 
 def hypo_run_fun(hypothesis, param_names, param_values, param_indexes, out_fun=hypo_out_fun, seizure_indices=[],
-                 n_eigenvectors=DEF_EIGENVECTORS_NUMBER):
+                 n_eigenvectors=EIGENVECTORS_NUMBER_SELECTION):
 
     try:
         iE = []
@@ -79,7 +79,7 @@ def sim_out_fun(simulator, time, data, **kwargs):
 
 def sim_run_fun(simulator, param_names, param_values, param_indexes, out_fun=sim_out_fun, hypothesis_update=True,
                 model_update=True, initial_conditions_update=True, seizure_indices=[],
-                n_eigenvectors=DEF_EIGENVECTORS_NUMBER):
+                n_eigenvectors=EIGENVECTORS_NUMBER_SELECTION):
 
     try:
 
@@ -157,6 +157,7 @@ class PSE(object):
 
         if task is "LSA":
 
+            # TODO: this will not work anymore
             if isinstance(hypothesis, Hypothesis):
                 self.pse_object = hypothesis
 

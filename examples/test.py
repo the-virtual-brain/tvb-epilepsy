@@ -8,6 +8,6 @@ if __name__ == "__main__":
 
     ion()
 
-    elbow = curve_elbow_point(v, interactive=True)
+    elbow = curve_elbow_point(v)
 
     print elbow, v[:elbow+1]

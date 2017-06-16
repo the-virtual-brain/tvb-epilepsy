@@ -2,6 +2,7 @@
 Read VEP related entities from custom format and data-structures
 """
 
+import warnings
 import os
 import h5py
 from tvb_epilepsy.base.model_vep import Connectivity, Surface, Sensors, Head
@@ -10,9 +11,8 @@ from tvb_epilepsy.base.utils import calculate_projection, initialize_logger
 
 
 class CustomReader(ABCReader):
-
     LOG = initialize_logger(__name__)
-    
+
     def read_connectivity(self, h5_path):
         """
         :param h5_path: Path towards a custom Connectivity H5 file
@@ -26,23 +26,27 @@ class CustomReader(ABCReader):
 
         weights = h5_file['/weights'][()]
         tract_lengths = h5_file['/tract_lengths'][()]
-        #TODO: should change to English centers than French centres!
+        # TODO: should change to English centers than French centres!
         region_centers = h5_file['/centres'][()]
         region_labels = h5_file['/region_labels'][()]
         orientations = h5_file['/orientations'][()]
         hemispheres = h5_file['/hemispheres'][()]
 
         h5_file.close()
-        return Connectivity(weights, tract_lengths, region_labels, region_centers, hemispheres, orientations)
+        return Connectivity(h5_path, weights, tract_lengths, region_labels, region_centers, hemispheres, orientations)
 
     def read_cortical_surface(self, h5_path):
-        self.LOG.info("Reading Surface from " + h5_path)
-        h5_file = h5py.File(h5_path, 'r', libver='latest')
-        vertices = h5_file['/vertices'][()]
-        triangles = h5_file['/triangles'][()]
-        vertex_normals = h5_file['/vertex_normals'][()]
-        h5_file.close()
-        return Surface(vertices, triangles, vertex_normals)
+        if os.path.isfile(h5_path):
+            self.LOG.info("Reading Surface from " + h5_path)
+            h5_file = h5py.File(h5_path, 'r', libver='latest')
+            vertices = h5_file['/vertices'][()]
+            triangles = h5_file['/triangles'][()]
+            vertex_normals = h5_file['/vertex_normals'][()]
+            h5_file.close()
+            return Surface(vertices, triangles, vertex_normals)
+        else:
+            warnings.warn("\nNo Cortical Surface file found at path " + h5_path + "!")
+            return []
 
     def _read_data_field(self, h5_path):
         self.LOG.info("Reading 'data' from H5 " + h5_path)
@@ -52,23 +56,39 @@ class CustomReader(ABCReader):
         return data
 
     def read_region_mapping(self, h5_path):
-        return self._read_data_field(h5_path)
+        if os.path.isfile(h5_path):
+            return self._read_data_field(h5_path)
+        else:
+            warnings.warn("\nNo Region Mapping file found at path " + h5_path + "!")
+            return []
 
     def read_volume_mapping(self, h5_path):
-        return self._read_data_field(h5_path)
+        if os.path.isfile(h5_path):
+            return self._read_data_field(h5_path)
+        else:
+            warnings.warn("\nNo Volume Mapping file found at path " + h5_path + "!")
+            return []
 
     def read_t1(self, h5_path):
-        return self._read_data_field(h5_path)
+        if os.path.isfile(h5_path):
+            return self._read_data_field(h5_path)
+        else:
+            warnings.warn("\nNo Structural MRI file found at path " + h5_path + "!")
+            return []
 
     def read_sensors(self, h5_path, s_type):
-        self.LOG.info("Reading Sensors from: " + h5_path)
-        h5_file = h5py.File(h5_path, 'r', libver='latest')
+        if os.path.isfile(h5_path):
+            self.LOG.info("Reading Sensors from: " + h5_path)
+            h5_file = h5py.File(h5_path, 'r', libver='latest')
 
-        labels = h5_file['/labels'][()]
-        locations = h5_file['/locations'][()]
+            labels = h5_file['/labels'][()]
+            locations = h5_file['/locations'][()]
 
-        h5_file.close()
-        return Sensors(labels, locations, s_type=s_type)
+            h5_file.close()
+            return Sensors(labels, locations, s_type=s_type)
+        else:
+            warnings.warn("\nNo Sensor file found at path " + h5_path + "!")
+            return []
 
     def read_projection(self, path, s_type):
         raise NotImplementedError()
@@ -80,10 +100,17 @@ class CustomReader(ABCReader):
         vm = self.read_volume_mapping(os.path.join(root_folder, "VolumeMapping.h5"))
         t1 = self.read_volume_mapping(os.path.join(root_folder, "StructuralMRI.h5"))
 
+        seeg_sensors_dict = {}
         s_114 = self.read_sensors(os.path.join(root_folder, "SensorsSEEG_114.h5"), Sensors.TYPE_SEEG)
+        if isinstance(s_114, Sensors):
+            p_114 = calculate_projection(s_114, conn)
+            seeg_sensors_dict[s_114] = p_114
+
         s_125 = self.read_sensors(os.path.join(root_folder, "SensorsSEEG_125.h5"), Sensors.TYPE_SEEG)
-        seeg_sensors_dict = {s_114: calculate_projection(s_114, conn),
-                             s_125: calculate_projection(s_125, conn)}
+        if isinstance(s_125, Sensors):
+            p_125 = calculate_projection(s_125, conn)
+            seeg_sensors_dict[s_125] = p_125
+
         eeg_sensors_dict = {}
         meg_sensors_dict = {}
 
@@ -109,5 +136,3 @@ class CustomReader(ABCReader):
 
         h5_file.close()
         return values
-
-

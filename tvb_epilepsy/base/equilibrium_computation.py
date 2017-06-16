@@ -431,7 +431,7 @@ def eq_x1_hypo_x0_linTaylor(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
     return x1EQ.flatten(), x[0, :no_e].flatten()
 
 
-def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
+def assert_equilibrium_point(epileptor_model, weights, equilibrium_point):
 
     n_dim = equilibrium_point.shape[0]
 
@@ -439,7 +439,7 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
         K = epileptor_model.K
         dfun2 = calc_dfun(equilibrium_point[0].flatten(), equilibrium_point[1].flatten(),
                           epileptor_model.yc.flatten(), epileptor_model.Iext1.flatten(), epileptor_model.x0.flatten(),
-                          epileptor_model.K.flatten(), hypothesis.weights, model_vars=n_dim,
+                          epileptor_model.K.flatten(), weights, model_vars=n_dim,
                           x0cr=epileptor_model.x0cr.flatten(), r=epileptor_model.r.flatten(),
                           zmode=epileptor_model.zmode,
                           slope=epileptor_model.slope.flatten(), a=1.0, b=-2.0,
@@ -450,7 +450,7 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
         #dfun_max_cr[2] = 10 ** -3
         dfun2 = calc_dfun(equilibrium_point[0].flatten(), equilibrium_point[2].flatten(),
                           epileptor_model.yc.flatten(), epileptor_model.Iext1.flatten(), epileptor_model.x0.flatten(),
-                          epileptor_model.K.flatten(), hypothesis.weights, model_vars=n_dim,
+                          epileptor_model.K.flatten(), weights, model_vars=n_dim,
                           zmode=epileptor_model.zmode,
                           y1=equilibrium_point[1].flatten(), x2=equilibrium_point[3].flatten(),
                           y2=equilibrium_point[4].flatten(), g=equilibrium_point[5].flatten(),
@@ -463,7 +463,7 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
         #dfun_max_cr[2] = 10 ** -3
         dfun2 = calc_dfun(equilibrium_point[0].flatten(), equilibrium_point[2].flatten(),
                           epileptor_model.yc.flatten(), epileptor_model.Iext1.flatten(), epileptor_model.x0.flatten(),
-                          epileptor_model.K.flatten(), hypothesis.weights, model_vars=n_dim,
+                          epileptor_model.K.flatten(), weights, model_vars=n_dim,
                           zmode=epileptor_model.zmode, pmode=epileptor_model.pmode,
                           y1=equilibrium_point[1].flatten(), x2=equilibrium_point[3].flatten(),
                           y2=equilibrium_point[4].flatten(), g=equilibrium_point[5].flatten(),
@@ -479,7 +479,7 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
         K = epileptor_model.Ks
         dfun2 = calc_dfun(equilibrium_point[0].flatten(), equilibrium_point[2].flatten(),
                           epileptor_model.c, epileptor_model.Iext, epileptor_model.x0,
-                          epileptor_model.Ks, hypothesis.weights, model_vars=n_dim,
+                          epileptor_model.Ks, weights, model_vars=n_dim,
                           y1=equilibrium_point[1].flatten(), x2=equilibrium_point[3].flatten(),
                           y2=equilibrium_point[4].flatten(), g=equilibrium_point[5].flatten(),
                           slope=epileptor_model.slope, a=epileptor_model.a, b=epileptor_model.b,
@@ -488,7 +488,7 @@ def assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point):
                           output_mode="array")
 
     if hasattr(epileptor_model, 'dfun'):
-        coupl = calc_coupling(equilibrium_point[0], K, hypothesis.weights)
+        coupl = calc_coupling(equilibrium_point[0], K, weights)
         coupl = numpy.expand_dims((numpy.c_[coupl, 0.0 * coupl]).T, 2)
 
         dfun = epileptor_model.dfun(numpy.expand_dims(equilibrium_point, 2).astype('float32'), coupl)
@@ -557,50 +557,50 @@ def calc_eq_11d(x0, K, w, yc, Iext1, Iext2, slope, fun_slope_Iext2,  x1eqhyp = 0
     return equilibrium_point, slope_eq, Iext2_eq
 
 
-def calc_equilibrium_point(epileptor_model, hypothesis):
+def calc_equilibrium_point(epileptor_model, model_configuration, weights):
 
-    # Update zeq given the specific model, and assuming the hypothesis x1eq for the moment in the context of a 2d model:
+    # Update zeq given the specific model, and assuming the model_configuration x1eq for the moment in the context of a 2d model:
     # It is assumed that the model.x0 has been adjusted already at the phase of model creation
 
 
     if epileptor_model._ui_name == "EpileptorDP2D":
 
         #if numpy.all(epileptor_model.b == -2.0):
-        x1eq = hypothesis.x1EQ
-        zeq = hypothesis.zEQ
+        x1eq = model_configuration.x1EQ
+        zeq = model_configuration.zEQ
         # else:
         #     x1eq = calc_eq_x1(epileptor_model.yc, epileptor_model.Iext1, epileptor_model.x0, epileptor_model.K,
-        #                       hypothesis.weights, a=1.0, b=-2.0,
+        #                       weights, a=1.0, b=-2.0,
         #                       zmode=epileptor_model.zmode, model="2d")
         #
-        #     zeq = calc_eq_z_2d(hypothesis.x1EQ, epileptor_model.yc, epileptor_model.Iext1)
+        #     zeq = calc_eq_z_2d(model_configuration.x1EQ, epileptor_model.yc, epileptor_model.Iext1)
 
         equilibrium_point = numpy.c_[x1eq, zeq].T
 
     elif epileptor_model._ui_name == "EpileptorDP":
 
         #EpileptorDP
-        equilibrium_point = calc_eq_6d(epileptor_model.x0, epileptor_model.K, hypothesis.weights,
-                                        epileptor_model.yc, epileptor_model.Iext1, epileptor_model.Iext2,
-                                        hypothesis.x1EQ, -2.0, 1.0, 3.0, 5.0, zmode=epileptor_model.zmode)
+        equilibrium_point = calc_eq_6d(epileptor_model.x0, epileptor_model.K, weights,
+                                       epileptor_model.yc, epileptor_model.Iext1, epileptor_model.Iext2,
+                                       model_configuration.x1EQ, -2.0, 1.0, 3.0, 5.0, zmode=epileptor_model.zmode)
 
     elif epileptor_model._ui_name == "EpileptorDPrealistic":
 
-            equilibrium_point = calc_eq_11d(epileptor_model.x0, epileptor_model.K, hypothesis.weights,
+            equilibrium_point = calc_eq_11d(epileptor_model.x0, epileptor_model.K, weights,
                                             epileptor_model.yc, epileptor_model.Iext1, epileptor_model.Iext2,
-                                            epileptor_model.slope,  epileptor_model.fun_slope_Iext2, hypothesis.x1EQ,
+                                            epileptor_model.slope, epileptor_model.fun_slope_Iext2, model_configuration.x1EQ,
                                             -2.0, 1.0, 3.0, 5.0, zmode=epileptor_model.zmode,
                                             pmode=epileptor_model.pmode)[0]
 
     else:
         # all 6D models (tvb, custom)
-        equilibrium_point = calc_eq_6d(epileptor_model.x0, epileptor_model.Ks, hypothesis.weights,
+        equilibrium_point = calc_eq_6d(epileptor_model.x0, epileptor_model.Ks, weights,
                                        epileptor_model.c, epileptor_model.Iext, epileptor_model.Iext2,
-                                       hypothesis.x1EQ, -2.0, epileptor_model.a, epileptor_model.b,
+                                       model_configuration.x1EQ, -2.0, epileptor_model.a, epileptor_model.b,
                                        epileptor_model.d, zmode=numpy.array("lin"))
 
     if (epileptor_model._ui_name != "CustomEpileptor"):
-        assert_equilibrium_point(epileptor_model, hypothesis, equilibrium_point)
+        assert_equilibrium_point(epileptor_model, weights, equilibrium_point)
     else:
         #TODO: Implement dfun for custom simulator
         print "The dfun for custom simulator is not implemented yet!"

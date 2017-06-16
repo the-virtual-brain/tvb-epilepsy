@@ -11,7 +11,7 @@ import warnings
 from itertools import product
 from scipy.signal import butter, lfilter
 from collections import OrderedDict
-from tvb_epilepsy.base.constants import FOLDER_LOGS, WEIGHTS_NORM_PERCENT
+from tvb_epilepsy.base.constants import FOLDER_LOGS, WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
 from matplotlib import use
 use('Qt4Agg')
 from matplotlib import pyplot
@@ -168,7 +168,7 @@ def linear_scaling(x, x1, x2, y1, y2):
 def weighted_vector_sum(weights, vectors, normalize=True):
 
     if isinstance(vectors, numpy.ndarray):
-        vectors = list(vectors)
+        vectors = list(vectors.T)
 
     if normalize:
         weights /= numpy.sum(weights)
@@ -319,7 +319,7 @@ def calculate_projection(sensors, connectivity):
     return projection
 
 
-def curve_elbow_point(vals, interactive=False):
+def curve_elbow_point(vals):
 
     vals = numpy.array(vals).flatten()
 
@@ -334,7 +334,7 @@ def curve_elbow_point(vals, interactive=False):
 
     elbow = numpy.argmax(grad)
 
-    if interactive:
+    if INTERACTIVE_ELBOW_POINT:
 
         pyplot.ion()
 
@@ -342,13 +342,13 @@ def curve_elbow_point(vals, interactive=False):
 
         xdata = range(len(vals))
         lines=[]
+        lines.append(ax.plot(xdata, cumsum_vals, 'g*', picker=None, label="values' cumulative sum")[0])
         lines.append(ax.plot(xdata, vals, 'bo', picker=None, label="values in descending order")[0])
-        lines.append(ax.plot(xdata, cumsum_vals, 'go', picker=None, label="values' cumulative sum")[0])
 
-        lines.append(ax.plot(elbow, vals[elbow], "ro",
+        lines.append(ax.plot(elbow, vals[elbow], "rd",
                              label="suggested elbow point (maximum of third central difference)")[0])
 
-        lines.append(ax.plot(elbow, cumsum_vals[elbow], "ro")[0])
+        lines.append(ax.plot(elbow, cumsum_vals[elbow], "rd")[0])
 
         pyplot.legend(handles=lines[:2])
 
@@ -418,12 +418,11 @@ def filter_data(data, lowcut, highcut, fs, order=3):
     return y
 
 
-def set_time_scales(fs=4096.0, dt=None, time_length=1000.0, scale_time=1.0, scale_fsavg=8.0,
-                    hpf_low=None, hpf_high=None, report_every_n_monitor_steps=10,):
+def set_time_scales(fs=4096.0, dt=None, time_length=1000.0, scale_time=1.0, scale_fsavg=8.0, report_every_n_monitor_steps=10,):
     if dt is None:
-        dt = 1000.0 / fs / scale_time # msec
-    else:
-        dt /= scale_time
+        dt = 1000.0 / fs
+
+    dt /= scale_time
 
     fsAVG = fs / scale_fsavg
     monitor_period = scale_fsavg * dt
@@ -431,13 +430,7 @@ def set_time_scales(fs=4096.0, dt=None, time_length=1000.0, scale_time=1.0, scal
     time_length_avg = numpy.round(sim_length / monitor_period)
     n_report_blocks = max(report_every_n_monitor_steps * numpy.round(time_length_avg / 100), 1.0)
 
-    hpf_fs = fsAVG
-    if hpf_low is None:
-        hpf_low = max(16.0, 1000.0 / time_length)   # msec
-    if hpf_high is None:
-        hpf_high = min(250.0 , hpf_fs)
-
-    return fs, dt, fsAVG, scale_time, sim_length, monitor_period, n_report_blocks, hpf_fs, hpf_low, hpf_high
+    return dt, fsAVG, sim_length, monitor_period, n_report_blocks
 
 
 def ensure_unique_file(parent_folder, filename):

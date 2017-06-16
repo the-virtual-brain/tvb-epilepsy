@@ -57,6 +57,7 @@ class Head(object):
 
 
 class Connectivity(object):
+    file_path = None
     weights = None
     normalized_weights = None
     tract_lengths = None
@@ -66,8 +67,9 @@ class Connectivity(object):
     orientations = None
     areas = None
 
-    def __init__(self, weights, tract_lengths, labels=None, centers=None, hemispheres=None,
+    def __init__(self, file_path, weights, tract_lengths, labels=None, centers=None, hemispheres=None,
                  orientation=None, areas=None, normalized_weights=None, ):
+        self.file_path = file_path
         self.weights = weights
         if normalized_weights is None:
             normalized_weights = normalize_weights(weights)
@@ -84,7 +86,7 @@ class Connectivity(object):
 #             "c. normalized weights": self.normalized_weights,
 #             "d. tract_lengths": reg_dict(self.tract_lengths, self.region_labels),
              "b. areas": reg_dict(self.areas, self.region_labels)}
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ) )    
+        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ) )
 
     @property
     def number_of_regions(self):
@@ -121,7 +123,7 @@ class Surface(object):
              "b. triangles": self.triangles,
              "c. vertex_normals": self.vertex_normals,
              "d. triangle_normals": self.triangle_normals}
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ) )  
+        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ) )
 
     def __str__(self):
         return self.__repr__()
@@ -142,11 +144,11 @@ class Sensors(object):
         self.locations = locations
         self.orientations = orientations
         self.s_type = s_type
-        
+
     def summary(self):
         d = {"a. sensors type": self.s_type,
              "b. locations": reg_dict(self.locations, self.labels)}
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ) )    
+        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ) )
 
 
     @property
@@ -158,9 +160,8 @@ class Sensors(object):
              "b. labels": reg_dict(self.labels),
              "c. locations": reg_dict(self.locations, self.labels),
              "d. orientations": reg_dict(self.orientations, self.labels) }
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ) )  
+        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ) )
 
     def __str__(self):
         return self.__repr__()
-        
-    
+

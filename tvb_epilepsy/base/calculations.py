@@ -597,7 +597,7 @@ def calc_jac(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
             if z_pos is None:
                 z_pos = z > 0.0
 
-            return concatenate([eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg),
+            return np.concatenate([eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg),
                                 eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode, z_pos, K, w)])
 
         else:

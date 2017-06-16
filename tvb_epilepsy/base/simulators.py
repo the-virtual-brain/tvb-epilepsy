@@ -8,14 +8,13 @@ from tvb_epilepsy.base.constants import NOISE_SEED
 from collections import OrderedDict
 from tvb_epilepsy.base.equilibrium_computation import calc_equilibrium_point
 
+
 class SimulationSettings(object):
-# 
     def __init__(self, integration_step=0.01220703125, simulated_period=5000, scale_time=1, integrator_type="",
                  noise_preconfig=None, noise_ntau=0.0, noise_type="", noise_seed=NOISE_SEED,
                  noise_intensity=10 ** -6,
                  monitors_preconfig=None, monitor_sampling_period=0.9765625, monitor_expressions="",
                  monitor_type="", variables_names="", initial_conditions=numpy.array([])):
-
         self.integration_step = integration_step
         self.simulated_period = simulated_period
         self.scale_time = scale_time
@@ -48,8 +47,8 @@ class SimulationSettings(object):
              "13. monitor_expressions": self.monitor_expressions,
              "14. variables_names": self.variables_names,
              "15. initial_conditions": self.initial_conditions,
-            }
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ) )
+             }
+        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0])))
 
     def __str__(self):
         return self.__repr__()
@@ -70,18 +69,21 @@ class ABCSimulator(object):
     # Prepare for tvb-epilepsy epileptor_models initial conditions
     ###
 
-    def prepare_initial_conditions(self, hypothesis, history_length=1):
+    def prepare_initial_conditions(self, history_length=1):
         # Set default initial conditions right on the resting equilibrium point of the model...
         # ...after computing the equilibrium point (and correct it for zeql for a >=6D model
-        initial_conditions = calc_equilibrium_point(self.model, hypothesis)
-        #-------------------The lines below are for a specific "realistic" demo simulation:---------------------------------
-        #if isinstance(model,EpileptorDPrealistic):
+        initial_conditions = calc_equilibrium_point(self.model, self.model_configuration,
+                                                    self.connectivity.normalized_weights)
+
+        # -------------------The lines below are for a specific "realistic" demo simulation:---------------------------------
+        # if isinstance(model,EpileptorDPrealistic):
         #   shape = initial_conditions[6].shape
         #   type = initial_conditions[6].dtype
         #   initial_conditions[6] = 0.0** numpy.ones(shape,dtype=type) # hypothesis.x0.T
         #   initial_conditions[7] = 1.0 * numpy.ones((1,hypothesis.n_regions))#model.slope * numpy.ones((hypothesis.n_regions,1))
         #   initial_conditions[9] = 0.0 * numpy.ones((1,hypothesis.n_regions))#model.Iext2.T * numpy.ones((hypothesis.n_regions,1))
         # ------------------------------------------------------------------------------------------------------------------
+
         initial_conditions = numpy.expand_dims(initial_conditions, 2)
         initial_conditions = numpy.tile(initial_conditions, (history_length, 1, 1, 1))
         return initial_conditions
