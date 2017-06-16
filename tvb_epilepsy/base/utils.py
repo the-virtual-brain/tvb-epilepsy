@@ -436,9 +436,14 @@ def set_time_scales(fs=4096.0, dt=None, time_length=1000.0, scale_time=1.0, scal
 def ensure_unique_file(parent_folder, filename):
     final_path = os.path.join(parent_folder, filename)
 
-    while os.path.exists(final_path):
-        filename = raw_input("File %s already exists. Enter a different name: " % final_path)
-        final_path = os.path.join(parent_folder, filename)
+    while os.path.isfile(final_path):
+        user_input = raw_input("File %s already exists. " 
+                               "Enter a different name or press 'Enter/Return' to overwrite: " % final_path)
+        if user_input == "":
+            final_path = os.path.join(parent_folder, filename)
+            break
+        else:
+            final_path = os.path.join(parent_folder, user_input)
 
     return final_path
 

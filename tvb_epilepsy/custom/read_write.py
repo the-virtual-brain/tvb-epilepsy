@@ -149,6 +149,8 @@ def write_h5_model(h5_model, folder_name, file_name):
     Store H5Model object to a hdf5 file
     """
     final_path = ensure_unique_file(folder_name, file_name)
+    if os.path.isfile(final_path):
+        os.remove(final_path)
 
     logger.info("Writing %s at: %s" % (h5_model, final_path))
 
@@ -209,11 +211,14 @@ def write_sensors(labels, locations, file_name=None):
     """
     if file_name is None:
         file_name = "SensorsSEEG_" + str(len(labels))
-    path = os.path.join(os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name + ".h5")
+    # path = os.path.join(os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name + ".h5")
+    # if os.path.exists(path):
+    #     print "Sensors file %s already exists. Use a different name!" % path
+    #     return
 
-    if os.path.exists(path):
-        print "Sensors file %s already exists. Use a different name!" % path
-        return
+    path = ensure_unique_file(os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name + ".h5")
+    if os.path.isfile(path):
+        os.remove(path)
 
     print "Writing Sensors at:", path
     h5_file = h5py.File(path, 'a', libver='latest')
@@ -311,9 +316,14 @@ def read_ts(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5"), data=None):
 
 
 def write_ts(raw_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts_from_python.h5")):
-    if os.path.exists(path):
-        print "TS file %s already exists. Use a different name!" % path
-        return
+    dirname, filename = os.path.split(path)
+    path = ensure_unique_file(dirname, filename)
+    if os.path.isfile(path):
+        os.remove(path)
+
+    # if os.path.exists(path):
+    #     print "TS file %s already exists. Use a different name!" % path
+    #     return
 
     print "Writing a TS at:", path
 
@@ -354,6 +364,11 @@ def read_ts_epi(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5")):
     :param path: Path towards a valid TimeSeries H5 file
     :return: Timeseries in a numpy array
     """
+    dirname, filename = os.path.split(path)
+    path = ensure_unique_file(dirname, filename)
+    if os.path.isfile(path):
+        os.remove(path)
+
     print "Reading TimeSeries from:", path
     h5_file = h5py.File(path, 'r', libver='latest')
 
@@ -371,9 +386,14 @@ def read_ts_epi(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5")):
 
 def write_ts_epi(raw_data, sampling_period, lfp_data=None,
                  path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts_from_python.h5")):
-    if os.path.exists(path):
-        print "TS file %s already exists. Use a different name!" % path
-        return
+    dirname, filename = os.path.split(path)
+    path = ensure_unique_file(dirname, filename)
+    if os.path.isfile(path):
+        os.remove(path)
+
+    # if os.path.exists(path):
+    #     print "TS file %s already exists. Use a different name!" % path
+    #     return
     if raw_data is None or len(raw_data.shape) != 3:
         print "Invalid TS data 3D (time, regions, sv) expected"
         return
@@ -406,9 +426,13 @@ def write_ts_epi(raw_data, sampling_period, lfp_data=None,
 
 
 def write_ts_seeg_epi(seeg_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts_from_python.h5")):
-    if not os.path.exists(path):
-        print "TS file %s does exists. First define the raw data!" % path
-        return
+    dirname, filename = os.path.split(path)
+    path = ensure_unique_file(dirname, filename)
+    if os.path.isfile(path):
+        os.remove(path)
+    # if not os.path.exists(path):
+    #     print "TS file %s does exists. First define the raw data!" % path
+    #     return
 
     sensors_name = "SeegSensors-" + str(seeg_data.shape[1])
     print "Writing a TS at:", path, sensors_name
