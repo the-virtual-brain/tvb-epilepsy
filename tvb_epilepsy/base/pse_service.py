@@ -194,7 +194,7 @@ def sim_run_fun(simulator_input, param_names, param_values, param_indexes, out_f
         return False, None
 
 
-class PSE(object):
+class PSE_service(object):
 
     def __init__(self, task, hypothesis=None, simulator=None, params_pse=None, run_fun=None, out_fun=None,
                  grid_mode=True):
