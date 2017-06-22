@@ -101,7 +101,7 @@ class SimulatorCustom(ABCSimulator):
 
     json_custom_config_file = "SimulationConfiguration.json"
 
-    def __init__(self, model, simulation_settings, model_configuration, connectivity):
+    def __init__(self, connectivity, model_configuration, model, simulation_settings):
         self.model = model
         self.simulation_settings = simulation_settings
         self.model_configuration = model_configuration
@@ -219,6 +219,6 @@ def setup_simulation(model_configuration, connectivity, dt, sim_length, monitor_
                                   noise_intensity=noise_intensity,
                                   monitor_sampling_period=monitor_period)
 
-    simulator_instance = SimulatorCustom(model, settings, model_configuration, connectivity)
+    simulator_instance = SimulatorCustom(connectivity, model_configuration, model, settings)
 
     return simulator_instance
