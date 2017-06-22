@@ -21,7 +21,7 @@ from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic, Epilepto
 
 
 class SimulatorTVB(ABCSimulator):
-    def __init__(self, model, simulation_settings, model_configuration, connectivity):
+    def __init__(self, connectivity, model_configuration, model, simulation_settings):
         self.model = model
         self.simulation_settings = simulation_settings
         self.model_configuration = model_configuration
@@ -228,6 +228,6 @@ def setup_simulation(model_configuration, connectivity, dt, sim_length, monitor_
                                   monitor_sampling_period=monitor_period, monitor_expressions=monitor_expressions,
                                   variables_names=model.variables_of_interest)
 
-    simulator_instance = SimulatorTVB(model, settings, model_configuration, connectivity)
+    simulator_instance = SimulatorTVB(connectivity, model_configuration, model, settings)
 
     return simulator_instance
