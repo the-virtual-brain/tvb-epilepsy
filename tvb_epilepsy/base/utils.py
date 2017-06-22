@@ -261,6 +261,12 @@ def reg_dict(x, lbl=None, sort=None):
                 d[str(i) + '.'] = x[i]
         return d
 
+def dict_str(d):
+    s = "{"
+    for key, value in d.iteritems():
+        s += ("\n" + key + ": " + str(value))
+    s += "}"
+    return s
 
 def formal_repr(instance, attr_dict):
     """ A formal string representation for an object.
