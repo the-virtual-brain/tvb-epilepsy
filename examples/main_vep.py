@@ -30,11 +30,11 @@ else:
     from tvb_epilepsy.custom.simulator_custom import setup_simulation
 
 
-def prepare_vois_ts_dict(vois):
+def prepare_vois_ts_dict(vois, data):
     # Pack results into a dictionary:
     vois_ts_dict = dict()
     for idx_voi, voi in enumerate(vois):
-        vois_ts_dict[voi] = tavg_data[:, idx_voi, :].astype('f')
+        vois_ts_dict[voi] = data[:, idx_voi, :].astype('f')
 
     return vois_ts_dict
 
@@ -88,14 +88,15 @@ if __name__ == "__main__":
 
     # --------------------------Hypothesis definition-----------------------------------
 
-    # Manual definition of hypothesis:
-    x0_indices = [20]
-    x0_values = [0.9]
-    E_indices = [70]
-    E_values = [0.9]
-    disease_values = x0_values + E_values
+    # # Manual definition of hypothesis...:
+    # x0_indices = [20]
+    # x0_values = [0.9]
+    # E_indices = [70]
+    # E_values = [0.9]
+    # disease_values = x0_values + E_values
+    # disease_indices = x0_indices + E_indices
 
-    # Reading a custom file:
+    # or ...reading a custom file:
     ep_name = "ep_test1"
     FOLDER_RES = os.path.join(data_folder, ep_name)
     from tvb_epilepsy.custom.readers_custom import CustomReader
@@ -117,7 +118,7 @@ if __name__ == "__main__":
     hyp_x0 = DiseaseHypothesis(head.connectivity, numpy.array(disease_values), disease_indices, [], [], [],
                                "Excitability", "Excitability_Hypothesis")
 
-    # This is an example of x0 Epileptogenicity Hypothesis:
+    # This is an example of Epileptogenicity Hypothesis:
     hyp_E = DiseaseHypothesis(head.connectivity, numpy.array(disease_values), [], disease_indices, [], [],
                               "Epileptogenicity", "Epileptogenicity_Hypothesis")
 
@@ -167,7 +168,7 @@ if __name__ == "__main__":
     # --------------------------Hypothesis and LSA-----------------------------------
 
     for hyp in hypotheses:
-        model_configuration_service = ModelConfigurationService()
+        model_configuration_service = ModelConfigurationService(hyp.get_number_of_regions())
         if hyp.type == "Epileptogenicity":
             model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hyp)
         else:
@@ -214,7 +215,7 @@ if __name__ == "__main__":
             time = scale_time * numpy.array(ttavg, dtype='float32')
             dt2 = numpy.min(numpy.diff(time))
 
-            vois_ts_dict = prepare_vois_ts_dict(vois)
+            vois_ts_dict = prepare_vois_ts_dict(vois, tavg_data)
 
             prepare_ts_and_seeg_h5_file(lsa_hypothesis.name, model, projections, vois_ts_dict, hpf_flag, hpf_low,
                                         hpf_high, fsAVG, dt2)
