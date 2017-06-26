@@ -38,41 +38,45 @@ def set_object_attribute_recursively(object, name, values, indexes):
         setattr(object, name[0], temp)
 
 
-def pop_object_parameters(object_type, param_names, param_values, param_indexes):
+def pop_object_parameters(object_type, params_names, params_values, params_indexes):
 
-    object_param_names = []
-    object_param_values = []
-    object_param_indexes = []
+    object_params_names = []
+    object_params_values = []
+    object_params_indexes = []
+    items_to_delete = []
+    for ip in range(len(params_names)):
+        if params_names[ip].split(".")[0] == object_type:
+            object_params_names.append(params_names[ip].split(".")[1])
+            object_params_values.append(params_values[ip])
+            object_params_indexes.append(params_indexes[ip])
+            items_to_delete.append(ip)
 
-    for ip in range(len(param_names)):
+    params_names = numpy.delete(params_names, items_to_delete)
+    params_values = numpy.delete(params_values, items_to_delete)
+    params_indexes = numpy.delete(params_indexes, items_to_delete)
 
-        if param_names[ip].split(".")[0] == object_type:
-            object_param_names.append(param_names.pop(ip).split(".")[1])
-            object_param_values.append(param_values.pop(ip))
-            object_param_indexes.append(param_indexes.pop(ip))
-
-    return object_param_names, object_param_values, object_param_indexes, param_names, param_values, param_indexes
+    return object_params_names, object_params_values, object_params_indexes, params_names, params_values, params_indexes
 
 
-def update_object(object, object_type, param_names, param_values, param_indexes):
+def update_object(object, object_type, params_names, params_values, params_indexes):
     update_flag = False
-    object_param_names, object_param_values, object_param_indexes, param_names, param_values, param_indexes = \
-        pop_object_parameters(object_type, param_names, param_values, param_indexes)
-    for ip in range(len(object_param_names)):
-        set_object_attribute_recursively(object, object_param_names[ip], object_param_values[ip],
-                                         object_param_indexes[ip])
+    object_params_names, object_params_values, object_params_indexes, params_names, params_values, params_indexes = \
+        pop_object_parameters(object_type, params_names, params_values, params_indexes)
+    for ip in range(len(object_params_names)):
+        set_object_attribute_recursively(object, object_params_names[ip], object_params_values[ip],
+                                         object_params_indexes[ip])
         update_flag = True
-    return object, param_names, param_values, param_indexes, update_flag
+    return object, params_names, params_values, params_indexes, update_flag
 
 
-def update_hypothesis(hypothesis_input, param_names, param_values, param_indexes,
+def update_hypothesis(hypothesis_input, params_names, params_values, params_indexes,
                       model_configuration_service_input=None,
                       yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize"):
 
     # Assign possible hypothesis parameters on a new hypothesis object:
     hypothesis = deepcopy(hypothesis_input)
-    hypothesis, param_names, param_values, param_indexes = \
-        update_object(hypothesis, "hypothesis", param_names, param_values, param_indexes)[:4]
+    hypothesis, params_names, params_values, params_indexes = \
+        update_object(hypothesis, "hypothesis", params_names, params_values, params_indexes)[:4]
 
     # ...create/update a model configuration service:
     if isinstance(model_configuration_service_input, ModelConfigurationService):
@@ -81,9 +85,9 @@ def update_hypothesis(hypothesis_input, param_names, param_values, param_indexes
         model_configuration_service = ModelConfigurationService(yc=yc, Iext1=Iext1, K=K, a=a, b=b, x1eq_mode=x1eq_mode)
 
     # ...modify possible related parameters:
-    model_configuration_service, param_names, param_values, param_indexes = \
-        update_object(model_configuration_service, "model_configuration_service", param_names, param_values,
-                      param_indexes)[:4]
+    model_configuration_service, params_names, params_values, params_indexes = \
+        update_object(model_configuration_service, "model_configuration_service", params_names, params_values,
+                      params_indexes)[:4]
 
     # ...and compute a new model_configuration:
     if hypothesis.type == "Epileptogenicity":
@@ -91,14 +95,14 @@ def update_hypothesis(hypothesis_input, param_names, param_values, param_indexes
     else:
         model_configuration = model_configuration_service.configure_model_from_hypothesis(hypothesis)
 
-    return hypothesis, model_configuration, param_names, param_values, param_indexes
+    return hypothesis, model_configuration, params_names, params_values, params_indexes
 
 
 def lsa_out_fun(hypothesis, **kwargs):
-    return hypothesis.lsa_ps
+    return hypothesis.propagation_strenghts
 
 
-def lsa_run_fun(hypothesis_input, param_names, param_values, param_indexes, out_fun=lsa_out_fun,
+def lsa_run_fun(hypothesis_input, params_names, params_values, params_indexes, out_fun=lsa_out_fun,
                 model_configuration_service_input=None,
                 yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",
                 lsa_service_input=None,
@@ -106,8 +110,8 @@ def lsa_run_fun(hypothesis_input, param_names, param_values, param_indexes, out_
 
     try:
         # Update hypothesis and create a new model_configuration:
-        hypothesis, model_configuration, param_names, param_values, param_indexes\
-            = update_hypothesis(hypothesis_input, param_names, param_values, param_indexes,
+        hypothesis, model_configuration, params_names, params_values, params_indexes\
+            = update_hypothesis(hypothesis_input, params_names, params_values, params_indexes,
                                 model_configuration_service_input, yc, Iext1, K, a, b, x1eq_mode)
 
         # ...create/update lsa service:
@@ -118,12 +122,12 @@ def lsa_run_fun(hypothesis_input, param_names, param_values, param_indexes, out_
 
         # ...and modify possible related parameters:
         lsa_service = \
-            update_object(lsa_service, "lsa_service", param_names, param_values, param_indexes)[0]
+            update_object(lsa_service, "lsa_service", params_names, params_values, params_indexes)[0]
 
         # Run LSA:
         lsa_hypothesis = lsa_service.run_lsa(hypothesis, model_configuration)
 
-        if callable(hypothesis):
+        if callable(out_fun):
             output = out_fun(lsa_hypothesis)
         else:
             output = lsa_hypothesis
@@ -143,7 +147,7 @@ def sim_out_fun(simulator, time, data, **kwargs):
     return {"time": time, "data": data}
 
 
-def sim_run_fun(simulator_input, param_names, param_values, param_indexes, out_fun=sim_out_fun, hypothesis_input=None,
+def sim_run_fun(simulator_input, params_names, params_values, params_indexes, out_fun=sim_out_fun, hypothesis_input=None,
                 model_configuration_service_input=None,
                 yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",
                 update_initial_conditions=True):
@@ -157,8 +161,8 @@ def sim_run_fun(simulator_input, param_names, param_values, param_indexes, out_f
 
         # First try to update model_configuration via an input hypothesis...:
         if isinstance(hypothesis_input, DiseaseHypothesis):
-            hypothesis, model_configuration, param_names, param_values, param_indexes = \
-                update_hypothesis(hypothesis_input, param_names, param_values, param_indexes,
+            hypothesis, model_configuration, params_names, params_values, params_indexes = \
+                update_hypothesis(hypothesis_input, params_names, params_values, params_indexes,
                                   model_configuration_service_input, yc, Iext1, K, a, b, x1eq_mode)
             # Update model configuration:
             simulator.model_configuration = model_configuration
@@ -169,13 +173,13 @@ def sim_run_fun(simulator_input, param_names, param_values, param_indexes, out_f
                 model = custom_model_builder(model_configuration)
 
         # Now (further) update model if needed:
-        model, param_names, param_values, param_indexes = \
-            update_object(model, "model", param_names, param_values, param_indexes)
+        model, params_names, params_values, params_indexes = \
+            update_object(model, "model", params_names, params_values, params_indexes)
         simulator.model = model
 
         # Now, update other possible remaining parameters, i.e., concerning the integrator, noise etc...
-        for ip in range(len(param_names)):
-            set_object_attribute_recursively(simulator, param_names[ip], param_values[ip], param_indexes[ip])
+        for ip in range(len(params_names)):
+            set_object_attribute_recursively(simulator, params_names[ip], params_values[ip], params_indexes[ip])
 
         # Now, recalculate the default initial conditions...
         # If initial conditions were parameters, then, this flag can be set to False
@@ -242,42 +246,47 @@ class PSE_service(object):
         else:
             self.out_fun = out_fun
 
-        if isinstance(params_pse, dict):
+        if isinstance(params_pse, list):
 
-            self.pse_name_list = []
+            self.params_names = []
             self.n_params_vals = []
             self.params_indexes = []
             temp = []
-            for key, value in params_pse.iteritems():
-                temp.append(value[0])
-                self.n_params_vals.append(len(value[0]))
-                self.params_indexes.append(value[1])
-                self.params_names_list.append(key)
+            for param in params_pse:
+                self.params_names.append(param[0])
+                temp.append(param[1])
+                self.n_params_vals.append(param[1].shape[0])
+                self.params_indexes.append(param[2])
 
             self.n_params_vals = numpy.array(self.n_params_vals)
-            self.n_params = len(self.params_names_list)
+            self.n_params = len(self.params_names)
 
-            if grid_mode:
-                temp = list(numpy.meshgrid(tuple(temp), "indexing", "ij"))
-                for ip in range(self.n_params):
-                    temp[ip] = numpy.flatten(temp[ip])
-
-            else:
-                if not(numpy.all(self.n_params_vals == self.n_params_vals[0])):
-                    raise ValueError("\ngrid_mode = False but not all parameters have the same number of values!: " +
+            # # TODO: construct names and indexes for grid mode
+            # if grid_mode:
+            #     temp = list(numpy.meshgrid(*temp, sparse=False, indexing="ij"))
+            #     for ip in range(self.n_params):
+            #         temp[ip] = numpy.flatten(temp[ip])
+            #
+            # else:
+            if not(numpy.all(self.n_params_vals == self.n_params_vals[0])):
+                raise ValueError("\ngrid_mode = False but not all parameters have the same number of values!: " +
                                      "\n" + str(self.params_names_list) + " = " + str( self.n_params_vals))
+            else:
+                self.n_params_vals = self.n_params_vals[0]
 
-            self.pse_params = numpy.vstack(temp)
+            self.pse_params = numpy.vstack(temp).T
+            self.params_names = numpy.array(self.params_names)
+            self.params_indexes = numpy.array(self.params_indexes)
             self.n_loops = self.pse_params.shape[0]
 
             print "\nGenerated a parameter search exploration for " + str(task) + ","
-            print "with " + str(self.n_params) + " parameters of " + str(self.n_params_vals) + " each,"
+            print "with " + str(self.n_params) + " parameters of " + str(self.n_params_vals) + " values each,"
             print "leading to " + str(self.n_loops) + " total execution loops"
             if grid_mode:
                 print "in grid mode"
 
         else:
-            raise ValueError("\nparams_pse is not a dictionary!")
+            raise ValueError("\nparams_pse is not a list of tuples!")
 
     def run_pse(self, grid_mode=False, **kwargs):
 
@@ -286,16 +295,18 @@ class PSE_service(object):
 
         for iloop in range(self.n_loops):
 
-            params = self.pse_params[iloop, :].tolist()
+            params = self.pse_params[iloop, :]
 
-            print "\nExecuting loop " + str(iloop) + "of " + str(self.n_loops)
-            print "Parameters " + str(self.params_names_list) + " = " + str(params)
+            print "\nExecuting loop " + str(iloop) + " of " + str(self.n_loops)
+            # print "\nParameters:"
+            # for ii in range(len(params)):
+            #      print self.params_names[ii] + "[" + str(self.params_indexes[ii]) + "] = " + str(params[ii])
 
             status = False
             output = None
 
             try:
-                status, output = self.run_fun(self.pse_object, self.params_names_list, params, self.param_indexes,
+                status, output = self.run_fun(self.pse_object, self.params_names, params, self.params_indexes,
                                               self.out_fun, **kwargs)
 
             except:
