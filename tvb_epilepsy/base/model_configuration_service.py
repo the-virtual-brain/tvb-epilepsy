@@ -18,14 +18,19 @@ class ModelConfigurationService(object):
 
     x1EQcr = X1_EQ_CR_DEF
 
-    def __init__(self, yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize"):
+    def __init__(self, number_of_regions, x0=X0_DEF,yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, E=E_DEF, 
+                 x1eq_mode="optimize"):
+        self.number_of_regions = number_of_regions
+        self.x0 = x0 * numpy.ones((self.number_of_regions,), dtype=numpy.float32)
         self.yc = yc
         self.Iext1 = Iext1
         self.a = a
         self.b = b
         self.x1eq_mode = x1eq_mode
-        self.K_unscaled = K
+        self.K_unscaled = K * numpy.ones((self.number_of_regions,), dtype=numpy.float32)
         self.K = None
+        self._normalize_global_coupling()
+        self.E = E * numpy.ones((self.number_of_regions,), dtype=numpy.float32)
 
     def _ensure_equilibrum(self, x1EQ, zEQ):
         temp = x1EQ > self.x1EQcr - 10 ** (-3)
@@ -35,8 +40,8 @@ class ModelConfigurationService(object):
 
         return x1EQ, zEQ
 
-    def _compute_x1_equilibrium_from_E(self, E_values, n_regions):
-        array_ones = numpy.ones((n_regions,), dtype=numpy.float32)
+    def _compute_x1_equilibrium_from_E(self, E_values):
+        array_ones = numpy.ones((self.number_of_regions,), dtype=numpy.float32)
         return ((E_values - 5.0) / 3.0) * array_ones
 
     def _compute_z_equilibrium(self, x1EQ):
@@ -61,8 +66,8 @@ class ModelConfigurationService(object):
         E_values = self._compute_E_values(x1EQ)
         return x0cr, rx0, Ceq, x0_values, E_values
 
-    def _compute_x1_and_z_equilibrium_from_E(self, E_values, n_regions):
-        x1EQ = self._compute_x1_equilibrium_from_E(E_values, n_regions)
+    def _compute_x1_and_z_equilibrium_from_E(self, E_values):
+        x1EQ = self._compute_x1_equilibrium_from_E(E_values)
         zEQ = self._compute_z_equilibrium(x1EQ)
         return x1EQ, zEQ
 
@@ -78,8 +83,8 @@ class ModelConfigurationService(object):
                                        self.yc, self.Iext1, self.K, weights)[0]
         return x1EQ
 
-    def _normalize_global_coupling(self, n_regions):
-        self.K = self.K_unscaled / n_regions
+    def _normalize_global_coupling(self):
+        self.K = self.K_unscaled / self.number_of_regions
 
     def configure_model_from_equilibrium(self, x1EQ, zEQ, weights):
         x1EQ, zEQ = self._ensure_equilibrum(x1EQ, zEQ)
@@ -90,36 +95,36 @@ class ModelConfigurationService(object):
 
     def configure_model_from_E_hypothesis(self, disease_hypothesis):
         # Always normalize K first
-        self._normalize_global_coupling(disease_hypothesis.get_number_of_regions())
+        self._normalize_global_coupling()
 
-        # All nodes except for the diseased ones will get a default epileptogenicity:
-        E_values = E_DEF * numpy.ones((disease_hypothesis.get_number_of_regions(),), dtype=numpy.float32)
+        # All nodes except for the diseased ones will get the default epileptogenicity:
+        E_values = numpy.array(self.E)
         E_values[disease_hypothesis.e_indices] = disease_hypothesis.get_regions_disease()[disease_hypothesis.e_indices]
 
         # Compute equilibrium from epileptogenicity:
-        x1EQ, zEQ = self._compute_x1_and_z_equilibrium_from_E(E_values, E_values.size)
+        x1EQ, zEQ = self._compute_x1_and_z_equilibrium_from_E(E_values)
         x1EQ, zEQ = self._ensure_equilibrum(x1EQ, zEQ)
 
         return self.configure_model_from_equilibrium(x1EQ, zEQ, disease_hypothesis.get_weights())
 
     def configure_model_from_hypothesis(self, disease_hypothesis):
         # Always normalize K first
-        self._normalize_global_coupling(disease_hypothesis.get_number_of_regions())
+        self._normalize_global_coupling()
 
         # There are the diseased ones:
         disease = disease_hypothesis.get_regions_disease()
 
-        # We assume that all nodes have a default (healthy) excitability:
-        x0_values = X0_DEF * numpy.ones((disease_hypothesis.get_number_of_regions(),), dtype=numpy.float32)
+        # We assume that all nodes have the default (healthy) excitability:
+        x0_values = numpy.array(self.x0)
         # ...and some  excitability-diseased ones:
         x0_values[disease_hypothesis.x0_indices] = disease[disease_hypothesis.x0_indices]
         # x0 values must have size of len(x0_indices):
         x0_values = numpy.delete(x0_values, disease_hypothesis.e_indices)
 
         # There might be some epileptogenicity-diseased regions:
-        E_values = E_DEF * numpy.ones((disease_hypothesis.get_number_of_regions(),), dtype=numpy.float32)
+        E_values = numpy.array(self.E)
         E_values[disease_hypothesis.e_indices] = disease[disease_hypothesis.e_indices]
-        x1EQ_temp, zEQ_temp = self._compute_x1_and_z_equilibrium_from_E(E_values, E_values.size)
+        x1EQ_temp, zEQ_temp = self._compute_x1_and_z_equilibrium_from_E(E_values)
 
         (x0cr, rx0) = self._compute_critical_x0_scaling()
 
