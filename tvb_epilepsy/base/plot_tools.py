@@ -8,7 +8,7 @@ import matplotlib as mp
 from matplotlib import pyplot, gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.base.constants import *
-from tvb_epilepsy.base.utils import calculate_in_degree
+from tvb_epilepsy.base.utils import calculate_in_degree, linear_scaling
 from tvb_epilepsy.base.calculations import calc_fx1, calc_fx1, calc_fz, calc_fz, calc_fx1_2d_taylor, calc_rescaled_x0, \
     calc_x0cr_r
 from tvb_epilepsy.base.equilibrium_computation import calc_eq_y1, def_x1lin
@@ -42,7 +42,7 @@ def plot_head(head, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_
 def plot_connectivity(conn, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
                       figure_format=FIG_FORMAT, figure_name='Connectivity ', figsize=LARGE_SIZE):
 
-    mp.pyplot.figure(figure_name + str(conn.number_of_regions), figsize)
+    pyplot.figure(figure_name + str(conn.number_of_regions), figsize)
     #_plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
     _plot_regions2regions(conn.normalized_weights, conn.region_labels, 121, "normalised weights")
     _plot_regions2regions(conn.tract_lengths, conn.region_labels, 122, "tract lengths")
@@ -55,7 +55,7 @@ def plot_connectivity(conn, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir
 
 def plot_head_stats(conn, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
                     figure_name='HeadStats '):
-    mp.pyplot.figure("Head stats " + str(conn.number_of_regions), figsize=LARGE_SIZE)
+    pyplot.figure("Head stats " + str(conn.number_of_regions), figsize=LARGE_SIZE)
     ax = _plot_vector(calculate_in_degree(conn.normalized_weights), conn.region_labels, 121, "w in-degree")
     ax.invert_yaxis()
     if conn.areas is not None:
@@ -70,33 +70,31 @@ def plot_head_stats(conn, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=F
 def _check_show(show_flag=SHOW_FLAG):
     if show_flag:
         # mp.use('TkAgg')
-        mp.pyplot.ion()
-        mp.pyplot.show()
+        pyplot.ion()
+        pyplot.show()
     else:
         # mp.use('Agg')
-        mp.pyplot.ioff()
-        mp.pyplot.close()
+        pyplot.ioff()
+        pyplot.close()
 
 
 def _save_figure(figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name='figure'):
     if not (os.path.isdir(figure_dir)):
         os.mkdir(figure_dir)
     figure_name = figure_name + '.' + figure_format
-    mp.pyplot.savefig(os.path.join(figure_dir, figure_name))
+    pyplot.savefig(os.path.join(figure_dir, figure_name))
 
 
 def _plot_vector(vector, labels, subplot, title, show_y_labels=True, indices_red=None, sharey=None):
-    ax = mp.pyplot.subplot(subplot, sharey=sharey)
-    mp.pyplot.title(title)
+    ax = pyplot.subplot(subplot, sharey=sharey)
+    pyplot.title(title)
     n_vector = labels.shape[0]
 
     y_ticks = numpy.array(range(n_vector), dtype=numpy.int32)
     color = 'k'
     colors = numpy.repeat([color], n_vector)
-    if indices_red is None:
-        indices_red = y_ticks
-        coldif = False
-    else:
+    coldif = False
+    if indices_red is not None:
         colors[indices_red] = 'r'
         coldif = True
     if len(vector.shape) == 1:
@@ -120,11 +118,63 @@ def _plot_vector(vector, labels, subplot, title, show_y_labels=True, indices_red
     ax.autoscale(tight=True)
     return ax
 
+def _plot_vector_violin(vector, dataset, labels, subplot, title, colormap="YlOrRd", show_y_labels=True,
+                        indices_red=None, sharey=None):
+    ax = pyplot.subplot(subplot, sharey=sharey)
+    #ax.hold(True)
+    pyplot.title(title)
+    n_vector = labels.shape[0]
+    y_ticks = numpy.array(range(n_vector), dtype=numpy.int32)
+
+    # the vector plot
+    coldif = False
+    if len(vector) == n_vector:
+        color = 'k'
+        colors = numpy.repeat([color], n_vector)
+        if indices_red is not None:
+            colors[indices_red] = 'r'
+            coldif = True
+        for ii in range(n_vector):
+            ax.plot(vector[ii], y_ticks[ii], '*', mfc=colors[ii], mec=colors[ii], ms=5)
+
+    # the violin plot
+    n_samples = dataset.shape[0]
+    colormap = mp.cm.ScalarMappable(cmap=pyplot.set_cmap(colormap))
+    colormap = colormap.to_rgba(numpy.mean(dataset, axis=0), alpha=0.75)
+    violin_parts = ax.violinplot(dataset, y_ticks, vert=False, widths=0.9,
+                                 showmeans=True, showmedians=True, showextrema=True)
+    violin_parts['cmeans'].set_color("k")
+    violin_parts['cmins'].set_color("b")
+    violin_parts['cmaxes'].set_color("b")
+    violin_parts['cbars'].set_color("b")
+    violin_parts['cmedians'].set_color("b")
+    for ii in range(len(violin_parts['bodies'])):
+        violin_parts['bodies'][ii].set_color(numpy.reshape(colormap[ii], (1,4)))
+        violin_parts['bodies'][ii]._alpha = 0.75
+        violin_parts['bodies'][ii]._edgecolors = numpy.reshape(colormap[ii], (1,4))
+        violin_parts['bodies'][ii]._facecolors = numpy.reshape(colormap[ii], (1,4))
+
+    # ax.invert_yaxis()
+    ax.grid(True, color='grey')
+    ax.set_yticks(y_ticks)
+    if show_y_labels:
+        region_labels = numpy.array(["%d. %s" % l for l in zip(range(n_vector), labels)])
+        ax.set_yticklabels(region_labels)
+        if coldif:
+            labels = ax.yaxis.get_ticklabels()
+            for ids in indices_red:
+                labels[ids].set_color('r')
+            ax.yaxis.set_ticklabels(labels)
+    else:
+        ax.set_yticklabels([])
+
+    ax.autoscale(tight=True)
+    return ax
 
 def _plot_regions2regions(adj, labels, subplot, title, show_y_labels=True, show_x_labels=True,
                           indices_red_x=None, sharey=None):
-    ax = mp.pyplot.subplot(subplot, sharey=sharey)
-    mp.pyplot.title(title)
+    ax = pyplot.subplot(subplot, sharey=sharey)
+    pyplot.title(title)
 
     y_color = 'k'
     adj_size = adj.shape[0]
@@ -137,7 +187,7 @@ def _plot_regions2regions(adj, labels, subplot, title, show_y_labels=True, show_
         x_color = 'r'
         x_ticks = range(len(indices_red_x))
     region_labels = numpy.array(["%d. %s" % l for l in zip(range(adj_size), labels)])
-    cmap = mp.pyplot.set_cmap('autumn_r')
+    cmap = pyplot.set_cmap('autumn_r')
     img = ax.imshow(adj[indices_red_x, :].T, cmap=cmap, interpolation='none')
     ax.set_xticks(x_ticks)
     ax.grid(True, color='grey')
@@ -164,7 +214,7 @@ def _plot_regions2regions(adj, labels, subplot, title, show_y_labels=True, show_
     # make a color bar
     divider = make_axes_locatable(ax)
     cax1 = divider.append_axes("right", size="5%", pad=0.05)
-    mp.pyplot.colorbar(img, cax=cax1)  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
+    pyplot.colorbar(img, cax=cax1)  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
 
     return ax
 
@@ -185,8 +235,8 @@ def _show_projections_dict(head, sensors_dict, current_count=1, show_flag=SHOW_F
 def _plot_projection(proj, connectivity, sensors, figure=None, title="Projection",
                      y_labels=1, x_labels=1, x_ticks=None, y_ticks=None, show_flag=SHOW_FLAG,
                      save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name=''):
-    if not (isinstance(figure, mp.pyplot.Figure)):
-        figure = mp.pyplot.figure(title, figsize=LARGE_SIZE)
+    if not (isinstance(figure, pyplot.Figure)):
+        figure = pyplot.figure(title, figsize=LARGE_SIZE)
 
     n_sensors = sensors.number_of_sensors
     n_regions = connectivity.number_of_regions
@@ -195,27 +245,27 @@ def _plot_projection(proj, connectivity, sensors, figure=None, title="Projection
     if y_ticks is None:
         y_ticks = numpy.array(range(n_regions), dtype=numpy.int32)
 
-    cmap = mp.pyplot.set_cmap('autumn_r')
-    img = mp.pyplot.imshow(proj[x_ticks][:, y_ticks].T, cmap=cmap, interpolation='none')
-    mp.pyplot.grid(True, color='black')
+    cmap = pyplot.set_cmap('autumn_r')
+    img = pyplot.imshow(proj[x_ticks][:, y_ticks].T, cmap=cmap, interpolation='none')
+    pyplot.grid(True, color='black')
     if y_labels > 0:
         region_labels = numpy.array(["%d. %s" % l for l in zip(range(n_regions), connectivity.region_labels)])
-        mp.pyplot.yticks(y_ticks, region_labels[y_ticks])
+        pyplot.yticks(y_ticks, region_labels[y_ticks])
     else:
-        mp.pyplot.yticks(y_ticks)
+        pyplot.yticks(y_ticks)
     if x_labels > 0:
         sensor_labels = numpy.array(["%d. %s" % l for l in zip(range(n_sensors), sensors.labels)])
-        mp.pyplot.xticks(x_ticks, sensor_labels[x_ticks], rotation=90)
+        pyplot.xticks(x_ticks, sensor_labels[x_ticks], rotation=90)
     else:
-        mp.pyplot.xticks(x_ticks)
+        pyplot.xticks(x_ticks)
 
     ax = figure.get_axes()[0]
     ax.autoscale(tight=True)
-    mp.pyplot.title(title)
+    pyplot.title(title)
 
     divider = make_axes_locatable(ax)
     cax1 = divider.append_axes("right", size="5%", pad=0.05)
-    mp.pyplot.colorbar(img, cax=cax1)  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
+    pyplot.colorbar(img, cax=cax1)  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
 
     if save_flag:
         if figure_name == '':
@@ -289,15 +339,15 @@ def plot_nullclines_eq(model_configuration, region_labels, special_idx=None, mod
         zZe = calc_fz(x1, z=0.0, x0=x0e_6d, zmode=zmode, model="2d")   # for epileptogenic regions
         zZne = calc_fz(x1, z=0.0, x0=x0ne_6d, zmode=zmode, model="2d")  # for non-epileptogenic regions
 
-    fig = mp.pyplot.figure(figure_name, figsize=figsize)
-    x1null, = mp.pyplot.plot(x1, zX1, 'b-', label='x1 nullcline', linewidth=1)
-    ax = mp.pyplot.gca()
+    fig = pyplot.figure(figure_name, figsize=figsize)
+    x1null, = pyplot.plot(x1, zX1, 'b-', label='x1 nullcline', linewidth=1)
+    ax = pyplot.gca()
     ax.axes.hold(True)
-    zE1null, = mp.pyplot.plot(x1, zZe, 'g-', label='z nullcline at critical point (E=1)', linewidth=1)
-    zE2null, = mp.pyplot.plot(x1, zZne, 'g--', label='z nullcline for E=0', linewidth=1)
-    sq, = mp.pyplot.plot(x1sq, zX1sq, 'm--', label='Parabolic local approximation', linewidth=2)
-    lin, = mp.pyplot.plot(x1lin, zX1lin, 'c--', label='Linear local approximation', linewidth=2)
-    mp.pyplot.legend(handles=[x1null, zE1null, zE2null, lin, sq])
+    zE1null, = pyplot.plot(x1, zZe, 'g-', label='z nullcline at critical point (E=1)', linewidth=1)
+    zE2null, = pyplot.plot(x1, zZne, 'g--', label='z nullcline for E=0', linewidth=1)
+    sq, = pyplot.plot(x1sq, zX1sq, 'm--', label='Parabolic local approximation', linewidth=2)
+    lin, = pyplot.plot(x1lin, zX1lin, 'c--', label='Linear local approximation', linewidth=2)
+    pyplot.legend(handles=[x1null, zE1null, zE2null, lin, sq])
 
     ii=range(len(region_labels))
     if special_idx is None:
@@ -305,12 +355,12 @@ def plot_nullclines_eq(model_configuration, region_labels, special_idx=None, mod
 
     points =[]
     for i in ii:
-        point, = mp.pyplot.plot(model_configuration.x1EQ[i], model_configuration.zEQ[i], '*', mfc='k', mec='k', ms=10, alpha=0.3,
+        point, = pyplot.plot(model_configuration.x1EQ[i], model_configuration.zEQ[i], '*', mfc='k', mec='k', ms=10, alpha=0.3,
                                 label=str(i)+'.'+region_labels[i])
         points.append(point)
     if special_idx is None:
         for i in special_idx:
-            point, = mp.pyplot.plot(model_configuration.x1EQ[i], model_configuration.zEQ[i], '*', mfc='r', mec='r', ms=10, alpha=0.8,
+            point, = pyplot.plot(model_configuration.x1EQ[i], model_configuration.zEQ[i], '*', mfc='r', mec='r', ms=10, alpha=0.8,
                                     label=str(i)+'.'+region_labels[i])
             points.append(point)
     #ax.plot(x1lin0, zlin0, '*', mfc='r', mec='r', ms=10)
@@ -346,7 +396,7 @@ def plot_hypothesis_model_configuration_and_lsa(hypothesis, model_configuration,
                                                 figure_name='', show_flag=False, save_flag=True,
                                                 figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
                                                 figsize=VERY_LARGE_SIZE):
-    fig = mp.pyplot.figure(hypothesis.name + ": Overview", frameon=False, figsize=figsize)
+    fig = pyplot.figure(hypothesis.name + ": Overview", frameon=False, figsize=figsize)
     mp.gridspec.GridSpec(1, 7, width_ratios=[1, 1, 1, 1, 1, 2, 1])
 
     ax0 = _plot_vector(model_configuration.x0_values, hypothesis.get_region_labels(), 171, 'Excitabilities x0',
@@ -422,6 +472,89 @@ def plot_hypothesis_model_configuration_and_lsa(hypothesis, model_configuration,
     #                    figsize=figsize)
 
 
+def plot_lsa_pse(hypothesis, model_configuration, pse_results, n_eig=None, weighted_eigenvector_sum=None,
+                 colormap="YlOrRd", figure_name='', show_flag=False, save_flag=True, figure_dir=FOLDER_FIGURES,
+                 figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE):
+    fig = pyplot.figure(hypothesis.name + ": LSA PSE overview", frameon=False, figsize=figsize)
+    mp.gridspec.GridSpec(1, 7, width_ratios=[1, 1, 1, 1, 1, 2, 1])
+
+    if pse_results.get("x0_values") is not None:
+        ax0 = _plot_vector_violin(model_configuration.x0_values, pse_results.get("x0_values"),
+                                  hypothesis.get_region_labels(), 171, 'Excitabilities x0', colormap=colormap,
+                                  show_y_labels=False, indices_red=hypothesis.x0_indices)
+    else:
+        ax0 = _plot_vector(model_configuration.x0_values, hypothesis.get_region_labels(), 171, 'Excitabilities x0',
+                           show_y_labels=False, indices_red=hypothesis.x0_indices)
+
+    if pse_results.get("E_values") is not None:
+        _plot_vector_violin(model_configuration.x0_values, pse_results.get("E_values"), hypothesis.get_region_labels(),
+                            172, 'Epileptogenicities E', colormap=colormap, show_y_labels=False,
+                            indices_red=hypothesis.e_indices, sharey=ax0)
+    else:
+        _plot_vector(model_configuration.E_values, hypothesis.get_region_labels(), 172, 'Epileptogenicities E',
+                    show_y_labels=False, indices_red=hypothesis.e_indices, sharey=ax0)
+
+    if pse_results.get("x1EQ") is not None:
+        _plot_vector_violin(model_configuration.x1EQ, pse_results.get("x1EQ"), hypothesis.get_region_labels(), 173,
+                            'x1 Equilibria', colormap=colormap, show_y_labels=False,
+                            indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
+    else:
+        _plot_vector(model_configuration.x1EQ, hypothesis.get_region_labels(), 173, 'x1 Equilibria',
+                     show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
+
+    if pse_results.get("zEQ") is not None:
+        _plot_vector_violin(model_configuration.zEQ, pse_results.get("zEQ"), hypothesis.get_region_labels(), 174,
+                            'z Equilibria', colormap=colormap+"_r", show_y_labels=False,
+                            indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
+    else:
+        _plot_vector(model_configuration.zEQ, hypothesis.get_region_labels(), 174, 'z Equilibria', show_y_labels=False,
+                     indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
+
+    if pse_results.get("Ceq") is not None:
+        _plot_vector_violin(model_configuration.Ceq, pse_results.get("Ceq"), hypothesis.get_region_labels(), 175,
+                            'Total afferent coupling \n at equilibrium', colormap=colormap, show_y_labels=False,
+                            indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
+    else:
+        _plot_vector(model_configuration.Ceq, hypothesis.get_region_labels(), 175,
+                     'Total afferent coupling \n at equilibrium', show_y_labels=False,
+                     indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
+
+    seizure_and_propagation_indices = numpy.unique(numpy.r_[hypothesis.get_regions_disease_indices(),
+                                                            hypothesis.propagation_indices])
+
+    if len(seizure_and_propagation_indices) > 0:
+        _plot_regions2regions(hypothesis.get_weights(), hypothesis.get_region_labels(), 176,
+                              'Afferent connectivity \n from seizuring regions', show_y_labels=False,
+                              show_x_labels=True, indices_red_x=seizure_and_propagation_indices, sharey=ax0)
+
+    if hypothesis.propagation_strenghts is not None:
+        title = "LSA Propagation Strength:\nabsolut "
+        if weighted_eigenvector_sum:
+            title += "eigenvalue-weighted \n"
+        title += "sum of first "
+        if n_eig is not None:
+            title += str(n_eig) + " "
+        title += "eigenvectors"
+        if pse_results.get("propagation_strengths") is not None:
+            _plot_vector_violin(hypothesis.propagation_strenghts, pse_results.get("propagation_strengths"),
+                                hypothesis.get_region_labels(), 177, title, show_y_labels=False,
+                                indices_red=seizure_and_propagation_indices, sharey=ax0)
+        else:
+            _plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(), 177, title,
+                         show_y_labels=False, indices_red=seizure_and_propagation_indices, sharey=ax0)
+
+    _set_axis_labels(fig, 121, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(),
+                     hypothesis.get_regions_disease_indices(), 'r')
+    _set_axis_labels(fig, 122, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(),
+                     seizure_and_propagation_indices, 'r', 'right')
+
+    if save_flag:
+        if figure_name == '':
+            figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
+        _save_figure(figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
+    _check_show(show_flag)
+
+
 def _set_axis_labels(fig, sub, n_regions, region_labels, indices2emphasize, color='k', position='left'):
     y_ticks = range(n_regions)
     region_labels = numpy.array(["%d. %s" % l for l in zip(y_ticks, region_labels)])
@@ -445,14 +578,14 @@ def plot_timeseries(time, data_dict, special_idx=None, title='Time Series', show
                     save_flag=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name='TimeSeries',
                     labels=None,figsize=LARGE_SIZE):
 
-    mp.pyplot.figure(title, figsize=figsize)
+    pyplot.figure(title, figsize=figsize)
     no_rows = len(data_dict)
     lines = []
     for i, subtitle in enumerate(data_dict):
-        ax = mp.pyplot.subplot(no_rows, 1, i + 1)
-        mp.pyplot.hold(True)
+        ax = pyplot.subplot(no_rows, 1, i + 1)
+        pyplot.hold(True)
         if i == 0:
-            mp.pyplot.title(title)
+            pyplot.title(title)
         data = data_dict[subtitle]
         nTS = data.shape[1]
         if labels is None:
@@ -460,18 +593,18 @@ def plot_timeseries(time, data_dict, special_idx=None, title='Time Series', show
         lines.append([])
         if special_idx is None:
             for iTS in range(nTS):
-                line, = mp.pyplot.plot(time, data[:, iTS], 'k', alpha=0.3, label = labels[iTS])
+                line, = pyplot.plot(time, data[:, iTS], 'k', alpha=0.3, label = labels[iTS])
                 lines[i].append(line)
         else:
             mask = numpy.array(range(nTS))
             mask = numpy.delete(mask,special_idx)
             for iTS in special_idx:
-                line, = mp.pyplot.plot(time, data[:, iTS], 'r', alpha=0.7, label = labels[iTS])
+                line, = pyplot.plot(time, data[:, iTS], 'r', alpha=0.7, label = labels[iTS])
                 lines[i].append(line)
             for iTS in mask:
-                line, = mp.pyplot.plot(time, data[:, iTS], 'k', alpha=0.3, label = labels[iTS])
+                line, = pyplot.plot(time, data[:, iTS], 'k', alpha=0.3, label = labels[iTS])
                 lines[i].append(line)
-        mp.pyplot.ylabel(subtitle)
+        pyplot.ylabel(subtitle)
         ax.set_autoscalex_on(False)
         ax.set_xlim([time[0], time[-1]])
         if MOUSEHOOVER:
@@ -479,10 +612,10 @@ def plot_timeseries(time, data_dict, special_idx=None, title='Time Series', show
             #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
             HighlightingDataCursor(lines[i], formatter='{label}'.format, bbox=dict(fc='white'),
                                    arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )
-    mp.pyplot.xlabel("Time (ms)")
+    pyplot.xlabel("Time (ms)")
 
     if save_flag:
-        fig = mp.pyplot.gcf()
+        fig = pyplot.gcf()
         if len(fig.get_label())==0:
             fig.set_label(figure_name)
         else:
@@ -494,14 +627,14 @@ def plot_timeseries(time, data_dict, special_idx=None, title='Time Series', show
 def plot_raster(time, data_dict, special_idx=None, title='Time Series', offset=3.0, show_flag=SHOW_FLAG,
                     save_flag=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name='TimeSeries',labels=None,figsize=LARGE_SIZE):
 
-    mp.pyplot.figure(title, figsize=figsize)
+    pyplot.figure(title, figsize=figsize)
     no_rows = len(data_dict)
     lines = []
     for i, subtitle in enumerate(data_dict):
-        ax = mp.pyplot.subplot(1, no_rows, i + 1)
-        mp.pyplot.hold(True)
+        ax = pyplot.subplot(1, no_rows, i + 1)
+        pyplot.hold(True)
         if i == 0:
-            mp.pyplot.title(title)
+            pyplot.title(title)
         data = data_dict[subtitle]
         data = zscore(data,axis=None)
         nTS = data.shape[1]
@@ -510,18 +643,18 @@ def plot_raster(time, data_dict, special_idx=None, title='Time Series', offset=3
         lines.append([])
         if special_idx is None:
             for iTS in range(nTS):
-                line, = mp.pyplot.plot(time, data[:,iTS]+offset*iTS, 'k', label = labels[iTS])
+                line, = pyplot.plot(time, data[:,iTS]+offset*iTS, 'k', label = labels[iTS])
                 lines[i].append(line)
         else:
             mask = numpy.array(range(nTS))
             mask = numpy.delete(mask,special_idx)
             for iTS in special_idx:
-                line, = mp.pyplot.plot(time, data[:, iTS]+offset*iTS, 'r', label = labels[iTS])
+                line, = pyplot.plot(time, data[:, iTS]+offset*iTS, 'r', label = labels[iTS])
                 lines[i].append(line)
             for iTS in mask:
-                line, = mp.pyplot.plot(time, data[:, iTS]+offset*iTS, 'k', label = labels[iTS])
+                line, = pyplot.plot(time, data[:, iTS]+offset*iTS, 'k', label = labels[iTS])
                 lines[i].append(line)
-        mp.pyplot.ylabel(subtitle)
+        pyplot.ylabel(subtitle)
         ax.set_autoscalex_on(False)
         ax.set_xlim([time[0], time[-1]])
         ax.invert_yaxis()
@@ -530,10 +663,10 @@ def plot_raster(time, data_dict, special_idx=None, title='Time Series', offset=3
             #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
             HighlightingDataCursor(lines[i], formatter='{label}'.format, bbox=dict(fc='white'),
                                    arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )
-    mp.pyplot.xlabel("Time (ms)")
+    pyplot.xlabel("Time (ms)")
 
     if save_flag:
-        fig = mp.pyplot.gcf()
+        fig = pyplot.gcf()
         if len(fig.get_label())==0:
             fig.set_label(figure_name)
         else:
@@ -546,21 +679,21 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
                       save_flag=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name='Trajectories',
                       labels=None,figsize=LARGE_SIZE):
 
-    mp.pyplot.figure(title, figsize=figsize)
-    ax = mp.pyplot.subplot(111)
-    mp.pyplot.hold(True)
+    pyplot.figure(title, figsize=figsize)
+    ax = pyplot.subplot(111)
+    pyplot.hold(True)
     no_dims = len(data_dict)
     if no_dims>2:
         from mpl_toolkits.mplot3d import Axes3D
-        ax = mp.pyplot.subplot(111,projection='3d')
+        ax = pyplot.subplot(111,projection='3d')
     else:
-        ax = mp.pyplot.subplot(111)
+        ax = pyplot.subplot(111)
     lines = []
     ax_labels=[]
     data=[]
     for i, var in enumerate(data_dict):
         if i == 0:
-            mp.pyplot.title(title)
+            pyplot.title(title)
         ax_labels.append(var)
         data.append(data_dict[var])
     nTS = data[0].shape[1]
@@ -570,32 +703,32 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
     if special_idx is None:
         for iTS in range(nTS):
             if no_dims>2:
-                line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], data[2][:,iTS],  'k', alpha=0.3,
+                line, = pyplot.plot(data[0][:,iTS], data[1][:,iTS], data[2][:,iTS],  'k', alpha=0.3,
                                        label=labels[iTS])
             else:
-                line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], 'k', alpha=0.3, label=labels[iTS])
+                line, = pyplot.plot(data[0][:,iTS], data[1][:,iTS], 'k', alpha=0.3, label=labels[iTS])
             lines.append(line)
     else:
         mask = numpy.array(range(nTS))
         mask = numpy.delete(mask,special_idx)
         for iTS in special_idx:
             if no_dims>2:
-                line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], data[2][:,iTS], 'r', alpha=0.7,
+                line, = pyplot.plot(data[0][:,iTS], data[1][:,iTS], data[2][:,iTS], 'r', alpha=0.7,
                                        label=labels[iTS])
             else:
-                line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], 'r', alpha=0.7, label = labels[iTS])
+                line, = pyplot.plot(data[0][:,iTS], data[1][:,iTS], 'r', alpha=0.7, label = labels[iTS])
             lines.append(line)
         for iTS in mask:
             if no_dims>2:
-                line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], data[2][:,iTS], 'k', alpha=0.3,
+                line, = pyplot.plot(data[0][:,iTS], data[1][:,iTS], data[2][:,iTS], 'k', alpha=0.3,
                                        label=labels[iTS])
             else:
-                line, = mp.pyplot.plot(data[0][:,iTS], data[1][:,iTS], 'k', alpha=0.3, label=labels[iTS])
+                line, = pyplot.plot(data[0][:,iTS], data[1][:,iTS], 'k', alpha=0.3, label=labels[iTS])
             lines.append(line)
-    mp.pyplot.xlabel(ax_labels[0])
-    mp.pyplot.ylabel(ax_labels[1])
+    pyplot.xlabel(ax_labels[0])
+    pyplot.ylabel(ax_labels[1])
     if no_dims>2:
-        mp.pyplot.ylabel(ax_labels[2])
+        pyplot.ylabel(ax_labels[2])
     if MOUSEHOOVER:
         #datacursor( lines[0], formatter='{label}'.format, bbox=dict(fc='white'),
         #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
@@ -603,7 +736,7 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
                                    arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )
 
     if save_flag:
-        fig = mp.pyplot.gcf()
+        fig = pyplot.gcf()
         if len(fig.get_label())==0:
             fig.set_label(figure_name)
         else:
