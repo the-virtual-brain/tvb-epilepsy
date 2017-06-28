@@ -178,6 +178,7 @@ if __name__ == "__main__":
         lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
 
         plot_hypothesis_model_configuration_and_lsa(lsa_hypothesis, model_configuration,
+                                                    weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
                                                     n_eig=lsa_service.eigen_vectors_number)
 
         # write_h5_model(hyp.prepare_for_h5(), folder_name=FOLDER_RES, file_name=hyp.name + ".h5")
