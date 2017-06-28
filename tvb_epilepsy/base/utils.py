@@ -268,6 +268,9 @@ def dict_str(d):
     s += "}"
     return s
 
+def list_of_dicts_to_dicts_of_ndarray(lst):
+    return dict(zip(lst[0],numpy.array(zip(*list([d.values() for d in lst])))))
+
 def formal_repr(instance, attr_dict):
     """ A formal string representation for an object.
     :param attr_dict: dictionary attribute_name: attribute_value
@@ -461,7 +464,6 @@ def write_metadata(meta_dict, h5_file, key_date, key_version, path="/"):
     root[key_version] = 2
     for key, val in meta_dict.iteritems():
         root[key] = val
-
 
 # TODO: Will we need any of this?
 def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrite_fields_dict=None, keys=None):
