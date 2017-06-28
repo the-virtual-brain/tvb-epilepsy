@@ -98,8 +98,13 @@ def update_hypothesis(hypothesis_input, params_names, params_values, params_inde
     return hypothesis, model_configuration, params_names, params_values, params_indexes
 
 
-def lsa_out_fun(hypothesis, **kwargs):
-    return hypothesis.propagation_strenghts
+def lsa_out_fun(hypothesis, model_configuration=None, **kwargs):
+    if isinstance(model_configuration, ModelConfiguration):
+        return {"propagation_strengths": hypothesis.propagation_strenghts, "x0_values": model_configuration.x0_values,
+                "E_values": model_configuration.E_values, "x1EQ": model_configuration.x1EQ,
+                "zEQ": model_configuration.zEQ, "Ceq": model_configuration.Ceq}
+    else:
+        hypothesis.propagation_strenghts
 
 
 def lsa_run_fun(hypothesis_input, params_names, params_values, params_indexes, out_fun=lsa_out_fun,
@@ -128,7 +133,7 @@ def lsa_run_fun(hypothesis_input, params_names, params_values, params_indexes, o
         lsa_hypothesis = lsa_service.run_lsa(hypothesis, model_configuration)
 
         if callable(out_fun):
-            output = out_fun(lsa_hypothesis)
+            output = out_fun(lsa_hypothesis, model_configuration=model_configuration)
         else:
             output = lsa_hypothesis
 

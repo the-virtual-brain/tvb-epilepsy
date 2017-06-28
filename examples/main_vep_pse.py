@@ -12,10 +12,12 @@ from tvb_epilepsy.base.constants import FOLDER_RES, FOLDER_FIGURES, SAVE_FLAG, S
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.base.lsa_service import LSAService
-from tvb_epilepsy.base.plot_tools import plot_nullclines_eq, plot_sim_results, \
-    plot_hypothesis_model_configuration_and_lsa
-from tvb_epilepsy.base.utils import initialize_logger, set_time_scales, calculate_projection, filter_data
+from tvb_epilepsy.base.plot_tools import plot_nullclines_eq, plot_sim_results, plot_lsa_pse, \
+                                         plot_hypothesis_model_configuration_and_lsa
+from tvb_epilepsy.base.utils import initialize_logger, set_time_scales, calculate_projection, filter_data, \
+                                    list_of_dicts_to_dicts_of_ndarray
 from tvb_epilepsy.custom.read_write import write_h5_model, write_ts_epi, write_ts_seeg_epi
+from tvb_epilepsy.base.h5_model import prepare_for_h5
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 from tvb_epilepsy.base.sample_service import DeterministicSampleService, StochasticSampleService, mean_std_to_low_high
@@ -128,7 +130,7 @@ if __name__ == "__main__":
     healthy_indices = numpy.delete(all_regions_indices, x0_indices)
     stoch_sampler = StochasticSampleService(shape=(10,), distribution="norm", trunc_limits={"high": 1.0},
                                             random_seed=x0_indices[0], loc=0.9, scale=0.2)
-    params_pse_x0 = [("hypothesis.x0", stoch_sampler.generate_samples(), x0_indices)]
+    params_pse_x0 = [("hypothesis.disease_values", stoch_sampler.generate_samples(), [0])]
     stoch_sampler = StochasticSampleService(shape=(10,), distribution="norm", trunc_limits={"low": 0.0, "high": 1.0},
                                             loc=0.3, scale=0.1)
     for ii in healthy_indices:
@@ -146,7 +148,7 @@ if __name__ == "__main__":
     healthy_indices = numpy.delete(all_regions_indices, E_indices)
     stoch_sampler = StochasticSampleService(shape=(10,), distribution="norm", trunc_limits={"high": 1.0},
                                             random_seed=E_indices[0], loc=0.9, scale=0.2)
-    params_pse_E = [("hypothesis.E", stoch_sampler.generate_samples(), E_indices)]
+    params_pse_E = [("hypothesis.disease_values", stoch_sampler.generate_samples(), [0])]
     stoch_sampler = StochasticSampleService(shape=(10,), distribution="norm", trunc_limits={"low": 0.0, "high": 1.0},
                                             loc=0.3, scale=0.1)
     for ii in healthy_indices:
@@ -250,8 +252,9 @@ if __name__ == "__main__":
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
         lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
 
-        plot_hypothesis_model_configuration_and_lsa(lsa_hypothesis, model_configuration,
-                                                    n_eig=lsa_service.eigen_vectors_number)
+        # plot_hypothesis_model_configuration_and_lsa(lsa_hypothesis, model_configuration,
+        #                                             weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
+        #                                             n_eig=lsa_service.eigen_vectors_number)
 
         # write_h5_model(hyp.prepare_for_h5(), folder_name=FOLDER_RES, file_name=hyp.name + ".h5")
         write_h5_model(lsa_hypothesis.prepare_for_h5(), folder_name=FOLDER_RES, file_name=lsa_hypothesis.name + ".h5")
@@ -261,9 +264,14 @@ if __name__ == "__main__":
                        file_name=lsa_hypothesis.name + "_ModelConfig.h5")
 
         if isinstance(pse_instances[hyp], PSE_service):
-            pse_propagation_strengths, execution_status = pse_instances[hyp].run_pse(grid_mode=False, model_configuration_service_input=model_configuration_service,
-                                                                                     lsa_service_input=lsa_service)
-
+            pse_results, execution_status = pse_instances[hyp].run_pse(grid_mode=False,
+                                                          model_configuration_service_input=model_configuration_service,
+                                                          lsa_service_input=lsa_service)
+            pse_results = list_of_dicts_to_dicts_of_ndarray(pse_results)
+            plot_lsa_pse(lsa_hypothesis, model_configuration, pse_results,
+                         weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
+                         n_eig=lsa_service.eigen_vectors_number, show_flag=True) #, show_flag=True, save_flag=False
+            write_h5_model(prepare_for_h5(pse_results), FOLDER_RES, "PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
 
         # # ------------------------------Simulation--------------------------------------
         #
