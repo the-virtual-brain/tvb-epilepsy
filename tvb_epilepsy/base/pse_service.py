@@ -266,13 +266,6 @@ class PSE_service(object):
             self.n_params_vals = numpy.array(self.n_params_vals)
             self.n_params = len(self.params_names)
 
-            # # TODO: construct names and indexes for grid mode
-            # if grid_mode:
-            #     temp = list(numpy.meshgrid(*temp, sparse=False, indexing="ij"))
-            #     for ip in range(self.n_params):
-            #         temp[ip] = numpy.flatten(temp[ip])
-            #
-            # else:
             if not(numpy.all(self.n_params_vals == self.n_params_vals[0])):
                 raise ValueError("\ngrid_mode = False but not all parameters have the same number of values!: " +
                                      "\n" + str(self.params_names_list) + " = " + str( self.n_params_vals))
