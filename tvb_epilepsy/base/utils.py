@@ -268,8 +268,16 @@ def dict_str(d):
     s += "}"
     return s
 
-def list_of_dicts_to_dicts_of_ndarray(lst):
+def list_of_dicts_to_dicts_of_ndarrays(lst):
     return dict(zip(lst[0],numpy.array(zip(*list([d.values() for d in lst])))))
+
+def dicts_of_lists_to_lists_of_dicts(dictionary):
+    return [dict(zip(dictionary,t)) for t in zip(*dictionary.values())]
+
+def dicts_of_lists(dictionary, n=1):
+    for key, value in dictionary.iteritems():
+        dictionary[key] = [dictionary[key]] * n
+    return dictionary
 
 def formal_repr(instance, attr_dict):
     """ A formal string representation for an object.
