@@ -276,7 +276,10 @@ def dicts_of_lists_to_lists_of_dicts(dictionary):
 
 def dicts_of_lists(dictionary, n=1):
     for key, value in dictionary.iteritems():
-        dictionary[key] = [dictionary[key]] * n
+        if not(isinstance(dictionary[key], list)):
+            dictionary[key] = [dictionary[key]]
+        if len(dictionary[key]) == 1 and n>1:
+            dictionary[key] = dictionary[key] * n
     return dictionary
 
 def formal_repr(instance, attr_dict):
