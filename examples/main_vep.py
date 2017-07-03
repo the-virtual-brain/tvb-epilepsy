@@ -109,23 +109,28 @@ if __name__ == "__main__":
         inds_split = numpy.ceil(disease_values.size * 1.0 / 2).astype("int")
         x0_indices = disease_indices[:inds_split].tolist()
         E_indices = disease_indices[inds_split:].tolist()
+        x0_values = disease_values[:inds_split].tolist()
+        E_values = disease_values[inds_split:].tolist()
     else:
         x0_indices = disease_indices.tolist()
+        E_values = disease_values.tolist()
         E_indices = []
+        E_values = []
     disease_indices = list(disease_indices)
 
     # This is an example of Excitability Hypothesis:
-    hyp_x0 = DiseaseHypothesis(head.connectivity, numpy.array(disease_values), disease_indices, [], [], [],
-                               "Excitability", "Excitability_Hypothesis")
+    hyp_x0 = DiseaseHypothesis(head.connectivity, excitability_hypothesis={tuple(disease_indices): disease_values},
+                               epileptogenicity_hypothesis={}, connectivity_hypothesis={})
 
     # This is an example of Epileptogenicity Hypothesis:
-    hyp_E = DiseaseHypothesis(head.connectivity, numpy.array(disease_values), [], disease_indices, [], [],
-                              "Epileptogenicity", "Epileptogenicity_Hypothesis")
+    hyp_E = DiseaseHypothesis(head.connectivity, excitability_hypothesis={},
+                              epileptogenicity_hypothesis={tuple(disease_indices): disease_values},
+                              connectivity_hypothesis={})
 
     if len(E_indices) > 0:
         # This is an example of x0 mixed Excitability and Epileptogenicity Hypothesis:
-        hyp_x0_E = DiseaseHypothesis(head.connectivity, numpy.array(disease_values), x0_indices, E_indices, [], [],
-                                     "Excitability", "Mixed_x0_E_Hypothesis")
+        hyp_x0_E = DiseaseHypothesis(head.connectivity, excitability_hypothesis={tuple(x0_indices): x0_values},
+                               epileptogenicity_hypothesis={tuple(E_indices): E_values}, connectivity_hypothesis={})
         hypotheses = (hyp_x0, hyp_E, hyp_x0_E)
     else:
         hypotheses = (hyp_x0, hyp_E)

@@ -3,6 +3,8 @@
 Class to keep the model configuration values.
 This will be used to populate a Model instance needed in order to launch a simulation.
 """
+import numpy as np
+
 from collections import OrderedDict
 
 from tvb_epilepsy.base.h5_model import prepare_for_h5
@@ -13,7 +15,8 @@ from tvb_epilepsy.base.constants import X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF
 class ModelConfiguration(object):
 
     def __init__(self, yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF,
-                       x0cr=None, rx0=None, x1EQ=None, zEQ=None, Ceq=None, x0_values=X0_DEF, E_values=None):
+                       x0cr=None, rx0=None, x1EQ=None, zEQ=None, Ceq=None, x0_values=X0_DEF, E_values=None,
+                       connectivity=None):
 
         # These parameters are used for every Epileptor Model...
         self.x0_values = x0_values
@@ -33,6 +36,8 @@ class ModelConfiguration(object):
         self.zEQ = zEQ
         self.Ceq = Ceq
         self.E_values = E_values
+
+        self.connectivity = connectivity
 
     def __repr__(self):
         d = {

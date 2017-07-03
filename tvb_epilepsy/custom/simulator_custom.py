@@ -17,6 +17,8 @@ from tvb_epilepsy.base.calculations import calc_rescaled_x0
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
 from tvb_epilepsy.custom.read_write import read_ts
 
+# TODO: It is imperative to allow for modification of the connectivity.normalized_weights of the Connecitivity.h5
+# according to the model_configuration.connectivity
 
 class Settings(object):
     def __init__(self, integration_step=0.01220703125, noise_seed=42, noise_intensity=10 ** -6, simulated_period=5000,

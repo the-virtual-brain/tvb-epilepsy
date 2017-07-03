@@ -90,48 +90,59 @@ class ModelConfigurationService(object):
         x1EQ, zEQ = self._ensure_equilibrum(x1EQ, zEQ)
         x0cr, rx0, Ceq, x0_values, E_values = self._compute_params_after_equilibration(x1EQ, zEQ, weights)
         model_configuration = ModelConfiguration(self.yc, self.Iext1, self.K, self.a, self.b,
-                                                 x0cr, rx0, x1EQ, zEQ, Ceq, x0_values, E_values)
+                                                 x0cr, rx0, x1EQ, zEQ, Ceq, x0_values, E_values, weights)
         return model_configuration
 
     def configure_model_from_E_hypothesis(self, disease_hypothesis):
         # Always normalize K first
         self._normalize_global_coupling()
 
+        # Then apply connectivity disease hypothesis scaling if any:
+        connectivity = disease_hypothesis.get_weights()
+        if len(disease_hypothesis.w_indices) > 0:
+            connectivity *= disease_hypothesis.get_connectivity_disease()
+
         # All nodes except for the diseased ones will get the default epileptogenicity:
         E_values = numpy.array(self.E)
-        E_values[disease_hypothesis.e_indices] = disease_hypothesis.get_regions_disease()[disease_hypothesis.e_indices]
+        E_values[disease_hypothesis.e_indices] = disease_hypothesis.e_values
 
         # Compute equilibrium from epileptogenicity:
         x1EQ, zEQ = self._compute_x1_and_z_equilibrium_from_E(E_values)
         x1EQ, zEQ = self._ensure_equilibrum(x1EQ, zEQ)
 
-        return self.configure_model_from_equilibrium(x1EQ, zEQ, disease_hypothesis.get_weights())
+        return self.configure_model_from_equilibrium(x1EQ, zEQ, connectivity)
 
     def configure_model_from_hypothesis(self, disease_hypothesis):
         # Always normalize K first
         self._normalize_global_coupling()
 
-        # There are the diseased ones:
-        disease = disease_hypothesis.get_regions_disease()
+        # Then apply connectivity disease hypothesis scaling if any:
+        connectivity = disease_hypothesis.get_weights()
+        if len(disease_hypothesis.w_indices) > 0:
+            connectivity *= disease_hypothesis.get_connectivity_disease()
 
         # We assume that all nodes have the default (healthy) excitability:
         x0_values = numpy.array(self.x0)
         # ...and some  excitability-diseased ones:
-        x0_values[disease_hypothesis.x0_indices] = disease[disease_hypothesis.x0_indices]
+        x0_values[disease_hypothesis.x0_indices] = disease_hypothesis.x0_values
         # x0 values must have size of len(x0_indices):
         x0_values = numpy.delete(x0_values, disease_hypothesis.e_indices)
 
-        # There might be some epileptogenicity-diseased regions:
+        # There might be some epileptogenicity-diseased regions as well:
+        # Initialize with the default E
         E_values = numpy.array(self.E)
-        E_values[disease_hypothesis.e_indices] = disease[disease_hypothesis.e_indices]
+        # and assign any diseased E_values if any
+        E_values[disease_hypothesis.e_indices] = disease_hypothesis.e_values
+
+        # Compute equilibrium from epileptogenicity:
         x1EQ_temp, zEQ_temp = self._compute_x1_and_z_equilibrium_from_E(E_values)
 
         (x0cr, rx0) = self._compute_critical_x0_scaling()
 
-        # Compute equilibrium:
+        # Now, solve the system in order to compute equilibrium:
         x1EQ = self._compute_x1_equilibrium(disease_hypothesis.e_indices, x1EQ_temp, zEQ_temp, x0_values, x0cr, rx0,
-                                            disease_hypothesis.get_weights())
+                                            connectivity)
         zEQ = self._compute_z_equilibrium(x1EQ)
 
-        return self.configure_model_from_equilibrium(x1EQ, zEQ, disease_hypothesis.get_weights())
+        return self.configure_model_from_equilibrium(x1EQ, zEQ, connectivity)
 

@@ -14,6 +14,7 @@ from tvb.simulator.models import Epileptor
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.epileptor_model_factory import model_build_dict, model_noise_intensity_dict, \
     model_noise_type_dict
+from tvb_epilepsy.base.model_vep import Connectivity
 from tvb_epilepsy.base.h5_model import prepare_for_h5
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
 from tvb_epilepsy.custom.read_write import epileptor_model_attributes_dict
@@ -28,15 +29,20 @@ class SimulatorTVB(ABCSimulator):
         self.connectivity = connectivity
 
     @staticmethod
-    def _vep2tvb_connectivity(vep_conn):
-        return connectivity.Connectivity(use_storage=False, weights=vep_conn.normalized_weights,
+    def _vep2tvb_connectivity(vep_conn, weights=None):
+        if weights is None:
+            weights = vep_conn.normalized_weights
+        return connectivity.Connectivity(use_storage=False, weights=weights,
                                          tract_lengths=vep_conn.tract_lengths, region_labels=vep_conn.region_labels,
                                          centres=vep_conn.centers, hemispheres=vep_conn.hemispheres,
                                          orientations=vep_conn.orientations, areas=vep_conn.areas)
 
     def config_simulation(self):
 
-        tvb_connectivity = self._vep2tvb_connectivity(self.connectivity)
+        if isinstance(self.model_configuration.connectivity, numpy.ndarray):
+            tvb_connectivity = self._vep2tvb_connectivity(self.connectivity, self.model_configuration.connectivity)
+        else:
+            tvb_connectivity = self._vep2tvb_connectivity(self.connectivity)
         tvb_coupling = coupling.Difference(a=1.)
 
         # Set noise:

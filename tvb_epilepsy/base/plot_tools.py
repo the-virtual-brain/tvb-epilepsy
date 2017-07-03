@@ -406,15 +406,15 @@ def plot_hypothesis_model_configuration_and_lsa(hypothesis, model_configuration,
                  show_y_labels=False, indices_red=hypothesis.e_indices, sharey=ax0)
 
     _plot_vector(model_configuration.x1EQ, hypothesis.get_region_labels(), 173, 'x1 Equilibria',
-                 show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
+                 show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 
     _plot_vector(model_configuration.zEQ, hypothesis.get_region_labels(), 174, 'z Equilibria',
-                 show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
+                 show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 
     _plot_vector(model_configuration.Ceq, hypothesis.get_region_labels(), 175, 'Total afferent coupling \n at equilibrium',
-                 show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
+                 show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 
-    seizure_and_propagation_indices = numpy.unique(numpy.r_[hypothesis.get_regions_disease_indices(),
+    seizure_and_propagation_indices = numpy.unique(numpy.r_[hypothesis.get_all_disease_indices(),
                                                             hypothesis.propagation_indices])
 
     if len(seizure_and_propagation_indices) > 0:
@@ -497,29 +497,29 @@ def plot_lsa_pse(hypothesis, model_configuration, pse_results, n_eig=None, weigh
     if pse_results.get("x1EQ") is not None:
         _plot_vector_violin(model_configuration.x1EQ, pse_results.get("x1EQ"), hypothesis.get_region_labels(), 173,
                             'x1 Equilibria', colormap=colormap, show_y_labels=False,
-                            indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
+                            indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
     else:
         _plot_vector(model_configuration.x1EQ, hypothesis.get_region_labels(), 173, 'x1 Equilibria',
-                     show_y_labels=False, indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
+                     show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 
     if pse_results.get("zEQ") is not None:
         _plot_vector_violin(model_configuration.zEQ, pse_results.get("zEQ"), hypothesis.get_region_labels(), 174,
                             'z Equilibria', colormap=colormap+"_r", show_y_labels=False,
-                            indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
+                            indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
     else:
         _plot_vector(model_configuration.zEQ, hypothesis.get_region_labels(), 174, 'z Equilibria', show_y_labels=False,
-                     indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
+                     indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 
     if pse_results.get("Ceq") is not None:
         _plot_vector_violin(model_configuration.Ceq, pse_results.get("Ceq"), hypothesis.get_region_labels(), 175,
                             'Total afferent coupling \n at equilibrium', colormap=colormap, show_y_labels=False,
-                            indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
+                            indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
     else:
         _plot_vector(model_configuration.Ceq, hypothesis.get_region_labels(), 175,
                      'Total afferent coupling \n at equilibrium', show_y_labels=False,
                      indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
 
-    seizure_and_propagation_indices = numpy.unique(numpy.r_[hypothesis.get_regions_disease_indices(),
+    seizure_and_propagation_indices = numpy.unique(numpy.r_[hypothesis.get_all_disease_indices(),
                                                             hypothesis.propagation_indices])
 
     if len(seizure_and_propagation_indices) > 0:

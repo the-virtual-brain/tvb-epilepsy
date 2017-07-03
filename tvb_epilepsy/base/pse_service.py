@@ -77,6 +77,7 @@ def update_hypothesis(hypothesis_input, params_names, params_values, params_inde
     hypothesis = deepcopy(hypothesis_input)
     hypothesis, params_names, params_values, params_indexes = \
         update_object(hypothesis, "hypothesis", params_names, params_values, params_indexes)[:4]
+    hypothesis.update(name=hypothesis.name)
 
     # ...create/update a model configuration service:
     if isinstance(model_configuration_service_input, ModelConfigurationService):
