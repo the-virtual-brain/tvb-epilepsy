@@ -71,7 +71,8 @@ class SampleService(object):
         self.params = dicts_of_lists(self.params, self.n_outputs)
 
     def __repr__(self):
-        d = OrderedDict([("shape", str(self.shape)), ("sampler", self.sampling_module)])
+        d = OrderedDict([("n_parameters", str(self.n_outputs)), ("n_samples", str(self.n_samples)),
+                         ("shape", str(self.shape)), ("sampler", self.sampling_module)])
 
         return formal_repr(self, d) + \
                "\nparameters: " + dict_str(self.params) + \
@@ -144,7 +145,7 @@ class StochasticSampleService(SampleService):
 
                 self.sampling_module = "scipy.stats." + sampler + " inverse transform sampling"
                 self.sampler = lambda trunc_limits, **some_kwargs: \
-                   self.truncated_distribution(getattr(ss, sampler), trunc_limits, **some_kwargs)
+                   self.truncated_distribution_sampling(getattr(ss, sampler), trunc_limits, **some_kwargs)
 
             else:
 
@@ -159,13 +160,13 @@ class StochasticSampleService(SampleService):
                 else:
                     raise ValueError("Sampler module " + str(sampling_module) + " is not recognized!")
 
-    def truncated_distribution(self, distribution, trunc_limits, size=1, **kwargs):
+    def truncated_distribution_sampling(self, distribution, trunc_limits, size=1, **kwargs):
         # Following: https://stackoverflow.com/questions/25141250/
         # how-to-truncate-a-numpy-scipy-exponential-distribution-in-an-efficient-way
         # TODO: to have distributions parameters valid for the truncated distributions instead for the original one
         # pystan might be needed for that...
-        rnd_cdf = nr.uniform(distribution.cdf(x=trunc_limits.get("low", distribution.a), **kwargs),
-                             distribution.cdf(x=trunc_limits.get("high", distribution.b), **kwargs),
+        rnd_cdf = nr.uniform(distribution.cdf(x=trunc_limits.get("low", -np.inf), **kwargs),
+                             distribution.cdf(x=trunc_limits.get("high", np.inf), **kwargs),
                              size=size)
         return distribution.ppf(q=rnd_cdf, **kwargs)
 
@@ -196,21 +197,36 @@ class StochasticSampleService(SampleService):
             if self.sampling_module.find("inverse transform") >= 0:
                 trunc_limits = dicts_of_lists_to_lists_of_dicts(self.trunc_limits)
                 samples = []
-                for io in range(self.n_outputs):
-                    samples.append(self.sampler(trunc_limits[io], size=self.n_samples, **(params[io])))
+                if len(self.params) == 0:
+                    for io in range(self.n_outputs):
+                        samples.append(self.sampler(trunc_limits[io], size=self.n_samples))
+                elif len(self.params) == self.n_outputs:
+                    for io in range(self.n_outputs):
+                        samples.append(self.sampler(trunc_limits[io], size=self.n_samples, **(params[io])))
+                else:
+                    raise ValueError("Parameters are neither an empty list nor a list of length n_parameters = "
+                                     + str(self.n_outputs) + " but one of length " + str(len(self.params)) + " !")
 
             else:
                 samples = []
-                for io in range(self.n_outputs):
-                    samples.append(self.sampler(size=self.n_samples, **(params[io])))
+                if len(self.params) == 0:
+                    for io in range(self.n_outputs):
+                        samples.append(self.sampler(size=self.n_samples))
+                elif len(self.params) == self.n_outputs:
+                    for io in range(self.n_outputs):
+                        samples.append(self.sampler(size=self.n_samples, **(params[io])))
+                else:
+                    raise ValueError("Parameters are neither an empty list nor a list of length n_parameters = "
+                                     + str(self.n_outputs) + " but one of length " + str(len(self.params)) + " !")
 
         return np.reshape(samples, self.shape)
 
     def __repr__(self):
-        d = OrderedDict([("sampler", str(self.sampling_module)), ("n_samples", str(self.shape)),
-                         ("n_outputs", str(self.shape)), ("random_seed", str(self.random_seed))])
 
-        return formal_repr(self, d) + "\n" + "\ntruncation limits: " + dict_str(self.trunc_limits) + "\n"
+        d = OrderedDict([("random_seed", str(self.random_seed))])
+
+        return super(StochasticSampleService, self).__repr__() + "\n"+ \
+               formal_repr(self, d) + "\n" + "\ntruncation limits: " + dict_str(self.trunc_limits) + "\n"
 
 
 if __name__ == "__main__":
@@ -229,7 +245,7 @@ if __name__ == "__main__":
 
     print("\nStochastic uniform sampling:")
 
-    sampler = StochasticSampleService(n_samples=10, n_outputs=1, low=1.0, high=2.0)
+    sampler = StochasticSampleService() #(n_samples=10, n_outputs=1, low=1.0, high=2.0)
 
     samples, stats = sampler.generate_samples(stats=True)
 
@@ -254,7 +270,7 @@ if __name__ == "__main__":
     print("\nSensitivity analysis sampling:")
 
     sampler = StochasticSampleService(n_samples=10, n_outputs=2, sampler="latin", sampling_module="salib",
-                                      bounds=[0.0, 0.1]*2)
+                                      bounds=[[0.0, 0.1], [0.0, 0.1]])
 
     samples, stats = sampler.generate_samples(stats=True)
 
