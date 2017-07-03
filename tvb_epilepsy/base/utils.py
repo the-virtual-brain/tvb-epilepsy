@@ -274,13 +274,24 @@ def list_of_dicts_to_dicts_of_ndarrays(lst):
 def dicts_of_lists_to_lists_of_dicts(dictionary):
     return [dict(zip(dictionary,t)) for t in zip(*dictionary.values())]
 
+def ensure_list(arg):
+    if not (isinstance(arg, list)):
+        try: #if iterable
+            arg = list(arg)
+        except: #if not iterable
+            arg = [arg]
+    return arg
+
 def dicts_of_lists(dictionary, n=1):
     for key, value in dictionary.iteritems():
-        if not(isinstance(dictionary[key], list)):
-            dictionary[key] = [dictionary[key]]
+        dictionary[key] = ensure_list(dictionary[key])
         if len(dictionary[key]) == 1 and n>1:
             dictionary[key] = dictionary[key] * n
     return dictionary
+
+def linear_index_to_coordinate_tuples(linear_index, shape):
+    coordinates_tuple = numpy.unravel_index(linear_index, shape)
+    return zip(*[ca.flatten().tolist() for ca in coordinates_tuple])
 
 def formal_repr(instance, attr_dict):
     """ A formal string representation for an object.
