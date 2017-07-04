@@ -63,9 +63,6 @@ class DiseaseHypothesis(object):
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         h5_model.add_or_update_metadata_attribute("Number_of_nodes", self.get_number_of_regions())
 
-        h5_model.add_or_update_datasets_attribute("disease_indices", (self.get_regions_disease() != 0).astype(float))
-        h5_model.add_or_update_datasets_attribute("disease_values", self.get_regions_disease())
-
         all_indices_for_propagation = numpy.zeros(self.get_number_of_regions())
         all_indices_for_propagation[self.propagation_indices] = 1
 
