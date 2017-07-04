@@ -25,12 +25,23 @@ def prepare_for_h5(obj):
 
     metadata_dict = {}
 
-    for key, value in vars(obj).iteritems():
-        if (isinstance(value, numpy.ndarray)):
-            datasets_dict.update({key: value})
-        else:
-            if isinstance(value, (float, int, long, complex, str)):
-                metadata_dict.update({key: value})
+    if isinstance(obj, dict):
+
+        for key, value in obj.iteritems():
+            if (isinstance(value, numpy.ndarray)):
+                datasets_dict.update({key: value})
+            else:
+                if isinstance(value, (float, int, long, complex, str)):
+                    metadata_dict.update({key: value})
+
+    else:
+
+        for key, value in vars(obj).iteritems():
+            if (isinstance(value, numpy.ndarray)):
+                datasets_dict.update({key: value})
+            else:
+                if isinstance(value, (float, int, long, complex, str)):
+                    metadata_dict.update({key: value})
 
     h5_model = H5Model(datasets_dict, metadata_dict)
 
