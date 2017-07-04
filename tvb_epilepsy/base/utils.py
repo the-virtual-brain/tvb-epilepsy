@@ -474,6 +474,24 @@ def ensure_unique_file(parent_folder, filename):
     return final_path
 
 
+def change_filename_or_overwrite(parent_folder, original_filename):
+
+    final_path = os.path.join(parent_folder, original_filename)
+
+    overwrite = False
+
+    while os.path.exists(final_path) and not(overwrite):
+        filename = raw_input("File %s already exists. Enter a different name or press enter to overwrite file: "
+                             % final_path)
+        if filename == "":
+            overwrite = True
+            filename = original_filename
+
+        final_path = os.path.join(parent_folder, filename)
+
+    return final_path, overwrite
+
+
 def print_metadata(h5_file):
     print "Metadata:"
     for key, val in h5_file["/"].attrs.iteritems():
