@@ -197,10 +197,10 @@ class StochasticSampleService(SampleService):
             if self.sampling_module.find("inverse transform") >= 0:
                 trunc_limits = dicts_of_lists_to_lists_of_dicts(self.trunc_limits)
                 samples = []
-                if len(self.params) == 0:
+                if len(params) == 0:
                     for io in range(self.n_outputs):
                         samples.append(self.sampler(trunc_limits[io], size=self.n_samples))
-                elif len(self.params) == self.n_outputs:
+                elif len(params) == self.n_outputs:
                     for io in range(self.n_outputs):
                         samples.append(self.sampler(trunc_limits[io], size=self.n_samples, **(params[io])))
                 else:
@@ -209,10 +209,10 @@ class StochasticSampleService(SampleService):
 
             else:
                 samples = []
-                if len(self.params) == 0:
+                if len(params) == 0:
                     for io in range(self.n_outputs):
                         samples.append(self.sampler(size=self.n_samples))
-                elif len(self.params) == self.n_outputs:
+                elif len(params) == self.n_outputs:
                     for io in range(self.n_outputs):
                         samples.append(self.sampler(size=self.n_samples, **(params[io])))
                 else:

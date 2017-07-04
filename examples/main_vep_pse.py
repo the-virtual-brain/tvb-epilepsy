@@ -15,7 +15,7 @@ from tvb_epilepsy.base.lsa_service import LSAService
 from tvb_epilepsy.base.plot_tools import plot_nullclines_eq, plot_sim_results, plot_lsa_pse, \
                                          plot_hypothesis_model_configuration_and_lsa
 from tvb_epilepsy.base.utils import initialize_logger, set_time_scales, calculate_projection, filter_data, \
-                                    list_of_dicts_to_dicts_of_ndarray
+                                    list_of_dicts_to_dicts_of_ndarrays
 from tvb_epilepsy.custom.read_write import write_h5_model, write_ts_epi, write_ts_seeg_epi
 from tvb_epilepsy.base.h5_model import prepare_for_h5
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
@@ -92,13 +92,15 @@ if __name__ == "__main__":
 
     # --------------------------Hypothesis definition-----------------------------------
 
+    n_samples = 100
+
     # Manual definition of hypothesis...:
     x0_indices = [20]
     x0_values = [0.9]
-    E_indices = [70]
-    E_values = [0.9]
-    disease_values = x0_values + E_values
-    disease_indices = x0_indices + E_indices
+    e_indices = [70]
+    e_values = [0.9]
+    disease_values = x0_values + e_values
+    disease_indices = x0_indices + e_indices
 
     # ...or reading a custom file:
     # ep_name = "ep_test1"
@@ -112,87 +114,105 @@ if __name__ == "__main__":
     # if disease_values.size > 1:
     #     inds_split = numpy.ceil(disease_values.size * 1.0 / 2).astype("int")
     #     x0_indices = disease_indices[:inds_split].tolist()
-    #     E_indices = disease_indices[inds_split:].tolist()
+    #     e_indices = disease_indices[inds_split:].tolist()
     # else:
     #     x0_indices = disease_indices.tolist()
-    #     E_indices = []
+    #     e_indices = []
     # disease_indices = list(disease_indices)
 
+    n_x0 = len(x0_indices)
+    n_e = len(e_indices)
+    n_disease = len(disease_indices)
     all_regions_indices = numpy.array(range(head.number_of_regions))
+    healthy_indices = numpy.delete(all_regions_indices, disease_indices).tolist()
+    n_healthy = len(healthy_indices)
 
-    stoch_sampler = StochasticSampleService(shape=(100,), distribution="norm", trunc_limits={"low": 0.0},
+    # Sampling of the global coupling parameter
+    stoch_sampler = StochasticSampleService(n_samples=n_samples, n_outputs=1, sampler="norm", trunc_limits={"low": 0.0},
                                             random_seed=1000, loc=10.0, scale=3.0)
     K_samples, K_sample_stats = stoch_sampler.generate_samples(stats=True)
 
     # This is an example of Excitability Hypothesis:
-    hyp_x0 = DiseaseHypothesis(head.connectivity, numpy.array(disease_values), x0_indices, [], [], [],
-                               "Excitability", "Excitability_Hypothesis")
-    healthy_indices = numpy.delete(all_regions_indices, x0_indices)
-    stoch_sampler = StochasticSampleService(shape=(10,), distribution="norm", trunc_limits={"high": 1.0},
-                                            random_seed=x0_indices[0], loc=0.9, scale=0.2)
-    params_pse_x0 = [("hypothesis.disease_values", stoch_sampler.generate_samples(), [0])]
-    stoch_sampler = StochasticSampleService(shape=(10,), distribution="norm", trunc_limits={"low": 0.0, "high": 1.0},
+    hyp_x0 = DiseaseHypothesis(head.connectivity, excitability_hypothesis={tuple(disease_indices): disease_values},
+                               epileptogenicity_hypothesis={}, connectivity_hypothesis={})
+
+    stoch_sampler = StochasticSampleService(n_samples=n_samples, n_outputs=n_disease,
+                                            sampler="norm", trunc_limits={"high": 1.0},
+                                            random_seed=0, loc=0.9, scale=0.2)
+    disease_samples = stoch_sampler.generate_samples()
+    params_pse_x0 = []
+    for ii in range(n_disease):
+        params_pse_x0.append(("hypothesis.x0_values", disease_samples[ii], [ii]))
+
+    stoch_sampler = StochasticSampleService(n_samples=n_samples, n_outputs=n_healthy,
+                                            sampler="norm", trunc_limits={"low": 0.0, "high": 1.0},
                                             loc=0.3, scale=0.1)
-    for ii in healthy_indices:
-        stoch_sampler.random_seed = ii
-        params_pse_x0.append(("model_configuration_service.x0", stoch_sampler.generate_samples(stats=False), [ii]))
+    healthy_samples = stoch_sampler.generate_samples(stats=False)
+    params_pse_x0= []
+    for ii in range(n_healthy):
+        params_pse_x0.append(("model_configuration_service.x0", healthy_samples[ii], [healthy_indices[ii]]))
 
-    params_pse_x0.append(("model_configuration_service.K_unscaled", K_samples[:10], all_regions_indices))
+    # Add the global coupling K samples:
+    params_pse_x0.append(("model_configuration_service.K_unscaled", K_samples, all_regions_indices))
 
-    pse_hyp_x0 = PSE_service("LSA", hypothesis=hyp_x0, params_pse=params_pse_x0, grid_mode=False)
+    pse_hyp_x0 = PSE_service("LSA", hypothesis=hyp_x0, params_pse=params_pse_x0)
 
     # This is an example of Epileptogenicity Hypothesis:
-    hyp_E = DiseaseHypothesis(head.connectivity, numpy.array(disease_values), [], E_indices, [], [],
-                              "Epileptogenicity", "Epileptogenicity_Hypothesis")
+    hyp_E = DiseaseHypothesis(head.connectivity, excitability_hypothesis={},
+                              epileptogenicity_hypothesis={tuple(disease_indices): disease_values},
+                              connectivity_hypothesis={})
+    stoch_sampler = StochasticSampleService(n_samples=n_samples, n_outputs=n_disease,
+                                            sampler="norm", trunc_limits={"high": 1.0},
+                                            random_seed=1, loc=0.9, scale=0.2)
+    disease_samples = stoch_sampler.generate_samples()
+    params_pse_E = []
+    for ii in range(n_disease):
+        params_pse_E.append(("hypothesis.e_values", disease_samples[ii], [ii]))
 
-    healthy_indices = numpy.delete(all_regions_indices, E_indices)
-    stoch_sampler = StochasticSampleService(shape=(10,), distribution="norm", trunc_limits={"high": 1.0},
-                                            random_seed=E_indices[0], loc=0.9, scale=0.2)
-    params_pse_E = [("hypothesis.disease_values", stoch_sampler.generate_samples(), [0])]
-    stoch_sampler = StochasticSampleService(shape=(10,), distribution="norm", trunc_limits={"low": 0.0, "high": 1.0},
-                                            loc=0.3, scale=0.1)
-    for ii in healthy_indices:
-        stoch_sampler.random_seed = ii
-        params_pse_E.append(("model_configuration_service.E", stoch_sampler.generate_samples(stats=False), [ii]))
+    stoch_sampler = StochasticSampleService(n_samples=n_samples, n_outputs=n_healthy, sampler="norm",
+                                            trunc_limits={"low": 0.0, "high": 1.0}, loc=0.3, scale=0.1)
+    healthy_samples = stoch_sampler.generate_samples(stats=False)
+    for ii in range(n_healthy):
+        params_pse_E.append(("model_configuration_service.E", healthy_samples[ii], [healthy_indices[ii]]))
 
-    params_pse_E.append(("model_configuration_service.K_unscaled", K_samples[:10], all_regions_indices))
+    # Add the global coupling K samples:
+    params_pse_E.append(("model_configuration_service.K_unscaled", K_samples, all_regions_indices))
 
-    pse_hyp_E = PSE_service("LSA", hypothesis=hyp_E, params_pse=params_pse_E, grid_mode=False)
+    pse_hyp_E = PSE_service("LSA", hypothesis=hyp_E, params_pse=params_pse_E)
 
-    if len(E_indices) > 0:
+    if len(e_indices) > 0:
         # This is an example of x0 mixed Excitability and Epileptogenicity Hypothesis:
-        hyp_x0_E = DiseaseHypothesis(head.connectivity, numpy.array(disease_values), x0_indices, E_indices, [], [],
-                                     "Excitability", "Mixed_x0_E_Hypothesis")
+        hyp_x0_E = DiseaseHypothesis(head.connectivity, excitability_hypothesis={tuple(x0_indices): x0_values},
+                                     epileptogenicity_hypothesis={tuple(e_indices): e_values},
+                                     connectivity_hypothesis={})
 
         # Prepare parameter samples for pse:
         # Deterministic sampling for the 2 diseased regions to scan values around their mean value:
         low_x0, high_x0 = mean_std_to_low_high(mu=0.9, std=0.02)
         low_E, high_E = mean_std_to_low_high(mu=0.9, std=0.025)
-        det_sampler = DeterministicSampleService(shape=(10,), low=low_x0, high=high_x0)
-        x0_samples = det_sampler.generate_samples(stats=False)
-        det_sampler = DeterministicSampleService(shape=(10,), low=low_E, high=high_E)
-        E_samples = det_sampler.generate_samples(stats=False)
-        # We generate a 2 dimensional grid outside pse_service, because the rest of the parameters will not be in
-        # grid mode:
-        x0_samples, E_samples = numpy.meshgrid(*[x0_samples, E_samples], sparse=False, indexing="ij")
-        x0_samples = x0_samples.flatten()
-        E_samples = E_samples.flatten()
-        params_pse_x0_E = [("hypothesis.disease_values", x0_samples, [0]),
-                           ("hypothesis.disease_values", E_samples, [1])]
+        det_sampler = DeterministicSampleService(n_samples=10, n_outputs=n_disease, grid_mode=True,
+                                                 low=[low_x0]*n_x0 + [low_E]*n_e,
+                                                 high=[high_x0]*n_x0 + [high_E]*n_e)
+        disease_samples = det_sampler.generate_samples(stats=False)
+        x0_samples = disease_samples[:n_x0]
+        E_samples = disease_samples[n_x0:]
+        params_pse_x0_E = []
+        for ii in range(n_x0):
+            params_pse_x0_E.append(("hypothesis.x0_values", x0_samples[ii], [ii]))
+        for ii in range(n_e):
+                params_pse_x0_E.append(("hypothesis.e_values", E_samples[ii], [ii]))
 
         # Stochastic normal sampling for healthy regions around their x0 value
-        stoch_sampler = StochasticSampleService(shape=(100,), distribution="uniform",
+        stoch_sampler = StochasticSampleService(n_samples=n_samples, n_outputs=n_healthy, sampler="uniform",
                                                 sampling_module="numpy", low=0.0, high=0.25)
-        healthy_indices = numpy.delete(all_regions_indices, disease_indices)
-        for ii in healthy_indices:
-            stoch_sampler.random_seed = ii
-            params_pse_x0_E.append(("model_configuration_service.x0",
-                                    stoch_sampler.generate_samples(stats=False), [ii]))
+        healthy_samples = stoch_sampler.generate_samples(stats=False)
+        for ii in range(n_healthy):
+            params_pse_x0_E.append(("model_configuration_service.x0", healthy_samples[ii], [healthy_indices[ii]]))
 
         # Add the global coupling K samples:
         params_pse_x0_E.append(("model_configuration_service.K_unscaled", K_samples, all_regions_indices))
 
-        pse_hyp_x0_E = PSE_service("LSA", hypothesis=hyp_x0_E, params_pse=params_pse_x0_E, grid_mode=False)
+        pse_hyp_x0_E = PSE_service("LSA", hypothesis=hyp_x0_E, params_pse=params_pse_x0_E)
 
         hypotheses = (hyp_x0, hyp_E, hyp_x0_E)
 
@@ -243,18 +263,22 @@ if __name__ == "__main__":
 
     for hyp in hypotheses:
 
+        print "Running hypothesis: " + hyp.name
+
+        print "creating model configuration..."
         model_configuration_service = ModelConfigurationService(hyp.get_number_of_regions())
         if hyp.type == "Epileptogenicity":
             model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hyp)
         else:
             model_configuration = model_configuration_service.configure_model_from_hypothesis(hyp)
 
+        print "running LSA..."
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
         lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
 
-        # plot_hypothesis_model_configuration_and_lsa(lsa_hypothesis, model_configuration,
-        #                                             weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
-        #                                             n_eig=lsa_service.eigen_vectors_number)
+        plot_hypothesis_model_configuration_and_lsa(lsa_hypothesis, model_configuration,
+                                                    weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
+                                                    n_eig=lsa_service.eigen_vectors_number)
 
         # write_h5_model(hyp.prepare_for_h5(), folder_name=FOLDER_RES, file_name=hyp.name + ".h5")
         write_h5_model(lsa_hypothesis.prepare_for_h5(), folder_name=FOLDER_RES, file_name=lsa_hypothesis.name + ".h5")
@@ -264,17 +288,18 @@ if __name__ == "__main__":
                        file_name=lsa_hypothesis.name + "_ModelConfig.h5")
 
         if isinstance(pse_instances[hyp], PSE_service):
+            print "running PSE LSA..."
             pse_results, execution_status = pse_instances[hyp].run_pse(grid_mode=False,
                                                           model_configuration_service_input=model_configuration_service,
                                                           lsa_service_input=lsa_service)
-            pse_results = list_of_dicts_to_dicts_of_ndarray(pse_results)
+            pse_results = list_of_dicts_to_dicts_of_ndarrays(pse_results)
             plot_lsa_pse(lsa_hypothesis, model_configuration, pse_results,
                          weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
-                         n_eig=lsa_service.eigen_vectors_number, show_flag=True) #, show_flag=True, save_flag=False
+                         n_eig=lsa_service.eigen_vectors_number) #, show_flag=True, save_flag=False
             write_h5_model(prepare_for_h5(pse_results), FOLDER_RES, "PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
 
         # # ------------------------------Simulation--------------------------------------
-        #
+        # print "simulating..."
         # simulator_instance = setup_simulation(model_configuration, head.connectivity, dt, sim_length, monitor_period,
         #                                       model_name, scale_time=scale_time, noise_intensity=10 ** -8)
         #

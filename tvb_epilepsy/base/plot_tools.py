@@ -391,34 +391,38 @@ def plot_nullclines_eq(model_configuration, region_labels, special_idx=None, mod
     _check_show(show_flag)
 
 
-def plot_hypothesis_model_configuration_and_lsa(hypothesis, model_configuration, n_eig=None,
+def plot_hypothesis_model_configuration_and_lsa(hypothesis, model_configuration, plot_equilibria=False, n_eig=None,
                                                 weighted_eigenvector_sum=None,
                                                 figure_name='', show_flag=False, save_flag=True,
                                                 figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
                                                 figsize=VERY_LARGE_SIZE):
     fig = pyplot.figure(hypothesis.name + ": Overview", frameon=False, figsize=figsize)
-    mp.gridspec.GridSpec(1, 7, width_ratios=[1, 1, 1, 1, 1, 2, 1])
 
-    ax0 = _plot_vector(model_configuration.x0_values, hypothesis.get_region_labels(), 171, 'Excitabilities x0',
-                       show_y_labels=False, indices_red=hypothesis.x0_indices)
+    mp.gridspec.GridSpec(1, 5+2*plot_equilibria, width_ratios=[1, 1] + plot_equilibria*[1, 1]+[1, 2, 1])
+    subplot_ind = 150 + 20*plot_equilibria
 
-    _plot_vector(model_configuration.E_values, hypothesis.get_region_labels(), 172, 'Epileptogenicities E',
+    ax0 = _plot_vector(model_configuration.x0_values, hypothesis.get_region_labels(), subplot_ind+1,
+                       'Excitabilities x0', show_y_labels=False, indices_red=hypothesis.x0_indices)
+
+    _plot_vector(model_configuration.E_values, hypothesis.get_region_labels(), subplot_ind+2, 'Epileptogenicities E',
                  show_y_labels=False, indices_red=hypothesis.e_indices, sharey=ax0)
 
-    _plot_vector(model_configuration.x1EQ, hypothesis.get_region_labels(), 173, 'x1 Equilibria',
-                 show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
+    if plot_equilibria:
+        _plot_vector(model_configuration.x1EQ, hypothesis.get_region_labels(), subplot_ind+3, 'x1 Equilibria',
+                     show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 
-    _plot_vector(model_configuration.zEQ, hypothesis.get_region_labels(), 174, 'z Equilibria',
-                 show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
+        _plot_vector(model_configuration.zEQ, hypothesis.get_region_labels(), subplot_ind+4, 'z Equilibria',
+                     show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 
-    _plot_vector(model_configuration.Ceq, hypothesis.get_region_labels(), 175, 'Total afferent coupling \n at equilibrium',
-                 show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
+    _plot_vector(model_configuration.Ceq, hypothesis.get_region_labels(), subplot_ind+3+2*plot_equilibria,
+                 'Total afferent coupling \n at equilibrium', show_y_labels=False,
+                 indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 
     seizure_and_propagation_indices = numpy.unique(numpy.r_[hypothesis.get_all_disease_indices(),
                                                             hypothesis.propagation_indices])
 
     if len(seizure_and_propagation_indices) > 0:
-        _plot_regions2regions(hypothesis.get_weights(), hypothesis.get_region_labels(), 176,
+        _plot_regions2regions(hypothesis.get_weights(), hypothesis.get_region_labels(), subplot_ind+4+2*plot_equilibria,
                               'Afferent connectivity \n from seizuring regions',
                               show_y_labels=False, show_x_labels=True,
                               indices_red_x=seizure_and_propagation_indices, sharey=ax0)
@@ -431,8 +435,8 @@ def plot_hypothesis_model_configuration_and_lsa(hypothesis, model_configuration,
         if n_eig is not None:
             title += str(n_eig) + " "
         title += "eigenvectors"
-        _plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(), 177, title,
-                     show_y_labels=False, indices_red=seizure_and_propagation_indices, sharey=ax0)
+        _plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(), subplot_ind+5+2*plot_equilibria,
+                     title, show_y_labels=False, indices_red=seizure_and_propagation_indices, sharey=ax0)
 
     _set_axis_labels(fig, 121, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(),
                      hypothesis.get_regions_disease_indices(), 'r')
@@ -472,50 +476,54 @@ def plot_hypothesis_model_configuration_and_lsa(hypothesis, model_configuration,
     #                    figsize=figsize)
 
 
-def plot_lsa_pse(hypothesis, model_configuration, pse_results, n_eig=None, weighted_eigenvector_sum=None,
-                 colormap="YlOrRd", figure_name='', show_flag=False, save_flag=True, figure_dir=FOLDER_FIGURES,
-                 figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE):
+def plot_lsa_pse(hypothesis, model_configuration, pse_results, plot_equilibria=False, n_eig=None,
+                 weighted_eigenvector_sum=None, colormap="YlOrRd", figure_name='', show_flag=False, save_flag=True,
+                 figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE):
     fig = pyplot.figure(hypothesis.name + ": LSA PSE overview", frameon=False, figsize=figsize)
-    mp.gridspec.GridSpec(1, 7, width_ratios=[1, 1, 1, 1, 1, 2, 1])
+
+    mp.gridspec.GridSpec(1, 5 + 2 * plot_equilibria, width_ratios=[1, 1] + plot_equilibria * [1, 1] + [1, 2, 1])
+    subplot_ind = 150 + 20 * plot_equilibria
 
     if pse_results.get("x0_values") is not None:
         ax0 = _plot_vector_violin(model_configuration.x0_values, pse_results.get("x0_values"),
-                                  hypothesis.get_region_labels(), 171, 'Excitabilities x0', colormap=colormap,
+                                  hypothesis.get_region_labels(), subplot_ind+1, 'Excitabilities x0', colormap=colormap,
                                   show_y_labels=False, indices_red=hypothesis.x0_indices)
     else:
-        ax0 = _plot_vector(model_configuration.x0_values, hypothesis.get_region_labels(), 171, 'Excitabilities x0',
-                           show_y_labels=False, indices_red=hypothesis.x0_indices)
+        ax0 = _plot_vector(model_configuration.x0_values, hypothesis.get_region_labels(), subplot_ind+1,
+                           'Excitabilities x0', show_y_labels=False, indices_red=hypothesis.x0_indices)
 
     if pse_results.get("E_values") is not None:
         _plot_vector_violin(model_configuration.x0_values, pse_results.get("E_values"), hypothesis.get_region_labels(),
-                            172, 'Epileptogenicities E', colormap=colormap, show_y_labels=False,
+                            subplot_ind + 2, 'Epileptogenicities E', colormap=colormap, show_y_labels=False,
                             indices_red=hypothesis.e_indices, sharey=ax0)
     else:
-        _plot_vector(model_configuration.E_values, hypothesis.get_region_labels(), 172, 'Epileptogenicities E',
-                    show_y_labels=False, indices_red=hypothesis.e_indices, sharey=ax0)
+        _plot_vector(model_configuration.E_values, hypothesis.get_region_labels(), subplot_ind+2,
+                     'Epileptogenicities E', show_y_labels=False, indices_red=hypothesis.e_indices, sharey=ax0)
 
-    if pse_results.get("x1EQ") is not None:
-        _plot_vector_violin(model_configuration.x1EQ, pse_results.get("x1EQ"), hypothesis.get_region_labels(), 173,
-                            'x1 Equilibria', colormap=colormap, show_y_labels=False,
-                            indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
-    else:
-        _plot_vector(model_configuration.x1EQ, hypothesis.get_region_labels(), 173, 'x1 Equilibria',
-                     show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
+    if plot_equilibria:
+        if pse_results.get("x1EQ") is not None:
+            _plot_vector_violin(model_configuration.x1EQ, pse_results.get("x1EQ"), hypothesis.get_region_labels(),
+                                subplot_ind+3, 'x1 Equilibria', colormap=colormap, show_y_labels=False,
+                                indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
+        else:
+            _plot_vector(model_configuration.x1EQ, hypothesis.get_region_labels(), subplot_ind+3, 'x1 Equilibria',
+                         show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 
-    if pse_results.get("zEQ") is not None:
-        _plot_vector_violin(model_configuration.zEQ, pse_results.get("zEQ"), hypothesis.get_region_labels(), 174,
-                            'z Equilibria', colormap=colormap+"_r", show_y_labels=False,
-                            indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
-    else:
-        _plot_vector(model_configuration.zEQ, hypothesis.get_region_labels(), 174, 'z Equilibria', show_y_labels=False,
-                     indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
+        if pse_results.get("zEQ") is not None:
+            _plot_vector_violin(model_configuration.zEQ, pse_results.get("zEQ"), hypothesis.get_region_labels(),
+                                subplot_ind+4, 'z Equilibria', colormap=colormap+"_r", show_y_labels=False,
+                                indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
+        else:
+            _plot_vector(model_configuration.zEQ, hypothesis.get_region_labels(), subplot_ind+4, 'z Equilibria',
+                         show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 
     if pse_results.get("Ceq") is not None:
-        _plot_vector_violin(model_configuration.Ceq, pse_results.get("Ceq"), hypothesis.get_region_labels(), 175,
-                            'Total afferent coupling \n at equilibrium', colormap=colormap, show_y_labels=False,
-                            indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
+        _plot_vector_violin(model_configuration.Ceq, pse_results.get("Ceq"), hypothesis.get_region_labels(),
+                            subplot_ind + 3 + 2 * plot_equilibria, 'Total afferent coupling \n at equilibrium',
+                            colormap=colormap, show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(),
+                            sharey=ax0)
     else:
-        _plot_vector(model_configuration.Ceq, hypothesis.get_region_labels(), 175,
+        _plot_vector(model_configuration.Ceq, hypothesis.get_region_labels(), subplot_ind+3+2*plot_equilibria,
                      'Total afferent coupling \n at equilibrium', show_y_labels=False,
                      indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
 
@@ -523,7 +531,7 @@ def plot_lsa_pse(hypothesis, model_configuration, pse_results, n_eig=None, weigh
                                                             hypothesis.propagation_indices])
 
     if len(seizure_and_propagation_indices) > 0:
-        _plot_regions2regions(hypothesis.get_weights(), hypothesis.get_region_labels(), 176,
+        _plot_regions2regions(hypothesis.get_weights(), hypothesis.get_region_labels(), subplot_ind+4+2*plot_equilibria,
                               'Afferent connectivity \n from seizuring regions', show_y_labels=False,
                               show_x_labels=True, indices_red_x=seizure_and_propagation_indices, sharey=ax0)
 
@@ -537,11 +545,12 @@ def plot_lsa_pse(hypothesis, model_configuration, pse_results, n_eig=None, weigh
         title += "eigenvectors"
         if pse_results.get("propagation_strengths") is not None:
             _plot_vector_violin(hypothesis.propagation_strenghts, pse_results.get("propagation_strengths"),
-                                hypothesis.get_region_labels(), 177, title, show_y_labels=False,
-                                indices_red=seizure_and_propagation_indices, sharey=ax0)
+                                hypothesis.get_region_labels(), subplot_ind+5+2*plot_equilibria, title,
+                                show_y_labels=False, indices_red=seizure_and_propagation_indices, sharey=ax0)
         else:
-            _plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(), 177, title,
-                         show_y_labels=False, indices_red=seizure_and_propagation_indices, sharey=ax0)
+            _plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(),
+                         subplot_ind+5+2*plot_equilibria, title, show_y_labels=False,
+                         indices_red=seizure_and_propagation_indices, sharey=ax0)
 
     _set_axis_labels(fig, 121, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(),
                      hypothesis.get_regions_disease_indices(), 'r')
