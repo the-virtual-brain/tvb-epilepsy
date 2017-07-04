@@ -14,25 +14,123 @@ from tvb_epilepsy.base.utils import shape_to_size, formal_repr, dict_str, dicts_
                                     dicts_of_lists_to_lists_of_dicts, list_of_dicts_to_dicts_of_ndarrays
 
 
-def mean_std_to_low_high(mu=0.0, std=1.0):
+# A helper function to match normal distributions with several others we might use...
 
-    std = std * np.sqrt(3.0)
+def mean_std_to_distribution_params(distribution="uniform", mu=0.0, std=1.0):
 
-    low = mu - std
-    high = mu + std
+    p = {}
 
-    return low, high
+    if distribution is "uniform":
+
+        p["alpha"] = mu - std
+        p["beta"] = mu + std
+
+    elif distribution is "lognormal":
+
+        mu2 = np.power(mu, 2)
+        var = np.power(std, 2)
+
+        p["mu"] = np.log(mu2 / np.sqrt(var + mu2))
+
+        p["sigma"] = np.sqrt(np.log(1.0 + var / mu2))
+
+    elif distribution is "chisquare":
+
+        p["k"] = mu
+
+        if std != np.sqrt(2.0*mu):
+            warnings.warn("std is not equal to sqrt(2*mu) as it should be for chisquare distribution!")
+
+    elif distribution is "gamma":
+
+        p["k"] = np.power(mu / std, 2)
+
+        p["theta"] = np.power(std) / mu
+
+        p["a"] = p["k"]
+
+        p["beta"] = 1.0 / p["theta"]
+
+    elif distribution is "exponential":
+
+        p["lambda"] = 1.0 / mu
+
+        if std != mu:
+            warnings.warn("std is not equal to mu as it should be for exponential distribution!")
+
+    elif distribution is "beta":
+
+        var = np.power(std, 2)
+        mu1 = (1.0 - mu)
+
+        if var < mu * mu1:
+
+            vmu = mu * mu1 / var - 1.0
+
+            p["alpha"] = mu * vmu
+            p["beta"] = mu1 * vmu
+
+        else:
+            raise ValueError("Variance = " + str(var) + " has to be smaller than the quantity mu*(1-mu) = " + str(mu1)
+                             + " !")
+
+    return p
 
 
-def low_high_to_mean_std(low=0.0, high=1.0):
+def distribution_params_to_mean_std(distribution="uniform", p={"alpha":0.0, "beta":1.0}):
 
-    mu = (low + high) / 2.0
+    if distribution is "uniform":
 
-    std = (high - low) / 2.0 / np.sqrt(3)
+        mu = 0.5 * (p["alpha"] + p["beta"])
+
+        std = 0.5 * (p["beta"] - p["alpha"]) / np.sqrt(3)
+
+    elif distribution is "lognormal":
+
+        sigma2 = np.power(p["sigma"], 2)
+        mu = np.exp(p["mu"] + 0.5 * sigma2)
+
+        std = np.sqrt(np.exp(2.0 * p["mu"] + sigma2) * (np.exp(sigma2) - 1.0))
+
+    elif distribution is "chisquare":
+
+        mu = p["k"]
+
+        std = np.sqrt(2.0 * p["k"])
+
+    elif distribution is "gamma":
+
+        if p.get("a", False) and p.get("beta", False):
+
+            mu = p["a"] / p["beta"]
+
+            std = np.sqrt(p["a"]) / p["beta"]
+
+        elif p.get("k", False) and p.get("theta", False):
+
+            mu = p["k"] * p["theta"]
+
+            std = np.sqrt(p["k"]) * p["theta"]
+
+        else:
+
+            raise ValueError("The input gamma distribution parameters are neither of the a, beta system, nor of the "
+                             "k, theta one!")
+
+    elif distribution is "exponential":
+
+        mu = 1.0 / p["lambda"]
+        std = mu
+
+    elif distribution is "beta":
+
+        ab = p["alpha"] + p["beta"]
+
+        mu = p["alpha"] / ab
+
+        std = np.sqrt(p["alpha"] * p["beta"] / (ab + 1.0)) / ab
 
     return mu, std
-
-# def loc_scale_to_mean_std(loc=0.0, scale=1.0, distribution=):
 
 
 class SampleService(object):
@@ -165,8 +263,8 @@ class StochasticSampleService(SampleService):
         # how-to-truncate-a-numpy-scipy-exponential-distribution-in-an-efficient-way
         # TODO: to have distributions parameters valid for the truncated distributions instead for the original one
         # pystan might be needed for that...
-        rnd_cdf = nr.uniform(distribution.cdf(x=trunc_limits.get("low", -np.inf), **kwargs),
-                             distribution.cdf(x=trunc_limits.get("high", np.inf), **kwargs),
+        rnd_cdf = nr.uniform(distribution.cdf(x=trunc_limits.get("alpha", -np.inf), **kwargs),
+                             distribution.cdf(x=trunc_limits.get("beta", np.inf), **kwargs),
                              size=size)
         return distribution.ppf(q=rnd_cdf, **kwargs)
 
