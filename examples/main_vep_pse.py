@@ -6,7 +6,6 @@ import warnings
 
 import numpy
 
-from tvb_epilepsy.base.h5_model import prepare_for_h5
 from tvb_epilepsy.base.constants import FOLDER_RES, FOLDER_FIGURES, SAVE_FLAG, SHOW_FLAG, SIMULATION_MODE, \
     TVB, DATA_MODE, VOIS, DATA_CUSTOM, X0_DEF, E_DEF
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
@@ -20,7 +19,8 @@ from tvb_epilepsy.custom.read_write import write_h5_model, write_ts_epi, write_t
 from tvb_epilepsy.base.h5_model import prepare_for_h5
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
-from tvb_epilepsy.base.sample_service import DeterministicSampleService, StochasticSampleService, mean_std_to_low_high
+from tvb_epilepsy.base.sample_service import DeterministicSampleService, StochasticSampleService, \
+                                            mean_std_to_distribution_params
 from tvb_epilepsy.base.pse_service import PSE_service
 
 if DATA_MODE is TVB:
@@ -95,35 +95,35 @@ if __name__ == "__main__":
     n_samples = 100
 
     # Manual definition of hypothesis...:
-    # x0_indices = [20]
-    # x0_values = [0.9]
-    # e_indices = [70]
-    # e_values = [0.9]
-    # disease_values = x0_values + e_values
-    # disease_indices = x0_indices + e_indices
+    x0_indices = [20]
+    x0_values = [0.9]
+    e_indices = [70]
+    e_values = [0.9]
+    disease_values = x0_values + e_values
+    disease_indices = x0_indices + e_indices
 
-    # ...or reading a custom file:
-    ep_name = "ep_test1"
-    FOLDER_RES = os.path.join(data_folder, ep_name)
-    from tvb_epilepsy.custom.readers_custom import CustomReader
-
-    if not isinstance(reader, CustomReader):
-        reader = CustomReader()
-    disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
-    disease_indices, = numpy.where(disease_values > numpy.min([X0_DEF, E_DEF]))
-    disease_values = disease_values[disease_indices]
-    if disease_values.size > 1:
-        inds_split = numpy.ceil(disease_values.size * 1.0 / 2).astype("int")
-        x0_indices = disease_indices[:inds_split].tolist()
-        e_indices = disease_indices[inds_split:].tolist()
-        x0_values = disease_values[:inds_split].tolist()
-        e_values = disease_values[inds_split:].tolist()
-    else:
-        x0_indices = disease_indices.tolist()
-        x0_values = disease_values.tolist()
-        e_indices = []
-        e_values = []
-    disease_indices = list(disease_indices)
+    # # ...or reading a custom file:
+    # ep_name = "ep_test1"
+    # FOLDER_RES = os.path.join(data_folder, ep_name)
+    # from tvb_epilepsy.custom.readers_custom import CustomReader
+    #
+    # if not isinstance(reader, CustomReader):
+    #     reader = CustomReader()
+    # disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
+    # disease_indices, = numpy.where(disease_values > numpy.min([X0_DEF, E_DEF]))
+    # disease_values = disease_values[disease_indices]
+    # if disease_values.size > 1:
+    #     inds_split = numpy.ceil(disease_values.size * 1.0 / 2).astype("int")
+    #     x0_indices = disease_indices[:inds_split].tolist()
+    #     e_indices = disease_indices[inds_split:].tolist()
+    #     x0_values = disease_values[:inds_split].tolist()
+    #     e_values = disease_values[inds_split:].tolist()
+    # else:
+    #     x0_indices = disease_indices.tolist()
+    #     x0_values = disease_values.tolist()
+    #     e_indices = []
+    #     e_values = []
+    # disease_indices = list(disease_indices)
 
     n_x0 = len(x0_indices)
     n_e = len(e_indices)
@@ -202,11 +202,11 @@ if __name__ == "__main__":
 
         # Prepare parameter samples for pse:
         # Deterministic sampling for the 2 diseased regions to scan values around their mean value:
-        low_x0, high_x0 = mean_std_to_low_high(mu=0.9, std=0.02)
-        low_E, high_E = mean_std_to_low_high(mu=0.9, std=0.025)
+        alpha_x0, beta_x0 = mean_std_to_distribution_params(distribution="uniform", mu=0.9, std=0.02)
+        alpha_E, beta_E = mean_std_to_distribution_params(distribution="uniform", mu=0.9, std=0.025)
         det_sampler = DeterministicSampleService(n_samples=n_samples2, n_outputs=n_disease, grid_mode=grid_mode,
-                                                 low=[low_x0]*n_x0 + [low_E]*n_e,
-                                                 high=[high_x0]*n_x0 + [high_E]*n_e)
+                                                 alpha=[alpha_x0]*n_x0 + [alpha_E]*n_e,
+                                                 beta=[beta_x0]*n_x0 + [beta_E]*n_e)
         disease_samples = det_sampler.generate_samples(stats=False)
         x0_samples = disease_samples[:n_x0]
         E_samples = disease_samples[n_x0:]
@@ -218,7 +218,7 @@ if __name__ == "__main__":
 
         # Stochastic normal sampling for healthy regions around their x0 value
         stoch_sampler = StochasticSampleService(n_samples=n_samples, n_outputs=n_healthy, sampler="uniform",
-                                                sampling_module="numpy", low=0.0, high=0.25)
+                                                sampling_module="numpy", alpha=0.0, beta=0.25)
         healthy_samples = stoch_sampler.generate_samples(stats=False)
         for ii in range(n_healthy):
             params_pse_x0_E.append(("model_configuration_service.x0", healthy_samples[ii], [healthy_indices[ii]]))
