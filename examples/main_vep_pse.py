@@ -95,30 +95,35 @@ if __name__ == "__main__":
     n_samples = 100
 
     # Manual definition of hypothesis...:
-    x0_indices = [20]
-    x0_values = [0.9]
-    e_indices = [70]
-    e_values = [0.9]
-    disease_values = x0_values + e_values
-    disease_indices = x0_indices + e_indices
+    # x0_indices = [20]
+    # x0_values = [0.9]
+    # e_indices = [70]
+    # e_values = [0.9]
+    # disease_values = x0_values + e_values
+    # disease_indices = x0_indices + e_indices
 
     # ...or reading a custom file:
-    # ep_name = "ep_test1"
-    # FOLDER_RES = os.path.join(data_folder, ep_name)
-    # from tvb_epilepsy.custom.readers_custom import CustomReader
-    # if not isinstance(reader, CustomReader):
-    #     reader = CustomReader()
-    # disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
-    # disease_indices, = numpy.where(disease_values > numpy.min([X0_DEF, E_DEF]))
-    # disease_values = disease_values[disease_indices]
-    # if disease_values.size > 1:
-    #     inds_split = numpy.ceil(disease_values.size * 1.0 / 2).astype("int")
-    #     x0_indices = disease_indices[:inds_split].tolist()
-    #     e_indices = disease_indices[inds_split:].tolist()
-    # else:
-    #     x0_indices = disease_indices.tolist()
-    #     e_indices = []
-    # disease_indices = list(disease_indices)
+    ep_name = "ep_test1"
+    FOLDER_RES = os.path.join(data_folder, ep_name)
+    from tvb_epilepsy.custom.readers_custom import CustomReader
+
+    if not isinstance(reader, CustomReader):
+        reader = CustomReader()
+    disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
+    disease_indices, = numpy.where(disease_values > numpy.min([X0_DEF, E_DEF]))
+    disease_values = disease_values[disease_indices]
+    if disease_values.size > 1:
+        inds_split = numpy.ceil(disease_values.size * 1.0 / 2).astype("int")
+        x0_indices = disease_indices[:inds_split].tolist()
+        e_indices = disease_indices[inds_split:].tolist()
+        x0_values = disease_values[:inds_split].tolist()
+        e_values = disease_values[inds_split:].tolist()
+    else:
+        x0_indices = disease_indices.tolist()
+        x0_values = disease_values.tolist()
+        e_indices = []
+        e_values = []
+    disease_indices = list(disease_indices)
 
     n_x0 = len(x0_indices)
     n_e = len(e_indices)
@@ -181,6 +186,15 @@ if __name__ == "__main__":
     pse_hyp_E = PSE_service("LSA", hypothesis=hyp_E, params_pse=params_pse_E)
 
     if len(e_indices) > 0:
+
+        # Show example of grid_mode if there are only two disease parameters:
+        if n_disease == 2:
+            grid_mode = True
+            n_samples2 = 10
+        else:
+            grid_mode = False
+            n_samples2 = n_samples
+
         # This is an example of x0 mixed Excitability and Epileptogenicity Hypothesis:
         hyp_x0_E = DiseaseHypothesis(head.connectivity, excitability_hypothesis={tuple(x0_indices): x0_values},
                                      epileptogenicity_hypothesis={tuple(e_indices): e_values},
@@ -190,7 +204,7 @@ if __name__ == "__main__":
         # Deterministic sampling for the 2 diseased regions to scan values around their mean value:
         low_x0, high_x0 = mean_std_to_low_high(mu=0.9, std=0.02)
         low_E, high_E = mean_std_to_low_high(mu=0.9, std=0.025)
-        det_sampler = DeterministicSampleService(n_samples=10, n_outputs=n_disease, grid_mode=True,
+        det_sampler = DeterministicSampleService(n_samples=n_samples2, n_outputs=n_disease, grid_mode=grid_mode,
                                                  low=[low_x0]*n_x0 + [low_E]*n_e,
                                                  high=[high_x0]*n_x0 + [high_E]*n_e)
         disease_samples = det_sampler.generate_samples(stats=False)
@@ -298,51 +312,51 @@ if __name__ == "__main__":
                          n_eig=lsa_service.eigen_vectors_number) #, show_flag=True, save_flag=False
             write_h5_model(prepare_for_h5(pse_results), FOLDER_RES, "PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
 
-        # # ------------------------------Simulation--------------------------------------
-        # print "simulating..."
-        # simulator_instance = setup_simulation(model_configuration, head.connectivity, dt, sim_length, monitor_period,
-        #                                       model_name, scale_time=scale_time, noise_intensity=10 ** -8)
-        #
-        # simulator_instance.config_simulation()
-        # ttavg, tavg_data, status = simulator_instance.launch_simulation(n_report_blocks)
-        #
-        # write_h5_model(simulator_instance.prepare_for_h5(), folder_name=FOLDER_RES,
-        #                file_name=lsa_hypothesis.name + "_sim_settings.h5")
-        #
-        # if not status:
-        #     warnings.warn("Simulation failed!")
-        #
-        # else:
-        #     tavg_data = tavg_data[:, :, :, 0]
-        #
-        #     vois = VOIS[model_name]
-        #
-        #     model = simulator_instance.model
-        #
-        #     logger.info("\nSimulated signal return shape: %s", tavg_data.shape)
-        #     logger.info("Time: %s - %s", scale_time * ttavg[0], scale_time * ttavg[-1])
-        #     logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
-        #
-        #     time = scale_time * numpy.array(ttavg, dtype='float32')
-        #     dt2 = numpy.min(numpy.diff(time))
-        #
-        #     vois_ts_dict = prepare_vois_ts_dict(vois, tavg_data)
-        #
-        #     prepare_ts_and_seeg_h5_file(lsa_hypothesis.name, model, projections, vois_ts_dict, hpf_flag, hpf_low,
-        #                                 hpf_high, fsAVG, dt2)
-        #
-        #     vois_ts_dict['time'] = time
-        #
-        #     # Plot results
-        #     if model.zmode is not numpy.array("lin"):
-        #         plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
-        #                            special_idx=lsa_hypothesis.propagation_indices,
-        #                            model=str(model.nvar) + "d", zmode=model.zmode,
-        #                            figure_name=lsa_hypothesis.name + "_Nullclines and equilibria", save_flag=SAVE_FLAG,
-        #                            show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES)
-        #     plot_sim_results(model, lsa_hypothesis.propagation_indices, lsa_hypothesis.name, head, vois_ts_dict,
-        #                      sensorsSEEG, hpf_flag)
-        #
-        #     # Save results
-        #     vois_ts_dict['time_units'] = 'msec'
-        #     # savemat(os.path.join(FOLDER_RES, hypothesis.name + "_ts.mat"), vois_ts_dict)
+        # ------------------------------Simulation--------------------------------------
+        print "simulating..."
+        simulator_instance = setup_simulation(model_configuration, head.connectivity, dt, sim_length, monitor_period,
+                                              model_name, scale_time=scale_time, noise_intensity=10 ** -8)
+
+        simulator_instance.config_simulation()
+        ttavg, tavg_data, status = simulator_instance.launch_simulation(n_report_blocks)
+
+        write_h5_model(simulator_instance.prepare_for_h5(), folder_name=FOLDER_RES,
+                       file_name=lsa_hypothesis.name + "_sim_settings.h5")
+
+        if not status:
+            warnings.warn("Simulation failed!")
+
+        else:
+            tavg_data = tavg_data[:, :, :, 0]
+
+            vois = VOIS[model_name]
+
+            model = simulator_instance.model
+
+            logger.info("\nSimulated signal return shape: %s", tavg_data.shape)
+            logger.info("Time: %s - %s", scale_time * ttavg[0], scale_time * ttavg[-1])
+            logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
+
+            time = scale_time * numpy.array(ttavg, dtype='float32')
+            dt2 = numpy.min(numpy.diff(time))
+
+            vois_ts_dict = prepare_vois_ts_dict(vois, tavg_data)
+
+            prepare_ts_and_seeg_h5_file(lsa_hypothesis.name, model, projections, vois_ts_dict, hpf_flag, hpf_low,
+                                        hpf_high, fsAVG, dt2)
+
+            vois_ts_dict['time'] = time
+
+            # Plot results
+            if model.zmode is not numpy.array("lin"):
+                plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
+                                   special_idx=lsa_hypothesis.propagation_indices,
+                                   model=str(model.nvar) + "d", zmode=model.zmode,
+                                   figure_name=lsa_hypothesis.name + "_Nullclines and equilibria", save_flag=SAVE_FLAG,
+                                   show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES)
+            plot_sim_results(model, lsa_hypothesis.propagation_indices, lsa_hypothesis.name, head, vois_ts_dict,
+                             sensorsSEEG, hpf_flag)
+
+            # Save results
+            vois_ts_dict['time_units'] = 'msec'
+            # savemat(os.path.join(FOLDER_RES, hypothesis.name + "_ts.mat"), vois_ts_dict)

@@ -113,7 +113,7 @@ if __name__ == "__main__":
         E_values = disease_values[inds_split:].tolist()
     else:
         x0_indices = disease_indices.tolist()
-        E_values = disease_values.tolist()
+        x0_values = disease_values.tolist()
         E_indices = []
         E_values = []
     disease_indices = list(disease_indices)
