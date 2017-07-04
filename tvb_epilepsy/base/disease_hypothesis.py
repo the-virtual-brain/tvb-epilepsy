@@ -109,7 +109,7 @@ class DiseaseHypothesis(object):
             self.name = name
 
     def get_regions_disease_indices(self):
-        return numpy.unique(self.x0_indices + self.e_indices)
+        return numpy.unique(self.x0_indices + self.e_indices).astype("i").tolist()
 
     def get_connectivity_disease_indices(self):
         return self.w_indices
@@ -117,12 +117,12 @@ class DiseaseHypothesis(object):
     def get_connectivity_regions_disease_indices(self):
         indexes = numpy.unravel_index(self.get_connectivity_disease_indices(),
                                       (self.get_number_of_regions(), self.get_number_of_regions()))
-        indexes = numpy.unique(numpy.concatenate(indexes))
+        indexes = numpy.unique(numpy.concatenate(indexes)).astype("i")
         return indexes.tolist()
 
     def get_all_disease_indices(self):
         return numpy.unique(numpy.concatenate((self.get_regions_disease_indices(),
-                                               self.get_connectivity_disease_indices()))).tolist()
+                                               self.get_connectivity_disease_indices()))).astype("i").tolist()
 
     def get_regions_disease(self):
         # In case we need values for all regions, we can use this and have zeros where values are not defined
