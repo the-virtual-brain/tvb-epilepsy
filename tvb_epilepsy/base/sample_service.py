@@ -14,221 +14,173 @@ from tvb_epilepsy.base.utils import shape_to_size, formal_repr, dict_str, dicts_
                                     dicts_of_lists_to_lists_of_dicts, list_of_dicts_to_dicts_of_ndarrays
 
 
-# A helper function to match normal distributions with several others we might use...
+# Helper functions to match normal distributions with several others we might use...
+# Input parameters should be scalars or ndarrays! Not lists!
 
-distributions = {"uniform": {"constraint": lambda p: np.all(p["alpha"] < p["beta"]),
+distrib_dict = {"uniform": {"constraint": lambda p: np.all(p["alpha"] < p["beta"]),
                              "constraint_str": "alpha < beta",
                              "to_mu_std": lambda p: (0.5 * (p["alpha"] + p["beta"]),
                                                      0.5 * (p["beta"] - p["alpha"]) / np.sqrt(3)),
-                             "from_mu_std": lambda mu, std: {"alpha": mu - std, "beta": mu + std},
+                             "from_mu_std": lambda mu, std: {"alpha": mu - std * np.sqrt(3),
+                                                             "beta": mu + std* np.sqrt(3)}
+                            },
+                 "lognormal": {"constraint": lambda p: np.all(p["sigma"] > 0.0),
+                               "constraint_str": "sigma > 0",
+                               "to_mu_std": lambda p: lognormal_to_mu_std(p),
+                               "from_mu_std": lambda mu, std: lognormal_from_mu_std(mu, std)
+                               },
+                 "chisquare": {"constraint": lambda p: np.all(np.abs(p["k"] - np.round(p["k"]) < 10 ** -6))
+                                                       and np.all(p["k"] > 0),
+                               "constraint_str": "abs(k - round(k)) < 10 ** -6 and k > 0",
+                               "to_mu_std": lambda p: (p["k"], np.sqrt(2*p["k"])),
+                               "from_mu_std": lambda mu, std: {"k": mu} },
 
-                "lognormal": {"constraint": lambda p: np.all(p["sigma"] > 0),
-                              "constraint_str": "sigma > 0",
-                             "to_mu_std": lambda p: lognormal_to_mu_std(p),
-                             "from_mu_std": lambda mu, std: lognormal_from_mu_std(mu, std)},
-
-                "chisquare": {"constraint": lambda p: np.all(p["k"] == np.round(p["k"])) and np.all(p["k"] > 0),
-                              "constraint_str": " k == round(k) and k > 0",
-                             "to_mu_std": lambda p: p["k"],
-                             "from_mu_std": lambda mu, std: {"k": mu}},
-
-                "gamma": {"constraint": lambda p: (np.all(p.get("alpha", -1.0) > 0.0) and
+                 "gamma": {"constraint": lambda p: (np.all(p.get("alpha", -1.0) > 0.0) and
                                                    np.all(p.get("beta", -1.0) > 0.0))
                                                   or (np.all(p.get("k", -1.0) > 0.0) and
                                                       np.all(p.get("theta", -1.0) > 0.0)),
-                          "constraint_str": "(alpha > 0 and beta > 0) or (k > 0 and theta > 0)",
-                          "to_mu_std": lambda p: gamma_to_mu_std(p)},
-                          "from_mu_std": lambda mu, std: gamma_from_mu_std(mu, std)},
-
-
-
+                           "constraint_str": "(alpha > 0 and beta > 0) or (k > 0 and theta > 0)",
+                           "to_mu_std": lambda p: gamma_to_mu_std(p),
+                           "from_mu_std": lambda mu, std: gamma_from_mu_std(mu, std)
+                           },
+                 "exponential": {"constraint": lambda p: np.all(p["lambda"] > 0.0),
+                                 "constraint_str": "lambda > 0",
+                                 "to_mu_std": lambda p: (1.0 / p["lambda"], 1.0 / p["lambda"]),
+                                 "from_mu_std": lambda mu, std: {"lambda": 1.0 / mu}
+                                 },
+                 "beta": {"constraint": lambda p: np.all(p["alpha"] > 0.0) and np.all(p["beta"] > 0.0),
+                          "constraint_str": "alpha > 0 and beta > 0",
+                          "to_mu_std": lambda p: beta_to_mu_std(p),
+                          "from_mu_std": lambda mu, std: beta_from_mu_std(mu, std)
+                          },
+                 "binomial": {"constraint": lambda p: np.all(np.abs(p["n"] - np.round(p["n"])) < 10 ** -6)
+                                                      and np.all(p["n"] > 0)
+                                                      and np.all(p["p"] > 0.0) and np.all(p["p"] < 1.0),
+                              "constraint_str": "abs(n - round(n)) < 10 ** -6 and n > 0 and p > 0.0 and p < 1.0",
+                              "to_mu_std": lambda p: binomial_to_mu_std(p),
+                              "from_mu_std": lambda mu, std: binomial_from_mu_std(mu, std)
+                              },
+                 "poisson": {"constraint": lambda p: np.all(p["lambda"] > 0.0),
+                             "constraint_str": "lambda > 0",
+                             "to_mu_std": lambda p: (p["lambda"], np.sqrt(p["lambda"])),
+                             "from_mu_std": lambda mu, std: {"lambda": mu}
+                             },
+                 "bernoulli": {"constraint": lambda p: np.all(p["p"] > 0.0) and np.all(p["p"] < 1.0),
+                               "constraint_str": "p > 0.0 and p < 1.0",
+                               "to_mu_std": lambda p: (p["p"], np.sqrt(p["p"] * (1 - p["p"]))),
+                               "from_mu_std": lambda mu, std: {"p": mu}
+                               },
                  }
 
+
 def lognormal_from_mu_std(mu, std):
-    mu2 = np.power(mu, 2)
-    var = np.power(std, 2)
+    mu2 = mu ** 2
+    var = std ** 2
     return {"mu": np.log(mu2 / np.sqrt(var + mu2)), "sigma": np.sqrt(np.log(1.0 + var / mu2))}
 
+
 def lognormal_to_mu_std(p):
-    sigma2 = np.power(p["sigma"], 2)
+    sigma2 = p["sigma"] ** 2
     return np.exp(p["mu"] + 0.5 * sigma2), np.sqrt(np.exp(2.0 * p["mu"] + sigma2) * (np.exp(sigma2) - 1.0))
 
+
 def gamma_from_mu_std(mu, std):
-    k = np.power(mu / std, 2)
-    theta = np.power(std) / mu
+    k = (mu / std) ** 2
+    theta = std ** 2 / mu
     return {"k": k, "theta": theta, "alpha": k, "beta": 1.0 / theta}
+
 
 def gamma_to_mu_std(p):
     if p.get("a", False) and p.get("beta", False):
-
         return p["a"] / p["beta"], np.sqrt(p["a"]) / p["beta"]
 
     elif p.get("k", False) and p.get("theta", False):
-
         return p["k"] * p["theta"], np.sqrt(p["k"]) * p["theta"]
+
     else:
         raise ValueError("The input gamma distribution parameters are neither of the a, beta system, nor of the "
                          "k, theta one!")
 
 
-def mean_std_to_distribution_params(distribution="uniform", mu=0.0, std=1.0):
+def beta_from_mu_std(mu, std):
+    var = std ** 2
+    mu1 = 1.0 - mu
 
-    p = {}
+    if var < mu * mu1:
+        vmu = mu * mu1 / var - 1.0
+        return {"alpha": mu * vmu, "beta": mu1 * vmu}
 
-    if distribution is "uniform":
-
-        p["alpha"] = mu - std
-        p["beta"] = mu + std
-
-    elif distribution is "lognormal":
-
-        mu2 = np.power(mu, 2)
-        var = np.power(std, 2)
-
-        p["mu"] = np.log(mu2 / np.sqrt(var + mu2))
-
-        p["sigma"] = np.sqrt(np.log(1.0 + var / mu2))
-
-    elif distribution is "chisquare":
-
-        p["k"] = mu
-
-        if std != np.sqrt(2.0*mu):
-            warnings.warn("std is not equal to sqrt(2*mu) as it should be for chisquare distribution!")
-
-    elif distribution is "gamma":
-
-        p["k"] = np.power(mu / std, 2)
-
-        p["theta"] = np.power(std) / mu
-
-        p["a"] = p["k"]
-
-        p["beta"] = 1.0 / p["theta"]
-
-    elif distribution is "exponential":
-
-        if std != mu:
-            warnings.warn("std is not equal to mu as it should be for exponential distribution!")
-
-        p["lambda"] = 1.0 / mu
-
-        if not (np.all(p["lambda"] > 0)):
-            raise ValueError("It should be lambda = " + str(p["lambda"]) + " > 0 !")
-
-    elif distribution is "beta":
-
-        var = np.power(std, 2)
-        mu1 = (1.0 - mu)
-
-        if var < mu * mu1:
-
-            vmu = mu * mu1 / var - 1.0
-
-            p["alpha"] = mu * vmu
-            p["beta"] = mu1 * vmu
-
-            if not(np.all(p["alpha"] > 0 and p["beta"] > 0)):
-                raise ValueError("It should be alpha = " + str(p["alpha"]) + " > 0 and  "
-                                 + "beta = " + str(p["beta"]) + " > 0 !")
-
-        else:
-            raise ValueError("Variance = " + str(var) + " has to be smaller than the quantity mu*(1-mu) = " + str(mu1)
-                             + " !")
-
-    elif distribution is "binomial":
-
-        var = np.power(std, 2)
-        vm = var / mu
-
-        p["p"] = 1.0 + vm
-
-        p["n"] = mu / p["p"]
-
-        if np.all(p["n"] == np.round(p["n"]) >= 0 and 0.0 > p["p"] <= 1.0):
-            p["n"] = np.int(p["n"])
-
-        else:
-            raise ValueError("n = " + str(p["n"]) + " has to be a positive integer number and p = " + str(p["p"]) +
-                             " has to lie in the interval (0.0, 1.0]!")
+    else:
+        raise ValueError("Variance = " + str(var) + " has to be smaller than the quantity mu*(1-mu) = " + str(mu1)
+                         + " !")
 
 
+def beta_to_mu_std(p):
+    ab = p["alpha"] + p["beta"]
+    return p["alpha"] / ab, np.sqrt(p["alpha"] * p["beta"] / (ab + 1.0)) / ab
+
+
+def binomial_from_mu_std(mu, std):
+    var = std ** 2
+    vm = var / mu
+    p = {"p": 1.0 - vm}
+    p.update({"n": mu / p["p"]})
     return p
 
 
-def distribution_params_to_mean_std(distribution="uniform", p={"alpha":0.0, "beta":1.0}):
-
-    if distribution is "uniform":
-
-        mu = 0.5 * (p["alpha"] + p["beta"])
-
-        std = 0.5 * (p["beta"] - p["alpha"]) / np.sqrt(3)
-
-    elif distribution is "lognormal":
-
-        sigma2 = np.power(p["sigma"], 2)
-        mu = np.exp(p["mu"] + 0.5 * sigma2)
-
-        std = np.sqrt(np.exp(2.0 * p["mu"] + sigma2) * (np.exp(sigma2) - 1.0))
-
-    elif distribution is "chisquare":
-
-        mu = p["k"]
-
-        std = np.sqrt(2.0 * p["k"])
-
-    elif distribution is "gamma":
-
-        if p.get("a", False) and p.get("beta", False):
-
-            mu = p["a"] / p["beta"]
-
-            std = np.sqrt(p["a"]) / p["beta"]
-
-        elif p.get("k", False) and p.get("theta", False):
-
-            mu = p["k"] * p["theta"]
-
-            std = np.sqrt(p["k"]) * p["theta"]
-
-        else:
-            raise ValueError("The input gamma distribution parameters are neither of the a, beta system, nor of the "
-                             "k, theta one!")
-
-    elif distribution is "exponential":
-
-        if not (np.all(p["lambda"] > 0)):
-            raise ValueError("It should be lambda = " + str(p["lambda"]) + " > 0 !")
-
-        mu = 1.0 / p["lambda"]
-        std = mu
-
-    elif distribution is "beta":
-
-        if np.all(p["alpha"] > 0 and p["beta"] > 0):
-
-            ab = p["alpha"] + p["beta"]
-            mu = p["alpha"] / ab
-            std = np.sqrt(p["alpha"] * p["beta"] / (ab + 1.0)) / ab
-
-        else:
-            raise ValueError("It should be alpha = " + str(p["alpha"]) + " > 0 and  "
-                             + "beta = " + str(p["beta"]) + " > 0 !")
-
-    elif distribution is "binomial":
-
-        if np.all(p["n"] == np.round(p["n"]) >= 0 and 0.0 > p["p"] <= 1.0):
-
-            mu = p["n"] * p["p"]
-            std = np.sqrt(mu * (1 - p["p"]))
-
-        else:
-            raise ValueError("n = " + str(p["n"]) + " has to be a positive integer number and p = " + str(p["p"]) +
-                             " has to lie in the interval (0.0, 1.0]!")
+def binomial_to_mu_std(p):
+    mu = p["n"] * p["p"]
+    return mu, np.sqrt(mu * (1 - p["p"]))
 
 
+def mean_std_to_distribution_params(distribution, mu, std=1.0):
 
-    return mu, std
+    if np.any(std <= 0.0):
+        raise ValueError("Standard deviation std = " + str(std) + " <= 0!")
+
+    std_check = {"exponential": lambda mu: mu,
+                 "poisson": lambda mu: np.sqrt(mu),
+                 "chisquare": lambda mu: np.sqrt(2.0*mu),
+                 "bernoulli": lambda mu: np.sqrt(mu * (1.0-mu))
+                }
+    if np.in1d(distribution, ["exponential", "poisson", "chisquare", "bernoulli"]):
+        std_check = std_check[distribution](mu)
+        if std != std_check:
+            print "\nmu = ", mu
+            print "\nstd = ", std
+            print "\nstd should be = ", std_check
+            warnings.warn("\nStandard deviation constraint not satisfied for distribution " + distribution + "!)")
+
+    p = distrib_dict[distribution]["from_mu_std"](mu, std)
+
+    if distrib_dict[distribution]["constraint"](p):
+        return p
+
+    else:
+        print "\n"
+        for key, val in p.iteritems():
+            print key, val
+        raise ValueError("\nDistribution parameters'constraints " + distrib_dict[distribution]["constraint_str"]
+                         + " is not met!")
+
+
+def distribution_params_to_mean_std(distribution, **p):
+
+    if distrib_dict[distribution]["constraint"](p):
+
+        mu, std = distrib_dict[distribution]["to_mu_std"](p)
+
+        if np.any(std <= 0.0):
+            raise ValueError("\nStandard deviation std = " + str(std) + " <= 0!")
+
+        return mu, std
+
+    else:
+        print "\n"
+        for key, val in p.iteritems():
+            print key, val
+        raise ValueError("\nDistribution parameters'constraints " + distrib_dict[distribution]["constraint_str"]
+                         + " is not met!")
 
 
 class SampleService(object):
@@ -400,7 +352,7 @@ class StochasticSampleService(SampleService):
                     for io in range(self.n_outputs):
                         samples.append(self.sampler(trunc_limits[io], size=self.n_samples, **(params[io])))
                 else:
-                    raise ValueError("Parameters are neither an empty list nor a list of length n_parameters = "
+                    raise ValueError("\nParameters are neither an empty list nor a list of length n_parameters = "
                                      + str(self.n_outputs) + " but one of length " + str(len(self.params)) + " !")
 
             else:
@@ -412,7 +364,7 @@ class StochasticSampleService(SampleService):
                     for io in range(self.n_outputs):
                         samples.append(self.sampler(size=self.n_samples, **(params[io])))
                 else:
-                    raise ValueError("Parameters are neither an empty list nor a list of length n_parameters = "
+                    raise ValueError("\nParameters are neither an empty list nor a list of length n_parameters = "
                                      + str(self.n_outputs) + " but one of length " + str(len(self.params)) + " !")
 
         return np.reshape(samples, self.shape)
@@ -474,3 +426,40 @@ if __name__ == "__main__":
     #     print("\n" + key + ": " + str(value))
 
     print(sampler.__repr__())
+
+    print("\nTesting distribution conversions...")
+
+    for distribution in distrib_dict:
+
+        print "\nmu, std to distribution " + distribution + ":"
+
+        if distribution is "poisson":
+            mu= 0.25
+            std = 0.5
+        elif distribution is "beta":
+            mu = 0.5
+            std = 0.25
+        elif distribution is "binomial":
+            mu = 1.0
+            std = 1.0/np.sqrt(2)
+        elif distribution is "chisquare":
+            mu = 1.0
+            std = np.sqrt(2*mu)
+        else:
+            mu = 0.5
+            std = 0.5
+
+        print {"mu": mu, "std": std}
+
+        p = mean_std_to_distribution_params(distribution, mu=mu, std=std)
+
+        print p
+
+        print "\nDistribution " + distribution + " to mu, std:"
+
+        mu1, std1 = distribution_params_to_mean_std(distribution, **p)
+
+        print {"mu": mu, "std": std}
+
+        if np.abs(mu - mu1) > 10 ** -6 or np.abs(std - std1) > 10 ** -6:
+            raise ValueError("mu - mu1 = " + str(mu - mu1) + "std - std1 = " + str(std - std1))
