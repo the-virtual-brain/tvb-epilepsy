@@ -16,6 +16,61 @@ from tvb_epilepsy.base.utils import shape_to_size, formal_repr, dict_str, dicts_
 
 # A helper function to match normal distributions with several others we might use...
 
+distributions = {"uniform": {"constraint": lambda p: np.all(p["alpha"] < p["beta"]),
+                             "constraint_str": "alpha < beta",
+                             "to_mu_std": lambda p: (0.5 * (p["alpha"] + p["beta"]),
+                                                     0.5 * (p["beta"] - p["alpha"]) / np.sqrt(3)),
+                             "from_mu_std": lambda mu, std: {"alpha": mu - std, "beta": mu + std},
+
+                "lognormal": {"constraint": lambda p: np.all(p["sigma"] > 0),
+                              "constraint_str": "sigma > 0",
+                             "to_mu_std": lambda p: lognormal_to_mu_std(p),
+                             "from_mu_std": lambda mu, std: lognormal_from_mu_std(mu, std)},
+
+                "chisquare": {"constraint": lambda p: np.all(p["k"] == np.round(p["k"])) and np.all(p["k"] > 0),
+                              "constraint_str": " k == round(k) and k > 0",
+                             "to_mu_std": lambda p: p["k"],
+                             "from_mu_std": lambda mu, std: {"k": mu}},
+
+                "gamma": {"constraint": lambda p: (np.all(p.get("alpha", -1.0) > 0.0) and
+                                                   np.all(p.get("beta", -1.0) > 0.0))
+                                                  or (np.all(p.get("k", -1.0) > 0.0) and
+                                                      np.all(p.get("theta", -1.0) > 0.0)),
+                          "constraint_str": "(alpha > 0 and beta > 0) or (k > 0 and theta > 0)",
+                          "to_mu_std": lambda p: gamma_to_mu_std(p)},
+                          "from_mu_std": lambda mu, std: gamma_from_mu_std(mu, std)},
+
+
+
+                 }
+
+def lognormal_from_mu_std(mu, std):
+    mu2 = np.power(mu, 2)
+    var = np.power(std, 2)
+    return {"mu": np.log(mu2 / np.sqrt(var + mu2)), "sigma": np.sqrt(np.log(1.0 + var / mu2))}
+
+def lognormal_to_mu_std(p):
+    sigma2 = np.power(p["sigma"], 2)
+    return np.exp(p["mu"] + 0.5 * sigma2), np.sqrt(np.exp(2.0 * p["mu"] + sigma2) * (np.exp(sigma2) - 1.0))
+
+def gamma_from_mu_std(mu, std):
+    k = np.power(mu / std, 2)
+    theta = np.power(std) / mu
+    return {"k": k, "theta": theta, "alpha": k, "beta": 1.0 / theta}
+
+def gamma_to_mu_std(p):
+    if p.get("a", False) and p.get("beta", False):
+
+        return p["a"] / p["beta"], np.sqrt(p["a"]) / p["beta"]
+
+    elif p.get("k", False) and p.get("theta", False):
+
+        return p["k"] * p["theta"], np.sqrt(p["k"]) * p["theta"]
+    else:
+        raise ValueError("The input gamma distribution parameters are neither of the a, beta system, nor of the "
+                         "k, theta one!")
+
+
 def mean_std_to_distribution_params(distribution="uniform", mu=0.0, std=1.0):
 
     p = {}
@@ -53,10 +108,13 @@ def mean_std_to_distribution_params(distribution="uniform", mu=0.0, std=1.0):
 
     elif distribution is "exponential":
 
-        p["lambda"] = 1.0 / mu
-
         if std != mu:
             warnings.warn("std is not equal to mu as it should be for exponential distribution!")
+
+        p["lambda"] = 1.0 / mu
+
+        if not (np.all(p["lambda"] > 0)):
+            raise ValueError("It should be lambda = " + str(p["lambda"]) + " > 0 !")
 
     elif distribution is "beta":
 
@@ -70,9 +128,30 @@ def mean_std_to_distribution_params(distribution="uniform", mu=0.0, std=1.0):
             p["alpha"] = mu * vmu
             p["beta"] = mu1 * vmu
 
+            if not(np.all(p["alpha"] > 0 and p["beta"] > 0)):
+                raise ValueError("It should be alpha = " + str(p["alpha"]) + " > 0 and  "
+                                 + "beta = " + str(p["beta"]) + " > 0 !")
+
         else:
             raise ValueError("Variance = " + str(var) + " has to be smaller than the quantity mu*(1-mu) = " + str(mu1)
                              + " !")
+
+    elif distribution is "binomial":
+
+        var = np.power(std, 2)
+        vm = var / mu
+
+        p["p"] = 1.0 + vm
+
+        p["n"] = mu / p["p"]
+
+        if np.all(p["n"] == np.round(p["n"]) >= 0 and 0.0 > p["p"] <= 1.0):
+            p["n"] = np.int(p["n"])
+
+        else:
+            raise ValueError("n = " + str(p["n"]) + " has to be a positive integer number and p = " + str(p["p"]) +
+                             " has to lie in the interval (0.0, 1.0]!")
+
 
     return p
 
@@ -113,22 +192,41 @@ def distribution_params_to_mean_std(distribution="uniform", p={"alpha":0.0, "bet
             std = np.sqrt(p["k"]) * p["theta"]
 
         else:
-
             raise ValueError("The input gamma distribution parameters are neither of the a, beta system, nor of the "
                              "k, theta one!")
 
     elif distribution is "exponential":
+
+        if not (np.all(p["lambda"] > 0)):
+            raise ValueError("It should be lambda = " + str(p["lambda"]) + " > 0 !")
 
         mu = 1.0 / p["lambda"]
         std = mu
 
     elif distribution is "beta":
 
-        ab = p["alpha"] + p["beta"]
+        if np.all(p["alpha"] > 0 and p["beta"] > 0):
 
-        mu = p["alpha"] / ab
+            ab = p["alpha"] + p["beta"]
+            mu = p["alpha"] / ab
+            std = np.sqrt(p["alpha"] * p["beta"] / (ab + 1.0)) / ab
 
-        std = np.sqrt(p["alpha"] * p["beta"] / (ab + 1.0)) / ab
+        else:
+            raise ValueError("It should be alpha = " + str(p["alpha"]) + " > 0 and  "
+                             + "beta = " + str(p["beta"]) + " > 0 !")
+
+    elif distribution is "binomial":
+
+        if np.all(p["n"] == np.round(p["n"]) >= 0 and 0.0 > p["p"] <= 1.0):
+
+            mu = p["n"] * p["p"]
+            std = np.sqrt(mu * (1 - p["p"]))
+
+        else:
+            raise ValueError("n = " + str(p["n"]) + " has to be a positive integer number and p = " + str(p["p"]) +
+                             " has to lie in the interval (0.0, 1.0]!")
+
+
 
     return mu, std
 
