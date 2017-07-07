@@ -8,13 +8,31 @@ from tvb_epilepsy.base.utils import list_of_dicts_to_dicts_of_ndarrays
 
 METHODS = ["sobol", "latin", "delta", "dgsm", "fast", "fast_sampler", "morris", "ff", "fractional_factorial"]
 
-# TODO: incorporate a sampling function
-
 # TODO: make sensitivity_analysis_from_hypothesis() helper function
 
 # TODO: make example-testing function __main__
 
 # TODO: make __repr__ and prepare h5_model functions
+
+
+def sensitivity_analysis_pse_from_hypothesis(hypothesis, n_samples, method="latin", other_parameters={}):
+
+    from tvb_epilepsy.base.sample_service import StochasticSampleService
+    from tvb_epilepsy.base.pse_service import PSE_service
+
+    if np.in1d(method.lower(), METHODS):
+        method = method.lower()
+    else:
+        raise ValueError(
+            "Method " + str(method.lower()) + " is not one of the available methods " + str(METHODS) + " !")
+
+    names = []
+    bounds = []
+    n_outputs = 0
+
+    #for ii in range(len(hypothesis.x0_values)):
+
+
 
 class SensitivityAnalysisService(object):
 
@@ -127,6 +145,7 @@ class SensitivityAnalysisService(object):
             else:
                 raise ValueError("conf_level = " + str(conf_level) +
                                  "is not a float in the (0.0, 1.0) interval as it should!")
+
 
     def run(self, input_ids=None, output_ids=None, method=None, calc_second_order=None, conf_level=None, **kwargs):
 
