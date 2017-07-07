@@ -5,7 +5,7 @@ import numpy.random as nr
 import scipy.stats as ss
 import scipy as scp
 import SALib.sample
-from SALib.sample import sobol_sequence, saltelli
+from SALib.sample import latin, saltelli, fast_sampler, morris, ff
 
 import importlib
 from collections import OrderedDict
@@ -318,13 +318,29 @@ class StochasticSampleService(SampleService):
                              size=size)
         return distribution.ppf(q=rnd_cdf, **kwargs)
 
-    def salib_sample(self, sampler, size=1, **kwargs):
+    def salib_sample(self, sampler, **kwargs):
+
+        size = self.n_samples
 
         problem = {'num_vars': self.n_outputs, 'bounds': kwargs.get("bounds", [0.0, 1.0] * self.n_outputs)}
-        if sampler is saltelli.sample:
-            size = int(np.round(1.0*size / (2*self.outputs + 2)))
+        if sampler is ff.sample:
+            samples = sampler(problem)
 
-        samples = sampler(problem, size)
+        else:
+
+            other_params = {}
+            if sampler is saltelli.sample:
+                size = int(np.round(1.0*size / (2*self.outputs + 2)))
+
+            elif sampler is fast_sampler.sample:
+                other_params = {"M": kwargs.get("M", 4)}
+
+            elif sampler is morris.sample:
+                # I don't understand this method and its inputs. I don't think we will ever use it.
+                raise NotImplementedError
+
+            samples = sampler(problem, size, **other_params)
+
         #Adjust samples number:
         self.n_samples = samples.shape[0]
         self.shape = (self.n_outputs, self.n_samples)
