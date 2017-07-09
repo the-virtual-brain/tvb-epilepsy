@@ -269,7 +269,10 @@ def dict_str(d):
     return s
 
 def list_of_dicts_to_dicts_of_ndarrays(lst):
-    return dict(zip(lst[0],numpy.array(zip(*list([d.values() for d in lst])))))
+    d = dict(zip(lst[0], zip(*list([d.values() for d in lst]))))
+    for key, val in d.iteritems():
+        d[key] = numpy.squeeze(numpy.stack(d[key]))
+    return d
 
 def dicts_of_lists_to_lists_of_dicts(dictionary):
     return [dict(zip(dictionary,t)) for t in zip(*dictionary.values())]
