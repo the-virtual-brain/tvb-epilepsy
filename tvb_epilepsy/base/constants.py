@@ -62,6 +62,7 @@ X1_DEF = -5.0 / 3.0
 X1_EQ_CR_DEF = -4.0 / 3.0
 ADDITIVE_NOISE="Additive"
 MULTIPLICATIVE_NOISE="Multiplicative"
+MAX_DISEASE_VALUE = 1.0 - 10 ** -3
 
 # Simulation and data read folder amd flags:
 MODEL = '6v'
