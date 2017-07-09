@@ -207,8 +207,8 @@ class SampleService(object):
                             ("p90", np.percentile(samples, 90, axis=1)), ("p95", np.percentile(samples, 95, axis=1)),
                             ("p99", np.percentile(samples, 99, axis=1))])
 
-    def generate_samples(self, stats=False):
-        samples = self.sample()
+    def generate_samples(self, stats=False, **kwargs):
+        samples = self.sample(**kwargs)
         self.stats = self.compute_stats(samples)
         if stats:
             return samples, self.stats
@@ -245,7 +245,7 @@ class DeterministicSampleService(SampleService):
             self.params = {"low": low, "high": high}
             self.list_params()
 
-    def sample(self):
+    def sample(self, **kwargs):
 
         samples = []
         for io in range(self.n_outputs):
@@ -273,52 +273,52 @@ class StochasticSampleService(SampleService):
         self.params = kwargs
         self.list_params()
         self.trunc_limits = trunc_limits
+        sampling_module = sampling_module.lower()
 
-        if sampling_module == "salib":
+        self.sampler = sampler
 
-            self.sampling_module = "SALib.sample." + sampler + ".sample"
-            sampler = importlib.import_module("SALib.sample." + sampler)
-            self.sampler = lambda **some_kwargs: self.salib_sample(sampler.sample, **some_kwargs)
+        if len(self.trunc_limits) > 0:
+
+            self.trunc_limits = dicts_of_lists(self.trunc_limits, self.n_outputs)
+
+            # We use inverse transform sampling for truncated distributions...
+
+            if sampling_module is not "scipy":
+                warnings.warn("\nSelecting scipy module for truncated distributions")
+
+            self.sampling_module = "scipy.stats." + sampler + " inverse transform sampling"
+
+        elif sampling_module == "scipy":
+            self.sampling_module = "scipy.stats." + self.sampler + ".rvs"
+
+        elif sampling_module == "numpy":
+            self.sampling_module = "numpy.random." + self.sampler
+
+        elif sampling_module == "salib":
+            self.sampling_module = "SALib.sample." + self.sampler + ".sample"
 
         else:
+            raise ValueError("Sampler module " + str(sampling_module) + " is not recognized!")
 
-            if len(self.trunc_limits) > 0:
+    def _numpy_sample(self, distribution, size, **params):
+        return getattr(nr, distribution)(size=size, **params)
 
-                self.trunc_limits = dicts_of_lists(self.trunc_limits, self.n_outputs)
+    def _scipy_sample(self, distribution, size, **params):
+        return getattr(ss, distribution)(**params).rvs(size)
 
-                # We use inverse transform sampling for truncated distributions...
-
-                if sampling_module is not "scipy":
-                    warnings.warn("\nSelecting scipy module for truncated distributions")
-
-                self.sampling_module = "scipy.stats." + sampler + " inverse transform sampling"
-                self.sampler = lambda trunc_limits, **some_kwargs: \
-                   self.truncated_distribution_sampling(getattr(ss, sampler), trunc_limits, **some_kwargs)
-
-            else:
-
-                if sampling_module == "numpy":
-                    self.sampling_module = "numpy.random." + sampler
-                    self.sampler = getattr(nr, sampler)
-
-                elif sampling_module == "scipy":
-                    self.sampling_module = "scipy.stats." + sampler + ".rvs"
-                    self.sampler = getattr(ss, sampler).rvs
-
-                else:
-                    raise ValueError("Sampler module " + str(sampling_module) + " is not recognized!")
-
-    def truncated_distribution_sampling(self, distribution, trunc_limits, size=1, **kwargs):
+    def _truncated_distribution_sampling(self, distribution, trunc_limits, size, **kwargs):
         # Following: https://stackoverflow.com/questions/25141250/
         # how-to-truncate-a-numpy-scipy-exponential-distribution-in-an-efficient-way
         # TODO: to have distributions parameters valid for the truncated distributions instead for the original one
         # pystan might be needed for that...
-        rnd_cdf = nr.uniform(distribution.cdf(x=trunc_limits.get("alpha", -np.inf), **kwargs),
-                             distribution.cdf(x=trunc_limits.get("beta", np.inf), **kwargs),
+        rnd_cdf = nr.uniform(getattr(ss, distribution)(**kwargs).cdf(x=trunc_limits.get("low", -np.inf)),
+                             getattr(ss, distribution)(**kwargs).cdf(x=trunc_limits.get("high", np.inf)),
                              size=size)
-        return distribution.ppf(q=rnd_cdf, **kwargs)
+        return getattr(ss, distribution)(**kwargs).ppf(q=rnd_cdf)
 
-    def salib_sample(self, sampler, **kwargs):
+    def _salib_sample(self, **kwargs):
+
+        sampler = importlib.import_module("SALib.sample." + self.sampler).sample
 
         size = self.n_samples
 
@@ -330,7 +330,7 @@ class StochasticSampleService(SampleService):
 
             other_params = {}
             if sampler is saltelli.sample:
-                size = int(np.round(1.0*size / (2*self.outputs + 2)))
+                size = int(np.round(1.0*size / (2*self.n_outputs + 2)))
 
             elif sampler is fast_sampler.sample:
                 other_params = {"M": kwargs.get("M", 4)}
@@ -347,12 +347,12 @@ class StochasticSampleService(SampleService):
 
         return samples.T
 
-    def sample(self):
+    def sample(self, **kwargs):
 
         nr.seed(self.random_seed)
 
         if self.sampling_module.find("SALib") >= 0:
-            samples = self.sampler(size=self.n_samples, **self.params)
+            samples = self._salib_sample(**self.params)
 
         else:
 
@@ -361,29 +361,45 @@ class StochasticSampleService(SampleService):
             if self.sampling_module.find("inverse transform") >= 0:
                 trunc_limits = dicts_of_lists_to_lists_of_dicts(self.trunc_limits)
                 samples = []
-                if len(params) == 0:
+                if len(params)== 0:
                     for io in range(self.n_outputs):
-                        samples.append(self.sampler(trunc_limits[io], size=self.n_samples))
+                        samples.append(self._truncated_distribution_sampling(self.sampler, trunc_limits[io],
+                                                                             self.n_samples))
                 elif len(params) == self.n_outputs:
                     for io in range(self.n_outputs):
-                        samples.append(self.sampler(trunc_limits[io], size=self.n_samples, **(params[io])))
+                        samples.append(self._truncated_distribution_sampling(self.sampler,trunc_limits[io],
+                                                                             self.n_samples, **(params[io])))
+                else:
+                    raise ValueError("\nParameters are neither an empty list nor a list of n_parameters = "
+                                     + str(self.n_outputs) + " but one of length " + str(len(self.params)) + " !")
+
+            elif self.sampling_module.find("scipy") >= 0:
+
+                samples = []
+                if len(params) == 0:
+                    for io in range(self.n_outputs):
+                        samples.append(self._scipy_sample(self.sampler, self.n_samples))
+                elif len(params) == self.n_outputs:
+                    for io in range(self.n_outputs):
+                        samples.append(self._scipy_sample(self.sampler, self.n_samples, **(params[io])))
                 else:
                     raise ValueError("\nParameters are neither an empty list nor a list of length n_parameters = "
                                      + str(self.n_outputs) + " but one of length " + str(len(self.params)) + " !")
 
-            else:
+            elif self.sampling_module.find("numpy") >= 0:
                 samples = []
                 if len(params) == 0:
                     for io in range(self.n_outputs):
-                        samples.append(self.sampler(size=self.n_samples))
+                        samples.append(self._numpy_sample(self.sampler, self.n_samples))
                 elif len(params) == self.n_outputs:
                     for io in range(self.n_outputs):
-                        samples.append(self.sampler(size=self.n_samples, **(params[io])))
+                        samples.append(self._numpy_sample(self.sampler, self.n_samples, **(params[io])))
                 else:
                     raise ValueError("\nParameters are neither an empty list nor a list of length n_parameters = "
                                      + str(self.n_outputs) + " but one of length " + str(len(self.params)) + " !")
 
         return np.reshape(samples, self.shape)
+
 
     def __repr__(self):
 
@@ -449,16 +465,16 @@ if __name__ == "__main__":
 
         print "\nmu, std to distribution " + distribution + ":"
 
-        if distribution is "poisson":
+        if distribution == "poisson":
             mu= 0.25
             std = 0.5
-        elif distribution is "beta":
+        elif distribution == "beta":
             mu = 0.5
             std = 0.25
-        elif distribution is "binomial":
+        elif distribution == "binomial":
             mu = 1.0
             std = 1.0/np.sqrt(2)
-        elif distribution is "chisquare":
+        elif distribution == "chisquare":
             mu = 1.0
             std = np.sqrt(2*mu)
         else:
