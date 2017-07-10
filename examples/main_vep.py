@@ -219,12 +219,12 @@ if __name__ == "__main__":
             logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
 
             time = scale_time * numpy.array(ttavg, dtype='float32')
-            dt2 = numpy.min(numpy.diff(time))
+            sampling_time = numpy.min(numpy.diff(time))
 
             vois_ts_dict = prepare_vois_ts_dict(vois, tavg_data)
 
             prepare_ts_and_seeg_h5_file(lsa_hypothesis.name, model, projections, vois_ts_dict, hpf_flag, hpf_low,
-                                        hpf_high, fsAVG, dt2)
+                                        hpf_high, fsAVG, sampling_time)
 
             vois_ts_dict['time'] = time
 
