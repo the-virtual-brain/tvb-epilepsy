@@ -293,8 +293,11 @@ def dicts_of_lists(dictionary, n=1):
     return dictionary
 
 def linear_index_to_coordinate_tuples(linear_index, shape):
-    coordinates_tuple = numpy.unravel_index(linear_index, shape)
-    return zip(*[ca.flatten().tolist() for ca in coordinates_tuple])
+    if len(linear_index) > 0:
+        coordinates_tuple = numpy.unravel_index(linear_index, shape)
+        return zip(*[ca.flatten().tolist() for ca in coordinates_tuple])
+    else:
+        return []
 
 def formal_repr(instance, attr_dict):
     """ A formal string representation for an object.
