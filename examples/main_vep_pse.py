@@ -19,7 +19,7 @@ from tvb_epilepsy.custom.read_write import write_h5_model, write_ts_epi, write_t
 from tvb_epilepsy.base.h5_model import prepare_for_h5
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
-from tvb_epilepsy.base.pse_service import PSE_service, pse_from_hypothesis
+from tvb_epilepsy.base.pse_service import PSE_Service, pse_from_hypothesis
 from tvb_epilepsy.base.sensitivity_analysis_service import SensitivityAnalysisService, \
                                                            sensitivity_analysis_pse_from_hypothesis
 
@@ -247,7 +247,7 @@ if __name__ == "__main__":
 
         print "running sensitivity analysis PSE LSA..."
         sa_results, pse_results = \
-            sensitivity_analysis_pse_from_hypothesis(lsa_hypothesis, n_samples, method="sobol", half_range=0.1,
+            sensitivity_analysis_pse_from_hypothesis(lsa_hypothesis, n_samples, method="delta", half_range=0.1,
                                                      global_coupling=[{"indices": all_regions_indices,
                                                                        "bounds":
                                                                            [0.0, 2 *
@@ -294,12 +294,12 @@ if __name__ == "__main__":
             logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
 
             time = scale_time * numpy.array(ttavg, dtype='float32')
-            dt2 = numpy.min(numpy.diff(time))
+            sampling_time = numpy.min(numpy.diff(time))
 
             vois_ts_dict = prepare_vois_ts_dict(vois, tavg_data)
 
             prepare_ts_and_seeg_h5_file(lsa_hypothesis.name, model, projections, vois_ts_dict, hpf_flag, hpf_low,
-                                        hpf_high, fsAVG, dt2)
+                                        hpf_high, fsAVG, sampling_time)
 
             vois_ts_dict['time'] = time
 
