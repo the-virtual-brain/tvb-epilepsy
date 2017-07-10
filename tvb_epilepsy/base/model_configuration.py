@@ -3,13 +3,12 @@
 Class to keep the model configuration values.
 This will be used to populate a Model instance needed in order to launch a simulation.
 """
-import numpy as np
 
 from collections import OrderedDict
 
-from tvb_epilepsy.base.h5_model import prepare_for_h5
-from tvb_epilepsy.base.utils import formal_repr
 from tvb_epilepsy.base.constants import X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
+from tvb_epilepsy.base.utils import formal_repr
+from tvb_epilepsy.base.h5_model import prepare_for_h5
 
 
 class ModelConfiguration(object):

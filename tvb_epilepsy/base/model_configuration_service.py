@@ -2,10 +2,15 @@
 """
 Service to do X0/E Hypothesis configuration.
 """
+from collections import OrderedDict
+
 import numpy
 
-from tvb_epilepsy.base.calculations import calc_x0cr_r, calc_coupling, calc_x0
+from tvb.basic.logger.builder import get_logger
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
+from tvb_epilepsy.base.utils import formal_repr
+from tvb_epilepsy.base.h5_model import prepare_for_h5
+from tvb_epilepsy.base.calculations import calc_x0cr_r, calc_coupling, calc_x0
 from tvb_epilepsy.base.equilibrium_computation import calc_eq_z_2d, eq_x1_hypo_x0_linTaylor, eq_x1_hypo_x0_optimize
 from tvb_epilepsy.base.model_configuration import ModelConfiguration
 
@@ -13,6 +18,9 @@ from tvb_epilepsy.base.model_configuration import ModelConfiguration
 # In the future all the related to model configuration parameters might be part of the disease hypothesis:
 # yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF
 # For now, we assume default values, or externally set
+
+LOG = get_logger(__name__)
+
 
 class ModelConfigurationService(object):
 
@@ -31,6 +39,27 @@ class ModelConfigurationService(object):
         self.K = None
         self._normalize_global_coupling()
         self.E = E * numpy.ones((self.number_of_regions,), dtype=numpy.float32)
+
+    def __repr__(self):
+        d = {"01. Number of regions": self.number_of_regions,
+             "02. x0": self.x0,
+             "03. Iext1": self.Iext1,
+             "04. a": self.a,
+             "05. b": self.b,
+             "06. x1eq_mode": self.x1eq_mode,
+             "07. K_unscaled": self.K_unscaled,
+             "08. K": self.K,
+             "09. E": self.E,
+             }
+        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0])))
+
+    def __str__(self):
+        return self.__repr__()
+
+    def prepare_for_h5(self):
+        h5_model = prepare_for_h5(self)
+        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
+        return h5_model
 
     def _ensure_equilibrum(self, x1EQ, zEQ):
         temp = x1EQ > self.x1EQcr - 10 ** (-3)

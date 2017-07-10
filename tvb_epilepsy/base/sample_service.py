@@ -1,21 +1,25 @@
 import warnings
+import importlib
+from collections import OrderedDict
 
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
 import scipy as scp
-import SALib.sample
-from SALib.sample import latin, saltelli, fast_sampler, morris, ff
+from SALib.sample import saltelli, fast_sampler, morris, ff
 
-import importlib
-from collections import OrderedDict
+from tvb_epilepsy.base.constants import FOLDER_RES
+from tvb_epilepsy.base.utils import formal_repr, dict_str, dicts_of_lists, dicts_of_lists_to_lists_of_dicts
+from tvb_epilepsy.base.h5_model import prepare_for_h5
+from tvb_epilepsy.custom.read_write import write_h5_model
 
-from tvb_epilepsy.base.utils import shape_to_size, formal_repr, dict_str, dicts_of_lists, \
-                                    dicts_of_lists_to_lists_of_dicts, list_of_dicts_to_dicts_of_ndarrays
-
+from tvb.basic.logger.builder import get_logger
 
 # Helper functions to match normal distributions with several others we might use...
 # Input parameters should be scalars or ndarrays! Not lists!
+
+LOG = get_logger(__name__)
+
 
 distrib_dict = {"uniform": {"constraint": lambda p: np.all(p["alpha"] < p["beta"]),
                              "constraint_str": "alpha < beta",
@@ -195,10 +199,31 @@ class SampleService(object):
         self.stats = {}
         self.params = {}
 
+    def __repr__(self):
+
+        d = {"01. Sampling module": self.sampling_module,
+             "02. Sampler": self.sampler,
+             "03. Number of samples": self.n_samples,
+             "04. Number of output parameters": self.n_outputs,
+             "05. Samples' shape": self.shape,
+             }
+        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]))) + \
+                                            "\n06. Distribution parameters: " + dict_str(self.params) + \
+                                            "\n07 Resulting statistics: " + dict_str(self.stats)
+
+    def prepare_for_h5(self):
+        h5_model = prepare_for_h5({"sampling_module": self.sampling_module, "sampler": self.sampler,
+                                   "n_samples": self.n_samples, "n_outputs": self.n_outputs, "shape": self.shape,
+                                   "params": self.params, "stats": self.stats})
+        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
+        return h5_model
+
+    def _list_params(self):
+        self.params = dicts_of_lists(self.params, self.n_outputs)
+
     def compute_stats(self, samples):
         return OrderedDict([("mu", samples.mean(axis=1)), ("m", scp.median(samples, axis=1)),
-                            ("mode", ss.mode(samples, axis=1)),
-                            ("std", samples.std()), ("var", samples.var(axis=1)),
+                            ("std", samples.std(axis=1)), ("var", samples.var(axis=1)),
                             ("k", ss.kurtosis(samples, axis=1)), ("skew", ss.skew(samples, axis=1)),
                             ("min", samples.min(axis=1)), ("max", samples.max(axis=1)),
                             ("1%", np.percentile(samples, 1, axis=1)), ("5%", np.percentile(samples, 5, axis=1)),
@@ -215,16 +240,6 @@ class SampleService(object):
         else:
             return samples
 
-    def list_params(self):
-        self.params = dicts_of_lists(self.params, self.n_outputs)
-
-    def __repr__(self):
-        d = OrderedDict([("n_parameters", str(self.n_outputs)), ("n_samples", str(self.n_samples)),
-                         ("shape", str(self.shape)), ("sampler", self.sampling_module)])
-
-        return formal_repr(self, d) + \
-               "\nparameters: " + dict_str(self.params) + \
-               "\nstats: " + dict_str(self.stats)
 
 class DeterministicSampleService(SampleService):
 
@@ -243,7 +258,7 @@ class DeterministicSampleService(SampleService):
                              " is not greater than the lower one " + str(low) + "!")
         else:
             self.params = {"low": low, "high": high}
-            self.list_params()
+            self._list_params()
 
     def sample(self, **kwargs):
 
@@ -271,7 +286,7 @@ class StochasticSampleService(SampleService):
 
         self.random_seed = random_seed
         self.params = kwargs
-        self.list_params()
+        self._list_params()
         self.trunc_limits = trunc_limits
         sampling_module = sampling_module.lower()
 
@@ -299,6 +314,33 @@ class StochasticSampleService(SampleService):
 
         else:
             raise ValueError("Sampler module " + str(sampling_module) + " is not recognized!")
+
+    def __repr__(self):
+
+        d = {"01. Sampling module": self.sampling_module,
+             "02. Sampler": self.sampler,
+             "03. Number of samples": self.n_samples,
+             "04. Number of output parameters": self.n_outputs,
+             "05. Samples' shape": self.shape,
+             "06. Random seed": self.random_seed,
+             }
+        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]))) + \
+        "\n07. Distribution parameters: " + dict_str(self.params) + \
+        "\n08. Truncation limits: " + str([dict_str(d) for d in dicts_of_lists_to_lists_of_dicts(self.trunc_limits)]) + \
+        "\n08. Resulting statistics: " + dict_str(self.stats)
+
+    def __str__(self):
+        return self.__repr__()
+
+    def prepare_for_h5(self):
+        h5_model = prepare_for_h5({"sampling_module": self.sampling_module, "sampler": self.sampler,
+                                   "n_samples": self.n_samples, "n_outputs": self.n_outputs, "shape": self.shape,
+                                   "random_seed": self.random_seed,
+                                   "trunc_limits": np.array([(d.get("low", -np.inf), d.get("high", np.inf))
+                                                        for d in dicts_of_lists_to_lists_of_dicts(self.trunc_limits)]),
+                                   "params": self.params, "stats": self.stats})
+        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
+        return h5_model
 
     def _numpy_sample(self, distribution, size, **params):
         return getattr(nr, distribution)(size=size, **params)
@@ -401,17 +443,9 @@ class StochasticSampleService(SampleService):
         return np.reshape(samples, self.shape)
 
 
-    def __repr__(self):
-
-        d = OrderedDict([("random_seed", str(self.random_seed))])
-
-        return super(StochasticSampleService, self).__repr__() + "\n"+ \
-               formal_repr(self, d) + "\n" + "\ntruncation limits: " + dict_str(self.trunc_limits) + "\n"
-
-
 if __name__ == "__main__":
 
-    print("\nDeterministic linspace sampling:")
+    LOG.info("\nDeterministic linspace sampling:")
 
     sampler = DeterministicSampleService(n_samples=10, n_outputs=2, low=1.0, high=2.0, grid_mode=True)
 
@@ -421,9 +455,10 @@ if __name__ == "__main__":
     #
     #     print("\n" + key + ": " + str(value))
 
-    print(sampler.__repr__())
+    LOG.info(sampler.__repr__())
+    write_h5_model(sampler.prepare_for_h5(), folder_name=FOLDER_RES, file_name="test_Deterministic_Sampler.h5")
 
-    print("\nStochastic uniform sampling:")
+    LOG.info("\nStochastic uniform sampling:")
 
     sampler = StochasticSampleService() #(n_samples=10, n_outputs=1, low=1.0, high=2.0)
 
@@ -432,9 +467,10 @@ if __name__ == "__main__":
     # for key, value in stats.iteritems():
     #     print("\n" + key + ": " + str(value))
 
-    print(sampler.__repr__())
+    LOG.info(sampler.__repr__())
+    write_h5_model(sampler.prepare_for_h5(), folder_name=FOLDER_RES, file_name="test1_Stochastic_Sampler.h5")
 
-    print("\nStochastic truncated normal sampling:")
+    LOG.info("\nStochastic truncated normal sampling:")
 
     sampler = StochasticSampleService(n_samples=10, n_outputs=2, sampler="norm",
                                       trunc_limits={"low": 0.0, "high": +3.0}, loc=1.0,
@@ -445,9 +481,10 @@ if __name__ == "__main__":
     # for key, value in stats.iteritems():
     #     print("\n" + key + ": " + str(value))
 
-    print(sampler.__repr__())
+    LOG.info(sampler.__repr__())
+    write_h5_model(sampler.prepare_for_h5(), folder_name=FOLDER_RES, file_name="test2_Stochastic_Sampler.h5")
 
-    print("\nSensitivity analysis sampling:")
+    LOG.info("\nSensitivity analysis sampling:")
 
     sampler = StochasticSampleService(n_samples=10, n_outputs=2, sampler="latin", sampling_module="salib",
                                       bounds=[[0.0, 0.1], [0.0, 0.1]])
@@ -457,13 +494,14 @@ if __name__ == "__main__":
     # for key, value in stats.iteritems():
     #     print("\n" + key + ": " + str(value))
 
-    print(sampler.__repr__())
+    LOG.info(sampler.__repr__())
+    write_h5_model(sampler.prepare_for_h5(), folder_name=FOLDER_RES, file_name="test3_Stochastic_Sampler.h5")
 
-    print("\nTesting distribution conversions...")
+    LOG.info("\nTesting distribution conversions...")
 
     for distribution in distrib_dict:
 
-        print "\nmu, std to distribution " + distribution + ":"
+        LOG.info("\nmu, std to distribution " + distribution + ":")
 
         if distribution == "poisson":
             mu= 0.25
@@ -481,17 +519,17 @@ if __name__ == "__main__":
             mu = 0.5
             std = 0.5
 
-        print {"mu": mu, "std": std}
+        LOG.info(dict_str({"mu": mu, "std": std}))
 
         p = mean_std_to_distribution_params(distribution, mu=mu, std=std)
 
-        print p
+        LOG.info(str(p))
 
-        print "\nDistribution " + distribution + " to mu, std:"
+        LOG.info("\nDistribution " + distribution + " to mu, std:")
 
         mu1, std1 = distribution_params_to_mean_std(distribution, **p)
 
-        print {"mu": mu, "std": std}
+        LOG.info(dict_str({"mu": mu, "std": std}))
 
         if np.abs(mu - mu1) > 10 ** -6 or np.abs(std - std1) > 10 ** -6:
             raise ValueError("mu - mu1 = " + str(mu - mu1) + "std - std1 = " + str(std - std1))

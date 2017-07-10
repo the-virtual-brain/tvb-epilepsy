@@ -4,9 +4,15 @@ Mechanism for parameter search exploration for LSA and simulations (it will have
 
 import subprocess
 import warnings
-import numpy as np
+from collections import OrderedDict
 from copy import deepcopy
+
+import numpy as np
+
+from tvb.basic.logger.builder import get_logger
 from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
+from tvb_epilepsy.base.utils import formal_repr
+from tvb_epilepsy.base.h5_model import prepare_for_h5
 from tvb_epilepsy.base.simulators import ABCSimulator
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model_configuration import ModelConfiguration
@@ -16,6 +22,9 @@ from tvb_epilepsy.base.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
 from tvb_epilepsy.custom.simulator_custom import SimulatorCustom, custom_model_builder
 from tvb_epilepsy.custom.read_write import read_ts
+
+
+LOG = get_logger(__name__)
 
 
 def set_object_attribute_recursively(object, path, values, indices):
@@ -204,7 +213,7 @@ def sim_run_fun(simulator_input, params_paths, params_values, params_indices, ou
         return False, None
 
 
-class PSE_service(object):
+class PSE_Service(object):
 
     def __init__(self, task, hypothesis=None, simulator=None, params_pse=None, run_fun=None, out_fun=None):
 
@@ -253,6 +262,7 @@ class PSE_service(object):
 
         if isinstance(params_pse, list):
 
+            self.params_names = []
             self.params_paths = []
             self.n_params_vals = []
             self.params_indices = []
@@ -265,14 +275,16 @@ class PSE_service(object):
                 temp.append(temp2)
                 self.n_params_vals.append(temp2.size)
                 # parameter indices:
-                self.params_indices.append(param.get("indices", []))
+                indices = param.get("indices", [])
+                self.params_indices.append(indices)
+                self.params_names.append(param.get("name", param["path"].rsplit('.', 1)[-1] + str(indices)))
 
             self.n_params_vals = np.array(self.n_params_vals)
             self.n_params = len(self.params_paths)
 
             if not(np.all(self.n_params_vals == self.n_params_vals[0])):
                 raise ValueError("\nNot all parameters have the same number of samples!: " +
-                                     "\n" + str(self.params_paths) + " = " + str( self.n_params_vals))
+                                 "\n" + str(self.params_paths) + " = " + str( self.n_params_vals))
             else:
                 self.n_params_vals = self.n_params_vals[0]
 
@@ -287,6 +299,27 @@ class PSE_service(object):
 
         else:
             raise ValueError("\nparams_pse is not a list of tuples!")
+
+    def __repr__(self):
+
+        d = {"01. Task": self.task,
+             "02. Main PSE object": self.pse_object,
+             "03. Number of computation loops": self.n_loops,
+             "04. Parameters": np.array(["%s" % l for l in self.params_names]),
+             }
+        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0])))
+
+    def __str__(self):
+        return self.__repr__()
+
+    def prepare_for_h5(self):
+        h5_model = prepare_for_h5({"task": self.task, "n_loops": self.n_loops,
+                                   "params_names": self.params_names,
+                                   "params_paths": self.params_paths,
+                                   "params_indices": np.array([str(inds) for inds in self.params_indices], dtype="S"),
+                                   "params_samples": self.pse_params.T})
+        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
+        return h5_model
 
     def run_pse(self, grid_mode=False, **kwargs):
 
@@ -335,11 +368,12 @@ class PSE_service(object):
 # for Linear Stability Analysis (LSA).
 
 def pse_from_hypothesis(hypothesis, n_samples, half_range=0.1, global_coupling=[],
-                                             healthy_regions_parameters=[], model_configuration=None,
-                                             model_configuration_service=None, lsa_service=None, **kwargs):
+                        healthy_regions_parameters=[], model_configuration=None, model_configuration_service=None,
+                        lsa_service=None, save_services=False, **kwargs):
 
     from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE
-    from tvb_epilepsy.base.utils import linear_index_to_coordinate_tuples, dicts_of_lists_to_lists_of_dicts
+    from tvb_epilepsy.base.utils import linear_index_to_coordinate_tuples, dicts_of_lists_to_lists_of_dicts, \
+                                        list_of_dicts_to_dicts_of_ndarrays
     from tvb_epilepsy.base.sample_service import StochasticSampleService
 
     all_regions_indices = range(hypothesis.get_number_of_regions())
@@ -434,13 +468,18 @@ def pse_from_hypothesis(hypothesis, n_samples, half_range=0.1, global_coupling=[
 
     # Now run pse service to generate output samples:
 
-    pse = PSE_service("LSA", hypothesis=hypothesis, params_pse=pse_params_list)
+    pse = PSE_Service("LSA", hypothesis=hypothesis, params_pse=pse_params_list)
     pse_results, execution_status = pse.run_pse(grid_mode=False, lsa_service_input=lsa_service,
                                                 model_configuration_service_input=model_configuration_service)
 
     pse_results = list_of_dicts_to_dicts_of_ndarrays(pse_results)
 
+    if save_services:
+        LOG.info(pse.__repr__())
+        write_h5_model(pse.prepare_for_h5(), folder_name=FOLDER_RES, file_name="test_pse_service.h5")
+
     return pse_results, pse_params_list
+
 
 if __name__ == "__main__":
 
@@ -449,8 +488,7 @@ if __name__ == "__main__":
     from tvb_epilepsy.base.utils import list_of_dicts_to_dicts_of_ndarrays
     from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
     from tvb_epilepsy.custom.read_write import write_h5_model
-    from tvb_epilepsy.base.h5_model import prepare_for_h5
-    from tvb_epilepsy.base.sample_service import DeterministicSampleService, StochasticSampleService
+    from tvb_epilepsy.base.sample_service import StochasticSampleService
     from tvb_epilepsy.base.plot_tools import plot_lsa_pse
 
     # -------------------------------Reading data-----------------------------------
@@ -489,23 +527,23 @@ if __name__ == "__main__":
                                  epileptogenicity_hypothesis={tuple(e_indices): e_values},
                                  connectivity_hypothesis={})
 
-    print "Running hypothesis: " + hyp_x0_E.name
+    LOG.info("Running hypothesis: " + hyp_x0_E.name)
 
-    print "creating model configuration..."
+    LOG.info("creating model configuration...")
     model_configuration_service = ModelConfigurationService(hyp_x0_E.get_number_of_regions())
     model_configuration = model_configuration_service.configure_model_from_hypothesis(hyp_x0_E)
 
-    print "running LSA..."
+    LOG.info("running LSA...")
     lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
     lsa_hypothesis = lsa_service.run_lsa(hyp_x0_E, model_configuration)
 
-    print "running PSE LSA..."
+    LOG.info("running PSE LSA...")
     pse_results = pse_from_hypothesis(lsa_hypothesis, n_samples, half_range=0.1,
                                       global_coupling=[{"indices": all_regions_indices}],
                                       healthy_regions_parameters=[{"name": "x0", "indices": healthy_indices}],
                                       model_configuration=model_configuration,
                                       model_configuration_service=model_configuration_service,
-                                      lsa_service=lsa_service)[0]
+                                      lsa_service=lsa_service, save_services=True)[0]
 
     plot_lsa_pse(lsa_hypothesis, model_configuration, pse_results,
                  weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,

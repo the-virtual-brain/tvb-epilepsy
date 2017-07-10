@@ -6,9 +6,10 @@ import numpy
 from collections import OrderedDict
 
 from tvb.basic.logger.builder import get_logger
-from tvb_epilepsy.base.utils import formal_repr, weighted_vector_sum
-from tvb_epilepsy.base.calculations import calc_fz_jac_square_taylor
 from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM
+from tvb_epilepsy.base.utils import formal_repr, weighted_vector_sum
+from tvb_epilepsy.base.h5_model import prepare_for_h5
+from tvb_epilepsy.base.calculations import calc_fz_jac_square_taylor
 from tvb_epilepsy.base.utils import curve_elbow_point
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model_configuration import ModelConfiguration
@@ -37,9 +38,19 @@ class LSAService(object):
         d = {"01. Eigenvectors' number selection mode": self.eigen_vectors_number_selection,
              "02. Eigenvectors' number": self.eigen_vectors_number_selection,
              "03. Eigen values": self.eigen_values,
-             "04. Eigen vectors": self.eigen_vectors
+             "04. Eigenvectors": self.eigen_vectors,
+             "05. Eigenvectors' number": self.eigen_vectors_number,
+             "06. Weighted eigenvector's sum flag": str(self.weighted_eigenvector_sum)
              }
         return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0])))
+
+    def __str__(self):
+        return self.__repr__()
+
+    def prepare_for_h5(self):
+        h5_model = prepare_for_h5(self)
+        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
+        return h5_model
 
     def get_curve_elbow_point(self, values_array):
         return curve_elbow_point(values_array)
