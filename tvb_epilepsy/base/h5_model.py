@@ -30,6 +30,10 @@ def prepare_for_h5(obj):
         for key, value in obj.iteritems():
             if (isinstance(value, numpy.ndarray)):
                 datasets_dict.update({key: value})
+            elif isinstance(value, list):
+                datasets_dict.update({key: numpy.array(value)})
+            elif isinstance(value, dict):
+                datasets_dict, metadata_dict = flatten_dict_recursively(value, key, datasets_dict, metadata_dict)
             else:
                 if isinstance(value, (float, int, long, complex, str)):
                     metadata_dict.update({key: value})
@@ -39,6 +43,10 @@ def prepare_for_h5(obj):
         for key, value in vars(obj).iteritems():
             if (isinstance(value, numpy.ndarray)):
                 datasets_dict.update({key: value})
+            elif isinstance(value, list):
+                datasets_dict.update({key: numpy.array(value)})
+            elif isinstance(value, dict):
+                datasets_dict, metadata_dict = flatten_dict_recursively(value, key, datasets_dict, metadata_dict)
             else:
                 if isinstance(value, (float, int, long, complex, str)):
                     metadata_dict.update({key: value})
@@ -46,3 +54,24 @@ def prepare_for_h5(obj):
     h5_model = H5Model(datasets_dict, metadata_dict)
 
     return h5_model
+
+def flatten_dict_recursively(d, name, datasets_dict, metadata_dict):
+
+    for key, value in d.iteritems():
+
+        key = name + "/" + key
+
+        if (isinstance(value, numpy.ndarray)):
+            datasets_dict.update({key: value})
+
+        elif isinstance(value, list):
+            datasets_dict.update({key: numpy.array(value)})
+
+        elif isinstance(value, dict):
+            datasets_dict, metadata_dict = flatten_dict_recursively(value, key, datasets_dict, metadata_dict)
+
+        else:
+            if isinstance(value, (float, int, long, complex, str)):
+                metadata_dict.update({key: value})
+
+    return datasets_dict, metadata_dict
