@@ -6,14 +6,15 @@ from collections import OrderedDict
 
 import numpy
 
-from tvb_epilepsy.base.h5_model import prepare_for_h5
-from tvb_epilepsy.base.utils import formal_repr, ensure_list, linear_index_to_coordinate_tuples
+from tvb_epilepsy.base.utils import initialize_logger, formal_repr, ensure_list, linear_index_to_coordinate_tuples
+from tvb_epilepsy.base.h5_model import object_to_h5_model
 
 # NOTES:
 #  For the moment a hypothesis concerns the excitability and/or epileptogenicity of each brain region,
 #  and/or scalings of specific connectivity weights.
 # TODO if needed in the future: Generate a richer disease hypothesis as a combination of hypotheses on other parameters.
 
+logger = initialize_logger(__name__)
 
 class DiseaseHypothesis(object):
     def __init__(self, connectivity, excitability_hypothesis={}, epileptogenicity_hypothesis={},
@@ -58,8 +59,8 @@ class DiseaseHypothesis(object):
     def __str__(self):
         return self.__repr__()
 
-    def prepare_for_h5(self):
-        h5_model = prepare_for_h5(self)
+    def _prepare_for_h5(self):
+        h5_model = object_to_h5_model(self)
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         h5_model.add_or_update_metadata_attribute("Number_of_nodes", self.get_number_of_regions())
 
@@ -69,6 +70,12 @@ class DiseaseHypothesis(object):
         h5_model.add_or_update_datasets_attribute("propagation_indices", all_indices_for_propagation)
 
         return h5_model
+
+    def write_to_h5(self, folder, filename=""):
+        if filename == "":
+            filename = self.name + ".h5"
+        h5_model = self._prepare_for_h5()
+        h5_model.write_to_h5(folder, filename)
 
     def sort_disease_indices_values(self, disease_dict):
         indices = []
