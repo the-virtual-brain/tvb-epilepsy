@@ -75,9 +75,9 @@ class ModelConfigurationService(object):
 
         return x1EQ, zEQ
 
-    def _compute_x1_equilibrium_from_E(self, E_values):
+    def _compute_x1_equilibrium_from_E(self, e_values):
         array_ones = numpy.ones((self.number_of_regions,), dtype=numpy.float32)
-        return ((E_values - 5.0) / 3.0) * array_ones
+        return ((e_values - 5.0) / 3.0) * array_ones
 
     def _compute_z_equilibrium(self, x1EQ):
         return calc_eq_z_2d(x1EQ, self.yc, self.Iext1)
@@ -91,18 +91,18 @@ class ModelConfigurationService(object):
     def _compute_x0(self, x1EQ, zEQ, x0cr, rx0, weights):
         return calc_x0(x1EQ, zEQ, self.K, weights, x0cr, rx0)
 
-    def _compute_E_values(self, x1EQ):
+    def _compute_e_values(self, x1EQ):
         return 3.0 * x1EQ + 5.0
 
     def _compute_params_after_equilibration(self, x1EQ, zEQ, weights):
         (x0cr, rx0) = self._compute_critical_x0_scaling()
         Ceq = self._compute_coupling_at_equilibrium(x1EQ, weights)
         x0_values = self._compute_x0(x1EQ, zEQ, x0cr, rx0, weights)
-        E_values = self._compute_E_values(x1EQ)
-        return x0cr, rx0, Ceq, x0_values, E_values
+        e_values = self._compute_e_values(x1EQ)
+        return x0cr, rx0, Ceq, x0_values, e_values
 
-    def _compute_x1_and_z_equilibrium_from_E(self, E_values):
-        x1EQ = self._compute_x1_equilibrium_from_E(E_values)
+    def _compute_x1_and_z_equilibrium_from_E(self, e_values):
+        x1EQ = self._compute_x1_equilibrium_from_E(e_values)
         zEQ = self._compute_z_equilibrium(x1EQ)
         return x1EQ, zEQ
 
@@ -123,9 +123,9 @@ class ModelConfigurationService(object):
 
     def configure_model_from_equilibrium(self, x1EQ, zEQ, weights):
         x1EQ, zEQ = self._ensure_equilibrum(x1EQ, zEQ)
-        x0cr, rx0, Ceq, x0_values, E_values = self._compute_params_after_equilibration(x1EQ, zEQ, weights)
+        x0cr, rx0, Ceq, x0_values, e_values = self._compute_params_after_equilibration(x1EQ, zEQ, weights)
         model_configuration = ModelConfiguration(self.yc, self.Iext1, self.K, self.a, self.b,
-                                                 x0cr, rx0, x1EQ, zEQ, Ceq, x0_values, E_values, weights)
+                                                 x0cr, rx0, x1EQ, zEQ, Ceq, x0_values, e_values, weights)
         return model_configuration
 
     def configure_model_from_E_hypothesis(self, disease_hypothesis):
@@ -138,11 +138,11 @@ class ModelConfigurationService(object):
             connectivity *= disease_hypothesis.get_connectivity_disease()
 
         # All nodes except for the diseased ones will get the default epileptogenicity:
-        E_values = numpy.array(self.E)
-        E_values[disease_hypothesis.e_indices] = disease_hypothesis.e_values
+        e_values = numpy.array(self.E)
+        e_values[disease_hypothesis.e_indices] = disease_hypothesis.e_values
 
         # Compute equilibrium from epileptogenicity:
-        x1EQ, zEQ = self._compute_x1_and_z_equilibrium_from_E(E_values)
+        x1EQ, zEQ = self._compute_x1_and_z_equilibrium_from_E(e_values)
         x1EQ, zEQ = self._ensure_equilibrum(x1EQ, zEQ)
 
         return self.configure_model_from_equilibrium(x1EQ, zEQ, connectivity)
@@ -165,12 +165,12 @@ class ModelConfigurationService(object):
 
         # There might be some epileptogenicity-diseased regions as well:
         # Initialize with the default E
-        E_values = numpy.array(self.E)
+        e_values = numpy.array(self.E)
         # and assign any diseased E_values if any
-        E_values[disease_hypothesis.e_indices] = disease_hypothesis.e_values
+        e_values[disease_hypothesis.e_indices] = disease_hypothesis.e_values
 
         # Compute equilibrium from epileptogenicity:
-        x1EQ_temp, zEQ_temp = self._compute_x1_and_z_equilibrium_from_E(E_values)
+        x1EQ_temp, zEQ_temp = self._compute_x1_and_z_equilibrium_from_E(e_values)
 
         (x0cr, rx0) = self._compute_critical_x0_scaling()
 
