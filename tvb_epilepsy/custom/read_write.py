@@ -152,66 +152,6 @@ def write_epileptogenicity_hypothesis(ep_vector, folder_name=None, file_name=Non
     h5_file.close()
 
 
-def write_h5_model(h5_model, folder_name, file_name):
-    """
-    Store H5Model object to a hdf5 file
-    """
-    final_path, overwrite = change_filename_or_overwrite(folder_name, file_name)
-    #final_path = ensure_unique_file(folder_name, file_name)
-
-    if overwrite:
-        try:
-            os.remove(final_path)
-        except:
-            warnings.warn("\nFile to overwrite not found!")
-
-    logger.info("Writing %s at: %s" % (h5_model, final_path))
-
-    h5_file = h5py.File(final_path, 'a', libver='latest')
-
-    for attribute, field in h5_model.datasets_dict.iteritems():
-        h5_file.create_dataset("/" + attribute, data=field)
-
-    for meta, val in h5_model.metadata_dict.iteritems():
-        h5_file.attrs.create(meta, val)
-
-    h5_file.close()
-
-
-# TODO: read new hypothesis
-def read_hypothesis(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "hypo_ep.h5"), output="object", hypo_name=None,
-                    update_hypothesis=True):
-    """
-    :param path: Path towards an hypothesis H5 file
-    :return: hypothesis object
-    """
-
-    print "Reading Hypothesis from:", path
-    h5_file = h5py.File(path, 'r', libver='latest')
-
-    print_metadata(h5_file)
-
-    overwrite_fields_dict = {"seizure_indices":
-                                 numpy.array(numpy.where(h5_file["/EZ hypothesis"][()] > 0)).astype("i").squeeze()}
-
-    if isinstance(hypo_name, basestring):
-        overwrite_fields_dict.update({"name": hypo_name})
-
-    if output == "dict":
-        hyp = dict()
-    # else:
-    #     hyp = Hypothesis(h5_file['/Connectivity'][()].shape[0], h5_file['/Connectivity'][()])
-
-    read_object_from_h5_file(hyp, h5_file, hyp_attributes_dict, add_overwrite_fields_dict=overwrite_fields_dict)
-
-    if output != "dict" and update_hypothesis:
-        hyp._update_parameters(hyp.seizure_indices)
-
-    h5_file.close()
-
-    return hyp
-
-
 def import_sensors(src_txt_file):
     labels = numpy.loadtxt(src_txt_file, dtype=numpy.str, usecols=[0])
     locations = numpy.loadtxt(src_txt_file, dtype=numpy.float32, usecols=[1, 2, 3])
