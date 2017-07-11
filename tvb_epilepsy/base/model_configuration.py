@@ -8,7 +8,7 @@ from collections import OrderedDict
 
 from tvb_epilepsy.base.constants import X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 from tvb_epilepsy.base.utils import formal_repr
-from tvb_epilepsy.base.h5_model import prepare_for_h5
+from tvb_epilepsy.base.h5_model import object_to_h5_model
 
 
 class ModelConfiguration(object):
@@ -58,11 +58,17 @@ class ModelConfiguration(object):
     def __str__(self):
         return self.__repr__()
 
-    def prepare_for_h5(self):
-        h5_model = prepare_for_h5(self)
+    def _prepare_for_h5(self):
+        h5_model = object_to_h5_model(self)
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         h5_model.add_or_update_metadata_attribute("Number_of_nodes", len(self.x0_values))
 
         return h5_model
+
+    def write_to_h5(self, folder, filename=""):
+        if filename == "":
+            filename = self.name + ".h5"
+        h5_model = self._prepare_for_h5()
+        h5_model.write_to_h5(folder, filename)
 
 
