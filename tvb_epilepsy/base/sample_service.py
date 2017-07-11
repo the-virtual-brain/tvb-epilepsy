@@ -10,7 +10,7 @@ from SALib.sample import saltelli, fast_sampler, morris, ff
 
 from tvb_epilepsy.base.constants import FOLDER_RES
 from tvb_epilepsy.base.utils import formal_repr, dict_str, dicts_of_lists, dicts_of_lists_to_lists_of_dicts
-from tvb_epilepsy.base.h5_model import prepare_for_h5
+from tvb_epilepsy.base.h5_model import object_to_h5_model
 from tvb_epilepsy.custom.read_write import write_h5_model
 
 from tvb.basic.logger.builder import get_logger
@@ -212,11 +212,17 @@ class SampleService(object):
                                             "\n07 Resulting statistics: " + dict_str(self.stats)
 
     def prepare_for_h5(self):
-        h5_model = prepare_for_h5({"sampling_module": self.sampling_module, "sampler": self.sampler,
+        h5_model = object_to_h5_model({"sampling_module": self.sampling_module, "sampler": self.sampler,
                                    "n_samples": self.n_samples, "n_outputs": self.n_outputs, "shape": self.shape,
                                    "params": self.params, "stats": self.stats})
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         return h5_model
+
+    def write_to_h5(self, folder, filename=""):
+        if filename == "":
+            filename = self.name + ".h5"
+        h5_model = self._prepare_for_h5()
+        h5_model.write_to_h5(folder, filename)
 
     def _list_params(self):
         self.params = dicts_of_lists(self.params, self.n_outputs)
@@ -332,15 +338,21 @@ class StochasticSampleService(SampleService):
     def __str__(self):
         return self.__repr__()
 
-    def prepare_for_h5(self):
-        h5_model = prepare_for_h5({"sampling_module": self.sampling_module, "sampler": self.sampler,
+    def _prepare_for_h5(self):
+        h5_model = object_to_h5_model({"sampling_module": self.sampling_module, "sampler": self.sampler,
                                    "n_samples": self.n_samples, "n_outputs": self.n_outputs, "shape": self.shape,
                                    "random_seed": self.random_seed,
                                    "trunc_limits": np.array([(d.get("low", -np.inf), d.get("high", np.inf))
                                                         for d in dicts_of_lists_to_lists_of_dicts(self.trunc_limits)]),
-                                   "params": self.params, "stats": self.stats})
+                                       "params": self.params, "stats": self.stats})
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         return h5_model
+
+    def write_to_h5(self, folder, filename=""):
+        if filename == "":
+            filename = self.name + ".h5"
+        h5_model = self._prepare_for_h5()
+        h5_model.write_to_h5_file(folder, filename)
 
     def _numpy_sample(self, distribution, size, **params):
         return getattr(nr, distribution)(size=size, **params)
