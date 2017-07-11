@@ -348,12 +348,6 @@ class StochasticSampleService(SampleService):
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         return h5_model
 
-    def write_to_h5(self, folder, filename=""):
-        if filename == "":
-            filename = self.name + ".h5"
-        h5_model = self._prepare_for_h5()
-        h5_model.write_to_h5_file(folder, filename)
-
     def _numpy_sample(self, distribution, size, **params):
         return getattr(nr, distribution)(size=size, **params)
 
