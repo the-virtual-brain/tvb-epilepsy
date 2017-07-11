@@ -279,11 +279,8 @@ def list_of_dicts_to_dicts_of_ndarrays(lst):
     return d
 
 
-def dicts_of_lists_to_lists_of_dicts(dictionary, ordered=True):
-    if ordered:
-        return [OrderedDict(zip(dictionary, t)) for t in zip(*dictionary.values())]
-    else:
-        return [dict(zip(dictionary,t)) for t in zip(*dictionary.values())]
+def dicts_of_lists_to_lists_of_dicts(dictionary):
+    return [dict(zip(dictionary,t)) for t in zip(*dictionary.values())]
 
 
 def ensure_list(arg):
