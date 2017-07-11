@@ -5,7 +5,7 @@ import numpy as np
 
 from SALib.analyze import sobol, delta, fast, morris, dgsm,  ff
 from tvb_epilepsy.base.utils import formal_repr, list_of_dicts_to_dicts_of_ndarrays, dict_str
-from tvb_epilepsy.base.h5_model import prepare_for_h5
+from tvb_epilepsy.base.h5_model import object_to_h5_model
 from tvb.basic.logger.builder import get_logger
 
 METHODS = ["sobol", "latin", "delta", "dgsm", "fast", "fast_sampler", "morris", "ff", "fractional_factorial"]
@@ -17,141 +17,6 @@ LOG = get_logger(__name__)
 # TODO: make example-testing function __main__
 
 # TODO: make __repr__ and prepare h5_model functions
-
-# This function is a helper function to run sensitivity analysis parameter search exploration (pse)
-# for Linear Stability Analysis (LSA).
-
-def sensitivity_analysis_pse_from_hypothesis(hypothesis, n_samples, method="latin", half_range=0.1, global_coupling=[],
-                                             healthy_regions_parameters=[], model_configuration=None,
-                                             model_configuration_service=None, lsa_service=None, save_services=False,
-                                             **kwargs):
-
-    from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE
-    from tvb_epilepsy.base.utils import linear_index_to_coordinate_tuples, dicts_of_lists_to_lists_of_dicts
-    from tvb_epilepsy.base.sample_service import StochasticSampleService
-    from tvb_epilepsy.base.pse_service import PSE_Service
-    from tvb_epilepsy.base.sensitivity_analysis_service import SensitivityAnalysisService
-
-    method = method.lower()
-    if np.in1d(method, METHODS):
-        if np.in1d(method, ["delta", "dgsm"]):
-            sampler = "latin"
-        elif method == "sobol":
-            sampler = "saltelli"
-        elif method == "fast":
-            sampler = "fast_sampler"
-        else:
-            sampler = method
-    else:
-        raise ValueError(
-            "Method " + str(method) + " is not one of the available methods " + str(METHODS) + " !")
-
-    all_regions_indices = range(hypothesis.get_number_of_regions())
-    disease_indices = hypothesis.get_regions_disease_indices()
-    healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
-
-    pse_params = {"path": [], "indices": [], "name": [], "bounds": []}
-    n_inputs = 0
-
-    # First build from the hypothesis the input parameters of the sensitivity analysis.
-    # These can be either originating from excitability, epileptogenicity or connectivity hypotheses,
-    # or they can relate to the global coupling scaling (parameter K of the model configuration)
-    for ii in range(len(hypothesis.x0_values)):
-        n_inputs += 1
-        pse_params["indices"].append([ii])
-        pse_params["path"].append("hypothesis.x0_values")
-        pse_params["name"].append(str(hypothesis.connectivity.region_labels[hypothesis.x0_indices[ii]]) +
-                                  " Excitability")
-        pse_params["bounds"].append([hypothesis.x0_values[ii]-half_range,
-                       np.min([MAX_DISEASE_VALUE, hypothesis.x0_values[ii]+half_range])])
-
-    for ii in range(len(hypothesis.e_values)):
-        n_inputs += 1
-        pse_params["indices"].append([ii])
-        pse_params["path"].append("hypothesis.e_values")
-        pse_params["name"].append(str(hypothesis.connectivity.region_labels[hypothesis.x0_indices[ii]]) +
-                                  " Epileptogenicity")
-        pse_params["bounds"].append([hypothesis.e_values[ii]-half_range,
-                       np.min([MAX_DISEASE_VALUE, hypothesis.e_values[ii]+half_range])])
-
-    for ii in range(len(hypothesis.w_values)):
-        n_inputs += 1
-        pse_params["indices"].append([ii])
-        pse_params["path"].append("hypothesis.w_values")
-        inds = linear_index_to_coordinate_tuples(hypothesis.w_indices[ii], hypothesis.connectivity.weights.shape)
-        if len(inds) == 1:
-            pse_params["name"].append(str(hypothesis.connectivity.region_labels[inds[0][0]]) + "-" +
-                                str(hypothesis.connectivity.region_labels[inds[0][0]]) + " Connectivity")
-        else:
-            pse_params["name"].append("Connectivity[" + str(inds), + "]")
-            pse_params["bounds"].append([np.max([hypothesis.w_values[ii]-half_range, 0.0]),
-                                                 hypothesis.w_values[ii]+half_range])
-
-    for val in global_coupling:
-        n_inputs += 1
-        pse_params["path"].append("model.configuration.service.K_unscaled")
-        inds = val.get("indices", all_regions_indices)
-        if np.all(inds == all_regions_indices):
-            pse_params["name"].append("Global coupling")
-        else:
-            pse_params["name"].append("Afferent coupling[" + str(inds) + "]")
-        pse_params["indices"].append(inds)
-        pse_params["bounds"].append(val["bounds"])
-
-    # Now generate samples suitable for sensitivity analysis
-    sampler = StochasticSampleService(n_samples=n_samples, n_outputs=n_inputs, sampler=sampler, trunc_limits={},
-                                      sampling_module="salib", random_seed=kwargs.get("random_seed", None),
-                                      bounds=pse_params["bounds"])
-
-    input_samples = sampler.generate_samples(**kwargs)
-    n_samples = input_samples.shape[1]
-    pse_params.update({"samples": [np.array(value) for value in input_samples.tolist()]})
-
-    pse_params_list = dicts_of_lists_to_lists_of_dicts(pse_params)
-
-    # Add a random jitter to the healthy regions if required...:
-    for val in healthy_regions_parameters:
-        inds = val.get("indices", healthy_indices)
-        name = val.get("name", "x0")
-        n_params = len(inds)
-        sampler = StochasticSampleService(n_samples=n_samples, n_outputs=n_params, sampler="uniform",
-                                          trunc_limits={"low": 0.0}, sampling_module="scipy",
-                                          random_seed=kwargs.get("random_seed", None),
-                                          loc=kwargs.get("loc", 0.0), scale=kwargs.get("scale", 2*half_range))
-
-        samples = sampler.generate_samples(**kwargs)
-        for ii in range(n_params):
-            pse_params_list.append({"path": "model_configuration_service." + name, "samples": samples[ii],
-                                    "indices": [inds[ii]], "name": name})
-
-    # Now run pse service to generate output samples:
-
-    pse = PSE_Service("LSA", hypothesis=hypothesis, params_pse=pse_params_list)
-    pse_results, execution_status = pse.run_pse(grid_mode=False, lsa_service_input=lsa_service,
-                                                model_configuration_service_input=model_configuration_service)
-
-    pse_results = list_of_dicts_to_dicts_of_ndarrays(pse_results)
-
-    # Now prepare inputs and outputs and run the sensitivity analysis:
-    # NOTE!: Without the jittered healthy regions which we don' want to include into the sensitivity analysis!
-    inputs = dicts_of_lists_to_lists_of_dicts(pse_params)
-
-    outputs = [{"names": ["LSA Propagation Strength"], "values": pse_results["propagation_strengths"]}]
-    sensitivity_analysis_service = SensitivityAnalysisService(inputs, outputs, method=method,
-                                                              calc_second_order=kwargs.get("calc_second_order", True),
-                                                              conf_level=kwargs.get("conf_level", 0.95))
-
-    results = sensitivity_analysis_service.run(**kwargs)
-
-    if save_services:
-        LOG.info(pse.__repr__())
-        write_h5_model(pse.prepare_for_h5(), folder_name=FOLDER_RES, file_name=method+"_test_pse_service.h5")
-
-        LOG.info(sensitivity_analysis_service.__repr__())
-        write_h5_model(sensitivity_analysis_service.prepare_for_h5(), folder_name=FOLDER_RES,
-                       file_name=method+"_test_sa_service.h5")
-
-    return results, pse_results
 
 
 class SensitivityAnalysisService(object):
@@ -235,18 +100,23 @@ class SensitivityAnalysisService(object):
     def __str__(self):
         return self.__repr__()
 
-    def prepare_for_h5(self):
-        h5_model = prepare_for_h5({"method": self.method, "calc_second_order": self.calc_second_order,
+    def _prepare_for_h5(self):
+        h5_model = object_to_h5_model({"method": self.method, "calc_second_order": self.calc_second_order,
                                    "conf_level": self.conf_level, "n_inputs": self.n_inputs,
                                    "n_outputs": self.n_outputs, "input_names": self.input_names,
                                    "output_names": self.output_names,
                                    "input_bounds": self.input_bounds,
                                    "problem": self.problem,
                                    "other_parameters": self.other_parameters
-                                   })
+                                       })
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         return h5_model
 
+    def write_to_h5(self, folder, filename=""):
+        if filename == "":
+            filename = self.name + ".h5"
+        h5_model = self._prepare_for_h5()
+        h5_model.write_to_h5(folder, filename)
 
     def _set_method(self, method):
         method = method.lower()
@@ -306,7 +176,14 @@ class SensitivityAnalysisService(object):
             # num_resamples (int): The number of resamples used to compute the confidence intervals (default 1000)
             # conf_level (float): The confidence interval level (default 0.95)
             # print_to_console (bool): Print results directly to console (default False)
-            self.analyzer = lambda output: sobol.analyze(self.problem, output, **self.other_parameters)
+            # parallel: False,
+            # n_processors: None
+            self.analyzer = lambda output: sobol.analyze(self.problem, output, calc_second_order=self.calc_second_order,
+                                                         conf_level=self.conf_level,
+                                                         num_resamples=self.other_parameters.get("num_resamples", 1000),
+                                                         parallel=self.other_parameters.get("parallel", False),
+                                                         n_processors=self.other_parameters.get("n_processors", None),
+                                                  print_to_console=self.other_parameters.get("print_to_console", False))
 
         elif np.in1d(self.method.lower(), ["latin", "delta"]):
             warnings.warn("'latin' sampling scheme is recommended for 'delta' method!")
@@ -315,7 +192,10 @@ class SensitivityAnalysisService(object):
             # conf_level (float): The confidence interval level (default 0.95)
             # print_to_console (bool): Print results directly to console (default False)
             self.analyzer = lambda output: delta.analyze(self.problem, self.input_samples[:, input_ids], output,
-                                                         **self.other_parameters)
+                                                         conf_level=self.conf_level,
+                                                         num_resamples=self.other_parameters.get("num_resamples", 1000),
+                                                         print_to_console=self.other_parameters.get("print_to_console",
+                                                                                                    False))
 
         elif np.in1d(self.method.lower(), ["fast", "fast_sampler"]):
             warnings.warn("'fast' method requires 'fast_sampler' sampling scheme!")
@@ -323,19 +203,22 @@ class SensitivityAnalysisService(object):
             # M (int): The interference parameter,
             #           i.e., the number of harmonics to sum in the Fourier series decomposition (default 4)
             # print_to_console (bool): Print results directly to console (default False)
-            # grid_jump (int): The grid jump size, must be identical to the value passed to
-            #                   SALib.sample.morris.sample() (default 2)
-            # num_levels (int): The number of grid levels, must be identical to the value passed to
-            #                   SALib.sample.morris (default 4)
-            self.analyzer = lambda output: fast.analyze(self.problem, output, **self.other_parameters)
+            self.analyzer = lambda output: fast.analyze(self.problem, output, M=self.other_parameters.get("M", 4),
+                                                        print_to_console=self.other_parameters.get("print_to_console",
+                                                                                                   False))
 
         elif np.in1d(self.method.lower(), ["ff", "fractional_factorial"]):
-            warnings.warn("'fractional_factorial' method requires 'fractional_factorial' sampling scheme!")
-            self.analyzer = lambda output: ff.analyze(self.problem, self.input_samples[:, input_ids], output,
-                                                      **self.other_parameters)
             # Additional keyword parameters and their defaults:
             # second_order (bool, default=False): Include interaction effects
             # print_to_console (bool, default=False): Print results directly to console
+            warnings.warn("'fractional_factorial' method requires 'fractional_factorial' sampling scheme!")
+            self.analyzer = lambda output: ff.analyze(self.problem, self.input_samples[:, input_ids], output,
+                                                      calc_second_order=self.calc_second_order,
+                                                      conf_level=self.conf_level,
+                                                      num_resamples=self.other_parameters.get("num_resamples", 1000),
+                                                      print_to_console=self.other_parameters.get("print_to_console",
+                                                                                                 False))
+
 
         elif self.method.lower().lower() == "morris":
             warnings.warn("'morris' method requires 'morris' sampling scheme!")
@@ -343,8 +226,18 @@ class SensitivityAnalysisService(object):
             # num_resamples (int): The number of resamples used to compute the confidence intervals (default 1000)
             # conf_level (float): The confidence interval level (default 0.95)
             # print_to_console (bool): Print results directly to console (default False)
+            # grid_jump (int): The grid jump size, must be identical to the value passed to
+            #                   SALib.sample.morris.sample() (default 2)
+            # num_levels (int): The number of grid levels, must be identical to the value passed to
+            #                   SALib.sample.morris (default 4)
             self.analyzer = lambda output: morris.analyze(self.problem, self.input_samples[:, input_ids], output,
-                                                          **self.other_parameters)
+                                                          conf_level=self.conf_level,
+                                                          grid_jump=self.other_parameters.get("grid_jump", 2),
+                                                          num_levels=self.other_parameters.get("num_levels", 4),
+                                                          num_resamples=self.other_parameters.get("num_resamples",
+                                                                                                  1000),
+                                                          print_to_console=self.other_parameters.get("print_to_console",
+                                                                                                     False))
 
         elif self.method.lower() == "dgsm":
             # num_resamples (int): The number of resamples used to compute the confidence intervals (default 1000)
@@ -352,6 +245,7 @@ class SensitivityAnalysisService(object):
             # print_to_console (bool): Print results directly to console (default False)
             self.analyzer = lambda output: dgsm.analyze(self.problem, self.input_samples[:, input_ids], output,
                                                         **self.other_parameters)
+
         else:
             raise ValueError(
                 "Method " + str(self.method) + " is not one of the available methods " + str(METHODS) + " !")
@@ -382,6 +276,8 @@ if __name__ == "__main__":
     from tvb_epilepsy.base.model_configuration_service import ModelConfigurationService
     from tvb_epilepsy.base.lsa_service import LSAService
     from tvb_epilepsy.base.plot_tools import plot_lsa_pse
+
+    from tvb_epilepsy.base.helper_functions import sensitivity_analysis_pse_from_hypothesis
 
     # -------------------------------Reading data-----------------------------------
 
@@ -443,11 +339,10 @@ if __name__ == "__main__":
                          figure_name=m + "_PSE_LSA_overview_" + lsa_hypothesis.name)
             # , show_flag=True, save_flag=False
 
-            write_h5_model(prepare_for_h5(pse_results), FOLDER_RES, m + "_PSE_LSA_results_" +
-                           lsa_hypothesis.name + ".h5")
-
-            write_h5_model(prepare_for_h5(sa_results), FOLDER_RES, m + "_SA_LSA_results_" +
-                           lsa_hypothesis.name + ".h5")
+            object_to_h5_model(pse_results).write_to_h5(FOLDER_RES,
+                                                        m + "_PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
+            object_to_h5_model(sa_results).write_to_h5(FOLDER_RES,
+                                                       m + "_SA_LSA_results_" + lsa_hypothesis.name + ".h5")
         except:
             warnings.warn("Method " + m + " failed!")
 
