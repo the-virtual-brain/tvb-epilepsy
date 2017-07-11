@@ -136,7 +136,7 @@ class SimulatorTVB(ABCSimulator):
     # def launch_pse(self, hypothesis, head, settings=SimulationSettings()):
     #     raise NotImplementedError()
 
-    def prepare_for_h5(self):
+    def _prepare_for_h5(self):
 
         attributes_dict = epileptor_model_attributes_dict[self.model._ui_name]
         for attr in attributes_dict:
