@@ -6,18 +6,21 @@ import warnings
 
 import numpy
 
-from tvb_epilepsy.base.h5_model import prepare_for_h5
 from tvb_epilepsy.base.constants import FOLDER_RES, FOLDER_FIGURES, SAVE_FLAG, SHOW_FLAG, SIMULATION_MODE, \
     TVB, DATA_MODE, VOIS, DATA_CUSTOM, X0_DEF, E_DEF
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.base.lsa_service import LSAService
-from tvb_epilepsy.base.plot_tools import plot_nullclines_eq, plot_sim_results, \
-    plot_hypothesis_model_configuration_and_lsa
+from tvb_epilepsy.base.plot_tools import plot_nullclines_eq, plot_sim_results, plot_lsa_pse, \
+                                         plot_hypothesis_model_configuration_and_lsa
 from tvb_epilepsy.base.utils import initialize_logger, set_time_scales, calculate_projection, filter_data
 from tvb_epilepsy.custom.read_write import write_h5_model, write_ts_epi, write_ts_seeg_epi
+from tvb_epilepsy.base.h5_model import object_to_h5_model
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
+
+
+from tvb_epilepsy.base.helper_functions import pse_from_hypothesis, sensitivity_analysis_pse_from_hypothesis
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
@@ -25,9 +28,11 @@ else:
     from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
 
 if SIMULATION_MODE is TVB:
-    from tvb_epilepsy.tvb_api.simulator_tvb import setup_simulation
+    from tvb_epilepsy.base.helper_functions import setup_TVB_simulation_from_model_configuration \
+        as setup_simulation_from_model_configuration
 else:
-    from tvb_epilepsy.custom.simulator_custom import setup_simulation
+    from tvb_epilepsy.custom.simulator_custom import setup_custpm_simulation_from_model_configuration \
+        as setup_simulation_from_model_configuration
 
 
 def prepare_vois_ts_dict(vois, data):
@@ -88,18 +93,21 @@ if __name__ == "__main__":
 
     # --------------------------Hypothesis definition-----------------------------------
 
+    n_samples = 100
+
     # # Manual definition of hypothesis...:
     # x0_indices = [20]
     # x0_values = [0.9]
-    # E_indices = [70]
-    # E_values = [0.9]
-    # disease_values = x0_values + E_values
-    # disease_indices = x0_indices + E_indices
+    # e_indices = [70]
+    # e_values = [0.9]
+    # disease_values = x0_values + e_values
+    # disease_indices = x0_indices + e_indices
 
-    # or ...reading a custom file:
+    # ...or reading a custom file:
     ep_name = "ep_test1"
     FOLDER_RES = os.path.join(data_folder, ep_name)
     from tvb_epilepsy.custom.readers_custom import CustomReader
+
     if not isinstance(reader, CustomReader):
         reader = CustomReader()
     disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
@@ -108,15 +116,23 @@ if __name__ == "__main__":
     if disease_values.size > 1:
         inds_split = numpy.ceil(disease_values.size * 1.0 / 2).astype("int")
         x0_indices = disease_indices[:inds_split].tolist()
-        E_indices = disease_indices[inds_split:].tolist()
+        e_indices = disease_indices[inds_split:].tolist()
         x0_values = disease_values[:inds_split].tolist()
-        E_values = disease_values[inds_split:].tolist()
+        e_values = disease_values[inds_split:].tolist()
     else:
         x0_indices = disease_indices.tolist()
         x0_values = disease_values.tolist()
-        E_indices = []
-        E_values = []
+        e_indices = []
+        e_values = []
     disease_indices = list(disease_indices)
+
+    n_x0 = len(x0_indices)
+    n_e = len(e_indices)
+    n_disease = len(disease_indices)
+    all_regions_indices = numpy.array(range(head.number_of_regions))
+    healthy_indices = numpy.delete(all_regions_indices, disease_indices).tolist()
+    n_healthy = len(healthy_indices)
+
 
     # This is an example of Excitability Hypothesis:
     hyp_x0 = DiseaseHypothesis(head.connectivity, excitability_hypothesis={tuple(disease_indices): disease_values},
@@ -127,12 +143,25 @@ if __name__ == "__main__":
                               epileptogenicity_hypothesis={tuple(disease_indices): disease_values},
                               connectivity_hypothesis={})
 
-    if len(E_indices) > 0:
+    if len(e_indices) > 0:
+
+        # Show example of grid_mode if there are only two disease parameters:
+        if n_disease == 2:
+            grid_mode = True
+            n_samples2 = 10
+        else:
+            grid_mode = False
+            n_samples2 = n_samples
+
         # This is an example of x0 mixed Excitability and Epileptogenicity Hypothesis:
         hyp_x0_E = DiseaseHypothesis(head.connectivity, excitability_hypothesis={tuple(x0_indices): x0_values},
-                               epileptogenicity_hypothesis={tuple(E_indices): E_values}, connectivity_hypothesis={})
+                                     epileptogenicity_hypothesis={tuple(e_indices): e_values},
+                                     connectivity_hypothesis={})
+
         hypotheses = (hyp_x0, hyp_E, hyp_x0_E)
+
     else:
+
         hypotheses = (hyp_x0, hyp_E)
 
     # --------------------------Projections computations-----------------------------------
@@ -145,7 +174,6 @@ if __name__ == "__main__":
         else:
             projection = calculate_projection(sensors, head.connectivity)
             head.sensorsSEEG[sensors] = projection
-            print projection.shape
             sensorsSEEG.append(sensors)
             projections.append(projection)
 
@@ -173,12 +201,17 @@ if __name__ == "__main__":
     # --------------------------Hypothesis and LSA-----------------------------------
 
     for hyp in hypotheses:
+
+        logger.info("\n\nRunning hypothesis: " + hyp.name)
+
+        logger.info("\n\nCreating model configuration...")
         model_configuration_service = ModelConfigurationService(hyp.get_number_of_regions())
         if hyp.type == "Epileptogenicity":
             model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hyp)
         else:
             model_configuration = model_configuration_service.configure_model_from_hypothesis(hyp)
 
+        logger.info("\n\nRunning LSA...")
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
         lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
 
@@ -186,17 +219,51 @@ if __name__ == "__main__":
                                                     weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
                                                     n_eig=lsa_service.eigen_vectors_number)
 
-        # write_h5_model(hyp.prepare_for_h5(), folder_name=FOLDER_RES, file_name=hyp.name + ".h5")
-        write_h5_model(lsa_hypothesis.prepare_for_h5(), folder_name=FOLDER_RES, file_name=lsa_hypothesis.name + ".h5")
-        write_h5_model(prepare_for_h5(lsa_service), folder_name=FOLDER_RES,
-                       file_name=lsa_hypothesis.name + "_LSAConfig.h5")
-        write_h5_model(model_configuration.prepare_for_h5(), folder_name=FOLDER_RES,
-                       file_name=lsa_hypothesis.name + "_ModelConfig.h5")
+        # hyp.write_to_h5(FOLDER_RES, hyp.name + ".h5")
+        lsa_hypothesis.write_to_h5(FOLDER_RES, lsa_hypothesis.name + ".h5")
+        lsa_service.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")
+        model_configuration.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_ModelConfig.h5")
+
+        #--------------Parameter Search Exploration (PSE)-------------------------------
+
+        logger.info("\n\nRunning PSE LSA...")
+        pse_results = pse_from_hypothesis(lsa_hypothesis, n_samples, half_range=0.1,
+                                          global_coupling=[{"indices": all_regions_indices}],
+                                          healthy_regions_parameters=[{"name": "x0", "indices": healthy_indices}],
+                                          model_configuration=model_configuration,
+                                          model_configuration_service=model_configuration_service,
+                                          lsa_service=lsa_service)[0]
+
+        plot_lsa_pse(lsa_hypothesis, model_configuration, pse_results,
+                     weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
+                     n_eig=lsa_service.eigen_vectors_number)
+        # , show_flag=True, save_flag=False
+
+        object_to_h5_model(pse_results).write_to_h5(FOLDER_RES, "PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
+
+        # --------------Sensitivity Analysis Parameter Search Exploration (PSE)-------------------------------
+
+        logger.info("\n\nrunning sensitivity analysis PSE LSA...")
+        sa_results, pse_results = \
+            sensitivity_analysis_pse_from_hypothesis(lsa_hypothesis, n_samples, method="delta", half_range=0.1,
+                                     global_coupling=[{"indices": all_regions_indices,
+                                                       "bounds":[0.0, 2 * model_configuration_service.K_unscaled[ 0]]}],
+                                     healthy_regions_parameters=[{"name": "x0", "indices": healthy_indices}],
+                                     model_configuration=model_configuration,
+                                     model_configuration_service=model_configuration_service, lsa_service=lsa_service)
+
+        plot_lsa_pse(lsa_hypothesis, model_configuration, pse_results,
+                     weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
+                     n_eig=lsa_service.eigen_vectors_number, figure_name="SA_PSE_LSA_overview_" + lsa_hypothesis.name)
+        # , show_flag=True, save_flag=False
+        object_to_h5_model(pse_results).write_to_h5(FOLDER_RES, "SA_PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
+        object_to_h5_model(sa_results).write_to_h5(FOLDER_RES, "SA_LSA_results_" + lsa_hypothesis.name + ".h5")
 
         # ------------------------------Simulation--------------------------------------
-
-        simulator_instance = setup_simulation(model_configuration, head.connectivity, dt, sim_length, monitor_period,
-                                              model_name, scale_time=scale_time, noise_intensity=10 ** -8)
+        logger.info("\n\nSimulating...")
+        simulator_instance = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt,
+                                                                       sim_length, monitor_period, model_name,
+                                                                       scale_time=scale_time, noise_intensity=10 ** -8)
 
         simulator_instance.config_simulation()
         ttavg, tavg_data, status = simulator_instance.launch_simulation(n_report_blocks)
@@ -205,7 +272,7 @@ if __name__ == "__main__":
                        file_name=lsa_hypothesis.name + "_sim_settings.h5")
 
         if not status:
-            warnings.warn("Simulation failed!")
+            warnings.warn("\nSimulation failed!")
 
         else:
             tavg_data = tavg_data[:, :, :, 0]
@@ -214,7 +281,7 @@ if __name__ == "__main__":
 
             model = simulator_instance.model
 
-            logger.info("\nSimulated signal return shape: %s", tavg_data.shape)
+            logger.info("\n\nSimulated signal return shape: %s", tavg_data.shape)
             logger.info("Time: %s - %s", scale_time * ttavg[0], scale_time * ttavg[-1])
             logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
 
