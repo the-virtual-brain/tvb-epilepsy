@@ -12,7 +12,7 @@ import numpy as np
 from tvb.basic.logger.builder import get_logger
 from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 from tvb_epilepsy.base.utils import formal_repr
-from tvb_epilepsy.base.h5_model import prepare_for_h5
+from tvb_epilepsy.base.h5_model import object_to_h5_model
 from tvb_epilepsy.base.simulators import ABCSimulator
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model_configuration import ModelConfiguration
@@ -312,14 +312,20 @@ class PSE_Service(object):
     def __str__(self):
         return self.__repr__()
 
-    def prepare_for_h5(self):
-        h5_model = prepare_for_h5({"task": self.task, "n_loops": self.n_loops,
+    def _prepare_for_h5(self):
+        h5_model = object_to_h5_model({"task": self.task, "n_loops": self.n_loops,
                                    "params_names": self.params_names,
                                    "params_paths": self.params_paths,
                                    "params_indices": np.array([str(inds) for inds in self.params_indices], dtype="S"),
                                    "params_samples": self.pse_params.T})
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         return h5_model
+
+    def write_to_h5(self, folder, filename=""):
+        if filename == "":
+            filename = self.name + ".h5"
+        h5_model = self._prepare_for_h5()
+        h5_model.write_to_h5(folder, filename)
 
     def run_pse(self, grid_mode=False, **kwargs):
 
@@ -362,125 +368,6 @@ class PSE_Service(object):
         raise NotImplementedError
 
 
-# Test and example functions:
-
-# This function is a helper function to run parameter search exploration (pse)
-# for Linear Stability Analysis (LSA).
-
-def pse_from_hypothesis(hypothesis, n_samples, half_range=0.1, global_coupling=[],
-                        healthy_regions_parameters=[], model_configuration=None, model_configuration_service=None,
-                        lsa_service=None, save_services=False, **kwargs):
-
-    from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE
-    from tvb_epilepsy.base.utils import linear_index_to_coordinate_tuples, dicts_of_lists_to_lists_of_dicts, \
-                                        list_of_dicts_to_dicts_of_ndarrays
-    from tvb_epilepsy.base.sample_service import StochasticSampleService
-
-    all_regions_indices = range(hypothesis.get_number_of_regions())
-    disease_indices = hypothesis.get_regions_disease_indices()
-    healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
-
-    pse_params = {"path": [], "indices": [], "name": [], "samples": []}
-
-    # First build from the hypothesis the input parameters of the parameter search exploration.
-    # These can be either originating from excitability, epileptogenicity or connectivity hypotheses,
-    # or they can relate to the global coupling scaling (parameter K of the model configuration)
-    for ii in range(len(hypothesis.x0_values)):
-        pse_params["indices"].append([ii])
-        pse_params["path"].append("hypothesis.x0_values")
-        pse_params["name"].append(str(hypothesis.connectivity.region_labels[hypothesis.x0_indices[ii]]) +
-                                  " Excitability")
-
-        # Now generate samples using a truncated uniform distribution
-        sampler = StochasticSampleService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                          random_seed=kwargs.get("random_seed", None),
-                                          trunc_limits={"high": MAX_DISEASE_VALUE},
-                                          sampler="uniform",
-                                          loc=hypothesis.x0_values[ii] - half_range, scale=2 * half_range)
-        pse_params["samples"].append(sampler.generate_samples(**kwargs))
-
-    for ii in range(len(hypothesis.e_values)):
-        pse_params["indices"].append([ii])
-        pse_params["path"].append("hypothesis.e_values")
-        pse_params["name"].append(str(hypothesis.connectivity.region_labels[hypothesis.x0_indices[ii]]) +
-                                  " Epileptogenicity")
-
-        # Now generate samples using a truncated uniform distribution
-        sampler = StochasticSampleService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                          random_seed=kwargs.get("random_seed", None),
-                                          trunc_limits={"high": MAX_DISEASE_VALUE},
-                                          sampler="uniform",
-                                          loc=hypothesis.e_values[ii] - half_range, scale=2 * half_range)
-        pse_params["samples"].append(sampler.generate_samples(**kwargs))
-
-    for ii in range(len(hypothesis.w_values)):
-        pse_params["indices"].append([ii])
-        pse_params["path"].append("hypothesis.w_values")
-        inds = linear_index_to_coordinate_tuples(hypothesis.w_indices[ii], hypothesis.connectivity.weights.shape)
-        if len(inds) == 1:
-            pse_params["name"].append(str(hypothesis.connectivity.region_labels[inds[0][0]]) + "-" +
-                                str(hypothesis.connectivity.region_labels[inds[0][0]]) + " Connectivity")
-        else:
-            pse_params["name"].append("Connectivity[" + str(inds), + "]")
-
-        # Now generate samples using a truncated normal distribution
-        sampler = StochasticSampleService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                          random_seed=kwargs.get("random_seed", None),
-                                          trunc_limits={"high": MAX_DISEASE_VALUE},
-                                          sampler="norm", loc=hypothesis.w_values[ii], scale=half_range)
-        pse_params["samples"].append(sampler.generate_samples(**kwargs))
-
-    if model_configuration_service is None:
-        kloc = K_DEF
-    else:
-        kloc = model_configuration_service.K_unscaled[0]
-    for val in global_coupling:
-        pse_params["path"].append("model.configuration.service.K_unscaled")
-        inds = val.get("indices", all_regions_indices)
-        if np.all(inds == all_regions_indices):
-            pse_params["name"].append("Global coupling")
-        else:
-            pse_params["name"].append("Afferent coupling[" + str(inds) + "]")
-        pse_params["indices"].append(inds)
-
-        # Now generate samples susing a truncated normal distribution
-        sampler = StochasticSampleService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                          random_seed=kwargs.get("random_seed", None),
-                                          trunc_limits={"low": 0.0}, sampler="norm", loc=kloc, scale=30*half_range)
-        pse_params["samples"].append(sampler.generate_samples(**kwargs))
-
-    pse_params_list = dicts_of_lists_to_lists_of_dicts(pse_params)
-
-    # Add a random jitter to the healthy regions if required...:
-    for val in healthy_regions_parameters:
-        inds = val.get("indices", healthy_indices)
-        name = val.get("name", "x0")
-        n_params = len(inds)
-        sampler = StochasticSampleService(n_samples=n_samples, n_outputs=n_params, sampler="uniform",
-                                          trunc_limits={"low": 0.0}, sampling_module="scipy",
-                                          random_seed=kwargs.get("random_seed", None),
-                                          loc=kwargs.get("loc", 0.0), scale=kwargs.get("scale", 2*half_range))
-
-        samples = sampler.generate_samples(**kwargs)
-        for ii in range(n_params):
-            pse_params_list.append({"path": "model_configuration_service." + name, "samples": samples[ii],
-                                    "indices": [inds[ii]], "name": name})
-
-    # Now run pse service to generate output samples:
-
-    pse = PSE_Service("LSA", hypothesis=hypothesis, params_pse=pse_params_list)
-    pse_results, execution_status = pse.run_pse(grid_mode=False, lsa_service_input=lsa_service,
-                                                model_configuration_service_input=model_configuration_service)
-
-    pse_results = list_of_dicts_to_dicts_of_ndarrays(pse_results)
-
-    if save_services:
-        LOG.info(pse.__repr__())
-        write_h5_model(pse.prepare_for_h5(), folder_name=FOLDER_RES, file_name="test_pse_service.h5")
-
-    return pse_results, pse_params_list
-
-
 if __name__ == "__main__":
 
     import os
@@ -490,6 +377,8 @@ if __name__ == "__main__":
     from tvb_epilepsy.custom.read_write import write_h5_model
     from tvb_epilepsy.base.sample_service import StochasticSampleService
     from tvb_epilepsy.base.plot_tools import plot_lsa_pse
+
+    from tvb_epilepsy.base.helper_functions import pse_from_hypothesis
 
     # -------------------------------Reading data-----------------------------------
 
@@ -550,7 +439,7 @@ if __name__ == "__main__":
                  n_eig=lsa_service.eigen_vectors_number)
     # , show_flag=True, save_flag=False
 
-    write_h5_model(prepare_for_h5(pse_results), FOLDER_RES, "PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
+    write_h5_model(object_to_h5_model(pse_results), FOLDER_RES, "PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
 
 
 
