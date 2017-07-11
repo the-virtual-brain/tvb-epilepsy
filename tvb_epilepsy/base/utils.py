@@ -12,9 +12,11 @@ from itertools import product
 from scipy.signal import butter, lfilter
 from collections import OrderedDict
 from tvb_epilepsy.base.constants import FOLDER_LOGS, WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
+
 from matplotlib import use
 use('Qt4Agg')
 from matplotlib import pyplot
+
 
 def initialize_logger(name, target_folder=FOLDER_LOGS):
     """
@@ -43,7 +45,7 @@ def list_of_strings_to_string(lstr, sep=","):
 
 def shape_to_size(shape):
     shape = numpy.array(shape)
-    shape = shape[shape>0]
+    shape = shape[shape > 0]
     return shape.prod()
 
 
@@ -261,6 +263,7 @@ def reg_dict(x, lbl=None, sort=None):
                 d[str(i) + '.'] = x[i]
         return d
 
+
 def dict_str(d):
     s = "{"
     for key, value in d.iteritems():
@@ -268,14 +271,17 @@ def dict_str(d):
     s += "}"
     return s
 
+
 def list_of_dicts_to_dicts_of_ndarrays(lst):
     d = dict(zip(lst[0], zip(*list([d.values() for d in lst]))))
     for key, val in d.iteritems():
         d[key] = numpy.squeeze(numpy.stack(d[key]))
     return d
 
+
 def dicts_of_lists_to_lists_of_dicts(dictionary):
     return [dict(zip(dictionary,t)) for t in zip(*dictionary.values())]
+
 
 def ensure_list(arg):
     if not (isinstance(arg, list)):
@@ -285,6 +291,7 @@ def ensure_list(arg):
             arg = [arg]
     return arg
 
+
 def dicts_of_lists(dictionary, n=1):
     for key, value in dictionary.iteritems():
         dictionary[key] = ensure_list(dictionary[key])
@@ -292,12 +299,14 @@ def dicts_of_lists(dictionary, n=1):
             dictionary[key] = dictionary[key] * n
     return dictionary
 
+
 def linear_index_to_coordinate_tuples(linear_index, shape):
     if len(linear_index) > 0:
         coordinates_tuple = numpy.unravel_index(linear_index, shape)
         return zip(*[ca.flatten().tolist() for ca in coordinates_tuple])
     else:
         return []
+
 
 def formal_repr(instance, attr_dict):
     """ A formal string representation for an object.
@@ -511,7 +520,8 @@ def write_metadata(meta_dict, h5_file, key_date, key_version, path="/"):
     for key, val in meta_dict.iteritems():
         root[key] = val
 
-# TODO: Will we need any of this?
+
+# Depreciated since prepare_h5_model and write_h5_model can handle dictionaries (even recursively)...
 def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrite_fields_dict=None, keys=None):
 
     if isinstance(h5_file, basestring):
@@ -608,7 +618,7 @@ def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrit
     if isinstance(h5_file, basestring):
         h5_file.close()
 
-
+# TODO: read dictionaries of dictionaries and objects of objects recursively
 def read_object_from_h5_file(object, h5_file, attributes_dict=None, add_overwrite_fields_dict=None):
 
     if isinstance(h5_file, basestring):
