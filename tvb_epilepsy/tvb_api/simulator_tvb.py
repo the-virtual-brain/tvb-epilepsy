@@ -15,10 +15,9 @@ from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.epileptor_model_factory import model_build_dict, model_noise_intensity_dict, \
     model_noise_type_dict
 from tvb_epilepsy.base.model_vep import Connectivity
-from tvb_epilepsy.base.h5_model import prepare_for_h5
+from tvb_epilepsy.base.h5_model import object_to_h5_model
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
 from tvb_epilepsy.custom.read_write import epileptor_model_attributes_dict
-from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic, EpileptorDP2D
 
 
 class SimulatorTVB(ABCSimulator):
@@ -148,8 +147,8 @@ class SimulatorTVB(ABCSimulator):
                         and numpy.all(str(field.dtype)[1] != numpy.array(["O", "S"])) and field.size == 1):
                 setattr(self.model, attributes_dict[attr], field * numpy.ones(p))
 
-        settings_h5_model = prepare_for_h5(self.simulation_settings)
-        epileptor_model_h5_model = prepare_for_h5(self.model)
+        settings_h5_model = object_to_h5_model(self.simulation_settings)
+        epileptor_model_h5_model = object_to_h5_model(self.model)
 
         epileptor_model_h5_model.append(settings_h5_model)
         epileptor_model_h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
@@ -171,69 +170,3 @@ class SimulatorTVB(ABCSimulator):
         else:
             self.simTVB.initial_conditions = self.prepare_initial_conditions(self.simTVB.good_history_shape[0])
 
-
-###
-# A helper function to make good choices for simulation settings, noise and monitors
-###
-def setup_simulation(model_configuration, connectivity, dt, sim_length, monitor_period, model_name="EpileptorDP",
-                     zmode=numpy.array("lin"), scale_time=1, noise_instance=None, noise_intensity=None,
-                     monitor_expressions=None, monitors_instance=None):
-
-    model = model_build_dict[model_name](model_configuration, zmode=zmode)
-
-    if isinstance(model, Epileptor):
-        model.tt *= scale_time * 0.25
-    else:
-        model.tau1 *= scale_time
-        if isinstance(model, EpileptorDPrealistic):
-            model.slope = 0.25
-            model.pmode = numpy.array("z")
-
-    if monitor_expressions is None:
-        monitor_expressions = []
-        for i in range(model._nvar):
-            monitor_expressions.append("y" + str(i))
-        if not (isinstance(model, EpileptorDP2D)):
-            monitor_expressions.append("y3 - y0")
-
-    if monitor_expressions is not None:
-        model.variables_of_interest = monitor_expressions
-
-    if monitors_instance is None:
-        monitors_instance = monitors.TemporalAverage()
-
-    if monitor_period is not None:
-        monitors_instance.period = monitor_period
-
-    default_noise_intensity = model_noise_intensity_dict[model_name]
-    default_noise_type = model_noise_type_dict[model_name]
-
-    if noise_intensity is None:
-        noise_intensity = default_noise_intensity
-
-    if noise_instance is not None:
-        noise_instance.nsig = noise_intensity
-
-    else:
-        if default_noise_type is ADDITIVE_NOISE:
-            noise_instance = noise.Additive(nsig=noise_intensity,
-                                            random_stream=numpy.random.RandomState(seed=NOISE_SEED))
-            noise_instance.configure_white(dt=dt)
-
-        else:
-            eq = equations.Linear(parameters={"a": 1.0, "b": 0.0})
-            noise_instance = noise.Multiplicative(ntau=10, nsig=noise_intensity, b=eq,
-                                                  random_stream=numpy.random.RandomState(seed=NOISE_SEED))
-            noise_shape = noise_instance.nsig.shape
-            noise_instance.configure_coloured(dt=dt, shape=noise_shape)
-
-    settings = SimulationSettings(simulated_period=sim_length, integration_step=dt, scale_time=scale_time,
-                                  noise_preconfig=noise_instance, noise_type=default_noise_type,
-                                  noise_intensity=noise_intensity, noise_ntau=noise_instance.ntau,
-                                  monitors_preconfig=monitors_instance, monitor_type=monitors_instance._ui_name,
-                                  monitor_sampling_period=monitor_period, monitor_expressions=monitor_expressions,
-                                  variables_names=model.variables_of_interest)
-
-    simulator_instance = SimulatorTVB(connectivity, model_configuration, model, settings)
-
-    return simulator_instance
