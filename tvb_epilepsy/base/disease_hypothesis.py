@@ -6,8 +6,13 @@ from collections import OrderedDict
 
 import numpy
 
-from tvb_epilepsy.base.utils import initialize_logger, formal_repr, ensure_list, linear_index_to_coordinate_tuples
+from tvb_epilepsy.base.utils import initialize_logger, formal_repr, ensure_list, linear_index_to_coordinate_tuples, \
+                                    dicts_of_lists_to_lists_of_dicts
 from tvb_epilepsy.base.h5_model import object_to_h5_model
+
+from tvb_epilepsy.base.model_configuration import ModelConfiguration
+from tvb_epilepsy.base.constants import FOLDER_FIGURES, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
+from tvb_epilepsy.base.plot_tools import plot_in_columns
 
 # NOTES:
 #  For the moment a hypothesis concerns the excitability and/or epileptogenicity of each brain region,
@@ -15,6 +20,7 @@ from tvb_epilepsy.base.h5_model import object_to_h5_model
 # TODO if needed in the future: Generate a richer disease hypothesis as a combination of hypotheses on other parameters.
 
 logger = initialize_logger(__name__)
+
 
 class DiseaseHypothesis(object):
     def __init__(self, connectivity, excitability_hypothesis={}, epileptogenicity_hypothesis={},
@@ -76,6 +82,74 @@ class DiseaseHypothesis(object):
             filename = self.name + ".h5"
         h5_model = self._prepare_for_h5()
         h5_model.write_to_h5(folder, filename)
+
+    def prepare_for_plot(self, model_configuration=None, pse_results=None, weighted_eigenvector_sum=False, n_eig=None):
+
+        if isinstance(model_configuration, ModelConfiguration):
+            plot_dict_list = model_configuration.create_plot_dict_list(self.x0_indices, self.e_indices,
+                                                                                    self.get_all_disease_indices())[:2]
+            width_ratios = [1, 1]
+
+        else:
+            plot_dict_list = []
+            width_ratios = []
+
+        if len(self.propagation_indices) > 0:
+            width_ratios += [1, 2]
+            name = "LSA Propagation Strength"
+            if weighted_eigenvector_sum:
+                name += "\n(absolut eigenvalue-weighted sum of first "
+                if n_eig is not None:
+                    name += str(n_eig) + " "
+                name += "eigenvectors)"
+            names = [name, "Afferent connectivity \n from seizuring regions"]
+            data = [self.propagation_strenghts, self.get_weights()]
+            indices = [self.propagation_indices, self.propagation_indices]
+            plot_types = ["vector", "regions2regions"]
+
+            plot_dict_list += dicts_of_lists_to_lists_of_dicts({"name": names, "data": data, "focus_indices": indices,
+                                                                "plot_type": plot_types})
+
+        ind_ps = len(plot_dict_list) - 2
+        for ii, value in enumerate(["propagation_strengths", "e_values", "x0_values"]):
+            ind = ind_ps - ii
+            if ind >= 0:
+                if pse_results.get(value, False):
+                    plot_dict_list[ind]["data_samples"] = pse_results.get(value)
+                    plot_dict_list[ind]["plot_type"] = "vector_violin"
+
+        return plot_dict_list, width_ratios
+
+    def plot(self, model_configuration=None, title="Hypothesis Overview", weighted_eigenvector_sum=False, n_eig=None,
+             figure_name='', show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
+             figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE):
+
+        if figure_name == '':
+            self.name + " " + title
+
+        plot_dict_list, width_ratios = self.prepare_for_plot(model_configuration, None, weighted_eigenvector_sum, n_eig)
+
+        return plot_in_columns(plot_dict_list, self.connectivity.region_labels, width_ratios=[],
+                               left_ax_focus_indices=self.get_all_disease_indices(),
+                               right_ax_focus_indices=self.propagation_indices, title=title, figure_name=figure_name,
+                               show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,
+                               figure_format=figure_format, figsize=figsize)
+
+    def plot_pse_lsa(self, pse_results, model_configuration=None, title="PSE LSA Hypothesis Overview",
+                     weighted_eigenvector_sum=False, n_eig=None, figure_name='', show_flag=SHOW_FLAG,
+                     save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE):
+
+        if figure_name == '':
+            self.name + " " + title
+
+        plot_dict_list, width_ratios = self.prepare_for_plot(model_configuration, pse_results, weighted_eigenvector_sum,
+                                                             n_eig)
+
+        return plot_in_columns(plot_dict_list, self.connectivity.region_labels, width_ratios=[],
+                                   left_ax_focus_indices=self.get_all_disease_indices(),
+                                   right_ax_focus_indices=self.propagation_indices, title=title, figure_name=figure_name,
+                                   show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,
+                                   figure_format=figure_format, figsize=figsize)
 
     def sort_disease_indices_values(self, disease_dict):
         indices = []
