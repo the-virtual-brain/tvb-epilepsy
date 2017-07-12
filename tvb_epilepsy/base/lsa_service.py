@@ -84,7 +84,7 @@ class LSAService(object):
     def _compute_jacobian(self, model_configuration):
         fz_jacobian = calc_fz_jac_square_taylor(model_configuration.zEQ, model_configuration.yc,
                                                 model_configuration.Iext1, model_configuration.K,
-                                                model_configuration.connectivity,
+                                                model_configuration.connectivity_matrix,
                                                 model_configuration.a, model_configuration.b)
 
         if numpy.any([numpy.any(numpy.isnan(fz_jacobian.flatten())), numpy.any(numpy.isinf(fz_jacobian.flatten()))]):
@@ -103,7 +103,7 @@ class LSAService(object):
         self.eigen_values = eigen_values[sorted_indices]
         self.eigen_vectors = eigen_vectors[:, sorted_indices]
 
-        self._ensure_eigen_vectors_number(self.eigen_values, model_configuration.E_values,
+        self._ensure_eigen_vectors_number(self.eigen_values, model_configuration.e_values,
                                           model_configuration.x0_values, disease_hypothesis.get_all_disease_indices())
 
         if self.eigen_vectors_number == disease_hypothesis.get_number_of_regions():

@@ -44,7 +44,8 @@ def prepare_vois_ts_dict(vois, data):
     return vois_ts_dict
 
 
-def prepare_ts_and_seeg_h5_file(hyp_name, model, projections, vois_ts_dict, hpf_flag, hpf_low, hpf_high, fsAVG, dt):
+def prepare_ts_and_seeg_h5_file(folder, filename, model, projections, vois_ts_dict, hpf_flag, hpf_low, hpf_high, fsAVG,
+                                dt):
     # High pass filter, and compute SEEG:
     if isinstance(model, EpileptorDP2D):
         raw_data = numpy.dstack(
@@ -72,10 +73,10 @@ def prepare_ts_and_seeg_h5_file(hyp_name, model, projections, vois_ts_dict, hpf_
                         vois_ts_dict['seeg%d' % i][:, i], hpf_low, hpf_high,
                         fsAVG)
     # Write files:
-    write_ts_epi(raw_data, dt, lfp_data, path=os.path.join(FOLDER_RES, hyp_name + "_ep_ts.h5"))
+    write_ts_epi(raw_data, dt, lfp_data, folder, filename)
 
     for i in range(len(projections)):
-        write_ts_seeg_epi(vois_ts_dict['seeg%d' % i], dt, path=os.path.join(FOLDER_RES, hyp_name + "_ep_ts.h5"))
+        write_ts_seeg_epi(vois_ts_dict['seeg%d' % i], dt, folder, filename)
 
 
 def main_vep(test_write_read=False):
@@ -206,13 +207,13 @@ def main_vep(test_write_read=False):
 
         logger.info("\n\nRunning LSA...")
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
-        lsa_service.write_to_h5(FOLDER_RES, hyp.name + "_LSAConfig.h5")
-
         lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
-        lsa_hypothesis.write_to_h5(FOLDER_RES, lsa_hypothesis.name + ".h5")
 
-        lsa_hypothesis.plot(model_configuration, weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
-                            n_eig=lsa_service.eigen_vectors_number)
+        lsa_hypothesis.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")
+        lsa_service.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")
+
+        lsa_hypothesis.plot_lsa(model_configuration, weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
+                            n_eig=lsa_service.eigen_vectors_number, figure_name=lsa_hypothesis.name+"_LSA.h5")
 
         #--------------Parameter Search Exploration (PSE)-------------------------------
 
@@ -235,7 +236,7 @@ def main_vep(test_write_read=False):
 
         logger.info("\n\nrunning sensitivity analysis PSE LSA...")
         sa_results, pse_sa_results = \
-            sensitivity_analysis_pse_from_hypothesis(lsa_hypothesis, n_samples, method="delta", half_range=0.1,
+            sensitivity_analysis_pse_from_hypothesis(lsa_hypothesis, n_samples, method="sobol", half_range=0.1,
                                      global_coupling=[{"indices": all_regions_indices,
                                                        "bounds":[0.0, 2 * model_configuration_service.K_unscaled[ 0]]}],
                                      healthy_regions_parameters=[{"name": "x0", "indices": healthy_indices}],
@@ -253,14 +254,14 @@ def main_vep(test_write_read=False):
 
         # ------------------------------Simulation--------------------------------------
         logger.info("\n\nSimulating...")
-        simulator_instance = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt,
+        sim = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt,
                                                                        sim_length, monitor_period, model_name,
                                                                        scale_time=scale_time, noise_intensity=10 ** -8)
 
-        simulator_instance.config_simulation()
-        ttavg, tavg_data, status = simulator_instance.launch_simulation(n_report_blocks)
+        sim.config_simulation()
+        ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
 
-        simulator_instance.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")
+        object_to_h5_model(sim).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")
 
         if not status:
             warnings.warn("\nSimulation failed!")
@@ -271,7 +272,7 @@ def main_vep(test_write_read=False):
 
             vois = VOIS[model_name]
 
-            model = simulator_instance.model
+            model = sim.model
 
             logger.info("\n\nSimulated signal return shape: %s", tavg_data.shape)
             logger.info("Time: %s - %s", scale_time * ttavg[0], scale_time * ttavg[-1])
@@ -282,18 +283,20 @@ def main_vep(test_write_read=False):
 
             vois_ts_dict = prepare_vois_ts_dict(vois, tavg_data)
 
-            prepare_ts_and_seeg_h5_file(lsa_hypothesis.name, model, projections, vois_ts_dict, hpf_flag, hpf_low,
-                                        hpf_high, fsAVG, sampling_time)
+            prepare_ts_and_seeg_h5_file(FOLDER_RES, lsa_hypothesis.name + "_ts.h5", model, projections, vois_ts_dict,
+                                        hpf_flag, hpf_low, hpf_high, fsAVG, sampling_time)
 
             vois_ts_dict['time'] = time
 
             # Plot results
             if model.zmode is not numpy.array("lin"):
-                plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
-                                   special_idx=lsa_hypothesis.propagation_indices,
-                                   model=str(model.nvar) + "d", zmode=model.zmode,
-                                   figure_name=lsa_hypothesis.name + "_Nullclines and equilibria", save_flag=SAVE_FLAG,
-                                   show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES)
+                model_configuration.plot_nullclines_eq(head.connectivity.region_labels,
+                                                       special_idx=lsa_hypothesis.propagation_indices,
+                                                       model=str(model.nvar) + "d", zmode=model.zmode,
+                                                       figure_name=lsa_hypothesis.name + "_Nullclines and equilibria",
+                                                       save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
+                                                       figure_dir=FOLDER_FIGURES)
+
             plot_sim_results(model, lsa_hypothesis.propagation_indices, lsa_hypothesis.name, head, vois_ts_dict,
                              sensorsSEEG, hpf_flag)
 
@@ -323,6 +326,9 @@ def main_vep(test_write_read=False):
             assert_equal_objects(sa_results,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_LSA_results.h5")).
                                  convert_to_object())
+            assert_equal_objects(sim,
+                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")).
+                                 convert_to_object(object=sim))
 
 
 

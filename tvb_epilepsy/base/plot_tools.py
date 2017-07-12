@@ -42,7 +42,7 @@ def _save_figure(save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=F
     if save_flag:
         if not (os.path.isdir(figure_dir)):
             os.mkdir(figure_dir)
-        figure_name = figure_name.replace(" ", "").replace("\t", "_") + '.' + figure_format
+        figure_name = figure_name.replace(" ", "_").replace("\t", "_") + '.' + figure_format
         pyplot.savefig(os.path.join(figure_dir, figure_name))
         
     
@@ -199,29 +199,30 @@ def plot_in_columns(data_dict_list, labels, width_ratios=[], left_ax_focus_indic
 
     n_regions = len(labels)
     subplot_ind = subplot_ind0
+    ax = None
+    ax0 = None
     for data_dict in data_dict_list:
         subplot_ind += 1
         data = data_dict["data"]
         focus_indices = data_dict.get("focus_indices")
 
+        if subplot_ind == 0:
+            if left_ax_focus_indices == []:
+                left_ax_focus_indices = focus_indices
+        else:
+            ax0 = ax
+
         if data_dict.get("plot_type") == "vector_violin":
-            _plot_vector_violin(data, data_dict.get("data_samples",[]), labels, subplot_ind, data_dict["name"],
-                                colormap=kwargs.get("colormap", "YlOrRd"), show_y_labels=False,
-                                indices_red=focus_indices,  sharey=np.where(subplot_ind > subplot_ind0, ax0, None)
-)
+            ax = _plot_vector_violin(data, data_dict.get("data_samples",[]), labels, subplot_ind, data_dict["name"],
+                                     colormap=kwargs.get("colormap", "YlOrRd"), show_y_labels=False,
+                                     indices_red=focus_indices, sharey=ax0)
 
         elif data_dict.get("plot_type") == "regions2regions":
             ax = _plot_regions2regions(data, labels, subplot_ind, data_dict["name"], show_y_labels=False,
-                                       show_x_labels=True, indices_red_x=focus_indices,
-                                       sharey=np.where(subplot_ind > subplot_ind0, ax0, None))
+                                       show_x_labels=True, indices_red_x=focus_indices, sharey=ax0)
         else:
             ax = _plot_vector(data, labels, subplot_ind, data_dict["name"], show_y_labels=False,
-                              indices_red=focus_indices, sharey=np.where(subplot_ind > subplot_ind0, ax0, None))
-
-        if subplot_ind == 0:
-            ax0 = ax
-            if left_ax_focus_indices == []:
-                left_ax_focus_indices = focus_indices
+                              indices_red=focus_indices, sharey=ax0)
 
     if right_ax_focus_indices == []:
         right_ax_focus_indices = focus_indices

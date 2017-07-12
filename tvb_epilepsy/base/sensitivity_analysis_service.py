@@ -244,7 +244,10 @@ class SensitivityAnalysisService(object):
             # conf_level (float): The confidence interval level (default 0.95)
             # print_to_console (bool): Print results directly to console (default False)
             self.analyzer = lambda output: dgsm.analyze(self.problem, self.input_samples[:, input_ids], output,
-                                                        **self.other_parameters)
+                                                        conf_level=self.conf_level,
+                                                        num_resamples=self.other_parameters.get("num_resamples", 1000),
+                                                        print_to_console=self.other_parameters.get("print_to_console",
+                                                                                                   False))
 
         else:
             raise ValueError(

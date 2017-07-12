@@ -42,7 +42,7 @@ def pse_from_hypothesis(hypothesis, n_samples, half_range=0.1, global_coupling=[
     for ii in range(len(hypothesis.e_values)):
         pse_params["indices"].append([ii])
         pse_params["path"].append("hypothesis.e_values")
-        pse_params["name"].append(str(hypothesis.connectivity.region_labels[hypothesis.x0_indices[ii]]) +
+        pse_params["name"].append(str(hypothesis.connectivity.region_labels[hypothesis.e_indices[ii]]) +
                                   " Epileptogenicity")
 
         # Now generate samples using a truncated uniform distribution
@@ -125,7 +125,7 @@ def pse_from_hypothesis(hypothesis, n_samples, half_range=0.1, global_coupling=[
 # This function is a helper function to run sensitivity analysis parameter search exploration (pse)
 # for Linear Stability Analysis (LSA).
 
-def sensitivity_analysis_pse_from_hypothesis(hypothesis, n_samples, method="latin", half_range=0.1, global_coupling=[],
+def sensitivity_analysis_pse_from_hypothesis(hypothesis, n_samples, method="sobol", half_range=0.1, global_coupling=[],
                                              healthy_regions_parameters=[], model_configuration_service=None, 
                                              lsa_service=None, save_services=False, **kwargs):
 
@@ -175,7 +175,7 @@ def sensitivity_analysis_pse_from_hypothesis(hypothesis, n_samples, method="lati
         n_inputs += 1
         pse_params["indices"].append([ii])
         pse_params["path"].append("hypothesis.e_values")
-        pse_params["name"].append(str(hypothesis.connectivity.region_labels[hypothesis.x0_indices[ii]]) +
+        pse_params["name"].append(str(hypothesis.connectivity.region_labels[hypothesis.e_indices[ii]]) +
                                   " Epileptogenicity")
         pse_params["bounds"].append([hypothesis.e_values[ii]-half_range,
                        np.min([MAX_DISEASE_VALUE, hypothesis.e_values[ii]+half_range])])

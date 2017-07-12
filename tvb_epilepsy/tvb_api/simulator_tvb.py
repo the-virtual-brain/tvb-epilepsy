@@ -28,18 +28,19 @@ class SimulatorTVB(ABCSimulator):
         self.connectivity = connectivity
 
     @staticmethod
-    def _vep2tvb_connectivity(vep_conn, weights=None):
-        if weights is None:
-            weights = vep_conn.normalized_weights
-        return connectivity.Connectivity(use_storage=False, weights=weights,
+    def _vep2tvb_connectivity(vep_conn, connectivity_matrix=None):
+        if connectivity_matrix is None:
+            connectivity_matrix = vep_conn.normalized_weights
+        return connectivity.Connectivity(use_storage=False, weights=connectivity_matrix,
                                          tract_lengths=vep_conn.tract_lengths, region_labels=vep_conn.region_labels,
                                          centres=vep_conn.centers, hemispheres=vep_conn.hemispheres,
                                          orientations=vep_conn.orientations, areas=vep_conn.areas)
 
     def config_simulation(self):
 
-        if isinstance(self.model_configuration.connectivity, numpy.ndarray):
-            tvb_connectivity = self._vep2tvb_connectivity(self.connectivity, self.model_configuration.connectivity)
+        if isinstance(self.model_configuration.connectivity_matrix, numpy.ndarray):
+            tvb_connectivity = self._vep2tvb_connectivity(self.connectivity,
+                                                          self.model_configuration.connectivity_matrix)
         else:
             tvb_connectivity = self._vep2tvb_connectivity(self.connectivity)
         tvb_coupling = coupling.Difference(a=1.)

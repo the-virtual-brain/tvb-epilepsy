@@ -86,7 +86,7 @@ class DiseaseHypothesis(object):
     def prepare_for_plot(self, model_configuration=None, pse_results=None, weighted_eigenvector_sum=False, n_eig=None):
 
         if isinstance(model_configuration, ModelConfiguration):
-            plot_dict_list = model_configuration.create_plot_dict_list(self.x0_indices, self.e_indices,
+            plot_dict_list = model_configuration.prepare_for_plot(self.x0_indices, self.e_indices,
                                                                                     self.get_all_disease_indices())[:2]
             width_ratios = [1, 1]
 
@@ -110,17 +110,18 @@ class DiseaseHypothesis(object):
             plot_dict_list += dicts_of_lists_to_lists_of_dicts({"name": names, "data": data, "focus_indices": indices,
                                                                 "plot_type": plot_types})
 
-        ind_ps = len(plot_dict_list) - 2
-        for ii, value in enumerate(["propagation_strengths", "e_values", "x0_values"]):
-            ind = ind_ps - ii
-            if ind >= 0:
-                if pse_results.get(value, False):
-                    plot_dict_list[ind]["data_samples"] = pse_results.get(value)
-                    plot_dict_list[ind]["plot_type"] = "vector_violin"
+        if isinstance(pse_results, dict):
+            ind_ps = len(plot_dict_list) - 2
+            for ii, value in enumerate(["propagation_strengths", "e_values", "x0_values"]):
+                ind = ind_ps - ii
+                if ind >= 0:
+                    if pse_results.get(value, False).any():
+                        plot_dict_list[ind]["data_samples"] = pse_results.get(value)
+                        plot_dict_list[ind]["plot_type"] = "vector_violin"
 
         return plot_dict_list, width_ratios
 
-    def plot(self, model_configuration=None, title="Hypothesis Overview", weighted_eigenvector_sum=False, n_eig=None,
+    def plot_lsa(self, model_configuration=None, title="Hypothesis Overview", weighted_eigenvector_sum=False, n_eig=None,
              figure_name='', show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
              figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE):
 
@@ -135,7 +136,7 @@ class DiseaseHypothesis(object):
                                show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,
                                figure_format=figure_format, figsize=figsize)
 
-    def plot_pse_lsa(self, pse_results, model_configuration=None, title="PSE LSA Hypothesis Overview",
+    def plot_lsa_pse(self, pse_results, model_configuration=None, title="PSE LSA Hypothesis Overview",
                      weighted_eigenvector_sum=False, n_eig=None, figure_name='', show_flag=SHOW_FLAG,
                      save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE):
 

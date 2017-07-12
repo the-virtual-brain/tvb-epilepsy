@@ -56,7 +56,7 @@ class ModelConfiguration(object):
         self.Ceq = Ceq
         self.e_values = e_values
 
-        self.connectivity = connectivity
+        self.connectivity_matrix = connectivity
 
     def __repr__(self):
         d = {

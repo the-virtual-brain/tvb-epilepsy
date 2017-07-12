@@ -370,7 +370,6 @@ def curve_elbow_point(vals):
     vals = numpy.array(vals).flatten()
 
     if numpy.any(vals[0:-1] - vals[1:] < 0):
-        warnings.warn("Sorting vals in descending order...")
         vals = numpy.sort(vals)
         vals = vals[::-1]
 

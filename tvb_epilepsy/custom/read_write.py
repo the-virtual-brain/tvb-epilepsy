@@ -79,10 +79,11 @@ simulation_settings_attributes_dict = {"Simulated length (ms)": "simulated_perio
 
 
 def generate_connectivity_variant(uq_name, new_weights, new_tracts, description, new_w=None,
-                                  path=os.path.join(PATIENT_VIRTUAL_HEAD, "Connectivity.h5")):
+                                  folder=os.path.join(PATIENT_VIRTUAL_HEAD), filename="Connectivity.h5"):
     """
     In existing Connectivity H5 define Weights and Tracts variants
     """
+    path = os.path.join(folder, filename)
     print "Writing a Connectivity Variant in:", path
     h5_file = h5py.File(path, 'a', libver='latest')
 
@@ -158,15 +159,15 @@ def import_sensors(src_txt_file):
     write_sensors(labels, locations)
 
 
-def write_sensors(labels, locations, file_name=None):
+def write_sensors(labels, locations, folder=os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name=None):
     """
     Store Sensors in a file to be shared by multiple patient virtualizations (heads)
     """
     if file_name is None:
-        file_name = "SensorsSEEG_" + str(len(labels))
+        file_name = "SensorsSEEG_" + str(len(labels)) + ".h5"
 
-    path, overwrite = change_filename_or_overwrite(os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name + ".h5")
-    # path = os.path.join(os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name + ".h5")
+    path, overwrite = change_filename_or_overwrite(folder, file_name)
+    # path = os.path.join(os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name)
     # if os.path.exists(path):
     #     print "Sensors file %s already exists. Use a different name!" % path
     #     return
@@ -272,8 +273,9 @@ def read_ts(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5"), data=None):
     return time, data
 
 
-def write_ts(raw_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts_from_python.h5")):
-    path, overwrite = change_filename_or_overwrite(os.path.join(PATIENT_VIRTUAL_HEAD, "ep"), "ts_from_python.h5")
+def write_ts(raw_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD, "ep"), filename="ts_from_python.h5"):
+
+    path, overwrite = change_filename_or_overwrite(os.path.join(folder, filename))
     # if os.path.exists(path):
     #     print "TS file %s already exists. Use a different name!" % path
     #     return
@@ -338,10 +340,10 @@ def read_ts_epi(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5")):
     return data
 
 
-def write_ts_epi(raw_data, sampling_period, lfp_data=None,
-                 path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts_from_python.h5")):
+def write_ts_epi(raw_data, sampling_period, lfp_data=None, folder=os.path.join(PATIENT_VIRTUAL_HEAD, "ep"),
+                 filename="ts_from_python.h5"):
 
-    path, overwrite = change_filename_or_overwrite(os.path.join(PATIENT_VIRTUAL_HEAD, "ep"), "ts_from_python.h5")
+    path, overwrite = change_filename_or_overwrite(folder, filename)
     # if os.path.exists(path):
     #     print "TS file %s already exists. Use a different name!" % path
     #     return
@@ -383,8 +385,10 @@ def write_ts_epi(raw_data, sampling_period, lfp_data=None,
     h5_file.close()
 
 
-def write_ts_seeg_epi(seeg_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts_from_python.h5")):
+def write_ts_seeg_epi(seeg_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD, "ep"),
+                 filename="ts_from_python.h5"):
 
+    path = os.path.join(folder, filename)
     if not os.path.exists(path):
         print "TS file %s does not exist. First define the raw data!" % path
         return

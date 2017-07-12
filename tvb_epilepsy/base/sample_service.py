@@ -11,7 +11,6 @@ from SALib.sample import saltelli, fast_sampler, morris, ff
 from tvb_epilepsy.base.constants import FOLDER_RES
 from tvb_epilepsy.base.utils import formal_repr, dict_str, dicts_of_lists, dicts_of_lists_to_lists_of_dicts
 from tvb_epilepsy.base.h5_model import object_to_h5_model
-from tvb_epilepsy.custom.read_write import write_h5_model
 
 from tvb.basic.logger.builder import get_logger
 
@@ -462,7 +461,7 @@ if __name__ == "__main__":
     #     print("\n" + key + ": " + str(value))
 
     LOG.info(sampler.__repr__())
-    write_h5_model(sampler.prepare_for_h5(), folder_name=FOLDER_RES, file_name="test_Deterministic_Sampler.h5")
+    sampler.write_to_h5(FOLDER_RES, "test_Stochastic_Sampler.h5")
 
     LOG.info("\nStochastic uniform sampling:")
 
@@ -474,7 +473,7 @@ if __name__ == "__main__":
     #     print("\n" + key + ": " + str(value))
 
     LOG.info(sampler.__repr__())
-    write_h5_model(sampler.prepare_for_h5(), folder_name=FOLDER_RES, file_name="test1_Stochastic_Sampler.h5")
+    sampler.write_to_h5(FOLDER_RES, "test1_Stochastic_Sampler.h5")
 
     LOG.info("\nStochastic truncated normal sampling:")
 
@@ -488,7 +487,7 @@ if __name__ == "__main__":
     #     print("\n" + key + ": " + str(value))
 
     LOG.info(sampler.__repr__())
-    write_h5_model(sampler.prepare_for_h5(), folder_name=FOLDER_RES, file_name="test2_Stochastic_Sampler.h5")
+    sampler.write_to_h5(FOLDER_RES, "test2_Stochastic_Sampler.h5")
 
     LOG.info("\nSensitivity analysis sampling:")
 
@@ -501,7 +500,7 @@ if __name__ == "__main__":
     #     print("\n" + key + ": " + str(value))
 
     LOG.info(sampler.__repr__())
-    write_h5_model(sampler.prepare_for_h5(), folder_name=FOLDER_RES, file_name="test3_Stochastic_Sampler.h5")
+    sampler.write_to_h5(FOLDER_RES, "test3_Stochastic_Sampler.h5")
 
     LOG.info("\nTesting distribution conversions...")
 
