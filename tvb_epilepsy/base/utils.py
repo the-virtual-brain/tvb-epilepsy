@@ -264,6 +264,22 @@ def reg_dict(x, lbl=None, sort=None):
         return d
 
 
+def sort_dict(d):
+    return OrderedDict(sorted(d.items(), key=lambda t: t[0]))
+
+def list_or_tuple_to_dict(obj):
+    d = OrderedDict()
+    for ind, value in enumerate(obj):
+        d[str(ind)] = value
+    return d
+
+
+def set_list_item_by_reference_safely(ind, item, lst):
+     while ind >= len(lst):
+         lst.append(None)
+     lst.__setitem__(ind, item)
+
+
 def dict_str(d):
     s = "{"
     for key, value in d.iteritems():
@@ -315,7 +331,7 @@ def formal_repr(instance, attr_dict):
     """
     class_name = instance.__class__.__name__
     formal = class_name + "{"
-    for key, val in attr_dict.iteritems():
+    for key, val in sort_dict(attr_dict).iteritems():
         if isinstance(val, dict):
             formal += "\n" + key + "=["
             for key2, val2 in val.iteritems():
@@ -687,6 +703,7 @@ def assert_equal_objects(object1, object2, attributes_dict=None):
     else:
         get_field2 = lambda object, attribute: getattr(object, attribute)
 
+    equal = True
     for attribute in attributes_dict:
         #print attributes_dict[attribute]
         field1 = get_field1(object1, attributes_dict[attribute])
@@ -699,16 +716,22 @@ def assert_equal_objects(object1, object2, attributes_dict=None):
             if isinstance(field1, basestring) or isinstance(field1, list) or isinstance(field1, dict) \
                     or (isinstance(field1, numpy.ndarray) and field1.dtype.kind in 'OSU'):
                 if numpy.any(field1 != field2):
-                    raise ValueError("Original and read object field "
-                                     + attributes_dict[attribute] + " not equal!")
+                    # raise ValueError("\nOriginal and read object field "
+                    #                  + attributes_dict[attribute] + " not equal!")
+                    warnings.warn("\nOriginal and read object field "
+                                 + attributes_dict[attribute] + " not equal!")
+                equal = False
 
             # For numeric types
             elif isinstance(field1, (int, float, long, complex, numpy.number, numpy.ndarray)) \
                 and not (isinstance(field1, numpy.ndarray) and field1.dtype.kind in 'OSU'):
                 # TODO: handle better accuracy differences and complex numbers...
                 if numpy.any(numpy.float32(field1) - numpy.float32(field2) > 0):
-                    raise ValueError("Original and read object field "
-                                     + attributes_dict[attribute] + " not equal!")
+                    # raise ValueError("\nOriginal and read object field "
+                    #                  + attributes_dict[attribute] + " not equal!")
+                    warnings.warn("\nOriginal and read object field "
+                                  + attributes_dict[attribute] + " not equal!")
+                    equal = False
 
             else:
                 warnings.warn("No comparison made for field "
@@ -716,3 +739,6 @@ def assert_equal_objects(object1, object2, attributes_dict=None):
         except:
             raise ValueError("Something went wrong when trying to compare "
                              + attributes_dict[attribute] + " !")
+
+    if equal:
+        print "\nEqual objects!"
