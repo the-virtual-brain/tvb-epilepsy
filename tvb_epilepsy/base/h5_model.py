@@ -74,7 +74,7 @@ class H5Model(object):
         return object
 
 
-def flatten_hierarchical_object_recursively(object, name, datasets_dict, metadata_dict):
+def object_to_h5_model(object, name="", datasets_dict=OrderedDict(), metadata_dict=OrderedDict()):
 
     if isinstance(object, (list, tuple)):
         object = list_or_tuple_to_dict(object)
@@ -101,44 +101,7 @@ def flatten_hierarchical_object_recursively(object, name, datasets_dict, metadat
             metadata_dict.update({key: value})
 
         else: # if isinstance(value, dict):
-            flatten_hierarchical_object_recursively(value, key, datasets_dict, metadata_dict)
-
-
-
-def object_to_h5_model(object):
-
-    datasets_dict = OrderedDict()
-
-    metadata_dict = OrderedDict()
-
-    if isinstance(object, (list, tuple)):
-        object = list_or_tuple_to_dict(object)
-
-    elif not(isinstance(object, dict)):
-        object = vars(object)
-
-    object = sort_dict(object)
-
-    for key, value in object.iteritems():
-
-        if (isinstance(value, np.ndarray)):
-            datasets_dict.update({key: value})
-
-        elif value == [] or value == () or value == "":
-            datasets_dict.update({key: np.array(value)})
-
-        elif value == {} or value is None:
-            pass
-
-        elif isinstance(value, (float, int, long, complex, str)):
-            metadata_dict.update({key: value})
-
-        else: # isinstance(value, dict):
-            try:
-                flatten_hierarchical_object_recursively(value, key, datasets_dict, metadata_dict)
-            except:
-                warnings.warn("Not able to include attribute " + key + " to the h5_model!")
-                continue
+            object_to_h5_model(value, key, datasets_dict, metadata_dict)
 
     h5_model = H5Model(datasets_dict, metadata_dict)
 
