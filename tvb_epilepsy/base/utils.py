@@ -81,13 +81,13 @@ def assert_arrays(params, shape=None, transpose=False):
             try:
                 import sympy
             except:
-                raise ImportError("sympy import failed")
+                raise ImportError("\n\nsympy import failed")
 
             if isinstance(params[ip], tuple(sympy.core.all_classes)):
                 params[ip] = numpy.array(params[ip])
 
             else:
-                raise ValueError("Input " + str(params[ip]) + " of type " + str(type(params[ip])) + " is not numeric, "
+                raise ValueError("\n\nInput " + str(params[ip]) + " of type " + str(type(params[ip])) + " is not numeric, "
                                                                                   "of type numpy.ndarray, nor Symbol")
 
         if shape is None:
@@ -98,7 +98,7 @@ def assert_arrays(params, shape=None, transpose=False):
 
                 if size > 1 and params[ip].size > 1:
 
-                    raise ValueError("Inputs are of at least two distinct sizes > 1")
+                    raise ValueError("\n\nInputs are of at least two distinct sizes > 1")
 
                 elif params[ip].size > size:
 
@@ -120,7 +120,7 @@ def assert_arrays(params, shape=None, transpose=False):
 
             if params[ip].size > size:
 
-                raise ValueError("At least one input is of a greater size than the one given!")
+                raise ValueError("\n\nAt least one input is of a greater size than the one given!")
 
     if shape is None:
 
@@ -154,7 +154,7 @@ def assert_arrays(params, shape=None, transpose=False):
                 else:
                     params[ip] = numpy.reshape(params[ip], shape)
         except:
-            print "what the fuck??"
+            print "\n\nwhat the fuck??"
 
     if len(params) == 1:
         return params[0]
@@ -267,11 +267,20 @@ def reg_dict(x, lbl=None, sort=None):
 def sort_dict(d):
     return OrderedDict(sorted(d.items(), key=lambda t: t[0]))
 
+
 def list_or_tuple_to_dict(obj):
     d = OrderedDict()
     for ind, value in enumerate(obj):
         d[str(ind)] = value
     return d
+
+
+def dict_to_list_or_tuple(dictionary, output_obj="list"):
+    dictionary = sort_dict(dictionary)
+    output = dictionary.values()
+    if output_obj == "tuple":
+        output = tuple(output)
+    return output
 
 
 def set_list_item_by_reference_safely(ind, item, lst):
@@ -456,9 +465,9 @@ def curve_elbow_point(vals):
 
         if click_point.x is not None:
             elbow = click_point.x
-            print "manual selection: ", elbow
+            print "\n\nmanual selection: ", elbow
         else:
-            print "automatic selection: ", elbow
+            print "\n\nautomatic selection: ", elbow
 
         return elbow
 
@@ -505,7 +514,7 @@ def ensure_unique_file(parent_folder, filename):
     final_path = os.path.join(parent_folder, filename)
 
     while os.path.exists(final_path):
-        filename = raw_input("File %s already exists. Enter a different name: " % final_path)
+        filename = raw_input("\n\nFile %s already exists. Enter a different name: " % final_path)
         final_path = os.path.join(parent_folder, filename)
 
     return final_path
@@ -518,7 +527,7 @@ def change_filename_or_overwrite(parent_folder, original_filename):
     overwrite = False
 
     while os.path.exists(final_path) and not(overwrite):
-        filename = raw_input("File %s already exists. Enter a different name or press enter to overwrite file: "
+        filename = raw_input("\n\nFile %s already exists. Enter a different name or press enter to overwrite file: "
                              % final_path)
         if filename == "":
             overwrite = True
@@ -530,7 +539,7 @@ def change_filename_or_overwrite(parent_folder, original_filename):
 
 
 def print_metadata(h5_file):
-    print "Metadata:"
+    print "\n\nMetadata:"
     for key, val in h5_file["/"].attrs.iteritems():
         print "\t", key, val
 
@@ -547,7 +556,7 @@ def write_metadata(meta_dict, h5_file, key_date, key_version, path="/"):
 def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrite_fields_dict=None, keys=None):
 
     if isinstance(h5_file, basestring):
-        print "Writing to: ", h5_file
+        print "\n\nWriting to: ", h5_file
         h5_file = h5py.File(h5_file, 'a', libver='latest')
         if isinstance(keys, dict):
             write_metadata(keys, h5_file, keys["date"], keys["version"], path="/")
@@ -571,31 +580,31 @@ def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrit
 
         try:
 
-            print "Writing " + attributes_dict[attribute] + "..."
+            print "\n\nWriting " + attributes_dict[attribute] + "..."
 
             if isinstance(field, basestring):
 
-                print "String length: ", len(field)
+                print "\n\nString length: ", len(field)
                 h5_file.create_dataset("/" + attribute, data=field)
-                print "String written length: ", len(h5_file['/' + attribute][()])
+                print "\n\nString written length: ", len(h5_file['/' + attribute][()])
 
             elif isinstance(field, numpy.ndarray):
-                print "Numpy array shape:", field.shape
+                print "\n\nNumpy array shape:", field.shape
                 #TODO: deal with arrays of more than 2 dimensions
                 if len(field.shape) > 2:
                     field = field.squeeze()
                     if len(field.shape) > 2:
                         field = field.flatten()
                 h5_file.create_dataset("/" + attribute, data=field)
-                print "Numpy array written shape: ", h5_file['/' + attribute][()].shape
+                print "\n\nNumpy array written shape: ", h5_file['/' + attribute][()].shape
 
             else:
                 #try to write a scalar value
                 try:
-                    print "Writing scalar value..."
+                    print "\n\nWriting scalar value..."
                     h5_file.create_dataset("/" + attribute, data=field)
                 except:
-                    raise ValueError("Failed to write "+ attribute + " as a scalar value!")
+                    raise ValueError("\n\nFailed to write "+ attribute + " as a scalar value!")
 
         except:
             raise ValueError(attribute + " not found in the object!")
@@ -606,34 +615,34 @@ def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrit
 
         for attribute in add_overwrite_fields_dict:
 
-            print "Adding or overwritting " + attribute + "... "
+            print "\n\nAdding or overwritting " + attribute + "... "
 
             field = add_overwrite_fields_dict[attribute][0]
             mode = add_overwrite_fields_dict[attribute][1]
 
             if isinstance(field, basestring):
-                print "String length: ", len(field)
+                print "\n\nString length: ", len(field)
                 if mode == "overwrite":
                     del h5_file["/" + attribute]
                 h5_file.create_dataset("/" + attribute, data=field)
-                print "String written length: ", len(h5_file['/' + attribute][()])
+                print "\n\nString written length: ", len(h5_file['/' + attribute][()])
 
             elif isinstance(field, numpy.ndarray):
-                print "Numpy array shape:", field.shape
+                print "\n\nNumpy array shape:", field.shape
                 if mode == "overwrite":
                     del h5_file["/" + attribute]
                 h5_file.create_dataset("/" + attribute, data=field)
-                print "Numpy array written shape: ", h5_file['/' + attribute][()].shape
+                print "\n\nNumpy array written shape: ", h5_file['/' + attribute][()].shape
 
             else:
                 #try to write a scalar value
                 try:
-                    print "Writing scalar value..."
+                    print "\n\nWriting scalar value..."
                     if mode == "overwrite":
                         del h5_file["/" + attribute]
                     h5_file.create_dataset("/" + attribute, data=field)
                 except:
-                    raise ValueError("Failed to write "+ attribute + " as a scalar value!")
+                    raise ValueError("\n\nFailed to write "+ attribute + " as a scalar value!")
 
             #print "dataset %s value %s" % (attribute, h5_file['/' + attribute][()])
 
@@ -644,7 +653,7 @@ def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrit
 def read_object_from_h5_file(object, h5_file, attributes_dict=None, add_overwrite_fields_dict=None):
 
     if isinstance(h5_file, basestring):
-        print "Reading from:", h5_file
+        print "\n\nReading from:", h5_file
         h5_file = h5py.File(h5_file, 'r', libver='latest')
         print_metadata(h5_file)
 
@@ -662,12 +671,12 @@ def read_object_from_h5_file(object, h5_file, attributes_dict=None, add_overwrit
 
     for attribute in attributes_dict:
 
-        print "Reading " + attributes_dict[attribute] + "... "
+        print "\n\nReading " + attributes_dict[attribute] + "... "
 
         try:
             set_field(object, attributes_dict[attribute], h5_file['/' + attribute][()])
         except:
-            raise ValueError("Failed to read " + attribute + "!")
+            raise ValueError("\n\nFailed to read " + attribute + "!")
 
         #print "attribute %s value %s" % (attribute, get_field(object, attributes_dict[attribute]))
 
@@ -678,18 +687,19 @@ def read_object_from_h5_file(object, h5_file, attributes_dict=None, add_overwrit
 
         for attribute in add_overwrite_fields_dict:
 
-            print "Setting or overwritting " + attribute + "... "
+            print "\n\nSetting or overwritting " + attribute + "... "
 
             try:
                 set_field(object, attribute, add_overwrite_fields_dict[attribute])
             except:
-                raise ValueError("Failed to set " + attribute + "!")
+                raise ValueError("\n\nFailed to set " + attribute + "!")
 
             #print "attribute %s value %s" % (attribute, get_field(object, attribute))
 
     return object
 
 
+# This function is meant to confirm that two objects assumingly of the same type are equal, i.e., identical
 def assert_equal_objects(object1, object2, attributes_dict=None):
 
     if isinstance(object1, dict):
@@ -706,9 +716,9 @@ def assert_equal_objects(object1, object2, attributes_dict=None):
                 attributes_dict.update({key: key})
 
     if isinstance(object2, dict):
-        get_field2 = lambda object, key: object[key]
+        get_field2 = lambda obj, key: obj.get(key, None)
     else:
-        get_field2 = lambda object, attribute: getattr(object, attribute)
+        get_field2 = lambda obj, attribute: getattr(obj, attribute, None)
 
     equal = True
     for attribute in attributes_dict:
@@ -725,9 +735,9 @@ def assert_equal_objects(object1, object2, attributes_dict=None):
                 if numpy.any(field1 != field2):
                     # raise ValueError("\nOriginal and read object field "
                     #                  + attributes_dict[attribute] + " not equal!")
-                    warnings.warn("\nOriginal and read object field "
+                    warnings.warn("\n\nOriginal and read object field "
                                  + attributes_dict[attribute] + " not equal!")
-                equal = False
+                    equal = False
 
             # For numeric types
             elif isinstance(field1, (int, float, long, complex, numpy.number, numpy.ndarray)) \
@@ -736,16 +746,35 @@ def assert_equal_objects(object1, object2, attributes_dict=None):
                 if numpy.any(numpy.float32(field1) - numpy.float32(field2) > 0):
                     # raise ValueError("\nOriginal and read object field "
                     #                  + attributes_dict[attribute] + " not equal!")
-                    warnings.warn("\nOriginal and read object field "
+                    warnings.warn("\n\nOriginal and read object field "
                                   + attributes_dict[attribute] + " not equal!")
                     equal = False
 
             else:
-                warnings.warn("No comparison made for field "
-                                 + attributes_dict[attribute] + " because is of unknown type!")
+                warnings.warn("\n\nComparing str(objects) for field "
+                              + attributes_dict[attribute] + " because it is of unknown type!")
+                if numpy.any(str(field1) != str(field2)):
+                    # raise ValueError("\nOriginal and read object field "
+                    #                  + attributes_dict[attribute] + " not equal!")
+                    warnings.warn("\n\nOriginal and read object field "
+                                 + attributes_dict[attribute] + " not equal!")
+                    equal = False
+
         except:
-            raise ValueError("Something went wrong when trying to compare "
-                             + attributes_dict[attribute] + " !")
+            try:
+                warnings.warn("\n\nComparing str(objects) for field "
+                              + attributes_dict[attribute] + " because there was an error!")
+                if numpy.any(str(field1) != str(field2)):
+                    # raise ValueError("\nOriginal and read object field "
+                    #                  + attributes_dict[attribute] + " not equal!")
+                    warnings.warn("\n\nOriginal and read object field "
+                                  + attributes_dict[attribute] + " not equal!")
+                    equal = False
+            except:
+
+                raise ValueError("\n\nSomething went wrong when trying to compare " + attributes_dict[attribute] + " !")
 
     if equal:
-        print "\nEqual objects!"
+        return True
+    else:
+        return False
