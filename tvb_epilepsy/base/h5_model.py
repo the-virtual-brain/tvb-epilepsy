@@ -2,10 +2,12 @@ import os
 import warnings
 
 import h5py
+from collections import OrderedDict
 
 import numpy as np
 
-from tvb_epilepsy.base.utils import initialize_logger, ensure_unique_file, change_filename_or_overwrite
+from tvb_epilepsy.base.utils import initialize_logger, ensure_unique_file, change_filename_or_overwrite, \
+                                    set_list_item_by_reference_safely, list_or_tuple_to_dict, sort_dict
 
 logger = initialize_logger(__name__)
 
@@ -56,14 +58,18 @@ class H5Model(object):
 
     def convert_to_object(self, object=dict()):
 
-        data = {}
-        data.update(self.metadata_dict)
+        data = dict()
         data.update(self.datasets_dict)
+        data.update(self.metadata_dict)
+
+        data = sort_dict(data)
 
         for key, value in data.iteritems():
+
             if key[0] == "/":
-                key.split('/', 1)[1]
-            object = build_hierarchical_object_recursively(object, key, value)
+                key = key.split('/', 1)[1]
+
+            build_hierarchical_object_recursively(object, key, value)
 
         return object
 
@@ -71,121 +77,127 @@ class H5Model(object):
 def flatten_hierarchical_object_recursively(object, name, datasets_dict, metadata_dict):
 
     if isinstance(object, (list, tuple)):
+        object = list_or_tuple_to_dict(object)
 
-        for ii, item in enumerate(object):
-            key = name + "#" + str(ii)
-            datasets_dict, metadata_dict = flatten_hierarchical_object_recursively(item, key, datasets_dict,
-                                                                                   metadata_dict)
-    else:
+    elif not(isinstance(object, dict)):
+        object = vars(object)
 
-        if not(isinstance(object, dict)):
-            object_dict = vars(object)
+    object = sort_dict(object)
 
-        for key, value in object_dict.iteritems():
+    for key, value in object.iteritems():
 
-            key = name + "/" + key
-
-            if (isinstance(value, np.ndarray)):
-                datasets_dict.update({key: value})
-
-            elif value == {} or value == [] or value == () or value == "":
-                datasets_dict.update({key: np.array(value)})
-
-            elif isinstance(value, (float, int, long, complex, str)):
-                metadata_dict.update({key: value})
-
-            else: # if isinstance(value, dict):
-                datasets_dict, metadata_dict = flatten_hierarchical_object_recursively(value, key, datasets_dict,
-                                                                                       metadata_dict)
-
-    return datasets_dict, metadata_dict
-
-
-def object_to_h5_model(obj):
-
-    datasets_dict = {}
-
-    metadata_dict = {}
-
-    if not(isinstance(obj, dict)):
-        obj = vars(obj)
-
-    for key, value in obj.iteritems():
+        key = name + "/" + key
 
         if (isinstance(value, np.ndarray)):
             datasets_dict.update({key: value})
 
-        elif value == {} or value == [] or value == () or value == "":
-            continue
+        elif value == [] or value == () or value == "":
+            datasets_dict.update({key: np.array(value)})
+
+        elif value == {} or value is None:
+            pass
+
+        elif isinstance(value, (float, int, long, complex, str)):
+            metadata_dict.update({key: value})
+
+        else: # if isinstance(value, dict):
+            flatten_hierarchical_object_recursively(value, key, datasets_dict, metadata_dict)
+
+
+
+def object_to_h5_model(object):
+
+    datasets_dict = OrderedDict()
+
+    metadata_dict = OrderedDict()
+
+    if isinstance(object, (list, tuple)):
+        object = list_or_tuple_to_dict(object)
+
+    elif not(isinstance(object, dict)):
+        object = vars(object)
+
+    object = sort_dict(object)
+
+    for key, value in object.iteritems():
+
+        if (isinstance(value, np.ndarray)):
+            datasets_dict.update({key: value})
+
+        elif value == [] or value == () or value == "":
+            datasets_dict.update({key: np.array(value)})
+
+        elif value == {} or value is None:
+            pass
 
         elif isinstance(value, (float, int, long, complex, str)):
             metadata_dict.update({key: value})
 
         else: # isinstance(value, dict):
             try:
-                datasets_dict, metadata_dict = flatten_hierarchical_object_recursively(value, key, datasets_dict,
-                                                                                       metadata_dict)
+                flatten_hierarchical_object_recursively(value, key, datasets_dict, metadata_dict)
             except:
                 warnings.warn("Not able to include attribute " + key + " to the h5_model!")
                 continue
+
     h5_model = H5Model(datasets_dict, metadata_dict)
 
     return h5_model
 
 
+def get_list_or_tuple_item_safely(object, key):
+    try:
+        return object[int(key)]
+    except:
+        return None
+
+
 def build_hierarchical_object_recursively(object, key, value):
 
     if isinstance(object, dict):
-        set_field = lambda object, key, data: object.update({key: data})
-        get_field = lambda object, key: object[key]
-    else:
-        set_field = lambda object, attribute, data: setattr(object, attribute, data)
-        get_field = lambda object, attribute: getattr(object, attribute)
+        set_field = lambda object, key, value: object.update({key: value})
+        get_field = lambda object, key: object.get(key, None)
 
-    name = key.split('/', 1)[0]
-    if name == key:
-        name_list_tuple = name.split('#', 1)[0]
-        if name_list_tuple == name: # if it is NOT a list nor a tuple
-            try:
-                set_field(object, name, value)
-            except:
-                warnings.warn("Failed to set attribute " + str(name) + "to object " + object.get("__name__", "") + "!")
-                return object
-        else: # if it IS a list or tuple
-            ind = name.split('#', 1)[1]
-            try:
-                get_field(object, name_list_tuple)[ind] = value
-            except:
-                warnings.warn("Failed to set attribute " + str(name) + "to object " + object.get("__name__", "") + "!")
-                return object
-    else:
-        child_key = key.split('/', 1)[1]
-        name_list_tuple = name.split('#', 1)[0]
-        if name_list_tuple == name:  # if it is NOT a list nor a tuple
-            child_object = get_field(object, name)
-            set_field(child_object, build_hierarchical_object_recursively(child_object, child_key, value))
+    elif isinstance(object, list):
+        set_field = lambda object, key, value: set_list_item_by_reference_safely(int(key), value, object)
+        get_field = lambda object, key: get_list_or_tuple_item_safely(object, key)
 
-        else:
-            ind = name.split('#', 1)[1]
-            child_object = get_field(object, name_list_tuple) # this a list or a tuple of object
-            temp = list(child_object)
-            temp[ind] = build_hierarchical_object_recursively(child_object[ind], child_key, value)
-            if child_object.__class__.__name__ == "tuple":
-                child_object = tuple(temp)
+    else:
+        set_field = lambda object, attribute, value: setattr(object, attribute, value)
+        get_field = lambda object, attribute: getattr(object, attribute, None)
+
+    child_object = get_field(object, key)
+    if child_object is not None:
+        set_field(object, key, value)
+
+    else:
+        name = key.split('/', 1)[0]
+        try:
+            if name == key:
+                set_field(object, key, value)
+                return 1
             else:
-                child_object = temp
-            set_field(object, name_list_tuple, child_object)
+                child_key = key.split('/', 1)[1]
+                child_object = get_field(object, name)
+                if child_object is None:
+                    grandchild_name = child_key.split('/', 1)[0]
+                    if grandchild_name.isdigit():
+                        child_object = list()
+                    else:
+                        child_object = dict()
+                    set_field(object, name, child_object)
+                build_hierarchical_object_recursively(child_object, child_key, value)
 
-
-    return object
+        except:
+            warnings.warn("Failed to set attribute " + str(key) + "to object " + object.get("__name__", "") + "!")
 
 
 def read_h5_model(path):
 
     h5_file = h5py.File(path, 'r', libver='latest')
 
-    datasets_dict = {}
-    metadata_dict = {}
+    datasets_dict = dict()
+    metadata_dict = dict()
 
     for key, value in h5_file.attrs.iteritems():
         metadata_dict.update({key: value})
@@ -193,7 +205,10 @@ def read_h5_model(path):
     datasets_keys = return_h5_dataset_paths_recursively(h5_file)
 
     for key in datasets_keys:
-        datasets_dict.update({key: h5_file[key]})
+        datasets_dict.update({key: h5_file[key][()]})
+
+    datasets_dict = sort_dict(datasets_dict)
+    metadata_dict = sort_dict(metadata_dict)
 
     return H5Model(datasets_dict, metadata_dict)
 
@@ -207,5 +222,29 @@ def return_h5_dataset_paths_recursively(group):
         return paths
     except:
         return [group.name]
+
+
+if __name__ == "__main__":
+    from tvb_epilepsy.base.constants import FOLDER_RES
+    from tvb_epilepsy.base.utils import assert_equal_objects
+
+    from copy import deepcopy
+
+    object = {"h5_model": H5Model({"a/b": np.array([1,2,3]), "a/c": np.array([1,2,3])},
+                                  {"list0": ["l00", 1, {"d020": "a", "d021": [1,2,3]}]}),
+              "dict": {"list0": ["l00", 1, {"d020": "a", "d021": [1,2,3]}]}}
+    logger.info("\n\nOriginal object:\n" + str(object))
+
+    logger.info("\n\nWritine object to h5 file...")
+    object_to_h5_model(object).write_to_h5(FOLDER_RES,"test_h5_model.h5")
+
+    object1 = read_h5_model(FOLDER_RES + "/test_h5_model.h5").convert_to_object(deepcopy(object))
+    assert_equal_objects(object, object1)
+    logger.info("\n\nRead identical object:\n" + str(object1))
+
+    object2 = read_h5_model(FOLDER_RES + "/test_h5_model.h5").convert_to_object()
+    assert_equal_objects(object, object2)
+    logger.info("\n\nRead object as dictionary:\n" + str(object2))
+
 
 
