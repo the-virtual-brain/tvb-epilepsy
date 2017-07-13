@@ -4,6 +4,8 @@ Entry point for working with VEP
 import os
 import warnings
 
+from copy import deepcopy
+
 import numpy
 
 from tvb_epilepsy.base.constants import FOLDER_RES, FOLDER_FIGURES, SAVE_FLAG, SHOW_FLAG, SIMULATION_MODE, \
@@ -106,7 +108,7 @@ def main_vep(test_write_read=False):
 
     # ...or reading a custom file:
     ep_name = "ep_test1"
-    FOLDER_RES = os.path.join(data_folder, ep_name)
+    #FOLDER_RES = os.path.join(data_folder, ep_name)
     from tvb_epilepsy.custom.readers_custom import CustomReader
 
     if not isinstance(reader, CustomReader):
@@ -205,6 +207,14 @@ def main_vep(test_write_read=False):
             model_configuration = model_configuration_service.configure_model_from_hypothesis(hyp)
         model_configuration.write_to_h5(FOLDER_RES, hyp.name + "_ModelConfig.h5")
 
+        # # Plot nullclines and equilibria of model configuration
+        # model_configuration.plot_nullclines_eq(head.connectivity.region_labels,
+        #                                        special_idx=lsa_hypothesis.propagation_indices,
+        #                                        model=str(model.nvar) + "d", zmode=model.zmode,
+        #                                        figure_name=lsa_hypothesis.name + "_Nullclines and equilibria",
+        #                                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
+        #                                        figure_dir=FOLDER_FIGURES)
+
         logger.info("\n\nRunning LSA...")
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
         lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
@@ -289,14 +299,6 @@ def main_vep(test_write_read=False):
             vois_ts_dict['time'] = time
 
             # Plot results
-            if model.zmode is not numpy.array("lin"):
-                model_configuration.plot_nullclines_eq(head.connectivity.region_labels,
-                                                       special_idx=lsa_hypothesis.propagation_indices,
-                                                       model=str(model.nvar) + "d", zmode=model.zmode,
-                                                       figure_name=lsa_hypothesis.name + "_Nullclines and equilibria",
-                                                       save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
-                                                       figure_dir=FOLDER_FIGURES)
-
             plot_sim_results(model, lsa_hypothesis.propagation_indices, lsa_hypothesis.name, head, vois_ts_dict,
                              sensorsSEEG, hpf_flag)
 
@@ -305,30 +307,38 @@ def main_vep(test_write_read=False):
             # savemat(os.path.join(FOLDER_RES, hypothesis.name + "_ts.mat"), vois_ts_dict)
 
         if test_write_read:
-            assert_equal_objects(model_configuration_service,
+            logger.info("Written and read model configuration services are identical?: "+
+                        assert_equal_objects(model_configuration_service,
                                  read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_model_config_service.h5")).
-                                 convert_from_h5_model(object=model_configuration_service))
-            assert_equal_objects(model_configuration,
+                                 convert_from_h5_model(obj=deepcopy(model_configuration_service))))
+            logger.info("Written and read model configuration services are identical?: " +
+                        assert_equal_objects(model_configuration,
                                  read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_ModelConfig.h5")).
-                                 convert_from_h5_model(object=model_configuration))
-            assert_equal_objects(lsa_service,
-                                 read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_LSAConfig.h5")).
-                                 convert_from_h5_model(object=lsa_service))
-            assert_equal_objects(lsa_hypothesis,
-                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + ".h5")).
-                                 convert_from_h5_model(object=lsa_hypothesis))
-            assert_equal_objects(pse_results,
+                                 convert_from_h5_model(obj=deepcopy(model_configuration))))
+            logger.info("Written and read model configuration services are identical?: " +
+                        assert_equal_objects(lsa_service,
+                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")).
+                                 convert_from_h5_model(obj=deepcopy(lsa_service))))
+            logger.info("Written and read model configuration services are identical?: " +
+                        assert_equal_objects(lsa_hypothesis,
+                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
+                                 convert_from_h5_model(obj=deepcopy(lsa_hypothesis))))
+            logger.info("Written and read model configuration services are identical?: " +
+                        assert_equal_objects(pse_results,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")).
-                                 convert_from_h5_model())
-            assert_equal_objects(pse_sa_results,
+                                 convert_from_h5_model()))
+            logger.info("Written and read model configuration services are identical?: " +
+                        assert_equal_objects(pse_sa_results,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).
-                                 convert_from_h5_model())
-            assert_equal_objects(sa_results,
+                                 convert_from_h5_model()))
+            logger.info("Written and read model configuration services are identical?: " +
+                        assert_equal_objects(sa_results,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_LSA_results.h5")).
-                                 convert_from_h5_model())
-            assert_equal_objects(sim,
+                                 convert_from_h5_model()))
+            logger.info("Written and read model configuration services are identical?: " +
+                        assert_equal_objects(sim,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")).
-                                 convert_from_h5_model(object=sim))
+                                 convert_from_h5_model(obj=deepcopy(sim))))
 
 
 
