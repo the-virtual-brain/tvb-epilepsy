@@ -7,7 +7,8 @@ from collections import OrderedDict
 import numpy as np
 
 from tvb_epilepsy.base.utils import initialize_logger, ensure_unique_file, change_filename_or_overwrite, \
-                                    set_list_item_by_reference_safely, list_or_tuple_to_dict, sort_dict
+                                    set_list_item_by_reference_safely, get_list_or_tuple_item_safely, \
+                                    list_or_tuple_to_dict, sort_dict
 
 logger = initialize_logger(__name__)
 
@@ -56,7 +57,7 @@ class H5Model(object):
 
         h5_file.close()
 
-    def convert_to_object(self, object=dict()):
+    def convert_from_h5_model(self, object=dict()):
 
         data = dict()
         data.update(self.datasets_dict)
@@ -74,45 +75,53 @@ class H5Model(object):
         return object
 
 
-def object_to_h5_model(object, name="", datasets_dict=OrderedDict(), metadata_dict=OrderedDict()):
+def convert_to_h5_model(object, name="", datasets_dict=OrderedDict(), metadata_dict=OrderedDict()):
 
-    if isinstance(object, (list, tuple)):
-        object = list_or_tuple_to_dict(object)
+    if isinstance(object, (float, int, long, complex, str)):
+        if name == "":
+            name = "/var"
+        metadata_dict.update({name: object})
 
-    elif not(isinstance(object, dict)):
-        object = vars(object)
+    elif (isinstance(object, np.ndarray)):
+        if name == "":
+            name = "/var"
+        datasets_dict.update({name: object})
 
-    object = sort_dict(object)
+    elif object == [] or object == () or object == "":
+        if name == "":
+            name = "/var"
+        datasets_dict.update({name: np.array(object)})
 
-    for key, value in object.iteritems():
+    else:
 
-        key = name + "/" + key
+        if isinstance(object, (list, tuple)):
+            object = list_or_tuple_to_dict(object)
 
-        if (isinstance(value, np.ndarray)):
-            datasets_dict.update({key: value})
+        elif not(isinstance(object, dict)):
+            object = vars(object)
 
-        elif value == [] or value == () or value == "":
-            datasets_dict.update({key: np.array(value)})
+        object = sort_dict(object)
 
-        elif value == {} or value is None:
-            pass
+        for key, value in object.iteritems():
 
-        elif isinstance(value, (float, int, long, complex, str)):
-            metadata_dict.update({key: value})
+            key = name + "/" + key
 
-        else: # if isinstance(value, dict):
-            object_to_h5_model(value, key, datasets_dict, metadata_dict)
+            if (isinstance(value, np.ndarray)):
+                datasets_dict.update({key: value})
 
-    h5_model = H5Model(datasets_dict, metadata_dict)
+            elif value == [] or value == () or value == "":
+                datasets_dict.update({key: np.array(value)})
 
-    return h5_model
+            elif value == {} or value is None:
+                pass
 
+            elif isinstance(value, (float, int, long, complex, str)):
+                metadata_dict.update({key: value})
 
-def get_list_or_tuple_item_safely(object, key):
-    try:
-        return object[int(key)]
-    except:
-        return None
+            else: # if isinstance(value, dict):
+                convert_to_h5_model(value, key, datasets_dict, metadata_dict)
+
+    return H5Model(datasets_dict, metadata_dict)
 
 
 def build_hierarchical_object_recursively(object, key, value):
@@ -199,13 +208,13 @@ if __name__ == "__main__":
     logger.info("\n\nOriginal object:\n" + str(object))
 
     logger.info("\n\nWritine object to h5 file...")
-    object_to_h5_model(object).write_to_h5(FOLDER_RES,"test_h5_model.h5")
+    convert_to_h5_model(object).write_to_h5(FOLDER_RES, "test_h5_model.h5")
 
-    object1 = read_h5_model(FOLDER_RES + "/test_h5_model.h5").convert_to_object(deepcopy(object))
+    object1 = read_h5_model(FOLDER_RES + "/test_h5_model.h5").convert_from_h5_model(deepcopy(object))
     assert_equal_objects(object, object1)
     logger.info("\n\nRead identical object:\n" + str(object1))
 
-    object2 = read_h5_model(FOLDER_RES + "/test_h5_model.h5").convert_to_object()
+    object2 = read_h5_model(FOLDER_RES + "/test_h5_model.h5").convert_from_h5_model()
     assert_equal_objects(object, object2)
     logger.info("\n\nRead object as dictionary:\n" + str(object2))
 
