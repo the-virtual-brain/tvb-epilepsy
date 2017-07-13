@@ -478,9 +478,6 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
                         labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
 
 
-
-
-
 # def plot_head(head, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
 #               figsize=LARGE_SIZE):
 #     plot_connectivity(head.connectivity, show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,
