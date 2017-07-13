@@ -11,7 +11,7 @@ import numpy as np
 from tvb_epilepsy.base.constants import X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 
 from tvb_epilepsy.base.utils import formal_repr, dicts_of_lists_to_lists_of_dicts
-from tvb_epilepsy.base.h5_model import object_to_h5_model
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_CR_DEF, \
                                         FOLDER_FIGURES, VERY_LARGE_SIZE, SMALL_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
@@ -79,7 +79,7 @@ class ModelConfiguration(object):
         return self.__repr__()
 
     def _prepare_for_h5(self):
-        h5_model = object_to_h5_model(self)
+        h5_model = convert_to_h5_model(self)
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         h5_model.add_or_update_metadata_attribute("Number_of_nodes", len(self.x0_values))
 

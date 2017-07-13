@@ -12,7 +12,7 @@ import numpy as np
 from tvb.basic.logger.builder import get_logger
 from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 from tvb_epilepsy.base.utils import formal_repr
-from tvb_epilepsy.base.h5_model import object_to_h5_model
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.simulators import ABCSimulator
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model_configuration import ModelConfiguration
@@ -313,7 +313,7 @@ class PSE_Service(object):
         return self.__repr__()
 
     def _prepare_for_h5(self):
-        h5_model = object_to_h5_model({"task": self.task, "n_loops": self.n_loops,
+        h5_model = convert_to_h5_model({"task": self.task, "n_loops": self.n_loops,
                                    "params_names": self.params_names,
                                    "params_paths": self.params_paths,
                                    "params_indices": np.array([str(inds) for inds in self.params_indices], dtype="S"),
@@ -439,7 +439,7 @@ if __name__ == "__main__":
                  n_eig=lsa_service.eigen_vectors_number)
     # , show_flag=True, save_flag=False
 
-    write_h5_model(object_to_h5_model(pse_results), FOLDER_RES, "PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
+    write_h5_model(convert_to_h5_model(pse_results), FOLDER_RES, "PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
 
 
 

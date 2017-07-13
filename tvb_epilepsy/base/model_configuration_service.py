@@ -9,7 +9,7 @@ import numpy
 from tvb.basic.logger.builder import get_logger
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 from tvb_epilepsy.base.utils import formal_repr
-from tvb_epilepsy.base.h5_model import object_to_h5_model
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.calculations import calc_x0cr_r, calc_coupling, calc_x0
 from tvb_epilepsy.base.equilibrium_computation import calc_eq_z_2d, eq_x1_hypo_x0_linTaylor, eq_x1_hypo_x0_optimize
 from tvb_epilepsy.base.model_configuration import ModelConfiguration
@@ -57,7 +57,7 @@ class ModelConfigurationService(object):
         return self.__repr__()
 
     def _prepare_for_h5(self):
-        h5_model = object_to_h5_model(self)
+        h5_model = convert_to_h5_model(self)
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         return h5_model
 

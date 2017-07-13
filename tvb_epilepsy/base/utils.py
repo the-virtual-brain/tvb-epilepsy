@@ -280,6 +280,13 @@ def set_list_item_by_reference_safely(ind, item, lst):
      lst.__setitem__(ind, item)
 
 
+def get_list_or_tuple_item_safely(object, key):
+    try:
+        return object[int(key)]
+    except:
+        return None
+
+
 def dict_str(d):
     s = "{"
     for key, value in d.iteritems():

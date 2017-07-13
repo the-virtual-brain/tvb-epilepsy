@@ -11,7 +11,7 @@ import subprocess
 import warnings
 import numpy
 from tvb_epilepsy.base.constants import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
-from tvb_epilepsy.base.h5_model import object_to_h5_model
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.utils import obj_to_dict, assert_arrays
 from tvb_epilepsy.base.calculations import calc_rescaled_x0
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
@@ -169,8 +169,8 @@ class SimulatorCustom(ABCSimulator):
         return epileptor_params_list
 
     def prepare_for_h5(self):
-        settings_h5_model = object_to_h5_model(self.simulation_settings)
-        epileptor_model_h5_model = object_to_h5_model(self.model)
+        settings_h5_model = convert_to_h5_model(self.simulation_settings)
+        epileptor_model_h5_model = convert_to_h5_model(self.model)
 
         epileptor_model_h5_model.append(settings_h5_model)
         epileptor_model_h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")

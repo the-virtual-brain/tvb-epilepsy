@@ -8,7 +8,7 @@ import numpy
 from abc import ABCMeta, abstractmethod
 from tvb_epilepsy.base.constants import NOISE_SEED
 from tvb_epilepsy.base.model_vep import formal_repr
-from tvb_epilepsy.base.h5_model import object_to_h5_model
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.equilibrium_computation import calc_equilibrium_point
 
 
@@ -57,7 +57,7 @@ class SimulationSettings(object):
         return self.__repr__()
 
     def _prepare_for_h5(self):
-        h5_model = object_to_h5_model(self)
+        h5_model = convert_to_h5_model(self)
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         return h5_model
 

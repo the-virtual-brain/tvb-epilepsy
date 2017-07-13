@@ -8,7 +8,7 @@ import numpy
 
 from tvb_epilepsy.base.utils import initialize_logger, formal_repr, ensure_list, dicts_of_lists_to_lists_of_dicts, \
                                     linear_index_to_coordinate_tuples
-from tvb_epilepsy.base.h5_model import object_to_h5_model
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 from tvb_epilepsy.base.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.constants import FOLDER_FIGURES, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
@@ -66,7 +66,7 @@ class DiseaseHypothesis(object):
         return self.__repr__()
 
     def _prepare_for_h5(self):
-        h5_model = object_to_h5_model(self)
+        h5_model = convert_to_h5_model(self)
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         h5_model.add_or_update_metadata_attribute("Number_of_nodes", self.get_number_of_regions())
 

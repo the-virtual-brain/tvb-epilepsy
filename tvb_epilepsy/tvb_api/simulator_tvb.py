@@ -15,7 +15,7 @@ from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.epileptor_model_factory import model_build_dict, model_noise_intensity_dict, \
     model_noise_type_dict
 from tvb_epilepsy.base.model_vep import Connectivity
-from tvb_epilepsy.base.h5_model import object_to_h5_model
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
 from tvb_epilepsy.custom.read_write import epileptor_model_attributes_dict
 
@@ -148,8 +148,8 @@ class SimulatorTVB(ABCSimulator):
                         and numpy.all(str(field.dtype)[1] != numpy.array(["O", "S"])) and field.size == 1):
                 setattr(self.model, attributes_dict[attr], field * numpy.ones(p))
 
-        settings_h5_model = object_to_h5_model(self.simulation_settings)
-        epileptor_model_h5_model = object_to_h5_model(self.model)
+        settings_h5_model = convert_to_h5_model(self.simulation_settings)
+        epileptor_model_h5_model = convert_to_h5_model(self.model)
 
         epileptor_model_h5_model.append(settings_h5_model)
         epileptor_model_h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")

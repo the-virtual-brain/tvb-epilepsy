@@ -8,7 +8,7 @@ from collections import OrderedDict
 from tvb.basic.logger.builder import get_logger
 from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM
 from tvb_epilepsy.base.utils import formal_repr, weighted_vector_sum
-from tvb_epilepsy.base.h5_model import object_to_h5_model
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.calculations import calc_fz_jac_square_taylor
 from tvb_epilepsy.base.utils import curve_elbow_point
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
@@ -48,7 +48,7 @@ class LSAService(object):
         return self.__repr__()
 
     def _prepare_for_h5(self):
-        h5_model = object_to_h5_model(self)
+        h5_model = convert_to_h5_model(self)
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         return h5_model
 

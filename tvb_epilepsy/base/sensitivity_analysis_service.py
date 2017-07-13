@@ -5,7 +5,7 @@ import numpy as np
 
 from SALib.analyze import sobol, delta, fast, morris, dgsm,  ff
 from tvb_epilepsy.base.utils import formal_repr, list_of_dicts_to_dicts_of_ndarrays, dict_str
-from tvb_epilepsy.base.h5_model import object_to_h5_model
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb.basic.logger.builder import get_logger
 
 METHODS = ["sobol", "latin", "delta", "dgsm", "fast", "fast_sampler", "morris", "ff", "fractional_factorial"]
@@ -101,14 +101,14 @@ class SensitivityAnalysisService(object):
         return self.__repr__()
 
     def _prepare_for_h5(self):
-        h5_model = object_to_h5_model({"method": self.method, "calc_second_order": self.calc_second_order,
+        h5_model = convert_to_h5_model({"method": self.method, "calc_second_order": self.calc_second_order,
                                    "conf_level": self.conf_level, "n_inputs": self.n_inputs,
                                    "n_outputs": self.n_outputs, "input_names": self.input_names,
                                    "output_names": self.output_names,
                                    "input_bounds": self.input_bounds,
                                    "problem": self.problem,
                                    "other_parameters": self.other_parameters
-                                       })
+                                        })
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         return h5_model
 
@@ -342,10 +342,10 @@ if __name__ == "__main__":
                          figure_name=m + "_PSE_LSA_overview_" + lsa_hypothesis.name)
             # , show_flag=True, save_flag=False
 
-            object_to_h5_model(pse_results).write_to_h5(FOLDER_RES,
-                                                        m + "_PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
-            object_to_h5_model(sa_results).write_to_h5(FOLDER_RES,
-                                                       m + "_SA_LSA_results_" + lsa_hypothesis.name + ".h5")
+            convert_to_h5_model(pse_results).write_to_h5(FOLDER_RES,
+                                                         m + "_PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
+            convert_to_h5_model(sa_results).write_to_h5(FOLDER_RES,
+                                                        m + "_SA_LSA_results_" + lsa_hypothesis.name + ".h5")
         except:
             warnings.warn("Method " + m + " failed!")
 

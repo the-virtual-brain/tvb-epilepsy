@@ -15,7 +15,7 @@ from tvb_epilepsy.base.lsa_service import LSAService
 from tvb_epilepsy.base.plot_tools import plot_sim_results
 from tvb_epilepsy.base.utils import initialize_logger, set_time_scales, calculate_projection, filter_data
 from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
-from tvb_epilepsy.base.h5_model import object_to_h5_model, read_h5_model
+from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 
@@ -230,7 +230,7 @@ def main_vep(test_write_read=False):
                                     n_eig=lsa_service.eigen_vectors_number)
         # , show_flag=True, save_flag=False
 
-        object_to_h5_model(pse_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")
+        convert_to_h5_model(pse_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")
 
         # --------------Sensitivity Analysis Parameter Search Exploration (PSE)-------------------------------
 
@@ -249,8 +249,8 @@ def main_vep(test_write_read=False):
                                     figure_name="SA PSE LSA overview " + lsa_hypothesis.name)
         # , show_flag=True, save_flag=False
 
-        object_to_h5_model(pse_sa_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")
-        object_to_h5_model(sa_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_SA_LSA_results.h5")
+        convert_to_h5_model(pse_sa_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")
+        convert_to_h5_model(sa_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_SA_LSA_results.h5")
 
         # ------------------------------Simulation--------------------------------------
         logger.info("\n\nSimulating...")
@@ -261,7 +261,7 @@ def main_vep(test_write_read=False):
         sim.config_simulation()
         ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
 
-        object_to_h5_model(sim).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")
+        convert_to_h5_model(sim).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")
 
         if not status:
             warnings.warn("\nSimulation failed!")
@@ -307,28 +307,28 @@ def main_vep(test_write_read=False):
         if test_write_read:
             assert_equal_objects(model_configuration_service,
                                  read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_model_config_service.h5")).
-                                 convert_to_object(object=model_configuration_service))
+                                 convert_from_h5_model(object=model_configuration_service))
             assert_equal_objects(model_configuration,
                                  read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_ModelConfig.h5")).
-                                 convert_to_object(object=model_configuration))
+                                 convert_from_h5_model(object=model_configuration))
             assert_equal_objects(lsa_service,
                                  read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_LSAConfig.h5")).
-                                 convert_to_object(object=lsa_service))
+                                 convert_from_h5_model(object=lsa_service))
             assert_equal_objects(lsa_hypothesis,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + ".h5")).
-                                 convert_to_object(object=lsa_hypothesis))
+                                 convert_from_h5_model(object=lsa_hypothesis))
             assert_equal_objects(pse_results,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")).
-                                 convert_to_object())
+                                 convert_from_h5_model())
             assert_equal_objects(pse_sa_results,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).
-                                 convert_to_object())
+                                 convert_from_h5_model())
             assert_equal_objects(sa_results,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_LSA_results.h5")).
-                                 convert_to_object())
+                                 convert_from_h5_model())
             assert_equal_objects(sim,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")).
-                                 convert_to_object(object=sim))
+                                 convert_from_h5_model(object=sim))
 
 
 

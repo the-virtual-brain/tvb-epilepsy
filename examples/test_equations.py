@@ -4,7 +4,7 @@ import numpy
 from numpy.linalg import eig
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.utils import initialize_logger
-from tvb_epilepsy.base.h5_model import object_to_h5_model
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.custom.read_write import write_h5_model
 from tvb_epilepsy.base.calculations import *
 from tvb_epilepsy.base.symbolic import * 
@@ -120,7 +120,7 @@ if __name__ == "__main__":
                            slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
                            tau2=10.0)
 
-    write_h5_model(object_to_h5_model({"eq": eq, "dfun": numpy.array(dfun), "jac": numpy.array(jac)}), FOLDER_RES,
+    write_h5_model(convert_to_h5_model({"eq": eq, "dfun": numpy.array(dfun), "jac": numpy.array(jac)}), FOLDER_RES,
                    model +"Symbolic" + str(SYMBOLIC_CALCULATIONS_FLAG) +".h5")
 
     model = str(model_vars)+"d"
