@@ -8,9 +8,20 @@ import numpy as np
 
 from tvb_epilepsy.base.utils import initialize_logger, ensure_unique_file, change_filename_or_overwrite, \
                                     set_list_item_by_reference_safely, get_list_or_tuple_item_safely, \
-                                    list_or_tuple_to_dict, sort_dict
+                                    list_or_tuple_to_dict, dict_to_list_or_tuple, sort_dict
 
 logger = initialize_logger(__name__)
+
+bool_inf_nan_none_empty = OrderedDict()
+bool_inf_nan_none_empty.update({"True": True})
+bool_inf_nan_none_empty.update({"False": False})
+bool_inf_nan_none_empty.update({"inf": np.inf})
+bool_inf_nan_none_empty.update({"nan": np.nan})
+bool_inf_nan_none_empty.update({"None": None})
+bool_inf_nan_none_empty.update({"''": ""})
+bool_inf_nan_none_empty.update({"[]": []})
+bool_inf_nan_none_empty.update({"{}": {}})
+bool_inf_nan_none_empty.update({"()": ()})
 
 
 class H5Model(object):
@@ -57,7 +68,11 @@ class H5Model(object):
 
         h5_file.close()
 
-    def convert_from_h5_model(self, object=dict()):
+    def convert_from_h5_model(self, obj=dict()):
+
+        output = obj.__class__.__name__
+        if np.in1d(output, ["tuple", "list"]):
+            obj = list_or_tuple_to_dict(obj)
 
         data = dict()
         data.update(self.datasets_dict)
@@ -70,98 +85,115 @@ class H5Model(object):
             if key[0] == "/":
                 key = key.split('/', 1)[1]
 
-            build_hierarchical_object_recursively(object, key, value)
+            build_hierarchical_object_recursively(obj, key, value)
 
-        return object
+        if np.in1d(output, ["tuple", "list"]):
+            obj = dict_to_list_or_tuple(obj, output)
 
-
-def convert_to_h5_model(object, name="", datasets_dict=OrderedDict(), metadata_dict=OrderedDict()):
-
-    if isinstance(object, (float, int, long, complex, str)):
-        if name == "":
-            name = "/var"
-        metadata_dict.update({name: object})
-
-    elif (isinstance(object, np.ndarray)):
-        if name == "":
-            name = "/var"
-        datasets_dict.update({name: object})
-
-    elif object == [] or object == () or object == "":
-        if name == "":
-            name = "/var"
-        datasets_dict.update({name: np.array(object)})
-
-    else:
-
-        if isinstance(object, (list, tuple)):
-            object = list_or_tuple_to_dict(object)
-
-        elif not(isinstance(object, dict)):
-            object = vars(object)
-
-        object = sort_dict(object)
-
-        for key, value in object.iteritems():
-
-            key = name + "/" + key
-
-            if (isinstance(value, np.ndarray)):
-                datasets_dict.update({key: value})
-
-            elif value == [] or value == () or value == "":
-                datasets_dict.update({key: np.array(value)})
-
-            elif value == {} or value is None:
-                pass
-
-            elif isinstance(value, (float, int, long, complex, str)):
-                metadata_dict.update({key: value})
-
-            else: # if isinstance(value, dict):
-                convert_to_h5_model(value, key, datasets_dict, metadata_dict)
-
-    return H5Model(datasets_dict, metadata_dict)
+        return obj
 
 
-def build_hierarchical_object_recursively(object, key, value):
+def convert_to_h5_model(obj, name=""):
+    h5_model = H5Model(OrderedDict(), OrderedDict())
+    object_to_h5_model_recursively(h5_model, obj, name="")
+    return h5_model
 
-    if isinstance(object, dict):
-        set_field = lambda object, key, value: object.update({key: value})
-        get_field = lambda object, key: object.get(key, None)
 
-    elif isinstance(object, list):
-        set_field = lambda object, key, value: set_list_item_by_reference_safely(int(key), value, object)
-        get_field = lambda object, key: get_list_or_tuple_item_safely(object, key)
+def object_to_h5_model_recursively(h5_model, obj, name=""):
+
+    # Use in some cases the name of the class as key, when name is empty string. Otherwise, class+name = name.
+    name_empty = (len(name) == 0)
+    class_name = name_empty * obj.__class__.__name__ + name
+
+    for key, val in bool_inf_nan_none_empty.iteritems():
+        # Bool, inf, nan, None, or empty list/tuple/dict/str
+        try:
+            if obj is val or all(obj == val):
+                h5_model.add_or_update_metadata_attribute(class_name, key)
+                return
+        except:
+            continue
+
+    if isinstance(obj, (float, int, long, complex, str, np.ndarray)):
+
+        if isinstance(obj, (float, int, long, complex, str)):
+            h5_model.add_or_update_metadata_attribute(class_name, obj)
+
+        elif isinstance(obj, np.ndarray):
+            h5_model.add_or_update_datasets_attribute(class_name, obj)
 
     else:
-        set_field = lambda object, attribute, value: setattr(object, attribute, value)
-        get_field = lambda object, attribute: getattr(object, attribute, None)
 
-    child_object = get_field(object, key)
+        # In any other case, make sure object is/becomes an alphabetically ordered dictionary:
+
+        if isinstance(obj, (list, tuple)):
+            obj = list_or_tuple_to_dict(obj)
+
+        elif not(isinstance(obj, dict)):
+            try:
+                obj = vars(obj)
+            except:
+                logger.info("Object " + name + (len(name) > 0) * "/" + key + "cannot be assigned to h5_model because it"
+                                                                             "is has no __dict__ property")
+                return
+
+        obj = sort_dict(obj)
+
+        for key, value in obj.iteritems():
+
+            key = name + (len(name) > 0) * "/" + key
+
+            # call recursively...
+            object_to_h5_model_recursively(h5_model, value, key)
+
+
+def build_hierarchical_object_recursively(obj, key, value):
+
+    if isinstance(obj, dict):
+        set_field = lambda obj, key, value: obj.update({key: value})
+        get_field = lambda obj, key: obj.get(key, None)
+
+    elif isinstance(obj, list):
+        set_field = lambda obj, key, value: set_list_item_by_reference_safely(int(key), value, obj)
+        get_field = lambda obj, key: get_list_or_tuple_item_safely(obj, key)
+
+    else:
+        set_field = lambda obj, attribute, value: setattr(obj, attribute, value)
+        get_field = lambda obj, attribute: getattr(obj, attribute, None)
+
+    # Check whether value is an inf, nan, None, bool, or empty list/dict/tuple/str value
+    try:
+        bool_inf_nan_none_empty_value = bool_inf_nan_none_empty.get(value, "skip_bool_inf_nan_none_empty_value")
+        if bool_inf_nan_none_empty_value != "skip_bool_inf_nan_none_empty_value":
+            set_field(obj, key, bool_inf_nan_none_empty_value)
+        return
+    except:
+        pass
+
+    child_object = get_field(obj, key)
     if child_object is not None:
-        set_field(object, key, value)
+        set_field(obj, key, value)
 
     else:
         name = key.split('/', 1)[0]
         try:
             if name == key:
-                set_field(object, key, value)
+                set_field(obj, key, value)
                 return 1
             else:
                 child_key = key.split('/', 1)[1]
-                child_object = get_field(object, name)
+                child_object = get_field(obj, name)
                 if child_object is None:
                     grandchild_name = child_key.split('/', 1)[0]
                     if grandchild_name.isdigit():
                         child_object = list()
                     else:
                         child_object = dict()
-                    set_field(object, name, child_object)
+                    set_field(obj, name, child_object)
                 build_hierarchical_object_recursively(child_object, child_key, value)
 
         except:
-            warnings.warn("Failed to set attribute " + str(key) + "to object " + object.get("__name__", "") + "!")
+            warnings.warn("Failed to set attribute " + str(key) + "of object " + obj.__class__.__name__ + "!")
 
 
 def read_h5_model(path):
@@ -197,26 +229,29 @@ def return_h5_dataset_paths_recursively(group):
 
 
 if __name__ == "__main__":
+
     from tvb_epilepsy.base.constants import FOLDER_RES
     from tvb_epilepsy.base.utils import assert_equal_objects
 
     from copy import deepcopy
 
-    object = {"h5_model": H5Model({"a/b": np.array([1,2,3]), "a/c": np.array([1,2,3])},
-                                  {"list0": ["l00", 1, {"d020": "a", "d021": [1,2,3]}]}),
-              "dict": {"list0": ["l00", 1, {"d020": "a", "d021": [1,2,3]}]}}
-    logger.info("\n\nOriginal object:\n" + str(object))
+    obj = {"h5_model": H5Model({"a/b": np.array([1,2,3]), "a/c": np.array([1,2,3])},
+                                  {"list0": ["l00", 1, {"d020": "a", "d021": []}]}),
+              "dict": {"list0": ["l00", 1, {"d020": "a", "d021": [True, False, np.inf, np.nan, None, [], (), {}, ""]}]}}
+    logger.info("\n\nOriginal object:\n" + str(obj))
 
-    logger.info("\n\nWritine object to h5 file...")
-    convert_to_h5_model(object).write_to_h5(FOLDER_RES, "test_h5_model.h5")
+    logger.info("\n\nWriting object to h5 file...")
+    convert_to_h5_model(obj).write_to_h5(FOLDER_RES, "test_h5_model.h5")
 
-    object1 = read_h5_model(FOLDER_RES + "/test_h5_model.h5").convert_from_h5_model(deepcopy(object))
-    assert_equal_objects(object, object1)
-    logger.info("\n\nRead identical object:\n" + str(object1))
+    obj1 = read_h5_model(FOLDER_RES + "/test_h5_model.h5").convert_from_h5_model(deepcopy(obj))
+    if assert_equal_objects(obj, obj1):
+        print "\n\nRead identical object:\n" + str(obj1)
+        logger.info("\n\nRead identical object:\n" + str(obj1))
 
-    object2 = read_h5_model(FOLDER_RES + "/test_h5_model.h5").convert_from_h5_model()
-    assert_equal_objects(object, object2)
-    logger.info("\n\nRead object as dictionary:\n" + str(object2))
+    obj2 = read_h5_model(FOLDER_RES + "/test_h5_model.h5").convert_from_h5_model()
+    if assert_equal_objects(obj, obj2):
+        print "\n\nRead object as dictionary:\n" + str(obj2)
+        logger.info("\n\nRead object as dictionary:\n" + str(obj2))
 
 
 
