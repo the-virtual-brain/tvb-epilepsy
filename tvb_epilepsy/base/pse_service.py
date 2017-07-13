@@ -307,7 +307,7 @@ class PSE_Service(object):
              "03. Number of computation loops": self.n_loops,
              "04. Parameters": np.array(["%s" % l for l in self.params_names]),
              }
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0])))
+        return formal_repr(self, d)
 
     def __str__(self):
         return self.__repr__()

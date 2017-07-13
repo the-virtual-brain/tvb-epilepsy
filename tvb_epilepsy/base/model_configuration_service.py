@@ -51,7 +51,7 @@ class ModelConfigurationService(object):
              "08. K": self.K,
              "09. E": self.E,
              }
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0])))
+        return formal_repr(self, d)
 
     def __str__(self):
         return self.__repr__()

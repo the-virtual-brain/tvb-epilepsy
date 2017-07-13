@@ -51,7 +51,7 @@ class SimulationSettings(object):
              "14. variables_names": self.variables_names,
              "15. initial_conditions": self.initial_conditions,
              }
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0])))
+        return formal_repr(self, d)
 
     def __str__(self):
         return self.__repr__()

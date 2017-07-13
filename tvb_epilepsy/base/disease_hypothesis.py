@@ -6,8 +6,8 @@ from collections import OrderedDict
 
 import numpy
 
-from tvb_epilepsy.base.utils import initialize_logger, formal_repr, ensure_list, linear_index_to_coordinate_tuples, \
-                                    dicts_of_lists_to_lists_of_dicts
+from tvb_epilepsy.base.utils import initialize_logger, formal_repr, ensure_list, dicts_of_lists_to_lists_of_dicts, \
+                                    linear_index_to_coordinate_tuples
 from tvb_epilepsy.base.h5_model import object_to_h5_model
 
 from tvb_epilepsy.base.model_configuration import ModelConfiguration
@@ -60,7 +60,7 @@ class DiseaseHypothesis(object):
              "09. Propagation indices": self.propagation_indices,
              "10. Propagation strengths of indices": self.propagation_strenghts[self.propagation_indices]
              }
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0])))
+        return formal_repr(self, d)
 
     def __str__(self):
         return self.__repr__()

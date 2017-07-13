@@ -206,9 +206,8 @@ class SampleService(object):
              "04. Number of output parameters": self.n_outputs,
              "05. Samples' shape": self.shape,
              }
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]))) + \
-                                            "\n06. Distribution parameters: " + dict_str(self.params) + \
-                                            "\n07 Resulting statistics: " + dict_str(self.stats)
+        return formal_repr(self, d) + "\n06. Distribution parameters: " + dict_str(self.params) + \
+                                      "\n07 Resulting statistics: " + dict_str(self.stats)
 
     def prepare_for_h5(self):
         h5_model = object_to_h5_model({"sampling_module": self.sampling_module, "sampler": self.sampler,
@@ -329,7 +328,7 @@ class StochasticSampleService(SampleService):
              "05. Samples' shape": self.shape,
              "06. Random seed": self.random_seed,
              }
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]))) + \
+        return formal_repr(self, d) + \
         "\n07. Distribution parameters: " + dict_str(self.params) + \
         "\n08. Truncation limits: " + str([dict_str(d) for d in dicts_of_lists_to_lists_of_dicts(self.trunc_limits)]) + \
         "\n08. Resulting statistics: " + dict_str(self.stats)

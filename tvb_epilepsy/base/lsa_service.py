@@ -42,7 +42,7 @@ class LSAService(object):
              "05. Eigenvectors' number": self.eigen_vectors_number,
              "06. Weighted eigenvector's sum flag": str(self.weighted_eigenvector_sum)
              }
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0])))
+        return formal_repr(self, d)
 
     def __str__(self):
         return self.__repr__()

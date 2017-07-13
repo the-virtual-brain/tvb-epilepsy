@@ -95,7 +95,7 @@ class SensitivityAnalysisService(object):
              "10. Problem": dict_str(self.problem),
              "11. Other parameters": dict_str(self.other_parameters),
              }
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0])))
+        return formal_repr(self, d)
 
     def __str__(self):
         return self.__repr__()
