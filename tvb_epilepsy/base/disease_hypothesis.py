@@ -4,7 +4,7 @@ Class for defining and storing the state of a hypothesis.
 """
 from collections import OrderedDict
 
-import numpy
+import numpy as np
 
 from tvb_epilepsy.base.utils import initialize_logger, formal_repr, ensure_list, dicts_of_lists_to_lists_of_dicts, \
                                     linear_index_to_coordinate_tuples
@@ -44,8 +44,8 @@ class DiseaseHypothesis(object):
         else:
             self.name = name
 
-        self.propagation_indices = propagation_indices
-        self.propagation_strenghts = propagation_strenghts
+        self.propagation_indices = np.array(propagation_indices)
+        self.propagation_strenghts = np.array(propagation_strenghts)
 
     def __repr__(self):
         d = {"01. Name": self.name,
@@ -58,8 +58,13 @@ class DiseaseHypothesis(object):
                  linear_index_to_coordinate_tuples(self.w_indices, self.connectivity.weights.shape),
              "08. Connectivity disease values": self.w_values,
              "09. Propagation indices": self.propagation_indices,
-             "10. Propagation strengths of indices": self.propagation_strenghts[self.propagation_indices]
              }
+
+        if len(self.propagation_indices):
+            d.update({"10. Propagation strengths of indices": self.propagation_strenghts[self.propagation_indices]})
+        else:
+            d.update({"10. Propagation strengths of indices": self.propagation_strenghts})
+
         return formal_repr(self, d)
 
     def __str__(self):
@@ -70,7 +75,7 @@ class DiseaseHypothesis(object):
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         h5_model.add_or_update_metadata_attribute("Number_of_nodes", self.get_number_of_regions())
 
-        all_indices_for_propagation = numpy.zeros(self.get_number_of_regions())
+        all_indices_for_propagation = np.zeros(self.get_number_of_regions())
         all_indices_for_propagation[self.propagation_indices] = 1
 
         h5_model.add_or_update_datasets_attribute("propagation_indices", all_indices_for_propagation)
@@ -167,8 +172,8 @@ class DiseaseHypothesis(object):
             else:
                 raise ValueError("Length of disease indices " + str(len(key)) + " and values " + str(len(value)) +
                                  " do not match!")
-        arg_sort = numpy.argsort(indices)
-        return numpy.array(indices)[arg_sort].tolist(), numpy.array(values)[arg_sort]
+        arg_sort = np.argsort(indices)
+        return np.array(indices)[arg_sort].tolist(), np.array(values)[arg_sort]
 
     def update(self, name=""):
         self.type = []
@@ -188,24 +193,24 @@ class DiseaseHypothesis(object):
             self.name = name
 
     def get_regions_disease_indices(self):
-        return numpy.unique(self.x0_indices + self.e_indices).astype("i").tolist()
+        return np.unique(self.x0_indices + self.e_indices).astype("i").tolist()
 
     def get_connectivity_disease_indices(self):
         return self.w_indices
 
     def get_connectivity_regions_disease_indices(self):
-        indexes = numpy.unravel_index(self.get_connectivity_disease_indices(),
+        indexes = np.unravel_index(self.get_connectivity_disease_indices(),
                                       (self.get_number_of_regions(), self.get_number_of_regions()))
-        indexes = numpy.unique(numpy.concatenate(indexes)).astype("i")
+        indexes = np.unique(np.concatenate(indexes)).astype("i")
         return indexes.tolist()
 
     def get_all_disease_indices(self):
-        return numpy.unique(numpy.concatenate((self.get_regions_disease_indices(),
+        return np.unique(np.concatenate((self.get_regions_disease_indices(),
                                                self.get_connectivity_disease_indices()))).astype("i").tolist()
 
     def get_regions_disease(self):
         # In case we need values for all regions, we can use this and have zeros where values are not defined
-        regions_disease = numpy.zeros(self.get_number_of_regions())
+        regions_disease = np.zeros(self.get_number_of_regions())
         regions_disease[self.x0_indices] = self.x0_values
         regions_disease[self.e_indices] = self.e_values
 
@@ -214,8 +219,8 @@ class DiseaseHypothesis(object):
     def get_connectivity_disease(self):
         # In case we need values for all regions, we can use this and have zeros where values are not defined
         connectivity_shape = (self.get_number_of_regions(), self.get_number_of_regions())
-        connectivity_disease = numpy.ones(connectivity_shape)
-        indexes = numpy.unravel_index(self.get_connectivity_disease_indices(), connectivity_shape)
+        connectivity_disease = np.ones(connectivity_shape)
+        indexes = np.unravel_index(self.get_connectivity_disease_indices(), connectivity_shape)
         connectivity_disease[indexes[0], indexes[1]] = self.w_values
         connectivity_disease[indexes[1], indexes[0]] = self.w_values
 
