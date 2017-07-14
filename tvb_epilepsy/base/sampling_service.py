@@ -186,7 +186,7 @@ def distribution_params_to_mean_std(distribution, **p):
                          + " is not met!")
 
 
-class SampleService(object):
+class SamplingService(object):
 
     def __init__(self, n_samples=10, n_outputs=1):
 
@@ -245,11 +245,11 @@ class SampleService(object):
             return samples
 
 
-class DeterministicSampleService(SampleService):
+class DeterministicSamplingService(SamplingService):
 
     def __init__(self, n_samples=10, n_outputs=1, low=0.0, high=1.0, grid_mode=True):
 
-        super(DeterministicSampleService, self).__init__(n_samples, n_outputs)
+        super(DeterministicSamplingService, self).__init__(n_samples, n_outputs)
 
         self.sampling_module = "numpy.linspace"
         self.sampler = np.linspace
@@ -281,12 +281,12 @@ class DeterministicSampleService(SampleService):
 
 # TODO: Add pystan as a stochastic sampling module, when/if needed.
 
-class StochasticSampleService(SampleService):
+class StochasticSamplingService(SamplingService):
 
     def __init__(self, n_samples=10, n_outputs=1, sampler="uniform", trunc_limits={},
                  sampling_module="numpy", random_seed=None, **kwargs):
 
-        super(StochasticSampleService, self).__init__(n_samples, n_outputs)
+        super(StochasticSamplingService, self).__init__(n_samples, n_outputs)
 
         self.random_seed = random_seed
         self.params = kwargs
@@ -451,7 +451,7 @@ if __name__ == "__main__":
 
     LOG.info("\nDeterministic linspace sampling:")
 
-    sampler = DeterministicSampleService(n_samples=10, n_outputs=2, low=1.0, high=2.0, grid_mode=True)
+    sampler = DeterministicSamplingService(n_samples=10, n_outputs=2, low=1.0, high=2.0, grid_mode=True)
 
     samples, stats = sampler.generate_samples(stats=True)
 
@@ -464,7 +464,7 @@ if __name__ == "__main__":
 
     LOG.info("\nStochastic uniform sampling:")
 
-    sampler = StochasticSampleService() #(n_samples=10, n_outputs=1, low=1.0, high=2.0)
+    sampler = StochasticSamplingService() #(n_samples=10, n_outputs=1, low=1.0, high=2.0)
 
     samples, stats = sampler.generate_samples(stats=True)
 
@@ -476,9 +476,9 @@ if __name__ == "__main__":
 
     LOG.info("\nStochastic truncated normal sampling:")
 
-    sampler = StochasticSampleService(n_samples=10, n_outputs=2, sampler="norm",
-                                      trunc_limits={"low": 0.0, "high": +3.0}, loc=1.0,
-                                      scale=2.0)
+    sampler = StochasticSamplingService(n_samples=10, n_outputs=2, sampler="norm",
+                                        trunc_limits={"low": 0.0, "high": +3.0}, loc=1.0,
+                                        scale=2.0)
 
     samples, stats = sampler.generate_samples(stats=True)
 
@@ -490,8 +490,8 @@ if __name__ == "__main__":
 
     LOG.info("\nSensitivity analysis sampling:")
 
-    sampler = StochasticSampleService(n_samples=10, n_outputs=2, sampler="latin", sampling_module="salib",
-                                      bounds=[[0.0, 0.1], [0.0, 0.1]])
+    sampler = StochasticSamplingService(n_samples=10, n_outputs=2, sampler="latin", sampling_module="salib",
+                                        bounds=[[0.0, 0.1], [0.0, 0.1]])
 
     samples, stats = sampler.generate_samples(stats=True)
 

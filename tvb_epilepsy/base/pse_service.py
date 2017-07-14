@@ -213,16 +213,21 @@ def sim_run_fun(simulator_input, params_paths, params_values, params_indices, ou
         return False, None
 
 
-class PSE_Service(object):
+class PSEService(object):
 
-    def __init__(self, task, hypothesis=None, simulator=None, params_pse=None, run_fun=None, out_fun=None):
+    def __init__(self, task, hypothesis=[], simulator=[], params_pse=None, run_fun=None, out_fun=None):
 
         if task not in ["LSA", "SIMULATION"]:
-            raise ValueError("\ntask = " + str(task) + " is not a valid pse task." +
+            warnings.warn("\ntask = " + str(task) + " is not a valid pse task." +
                              "\nSelect one of 'LSA', or 'SIMULATION' to perform parameter search exploration of " +
                              "\n hypothesis Linear Stability Analysis, or simulation, " + "respectively")
 
         self.task = task
+        self.params_names = []
+        self.params_paths = []
+        self.n_params_vals = []
+        self.params_indices = []
+        self.n_loops = 0
 
         if task == "LSA":
 
@@ -231,22 +236,27 @@ class PSE_Service(object):
                 self.pse_object = hypothesis
 
             else:
-                raise ValueError("\ntask = LSA" + str(task) + " but hypothesis is not a Hypothesis object!")
+                warnings.warn("\ntask = " + str(task) + " but hypothesis is not a Hypothesis object!")
 
             def_run_fun = lsa_run_fun
             def_out_fun = lsa_out_fun
 
-        else:
+        elif task == "SIMULATION":
 
             if isinstance(simulator, ABCSimulator):
                 self.pse_object = simulator
 
             else:
-                raise ValueError("\ntask = 'SIMULATION'" + str(task) + " but simulator is not an object of" +
-                                 " one of the available simulator classes!")
+                raise warnings.warn("\ntask = " + str(task) + " but simulator is not an object of" +
+                                    " one of the available simulator classes!")
 
             def_run_fun = sim_run_fun
             def_out_fun = sim_out_fun
+
+        else:
+            self.pse_object = []
+            def_run_fun = None
+            def_out_fun = None
 
         if not (callable(run_fun)):
             warnings.warn("\nUser defined run_fun is not callable. Using default one for task " + str(task) +"!")
@@ -262,10 +272,7 @@ class PSE_Service(object):
 
         if isinstance(params_pse, list):
 
-            self.params_names = []
-            self.params_paths = []
-            self.n_params_vals = []
-            self.params_indices = []
+
             temp = []
             for param in params_pse:
                 # parameter path:
@@ -298,7 +305,7 @@ class PSE_Service(object):
             print "leading to " + str(self.n_loops) + " total execution loops"
 
         else:
-            raise ValueError("\nparams_pse is not a list of tuples!")
+            warnings.warn("\nparams_pse is not a list of tuples!")
 
     def __repr__(self):
 
@@ -375,7 +382,7 @@ if __name__ == "__main__":
     from tvb_epilepsy.base.utils import list_of_dicts_to_dicts_of_ndarrays
     from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
     from tvb_epilepsy.custom.read_write import write_h5_model
-    from tvb_epilepsy.base.sample_service import StochasticSampleService
+    from tvb_epilepsy.base.sampling_service import StochasticSamplingService
     from tvb_epilepsy.base.plot_tools import plot_lsa_pse
 
     from tvb_epilepsy.base.helper_functions import pse_from_hypothesis
@@ -393,8 +400,8 @@ if __name__ == "__main__":
     n_samples = 100
 
     # Sampling of the global coupling parameter
-    stoch_sampler = StochasticSampleService(n_samples=n_samples, n_outputs=1, sampler="norm", trunc_limits={"low": 0.0},
-                                            random_seed=1000, loc=10.0, scale=3.0)
+    stoch_sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampler="norm", trunc_limits={"low": 0.0},
+                                              random_seed=1000, loc=10.0, scale=3.0)
     K_samples, K_sample_stats = stoch_sampler.generate_samples(stats=True)
 
     #

@@ -11,8 +11,8 @@ def pse_from_hypothesis(hypothesis, n_samples, half_range=0.1, global_coupling=[
     from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE, K_DEF, FOLDER_RES
     from tvb_epilepsy.base.utils import initialize_logger, linear_index_to_coordinate_tuples, \
                                         dicts_of_lists_to_lists_of_dicts, list_of_dicts_to_dicts_of_ndarrays
-    from tvb_epilepsy.base.sample_service import StochasticSampleService
-    from tvb_epilepsy.base.pse_service import PSE_Service
+    from tvb_epilepsy.base.sampling_service import StochasticSamplingService
+    from tvb_epilepsy.base.pse_service import PSEService
 
     logger = initialize_logger(__name__)
     
@@ -32,11 +32,11 @@ def pse_from_hypothesis(hypothesis, n_samples, half_range=0.1, global_coupling=[
                                   " Excitability")
 
         # Now generate samples using a truncated uniform distribution
-        sampler = StochasticSampleService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                          random_seed=kwargs.get("random_seed", None),
-                                          trunc_limits={"high": MAX_DISEASE_VALUE},
-                                          sampler="uniform",
-                                          loc=hypothesis.x0_values[ii] - half_range, scale=2 * half_range)
+        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
+                                            random_seed=kwargs.get("random_seed", None),
+                                            trunc_limits={"high": MAX_DISEASE_VALUE},
+                                            sampler="uniform",
+                                            loc=hypothesis.x0_values[ii] - half_range, scale=2 * half_range)
         pse_params["samples"].append(sampler.generate_samples(**kwargs))
 
     for ii in range(len(hypothesis.e_values)):
@@ -46,11 +46,11 @@ def pse_from_hypothesis(hypothesis, n_samples, half_range=0.1, global_coupling=[
                                   " Epileptogenicity")
 
         # Now generate samples using a truncated uniform distribution
-        sampler = StochasticSampleService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                          random_seed=kwargs.get("random_seed", None),
-                                          trunc_limits={"high": MAX_DISEASE_VALUE},
-                                          sampler="uniform",
-                                          loc=hypothesis.e_values[ii] - half_range, scale=2 * half_range)
+        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
+                                            random_seed=kwargs.get("random_seed", None),
+                                            trunc_limits={"high": MAX_DISEASE_VALUE},
+                                            sampler="uniform",
+                                            loc=hypothesis.e_values[ii] - half_range, scale=2 * half_range)
         pse_params["samples"].append(sampler.generate_samples(**kwargs))
 
     for ii in range(len(hypothesis.w_values)):
@@ -64,10 +64,10 @@ def pse_from_hypothesis(hypothesis, n_samples, half_range=0.1, global_coupling=[
             pse_params["name"].append("Connectivity[" + str(inds), + "]")
 
         # Now generate samples using a truncated normal distribution
-        sampler = StochasticSampleService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                          random_seed=kwargs.get("random_seed", None),
-                                          trunc_limits={"high": MAX_DISEASE_VALUE},
-                                          sampler="norm", loc=hypothesis.w_values[ii], scale=half_range)
+        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
+                                            random_seed=kwargs.get("random_seed", None),
+                                            trunc_limits={"high": MAX_DISEASE_VALUE},
+                                            sampler="norm", loc=hypothesis.w_values[ii], scale=half_range)
         pse_params["samples"].append(sampler.generate_samples(**kwargs))
 
     if model_configuration_service is None:
@@ -84,9 +84,9 @@ def pse_from_hypothesis(hypothesis, n_samples, half_range=0.1, global_coupling=[
         pse_params["indices"].append(inds)
 
         # Now generate samples susing a truncated normal distribution
-        sampler = StochasticSampleService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                          random_seed=kwargs.get("random_seed", None),
-                                          trunc_limits={"low": 0.0}, sampler="norm", loc=kloc, scale=30*half_range)
+        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
+                                            random_seed=kwargs.get("random_seed", None),
+                                            trunc_limits={"low": 0.0}, sampler="norm", loc=kloc, scale=30*half_range)
         pse_params["samples"].append(sampler.generate_samples(**kwargs))
 
     pse_params_list = dicts_of_lists_to_lists_of_dicts(pse_params)
@@ -96,10 +96,10 @@ def pse_from_hypothesis(hypothesis, n_samples, half_range=0.1, global_coupling=[
         inds = val.get("indices", healthy_indices)
         name = val.get("name", "x0")
         n_params = len(inds)
-        sampler = StochasticSampleService(n_samples=n_samples, n_outputs=n_params, sampler="uniform",
-                                          trunc_limits={"low": 0.0}, sampling_module="scipy",
-                                          random_seed=kwargs.get("random_seed", None),
-                                          loc=kwargs.get("loc", 0.0), scale=kwargs.get("scale", 2*half_range))
+        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=n_params, sampler="uniform",
+                                            trunc_limits={"low": 0.0}, sampling_module="scipy",
+                                            random_seed=kwargs.get("random_seed", None),
+                                            loc=kwargs.get("loc", 0.0), scale=kwargs.get("scale", 2*half_range))
 
         samples = sampler.generate_samples(**kwargs)
         for ii in range(n_params):
@@ -108,7 +108,7 @@ def pse_from_hypothesis(hypothesis, n_samples, half_range=0.1, global_coupling=[
 
     # Now run pse service to generate output samples:
 
-    pse = PSE_Service("LSA", hypothesis=hypothesis, params_pse=pse_params_list)
+    pse = PSEService("LSA", hypothesis=hypothesis, params_pse=pse_params_list)
     pse_results, execution_status = pse.run_pse(grid_mode=False, lsa_service_input=lsa_service,
                                                 model_configuration_service_input=model_configuration_service)
 
@@ -132,8 +132,8 @@ def sensitivity_analysis_pse_from_hypothesis(hypothesis, n_samples, method="sobo
     from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE, FOLDER_RES
     from tvb_epilepsy.base.utils import initialize_logger, linear_index_to_coordinate_tuples, \
                                         list_of_dicts_to_dicts_of_ndarrays, dicts_of_lists_to_lists_of_dicts
-    from tvb_epilepsy.base.sample_service import StochasticSampleService
-    from tvb_epilepsy.base.pse_service import PSE_Service
+    from tvb_epilepsy.base.sampling_service import StochasticSamplingService
+    from tvb_epilepsy.base.pse_service import PSEService
     from tvb_epilepsy.base.sensitivity_analysis_service import SensitivityAnalysisService, METHODS
     
     logger = initialize_logger(__name__)
@@ -205,9 +205,9 @@ def sensitivity_analysis_pse_from_hypothesis(hypothesis, n_samples, method="sobo
         pse_params["bounds"].append(val["bounds"])
 
     # Now generate samples suitable for sensitivity analysis
-    sampler = StochasticSampleService(n_samples=n_samples, n_outputs=n_inputs, sampler=sampler, trunc_limits={},
-                                      sampling_module="salib", random_seed=kwargs.get("random_seed", None),
-                                      bounds=pse_params["bounds"])
+    sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=n_inputs, sampler=sampler, trunc_limits={},
+                                        sampling_module="salib", random_seed=kwargs.get("random_seed", None),
+                                        bounds=pse_params["bounds"])
 
     input_samples = sampler.generate_samples(**kwargs)
     n_samples = input_samples.shape[1]
@@ -220,10 +220,10 @@ def sensitivity_analysis_pse_from_hypothesis(hypothesis, n_samples, method="sobo
         inds = val.get("indices", healthy_indices)
         name = val.get("name", "x0")
         n_params = len(inds)
-        sampler = StochasticSampleService(n_samples=n_samples, n_outputs=n_params, sampler="uniform",
-                                          trunc_limits={"low": 0.0}, sampling_module="scipy",
-                                          random_seed=kwargs.get("random_seed", None),
-                                          loc=kwargs.get("loc", 0.0), scale=kwargs.get("scale", 2*half_range))
+        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=n_params, sampler="uniform",
+                                            trunc_limits={"low": 0.0}, sampling_module="scipy",
+                                            random_seed=kwargs.get("random_seed", None),
+                                            loc=kwargs.get("loc", 0.0), scale=kwargs.get("scale", 2*half_range))
 
         samples = sampler.generate_samples(**kwargs)
         for ii in range(n_params):
@@ -232,7 +232,7 @@ def sensitivity_analysis_pse_from_hypothesis(hypothesis, n_samples, method="sobo
 
     # Now run pse service to generate output samples:
 
-    pse = PSE_Service("LSA", hypothesis=hypothesis, params_pse=pse_params_list)
+    pse = PSEService("LSA", hypothesis=hypothesis, params_pse=pse_params_list)
     pse_results, execution_status = pse.run_pse(grid_mode=False, lsa_service_input=lsa_service,
                                                 model_configuration_service_input=model_configuration_service)
 

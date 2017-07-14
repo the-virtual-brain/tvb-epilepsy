@@ -9,7 +9,7 @@ class Sensors
 from collections import OrderedDict
 import numpy as np
 
-from tvb_epilepsy.base.utils import reg_dict, formal_repr, normalize_weights, calculate_in_degree
+from tvb_epilepsy.base.utils import reg_dict, formal_repr, normalize_weights, calculate_in_degree, sort_dict
 
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -23,7 +23,7 @@ class Head(object):
     """
 
     def __init__(self, connectivity, cortical_surface, rm, vm, t1, name='',
-                 eeg_sensors_dict=None, meg_sensors_dict=None, seeg_sensors_dict=None):
+                 eeg_sensors_dict={}, meg_sensors_dict={}, seeg_sensors_dict={}):
 
         self.connectivity = connectivity
         self.cortical_surface = cortical_surface
@@ -39,6 +39,10 @@ class Head(object):
             self.name = 'Head' + str(self.number_of_regions)
         else:
             self.name = name
+
+        self.children_dict = {"Connectivity": Connectivity("", np.array([]), np.array([])),
+                              "Surface": Surface(np.array([]), np.array([])),
+                              "Sensors": Sensors(np.array([]), np.array([]))}
 
     @property
     def number_of_regions(self):
@@ -57,7 +61,7 @@ class Head(object):
              "7. SEEG": self.sensorsSEEG,
              "8. EEG": self.sensorsEEG,
              "9. MEG": self.sensorsMEG }
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ) )
+        return formal_repr(self, sort_dict(d))
 
     def __str__(self):
         return self.__repr__()
@@ -88,11 +92,12 @@ class Connectivity(object):
     orientations = None
     areas = None
 
-    def __init__(self, file_path, weights, tract_lengths, labels=None, centers=None, hemispheres=None,
-                 orientation=None, areas=None, normalized_weights=None, ):
+    def __init__(self, file_path, weights, tract_lengths, labels=np.array([]), centers=np.array([]),
+                 hemispheres=np.array([]), orientation=np.array([]), areas=np.array([]),
+                 normalized_weights=np.array([])):
         self.file_path = file_path
         self.weights = weights
-        if normalized_weights is None:
+        if len(normalized_weights) == 0:
             normalized_weights = normalize_weights(weights)
         self.normalized_weights = normalized_weights
         self.tract_lengths = tract_lengths
@@ -122,7 +127,7 @@ class Connectivity(object):
              "c. hemispheres": reg_dict(self.hemispheres, self.region_labels),
              "d. orientations": reg_dict(self.orientations, self.region_labels),
              "e. areas": reg_dict(self.areas, self.region_labels)}
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ) )
+        return formal_repr(self, sort_dict(d))
 
     def __str__(self):
         return self.__repr__()
@@ -146,7 +151,7 @@ class Connectivity(object):
         pyplot.figure("Head stats " + str(self.number_of_regions), figsize=LARGE_SIZE)
         ax = _plot_vector(calculate_in_degree(self.normalized_weights), self.region_labels, 121, "w in-degree")
         ax.invert_yaxis()
-        if self.areas is not None:
+        if len(self.areas) == len(self.region_labels):
             ax = _plot_vector(self.areas, self.region_labels, 122, "region areas")
             ax.invert_yaxis()
         if save_flag:
@@ -156,12 +161,12 @@ class Connectivity(object):
 
 
 class Surface(object):
-    vertices = None
-    triangles = None
-    vertex_normals = None
-    triangle_normals = None
+    vertices = np.array([])
+    triangles = np.array([])
+    vertex_normals = np.array([])
+    triangle_normals = np.array([])
 
-    def __init__(self, vertices, triangles, vertex_normals=None, triangle_normals=None):
+    def __init__(self, vertices, triangles, vertex_normals=np.array([]), triangle_normals=np.array([])):
         self.vertices = vertices
         self.triangles = triangles
         self.vertex_normals = vertex_normals
@@ -172,7 +177,7 @@ class Surface(object):
              "b. triangles": self.triangles,
              "c. vertex_normals": self.vertex_normals,
              "d. triangle_normals": self.triangle_normals}
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ) )
+        return formal_repr(self, sort_dict(d))
 
     def __str__(self):
         return self.__repr__()
@@ -183,12 +188,12 @@ class Sensors(object):
     TYPE_MEG = "MEG"
     TYPE_SEEG = "SEEG"
 
-    labels = None
-    locations = None
-    orientations = None
-    s_type = None
+    labels = np.array([])
+    locations = np.array([])
+    orientations = np.array([])
+    s_type = ''
 
-    def __init__(self, labels, locations, orientations=None, s_type=TYPE_SEEG):
+    def __init__(self, labels, locations, orientations=np.array([]), s_type=TYPE_SEEG):
         self.labels = labels
         self.locations = locations
         self.orientations = orientations
@@ -209,14 +214,14 @@ class Sensors(object):
              "b. labels": reg_dict(self.labels),
              "c. locations": reg_dict(self.locations, self.labels),
              "d. orientations": reg_dict(self.orientations, self.labels) }
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ) )
+        return formal_repr(self, sort_dict(d))
 
     def __str__(self):
         return self.__repr__()
 
-    def plot(self, projection, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1, x_ticks=None,
-             y_ticks=None, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
-             figure_format=FIG_FORMAT, figure_name=''):
+    def plot(self, projection, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1,
+             x_ticks=np.array([]), y_ticks=np.array([]), show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
+             figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name=''):
 
         if not (isinstance(figure, pyplot.Figure)):
             figure = pyplot.figure(title, figsize=LARGE_SIZE)
@@ -224,9 +229,9 @@ class Sensors(object):
         n_sensors = self.number_of_sensors
         n_regions = len(region_labels)
 
-        if x_ticks is None:
+        if len(x_ticks) == 0:
             x_ticks = np.array(range(n_sensors), dtype=np.int32)
-        if y_ticks is None:
+        if len(y_ticks) == 0:
             y_ticks = np.array(range(n_regions), dtype=np.int32)
 
         cmap = pyplot.set_cmap('autumn_r')
@@ -264,7 +269,7 @@ def plot_sensor_dict(sensor_dict, region_labels, count=1, show_flag=SHOW_FLAG, s
                      figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
     # plot sensors:
     for sensors, projection in sensor_dict.sensorsSEEG.iteritems():
-        if projection is None:
+        if len(projection) == 0:
             continue
         sensors.plot(projection, region_labels, title=str(count) + " - " + sensors.s_type + " - Projection",
                                 show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,

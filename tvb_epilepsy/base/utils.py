@@ -3,14 +3,16 @@ Various transformation/computation functions will be placed here.
 """
 import os
 import logging
+import warnings
 from datetime import datetime
 from time import sleep
-import numpy
 import h5py
-import warnings
 from itertools import product
-from scipy.signal import butter, lfilter
 from collections import OrderedDict
+
+import numpy as np
+from scipy.signal import butter, lfilter
+
 from tvb_epilepsy.base.constants import FOLDER_LOGS, WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
 
 from matplotlib import use
@@ -44,7 +46,7 @@ def list_of_strings_to_string(lstr, sep=","):
 
 
 def shape_to_size(shape):
-    shape = numpy.array(shape)
+    shape = np.array(shape)
     shape = shape[shape > 0]
     return shape.prod()
 
@@ -54,7 +56,7 @@ def assert_arrays(params, shape=None, transpose=False):
 
     if shape is None or \
         not(isinstance(shape, tuple)
-            and len(shape) in range(3) and numpy.all([isinstance(s, (int, numpy.int)) for s in shape])):
+            and len(shape) in range(3) and np.all([isinstance(s, (int, np.int)) for s in shape])):
         shape = None
         shapes = [] # list of all unique shapes
         n_shapes = []   # list of all unique shapes' frequencies
@@ -65,17 +67,17 @@ def assert_arrays(params, shape=None, transpose=False):
 
     for ip in range(len(params)):
 
-        # Convert all accepted types to numpy arrays:
+        # Convert all accepted types to np arrays:
 
-        if isinstance(params[ip], numpy.ndarray):
+        if isinstance(params[ip], np.ndarray):
             pass
 
         elif isinstance(params[ip], (list, tuple)):
             # assuming a list or tuple of symbols...
-            params[ip] = numpy.array(params[ip]).astype(type(params[ip][0]))
+            params[ip] = np.array(params[ip]).astype(type(params[ip][0]))
 
-        elif isinstance(params[ip], (float, int, long, complex, numpy.number)):
-            params[ip] = numpy.array(params[ip])
+        elif isinstance(params[ip], (float, int, long, complex, np.number)):
+            params[ip] = np.array(params[ip])
 
         else:
             try:
@@ -84,11 +86,11 @@ def assert_arrays(params, shape=None, transpose=False):
                 raise ImportError("\n\nsympy import failed")
 
             if isinstance(params[ip], tuple(sympy.core.all_classes)):
-                params[ip] = numpy.array(params[ip])
+                params[ip] = np.array(params[ip])
 
             else:
                 raise ValueError("\n\nInput " + str(params[ip]) + " of type " + str(type(params[ip])) + " is not numeric, "
-                                                                                  "of type numpy.ndarray, nor Symbol")
+                                                                                  "of type np.ndarray, nor Symbol")
 
         if shape is None:
 
@@ -107,10 +109,10 @@ def assert_arrays(params, shape=None, transpose=False):
 
             # Construct a kind of histogram of all different shapes of the inputs:
 
-            ind = numpy.array([(x == params[ip].shape) for x in shapes])
+            ind = np.array([(x == params[ip].shape) for x in shapes])
 
-            if numpy.any(ind):
-                ind = numpy.where(ind)[0]
+            if np.any(ind):
+                ind = np.where(ind)[0]
                 #TODO: handle this properly
                 n_shapes[int(ind)] += 1
             else:
@@ -125,12 +127,12 @@ def assert_arrays(params, shape=None, transpose=False):
     if shape is None:
 
         # Keep only shapes of the correct size
-        ind = numpy.array([shape_to_size(s) == size for s in shapes])
-        shapes = numpy.array(shapes)[ind]
-        n_shapes = numpy.array(n_shapes)[ind]
+        ind = np.array([shape_to_size(s) == size for s in shapes])
+        shapes = np.array(shapes)[ind]
+        n_shapes = np.array(n_shapes)[ind]
 
         # Find the most frequent shape
-        ind = numpy.argmax(n_shapes)
+        ind = np.argmax(n_shapes)
         shape = tuple(shapes[ind])
 
     if transpose and len(shape) > 1:
@@ -150,9 +152,9 @@ def assert_arrays(params, shape=None, transpose=False):
             if params[ip].shape != shape:
 
                 if params[ip].size in [0, 1]:
-                    params[ip] = numpy.tile(params[ip], shape)
+                    params[ip] = np.tile(params[ip], shape)
                 else:
-                    params[ip] = numpy.reshape(params[ip], shape)
+                    params[ip] = np.reshape(params[ip], shape)
         except:
             print "\n\nwhat the fuck??"
 
@@ -169,17 +171,17 @@ def linear_scaling(x, x1, x2, y1, y2):
 
 def weighted_vector_sum(weights, vectors, normalize=True):
 
-    if isinstance(vectors, numpy.ndarray):
+    if isinstance(vectors, np.ndarray):
         vectors = list(vectors.T)
 
     if normalize:
-        weights /= numpy.sum(weights)
+        weights /= np.sum(weights)
 
     vector_sum = weights[0] * vectors[0]
     for iv in range(1, len(weights)):
         vector_sum += weights[iv] * vectors[iv]
 
-    return numpy.array(vector_sum)
+    return np.array(vector_sum)
 
 def obj_to_dict(obj):
     """
@@ -191,10 +193,10 @@ def obj_to_dict(obj):
 
     if isinstance(obj, (str, int, float)):
         return obj
-    if isinstance(obj, (numpy.float32,)):
+    if isinstance(obj, (np.float32,)):
         return float(obj)
 
-    if isinstance(obj, (numpy.ndarray)):
+    if isinstance(obj, (np.ndarray)):
         return obj.tolist()
 
     if isinstance(obj, list):
@@ -211,10 +213,10 @@ def obj_to_dict(obj):
 
 
 def vector2scalar(x):
-    if not (isinstance(x, numpy.ndarray)):
+    if not (isinstance(x, np.ndarray)):
         return x
     else:
-        y=numpy.squeeze(x)
+        y=np.squeeze(x)
     if all(y.squeeze()==y[0]):
         return y[0]
     else:
@@ -223,28 +225,28 @@ def vector2scalar(x):
 
 def reg_dict(x, lbl=None, sort=None):
     """
-    :x: a list or numpy vector 
-    :lbl: a list or numpy vector of labels
+    :x: a list or np vector 
+    :lbl: a list or np vector of labels
     :return: dictionary 
     """
 
-    if not (isinstance(x, (str, int, float, list, numpy.ndarray))):
+    if not (isinstance(x, (str, int, float, list, np.ndarray))):
         return x
     else:
         if not (isinstance(x, list)):
-            x = numpy.squeeze(x)
+            x = np.squeeze(x)
         x_no = len(x)
-        if not (isinstance(lbl, (list, numpy.ndarray))):
-            lbl = numpy.repeat('', x_no)
+        if not (isinstance(lbl, (list, np.ndarray))):
+            lbl = np.repeat('', x_no)
         else:
-            lbl = numpy.squeeze(lbl)
+            lbl = np.squeeze(lbl)
         labels_no = len(lbl)
         total_no = min(labels_no, x_no)
         if x_no <= labels_no:
             if sort=='ascend':
-                ind = numpy.argsort(x).tolist()
+                ind = np.argsort(x).tolist()
             elif sort == 'descend':
-                ind = numpy.argsort(x)
+                ind = np.argsort(x)
                 ind = ind[::-1].tolist()
             else:
                 ind = range(x_no)
@@ -254,11 +256,11 @@ def reg_dict(x, lbl=None, sort=None):
         for i in ind:
             d[str(i) + '.' + str(lbl[i])] = x[i]
         if labels_no > total_no:
-            ind_lbl = numpy.delete(numpy.array(range(labels_no)),ind).tolist()
+            ind_lbl = np.delete(np.array(range(labels_no)),ind).tolist()
             for i in ind_lbl:
                 d[str(i) + '.' + str(lbl[i])] = None
         if x_no > total_no:
-            ind_x = numpy.delete(numpy.array(range(x_no)),ind).tolist()
+            ind_x = np.delete(np.array(range(x_no)),ind).tolist()
             for i in ind_x:
                 d[str(i) + '.'] = x[i]
         return d
@@ -307,7 +309,7 @@ def dict_str(d):
 def list_of_dicts_to_dicts_of_ndarrays(lst):
     d = dict(zip(lst[0], zip(*list([d.values() for d in lst]))))
     for key, val in d.iteritems():
-        d[key] = numpy.squeeze(numpy.stack(d[key]))
+        d[key] = np.squeeze(np.stack(d[key]))
     return d
 
 
@@ -334,7 +336,7 @@ def dicts_of_lists(dictionary, n=1):
 
 def linear_index_to_coordinate_tuples(linear_index, shape):
     if len(linear_index) > 0:
-        coordinates_tuple = numpy.unravel_index(linear_index, shape)
+        coordinates_tuple = np.unravel_index(linear_index, shape)
         return zip(*[ca.flatten().tolist() for ca in coordinates_tuple])
     else:
         return []
@@ -361,55 +363,59 @@ def formal_repr(instance, attr_dict):
 def normalize_weights(weights, percentile=WEIGHTS_NORM_PERCENT):  # , max_w=1.0
     # Create the normalized connectivity weights:
 
-    normalized_w = numpy.array(weights)
-
-    # Remove diagonal elements
-    n_regions = normalized_w.shape[0]
-    normalized_w *= 1 - numpy.eye(n_regions)
-
-    # Normalize with the 95th percentile
-    # if numpy.max(normalized_w) - max_w > 1e-6:
-    normalized_w = numpy.array(normalized_w / numpy.percentile(normalized_w, percentile))
-    #    else:
-    #        normalized_w = numpy.array(weights)
-
-    # normalized_w[normalized_w > max_w] = max_w
-
-    return normalized_w
+    if len(weights) > 0:
+        normalized_w = np.array(weights)
+    
+        # Remove diagonal elements
+        n_regions = normalized_w.shape[0]
+        normalized_w *= 1 - np.eye(n_regions)
+    
+        # Normalize with the 95th percentile
+        # if np.max(normalized_w) - max_w > 1e-6:
+        normalized_w = np.array(normalized_w / np.percentile(normalized_w, percentile))
+        #    else:
+        #        normalized_w = np.array(weights)
+    
+        # normalized_w[normalized_w > max_w] = max_w
+    
+        return normalized_w
+    
+    else:
+        return np.array([])
 
 
 def calculate_in_degree(weights):
-    return numpy.expand_dims(numpy.sum(weights, axis=1), 1).T
+    return np.expand_dims(np.sum(weights, axis=1), 1).T
 
 
 def calculate_projection(sensors, connectivity):
     n_sensors = sensors.number_of_sensors
     n_regions = connectivity.number_of_regions
-    projection = numpy.zeros((n_sensors, n_regions))
-    dist = numpy.zeros((n_sensors, n_regions))
+    projection = np.zeros((n_sensors, n_regions))
+    dist = np.zeros((n_sensors, n_regions))
 
     for iS, iR in product(range(n_sensors), range(n_regions)):
-        dist[iS, iR] = numpy.sqrt(numpy.sum((sensors.locations[iS, :] - connectivity.centers[iR, :]) ** 2))
+        dist[iS, iR] = np.sqrt(np.sum((sensors.locations[iS, :] - connectivity.centers[iR, :]) ** 2))
         projection[iS, iR] = 1 / dist[iS, iR] ** 2
 
-    projection /= numpy.percentile(projection, 95)
+    projection /= np.percentile(projection, 95)
     #projection[projection > 1.0] = 1.0
     return projection
 
 
 def curve_elbow_point(vals):
 
-    vals = numpy.array(vals).flatten()
+    vals = np.array(vals).flatten()
 
-    if numpy.any(vals[0:-1] - vals[1:] < 0):
-        vals = numpy.sort(vals)
+    if np.any(vals[0:-1] - vals[1:] < 0):
+        vals = np.sort(vals)
         vals = vals[::-1]
 
-    cumsum_vals = numpy.cumsum(vals)
+    cumsum_vals = np.cumsum(vals)
 
-    grad = numpy.gradient(numpy.gradient(numpy.gradient(cumsum_vals)))
+    grad = np.gradient(np.gradient(np.gradient(cumsum_vals)))
 
-    elbow = numpy.argmax(grad)
+    elbow = np.argmax(grad)
 
     if INTERACTIVE_ELBOW_POINT:
 
@@ -455,8 +461,8 @@ def curve_elbow_point(vals):
 
             def onclick(self, event):
                 if event.inaxes != self.lines[0].axes: return
-                dist = numpy.sqrt((self.lines[0].get_xdata() - event.xdata) ** 2.0)  # + (self.lines[0].get_ydata() - event.ydata) ** 2.)
-                self.x = numpy.argmin(dist)
+                dist = np.sqrt((self.lines[0].get_xdata() - event.xdata) ** 2.0)  # + (self.lines[0].get_ydata() - event.ydata) ** 2.)
+                self.x = np.argmin(dist)
                 self.fig.canvas.stop_event_loop()
                 return
 
@@ -504,8 +510,8 @@ def set_time_scales(fs=4096.0, dt=None, time_length=1000.0, scale_time=1.0, scal
     fsAVG = fs / scale_fsavg
     monitor_period = scale_fsavg * dt
     sim_length = time_length / scale_time
-    time_length_avg = numpy.round(sim_length / monitor_period)
-    n_report_blocks = max(report_every_n_monitor_steps * numpy.round(time_length_avg / 100), 1.0)
+    time_length_avg = np.round(sim_length / monitor_period)
+    n_report_blocks = max(report_every_n_monitor_steps * np.round(time_length_avg / 100), 1.0)
 
     return dt, fsAVG, sim_length, monitor_period, n_report_blocks
 
@@ -588,7 +594,7 @@ def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrit
                 h5_file.create_dataset("/" + attribute, data=field)
                 print "\n\nString written length: ", len(h5_file['/' + attribute][()])
 
-            elif isinstance(field, numpy.ndarray):
+            elif isinstance(field, np.ndarray):
                 print "\n\nNumpy array shape:", field.shape
                 #TODO: deal with arrays of more than 2 dimensions
                 if len(field.shape) > 2:
@@ -627,7 +633,7 @@ def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrit
                 h5_file.create_dataset("/" + attribute, data=field)
                 print "\n\nString written length: ", len(h5_file['/' + attribute][()])
 
-            elif isinstance(field, numpy.ndarray):
+            elif isinstance(field, np.ndarray):
                 print "\n\nNumpy array shape:", field.shape
                 if mode == "overwrite":
                     del h5_file["/" + attribute]
@@ -731,8 +737,8 @@ def assert_equal_objects(object1, object2, attributes_dict=None):
 
             # For non numeric types
             if isinstance(field1, basestring) or isinstance(field1, list) or isinstance(field1, dict) \
-                    or (isinstance(field1, numpy.ndarray) and field1.dtype.kind in 'OSU'):
-                if numpy.any(field1 != field2):
+                    or (isinstance(field1, np.ndarray) and field1.dtype.kind in 'OSU'):
+                if np.any(field1 != field2):
                     # raise ValueError("\nOriginal and read object field "
                     #                  + attributes_dict[attribute] + " not equal!")
                     warnings.warn("\n\nOriginal and read object field "
@@ -740,10 +746,10 @@ def assert_equal_objects(object1, object2, attributes_dict=None):
                     equal = False
 
             # For numeric types
-            elif isinstance(field1, (int, float, long, complex, numpy.number, numpy.ndarray)) \
-                and not (isinstance(field1, numpy.ndarray) and field1.dtype.kind in 'OSU'):
+            elif isinstance(field1, (int, float, long, complex, np.number, np.ndarray)) \
+                and not (isinstance(field1, np.ndarray) and field1.dtype.kind in 'OSU'):
                 # TODO: handle better accuracy differences and complex numbers...
-                if numpy.any(numpy.float32(field1) - numpy.float32(field2) > 0):
+                if np.any(np.float32(field1) - np.float32(field2) > 0):
                     # raise ValueError("\nOriginal and read object field "
                     #                  + attributes_dict[attribute] + " not equal!")
                     warnings.warn("\n\nOriginal and read object field "
@@ -753,7 +759,7 @@ def assert_equal_objects(object1, object2, attributes_dict=None):
             else:
                 warnings.warn("\n\nComparing str(objects) for field "
                               + attributes_dict[attribute] + " because it is of unknown type!")
-                if numpy.any(str(field1) != str(field2)):
+                if np.any(str(field1) != str(field2)):
                     # raise ValueError("\nOriginal and read object field "
                     #                  + attributes_dict[attribute] + " not equal!")
                     warnings.warn("\n\nOriginal and read object field "
@@ -764,7 +770,7 @@ def assert_equal_objects(object1, object2, attributes_dict=None):
             try:
                 warnings.warn("\n\nComparing str(objects) for field "
                               + attributes_dict[attribute] + " because there was an error!")
-                if numpy.any(str(field1) != str(field2)):
+                if np.any(str(field1) != str(field2)):
                     # raise ValueError("\nOriginal and read object field "
                     #                  + attributes_dict[attribute] + " not equal!")
                     warnings.warn("\n\nOriginal and read object field "

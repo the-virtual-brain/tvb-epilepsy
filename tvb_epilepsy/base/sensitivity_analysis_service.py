@@ -43,10 +43,11 @@ class SensitivityAnalysisService(object):
 
             self.input_bounds.append(input.get("bounds", [samples.min(), samples.max()]))
 
-        if np.all(np.array(self.n_samples) == self.n_samples[0]):
-            self.n_samples = self.n_samples[0]
-        else:
-            raise ValueError("Not all input parameters have equal number of samples!: " + str(self.n_samples))
+        if len(self.n_samples) > 0:
+            if np.all(np.array(self.n_samples) == self.n_samples[0]):
+                self.n_samples = self.n_samples[0]
+            else:
+                raise ValueError("Not all input parameters have equal number of samples!: " + str(self.n_samples))
 
         self.input_samples = np.array(self.input_samples).T
 
@@ -77,7 +78,8 @@ class SensitivityAnalysisService(object):
             else:
                 self.output_names += output["names"]
 
-        self.output_values = np.vstack(self.output_values)
+        if len(self.output_values) > 0:
+            self.output_values = np.vstack(self.output_values)
 
         self.problem = {}
         self.other_parameters = {}

@@ -17,26 +17,18 @@ bool_inf_nan_none_empty.update({"True": True})
 bool_inf_nan_none_empty.update({"False": False})
 bool_inf_nan_none_empty.update({"inf": np.inf})
 bool_inf_nan_none_empty.update({"nan": np.nan})
-bool_inf_nan_none_empty.update({"None": None})
+# bool_inf_nan_none_empty.update({"None": None})
 bool_inf_nan_none_empty.update({"''": ""})
 bool_inf_nan_none_empty.update({"[]": []})
 bool_inf_nan_none_empty.update({"{}": {}})
 bool_inf_nan_none_empty.update({"()": ()})
 
-class_dict = {"''": OrderedDict(),
-              "dict": OrderedDict(),
-              "list:": [],
-              "tuple": [],
-              "DiseaseHypothesis": DiseaseHypothesis(Connectivity()),
-              "ModelConfigurationService": ModelConfigurationService(1),
-              "ModelConfiguration": ModelConfiguration(),
-              "Sampling_Service": Sampling_Service(),
-              "Stochastic_Sampling_Service": Stochastic_Sampling_Service(),
-              "Deterministic_Service": Deterministic_Service(),
-              "LSA_Service": LSA_Service(),
-              "PSE_Service": PSA_Service(),
-              "SA_Service": SA_Service([],[]),
-              }
+class_dict = {"list": list(), "tuple": tuple(), "dict": OrderedDict()}
+class_list = ["list", "tuple", "dict",  "Connectivity", "Surface", "Sensors", "Head", "DiseaseHypothesis",
+                 "ModelConfigurationService", "ModelConfiguration", "LSAService", "SamplingService", 
+                 "DeterministicSamplingService", "StochasticSamplingService", "PSEService", 
+                 "SensitivityAnalysisService"]
+
 class H5Model(object):
 
     def __init__(self, datasets_dict, metadata_dict):
@@ -81,7 +73,9 @@ class H5Model(object):
 
         h5_file.close()
 
-    def convert_from_h5_model(self, obj=dict()):
+    def convert_from_h5_model(self, obj=dict(), children_dict=class_dict):
+
+        children_dict.update(getattr(obj, "children_dict", {}))
 
         output = obj.__class__.__name__
         if np.in1d(output, ["tuple", "list"]):
@@ -98,7 +92,7 @@ class H5Model(object):
             if key[0] == "/":
                 key = key.split('/', 1)[1]
 
-            build_hierarchical_object_recursively(obj, key, value)
+            build_hierarchical_object_recursively(obj, key, value, children_dict)
 
         if np.in1d(output, ["tuple", "list"]):
             obj = dict_to_list_or_tuple(obj, output)
@@ -106,9 +100,9 @@ class H5Model(object):
         return obj
 
 
-def convert_to_h5_model(obj, name=""):
+def convert_to_h5_model(obj):
     h5_model = H5Model(OrderedDict(), OrderedDict())
-    object_to_h5_model_recursively(h5_model, obj, name="")
+    object_to_h5_model_recursively(h5_model, obj, "")
     return h5_model
 
 
@@ -118,10 +112,13 @@ def object_to_h5_model_recursively(h5_model, obj, name=""):
     name_empty = (len(name) == 0)
     class_name = name_empty * obj.__class__.__name__ + name
 
+    if obj is None:
+        h5_model.add_or_update_metadata_attribute(class_name, "None")
+
     for key, val in bool_inf_nan_none_empty.iteritems():
-        # Bool, inf, nan, None, or empty list/tuple/dict/str
+        # Bool, inf, nan, or empty list/tuple/dict/str
         try:
-            if obj is val or all(obj == val):
+            if all(obj == val):
                 h5_model.add_or_update_metadata_attribute(class_name, key)
                 return
         except:
@@ -140,26 +137,31 @@ def object_to_h5_model_recursively(h5_model, obj, name=""):
         # In any other case, make sure object is/becomes an alphabetically ordered dictionary:
         if not(isinstance(obj, dict)):
             try:
-                obj = vars(obj)
-                for class_type in class_dict.keys():
-                    if isinstance(obj, class_type):
+                for class_type in class_list:
+                    if obj.__class__.__name__ == class_type:
                         name = name + ":" + obj.__class__.__name__
+                        break
+                if isinstance(obj, (list, tuple)):
+                    obj = list_or_tuple_to_dict(obj)
+                else:
+                    obj = sort_dict(vars(obj))
             except:
                 logger.info("Object " + name + (len(name) > 0) * "/" + key + "cannot be assigned to h5_model because it"
                                                                              "is has no __dict__ property")
                 return
-
-        obj = sort_dict(obj)
+        else:
+            obj = sort_dict(obj)
 
         for key, value in obj.iteritems():
 
             key = name + (len(name) > 0) * "/" + key
 
-            # call recursively...
-            object_to_h5_model_recursively(h5_model, value, key)
+            if key.find("children_dict") < 0 :
+                # call recursively...
+                object_to_h5_model_recursively(h5_model, value, key)
 
 
-def build_hierarchical_object_recursively(obj, key, value):
+def build_hierarchical_object_recursively(obj, key, value, children_dict=class_dict):
 
     if isinstance(obj, dict):
         set_field = lambda obj, key, value: obj.update({key: value})
@@ -208,7 +210,7 @@ def build_hierarchical_object_recursively(obj, key, value):
                 # Check if it exists already:
                 if child_object is None:
                     # and create it if not:
-                    for class_type, class_instance in class_dict.iteritems():
+                    for class_type, class_instance in children_dict.iteritems():
                         if class_name == class_type:
                             child_object = class_instance
                     if isinstance(child_object, (list, tuple)):
@@ -228,7 +230,8 @@ def build_hierarchical_object_recursively(obj, key, value):
                                    " still not created! Creating an Ordereddict() by default!")
                     child_object = OrderedDict()
                 # ...and continue to further specify it...
-                build_hierarchical_object_recursively(child_object, child_key, value)
+                children_dict.update(getattr(child_object, "children_dict", {}))
+                build_hierarchical_object_recursively(child_object, child_key, value, children_dict)
                 if class_name == "tuple":
                     child_object = tuple(child_object)
                 set_field(obj, name, child_object)
@@ -274,6 +277,7 @@ if __name__ == "__main__":
 
     from tvb_epilepsy.base.constants import FOLDER_RES, DATA_MODE, DATA_CUSTOM, TVB
     from tvb_epilepsy.base.utils import assert_equal_objects
+    from tvb_epilepsy.base.model_vep import Connectivity
     from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 
     if DATA_MODE is TVB:
@@ -282,6 +286,9 @@ if __name__ == "__main__":
         from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
 
     # -------------------------------Reading data-----------------------------------
+
+    empty_connectivity = Connectivity("", np.array([]), np.array([]))
+    empty_hypothesis = DiseaseHypothesis(deepcopy(empty_connectivity))
 
     data_folder = os.path.join(DATA_CUSTOM, 'Head')
 
@@ -304,20 +311,25 @@ if __name__ == "__main__":
                                  connectivity_hypothesis={})
 
     obj = {"hyp_x0_E": hyp_x0_E,
-            "dict": {"list0": ["l00", 1, {"d020": "a", "d021": [True, False, np.inf, np.nan, None, [], (), {}, ""]}]}}
+            "test_dict":
+                {"list0": ["l00", 1, {"d020": "a", "d021": [True, False, np.inf, np.nan, None, [], (), {}, ""]}]}}
     logger.info("\n\nOriginal object:\n" + str(obj))
 
     logger.info("\n\nWriting object to h5 file...")
-    convert_to_h5_model(obj).write_to_h5(FOLDER_RES, "test_h5_model.h5")
+    h5_model = convert_to_h5_model(obj)
 
-    obj1 = read_h5_model(FOLDER_RES + "/test_h5_model.h5").convert_from_h5_model(deepcopy(obj))
+    h5_model.write_to_h5(FOLDER_RES, "test_h5_model.h5")
+
+    h5_model1 = read_h5_model(FOLDER_RES + "/test_h5_model.h5")
+    obj1 = h5_model1.convert_from_h5_model(deepcopy(obj))
+
     if assert_equal_objects(obj, obj1):
-        print "\n\nRead identical object:\n" + str(obj1)
         logger.info("\n\nRead identical object:\n" + str(obj1))
 
-    obj2 = read_h5_model(FOLDER_RES + "/test_h5_model.h5").convert_from_h5_model()
+    h5_model2 = read_h5_model(FOLDER_RES + "/test_h5_model.h5")
+    obj2 = h5_model2.convert_from_h5_model(children_dict={"DiseaseHypothesis": deepcopy(empty_hypothesis)})
+
     if assert_equal_objects(obj, obj2):
-        print "\n\nRead object as dictionary:\n" + str(obj2)
         logger.info("\n\nRead object as dictionary:\n" + str(obj2))
 
 

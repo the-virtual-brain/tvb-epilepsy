@@ -14,6 +14,8 @@ from tvb_epilepsy.base.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.constants import FOLDER_FIGURES, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.plot_tools import plot_in_columns
 
+from model_vep import Connectivity
+
 # NOTES:
 #  For the moment a hypothesis concerns the excitability and/or epileptogenicity of each brain region,
 #  and/or scalings of specific connectivity weights.
@@ -46,6 +48,8 @@ class DiseaseHypothesis(object):
 
         self.propagation_indices = np.array(propagation_indices)
         self.propagation_strenghts = np.array(propagation_strenghts)
+
+        self.children_dict = {"Connectivity": Connectivity("", np.array([]), np.array([]))}
 
     def __repr__(self):
         d = {"01. Name": self.name,

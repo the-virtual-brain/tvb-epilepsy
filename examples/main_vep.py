@@ -8,8 +8,8 @@ from copy import deepcopy
 
 import numpy
 
-from tvb_epilepsy.base.constants import FOLDER_RES, FOLDER_FIGURES, SAVE_FLAG, SHOW_FLAG, SIMULATION_MODE, \
-    TVB, DATA_MODE, VOIS, DATA_CUSTOM, X0_DEF, E_DEF
+from tvb_epilepsy.base.constants import FOLDER_RES, SIMULATION_MODE, TVB, DATA_MODE, VOIS, DATA_CUSTOM, X0_DEF, E_DEF, \
+                                        FOLDER_FIGURES, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.utils import assert_equal_objects
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model_configuration_service import ModelConfigurationService
