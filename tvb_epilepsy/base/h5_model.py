@@ -23,7 +23,20 @@ bool_inf_nan_none_empty.update({"[]": []})
 bool_inf_nan_none_empty.update({"{}": {}})
 bool_inf_nan_none_empty.update({"()": ()})
 
-
+class_dict = {"''": OrderedDict(),
+              "dict": OrderedDict(),
+              "list:": [],
+              "tuple": [],
+              "DiseaseHypothesis": DiseaseHypothesis(Connectivity()),
+              "ModelConfigurationService": ModelConfigurationService(1),
+              "ModelConfiguration": ModelConfiguration(),
+              "Sampling_Service": Sampling_Service(),
+              "Stochastic_Sampling_Service": Stochastic_Sampling_Service(),
+              "Deterministic_Service": Deterministic_Service(),
+              "LSA_Service": LSA_Service(),
+              "PSE_Service": PSA_Service(),
+              "SA_Service": SA_Service([],[]),
+              }
 class H5Model(object):
 
     def __init__(self, datasets_dict, metadata_dict):
@@ -125,13 +138,12 @@ def object_to_h5_model_recursively(h5_model, obj, name=""):
     else:
 
         # In any other case, make sure object is/becomes an alphabetically ordered dictionary:
-
-        if isinstance(obj, (list, tuple)):
-            obj = list_or_tuple_to_dict(obj)
-
-        elif not(isinstance(obj, dict)):
+        if not(isinstance(obj, dict)):
             try:
                 obj = vars(obj)
+                for class_type in class_dict.keys():
+                    if isinstance(obj, class_type):
+                        name = name + ":" + obj.__class__.__name__
             except:
                 logger.info("Object " + name + (len(name) > 0) * "/" + key + "cannot be assigned to h5_model because it"
                                                                              "is has no __dict__ property")
@@ -177,21 +189,49 @@ def build_hierarchical_object_recursively(obj, key, value):
     else:
         name = key.split('/', 1)[0]
         try:
+
+           # value is not a container object, or it is an empty container object
             if name == key:
+                # just assign it:
                 set_field(obj, key, value)
                 return 1
+
             else:
                 child_key = key.split('/', 1)[1]
-                child_object = get_field(obj, name)
+                # Check if the child object is a one of the tvb-epilepsy module's classes, a list or dict:
+                class_name = name.split(':', 1)[1]
+                if class_name == name:
+                    class_name = ""
+                else:
+                    name = key.split(":", 1)[0]
+                child_object = deepcopy(get_field(obj, name))
+                # Check if it exists already:
                 if child_object is None:
-                    grandchild_name = child_key.split('/', 1)[0]
-                    if grandchild_name.isdigit():
-                        child_object = list()
-                    else:
-                        child_object = dict()
-                    set_field(obj, name, child_object)
+                    # and create it if not:
+                    for class_type, class_instance in class_dict.iteritems():
+                        if class_name == class_type:
+                            child_object = class_instance
+                    if isinstance(child_object, (list, tuple)):
+                        # if it is a list or tuple...
+                        grandchild_name = child_key.split('/', 1)[0]
+                        # but its own children names are not strings of integers:
+                        if not(grandchild_name.isdigit()):
+                            # convert to a dict
+                            child_object = list_or_tuple_to_dict(child_object)
+                        # if it is a tuple...
+                        if isinstance(child_object, tuple):
+                            # ...convert to list that is mutable
+                            child_object = list(child_object)
+                # If still not created, make a dict() by default:
+                if child_object is None:
+                    logger.warning("\n Child object " + str(name) +
+                                   " still not created! Creating an Ordereddict() by default!")
+                    child_object = OrderedDict()
+                # ...and continue to further specify it...
                 build_hierarchical_object_recursively(child_object, child_key, value)
-
+                if class_name == "tuple":
+                    child_object = tuple(child_object)
+                set_field(obj, name, child_object)
         except:
             warnings.warn("Failed to set attribute " + str(key) + "of object " + obj.__class__.__name__ + "!")
 
@@ -230,14 +270,41 @@ def return_h5_dataset_paths_recursively(group):
 
 if __name__ == "__main__":
 
-    from tvb_epilepsy.base.constants import FOLDER_RES
-    from tvb_epilepsy.base.utils import assert_equal_objects
-
     from copy import deepcopy
 
-    obj = {"h5_model": H5Model({"a/b": np.array([1,2,3]), "a/c": np.array([1,2,3])},
-                                  {"list0": ["l00", 1, {"d020": "a", "d021": []}]}),
-              "dict": {"list0": ["l00", 1, {"d020": "a", "d021": [True, False, np.inf, np.nan, None, [], (), {}, ""]}]}}
+    from tvb_epilepsy.base.constants import FOLDER_RES, DATA_MODE, DATA_CUSTOM, TVB
+    from tvb_epilepsy.base.utils import assert_equal_objects
+    from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
+
+    if DATA_MODE is TVB:
+        from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
+    else:
+        from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
+
+    # -------------------------------Reading data-----------------------------------
+
+    data_folder = os.path.join(DATA_CUSTOM, 'Head')
+
+    reader = Reader()
+
+    logger.info("Reading from: " + data_folder)
+    head = reader.read_head(data_folder)
+
+    # # Manual definition of hypothesis...:
+    x0_indices = [20]
+    x0_values = [0.9]
+    e_indices = [70]
+    e_values = [0.9]
+    disease_values = x0_values + e_values
+    disease_indices = x0_indices + e_indices
+
+    # This is an example of x0 mixed Excitability and Epileptogenicity Hypothesis:
+    hyp_x0_E = DiseaseHypothesis(head.connectivity, excitability_hypothesis={tuple(x0_indices): x0_values},
+                                 epileptogenicity_hypothesis={tuple(e_indices): e_values},
+                                 connectivity_hypothesis={})
+
+    obj = {"hyp_x0_E": hyp_x0_E,
+            "dict": {"list0": ["l00", 1, {"d020": "a", "d021": [True, False, np.inf, np.nan, None, [], (), {}, ""]}]}}
     logger.info("\n\nOriginal object:\n" + str(obj))
 
     logger.info("\n\nWriting object to h5 file...")
