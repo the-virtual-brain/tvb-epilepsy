@@ -12,16 +12,13 @@ from tvb_epilepsy.base.utils import initialize_logger, ensure_unique_file, chang
 
 logger = initialize_logger(__name__)
 
-bool_inf_nan_none_empty = OrderedDict()
-bool_inf_nan_none_empty.update({"True": True})
-bool_inf_nan_none_empty.update({"False": False})
-bool_inf_nan_none_empty.update({"inf": np.inf})
-bool_inf_nan_none_empty.update({"nan": np.nan})
+bool_inf_nan_empty = OrderedDict()
+bool_inf_nan_empty.update({"True": True})
+bool_inf_nan_empty.update({"False": False})
+bool_inf_nan_empty.update({"inf": np.inf})
+bool_inf_nan_empty.update({"nan": np.nan})
 # bool_inf_nan_none_empty.update({"None": None})
-bool_inf_nan_none_empty.update({"''": ""})
-bool_inf_nan_none_empty.update({"[]": []})
-bool_inf_nan_none_empty.update({"{}": {}})
-bool_inf_nan_none_empty.update({"()": ()})
+bool_inf_nan_empty.update({"''": ""})
 
 class_dict = {"list": list(), "tuple": tuple(), "dict": OrderedDict()}
 class_list = ["list", "tuple", "dict",  "Connectivity", "Surface", "Sensors", "Head", "DiseaseHypothesis",
@@ -108,21 +105,14 @@ def convert_to_h5_model(obj):
 
 def object_to_h5_model_recursively(h5_model, obj, name=""):
 
-    # Use in some cases the name of the class as key, when name is empty string. Otherwise, class+name = name.
+    # Use in some cases the name of the class as key, when name is empty string. Otherwise, class_name = name.
     name_empty = (len(name) == 0)
     class_name = name_empty * obj.__class__.__name__ + name
 
     if obj is None:
         h5_model.add_or_update_metadata_attribute(class_name, "None")
 
-    for key, val in bool_inf_nan_none_empty.iteritems():
-        # Bool, inf, nan, or empty list/tuple/dict/str
-        try:
-            if all(obj == val):
-                h5_model.add_or_update_metadata_attribute(class_name, key)
-                return
-        except:
-            continue
+
 
     if isinstance(obj, (float, int, long, complex, str, np.ndarray)):
 
@@ -134,23 +124,51 @@ def object_to_h5_model_recursively(h5_model, obj, name=""):
 
     else:
 
+        for key, val in bool_inf_nan_empty.iteritems():
+            # Bool, inf, nan, or empty list/tuple/dict/str
+            try:
+                if all(obj == val):
+                    h5_model.add_or_update_metadata_attribute(class_name, key)
+                    return
+            except:
+                continue
+
         # In any other case, make sure object is/becomes an alphabetically ordered dictionary:
         if not(isinstance(obj, dict)):
+
             try:
+
                 for class_type in class_list:
                     if obj.__class__.__name__ == class_type:
                         name = name + ":" + obj.__class__.__name__
                         break
+
                 if isinstance(obj, (list, tuple)):
+                    try:
+                        # empty list or tuple get into metadata
+                        if len(obj) == 0:
+                            h5_model.add_or_update_metadata_attribute(name, key)
+                            return
+                        temp = np.array(obj)
+                        # those that can be converted to np arrays get in datasets
+                        if temp.dtype != "O":
+                            h5_model.add_or_update_datasets_attribute(name, temp)
+                            return
+                    except:
+                        pass
+                    # the rest are converted to dict
                     obj = list_or_tuple_to_dict(obj)
+
+                elif isinstance(obj, dict):
+                    obj = sort_dict(obj)
+
                 else:
                     obj = sort_dict(vars(obj))
+
             except:
                 logger.info("Object " + name + (len(name) > 0) * "/" + key + "cannot be assigned to h5_model because it"
                                                                              "is has no __dict__ property")
                 return
-        else:
-            obj = sort_dict(obj)
 
         for key, value in obj.iteritems():
 
@@ -177,10 +195,10 @@ def build_hierarchical_object_recursively(obj, key, value, children_dict=class_d
 
     # Check whether value is an inf, nan, None, bool, or empty list/dict/tuple/str value
     try:
-        bool_inf_nan_none_empty_value = bool_inf_nan_none_empty.get(value, "skip_bool_inf_nan_none_empty_value")
-        if bool_inf_nan_none_empty_value != "skip_bool_inf_nan_none_empty_value":
-            set_field(obj, key, bool_inf_nan_none_empty_value)
-        return
+        bool_inf_nan_empty_value = bool_inf_nan_empty.get(value, "skip_bool_inf_nan_empty_value")
+        if bool_inf_nan_empty_value != "skip_bool_inf_nan_empty_value":
+            set_field(obj, key, bool_inf_nan_empty_value)
+            return
     except:
         pass
 
@@ -189,23 +207,30 @@ def build_hierarchical_object_recursively(obj, key, value, children_dict=class_d
         set_field(obj, key, value)
 
     else:
-        name = key.split('/', 1)[0]
+
+        this_name = key.split('/', 1)[0]
+        split_name = this_name.split(':')
+        if len(split_name) == 2:
+            name = split_name[0]
+            class_name = split_name[1]
+        else:
+            class_name = ""
+            name = this_name
+
         try:
 
            # value is not a container object, or it is an empty container object
-            if name == key:
+            if this_name == key:
                 # just assign it:
-                set_field(obj, key, value)
+                if np.in1d(class_name, ["tuple", "list"]) and isinstance(value, np.ndarray):
+                    value = value.tolist()
+                    if class_name == "tuple":
+                        value = tuple(value)
+                set_field(obj, name, value)
                 return 1
 
             else:
                 child_key = key.split('/', 1)[1]
-                # Check if the child object is a one of the tvb-epilepsy module's classes, a list or dict:
-                class_name = name.split(':', 1)[1]
-                if class_name == name:
-                    class_name = ""
-                else:
-                    name = key.split(":", 1)[0]
                 child_object = deepcopy(get_field(obj, name))
                 # Check if it exists already:
                 if child_object is None:
@@ -236,7 +261,7 @@ def build_hierarchical_object_recursively(obj, key, value, children_dict=class_d
                     child_object = tuple(child_object)
                 set_field(obj, name, child_object)
         except:
-            warnings.warn("Failed to set attribute " + str(key) + "of object " + obj.__class__.__name__ + "!")
+            warnings.warn("Failed to set attribute " + str(key) + " of object " + obj.__class__.__name__ + "!")
 
 
 def read_h5_model(path):
@@ -288,7 +313,7 @@ if __name__ == "__main__":
     # -------------------------------Reading data-----------------------------------
 
     empty_connectivity = Connectivity("", np.array([]), np.array([]))
-    empty_hypothesis = DiseaseHypothesis(deepcopy(empty_connectivity))
+    empty_hypothesis = DiseaseHypothesis(empty_connectivity)
 
     data_folder = os.path.join(DATA_CUSTOM, 'Head')
 
@@ -325,12 +350,16 @@ if __name__ == "__main__":
 
     if assert_equal_objects(obj, obj1):
         logger.info("\n\nRead identical object:\n" + str(obj1))
+    else:
+        logger.info("\n\nComparison failed!:\n" + str(obj1))
 
     h5_model2 = read_h5_model(FOLDER_RES + "/test_h5_model.h5")
-    obj2 = h5_model2.convert_from_h5_model(children_dict={"DiseaseHypothesis": deepcopy(empty_hypothesis)})
+    obj2 = h5_model2.convert_from_h5_model(children_dict={"DiseaseHypothesis": empty_hypothesis})
 
     if assert_equal_objects(obj, obj2):
         logger.info("\n\nRead object as dictionary:\n" + str(obj2))
+    else:
+        logger.info("\n\nComparison failed!:\n" + str(obj2))
 
 
 

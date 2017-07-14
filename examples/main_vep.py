@@ -6,11 +6,12 @@ import warnings
 
 from copy import deepcopy
 
-import numpy
+import numpy as np
 
 from tvb_epilepsy.base.constants import FOLDER_RES, SIMULATION_MODE, TVB, DATA_MODE, VOIS, DATA_CUSTOM, X0_DEF, E_DEF, \
                                         FOLDER_FIGURES, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.utils import assert_equal_objects
+from tvb_epilepsy.base.model_vep import Connectivity
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.base.lsa_service import LSAService
@@ -50,7 +51,7 @@ def prepare_ts_and_seeg_h5_file(folder, filename, model, projections, vois_ts_di
                                 dt):
     # High pass filter, and compute SEEG:
     if isinstance(model, EpileptorDP2D):
-        raw_data = numpy.dstack(
+        raw_data = np.dstack(
             [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x1"]])
         lfp_data = vois_ts_dict["x1"]
 
@@ -64,7 +65,7 @@ def prepare_ts_and_seeg_h5_file(folder, filename, model, projections, vois_ts_di
         else:
             lfp_data = vois_ts_dict["lfp"]
 
-        raw_data = numpy.dstack(
+        raw_data = np.dstack(
             [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x2"]])
 
         for idx_proj, proj in enumerate(projections):
@@ -114,10 +115,10 @@ def main_vep(test_write_read=False):
     if not isinstance(reader, CustomReader):
         reader = CustomReader()
     disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
-    disease_indices, = numpy.where(disease_values > numpy.min([X0_DEF, E_DEF]))
+    disease_indices, = np.where(disease_values > np.min([X0_DEF, E_DEF]))
     disease_values = disease_values[disease_indices]
     if disease_values.size > 1:
-        inds_split = numpy.ceil(disease_values.size * 1.0 / 2).astype("int")
+        inds_split = np.ceil(disease_values.size * 1.0 / 2).astype("int")
         x0_indices = disease_indices[:inds_split].tolist()
         e_indices = disease_indices[inds_split:].tolist()
         x0_values = disease_values[:inds_split].tolist()
@@ -132,8 +133,8 @@ def main_vep(test_write_read=False):
     n_x0 = len(x0_indices)
     n_e = len(e_indices)
     n_disease = len(disease_indices)
-    all_regions_indices = numpy.array(range(head.number_of_regions))
-    healthy_indices = numpy.delete(all_regions_indices, disease_indices).tolist()
+    all_regions_indices = np.array(range(head.number_of_regions))
+    healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
     n_healthy = len(healthy_indices)
 
 
@@ -288,8 +289,8 @@ def main_vep(test_write_read=False):
             logger.info("Time: %s - %s", scale_time * ttavg[0], scale_time * ttavg[-1])
             logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
 
-            time = scale_time * numpy.array(ttavg, dtype='float32')
-            sampling_time = numpy.min(numpy.diff(time))
+            time = scale_time * np.array(ttavg, dtype='float32')
+            sampling_time = np.min(np.diff(time))
 
             vois_ts_dict = prepare_vois_ts_dict(vois, tavg_data)
 
@@ -307,6 +308,9 @@ def main_vep(test_write_read=False):
             # savemat(os.path.join(FOLDER_RES, hypothesis.name + "_ts.mat"), vois_ts_dict)
 
         if test_write_read:
+
+            hypothesis_template = DiseaseHypothesis(Connectivity("", np.array([]), np.array([])))
+
             logger.info("Written and read model configuration services are identical?: "+
                         assert_equal_objects(model_configuration_service,
                                  read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_model_config_service.h5")).
@@ -323,6 +327,10 @@ def main_vep(test_write_read=False):
                         assert_equal_objects(lsa_hypothesis,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
                                  convert_from_h5_model(obj=deepcopy(lsa_hypothesis))))
+            logger.info("Written and read model configuration services are identical?: " +
+                        assert_equal_objects(lsa_hypothesis,
+                                             read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
+                                             convert_from_h5_model(children_dict=hypothesis_template)))
             logger.info("Written and read model configuration services are identical?: " +
                         assert_equal_objects(pse_results,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")).

@@ -63,12 +63,11 @@ class DiseaseHypothesis(object):
              "08. Connectivity disease values": self.w_values,
              "09. Propagation indices": self.propagation_indices,
              }
-
         if len(self.propagation_indices):
             d.update({"10. Propagation strengths of indices": self.propagation_strenghts[self.propagation_indices]})
         else:
             d.update({"10. Propagation strengths of indices": self.propagation_strenghts})
-
+        # d.update({"11. Connectivity": str(self.connectivity)})
         return formal_repr(self, d)
 
     def __str__(self):
