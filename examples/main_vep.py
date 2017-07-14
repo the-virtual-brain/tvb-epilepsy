@@ -272,7 +272,7 @@ def main_vep(test_write_read=False):
         sim.config_simulation()
         ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
 
-        convert_to_h5_model(sim).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")
+        convert_to_h5_model(sim.simulation_settings).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")
 
         if not status:
             warnings.warn("\nSimulation failed!")
@@ -344,9 +344,9 @@ def main_vep(test_write_read=False):
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_LSA_results.h5")).
                                  convert_from_h5_model()))
             logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(sim,
+                        assert_equal_objects(sim.simulation_settings,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")).
-                                 convert_from_h5_model(obj=deepcopy(sim))))
+                                 convert_from_h5_model(obj=deepcopy(sim.simulation_settings))))
 
 
 
