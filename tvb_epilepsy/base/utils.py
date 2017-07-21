@@ -5,7 +5,6 @@ import os
 import logging
 import warnings
 from datetime import datetime
-from time import sleep
 import h5py
 from itertools import product
 from collections import OrderedDict
@@ -36,6 +35,32 @@ def initialize_logger(name, target_folder=FOLDER_LOGS):
     fh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     logger.addHandler(fh)
     return logger
+
+
+def warning(msg, logger=None, print_warning=True):
+    msg = "\n\n" + msg
+    if logger is not None:
+        logger.warning(msg)
+    if print_warning:
+        warnings.warn(msg)
+
+
+def raise_value_error(msg, logger=None):
+    if logger is not None:
+        logger.error("\n\nValueError: " + msg)
+    raise ValueError(msg)
+
+
+def raise_import_error(msg, logger=None):
+    if logger is not None:
+        logger.error("\n\nImportError: " + msg)
+    raise ImportError(msg)
+
+
+def raise_not_implemented_error(msg, logger=None):
+    if logger is not None:
+        logger.error("\n\nNotImplementedError: " + msg)
+    raise NotImplementedError(msg)
 
 
 def list_of_strings_to_string(lstr, sep=","):
@@ -83,13 +108,13 @@ def assert_arrays(params, shape=None, transpose=False):
             try:
                 import sympy
             except:
-                raise ImportError("\n\nsympy import failed")
+                raise_import_error("sympy import failed")
 
             if isinstance(params[ip], tuple(sympy.core.all_classes)):
                 params[ip] = np.array(params[ip])
 
             else:
-                raise ValueError("\n\nInput " + str(params[ip]) + " of type " + str(type(params[ip])) + " is not numeric, "
+                raise_value_error("Input " + str(params[ip]) + " of type " + str(type(params[ip])) + " is not numeric, "
                                                                                   "of type np.ndarray, nor Symbol")
 
         if shape is None:
@@ -99,8 +124,7 @@ def assert_arrays(params, shape=None, transpose=False):
             if params[ip].size != size:
 
                 if size > 1 and params[ip].size > 1:
-
-                    raise ValueError("\n\nInputs are of at least two distinct sizes > 1")
+                    raise_value_error("Inputs are of at least two distinct sizes > 1")
 
                 elif params[ip].size > size:
 
@@ -121,8 +145,7 @@ def assert_arrays(params, shape=None, transpose=False):
         else:
 
             if params[ip].size > size:
-
-                raise ValueError("\n\nAt least one input is of a greater size than the one given!")
+                raise_value_error("At least one input is of a greater size than the one given!")
 
     if shape is None:
 
@@ -156,7 +179,7 @@ def assert_arrays(params, shape=None, transpose=False):
                 else:
                     params[ip] = np.reshape(params[ip], shape)
         except:
-            print "\n\nwhat the fuck??"
+            print("\n\nwhat the fuck??")
 
     if len(params) == 1:
         return params[0]
@@ -291,9 +314,9 @@ def set_list_item_by_reference_safely(ind, item, lst):
      lst.__setitem__(ind, item)
 
 
-def get_list_or_tuple_item_safely(object, key):
+def get_list_or_tuple_item_safely(obj, key):
     try:
-        return object[int(key)]
+        return obj[int(key)]
     except:
         return None
 
@@ -405,6 +428,8 @@ def calculate_projection(sensors, connectivity):
 
 def curve_elbow_point(vals):
 
+    logger = initialize_logger(__name__)
+
     vals = np.array(vals).flatten()
 
     if np.any(vals[0:-1] - vals[1:] < 0):
@@ -471,9 +496,9 @@ def curve_elbow_point(vals):
 
         if click_point.x is not None:
             elbow = click_point.x
-            print "\n\nmanual selection: ", elbow
+            logger.info("\nmanual selection: " + str(elbow))
         else:
-            print "\n\nautomatic selection: ", elbow
+            logger.info("\nautomatic selection: " + str(elbow))
 
         return elbow
 
@@ -559,107 +584,108 @@ def write_metadata(meta_dict, h5_file, key_date, key_version, path="/"):
 
 
 # Depreciated since prepare_h5_model and write_h5_model can handle dictionaries (even recursively)...
-def write_object_to_h5_file(object, h5_file, attributes_dict=None,  add_overwrite_fields_dict=None, keys=None):
+def write_object_to_h5_file(obj, h5_file, attributes_dict=None,  add_overwrite_fields_dict=None, keys=None,
+                            logger=None):
 
     if isinstance(h5_file, basestring):
-        print "\n\nWriting to: ", h5_file
+        logger.info("\nWriting to: " + h5_file)
         h5_file = h5py.File(h5_file, 'a', libver='latest')
         if isinstance(keys, dict):
             write_metadata(keys, h5_file, keys["date"], keys["version"], path="/")
 
-    if isinstance(object, dict):
-        get_field = lambda object, key: object[key]
+    if isinstance(obj, dict):
+        get_field = lambda obj, key: obj[key]
         if not(isinstance(attributes_dict, dict)):
             attributes_dict = dict()
-            for key in object.keys():
+            for key in obj.keys():
                 attributes_dict.update({key: key})
     else:
-        get_field = lambda object, attribute: getattr(object, attribute)
+        get_field = lambda obj, attribute: getattr(obj, attribute)
         if not(isinstance(attributes_dict, dict)):
             attributes_dict = dict()
-            for key in object.__dict__.keys():
+            for key in obj.__dict__.keys():
                 attributes_dict.update({key: key})
 
     for attribute in attributes_dict:
 
-        field = get_field(object, attributes_dict[attribute])
+        field = get_field(obj, attributes_dict[attribute])
 
         try:
 
-            print "\n\nWriting " + attributes_dict[attribute] + "..."
+            logger.info("\nWriting " + attributes_dict[attribute] + "...")
 
             if isinstance(field, basestring):
 
-                print "\n\nString length: ", len(field)
+                logger.info("\nString length: " + str(len(field)))
                 h5_file.create_dataset("/" + attribute, data=field)
-                print "\n\nString written length: ", len(h5_file['/' + attribute][()])
+                logger.info("\nString written length: " + str(len(h5_file['/' + attribute][()])))
 
             elif isinstance(field, np.ndarray):
-                print "\n\nNumpy array shape:", field.shape
+                logger.info("\nNumpy array shape: " + str(field.shape))
                 #TODO: deal with arrays of more than 2 dimensions
                 if len(field.shape) > 2:
                     field = field.squeeze()
                     if len(field.shape) > 2:
                         field = field.flatten()
                 h5_file.create_dataset("/" + attribute, data=field)
-                print "\n\nNumpy array written shape: ", h5_file['/' + attribute][()].shape
+                logger.info("\nNumpy array written shape: " + str(h5_file['/' + attribute][()].shape))
 
             else:
                 #try to write a scalar value
                 try:
-                    print "\n\nWriting scalar value..."
+                    logger.info("\nWriting scalar value...")
                     h5_file.create_dataset("/" + attribute, data=field)
                 except:
-                    raise ValueError("\n\nFailed to write "+ attribute + " as a scalar value!")
+                    raise_value_error("\n\nValueError: Failed to write "+ attribute + " as a scalar value!", logger)
 
         except:
-            raise ValueError(attribute + " not found in the object!")
+            raise_value_error("ValueError: " + attribute + " not found in the object!", logger)
 
-        #print "dataset %s value %s" % (attribute, h5_file['/' + attribute][()])
+        #logger.info("dataset " + attribute +"value " + str(h5_file['/' + attribute][()]))
 
     if isinstance(add_overwrite_fields_dict, dict):
 
         for attribute in add_overwrite_fields_dict:
 
-            print "\n\nAdding or overwritting " + attribute + "... "
+            logger.info("\nAdding or overwritting " + attribute + "... ")
 
             field = add_overwrite_fields_dict[attribute][0]
             mode = add_overwrite_fields_dict[attribute][1]
 
             if isinstance(field, basestring):
-                print "\n\nString length: ", len(field)
+                logger.info("\nString length: " + str(len(field)))
                 if mode == "overwrite":
                     del h5_file["/" + attribute]
                 h5_file.create_dataset("/" + attribute, data=field)
-                print "\n\nString written length: ", len(h5_file['/' + attribute][()])
+                logger.info("\nString written length: " + str(len(h5_file['/' + attribute][()])))
 
             elif isinstance(field, np.ndarray):
-                print "\n\nNumpy array shape:", field.shape
+                logger.info("\nNumpy array shape:" + str(field.shape))
                 if mode == "overwrite":
                     del h5_file["/" + attribute]
                 h5_file.create_dataset("/" + attribute, data=field)
-                print "\n\nNumpy array written shape: ", h5_file['/' + attribute][()].shape
+                logger.info("\nlNumpy array written shape: " + str(h5_file['/' + attribute][()].shape))
 
             else:
                 #try to write a scalar value
                 try:
-                    print "\n\nWriting scalar value..."
+                    logger.info("\nWriting scalar value...")
                     if mode == "overwrite":
                         del h5_file["/" + attribute]
                     h5_file.create_dataset("/" + attribute, data=field)
                 except:
-                    raise ValueError("\n\nFailed to write "+ attribute + " as a scalar value!")
+                    raise_value_error("ValueError: Failed to write "+ attribute + " as a scalar value!", logger)
 
-            #print "dataset %s value %s" % (attribute, h5_file['/' + attribute][()])
+            # logger.info("dataset " + attribute +"value " + str(h5_file['/' + attribute][()]))
 
     if isinstance(h5_file, basestring):
         h5_file.close()
 
 # TODO: read dictionaries of dictionaries and objects of objects recursively
-def read_object_from_h5_file(object, h5_file, attributes_dict=None, add_overwrite_fields_dict=None):
+def read_object_from_h5_file(obj, h5_file, attributes_dict=None, add_overwrite_fields_dict=None, logger=None):
 
     if isinstance(h5_file, basestring):
-        print "\n\nReading from:", h5_file
+        logger.info("\nReading from:" + h5_file)
         h5_file = h5py.File(h5_file, 'r', libver='latest')
         print_metadata(h5_file)
 
@@ -668,23 +694,23 @@ def read_object_from_h5_file(object, h5_file, attributes_dict=None, add_overwrit
         for key in h5_file.keys():
             attributes_dict.update({key: key})
 
-    if isinstance(object, dict):
-        set_field = lambda object, key, data: object.update({key: data})
-        get_field = lambda object, key: object[key]
+    if isinstance(obj, dict):
+        set_field = lambda obj, key, data: obj.update({key: data})
+        get_field = lambda obj, key: obj[key]
     else:
-        set_field = lambda object, attribute, data: setattr(object, attribute, data)
-        get_field = lambda object, attribute: getattr(object, attribute)
+        set_field = lambda obj, attribute, data: setattr(obj, attribute, data)
+        get_field = lambda obj, attribute: getattr(obj, attribute)
 
     for attribute in attributes_dict:
 
-        print "\n\nReading " + attributes_dict[attribute] + "... "
+        logger.info("\nReading " + attributes_dict[attribute] + "... ")
 
         try:
-            set_field(object, attributes_dict[attribute], h5_file['/' + attribute][()])
+            set_field(obj, attributes_dict[attribute], h5_file['/' + attribute][()])
         except:
-            raise ValueError("\n\nFailed to read " + attribute + "!")
+            raise_value_error("ValueError: Failed to read " + attribute + "!", logger)
 
-        #print "attribute %s value %s" % (attribute, get_field(object, attributes_dict[attribute]))
+        # logger.info("dataset " + attribute + "value " + str(get_field(obj, attributes_dict[attribute])))
 
     if isinstance(h5_file, basestring):
         h5_file.close()
@@ -693,35 +719,40 @@ def read_object_from_h5_file(object, h5_file, attributes_dict=None, add_overwrit
 
         for attribute in add_overwrite_fields_dict:
 
-            print "\n\nSetting or overwritting " + attribute + "... "
+            logger.info("\nSetting or overwritting " + attribute + "... ")
 
             try:
-                set_field(object, attribute, add_overwrite_fields_dict[attribute])
+                set_field(obj, attribute, add_overwrite_fields_dict[attribute])
             except:
-                raise ValueError("\n\nFailed to set " + attribute + "!")
+                raise_value_error("ValueError: Failed to set " + attribute + "!", logger)
 
-            #print "attribute %s value %s" % (attribute, get_field(object, attribute))
+            # logger.info("dataset " + attribute " value " + str(get_field(obj, attribute)))
 
-    return object
+    return obj
 
 
 # This function is meant to confirm that two objects assumingly of the same type are equal, i.e., identical
-def assert_equal_objects(object1, object2, attributes_dict=None):
+def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
 
-    if isinstance(object1, dict):
-        get_field1 = lambda object, key: object[key]
+    def print_not_equal_message(attr, logger):
+        # logger.error("\n\nValueError: Original and read object field "+ attr + " not equal!")
+        # raise ValueError("\n\nOriginal and read object field " + attr + " not equal!")
+        warning("Original and read object field " + attr + " not equal!", logger)
+
+    if isinstance(obj1, dict):
+        get_field1 = lambda obj, key: obj[key]
         if not(isinstance(attributes_dict, dict)):
             attributes_dict = dict()
-            for key in object1.keys():
+            for key in obj1.keys():
                 attributes_dict.update({key: key})
     else:
-        get_field1 = lambda object, attribute: getattr(object, attribute)
+        get_field1 = lambda obj, attribute: getattr(obj, attribute)
         if not (isinstance(attributes_dict, dict)):
             attributes_dict = dict()
-            for key in object1.__dict__.keys():
+            for key in obj1.__dict__.keys():
                 attributes_dict.update({key: key})
 
-    if isinstance(object2, dict):
+    if isinstance(obj2, dict):
         get_field2 = lambda obj, key: obj.get(key, None)
     else:
         get_field2 = lambda obj, attribute: getattr(obj, attribute, None)
@@ -729,8 +760,8 @@ def assert_equal_objects(object1, object2, attributes_dict=None):
     equal = True
     for attribute in attributes_dict:
         #print attributes_dict[attribute]
-        field1 = get_field1(object1, attributes_dict[attribute])
-        field2 = get_field2(object2, attributes_dict[attribute])
+        field1 = get_field1(obj1, attributes_dict[attribute])
+        field2 = get_field2(obj2, attributes_dict[attribute])
 
         try:
             #TODO: a better hack for the stupid case of an ndarray of a string, such as model.zmode or pmode
@@ -739,10 +770,7 @@ def assert_equal_objects(object1, object2, attributes_dict=None):
             if isinstance(field1, basestring) or isinstance(field1, list) or isinstance(field1, dict) \
                     or (isinstance(field1, np.ndarray) and field1.dtype.kind in 'OSU'):
                 if np.any(field1 != field2):
-                    # raise ValueError("\nOriginal and read object field "
-                    #                  + attributes_dict[attribute] + " not equal!")
-                    warnings.warn("\n\nOriginal and read object field "
-                                 + attributes_dict[attribute] + " not equal!")
+                    print_not_equal_message(attributes_dict[attribute], logger)
                     equal = False
 
             # For numeric types
@@ -750,35 +778,26 @@ def assert_equal_objects(object1, object2, attributes_dict=None):
                 and not (isinstance(field1, np.ndarray) and field1.dtype.kind in 'OSU'):
                 # TODO: handle better accuracy differences and complex numbers...
                 if np.any(np.float32(field1) - np.float32(field2) > 0):
-                    # raise ValueError("\nOriginal and read object field "
-                    #                  + attributes_dict[attribute] + " not equal!")
-                    warnings.warn("\n\nOriginal and read object field "
-                                  + attributes_dict[attribute] + " not equal!")
+                    print_not_equal_message(attributes_dict[attribute], logger)
                     equal = False
 
             else:
-                warnings.warn("\n\nComparing str(objects) for field "
-                              + attributes_dict[attribute] + " because it is of unknown type!")
+                warning("Comparing str(objects) for field "
+                              + attributes_dict[attribute] + " because it is of unknown type!", logger)
                 if np.any(str(field1) != str(field2)):
-                    # raise ValueError("\nOriginal and read object field "
-                    #                  + attributes_dict[attribute] + " not equal!")
-                    warnings.warn("\n\nOriginal and read object field "
-                                 + attributes_dict[attribute] + " not equal!")
+                    print_not_equal_message(attributes_dict[attribute], logger)
                     equal = False
 
         except:
             try:
-                warnings.warn("\n\nComparing str(objects) for field "
-                              + attributes_dict[attribute] + " because there was an error!")
+                warnings("Comparing str(objects) for field "
+                              + attributes_dict[attribute] + " because there was an error!", logger)
                 if np.any(str(field1) != str(field2)):
-                    # raise ValueError("\nOriginal and read object field "
-                    #                  + attributes_dict[attribute] + " not equal!")
-                    warnings.warn("\n\nOriginal and read object field "
-                                  + attributes_dict[attribute] + " not equal!")
+                    print_not_equal_message(attributes_dict[attribute], logger)
                     equal = False
             except:
-
-                raise ValueError("\n\nSomething went wrong when trying to compare " + attributes_dict[attribute] + " !")
+                raise_value_error("ValueError: Something went wrong when trying to compare "
+                             + attributes_dict[attribute] + " !", logger)
 
     if equal:
         return True
