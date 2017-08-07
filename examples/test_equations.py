@@ -4,8 +4,6 @@ import numpy
 from numpy.linalg import eig
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.utils import initialize_logger
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.custom.read_write import write_h5_model
 from tvb_epilepsy.base.calculations import *
 from tvb_epilepsy.base.symbolic import * 
 from tvb_epilepsy.base.equilibrium_computation import *
@@ -120,8 +118,6 @@ if __name__ == "__main__":
                            slope=slope, a=1.0, b=3.0, d=5.0, s=6.0, Iext2=Iext2, gamma=0.1, tau1=1.0, tau0=2857.0,
                            tau2=10.0)
 
-    write_h5_model(convert_to_h5_model({"eq": eq, "dfun": numpy.array(dfun), "jac": numpy.array(jac)}), FOLDER_RES,
-                   model +"Symbolic" + str(SYMBOLIC_CALCULATIONS_FLAG) +".h5")
 
     model = str(model_vars)+"d"
 
@@ -177,7 +173,6 @@ if __name__ == "__main__":
             sx0cr_r[ii][iv] = sx0cr_r[ii][iv].subs([(v["a"][iv], a[iv]), (v["b"][iv], b2[iv]),
                                                     (v["x1_rest"][iv], X1_DEF), (v["x0_rest"][iv], X0_DEF),
                                                     (v["x1_cr"][iv], X1_EQ_CR_DEF), (v["x0_cr"][iv], X0_CR_DEF)])
-            print sx0cr_r[ii][iv]
             logger.info("\nsymbolic x0cr_r[" + str(ii) + "," + str(iv) + "] = " + str(sx0cr_r[ii][iv]))
         logger.info("\nx0cr_r[" + str(ii) + "] shape = " + str(sx0cr_r[ii].shape))
         logger.info("\nlambda x0cr_r[" + str(ii) + "] = " + str(lx0cr_r[ii](yc, Iext1, a, b2, X1_DEF*a, X1_EQ_CR_DEF*a,
