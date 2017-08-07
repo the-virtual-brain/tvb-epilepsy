@@ -276,12 +276,9 @@ if __name__ == "__main__":
     import os
     from tvb_epilepsy.base.constants import DATA_CUSTOM, FOLDER_RES
     from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
-    from tvb_epilepsy.custom.read_write import write_h5_model
     from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
     from tvb_epilepsy.base.model_configuration_service import ModelConfigurationService
     from tvb_epilepsy.base.lsa_service import LSAService
-    from tvb_epilepsy.base.plot_tools import plot_lsa_pse
-
     from tvb_epilepsy.base.helper_functions import sensitivity_analysis_pse_from_hypothesis
 
     # -------------------------------Reading data-----------------------------------
@@ -338,10 +335,10 @@ if __name__ == "__main__":
                                      model_configuration_service=model_configuration_service,
                                      lsa_service=lsa_service, save_services=True)
 
-            plot_lsa_pse(lsa_hypothesis, model_configuration, pse_results,
-                         weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
-                         n_eig=lsa_service.eigen_vectors_number,
-                         figure_name=m + "_PSE_LSA_overview_" + lsa_hypothesis.name)
+            lsa_hypothesis.plot_lsa_pse(pse_results, model_configuration,
+                                        weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
+                                        n_eig=lsa_service.eigen_vectors_number,
+                                        figure_name=m + "_PSE_LSA_overview_" + lsa_hypothesis.name)
             # , show_flag=True, save_flag=False
 
             convert_to_h5_model(pse_results).write_to_h5(FOLDER_RES,

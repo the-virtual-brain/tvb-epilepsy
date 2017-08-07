@@ -209,7 +209,7 @@ class SamplingService(object):
         return formal_repr(self, d) + "\n06. Distribution parameters: " + dict_str(self.params) + \
                                       "\n07 Resulting statistics: " + dict_str(self.stats)
 
-    def prepare_for_h5(self):
+    def _prepare_for_h5(self):
         h5_model = convert_to_h5_model({"sampling_module": self.sampling_module, "sampler": self.sampler,
                                    "n_samples": self.n_samples, "n_outputs": self.n_outputs, "shape": self.shape,
                                    "params": self.params, "stats": self.stats})
