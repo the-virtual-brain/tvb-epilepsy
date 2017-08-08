@@ -118,3 +118,12 @@ def filter_data(data, lowcut, highcut, fs, order=3):
     y = lfilter(b, a, data)
     return y
 
+
+# Bivariate
+
+def corrcoef(x):
+    return np.corrcoef(x.T)
+
+
+def covariance(x):
+    return np.cov(x.T)
