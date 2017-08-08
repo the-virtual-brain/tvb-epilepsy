@@ -9,7 +9,7 @@ Also, dictionaries to keep noise intensity and type for each model type.
 ###
 import numpy
 from tvb.simulator.models import Epileptor
-from tvb_epilepsy.base.calculations import calc_rescaled_x0
+from tvb_epilepsy.base.calculations_factory import calc_rescaled_x0
 from tvb_epilepsy.base.constants import ADDITIVE_NOISE, MULTIPLICATIVE_NOISE
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D, EpileptorDP, EpileptorDPrealistic
 

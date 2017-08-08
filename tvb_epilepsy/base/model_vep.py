@@ -14,7 +14,7 @@ from tvb_epilepsy.base.utils import reg_dict, formal_repr, normalize_weights, ca
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.base.constants import FOLDER_FIGURES, LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
-from tvb_epilepsy.base.plot_tools import _plot_vector, _plot_regions2regions, _save_figure, _check_show
+from tvb_epilepsy.base.plot_factory import _plot_vector, _plot_regions2regions, _save_figure, _check_show
 
 
 class Head(object):

@@ -25,8 +25,8 @@ try:
 except ImportError:
     pass
 
-from tvb_epilepsy.base.plot_tools import plot_in_columns, _save_figure, _check_show
-from tvb_epilepsy.base.calculations import calc_fx1, calc_fz, calc_fx1_2d_taylor, calc_rescaled_x0, \
+from tvb_epilepsy.base.plot_factory import plot_in_columns, _save_figure, _check_show
+from tvb_epilepsy.base.calculations_factory import calc_fx1, calc_fz, calc_fx1_2d_taylor, calc_rescaled_x0, \
     calc_x0cr_r
 from tvb_epilepsy.base.equilibrium_computation import calc_eq_y1, def_x1lin
 

@@ -12,7 +12,7 @@ from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 from tvb_epilepsy.base.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.constants import FOLDER_FIGURES, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
-from tvb_epilepsy.base.plot_tools import plot_in_columns
+from tvb_epilepsy.base.plot_factory import plot_in_columns
 
 from model_vep import Connectivity
 

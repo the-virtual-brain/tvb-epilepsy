@@ -362,3 +362,18 @@ def setup_custom_simulation_from_model_configuration(model_configuration, connec
     simulator_instance = SimulatorCustom(connectivity, model_configuration, model, settings)
 
     return simulator_instance
+
+
+def set_time_scales(fs=4096.0, dt=None, time_length=1000.0, scale_time=1.0, scale_fsavg=8.0, report_every_n_monitor_steps=10,):
+    if dt is None:
+        dt = 1000.0 / fs
+
+    dt /= scale_time
+
+    fsAVG = fs / scale_fsavg
+    monitor_period = scale_fsavg * dt
+    sim_length = time_length / scale_time
+    time_length_avg = np.round(sim_length / monitor_period)
+    n_report_blocks = max(report_every_n_monitor_steps * np.round(time_length_avg / 100), 1.0)
+
+    return dt, fsAVG, sim_length, monitor_period, n_report_blocks
