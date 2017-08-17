@@ -6,9 +6,10 @@ import numpy
 from collections import OrderedDict
 
 from tvb.basic.logger.builder import get_logger
-from tvb_epilepsy.base.utils import formal_repr, weighted_vector_sum
-from tvb_epilepsy.base.calculations import calc_fz_jac_square_taylor
 from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM
+from tvb_epilepsy.base.utils import formal_repr, weighted_vector_sum
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.calculations_factory import calc_fz_jac_square_taylor
 from tvb_epilepsy.base.utils import curve_elbow_point
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model_configuration import ModelConfiguration
@@ -37,9 +38,25 @@ class LSAService(object):
         d = {"01. Eigenvectors' number selection mode": self.eigen_vectors_number_selection,
              "02. Eigenvectors' number": self.eigen_vectors_number_selection,
              "03. Eigen values": self.eigen_values,
-             "04. Eigen vectors": self.eigen_vectors
+             "04. Eigenvectors": self.eigen_vectors,
+             "05. Eigenvectors' number": self.eigen_vectors_number,
+             "06. Weighted eigenvector's sum flag": str(self.weighted_eigenvector_sum)
              }
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0])))
+        return formal_repr(self, d)
+
+    def __str__(self):
+        return self.__repr__()
+
+    def _prepare_for_h5(self):
+        h5_model = convert_to_h5_model(self)
+        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
+        return h5_model
+
+    def write_to_h5(self, folder, filename=""):
+        if filename == "":
+            filename = self.name + ".h5"
+        h5_model = self._prepare_for_h5()
+        h5_model.write_to_h5(folder, filename)
 
     def get_curve_elbow_point(self, values_array):
         return curve_elbow_point(values_array)
@@ -64,9 +81,10 @@ class LSAService(object):
         else:
             self.eigen_vectors_number_selection = "user_defined"
 
-    def _compute_jacobian(self, model_configuration, weights):
+    def _compute_jacobian(self, model_configuration):
         fz_jacobian = calc_fz_jac_square_taylor(model_configuration.zEQ, model_configuration.yc,
-                                                model_configuration.Iext1, model_configuration.K, weights,
+                                                model_configuration.Iext1, model_configuration.K,
+                                                model_configuration.connectivity_matrix,
                                                 model_configuration.a, model_configuration.b)
 
         if numpy.any([numpy.any(numpy.isnan(fz_jacobian.flatten())), numpy.any(numpy.isinf(fz_jacobian.flatten()))]):
@@ -76,7 +94,7 @@ class LSAService(object):
 
     def run_lsa(self, disease_hypothesis, model_configuration):
 
-        jacobian = self._compute_jacobian(model_configuration, disease_hypothesis.get_weights())
+        jacobian = self._compute_jacobian(model_configuration)
 
         # Perform eigenvalue decomposition
         eigen_values, eigen_vectors = numpy.linalg.eig(jacobian)
@@ -85,8 +103,8 @@ class LSAService(object):
         self.eigen_values = eigen_values[sorted_indices]
         self.eigen_vectors = eigen_vectors[:, sorted_indices]
 
-        self._ensure_eigen_vectors_number(self.eigen_values, model_configuration.E_values,
-                                          model_configuration.x0_values, disease_hypothesis.get_regions_disease_indices)
+        self._ensure_eigen_vectors_number(self.eigen_values, model_configuration.e_values,
+                                          model_configuration.x0_values, disease_hypothesis.get_all_disease_indices())
 
         if self.eigen_vectors_number == disease_hypothesis.get_number_of_regions():
             # Calculate the propagation strength index by summing all eigenvectors
@@ -107,7 +125,8 @@ class LSAService(object):
         propagation_strength_elbow = self.get_curve_elbow_point(lsa_propagation_strength)
         propagation_indices = lsa_propagation_strength.argsort()[-propagation_strength_elbow:]
 
-        return DiseaseHypothesis(disease_hypothesis.connectivity, disease_hypothesis.disease_values,
-                                 disease_hypothesis.x0_indices, disease_hypothesis.e_indices, propagation_indices,
-                                 lsa_propagation_strength, disease_hypothesis.type,
-                                 "LSA_" + disease_hypothesis.name)
+        return DiseaseHypothesis(disease_hypothesis.connectivity,
+                                 {tuple(disease_hypothesis.x0_indices): disease_hypothesis.x0_values},
+                                 {tuple(disease_hypothesis.e_indices): disease_hypothesis.e_values},
+                                 {tuple(disease_hypothesis.w_indices): disease_hypothesis.w_values},
+                                 propagation_indices, lsa_propagation_strength, "LSA_" + disease_hypothesis.name)

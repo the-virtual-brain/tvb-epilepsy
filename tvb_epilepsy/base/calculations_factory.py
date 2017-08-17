@@ -1,13 +1,13 @@
 import warnings
 import numpy as np
 from scipy.optimize import root
-from tvb_epilepsy.base.equations import *
+from tvb_epilepsy.base.equations_factory import *
 
 # TODO: find out why I cannot import anything from utils here
 # from tvb_epilepsy.base.utils import assert_array_shape as sc2arr
 
 try:
-    from tvb_epilepsy.base.symbolic import *
+    from tvb_epilepsy.base.symbolic_factory import *
     SYMBOLIC_IMPORT=True
 
 except:

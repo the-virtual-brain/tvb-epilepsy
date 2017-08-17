@@ -4,7 +4,7 @@ from sympy import Symbol, symbols, exp, solve, solveset, solve_poly_system, Inte
 from sympy.tensor.array import Array
 from tvb_epilepsy.base.constants import X0_DEF, X0_CR_DEF, X1_DEF, X1_EQ_CR_DEF
 from tvb_epilepsy.base.utils import assert_arrays, shape_to_size
-from tvb_epilepsy.base.equations import *
+from tvb_epilepsy.base.equations_factory import *
 
 
 def symbol_vars(n_regions, vars_str, dims=1, ind_str="_", shape=None, output_flag="numpy_array"):
