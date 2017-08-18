@@ -2,16 +2,19 @@
 """
 Service to do X0/E Hypothesis configuration.
 """
-from collections import OrderedDict
-
 import numpy
-
+from matplotlib import pyplot
+from mpldatacursor import HighlightingDataCursor
 from tvb.basic.logger.builder import get_logger
-from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
+from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF, X1_DEF, \
+    X0_CR_DEF, FIG_SIZE, SAVE_FLAG, SHOW_FLAG, FOLDER_FIGURES, FIG_FORMAT, MOUSEHOOVER
+from tvb_epilepsy.base.plot_factory import _save_figure, _check_show
 from tvb_epilepsy.base.utils import formal_repr
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.calculations_factory import calc_x0cr_r, calc_coupling, calc_x0
-from tvb_epilepsy.base.equilibrium_computation import calc_eq_z_2d, eq_x1_hypo_x0_linTaylor, eq_x1_hypo_x0_optimize
+from tvb_epilepsy.base.calculations_factory import calc_x0cr_r, calc_coupling, calc_x0, calc_fx1, calc_fx1_2d_taylor, \
+    calc_fz, calc_rescaled_x0
+from tvb_epilepsy.base.equilibrium_computation import calc_eq_z_2d, eq_x1_hypo_x0_linTaylor, eq_x1_hypo_x0_optimize, \
+    def_x1lin, calc_eq_y1
 from tvb_epilepsy.base.model_configuration import ModelConfiguration
 
 # NOTES:
@@ -23,10 +26,9 @@ LOG = get_logger(__name__)
 
 
 class ModelConfigurationService(object):
-
     x1EQcr = X1_EQ_CR_DEF
 
-    def __init__(self, number_of_regions, x0=X0_DEF,yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, E=E_DEF, 
+    def __init__(self, number_of_regions, x0=X0_DEF, yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, E=E_DEF,
                  x1eq_mode="optimize"):
         self.number_of_regions = number_of_regions
         self.x0 = x0 * numpy.ones((self.number_of_regions,), dtype=numpy.float32)
@@ -181,3 +183,116 @@ class ModelConfigurationService(object):
 
         return self.configure_model_from_equilibrium(x1EQ, zEQ, connectivity_matrix)
 
+    def plot_nullclines(self, model_config, region_labels, special_idx, model, zmode, figure_name):
+        add_name = " " + "Epileptor " + model + " z-" + str(zmode)
+        figure_name = figure_name + add_name
+
+        # Fixed parameters for all regions:
+        x1eq = numpy.mean(model_config.x1EQ)
+        yc = numpy.mean(model_config.yc)
+        Iext1 = numpy.mean(model_config.Iext1)
+        x0cr = numpy.mean(model_config.x0cr)  # Critical x0
+        r = numpy.mean(model_config.rx0)
+        # The point of the linear approximation (1st order Taylor expansion)
+        x1LIN = def_x1lin(X1_DEF, X1_EQ_CR_DEF, len(region_labels))
+        x1SQ = X1_EQ_CR_DEF
+        x1lin0 = numpy.mean(x1LIN)
+        # The point of the square (parabolic) approximation (2nd order Taylor expansion)
+        x1sq0 = numpy.mean(x1SQ)
+        if model != "2d" or zmode != numpy.array("lin"):
+            x0cr, r = calc_x0cr_r(yc, Iext1, zmode=zmode, x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
+                                  x0cr_def=X0_CR_DEF)
+
+        # Lines:
+
+        # x1 nullcline:
+        x1 = numpy.linspace(-2.0, 2.0 / 3.0, 100)
+        if model == "2d":
+            y1 = yc
+            b = -2.0
+        else:
+            y1 = calc_eq_y1(x1, yc, d=5.0)
+            b = 3.0
+        zX1 = calc_fx1(x1, z=0, y1=y1, Iext1=Iext1, x1_neg=None, model=model,
+                       b=b)  # yc + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
+        # approximations:
+        # linear:
+        x1lin = numpy.linspace(-5.5 / 3.0, -3.5 / 3, 30)
+        # x1 nullcline after linear approximation
+        zX1lin = calc_fx1_2d_taylor(x1lin, x1lin0, z=0, y1=yc, Iext1=Iext1, slope=0.0, a=1.0, b=-2.0, tau1=1.0,
+                                    x1_neg=None,
+                                    order=2)  # yc + Iext1 + 2.0 * x1lin0 ** 3 + 2.0 * x1lin0 ** 2 - \
+        # (3.0 * x1lin0 ** 2 + 4.0 * x1lin0) * x1lin  # x1 nullcline after linear approximation
+        # center point without approximation:
+        # zlin0 = yc + Iext1 - x1lin0 ** 3 - 2.0 * x1lin0 ** 2
+        # square:
+        x1sq = numpy.linspace(-5.0 / 3, -1.0, 30)
+        # x1 nullcline after parabolic approximation
+        zX1sq = calc_fx1_2d_taylor(x1sq, x1sq0, z=0, y1=yc, Iext1=Iext1, slope=0.0, a=1.0, b=-2.0, tau1=1.0,
+                                   x1_neg=None, order=3,
+                                   shape=x1sq.shape)  # + 2.0 * x1sq ** 2 + 16.0 * x1sq / 3.0 + yc + Iext1 + 64.0 / 27.0
+        # center point (critical equilibrium point) without approximation:
+        # zsq0 = yc + Iext1 - x1sq0 ** 3 - 2.0 * x1sq0 ** 2
+        if model == "2d":
+            # z nullcline:
+            zZe = calc_fz(x1, z=0.0, x0=X0_CR_DEF, x0cr=x0cr, r=r, zmode=zmode)  # for epileptogenic regions
+            zZne = calc_fz(x1, z=0.0, x0=X0_DEF, x0cr=x0cr, r=r, zmode=zmode)  # for non-epileptogenic regions
+        else:
+            x0e_6d = calc_rescaled_x0(X0_CR_DEF, yc, Iext1, zmode=zmode)
+            x0ne_6d = calc_rescaled_x0(X0_DEF, yc, Iext1, zmode=zmode)
+            # z nullcline:
+            zZe = calc_fz(x1, z=0.0, x0=x0e_6d, zmode=zmode, model="2d")  # for epileptogenic regions
+            zZne = calc_fz(x1, z=0.0, x0=x0ne_6d, zmode=zmode, model="2d")  # for non-epileptogenic regions
+
+        fig = pyplot.figure(figure_name, figsize=FIG_SIZE)
+        x1null, = pyplot.plot(x1, zX1, 'b-', label='x1 nullcline', linewidth=1)
+        ax = pyplot.gca()
+        ax.axes.hold(True)
+        zE1null, = pyplot.plot(x1, zZe, 'g-', label='z nullcline at critical point (E=1)', linewidth=1)
+        zE2null, = pyplot.plot(x1, zZne, 'g--', label='z nullcline for E=0', linewidth=1)
+        sq, = pyplot.plot(x1sq, zX1sq, 'm--', label='Parabolic local approximation', linewidth=2)
+        lin, = pyplot.plot(x1lin, zX1lin, 'c--', label='Linear local approximation', linewidth=2)
+        pyplot.legend(handles=[x1null, zE1null, zE2null, lin, sq])
+
+        ii = range(len(region_labels))
+        if special_idx is None:
+            ii = numpy.delete(ii, special_idx)
+
+        points = []
+        for i in ii:
+            point, = pyplot.plot(model_config.x1EQ[i], model_config.zEQ[i], '*', mfc='k', mec='k',
+                                 ms=10, alpha=0.3,
+                                 label=str(i) + '.' + region_labels[i])
+            points.append(point)
+        if special_idx is None:
+            for i in special_idx:
+                point, = pyplot.plot(model_config.x1EQ[i], model_config.zEQ[i], '*', mfc='r', mec='r', ms=10, alpha=0.8,
+                                     label=str(i) + '.' + region_labels[i])
+                points.append(point)
+        # ax.plot(x1lin0, zlin0, '*', mfc='r', mec='r', ms=10)
+        # ax.axes.text(x1lin0 - 0.1, zlin0 + 0.2, 'E=0.0', fontsize=10, color='r')
+        # ax.plot(x1sq0, zsq0, '*', mfc='m', mec='m', ms=10)
+        # ax.axes.text(x1sq0, zsq0 - 0.2, 'E=1.0', fontsize=10, color='m')
+        if model == "2d":
+            ax.set_title(
+                "Equilibria, nullclines and Taylor series approximations \n at the x1-z phase plane of the" +
+                add_name + " for x1<0")
+        else:
+            ax.set_title("Equilibria, nullclines at the x1-z phase plane of the" + add_name + " for x1<0")
+        ax.axes.autoscale(tight=True)
+        ax.axes.set_xlabel('x1')
+        ax.axes.set_ylabel('z')
+        ax.axes.set_ylim(2.0, 5.0)
+        if MOUSEHOOVER:
+            # datacursor( lines[0], formatter='{label}'.format, bbox=dict(fc='white'),
+            #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
+            HighlightingDataCursor(points[0], formatter='{label}'.format, bbox=dict(fc='white'),
+                                   arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5))
+
+        if len(fig.get_label()) == 0:
+            fig.set_label(figure_name)
+        else:
+            figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
+
+        _save_figure(SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name=figure_name)
+        _check_show(SHOW_FLAG)
