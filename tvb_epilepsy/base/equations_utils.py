@@ -102,7 +102,7 @@ def eqtn_x0(x1, z, model="2d", zmode=np.array("lin"), z_pos=True, K=None, w=None
         if np.all(K == 0.0) or np.all(w == 0.0) or (K is None) or (w is None):
             coupl = 0.0
         else:
-            from tvb_epilepsy.base.calculations_factory import calc_coupling
+            from tvb_epilepsy.base.calculations_utils import calc_coupling
             coupl = calc_coupling(x1, K, w)
 
     if model == "2d":
@@ -205,7 +205,7 @@ def eqtn_fz(x1, z, x0, tau1, tau0, model="2d", zmode=np.array("lin"), z_pos=True
         if np.all(K == 0.0) or np.all(w == 0.0) or (K is None) or (w is None):
             coupl = 0.0
         else:
-            from tvb_epilepsy.base.calculations_factory import calc_coupling
+            from tvb_epilepsy.base.calculations_utils import calc_coupling
             coupl = calc_coupling(x1, K, w)
 
     tau = np.divide(tau1, tau0)
