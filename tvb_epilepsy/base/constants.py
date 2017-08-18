@@ -44,6 +44,7 @@ if not (os.path.isdir(FOLDER_RES)):
 VERY_LARGE_SIZE = (40, 20)
 LARGE_SIZE = (20, 15)
 SMALL_SIZE = (15, 10)
+FIG_SIZE = SMALL_SIZE
 FOLDER_FIGURES = os.path.join(FOLDER_VEP_HOME, 'figures'+datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M'))
 if not (os.path.isdir(FOLDER_FIGURES)):
         os.mkdir(FOLDER_FIGURES)

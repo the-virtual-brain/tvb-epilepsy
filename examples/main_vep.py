@@ -211,12 +211,10 @@ def main_vep(test_write_read=False):
         model_configuration.write_to_h5(FOLDER_RES, hyp.name + "_ModelConfig.h5")
 
         # # Plot nullclines and equilibria of model configuration
-        # model_configuration.plot_nullclines_eq(head.connectivity.region_labels,
+        # model_configuration_service.plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
         #                                        special_idx=lsa_hypothesis.propagation_indices,
         #                                        model=str(model.nvar) + "d", zmode=model.zmode,
-        #                                        figure_name=lsa_hypothesis.name + "_Nullclines and equilibria",
-        #                                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
-        #                                        figure_dir=FOLDER_FIGURES)
+        #                                        figure_name=lsa_hypothesis.name + "_Nullclines and equilibria")
 
         logger.info("\n\nRunning LSA...")
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
@@ -225,8 +223,7 @@ def main_vep(test_write_read=False):
         lsa_hypothesis.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")
         lsa_service.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")
 
-        lsa_hypothesis.plot_lsa(model_configuration, weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
-                            n_eig=lsa_service.eigen_vectors_number, figure_name=lsa_hypothesis.name+"_LSA.h5")
+        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, None, title=lsa_hypothesis.name+"_LSA.h5")
 
         #--------------Parameter Search Exploration (PSE)-------------------------------
 
@@ -238,9 +235,7 @@ def main_vep(test_write_read=False):
                                           model_configuration_service=model_configuration_service,
                                           lsa_service=lsa_service)[0]
 
-        lsa_hypothesis.plot_lsa_pse(pse_results, model_configuration,
-                                    weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
-                                    n_eig=lsa_service.eigen_vectors_number)
+        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, pse_results)
         # , show_flag=True, save_flag=False
 
         convert_to_h5_model(pse_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")
@@ -256,10 +251,8 @@ def main_vep(test_write_read=False):
                                      model_configuration=model_configuration,
                                      model_configuration_service=model_configuration_service, lsa_service=lsa_service)
 
-        lsa_hypothesis.plot_lsa_pse(pse_sa_results, model_configuration,
-                                    weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
-                                    n_eig=lsa_service.eigen_vectors_number,
-                                    figure_name="SA PSE LSA overview " + lsa_hypothesis.name)
+        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, pse_sa_results,
+                                    title="SA PSE LSA overview " + lsa_hypothesis.name)
         # , show_flag=True, save_flag=False
 
         convert_to_h5_model(pse_sa_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")
