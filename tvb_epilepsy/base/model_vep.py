@@ -14,7 +14,7 @@ from tvb_epilepsy.base.utils import reg_dict, formal_repr, normalize_weights, ca
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.base.constants import FOLDER_FIGURES, LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
-from tvb_epilepsy.base.plot_factory import _plot_vector, _plot_regions2regions, _save_figure, _check_show
+from tvb_epilepsy.base.plot_factory import _plot_vector, _plot_regions2regions, save_figure, check_show
 
 
 class Head(object):
@@ -142,9 +142,9 @@ class Connectivity(object):
         _plot_regions2regions(self.tract_lengths, self.region_labels, 122, "tract lengths")
 
         if save_flag:
-            _save_figure(figure_dir=figure_dir, figure_format=figure_format,
-                         figure_name=figure_name.replace(" ", "_").replace("\t", "_"))
-        _check_show(show_flag=show_flag)
+            save_figure(figure_dir=figure_dir, figure_format=figure_format,
+                        figure_name=figure_name.replace(" ", "_").replace("\t", "_"))
+        check_show(show_flag=show_flag)
 
     def plot_stats(self, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
                     figure_name='HeadStats '):
@@ -155,9 +155,9 @@ class Connectivity(object):
             ax = _plot_vector(self.areas, self.region_labels, 122, "region areas")
             ax.invert_yaxis()
         if save_flag:
-            _save_figure(figure_dir=figure_dir, figure_format=figure_format,
-                         figure_name=figure_name.replace(" ", "").replace("\t", ""))
-        _check_show(show_flag=show_flag)
+            save_figure(figure_dir=figure_dir, figure_format=figure_format,
+                        figure_name=figure_name.replace(" ", "").replace("\t", ""))
+        check_show(show_flag=show_flag)
 
 
 class Surface(object):
@@ -259,8 +259,8 @@ class Sensors(object):
         if figure_name == "":
             figure_name = title
 
-        _save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=title)
-        _check_show(show_flag)
+        save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=title)
+        check_show(show_flag)
 
         return figure
 

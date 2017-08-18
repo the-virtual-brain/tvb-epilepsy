@@ -27,7 +27,7 @@ except ImportError:
     pass
 
 
-def _check_show(show_flag=SHOW_FLAG):
+def check_show(show_flag=SHOW_FLAG):
     if show_flag:
         # mp.use('TkAgg')
         pyplot.ion()
@@ -38,14 +38,14 @@ def _check_show(show_flag=SHOW_FLAG):
         pyplot.close()
 
 
-def _save_figure(save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name='figure'):
+def save_figure(save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name='figure'):
     if save_flag:
         if not (os.path.isdir(figure_dir)):
             os.mkdir(figure_dir)
         figure_name = figure_name.replace(" ", "_").replace("\t", "_") + '.' + figure_format
         pyplot.savefig(os.path.join(figure_dir, figure_name))
-        
-    
+
+
 def _plot_vector(vector, labels, subplot, title, show_y_labels=True, indices_red=None, sharey=None):
     ax = pyplot.subplot(subplot, sharey=sharey)
     pyplot.title(title)
@@ -180,16 +180,16 @@ def _plot_regions2regions(adj, labels, subplot, title, show_y_labels=True, show_
     return ax
 
 
-def plot_in_columns(data_dict_list, labels, width_ratios=[], left_ax_focus_indices=[], right_ax_focus_indices=[],
+def plot_in_columns(data_dict_list, labels, width_ratios=[], left_ax_focus_indices=[], right_ax_focus_indices=[], description = "",
                     title="", figure_name='', show_flag=False, save_flag=True, figure_dir=FOLDER_FIGURES,
                     figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, **kwargs):
-    
+
     fig = pyplot.figure(title, frameon=False, figsize=figsize)
-    
+    fig.suptitle(description)
     n_subplots = len(data_dict_list)
     if width_ratios == []:
         width_rations = np.ones((n_subplots, )).tolist()
-        
+
     mp.gridspec.GridSpec(1, n_subplots, width_ratios)
 
     if n_subplots < 10 and n_subplots > 0:
@@ -233,8 +233,8 @@ def plot_in_columns(data_dict_list, labels, width_ratios=[], left_ax_focus_indic
     if figure_name == '':
         figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
 
-    _save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
-    _check_show(show_flag)
+    save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
+    check_show(show_flag)
 
     return fig
 
@@ -304,8 +304,8 @@ def plot_timeseries(time, data_dict, special_idx=None, title='Time Series', show
     else:
         figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
 
-    _save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
-    _check_show(show_flag)
+    save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
+    check_show(show_flag)
 
 
 def plot_raster(time, data_dict, special_idx=None, title='Time Series', offset=3.0, show_flag=SHOW_FLAG,
@@ -354,8 +354,8 @@ def plot_raster(time, data_dict, special_idx=None, title='Time Series', offset=3
         fig.set_label(figure_name)
     else:
         figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
-    _save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
-    _check_show(show_flag)
+    save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
+    check_show(show_flag)
 
 
 def plot_trajectories(data_dict, special_idx=None, title='State space trajectories', show_flag=SHOW_FLAG,
@@ -424,8 +424,8 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
     else:
         figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
 
-    _save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
-    _check_show(show_flag)
+    save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
+    check_show(show_flag)
 
 
 def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, hpf_flag=False):
