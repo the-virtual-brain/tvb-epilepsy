@@ -3,16 +3,13 @@
 Service to do LSA computation.
 """
 import numpy
-from collections import OrderedDict
-
 from tvb.basic.logger.builder import get_logger
 from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM
-from tvb_epilepsy.base.utils import formal_repr, weighted_vector_sum
+from tvb_epilepsy.base.plot_factory import plot_in_columns
+from tvb_epilepsy.base.utils import formal_repr, weighted_vector_sum,curve_elbow_point
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.calculations_factory import calc_fz_jac_square_taylor
-from tvb_epilepsy.base.utils import curve_elbow_point
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.base.model_configuration import ModelConfiguration
 
 LOG = get_logger(__name__)
 
@@ -130,3 +127,33 @@ class LSAService(object):
                                  {tuple(disease_hypothesis.e_indices): disease_hypothesis.e_values},
                                  {tuple(disease_hypothesis.w_indices): disease_hypothesis.w_values},
                                  propagation_indices, lsa_propagation_strength, "LSA_" + disease_hypothesis.name)
+
+    def plot_lsa(self, disease_hypothesis, model_configuration, pse_results=None, title="Hypothesis Overview"):
+        fig_name = disease_hypothesis.name + " " + title
+
+        hyp_dict_list = disease_hypothesis.prepare_for_plot()
+        model_config_dict_list = model_configuration.prepare_for_plot()
+
+        model_config_dict_list += hyp_dict_list
+        plot_dict_list = model_config_dict_list
+
+        if pse_results is not None and isinstance(pse_results, dict):
+            ind_ps = len(plot_dict_list) - 2
+            for ii, value in enumerate(["propagation_strengths", "e_values", "x0_values"]):
+                ind = ind_ps - ii
+                if ind >= 0:
+                    if pse_results.get(value, False).any():
+                        plot_dict_list[ind]["data_samples"] = pse_results.get(value)
+                        plot_dict_list[ind]["plot_type"] = "vector_violin"
+
+        description = ""
+        if self.weighted_eigenvector_sum:
+            description = "For LSA PS: absolut eigenvalue-weighted sum of "
+            if self.eigen_vectors_number is not None:
+                description += "first " + str(self.eigen_vectors_number) + " "
+            description += "eigenvectors has been used"
+
+        return plot_in_columns(plot_dict_list, disease_hypothesis.connectivity.region_labels, width_ratios=[],
+                               left_ax_focus_indices=disease_hypothesis.get_all_disease_indices(),
+                               right_ax_focus_indices=disease_hypothesis.propagation_indices,
+                               description=description, title=title, figure_name=fig_name)
