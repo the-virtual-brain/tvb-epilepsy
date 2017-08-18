@@ -4,8 +4,8 @@ import numpy
 from numpy.linalg import eig
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.utils import initialize_logger
-from tvb_epilepsy.base.calculations_factory import *
-from tvb_epilepsy.base.symbolic_factory import *
+from tvb_epilepsy.base.calculations_utils import *
+from tvb_epilepsy.base.symbolic_utils import *
 from tvb_epilepsy.base.equilibrium_computation import *
 
 if __name__ == "__main__":

@@ -15,9 +15,9 @@ from tvb_epilepsy.base.model_vep import Connectivity
 from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.base.lsa_service import LSAService
-from tvb_epilepsy.base.plot_factory import plot_sim_results
+from tvb_epilepsy.base.plot_utils import plot_sim_results
 from tvb_epilepsy.base.utils import initialize_logger, calculate_projection
-from tvb_epilepsy.base.analyzers_factory import filter_data
+from tvb_epilepsy.base.analyzers_utils import filter_data
 from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D

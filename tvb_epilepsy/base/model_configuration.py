@@ -9,7 +9,7 @@ from tvb_epilepsy.base.constants import X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF
 from tvb_epilepsy.base.utils import formal_repr, dicts_of_lists_to_lists_of_dicts
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.constants import FOLDER_FIGURES, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
-from tvb_epilepsy.base.plot_factory import plot_in_columns
+from tvb_epilepsy.base.plot_utils import plot_in_columns
 
 
 class ModelConfiguration(object):

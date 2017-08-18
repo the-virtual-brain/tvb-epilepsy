@@ -597,7 +597,7 @@ class EpileptorDPrealistic(Model):
     @staticmethod
     def fun_slope_Iext2(z, g, pmode, slope, Iext2):
 
-        from tvb_epilepsy.base.analyzers_factory import interval_scaling
+        from tvb_epilepsy.base.analyzers_utils import interval_scaling
 
         if (pmode == numpy.array(['g', 'z', 'z*g'])).any():
 

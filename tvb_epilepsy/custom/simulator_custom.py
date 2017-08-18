@@ -13,7 +13,7 @@ import numpy
 from tvb_epilepsy.base.constants import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.utils import obj_to_dict, assert_arrays
-from tvb_epilepsy.base.calculations_factory import calc_rescaled_x0
+from tvb_epilepsy.base.calculations_utils import calc_rescaled_x0
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
 from tvb_epilepsy.custom.read_write import read_ts
 
