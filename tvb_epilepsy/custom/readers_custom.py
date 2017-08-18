@@ -2,10 +2,12 @@
 Read VEP related entities from custom format and data-structures
 """
 
-import warnings
 import os
+import warnings
+
 import h5py
-from tvb_epilepsy.base.model_vep import Connectivity, Surface, Sensors, Head
+
+from tvb_epilepsy.base.model.model_vep import Connectivity, Surface, Sensors, Head
 from tvb_epilepsy.base.readers import ABCReader
 from tvb_epilepsy.base.utils import calculate_projection, initialize_logger
 

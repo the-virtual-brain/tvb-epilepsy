@@ -1,12 +1,11 @@
 import os
 import warnings
-
-import h5py
 from collections import OrderedDict
 
+import h5py
 import numpy as np
 
-from tvb_epilepsy.base.utils import initialize_logger, ensure_unique_file, change_filename_or_overwrite, \
+from tvb_epilepsy.base.utils import initialize_logger, change_filename_or_overwrite, \
                                     set_list_item_by_reference_safely, get_list_or_tuple_item_safely, \
                                     list_or_tuple_to_dict, dict_to_list_or_tuple, sort_dict
 
@@ -302,8 +301,8 @@ if __name__ == "__main__":
 
     from tvb_epilepsy.base.constants import FOLDER_RES, DATA_MODE, DATA_CUSTOM, TVB
     from tvb_epilepsy.base.utils import assert_equal_objects
-    from tvb_epilepsy.base.model_vep import Connectivity
-    from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
+    from tvb_epilepsy.base.model.model_vep import Connectivity
+    from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 
     if DATA_MODE is TVB:
         from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader

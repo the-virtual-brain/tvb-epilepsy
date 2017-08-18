@@ -4,17 +4,12 @@ Various plotting tools will be placed here.
 # TODO: make a plot function for sensitivity analysis results
 
 import matplotlib as mp
+import numpy as np
 from matplotlib import pyplot, gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-import numpy as np
 from scipy.stats.mstats import zscore
 
 from tvb_epilepsy.base.constants import *
-from tvb_epilepsy.base.utils import calculate_in_degree
-from tvb_epilepsy.base.calculations_utils import calc_fx1, calc_fx1, calc_fz, calc_fz, calc_fx1_2d_taylor, calc_rescaled_x0, \
-    calc_x0cr_r
-from tvb_epilepsy.base.equilibrium_computation import calc_eq_y1, def_x1lin
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
 try:
@@ -367,7 +362,6 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
     pyplot.hold(True)
     no_dims = len(data_dict)
     if no_dims>2:
-        from mpl_toolkits.mplot3d import Axes3D
         ax = pyplot.subplot(111,projection='3d')
     else:
         ax = pyplot.subplot(111)

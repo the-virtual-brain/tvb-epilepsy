@@ -11,8 +11,8 @@ def pse_from_hypothesis(hypothesis, n_samples, half_range=0.1, global_coupling=[
     from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE, K_DEF, FOLDER_RES
     from tvb_epilepsy.base.utils import initialize_logger, linear_index_to_coordinate_tuples, \
                                         dicts_of_lists_to_lists_of_dicts, list_of_dicts_to_dicts_of_ndarrays
-    from tvb_epilepsy.base.sampling_service import StochasticSamplingService
-    from tvb_epilepsy.base.pse_service import PSEService
+    from tvb_epilepsy.base.service.sampling_service import StochasticSamplingService
+    from tvb_epilepsy.base.service.pse_service import PSEService
 
     logger = initialize_logger(__name__)
     
@@ -132,9 +132,9 @@ def sensitivity_analysis_pse_from_hypothesis(hypothesis, n_samples, method="sobo
     from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE, FOLDER_RES
     from tvb_epilepsy.base.utils import initialize_logger, linear_index_to_coordinate_tuples, \
                                         list_of_dicts_to_dicts_of_ndarrays, dicts_of_lists_to_lists_of_dicts
-    from tvb_epilepsy.base.sampling_service import StochasticSamplingService
-    from tvb_epilepsy.base.pse_service import PSEService
-    from tvb_epilepsy.base.sensitivity_analysis_service import SensitivityAnalysisService, METHODS
+    from tvb_epilepsy.base.service.sampling_service import StochasticSamplingService
+    from tvb_epilepsy.base.service.pse_service import PSEService
+    from tvb_epilepsy.base.service.sensitivity_analysis_service import SensitivityAnalysisService, METHODS
     
     logger = initialize_logger(__name__)
     

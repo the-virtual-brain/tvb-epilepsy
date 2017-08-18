@@ -7,14 +7,14 @@ class Surface
 class Sensors
 """
 from collections import OrderedDict
+
 import numpy as np
-
-from tvb_epilepsy.base.utils import reg_dict, formal_repr, normalize_weights, calculate_in_degree, sort_dict
-
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 from tvb_epilepsy.base.constants import FOLDER_FIGURES, LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.plot_utils import _plot_vector, _plot_regions2regions, save_figure, check_show
+from tvb_epilepsy.base.utils import reg_dict, formal_repr, normalize_weights, calculate_in_degree, sort_dict
 
 
 class Head(object):

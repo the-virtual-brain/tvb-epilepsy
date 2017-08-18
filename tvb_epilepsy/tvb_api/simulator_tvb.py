@@ -7,16 +7,12 @@ import time
 import warnings
 
 import numpy
-from tvb.datatypes import connectivity, equations
+from tvb.datatypes import connectivity
 from tvb.simulator import coupling, integrators, monitors, noise, simulator
-from tvb.simulator.models import Epileptor
 
-from tvb_epilepsy.base.constants import *
-from tvb_epilepsy.base.epileptor_model_factory import model_build_dict, model_noise_intensity_dict, \
-    model_noise_type_dict
-from tvb_epilepsy.base.model_vep import Connectivity
+from tvb_epilepsy.base.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
+from tvb_epilepsy.base.simulators import ABCSimulator
 from tvb_epilepsy.custom.read_write import epileptor_model_attributes_dict
 
 

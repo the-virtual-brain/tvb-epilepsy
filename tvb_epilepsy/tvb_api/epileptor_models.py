@@ -4,10 +4,10 @@ Extend TVB Models, with new ones, specific for Epilepsy.
 """
 
 import numpy
-from tvb.simulator.common import get_logger
-import tvb.datatypes.arrays as arrays
 import tvb.basic.traits.types_basic as basic
-from tvb.simulator.models import Model, Epileptor
+import tvb.datatypes.arrays as arrays
+from tvb.simulator.common import get_logger
+from tvb.simulator.models import Model
 
 LOG = get_logger(__name__)
 
@@ -597,7 +597,7 @@ class EpileptorDPrealistic(Model):
     @staticmethod
     def fun_slope_Iext2(z, g, pmode, slope, Iext2):
 
-        from tvb_epilepsy.base.analyzers_utils import interval_scaling
+        from tvb_epilepsy.base.computations.analyzers_utils import interval_scaling
 
         if (pmode == numpy.array(['g', 'z', 'z*g'])).any():
 

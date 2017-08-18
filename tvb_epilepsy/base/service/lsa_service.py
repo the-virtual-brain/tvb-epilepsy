@@ -4,12 +4,13 @@ Service to do LSA computation.
 """
 import numpy
 from tvb.basic.logger.builder import get_logger
+
 from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.plot_utils import plot_in_columns
 from tvb_epilepsy.base.utils import formal_repr, weighted_vector_sum,curve_elbow_point
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.calculations_utils import calc_fz_jac_square_taylor
-from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
 
 LOG = get_logger(__name__)
 

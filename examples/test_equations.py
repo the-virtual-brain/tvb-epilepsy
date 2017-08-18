@@ -1,12 +1,6 @@
-
-import os
-import numpy
-from numpy.linalg import eig
-from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.utils import initialize_logger
-from tvb_epilepsy.base.calculations_utils import *
-from tvb_epilepsy.base.symbolic_utils import *
-from tvb_epilepsy.base.equilibrium_computation import *
+from tvb_epilepsy.base.computations.calculations_utils import *
+from tvb_epilepsy.base.computations.equilibrium_computation import *
 
 if __name__ == "__main__":
 

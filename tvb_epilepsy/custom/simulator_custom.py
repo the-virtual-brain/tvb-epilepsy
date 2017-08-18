@@ -4,18 +4,20 @@ Python Demo for configuring Custom Simulations from Python.
 Classes Settings, EpileptorParams and FullConfiguration are synchronized with the Java code, and should not be changed!
 """
 
-import os
 import json
-from copy import copy
+import os
 import subprocess
-import warnings
+from copy import copy
+
 import numpy
+
 from tvb_epilepsy.base.constants import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.simulators import ABCSimulator
 from tvb_epilepsy.base.utils import obj_to_dict, assert_arrays
-from tvb_epilepsy.base.calculations_utils import calc_rescaled_x0
-from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
+from tvb_epilepsy.base.computations.calculations_utils import calc_rescaled_x0
 from tvb_epilepsy.custom.read_write import read_ts
+
 
 # TODO: It is imperative to allow for modification of the connectivity.normalized_weights of the Connecitivity.h5
 # according to the model_configuration.connectivity

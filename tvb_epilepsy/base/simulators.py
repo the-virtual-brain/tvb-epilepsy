@@ -1,15 +1,15 @@
 """
 Mechanism for launching and configuring generic Simulations (it will have TVB or custom implementations)
 """
-from collections import OrderedDict
+
+from abc import ABCMeta, abstractmethod
 
 import numpy
 
-from abc import ABCMeta, abstractmethod
 from tvb_epilepsy.base.constants import NOISE_SEED
-from tvb_epilepsy.base.model_vep import formal_repr
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.equilibrium_computation import calc_equilibrium_point
+from tvb_epilepsy.base.model.model_vep import formal_repr
+from tvb_epilepsy.base.computations.equilibrium_computation import calc_equilibrium_point
 
 
 class SimulationSettings(object):

@@ -1,12 +1,11 @@
 import warnings
-from collections import OrderedDict
 
 import numpy as np
-
 from SALib.analyze import sobol, delta, fast, morris, dgsm,  ff
-from tvb_epilepsy.base.utils import formal_repr, list_of_dicts_to_dicts_of_ndarrays, dict_str
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb.basic.logger.builder import get_logger
+
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.utils import formal_repr, list_of_dicts_to_dicts_of_ndarrays, dict_str
 
 METHODS = ["sobol", "latin", "delta", "dgsm", "fast", "fast_sampler", "morris", "ff", "fractional_factorial"]
 
@@ -276,9 +275,9 @@ if __name__ == "__main__":
     import os
     from tvb_epilepsy.base.constants import DATA_CUSTOM, FOLDER_RES
     from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
-    from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
-    from tvb_epilepsy.base.model_configuration_service import ModelConfigurationService
-    from tvb_epilepsy.base.lsa_service import LSAService
+    from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+    from tvb_epilepsy.base.service.model_configuration_service import ModelConfigurationService
+    from tvb_epilepsy.base.service.lsa_service import LSAService
     from tvb_epilepsy.base.helper_functions import sensitivity_analysis_pse_from_hypothesis
 
     # -------------------------------Reading data-----------------------------------

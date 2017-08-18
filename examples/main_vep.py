@@ -3,29 +3,25 @@ Entry point for working with VEP
 """
 import os
 import warnings
-
 from copy import deepcopy
 
 import numpy as np
 
-from tvb_epilepsy.base.constants import FOLDER_RES, SIMULATION_MODE, TVB, DATA_MODE, VOIS, DATA_CUSTOM, X0_DEF, E_DEF, \
-                                        FOLDER_FIGURES, SAVE_FLAG, SHOW_FLAG
-from tvb_epilepsy.base.utils import assert_equal_objects
-from tvb_epilepsy.base.model_vep import Connectivity
-from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.base.model_configuration_service import ModelConfigurationService
-from tvb_epilepsy.base.lsa_service import LSAService
-from tvb_epilepsy.base.plot_utils import plot_sim_results
-from tvb_epilepsy.base.utils import initialize_logger, calculate_projection
-from tvb_epilepsy.base.analyzers_utils import filter_data
-from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
+from tvb_epilepsy.base.constants import FOLDER_RES, SIMULATION_MODE, TVB, DATA_MODE, VOIS, DATA_CUSTOM, X0_DEF, E_DEF
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
-from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
-from tvb_epilepsy.custom.simulator_custom import EpileptorModel
-
-
 from tvb_epilepsy.base.helper_functions import pse_from_hypothesis, sensitivity_analysis_pse_from_hypothesis, \
     set_time_scales
+from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.base.model.model_vep import Connectivity
+from tvb_epilepsy.base.plot_utils import plot_sim_results
+from tvb_epilepsy.base.service.lsa_service import LSAService
+from tvb_epilepsy.base.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.base.utils import assert_equal_objects
+from tvb_epilepsy.base.utils import initialize_logger, calculate_projection
+from tvb_epilepsy.base.computations.analyzers_utils import filter_data
+from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
+from tvb_epilepsy.custom.simulator_custom import EpileptorModel
+from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
