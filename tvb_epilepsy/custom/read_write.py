@@ -6,7 +6,8 @@ import os
 import h5py
 import numpy
 import warnings
-from tvb_epilepsy.base.utils import ensure_unique_file, read_object_from_h5_file, print_metadata, write_metadata
+from tvb_epilepsy.base.utils import ensure_unique_file, change_filename_or_overwrite, \
+                                    read_object_from_h5_file, print_metadata, write_metadata
 # TODO: solve problems with setting up a logger
 from tvb_epilepsy.base.utils import initialize_logger
 from tvb_epilepsy.base.epileptor_model_factory import model_build_dict
@@ -78,10 +79,11 @@ simulation_settings_attributes_dict = {"Simulated length (ms)": "simulated_perio
 
 
 def generate_connectivity_variant(uq_name, new_weights, new_tracts, description, new_w=None,
-                                  path=os.path.join(PATIENT_VIRTUAL_HEAD, "Connectivity.h5")):
+                                  folder=os.path.join(PATIENT_VIRTUAL_HEAD), filename="Connectivity.h5"):
     """
     In existing Connectivity H5 define Weights and Tracts variants
     """
+    path = os.path.join(folder, filename)
     print "Writing a Connectivity Variant in:", path
     h5_file = h5py.File(path, 'a', libver='latest')
 
@@ -130,10 +132,17 @@ def write_epileptogenicity_hypothesis(ep_vector, folder_name=None, file_name=Non
     if folder_name is None:
         folder_name = file_name
 
-    path = os.path.join(PATIENT_VIRTUAL_HEAD, folder_name, file_name + ".h5")
-    if os.path.exists(path):
-        print "Ep file %s already exists. Use a different name!" % path
-        return
+    path, overwrite = change_filename_or_overwrite(os.path.join(PATIENT_VIRTUAL_HEAD, folder_name), file_name + ".h5")
+    # path = os.path.join(PATIENT_VIRTUAL_HEAD, folder_name, file_name + ".h5")
+    # if os.path.exists(path):
+    #     print "Ep file %s already exists. Use a different name!" % path
+    #     return
+    if overwrite:
+        try:
+            os.remove(path)
+        except:
+            warnings.warn("\nFile to overwrite not found!")
+
     os.makedirs(os.path.dirname(path))
 
     print "Writing an Epileptogenicity at:", path
@@ -144,81 +153,30 @@ def write_epileptogenicity_hypothesis(ep_vector, folder_name=None, file_name=Non
     h5_file.close()
 
 
-def write_h5_model(h5_model, folder_name, file_name):
-    """
-    Store H5Model object to a hdf5 file
-    """
-    final_path = ensure_unique_file(folder_name, file_name)
-    if os.path.isfile(final_path):
-        os.remove(final_path)
-
-    logger.info("Writing %s at: %s" % (h5_model, final_path))
-
-    h5_file = h5py.File(final_path, 'a', libver='latest')
-
-    for attribute, field in h5_model.datasets_dict.iteritems():
-        h5_file.create_dataset("/" + attribute, data=field)
-
-    for meta, val in h5_model.metadata_dict.iteritems():
-        h5_file.attrs.create(meta, val)
-
-    h5_file.close()
-
-
-# TODO: read new hypothesis
-def read_hypothesis(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "hypo_ep.h5"), output="object", hypo_name=None,
-                    update_hypothesis=True):
-    """
-    :param path: Path towards an hypothesis H5 file
-    :return: hypothesis object
-    """
-
-    print "Reading Hypothesis from:", path
-    h5_file = h5py.File(path, 'r', libver='latest')
-
-    print_metadata(h5_file)
-
-    overwrite_fields_dict = {"seizure_indices":
-                                 numpy.array(numpy.where(h5_file["/EZ hypothesis"][()] > 0)).astype("i").squeeze()}
-
-    if isinstance(hypo_name, basestring):
-        overwrite_fields_dict.update({"name": hypo_name})
-
-    if output == "dict":
-        hyp = dict()
-    # else:
-    #     hyp = Hypothesis(h5_file['/Connectivity'][()].shape[0], h5_file['/Connectivity'][()])
-
-    read_object_from_h5_file(hyp, h5_file, hyp_attributes_dict, add_overwrite_fields_dict=overwrite_fields_dict)
-
-    if output != "dict" and update_hypothesis:
-        hyp._update_parameters(hyp.seizure_indices)
-
-    h5_file.close()
-
-    return hyp
-
-
 def import_sensors(src_txt_file):
     labels = numpy.loadtxt(src_txt_file, dtype=numpy.str, usecols=[0])
     locations = numpy.loadtxt(src_txt_file, dtype=numpy.float32, usecols=[1, 2, 3])
     write_sensors(labels, locations)
 
 
-def write_sensors(labels, locations, file_name=None):
+def write_sensors(labels, locations, folder=os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name=None):
     """
     Store Sensors in a file to be shared by multiple patient virtualizations (heads)
     """
     if file_name is None:
-        file_name = "SensorsSEEG_" + str(len(labels))
-    # path = os.path.join(os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name + ".h5")
+        file_name = "SensorsSEEG_" + str(len(labels)) + ".h5"
+
+    path, overwrite = change_filename_or_overwrite(folder, file_name)
+    # path = os.path.join(os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name)
     # if os.path.exists(path):
     #     print "Sensors file %s already exists. Use a different name!" % path
     #     return
 
-    path = ensure_unique_file(os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name + ".h5")
-    if os.path.isfile(path):
-        os.remove(path)
+    if overwrite:
+        try:
+            os.remove(path)
+        except:
+            warnings.warn("\nFile to overwrite not found!")
 
     print "Writing Sensors at:", path
     h5_file = h5py.File(path, 'a', libver='latest')
@@ -315,17 +273,20 @@ def read_ts(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5"), data=None):
     return time, data
 
 
-def write_ts(raw_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts_from_python.h5")):
-    dirname, filename = os.path.split(path)
-    path = ensure_unique_file(dirname, filename)
-    if os.path.isfile(path):
-        os.remove(path)
+def write_ts(raw_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD, "ep"), filename="ts_from_python.h5"):
 
+    path, overwrite = change_filename_or_overwrite(os.path.join(folder, filename))
     # if os.path.exists(path):
     #     print "TS file %s already exists. Use a different name!" % path
     #     return
 
     print "Writing a TS at:", path
+
+    if overwrite:
+        try:
+            os.remove(path)
+        except:
+            warnings.warn("\nFile to overwrite not found!")
 
     h5_file = h5py.File(path, 'a', libver='latest')
     write_metadata({KEY_TYPE: "TimeSeries"}, h5_file, KEY_DATE, KEY_VERSION)
@@ -364,11 +325,6 @@ def read_ts_epi(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5")):
     :param path: Path towards a valid TimeSeries H5 file
     :return: Timeseries in a numpy array
     """
-    dirname, filename = os.path.split(path)
-    path = ensure_unique_file(dirname, filename)
-    if os.path.isfile(path):
-        os.remove(path)
-
     print "Reading TimeSeries from:", path
     h5_file = h5py.File(path, 'r', libver='latest')
 
@@ -384,16 +340,14 @@ def read_ts_epi(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5")):
     return data
 
 
-def write_ts_epi(raw_data, sampling_period, lfp_data=None,
-                 path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts_from_python.h5")):
-    dirname, filename = os.path.split(path)
-    path = ensure_unique_file(dirname, filename)
-    if os.path.isfile(path):
-        os.remove(path)
+def write_ts_epi(raw_data, sampling_period, lfp_data=None, folder=os.path.join(PATIENT_VIRTUAL_HEAD, "ep"),
+                 filename="ts_from_python.h5"):
 
+    path, overwrite = change_filename_or_overwrite(folder, filename)
     # if os.path.exists(path):
     #     print "TS file %s already exists. Use a different name!" % path
     #     return
+
     if raw_data is None or len(raw_data.shape) != 3:
         print "Invalid TS data 3D (time, regions, sv) expected"
         return
@@ -408,6 +362,12 @@ def write_ts_epi(raw_data, sampling_period, lfp_data=None,
         lfp_data = lfp_data.reshape((lfp_data.shape[0], lfp_data.shape[1], 1))
     else:
         print "Invalid lfp_data 3D (time, regions, sv) expected"
+
+    if overwrite:
+        try:
+            os.remove(path)
+        except:
+            warnings.warn("\nFile to overwrite not found!")
 
     h5_file = h5py.File(path, 'a', libver='latest')
     h5_file.create_dataset("/data", data=raw_data)
@@ -425,14 +385,13 @@ def write_ts_epi(raw_data, sampling_period, lfp_data=None,
     h5_file.close()
 
 
-def write_ts_seeg_epi(seeg_data, sampling_period, path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts_from_python.h5")):
-    dirname, filename = os.path.split(path)
-    path = ensure_unique_file(dirname, filename)
-    if os.path.isfile(path):
-        os.remove(path)
-    # if not os.path.exists(path):
-    #     print "TS file %s does exists. First define the raw data!" % path
-    #     return
+def write_ts_seeg_epi(seeg_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD, "ep"),
+                 filename="ts_from_python.h5"):
+
+    path = os.path.join(folder, filename)
+    if not os.path.exists(path):
+        print "TS file %s does not exist. First define the raw data!" % path
+        return
 
     sensors_name = "SeegSensors-" + str(seeg_data.shape[1])
     print "Writing a TS at:", path, sensors_name

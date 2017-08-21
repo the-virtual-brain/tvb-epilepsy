@@ -7,36 +7,38 @@ import time
 import warnings
 
 import numpy
-from tvb.datatypes import connectivity, equations
+from tvb.datatypes import connectivity
 from tvb.simulator import coupling, integrators, monitors, noise, simulator
-from tvb.simulator.models import Epileptor
 
-from tvb_epilepsy.base.constants import *
-from tvb_epilepsy.base.epileptor_model_factory import model_build_dict, model_noise_intensity_dict, \
-    model_noise_type_dict
-from tvb_epilepsy.base.h5_model import prepare_for_h5
-from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
+from tvb_epilepsy.base.epileptor_model_factory import model_build_dict
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.simulators import ABCSimulator
 from tvb_epilepsy.custom.read_write import epileptor_model_attributes_dict
-from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic, EpileptorDP2D
 
 
 class SimulatorTVB(ABCSimulator):
-    def __init__(self, model, simulation_settings, model_configuration, connectivity):
+    def __init__(self, connectivity, model_configuration, model, simulation_settings):
         self.model = model
         self.simulation_settings = simulation_settings
         self.model_configuration = model_configuration
         self.connectivity = connectivity
 
     @staticmethod
-    def _vep2tvb_connectivity(vep_conn):
-        return connectivity.Connectivity(use_storage=False, weights=vep_conn.normalized_weights,
+    def _vep2tvb_connectivity(vep_conn, connectivity_matrix=None):
+        if connectivity_matrix is None:
+            connectivity_matrix = vep_conn.normalized_weights
+        return connectivity.Connectivity(use_storage=False, weights=connectivity_matrix,
                                          tract_lengths=vep_conn.tract_lengths, region_labels=vep_conn.region_labels,
                                          centres=vep_conn.centers, hemispheres=vep_conn.hemispheres,
                                          orientations=vep_conn.orientations, areas=vep_conn.areas)
 
     def config_simulation(self):
 
-        tvb_connectivity = self._vep2tvb_connectivity(self.connectivity)
+        if isinstance(self.model_configuration.connectivity_matrix, numpy.ndarray):
+            tvb_connectivity = self._vep2tvb_connectivity(self.connectivity,
+                                                          self.model_configuration.connectivity_matrix)
+        else:
+            tvb_connectivity = self._vep2tvb_connectivity(self.connectivity)
         tvb_coupling = coupling.Difference(a=1.)
 
         # Set noise:
@@ -131,7 +133,7 @@ class SimulatorTVB(ABCSimulator):
     # def launch_pse(self, hypothesis, head, settings=SimulationSettings()):
     #     raise NotImplementedError()
 
-    def prepare_for_h5(self):
+    def _prepare_for_h5(self):
 
         attributes_dict = epileptor_model_attributes_dict[self.model._ui_name]
         for attr in attributes_dict:
@@ -142,8 +144,8 @@ class SimulatorTVB(ABCSimulator):
                         and numpy.all(str(field.dtype)[1] != numpy.array(["O", "S"])) and field.size == 1):
                 setattr(self.model, attributes_dict[attr], field * numpy.ones(p))
 
-        settings_h5_model = prepare_for_h5(self.simulation_settings)
-        epileptor_model_h5_model = prepare_for_h5(self.model)
+        settings_h5_model = convert_to_h5_model(self.simulation_settings)
+        epileptor_model_h5_model = convert_to_h5_model(self.model)
 
         epileptor_model_h5_model.append(settings_h5_model)
         epileptor_model_h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
@@ -165,69 +167,3 @@ class SimulatorTVB(ABCSimulator):
         else:
             self.simTVB.initial_conditions = self.prepare_initial_conditions(self.simTVB.good_history_shape[0])
 
-
-###
-# A helper function to make good choices for simulation settings, noise and monitors
-###
-def setup_simulation(model_configuration, connectivity, dt, sim_length, monitor_period, model_name="EpileptorDP",
-                     zmode=numpy.array("lin"), scale_time=1, noise_instance=None, noise_intensity=None,
-                     monitor_expressions=None, monitors_instance=None):
-
-    model = model_build_dict[model_name](model_configuration, zmode=zmode)
-
-    if isinstance(model, Epileptor):
-        model.tt *= scale_time * 0.25
-    else:
-        model.tau1 *= scale_time
-        if isinstance(model, EpileptorDPrealistic):
-            model.slope = 0.25
-            model.pmode = numpy.array("z")
-
-    if monitor_expressions is None:
-        monitor_expressions = []
-        for i in range(model._nvar):
-            monitor_expressions.append("y" + str(i))
-        if not (isinstance(model, EpileptorDP2D)):
-            monitor_expressions.append("y3 - y0")
-
-    if monitor_expressions is not None:
-        model.variables_of_interest = monitor_expressions
-
-    if monitors_instance is None:
-        monitors_instance = monitors.TemporalAverage()
-
-    if monitor_period is not None:
-        monitors_instance.period = monitor_period
-
-    default_noise_intensity = model_noise_intensity_dict[model_name]
-    default_noise_type = model_noise_type_dict[model_name]
-
-    if noise_intensity is None:
-        noise_intensity = default_noise_intensity
-
-    if noise_instance is not None:
-        noise_instance.nsig = noise_intensity
-
-    else:
-        if default_noise_type is ADDITIVE_NOISE:
-            noise_instance = noise.Additive(nsig=noise_intensity,
-                                            random_stream=numpy.random.RandomState(seed=NOISE_SEED))
-            noise_instance.configure_white(dt=dt)
-
-        else:
-            eq = equations.Linear(parameters={"a": 1.0, "b": 0.0})
-            noise_instance = noise.Multiplicative(ntau=10, nsig=noise_intensity, b=eq,
-                                                  random_stream=numpy.random.RandomState(seed=NOISE_SEED))
-            noise_shape = noise_instance.nsig.shape
-            noise_instance.configure_coloured(dt=dt, shape=noise_shape)
-
-    settings = SimulationSettings(simulated_period=sim_length, integration_step=dt, scale_time=scale_time,
-                                  noise_preconfig=noise_instance, noise_type=default_noise_type,
-                                  noise_intensity=noise_intensity, noise_ntau=noise_instance.ntau,
-                                  monitors_preconfig=monitors_instance, monitor_type=monitors_instance._ui_name,
-                                  monitor_sampling_period=monitor_period, monitor_expressions=monitor_expressions,
-                                  variables_names=model.variables_of_interest)
-
-    simulator_instance = SimulatorTVB(model, settings, model_configuration, connectivity)
-
-    return simulator_instance

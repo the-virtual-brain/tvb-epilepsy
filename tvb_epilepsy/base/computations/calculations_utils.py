@@ -1,13 +1,15 @@
 import warnings
-import numpy as np
 from scipy.optimize import root
-from tvb_epilepsy.base.equations import *
+import numpy as np
+from tvb_epilepsy.base.computations.equations_utils import *
 
 # TODO: find out why I cannot import anything from utils here
 # from tvb_epilepsy.base.utils import assert_array_shape as sc2arr
+from tvb_epilepsy.base.constants import X0_CR_DEF, X1_EQ_CR_DEF, X0_DEF
+from tvb_epilepsy.base.constants import X1_DEF
 
 try:
-    from tvb_epilepsy.base.symbolic import *
+    from tvb_epilepsy.base.computations.symbolic_utils import *
     SYMBOLIC_IMPORT=True
 
 except:
@@ -518,7 +520,7 @@ def calc_jac(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
     if numpy.all(calc_mode == "symbol"):
 
         n = model_vars * n_regions
-        jac = zeros((n,n), dtype=z.dtype)
+        jac = np.zeros((n,n), dtype=z.dtype)
 
         ind = lambda x: x * n_regions + np.array(range(n_regions))
 
@@ -685,8 +687,8 @@ def calc_fx1_2d_taylor(x1, x_taylor, z=0, y1=0.0, Iext1=0.0, slope=0.0, a=1.0, b
 
         if order == 2 and numpy.all(x1_neg == True):
 
-            fx1lin = multiply(Iext1 + 2 * multiply(power(x_taylor, 3), a) - multiply(power(x_taylor, 2), b) + y1 - z +
-                              multiply(x1, (-3 * multiply(power(x_taylor, 2), a) + 2 * multiply(x_taylor, b))), tau1)
+            fx1lin = np.multiply(Iext1 + 2 * np.multiply(np.power(x_taylor, 3), a) - np.multiply(np.power(x_taylor, 2), b) + y1 - z +
+                              np.multiply(x1, (-3 * np.multiply(np.power(x_taylor, 2), a) + 2 * np.multiply(x_taylor, b))), tau1)
 
         else:
 
@@ -804,31 +806,31 @@ def calc_fx1z_2d_x1neg_zpos_jac(x1, z, x0, x0cr, r, yc, Iext1, K, w, ix0, iE, a=
     else:
 
         if x1.shape != (1, x1.size):
-            x1 = expand_dims(x1.flatten(), 1).T
+            x1 = np.expand_dims(x1.flatten(), 1).T
 
         x1, z, x0, x0cr, r, yc, Iext1, K, a, b, tau1, tau0 = \
             assert_arrays([x1, z, x0, x0cr, r, yc, Iext1, K, a, b, tau1, tau0], x1.shape)
 
         w = assert_arrays([w], (x1.size, x1.size))
 
-        tau = divide(tau1, tau0)
+        tau = np.divide(tau1, tau0)
 
         no_x0 = len(ix0)
         no_e = len(iE)
 
-        i_x0 = ones((no_x0, 1))
-        i_e = ones((no_e, 1))
+        i_x0 = np.ones((no_x0, 1))
+        i_e = np.ones((no_e, 1))
 
-        jac_e_x0e = diag(multiply(tau[:, iE], (- 4 * r[:, iE])).flatten())
-        jac_e_x1o = -dot(dot(i_e, multiply(tau[:, iE], K[:, iE])), w[iE][:, ix0])
-        jac_x0_x0e = zeros((no_x0, no_e))
-        jac_x0_x1o = (diag(multiply(tau[:, ix0],
-                                    (4 + 3 * multiply(a[:, ix0], power(x1[:, ix0], 2))
-                                     - 2 * multiply(b[:, ix0], x1[:, ix0]) +
-                                     multiply(K[:, ix0], sum(w[ix0], axis=1)))).flatten()) -
-                      multiply(dot(i_x0, multiply(tau[:, ix0], K[:, ix0])).T, w[ix0][:, ix0]))
+        jac_e_x0e = np.diag(np.multiply(tau[:, iE], (- 4 * r[:, iE])).flatten())
+        jac_e_x1o = -np.dot(np.dot(i_e, np.multiply(tau[:, iE], K[:, iE])), w[iE][:, ix0])
+        jac_x0_x0e = np.zeros((no_x0, no_e))
+        jac_x0_x1o = (np.diag(np.multiply(tau[:, ix0],
+                                    (4 + 3 * np.multiply(a[:, ix0], np.power(x1[:, ix0], 2))
+                                     - 2 * np.multiply(b[:, ix0], x1[:, ix0]) +
+                                     np.multiply(K[:, ix0], np.sum(w[ix0], axis=1)))).flatten()) -
+                      np.multiply(np.dot(i_x0, np.multiply(tau[:, ix0], K[:, ix0])).T, w[ix0][:, ix0]))
 
-        jac = empty((x1.size, x1.size), dtype=jac_e_x0e.dtype)
+        jac = np.empty((x1.size, x1.size), dtype=jac_e_x0e.dtype)
         jac[numpy.ix_(iE, iE)] = jac_e_x0e
         jac[numpy.ix_(iE, ix0)] = jac_e_x1o
         jac[numpy.ix_(ix0, iE)] = jac_x0_x0e
@@ -849,7 +851,7 @@ def calc_fx1y1_6d_diff_x1(x1, yc, Iext1, a=1.0, b=3.0, d=5.0, tau1=1.0, shape=No
 
     else:
 
-        return multiply(multiply(-3 * multiply(x1, a) + 2 * (b - d), x1), tau1)
+        return np.multiply(np.multiply(-3 * np.multiply(x1, a) + 2 * (b - d), x1), tau1)
 
 
 def calc_x0cr_r(yc, Iext1, a=1.0, b=-2.0, zmode=np.array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
@@ -983,7 +985,7 @@ def calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
 
     shape = (1, n_regions)
 
-    f = empty((model_vars, n_regions), dtype=type(x1[0]))
+    f = np.empty((model_vars, n_regions), dtype=type(x1[0]))
 
     if model_vars == 2:
 
@@ -1029,4 +1031,4 @@ def calc_rescaled_x0(hyp_x0, yc, Iext1, a=1.0, bd=-2.0, zmode=np.array("lin"), s
 
     x0cr, r = calc_x0cr_r(yc, Iext1, a, bd, zmode=zmode, calc_mode=calc_mode) #epileptor_model="6d",
 
-    return multiply(r, hyp_x0) - x0cr
+    return np.multiply(r, hyp_x0) - x0cr

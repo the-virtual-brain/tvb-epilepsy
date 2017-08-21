@@ -8,8 +8,11 @@ from datetime import datetime
 
 USER_HOME = os.path.expanduser("~")
 
+FOLDER_VEP_ONLINE = os.path.join(USER_HOME, 'Dropbox', 'Work', 'VBtech', 'DenisVEP', 'Results')
+FOLDER_VEP = FOLDER_VEP_ONLINE
+
 if platform.node()=='dionperdMBP':
-    FOLDER_VEP = os.path.join(USER_HOME, 'CBR', 'VEP')
+    FOLDER_VEP_HOME = os.path.join(USER_HOME, 'CBR', 'VEP')
     # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR', 'svn', 'episense', 'demo-data')
     DATA_TVB = os.path.join(USER_HOME, 'CBR', 'svn', 'tvb', 'tvb-data', 'tvb-data')
     # DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH')
@@ -17,7 +20,7 @@ if platform.node()=='dionperdMBP':
     DATA_CUSTOM = os.path.join(FOLDER_VEP, 'CC/TVB1')
 
 else:
-    FOLDER_VEP = os.path.join(USER_HOME, 'VEP')
+    FOLDER_VEP_HOME = os.path.join(USER_HOME, 'VEP')
     # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR_software', 'svn-episense', 'demo-data')
     DATA_TVB = os.path.join(USER_HOME, 'CBR_software', 'svn-tvb', 'tvb-data', 'tvb-data')
     # DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH')
@@ -31,17 +34,18 @@ if not (os.path.isdir(FOLDER_VEP)):
 # FOLDER_DATA = os.path.join(FOLDER_VEP, 'data')
 
 # Folder where logs will be written
-FOLDER_LOGS = os.path.join(FOLDER_VEP, 'logs'+datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M'))
+FOLDER_LOGS = os.path.join(FOLDER_VEP_HOME, 'logs'+datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M'))
 
 # Folder where results will be saved
-FOLDER_RES = os.path.join(FOLDER_VEP, 'results'+datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M'))
+FOLDER_RES = os.path.join(FOLDER_VEP_HOME, 'results'+datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M'))
 if not (os.path.isdir(FOLDER_RES)):
         os.mkdir(FOLDER_RES)
 # Figures related settings:
 VERY_LARGE_SIZE = (40, 20)
 LARGE_SIZE = (20, 15)
 SMALL_SIZE = (15, 10)
-FOLDER_FIGURES = os.path.join(FOLDER_VEP, 'figures'+datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M'))
+FIG_SIZE = SMALL_SIZE
+FOLDER_FIGURES = os.path.join(FOLDER_VEP_HOME, 'figures'+datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M'))
 if not (os.path.isdir(FOLDER_FIGURES)):
         os.mkdir(FOLDER_FIGURES)
 FIG_FORMAT = 'png'
@@ -62,6 +66,7 @@ X1_DEF = -5.0 / 3.0
 X1_EQ_CR_DEF = -4.0 / 3.0
 ADDITIVE_NOISE="Additive"
 MULTIPLICATIVE_NOISE="Multiplicative"
+MAX_DISEASE_VALUE = 1.0 - 10 ** -3
 
 # Simulation and data read folder amd flags:
 MODEL = '6v'

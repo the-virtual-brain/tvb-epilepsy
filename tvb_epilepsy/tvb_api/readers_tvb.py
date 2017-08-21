@@ -8,7 +8,7 @@ TvbProfile.set_profile(TvbProfile.LIBRARY_PROFILE)
 
 import os
 from tvb.datatypes import connectivity, surfaces, region_mapping, sensors, structural, projections
-from tvb_epilepsy.base.model_vep import Connectivity, Surface, Sensors, Head
+from tvb_epilepsy.base.model.model_vep import Connectivity, Surface, Sensors, Head
 from tvb_epilepsy.base.readers import ABCReader
 
 
