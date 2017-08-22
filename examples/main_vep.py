@@ -199,12 +199,22 @@ def main_vep(test_write_read=False):
         logger.info("\n\nCreating model configuration...")
         model_configuration_service = ModelConfigurationService(hyp.get_number_of_regions())
         model_configuration_service.write_to_h5(FOLDER_RES, hyp.name + "_model_config_service.h5")
+        if test_write_read:
+            logger.info("Written and read model configuration services are identical?: "+
+                        str(assert_equal_objects(model_configuration_service,
+                                 read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_model_config_service.h5")).
+                                    convert_from_h5_model(obj=deepcopy(model_configuration_service)))))
 
         if hyp.type == "Epileptogenicity":
             model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hyp)
         else:
             model_configuration = model_configuration_service.configure_model_from_hypothesis(hyp)
         model_configuration.write_to_h5(FOLDER_RES, hyp.name + "_ModelConfig.h5")
+        if test_write_read:
+            logger.info("Written and read model configuration are identical?: " +
+                        str(assert_equal_objects(model_configuration,
+                                                 read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_ModelConfig.h5")).
+                                                 convert_from_h5_model(obj=deepcopy(model_configuration)))))
 
         # # Plot nullclines and equilibria of model configuration
         # model_configuration_service.plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
@@ -218,6 +228,31 @@ def main_vep(test_write_read=False):
 
         lsa_hypothesis.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")
         lsa_service.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")
+        if test_write_read:
+
+            hypothesis_template = DiseaseHypothesis(Connectivity("", np.array([]), np.array([])))
+
+            logger.info("Written and read LSA services are identical?: " +
+                        str(assert_equal_objects(lsa_service,
+                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")).
+                                    convert_from_h5_model(obj=deepcopy(lsa_service)))))
+
+            logger.info("Written and read LSA hypotheses are identical (input object check)?: " +
+                        str(assert_equal_objects(lsa_hypothesis,
+                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
+                                    convert_from_h5_model(obj=deepcopy(lsa_hypothesis)))))
+            logger.info("Written and read LSA hypotheses are identical (input template check)?: " +
+                        str(assert_equal_objects(lsa_hypothesis,
+                                read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
+                                    convert_from_h5_model(children_dict=hypothesis_template))))
+            logger.info("Written and read LSA hypotheses are identical (no input object check)?: " +
+                        str(assert_equal_objects(pse_results,
+                                read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")).
+                                    convert_from_h5_model())))
+            logger.info("Written and read LSA services are identical?: " +
+                        str(assert_equal_objects(lsa_service,
+                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")).
+                                    convert_from_h5_model(obj=deepcopy(lsa_service)))))
 
         lsa_service.plot_lsa(lsa_hypothesis, model_configuration, None, title=lsa_hypothesis.name+"_LSA.h5")
 
@@ -235,6 +270,12 @@ def main_vep(test_write_read=False):
         # , show_flag=True, save_flag=False
 
         convert_to_h5_model(pse_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")
+        if test_write_read:
+            logger.info("Written and read sensitivity analysis parameter search results are identical?: " +
+                        str(assert_equal_objects(pse_results,
+                                  read_h5_model(os.path.join(FOLDER_RES,
+                                           lsa_hypothesis.name + "_PSE_LSA_results.h5")).convert_from_h5_model())))
+
 
         # --------------Sensitivity Analysis Parameter Search Exploration (PSE)-------------------------------
 
@@ -253,6 +294,20 @@ def main_vep(test_write_read=False):
 
         convert_to_h5_model(pse_sa_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")
         convert_to_h5_model(sa_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_SA_LSA_results.h5")
+        if test_write_read:
+            logger.info("Written and read sensitivity analysis results are identical?: " +
+                        str(assert_equal_objects(sa_results,
+                                  read_h5_model(os.path.join(FOLDER_RES,
+                                              lsa_hypothesis.name + "_SA_LSA_results.h5")).convert_from_h5_model())))
+            logger.info("Written and read sensitivity analysis parameter search results are identical?: " +
+                        str(assert_equal_objects(pse_results,
+                                  read_h5_model(os.path.join(FOLDER_RES,
+                                            lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).convert_from_h5_model())))
+            logger.info("Written and read simulation settings are identical?: " +
+                        str(assert_equal_objects(sim.simulation_settings,
+                                                 read_h5_model(os.path.join(FOLDER_RES,
+                                                                            lsa_hypothesis.name + "_sim_settings.h5")).
+                                                 convert_from_h5_model(obj=deepcopy(sim.simulation_settings)))))
 
         # ------------------------------Simulation--------------------------------------
         logger.info("\n\nSimulating...")
@@ -264,6 +319,20 @@ def main_vep(test_write_read=False):
         ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
 
         convert_to_h5_model(sim.simulation_settings).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")
+        if test_write_read:
+            logger.info("Written and read sensitivity analysis results are identical?: " +
+                        str(assert_equal_objects(sa_results,
+                                  read_h5_model(os.path.join(FOLDER_RES,
+                                              lsa_hypothesis.name + "_SA_LSA_results.h5")).convert_from_h5_model())))
+            logger.info("Written and read sensitivity analysis parameter search results are identical?: " +
+                        str(assert_equal_objects(pse_results,
+                                  read_h5_model(os.path.join(FOLDER_RES,
+                                            lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).convert_from_h5_model())))
+            logger.info("Written and read simulation settings are identical?: " +
+                        str(assert_equal_objects(sim.simulation_settings,
+                                                 read_h5_model(os.path.join(FOLDER_RES,
+                                                                            lsa_hypothesis.name + "_sim_settings.h5")).
+                                                 convert_from_h5_model(obj=deepcopy(sim.simulation_settings)))))
 
         if not status:
             warnings.warn("\nSimulation failed!")
@@ -298,46 +367,46 @@ def main_vep(test_write_read=False):
             vois_ts_dict['time_units'] = 'msec'
             # savemat(os.path.join(FOLDER_RES, hypothesis.name + "_ts.mat"), vois_ts_dict)
 
-        if test_write_read:
-
-            hypothesis_template = DiseaseHypothesis(Connectivity("", np.array([]), np.array([])))
-
-            logger.info("Written and read model configuration services are identical?: "+
-                        str(assert_equal_objects(model_configuration_service,
-                                 read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_model_config_service.h5")).
-                                    convert_from_h5_model(obj=deepcopy(model_configuration_service)))))
-            logger.info("Written and read model configuration services are identical?: " +
-                        str(assert_equal_objects(model_configuration,
-                                 read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_ModelConfig.h5")).
-                                    convert_from_h5_model(obj=deepcopy(model_configuration)))))
-            logger.info("Written and read model configuration services are identical?: " +
-                        str(assert_equal_objects(lsa_service,
-                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")).
-                                    convert_from_h5_model(obj=deepcopy(lsa_service)))))
-            logger.info("Written and read model configuration services are identical?: " +
-                        str(assert_equal_objects(lsa_hypothesis,
-                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
-                                    convert_from_h5_model(obj=deepcopy(lsa_hypothesis)))))
-            logger.info("Written and read model configuration services are identical?: " +
-                        str(assert_equal_objects(lsa_hypothesis,
-                                read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
-                                    convert_from_h5_model(children_dict=hypothesis_template))))
-            logger.info("Written and read model configuration services are identical?: " +
-                        str(assert_equal_objects(pse_results,
-                                read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")).
-                                    convert_from_h5_model())))
-            logger.info("Written and read model configuration services are identical?: " +
-                        str(assert_equal_objects(pse_sa_results,
-                                read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).
-                                    convert_from_h5_model())))
-            logger.info("Written and read model configuration services are identical?: " +
-                        str(assert_equal_objects(sa_results,
-                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_LSA_results.h5")).
-                                 convert_from_h5_model())))
-            logger.info("Written and read model configuration services are identical?: " +
-                        str(assert_equal_objects(sim.simulation_settings,
-                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")).
-                                 convert_from_h5_model(obj=deepcopy(sim.simulation_settings)))))
+        # if test_write_read:
+        #
+        #     hypothesis_template = DiseaseHypothesis(Connectivity("", np.array([]), np.array([])))
+        #
+        #     logger.info("Written and read model configuration services are identical?: "+
+        #                 str(assert_equal_objects(model_configuration_service,
+        #                          read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_model_config_service.h5")).
+        #                             convert_from_h5_model(obj=deepcopy(model_configuration_service)))))
+        #     logger.info("Written and read model configuration are identical?: " +
+        #                 str(assert_equal_objects(model_configuration,
+        #                          read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_ModelConfig.h5")).
+        #                             convert_from_h5_model(obj=deepcopy(model_configuration)))))
+        #     logger.info("Written and read LSA services are identical?: " +
+        #                 str(assert_equal_objects(lsa_service,
+        #                          read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")).
+        #                             convert_from_h5_model(obj=deepcopy(lsa_service)))))
+        #     logger.info("Written and read LSA hypotheses are identical (input object check)?: " +
+        #                 str(assert_equal_objects(lsa_hypothesis,
+        #                          read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
+        #                             convert_from_h5_model(obj=deepcopy(lsa_hypothesis)))))
+        #     logger.info("Written and read LSA hypotheses are identical (input template check)?: " +
+        #                 str(assert_equal_objects(lsa_hypothesis,
+        #                         read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
+        #                             convert_from_h5_model(children_dict=hypothesis_template))))
+        #     logger.info("Written and read LSA hypotheses are identical (no input object check)?: " +
+        #                 str(assert_equal_objects(pse_results,
+        #                         read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")).
+        #                             convert_from_h5_model())))
+        #     logger.info("Written and read sensitivity analysis results are identical?: " +
+        #                 str(assert_equal_objects(sa_results,
+        #                         read_h5_model(os.path.join(FOLDER_RES,
+        #                                     lsa_hypothesis.name + "_SA_LSA_results.h5")).convert_from_h5_model())))
+        #     logger.info("Written and read sensitivity analysis parameter search results are identical?: " +
+        #                 str(assert_equal_objects(pse_sa_results,
+        #                         read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).
+        #                             convert_from_h5_model())))
+        #     logger.info("Written and read simulation settings are identical?: " +
+        #                 str(assert_equal_objects(sim.simulation_settings,
+        #                          read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")).
+        #                          convert_from_h5_model(obj=deepcopy(sim.simulation_settings)))))
 
 
 

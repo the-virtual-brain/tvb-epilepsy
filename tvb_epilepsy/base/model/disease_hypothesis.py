@@ -71,10 +71,12 @@ class DiseaseHypothesis(object):
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         h5_model.add_or_update_metadata_attribute("Number_of_nodes", self.get_number_of_regions())
 
-        all_indices_for_propagation = np.zeros(self.get_number_of_regions())
-        all_indices_for_propagation[self.propagation_indices] = 1
+        # TODO: resolve this possible disagreement with Episense with the propagation indices being converted to flags:
 
-        h5_model.add_or_update_datasets_attribute("propagation_indices", all_indices_for_propagation)
+        # all_indices_for_propagation = np.zeros(self.get_number_of_regions())
+        # all_indices_for_propagation[self.propagation_indices] = 1
+        #
+        # h5_model.add_or_update_datasets_attribute("propagation_indices", all_indices_for_propagation)
 
         return h5_model
 
