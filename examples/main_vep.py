@@ -303,41 +303,41 @@ def main_vep(test_write_read=False):
             hypothesis_template = DiseaseHypothesis(Connectivity("", np.array([]), np.array([])))
 
             logger.info("Written and read model configuration services are identical?: "+
-                        assert_equal_objects(model_configuration_service,
+                        str(assert_equal_objects(model_configuration_service,
                                  read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_model_config_service.h5")).
-                                 convert_from_h5_model(obj=deepcopy(model_configuration_service))))
+                                    convert_from_h5_model(obj=deepcopy(model_configuration_service)))))
             logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(model_configuration,
+                        str(assert_equal_objects(model_configuration,
                                  read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_ModelConfig.h5")).
-                                 convert_from_h5_model(obj=deepcopy(model_configuration))))
+                                    convert_from_h5_model(obj=deepcopy(model_configuration)))))
             logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(lsa_service,
+                        str(assert_equal_objects(lsa_service,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")).
-                                 convert_from_h5_model(obj=deepcopy(lsa_service))))
+                                    convert_from_h5_model(obj=deepcopy(lsa_service)))))
             logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(lsa_hypothesis,
+                        str(assert_equal_objects(lsa_hypothesis,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
-                                 convert_from_h5_model(obj=deepcopy(lsa_hypothesis))))
+                                    convert_from_h5_model(obj=deepcopy(lsa_hypothesis)))))
             logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(lsa_hypothesis,
-                                             read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
-                                             convert_from_h5_model(children_dict=hypothesis_template)))
+                        str(assert_equal_objects(lsa_hypothesis,
+                                read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
+                                    convert_from_h5_model(children_dict=hypothesis_template))))
             logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(pse_results,
-                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")).
-                                 convert_from_h5_model()))
+                        str(assert_equal_objects(pse_results,
+                                read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")).
+                                    convert_from_h5_model())))
             logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(pse_sa_results,
-                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).
-                                 convert_from_h5_model()))
+                        str(assert_equal_objects(pse_sa_results,
+                                read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).
+                                    convert_from_h5_model())))
             logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(sa_results,
+                        str(assert_equal_objects(sa_results,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_LSA_results.h5")).
-                                 convert_from_h5_model()))
+                                 convert_from_h5_model())))
             logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(sim.simulation_settings,
+                        str(assert_equal_objects(sim.simulation_settings,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")).
-                                 convert_from_h5_model(obj=deepcopy(sim.simulation_settings))))
+                                 convert_from_h5_model(obj=deepcopy(sim.simulation_settings)))))
 
 
 
