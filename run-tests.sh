@@ -2,7 +2,7 @@
 
 # ignore extern and scripts under dev
 ignores=""
-for ign in examples; do ignores="--ignore=$ign $ignores"; done
+for ign in examples extern; do ignores="--ignore=$ign $ignores"; done
 
 # maybe do coverage
 cov=""
