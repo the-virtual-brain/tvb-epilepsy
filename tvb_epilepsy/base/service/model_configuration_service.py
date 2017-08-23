@@ -131,12 +131,11 @@ class ModelConfigurationService(object):
                                                  x0cr, rx0, x1EQ, zEQ, Ceq, x0_values, e_values, connectivity_matrix)
         return model_configuration
 
-    def configure_model_from_E_hypothesis(self, disease_hypothesis):
+    def configure_model_from_E_hypothesis(self, disease_hypothesis, connectivity_matrix):
         # Always normalize K first
         self._normalize_global_coupling()
 
         # Then apply connectivity disease hypothesis scaling if any:
-        connectivity_matrix = disease_hypothesis.get_weights()
         if len(disease_hypothesis.w_indices) > 0:
             connectivity_matrix *= disease_hypothesis.get_connectivity_disease()
 
@@ -150,12 +149,11 @@ class ModelConfigurationService(object):
 
         return self.configure_model_from_equilibrium(x1EQ, zEQ, connectivity_matrix)
 
-    def configure_model_from_hypothesis(self, disease_hypothesis):
+    def configure_model_from_hypothesis(self, disease_hypothesis, connectivity_matrix):
         # Always normalize K first
         self._normalize_global_coupling()
 
         # Then apply connectivity disease hypothesis scaling if any:
-        connectivity_matrix = disease_hypothesis.get_weights()
         if len(disease_hypothesis.w_indices) > 0:
             connectivity_matrix *= disease_hypothesis.get_connectivity_disease()
 

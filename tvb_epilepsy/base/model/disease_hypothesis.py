@@ -18,10 +18,10 @@ logger = initialize_logger(__name__)
 
 
 class DiseaseHypothesis(object):
-    def __init__(self, connectivity, excitability_hypothesis={}, epileptogenicity_hypothesis={},
+    def __init__(self, number_of_regions, excitability_hypothesis={}, epileptogenicity_hypothesis={},
                  connectivity_hypothesis={}, propagation_indices=[], propagation_strenghts=[], name=""):
 
-        self.connectivity = connectivity
+        self.number_of_regions = number_of_regions
 
         self.type = []
         self.x0_indices, self.x0_values = self.sort_disease_indices_values(excitability_hypothesis)
@@ -47,19 +47,20 @@ class DiseaseHypothesis(object):
     def __repr__(self):
         d = {"01. Name": self.name,
              "02. Type": self.type,
-             "03. X0 disease indices": self.x0_indices,
-             "04. X0 disease values": self.x0_values,
-             "05. E disease indices": self.e_indices,
-             "06. E disease indices": self.e_values,
-             "07. Connectivity disease indices":
-                 linear_index_to_coordinate_tuples(self.w_indices, self.connectivity.weights.shape),
-             "08. Connectivity disease values": self.w_values,
-             "09. Propagation indices": self.propagation_indices,
+             "03. Number of regions": self.number_of_regions,
+             "04. X0 disease indices": self.x0_indices,
+             "05. X0 disease values": self.x0_values,
+             "06. E disease indices": self.e_indices,
+             "07. E disease indices": self.e_values,
+             "08. Connectivity disease indices":
+                 linear_index_to_coordinate_tuples(self.w_indices, (self.number_of_regions, self.number_of_regions)),
+             "09. Connectivity disease values": self.w_values,
+             "10. Propagation indices": self.propagation_indices,
              }
         if len(self.propagation_indices):
-            d.update({"10. Propagation strengths of indices": self.propagation_strenghts[self.propagation_indices]})
+            d.update({"11. Propagation strengths of indices": self.propagation_strenghts[self.propagation_indices]})
         else:
-            d.update({"10. Propagation strengths of indices": self.propagation_strenghts})
+            d.update({"11. Propagation strengths of indices": self.propagation_strenghts})
         # d.update({"11. Connectivity": str(self.connectivity)})
         return formal_repr(self, d)
 
@@ -69,7 +70,7 @@ class DiseaseHypothesis(object):
     def _prepare_for_h5(self):
         h5_model = convert_to_h5_model(self)
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
-        h5_model.add_or_update_metadata_attribute("Number_of_nodes", self.get_number_of_regions())
+        h5_model.add_or_update_metadata_attribute("Number_of_nodes", self.number_of_regions)
 
         # TODO: resolve this possible disagreement with Episense with the propagation indices being converted to flags:
 
@@ -86,16 +87,24 @@ class DiseaseHypothesis(object):
         h5_model = self._prepare_for_h5()
         h5_model.write_to_h5(folder, filename)
 
-    def prepare_for_plot(self):
+    def prepare_for_plot(self, connectivity_matrix=None):
         width_ratios = []
 
         if len(self.propagation_indices) > 0:
-            width_ratios += [1, 2]
-            name = "LSA Propagation Strength"
-            names = [name, "Afferent connectivity \n from seizuring regions"]
-            data = [self.propagation_strenghts, self.get_weights()]
-            indices = [self.propagation_indices, self.propagation_indices]
-            plot_types = ["vector", "regions2regions"]
+            if connectivity_matrix is None:
+                width_ratios += [1]
+                name = "LSA Propagation Strength"
+                names = [name]
+                data = [self.propagation_strenghts]
+                indices = [self.propagation_indices]
+                plot_types = ["vector"]
+            else:
+                width_ratios += [1, 2]
+                name = "LSA Propagation Strength"
+                names = [name, "Afferent connectivity \n from seizuring regions"]
+                data = [self.propagation_strenghts, connectivity_matrix]
+                indices = [self.propagation_indices, self.propagation_indices]
+                plot_types = ["vector", "regions2regions"]
 
             plot_dict_list = dicts_of_lists_to_lists_of_dicts({"name": names, "data": data, "focus_indices": indices,
                                                                 "plot_type": plot_types})
@@ -145,7 +154,7 @@ class DiseaseHypothesis(object):
 
     def get_connectivity_regions_disease_indices(self):
         indexes = np.unravel_index(self.get_connectivity_disease_indices(),
-                                   (self.get_number_of_regions(), self.get_number_of_regions()))
+                                   (self.get_number_of_regions(), self.number_of_regions))
         indexes = np.unique(np.concatenate(indexes)).astype("i")
         return indexes.tolist()
 
@@ -155,7 +164,7 @@ class DiseaseHypothesis(object):
 
     def get_regions_disease(self):
         # In case we need values for all regions, we can use this and have zeros where values are not defined
-        regions_disease = np.zeros(self.get_number_of_regions())
+        regions_disease = np.zeros(self.number_of_regions)
         regions_disease[self.x0_indices] = self.x0_values
         regions_disease[self.e_indices] = self.e_values
 
@@ -163,22 +172,13 @@ class DiseaseHypothesis(object):
 
     def get_connectivity_disease(self):
         # In case we need values for all regions, we can use this and have zeros where values are not defined
-        connectivity_shape = (self.get_number_of_regions(), self.get_number_of_regions())
+        connectivity_shape = (self.number_of_regions, self.number_of_regions)
         connectivity_disease = np.ones(connectivity_shape)
         indexes = np.unravel_index(self.get_connectivity_disease_indices(), connectivity_shape)
         connectivity_disease[indexes[0], indexes[1]] = self.w_values
         connectivity_disease[indexes[1], indexes[0]] = self.w_values
 
         return connectivity_disease
-
-    def get_number_of_regions(self):
-        return self.connectivity.number_of_regions
-
-    def get_weights(self):
-        return self.connectivity.normalized_weights
-
-    def get_region_labels(self):
-        return self.connectivity.region_labels
 
     # Do we really need those two?:
     def get_e_values_for_all_regions(self):

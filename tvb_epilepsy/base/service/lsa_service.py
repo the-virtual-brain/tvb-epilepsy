@@ -17,10 +17,6 @@ LOG = get_logger(__name__)
 # TODO: it might be useful to store eigenvalues and eigenvectors, as well as the parameters of the computation, such as
 # eigen_vectors_number and LSAService in a h5 file
 
-# NOTES: currently the disease_hypothesis (after it has configured a model) is needed only for the connectivity weights.
-# In the future this could be part of the model configuration. Disease hypothesis should hold only specific hypotheses,
-# on the connectivity matrix (changes, lesions, etc)
-
 
 class LSAService(object):
 
@@ -104,7 +100,7 @@ class LSAService(object):
         self._ensure_eigen_vectors_number(self.eigen_values, model_configuration.e_values,
                                           model_configuration.x0_values, disease_hypothesis.get_all_disease_indices())
 
-        if self.eigen_vectors_number == disease_hypothesis.get_number_of_regions():
+        if self.eigen_vectors_number == disease_hypothesis.number_of_regions:
             # Calculate the propagation strength index by summing all eigenvectors
             lsa_propagation_strength = numpy.abs(numpy.sum(self.eigen_vectors, axis=1))
             lsa_propagation_strength /= numpy.max(lsa_propagation_strength)
@@ -123,16 +119,17 @@ class LSAService(object):
         propagation_strength_elbow = self.get_curve_elbow_point(lsa_propagation_strength)
         propagation_indices = lsa_propagation_strength.argsort()[-propagation_strength_elbow:]
 
-        return DiseaseHypothesis(disease_hypothesis.connectivity,
+        return DiseaseHypothesis(disease_hypothesis.number_of_regions,
                                  {tuple(disease_hypothesis.x0_indices): disease_hypothesis.x0_values},
                                  {tuple(disease_hypothesis.e_indices): disease_hypothesis.e_values},
                                  {tuple(disease_hypothesis.w_indices): disease_hypothesis.w_values},
                                  propagation_indices, lsa_propagation_strength, "LSA_" + disease_hypothesis.name)
 
-    def plot_lsa(self, disease_hypothesis, model_configuration, pse_results=None, title="Hypothesis Overview"):
+    def plot_lsa(self, disease_hypothesis, model_configuration, region_labels=[],
+                 pse_results=None, title="Hypothesis Overview"):
         fig_name = disease_hypothesis.name + " " + title
 
-        hyp_dict_list = disease_hypothesis.prepare_for_plot()
+        hyp_dict_list = disease_hypothesis.prepare_for_plot(model_configuration.connectivity_matrix)
         model_config_dict_list = model_configuration.prepare_for_plot()
 
         model_config_dict_list += hyp_dict_list
@@ -154,7 +151,7 @@ class LSAService(object):
                 description += "first " + str(self.eigen_vectors_number) + " "
             description += "eigenvectors has been used"
 
-        return plot_in_columns(plot_dict_list, disease_hypothesis.connectivity.region_labels, width_ratios=[],
+        return plot_in_columns(plot_dict_list, region_labels, width_ratios=[],
                                left_ax_focus_indices=disease_hypothesis.get_all_disease_indices(),
                                right_ax_focus_indices=disease_hypothesis.propagation_indices,
                                description=description, title=title, figure_name=fig_name)

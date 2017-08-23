@@ -22,7 +22,7 @@ from tvb_epilepsy.custom.read_write import read_ts
 # TODO: It is imperative to allow for modification of the connectivity.normalized_weights of the Connecitivity.h5
 # according to the model_configuration.connectivity
 
-class Settings(object):
+class SimulationSettings(object):
     def __init__(self, integration_step=0.01220703125, noise_seed=42, noise_intensity=10 ** -6, simulated_period=5000,
                  downsampling_period=0.9765625):
         self.integration_step = integration_step
@@ -82,7 +82,7 @@ class EpileptorModel(object):
 
 class FullConfiguration(object):
     def __init__(self, name="full-configuration", connectivity_path="Connectivity.h5", epileptor_paramses=[],
-                 settings=Settings(), initial_states=None, initial_states_shape=None):
+                 settings=SimulationSettings(), initial_states=None, initial_states_shape=None):
         self.configurationName = name
         self.connectivityPath = connectivity_path
         self.settings = settings
@@ -120,9 +120,9 @@ class SimulatorCustom(ABCSimulator):
 
     def config_simulation(self):
 
-        ep_settings = Settings(self.simulation_settings.integration_step, self.simulation_settings.noise_seed,
-                               self.simulation_settings.noise_intensity, self.simulation_settings.simulated_period,
-                               self.simulation_settings.monitor_sampling_period)
+        ep_settings = SimulationSettings(self.simulation_settings.integration_step, self.simulation_settings.noise_seed,
+                                         self.simulation_settings.noise_intensity, self.simulation_settings.simulated_period,
+                                         self.simulation_settings.monitor_sampling_period)
 
         json_model = self.prepare_epileptor_model_for_json(self.connectivity.number_of_regions)
 

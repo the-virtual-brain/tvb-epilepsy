@@ -9,7 +9,7 @@ from tvb_epilepsy.base.utils import formal_repr, list_of_dicts_to_dicts_of_ndarr
 
 METHODS = ["sobol", "latin", "delta", "dgsm", "fast", "fast_sampler", "morris", "ff", "fractional_factorial"]
 
-LOG = get_logger(__name__)
+logger = get_logger(__name__)
 
 # TODO: make sensitivity_analysis_from_hypothesis() helper function
 
@@ -273,7 +273,7 @@ class SensitivityAnalysisService(object):
 if __name__ == "__main__":
 
     import os
-    from tvb_epilepsy.base.constants import DATA_CUSTOM, FOLDER_RES
+    from tvb_epilepsy.base.constants import DATA_CUSTOM, FOLDER_RES, K_DEF
     from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
     from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
     from tvb_epilepsy.base.service.model_configuration_service import ModelConfigurationService
@@ -303,41 +303,30 @@ if __name__ == "__main__":
 
     n_x0 = len(x0_indices)
     n_e = len(e_indices)
-    all_regions_indices = np.array(range(head.number_of_regions))
+    all_regions_indices = np.array(range(head.connectivity.number_of_regions))
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
     n_healthy = len(healthy_indices)
     # This is an example of x0 mixed Excitability and Epileptogenicity Hypothesis:
-    hyp_x0_E = DiseaseHypothesis(head.connectivity, excitability_hypothesis={tuple(x0_indices): x0_values},
+    hyp_x0_E = DiseaseHypothesis(head.connectivity.number_of_regions,
+                                 excitability_hypothesis={tuple(x0_indices): x0_values},
                                  epileptogenicity_hypothesis={tuple(e_indices): e_values},
                                  connectivity_hypothesis={})
 
-    LOG.info("Running hypothesis: " + hyp_x0_E.name)
-
-    LOG.info("creating model configuration...")
-    model_configuration_service = ModelConfigurationService(hyp_x0_E.get_number_of_regions())
-    model_configuration = model_configuration_service.configure_model_from_hypothesis(hyp_x0_E)
-
-    LOG.info("running LSA...")
-    lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
-    lsa_hypothesis = lsa_service.run_lsa(hyp_x0_E, model_configuration)
-
-    LOG.info("running sensitivity analysis PSE LSA...")
+    # Now running the sensitivity analysis:
+    logger.info("running sensitivity analysis PSE LSA...")
     for m in METHODS:
         try:
-            sa_results, pse_results = \
-                sensitivity_analysis_pse_from_hypothesis(lsa_hypothesis, n_samples, method=m, half_range=0.1,
-                                     global_coupling=[{"indices": all_regions_indices,
-                                                        "bounds":
-                                                                 [0.0, 2*model_configuration_service.K_unscaled[0]]}],
-                                     healthy_regions_parameters= [{"name": "x0", "indices": healthy_indices}],
-                                     model_configuration=model_configuration,
-                                     model_configuration_service=model_configuration_service,
-                                     lsa_service=lsa_service, save_services=True)
+            model_configuration_service, model_configuration, lsa_service, lsa_hypothesis, sa_results, pse_results = \
+                sensitivity_analysis_pse_from_hypothesis(hyp_x0_E,
+                                                         head.connectivity.normalized_weights,
+                                                         head.connectivity.region_labels,
+                                                         n_samples, method=m, half_range=0.1,
+                                           global_coupling=[{"indices": all_regions_indices, "bounds": [0.0, 2*K_DEF]}],
+                                               healthy_regions_parameters= [{"name": "x0", "indices": healthy_indices}],
+                                                         logger=logger, save_services=True)
 
-            lsa_hypothesis.plot_lsa_pse(pse_results, model_configuration,
-                                        weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
-                                        n_eig=lsa_service.eigen_vectors_number,
-                                        figure_name=m + "_PSE_LSA_overview_" + lsa_hypothesis.name)
+            lsa_service.plot_lsa(lsa_hypothesis, model_configuration, region_labels=head.connectivity.region_labels,
+                                 pse_results=pse_results, title=m + "_PSE_LSA_overview_" + lsa_hypothesis.name)
             # , show_flag=True, save_flag=False
 
             convert_to_h5_model(pse_results).write_to_h5(FOLDER_RES,
