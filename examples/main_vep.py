@@ -6,17 +6,16 @@ import warnings
 from copy import deepcopy
 
 import numpy as np
-
 from tvb_epilepsy.base.constants import FOLDER_RES, SIMULATION_MODE, TVB, DATA_MODE, VOIS, DATA_CUSTOM, X0_DEF, E_DEF
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
-from tvb_epilepsy.base.helper_functions import pse_from_hypothesis, sensitivity_analysis_pse_from_hypothesis, \
-    set_time_scales
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_vep import Connectivity
 from tvb_epilepsy.base.plot_utils import plot_sim_results
 from tvb_epilepsy.base.service.lsa_service import LSAService
 from tvb_epilepsy.base.service.model_configuration_service import ModelConfigurationService
-from tvb_epilepsy.base.utils import assert_equal_objects
+from tvb_epilepsy.base.service.pse_service import pse_from_hypothesis
+from tvb_epilepsy.base.service.sensitivity_analysis_service import sensitivity_analysis_pse_from_hypothesis
+from tvb_epilepsy.base.utils import assert_equal_objects, set_time_scales
 from tvb_epilepsy.base.utils import initialize_logger, calculate_projection
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
@@ -29,10 +28,10 @@ else:
     from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
 
 if SIMULATION_MODE is TVB:
-    from tvb_epilepsy.base.helper_functions import setup_TVB_simulation_from_model_configuration \
+    from tvb_epilepsy.tvb_api.simulator_tvb import setup_TVB_simulation_from_model_configuration \
         as setup_simulation_from_model_configuration
 else:
-    from tvb_epilepsy.custom.simulator_custom import setup_custpm_simulation_from_model_configuration \
+    from tvb_epilepsy.custom.simulator_custom import setup_custom_simulation_from_model_configuration \
         as setup_simulation_from_model_configuration
 
 
@@ -254,9 +253,9 @@ def main_vep(test_write_read=False):
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")).
                                     convert_from_h5_model(obj=deepcopy(lsa_service)))))
 
-        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, None, title=lsa_hypothesis.name+"_LSA.h5")
+        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, None, title=lsa_hypothesis.name + "_LSA.h5")
 
-        #--------------Parameter Search Exploration (PSE)-------------------------------
+        # --------------Parameter Search Exploration (PSE)-------------------------------
 
         logger.info("\n\nRunning PSE LSA...")
         pse_results = pse_from_hypothesis(lsa_hypothesis, n_samples, half_range=0.1,
@@ -282,14 +281,18 @@ def main_vep(test_write_read=False):
         logger.info("\n\nrunning sensitivity analysis PSE LSA...")
         sa_results, pse_sa_results = \
             sensitivity_analysis_pse_from_hypothesis(lsa_hypothesis, n_samples, method="sobol", half_range=0.1,
-                                     global_coupling=[{"indices": all_regions_indices,
-                                                       "bounds":[0.0, 2 * model_configuration_service.K_unscaled[ 0]]}],
-                                     healthy_regions_parameters=[{"name": "x0", "indices": healthy_indices}],
-                                     model_configuration=model_configuration,
-                                     model_configuration_service=model_configuration_service, lsa_service=lsa_service)
+                                                     global_coupling=[{"indices": all_regions_indices,
+                                                                       "bounds": [0.0, 2 *
+                                                                                  model_configuration_service.K_unscaled[
+                                                                                      0]]}],
+                                                     healthy_regions_parameters=[
+                                                         {"name": "x0", "indices": healthy_indices}],
+                                                     model_configuration=model_configuration,
+                                                     model_configuration_service=model_configuration_service,
+                                                     lsa_service=lsa_service)
 
         lsa_service.plot_lsa(lsa_hypothesis, model_configuration, pse_sa_results,
-                                    title="SA PSE LSA overview " + lsa_hypothesis.name)
+                             title="SA PSE LSA overview " + lsa_hypothesis.name)
         # , show_flag=True, save_flag=False
 
         convert_to_h5_model(pse_sa_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")
@@ -312,8 +315,8 @@ def main_vep(test_write_read=False):
         # ------------------------------Simulation--------------------------------------
         logger.info("\n\nSimulating...")
         sim = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt,
-                                                                       sim_length, monitor_period, model_name,
-                                                                       scale_time=scale_time, noise_intensity=10 ** -8)
+                                                        sim_length, monitor_period, model_name,
+                                                        scale_time=scale_time, noise_intensity=10 ** -8)
 
         sim.config_simulation()
         ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
