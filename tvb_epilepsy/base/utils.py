@@ -746,18 +746,21 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
                     print_not_equal_message(attributes_dict[attribute], logger)
                     equal = False
 
-            # For numeric types
-            elif isinstance(field1, (int, float, long, complex, np.number, np.ndarray)) \
-                and not (isinstance(field1, np.ndarray) and field1.dtype.kind in 'OSU'):
+            # For numeric numpy arrays:
+            elif isinstance(field1, np.ndarray) and not field1.dtype.kind in 'OSU':
                 # TODO: handle better accuracy differences, empty matrices and complex numbers...
 
-                if isinstance(field1, np.ndarray):
-                    if field1.shape != field2.shape:
-                        print_not_equal_message(attributes_dict[attribute], logger)
-                        equal = False
-                        break
+                if field1.shape != field2.shape:
+                    print_not_equal_message(attributes_dict[attribute], logger)
+                    equal = False
 
-                if np.any(np.float32(field1) - np.float32(field2) > 0):
+                elif np.any(np.float32(field1) - np.float32(field2) > 0):
+                    print_not_equal_message(attributes_dict[attribute], logger)
+                    equal = False
+
+            # For numeric scalar types
+            elif isinstance(field1, (int, float, long, complex, np.number)):
+                if np.float32(field1) - np.float32(field2) > 0:
                     print_not_equal_message(attributes_dict[attribute], logger)
                     equal = False
 
