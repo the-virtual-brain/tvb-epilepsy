@@ -98,11 +98,11 @@ class H5Model(object):
 
 def convert_to_h5_model(obj):
     h5_model = H5Model(OrderedDict(), OrderedDict())
-    object_to_h5_model_recursively(h5_model, obj, "")
+    object_to_h5_model_recursively(h5_model, obj, "", root=True)
     return h5_model
 
 
-def object_to_h5_model_recursively(h5_model, obj, name=""):
+def object_to_h5_model_recursively(h5_model, obj, name="", root=False):
 
     # Use in some cases the name of the class as key, when name is empty string. Otherwise, class_name = name.
     name_empty = (len(name) == 0)
@@ -110,8 +110,6 @@ def object_to_h5_model_recursively(h5_model, obj, name=""):
 
     if obj is None:
         h5_model.add_or_update_metadata_attribute(class_name, "None")
-
-
 
     if isinstance(obj, (float, int, long, complex, str, np.ndarray)):
 
@@ -171,7 +169,8 @@ def object_to_h5_model_recursively(h5_model, obj, name=""):
 
         for key, value in obj.iteritems():
 
-            key = name + (len(name) > 0) * "/" + key
+            if not(root):
+                key = name + (len(name) > 0) * "/" + key
 
             if key.find("children_dict") < 0 :
                 # call recursively...

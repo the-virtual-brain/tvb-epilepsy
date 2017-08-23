@@ -333,11 +333,15 @@ class PSEService(object):
         results = []
         execution_status = []
 
+        loop_tenth = 1
         for iloop in range(self.n_loops):
 
             params = self.pse_params[iloop, :]
 
-            print "\nExecuting loop " + str(iloop) + " of " + str(self.n_loops)
+            if iloop == 0 or iloop + 1 >= loop_tenth * self.n_loops / 10.0:
+                print "\nExecuting loop " + str(iloop + 1) + " of " + str(self.n_loops)
+                if iloop > 0:
+                    loop_tenth += 1
             # print "\nParameters:"
             # for ii in range(len(params)):
             #      print self.params_paths[ii] + "[" + str(self.params_indices[ii]) + "] = " + str(params[ii])

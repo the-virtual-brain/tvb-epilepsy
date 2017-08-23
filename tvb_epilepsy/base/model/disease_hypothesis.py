@@ -42,8 +42,6 @@ class DiseaseHypothesis(object):
         self.propagation_indices = np.array(propagation_indices)
         self.propagation_strenghts = np.array(propagation_strenghts)
 
-        self.children_dict = {"Connectivity": Connectivity("", np.array([]), np.array([]))}
-
     def __repr__(self):
         d = {"01. Name": self.name,
              "02. Type": self.type,

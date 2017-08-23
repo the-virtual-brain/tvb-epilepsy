@@ -127,7 +127,6 @@ class LSAService(object):
 
     def plot_lsa(self, disease_hypothesis, model_configuration, region_labels=[],
                  pse_results=None, title="Hypothesis Overview"):
-        fig_name = disease_hypothesis.name + " " + title
 
         hyp_dict_list = disease_hypothesis.prepare_for_plot(model_configuration.connectivity_matrix)
         model_config_dict_list = model_configuration.prepare_for_plot()
@@ -136,6 +135,7 @@ class LSAService(object):
         plot_dict_list = model_config_dict_list
 
         if pse_results is not None and isinstance(pse_results, dict):
+            fig_name = disease_hypothesis.name + " PSE " + title
             ind_ps = len(plot_dict_list) - 2
             for ii, value in enumerate(["propagation_strengths", "e_values", "x0_values"]):
                 ind = ind_ps - ii
@@ -143,6 +143,9 @@ class LSAService(object):
                     if pse_results.get(value, False).any():
                         plot_dict_list[ind]["data_samples"] = pse_results.get(value)
                         plot_dict_list[ind]["plot_type"] = "vector_violin"
+
+        else:
+            fig_name = disease_hypothesis.name + " " + title
 
         description = ""
         if self.weighted_eigenvector_sum:

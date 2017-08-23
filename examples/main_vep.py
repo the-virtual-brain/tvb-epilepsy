@@ -205,7 +205,7 @@ def main_vep(test_write_read=False):
             logger.info("Written and read model configuration services are identical?: "+
                         str(assert_equal_objects(model_configuration_service,
                                  read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_model_config_service.h5")).
-                                    convert_from_h5_model(obj=deepcopy(model_configuration_service)))))
+                                    convert_from_h5_model(obj=deepcopy(model_configuration_service)), logger=logger)))
 
         if hyp.type == "Epileptogenicity":
             model_configuration = model_configuration_service.\
@@ -218,7 +218,8 @@ def main_vep(test_write_read=False):
             logger.info("Written and read model configuration are identical?: " +
                         str(assert_equal_objects(model_configuration,
                                                  read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_ModelConfig.h5")).
-                                                 convert_from_h5_model(obj=deepcopy(model_configuration)))))
+                                                 convert_from_h5_model(obj=deepcopy(model_configuration)),
+                                                 logger=logger)))
 
         # # Plot nullclines and equilibria of model configuration
         # model_configuration_service.plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
@@ -239,26 +240,17 @@ def main_vep(test_write_read=False):
             logger.info("Written and read LSA services are identical?: " +
                         str(assert_equal_objects(lsa_service,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")).
-                                    convert_from_h5_model(obj=deepcopy(lsa_service)))))
+                                    convert_from_h5_model(obj=deepcopy(lsa_service)), logger=logger)))
             logger.info("Written and read LSA hypotheses are identical (input object check)?: " +
                         str(assert_equal_objects(lsa_hypothesis,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
-                                    convert_from_h5_model(obj=deepcopy(lsa_hypothesis)))))
+                                    convert_from_h5_model(obj=deepcopy(lsa_hypothesis)), logger=logger)))
             logger.info("Written and read LSA hypotheses are identical (input template check)?: " +
                         str(assert_equal_objects(lsa_hypothesis,
                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
-                                    convert_from_h5_model(obj=hypothesis_template))))
-            logger.info("Written and read LSA hypotheses are identical (no input object check)?: " +
-                        str(assert_equal_objects(pse_results,
-                                read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")).
-                                    convert_from_h5_model())))
-            logger.info("Written and read LSA services are identical?: " +
-                        str(assert_equal_objects(lsa_service,
-                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")).
-                                    convert_from_h5_model(obj=deepcopy(lsa_service)))))
+                                    convert_from_h5_model(obj=hypothesis_template), logger=logger)))
 
-        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels,  None,
-                             title="LSA overview " + lsa_hypothesis.name)
+        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels,  None)
 
         #--------------Parameter Search Exploration (PSE)-------------------------------
 
@@ -272,8 +264,7 @@ def main_vep(test_write_read=False):
                                           model_configuration_service=model_configuration_service,
                                           lsa_service=lsa_service, logger=logger)[0]
 
-        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, pse_results,
-                             title="PSE LSA overview " + lsa_hypothesis.name)
+        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, pse_results)
         # , show_flag=True, save_flag=False
 
         convert_to_h5_model(pse_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")
@@ -281,7 +272,8 @@ def main_vep(test_write_read=False):
             logger.info("Written and read sensitivity analysis parameter search results are identical?: " +
                         str(assert_equal_objects(pse_results,
                                   read_h5_model(os.path.join(FOLDER_RES,
-                                           lsa_hypothesis.name + "_PSE_LSA_results.h5")).convert_from_h5_model())))
+                                           lsa_hypothesis.name + "_PSE_LSA_results.h5")).convert_from_h5_model(),
+                                                 logger=logger)))
 
 
         # --------------Sensitivity Analysis Parameter Search Exploration (PSE)-------------------------------
@@ -296,11 +288,11 @@ def main_vep(test_write_read=False):
                                                        "bounds":[0.0, 2 * model_configuration_service.K_unscaled[ 0]]}],
                                      healthy_regions_parameters=[{"name": "x0", "indices": healthy_indices}],
                                      model_configuration_service=model_configuration_service, lsa_service=lsa_service,
-                                    logger=logger)
+                                     logger=logger)
 
 
         lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, pse_sa_results,
-                                    title="SA PSE LSA overview " + lsa_hypothesis.name)
+                             title="SA PSE Hypothesis Overview")
         # , show_flag=True, save_flag=False
 
         convert_to_h5_model(pse_sa_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")
@@ -309,16 +301,14 @@ def main_vep(test_write_read=False):
             logger.info("Written and read sensitivity analysis results are identical?: " +
                         str(assert_equal_objects(sa_results,
                                   read_h5_model(os.path.join(FOLDER_RES,
-                                              lsa_hypothesis.name + "_SA_LSA_results.h5")).convert_from_h5_model())))
+                                              lsa_hypothesis.name + "_SA_LSA_results.h5")).convert_from_h5_model(),
+                                                 logger=logger)))
             logger.info("Written and read sensitivity analysis parameter search results are identical?: " +
-                        str(assert_equal_objects(pse_results,
+                        str(assert_equal_objects(pse_sa_results,
                                   read_h5_model(os.path.join(FOLDER_RES,
-                                            lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).convert_from_h5_model())))
-            logger.info("Written and read simulation settings are identical?: " +
-                        str(assert_equal_objects(sim.simulation_settings,
-                                                 read_h5_model(os.path.join(FOLDER_RES,
-                                                                            lsa_hypothesis.name + "_sim_settings.h5")).
-                                                 convert_from_h5_model(obj=deepcopy(sim.simulation_settings)))))
+                                            lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).convert_from_h5_model(),
+                                                 logger=logger)))
+
 
         # ------------------------------Simulation--------------------------------------
         logger.info("\n\nSimulating...")
@@ -331,19 +321,12 @@ def main_vep(test_write_read=False):
 
         convert_to_h5_model(sim.simulation_settings).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")
         if test_write_read:
-            logger.info("Written and read sensitivity analysis results are identical?: " +
-                        str(assert_equal_objects(sa_results,
-                                  read_h5_model(os.path.join(FOLDER_RES,
-                                              lsa_hypothesis.name + "_SA_LSA_results.h5")).convert_from_h5_model())))
-            logger.info("Written and read sensitivity analysis parameter search results are identical?: " +
-                        str(assert_equal_objects(pse_results,
-                                  read_h5_model(os.path.join(FOLDER_RES,
-                                            lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).convert_from_h5_model())))
             logger.info("Written and read simulation settings are identical?: " +
                         str(assert_equal_objects(sim.simulation_settings,
                                                  read_h5_model(os.path.join(FOLDER_RES,
                                                                             lsa_hypothesis.name + "_sim_settings.h5")).
-                                                 convert_from_h5_model(obj=deepcopy(sim.simulation_settings)))))
+                                                 convert_from_h5_model(obj=deepcopy(sim.simulation_settings)),
+                                                 logger=logger)))
 
         if not status:
             warnings.warn("\nSimulation failed!")
