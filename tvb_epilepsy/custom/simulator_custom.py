@@ -13,7 +13,7 @@ import numpy
 
 from tvb_epilepsy.base.constants import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.simulators import ABCSimulator
+from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
 from tvb_epilepsy.base.utils import obj_to_dict, assert_arrays
 from tvb_epilepsy.base.computations.calculations_utils import calc_rescaled_x0
 from tvb_epilepsy.custom.read_write import read_ts
@@ -207,3 +207,25 @@ def custom_model_builder(model_configuration, a=1.0, b=3.0, d=5.0):
 
     return model
 
+###
+# A helper function to make good choices for simulation settings for a custom simulator
+###
+def setup_custom_simulation_from_model_configuration(model_configuration, connectivity, dt, sim_length, monitor_period, model_name, scale_time=1,
+                     noise_intensity=None):
+
+    if model_name != EpileptorModel._ui_name:
+        print "You can use only " + EpileptorModel._ui_name + "for custom simulations!"
+
+    model = custom_model_builder(model_configuration)
+
+    if noise_intensity is None:
+        noise_intensity = 0  # numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.])
+
+    settings = SimulationSettings(simulated_period=sim_length, integration_step=dt,
+                                  scale_time=scale_time,
+                                  noise_intensity=noise_intensity,
+                                  monitor_sampling_period=monitor_period)
+
+    simulator_instance = SimulatorCustom(connectivity, model_configuration, model, settings)
+
+    return simulator_instance
