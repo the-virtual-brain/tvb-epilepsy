@@ -10,10 +10,10 @@ import numpy
 from tvb.datatypes import connectivity
 from tvb.simulator import coupling, integrators, monitors, noise, simulator
 
-from tvb_epilepsy.base.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.simulators import ABCSimulator
 from tvb_epilepsy.custom.read_write import epileptor_model_attributes_dict
+from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 
 
 class SimulatorTVB(ABCSimulator):
@@ -177,7 +177,7 @@ def setup_TVB_simulation_from_model_configuration(model_configuration, connectiv
 
     from tvb_epilepsy.base.constants import ADDITIVE_NOISE, NOISE_SEED
     from tvb_epilepsy.base.simulators import SimulationSettings
-    from tvb_epilepsy.base.epileptor_model_factory import model_build_dict, model_noise_intensity_dict, \
+    from tvb_epilepsy.service.epileptor_model_factory import model_build_dict, model_noise_intensity_dict, \
                                                           model_noise_type_dict
     from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic, EpileptorDP2D
     from tvb.datatypes import equations

@@ -3,15 +3,17 @@
 """
 
 import os
+import warnings
+
 import h5py
 import numpy
-import warnings
-from tvb_epilepsy.base.utils import ensure_unique_file, change_filename_or_overwrite, \
+
+from tvb_epilepsy.base.simulators import SimulationSettings
+from tvb_epilepsy.base.utils import change_filename_or_overwrite, \
                                     read_object_from_h5_file, print_metadata, write_metadata
 # TODO: solve problems with setting up a logger
 from tvb_epilepsy.base.utils import initialize_logger
-from tvb_epilepsy.base.epileptor_model_factory import model_build_dict
-from tvb_epilepsy.base.simulators import SimulationSettings
+from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 
 PATIENT_VIRTUAL_HEAD = "/WORK/episense/episense-root/trunk/demo-data/Head_TREC"
 
