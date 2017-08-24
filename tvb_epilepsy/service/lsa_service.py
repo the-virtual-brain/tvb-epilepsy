@@ -5,12 +5,12 @@ Service to do LSA computation.
 import numpy
 from tvb.basic.logger.builder import get_logger
 
+from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
 from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.plot_utils import plot_in_columns
 from tvb_epilepsy.base.utils import formal_repr, weighted_vector_sum,curve_elbow_point
-from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
 
 LOG = get_logger(__name__)
 
@@ -158,3 +158,19 @@ class LSAService(object):
                                left_ax_focus_indices=disease_hypothesis.get_all_disease_indices(),
                                right_ax_focus_indices=disease_hypothesis.propagation_indices,
                                description=description, title=title, figure_name=fig_name)
+
+def start_lsa_run(hypothesis, connectivity_matrix, logger):
+
+    from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+
+    logger.info("creating model configuration...")
+    model_configuration_service = ModelConfigurationService(hypothesis.number_of_regions)
+    model_configuration = model_configuration_service. \
+        configure_model_from_hypothesis(hypothesis, connectivity_matrix)
+
+    logger.info("running LSA...")
+    lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
+    lsa_hypothesis = lsa_service.run_lsa(hypothesis, model_configuration)
+
+    return model_configuration_service, model_configuration, lsa_service, lsa_hypothesis
+

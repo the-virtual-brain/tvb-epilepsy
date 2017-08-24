@@ -391,21 +391,21 @@ def normalize_weights(weights, percentile=WEIGHTS_NORM_PERCENT):  # , max_w=1.0
 
     if len(weights) > 0:
         normalized_w = np.array(weights)
-    
+
         # Remove diagonal elements
         n_regions = normalized_w.shape[0]
         normalized_w *= 1 - np.eye(n_regions)
-    
+
         # Normalize with the 95th percentile
         # if np.max(normalized_w) - max_w > 1e-6:
         normalized_w = np.array(normalized_w / np.percentile(normalized_w, percentile))
         #    else:
         #        normalized_w = np.array(weights)
-    
+
         # normalized_w[normalized_w > max_w] = max_w
-    
+
         return normalized_w
-    
+
     else:
         return np.array([])
 
@@ -786,3 +786,18 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
         return True
     else:
         return False
+
+
+def set_time_scales(fs=4096.0, dt=None, time_length=1000.0, scale_time=1.0, scale_fsavg=8.0, report_every_n_monitor_steps=10,):
+    if dt is None:
+        dt = 1000.0 / fs
+
+    dt /= scale_time
+
+    fsAVG = fs / scale_fsavg
+    monitor_period = scale_fsavg * dt
+    sim_length = time_length / scale_time
+    time_length_avg = np.round(sim_length / monitor_period)
+    n_report_blocks = max(report_every_n_monitor_steps * np.round(time_length_avg / 100), 1.0)
+
+    return dt, fsAVG, sim_length, monitor_period, n_report_blocks
