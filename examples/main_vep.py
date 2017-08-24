@@ -8,13 +8,13 @@ from copy import deepcopy
 import numpy as np
 from tvb_epilepsy.base.constants import FOLDER_RES, SIMULATION_MODE, TVB, DATA_MODE, VOIS, DATA_CUSTOM, X0_DEF, E_DEF
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
-from tvb_epilepsy.base.helper_functions import pse_from_lsa_hypothesis, sensitivity_analysis_pse_from_lsa_hypothesis, \
-    set_time_scales
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.plot_utils import plot_sim_results
 from tvb_epilepsy.base.service.lsa_service import LSAService
 from tvb_epilepsy.base.service.model_configuration_service import ModelConfigurationService
-from tvb_epilepsy.base.utils import assert_equal_objects
+from tvb_epilepsy.base.service.pse_service import pse_from_lsa_hypothesis
+from tvb_epilepsy.base.service.sensitivity_analysis_service import sensitivity_analysis_pse_from_lsa_hypothesis
+from tvb_epilepsy.base.utils import assert_equal_objects, set_time_scales
 from tvb_epilepsy.base.utils import initialize_logger, calculate_projection
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
@@ -27,10 +27,10 @@ else:
     from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
 
 if SIMULATION_MODE is TVB:
-    from tvb_epilepsy.base.helper_functions import setup_TVB_simulation_from_model_configuration \
+    from tvb_epilepsy.base.service.simulation_service import setup_TVB_simulation_from_model_configuration \
         as setup_simulation_from_model_configuration
 else:
-    from tvb_epilepsy.custom.simulator_custom import setup_custpm_simulation_from_model_configuration \
+    from tvb_epilepsy.base.service.simulation_service import setup_custom_simulation_from_model_configuration \
         as setup_simulation_from_model_configuration
 
 
