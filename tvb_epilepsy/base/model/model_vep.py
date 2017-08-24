@@ -12,8 +12,8 @@ import numpy as np
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from tvb_epilepsy.base.constants import FOLDER_FIGURES, LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
-from tvb_epilepsy.base.plot_utils import _plot_vector, _plot_regions2regions, save_figure, check_show
+from tvb_epilepsy.base.constants import FOLDER_FIGURES, LARGE_SIZE, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
+from tvb_epilepsy.base.plot_utils import plot_vector, plot_regions2regions, save_figure, check_show
 from tvb_epilepsy.base.utils import reg_dict, formal_repr, normalize_weights, calculate_in_degree, sort_dict
 
 
@@ -81,6 +81,7 @@ class Head(object):
         count = plot_sensor_dict(self.sensorsMEG, self.connectivity.region_labels, count, show_flag, save_flag,
                                  figure_dir, figure_format)
 
+
 class Connectivity(object):
     file_path = None
     weights = None
@@ -133,13 +134,13 @@ class Connectivity(object):
         return self.__repr__()
 
     def plot(self, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
-                      figure_format=FIG_FORMAT, figure_name='Connectivity ', figsize=LARGE_SIZE):
+                      figure_format=FIG_FORMAT, figure_name='Connectivity ', figsize=VERY_LARGE_SIZE):
 
         # plot connectivity
         pyplot.figure(figure_name + str(self.number_of_regions), figsize)
-        # _plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
-        _plot_regions2regions(self.normalized_weights, self.region_labels, 121, "normalised weights")
-        _plot_regions2regions(self.tract_lengths, self.region_labels, 122, "tract lengths")
+        # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
+        plot_regions2regions(self.normalized_weights, self.region_labels, 121, "normalised weights")
+        plot_regions2regions(self.tract_lengths, self.region_labels, 122, "tract lengths")
 
         if save_flag:
             save_figure(figure_dir=figure_dir, figure_format=figure_format,
@@ -147,12 +148,14 @@ class Connectivity(object):
         check_show(show_flag=show_flag)
 
     def plot_stats(self, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
-                    figure_name='HeadStats '):
-        pyplot.figure("Head stats " + str(self.number_of_regions), figsize=LARGE_SIZE)
-        ax = _plot_vector(calculate_in_degree(self.normalized_weights), self.region_labels, 121, "w in-degree")
+                   figsize=VERY_LARGE_SIZE, figure_name='HeadStats '):
+        pyplot.figure("Head stats " + str(self.number_of_regions), figsize=figsize)
+        areas_flag = len(self.areas) == len(self.region_labels)
+        ax = plot_vector(calculate_in_degree(self.normalized_weights), self.region_labels, 111+10*areas_flag,
+                         "w in-degree")
         ax.invert_yaxis()
         if len(self.areas) == len(self.region_labels):
-            ax = _plot_vector(self.areas, self.region_labels, 122, "region areas")
+            ax = plot_vector(self.areas, self.region_labels, 122, "region areas")
             ax.invert_yaxis()
         if save_flag:
             save_figure(figure_dir=figure_dir, figure_format=figure_format,
@@ -221,10 +224,10 @@ class Sensors(object):
 
     def plot(self, projection, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1,
              x_ticks=np.array([]), y_ticks=np.array([]), show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
-             figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name=''):
+             figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, figure_name=''):
 
         if not (isinstance(figure, pyplot.Figure)):
-            figure = pyplot.figure(title, figsize=LARGE_SIZE)
+            figure = pyplot.figure(title, figsize=figsize)
 
         n_sensors = self.number_of_sensors
         n_regions = len(region_labels)
@@ -268,7 +271,7 @@ class Sensors(object):
 def plot_sensor_dict(sensor_dict, region_labels, count=1, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
                      figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
     # plot sensors:
-    for sensors, projection in sensor_dict.sensorsSEEG.iteritems():
+    for sensors, projection in sensor_dict.iteritems():
         if len(projection) == 0:
             continue
         sensors.plot(projection, region_labels, title=str(count) + " - " + sensors.s_type + " - Projection",

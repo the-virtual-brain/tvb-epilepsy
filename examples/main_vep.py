@@ -92,6 +92,8 @@ def main_vep(test_write_read=False):
     logger.info("Reading from: " + data_folder)
     head = reader.read_head(data_folder)
 
+    head.plot()
+
     # --------------------------Hypothesis definition-----------------------------------
 
     n_samples = 100
