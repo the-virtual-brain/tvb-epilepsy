@@ -2,14 +2,13 @@
 Read VEP related entities from custom format and data-structures
 """
 
-import os
-import warnings
+import os 
 
 import h5py
 
+from tvb_epilepsy.base.utils import warning, raise_not_implemented_error, calculate_projection, initialize_logger
 from tvb_epilepsy.base.model.model_vep import Connectivity, Surface, Sensors, Head
 from tvb_epilepsy.base.readers import ABCReader
-from tvb_epilepsy.base.utils import calculate_projection, initialize_logger
 
 
 class CustomReader(ABCReader):
@@ -47,7 +46,7 @@ class CustomReader(ABCReader):
             h5_file.close()
             return Surface(vertices, triangles, vertex_normals)
         else:
-            warnings.warn("\nNo Cortical Surface file found at path " + h5_path + "!")
+            warning("\nNo Cortical Surface file found at path " + h5_path + "!")
             return []
 
     def _read_data_field(self, h5_path):
@@ -61,21 +60,21 @@ class CustomReader(ABCReader):
         if os.path.isfile(h5_path):
             return self._read_data_field(h5_path)
         else:
-            warnings.warn("\nNo Region Mapping file found at path " + h5_path + "!")
+            warning("\nNo Region Mapping file found at path " + h5_path + "!")
             return []
 
     def read_volume_mapping(self, h5_path):
         if os.path.isfile(h5_path):
             return self._read_data_field(h5_path)
         else:
-            warnings.warn("\nNo Volume Mapping file found at path " + h5_path + "!")
+            warning("\nNo Volume Mapping file found at path " + h5_path + "!")
             return []
 
     def read_t1(self, h5_path):
         if os.path.isfile(h5_path):
             return self._read_data_field(h5_path)
         else:
-            warnings.warn("\nNo Structural MRI file found at path " + h5_path + "!")
+            warning("\nNo Structural MRI file found at path " + h5_path + "!")
             return []
 
     def read_sensors(self, h5_path, s_type):
@@ -89,11 +88,11 @@ class CustomReader(ABCReader):
             h5_file.close()
             return Sensors(labels, locations, s_type=s_type)
         else:
-            warnings.warn("\nNo Sensor file found at path " + h5_path + "!")
+            warning("\nNo Sensor file found at path " + h5_path + "!")
             return []
 
     def read_projection(self, path, s_type):
-        raise NotImplementedError()
+        raise_not_implemented_error()
 
     def read_head(self, root_folder, name=''):
         conn = self.read_connectivity(os.path.join(root_folder, "Connectivity.h5"))

@@ -709,7 +709,7 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
 
     def print_not_equal_message(attr, logger):
         # logger.error("\n\nValueError: Original and read object field "+ attr + " not equal!")
-        # raise ValueError("\n\nOriginal and read object field " + attr + " not equal!")
+        # raise_value_error("\n\nOriginal and read object field " + attr + " not equal!")
         warning("Original and read object field " + attr + " not equal!", logger)
 
     if isinstance(obj1, dict):

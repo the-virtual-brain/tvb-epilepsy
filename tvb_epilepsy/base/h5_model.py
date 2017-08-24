@@ -1,11 +1,10 @@
 import os
-import warnings
 from collections import OrderedDict
 
 import h5py
 import numpy as np
 
-from tvb_epilepsy.base.utils import initialize_logger, change_filename_or_overwrite, \
+from tvb_epilepsy.base.utils import warning, initialize_logger, change_filename_or_overwrite, \
                                     set_list_item_by_reference_safely, get_list_or_tuple_item_safely, \
                                     list_or_tuple_to_dict, dict_to_list_or_tuple, sort_dict
 
@@ -55,7 +54,7 @@ class H5Model(object):
             try:
                 os.remove(final_path)
             except:
-                warnings.warn("\nFile to overwrite not found!")
+                warning("\nFile to overwrite not found!")
 
         logger.info("Writing %s at: %s" % (self, final_path))
 
@@ -279,7 +278,7 @@ def build_hierarchical_object_recursively(obj, key, value, children_dict=class_d
                     child_object = tuple(child_object)
                 set_field(obj, name, child_object)
         except:
-            warnings.warn("Failed to set attribute " + str(key) + " of object " + obj.__class__.__name__ + "!")
+            warning("Failed to set attribute " + str(key) + " of object " + obj.__class__.__name__ + "!")
 
 
 def read_h5_model(path):

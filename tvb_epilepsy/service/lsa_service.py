@@ -5,12 +5,12 @@ Service to do LSA computation.
 import numpy
 from tvb.basic.logger.builder import get_logger
 
-from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
 from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM
+from tvb_epilepsy.base.utils import raise_value_error, formal_repr, weighted_vector_sum,curve_elbow_point
+from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.plot_utils import plot_in_columns
-from tvb_epilepsy.base.utils import formal_repr, weighted_vector_sum,curve_elbow_point
 
 LOG = get_logger(__name__)
 
@@ -70,7 +70,7 @@ class LSAService(object):
                 self.eigen_vectors_number = self.get_curve_elbow_point(x0_values) + 1
 
             else:
-                raise ValueError("\n" + self.eigen_vectors_number_selection +
+                raise_value_error("\n" + self.eigen_vectors_number_selection +
                                  "is not a valid option when for automatic computation of self.eigen_vectors_number")
         else:
             self.eigen_vectors_number_selection = "user_defined"
@@ -82,7 +82,7 @@ class LSAService(object):
                                                 model_configuration.a, model_configuration.b)
 
         if numpy.any([numpy.any(numpy.isnan(fz_jacobian.flatten())), numpy.any(numpy.isinf(fz_jacobian.flatten()))]):
-            raise ValueError("nan or inf values in dfz")
+            raise_value_error("nan or inf values in dfz")
 
         return fz_jacobian
 

@@ -2,7 +2,6 @@
 Mechanism for parameter search exploration for LSA and simulations (it will have TVB or custom implementations)
 """
 
-import warnings
 from copy import deepcopy
 
 import numpy as np
@@ -10,12 +9,12 @@ from tvb.basic.logger.builder import get_logger
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 
 from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
+from tvb_epilepsy.base.utils import formal_repr, warning, raise_not_implemented_error, raise_value_error
 from tvb_epilepsy.base.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.simulators import ABCSimulator
-from tvb_epilepsy.base.utils import formal_repr
 from tvb_epilepsy.custom.read_write import read_ts
 from tvb_epilepsy.custom.simulator_custom import custom_model_builder
 from tvb_epilepsy.service.lsa_service import LSAService, start_lsa_run
@@ -212,9 +211,9 @@ class PSEService(object):
     def __init__(self, task, hypothesis=[], simulator=[], params_pse=None, run_fun=None, out_fun=None):
 
         if task not in ["LSA", "SIMULATION"]:
-            warnings.warn("\ntask = " + str(task) + " is not a valid pse task." +
-                          "\nSelect one of 'LSA', or 'SIMULATION' to perform parameter search exploration of " +
-                          "\n hypothesis Linear Stability Analysis, or simulation, " + "respectively")
+            warning("\ntask = " + str(task) + " is not a valid pse task." +
+                    "\nSelect one of 'LSA', or 'SIMULATION' to perform parameter search exploration of " +
+                    "\n hypothesis Linear Stability Analysis, or simulation, " + "respectively")
 
         self.task = task
         self.params_names = []
@@ -230,7 +229,7 @@ class PSEService(object):
                 self.pse_object = hypothesis
 
             else:
-                warnings.warn("\ntask = " + str(task) + " but hypothesis is not a Hypothesis object!")
+                warning("\ntask = " + str(task) + " but hypothesis is not a Hypothesis object!")
 
             def_run_fun = lsa_run_fun
             def_out_fun = lsa_out_fun
@@ -241,8 +240,8 @@ class PSEService(object):
                 self.pse_object = simulator
 
             else:
-                raise warnings.warn("\ntask = " + str(task) + " but simulator is not an object of" +
-                                    " one of the available simulator classes!")
+                warning("\ntask = " + str(task) + " but simulator is not an object of" +
+                        " one of the available simulator classes!")
 
             def_run_fun = sim_run_fun
             def_out_fun = sim_out_fun
@@ -253,13 +252,13 @@ class PSEService(object):
             def_out_fun = None
 
         if not (callable(run_fun)):
-            warnings.warn("\nUser defined run_fun is not callable. Using default one for task " + str(task) + "!")
+            warning("\nUser defined run_fun is not callable. Using default one for task " + str(task) + "!")
             self.run_fun = def_run_fun
         else:
             self.run_fun = run_fun
 
         if not (callable(out_fun)):
-            warnings.warn("\nUser defined out_fun is not callable. Using default one for task " + str(task) + "!")
+            warning("\nUser defined out_fun is not callable. Using default one for task " + str(task) + "!")
             self.out_fun = def_out_fun
         else:
             self.out_fun = out_fun
@@ -283,8 +282,8 @@ class PSEService(object):
             self.n_params = len(self.params_paths)
 
             if not (np.all(self.n_params_vals == self.n_params_vals[0])):
-                raise ValueError("\nNot all parameters have the same number of samples!: " +
-                                 "\n" + str(self.params_paths) + " = " + str(self.n_params_vals))
+                raise_value_error("\nNot all parameters have the same number of samples!: " +
+                                  "\n" + str(self.params_paths) + " = " + str(self.n_params_vals))
             else:
                 self.n_params_vals = self.n_params_vals[0]
 
@@ -298,7 +297,7 @@ class PSEService(object):
             print "leading to " + str(self.n_loops) + " total execution loops"
 
         else:
-            warnings.warn("\nparams_pse is not a list of tuples!")
+            warning("\nparams_pse is not a list of tuples!")
 
     def __repr__(self):
 
@@ -357,7 +356,7 @@ class PSEService(object):
                 pass
 
             if not status:
-                warnings.warn("\nExecution of loop " + str(iloop) + "failed!")
+                warning("\nExecution of loop " + str(iloop) + "failed!")
 
             results.append(output)
             execution_status.append(status)
@@ -370,7 +369,7 @@ class PSEService(object):
 
     def run_pse_parallel(self, connectivity_matrix, grid_mode=False):
         # TODO: start each loop on a separate process, gather results and return them
-        raise NotImplementedError
+        raise_not_implemented_error
 
 
 ###

@@ -8,7 +8,7 @@ import tvb.basic.traits.types_basic as basic
 import tvb.datatypes.arrays as arrays
 from tvb.simulator.common import get_logger
 from tvb.simulator.models import Model
-
+from tvb_epilepsy.base.utils import raise_value_error
 LOG = get_logger(__name__)
 
 
@@ -324,7 +324,7 @@ class EpileptorDP(Model):
             fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.x0
 
         else:
-            raise ValueError("zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), " +
+            raise_value_error("zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), " +
                              "respectively")
 
         # ydot[2] = self.tt * (        ...+ self.Ks * c_pop1))
@@ -707,7 +707,7 @@ class EpileptorDPrealistic(Model):
             fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - x0
 
         else:
-            raise ValueError("zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively")
+            raise_value_error("zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively")
         ydot[2] = self.tau1 * ((fz - y[2] + K * c_pop1) / self.tau0)
 
         # population 2
@@ -1011,7 +1011,7 @@ class EpileptorDP2D(Model):
             fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.r * self.x0 + self.x0cr
 
         else:
-            raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
+            raise_value_error('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
 
         ydot[1] = self.tau1 * (fz - y[1] + self.K * c_pop1) / self.tau0
 
@@ -1079,6 +1079,6 @@ class EpileptorDP2D(Model):
     #         exp_fun = numpy.exp(-10.0 * (y[0] + 0.5))
     #         jac_zx = numpy.diag(30.0 * exp_fun / (1.0 + exp_fun) ** 2)/ self.tau0
     #     else:
-    #         raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
+    #         raise_value_error('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
     #
     #     return concat([numpy.hstack([jac_xx, jac_xz]),numpy.hstack([jac_zx, jac_zz])],axis=0)

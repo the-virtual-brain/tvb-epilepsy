@@ -5,9 +5,8 @@ Class for defining and storing the state of a hypothesis.
 import numpy as np
 
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.model.model_vep import Connectivity
 from tvb_epilepsy.base.utils import initialize_logger, formal_repr, ensure_list, dicts_of_lists_to_lists_of_dicts, \
-    linear_index_to_coordinate_tuples
+    linear_index_to_coordinate_tuples, raise_value_error
 
 # NOTES:
 #  For the moment a hypothesis concerns the excitability and/or epileptogenicity of each brain region,
@@ -130,7 +129,7 @@ class DiseaseHypothesis(object):
             elif len(value) == 1 and n > 1:
                 values += value * n
             else:
-                raise ValueError("Length of disease indices " + str(len(key)) + " and values " + str(len(value)) +
+                raise_value_error("Length of disease indices " + str(len(key)) + " and values " + str(len(value)) +
                                  " do not match!")
         arg_sort = np.argsort(indices)
         return np.array(indices)[arg_sort].tolist(), np.array(values)[arg_sort]

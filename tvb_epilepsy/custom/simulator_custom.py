@@ -12,9 +12,9 @@ from copy import copy
 import numpy
 
 from tvb_epilepsy.base.constants import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
+from tvb_epilepsy.base.utils import warning, obj_to_dict, assert_arrays
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
-from tvb_epilepsy.base.utils import obj_to_dict, assert_arrays
 from tvb_epilepsy.base.computations.calculations_utils import calc_rescaled_x0
 from tvb_epilepsy.custom.read_write import read_ts
 
@@ -144,19 +144,17 @@ class SimulatorCustom(ABCSimulator):
                "-Djava.library.path=" + LIB_PATH + " " + "-cp" + " " + JAR_PATH + " " + \
                JAVA_MAIN_SIM + " " + self.json_config_path + " " + self.head_path
 
-        # try:
-        status = subprocess.call(opts, shell=True)
-        print status
+        try:
+            status = subprocess.call(opts, shell=True)
+            print status
 
-        # except:
-        #     status = False
-        #     warnings.warn("Something went wrong with this simulation...")
+        except:
+            status = False
+            warning("Something went wrong with this simulation...")
 
         time, data = read_ts(os.path.join(self.head_path, "full-configuration", "ts.h5"), data="data")
         return time, data, status
 
-    # def launch_pse(self, hypothesis, head, vep_settings=SimulationSettings()):
-    #     raise NotImplementedError()
 
     def prepare_epileptor_model_for_json(self, no_regions=88):
         epileptor_params_list = []

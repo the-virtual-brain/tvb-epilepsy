@@ -1,11 +1,10 @@
-import warnings
 
 import numpy as np
 from SALib.analyze import sobol, delta, fast, morris, dgsm,  ff
 from tvb.basic.logger.builder import get_logger
 
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.utils import formal_repr, list_of_dicts_to_dicts_of_ndarrays, dict_str
+from tvb_epilepsy.base.utils import formal_repr, warning, raise_value_error, list_of_dicts_to_dicts_of_ndarrays, dict_str
 from tvb_epilepsy.service.lsa_service import start_lsa_run
 
 METHODS = ["sobol", "latin", "delta", "dgsm", "fast", "fast_sampler", "morris", "ff", "fractional_factorial"]
@@ -47,7 +46,7 @@ class SensitivityAnalysisService(object):
             if np.all(np.array(self.n_samples) == self.n_samples[0]):
                 self.n_samples = self.n_samples[0]
             else:
-                raise ValueError("Not all input parameters have equal number of samples!: " + str(self.n_samples))
+                raise_value_error("Not all input parameters have equal number of samples!: " + str(self.n_samples))
 
         self.input_samples = np.array(self.input_samples).T
 
@@ -68,7 +67,7 @@ class SensitivityAnalysisService(object):
                     self.output_values.append(output["values"].T)
                     n_outputs = output["values"].shape[0]
                 else:
-                    raise ValueError("Non of the dimensions of output samples: " + str(output["values"].shape) +
+                    raise_value_error("Non of the dimensions of output samples: " + str(output["values"].shape) +
                                      " matches n_samples = " + str(self.n_samples) + " !")
             self.n_outputs += n_outputs
 
@@ -125,21 +124,21 @@ class SensitivityAnalysisService(object):
         if np.in1d(method, METHODS):
             self.method = method
         else:
-            raise ValueError(
+            raise_value_error(
                 "Method " + str(method) + " is not one of the available methods " + str(METHODS) + " !")
 
     def _set_calc_second_order(self, calc_second_order):
         if isinstance(calc_second_order, bool):
             self.calc_second_order = calc_second_order
         else:
-            raise ValueError("calc_second_order = " + str(calc_second_order) + "is not a boolean as it should!")
+            raise_value_error("calc_second_order = " + str(calc_second_order) + "is not a boolean as it should!")
 
     def _set_conf_level(self, conf_level):
         if isinstance(conf_level, float) and conf_level > 0.0 and conf_level < 1.0:
             self.conf_level = conf_level
         else:
-            raise ValueError("conf_level = " + str(conf_level) +
-                             "is not a float in the (0.0, 1.0) interval as it should!")
+            raise_value_error("conf_level = " + str(conf_level) +
+                              "is not a float in the (0.0, 1.0) interval as it should!")
 
     def _update_parameters(self, method=None, calc_second_order=None, conf_level=None):
 
@@ -172,7 +171,7 @@ class SensitivityAnalysisService(object):
         n_outputs = len(output_ids)
 
         if self.method.lower() == "sobol":
-            warnings.warn("'sobol' method requires 'saltelli' sampling scheme!")
+            warning("'sobol' method requires 'saltelli' sampling scheme!")
             # Additional keyword parameters and their defaults:
             # calc_second_order (bool): Calculate second-order sensitivities (default True)
             # num_resamples (int): The number of resamples used to compute the confidence intervals (default 1000)
@@ -188,7 +187,7 @@ class SensitivityAnalysisService(object):
                                                   print_to_console=self.other_parameters.get("print_to_console", False))
 
         elif np.in1d(self.method.lower(), ["latin", "delta"]):
-            warnings.warn("'latin' sampling scheme is recommended for 'delta' method!")
+            warning("'latin' sampling scheme is recommended for 'delta' method!")
             # Additional keyword parameters and their defaults:
             # num_resamples (int): The number of resamples used to compute the confidence intervals (default 1000)
             # conf_level (float): The confidence interval level (default 0.95)
@@ -200,7 +199,7 @@ class SensitivityAnalysisService(object):
                                                                                                     False))
 
         elif np.in1d(self.method.lower(), ["fast", "fast_sampler"]):
-            warnings.warn("'fast' method requires 'fast_sampler' sampling scheme!")
+            warning("'fast' method requires 'fast_sampler' sampling scheme!")
             # Additional keyword parameters and their defaults:
             # M (int): The interference parameter,
             #           i.e., the number of harmonics to sum in the Fourier series decomposition (default 4)
@@ -213,7 +212,7 @@ class SensitivityAnalysisService(object):
             # Additional keyword parameters and their defaults:
             # second_order (bool, default=False): Include interaction effects
             # print_to_console (bool, default=False): Print results directly to console
-            warnings.warn("'fractional_factorial' method requires 'fractional_factorial' sampling scheme!")
+            warning("'fractional_factorial' method requires 'fractional_factorial' sampling scheme!")
             self.analyzer = lambda output: ff.analyze(self.problem, self.input_samples[:, input_ids], output,
                                                       calc_second_order=self.calc_second_order,
                                                       conf_level=self.conf_level,
@@ -223,7 +222,7 @@ class SensitivityAnalysisService(object):
 
 
         elif self.method.lower().lower() == "morris":
-            warnings.warn("'morris' method requires 'morris' sampling scheme!")
+            warning("'morris' method requires 'morris' sampling scheme!")
             # Additional keyword parameters and their defaults:
             # num_resamples (int): The number of resamples used to compute the confidence intervals (default 1000)
             # conf_level (float): The confidence interval level (default 0.95)
@@ -252,8 +251,8 @@ class SensitivityAnalysisService(object):
                                                                                                    False))
 
         else:
-            raise ValueError(
-                "Method " + str(self.method) + " is not one of the available methods " + str(METHODS) + " !")
+            raise_value_error("Method " + str(self.method) +
+                              " is not one of the available methods " + str(METHODS) + " !")
 
         output_names = []
         results = []
@@ -298,8 +297,7 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
         else:
             sampler = method
     else:
-        raise ValueError(
-            "Method " + str(method) + " is not one of the available methods " + str(METHODS) + " !")
+        raise_value_error("Method " + str(method) + " is not one of the available methods " + str(METHODS) + " !")
 
     all_regions_indices = range(lsa_hypothesis.number_of_regions)
     disease_indices = lsa_hypothesis.get_regions_disease_indices()
