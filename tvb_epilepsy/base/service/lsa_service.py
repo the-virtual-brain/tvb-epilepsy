@@ -158,3 +158,19 @@ class LSAService(object):
                                left_ax_focus_indices=disease_hypothesis.get_all_disease_indices(),
                                right_ax_focus_indices=disease_hypothesis.propagation_indices,
                                description=description, title=title, figure_name=fig_name)
+
+def start_lsa_run(hypothesis, connectivity_matrix, logger):
+
+    from tvb_epilepsy.base.service.model_configuration_service import ModelConfigurationService
+
+    logger.info("creating model configuration...")
+    model_configuration_service = ModelConfigurationService(hypothesis.number_of_regions)
+    model_configuration = model_configuration_service. \
+        configure_model_from_hypothesis(hypothesis, connectivity_matrix)
+
+    logger.info("running LSA...")
+    lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
+    lsa_hypothesis = lsa_service.run_lsa(hypothesis, model_configuration)
+
+    return model_configuration_service, model_configuration, lsa_service, lsa_hypothesis
+
