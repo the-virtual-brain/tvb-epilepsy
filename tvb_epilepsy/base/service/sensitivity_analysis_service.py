@@ -9,7 +9,7 @@ from tvb_epilepsy.base.utils import formal_repr, list_of_dicts_to_dicts_of_ndarr
 
 METHODS = ["sobol", "latin", "delta", "dgsm", "fast", "fast_sampler", "morris", "ff", "fractional_factorial"]
 
-LOG = get_logger(__name__)
+logger = get_logger(__name__)
 
 # TODO: make sensitivity_analysis_from_hypothesis() helper function
 
@@ -268,136 +268,72 @@ class SensitivityAnalysisService(object):
         return results
 
 
-# This function is a helper function to run sensitivity analysis parameter search exploration (pse)
-# for Linear Stability Analysis (LSA).
+# Test and example function:
 
-def sensitivity_analysis_pse_from_hypothesis(hypothesis, n_samples, method="sobol", half_range=0.1, global_coupling=[],
-                                             healthy_regions_parameters=[], model_configuration_service=None,
-                                             lsa_service=None, save_services=False, **kwargs):
-    from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE, FOLDER_RES
-    from tvb_epilepsy.base.utils import initialize_logger, linear_index_to_coordinate_tuples, \
-        list_of_dicts_to_dicts_of_ndarrays, dicts_of_lists_to_lists_of_dicts
-    from tvb_epilepsy.base.service.sampling_service import StochasticSamplingService
-    from tvb_epilepsy.base.service.pse_service import PSEService
+if __name__ == "__main__":
 
-    logger = initialize_logger(__name__)
+    import os
+    from tvb_epilepsy.base.constants import DATA_CUSTOM, FOLDER_RES, K_DEF
+    from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
+    from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+    from tvb_epilepsy.base.service.model_configuration_service import ModelConfigurationService
+    from tvb_epilepsy.base.service.lsa_service import LSAService
+    from tvb_epilepsy.base.helper_functions import sensitivity_analysis_pse_from_hypothesis
 
-    method = method.lower()
-    if np.in1d(method, METHODS):
-        if np.in1d(method, ["delta", "dgsm"]):
-            sampler = "latin"
-        elif method == "sobol":
-            sampler = "saltelli"
-        elif method == "fast":
-            sampler = "fast_sampler"
-        else:
-            sampler = method
-    else:
-        raise ValueError(
-            "Method " + str(method) + " is not one of the available methods " + str(METHODS) + " !")
+    # -------------------------------Reading data-----------------------------------
 
-    all_regions_indices = range(hypothesis.get_number_of_regions())
-    disease_indices = hypothesis.get_regions_disease_indices()
+    data_folder = os.path.join(DATA_CUSTOM, 'Head')
+
+    reader = Reader()
+
+    head = reader.read_head(data_folder)
+
+    # --------------------------Hypothesis definition-----------------------------------
+
+    n_samples = 100
+
+    #
+    # Manual definition of hypothesis...:
+    x0_indices = [20]
+    x0_values = [0.9]
+    e_indices = [70]
+    e_values = [0.9]
+    disease_indices = x0_indices + e_indices
+    n_disease = len(disease_indices)
+
+    n_x0 = len(x0_indices)
+    n_e = len(e_indices)
+    all_regions_indices = np.array(range(head.connectivity.number_of_regions))
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
+    n_healthy = len(healthy_indices)
+    # This is an example of x0 mixed Excitability and Epileptogenicity Hypothesis:
+    hyp_x0_E = DiseaseHypothesis(head.connectivity.number_of_regions,
+                                 excitability_hypothesis={tuple(x0_indices): x0_values},
+                                 epileptogenicity_hypothesis={tuple(e_indices): e_values},
+                                 connectivity_hypothesis={})
 
-    pse_params = {"path": [], "indices": [], "name": [], "bounds": []}
-    n_inputs = 0
+    # Now running the sensitivity analysis:
+    logger.info("running sensitivity analysis PSE LSA...")
+    for m in METHODS:
+        try:
+            model_configuration_service, model_configuration, lsa_service, lsa_hypothesis, sa_results, pse_results = \
+                sensitivity_analysis_pse_from_hypothesis(hyp_x0_E,
+                                                         head.connectivity.normalized_weights,
+                                                         head.connectivity.region_labels,
+                                                         n_samples, method=m, half_range=0.1,
+                                           global_coupling=[{"indices": all_regions_indices, "bounds": [0.0, 2*K_DEF]}],
+                                               healthy_regions_parameters= [{"name": "x0", "indices": healthy_indices}],
+                                                         logger=logger, save_services=True)
 
-    # First build from the hypothesis the input parameters of the sensitivity analysis.
-    # These can be either originating from excitability, epileptogenicity or connectivity hypotheses,
-    # or they can relate to the global coupling scaling (parameter K of the model configuration)
-    for ii in range(len(hypothesis.x0_values)):
-        n_inputs += 1
-        pse_params["indices"].append([ii])
-        pse_params["path"].append("hypothesis.x0_values")
-        pse_params["name"].append(str(hypothesis.connectivity.region_labels[hypothesis.x0_indices[ii]]) +
-                                  " Excitability")
-        pse_params["bounds"].append([hypothesis.x0_values[ii] - half_range,
-                                     np.min([MAX_DISEASE_VALUE, hypothesis.x0_values[ii] + half_range])])
+            lsa_service.plot_lsa(lsa_hypothesis, model_configuration, region_labels=head.connectivity.region_labels,
+                                 pse_results=pse_results, title=m + "_PSE_LSA_overview_" + lsa_hypothesis.name)
+            # , show_flag=True, save_flag=False
 
-    for ii in range(len(hypothesis.e_values)):
-        n_inputs += 1
-        pse_params["indices"].append([ii])
-        pse_params["path"].append("hypothesis.e_values")
-        pse_params["name"].append(str(hypothesis.connectivity.region_labels[hypothesis.e_indices[ii]]) +
-                                  " Epileptogenicity")
-        pse_params["bounds"].append([hypothesis.e_values[ii] - half_range,
-                                     np.min([MAX_DISEASE_VALUE, hypothesis.e_values[ii] + half_range])])
+            convert_to_h5_model(pse_results).write_to_h5(FOLDER_RES,
+                                                         m + "_PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
+            convert_to_h5_model(sa_results).write_to_h5(FOLDER_RES,
+                                                        m + "_SA_LSA_results_" + lsa_hypothesis.name + ".h5")
+        except:
+            warnings.warn("Method " + m + " failed!")
 
-    for ii in range(len(hypothesis.w_values)):
-        n_inputs += 1
-        pse_params["indices"].append([ii])
-        pse_params["path"].append("hypothesis.w_values")
-        inds = linear_index_to_coordinate_tuples(hypothesis.w_indices[ii], hypothesis.connectivity.weights.shape)
-        if len(inds) == 1:
-            pse_params["name"].append(str(hypothesis.connectivity.region_labels[inds[0][0]]) + "-" +
-                                      str(hypothesis.connectivity.region_labels[inds[0][0]]) + " Connectivity")
-        else:
-            pse_params["name"].append("Connectivity[" + str(inds), + "]")
-            pse_params["bounds"].append([np.max([hypothesis.w_values[ii] - half_range, 0.0]),
-                                         hypothesis.w_values[ii] + half_range])
 
-    for val in global_coupling:
-        n_inputs += 1
-        pse_params["path"].append("model.configuration.service.K_unscaled")
-        inds = val.get("indices", all_regions_indices)
-        if np.all(inds == all_regions_indices):
-            pse_params["name"].append("Global coupling")
-        else:
-            pse_params["name"].append("Afferent coupling[" + str(inds) + "]")
-        pse_params["indices"].append(inds)
-        pse_params["bounds"].append(val["bounds"])
-
-    # Now generate samples suitable for sensitivity analysis
-    sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=n_inputs, sampler=sampler, trunc_limits={},
-                                        sampling_module="salib", random_seed=kwargs.get("random_seed", None),
-                                        bounds=pse_params["bounds"])
-
-    input_samples = sampler.generate_samples(**kwargs)
-    n_samples = input_samples.shape[1]
-    pse_params.update({"samples": [np.array(value) for value in input_samples.tolist()]})
-
-    pse_params_list = dicts_of_lists_to_lists_of_dicts(pse_params)
-
-    # Add a random jitter to the healthy regions if required...:
-    for val in healthy_regions_parameters:
-        inds = val.get("indices", healthy_indices)
-        name = val.get("name", "x0")
-        n_params = len(inds)
-        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=n_params, sampler="uniform",
-                                            trunc_limits={"low": 0.0}, sampling_module="scipy",
-                                            random_seed=kwargs.get("random_seed", None),
-                                            loc=kwargs.get("loc", 0.0), scale=kwargs.get("scale", 2 * half_range))
-
-        samples = sampler.generate_samples(**kwargs)
-        for ii in range(n_params):
-            pse_params_list.append({"path": "model_configuration_service." + name, "samples": samples[ii],
-                                    "indices": [inds[ii]], "name": name})
-
-    # Now run pse service to generate output samples:
-
-    pse = PSEService("LSA", hypothesis=hypothesis, params_pse=pse_params_list)
-    pse_results, execution_status = pse.run_pse(grid_mode=False, lsa_service_input=lsa_service,
-                                                model_configuration_service_input=model_configuration_service)
-
-    pse_results = list_of_dicts_to_dicts_of_ndarrays(pse_results)
-
-    # Now prepare inputs and outputs and run the sensitivity analysis:
-    # NOTE!: Without the jittered healthy regions which we don' want to include into the sensitivity analysis!
-    inputs = dicts_of_lists_to_lists_of_dicts(pse_params)
-
-    outputs = [{"names": ["LSA Propagation Strength"], "values": pse_results["propagation_strengths"]}]
-    sensitivity_analysis_service = SensitivityAnalysisService(inputs, outputs, method=method,
-                                                              calc_second_order=kwargs.get("calc_second_order", True),
-                                                              conf_level=kwargs.get("conf_level", 0.95))
-
-    results = sensitivity_analysis_service.run(**kwargs)
-
-    if save_services:
-        logger.info(pse.__repr__())
-        pse.write_to_h5(FOLDER_RES, method + "_test_pse_service.h5")
-
-        logger.info(sensitivity_analysis_service.__repr__())
-        sensitivity_analysis_service.write_to_h5(FOLDER_RES, method + "_test_sa_service.h5")
-
-    return results, pse_results

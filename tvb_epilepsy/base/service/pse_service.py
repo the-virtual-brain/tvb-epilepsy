@@ -21,7 +21,7 @@ from tvb_epilepsy.custom.read_write import read_ts
 from tvb_epilepsy.custom.simulator_custom import custom_model_builder
 from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
 
-LOG = get_logger(__name__)
+logger = get_logger(__name__)
 
 
 def set_object_attribute_recursively(object, path, values, indices):
@@ -73,7 +73,7 @@ def update_object(object, object_type, params_paths, params_values, params_indic
     return object, params_paths, params_values, params_indices, update_flag
 
 
-def update_hypothesis(hypothesis_input, params_paths, params_values, params_indices,
+def update_hypothesis(hypothesis_input, connectivity_matrix, params_paths, params_values, params_indices,
                       model_configuration_service_input=None,
                       yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize"):
     # Assign possible hypothesis parameters on a new hypothesis object:
@@ -86,7 +86,8 @@ def update_hypothesis(hypothesis_input, params_paths, params_values, params_indi
     if isinstance(model_configuration_service_input, ModelConfigurationService):
         model_configuration_service = deepcopy(model_configuration_service_input)
     else:
-        model_configuration_service = ModelConfigurationService(yc=yc, Iext1=Iext1, K=K, a=a, b=b, x1eq_mode=x1eq_mode)
+        model_configuration_service = ModelConfigurationService(hypothesis_input.number_of_regions,
+                                                                yc=yc, Iext1=Iext1, K=K, a=a, b=b, x1eq_mode=x1eq_mode)
 
     # ...modify possible related parameters:
     model_configuration_service, params_paths, params_values, params_indices = \
@@ -95,9 +96,11 @@ def update_hypothesis(hypothesis_input, params_paths, params_values, params_indi
 
     # ...and compute a new model_configuration:
     if hypothesis.type == "Epileptogenicity":
-        model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hypothesis)
+        model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hypothesis,
+                                                                                            connectivity_matrix)
     else:
-        model_configuration = model_configuration_service.configure_model_from_hypothesis(hypothesis)
+        model_configuration = model_configuration_service.configure_model_from_hypothesis(hypothesis,
+                                                                                          connectivity_matrix)
 
     return hypothesis, model_configuration, params_paths, params_values, params_indices
 
@@ -111,7 +114,7 @@ def lsa_out_fun(hypothesis, model_configuration=None, **kwargs):
         hypothesis.propagation_strenghts
 
 
-def lsa_run_fun(hypothesis_input, params_paths, params_values, params_indices, out_fun=lsa_out_fun,
+def lsa_run_fun(hypothesis_input, connectivity_matrix, params_paths, params_values, params_indices, out_fun=lsa_out_fun,
                 model_configuration_service_input=None,
                 yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",
                 lsa_service_input=None,
@@ -119,7 +122,7 @@ def lsa_run_fun(hypothesis_input, params_paths, params_values, params_indices, o
     try:
         # Update hypothesis and create a new model_configuration:
         hypothesis, model_configuration, params_paths, params_values, params_indices \
-            = update_hypothesis(hypothesis_input, params_paths, params_values, params_indices,
+            = update_hypothesis(hypothesis_input, connectivity_matrix, params_paths, params_values, params_indices,
                                 model_configuration_service_input, yc, Iext1, K, a, b, x1eq_mode)
 
         # ...create/update lsa service:
@@ -154,7 +157,7 @@ def sim_out_fun(simulator, time, data, **kwargs):
     return {"time": time, "data": data}
 
 
-def sim_run_fun(simulator_input, params_paths, params_values, params_indices, out_fun=sim_out_fun,
+def sim_run_fun(simulator_input, connectivity_matrix, params_paths, params_values, params_indices, out_fun=sim_out_fun,
                 hypothesis_input=None,
                 model_configuration_service_input=None,
                 yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",
@@ -169,7 +172,7 @@ def sim_run_fun(simulator_input, params_paths, params_values, params_indices, ou
         # First try to update model_configuration via an input hypothesis...:
         if isinstance(hypothesis_input, DiseaseHypothesis):
             hypothesis, model_configuration, params_paths, params_values, params_indices = \
-                update_hypothesis(hypothesis_input, params_paths, params_values, params_indices,
+                update_hypothesis(hypothesis_input, connectivity_matrix, params_paths, params_values, params_indices,
                                   model_configuration_service_input, yc, Iext1, K, a, b, x1eq_mode)
             # Update model configuration:
             simulator.model_configuration = model_configuration
@@ -325,16 +328,20 @@ class PSEService(object):
         h5_model = self._prepare_for_h5()
         h5_model.write_to_h5(folder, filename)
 
-    def run_pse(self, grid_mode=False, **kwargs):
+    def run_pse(self, connectivity_matrix, grid_mode=False, **kwargs):
 
         results = []
         execution_status = []
 
+        loop_tenth = 1
         for iloop in range(self.n_loops):
 
             params = self.pse_params[iloop, :]
 
-            print "\nExecuting loop " + str(iloop) + " of " + str(self.n_loops)
+            if iloop == 0 or iloop + 1 >= loop_tenth * self.n_loops / 10.0:
+                print "\nExecuting loop " + str(iloop + 1) + " of " + str(self.n_loops)
+                if iloop > 0:
+                    loop_tenth += 1
             # print "\nParameters:"
             # for ii in range(len(params)):
             #      print self.params_paths[ii] + "[" + str(self.params_indices[ii]) + "] = " + str(params[ii])
@@ -343,8 +350,8 @@ class PSEService(object):
             output = None
 
             try:
-                status, output = self.run_fun(self.pse_object, self.params_paths, params, self.params_indices,
-                                              self.out_fun, **kwargs)
+                status, output = self.run_fun(self.pse_object, connectivity_matrix,
+                                              self.params_paths, params, self.params_indices, self.out_fun, **kwargs)
 
             except:
                 pass
@@ -361,124 +368,69 @@ class PSEService(object):
 
         return results, execution_status
 
-    def run_pse_parallel(self, grid_mode=False):
+    def run_pse_parallel(self, connectivity_matrix, grid_mode=False):
         # TODO: start each loop on a separate process, gather results and return them
         raise NotImplementedError
 
-
-###
-# This function is a helper function to run parameter search exploration (pse) for Linear Stability Analysis (LSA).
-###
-def pse_from_hypothesis(hypothesis, n_samples, half_range=0.1, global_coupling=[],
-                        healthy_regions_parameters=[], model_configuration_service=None, lsa_service=None,
-                        save_services=False, **kwargs):
-    from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE, K_DEF, FOLDER_RES
-    from tvb_epilepsy.base.utils import initialize_logger, linear_index_to_coordinate_tuples, \
-        dicts_of_lists_to_lists_of_dicts, list_of_dicts_to_dicts_of_ndarrays
+if __name__ == "__main__":
+    import os
+    from tvb_epilepsy.base.constants import DATA_CUSTOM, FOLDER_RES
+    from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
     from tvb_epilepsy.base.service.sampling_service import StochasticSamplingService
+    from tvb_epilepsy.base.helper_functions import pse_from_hypothesis
 
-    logger = initialize_logger(__name__)
+    # -------------------------------Reading data-----------------------------------
 
-    all_regions_indices = range(hypothesis.get_number_of_regions())
-    disease_indices = hypothesis.get_regions_disease_indices()
+    data_folder = os.path.join(DATA_CUSTOM, 'Head')
+
+    reader = Reader()
+
+    head = reader.read_head(data_folder)
+
+    # --------------------------Hypothesis definition-----------------------------------
+
+    n_samples = 100
+
+    # Sampling of the global coupling parameter
+    stoch_sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampler="norm",
+                                              trunc_limits={"low": 0.0},
+                                              random_seed=1000, loc=10.0, scale=3.0)
+    K_samples, K_sample_stats = stoch_sampler.generate_samples(stats=True)
+
+    #
+    # Manual definition of hypothesis...:
+    x0_indices = [20]
+    x0_values = [0.9]
+    e_indices = [70]
+    e_values = [0.9]
+    disease_indices = x0_indices + e_indices
+    n_disease = len(disease_indices)
+
+    n_x0 = len(x0_indices)
+    n_e = len(e_indices)
+    all_regions_indices = np.array(range(head.number_of_regions))
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
+    n_healthy = len(healthy_indices)
+    # This is an example of x0 mixed Excitability and Epileptogenicity Hypothesis:
+    hyp_x0_E = DiseaseHypothesis(head.connectivity.number_of_regions,
+                                 excitability_hypothesis={tuple(x0_indices): x0_values},
+                                 epileptogenicity_hypothesis={tuple(e_indices): e_values},
+                                 connectivity_hypothesis={})
 
-    pse_params = {"path": [], "indices": [], "name": [], "samples": []}
+    # Now running the parameter search analysis:
+    logger.info("running PSE LSA...")
+    model_configuration, lsa_service, lsa_hypothesis, pse_results = pse_from_hypothesis(hyp_x0_E,
+                                      head.connectivity.normalized_weights, head.connectivity.region_labels,
+                                      n_samples, half_range=0.1, global_coupling=[{"indices": all_regions_indices}],
+                                      healthy_regions_parameters=[{"name": "x0", "indices": healthy_indices}],
+                                      logger=logger, save_services=True)[:4]
 
-    # First build from the hypothesis the input parameters of the parameter search exploration.
-    # These can be either originating from excitability, epileptogenicity or connectivity hypotheses,
-    # or they can relate to the global coupling scaling (parameter K of the model configuration)
-    for ii in range(len(hypothesis.x0_values)):
-        pse_params["indices"].append([ii])
-        pse_params["path"].append("hypothesis.x0_values")
-        pse_params["name"].append(str(hypothesis.connectivity.region_labels[hypothesis.x0_indices[ii]]) +
-                                  " Excitability")
+    lsa_service.plot_lsa(lsa_hypothesis, model_configuration, region_labels=head.connectivity.region_labels,
+                            pse_results=pse_results)
+    # , show_flag=True, save_flag=False
 
-        # Now generate samples using a truncated uniform distribution
-        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                            random_seed=kwargs.get("random_seed", None),
-                                            trunc_limits={"high": MAX_DISEASE_VALUE},
-                                            sampler="uniform",
-                                            loc=hypothesis.x0_values[ii] - half_range, scale=2 * half_range)
-        pse_params["samples"].append(sampler.generate_samples(**kwargs))
+    convert_to_h5_model(pse_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")
 
-    for ii in range(len(hypothesis.e_values)):
-        pse_params["indices"].append([ii])
-        pse_params["path"].append("hypothesis.e_values")
-        pse_params["name"].append(str(hypothesis.connectivity.region_labels[hypothesis.e_indices[ii]]) +
-                                  " Epileptogenicity")
 
-        # Now generate samples using a truncated uniform distribution
-        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                            random_seed=kwargs.get("random_seed", None),
-                                            trunc_limits={"high": MAX_DISEASE_VALUE},
-                                            sampler="uniform",
-                                            loc=hypothesis.e_values[ii] - half_range, scale=2 * half_range)
-        pse_params["samples"].append(sampler.generate_samples(**kwargs))
 
-    for ii in range(len(hypothesis.w_values)):
-        pse_params["indices"].append([ii])
-        pse_params["path"].append("hypothesis.w_values")
-        inds = linear_index_to_coordinate_tuples(hypothesis.w_indices[ii], hypothesis.connectivity.weights.shape)
-        if len(inds) == 1:
-            pse_params["name"].append(str(hypothesis.connectivity.region_labels[inds[0][0]]) + "-" +
-                                      str(hypothesis.connectivity.region_labels[inds[0][0]]) + " Connectivity")
-        else:
-            pse_params["name"].append("Connectivity[" + str(inds), + "]")
 
-        # Now generate samples using a truncated normal distribution
-        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                            random_seed=kwargs.get("random_seed", None),
-                                            trunc_limits={"high": MAX_DISEASE_VALUE},
-                                            sampler="norm", loc=hypothesis.w_values[ii], scale=half_range)
-        pse_params["samples"].append(sampler.generate_samples(**kwargs))
-
-    if model_configuration_service is None:
-        kloc = K_DEF
-    else:
-        kloc = model_configuration_service.K_unscaled[0]
-    for val in global_coupling:
-        pse_params["path"].append("model.configuration.service.K_unscaled")
-        inds = val.get("indices", all_regions_indices)
-        if np.all(inds == all_regions_indices):
-            pse_params["name"].append("Global coupling")
-        else:
-            pse_params["name"].append("Afferent coupling[" + str(inds) + "]")
-        pse_params["indices"].append(inds)
-
-        # Now generate samples susing a truncated normal distribution
-        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                            random_seed=kwargs.get("random_seed", None),
-                                            trunc_limits={"low": 0.0}, sampler="norm", loc=kloc, scale=30 * half_range)
-        pse_params["samples"].append(sampler.generate_samples(**kwargs))
-
-    pse_params_list = dicts_of_lists_to_lists_of_dicts(pse_params)
-
-    # Add a random jitter to the healthy regions if required...:
-    for val in healthy_regions_parameters:
-        inds = val.get("indices", healthy_indices)
-        name = val.get("name", "x0")
-        n_params = len(inds)
-        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=n_params, sampler="uniform",
-                                            trunc_limits={"low": 0.0}, sampling_module="scipy",
-                                            random_seed=kwargs.get("random_seed", None),
-                                            loc=kwargs.get("loc", 0.0), scale=kwargs.get("scale", 2 * half_range))
-
-        samples = sampler.generate_samples(**kwargs)
-        for ii in range(n_params):
-            pse_params_list.append({"path": "model_configuration_service." + name, "samples": samples[ii],
-                                    "indices": [inds[ii]], "name": name})
-
-    # Now run pse service to generate output samples:
-
-    pse = PSEService("LSA", hypothesis=hypothesis, params_pse=pse_params_list)
-    pse_results, execution_status = pse.run_pse(grid_mode=False, lsa_service_input=lsa_service,
-                                                model_configuration_service_input=model_configuration_service)
-
-    pse_results = list_of_dicts_to_dicts_of_ndarrays(pse_results)
-
-    if save_services:
-        logger.info(pse.__repr__())
-        pse.write_to_h5(FOLDER_RES, "test_pse_service.h5")
-
-    return pse_results, pse_params_list

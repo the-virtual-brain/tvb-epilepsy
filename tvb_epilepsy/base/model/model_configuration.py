@@ -16,7 +16,7 @@ from tvb_epilepsy.base.utils import formal_repr, dicts_of_lists_to_lists_of_dict
 class ModelConfiguration(object):
     def __init__(self, yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF,
                  x0cr=None, rx0=None, x1EQ=None, zEQ=None, Ceq=None, x0_values=X0_DEF, e_values=None,
-                 connectivity=None):
+                 connectivity_matrix=None):
 
         # These parameters are used for every Epileptor Model...
         self.x0_values = x0_values
@@ -37,7 +37,7 @@ class ModelConfiguration(object):
         self.Ceq = Ceq
         self.e_values = e_values
 
-        self.connectivity_matrix = connectivity
+        self.connectivity_matrix = connectivity_matrix
 
     def __repr__(self):
         d = {
