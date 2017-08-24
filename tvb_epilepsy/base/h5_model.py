@@ -69,7 +69,7 @@ class H5Model(object):
 
         h5_file.close()
 
-    def convert_from_h5_model(self, obj=dict(), children_dict=class_dict):
+    def convert_from_h5_model(self, obj=dict(), children_dict=class_dict, hypothesis=False):
 
         children_dict.update(getattr(obj, "children_dict", {}))
 
@@ -92,6 +92,25 @@ class H5Model(object):
 
         if np.in1d(output, ["tuple", "list"]):
             obj = dict_to_list_or_tuple(obj, output)
+
+        if hypothesis:
+            # TODO: make this hack work also recursively, if needed...
+            if isinstance(obj, dict):
+                set_field = lambda obj, key, value: obj.update({key: value})
+                get_field = lambda obj, key: obj.get(key, None)
+            else:
+                set_field = lambda obj, attribute, value: setattr(obj, attribute, value)
+                get_field = lambda obj, attribute: getattr(obj, attribute, None)
+
+            for var_str in ["x0", "e", "w"]:
+                ind = get_field(obj, var_str + "_indices")
+                var_key = var_str + "_values"
+                var = np.array(get_field(obj, var_key))
+                if len(ind) > 0:
+                    set_field(obj, var_key, var[ind])
+                else:
+                    set_field(obj, var_key, np.array([]))
+
 
         return obj
 
@@ -137,7 +156,7 @@ def object_to_h5_model_recursively(h5_model, obj, name="", root=False):
 
                 for class_type in class_list:
                     if obj.__class__.__name__ == class_type:
-                        name = name + ":" + obj.__class__.__name__
+                        name = name + "#" + obj.__class__.__name__
                         break
 
                 if isinstance(obj, (list, tuple)):
@@ -149,6 +168,7 @@ def object_to_h5_model_recursively(h5_model, obj, name="", root=False):
                         temp = np.array(obj)
                         # those that can be converted to np arrays get in datasets
                         if temp.dtype != "O":
+                            # h5_model.add_or_update_metadata_attribute(name, str(temp))
                             h5_model.add_or_update_datasets_attribute(name, temp)
                             return
                     except:
@@ -207,7 +227,7 @@ def build_hierarchical_object_recursively(obj, key, value, children_dict=class_d
     else:
 
         this_name = key.split('/', 1)[0]
-        split_name = this_name.split(':')
+        split_name = this_name.split('#')
         if len(split_name) == 2:
             name = split_name[0]
             class_name = split_name[1]

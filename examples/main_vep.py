@@ -244,11 +244,12 @@ def main_vep(test_write_read=False):
             logger.info("Written and read LSA hypotheses are identical (input object check)?: " +
                         str(assert_equal_objects(lsa_hypothesis,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
-                                    convert_from_h5_model(obj=deepcopy(lsa_hypothesis)), logger=logger)))
+                                    convert_from_h5_model(obj=deepcopy(lsa_hypothesis), hypothesis=True),
+                                                 logger=logger)))
             logger.info("Written and read LSA hypotheses are identical (input template check)?: " +
                         str(assert_equal_objects(lsa_hypothesis,
                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
-                                    convert_from_h5_model(obj=hypothesis_template), logger=logger)))
+                                    convert_from_h5_model(obj=hypothesis_template, hypothesis=True), logger=logger)))
 
         lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels,  None)
 
