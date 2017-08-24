@@ -81,7 +81,7 @@ class ModelConfiguration(object):
 
         disease_indices = np.unique(np.concatenate((x0_indices, e_indices, disease_indices), axis=0)).tolist()
         indices = [x0_indices, e_indices, disease_indices, disease_indices, disease_indices]
-        plot_types = ["vector", "vector"]
+        plot_types = ["vector", "vector", "vector", "vector", "regions2regions"]
 
         return dicts_of_lists_to_lists_of_dicts({"name": names, "data": data, "focus_indices": indices,
                                                  "plot_type": plot_types})

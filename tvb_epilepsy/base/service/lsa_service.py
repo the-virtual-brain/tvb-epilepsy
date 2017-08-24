@@ -129,7 +129,7 @@ class LSAService(object):
                  pse_results=None, title="Hypothesis Overview"):
 
         hyp_dict_list = disease_hypothesis.prepare_for_plot(model_configuration.connectivity_matrix)
-        model_config_dict_list = model_configuration.prepare_for_plot()
+        model_config_dict_list = model_configuration.prepare_for_plot()[:2]
 
         model_config_dict_list += hyp_dict_list
         plot_dict_list = model_config_dict_list
