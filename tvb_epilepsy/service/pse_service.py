@@ -7,18 +7,18 @@ from copy import deepcopy
 
 import numpy as np
 from tvb.basic.logger.builder import get_logger
+from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 
 from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 from tvb_epilepsy.base.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
-from tvb_epilepsy.base.service.lsa_service import LSAService, start_lsa_run
-from tvb_epilepsy.base.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.base.simulators import ABCSimulator
 from tvb_epilepsy.base.utils import formal_repr
 from tvb_epilepsy.custom.read_write import read_ts
 from tvb_epilepsy.custom.simulator_custom import custom_model_builder
+from tvb_epilepsy.service.lsa_service import LSAService, start_lsa_run
 from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
 
 logger = get_logger(__name__)
@@ -382,11 +382,11 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
                             model_configuration_service=None, lsa_service=None,
                             save_services=False, logger=None, **kwargs):
 
-    from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE, K_DEF, FOLDER_RES
+    from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE, FOLDER_RES
     from tvb_epilepsy.base.utils import initialize_logger, linear_index_to_coordinate_tuples, \
         dicts_of_lists_to_lists_of_dicts, list_of_dicts_to_dicts_of_ndarrays
-    from tvb_epilepsy.base.service.sampling_service import StochasticSamplingService
-    from tvb_epilepsy.base.service.pse_service import PSEService
+    from tvb_epilepsy.service.sampling_service import StochasticSamplingService
+    from tvb_epilepsy.service.pse_service import PSEService
 
     if logger is None:
         logger = initialize_logger(__name__)

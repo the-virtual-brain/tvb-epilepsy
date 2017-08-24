@@ -5,8 +5,8 @@ from SALib.analyze import sobol, delta, fast, morris, dgsm,  ff
 from tvb.basic.logger.builder import get_logger
 
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.service.lsa_service import start_lsa_run
 from tvb_epilepsy.base.utils import formal_repr, list_of_dicts_to_dicts_of_ndarrays, dict_str
+from tvb_epilepsy.service.lsa_service import start_lsa_run
 
 METHODS = ["sobol", "latin", "delta", "dgsm", "fast", "fast_sampler", "morris", "ff", "fractional_factorial"]
 
@@ -280,9 +280,9 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
     from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE, FOLDER_RES
     from tvb_epilepsy.base.utils import initialize_logger, linear_index_to_coordinate_tuples, \
         list_of_dicts_to_dicts_of_ndarrays, dicts_of_lists_to_lists_of_dicts
-    from tvb_epilepsy.base.service.sampling_service import StochasticSamplingService
-    from tvb_epilepsy.base.service.pse_service import PSEService
-    from tvb_epilepsy.base.service.sensitivity_analysis_service import SensitivityAnalysisService, METHODS
+    from tvb_epilepsy.service.sampling_service import StochasticSamplingService
+    from tvb_epilepsy.service.pse_service import PSEService
+    from tvb_epilepsy.service.sensitivity_analysis_service import SensitivityAnalysisService, METHODS
 
     if logger is None:
         logger = initialize_logger(__name__)
