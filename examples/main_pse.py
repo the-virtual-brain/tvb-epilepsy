@@ -1,6 +1,6 @@
 import numpy as np
 import os
-from tvb_epilepsy.base.constants import DATA_CUSTOM, FOLDER_RES
+from tvb_epilepsy.base.configurations import DATA_CUSTOM, FOLDER_RES
 from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
 from tvb_epilepsy.service.sampling_service import StochasticSamplingService
 from tvb.basic.logger.builder import get_logger

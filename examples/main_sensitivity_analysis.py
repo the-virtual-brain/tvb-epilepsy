@@ -1,7 +1,8 @@
 import warnings
 import numpy as np
 import os
-from tvb_epilepsy.base.constants import DATA_CUSTOM, FOLDER_RES, K_DEF
+from tvb_epilepsy.base.configurations import DATA_CUSTOM, FOLDER_RES
+from tvb_epilepsy.base.constants import K_DEF
 from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb.basic.logger.builder import get_logger

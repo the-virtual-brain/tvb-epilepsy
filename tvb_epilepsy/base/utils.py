@@ -12,7 +12,8 @@ import h5py
 import numpy as np
 from matplotlib import use
 
-from tvb_epilepsy.base.constants import FOLDER_LOGS, WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
+from tvb_epilepsy.base.constants import WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
+from tvb_epilepsy.base.configurations import FOLDER_LOGS
 
 use('Qt4Agg')
 from matplotlib import pyplot

@@ -9,4 +9,5 @@ cov=""
 if [[ $COV == "yes" ]]; then cov="--cov=tvb_epilepsy"; fi
 
 # run 'em
+export RUN_ENV="test"
 py.test --cov-config .coveragerc $cov $ignores

@@ -12,7 +12,8 @@ import numpy as np
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from tvb_epilepsy.base.constants import FOLDER_FIGURES, LARGE_SIZE, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
+from tvb_epilepsy.base.constants import LARGE_SIZE, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
+from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.utils import reg_dict, formal_repr, normalize_weights, calculate_in_degree, sort_dict
 from tvb_epilepsy.base.plot_utils import plot_vector, plot_regions2regions, save_figure, check_show
 

@@ -317,7 +317,8 @@ if __name__ == "__main__":
 
     from copy import deepcopy
 
-    from tvb_epilepsy.base.constants import FOLDER_RES, DATA_MODE, DATA_CUSTOM, TVB
+    from tvb_epilepsy.base.constants import DATA_MODE, TVB
+    from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM
     from tvb_epilepsy.base.utils import assert_equal_objects
     from tvb_epilepsy.base.model.model_vep import Connectivity
     from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis

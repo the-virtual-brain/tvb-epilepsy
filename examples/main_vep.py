@@ -7,7 +7,8 @@ from copy import deepcopy
 
 import numpy as np
 
-from tvb_epilepsy.base.constants import FOLDER_RES, SIMULATION_MODE, TVB, DATA_MODE, VOIS, DATA_CUSTOM, X0_DEF, E_DEF
+from tvb_epilepsy.base.constants import SIMULATION_MODE, TVB, DATA_MODE, VOIS, X0_DEF, E_DEF
+from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM
 from tvb_epilepsy.base.utils import assert_equal_objects, set_time_scales, initialize_logger, calculate_projection
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model

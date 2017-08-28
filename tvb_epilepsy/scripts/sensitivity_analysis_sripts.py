@@ -1,6 +1,7 @@
 import numpy as np
 
-from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE, FOLDER_RES
+from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE
+from tvb_epilepsy.base.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils import initialize_logger, raise_value_error, linear_index_to_coordinate_tuples, \
     list_of_dicts_to_dicts_of_ndarrays, dicts_of_lists_to_lists_of_dicts
 from tvb_epilepsy.service.sampling_service import StochasticSamplingService

@@ -8,7 +8,8 @@ from mpldatacursor import HighlightingDataCursor
 from tvb.basic.logger.builder import get_logger
 
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF, X1_DEF, \
-    X0_CR_DEF, FIG_SIZE, SAVE_FLAG, SHOW_FLAG, FOLDER_FIGURES, FIG_FORMAT, MOUSEHOOVER
+    X0_CR_DEF, FIG_SIZE, SAVE_FLAG, SHOW_FLAG, FIG_FORMAT, MOUSEHOOVER
+from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.utils import formal_repr
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration

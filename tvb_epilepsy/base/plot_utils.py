@@ -2,13 +2,14 @@
 Various plotting tools will be placed here.
 """
 # TODO: make a plot function for sensitivity analysis results
-
+import os
 import matplotlib as mp
 import numpy as np
 from matplotlib import pyplot, gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats.mstats import zscore
 
+from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
