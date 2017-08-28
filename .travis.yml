@@ -24,6 +24,7 @@ install:
   - pip install pytest-cov coveralls h5py
   - pushd extern/tvb-geodesic && python setup.py install && popd
   - conda install llvmlite
+  - conda install pyqt
   - pushd extern/tvb-library && python setup.py install && popd
 script:
   - COV=yes bash run-tests.sh
