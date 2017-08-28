@@ -25,6 +25,7 @@ install:
   - pushd extern/tvb-geodesic && python setup.py install && popd
   - conda install llvmlite
   - conda install pyqt
+  - conda install pyside
   - pushd extern/tvb-library && python setup.py install && popd
 script:
   - COV=yes bash run-tests.sh
