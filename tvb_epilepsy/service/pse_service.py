@@ -2,23 +2,22 @@
 Mechanism for parameter search exploration for LSA and simulations (it will have TVB or custom implementations)
 """
 
-import warnings
 from copy import deepcopy
 
 import numpy as np
 from tvb.basic.logger.builder import get_logger
+from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 
 from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
+from tvb_epilepsy.base.utils import formal_repr, warning, raise_not_implemented_error, raise_value_error
+from tvb_epilepsy.base.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.simulators import ABCSimulator
-from tvb_epilepsy.base.utils import formal_repr
 from tvb_epilepsy.custom.read_write import read_ts
 from tvb_epilepsy.custom.simulator_custom import custom_model_builder
-from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
-from tvb_epilepsy.service.lsa_service import LSAService, start_lsa_run
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
 
 logger = get_logger(__name__)
@@ -212,9 +211,9 @@ class PSEService(object):
     def __init__(self, task, hypothesis=[], simulator=[], params_pse=None, run_fun=None, out_fun=None):
 
         if task not in ["LSA", "SIMULATION"]:
-            warnings.warn("\ntask = " + str(task) + " is not a valid pse task." +
-                          "\nSelect one of 'LSA', or 'SIMULATION' to perform parameter search exploration of " +
-                          "\n hypothesis Linear Stability Analysis, or simulation, " + "respectively")
+            warning("\ntask = " + str(task) + " is not a valid pse task." +
+                    "\nSelect one of 'LSA', or 'SIMULATION' to perform parameter search exploration of " +
+                    "\n hypothesis Linear Stability Analysis, or simulation, " + "respectively")
 
         self.task = task
         self.params_names = []
@@ -230,7 +229,7 @@ class PSEService(object):
                 self.pse_object = hypothesis
 
             else:
-                warnings.warn("\ntask = " + str(task) + " but hypothesis is not a Hypothesis object!")
+                warning("\ntask = " + str(task) + " but hypothesis is not a Hypothesis object!")
 
             def_run_fun = lsa_run_fun
             def_out_fun = lsa_out_fun
@@ -241,8 +240,8 @@ class PSEService(object):
                 self.pse_object = simulator
 
             else:
-                raise warnings.warn("\ntask = " + str(task) + " but simulator is not an object of" +
-                                    " one of the available simulator classes!")
+                warning("\ntask = " + str(task) + " but simulator is not an object of" +
+                        " one of the available simulator classes!")
 
             def_run_fun = sim_run_fun
             def_out_fun = sim_out_fun
@@ -253,13 +252,13 @@ class PSEService(object):
             def_out_fun = None
 
         if not (callable(run_fun)):
-            warnings.warn("\nUser defined run_fun is not callable. Using default one for task " + str(task) + "!")
+            warning("\nUser defined run_fun is not callable. Using default one for task " + str(task) + "!")
             self.run_fun = def_run_fun
         else:
             self.run_fun = run_fun
 
         if not (callable(out_fun)):
-            warnings.warn("\nUser defined out_fun is not callable. Using default one for task " + str(task) + "!")
+            warning("\nUser defined out_fun is not callable. Using default one for task " + str(task) + "!")
             self.out_fun = def_out_fun
         else:
             self.out_fun = out_fun
@@ -283,8 +282,8 @@ class PSEService(object):
             self.n_params = len(self.params_paths)
 
             if not (np.all(self.n_params_vals == self.n_params_vals[0])):
-                raise ValueError("\nNot all parameters have the same number of samples!: " +
-                                 "\n" + str(self.params_paths) + " = " + str(self.n_params_vals))
+                raise_value_error("\nNot all parameters have the same number of samples!: " +
+                                  "\n" + str(self.params_paths) + " = " + str(self.n_params_vals))
             else:
                 self.n_params_vals = self.n_params_vals[0]
 
@@ -298,7 +297,7 @@ class PSEService(object):
             print "leading to " + str(self.n_loops) + " total execution loops"
 
         else:
-            warnings.warn("\nparams_pse is not a list of tuples!")
+            warning("\nparams_pse is not a list of tuples!")
 
     def __repr__(self):
 
@@ -357,7 +356,7 @@ class PSEService(object):
                 pass
 
             if not status:
-                warnings.warn("\nExecution of loop " + str(iloop) + "failed!")
+                warning("\nExecution of loop " + str(iloop) + "failed!")
 
             results.append(output)
             execution_status.append(status)
@@ -370,144 +369,4 @@ class PSEService(object):
 
     def run_pse_parallel(self, connectivity_matrix, grid_mode=False):
         # TODO: start each loop on a separate process, gather results and return them
-        raise NotImplementedError
-
-
-###
-# These functions are helper functions to run parameter search exploration (pse) for Linear Stability Analysis (LSA).
-###
-def pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
-                            n_samples, half_range=0.1, global_coupling=[],
-                            healthy_regions_parameters=[],
-                            model_configuration_service=None, lsa_service=None,
-                            save_services=False, logger=None, **kwargs):
-
-    from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE, FOLDER_RES
-    from tvb_epilepsy.base.utils import initialize_logger, linear_index_to_coordinate_tuples, \
-        dicts_of_lists_to_lists_of_dicts, list_of_dicts_to_dicts_of_ndarrays
-    from tvb_epilepsy.service.sampling_service import StochasticSamplingService
-    from tvb_epilepsy.service.pse_service import PSEService
-
-    if logger is None:
-        logger = initialize_logger(__name__)
-
-    all_regions_indices = range(lsa_hypothesis.number_of_regions)
-    disease_indices = lsa_hypothesis.get_regions_disease_indices()
-    healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
-
-    pse_params = {"path": [], "indices": [], "name": [], "samples": []}
-
-    # First build from the hypothesis the input parameters of the parameter search exploration.
-    # These can be either originating from excitability, epileptogenicity or connectivity hypotheses,
-    # or they can relate to the global coupling scaling (parameter K of the model configuration)
-    for ii in range(len(lsa_hypothesis.x0_values)):
-        pse_params["indices"].append([ii])
-        pse_params["path"].append("hypothesis.x0_values")
-        pse_params["name"].append(str(region_labels[lsa_hypothesis.x0_indices[ii]]) + " Excitability")
-
-        # Now generate samples using a truncated uniform distribution
-        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                            random_seed=kwargs.get("random_seed", None),
-                                            trunc_limits={"high": MAX_DISEASE_VALUE},
-                                            sampler="uniform",
-                                            loc=lsa_hypothesis.x0_values[ii] - half_range, scale=2 * half_range)
-        pse_params["samples"].append(sampler.generate_samples(**kwargs))
-
-    for ii in range(len(lsa_hypothesis.e_values)):
-        pse_params["indices"].append([ii])
-        pse_params["path"].append("hypothesis.e_values")
-        pse_params["name"].append(str(region_labels[lsa_hypothesis.e_indices[ii]]) + " Epileptogenicity")
-
-        # Now generate samples using a truncated uniform distribution
-        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                            random_seed=kwargs.get("random_seed", None),
-                                            trunc_limits={"high": MAX_DISEASE_VALUE},
-                                            sampler="uniform",
-                                            loc=lsa_hypothesis.e_values[ii] - half_range, scale=2 * half_range)
-        pse_params["samples"].append(sampler.generate_samples(**kwargs))
-
-    for ii in range(len(lsa_hypothesis.w_values)):
-        pse_params["indices"].append([ii])
-        pse_params["path"].append("hypothesis.w_values")
-        inds = linear_index_to_coordinate_tuples(lsa_hypothesis.w_indices[ii], connectivity_matrix.shape)
-        if len(inds) == 1:
-            pse_params["name"].append(str(region_labels[inds[0][0]]) + "-" +
-                                      str(region_labels[inds[0][0]]) + " Connectivity")
-        else:
-            pse_params["name"].append("Connectivity[" + str(inds), + "]")
-
-        # Now generate samples using a truncated normal distribution
-        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                            random_seed=kwargs.get("random_seed", None),
-                                            trunc_limits={"high": MAX_DISEASE_VALUE},
-                                            sampler="norm", loc=lsa_hypothesis.w_values[ii], scale=half_range)
-        pse_params["samples"].append(sampler.generate_samples(**kwargs))
-
-    kloc = model_configuration_service.K_unscaled[0]
-    for val in global_coupling:
-        pse_params["path"].append("model.configuration.service.K_unscaled")
-        inds = val.get("indices", all_regions_indices)
-        if np.all(inds == all_regions_indices):
-            pse_params["name"].append("Global coupling")
-        else:
-            pse_params["name"].append("Afferent coupling[" + str(inds) + "]")
-        pse_params["indices"].append(inds)
-
-        # Now generate samples susing a truncated normal distribution
-        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                            random_seed=kwargs.get("random_seed", None),
-                                            trunc_limits={"low": 0.0}, sampler="norm", loc=kloc, scale=30 * half_range)
-        pse_params["samples"].append(sampler.generate_samples(**kwargs))
-
-    pse_params_list = dicts_of_lists_to_lists_of_dicts(pse_params)
-
-    # Add a random jitter to the healthy regions if required...:
-    for val in healthy_regions_parameters:
-        inds = val.get("indices", healthy_indices)
-        name = val.get("name", "x0")
-        n_params = len(inds)
-        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=n_params, sampler="uniform",
-                                            trunc_limits={"low": 0.0}, sampling_module="scipy",
-                                            random_seed=kwargs.get("random_seed", None),
-                                            loc=kwargs.get("loc", 0.0), scale=kwargs.get("scale", 2 * half_range))
-
-        samples = sampler.generate_samples(**kwargs)
-        for ii in range(n_params):
-            pse_params_list.append({"path": "model_configuration_service." + name, "samples": samples[ii],
-                                    "indices": [inds[ii]], "name": name})
-
-    # Now run pse service to generate output samples:
-
-    pse = PSEService("LSA", hypothesis=lsa_hypothesis, params_pse=pse_params_list)
-    pse_results, execution_status = pse.run_pse(connectivity_matrix, grid_mode=False, lsa_service_input=lsa_service,
-                                                model_configuration_service_input=model_configuration_service)
-
-    pse_results = list_of_dicts_to_dicts_of_ndarrays(pse_results)
-
-    if save_services:
-        logger.info(pse.__repr__())
-        pse.write_to_h5(FOLDER_RES, "test_pse_service.h5")
-
-    return pse_results, pse_params_list
-
-
-def pse_from_hypothesis(hypothesis, connectivity_matrix, region_labels, n_samples, half_range=0.1, global_coupling=[],
-                        healthy_regions_parameters=[], save_services=False, logger=None, **kwargs):
-
-    from tvb_epilepsy.base.utils import initialize_logger
-
-    if logger is None:
-        logger = initialize_logger(__name__)
-
-    # Compute lsa for this hypothesis before the parameter search:
-    logger.info("Running hypothesis: " + hypothesis.name)
-    model_configuration_service, model_configuration, lsa_service, lsa_hypothesis = \
-        start_lsa_run(hypothesis, connectivity_matrix, logger)
-
-    pse_results, pse_params_list = pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
-                                                           n_samples, half_range, global_coupling,
-                                                           healthy_regions_parameters,
-                                                           model_configuration_service, lsa_service,
-                                                           save_services, logger, **kwargs)
-
-    return model_configuration, lsa_service, lsa_hypothesis, pse_results, pse_params_list
+        raise_not_implemented_error

@@ -6,11 +6,11 @@ This will be used to populate a Model instance needed in order to launch a simul
 
 import numpy as np
 
-from tvb_epilepsy.base.constants import FOLDER_FIGURES, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
-from tvb_epilepsy.base.constants import X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
+from tvb_epilepsy.base.constants import X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF, FOLDER_FIGURES, \
+                                        VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
+from tvb_epilepsy.base.utils import formal_repr, dicts_of_lists_to_lists_of_dicts
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.plot_utils import plot_in_columns
-from tvb_epilepsy.base.utils import formal_repr, dicts_of_lists_to_lists_of_dicts
 
 
 class ModelConfiguration(object):
@@ -81,7 +81,7 @@ class ModelConfiguration(object):
 
         disease_indices = np.unique(np.concatenate((x0_indices, e_indices, disease_indices), axis=0)).tolist()
         indices = [x0_indices, e_indices, disease_indices, disease_indices, disease_indices]
-        plot_types = ["vector", "vector"]
+        plot_types = ["vector", "vector", "vector", "vector", "regions2regions"]
 
         return dicts_of_lists_to_lists_of_dicts({"name": names, "data": data, "focus_indices": indices,
                                                  "plot_type": plot_types})

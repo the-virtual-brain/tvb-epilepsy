@@ -1,6 +1,8 @@
-import warnings
+
 from scipy.optimize import root
 import numpy as np
+
+from tvb_epilepsy.base.utils import warning, raise_import_error, raise_value_error
 from tvb_epilepsy.base.computations.equations_utils import *
 
 # TODO: find out why I cannot import anything from utils here
@@ -13,7 +15,7 @@ try:
     SYMBOLIC_IMPORT=True
 
 except:
-    warnings.warn("Unable to load symbolic_equations module! Symbolic calculations are not possible!")
+    warning("Unable to load symbolic_equations module! Symbolic calculations are not possible!")
     SYMBOLIC_IMPORT = False
 
 #if SYMBOLIC_CALCULATIONS_FLAG:
@@ -28,7 +30,7 @@ def confirm_calc_mode(calc_mode):
             print "Executing symbolic calculations..."
 
         else:
-            warnings.warn("\nNot possible to execute symbolic calculations! Turning to non-symbolic ones!..")
+            warning("\nNot possible to execute symbolic calculations! Turning to non-symbolic ones!..")
             calc_mode = "non_symbol"
 
     return calc_mode
@@ -203,8 +205,8 @@ def calc_fy2(x2, y2=0.0, s=6.0, tau1=1.0, tau2=1.0, x2_neg=None, shape=None, cal
             x2_neg = x2 < -0.25
         except:
             x2_neg = False
-            warnings.warn("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
-                          "\nSetting default x2_neg = False")
+            warning("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
+                    "\nSetting default x2_neg = False")
 
     if numpy.all(calc_mode == "symbol"):
 
@@ -355,8 +357,8 @@ def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
                 x2_neg = x2 < -0.25
             except:
                 x2_neg = False
-                warnings.warn("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
-                              "\nSetting default x2_neg = False")
+                warning("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
+                        "\nSetting default x2_neg = False")
 
     if output_mode == "array":
 
@@ -507,8 +509,8 @@ def calc_jac(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None,
                 x2_neg = x2 < -0.25
             except:
                 x2_neg = False
-                warnings.warn("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
-                              "\nSetting default x2_neg = False")
+                warning("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
+                        "\nSetting default x2_neg = False")
 
     n_regions = max(shape_to_size(x1.shape), shape_to_size(z.shape))
 
@@ -696,8 +698,8 @@ def calc_fx1_2d_taylor(x1, x_taylor, z=0, y1=0.0, Iext1=0.0, slope=0.0, a=1.0, b
                 from sympy import Symbol, series
 
             except:
-                raise ImportError("Unable to load symbolic_equations module. Taylor expansion calculation is not  \
-                                      supported non-symbolically for order of expansion >2 and/or when any x1 > 0.")
+                raise_import_error("Unable to load symbolic_equations module. Taylor expansion calculation is not  \
+                                    supported non-symbolically for order of expansion >2 and/or when any x1 > 0.")
 
             x = Symbol("x")
 
@@ -918,11 +920,11 @@ def calc_x0cr_r(yc, Iext1, a=1.0, b=-2.0, zmode=np.array("lin"), x1_rest=X1_DEF,
 
                 if sol.success:
                     if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
-                        raise ValueError("nan or inf values in solution x\n" + sol.message)
+                        raise_value_error("nan or inf values in solution x\n" + sol.message)
                     x0cr.append(sol.x[0])
                     r.append(sol.x[1])
                 else:
-                    raise ValueError(sol.message)
+                    raise_value_error(sol.message)
 
             if p2 != shape:
                 x0cr = numpy.tile(x0cr[0], shape)

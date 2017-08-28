@@ -1,13 +1,12 @@
 """
 Module to compute the resting equilibrium point of a Virtual Epileptic Patient module
 """
-import warnings
 
 import numpy
 from scipy.optimize import root
 
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, SYMBOLIC_CALCULATIONS_FLAG
-from tvb_epilepsy.base.utils import assert_arrays
+from tvb_epilepsy.base.utils import assert_arrays, warning, raise_value_error
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0, calc_fx1, calc_fx1z, calc_fy1, calc_fz, calc_fg, \
                                            calc_coupling, calc_dfun, calc_fx1z_2d_x1neg_zpos_jac, calc_fx1z_diff
 
@@ -19,7 +18,7 @@ if SYMBOLIC_CALCULATIONS_FLAG :
         from tvb_epilepsy.base.computations.symbolic_utils import symbol_vars, symbol_eqtn_fx1z, symbol_eqtn_fx2y2, symbol_eqtn_fx1z_diff
 
     except:
-        warnings.warn("Unable to load sympy. Turning to scipy.optimization.")
+        warning("Unable to load sympy. Turning to scipy.optimization.")
         SYMBOLIC_CALCULATIONS_FLAG = False
 
 
@@ -83,17 +82,17 @@ def calc_eq_x1(yc, Iext1, x0, K, w, a=1.0, b=3.0, d=5.0, x0cr=0.0, r=1.0, zmode=
     if sol.success:
 
         if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
-            raise ValueError("nan or inf values in solution x\n" + sol.message)
+            raise_value_error("nan or inf values in solution x\n" + sol.message)
 
         x1eq = sol.x
 
     else:
-        raise ValueError(sol.message)
+        raise_value_error(sol.message)
 
     x1eq = numpy.reshape(x1eq, shape)
 
     if numpy.any(x1eq > 0.0):
-        raise ValueError("At least one x1eq is > 0.0!")
+        raise_value_error("At least one x1eq is > 0.0!")
 
     return x1eq
 
@@ -202,7 +201,7 @@ def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, y1eq=None, s=6.0
         for ii in range(delta.size):
             temp = sol[ii, numpy.abs(numpy.imag(sol[ii])) < 10 ** (-6)]
             if temp.size == 0:
-                raise ValueError("No real roots for x2eq_" + str(ii))
+                raise_value_error("No real roots for x2eq_" + str(ii))
             else:
                 x2eq.append(numpy.min(numpy.real(temp)))
 
@@ -229,12 +228,12 @@ def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, y1eq=None, s=6.0
         #     if sol.success:
         #
         #         if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
-        #             raise ValueError("nan or inf values in solution x\n" + sol.message)
+        #             raise_value_error("nan or inf values in solution x\n" + sol.message)
         #
         #         x2eq.append(numpy.min(numpy.real(numpy.array(sol.x))))
         #
         #     else:
-        #         raise ValueError(sol.message)
+        #         raise_value_error(sol.message)
 
     if numpy.array(x2_neg).size == 1:
         x2_neg = numpy.tile(x2_neg, (n, ))
@@ -242,28 +241,28 @@ def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, y1eq=None, s=6.0
     for iv in range(n):
 
         if x2_neg[iv] == False and x2eq[iv] < -0.25:
-            warnings.warn("\nx2eq["+str(iv)+"] = " + str(x2eq[iv]) + " < -0.25, although x2_neg[" + str(iv)+"] = False!" +
-                          "\n" + "Rerunning with x2_neg[" + str(iv)+"] = True...")
+            warning("\nx2eq["+str(iv)+"] = " + str(x2eq[iv]) + " < -0.25, although x2_neg[" + str(iv)+"] = False!" +
+                    "\n" + "Rerunning with x2_neg[" + str(iv)+"] = True...")
             temp, _ = calc_eq_x2(Iext2[iv], zeq=zeq[iv], geq=geq[iv], s=s[iv], x2_neg=True)
             if temp < -0.25:
                 x2eq[iv] = temp
                 x2_neg[iv] = True
             else:
-                warnings.warn("\nThe value of x2eq returned after rerunning with x2_neg[" + str(iv)+"] = True, " +
-                              "is " + str(temp) + ">= -0.25!" +
-                              "\n" + "We will use the original x2eq!")
+                warning("\nThe value of x2eq returned after rerunning with x2_neg[" + str(iv)+"] = True, " +
+                        "is " + str(temp) + ">= -0.25!" +
+                        "\n" + "We will use the original x2eq!")
 
         if x2_neg[iv] == True and x2eq[iv] > -0.25:
-            warnings.warn("\nx2eq["+str(iv)+"] = " + str(x2eq[iv]) + " > -0.25, although x2_neg[" + str(iv)+"] = True!" +
-                          "\n" + "Rerunning with x2_neg[" + str(iv)+"] = False...")
+            warning("\nx2eq["+str(iv)+"] = " + str(x2eq[iv]) + " > -0.25, although x2_neg[" + str(iv)+"] = True!" +
+                    "\n" + "Rerunning with x2_neg[" + str(iv)+"] = False...")
             temp, _ = calc_eq_x2(Iext2[iv], zeq=zeq[iv], geq=geq[iv], s=s[iv], x2_neg=False)
             if temp > -0.25:
                 x2eq[iv] = temp
                 x2_neg[iv] = True
             else:
-                warnings.warn("\nThe value of x2eq returned after rerunning with x2_neg[" + str(iv)+"] = False, " +
-                              "is " + str(temp) + "=< -0.25!" +
-                              "\n" + "We will use the original x2eq!")
+                warning("\nThe value of x2eq returned after rerunning with x2_neg[" + str(iv)+"] = False, " +
+                        "is " + str(temp) + "=< -0.25!" +
+                        "\n" + "We will use the original x2eq!")
 
     x2eq = numpy.reshape(x2eq, shape)
 
@@ -302,7 +301,7 @@ def eq_x1_hypo_x0_optimize_fun(x, ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K,
 
     # if numpy.any([numpy.any(numpy.isnan(x)), numpy.any(numpy.isinf(x)),
     #               numpy.any(numpy.isnan(fun)), numpy.any(numpy.isinf(fun))]):
-    #     raise ValueError("nan or inf values in x or fun")
+    #     raise_value_error("nan or inf values in x or fun")
 
     return fun
 
@@ -352,11 +351,11 @@ def eq_x1_hypo_x0_optimize(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
         x1EQ[ix0] = sol.x[ix0]
         x0sol = sol.x[iE]
         if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
-            raise ValueError("nan or inf values in solution x\n" + sol.message)
+            raise_value_error("nan or inf values in solution x\n" + sol.message)
         else:
             return x1EQ, x0sol
     else:
-        raise ValueError(sol.message)
+        raise_value_error(sol.message)
 
 
 def eq_x1_hypo_x0_linTaylor(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
@@ -421,7 +420,7 @@ def eq_x1_hypo_x0_linTaylor(ix0, iE, x1EQ, zEQ, x0, x0cr, r, yc, Iext1, K, w):
     # Solve the system
     x = numpy.dot(numpy.linalg.inv(a), b).T
     if numpy.any([numpy.any(numpy.isnan(x)), numpy.any(numpy.isnan(x))]):
-        raise ValueError("nan or inf values in solution x")
+        raise_value_error("nan or inf values in solution x")
 
     # Unpack solution:
     # The equilibria of the regions with fixed E have not changed:
@@ -498,21 +497,21 @@ def assert_equilibrium_point(epileptor_model, weights, equilibrium_point):
 
         max_dfun_diff = numpy.max(numpy.abs(dfun2.flatten() - dfun.flatten()))
         if numpy.any(max_dfun_diff > dfun_max_cr):
-            warnings.warn("\nmodel dfun and calc_dfun functions do not return the same results!\n"
-                          + "maximum difference = " + str(max_dfun_diff))
-                          # + "\n" + "model dfun = " + str(dfun) + "\n"
-                          # + "calc_dfun = " + str(dfun2))
+            warning("\nmodel dfun and calc_dfun functions do not return the same results!\n"
+                    + "maximum difference = " + str(max_dfun_diff))
+                  # + "\n" + "model dfun = " + str(dfun) + "\n"
+                  # + "calc_dfun = " + str(dfun2))
     else:
         dfun_max = numpy.max(numpy.abs(dfun2.flatten()))
         dfun_max_cr = 10 ** -5 * numpy.ones(dfun_max.shape)
 
     if numpy.any(dfun_max > dfun_max_cr):
-        # raise ValueError("Equilibrium point for initial condition not accurate enough!\n" \
+        # raise_value_error("Equilibrium point for initial condition not accurate enough!\n" \
         #                  + "max(dfun) = " + str(dfun_max))
         ##                  + "\n" + "model dfun = " + str(dfun))
-        warnings.warn("\nEquilibrium point for initial condition not accurate enough!\n"
-                      + "max(dfun) = " + str(dfun_max))
-        #              + "\n" + "model dfun = " + str(dfun))
+        warning("\nEquilibrium point for initial condition not accurate enough!\n"
+                 + "max(dfun) = " + str(dfun_max))
+        #        + "\n" + "model dfun = " + str(dfun))
 
 
 def calc_eq_6d(x0, K, w, yc, Iext1, Iext2, x1eqhyp = 0.0, bhyp=-2, a=1.0, b=3.0, d=5.0, zmode=numpy.array("lin")):

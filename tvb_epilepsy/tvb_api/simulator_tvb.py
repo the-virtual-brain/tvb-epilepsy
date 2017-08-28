@@ -4,12 +4,12 @@ Mechanism for launching TVB simulations.
 
 import sys
 import time
-import warnings
 
 import numpy
 from tvb.datatypes import connectivity
 from tvb.simulator import coupling, integrators, monitors, noise, simulator
 
+from tvb_epilepsy.base.utils import warning
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.simulators import ABCSimulator
 from tvb_epilepsy.custom.read_write import epileptor_model_attributes_dict
@@ -89,7 +89,7 @@ class SimulatorTVB(ABCSimulator):
                 tavg_time, tavg_data = self.simTVB.run()[0]
             except:
                 status = False
-                warnings.warn("Something went wrong with this simulation...")
+                warning("Something went wrong with this simulation...")
                 return None, None, status
 
             return tavg_time, tavg_data, status
@@ -125,13 +125,10 @@ class SimulatorTVB(ABCSimulator):
                         curr_block += 1.0
             except:
                 status = False
-                warnings.warn("Something went wrong with this simulation...")
+                warning("Something went wrong with this simulation...")
                 return None, None, status
 
             return numpy.array(tavg_time), numpy.array(tavg_data), status
-
-    # def launch_pse(self, hypothesis, head, settings=SimulationSettings()):
-    #     raise NotImplementedError()
 
     def _prepare_for_h5(self):
 

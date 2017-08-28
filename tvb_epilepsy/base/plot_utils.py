@@ -41,7 +41,7 @@ def save_figure(save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FI
         pyplot.savefig(os.path.join(figure_dir, figure_name))
 
 
-def _plot_vector(vector, labels, subplot, title, show_y_labels=True, indices_red=None, sharey=None):
+def plot_vector(vector, labels, subplot, title, show_y_labels=True, indices_red=None, sharey=None):
     ax = pyplot.subplot(subplot, sharey=sharey)
     pyplot.title(title)
     n_vector = labels.shape[0]
@@ -74,8 +74,8 @@ def _plot_vector(vector, labels, subplot, title, show_y_labels=True, indices_red
     ax.autoscale(tight=True)
     return ax
 
-def _plot_vector_violin(vector, dataset, labels, subplot, title, colormap="YlOrRd", show_y_labels=True,
-                        indices_red=None, sharey=None):
+def plot_vector_violin(vector, dataset, labels, subplot, title, colormap="YlOrRd", show_y_labels=True,
+                       indices_red=None, sharey=None):
     ax = pyplot.subplot(subplot, sharey=sharey)
     #ax.hold(True)
     pyplot.title(title)
@@ -127,8 +127,8 @@ def _plot_vector_violin(vector, dataset, labels, subplot, title, colormap="YlOrR
     ax.autoscale(tight=True)
     return ax
 
-def _plot_regions2regions(adj, labels, subplot, title, show_y_labels=True, show_x_labels=True,
-                          indices_red_x=None, sharey=None):
+def plot_regions2regions(adj, labels, subplot, title, show_y_labels=True, show_x_labels=True,
+                         indices_red_x=None, sharey=None):
     ax = pyplot.subplot(subplot, sharey=sharey)
     pyplot.title(title)
 
@@ -208,16 +208,16 @@ def plot_in_columns(data_dict_list, labels, width_ratios=[], left_ax_focus_indic
             ax0 = ax
 
         if data_dict.get("plot_type") == "vector_violin":
-            ax = _plot_vector_violin(data, data_dict.get("data_samples",[]), labels, subplot_ind, data_dict["name"],
-                                     colormap=kwargs.get("colormap", "YlOrRd"), show_y_labels=False,
-                                     indices_red=focus_indices, sharey=ax0)
+            ax = plot_vector_violin(data, data_dict.get("data_samples", []), labels, subplot_ind, data_dict["name"],
+                                    colormap=kwargs.get("colormap", "YlOrRd"), show_y_labels=False,
+                                    indices_red=focus_indices, sharey=ax0)
 
         elif data_dict.get("plot_type") == "regions2regions":
-            ax = _plot_regions2regions(data, labels, subplot_ind, data_dict["name"], show_y_labels=False,
-                                       show_x_labels=True, indices_red_x=focus_indices, sharey=ax0)
+            ax = plot_regions2regions(data, labels, subplot_ind, data_dict["name"], show_y_labels=False,
+                                      show_x_labels=True, indices_red_x=focus_indices, sharey=ax0)
         else:
-            ax = _plot_vector(data, labels, subplot_ind, data_dict["name"], show_y_labels=False,
-                              indices_red=focus_indices, sharey=ax0)
+            ax = plot_vector(data, labels, subplot_ind, data_dict["name"], show_y_labels=False,
+                             indices_red=focus_indices, sharey=ax0)
 
     if right_ax_focus_indices == []:
         right_ax_focus_indices = focus_indices
@@ -355,7 +355,7 @@ def plot_raster(time, data_dict, special_idx=None, title='Time Series', offset=3
 
 def plot_trajectories(data_dict, special_idx=None, title='State space trajectories', show_flag=SHOW_FLAG,
                       save_flag=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name='Trajectories',
-                      labels=None,figsize=LARGE_SIZE):
+                      labels=None, figsize=LARGE_SIZE):
 
     pyplot.figure(title, figsize=figsize)
     ax = pyplot.subplot(111)
@@ -492,9 +492,9 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 #                       figure_format=FIG_FORMAT, figure_name='Connectivity ', figsize=LARGE_SIZE):
 #
 #     pyplot.figure(figure_name + str(conn.number_of_regions), figsize)
-#     #_plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
-#     _plot_regions2regions(conn.normalized_weights, conn.region_labels, 121, "normalised weights")
-#     _plot_regions2regions(conn.tract_lengths, conn.region_labels, 122, "tract lengths")
+#     #plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
+#     plot_regions2regions(conn.normalized_weights, conn.region_labels, 121, "normalised weights")
+#     plot_regions2regions(conn.tract_lengths, conn.region_labels, 122, "tract lengths")
 #
 #     _save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
 #     _check_show(show_flag=show_flag)
@@ -503,10 +503,10 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 # def plot_head_stats(conn, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
 #                     figure_name='HeadStats '):
 #     pyplot.figure("Head stats " + str(conn.number_of_regions), figsize=LARGE_SIZE)
-#     ax = _plot_vector(calculate_in_degree(conn.normalized_weights), conn.region_labels, 121, "w in-degree")
+#     ax = plot_vector(calculate_in_degree(conn.normalized_weights), conn.region_labels, 121, "w in-degree")
 #     ax.invert_yaxis()
 #     if conn.areas is not None:
-#         ax = _plot_vector(conn.areas, conn.region_labels, 122, "region areas")
+#         ax = plot_vector(conn.areas, conn.region_labels, 122, "region areas")
 #         ax.invert_yaxis()
 #     _save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
 #     _check_show(show_flag=show_flag)
@@ -694,20 +694,20 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 #     mp.gridspec.GridSpec(1, 5+2*plot_equilibria, width_ratios=[1, 1] + plot_equilibria*[1, 1]+[1, 2, 1])
 #     subplot_ind = 150 + 20*plot_equilibria
 #
-#     ax0 = _plot_vector(model_configuration.x0_values, hypothesis.get_region_labels(), subplot_ind+1,
+#     ax0 = plot_vector(model_configuration.x0_values, hypothesis.get_region_labels(), subplot_ind+1,
 #                        'Excitabilities x0', show_y_labels=False, indices_red=hypothesis.x0_indices)
 #
-#     _plot_vector(model_configuration.E_values, hypothesis.get_region_labels(), subplot_ind+2, 'Epileptogenicities E',
+#     plot_vector(model_configuration.E_values, hypothesis.get_region_labels(), subplot_ind+2, 'Epileptogenicities E',
 #                  show_y_labels=False, indices_red=hypothesis.e_indices, sharey=ax0)
 #
 #     if plot_equilibria:
-#         _plot_vector(model_configuration.x1EQ, hypothesis.get_region_labels(), subplot_ind+3, 'x1 Equilibria',
+#         plot_vector(model_configuration.x1EQ, hypothesis.get_region_labels(), subplot_ind+3, 'x1 Equilibria',
 #                      show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 #
-#         _plot_vector(model_configuration.zEQ, hypothesis.get_region_labels(), subplot_ind+4, 'z Equilibria',
+#         plot_vector(model_configuration.zEQ, hypothesis.get_region_labels(), subplot_ind+4, 'z Equilibria',
 #                      show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 #
-#     _plot_vector(model_configuration.Ceq, hypothesis.get_region_labels(), subplot_ind+3+2*plot_equilibria,
+#     plot_vector(model_configuration.Ceq, hypothesis.get_region_labels(), subplot_ind+3+2*plot_equilibria,
 #                  'Total afferent coupling \n at equilibrium', show_y_labels=False,
 #                  indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 #
@@ -715,7 +715,7 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 #                                                             hypothesis.propagation_indices])
 #
 #     if len(seizure_and_propagation_indices) > 0:
-#         _plot_regions2regions(hypothesis.get_weights(), hypothesis.get_region_labels(), subplot_ind+4+2*plot_equilibria,
+#         plot_regions2regions(hypothesis.get_weights(), hypothesis.get_region_labels(), subplot_ind+4+2*plot_equilibria,
 #                               'Afferent connectivity \n from seizuring regions',
 #                               show_y_labels=False, show_x_labels=True,
 #                               indices_red_x=seizure_and_propagation_indices, sharey=ax0)
@@ -727,7 +727,7 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 #             if n_eig is not None:
 #                 title += str(n_eig) + " "
 #             title += "eigenvectors"
-#         _plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(), subplot_ind+5+2*plot_equilibria,
+#         plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(), subplot_ind+5+2*plot_equilibria,
 #                      title, show_y_labels=False, indices_red=seizure_and_propagation_indices, sharey=ax0)
 #
 #     _set_axis_labels(fig, 121, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(),
@@ -751,45 +751,45 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 #     subplot_ind = 150 + 20 * plot_equilibria
 #
 #     if pse_results.get("x0_values") is not None:
-#         ax0 = _plot_vector_violin(model_configuration.x0_values, pse_results.get("x0_values"),
+#         ax0 = plot_vector_violin(model_configuration.x0_values, pse_results.get("x0_values"),
 #                                   hypothesis.get_region_labels(), subplot_ind+1, 'Excitabilities x0', colormap=colormap,
 #                                   show_y_labels=False, indices_red=hypothesis.x0_indices)
 #     else:
-#         ax0 = _plot_vector(model_configuration.x0_values, hypothesis.get_region_labels(), subplot_ind+1,
+#         ax0 = plot_vector(model_configuration.x0_values, hypothesis.get_region_labels(), subplot_ind+1,
 #                            'Excitabilities x0', show_y_labels=False, indices_red=hypothesis.x0_indices)
 #
 #     if pse_results.get("E_values") is not None:
-#         _plot_vector_violin(model_configuration.x0_values, pse_results.get("E_values"), hypothesis.get_region_labels(),
+#         plot_vector_violin(model_configuration.x0_values, pse_results.get("E_values"), hypothesis.get_region_labels(),
 #                             subplot_ind + 2, 'Epileptogenicities E', colormap=colormap, show_y_labels=False,
 #                             indices_red=hypothesis.e_indices, sharey=ax0)
 #     else:
-#         _plot_vector(model_configuration.E_values, hypothesis.get_region_labels(), subplot_ind+2,
+#         plot_vector(model_configuration.E_values, hypothesis.get_region_labels(), subplot_ind+2,
 #                      'Epileptogenicities E', show_y_labels=False, indices_red=hypothesis.e_indices, sharey=ax0)
 #
 #     if plot_equilibria:
 #         if pse_results.get("x1EQ") is not None:
-#             _plot_vector_violin(model_configuration.x1EQ, pse_results.get("x1EQ"), hypothesis.get_region_labels(),
+#             plot_vector_violin(model_configuration.x1EQ, pse_results.get("x1EQ"), hypothesis.get_region_labels(),
 #                                 subplot_ind+3, 'x1 Equilibria', colormap=colormap, show_y_labels=False,
 #                                 indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 #         else:
-#             _plot_vector(model_configuration.x1EQ, hypothesis.get_region_labels(), subplot_ind+3, 'x1 Equilibria',
+#             plot_vector(model_configuration.x1EQ, hypothesis.get_region_labels(), subplot_ind+3, 'x1 Equilibria',
 #                          show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 #
 #         if pse_results.get("zEQ") is not None:
-#             _plot_vector_violin(model_configuration.zEQ, pse_results.get("zEQ"), hypothesis.get_region_labels(),
+#             plot_vector_violin(model_configuration.zEQ, pse_results.get("zEQ"), hypothesis.get_region_labels(),
 #                                 subplot_ind+4, 'z Equilibria', colormap=colormap+"_r", show_y_labels=False,
 #                                 indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 #         else:
-#             _plot_vector(model_configuration.zEQ, hypothesis.get_region_labels(), subplot_ind+4, 'z Equilibria',
+#             plot_vector(model_configuration.zEQ, hypothesis.get_region_labels(), subplot_ind+4, 'z Equilibria',
 #                          show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(), sharey=ax0)
 #
 #     if pse_results.get("Ceq") is not None:
-#         _plot_vector_violin(model_configuration.Ceq, pse_results.get("Ceq"), hypothesis.get_region_labels(),
+#         plot_vector_violin(model_configuration.Ceq, pse_results.get("Ceq"), hypothesis.get_region_labels(),
 #                             subplot_ind + 3 + 2 * plot_equilibria, 'Total afferent coupling \n at equilibrium',
 #                             colormap=colormap, show_y_labels=False, indices_red=hypothesis.get_all_disease_indices(),
 #                             sharey=ax0)
 #     else:
-#         _plot_vector(model_configuration.Ceq, hypothesis.get_region_labels(), subplot_ind+3+2*plot_equilibria,
+#         plot_vector(model_configuration.Ceq, hypothesis.get_region_labels(), subplot_ind+3+2*plot_equilibria,
 #                      'Total afferent coupling \n at equilibrium', show_y_labels=False,
 #                      indices_red=hypothesis.get_regions_disease_indices(), sharey=ax0)
 #
@@ -797,7 +797,7 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 #                                                             hypothesis.propagation_indices])
 #
 #     if len(seizure_and_propagation_indices) > 0:
-#         _plot_regions2regions(hypothesis.get_weights(), hypothesis.get_region_labels(), subplot_ind+4+2*plot_equilibria,
+#         plot_regions2regions(hypothesis.get_weights(), hypothesis.get_region_labels(), subplot_ind+4+2*plot_equilibria,
 #                               'Afferent connectivity \n from seizuring regions', show_y_labels=False,
 #                               show_x_labels=True, indices_red_x=seizure_and_propagation_indices, sharey=ax0)
 #
@@ -810,11 +810,11 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 #             title += str(n_eig) + " "
 #         title += "eigenvectors"
 #         if pse_results.get("propagation_strengths") is not None:
-#             _plot_vector_violin(hypothesis.propagation_strenghts, pse_results.get("propagation_strengths"),
+#             plot_vector_violin(hypothesis.propagation_strenghts, pse_results.get("propagation_strengths"),
 #                                 hypothesis.get_region_labels(), subplot_ind+5+2*plot_equilibria, title,
 #                                 show_y_labels=False, indices_red=seizure_and_propagation_indices, sharey=ax0)
 #         else:
-#             _plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(),
+#             plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(),
 #                          subplot_ind+5+2*plot_equilibria, title, show_y_labels=False,
 #                          indices_red=seizure_and_propagation_indices, sharey=ax0)
 #

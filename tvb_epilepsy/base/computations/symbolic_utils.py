@@ -3,7 +3,7 @@ from numpy import array, empty_like, reshape
 from sympy import Symbol, solve, solveset, lambdify,series, Matrix  # diff, ArraySymbol
 from sympy.tensor.array import Array
 
-from tvb_epilepsy.base.utils import shape_to_size
+from tvb_epilepsy.base.utils import shape_to_size, raise_value_error
 from tvb_epilepsy.base.computations.equations_utils import *
 
 
@@ -63,7 +63,7 @@ def symbol_vars(n_regions, vars_str, dims=1, ind_str="_", shape=None, output_fla
             vars_out.append(temp)
             vars_dict[vs] = vars_out[-1:][0]
     else:
-        raise ValueError("The dimensionality of the variables is neither 1 nor 2: " + str(dims))
+        raise_value_error("The dimensionality of the variables is neither 1 nor 2: " + str(dims))
 
     vars_out.append(vars_dict)
 

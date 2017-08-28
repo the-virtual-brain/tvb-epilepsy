@@ -3,17 +3,15 @@
 """
 
 import os
-import warnings
-
 import h5py
 import numpy
 
-from tvb_epilepsy.base.simulators import SimulationSettings
-from tvb_epilepsy.base.utils import change_filename_or_overwrite, \
+from tvb_epilepsy.base.utils import warning, raise_value_error, ensure_unique_file, change_filename_or_overwrite, \
                                     read_object_from_h5_file, print_metadata, write_metadata
 # TODO: solve problems with setting up a logger
 from tvb_epilepsy.base.utils import initialize_logger
 from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
+from tvb_epilepsy.base.simulators import SimulationSettings
 
 PATIENT_VIRTUAL_HEAD = "/WORK/episense/episense-root/trunk/demo-data/Head_TREC"
 
@@ -143,7 +141,7 @@ def write_epileptogenicity_hypothesis(ep_vector, folder_name=None, file_name=Non
         try:
             os.remove(path)
         except:
-            warnings.warn("\nFile to overwrite not found!")
+            warning("\nFile to overwrite not found!")
 
     os.makedirs(os.path.dirname(path))
 
@@ -178,7 +176,7 @@ def write_sensors(labels, locations, folder=os.path.dirname(PATIENT_VIRTUAL_HEAD
         try:
             os.remove(path)
         except:
-            warnings.warn("\nFile to overwrite not found!")
+            warning("\nFile to overwrite not found!")
 
     print "Writing Sensors at:", path
     h5_file = h5py.File(path, 'a', libver='latest')
@@ -205,7 +203,7 @@ def read_simulation_settings(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "sim_
     if output == "dict": #or not (isinstance(hypothesis, Hypothesis)):
         model = dict()
         if hypothesis is not None:
-            warnings.warn("hypothesis is not a Hypothesis object. Returning a dictionary for model.")
+            warning("hypothesis is not a Hypothesis object. Returning a dictionary for model.")
     else:
         if h5_file['/' + "model.name"][()] == "Epileptor":
             model = model_build_dict[h5_file['/' + "model.name"][()]](hypothesis)
@@ -288,7 +286,7 @@ def write_ts(raw_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD
         try:
             os.remove(path)
         except:
-            warnings.warn("\nFile to overwrite not found!")
+            warning("\nFile to overwrite not found!")
 
     h5_file = h5py.File(path, 'a', libver='latest')
     write_metadata({KEY_TYPE: "TimeSeries"}, h5_file, KEY_DATE, KEY_VERSION)
@@ -304,7 +302,7 @@ def write_ts(raw_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD
                                 KEY_SAMPLING: sampling_period, KEY_START: 0.0
                                 }, h5_file, KEY_DATE, KEY_VERSION, "/" + data)
             else:
-                raise ValueError("Invalid TS data. 2D (time, nodes) numpy.ndarray of floats expected")
+                raise_value_error("Invalid TS data. 2D (time, nodes) numpy.ndarray of floats expected")
 
     elif isinstance(raw_data, numpy.ndarray):
         if len(raw_data.shape) != 2 and str(raw_data.dtype)[0] != "f":
@@ -314,10 +312,10 @@ def write_ts(raw_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD
                             KEY_SAMPLING: sampling_period, KEY_START: 0.0
                             }, h5_file, KEY_DATE, KEY_VERSION, "/data")
         else:
-            raise ValueError("Invalid TS data. 2D (time, nodes) numpy.ndarray of floats expected")
+            raise_value_error("Invalid TS data. 2D (time, nodes) numpy.ndarray of floats expected")
 
     else:
-        raise ValueError("Invalid TS data. Dictionary or 2D (time, nodes) numpy.ndarray of floats expected")
+        raise_value_error("Invalid TS data. Dictionary or 2D (time, nodes) numpy.ndarray of floats expected")
 
     h5_file.close()
 
@@ -369,7 +367,7 @@ def write_ts_epi(raw_data, sampling_period, lfp_data=None, folder=os.path.join(P
         try:
             os.remove(path)
         except:
-            warnings.warn("\nFile to overwrite not found!")
+            warning("\nFile to overwrite not found!")
 
     h5_file = h5py.File(path, 'a', libver='latest')
     h5_file.create_dataset("/data", data=raw_data)

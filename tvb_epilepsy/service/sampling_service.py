@@ -1,4 +1,4 @@
-import warnings
+
 import importlib
 from collections import OrderedDict
 
@@ -8,7 +8,8 @@ import scipy.stats as ss
 import scipy as scp
 from SALib.sample import saltelli, fast_sampler, morris, ff
 
-from tvb_epilepsy.base.utils import formal_repr, dict_str, dicts_of_lists, dicts_of_lists_to_lists_of_dicts
+from tvb_epilepsy.base.utils import formal_repr, warning, raise_value_error, raise_not_implemented_error, \
+                                    dict_str, dicts_of_lists, dicts_of_lists_to_lists_of_dicts
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 from tvb.basic.logger.builder import get_logger
@@ -100,8 +101,8 @@ def gamma_to_mu_std(p):
         return p["k"] * p["theta"], np.sqrt(p["k"]) * p["theta"]
 
     else:
-        raise ValueError("The input gamma distribution parameters are neither of the a, beta system, nor of the "
-                         "k, theta one!")
+        raise_value_error("The input gamma distribution parameters are neither of the a, beta system, nor of the "
+                          "k, theta one!")
 
 
 def beta_from_mu_std(mu, std):
@@ -113,8 +114,8 @@ def beta_from_mu_std(mu, std):
         return {"alpha": mu * vmu, "beta": mu1 * vmu}
 
     else:
-        raise ValueError("Variance = " + str(var) + " has to be smaller than the quantity mu*(1-mu) = " + str(mu1)
-                         + " !")
+        raise_value_error("Variance = " + str(var) + " has to be smaller than the quantity mu*(1-mu) = " + str(mu1)
+                           + " !")
 
 
 def beta_to_mu_std(p):
@@ -138,7 +139,7 @@ def binomial_to_mu_std(p):
 def mean_std_to_distribution_params(distribution, mu, std=1.0):
 
     if np.any(std <= 0.0):
-        raise ValueError("Standard deviation std = " + str(std) + " <= 0!")
+        raise_value_error("Standard deviation std = " + str(std) + " <= 0!")
 
     std_check = {"exponential": lambda mu: mu,
                  "poisson": lambda mu: np.sqrt(mu),
@@ -151,7 +152,7 @@ def mean_std_to_distribution_params(distribution, mu, std=1.0):
             print "\nmu = ", mu
             print "\nstd = ", std
             print "\nstd should be = ", std_check
-            warnings.warn("\nStandard deviation constraint not satisfied for distribution " + distribution + "!)")
+            warning("\nStandard deviation constraint not satisfied for distribution " + distribution + "!)")
 
     p = distrib_dict[distribution]["from_mu_std"](mu, std)
 
@@ -162,7 +163,7 @@ def mean_std_to_distribution_params(distribution, mu, std=1.0):
         print "\n"
         for key, val in p.iteritems():
             print key, val
-        raise ValueError("\nDistribution parameters'constraints " + distrib_dict[distribution]["constraint_str"]
+        raise_value_error("\nDistribution parameters'constraints " + distrib_dict[distribution]["constraint_str"]
                          + " is not met!")
 
 
@@ -173,7 +174,7 @@ def distribution_params_to_mean_std(distribution, **p):
         mu, std = distrib_dict[distribution]["to_mu_std"](p)
 
         if np.any(std <= 0.0):
-            raise ValueError("\nStandard deviation std = " + str(std) + " <= 0!")
+            raise_value_error("\nStandard deviation std = " + str(std) + " <= 0!")
 
         return mu, std
 
@@ -181,7 +182,7 @@ def distribution_params_to_mean_std(distribution, **p):
         print "\n"
         for key, val in p.iteritems():
             print key, val
-        raise ValueError("\nDistribution parameters'constraints " + distrib_dict[distribution]["constraint_str"]
+        raise_value_error("\nDistribution parameters'constraints " + distrib_dict[distribution]["constraint_str"]
                          + " is not met!")
 
 
@@ -257,7 +258,7 @@ class DeterministicSamplingService(SamplingService):
             self.shape = (self.n_outputs, np.power(self.n_samples, self.n_outputs))
 
         if np.any(high <= low):
-            raise ValueError("\nHigh limit of linear space " + str(high) +
+            raise_value_error("\nHigh limit of linear space " + str(high) +
                              " is not greater than the lower one " + str(low) + "!")
         else:
             self.params = {"low": low, "high": high}
@@ -302,7 +303,7 @@ class StochasticSamplingService(SamplingService):
             # We use inverse transform sampling for truncated distributions...
 
             if sampling_module is not "scipy":
-                warnings.warn("\nSelecting scipy module for truncated distributions")
+                warning("\nSelecting scipy module for truncated distributions")
 
             self.sampling_module = "scipy.stats." + sampler + " inverse transform sampling"
 
@@ -316,7 +317,7 @@ class StochasticSamplingService(SamplingService):
             self.sampling_module = "SALib.sample." + self.sampler + ".sample"
 
         else:
-            raise ValueError("Sampler module " + str(sampling_module) + " is not recognized!")
+            raise_value_error("Sampler module " + str(sampling_module) + " is not recognized!")
 
     def __repr__(self):
 
@@ -382,7 +383,7 @@ class StochasticSamplingService(SamplingService):
 
             elif sampler is morris.sample:
                 # I don't understand this method and its inputs. I don't think we will ever use it.
-                raise NotImplementedError
+                raise_not_implemented_error
 
             samples = sampler(problem, size, **other_params)
 
@@ -415,7 +416,7 @@ class StochasticSamplingService(SamplingService):
                         samples.append(self._truncated_distribution_sampling(self.sampler,trunc_limits[io],
                                                                              self.n_samples, **(params[io])))
                 else:
-                    raise ValueError("\nParameters are neither an empty list nor a list of n_parameters = "
+                    raise_value_error("\nParameters are neither an empty list nor a list of n_parameters = "
                                      + str(self.n_outputs) + " but one of length " + str(len(self.params)) + " !")
 
             elif self.sampling_module.find("scipy") >= 0:
@@ -428,7 +429,7 @@ class StochasticSamplingService(SamplingService):
                     for io in range(self.n_outputs):
                         samples.append(self._scipy_sample(self.sampler, self.n_samples, **(params[io])))
                 else:
-                    raise ValueError("\nParameters are neither an empty list nor a list of length n_parameters = "
+                    raise_value_error("\nParameters are neither an empty list nor a list of length n_parameters = "
                                      + str(self.n_outputs) + " but one of length " + str(len(self.params)) + " !")
 
             elif self.sampling_module.find("numpy") >= 0:
@@ -440,7 +441,7 @@ class StochasticSamplingService(SamplingService):
                     for io in range(self.n_outputs):
                         samples.append(self._numpy_sample(self.sampler, self.n_samples, **(params[io])))
                 else:
-                    raise ValueError("\nParameters are neither an empty list nor a list of length n_parameters = "
+                    raise_value_error("\nParameters are neither an empty list nor a list of length n_parameters = "
                                      + str(self.n_outputs) + " but one of length " + str(len(self.params)) + " !")
 
         return np.reshape(samples, self.shape)

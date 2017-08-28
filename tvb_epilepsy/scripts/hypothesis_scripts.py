@@ -1,0 +1,21 @@
+
+from tvb_epilepsy.base.utils import initialize_logger
+from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.service.lsa_service import LSAService
+
+
+def start_lsa_run(hypothesis, connectivity_matrix, logger=None):
+
+    if logger is None:
+        logger = initialize_logger(__name__)
+
+    logger.info("creating model configuration...")
+    model_configuration_service = ModelConfigurationService(hypothesis.number_of_regions)
+    model_configuration = model_configuration_service. \
+        configure_model_from_hypothesis(hypothesis, connectivity_matrix)
+
+    logger.info("running LSA...")
+    lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
+    lsa_hypothesis = lsa_service.run_lsa(hypothesis, model_configuration)
+
+    return model_configuration_service, model_configuration, lsa_service, lsa_hypothesis

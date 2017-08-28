@@ -1,6 +1,6 @@
 import numpy as np
 
-from tvb_epilepsy.base.utils import assert_arrays
+from tvb_epilepsy.base.utils import assert_arrays, raise_value_error
 
 
 def if_ydot0(x1, a, b):
@@ -94,7 +94,7 @@ def eqtn_x0cr_r(Iext1, yc, a, b, x1_rest, x1_cr, x0_rest, x0_cr, zmode=np.array(
                                    4.74922109128249e+68 * 54365636569181.0 ** (10.0 * x1_rest)) * (-x0_cr + x0_rest))
 
     else:
-        raise ValueError('zmode is neither "lin" nor "sig"')
+        raise_value_error('zmode is neither "lin" nor "sig"')
 
 
 def eqtn_x0(x1, z, model="2d", zmode=np.array("lin"), z_pos=True, K=None, w=None, coupl=None, x0cr=None, r=None):
@@ -114,7 +114,7 @@ def eqtn_x0(x1, z, model="2d", zmode=np.array("lin"), z_pos=True, K=None, w=None
             return np.divide(np.divide(3.0, 1.0 + np.power(np.exp(1), -10.0 * (x1 + 0.5))) + x0cr - z - coupl, r)
 
         else:
-            raise ValueError('zmode is neither "lin" nor "sig"')
+            raise_value_error('zmode is neither "lin" nor "sig"')
 
     else:
         if zmode == 'lin':
@@ -124,7 +124,7 @@ def eqtn_x0(x1, z, model="2d", zmode=np.array("lin"), z_pos=True, K=None, w=None
             return np.divide(3.0, 1.0 + np.power(np.exp(1), -10.0 * (x1 + 0.5))) - z - coupl
 
         else:
-            raise ValueError('zmode is neither "lin" nor "sig"')
+            raise_value_error('zmode is neither "lin" nor "sig"')
 
 
 def eqtn_fx1(x1, z, y1, Iext1, slope, a, b, tau1, x1_neg=True, model="2d", x2=0.0):
@@ -176,7 +176,7 @@ def eqtn_fx1z_diff(x1, K, w, ix, jx, a, b, d, tau1, tau0, model="6d", zmode=np.a
         dfx1_1_dx1 = np.divide(30 * np.power(np.exp(1), (-10.0 * (x1[ix] + 0.5))),
                                np.power(1 + np.power(np.exp(1), (-10.0 * (x1[ix] + 0.5))), 2))
     else:
-        raise ValueError('zmode is neither "lin" nor "sig"')
+        raise_value_error('zmode is neither "lin" nor "sig"')
 
     if model == "2d":
         dfx1_3_dx1 = 3 * np.multiply(np.power(x1[ix], 2.0), a[ix]) - 2 * np.multiply(x1[ix], b[ix])
@@ -221,7 +221,7 @@ def eqtn_fz(x1, z, x0, tau1, tau0, model="2d", zmode=np.array("lin"), z_pos=True
             return np.multiply(np.divide(3.0, (1 + np.power(np.exp(1), (-10.0 * (x1 + 0.5))))) -
                                np.multiply(r, x0) + x0cr - z - coupl, tau)
         else:
-            raise ValueError('zmode is neither "lin" nor "sig"')
+            raise_value_error('zmode is neither "lin" nor "sig"')
 
     else:
 
@@ -231,7 +231,7 @@ def eqtn_fz(x1, z, x0, tau1, tau0, model="2d", zmode=np.array("lin"), z_pos=True
         elif zmode == 'sig':
             return np.multiply(np.divide(3.0, (1 + np.power(np.exp(1), (-10.0 * (x1 + 0.5))))) - x0 - z - coupl, tau)
         else:
-            raise ValueError('zmode is neither "lin" nor "sig"')
+            raise_value_error('zmode is neither "lin" nor "sig"')
 
 
 def eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode=np.array("lin"), z_pos=True, K=None, w=None):
@@ -250,7 +250,7 @@ def eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode=np.array("lin"), z_pos=True, K=None,
         jac_x1 = np.divide(30 * np.power(np.exp(1), (-10.0 * (x1 + 0.5))),
                            1 + np.power(np.exp(1), (-10.0 * (x1 + 0.5))))
     else:
-        raise ValueError('zmode is neither "lin" nor "sig"')
+        raise_value_error('zmode is neither "lin" nor "sig"')
 
     # Assuming that wii = 0
     jac_x1 += np.multiply(K, np.sum(w, 1))
@@ -436,7 +436,7 @@ def eqtn_fz_square_taylor(zeq, yc, Iext1, K, w, tau1, tau0):
 
     try:
         if np.any([np.any(np.isnan(dfz)), np.any(np.isinf(dfz))]):
-            raise ValueError("nan or inf values in dfz")
+            raise_value_error("nan or inf values in dfz")
     except:
         pass
 
@@ -449,7 +449,7 @@ def eqtn_fz_square_taylor(zeq, yc, Iext1, K, w, tau1, tau0):
 
     try:
         if np.any([np.any(np.isnan(fz_jac.flatten())), np.any(np.isinf(fz_jac.flatten()))]):
-            raise ValueError("nan or inf values in dfz")
+            raise_value_error("nan or inf values in dfz")
     except:
         pass
 
