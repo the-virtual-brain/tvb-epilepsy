@@ -18,7 +18,7 @@ else:
     FOLDER_VEP = FOLDER_VEP_ONLINE
 
     if platform.node() == 'dionperdMBP':
-        FOLDER_VEP_HOME = os.path.join(USER_HOME, 'CBR', 'VEP')
+        FOLDER_VEP_HOME = os.path.join(USER_HOME, 'CBR', 'VEP', 'tests')
         # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR', 'svn', 'episense', 'demo-data')
         DATA_TVB = os.path.join(USER_HOME, 'CBR', 'svn', 'tvb', 'tvb-data', 'tvb-data')
         # DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH')
@@ -26,15 +26,15 @@ else:
         DATA_CUSTOM = os.path.join(FOLDER_VEP, 'CC/TVB1')
 
     else:
-        FOLDER_VEP_HOME = os.path.join(USER_HOME, 'VEP')
+        FOLDER_VEP_HOME = os.path.join(USER_HOME, 'VEP', 'tests')
         # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR_software', 'svn-episense', 'demo-data')
         DATA_TVB = os.path.join(USER_HOME, 'CBR_software', 'svn-tvb', 'tvb-data', 'tvb-data')
         # DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH')
         # DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/JUNCH')
         DATA_CUSTOM = os.path.join(FOLDER_VEP, 'CC/TVB1')
 
-    if not (os.path.isdir(FOLDER_VEP)):
-        os.mkdir(FOLDER_VEP)
+    if not (os.path.isdir(FOLDER_VEP_HOME)):
+        os.mkdir(FOLDER_VEP_HOME)
 
     # Folder where input data will be
     # FOLDER_DATA = os. path.join(FOLDER_VEP, 'data')
