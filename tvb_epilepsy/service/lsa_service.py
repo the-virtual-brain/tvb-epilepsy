@@ -5,7 +5,9 @@ Service to do LSA computation.
 import numpy
 from tvb.basic.logger.builder import get_logger
 
-from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM
+from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM, \
+                                        FIG_FORMAT,  SAVE_FLAG, SHOW_FLAG
+from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.utils import raise_value_error, formal_repr, weighted_vector_sum,curve_elbow_point
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
@@ -126,7 +128,9 @@ class LSAService(object):
                                  propagation_indices, lsa_propagation_strength, "LSA_" + disease_hypothesis.name)
 
     def plot_lsa(self, disease_hypothesis, model_configuration, region_labels=[],
-                 pse_results=None, title="Hypothesis Overview"):
+                 pse_results=None, title="Hypothesis Overview",
+                 figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
+                 show_flag=SHOW_FLAG, save_flag=SAVE_FLAG):
 
         hyp_dict_list = disease_hypothesis.prepare_for_plot(model_configuration.connectivity_matrix)
         model_config_dict_list = model_configuration.prepare_for_plot()[:2]
@@ -157,4 +161,7 @@ class LSAService(object):
         return plot_in_columns(plot_dict_list, region_labels, width_ratios=[],
                                left_ax_focus_indices=disease_hypothesis.get_all_disease_indices(),
                                right_ax_focus_indices=disease_hypothesis.propagation_indices,
-                               description=description, title=title, figure_name=fig_name)
+                               description=description, title=title, figure_name=fig_name,
+                               figure_dir=figure_dir,
+                               figure_format=figure_format,
+                               show_flag=show_flag, save_flag=save_flag)
