@@ -356,7 +356,7 @@ class PSEService(object):
                 pass
 
             if not status:
-                warning("\nExecution of loop " + str(iloop) + "failed!")
+                warning("\nExecution of loop " + str(iloop) + " failed!")
 
             results.append(output)
             execution_status.append(status)
