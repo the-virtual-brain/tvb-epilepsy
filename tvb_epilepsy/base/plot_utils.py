@@ -423,54 +423,55 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
     check_show(show_flag)
 
 
-def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, hpf_flag=False):
+def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, hpf_flag=False,
+                     save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
 
     if isinstance(model, EpileptorDP2D):
         plot_timeseries(res['time'], {'x1': res['x1'], 'z(t)': res['z']},
                         seizure_indices, title=hyp_name + ": Simulated TAVG",
-                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
+                        save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
     else:
         plot_timeseries(res['time'], {'LFP(t)': res['lfp'], 'z(t)': res['z']},
                         seizure_indices, title=hyp_name + ": Simulated LFP-z",
-                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
+                        save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
         plot_timeseries(res['time'], {'x1(t)': res['x1'], 'y1(t)': res['y1']},
                         seizure_indices, title=hyp_name + ": Simulated pop1",
-                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
+                        save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
         plot_timeseries(res['time'], {'x2(t)': res['x2'], 'y2(t)': res['y2'], 'g(t)': res['g']}, seizure_indices,
                         title=hyp_name + ": Simulated pop2-g",
-                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
+                        save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
         start_plot = int(np.round(0.01 * res['lfp'].shape[0]))
         plot_raster(res['time'][start_plot:], {'lfp': res['lfp'][start_plot:, :]}, seizure_indices,
                     title=hyp_name + ": Simulated LFP rasterplot", offset=10.0,
-                    save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
+                    save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                     labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
 
     if isinstance(model, EpileptorDPrealistic):
         plot_timeseries(res['time'], {'1/(1+exp(-10(z-3.03))': 1 / (1 + np.exp(-10 * (res['z'] - 3.03))),
                                       'slope': res['slopeTS'], 'Iext2': res['Iext2ts']},
                         seizure_indices, title=hyp_name + ": Simulated controlled parameters",
-                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
+                        save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
         plot_timeseries(res['time'], {'x0': res['x0ts'], 'Iext1':  res['Iext1ts'] , 'K': res['Kts']},
                         seizure_indices, title=hyp_name + ": Simulated parameters",
-                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
+                        save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
 
     for i in range(len(sensorsSEEG)):
         start_plot = int(np.round(0.01*res['seeg'+str(i)].shape[0]))
         plot_raster(res['time'][start_plot:], {'SEEG': res['seeg'+str(i)][start_plot:, :]},
                     title=hyp_name + ": Simulated SEEG" + str(i) + " raster plot",
-                    offset=10.0, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
-                    labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
+                    offset=10.0, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
+                    figure_format=figure_format, labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
         if hpf_flag:
             plot_raster(res['time'][start_plot:], {'SEEG hpf': res['seeg_hpf' + str(i)][start_plot:, :]},
                         title=hyp_name + ": Simulated high pass filtered SEEG" + str(i) + " raster plot",
-                        offset=10.0, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
-                        labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
+                        offset=10.0, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
+                        figure_format=figure_format, labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
 
 
 # def plot_head(head, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
