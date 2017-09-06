@@ -109,6 +109,15 @@ class Connectivity(object):
         self.orientations = orientation
         self.areas = areas
 
+    def regions_labels2inds(self, labels):
+        inds = []
+        for lbl in labels:
+            inds.append(np.where(self.region_labels == lbl)[0][0])
+        if len(inds)==1:
+            return inds[0]
+        else:
+            return inds
+
     def summary(self):
         d = {"a. centers": reg_dict(self.centers, self.region_labels),
 #             "c. normalized weights": self.normalized_weights,
