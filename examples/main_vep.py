@@ -9,8 +9,7 @@ import numpy as np
 
 from tvb_epilepsy.base.constants import SIMULATION_MODE, TVB, DATA_MODE, VOIS, X0_DEF, E_DEF
 from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM
-from tvb_epilepsy.base.utils import assert_equal_objects, set_time_scales, initialize_logger, calculate_projection
-from tvb_epilepsy.base.computations.analyzers_utils import filter_data
+from tvb_epilepsy.base.utils import assert_equal_objects, initialize_logger, calculate_projection
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.lsa_service import LSAService
@@ -18,9 +17,7 @@ from tvb_epilepsy.service.model_configuration_service import ModelConfigurationS
 from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
 from tvb_epilepsy.base.plot_utils import plot_sim_results
-from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
-from tvb_epilepsy.custom.simulator_custom import EpileptorModel
-from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
+from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, prepare_ts_and_seeg_h5_file
 
 
 if DATA_MODE is TVB:
@@ -34,50 +31,6 @@ if SIMULATION_MODE is TVB:
 else:
     from tvb_epilepsy.scripts.simulation_scripts import setup_custom_simulation_from_model_configuration \
         as setup_simulation_from_model_configuration
-
-
-def prepare_vois_ts_dict(vois, data):
-    # Pack results into a dictionary:
-    vois_ts_dict = dict()
-    for idx_voi, voi in enumerate(vois):
-        vois_ts_dict[voi] = data[:, idx_voi, :].astype('f')
-
-    return vois_ts_dict
-
-
-def prepare_ts_and_seeg_h5_file(folder, filename, model, projections, vois_ts_dict, hpf_flag, hpf_low, hpf_high, fsAVG,
-                                dt):
-    # High pass filter, and compute SEEG:
-    if isinstance(model, EpileptorDP2D):
-        raw_data = np.dstack(
-            [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x1"]])
-        lfp_data = vois_ts_dict["x1"]
-
-        for idx_proj, proj in enumerate(projections):
-            vois_ts_dict['seeg%d' % idx_proj] = vois_ts_dict['z'].dot(proj.T)
-
-    else:
-        if isinstance(model, EpileptorModel):
-            lfp_data = vois_ts_dict["x2"] - vois_ts_dict["x1"]
-
-        else:
-            lfp_data = vois_ts_dict["lfp"]
-
-        raw_data = np.dstack(
-            [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x2"]])
-
-        for idx_proj, proj in enumerate(projections):
-            vois_ts_dict['seeg%d' % idx_proj] = vois_ts_dict['lfp'].dot(proj.T)
-            if hpf_flag:
-                for i in range(vois_ts_dict['seeg'].shape[0]):
-                    vois_ts_dict['seeg_hpf%d' % i][:, i] = filter_data(
-                        vois_ts_dict['seeg%d' % i][:, i], hpf_low, hpf_high,
-                        fsAVG)
-    # Write files:
-    write_ts_epi(raw_data, dt, lfp_data, folder, filename)
-
-    for i in range(len(projections)):
-        write_ts_seeg_epi(vois_ts_dict['seeg%d' % i], dt, folder, filename)
 
 
 def main_vep(test_write_read=False):
@@ -184,7 +137,7 @@ def main_vep(test_write_read=False):
         set_time_scales(fs=fs, dt=None, time_length=time_length, scale_time=scale_time, scale_fsavg=scale_fsavg,
                         report_every_n_monitor_steps=report_every_n_monitor_steps)
 
-    model_name = "EpileptorDP"
+    model_name = "EpileptorDPrealistic"
 
     # We don't want any time delays for the moment
     head.connectivity.tract_lengths *= 0.0
@@ -363,7 +316,8 @@ def main_vep(test_write_read=False):
 
             # Save results
             vois_ts_dict['time_units'] = 'msec'
-            # savemat(os.path.join(FOLDER_RES, hypothesis.name + "_ts.mat"), vois_ts_dict)
+            # from scipy.io import savemat
+            # savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), vois_ts_dict)
 
         # if test_write_read:
         #

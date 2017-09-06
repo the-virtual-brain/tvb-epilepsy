@@ -1,5 +1,9 @@
 import numpy as np
 
+from tvb_epilepsy.base.computations.analyzers_utils import filter_data
+from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
+from tvb_epilepsy.custom.simulator_custom import EpileptorModel
+from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
 
 ###
 # A helper function to make good choices for simulation settings for a custom simulator
@@ -101,3 +105,62 @@ def setup_TVB_simulation_from_model_configuration(model_configuration, connectiv
     simulator_instance = SimulatorTVB(connectivity, model_configuration, model, settings)
 
     return simulator_instance
+
+
+def prepare_vois_ts_dict(vois, data):
+    # Pack results into a dictionary:
+    vois_ts_dict = dict()
+    for idx_voi, voi in enumerate(vois):
+        vois_ts_dict[voi] = data[:, idx_voi, :].astype('f')
+
+    return vois_ts_dict
+
+
+def prepare_ts_and_seeg_h5_file(folder, filename, model, projections, vois_ts_dict, hpf_flag, hpf_low, hpf_high, fsAVG,
+                                dt):
+    # High pass filter, and compute SEEG:
+    if isinstance(model, EpileptorDP2D):
+        raw_data = np.dstack(
+            [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x1"]])
+        lfp_data = vois_ts_dict["x1"]
+
+        for idx_proj, proj in enumerate(projections):
+            vois_ts_dict['seeg%d' % idx_proj] = vois_ts_dict['z'].dot(proj.T)
+
+    else:
+        if isinstance(model, EpileptorModel):
+            lfp_data = vois_ts_dict["x2"] - vois_ts_dict["x1"]
+
+        else:
+            lfp_data = vois_ts_dict["lfp"]
+
+        raw_data = np.dstack(
+            [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x2"]])
+
+        for idx_proj, proj in enumerate(projections):
+            vois_ts_dict['seeg%d' % idx_proj] = vois_ts_dict['lfp'].dot(proj.T)
+            if hpf_flag:
+                for i in range(vois_ts_dict['seeg'].shape[0]):
+                    vois_ts_dict['seeg_hpf%d' % i][:, i] = filter_data(
+                        vois_ts_dict['seeg%d' % i][:, i], hpf_low, hpf_high,
+                        fsAVG)
+    # Write files:
+    write_ts_epi(raw_data, dt, lfp_data, folder, filename)
+
+    for i in range(len(projections)):
+        write_ts_seeg_epi(vois_ts_dict['seeg%d' % i], dt, folder, filename)
+
+
+def set_time_scales(fs=4096.0, dt=None, time_length=1000.0, scale_time=1.0, scale_fsavg=8.0, report_every_n_monitor_steps=10,):
+    if dt is None:
+        dt = 1000.0 / fs
+
+    dt /= scale_time
+
+    fsAVG = fs / scale_fsavg
+    monitor_period = scale_fsavg * dt
+    sim_length = time_length / scale_time
+    time_length_avg = np.round(sim_length / monitor_period)
+    n_report_blocks = max(report_every_n_monitor_steps * np.round(time_length_avg / 100), 1.0)
+
+    return dt, fsAVG, sim_length, monitor_period, n_report_blocks
