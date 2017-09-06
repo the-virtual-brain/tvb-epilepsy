@@ -121,7 +121,7 @@ def read_epileptogenicity(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ep.h5")
     return values
 
 
-def write_epileptogenicity_hypothesis(ep_vector, folder_name=None, file_name=None):
+def write_epileptogenicity_hypothesis(ep_vector, folder_path=PATIENT_VIRTUAL_HEAD, folder_name=None, file_name=None):
     """
     Store X0 values to be used when launching simulations
     """
@@ -132,7 +132,7 @@ def write_epileptogenicity_hypothesis(ep_vector, folder_name=None, file_name=Non
     if folder_name is None:
         folder_name = file_name
 
-    path, overwrite = change_filename_or_overwrite(os.path.join(PATIENT_VIRTUAL_HEAD, folder_name), file_name + ".h5")
+    path, overwrite = change_filename_or_overwrite(os.path.join(folder_path, folder_name), file_name + ".h5")
     # path = os.path.join(PATIENT_VIRTUAL_HEAD, folder_name, file_name + ".h5")
     # if os.path.exists(path):
     #     print "Ep file %s already exists. Use a different name!" % path
@@ -148,7 +148,7 @@ def write_epileptogenicity_hypothesis(ep_vector, folder_name=None, file_name=Non
     print "Writing an Epileptogenicity at:", path
     h5_file = h5py.File(path, 'a', libver='latest')
 
-    write_metadata({KEY_TYPE: "ModelEpileptogenicity", KEY_NODES: ep_vector.shape[0]}, h5_file, KEY_DATE, KEY_VERSION)
+    write_metadata({KEY_TYPE: "EpileptogenicityModel", KEY_NODES: ep_vector.shape[0]}, h5_file, KEY_DATE, KEY_VERSION)
     h5_file.create_dataset("/values", data=ep_vector)
     h5_file.close()
 
