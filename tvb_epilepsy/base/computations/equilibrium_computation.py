@@ -552,7 +552,8 @@ def calc_eq_11d(x0, K, w, yc, Iext1, Iext2, slope, fun_slope_Iext2,  x1eqhyp = 0
 
     x2eq, y2eq = calc_eq_pop2(Iext2, y2eq=None, zeq=zeq, geq=geq, x1eq=None, y1eq=None, x2_neg=True)
 
-    equilibrium_point = numpy.c_[x1eq, y1eq, zeq, x2eq, y2eq, geq, x0, slope_eq, Iext1, Iext2_eq, K].T
+    equilibrium_point = numpy.c_[x1eq, y1eq, zeq, x2eq, y2eq, geq,
+                                 x0, slope_eq, Iext1*numpy.ones(x1eq.shape), Iext2_eq, K].T
 
     return equilibrium_point, slope_eq, Iext2_eq
 
