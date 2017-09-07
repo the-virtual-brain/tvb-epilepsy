@@ -75,7 +75,7 @@ class ModelConfiguration(object):
 
     def prepare_for_plot(self, x0_indices=[], e_indices=[], disease_indices=[]):
 
-        names = ["Excitabilities x0", "Epileptogenicities x0", "x1 Equilibria", "z Equilibria",
+        names = ["Pathological Excitabilities x0", "Model Epileptogenicities E", "x1 Equilibria", "z Equilibria",
                  "Total afferent coupling \n at equilibrium"]
 
         data = [self.x0_values, self.e_values, self.x1EQ, self.zEQ, self.Ceq]
