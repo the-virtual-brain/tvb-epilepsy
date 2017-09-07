@@ -23,12 +23,13 @@ LOG = get_logger(__name__)
 class LSAService(object):
 
     def __init__(self, eigen_vectors_number_selection=EIGENVECTORS_NUMBER_SELECTION, eigen_vectors_number=None,
-                 weighted_eigenvector_sum=WEIGHTED_EIGENVECTOR_SUM):
+                 weighted_eigenvector_sum=WEIGHTED_EIGENVECTOR_SUM, normalize_propagation_strength=False):
         self.eigen_vectors_number_selection = eigen_vectors_number_selection
         self.eigen_values = []
         self.eigen_vectors = []
         self.eigen_vectors_number = eigen_vectors_number
         self.weighted_eigenvector_sum=weighted_eigenvector_sum
+        self.normalize_propagation_strength = normalize_propagation_strength
 
     def __repr__(self):
         d = {"01. Eigenvectors' number selection mode": self.eigen_vectors_number_selection,
@@ -115,8 +116,9 @@ class LSAService(object):
             else:
                 lsa_propagation_strength = numpy.abs(numpy.sum(self.eigen_vectors[:, :sorted_indices], axis=1))
 
-        # Normalize by the maximum
-        # lsa_propagation_strength /= numpy.max(lsa_propagation_strength)
+        if self.normalize_propagation_strength:
+            # Normalize by the maximum
+            lsa_propagation_strength /= numpy.max(lsa_propagation_strength)
 
 
         propagation_strength_elbow = self.get_curve_elbow_point(lsa_propagation_strength)
