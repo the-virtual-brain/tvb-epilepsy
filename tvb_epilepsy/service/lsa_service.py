@@ -105,7 +105,6 @@ class LSAService(object):
         if self.eigen_vectors_number == disease_hypothesis.number_of_regions:
             # Calculate the propagation strength index by summing all eigenvectors
             lsa_propagation_strength = numpy.abs(numpy.sum(self.eigen_vectors, axis=1))
-            lsa_propagation_strength /= numpy.max(lsa_propagation_strength)
 
         else:
             sorted_indices = max(self.eigen_vectors_number, 1)
@@ -115,7 +114,9 @@ class LSAService(object):
                                                            self.eigen_vectors[:, :sorted_indices], normalize=True))
             else:
                 lsa_propagation_strength = numpy.abs(numpy.sum(self.eigen_vectors[:, :sorted_indices], axis=1))
-            lsa_propagation_strength /= numpy.max(lsa_propagation_strength)
+
+        # Normalize by the maximum
+        # lsa_propagation_strength /= numpy.max(lsa_propagation_strength)
 
 
         propagation_strength_elbow = self.get_curve_elbow_point(lsa_propagation_strength)
