@@ -33,8 +33,8 @@ else:
         as setup_simulation_from_model_configuration
 
 
-PSE_FLAG = False
-SA_PSE_FLAG = False
+PSE_FLAG = True
+SA_PSE_FLAG = True
 SIM_FLAG = True
 def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG):
 

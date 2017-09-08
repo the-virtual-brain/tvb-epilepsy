@@ -54,7 +54,7 @@ def setup_TVB_simulation_from_model_configuration(model_configuration, connectiv
         model.r = 0.0001
     else:
         model.tau1 *= scale_time
-        model.tau0 = 10000
+        model.tau0 = 10000.0
         if isinstance(model, EpileptorDPrealistic):
             model.slope = 0.25
             model.pmode = np.array("z")
