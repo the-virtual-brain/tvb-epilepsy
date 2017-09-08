@@ -51,8 +51,10 @@ def setup_TVB_simulation_from_model_configuration(model_configuration, connectiv
 
     if isinstance(model, Epileptor):
         model.tt *= scale_time * 0.25
+        model.r = 0.0001
     else:
         model.tau1 *= scale_time
+        model.tau0 = 10000
         if isinstance(model, EpileptorDPrealistic):
             model.slope = 0.25
             model.pmode = np.array("z")
@@ -151,16 +153,13 @@ def prepare_ts_and_seeg_h5_file(folder, filename, model, projections, vois_ts_di
         write_ts_seeg_epi(vois_ts_dict['seeg%d' % i], dt, folder, filename)
 
 
-def set_time_scales(fs=4096.0, dt=None, time_length=1000.0, scale_time=1.0, scale_fsavg=8.0, report_every_n_monitor_steps=10,):
-    if dt is None:
-        dt = 1000.0 / fs
-
-    dt /= scale_time
-
+def set_time_scales(fs=4096.0, time_length=100000.0, scale_time=1.0, scale_fsavg=None, report_every_n_monitor_steps=10,):
+    dt = 1000.0 / fs
+    if scale_fsavg is None:
+        scale_fsavg = int(np.round(fs / 512.0))
     fsAVG = fs / scale_fsavg
-    monitor_period = scale_fsavg * dt
+    monitor_period = scale_fsavg * dt / scale_time
     sim_length = time_length / scale_time
     time_length_avg = np.round(sim_length / monitor_period)
     n_report_blocks = max(report_every_n_monitor_steps * np.round(time_length_avg / 100), 1.0)
-
     return dt, fsAVG, sim_length, monitor_period, n_report_blocks
