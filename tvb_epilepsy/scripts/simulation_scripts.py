@@ -153,7 +153,8 @@ def prepare_ts_and_seeg_h5_file(folder, filename, model, projections, vois_ts_di
         write_ts_seeg_epi(vois_ts_dict['seeg%d' % i], dt, folder, filename)
 
 
-def set_time_scales(fs=4096.0, time_length=100000.0, scale_time=1.0, scale_fsavg=None, report_every_n_monitor_steps=10,):
+def set_time_scales(fs=4096.0, time_length=100000.0, scale_time=1.0, scale_fsavg=None,
+                    report_every_n_monitor_steps=100):
     dt = 1000.0 / fs
     if scale_fsavg is None:
         scale_fsavg = int(np.round(fs / 512.0))
