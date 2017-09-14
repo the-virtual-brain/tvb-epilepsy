@@ -47,8 +47,8 @@ class DiseaseHypothesis(object):
              "03. Number of regions": self.number_of_regions,
              "04. X0 disease indices": self.x0_indices,
              "05. X0 disease values": self.x0_values,
-             "06. E disease indices": self.e_indices,
-             "07. E disease indices": self.e_values,
+             "06. e_values disease indices": self.e_indices,
+             "07. e_values disease indices": self.e_values,
              "08. Connectivity disease indices":
                  linear_index_to_coordinate_tuples(self.w_indices, (self.number_of_regions, self.number_of_regions)),
              "09. Connectivity disease values": self.w_values,

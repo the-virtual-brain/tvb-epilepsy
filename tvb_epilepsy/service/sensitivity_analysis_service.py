@@ -1,14 +1,14 @@
 
 import numpy as np
 from SALib.analyze import sobol, delta, fast, morris, dgsm,  ff
-from tvb.basic.logger.builder import get_logger
 
-from tvb_epilepsy.base.utils import formal_repr, warning, raise_value_error, list_of_dicts_to_dicts_of_ndarrays, dict_str
+from tvb_epilepsy.base.utils import initialize_logger, formal_repr, warning, raise_value_error, \
+                                    list_of_dicts_to_dicts_of_ndarrays, dict_str
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 METHODS = ["sobol", "latin", "delta", "dgsm", "fast", "fast_sampler", "morris", "ff", "fractional_factorial"]
 
-logger = get_logger(__name__)
+logger = initialize_logger(__name__)
 
 # TODO: make sensitivity_analysis_from_hypothesis() helper function
 

@@ -11,15 +11,15 @@ import numpy
 from tvb.simulator.models import Epileptor
 
 from tvb_epilepsy.base.constants import ADDITIVE_NOISE, MULTIPLICATIVE_NOISE
-from tvb_epilepsy.base.computations.calculations_utils import calc_rescaled_x0
+from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val__to_model_x0
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D, EpileptorDP, EpileptorDPrealistic
 
 
-def build_tvb_model(model_configuration, a=1.0, b=3.0, d=5.0, zmode=numpy.array("lin")):
-    x0_transformed = calc_rescaled_x0(model_configuration.x0_values, model_configuration.yc,
-                                      model_configuration.Iext1, a, b - d, zmode=zmode)
-    model_instance = Epileptor(x0=x0_transformed, Iext=model_configuration.Iext1,
-                               Ks=model_configuration.K, c=model_configuration.yc)
+def build_tvb_model(model_configuration, zmode=numpy.array("lin")):
+    model_instance = Epileptor(x0=model_configuration.x0, Iext=model_configuration.Iext1, Iext2=model_configuration.Iext2,
+                               Ks=model_configuration.K, c=model_configuration.yc,
+                               a=model_configuration.a, b=model_configuration.b, d=model_configuration.d,
+                               aa=model_configuration.s)
 
     return model_instance
 
@@ -28,12 +28,9 @@ def build_tvb_model(model_configuration, a=1.0, b=3.0, d=5.0, zmode=numpy.array(
 # Build EpileptorDP2D
 ###
 def build_ep_2sv_model(model_configuration, zmode=numpy.array("lin")):
-    x0 = model_configuration.x0
-    x0cr = model_configuration.x0cr
-    rx0 = model_configuration.rx0
-
-    model = EpileptorDP2D(x0=x0, Iext1=model_configuration.Iext1, K=model_configuration.K,
-                          yc=model_configuration.yc, r=rx0, x0cr=x0cr, zmode=zmode)
+    model = EpileptorDP2D(x0=model_configuration.x0, Iext1=model_configuration.Iext1, K=model_configuration.K,
+                          yc=model_configuration.yc, a=model_configuration.a, b=model_configuration.b,
+                          d=model_configuration.d, zmode=zmode)
 
     return model
 
@@ -42,10 +39,10 @@ def build_ep_2sv_model(model_configuration, zmode=numpy.array("lin")):
 # Build EpileptorDP
 ###
 def build_ep_6sv_model(model_configuration, zmode=numpy.array("lin")):
-    x0_transformed = calc_rescaled_x0(model_configuration.x0_values, model_configuration.yc,
-                                      model_configuration.Iext1)
-    model = EpileptorDP(x0=x0_transformed, Iext1=model_configuration.Iext1, K=model_configuration.K,
-                        yc=model_configuration.yc, zmode=zmode)
+    model = EpileptorDP(x0=model_configuration.x0, Iext1=model_configuration.Iext1, Iext2=model_configuration.Iext2,
+                        K=model_configuration.K, yc=model_configuration.yc, a=model_configuration.a,
+                        b=model_configuration.b, d=model_configuration.d, s=model_configuration.s,
+                        gamma=model_configuration.gamma, zmode=zmode)
 
     return model
 
@@ -53,11 +50,11 @@ def build_ep_6sv_model(model_configuration, zmode=numpy.array("lin")):
 ###
 # Build EpileptorDPrealistic
 ###
-def build_ep_11sv_model(model_configuration, zmode=numpy.array("lin")):
-    x0_transformed = calc_rescaled_x0(model_configuration.x0_values, model_configuration.yc,
-                                      model_configuration.Iext1)
-    model = EpileptorDPrealistic(x0=x0_transformed, Iext1=model_configuration.Iext1,
-                                 K=model_configuration.K, yc=model_configuration.yc, zmode=zmode)
+def build_ep_11sv_model(model_configuration, zmode=numpy.array("lin"), pmode=numpy.array("z")):
+    model = EpileptorDPrealistic(x0=model_configuration.x0, Iext1=model_configuration.Iext1,
+                                 Iext2=model_configuration.Iext2, K=model_configuration.K, yc=model_configuration.yc,
+                                 a=model_configuration.a, b=model_configuration.b, d=model_configuration.d,
+                                 s=model_configuration.s, gamma=model_configuration.gamma, zmode=zmode, pmode=pmode)
 
     return model
 

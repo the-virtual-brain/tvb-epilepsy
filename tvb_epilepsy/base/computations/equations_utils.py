@@ -1,5 +1,7 @@
 import numpy as np
 
+from tvb_epilepsy.base.constants import A_DEF, B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, I_EXT1_DEF, I_EXT2_DEF, \
+                                        YC_DEF, TAU0_DEF, TAU1_DEF, TAU2_DEF
 from tvb_epilepsy.base.utils import assert_arrays, raise_value_error
 
 
@@ -13,9 +15,9 @@ def else_ydot0_6d(x2, z, slope):
     return slope - x2 + 0.6 * np.power(z - 4.0, 2)
 
 
-def else_ydot0_2d(x1, z, slope):
+def else_ydot0_2d(x1, z, slope, d):
     # else_ydot0 = self.slope - 5 * y[0] + 0.6 * (y[2] - 4.0) ** 2
-    return slope - 5.0 * x1 + 0.6 * np.power(z - 4.0, 2)
+    return slope - d * x1 + 0.6 * np.power(z - 4.0, 2)
 
 
 def eqtn_coupling(x1, K, w, ix, jx):
@@ -60,7 +62,10 @@ def eqtn_coupling_diff(K, w, ix, jx):
     return dcoupl_dx1
 
 
-def eqtn_x0cr_r(Iext1, yc, a, b, x1_rest, x1_cr, x0_rest, x0_cr, zmode=np.array("lin")):
+def eqtn_x0cr_r(Iext1, yc, a, b, d, x1_rest, x1_cr, x0_rest, x0_cr, zmode=np.array("lin")):
+
+    # Correspondance with EpileptorDP2D
+    b = b - d
 
     if zmode == 'lin':
 
@@ -97,7 +102,7 @@ def eqtn_x0cr_r(Iext1, yc, a, b, x1_rest, x1_cr, x0_rest, x0_cr, zmode=np.array(
         raise_value_error('zmode is neither "lin" nor "sig"')
 
 
-def eqtn_x0(x1, z, model="2d", zmode=np.array("lin"), z_pos=True, K=None, w=None, coupl=None, x0cr=None, r=None):
+def eqtn_x0(x1, z, zmode=np.array("lin"), z_pos=True, K=None, w=None, coupl=None):
 
     if coupl is None:
         if np.all(K == 0.0) or np.all(w == 0.0) or (K is None) or (w is None):
@@ -106,50 +111,47 @@ def eqtn_x0(x1, z, model="2d", zmode=np.array("lin"), z_pos=True, K=None, w=None
             from tvb_epilepsy.base.computations.calculations_utils import calc_coupling
             coupl = calc_coupling(x1, K, w)
 
-    if model == "2d":
-        if zmode == 'lin':
-            return np.divide((x1 + x0cr - (np.where(z_pos, z, z + 0.1 * np.power(z, 7.0)) + coupl) / 4.0), r)
+    if zmode == 'lin':
+        return x1 - (z + np.where(z_pos, 0.0, 0.1 * np.power(z, 7.0)) + coupl) / 4.0
 
-        elif zmode == 'sig':
-            return np.divide(np.divide(3.0, 1.0 + np.power(np.exp(1), -10.0 * (x1 + 0.5))) + x0cr - z - coupl, r)
-
-        else:
-            raise_value_error('zmode is neither "lin" nor "sig"')
+    elif zmode == 'sig':
+        return np.divide(3.0, 1.0 + np.power(np.exp(1), -10.0 * (x1 + 0.5))) - z - coupl
 
     else:
-        if zmode == 'lin':
-            return x1 - (z + np.where(z_pos, z, 0.1 * np.power(z, 7.0)) + coupl) / 4.0
-
-        elif zmode == 'sig':
-            return np.divide(3.0, 1.0 + np.power(np.exp(1), -10.0 * (x1 + 0.5))) - z - coupl
-
-        else:
-            raise_value_error('zmode is neither "lin" nor "sig"')
+        raise_value_error('zmode is neither "lin" nor "sig"')
 
 
-def eqtn_fx1(x1, z, y1, Iext1, slope, a, b, tau1, x1_neg=True, model="2d", x2=0.0):
+def eqtn_fx1(x1, z, y1, Iext1, slope, a, b, d, tau1, x1_neg=True, model="2d", x2=0.0):
 
     if model == "2d":
+        # Correspondance with EpileptorDP2D
+        b = b - d
         return np.multiply(y1 - z + Iext1 + np.multiply(x1, np.where(x1_neg, if_ydot0(x1, a, b),
-                                                                     else_ydot0_2d(x1, z, slope))),
-                           tau1)
+                                                                         else_ydot0_2d(x1, z, slope, d))), tau1)
     else:
         return np.multiply(y1 - z + Iext1 + np.multiply(x1, np.where(x1_neg, if_ydot0(x1, a, b),
-                                                                     else_ydot0_6d(x2, z, slope))),
-                           tau1)
+                                                                     else_ydot0_6d(x2, z, slope))), tau1)
 
 
-def eqtn_fx1_2d_taylor_lin(x1, x_taylor, z, yc, Iext1, a, b, tau1):
+def eqtn_fx1_2d_taylor_lin(x1, x_taylor, z, yc, Iext1, a, b, d, tau1):
 
-    return np.multiply(Iext1+ 2 * np.multiply(np.power(x_taylor, 3), a) - np.multiply(np.power(x_taylor, 2), b) + yc - z +
-                       np.multiply(x1, (-3 * np.multiply(np.power(x_taylor, 2), a) + 2 * np.multiply(x_taylor, b))), tau1)
+    # Correspondance with EpileptorDP2D
+    b = b - d
+
+    return np.multiply(Iext1+ 2 * np.multiply(np.power(x_taylor, 3), a)
+            - np.multiply(np.power(x_taylor, 2), b) + yc - z
+            + np.multiply(x1, (-3 * np.multiply(np.power(x_taylor, 2), a)
+            + 2 * np.multiply(x_taylor, b))), tau1)
 
 
-def eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg=True):
+def eqtn_jac_x1_2d(x1, z, slope, a, b, d, tau1, x1_neg=True):
+
+    # Correspondance with EpileptorDP2D
+    b = b - d
 
     jac_x1 = np.diag(
         np.multiply(np.where(x1_neg, np.multiply(-3.0 * np.multiply(a, x1) + 2.0 * np.multiply(b, 1.0), x1),
-                             + else_ydot0_2d(x1, z, slope)), tau1).flatten())
+                             + else_ydot0_2d(x1, z, slope, d)), tau1).flatten())
 
     jac_z = - np.diag(np.multiply(np.ones(x1.shape, dtype=x1.dtype) +
                                   np.where(x1_neg, 0.0, 1.2 * np.multiply(z - 4.0, x1)), tau1).flatten())
@@ -157,12 +159,10 @@ def eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg=True):
     return np.concatenate([jac_x1, jac_z], axis=1)
 
 
-def eqtn_fx1z_diff(x1, K, w, ix, jx, a, b, d, tau1, tau0, model="6d", zmode=np.array("lin")):  # , z_pos=True
+def eqtn_fx1z_diff(x1, K, w, ix, jx, a, b, d, tau1, tau0, zmode=np.array("lin")):  # , z_pos=True
 
     # TODO: for the extreme z_pos = False case where we have terms like 0.1 * z ** 7. See below eqtn_fz()
     # TODO: for the extreme x1_neg = False case where we have to solve for x2 as well
-
-    shape = x1.shape
 
     x1, K, ix, jx, a, b, d, tau1, tau0 = assert_arrays([x1, K, ix, jx, a, b, d, tau1, tau0], (x1.size,))
 
@@ -178,10 +178,7 @@ def eqtn_fx1z_diff(x1, K, w, ix, jx, a, b, d, tau1, tau0, model="6d", zmode=np.a
     else:
         raise_value_error('zmode is neither "lin" nor "sig"')
 
-    if model == "2d":
-        dfx1_3_dx1 = 3 * np.multiply(np.power(x1[ix], 2.0), a[ix]) - 2 * np.multiply(x1[ix], b[ix])
-    else:
-        dfx1_3_dx1 = 3 * np.multiply(np.power(x1[ix], 2.0), a[ix]) + 2 * np.multiply(x1[ix], d[ix] - b[ix])
+    dfx1_3_dx1 = 3 * np.multiply(np.power(x1[ix], 2.0), a[ix]) + 2 * np.multiply(x1[ix], d[ix] - b[ix])
 
     fx1z_diff = np.empty_like(dcoupl_dx, dtype=dcoupl_dx.dtype)
     for xi in ix:
@@ -199,8 +196,7 @@ def eqtn_fy1(x1, yc, y1, d, tau1):
     return np.multiply((yc - np.multiply(pow(x1, 2), d) - y1), tau1)
 
 
-def eqtn_fz(x1, z, x0, tau1, tau0, model="2d", zmode=np.array("lin"), z_pos=True, K=None, w=None, coupl=None, x0cr=None,
-            r=None):
+def eqtn_fz(x1, z, x0, tau1, tau0, zmode=np.array("lin"), z_pos=True, K=None, w=None, coupl=None):
 
     if coupl is None:
         if np.all(K == 0.0) or np.all(w == 0.0) or (K is None) or (w is None):
@@ -211,30 +207,17 @@ def eqtn_fz(x1, z, x0, tau1, tau0, model="2d", zmode=np.array("lin"), z_pos=True
 
     tau = np.divide(tau1, tau0)
 
-    if model == "2d":
+    if zmode == 'lin':
+        return np.multiply((4 * (x1 - x0) - np.where(z_pos, z, z + 0.1 * np.power(z, 7.0)) - coupl), tau)
 
-        if zmode == 'lin':
-            return np.multiply(
-                (4 * (x1 - np.multiply(r, x0) + x0cr) - np.where(z_pos, z, z + 0.1 * np.power(z, 7.0)) - coupl), tau)
-
-        elif zmode == 'sig':
-            return np.multiply(np.divide(3.0, (1 + np.power(np.exp(1), (-10.0 * (x1 + 0.5))))) -
-                               np.multiply(r, x0) + x0cr - z - coupl, tau)
-        else:
-            raise_value_error('zmode is neither "lin" nor "sig"')
-
+    elif zmode == 'sig':
+        return np.multiply(np.divide(3.0, (1 + np.power(np.exp(1), (-10.0 * (x1 + 0.5))))) - x0 - z - coupl, tau)
     else:
-
-        if zmode == 'lin':
-            return np.multiply((4 * (x1 - x0) - np.where(z_pos, z, z + 0.1 * np.power(z, 7.0)) - coupl), tau)
-
-        elif zmode == 'sig':
-            return np.multiply(np.divide(3.0, (1 + np.power(np.exp(1), (-10.0 * (x1 + 0.5))))) - x0 - z - coupl, tau)
-        else:
-            raise_value_error('zmode is neither "lin" nor "sig"')
+        raise_value_error('zmode is neither "lin" nor "sig"')
 
 
 def eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode=np.array("lin"), z_pos=True, K=None, w=None):
+
     tau = np.divide(tau1, tau0)
 
     jac_z = - np.ones(z.shape, dtype=z.dtype)
@@ -263,11 +246,12 @@ def eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode=np.array("lin"), z_pos=True, K=None,
     return np.concatenate([jac_x1, jac_z], axis=1)
 
 
-def eqtn_fx1z_2d_zpos_jac(x1, r, K, w, ix0, iE, a, b, tau1, tau0):
+def eqtn_fx1z_2d_zpos_jac(x1, K, w, ix0, iE, a, b, d, tau1, tau0):
 
-    p = x1.shape
+    x1, K, a, b, tau1, tau0 = assert_arrays([x1, K, a, b, d, tau1, tau0], (1, x1.size))
 
-    x1, r, K, a, b, tau1, tau0 = assert_arrays([x1, r, K, a, b, tau1, tau0], (1, x1.size))
+    # Correspondance with EpileptorDP2D
+    b = b - d
 
     no_x0 = len(ix0)
     no_e = len(iE)
@@ -277,7 +261,7 @@ def eqtn_fx1z_2d_zpos_jac(x1, r, K, w, ix0, iE, a, b, tau1, tau0):
 
     tau = np.divide(tau1, tau0)
 
-    jac_e_x0e = np.diag(np.multiply(tau[:, iE], (- 4 * r[:, iE])).flatten())
+    jac_e_x0e = np.diag(np.multiply(tau[:, iE], (- 4 * i_e.T)).flatten())
     jac_e_x1o = -np.dot(np.dot(i_e, np.multiply(tau[:, iE], K[:, iE])), w[iE][:, ix0])
     jac_x0_x0e = np.zeros((no_x0, no_e), dtype="float32")
     jac_x0_x1o = (np.diag(np.multiply(tau[:, ix0],
@@ -295,9 +279,9 @@ def eqtn_fx1z_2d_zpos_jac(x1, r, K, w, ix0, iE, a, b, tau1, tau0):
     return jac
 
 
-def eqtn_fx1y1_6d_diff_x1(x1, a, b, d, tau1):
+def eqtn_fx1y1_6d_diff_x1(x1, a, b, tau1):
 
-    return np.multiply(np.multiply(-3 * np.multiply(x1, a) + 2 * (b - d), x1), tau1)
+    return np.multiply(np.multiply(-3 * np.multiply(x1, a) + 2 * b, x1), tau1)
 
 
 def eqtn_fx2(x2, y2, z, g, Iext2, tau1):
@@ -314,11 +298,11 @@ def eqtn_fy2(x2, y2, s, tau1, tau2, x2_neg=False):
 
 def eqtn_fg(x1, g, gamma, tau1):
 
-    return np.multiply(np.multiply(-g + 0.1 * x1, gamma), tau1)
+    return np.multiply(-g + np.multiply(gamma, x1),  tau1)
 
 
 def eqtn_fx0(x0_var, x0, tau1):
-    # ydot[6] = self.tau1 * (-y[6] + self.x0)
+    # ydot[6] = self.tau1 * (-y[6] + self.x0_values)
     return np.multiply(-x0_var + x0, tau1)
 
 
@@ -361,28 +345,27 @@ def eqtn_fparams_vars(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope,
     return fx0, fslope, fIext1, fIext2, fK
 
 
-def eqtn_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None, zmode="lin", pmode="const", x1_neg=True,
+def eqtn_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, zmode="lin", pmode="const", x1_neg=True,
               y1=None, x2=None, y2=None, g=None, x2_neg=False,
               x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
-              slope=0.0, a=1.0, b=-2.0, d=5.0, s=6.0, Iext2=0.45, gamma=0.1,
-              tau1=1.0, tau0=2857.0, tau2=10.0):
+              slope=SLOPE_DEF, Iext2=I_EXT2_DEF, a=A_DEF, b=B_DEF, d=D_DEF, s=S_DEF, gamma=GAMMA_DEF,
+              tau1=TAU1_DEF, tau0=TAU0_DEF, tau2=TAU2_DEF):
 
     if model_vars == 2:
 
-        fx1 = eqtn_fx1(x1, z, y1, Iext1, slope, a, b, tau1, x1_neg, model="2d", x2=None)
+        fx1 = eqtn_fx1(x1, z, y1, Iext1, slope, a, b, d, tau1, x1_neg, model="2d", x2=None)
 
-        fz = eqtn_fz(x1, z, x0, tau1, tau0, model="2d", zmode=zmode, z_pos=True, K=K, w=w, coupl=None, x0cr=x0cr, r=r)
+        fz = eqtn_fz(x1, z, x0, tau1, tau0, zmode=zmode, z_pos=True, K=K, w=w, coupl=None)
 
         return fx1, fz
 
     elif model_vars == 6:
 
-        fx1 = eqtn_fx1(x1, z, y1, Iext1, slope, a, b, tau1, x1_neg, model="6d", x2=x2)
+        fx1 = eqtn_fx1(x1, z, y1, Iext1, slope, a, b, d, tau1, x1_neg, model="6d", x2=x2)
 
         fy1 = eqtn_fy1(x1, yc, y1, d, tau1)
 
-        fz = eqtn_fz(x1, z, x0, tau1, tau0, model="6d", zmode=zmode, z_pos=True, K=K, w=w, coupl=None, x0cr=None,
-                     r=None)
+        fz = eqtn_fz(x1, z, x0, tau1, tau0, zmode=zmode, z_pos=True, K=K, w=w, coupl=None)
 
         fx2 = eqtn_fx2(x2, y2, z, g, Iext2, tau1)
 
@@ -394,12 +377,11 @@ def eqtn_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None, zmode
 
     elif model_vars == 11:
 
-        fx1 = eqtn_fx1(x1, z, y1, Iext1_var, slope_var, a, b, tau1, x1_neg, model="6d", x2=x2)
+        fx1 = eqtn_fx1(x1, z, y1, Iext1_var, slope_var, a, b, d, tau1, x1_neg, model="6d", x2=x2)
 
         fy1 = eqtn_fy1(x1, yc, y1, d, tau1)
 
-        fz = eqtn_fz(x1, z, x0, tau1, tau0, model="6d", zmode=zmode, z_pos=True, K=K_var, w=w, coupl=None, x0cr=None,
-                     r=None)
+        fz = eqtn_fz(x1, z, x0, tau1, tau0, zmode=zmode, z_pos=True, K=K_var, w=w, coupl=None)
 
         fx2 = eqtn_fx2(x2, y2, z, g, Iext2_var, tau1)
 
@@ -413,9 +395,9 @@ def eqtn_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, x0cr=None, r=None, zmode
         return fx1, fy1, fz, fx2, fy2, fg, fx0, fslope, fIext1, fIext2, fK
 
 
-def eqtn_jac_2d(x1, z, K, w, slope, a, b, tau1, tau0, zmode=np.array("lin"), x1_neg=True, z_pos=True):
+def eqtn_jac_2d(x1, z, K, w, slope, a, b, d, tau1, tau0, zmode=np.array("lin"), x1_neg=True, z_pos=True):
 
-    jac_fx1 = eqtn_jac_x1_2d(x1, z, slope, a, b, tau1, x1_neg)
+    jac_fx1 = eqtn_jac_x1_2d(x1, z, slope, a, b, d, tau1, x1_neg)
 
     jac_fz = eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode, z_pos, K, w)
 

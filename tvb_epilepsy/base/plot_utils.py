@@ -176,9 +176,9 @@ def plot_regions2regions(adj, labels, subplot, title, show_y_labels=True, show_x
     return ax
 
 
-def plot_in_columns(data_dict_list, labels, width_ratios=[], left_ax_focus_indices=[], right_ax_focus_indices=[], description = "",
-                    title="", figure_name='', show_flag=False, save_flag=True, figure_dir=FOLDER_FIGURES,
-                    figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, **kwargs):
+def plot_in_columns(data_dict_list, labels, width_ratios=[], left_ax_focus_indices=[], right_ax_focus_indices=[],
+                    description="", title="", figure_name='', show_flag=False, save_flag=True,
+                    figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, **kwargs):
 
     fig = pyplot.figure(title, frameon=False, figsize=figsize)
     fig.suptitle(description)
@@ -254,9 +254,9 @@ def _set_axis_labels(fig, sub, n_regions, region_labels, indices2emphasize, colo
     big_ax.set_axis_bgcolor('none')
 
 
-def plot_timeseries(time, data_dict, special_idx=None, title='Time Series', show_flag=SHOW_FLAG,
-                    save_flag=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name='TimeSeries',
-                    labels=None,figsize=LARGE_SIZE):
+def plot_timeseries(time, data_dict, time_units="ms", special_idx=None, title='Time Series', figure_name='TimeSeries',
+                    labels=None, show_flag=SHOW_FLAG, save_flag=False, figure_dir=FOLDER_FIGURES,
+                    figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
 
     pyplot.figure(title, figsize=figsize)
     no_rows = len(data_dict)
@@ -273,16 +273,16 @@ def plot_timeseries(time, data_dict, special_idx=None, title='Time Series', show
         lines.append([])
         if special_idx is None:
             for iTS in range(nTS):
-                line, = pyplot.plot(time, data[:, iTS], 'k', alpha=0.3, label = labels[iTS])
+                line, = pyplot.plot(time, data[:, iTS], 'k', alpha=0.3, label=labels[iTS])
                 lines[i].append(line)
         else:
             mask = np.array(range(nTS))
             mask = np.delete(mask,special_idx)
             for iTS in special_idx:
-                line, = pyplot.plot(time, data[:, iTS], 'r', alpha=0.7, label = labels[iTS])
+                line, = pyplot.plot(time, data[:, iTS], 'r', alpha=0.7, label=labels[iTS])
                 lines[i].append(line)
             for iTS in mask:
-                line, = pyplot.plot(time, data[:, iTS], 'k', alpha=0.3, label = labels[iTS])
+                line, = pyplot.plot(time, data[:, iTS], 'k', alpha=0.3, label=labels[iTS])
                 lines[i].append(line)
         pyplot.ylabel(subtitle)
         ax.set_autoscalex_on(False)
@@ -292,7 +292,7 @@ def plot_timeseries(time, data_dict, special_idx=None, title='Time Series', show
             #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
             HighlightingDataCursor(lines[i], formatter='{label}'.format, bbox=dict(fc='white'),
                                    arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )
-    pyplot.xlabel("Time (ms)")
+    pyplot.xlabel("Time (" + time_units + ")")
 
     fig = pyplot.gcf()
     if len(fig.get_label())==0:
@@ -304,8 +304,9 @@ def plot_timeseries(time, data_dict, special_idx=None, title='Time Series', show
     check_show(show_flag)
 
 
-def plot_raster(time, data_dict, special_idx=None, title='Time Series', offset=3.0, show_flag=SHOW_FLAG,
-                    save_flag=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name='TimeSeries',labels=None,figsize=LARGE_SIZE):
+def plot_raster(time, data_dict, time_units="ms", special_idx=None, title='Time Series', offset=3.0,
+                figure_name='TimeSeries', labels=None, show_flag=SHOW_FLAG, save_flag=False, figure_dir=FOLDER_FIGURES,
+                figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
 
     pyplot.figure(title, figsize=figsize)
     no_rows = len(data_dict)
@@ -343,7 +344,7 @@ def plot_raster(time, data_dict, special_idx=None, title='Time Series', offset=3
             #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
             HighlightingDataCursor(lines[i], formatter='{label}'.format, bbox=dict(fc='white'),
                                    arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )
-    pyplot.xlabel("Time (ms)")
+    pyplot.xlabel("Time (" + time_units + ")")
 
     fig = pyplot.gcf()
     if len(fig.get_label())==0:
@@ -354,9 +355,9 @@ def plot_raster(time, data_dict, special_idx=None, title='Time Series', offset=3
     check_show(show_flag)
 
 
-def plot_trajectories(data_dict, special_idx=None, title='State space trajectories', show_flag=SHOW_FLAG,
-                      save_flag=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name='Trajectories',
-                      labels=None, figsize=LARGE_SIZE):
+def plot_trajectories(data_dict, special_idx=None, title='State space trajectories', figure_name='Trajectories',
+                      labels=None, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
+                      figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
 
     pyplot.figure(title, figsize=figsize)
     ax = pyplot.subplot(111)
@@ -423,52 +424,64 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
     check_show(show_flag)
 
 
-def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, hpf_flag=False,
+def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, hpf_flag=False, trajectories_plot=False,
                      save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
 
     if isinstance(model, EpileptorDP2D):
-        plot_timeseries(res['time'], {'x1': res['x1'], 'z(t)': res['z']},
-                        seizure_indices, title=hyp_name + ": Simulated TAVG",
+        plot_timeseries(res['time'], {'x1': res['x1'], 'z(t)': res['z']}, time_units=res.get('time_units', "ms"),
+                        special_idx=seizure_indices, title=hyp_name + ": Simulated TAVG",
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
     else:
-        plot_timeseries(res['time'], {'LFP(t)': res['lfp'], 'z(t)': res['z']},
-                        seizure_indices, title=hyp_name + ": Simulated LFP-z",
+        plot_timeseries(res['time'], {'LFP(t)': res['lfp'], 'z(t)': res['z']}, time_units=res.get('time_units', "ms"),
+                        special_idx=seizure_indices, title=hyp_name + ": Simulated LFP-z",
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
-        plot_timeseries(res['time'], {'x1(t)': res['x1'], 'y1(t)': res['y1']},
-                        seizure_indices, title=hyp_name + ": Simulated pop1",
+        plot_timeseries(res['time'], {'x1(t)': res['x1'], 'y1(t)': res['y1']},time_units=res.get('time_units', "ms"),
+                        special_idx=seizure_indices, title=hyp_name + ": Simulated pop1",
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
-        plot_timeseries(res['time'], {'x2(t)': res['x2'], 'y2(t)': res['y2'], 'g(t)': res['g']}, seizure_indices,
+        plot_timeseries(res['time'], {'x2(t)': res['x2'], 'y2(t)': res['y2'], 'g(t)': res['g']},
+                        time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
                         title=hyp_name + ": Simulated pop2-g",
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
         start_plot = int(np.round(0.01 * res['lfp'].shape[0]))
-        plot_raster(res['time'][start_plot:], {'lfp': res['lfp'][start_plot:, :]}, seizure_indices,
-                    title=hyp_name + ": Simulated LFP rasterplot", offset=10.0,
+        plot_raster(res['time'][start_plot:], {'lfp': res['lfp'][start_plot:, :]},
+                    time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
+                    title=hyp_name + ": Simulated LFP rasterplot", offset=10.0, labels=head.connectivity.region_labels,
                     save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
-                    labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+                    figsize=VERY_LARGE_SIZE)
 
     if isinstance(model, EpileptorDPrealistic):
         plot_timeseries(res['time'], {'1/(1+exp(-10(z-3.03))': 1 / (1 + np.exp(-10 * (res['z'] - 3.03))),
                                       'slope': res['slopeTS'], 'Iext2': res['Iext2ts']},
-                        seizure_indices, title=hyp_name + ": Simulated controlled parameters",
+                        time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
+                        title=hyp_name + ": Simulated controlled parameters", labels=head.connectivity.region_labels,
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
-                        labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
-        plot_timeseries(res['time'], {'x0': res['x0ts'], 'Iext1':  res['Iext1ts'] , 'K': res['Kts']},
-                        seizure_indices, title=hyp_name + ": Simulated parameters",
+                        figsize=VERY_LARGE_SIZE)
+        plot_timeseries(res['time'], {'x0_values': res['x0ts'], 'Iext1':  res['Iext1ts'], 'K': res['Kts']},
+                        time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
+                        title=hyp_name + ": Simulated parameters", labels=head.connectivity.region_labels,
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
-                        labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+                        figsize=VERY_LARGE_SIZE)
+
+    if trajectories_plot:
+        plot_trajectories({'x1': res['x1'], 'z(t)': res['z']}, special_idx=seizure_indices,
+                          title='State space trajectories', figure_name='Trajectories',
+                          labels=head.connectivity.region_labels, show_flag=show_flag, save_flag=save_flag,
+                          figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
 
     for i in range(len(sensorsSEEG)):
-        start_plot = int(np.round(0.01*res['seeg'+str(i)].shape[0]))
-        plot_raster(res['time'][start_plot:], {'SEEG': res['seeg'+str(i)][start_plot:, :]},
+        start_plot = int(np.round(0.01*res['SEEG'+str(i)].shape[0]))
+        plot_raster(res['time'][start_plot:], {'SEEG': res['SEEG'+str(i)][start_plot:, :]},
+                    time_units=res.get('time_units', "ms"),
                     title=hyp_name + ": Simulated SEEG" + str(i) + " raster plot",
                     offset=10.0, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                     figure_format=figure_format, labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
         if hpf_flag:
-            plot_raster(res['time'][start_plot:], {'SEEG hpf': res['seeg_hpf' + str(i)][start_plot:, :]},
+            plot_raster(res['time'][start_plot:], {'SEEG hpf': res['SEEG_hpf' + str(i)][start_plot:, :]},
+                        time_units=res.get('time_units', "ms"),
                         title=hyp_name + ": Simulated high pass filtered SEEG" + str(i) + " raster plot",
                         offset=10.0, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                         figure_format=figure_format, labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
@@ -579,7 +592,7 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 #     x1eq = np.mean(model_configuration.x1EQ)
 #     yc = np.mean(model_configuration.yc)
 #     Iext1 = np.mean(model_configuration.Iext1)
-#     x0cr = np.mean(model_configuration.x0cr)  # Critical x0
+#     x0cr = np.mean(model_configuration.x0cr)  # Critical x0_values
 #     r = np.mean(model_configuration.rx0)
 #     # The point of the linear approximation (1st order Taylor expansion)
 #     x1LIN = def_x1lin(X1_DEF, X1_EQ_CR_DEF, len(region_labels))
@@ -623,21 +636,21 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 #     # zsq0 = yc + Iext1 - x1sq0 ** 3 - 2.0 * x1sq0 ** 2
 #     if model == "2d":
 #         # z nullcline:
-#         zZe = calc_fz(x1, z=0.0, x0=x0e, x0cr=x0cr, r=r, zmode=zmode)  # for epileptogenic regions
-#         zZne = calc_fz(x1, z=0.0, x0=x0ne, x0cr=x0cr, r=r, zmode=zmode)  # for non-epileptogenic regions
+#         zZe = calc_fz(x1, z=0.0, x0_values=x0e, x0cr=x0cr, r=r, zmode=zmode)  # for epileptogenic regions
+#         zZne = calc_fz(x1, z=0.0, x0_values=x0ne, x0cr=x0cr, r=r, zmode=zmode)  # for non-epileptogenic regions
 #     else:
-#         x0e_6d = calc_rescaled_x0(x0e, yc, Iext1, zmode=zmode)
-#         x0ne_6d = calc_rescaled_x0(x0ne, yc, Iext1, zmode=zmode)
+#         x0e_6d = calc_x0_val__to_model_x0(x0e, yc, Iext1, zmode=zmode)
+#         x0ne_6d = calc_x0_val__to_model_x0(x0ne, yc, Iext1, zmode=zmode)
 #         # z nullcline:
-#         zZe = calc_fz(x1, z=0.0, x0=x0e_6d, zmode=zmode, model="2d")  # for epileptogenic regions
-#         zZne = calc_fz(x1, z=0.0, x0=x0ne_6d, zmode=zmode, model="2d")  # for non-epileptogenic regions
+#         zZe = calc_fz(x1, z=0.0, x0_values=x0e_6d, zmode=zmode, model="2d")  # for epileptogenic regions
+#         zZne = calc_fz(x1, z=0.0, x0_values=x0ne_6d, zmode=zmode, model="2d")  # for non-epileptogenic regions
 #
 #     fig = pyplot.figure(figure_name, figsize=figsize)
 #     x1null, = pyplot.plot(x1, zX1, 'b-', label='x1 nullcline', linewidth=1)
 #     ax = pyplot.gca()
 #     ax.axes.hold(True)
-#     zE1null, = pyplot.plot(x1, zZe, 'g-', label='z nullcline at critical point (E=1)', linewidth=1)
-#     zE2null, = pyplot.plot(x1, zZne, 'g--', label='z nullcline for E=0', linewidth=1)
+#     zE1null, = pyplot.plot(x1, zZe, 'g-', label='z nullcline at critical point (e_values=1)', linewidth=1)
+#     zE2null, = pyplot.plot(x1, zZne, 'g--', label='z nullcline for e_values=0', linewidth=1)
 #     sq, = pyplot.plot(x1sq, zX1sq, 'm--', label='Parabolic local approximation', linewidth=2)
 #     lin, = pyplot.plot(x1lin, zX1lin, 'c--', label='Linear local approximation', linewidth=2)
 #     pyplot.legend(handles=[x1null, zE1null, zE2null, lin, sq])
@@ -658,9 +671,9 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 #                                  ms=10, alpha=0.8, label=str(i) + '.' + region_labels[i])
 #             points.append(point)
 #     # ax.plot(x1lin0, zlin0, '*', mfc='r', mec='r', ms=10)
-#     # ax.axes.text(x1lin0 - 0.1, zlin0 + 0.2, 'E=0.0', fontsize=10, color='r')
+#     # ax.axes.text(x1lin0 - 0.1, zlin0 + 0.2, 'e_values=0.0', fontsize=10, color='r')
 #     # ax.plot(x1sq0, zsq0, '*', mfc='m', mec='m', ms=10)
-#     # ax.axes.text(x1sq0, zsq0 - 0.2, 'E=1.0', fontsize=10, color='m')
+#     # ax.axes.text(x1sq0, zsq0 - 0.2, 'e_values=1.0', fontsize=10, color='m')
 #     if model == "2d":
 #         ax.set_title(
 #             "Equilibria, nullclines and Taylor series approximations \n at the x1-z phase plane of the" +
@@ -697,9 +710,9 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 #     subplot_ind = 150 + 20*plot_equilibria
 #
 #     ax0 = plot_vector(model_configuration.x0_values, hypothesis.get_region_labels(), subplot_ind+1,
-#                        'Excitabilities x0', show_y_labels=False, indices_red=hypothesis.x0_indices)
+#                        'Excitabilities x0_values', show_y_labels=False, indices_red=hypothesis.x0_indices)
 #
-#     plot_vector(model_configuration.E_values, hypothesis.get_region_labels(), subplot_ind+2, 'Epileptogenicities E',
+#     plot_vector(model_configuration.E_values, hypothesis.get_region_labels(), subplot_ind+2, 'Epileptogenicities e_values',
 #                  show_y_labels=False, indices_red=hypothesis.e_indices, sharey=ax0)
 #
 #     if plot_equilibria:
@@ -754,19 +767,19 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 #
 #     if pse_results.get("x0_values") is not None:
 #         ax0 = plot_vector_violin(model_configuration.x0_values, pse_results.get("x0_values"),
-#                                   hypothesis.get_region_labels(), subplot_ind+1, 'Excitabilities x0', colormap=colormap,
+#                                   hypothesis.get_region_labels(), subplot_ind+1, 'Excitabilities x0_values', colormap=colormap,
 #                                   show_y_labels=False, indices_red=hypothesis.x0_indices)
 #     else:
 #         ax0 = plot_vector(model_configuration.x0_values, hypothesis.get_region_labels(), subplot_ind+1,
-#                            'Excitabilities x0', show_y_labels=False, indices_red=hypothesis.x0_indices)
+#                            'Excitabilities x0_values', show_y_labels=False, indices_red=hypothesis.x0_indices)
 #
 #     if pse_results.get("E_values") is not None:
 #         plot_vector_violin(model_configuration.x0_values, pse_results.get("E_values"), hypothesis.get_region_labels(),
-#                             subplot_ind + 2, 'Epileptogenicities E', colormap=colormap, show_y_labels=False,
+#                             subplot_ind + 2, 'Epileptogenicities e_values', colormap=colormap, show_y_labels=False,
 #                             indices_red=hypothesis.e_indices, sharey=ax0)
 #     else:
 #         plot_vector(model_configuration.E_values, hypothesis.get_region_labels(), subplot_ind+2,
-#                      'Epileptogenicities E', show_y_labels=False, indices_red=hypothesis.e_indices, sharey=ax0)
+#                      'Epileptogenicities e_values', show_y_labels=False, indices_red=hypothesis.e_indices, sharey=ax0)
 #
 #     if plot_equilibria:
 #         if pse_results.get("x1EQ") is not None:

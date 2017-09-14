@@ -6,24 +6,25 @@ import os
 
 import h5py
 
-from tvb_epilepsy.base.utils import warning, raise_not_implemented_error, calculate_projection, initialize_logger
+from tvb_epilepsy.base.utils import warning, raise_not_implemented_error, ensure_list, initialize_logger, \
+                                    calculate_projection
 from tvb_epilepsy.base.model.model_vep import Connectivity, Surface, Sensors, Head
 from tvb_epilepsy.base.readers import ABCReader
 
 
 class CustomReader(ABCReader):
-    LOG = initialize_logger(__name__)
+    logger = initialize_logger(__name__)
 
     def read_connectivity(self, h5_path):
         """
         :param h5_path: Path towards a custom Connectivity H5 file
         :return: Weights, Tracts, Region centers
         """
-        self.LOG.info("Reading a Connectivity from: " + h5_path)
+        self.logger.info("Reading a Connectivity from: " + h5_path)
         h5_file = h5py.File(h5_path, 'r', libver='latest')
 
-        self.LOG.debug("Structures: " + str(h5_file["/"].keys()))
-        self.LOG.debug("Weights shape:" + str(h5_file['/weights'].shape))
+        self.logger.debug("Structures: " + str(h5_file["/"].keys()))
+        self.logger.debug("Weights shape:" + str(h5_file['/weights'].shape))
 
         weights = h5_file['/weights'][()]
         tract_lengths = h5_file['/tract_lengths'][()]
@@ -38,7 +39,7 @@ class CustomReader(ABCReader):
 
     def read_cortical_surface(self, h5_path):
         if os.path.isfile(h5_path):
-            self.LOG.info("Reading Surface from " + h5_path)
+            self.logger.info("Reading Surface from " + h5_path)
             h5_file = h5py.File(h5_path, 'r', libver='latest')
             vertices = h5_file['/vertices'][()]
             triangles = h5_file['/triangles'][()]
@@ -50,7 +51,7 @@ class CustomReader(ABCReader):
             return []
 
     def _read_data_field(self, h5_path):
-        self.LOG.info("Reading 'data' from H5 " + h5_path)
+        self.logger.info("Reading 'data' from H5 " + h5_path)
         h5_file = h5py.File(h5_path, 'r', libver='latest')
         data = h5_file['/data'][()]
         h5_file.close()
@@ -79,7 +80,7 @@ class CustomReader(ABCReader):
 
     def read_sensors(self, h5_path, s_type):
         if os.path.isfile(h5_path):
-            self.LOG.info("Reading Sensors from: " + h5_path)
+            self.logger.info("Reading Sensors from: " + h5_path)
             h5_file = h5py.File(h5_path, 'r', libver='latest')
 
             labels = h5_file['/labels'][()]
@@ -89,31 +90,47 @@ class CustomReader(ABCReader):
             return Sensors(labels, locations, s_type=s_type)
         else:
             warning("\nNo Sensor file found at path " + h5_path + "!")
-            return []
+            return None
 
     def read_projection(self, path, s_type):
-        raise_not_implemented_error()
+        warning("Custom projection matrix reading not implemented yet!")
+        return []
+        # raise_not_implemented_error()
 
-    def read_head(self, root_folder, name=''):
+    def read_sensors_projections(self, root_folder, conn, sensor_files, s_type):
+        sensors_dict = {}
+        for sensor_file in ensure_list(sensor_files):
+            sensor = self.read_sensors(os.path.join(root_folder, sensor_file[0]), s_type)
+            if isinstance(sensor, Sensors):
+                projection = self.read_projection(os.path.join(root_folder, sensor_file[1]), s_type)
+                if projection==[]:
+                    warning("Calculating projection matrix based solely on euclidean distance!")
+                    projection = calculate_projection(sensor, conn)
+                sensors_dict[sensor] = projection
+        return sensors_dict
+
+    def read_head(self, root_folder, name='',
+                  connectivity_file="Connectivity.h5",
+                  surface_file="CorticalSurface.h5",
+                  region_mapping_file="RegionMapping.h5",
+                  volume_mapping_file="VolumeMapping.h5",
+                  structural_mri_file="StructuralMRI.h5",
+                  seeg_sensors_files=[("SensorsSEEG_114.h5", ""), ("SensorsSEEG_125.h5", "")],
+                  eeg_sensors_files=[("eeg_brainstorm_65.txt", "projection_eeg_65_surface_16k.npy")],
+                  meg_sensors_files=[("meg_brainstorm_276.txt", "projection_meg_276_surface_16k.npy")],
+                  ):
+
         conn = self.read_connectivity(os.path.join(root_folder, "Connectivity.h5"))
         srf = self.read_cortical_surface(os.path.join(root_folder, "CorticalSurface.h5"))
         rm = self.read_region_mapping(os.path.join(root_folder, "RegionMapping.h5"))
         vm = self.read_volume_mapping(os.path.join(root_folder, "VolumeMapping.h5"))
         t1 = self.read_volume_mapping(os.path.join(root_folder, "StructuralMRI.h5"))
 
-        seeg_sensors_dict = {}
-        s_114 = self.read_sensors(os.path.join(root_folder, "SensorsSEEG_114.h5"), Sensors.TYPE_SEEG)
-        if isinstance(s_114, Sensors):
-            p_114 = calculate_projection(s_114, conn)
-            seeg_sensors_dict[s_114] = p_114
+        seeg_sensors_dict = self.read_sensors_projections(root_folder, conn, seeg_sensors_files, Sensors.TYPE_SEEG)
 
-        s_125 = self.read_sensors(os.path.join(root_folder, "SensorsSEEG_125.h5"), Sensors.TYPE_SEEG)
-        if isinstance(s_125, Sensors):
-            p_125 = calculate_projection(s_125, conn)
-            seeg_sensors_dict[s_125] = p_125
+        eeg_sensors_dict = self.read_sensors_projections(root_folder, conn, eeg_sensors_files, Sensors.TYPE_EEG)
 
-        eeg_sensors_dict = {}
-        meg_sensors_dict = {}
+        meg_sensors_dict = self.read_sensors_projections(root_folder, conn, meg_sensors_files, Sensors.TYPE_MEG)
 
         return Head(conn, srf, rm, vm, t1, name, eeg_sensors_dict, meg_sensors_dict, seeg_sensors_dict)
 

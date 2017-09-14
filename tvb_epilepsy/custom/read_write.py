@@ -33,31 +33,31 @@ KEY_SAMPLING = "Sampling_period"
 KEY_START = "Start_time"
 
 # Attributes to be read or written for hypothesis object and files:
-hyp_attributes_dict = {"Hypothesis name": "name", "Model Epileptogenicity": "E", "Pathological Excitability": "x0",
+hyp_attributes_dict = {"Hypothesis name": "name", "Model Epileptogenicity": "e_values", "Pathological Excitability": "x0_values",
                        "LSA Propagation Strength": "lsa_ps", "x1 Equilibria": "x1EQ",
                        "z Equilibria": "zEQ", "Afferent coupling at equilibrium": "Ceq",
                        "Connectivity": "weights", "Permittivity Coupling": "K", "Iext1": "Iext1",
-                       "yc": "yc", "Critical x0": "x0cr", "x0 scaling": "rx0", "EZ hypothesis": "seizure_indices",
+                       "yc": "yc", "Critical x0_values": "x0cr", "x0_values scaling": "rx0", "EZ hypothesis": "seizure_indices",
                        "x1EQcr": "x1EQcr", "x1LIN": "x1LIN", "x1SQ": "x1SQ",
                        "lsa_eigvals": "lsa_eigvals", "lsa_eigvects": "lsa_eigvects", "lsa_ps_tot": "lsa_ps_tot"}
 
 # Attributes to be read or written for Epileptor models object and files:
 epileptor_attributes_dict = {"model.name": "_ui_name", "model.a": "a", "model.b": "b", "model.c": "c", "model.d": "d",
-                             "model.r": "r", "model.s": "s", "model.x0": "x0", "model.Iext": "Iext",
+                             "model.r": "r", "model.s": "s", "model.x0_values": "x0_values", "model.Iext": "Iext",
                              "model.slope": "slope", "model.Iext2": "Iext2", "model.tau": "tau", "model.aa": "aa",
                              "model.Kvf": "Kvf", "model.Kf": "Kf", "model.Ks": "Ks", "model.tt": "tt"}
 
-epileptorDP_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0": "x0", "model.Iext1": "Iext1",
+epileptorDP_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0_values": "x0_values", "model.Iext1": "Iext1",
                                "model.slope": "slope", "model.Iext2": "Iext2",
                                "model.tau2": "tau2", "model.Kvf": "Kvf", "model.Kf": "Kf", "model.K": "K",
                                "model.tau1": "tau1", "model.zmode": "zmode"}
 
-epileptorDPrealistic_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0": "x0",
+epileptorDPrealistic_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0_values": "x0_values",
                                         "model.Iext1": "Iext1", "model.slope": "slope", "model.Iext2": "Iext2",
                                         "model.tau2": "tau2", "model.Kvf": "Kvf", "model.Kf": "Kf", "model.K": "K",
                                         "model.tau1": "tau1", "model.zmode": "zmode", "model.pmode": "pmode"}
 
-epileptorDP2D_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0": "x0", "model.x0cr": "x0cr",
+epileptorDP2D_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0_values": "x0_values", "model.x0cr": "x0cr",
                                  "model.r": "r", "model.Iext1": "Iext1", "model.slope": "slope", "model.Kvf": "Kvf",
                                  "model.K": "K", "model.tau1": "tau1", "model.zmode": "zmode"}
 

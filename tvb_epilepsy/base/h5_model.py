@@ -101,7 +101,7 @@ class H5Model(object):
                 set_field = lambda obj, attribute, value: setattr(obj, attribute, value)
                 get_field = lambda obj, attribute: getattr(obj, attribute, None)
 
-            for var_str in ["x0", "e", "w"]:
+            for var_str in ["x0_values", "e", "w"]:
                 ind = get_field(obj, var_str + "_indices")
                 var_key = var_str + "_values"
                 var = np.array(get_field(obj, var_key))
@@ -348,7 +348,7 @@ if __name__ == "__main__":
     disease_values = x0_values + e_values
     disease_indices = x0_indices + e_indices
 
-    # This is an example of x0 mixed Excitability and Epileptogenicity Hypothesis:
+    # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
     hyp_x0_E = DiseaseHypothesis(head.connectivity, excitability_hypothesis={tuple(x0_indices): x0_values},
                                  epileptogenicity_hypothesis={tuple(e_indices): e_values},
                                  connectivity_hypothesis={})

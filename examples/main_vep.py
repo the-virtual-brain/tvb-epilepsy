@@ -17,7 +17,7 @@ from tvb_epilepsy.service.model_configuration_service import ModelConfigurationS
 from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
 from tvb_epilepsy.base.plot_utils import plot_sim_results
-from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, prepare_ts_and_seeg_h5_file
+from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, compute_seeg_and_write_ts_h5_file
 
 
 if DATA_MODE is TVB:
@@ -33,8 +33,8 @@ else:
         as setup_simulation_from_model_configuration
 
 
-PSE_FLAG = True
-SA_PSE_FLAG = True
+PSE_FLAG = False
+SA_PSE_FLAG = False
 SIM_FLAG = True
 def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG):
 
@@ -106,7 +106,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                               connectivity_hypothesis={})
 
     if len(e_indices) > 0:
-        # This is an example of x0 mixed Excitability and Epileptogenicity Hypothesis:
+        # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
         hyp_x0_E = DiseaseHypothesis(head.connectivity.number_of_regions,
                                      excitability_hypothesis={tuple(x0_indices): x0_values},
                                      epileptogenicity_hypothesis={tuple(e_indices): e_values},
@@ -115,39 +115,21 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     else:
         hypotheses = (hyp_x0, hyp_E)
 
-    # --------------------------Projections computations-----------------------------------
-
-    sensorsSEEG = []
-    projections = []
-    for sensors, projection in head.sensorsSEEG.iteritems():
-        if projection is None:
-            continue
-        else:
-            projection = calculate_projection(sensors, head.connectivity)
-            head.sensorsSEEG[sensors] = projection
-            sensorsSEEG.append(sensors)
-            projections.append(projection)
 
     # --------------------------Simulation preparations-----------------------------------
 
     # TODO: maybe use a custom Monitor class
-    fs = 4096.0 # this is the simulation sampling rate that is necessary for the simulation to be stable
-    time_length = 100000.0  #=100 secs, the final output nominal time length of the simulation
-    scale_time = 2.0 # scaling factor to accelerate  simulation to get the nominal time length in less integration steps
-    # scale_fsavg = 8.0 # scaling factor for the monitor period, it affects the final output sampling time
+    fs = 2*4096.0 # this is the simulation sampling rate that is necessary for the simulation to be stable
+    time_length = 10000.0  # =100 secs, the final output nominal time length of the simulation
     report_every_n_monitor_steps = 10.0
     (dt, fsAVG, sim_length, monitor_period, n_report_blocks) = \
-        set_time_scales(fs=fs, time_length=time_length, scale_time=scale_time, scale_fsavg=None,
+        set_time_scales(fs=fs, time_length=time_length, scale_fsavg=None,
                         report_every_n_monitor_steps=report_every_n_monitor_steps)
 
-    model_name = "EpileptorDP"
+    model_name = "EpileptorDP2D"
 
     # We don't want any time delays for the moment
     head.connectivity.tract_lengths *= 0.0
-
-    hpf_flag = False
-    hpf_low = max(16.0, 1000.0 / time_length)  # msec
-    hpf_high = min(250.0, fsAVG)
 
     # --------------------------Hypothesis and LSA-----------------------------------
 
@@ -180,11 +162,10 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                  convert_from_h5_model(obj=deepcopy(model_configuration)),
                                                  logger=logger)))
 
-        # # Plot nullclines and equilibria of model configuration
-        # model_configuration_service.plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
-        #                                        special_idx=lsa_hypothesis.propagation_indices,
-        #                                        model=str(model.nvar) + "d", zmode=model.zmode,
-        #                                        figure_name=lsa_hypothesis.name + "_Nullclines and equilibria")
+        # Plot nullclines and equilibria of model configuration
+        model_configuration_service.plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
+                                               special_idx=disease_indices, model="6d", zmode="lin",
+                                               figure_name=hyp.name + "_Nullclines and equilibria")
 
         logger.info("\n\nRunning LSA...")
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
@@ -221,7 +202,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                               head.connectivity.region_labels,
                                               n_samples, half_range=0.1,
                                               global_coupling=[{"indices": all_regions_indices}],
-                                              healthy_regions_parameters=[{"name": "x0", "indices": healthy_indices}],
+                                              healthy_regions_parameters=[{"name": "x0_values", "indices": healthy_indices}],
                                               model_configuration_service=model_configuration_service,
                                               lsa_service=lsa_service, logger=logger)[0]
 
@@ -246,11 +227,10 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                          head.connectivity.region_labels,
                                                          n_samples, method="sobol", half_range=0.1,
                                          global_coupling=[{"indices": all_regions_indices,
-                                                           "bounds":[0.0, 2 * model_configuration_service.K_unscaled[ 0]]}],
-                                         healthy_regions_parameters=[{"name": "x0", "indices": healthy_indices}],
-                                         model_configuration_service=model_configuration_service, lsa_service=lsa_service,
-                                         logger=logger)
-
+                                                     "bounds":[0.0, 2 * model_configuration_service.K_unscaled[ 0]]}],
+                                         healthy_regions_parameters=[{"name": "x0_values", "indices": healthy_indices}],
+                                         model_configuration_service=model_configuration_service,
+                                         lsa_service=lsa_service, logger=logger)
 
             lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, pse_sa_results,
                                  title="SA PSE Hypothesis Overview")
@@ -266,26 +246,36 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                      logger=logger)))
                 logger.info("Written and read sensitivity analysis parameter search results are identical?: " +
                             str(assert_equal_objects(pse_sa_results,
-                                      read_h5_model(os.path.join(FOLDER_RES,
-                                                lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).convert_from_h5_model(),
+                                    read_h5_model(os.path.join(FOLDER_RES,
+                                            lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).convert_from_h5_model(),
                                                      logger=logger)))
 
         if sim_flag:
             # ------------------------------Simulation--------------------------------------
-            logger.info("\n\nSimulating...")
+            logger.info("\n\nConfiguring simulation...")
             sim = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt,
-                                                                           sim_length, monitor_period, model_name,
-                                                                           scale_time=scale_time, noise_intensity=10 ** -8)
+                                                            sim_length, monitor_period, model_name,
+                                                            zmode=np.array("lin"),
+                                                            noise_instance=None, noise_intensity=10 ** -8,
+                                                            monitor_expressions=None)
 
-            sim.config_simulation()
+            # Integrator and initial conditions initialization.
+            # By default initial condition is set right on the equilibrium point.
+            sim.config_simulation(initial_conditions=None)
+
+            convert_to_h5_model(sim.model).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5")
+
+            logger.info("\n\nSimulating...")
             ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
 
-            convert_to_h5_model(sim.simulation_settings).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")
+            convert_to_h5_model(sim.simulation_settings).write_to_h5(FOLDER_RES,
+                                                                     lsa_hypothesis.name + "_sim_settings.h5")
+
             if test_write_read:
                 logger.info("Written and read simulation settings are identical?: " +
                             str(assert_equal_objects(sim.simulation_settings,
                                                      read_h5_model(os.path.join(FOLDER_RES,
-                                                                                lsa_hypothesis.name + "_sim_settings.h5")).
+                                                                            lsa_hypothesis.name + "_sim_settings.h5")).
                                                      convert_from_h5_model(obj=deepcopy(sim.simulation_settings)),
                                                      logger=logger)))
 
@@ -294,36 +284,32 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
 
             else:
 
-                time = scale_time * np.array(ttavg, dtype='float32')
-                output_sampling_time = np.min(np.diff(time))
+                time = np.array(ttavg, dtype='float32')
 
+                output_sampling_time = np.mean(np.diff(time))
                 tavg_data = tavg_data[:, :, :, 0]
-
-                vois = VOIS[model_name]
-
-                model = sim.model
 
                 logger.info("\n\nSimulated signal return shape: %s", tavg_data.shape)
                 logger.info("Time: %s - %s", time[0], time[-1])
                 logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
 
-                vois_ts_dict = prepare_vois_ts_dict(vois, tavg_data)
-
-                prepare_ts_and_seeg_h5_file(FOLDER_RES, lsa_hypothesis.name + "_ts.h5", model, projections, vois_ts_dict,
-                                            hpf_flag, hpf_low, hpf_high, fsAVG, output_sampling_time)
-
+                # Variables of interest in a dictionary:
+                vois_ts_dict = prepare_vois_ts_dict(VOIS[model_name], tavg_data)
                 vois_ts_dict['time'] = time
+                vois_ts_dict['time_units'] = 'msec'
+
+                compute_seeg_and_write_ts_h5_file(FOLDER_RES, lsa_hypothesis.name + "_ts.h5", sim.model, vois_ts_dict,
+                                                  output_sampling_time, time_length,
+                                                  hpf_flag=False, hpf_low=10.0, hpf_high=250.0,
+                                                  sensor_dicts_list=[head.sensorsSEEG])
 
                 # Plot results
-                plot_sim_results(model, lsa_hypothesis.propagation_indices, lsa_hypothesis.name, head, vois_ts_dict,
-                                 sensorsSEEG, hpf_flag)
+                plot_sim_results(sim.model, lsa_hypothesis.propagation_indices, lsa_hypothesis.name, head, vois_ts_dict,
+                                 head.sensorsSEEG.keys(), hpf_flag=False, trajectories_plot=True)
 
-                # Save results
-                vois_ts_dict['time_units'] = 'msec'
+                # Optionally save results in mat files
                 # from scipy.io import savemat
                 # savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), vois_ts_dict)
-
-
 
 
 if __name__ == "__main__":

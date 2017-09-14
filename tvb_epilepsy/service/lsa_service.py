@@ -3,18 +3,19 @@
 Service to do LSA computation.
 """
 import numpy
-from tvb.basic.logger.builder import get_logger
 
-from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM, \
+from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM, \
                                         FIG_FORMAT,  SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
-from tvb_epilepsy.base.utils import raise_value_error, formal_repr, weighted_vector_sum,curve_elbow_point
+from tvb_epilepsy.base.utils import raise_value_error, initialize_logger, formal_repr, \
+                                    weighted_vector_sum,curve_elbow_point
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
+from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.plot_utils import plot_in_columns
 
-LOG = get_logger(__name__)
+logger = initialize_logger(__name__)
 
 # TODO: it might be useful to store eigenvalues and eigenvectors, as well as the parameters of the computation, such as
 # eigen_vectors_number and LSAService in a h5 file
@@ -79,10 +80,21 @@ class LSAService(object):
             self.eigen_vectors_number_selection = "user_defined"
 
     def _compute_jacobian(self, model_configuration):
+
+        # Check if any of the equilibria are in the supercritical regime (beyond the separatrix) and set it right before
+        # the bifurcation.
+        zEQ = model_configuration.zEQ
+        temp = model_configuration.x1EQ > X1_EQ_CR_DEF - 10 ** (-3)
+        if temp.any():
+            model_configuration.x1EQ[temp] = self.x1EQcr - 10 ** (-3)
+            zEQ[temp] = calc_eq_z(model_configuration.x1EQ[temp], model_configuration.yc[temp],
+                                  model_configuration.Iext1[temp], "2d", 0.0, model_configuration.slope[temp],
+                                  model_configuration.a[temp], model_configuration.b[temp], model_configuration.d[temp])
+
         fz_jacobian = calc_fz_jac_square_taylor(model_configuration.zEQ, model_configuration.yc,
                                                 model_configuration.Iext1, model_configuration.K,
                                                 model_configuration.connectivity_matrix,
-                                                model_configuration.a, model_configuration.b)
+                                                model_configuration.a, model_configuration.b, model_configuration.d)
 
         if numpy.any([numpy.any(numpy.isnan(fz_jacobian.flatten())), numpy.any(numpy.isinf(fz_jacobian.flatten()))]):
             raise_value_error("nan or inf values in dfz")

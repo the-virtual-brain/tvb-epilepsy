@@ -39,7 +39,7 @@ if __name__ == "__main__":
     all_regions_indices = np.array(range(head.connectivity.number_of_regions))
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
     n_healthy = len(healthy_indices)
-    # This is an example of x0 mixed Excitability and Epileptogenicity Hypothesis:
+    # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
     hyp_x0_E = DiseaseHypothesis(head.connectivity.number_of_regions,
                                  excitability_hypothesis={tuple(x0_indices): x0_values},
                                  epileptogenicity_hypothesis={tuple(e_indices): e_values},
@@ -57,7 +57,7 @@ if __name__ == "__main__":
                                                          global_coupling=[{"indices": all_regions_indices,
                                                                            "bounds": [0.0, 2 * K_DEF]}],
                                                          healthy_regions_parameters=[
-                                                             {"name": "x0", "indices": healthy_indices}],
+                                                             {"name": "x0_values", "indices": healthy_indices}],
                                                          logger=logger, save_services=True)
 
             lsa_service.plot_lsa(lsa_hypothesis, model_configuration, region_labels=head.connectivity.region_labels,

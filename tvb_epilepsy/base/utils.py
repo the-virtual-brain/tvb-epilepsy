@@ -40,7 +40,7 @@ def initialize_logger(name, target_folder=FOLDER_LOGS):
 
 
 def warning(msg, logger=None, print_warning=True):
-    msg = "\n\n" + msg
+    msg = "\n\n" + msg  + "\n"
     if logger is not None:
         logger.warning(msg)
     if print_warning:
@@ -49,19 +49,19 @@ def warning(msg, logger=None, print_warning=True):
 
 def raise_value_error(msg, logger=None):
     if logger is not None:
-        logger.error("\n\nValueError: " + msg)
+        logger.error("\n\nValueError: " + msg + "\n")
     raise ValueError(msg)
 
 
 def raise_import_error(msg, logger=None):
     if logger is not None:
-        logger.error("\n\nImportError: " + msg)
+        logger.error("\n\nImportError: " + msg + "\n")
     raise ImportError(msg)
 
 
 def raise_not_implemented_error(msg, logger=None):
     if logger is not None:
-        logger.error("\n\nNotImplementedError: " + msg)
+        logger.error("\n\nNotImplementedError: " + msg + "\n")
     raise NotImplementedError(msg)
 
 
@@ -774,7 +774,7 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
 
         except:
             try:
-                warnings("Comparing str(objects) for field "
+                warning("Comparing str(objects) for field "
                               + attributes_dict[attribute] + " because there was an error!", logger)
                 if np.any(str(field1) != str(field2)):
                     print_not_equal_message(attributes_dict[attribute], logger)

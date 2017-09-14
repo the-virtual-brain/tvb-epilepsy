@@ -8,8 +8,9 @@ import scipy.stats as ss
 import scipy as scp
 from SALib.sample import saltelli, fast_sampler, morris, ff
 
-from tvb_epilepsy.base.utils import formal_repr, warning, raise_value_error, raise_not_implemented_error, \
-                                    dict_str, dicts_of_lists, dicts_of_lists_to_lists_of_dicts
+from tvb_epilepsy.base.utils import initialize_logger, formal_repr, warning, raise_value_error, \
+                                    raise_not_implemented_error, dict_str, dicts_of_lists, \
+                                    dicts_of_lists_to_lists_of_dicts
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 from tvb.basic.logger.builder import get_logger
@@ -17,7 +18,7 @@ from tvb.basic.logger.builder import get_logger
 # Helper functions to match normal distributions with several others we might use...
 # Input parameters should be scalars or ndarrays! Not lists!
 
-LOG = get_logger(__name__)
+logger = initialize_logger(__name__)
 
 
 distrib_dict = {"uniform": {"constraint": lambda p: np.all(p["alpha"] < p["beta"]),

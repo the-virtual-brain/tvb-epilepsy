@@ -100,7 +100,7 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
     # Add a random jitter to the healthy regions if required...:
     for val in healthy_regions_parameters:
         inds = val.get("indices", healthy_indices)
-        name = val.get("name", "x0")
+        name = val.get("name", "x0_values")
         n_params = len(inds)
         sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=n_params, sampler="uniform",
                                             trunc_limits={"low": 0.0}, sampling_module="scipy",
