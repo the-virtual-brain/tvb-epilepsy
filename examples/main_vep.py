@@ -7,7 +7,7 @@ from copy import deepcopy
 
 import numpy as np
 
-from tvb_epilepsy.base.constants import SIMULATION_MODE, TVB, DATA_MODE, VOIS, X0_DEF, E_DEF
+from tvb_epilepsy.base.constants import SIMULATION_MODE, TVB, DATA_MODE, VOIS, X0_DEF, E_DEF, TIME_DELAYS_FLAG
 from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM
 from tvb_epilepsy.base.utils import assert_equal_objects, initialize_logger, calculate_projection
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
@@ -120,7 +120,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
 
     # TODO: maybe use a custom Monitor class
     fs = 2*4096.0 # this is the simulation sampling rate that is necessary for the simulation to be stable
-    time_length = 10000.0  # =100 secs, the final output nominal time length of the simulation
+    time_length = 30000.0  # =100 secs, the final output nominal time length of the simulation
     report_every_n_monitor_steps = 10.0
     (dt, fsAVG, sim_length, monitor_period, n_report_blocks) = \
         set_time_scales(fs=fs, time_length=time_length, scale_fsavg=None,
@@ -129,7 +129,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     model_name = "EpileptorDP2D"
 
     # We don't want any time delays for the moment
-    head.connectivity.tract_lengths *= 0.0
+    head.connectivity.tract_lengths *= TIME_DELAYS_FLAG
 
     # --------------------------Hypothesis and LSA-----------------------------------
 

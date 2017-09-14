@@ -9,6 +9,7 @@ import numpy
 from tvb.datatypes import connectivity
 from tvb.simulator import coupling, integrators, monitors, noise, simulator
 
+from tvb_epilepsy.base.constants import TIME_DELAYS_FLAG
 from tvb_epilepsy.base.utils import warning
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.simulators import ABCSimulator
@@ -28,7 +29,8 @@ class SimulatorTVB(ABCSimulator):
         if connectivity_matrix is None:
             connectivity_matrix = vep_conn.normalized_weights
         return connectivity.Connectivity(use_storage=False, weights=connectivity_matrix,
-                                         tract_lengths=vep_conn.tract_lengths, region_labels=vep_conn.region_labels,
+                                         tract_lengths=TIME_DELAYS_FLAG*vep_conn.tract_lengths,
+                                         region_labels=vep_conn.region_labels,
                                          centres=vep_conn.centers, hemispheres=vep_conn.hemispheres,
                                          orientations=vep_conn.orientations, areas=vep_conn.areas)
 

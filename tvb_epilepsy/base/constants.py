@@ -11,6 +11,8 @@ SAVE_FLAG = True
 SHOW_FLAG = False
 MOUSEHOOVER = False
 
+TIME_DELAYS_FLAG = 0.0
+
 # Default model parameters
 X0_DEF = 0.0
 X0_CR_DEF = 1.0
