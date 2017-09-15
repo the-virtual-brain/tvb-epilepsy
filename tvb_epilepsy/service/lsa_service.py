@@ -7,7 +7,7 @@ import numpy
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM, \
                                         FIG_FORMAT,  SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
-from tvb_epilepsy.base.utils import raise_value_error, initialize_logger, formal_repr, \
+from tvb_epilepsy.base.utils import warning, raise_value_error, initialize_logger, formal_repr, \
                                     weighted_vector_sum,curve_elbow_point
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
@@ -86,7 +86,11 @@ class LSAService(object):
         zEQ = model_configuration.zEQ
         temp = model_configuration.x1EQ > X1_EQ_CR_DEF - 10 ** (-3)
         if temp.any():
-            model_configuration.x1EQ[temp] = self.x1EQcr - 10 ** (-3)
+            correction_value = X1_EQ_CR_DEF - 10 ** (-3)
+            warning("Equibria x1EQ[" + str(numpy.where(temp)[0]) + "]  = " + str(model_configuration.x1EQ[temp]) +
+            "\nwhere corrected for LSA to value: X1_EQ_CR_DEF - 10 ** (-3) = " + str(correction_value)
+                    + " to be sub-critical!" )
+            model_configuration.x1EQ[temp] = correction_value
             zEQ[temp] = calc_eq_z(model_configuration.x1EQ[temp], model_configuration.yc[temp],
                                   model_configuration.Iext1[temp], "2d", 0.0, model_configuration.slope[temp],
                                   model_configuration.a[temp], model_configuration.b[temp], model_configuration.d[temp])
