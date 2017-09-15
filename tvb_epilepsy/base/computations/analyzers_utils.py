@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.signal import butter, lfilter, welch, periodogram
+from scipy.signal import butter, lfilter, welch, periodogram, spectrogram
+from scipy.interpolate import interp1d, griddata
 
 # x is assumed to be data (real numbers) arranged along the first dimension of an ndarray
 # this factory makes use of the numpy array properties
@@ -134,42 +135,79 @@ def filter_data(data, lowcut, highcut, fs, order=3):
 
 
 def spectral_analysis(x, fs, freq=None, method="periodogram", output="spectrum", nfft=None, window='hanning',
-                           nperseg=512, detrend='constant', noverlap=None):
+                      nperseg=256, detrend='constant', noverlap=None):
     if freq is None:
         freq = np.linspace(1, nperseg, nperseg)
+        df = freq[1] - freq[0]
 
-    if method is welch:
-        f, psd = welch(x,
-                       fs=fs,  # sample rate
-                       nfft=nfft,
-                       window=window,   # apply a Hanning window before taking the DFT
-                       nperseg=nperseg,        # compute periodograms of 256-long segments of x
-                       detrend=detrend,
-                       scaling="spectrum",
-                       noverlap=noverlap,
-                       axis=0)
-    else:
-        f, psd = periodogram(x,
-                             fs=fs,  # sample rate
-                             nfft=nfft,
-                             window=window,  # apply a Hanning window before taking the DFT
-                             detrend=detrend,
-                             scaling="spectrum",
-                             axis=0)
+    psd = []
+    for iS in range(x.shape[1]):
 
-    # Fit to desired frequency grid:
-    df = freq[1] - freq[0]
-    p = np.polyfit(f, psd, psd.shape[0])
-    for k in range(psd.shape[1]):
-        psd[:, k] = np.polyval(p[:, k], freq)
+        if method is welch:
+
+            f, temp_psd = welch(x[:, iS],
+                           fs=fs,  # sample rate
+                           nfft=nfft,
+                           window=window,   # apply a Hanning window before taking the DFT
+                           nperseg=nperseg,        # compute periodograms of 256-long segments of x
+                           detrend=detrend,
+                           scaling="spectrum",
+                           noverlap=noverlap,
+                           return_onesided=True,
+                           axis=0)
+        else:
+            f, temp_psd = periodogram(x[:, iS],
+                                 fs=fs,  # sample rate
+                                 nfft=nfft,
+                                 window=window,  # apply a Hanning window before taking the DFT
+                                 detrend=detrend,
+                                 scaling="spectrum",
+                                 return_onesided=True,
+                                 axis=0)
+
+        f = interp1d(f, temp_psd)
+        temp_psd = f(freq)
         if output == "density":
-            psd[:, k] /= (np.sum(psd[:, k]) * df)
+            temp_psd /= (np.sum(temp_psd) * df)
+
+        psd.append(temp_psd)
+
+    # Stack them to a ndarray
+    psd = np.stack(psd, axis=1)
 
     if output == "energy":
         return np.sum(psd, axis=0)
 
     else:
         return psd, freq
+
+
+def time_spectral_analysis(x, fs, freq=None, mode="psd", nfft=None, window='hanning', nperseg=256, detrend='constant',
+                           noverlap=None, calculate_psd=True):
+
+    # TODO: add a Continuous Wavelet Transform implementation
+
+    if freq is None:
+        freq = np.linspace(1, nperseg, nperseg)
+
+    stf = []
+    for iS in range(x.shape[1]):
+        f, t, temp_s = spectrogram(x[:, iS], fs=fs, nperseg=nperseg, nfft=nfft, window=window, mode=mode,
+                                noverlap=noverlap, detrend=detrend, return_onesided=True, scaling='spectrum', axis=0)
+
+        temp_s = griddata((t, f), temp_s.T, np.mgrid[t, freq], method='linear')
+
+        stf.append(temp_s)
+
+    # Stack them to a ndarray
+        stf = np.stack(stf, axis=3)
+
+    if calculate_psd:
+        psd = spectral_analysis(x, fs, freq=freq, method="periodogram", output="spectrum", nfft=nfft, window=window,
+                          nperseg=nperseg, detrend=detrend, noverlap=noverlap)
+        return stf, psd
+    else:
+        return stf
 
 
 # Bivariate
