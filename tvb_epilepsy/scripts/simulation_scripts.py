@@ -51,7 +51,7 @@ def setup_TVB_simulation_from_model_configuration(model_configuration, connectiv
     model = model_build_dict[model_name](model_configuration, zmode=zmode)
 
     if isinstance(model, Epileptor):
-        model.tt *= 0.25  # necessary to get spikes in a realistic frequency range
+        model.tt = 0.25  # necessary to get spikes in a realistic frequency range
         # model.r = 0.0001 # realistic seizures require a larger time scale separation
     else:
         # model.tau0 = 10000.0 # realistic seizures require a larger time scale separation
