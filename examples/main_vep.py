@@ -17,7 +17,8 @@ from tvb_epilepsy.service.model_configuration_service import ModelConfigurationS
 from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
 from tvb_epilepsy.base.plot_utils import plot_sim_results
-from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, compute_seeg_and_write_ts_h5_file
+from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
+                                                    compute_seeg_and_write_ts_h5_file
 
 
 if DATA_MODE is TVB:
@@ -126,10 +127,22 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
         set_time_scales(fs=fs, time_length=time_length, scale_fsavg=None,
                         report_every_n_monitor_steps=report_every_n_monitor_steps)
 
-    model_name = "EpileptorDP2D"
+    # Choose model
+    # Available models beyond the TVB Epileptor (they all encompass optional variations from the different papers):
+    # EpileptorDP: similar to the TVB Epileptor + optional variations,
+    # EpileptorDP2D: reduced 2D model, following Proix et all 2014 +optional variations,
+    # EpleptorDPrealistic: starting from the TVB Epileptor + optional variations, but:
+    #      -x0, Iext1, Iext2, slope and K become noisy state variables,
+    #      -Iext2 and slope are coupled to z, g, or z*g in order for spikes to appear before seizure,
+    #      -multiplicative correlated noise is also used
+    # Optional variations:
+    zmode = "lin"  # by default, or "sig" for the sigmoidal expression for the slow z variable in Proix et al. 2014
+    pmode = "z"  # by default, "g" or "z*g" for the feedback coupling to Iext2 and slope for EpileptorDPrealistic
+
+    model_name = "Epileptor"
 
     # We don't want any time delays for the moment
-    head.connectivity.tract_lengths *= TIME_DELAYS_FLAG
+    # head.connectivity.tract_lengths *= TIME_DELAYS_FLAG
 
     # --------------------------Hypothesis and LSA-----------------------------------
 
@@ -255,8 +268,8 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
             logger.info("\n\nConfiguring simulation...")
             sim = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt,
                                                             sim_length, monitor_period, model_name,
-                                                            zmode=np.array("lin"),
-                                                            noise_instance=None, noise_intensity=10 ** -8,
+                                                            zmode=np.array(zmode), pmode=np.array(pmode),
+                                                            noise_instance=None, noise_intensity=None,
                                                             monitor_expressions=None)
 
             # Integrator and initial conditions initialization.
