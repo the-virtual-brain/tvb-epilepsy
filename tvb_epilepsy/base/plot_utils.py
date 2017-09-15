@@ -6,12 +6,14 @@ import os
 import matplotlib as mp
 import numpy as np
 from matplotlib import pyplot, gridspec
+from matplotlib.colors import Normalize
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats.mstats import zscore
 
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.tvb_api.epileptor_models import *
+from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
 
 try:
     #https://github.com/joferkington/mpldatacursor
@@ -424,6 +426,50 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
     check_show(show_flag)
 
 
+# def plot_spectral_analysis_raster(time, data, time_units="ms", freq=None, special_idx=None, title='Spectral Analysis',
+#                                   figure_name='Spectral Analysis', labels=None,
+#                                   show_flag=SHOW_FLAG, save_flag=False, figure_dir=FOLDER_FIGURES,
+#                                   figure_format=FIG_FORMAT, figsize=LARGE_SIZE, **kwargs):
+#
+#     if time_units in ("ms", "msec"):
+#         fs=1000.0
+#     else:
+#         fs=1.0
+#     fs = fs/np.mean(np.diff(time))
+#
+#     if special_idx is not None:
+#         data = data[:, special_idx]
+#         if labels is not None:
+#             labels = np.array(labels)[special_idx]
+#
+#     stf, freq, time, psd = time_spectral_analysis(data, fs, **kwargs)
+#     min_val = np.min(stf.flatten())
+#     max_val = np.max(stf.flatten())
+#     no_rows = data.shape[1]
+#     pyplot.figure(title, figsize=figsize)
+#     fig, ax = pyplot.subplot(no_rows, 2, gridspec_kw = {'width_ratios':[3, 1]})
+#     ax = np.empty((no_rows, 3), dtype="O")
+#
+#     for iS in range(no_rows):
+#         if iS == 0:
+#             pyplot.title(title)
+#
+#         ax.
+#     img = ax.imshow(np.squeeze(stf[:, :, iS]).T, cmap=pyplot.set_cmap('jet'), interpolation='none',
+#                     norm=Normalize(vmin=min_val, vmax=max_val), aspect='auto', origin='lower',
+#                     extent=(time.min(),time.max(),AA.min(),AA.max()))
+#     ax.clim(-4, 4)
+
+    fig = pyplot.gcf()
+    if len(fig.get_label()) == 0:
+        fig.set_label(figure_name)
+    else:
+        figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
+
+    save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
+    check_show(show_flag)
+
+
 def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, hpf_flag=False, trajectories_plot=False,
                      save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
 
@@ -455,12 +501,12 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 
     if isinstance(model, EpileptorDPrealistic):
         plot_timeseries(res['time'], {'1/(1+exp(-10(z-3.03))': 1 / (1 + np.exp(-10 * (res['z'] - 3.03))),
-                                      'slope': res['slopeTS'], 'Iext2': res['Iext2ts']},
+                                      'slope': res['slope_t'], 'Iext2': res['Iext2_t']},
                         time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
                         title=hyp_name + ": Simulated controlled parameters", labels=head.connectivity.region_labels,
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         figsize=VERY_LARGE_SIZE)
-        plot_timeseries(res['time'], {'x0_values': res['x0ts'], 'Iext1':  res['Iext1ts'], 'K': res['Kts']},
+        plot_timeseries(res['time'], {'x0_values': res['x0_t'], 'Iext1':  res['Iext1_t'], 'K': res['K_t']},
                         time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
                         title=hyp_name + ": Simulated parameters", labels=head.connectivity.region_labels,
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
