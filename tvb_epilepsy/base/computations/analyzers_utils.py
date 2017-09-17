@@ -195,19 +195,22 @@ def time_spectral_analysis(x, fs, freq=None, mode="psd", nfft=None, window='hann
         f, t, temp_s = spectrogram(x[:, iS], fs=fs, nperseg=nperseg, nfft=nfft, window=window, mode=mode,
                                 noverlap=noverlap, detrend=detrend, return_onesided=True, scaling='spectrum', axis=0)
 
-        temp_s = griddata((t, f), temp_s.T, np.mgrid[t, freq], method='linear')
+        t_mesh, f_mesh = np.meshgrid(t, f, indexing="ij")
+
+        temp_s = griddata((t_mesh.flatten(), f_mesh.flatten()), temp_s.T.flatten(),
+                          tuple(np.meshgrid(t, freq, indexing="ij")), method='linear')
 
         stf.append(temp_s)
 
     # Stack them to a ndarray
-        stf = np.stack(stf, axis=3)
+    stf = np.stack(stf, axis=2)
 
     if calculate_psd:
         psd = spectral_analysis(x, fs, freq=freq, method="periodogram", output="spectrum", nfft=nfft, window=window,
                           nperseg=nperseg, detrend=detrend, noverlap=noverlap)
-        return stf, psd
+        return stf, t, freq, psd
     else:
-        return stf
+        return stf, t, freq
 
 
 # Bivariate
