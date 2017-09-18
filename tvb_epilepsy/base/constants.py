@@ -66,6 +66,6 @@ VOIS = {
     "CustomEpileptor": ['x1', 'z', 'x2'],
     "Epileptor": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp'],
     "EpileptorDP": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp'],
-    "EpileptorDPrealistic": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'x0ts', 'slopeTS', 'Iext1ts', 'Iext2ts', 'Kts', 'lfp'],
+    "EpileptorDPrealistic": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp', 'x0_t', 'slope_t', 'Iext1_t', 'Iext2_t', 'K_t'],
     "EpileptorDP2D": ['x1', 'z']
 }

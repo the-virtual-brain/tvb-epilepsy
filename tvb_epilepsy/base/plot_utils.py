@@ -6,12 +6,14 @@ import os
 import matplotlib as mp
 import numpy as np
 from matplotlib import pyplot, gridspec
+from matplotlib.colors import Normalize
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats.mstats import zscore
 
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.tvb_api.epileptor_models import *
+from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
 
 try:
     #https://github.com/joferkington/mpldatacursor
@@ -424,8 +426,78 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
     check_show(show_flag)
 
 
-def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, hpf_flag=False, trajectories_plot=False,
-                     save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
+def plot_spectral_analysis_raster(time, data, time_units="ms", freq=None, special_idx=None, title='Spectral Analysis',
+                                  figure_name='Spectral Analysis', labels=None,
+                                  show_flag=SHOW_FLAG, save_flag=False, figure_dir=FOLDER_FIGURES,
+                                  figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, **kwargs):
+
+    if time_units in ("ms", "msec"):
+        fs=1000.0
+    else:
+        fs=1.0
+    fs = fs/np.mean(np.diff(time))
+
+    if special_idx is not None:
+        data = data[:, special_idx]
+        if labels is not None:
+            labels = np.array(labels)[special_idx]
+
+    nS = data.shape[1]
+
+    if labels is None:
+        labels = np.array(range(nS)).astype(str)
+
+    stf, freq, time, psd = time_spectral_analysis(data, fs,
+                                                  mode=kwargs.get("mode", "psd"),
+                                                  nfft=kwargs.get("nfft"),
+                                                  window=kwargs.get("window", 'hanning'),
+                                                  nperseg=kwargs.get("nperseg", 256),
+                                                  detrend=kwargs.get("detrend", 'constant'),
+                                                  noverlap=kwargs.get("noverlap"))
+    min_val = np.min(stf.flatten())
+    max_val = np.max(stf.flatten())
+
+    if nS > 2:
+        figsize = VERY_LARGE_SIZE
+    pyplot.figure(title, figsize=figsize)
+    fig, ax = pyplot.subplot(nS, 3, gridspec_kw={'width_ratios':[20, 2, 1]}, sharex='col', sharey='row')
+    ax = np.empty((nS, 3), dtype="O")
+    img = np.empty((nS, ), dtype="O")
+    line = np.empty((nS,), dtype="O")
+    for iS in range(nS):
+        if iS == 0:
+            pyplot.title(title)
+
+        img[iS] = ax[iS, 0].imshow(np.squeeze(stf[:, :, iS]).T, cmap=pyplot.set_cmap('jet'), interpolation='none',
+                                   norm=Normalize(vmin=min_val, vmax=max_val), aspect='auto', origin='lower',
+                                   extent=(time.min(),time.max(), freq.min(), freq.max()))
+        # ax[iS, 0].clim(min_val, max_val)
+        ax[iS, 0].set_title(labels[iS])
+        line[iS] = ax[iS, 1].plot(psd[:, iS], freq, 'k', label=labels[iS])
+        ax[iS, 0].autoscale(tight=True)
+        ax[iS, 1].autoscale(tight=True)
+        if iS == (nS-1):
+            ax[iS, 0].set_xlabel("Time (" + time_units + ")")
+            ax[iS, 0].set_ylabel("Frequency (Hz)")
+            ax[iS, 1].set_xlabel("PSD")
+
+    # make a color bar
+    pyplot.colorbar(img, cax=ax[:, 2])  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
+
+    fig = pyplot.gcf()
+    if len(fig.get_label()) == 0:
+        fig.set_label(figure_name)
+    else:
+        figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
+
+    save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
+    check_show(show_flag)
+
+
+def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, hpf_flag=False,
+                     trajectories_plot=False, spectral_raster_plot=False,
+                     save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
+                     **kwargs):
 
     if isinstance(model, EpileptorDP2D):
         plot_timeseries(res['time'], {'x1': res['x1'], 'z(t)': res['z']}, time_units=res.get('time_units', "ms"),
@@ -455,12 +527,12 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 
     if isinstance(model, EpileptorDPrealistic):
         plot_timeseries(res['time'], {'1/(1+exp(-10(z-3.03))': 1 / (1 + np.exp(-10 * (res['z'] - 3.03))),
-                                      'slope': res['slopeTS'], 'Iext2': res['Iext2ts']},
+                                      'slope': res['slope_t'], 'Iext2': res['Iext2_t']},
                         time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
                         title=hyp_name + ": Simulated controlled parameters", labels=head.connectivity.region_labels,
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         figsize=VERY_LARGE_SIZE)
-        plot_timeseries(res['time'], {'x0_values': res['x0ts'], 'Iext1':  res['Iext1ts'], 'K': res['Kts']},
+        plot_timeseries(res['time'], {'x0_values': res['x0_t'], 'Iext1':  res['Iext1_t'], 'K': res['K_t']},
                         time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
                         title=hyp_name + ": Simulated parameters", labels=head.connectivity.region_labels,
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
@@ -471,6 +543,14 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
                           title='State space trajectories', figure_name='Trajectories',
                           labels=head.connectivity.region_labels, show_flag=show_flag, save_flag=save_flag,
                           figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
+
+    if spectral_raster_plot is "lfp":
+        plot_spectral_analysis_raster(res["time"], res['lfp'], time_units=res.get('time_units', "ms"),
+                                      freq=None, special_idx=seizure_indices,
+                                      title=hyp_name + ": Spectral Analysis",
+                                      labels=head.connectivity.region_labels,
+                                      show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,
+                                      figure_format=figure_format, figsize=LARGE_SIZE, **kwargs)
 
     for i in range(len(sensorsSEEG)):
         start_plot = int(np.round(0.01*res['SEEG'+str(i)].shape[0]))

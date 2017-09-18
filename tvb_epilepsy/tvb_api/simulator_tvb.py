@@ -89,9 +89,10 @@ class SimulatorTVB(ABCSimulator):
         if n_report_blocks < 2:
             try:
                 tavg_time, tavg_data = self.simTVB.run()[0]
-            except:
+
+            except Exception, error_message:
                 status = False
-                warning("Something went wrong with this simulation...")
+                warning("Something went wrong with this simulation...:" + "\n" + error_message)
                 return None, None, status
 
             return tavg_time, tavg_data, status
@@ -125,9 +126,9 @@ class SimulatorTVB(ABCSimulator):
                         sys.stdout.write(print_this)
                         sys.stdout.flush()
                         curr_block += 1.0
-            except:
+            except Exception, error_message:
                 status = False
-                warning("Something went wrong with this simulation...")
+                warning("Something went wrong with this simulation...:" + "\n" + error_message)
                 return None, None, status
 
             return numpy.array(tavg_time), numpy.array(tavg_data), status

@@ -11,7 +11,7 @@ from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
 # A helper function to make good choices for simulation settings for a custom simulator
 ###
 def setup_custom_simulation_from_model_configuration(model_configuration, connectivity, dt, sim_length, monitor_period,
-                                                     model_name, noise_intensity=None):
+                                                     model_name, noise_intensity=None, **kwargs):
     from tvb_epilepsy.custom.simulator_custom import EpileptorModel, custom_model_builder, SimulatorCustom
     from tvb_epilepsy.base.simulators import SimulationSettings
 
@@ -36,7 +36,7 @@ def setup_custom_simulation_from_model_configuration(model_configuration, connec
 # A helper function to make good choices for simulation settings, noise and monitors for a TVB simulator
 ###
 def setup_TVB_simulation_from_model_configuration(model_configuration, connectivity, dt, sim_length, monitor_period,
-                                                  model_name="EpileptorDP", zmode=np.array("lin"),
+                                                  model_name="EpileptorDP", zmode=np.array("lin"), pmode=np.array("z"),
                                                   noise_instance=None, noise_intensity=None, monitor_expressions=None,
                                                   monitors_instance=None):
     from tvb_epilepsy.base.constants import ADDITIVE_NOISE, NOISE_SEED
@@ -53,12 +53,12 @@ def setup_TVB_simulation_from_model_configuration(model_configuration, connectiv
 
     if isinstance(model, Epileptor):
         model.tt = 0.25  # necessary to get spikes in a realistic frequency range
-        # model.r = 0.0001 # realistic seizures require a larger time scale separation
+        model.r = 0.0001 # realistic seizures require a larger time scale separation
     else:
-        # model.tau0 = 10000.0 # realistic seizures require a larger time scale separation
+        model.tau0 = 10000.0 # realistic seizures require a larger time scale separation
         if isinstance(model, EpileptorDPrealistic):
             model.slope = 0.25
-            model.pmode = np.array("z")
+            model.pmode = pmode
 
     if monitor_expressions is None:
         monitor_expressions = VOIS[model._ui_name]

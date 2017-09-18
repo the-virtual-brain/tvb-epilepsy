@@ -88,12 +88,15 @@ class LSAService(object):
         if temp.any():
             correction_value = X1_EQ_CR_DEF - 10 ** (-3)
             warning("Equibria x1EQ[" + str(numpy.where(temp)[0]) + "]  = " + str(model_configuration.x1EQ[temp]) +
-            "\nwhere corrected for LSA to value: X1_EQ_CR_DEF - 10 ** (-3) = " + str(correction_value)
-                    + " to be sub-critical!" )
+            "\nwere corrected for LSA to value: X1_EQ_CR_DEF - 10 ** (-3) = " + str(correction_value)
+                    + " to be sub-critical!")
             model_configuration.x1EQ[temp] = correction_value
-            zEQ[temp] = calc_eq_z(model_configuration.x1EQ[temp], model_configuration.yc[temp],
-                                  model_configuration.Iext1[temp], "2d", 0.0, model_configuration.slope[temp],
-                                  model_configuration.a[temp], model_configuration.b[temp], model_configuration.d[temp])
+            i_temp = numpy.ones(model_configuration.x1EQ.shape)
+            zEQ[temp] = calc_eq_z(model_configuration.x1EQ[temp], model_configuration.yc*i_temp[temp],
+                                  model_configuration.Iext1*i_temp[temp], "2d", 0.0,
+                                  model_configuration.slope*i_temp[temp],
+                                  model_configuration.a*i_temp[temp], model_configuration.b*i_temp[temp],
+                                  model_configuration.d*i_temp[temp])
 
         fz_jacobian = calc_fz_jac_square_taylor(model_configuration.zEQ, model_configuration.yc,
                                                 model_configuration.Iext1, model_configuration.K,
@@ -172,7 +175,7 @@ class LSAService(object):
 
         description = ""
         if self.weighted_eigenvector_sum:
-            description = "For LSA PS: absolut eigenvalue-weighted sum of "
+            description = "LSA PS: absolut eigenvalue-weighted sum of "
             if self.eigen_vectors_number is not None:
                 description += "first " + str(self.eigen_vectors_number) + " "
             description += "eigenvectors has been used"

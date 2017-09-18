@@ -585,24 +585,24 @@ class EpileptorDPrealistic(Model):
                  "x2": numpy.array([-2., 0.]),
                  "y2": numpy.array([0., 2.]),
                  "g": numpy.array([-1., 1.]),
-                 "x0_values": numpy.array([-2., 2.]),
-                 "slope": numpy.array([-20., 6.]),
-                 "Iext1": numpy.array([1.5, 5.]),
-                 "Iext2": numpy.array([0., 1.]),
-                 "K": numpy.array([-50., 50.])},
+                 "x0_t": numpy.array([-2., 2.]),
+                 "slope_t": numpy.array([-20., 6.]),
+                 "Iext1_t": numpy.array([1.5, 5.]),
+                 "Iext2_t": numpy.array([0., 1.]),
+                 "K_t": numpy.array([-50., 50.])},
         doc="Typical bounds on state variables in the Epileptor model.",
         order=16
     )
 
     variables_of_interest = basic.Enumerate(
         label="Variables watched by Monitors",
-        options=['x1', 'y1', 'z', 'x2', 'y2', 'g', 'x2 - x1', 'x0_values', 'slope', 'Iext1', 'Iext2', 'K'],
+        options=['x1', 'y1', 'z', 'x2', 'y2', 'g', 'x2 - x1', 'x0_t', 'slope_t', 'Iext1_t', 'Iext2_t', 'K_t'],
         default=["x2 - x1", 'z'],
         select_multiple=True,
         doc="Quantities of the Epileptor available to monitor.",
         order=-1)
 
-    state_variables = ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'x0_values', 'slope', 'Iext1', 'Iext2', 'K']
+    state_variables = ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'x0_t', 'slope_t', 'Iext1_t', 'Iext2_t', 'K_t']
 
     _nvar = 11
     cvar = numpy.array([0, 3], dtype=numpy.int32)
