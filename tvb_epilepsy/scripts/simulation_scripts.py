@@ -171,7 +171,7 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
 def set_time_scales(fs=2048.0, time_length=100000.0, scale_fsavg=None, report_every_n_monitor_steps=100):
     dt = 1000.0 / fs
     if scale_fsavg is None:
-        scale_fsavg = int(np.round(fs / 256.0))
+        scale_fsavg = int(np.round(fs / 512.0))
     fsAVG = fs / scale_fsavg
     monitor_period = scale_fsavg * dt
     sim_length = time_length

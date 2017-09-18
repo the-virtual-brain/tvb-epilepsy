@@ -135,7 +135,7 @@ def filter_data(data, lowcut, highcut, fs, order=3):
 
 
 def spectral_analysis(x, fs, freq=None, method="periodogram", output="spectrum", nfft=None, window='hanning',
-                      nperseg=250, detrend='constant', noverlap=None, f_low=10.0, log_norm=False):
+                      nperseg=256, detrend='constant', noverlap=None, f_low=10.0, log_scale=False):
     if freq is None:
         freq = np.linspace(f_low, nperseg, nperseg - f_low - 1)
         df = freq[1] - freq[0]
@@ -179,13 +179,13 @@ def spectral_analysis(x, fs, freq=None, method="periodogram", output="spectrum",
         return np.sum(psd, axis=0)
 
     else:
-        if log_norm:
+        if log_scale:
             psd = np.log(psd)
         return psd, freq
 
 
-def time_spectral_analysis(x, fs, freq=None, mode="psd", nfft=None, window='hanning', nperseg=250, detrend='constant',
-                           noverlap=None, f_low=10.0, calculate_psd=True, log_norm=False):
+def time_spectral_analysis(x, fs, freq=None, mode="psd", nfft=None, window='hanning', nperseg=256, detrend='constant',
+                           noverlap=None, f_low=10.0, calculate_psd=True, log_scale=False):
 
     # TODO: add a Continuous Wavelet Transform implementation
 
@@ -206,12 +206,12 @@ def time_spectral_analysis(x, fs, freq=None, mode="psd", nfft=None, window='hann
 
     # Stack them to a ndarray
     stf = np.stack(stf, axis=2)
-    if log_norm:
+    if log_scale:
         stf = np.log(stf)
 
     if calculate_psd:
         psd, _ = spectral_analysis(x, fs, freq=freq, method="periodogram", output="spectrum", nfft=nfft, window=window,
-                          nperseg=nperseg, detrend=detrend, noverlap=noverlap, log_norm=log_norm)
+                                   nperseg=nperseg, detrend=detrend, noverlap=noverlap, log_scale=log_scale)
         return stf, t, freq, psd
     else:
         return stf, t, freq
