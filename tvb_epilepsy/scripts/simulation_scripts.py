@@ -12,8 +12,9 @@ from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
 ###
 def setup_custom_simulation_from_model_configuration(model_configuration, connectivity, dt, sim_length, monitor_period,
                                                      model_name, noise_intensity=None, **kwargs):
-    from tvb_epilepsy.custom.simulator_custom import EpileptorModel, custom_model_builder, \
-        SimulationSettings, SimulatorCustom
+    from tvb_epilepsy.custom.simulator_custom import EpileptorModel, custom_model_builder, SimulatorCustom
+    from tvb_epilepsy.base.simulators import SimulationSettings
+
     if model_name != EpileptorModel._ui_name:
         print "You can use only " + EpileptorModel._ui_name + "for custom simulations!"
 

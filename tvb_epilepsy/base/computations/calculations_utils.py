@@ -4,7 +4,7 @@ import numpy as np
 
 from tvb_epilepsy.base.constants import A_DEF, B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, I_EXT1_DEF, I_EXT2_DEF, \
                                         YC_DEF, TAU0_DEF, TAU1_DEF, TAU2_DEF
-from tvb_epilepsy.base.utils import warning, raise_import_error, raise_value_error
+from tvb_epilepsy.base.utils import warning, raise_import_error, raise_value_error, shape_to_size
 from tvb_epilepsy.base.computations.equations_utils import *
 
 # TODO: find out why I cannot import anything from utils here
@@ -26,7 +26,7 @@ except:
 
 def confirm_calc_mode(calc_mode):
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         if SYMBOLIC_IMPORT:
             print "Executing symbolic calculations..."
@@ -53,7 +53,7 @@ def calc_coupling(x1, K, w, ix=None, jx=None, shape=None, calc_mode="non_symbol"
     if jx is None:
         jx = range(n_regions)
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
         return np.array(symbol_eqtn_coupling(x1.size, ix, jx, shape=x1.shape)[0](x1, K, w))
     else:
         return eqtn_coupling(x1, K, w, ix, jx)
@@ -66,7 +66,7 @@ def calc_x0(x1, z, K=0.0, w=0.0, zmode=np.array("lin"), z_pos=True, shape=None, 
     x1, z,  K = assert_arrays([x1, z,  K], shape)
     w = assert_arrays([w], (z.size, z.size))
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
         return np.array(symbol_eqtn_x0(z.size, zmode, z_pos, "K", z.shape)[0](x1, z, K, w))
 
     else:
@@ -84,9 +84,9 @@ def calc_fx1(x1=0.0, z=0.0, y1=0.0, Iext1=I_EXT1_DEF, slope=SLOPE_DEF, a=A_DEF, 
     
     x1, z, y1, Iext1, slope, a, b, d, tau1 = assert_arrays([x1, z, y1, Iext1, slope, a, b, d, tau1], shape)
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
-        if numpy.all(model == "2d"):
+        if np.all(model == "2d"):
 
             return np.array(symbol_eqtn_fx1(x1.size, model, x1_neg, slope="slope", Iext1="Iext1", shape=x1.shape)[0]
                          (x1, z, y1, Iext1, slope, a, b, d, tau1))
@@ -101,7 +101,7 @@ def calc_fx1(x1=0.0, z=0.0, y1=0.0, Iext1=I_EXT1_DEF, slope=SLOPE_DEF, a=A_DEF, 
         if x1_neg is None:
             x1_neg = x1 < 0.0
 
-        if numpy.all(model == "2d"):
+        if np.all(model == "2d"):
 
             return eqtn_fx1(x1, z, y1, Iext1, slope, a, b, d, tau1, x1_neg, model, x2=None)
 
@@ -117,7 +117,7 @@ def calc_fy1(x1, yc, y1=0, d=D_DEF, tau1=TAU1_DEF, shape=None, calc_mode="non_sy
     
     x1, yc, y1, d, tau1 = assert_arrays([x1, yc, y1, d, tau1], shape)
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         return np.array(symbol_eqtn_fy1(x1.size, x1.shape)[0](x1, y1, yc, d, tau1))
     else:
@@ -133,7 +133,7 @@ def calc_fz(x1=0.0, z=0, x0=0.0, K=0.0, w=0.0, tau1=TAU1_DEF, tau0=TAU0_DEF, zmo
     x1, z,  x0, K, tau1, tau0 = assert_arrays([x1, z,  x0, K, tau1, tau0], shape)
     w = assert_arrays([w], (z.size, z.size))
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         return np.array(symbol_eqtn_fz(z.size, zmode, z_pos, x0="x0_values", K="K", shape=z.shape)[0](x1, z, x0,
                                                                                                        K, w, tau1,
@@ -152,7 +152,7 @@ def calc_fx2(x2, y2=0.0, z=0.0, g=0.0, Iext2=I_EXT2_DEF, tau1=TAU1_DEF, shape=No
     
     x2, y2, z, g, Iext2, tau1 = assert_arrays([x2, y2, z, g, Iext2, tau1], shape)
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         return np.array(symbol_eqtn_fx2(x2.size, Iext2="Iext2", shape=x2.shape)[0](x2, y2, z, g, Iext2, tau1))
 
@@ -167,7 +167,7 @@ def calc_fy2(x2, y2=0.0, s=S_DEF, tau1=TAU1_DEF, tau2=TAU2_DEF, x2_neg=None, sha
 
     x2, y2, s, tau1, tau2 = assert_arrays([x2, y2, s, tau1, tau2], shape)
 
-    if numpy.any(x2_neg is None):
+    if np.any(x2_neg is None):
         try:
             x2_neg = x2 < -0.25
         except:
@@ -175,7 +175,7 @@ def calc_fy2(x2, y2=0.0, s=S_DEF, tau1=TAU1_DEF, tau2=TAU2_DEF, x2_neg=None, sha
             warning("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
                     "\nSetting default x2_neg = False")
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         return np.array(symbol_eqtn_fy2(x2.size, x2_neg=x2_neg, shape=x2.shape)[0](x2, y2, s, tau1, tau2))
 
@@ -190,7 +190,7 @@ def calc_fg(x1, g=0.0, gamma=GAMMA_DEF, tau1=TAU1_DEF, shape=None, calc_mode="no
 
     x1, g, gamma, tau1 = assert_arrays([x1, g, gamma, tau1], shape)
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         return np.array(symbol_eqtn_fg(x1.size, x1.shape)[0](x1, g, gamma, tau1))
 
@@ -205,7 +205,7 @@ def calc_fx0(x0_var, x0, tau1=TAU1_DEF, shape=None, calc_mode="non_symbol"):
 
     x0_var, x0, tau1 = assert_arrays([x0_var, x0, tau1], shape)
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         return np.array(symbol_eqtn_fx0(x0.size, shape)[0](x0_var, x0, tau1))
 
@@ -221,7 +221,7 @@ def calc_fslope(slope_var, slope, z=0.0, g=0.0, tau1=TAU1_DEF, pmode=np.array("c
 
     slope_var, slope, tau1 = assert_arrays([slope_var, slope, tau1], shape)
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         if pmode == "z":
             z = assert_arrays([z], slope.shape)
@@ -254,7 +254,7 @@ def calc_fIext1(Iext1_var, Iext1, tau1=TAU1_DEF, tau0=TAU0_DEF, shape=None, calc
 
     Iext1_var, Iext1, tau1, tau0 = assert_arrays([Iext1_var, Iext1, tau1, tau0], shape)
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         return np.array(symbol_eqtn_fIext1(Iext1.size, shape)[0](Iext1_var, Iext1, tau1, tau0))
     else:
@@ -269,7 +269,7 @@ def calc_fIext2(Iext2_var, Iext2, z=0.0, g=0.0, tau1=TAU1_DEF, pmode=np.array("c
 
     Iext2_var, Iext2, tau1 = assert_arrays([Iext2_var, Iext2, tau1], shape)
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         if pmode == "z":
             z = assert_arrays([z], Iext2.shape)
@@ -302,7 +302,7 @@ def calc_fK(K_var, K, tau1=TAU1_DEF, tau0=TAU0_DEF, shape=None, calc_mode="non_s
 
     K_var, K, tau1, tau0 = assert_arrays([K_var, K, tau1, tau0], shape)
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         return np.array(symbol_eqtn_fK(K.size, shape)[0](K_var, K, tau1, tau0))
 
@@ -321,7 +321,7 @@ def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2,
     calc_mode = confirm_calc_mode(calc_mode)
 
     if model_vars > 2:
-        if numpy.any(x2_neg is None):
+        if np.any(x2_neg is None):
             try:
                 x2_neg = x2 < -0.25
             except:
@@ -337,7 +337,7 @@ def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2,
 
     else:
 
-        if numpy.all(calc_mode == "symbol"):
+        if np.all(calc_mode == "symbol"):
 
             dfun_sym = symbol_eqnt_dfun(x1.size, model_vars, zmode, x1_neg, z_pos, x2_neg, pmode, shape)[0]
 
@@ -453,7 +453,7 @@ def calc_jac(x1, z, yc, Iext1, x0, K, w, model_vars=2,
 
     if model_vars > 2:
 
-        if numpy.any(x2_neg is None):
+        if np.any(x2_neg is None):
             try:
                 x2_neg = x2 < -0.25
             except:
@@ -468,7 +468,7 @@ def calc_jac(x1, z, yc, Iext1, x0, K, w, model_vars=2,
 
     w = assert_arrays([w], (z.size, z.size))
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         n = model_vars * n_regions
         jac = np.zeros((n,n), dtype=z.dtype)
@@ -601,7 +601,7 @@ def calc_coupling_diff(K, w, ix=None, jx=None, calc_mode="non_symbol"):
     if jx is None:
         jx = range(n_regions)
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         return np.array(symbol_calc_coupling_diff(K.size, ix, jx, K="K")[0](K, w))
 
@@ -618,7 +618,7 @@ def calc_fx1_2d_taylor(x1, x_taylor, z=0, y1=0.0, Iext1=I_EXT1_DEF, slope=SLOPE_
     x1, x_taylor, z, y1, Iext1, slope, a, b, d, tau1 = \
         assert_arrays([x1, x_taylor, z, y1, Iext1, slope, a, b, d, tau1], shape)
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         return np.array(symbol_calc_2d_taylor(x1.size, order=order, x1_neg=x1_neg, slope="slope", Iext1="Iext1",
                                            shape=shape)[0](x1, x_taylor, z, y1, Iext1, slope, a, b, d, tau1))
@@ -628,7 +628,7 @@ def calc_fx1_2d_taylor(x1, x_taylor, z=0, y1=0.0, Iext1=I_EXT1_DEF, slope=SLOPE_
         if x1_neg is None:
             x1_neg = x1 < 0.0
 
-        if order == 2 and numpy.all(x1_neg == True):
+        if order == 2 and np.all(x1_neg == True):
 
             # Correspondance with EpileptorDP2D
             b = b - d
@@ -672,7 +672,7 @@ def calc_fx1z(x1, x0, K, w, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, tau1=TAU1_DEF,
 
     w = assert_arrays([w], (x1.size, x1.size))
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         if model == "2d":
             return np.array(symbol_eqtn_fx1z(x1.size, model, zmode, x1.shape)[0](x1, x0, K, w, yc, Iext1, a, b,
@@ -711,7 +711,7 @@ def calc_fx1z_diff(x1, K, w, a=A_DEF, b=B_DEF, d=D_DEF, tau1=TAU1_DEF, tau0=TAU0
 
     w = assert_arrays([w], (x1.size, x1.size))
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         return np.array(symbol_eqtn_fx1z_diff(x1.size, model, zmode)[0](x1, K, w, a, b, d, tau1, tau0))
 
@@ -729,7 +729,7 @@ def calc_fx1z_2d_x1neg_zpos_jac(x1, z, x0, yc, Iext1, K, w, ix0, iE, a=A_DEF, b=
 
     calc_mode = confirm_calc_mode(calc_mode)
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         x1, z, x0, yc, Iext1, K, a, b, d, tau1, tau0 = \
             assert_arrays([x1, z, x0, yc, Iext1, K, a, b, d, tau1, tau0])
@@ -770,10 +770,10 @@ def calc_fx1z_2d_x1neg_zpos_jac(x1, z, x0, yc, Iext1, K, w, ix0, iE, a=A_DEF, b=
                       np.multiply(np.dot(i_x0, np.multiply(tau[:, ix0], K[:, ix0])).T, w[ix0][:, ix0]))
 
         jac = np.empty((x1.size, x1.size), dtype=jac_x0_x1o.dtype)
-        jac[numpy.ix_(iE, iE)] = jac_e_x0e
-        jac[numpy.ix_(iE, ix0)] = jac_e_x1o
-        jac[numpy.ix_(ix0, iE)] = jac_x0_x0e
-        jac[numpy.ix_(ix0, ix0)] = jac_x0_x1o
+        jac[np.ix_(iE, iE)] = jac_e_x0e
+        jac[np.ix_(iE, ix0)] = jac_e_x1o
+        jac[np.ix_(ix0, iE)] = jac_x0_x0e
+        jac[np.ix_(ix0, ix0)] = jac_x0_x1o
 
         return jac
 
@@ -784,7 +784,7 @@ def calc_fx1y1_6d_diff_x1(x1, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, tau1=TAU1_DE
 
     x1, yc, Iext1, a, b, d, tau1 = assert_arrays([x1, yc, Iext1, a, b, d, tau1], shape)
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
         return np.array(symbol_calc_fx1y1_6d_diff_x1(x1.size, shape)[0](x1, yc, Iext1, a, b, d, tau1))
 
     else:
@@ -801,7 +801,7 @@ def calc_x0cr_r(yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), x1_
     yc, Iext1, a, b, d, x1_rest, x1_cr, x0def, x0cr_def \
         = assert_arrays([yc, Iext1, a, b, d, x1_rest, x1_cr, x0def, x0cr_def], shape)
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         if test:
             x0cr, r = symbol_calc_x0cr_r(Iext1.size, zmode, Iext1.shape)[0]
@@ -817,8 +817,8 @@ def calc_x0cr_r(yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), x1_
     else:
 
         if test:
-            if numpy.all(Iext1 == Iext1[0]) and numpy.all(yc == yc[0]) \
-                    and numpy.all(a == a[0]) and numpy.all(b == b[0] and numpy.all(d == d[0])):
+            if np.all(Iext1 == Iext1[0]) and np.all(yc == yc[0]) \
+                    and np.all(a == a[0]) and np.all(b == b[0] and np.all(d == d[0])):
                 Iext1 = Iext1[0]
                 yc = yc[0]
                 a = a[0]
@@ -859,7 +859,7 @@ def calc_x0cr_r(yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), x1_
                 sol = root(fz, xinit, method='lm', tol=10 ** (-12), callback=None, options=None)
 
                 if sol.success:
-                    if numpy.any([numpy.any(numpy.isnan(sol.x)), numpy.any(numpy.isinf(sol.x))]):
+                    if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
                         raise_value_error("nan or inf values in solution x\n" + sol.message)
                     x0cr.append(sol.x[0])
                     r.append(sol.x[1])
@@ -867,8 +867,8 @@ def calc_x0cr_r(yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), x1_
                     raise_value_error(sol.message)
 
             if p2 != shape:
-                x0cr = numpy.tile(x0cr[0], shape)
-                r = numpy.tile(r[0], shape)
+                x0cr = np.tile(x0cr[0], shape)
+                r = np.tile(r[0], shape)
             else:
                 x0cr = reshape(x0cr, shape)
                 r = reshape(r, shape)
@@ -890,7 +890,7 @@ def calc_fz_jac_square_taylor(zeq, yc, Iext1, K, w, a=A_DEF, b=B_DEF, d=D_DEF, t
 
     w = assert_arrays([w], (zeq.size, zeq.size))
 
-    if numpy.all(calc_mode == "symbol"):
+    if np.all(calc_mode == "symbol"):
 
         return symbol_calc_fz_jac_square_taylor(zeq.size)[0](zeq, yc, Iext1, K, w, a, b, d, tau1, tau0, x_taylor)
 

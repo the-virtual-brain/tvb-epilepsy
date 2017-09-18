@@ -56,6 +56,7 @@ class EpileptorParams(object):
 
 class EpileptorModel(object):
     _ui_name = "CustomEpileptor"
+    _nvar = 2
 
     def __init__(self, a=1.0, b=3.0, c=1.0, d=5.0, aa=6.0, r=0.00035, kvf=0.0, kf=0.0, ks=1.5, tau=10.0, iext=3.1,
                  iext2=0.45, slope=0.0, x0=-2.1, tt=1.0):
@@ -130,7 +131,7 @@ class SimulatorCustom(ABCSimulator):
         # history_length = ...
         initial_conditions = self.prepare_initial_conditions(history_length=1)
 
-        self.custom_config = FullConfiguration(connectivity_path=self.connectivity.file_path,
+        self.custom_config = FullConfiguration(connectivity_path=os.path.abspath(self.connectivity.file_path),
                                                epileptor_paramses=json_model, settings=ep_settings,
                                                initial_states=initial_conditions.flatten(),
                                                initial_states_shape=numpy.array(initial_conditions.shape))
@@ -140,9 +141,9 @@ class SimulatorCustom(ABCSimulator):
         self._save_serialized(self.custom_config, self.json_config_path)
 
     def launch_simulation(self, n_report_blocks=0):
-        opts = "/usr/bin/java -Dncsa.hdf.hdf5lib.H5.hdf5lib=" + os.path.join(LIB_PATH, HDF5_LIB) + " " + \
+        opts = "java -Dncsa.hdf.hdf5lib.H5.hdf5lib=" + os.path.join(LIB_PATH, HDF5_LIB) + " " + \
                "-Djava.library.path=" + LIB_PATH + " " + "-cp" + " " + JAR_PATH + " " + \
-               JAVA_MAIN_SIM + " " + self.json_config_path + " " + self.head_path
+               JAVA_MAIN_SIM + " " + os.path.abspath(self.json_config_path) + " " + os.path.abspath(self.head_path)
 
         try:
             status = subprocess.call(opts, shell=True)
@@ -159,6 +160,7 @@ class SimulatorCustom(ABCSimulator):
     def prepare_epileptor_model_for_json(self, no_regions=88):
         epileptor_params_list = []
 
+        warning("No of regions is " + str(no_regions))
         for idx in xrange(no_regions):
             epileptor_params_list.append(
                 EpileptorParams(self.model.a[idx], self.model.b[idx], self.model.c[idx], self.model.d[idx],
@@ -197,10 +199,10 @@ class SimulatorCustom(ABCSimulator):
 
 # Some helper functions for model and simulator construction
 def custom_model_builder(model_configuration, a=1.0, b=3.0, d=5.0):
-    x0 = calc_x0_val__to_model_x0(model_configuration.x0_values.flatten(), model_configuration.yc.flatten(),
-                                  model_configuration.Iext1.flatten(), a, b - d)
-    model = EpileptorModel(a=a, b=b, d=d, x0=x0, iext=model_configuration.Iext1.flatten(),
-                           ks=model_configuration.K.flatten(),
-                           c=model_configuration.yc.flatten())
+    x0 = calc_x0_val__to_model_x0(model_configuration.x0_values, model_configuration.yc,
+                                  model_configuration.Iext1, a, b - d)
+    model = EpileptorModel(a=a, b=b, d=d, x0=x0, iext=model_configuration.Iext1,
+                           ks=model_configuration.K,
+                           c=model_configuration.yc)
 
     return model

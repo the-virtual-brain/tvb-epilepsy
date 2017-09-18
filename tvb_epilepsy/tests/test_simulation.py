@@ -1,0 +1,73 @@
+import numpy
+import os
+from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.custom.readers_custom import CustomReader
+from tvb_epilepsy.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration, set_time_scales, \
+    setup_custom_simulation_from_model_configuration
+from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.tvb_api.readers_tvb import TVBReader
+
+data_dir = "data"
+
+
+class TestSimulationRun():
+    fs = 2 * 4096.0
+    time_length = 30000.0
+    report_every_n_monitor_steps = 10.0
+    (dt, fsAVG, sim_length, monitor_period, n_report_blocks) = set_time_scales(fs=fs, time_length=time_length,
+                                                                               scale_fsavg=None,
+                                                                               report_every_n_monitor_steps=report_every_n_monitor_steps)
+    zmode = numpy.array("lin")
+    epileptor_model = "EpileptorDP2D"
+    noise_intensity = 10 ** -8
+
+    def _prepare_model_for_simulation(self, connectivity):
+        hypothesis = DiseaseHypothesis(connectivity.number_of_regions, excitability_hypothesis={tuple([0, 10]): [1, 1]},
+                                       epileptogenicity_hypothesis={}, connectivity_hypothesis={})
+
+        model_configuration_service = ModelConfigurationService(connectivity.number_of_regions)
+
+        model_configuration = model_configuration_service.configure_model_from_hypothesis(hypothesis,
+                                                                                          connectivity.normalized_weights)
+        return model_configuration
+
+    def test_tvb_simulation(self):
+        reader = TVBReader()
+        connectivity = reader.read_connectivity(os.path.join(data_dir, "connectivity_76.zip"))
+        model_configuration = self._prepare_model_for_simulation(connectivity)
+
+        simulator = setup_TVB_simulation_from_model_configuration(model_configuration, connectivity, self.dt,
+                                                                  self.sim_length, self.monitor_period,
+                                                                  self.epileptor_model, zmode=self.zmode,
+                                                                  noise_instance=None,
+                                                                  noise_intensity=self.noise_intensity,
+                                                                  monitor_expressions=None)
+        simulator.config_simulation(initial_conditions=None)
+
+        ttavg, tavg_data, status = simulator.launch_simulation(self.n_report_blocks)
+
+        assert status == True
+
+        # This can be ran only locally for the moment
+
+        # def test_custom_simulation(self):
+        #     reader = CustomReader()
+        #     connectivity = reader.read_connectivity(os.path.join(data_dir, "Connectivity.h5"))
+        #     model_configuration = self._prepare_model_for_simulation(connectivity)
+        #
+        #     simulator = setup_custom_simulation_from_model_configuration(model_configuration, connectivity, self.dt,
+        #                                                                  self.sim_length,
+        #                                                                  self.monitor_period, "CustomEpileptor",
+        #                                                                  self.noise_intensity)
+        #
+        #     simulator.config_simulation()
+        #     ttavg, tavg_data, status = simulator.launch_simulation(self.n_report_blocks)
+        #
+        #     assert status == 0
+
+        # @classmethod
+        # def teardown_class(cls):
+        #     os.remove(os.path.join(os.path.abspath(data_dir), "SimulationConfiguration.json"))
+        #     os.remove(os.path.join(os.path.abspath(data_dir), "full-configuration", "full-configuration.h5"))
+        #     os.remove(os.path.join(os.path.abspath(data_dir), "full-configuration", "ts.h5"))
+        #     os.removedirs(os.path.join(os.path.abspath(data_dir), "full-configuration"))
