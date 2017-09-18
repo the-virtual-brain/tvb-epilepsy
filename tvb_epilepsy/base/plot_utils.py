@@ -428,7 +428,7 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
 
 def plot_spectral_analysis_raster(time, data, time_units="ms", freq=None, special_idx=None, title='Spectral Analysis',
                                   figure_name='Spectral Analysis', labels=None,
-                                  show_flag=SHOW_FLAG, save_flag=False, figure_dir=FOLDER_FIGURES,
+                                  show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
                                   figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, **kwargs):
 
     if time_units in ("ms", "msec"):
@@ -447,44 +447,69 @@ def plot_spectral_analysis_raster(time, data, time_units="ms", freq=None, specia
     if labels is None:
         labels = np.array(range(nS)).astype(str)
 
-    stf, freq, time, psd = time_spectral_analysis(data, fs,
-                                                  mode=kwargs.get("mode", "psd"),
+    log_norm = kwargs.get("log_norm", False)
+    mode = kwargs.get("mode", "psd")
+    psd_label = mode
+    if log_norm:
+        psd_label = "log" + psd_label
+    stf, time, freq, psd = time_spectral_analysis(data, fs,
+                                                  mode=mode,
                                                   nfft=kwargs.get("nfft"),
                                                   window=kwargs.get("window", 'hanning'),
                                                   nperseg=kwargs.get("nperseg", 256),
                                                   detrend=kwargs.get("detrend", 'constant'),
-                                                  noverlap=kwargs.get("noverlap"))
+                                                  noverlap=kwargs.get("noverlap"),
+                                                  f_low=kwargs.get("f_low", 10.0),
+                                                  log_norm=log_norm)
+
     min_val = np.min(stf.flatten())
     max_val = np.max(stf.flatten())
-
     if nS > 2:
         figsize = VERY_LARGE_SIZE
-    pyplot.figure(title, figsize=figsize)
-    fig, ax = pyplot.subplot(nS, 3, gridspec_kw={'width_ratios':[20, 2, 1]}, sharex='col', sharey='row')
-    ax = np.empty((nS, 3), dtype="O")
+
+    fig = pyplot.figure(title, figsize=figsize)
+    fig.suptitle(title)
+    gs = gridspec.GridSpec(nS, 23)
+    ax = np.empty((nS,2), dtype="O")
     img = np.empty((nS, ), dtype="O")
     line = np.empty((nS,), dtype="O")
-    for iS in range(nS):
-        if iS == 0:
-            pyplot.title(title)
+
+    for iS in range(nS-1, -1, -1):
+
+        if iS < nS-1:
+            ax[iS, 0] = pyplot.subplot(gs[iS, :20], sharex=ax[iS, 0])
+            ax[iS, 1] = pyplot.subplot(gs[iS, 20:22], sharex=ax[iS, 1], sharey=ax[iS, 0])
+        else:
+            ax[iS, 0] = pyplot.subplot(gs[iS, :20])
+            ax[iS, 1] = pyplot.subplot(gs[iS, 20:22], sharey=ax[iS, 0])
 
         img[iS] = ax[iS, 0].imshow(np.squeeze(stf[:, :, iS]).T, cmap=pyplot.set_cmap('jet'), interpolation='none',
                                    norm=Normalize(vmin=min_val, vmax=max_val), aspect='auto', origin='lower',
                                    extent=(time.min(),time.max(), freq.min(), freq.max()))
-        # ax[iS, 0].clim(min_val, max_val)
+        # img[iS].clim(min_val, max_val)
         ax[iS, 0].set_title(labels[iS])
+        ax[iS, 0].set_ylabel("Frequency (Hz)")
+
         line[iS] = ax[iS, 1].plot(psd[:, iS], freq, 'k', label=labels[iS])
-        ax[iS, 0].autoscale(tight=True)
-        ax[iS, 1].autoscale(tight=True)
+        pyplot.setp(ax[iS, 1].get_yticklabels(), visible=False)
+        # ax[iS, 1].yaxis.tick_right()
+        # ax[iS, 1].yaxis.set_ticks_position('both')
+
         if iS == (nS-1):
             ax[iS, 0].set_xlabel("Time (" + time_units + ")")
-            ax[iS, 0].set_ylabel("Frequency (Hz)")
-            ax[iS, 1].set_xlabel("PSD")
+
+            ax[iS, 1].set_xlabel(psd_label)
+        else:
+            pyplot.setp(ax[iS, 0].get_xticklabels(), visible=False)
+        pyplot.setp(ax[iS, 1].get_xticklabels(), visible=False)
+        ax[iS, 0].autoscale(tight=True)
+        ax[iS, 1].autoscale(tight=True)
 
     # make a color bar
-    pyplot.colorbar(img, cax=ax[:, 2])  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
-
-    fig = pyplot.gcf()
+    cax = pyplot.subplot(gs[:, 22])
+    pyplot.colorbar(img[0], cax=pyplot.subplot(gs[:, 22]))  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
+    cax.set_title(psd_label)
+    # fig = pyplot.gcf()
     if len(fig.get_label()) == 0:
         fig.set_label(figure_name)
     else:
@@ -493,6 +518,7 @@ def plot_spectral_analysis_raster(time, data, time_units="ms", freq=None, specia
     save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
     check_show(show_flag)
 
+    return fig, ax, img, line, time, freq, stf, psd
 
 def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, hpf_flag=False,
                      trajectories_plot=False, spectral_raster_plot=False,
@@ -560,7 +586,7 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
                     offset=10.0, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                     figure_format=figure_format, labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
         if hpf_flag:
-            plot_raster(res['time'][start_plot:], {'SEEG hpf': res['SEEG_hpf' + str(i)][start_plot:, :]},
+            plot_raster(res['time'][start_plot:], {'SEEG hpf': res['SEEG' + str(i)][start_plot:, :]},
                         time_units=res.get('time_units', "ms"),
                         title=hyp_name + ": Simulated high pass filtered SEEG" + str(i) + " raster plot",
                         offset=10.0, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,

@@ -120,9 +120,9 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     # --------------------------Simulation preparations-----------------------------------
 
     # TODO: maybe use a custom Monitor class
-    fs = 2*4096.0 # this is the simulation sampling rate that is necessary for the simulation to be stable
-    time_length = 10000.0  # =100 secs, the final output nominal time length of the simulation
-    report_every_n_monitor_steps = 10.0
+    fs = 2048.0 # this is the simulation sampling rate that is necessary for the simulation to be stable
+    time_length = 100000.0  # =100 secs, the final output nominal time length of the simulation
+    report_every_n_monitor_steps = 100.0
     (dt, fsAVG, sim_length, monitor_period, n_report_blocks) = \
         set_time_scales(fs=fs, time_length=time_length, scale_fsavg=None,
                         report_every_n_monitor_steps=report_every_n_monitor_steps)
@@ -139,8 +139,13 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     zmode = "lin"  # by default, or "sig" for the sigmoidal expression for the slow z variable in Proix et al. 2014
     pmode = "z"  # by default, "g" or "z*g" for the feedback coupling to Iext2 and slope for EpileptorDPrealistic
 
-    model_name = "Epileptor"
-
+    model_name = "EpileptorDPrealistic"
+    if model_name is "EpileptorDP2D":
+        spectral_raster_plot = False
+        trajectories_plot = True
+    else:
+        spectral_raster_plot = "lfp"
+        trajectories_plot = False
     # We don't want any time delays for the moment
     # head.connectivity.tract_lengths *= TIME_DELAYS_FLAG
 
@@ -313,13 +318,13 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
 
                 compute_seeg_and_write_ts_h5_file(FOLDER_RES, lsa_hypothesis.name + "_ts.h5", sim.model, vois_ts_dict,
                                                   output_sampling_time, time_length,
-                                                  hpf_flag=False, hpf_low=10.0, hpf_high=250.0,
+                                                  hpf_flag=True, hpf_low=10.0, hpf_high=250.0,
                                                   sensor_dicts_list=[head.sensorsSEEG])
 
                 # Plot results
                 plot_sim_results(sim.model, lsa_hypothesis.propagation_indices, lsa_hypothesis.name, head, vois_ts_dict,
-                                 head.sensorsSEEG.keys(), hpf_flag=False, trajectories_plot=True,
-                                 spectral_raster_plot="lfp")
+                                 head.sensorsSEEG.keys(), hpf_flag=True, trajectories_plot=trajectories_plot,
+                                 spectral_raster_plot=spectral_raster_plot, log_norm=True)
 
                 # Optionally save results in mat files
                 # from scipy.io import savemat

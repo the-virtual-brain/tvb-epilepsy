@@ -51,10 +51,9 @@ def setup_TVB_simulation_from_model_configuration(model_configuration, connectiv
     model = model_build_dict[model_name](model_configuration, zmode=zmode)
 
     if isinstance(model, Epileptor):
-        model.tt = 0.25  # necessary to get spikes in a realistic frequency range
-        model.r = 0.0001 # realistic seizures require a larger time scale separation
+        model.tt = 0.2 # necessary to get spikes in a realistic frequency range
+        model.r = 0.000025 # realistic seizures require a larger time scale separation
     else:
-        model.tau0 = 10000.0 # realistic seizures require a larger time scale separation
         if isinstance(model, EpileptorDPrealistic):
             model.slope = 0.25
             model.pmode = pmode
@@ -115,8 +114,8 @@ def prepare_vois_ts_dict(vois, data):
     return vois_ts_dict
 
 
-def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt, time_length, hpf_flag=False, hpf_low=10.0,
-                                      hpf_high=250.0, sensor_dicts_list=[]):
+def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt, time_length, hpf_flag=False,
+                                      hpf_low=10.0, hpf_high=256.0, sensor_dicts_list=[]):
 
     fsAVG = 1000.0 / dt
 
@@ -168,10 +167,10 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
             write_ts_seeg_epi(vois_ts_dict[sensor.s_type+'%d' % i_sensor], dt, folder, filename)
 
 
-def set_time_scales(fs=4096.0, time_length=100000.0, scale_fsavg=None, report_every_n_monitor_steps=100):
+def set_time_scales(fs=2048.0, time_length=100000.0, scale_fsavg=None, report_every_n_monitor_steps=100):
     dt = 1000.0 / fs
     if scale_fsavg is None:
-        scale_fsavg = int(np.round(fs / 512.0))
+        scale_fsavg = int(np.round(fs / 256.0))
     fsAVG = fs / scale_fsavg
     monitor_period = scale_fsavg * dt
     sim_length = time_length
