@@ -1001,7 +1001,7 @@ class EpileptorDP2D(Model):
 
         # population 1
         if_ydot0 = self.a * y[0] ** 2 + (self.d - self.b) * y[0]  # self.a=1.0, self.b=3.0, self.d=5.0
-        else_ydot0 = 5 * y[0] - 0.6 * (y[1] - 4.0) ** 2 - self.slope
+        else_ydot0 = self.d * y[0] - 0.6 * (y[1] - 4.0) ** 2 - self.slope
         ydot[0] = self.tau1 * (
         self.yc - y[1] + Iext1 + self.Kvf * c_pop1 - where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
 
