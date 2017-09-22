@@ -39,7 +39,7 @@ class DiseaseHypothesis(object):
             self.name = name
 
         self.propagation_indices = np.array(propagation_indices)
-        self.propagation_strenghts = np.array(propagation_strenghts)
+        self.propagation_strengths = np.array(propagation_strenghts)
 
     def __repr__(self):
         d = {"01. Name": self.name,
@@ -55,9 +55,9 @@ class DiseaseHypothesis(object):
              "10. Propagation indices": self.propagation_indices,
              }
         if len(self.propagation_indices):
-            d.update({"11. Propagation strengths of indices": self.propagation_strenghts[self.propagation_indices]})
+            d.update({"11. Propagation strengths of indices": self.propagation_strengths[self.propagation_indices]})
         else:
-            d.update({"11. Propagation strengths of indices": self.propagation_strenghts})
+            d.update({"11. Propagation strengths of indices": self.propagation_strengths})
         # d.update({"11. Connectivity": str(self.connectivity)})
         return formal_repr(self, d)
 
@@ -100,14 +100,14 @@ class DiseaseHypothesis(object):
                 width_ratios += [1]
                 name = "LSA Propagation Strength"
                 names = [name]
-                data = [self.propagation_strenghts]
+                data = [self.propagation_strengths]
                 indices = [self.propagation_indices]
                 plot_types = ["vector"]
             else:
                 width_ratios += [1, 2]
                 name = "LSA Propagation Strength"
                 names = [name, "Afferent connectivity \n from seizuring regions"]
-                data = [self.propagation_strenghts, connectivity_matrix]
+                data = [self.propagation_strengths, connectivity_matrix]
                 indices = [self.propagation_indices, self.propagation_indices]
                 plot_types = ["vector", "regions2regions"]
 
