@@ -2,14 +2,13 @@
 Entry point for working with VEP
 """
 import os
-import warnings
 from copy import deepcopy
 
 import numpy as np
 
 from tvb_epilepsy.base.constants import SIMULATION_MODE, TVB, DATA_MODE, VOIS, X0_DEF, E_DEF, TIME_DELAYS_FLAG
 from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM
-from tvb_epilepsy.base.utils import assert_equal_objects, initialize_logger, calculate_projection
+from tvb_epilepsy.base.utils import warning, assert_equal_objects, initialize_logger
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.lsa_service import LSAService
@@ -298,7 +297,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                      logger=logger)))
 
             if not status:
-                warnings.warn("\nSimulation failed!")
+                warning("\nSimulation failed!")
 
             else:
 
@@ -329,6 +328,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                 # Optionally save results in mat files
                 # from scipy.io import savemat
                 # savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), vois_ts_dict)
+
 
 
 if __name__ == "__main__":
