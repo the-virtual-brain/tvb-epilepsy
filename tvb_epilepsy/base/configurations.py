@@ -18,6 +18,7 @@ else:
     FOLDER_VEP = FOLDER_VEP_ONLINE
 
     if platform.node() == 'dionperdMBP':
+        SOFTWARE_PATH = os.path.join(USER_HOME, 'CBR', 'software', 'git')
         FOLDER_VEP_HOME = os.path.join(USER_HOME, 'CBR', 'VEP', 'tests')
         # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR', 'svn', 'episense', 'demo-data')
         DATA_TVB = os.path.join(USER_HOME, 'CBR', 'svn', 'tvb', 'tvb-data', 'tvb-data')
@@ -26,6 +27,7 @@ else:
         DATA_CUSTOM = os.path.join(FOLDER_VEP, 'CC/TVB1')
 
     else:
+        SOFTWARE_PATH = os.path.join(USER_HOME, 'VirtualVEP', 'software')
         FOLDER_VEP_HOME = os.path.join(USER_HOME, 'VEP', 'tests')
         # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR_software', 'svn-episense', 'demo-data')
         DATA_TVB = os.path.join(USER_HOME, 'CBR_software', 'svn-tvb', 'tvb-data', 'tvb-data')
@@ -50,3 +52,5 @@ else:
     FOLDER_FIGURES = os.path.join(FOLDER_VEP_HOME, 'figures' + datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M'))
     if not (os.path.isdir(FOLDER_FIGURES)):
         os.mkdir(FOLDER_FIGURES)
+
+    STATISTICAL_MODELS_PATH = os.path.join(SOFTWARE_PATH, "tvb-infer", "tvb_infer", "stan_epilepsy_models")
