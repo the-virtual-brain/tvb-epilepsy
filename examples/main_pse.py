@@ -1,14 +1,15 @@
 import numpy as np
 import os
 from tvb_epilepsy.base.configurations import DATA_CUSTOM, FOLDER_RES
+from tvb_epilepsy.base.utils import initialize_logger
 from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
 from tvb_epilepsy.service.sampling_service import StochasticSamplingService
-from tvb.basic.logger.builder import get_logger
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.scripts.pse_scripts import pse_from_hypothesis
 
-LOG = get_logger(__name__)
+
+logger = initialize_logger(__name__)
 
 if __name__ == "__main__":
     # -------------------------------Reading data-----------------------------------
@@ -50,7 +51,7 @@ if __name__ == "__main__":
                                  connectivity_hypothesis={})
 
     # Now running the parameter search analysis:
-    LOG.info("running PSE LSA...")
+    logger.info("running PSE LSA...")
     model_configuration, lsa_service, lsa_hypothesis, pse_results = pse_from_hypothesis(hyp_x0_E,
                                                                                         head.connectivity.normalized_weights,
                                                                                         head.connectivity.region_labels,
@@ -60,7 +61,7 @@ if __name__ == "__main__":
                                                                                         healthy_regions_parameters=[
                                                                                             {"name": "x0_values",
                                                                                              "indices": healthy_indices}],
-                                                                                        logger=LOG,
+                                                                                        logger=logger,
                                                                                         save_services=True)[:4]
 
     lsa_service.plot_lsa(lsa_hypothesis, model_configuration, region_labels=head.connectivity.region_labels,

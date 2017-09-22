@@ -3,14 +3,15 @@ import numpy as np
 import os
 from tvb_epilepsy.base.configurations import DATA_CUSTOM, FOLDER_RES
 from tvb_epilepsy.base.constants import K_DEF
+from tvb_epilepsy.base.utils import initialize_logger
 from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb.basic.logger.builder import get_logger
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_hypothesis
 from tvb_epilepsy.service.sensitivity_analysis_service import METHODS
 
-logger = get_logger(__name__)
+
+logger = initialize_logger(__name__)
 
 if __name__ == "__main__":
     # -------------------------------Reading data-----------------------------------
