@@ -79,7 +79,7 @@ model_noise_intensity_dict = {
     "Epileptor": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
     "EpileptorDP": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
     "EpileptorDPrealistic": numpy.array([0., 0., 1e-7, 0.0, 1e-7, 0., 1e-8, 1e-3, 1e-8, 1e-3, 1e-9]),
-    "EpileptorDP2D": numpy.array([0., 5e-5])
+    "EpileptorDP2D": numpy.array([0., 5e-8])
 }
 
 model_noise_type_dict = {
