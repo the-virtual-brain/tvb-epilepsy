@@ -841,14 +841,14 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 #                               show_y_labels=False, show_x_labels=True,
 #                               indices_red_x=seizure_and_propagation_indices, sharey=ax0)
 #
-#     if hypothesis.propagation_strenghts is not None:
+#     if hypothesis.propagation_strengths is not None:
 #         title = "LSA Propagation Strength:\nabsolut "
 #         if weighted_eigenvector_sum:
 #             title += ":\nabsolut eigenvalue-weighted sum of first "
 #             if n_eig is not None:
 #                 title += str(n_eig) + " "
 #             title += "eigenvectors"
-#         plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(), subplot_ind+5+2*plot_equilibria,
+#         plot_vector(hypothesis.propagation_strengths, hypothesis.get_region_labels(), subplot_ind+5+2*plot_equilibria,
 #                      title, show_y_labels=False, indices_red=seizure_and_propagation_indices, sharey=ax0)
 #
 #     _set_axis_labels(fig, 121, hypothesis.get_number_of_regions(), hypothesis.get_region_labels(),
@@ -922,7 +922,7 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 #                               'Afferent connectivity \n from seizuring regions', show_y_labels=False,
 #                               show_x_labels=True, indices_red_x=seizure_and_propagation_indices, sharey=ax0)
 #
-#     if hypothesis.propagation_strenghts is not None:
+#     if hypothesis.propagation_strengths is not None:
 #         title = "LSA Propagation Strength:\nabsolut "
 #         if weighted_eigenvector_sum:
 #             title += "eigenvalue-weighted \n"
@@ -931,11 +931,11 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 #             title += str(n_eig) + " "
 #         title += "eigenvectors"
 #         if pse_results.get("propagation_strengths") is not None:
-#             plot_vector_violin(hypothesis.propagation_strenghts, pse_results.get("propagation_strengths"),
+#             plot_vector_violin(hypothesis.propagation_strengths, pse_results.get("propagation_strengths"),
 #                                 hypothesis.get_region_labels(), subplot_ind+5+2*plot_equilibria, title,
 #                                 show_y_labels=False, indices_red=seizure_and_propagation_indices, sharey=ax0)
 #         else:
-#             plot_vector(hypothesis.propagation_strenghts, hypothesis.get_region_labels(),
+#             plot_vector(hypothesis.propagation_strengths, hypothesis.get_region_labels(),
 #                          subplot_ind+5+2*plot_equilibria, title, show_y_labels=False,
 #                          indices_red=seizure_and_propagation_indices, sharey=ax0)
 #
