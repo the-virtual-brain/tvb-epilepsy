@@ -16,7 +16,7 @@ def setup_custom_simulation_from_model_configuration(model_configuration, connec
     from tvb_epilepsy.base.simulators import SimulationSettings
 
     if model_name != EpileptorModel._ui_name:
-        print "You can use only " + EpileptorModel._ui_name + "for custom simulations!"
+        print("You can use only " + EpileptorModel._ui_name + "for custom simulations!")
 
     model = custom_model_builder(model_configuration)
 
