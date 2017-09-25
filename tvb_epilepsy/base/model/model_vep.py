@@ -11,6 +11,7 @@ from collections import OrderedDict
 import numpy as np
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from itertools import product
 
 from tvb_epilepsy.base.constants import LARGE_SIZE, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
@@ -231,6 +232,20 @@ class Sensors(object):
 
     def __str__(self):
         return self.__repr__()
+
+    def calculate_projection(self, connectivity):
+        n_sensors = self.number_of_sensors
+        n_regions = connectivity.number_of_regions
+        projection = np.zeros((n_sensors, n_regions))
+        dist = np.zeros((n_sensors, n_regions))
+
+        for iS, iR in product(range(n_sensors), range(n_regions)):
+            dist[iS, iR] = np.abs(np.sum((self.locations[iS, :] - connectivity.centers[iR, :]) ** 2))
+            projection[iS, iR] = 1 / dist[iS, iR]
+
+        projection /= np.percentile(projection, 95)
+        #projection[projection > 1.0] = 1.0
+        return projection
 
     def plot(self, projection, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1,
              x_ticks=np.array([]), y_ticks=np.array([]), show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,

@@ -6,7 +6,6 @@ import os
 import warnings
 from collections import OrderedDict
 from datetime import datetime
-from itertools import product
 
 import h5py
 import numpy as np
@@ -51,6 +50,12 @@ def raise_value_error(msg, logger=None):
     if logger is not None:
         logger.error("\n\nValueError: " + msg + "\n")
     raise ValueError(msg)
+
+
+def raise_error(msg, logger=None):
+    if logger is not None:
+        logger.error("\n\nError: " + msg + "\n")
+    raise
 
 
 def raise_import_error(msg, logger=None):
@@ -415,21 +420,6 @@ def calculate_in_degree(weights):
     return np.expand_dims(np.sum(weights, axis=1), 1).T
 
 
-def calculate_projection(sensors, connectivity):
-    n_sensors = sensors.number_of_sensors
-    n_regions = connectivity.number_of_regions
-    projection = np.zeros((n_sensors, n_regions))
-    dist = np.zeros((n_sensors, n_regions))
-
-    for iS, iR in product(range(n_sensors), range(n_regions)):
-        dist[iS, iR] = np.sqrt(np.sum((sensors.locations[iS, :] - connectivity.centers[iR, :]) ** 2))
-        projection[iS, iR] = 1 / dist[iS, iR] ** 2
-
-    projection /= np.percentile(projection, 95)
-    #projection[projection > 1.0] = 1.0
-    return projection
-
-
 def curve_elbow_point(vals):
 
     logger = initialize_logger(__name__)
@@ -542,10 +532,10 @@ def change_filename_or_overwrite(parent_folder, original_filename):
     return final_path, overwrite
 
 
-def print_metadata(h5_file):
-    print "\n\nMetadata:"
+def print_metadata(h5_file, logger):
+    logger.info("\n\nMetadata:")
     for key, val in h5_file["/"].attrs.iteritems():
-        print "\t", key, val
+        logger.info("\t" + str(key) + ", " + str(val))
 
 
 def write_metadata(meta_dict, h5_file, key_date, key_version, path="/"):
