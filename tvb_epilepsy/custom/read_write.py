@@ -404,7 +404,7 @@ def write_ts_seeg_epi(seeg_data, sampling_period, folder=os.path.join(PATIENT_VI
         raise_error(e + "\nSeeg dataset already written as " + sensors_name, logger)
 
 
-if __name__ == "__main__"(logger=logger):
+if __name__ == "__main__":
     read_epileptogenicity()
     read_ts()
 
