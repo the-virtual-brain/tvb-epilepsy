@@ -6,13 +6,13 @@ import os
 
 import h5py
 
-from tvb_epilepsy.base.utils import warning, raise_not_implemented_error, ensure_list, initialize_logger, \
-                                    calculate_projection
+from tvb_epilepsy.base.utils import warning, ensure_list, initialize_logger
 from tvb_epilepsy.base.model.model_vep import Connectivity, Surface, Sensors, Head
 from tvb_epilepsy.base.readers import ABCReader
 
 
 class CustomReader(ABCReader):
+
     logger = initialize_logger(__name__)
 
     def read_connectivity(self, h5_path):
@@ -105,7 +105,7 @@ class CustomReader(ABCReader):
                 projection = self.read_projection(os.path.join(root_folder, sensor_file[1]), s_type)
                 if projection==[]:
                     warning("Calculating projection matrix based solely on euclidean distance!")
-                    projection = calculate_projection(sensor, conn)
+                    projection = sensor.calculate_projection(conn)
                 sensors_dict[sensor] = projection
         return sensors_dict
 
@@ -143,14 +143,14 @@ class CustomReader(ABCReader):
         """
         path = os.path.join(root_folder, name, name + ".h5")
 
-        print "Reading Epileptogenicity from:", path
+        self.logger.info("Reading Epileptogenicity from:\n" + str(path))
         h5_file = h5py.File(path, 'r', libver='latest')
 
-        print "Structures:", h5_file["/"].keys()
-        print "Values expected shape:", h5_file['/values'].shape
+        self.logger.info("Structures:\n" + str(h5_file["/"].keys()))
+        self.logger.info("Values expected shape: " + str(h5_file['/values'].shape))
 
         values = h5_file['/values'][()]
-        print "Actual values shape", values.shape
+        self.logger.info("Actual values shape\: " + str(values.shape))
 
         h5_file.close()
         return values

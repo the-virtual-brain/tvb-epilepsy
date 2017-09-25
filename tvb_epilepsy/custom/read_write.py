@@ -6,7 +6,7 @@ import os
 import h5py
 import numpy
 
-from tvb_epilepsy.base.utils import warning, raise_value_error, ensure_unique_file, change_filename_or_overwrite, \
+from tvb_epilepsy.base.utils import warning, raise_error, raise_value_error, change_filename_or_overwrite, \
                                     read_object_from_h5_file, print_metadata, write_metadata
 # TODO: solve problems with setting up a logger
 from tvb_epilepsy.base.utils import initialize_logger
@@ -79,12 +79,13 @@ simulation_settings_attributes_dict = {"Simulated length (ms)": "simulated_perio
 
 
 def generate_connectivity_variant(uq_name, new_weights, new_tracts, description, new_w=None,
-                                  folder=os.path.join(PATIENT_VIRTUAL_HEAD), filename="Connectivity.h5"):
+                                  folder=os.path.join(PATIENT_VIRTUAL_HEAD), filename="Connectivity.h5",
+                                  logger=logger):
     """
     In existing Connectivity H5 define Weights and Tracts variants
     """
     path = os.path.join(folder, filename)
-    print "Writing a Connectivity Variant in:", path
+    logger.info("Writing a Connectivity Variant at:\n" + path)
     h5_file = h5py.File(path, 'a', libver='latest')
 
     try:
@@ -98,30 +99,30 @@ def generate_connectivity_variant(uq_name, new_weights, new_tracts, description,
         h5_file.create_dataset("/" + uq_name + "/tract_lengths", data=new_tracts)
         h5_file.close()
     except Exception, e:
-        print e
-        print "You should specify a unique group name %s" % uq_name
+        raise_value_error(e + "\nYou should specify a unique group name " + uq_name, logger)
 
 
-def read_epileptogenicity(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ep.h5")):
+def read_epileptogenicity(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ep.h5"), logger=logger):
     """
     :param path: Path towards an epileptogenicity H5 file
     :return: epileptogenicity in a numpy array
     """
-    print "Reading Epileptogenicity from:", path
+    logger.info("Reading Epileptogenicity from:\n" + path)
     h5_file = h5py.File(path, 'r', libver='latest')
 
-    print_metadata(h5_file)
-    print "Structures:", h5_file["/"].keys()
-    print "Values expected shape:", h5_file['/values'].shape
+    print_metadata(h5_file, logger)
+    logger.info("Structures:\n" + str(h5_file["/"].keys()))
+    logger.info("Values expected shape: " + str(h5_file['/values'].shape))
 
     values = h5_file['/values'][()]
-    print "Actual values shape", values.shape
+    logger.info("Actual values shape: " + str(values.shape))
 
     h5_file.close()
     return values
 
 
-def write_epileptogenicity_hypothesis(ep_vector, folder_path=PATIENT_VIRTUAL_HEAD, folder_name=None, file_name=None):
+def write_epileptogenicity_hypothesis(ep_vector, folder_path=PATIENT_VIRTUAL_HEAD, folder_name=None, file_name=None,
+                                      logger=logger):
     """
     Store X0 values to be used when launching simulations
     """
@@ -133,10 +134,7 @@ def write_epileptogenicity_hypothesis(ep_vector, folder_path=PATIENT_VIRTUAL_HEA
         folder_name = file_name
 
     path, overwrite = change_filename_or_overwrite(os.path.join(folder_path, folder_name), file_name + ".h5")
-    # path = os.path.join(PATIENT_VIRTUAL_HEAD, folder_name, file_name + ".h5")
-    # if os.path.exists(path):
-    #     print "Ep file %s already exists. Use a different name!" % path
-    #     return
+
     if overwrite:
         try:
             os.remove(path)
@@ -145,7 +143,8 @@ def write_epileptogenicity_hypothesis(ep_vector, folder_path=PATIENT_VIRTUAL_HEA
 
     os.makedirs(os.path.dirname(path))
 
-    print "Writing an Epileptogenicity at:", path
+    logger.info("Writing an Epileptogenicity at:\n" + path)
+
     h5_file = h5py.File(path, 'a', libver='latest')
 
     write_metadata({KEY_TYPE: "EpileptogenicityModel", KEY_NODES: ep_vector.shape[0]}, h5_file, KEY_DATE, KEY_VERSION)
@@ -159,7 +158,7 @@ def import_sensors(src_txt_file):
     write_sensors(labels, locations)
 
 
-def write_sensors(labels, locations, folder=os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name=None):
+def write_sensors(labels, locations, folder=os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name=None, logger=logger):
     """
     Store Sensors in a file to be shared by multiple patient virtualizations (heads)
     """
@@ -167,10 +166,6 @@ def write_sensors(labels, locations, folder=os.path.dirname(PATIENT_VIRTUAL_HEAD
         file_name = "SensorsSEEG_" + str(len(labels)) + ".h5"
 
     path, overwrite = change_filename_or_overwrite(folder, file_name)
-    # path = os.path.join(os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name)
-    # if os.path.exists(path):
-    #     print "Sensors file %s already exists. Use a different name!" % path
-    #     return
 
     if overwrite:
         try:
@@ -178,7 +173,7 @@ def write_sensors(labels, locations, folder=os.path.dirname(PATIENT_VIRTUAL_HEAD
         except:
             warning("\nFile to overwrite not found!")
 
-    print "Writing Sensors at:", path
+    logger.info("Writing Sensors at:\n" + path)
     h5_file = h5py.File(path, 'a', libver='latest')
 
     write_metadata({KEY_TYPE: "SeegSensors", KEY_SENSORS: len(labels)}, h5_file, KEY_DATE, KEY_VERSION)
@@ -189,16 +184,16 @@ def write_sensors(labels, locations, folder=os.path.dirname(PATIENT_VIRTUAL_HEAD
 
 # TODO: use new hypothesis
 def read_simulation_settings(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "sim_ep.h5"), output="object",
-                             hypothesis=None):
+                             hypothesis=None, logger=logger):
     """
     :param path: Path towards an hypothesis H5 file
     :return: hypothesis object
     """
 
-    print "Reading simulation settings from:", path
+    logger.info("Reading simulation settings from:\n" + path)
     h5_file = h5py.File(path, 'r', libver='latest')
 
-    print_metadata(h5_file)
+    print_metadata(h5_file, logger)
 
     if output == "dict": #or not (isinstance(hypothesis, Hypothesis)):
         model = dict()
@@ -237,31 +232,29 @@ def read_simulation_settings(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "sim_
     return model, sim_settings
 
 
-def read_ts(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5"), data=None):
+def read_ts(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5"), data=None, logger=logger):
     """
     :param path: Path towards a valid TimeSeries H5 file
     :return: Timeseries in a numpy array
     """
-    print "Reading TimeSeries from:", path
+    logger.info("Reading TimeSeries from:\n" + path)
     h5_file = h5py.File(path, 'r', libver='latest')
-    print_metadata(h5_file)
-    print "Structures:", h5_file["/"].keys()
+    print_metadata(h5_file, logger)
+    logger.info("Structures:\n" + str(h5_file["/"].keys()))
 
     if isinstance(data, dict):
 
         for key in data:
-            print "Data expected shape:", h5_file['/' + key].shape
+            logger.info("Values expected shape: " + str(h5_file['/' + key].shape))
             data[key] = h5_file['/' + key][()]
-            print "Actual Data shape", data[key].shape
-            print "First Channel sv sum", numpy.sum(data[key][:, 0])
+            logger.info("Actual Data shape: " + str(data[key].shape))
+            logger.info("First Channel sv sum: " + str(numpy.sum(data[key][:, 0])))
 
     else:
-
-        print "Data expected shape:", h5_file['/data'].shape
-
+        logger.info("Values expected shape: " + str(h5_file['/data'].shape))
         data = h5_file['/data'][()]
-        print "Actual Data shape", data.shape
-        print "First Channel sv sum", numpy.sum(data[:, 0])
+        logger.info("Actual Data shape: " + str(data.shape))
+        logger.info("First Channel sv sum: " + str(numpy.sum(data[:, 0])))
 
     total_time = int(h5_file["/"].attrs["Simulated_period"][0])
     nr_of_steps = int(h5_file["/data"].attrs["Number_of_steps"][0])
@@ -273,14 +266,15 @@ def read_ts(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5"), data=None):
     return time, data
 
 
-def write_ts(raw_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD, "ep"), filename="ts_from_python.h5"):
+def write_ts(raw_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD, "ep"), filename="ts_from_python.h5",
+             logger=logger):
 
     path, overwrite = change_filename_or_overwrite(os.path.join(folder, filename))
     # if os.path.exists(path):
     #     print "TS file %s already exists. Use a different name!" % path
     #     return
 
-    print "Writing a TS at:", path
+    logger.info("Writing a TS at:\n" + path)
 
     if overwrite:
         try:
@@ -293,7 +287,6 @@ def write_ts(raw_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD
 
     if isinstance(raw_data, dict):
         for data in raw_data:
-            print "Writing " + data
             if len(raw_data[data].shape) == 2 and str(raw_data[data].dtype)[0] == "f":
                 h5_file.create_dataset("/" + data, data=raw_data[data])
                 write_metadata({KEY_MAX: raw_data[data].max(), KEY_MIN: raw_data[data].min(),
@@ -320,28 +313,30 @@ def write_ts(raw_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD
     h5_file.close()
 
 
-def read_ts_epi(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5")):
+def read_ts_epi(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5"),
+                logger=logger):
     """
     :param path: Path towards a valid TimeSeries H5 file
     :return: Timeseries in a numpy array
     """
-    print "Reading TimeSeries from:", path
+    logger.info("Reading TimeSeries from:\n" + path)
     h5_file = h5py.File(path, 'r', libver='latest')
 
-    print_metadata(h5_file)
-    print "Structures:", h5_file["/"].keys()
-    print "Data expected shape:", h5_file['/data'].shape
+    print_metadata(h5_file, logger)
+    logger.info("Structures:\n" + str(h5_file["/"].keys()))
+    logger.info("Values expected shape: " + str(h5_file['/data'].shape))
+    h5_file['/data']
 
     data = h5_file['/data'][()]
-    print "Actual Data shape", data.shape
-    print "First Channel sv sum", numpy.sum(data[:, 0, :], axis=1)
+    logger.info("Actual Data shape: " + str(data.shape))
+    logger.info("First Channel sv sum: " +  str(numpy.sum(data[:, 0, :], axis=1)))
 
     h5_file.close()
     return data
 
 
 def write_ts_epi(raw_data, sampling_period, lfp_data=None, folder=os.path.join(PATIENT_VIRTUAL_HEAD, "ep"),
-                 filename="ts_from_python.h5"):
+                 filename="ts_from_python.h5", logger=logger):
 
     path, overwrite = change_filename_or_overwrite(folder, filename)
     # if os.path.exists(path):
@@ -349,10 +344,10 @@ def write_ts_epi(raw_data, sampling_period, lfp_data=None, folder=os.path.join(P
     #     return
 
     if raw_data is None or len(raw_data.shape) != 3:
-        print "Invalid TS data 3D (time, regions, sv) expected"
-        return
+        raise_value_error("Invalid TS data 3D (time, regions, sv) expected", logger)
 
-    print "Writing a TS at:", path
+    logger.info("Writing a TS at:\n" + path)
+
     if type(lfp_data) == int:
         lfp_data = raw_data[:, :, lfp_data[1]]
         raw_data[:, :, lfp_data[1]] = []
@@ -361,7 +356,7 @@ def write_ts_epi(raw_data, sampling_period, lfp_data=None, folder=os.path.join(P
     elif isinstance(lfp_data, numpy.ndarray):
         lfp_data = lfp_data.reshape((lfp_data.shape[0], lfp_data.shape[1], 1))
     else:
-        print "Invalid lfp_data 3D (time, regions, sv) expected"
+        raise_value_error("Invalid lfp_data 3D (time, regions, sv) expected", logger)
 
     if overwrite:
         try:
@@ -386,15 +381,15 @@ def write_ts_epi(raw_data, sampling_period, lfp_data=None, folder=os.path.join(P
 
 
 def write_ts_seeg_epi(seeg_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD, "ep"),
-                 filename="ts_from_python.h5"):
+                 filename="ts_from_python.h5", logger=logger):
 
     path = os.path.join(folder, filename)
     if not os.path.exists(path):
-        print "TS file %s does not exist. First define the raw data!" % path
+        raise_error("TS file %s does not exist. First define the raw data!" + path, logger)
         return
 
     sensors_name = "SeegSensors-" + str(seeg_data.shape[1])
-    print "Writing a TS at:", path, sensors_name
+    logger.info("Writing a TS at:\n" + path  + ", "+ sensors_name)
 
     try:
         h5_file = h5py.File(path, 'a', libver='latest')
@@ -406,27 +401,22 @@ def write_ts_seeg_epi(seeg_data, sampling_period, folder=os.path.join(PATIENT_VI
                         }, h5_file, KEY_DATE, KEY_VERSION, "/" + sensors_name)
         h5_file.close()
     except Exception, e:
-        print e
-        print "Seeg dataset already written %s" % sensors_name
+        raise_error(e + "\nSeeg dataset already written as " + sensors_name, logger)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__"(logger=logger):
     read_epileptogenicity()
-    print "----------------"
     read_ts()
-    print "----------------"
 
     # Simulating edit of a Connectivity.
     # It need to have the same number as the original connectivity, only weights and tracts changed.
     random_weights = numpy.random.random((88, 88))
     random_tracts = numpy.random.random((88, 88))
     generate_connectivity_variant('random3', random_weights, random_tracts, "Description of connectivity")
-    print "----------------"
 
     # Define the X0 vector, that can be later used as input in a simulation from GUI
     random_x0 = numpy.random.random((88,))
     write_epileptogenicity_hypothesis("ep-random", random_x0)
-    print "----------------"
 
     # Write TS
     random_ts = numpy.random.random((2000, 88, 3)).astype(numpy.float32)
@@ -434,7 +424,6 @@ if __name__ == "__main__":
 
     random_seeg = numpy.random.random((1000, 50)).astype(numpy.float32)
     write_ts_seeg_epi(random_seeg, 2.0)
-    print "-----------------"
 
     # Import Sensors from TXT file
     src_sensors_file = "/Users/lia.domide/Downloads/Denis/sEEG_position.txt"
