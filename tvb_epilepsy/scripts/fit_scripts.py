@@ -139,9 +139,9 @@ def prepare_model_and_data_for_fitting(model_configuration, hypothesis, fs, sign
                                             " for parameter " + p + " are not implemented yet!")
         data.update({p: temp})
 
-    zeq_lo = calc_eq_z(data["x1eq_lo"], data["yc"], data["Iext1"], "2d", x2=0.0, slope=data["slope"], a=data["a"],
+    zeq_lo = calc_eq_z(data["x1eq_hi"], data["yc"], data["Iext1"], "2d", x2=0.0, slope=data["slope"], a=data["a"],
                        b=data["b"], d=data["d"])
-    zeq_hi = calc_eq_z(data["x1eq_hi"], data["yc"], data["Iext1"], "2d", x2=0.0, slope=data["slope"], a=data["a"],
+    zeq_hi = calc_eq_z(data["x1eq_lo"], data["yc"], data["Iext1"], "2d", x2=0.0, slope=data["slope"], a=data["a"],
                        b=data["b"], d=data["d"])
     data.update({"zeq_lo": kwargs.get("zeq_lo", zeq_lo),
                  "zeq_hi": kwargs.get("zeq_hi", zeq_hi)})
@@ -373,7 +373,7 @@ def main_fit_sim_hyplsa():
                                                              observation_model=3,
                                                              mixing=None)
 
-            fit,  est = stanfit_model(model, data, mode="optimizing")
+            fit,  est = stanfit_model(model, data, mode="sampling", chains=1)
 
             print("Done!")
 
