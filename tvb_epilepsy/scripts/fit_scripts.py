@@ -17,7 +17,7 @@ from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D, EpileptorDPrealistic, EpileptorDP
-from tvb_epilepsy.base.plot_utils import plot_sim_results
+from tvb_epilepsy.base.plot_utils import plot_sim_results, plot_fit_results
 from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
                                                     compute_seeg_and_write_ts_h5_file
 
@@ -173,14 +173,14 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, signals, dynam
     data.update({"x0cr": x0cr, "rx0": rx0})
     logger.info("data dictionary completed with " + str(len(data)) + " fields:\n" + str(data.keys()))
 
-    return data, tau0_def
+    return data, tau0_def, tau1_def
 
 
 def prepare_data_for_fitting_vep_original(model_configuration, hypothesis, fs, signals, dynamic_model=None,
                                           active_regions=None, active_regions_th=0.1, observation_model=3, mixing=None,
                                           **kwargs):
 
-    p, tau0_def = prepare_data_for_fitting(model_configuration, hypothesis, fs, signals, dynamic_model, active_regions,
+    p, tau0_def, tau1_def = prepare_data_for_fitting(model_configuration, hypothesis, fs, signals, dynamic_model, active_regions,
                                  active_regions_th, observation_model, mixing, **kwargs)
 
     active_regions = np.where(p["active_regions_flag"])[0]
@@ -210,8 +210,11 @@ def prepare_data_for_fitting_vep_original(model_configuration, hypothesis, fs, s
     data.update({"eps_hi": p["eps_hi"]})
     data.update({"sig_hi": p["sig_hi"]})
     data.update({"zlim": np.array([p["z_lo"], p["z_hi"]])})
+    data.update({"tt": tau1_def})
+    data.update({"amp": 1.0})
+    data.update({"offset": 0.0})
 
-    return data
+    return data, p["signals"]
 
 
 def stanfit_model(model, data, mode="sampling", **kwargs):
@@ -219,13 +222,13 @@ def stanfit_model(model, data, mode="sampling", **kwargs):
     logger.info("Model sampling...")
     fit = getattr(model, mode)(data=data, **kwargs)
 
-    if mode is not "optimizing":
+    if mode is "sampling":
         logger.info("Extracting estimates...")
         est = fit.extract(permuted=True)
-        return fit, est
+        return est, fit
 
     else:
-        return fit
+        return fit, None
 
 
 def main_fit_sim_hyplsa():
@@ -433,11 +436,15 @@ def main_fit_sim_hyplsa():
 
         model = compile_model(model_path=os.path.join(STATISTICAL_MODELS_PATH, "vep_original_DP.stan"))
 
-        data = prepare_data_for_fitting_vep_original(model_configuration, lsa_hypothesis, fsAVG, vois_ts_dict["x1"],
-                                                     sim.model, active_regions=None, active_regions_th=0.1,
-                                                     observation_model=3, mixing=None)
+        data, signals = prepare_data_for_fitting_vep_original(model_configuration, lsa_hypothesis, fsAVG,
+                                                                     vois_ts_dict["x1"], sim.model, active_regions=None,
+                                                                     active_regions_th=0.1, observation_model=3,
+                                                                     mixing=None)
 
-        fit = stanfit_model(model, data, mode="optimizing")
+        est, fit = stanfit_model(model, data, mode="optimizing", iter=100)
+
+        plot_fit_results(lsa_hypothesis.name, head, est, signals, time=vois_ts_dict['time'],
+                         seizure_indices=[0, 1], trajectories_plot=True)
 
         print("Done!")
 

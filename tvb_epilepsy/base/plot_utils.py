@@ -596,7 +596,6 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
                         figure_format=figure_format, labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
 
 
-
 def plot_fit_results(hyp_name, head, res, signal, time=None, seizure_indices=None, trajectories_plot=False,
                      save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
                      figure_format=FIG_FORMAT,
@@ -605,14 +604,16 @@ def plot_fit_results(hyp_name, head, res, signal, time=None, seizure_indices=Non
     if time is None:
         time = np.array(range(signal.shape[0]))
 
-    plot_raster(time, {'observation signal': signal, 'x': res["x"]}, special_idx=seizure_indices,
+    time = time.flatten()
+
+    plot_raster(time, {'observation signal': signal, 'x': res["x"].T}, special_idx=seizure_indices,
                 time_units=res.get('time_units', "ms"),
                 title=hyp_name + ": Observation signal vs fit x rasterplot", offset=3.0,
                 labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                 figure_format=figure_format, figsize=VERY_LARGE_SIZE)
 
     if trajectories_plot:
-        plot_trajectories({'x': res['x'], 'z(t)': res['z']}, special_idx=seizure_indices,
+        plot_trajectories({'x': res['x'].T, 'z(t)': res['z'].T}, special_idx=seizure_indices,
                       title='Fit state space trajectories', figure_name='Trajectories',
                       labels=head.connectivity.region_labels, show_flag=show_flag, save_flag=save_flag,
                       figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
