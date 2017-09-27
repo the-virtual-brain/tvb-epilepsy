@@ -150,10 +150,8 @@ def mean_std_to_distribution_params(distribution, mu, std=1.0):
     if np.in1d(distribution, ["exponential", "poisson", "chisquare", "bernoulli"]):
         std_check = std_check[distribution](mu)
         if std != std_check:
-            print "\nmu = ", mu
-            print "\nstd = ", std
-            print "\nstd should be = ", std_check
-            warning("\nStandard deviation constraint not satisfied for distribution " + distribution + "!)")
+            msg = "\nmu = " +  str(mu) + "\nstd = " + str(std) + "\nstd should be = " + str(std_check)
+            warning(msg + "\nStandard deviation constraint not satisfied for distribution " + distribution + "!)")
 
     p = distrib_dict[distribution]["from_mu_std"](mu, std)
 
@@ -161,9 +159,8 @@ def mean_std_to_distribution_params(distribution, mu, std=1.0):
         return p
 
     else:
-        print "\n"
         for key, val in p.iteritems():
-            print key, val
+            logger.info("\n" + str(key) + ": " + str(val))
         raise_value_error("\nDistribution parameters'constraints " + distrib_dict[distribution]["constraint_str"]
                          + " is not met!")
 
@@ -180,9 +177,8 @@ def distribution_params_to_mean_std(distribution, **p):
         return mu, std
 
     else:
-        print "\n"
         for key, val in p.iteritems():
-            print key, val
+            logger.info("\n" + str(key) + ": " + str(val))
         raise_value_error("\nDistribution parameters'constraints " + distrib_dict[distribution]["constraint_str"]
                          + " is not met!")
 
