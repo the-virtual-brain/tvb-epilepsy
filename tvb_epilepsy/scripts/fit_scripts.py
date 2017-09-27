@@ -5,19 +5,23 @@ import pystan as ps
 
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_DEF, X0_CR_DEF, VOIS, X0_DEF, E_DEF, TVB, DATA_MODE, \
                                         SIMULATION_MODE
-from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM, STATISTICAL_MODELS_PATH
+from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM, STATISTICAL_MODELS_PATH, FOLDER_VEP_HOME
 from tvb_epilepsy.base.utils import warning, raise_not_implemented_error, initialize_logger
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
-from tvb_epilepsy.service.sampling_service import gamma_from_mu_std
+from tvb_epilepsy.service.sampling_service import gamma_from_mu_std, gamma_to_mu_std
 from tvb_epilepsy.service.epileptor_model_factory import model_noise_intensity_dict
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.custom.simulator_custom import EpileptorModel
+from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D, EpileptorDPrealistic, EpileptorDP
 from tvb_epilepsy.base.plot_utils import plot_sim_results
 from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
                                                     compute_seeg_and_write_ts_h5_file
+
+from tvb.simulator.models import Epileptor
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
@@ -35,15 +39,16 @@ else:
 logger = initialize_logger(__name__)
 
 
-def prepare_model_and_data_for_fitting(model_configuration, hypothesis, fs, signals,
-                                       model_path=os.path.join(STATISTICAL_MODELS_PATH, "vep_autoregress.stan"),
-                                       active_regions=None, active_regions_th=0.1, observation_model=3, mixing=None,
-                                       **kwargs):
-
+def compile_model(model_path=os.path.join(STATISTICAL_MODELS_PATH, "vep_autoregress.stan"), **kwargs):
     tic = time.time()
     logger.info("Compiling model...")
     model = ps.StanModel(file=model_path, model_name=kwargs.get("model_name", 'vep_epileptor2D_autoregress'))
     logger.info(str(time.time() - tic) + ' sec required to compile')
+    return model
+
+
+def prepare_data_for_fitting(model_configuration, hypothesis, fs, signals, dynamic_model=None, active_regions=None,
+                             active_regions_th=0.1, observation_model=3, mixing=None, **kwargs):
 
     logger.info("Constructing data dictionary...")
     active_regions_flag = np.zeros((hypothesis.number_of_regions, ), dtype="i")
@@ -59,26 +64,39 @@ def prepare_model_and_data_for_fitting(model_configuration, hypothesis, fs, sign
     active_regions_flag[active_regions] = 1
     n_active_regions = len(active_regions)
 
+    if isinstance(dynamic_model, (Epileptor, EpileptorModel)):
+        tau1_def = np.mean(1.0 / dynamic_model.r)
+        tau0_def = np.mean(dynamic_model.tt)
+    elif isinstance(dynamic_model, (EpileptorDP, EpileptorDP2D, EpileptorDPrealistic)):
+        tau1_def = np.mean(dynamic_model.tau1)
+        tau0_def = np.mean(dynamic_model.tau0)
+    else:
+        tau1_def = 0.2
+        tau0_def = 40000
+
     # Gamma distributions' parameters
     # visualize gamma distributions here: http://homepage.divms.uiowa.edu/~mbognar/applets/gamma.html
-    tau1 = gamma_from_mu_std(kwargs.get("tau1_mu", 0.2), kwargs.get("tau1_std", 0.1))
-    tau0 = gamma_from_mu_std(kwargs.get("tau0_mu", 10000.0), kwargs.get("tau0_std", 10000.0))
+    tau1_mu = tau1_def
+    tau1 = gamma_from_mu_std(kwargs.get("tau1_mu", tau1_mu), kwargs.get("tau1_std", 3*tau1_mu))
+    tau0_mu = tau0_def
+    tau0 = gamma_from_mu_std(kwargs.get("tau0_mu", tau0_mu), kwargs.get("tau0_std", 3*10000.0))
     K = gamma_from_mu_std(kwargs.get("K_mu", 10.0 / hypothesis.number_of_regions),
-                          kwargs.get("K_std", 10.0 / hypothesis.number_of_regions))
+                          kwargs.get("K_std", 300.0 / hypothesis.number_of_regions))
     # zero effective connectivity:
     conn0 = gamma_from_mu_std(kwargs.get("conn0_mu", 0.001), kwargs.get("conn0_std", 0.001))
     sig_mu = np.mean(model_noise_intensity_dict["EpileptorDP2D"])
     sig = gamma_from_mu_std(kwargs.get("sig_mu", sig_mu), kwargs.get("sig_std", sig_mu))
-    sig_eq_mu = 0.1/3.0
-    sig_eq = gamma_from_mu_std(kwargs.get("sig_eq_mu", sig_eq_mu), kwargs.get("sig_eq_std", sig_eq_mu))
+    sig_eq_mu = (X1_EQ_CR_DEF - X1_DEF) / 3.0
+    sig_eq_std = 3*sig_eq_mu
+    sig_eq = gamma_from_mu_std(kwargs.get("sig_eq_mu", sig_eq_mu), kwargs.get("sig_eq_std", sig_eq_std))
     sig_init_mu = sig_eq_mu
-    sig_init = gamma_from_mu_std(kwargs.get("sig_init_mu", sig_init_mu), kwargs.get("sig_init_std", sig_init_mu))
+    sig_init_std = sig_init_mu
+    sig_init = gamma_from_mu_std(kwargs.get("sig_init_mu", sig_init_mu), kwargs.get("sig_init_std", sig_init_std))
 
     if mixing is None:
-        observation_model = 3;
+        observation_model = 3
         mixing = np.eye(n_active_regions)
         signals = signals[:, active_regions]
-
 
     data = {"n_regions": hypothesis.number_of_regions,
             "n_active_regions": n_active_regions,
@@ -106,8 +124,8 @@ def prepare_model_and_data_for_fitting(model_configuration, hypothesis, fs, sign
             "tau0_b": kwargs.get("tau0_b", tau0["beta"]),
             "SC": model_configuration.connectivity_matrix,
             "SC_sig": kwargs.get("SC_sig", 0.1),
-            "K_lo": kwargs.get("K_lo", 1.0 / hypothesis.number_of_regions),
-            "K_hi": kwargs.get("K_hi", 100.0 / hypothesis.number_of_regions),
+            "K_lo": kwargs.get("K_lo", 0.0),
+            "K_hi": kwargs.get("K_hi", 300.0 / hypothesis.number_of_regions),
             "K_a": kwargs.get("K_a", K["alpha"]),
             "K_b": kwargs.get("K_b", K["beta"]),
             "gamma0": kwargs.get("gamma0", np.array([conn0["alpha"], conn0["beta"]])),
@@ -115,10 +133,10 @@ def prepare_model_and_data_for_fitting(model_configuration, hypothesis, fs, sign
             "sig_hi": kwargs.get("sig_hi", 1.0 / fs),
             "sig_a": kwargs.get("sig_a", sig["alpha"]),
             "sig_b": kwargs.get("sig_b", sig["beta"]),
-            "sig_eq_hi": kwargs.get("sig_eq_hi", 3*sig_eq_mu),
+            "sig_eq_hi": kwargs.get("sig_eq_hi", 3*sig_eq_std),
             "sig_eq_a": kwargs.get("sig_eq_a", sig_eq["alpha"]),
             "sig_eq_b": kwargs.get("sig_eq_b", sig_eq["beta"]),
-            "sig_init_hi": kwargs.get("sig_init_hi", 3 * sig_init_mu),
+            "sig_init_hi": kwargs.get("sig_init_hi", 3 * sig_init_std),
             "sig_init_a": kwargs.get("sig_init_a", sig_init["alpha"]),
             "sig_init_b": kwargs.get("sig_init_b", sig_init["beta"]),
             "observation_model": observation_model,
@@ -145,8 +163,8 @@ def prepare_model_and_data_for_fitting(model_configuration, hypothesis, fs, sign
                        b=data["b"], d=data["d"])
     data.update({"zeq_lo": kwargs.get("zeq_lo", zeq_lo),
                  "zeq_hi": kwargs.get("zeq_hi", zeq_hi)})
-    data.update({"zinit_lo": kwargs.get("zinit_lo", zeq_lo - sig_init_mu),
-                 "zinit_hi": kwargs.get("zinit_hi", zeq_hi + sig_init_mu)})
+    data.update({"zinit_lo": kwargs.get("zinit_lo", zeq_lo - sig_init_std),
+                 "zinit_hi": kwargs.get("zinit_hi", zeq_hi + sig_init_std)})
 
     x0cr, rx0 = calc_x0cr_r(data["yc"], data["Iext1"], data["a"], data["b"], data["d"], zmode=np.array("lin"),
                             x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF, test=False,
@@ -155,7 +173,45 @@ def prepare_model_and_data_for_fitting(model_configuration, hypothesis, fs, sign
     data.update({"x0cr": x0cr, "rx0": rx0})
     logger.info("data dictionary completed with " + str(len(data)) + " fields:\n" + str(data.keys()))
 
-    return model, data
+    return data, tau0_def
+
+
+def prepare_data_for_fitting_vep_original(model_configuration, hypothesis, fs, signals, dynamic_model=None,
+                                          active_regions=None, active_regions_th=0.1, observation_model=3, mixing=None,
+                                          **kwargs):
+
+    p, tau0_def = prepare_data_for_fitting(model_configuration, hypothesis, fs, signals, dynamic_model, active_regions,
+                                 active_regions_th, observation_model, mixing, **kwargs)
+
+    active_regions = np.where(p["active_regions_flag"])[0]
+    non_active_regions = np.where(1-p["active_regions_flag"])[0]
+
+    data = {"observation_model": p["observation_model"]}
+    data.update({"nn": p["n_active_regions"]})
+    data.update({"nt": p["n_time"]})
+    data.update({"ns": p["n_signals"]})
+    data.update({"I1": p["Iext1"]})
+    data.update({"tau0": tau0_def})
+    data.update({"dt": p["dt"]})
+    data.update({"gain": p["mixing"]})
+    data.update({"seeg_log_power": p["signals"]})
+    data.update({"Ic": np.sum(p["SC"][active_regions][:, non_active_regions], axis=1)})
+    data.update({"SC": p["SC"][active_regions][:, active_regions]})
+    data.update({"SC_var": p["SC_sig"]})
+    data.update({"K_lo": p["K_lo"]})
+    data.update({"K_hi": p["K_hi"]})
+    K = {"alpha": p["K_a"], "beta": p["K_b"]}
+    K_mu, K_std = gamma_to_mu_std(K)
+    K = gamma_from_mu_std(K_mu, K_std)
+    data.update({"K_u": K["k"]})
+    data.update({"K_v": K["theta"]})
+    data.update({"x0_lo": -4.0})
+    data.update({"x0_hi": -1.0})
+    data.update({"eps_hi": p["eps_hi"]})
+    data.update({"sig_hi": p["sig_hi"]})
+    data.update({"zlim": np.array([p["z_lo"], p["z_hi"]])})
+
+    return data
 
 
 def stanfit_model(model, data, mode="sampling", **kwargs):
@@ -163,10 +219,13 @@ def stanfit_model(model, data, mode="sampling", **kwargs):
     logger.info("Model sampling...")
     fit = getattr(model, mode)(data=data, **kwargs)
 
-    logger.info("Extracting estimates...")
-    est = fit.extract(permuted=True)
+    if mode is not "optimizing":
+        logger.info("Extracting estimates...")
+        est = fit.extract(permuted=True)
+        return fit, est
 
-    return fit, est
+    else:
+        return fit
 
 
 def main_fit_sim_hyplsa():
@@ -180,7 +239,7 @@ def main_fit_sim_hyplsa():
     logger.info("Reading from: " + data_folder)
     head = reader.read_head(data_folder)
 
-    head.plot()
+    # head.plot()
 
     # --------------------------Hypothesis definition-----------------------------------
 
@@ -288,7 +347,7 @@ def main_fit_sim_hyplsa():
 
         logger.info("\n\nCreating model configuration...")
         model_configuration_service = ModelConfigurationService(hyp.number_of_regions)
-        model_configuration_service.write_to_h5(FOLDER_RES, hyp.name + "_model_config_service.h5")
+        # model_configuration_service.write_to_h5(FOLDER_RES, hyp.name + "_model_config_service.h5")
 
         if hyp.type == "Epileptogenicity":
             model_configuration = model_configuration_service. \
@@ -296,21 +355,21 @@ def main_fit_sim_hyplsa():
         else:
             model_configuration = model_configuration_service. \
                 configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
-        model_configuration.write_to_h5(FOLDER_RES, hyp.name + "_ModelConfig.h5")
+        # model_configuration.write_to_h5(FOLDER_RES, hyp.name + "_ModelConfig.h5")
 
         # Plot nullclines and equilibria of model configuration
-        model_configuration_service.plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
-                                                       special_idx=disease_indices, model="6d", zmode="lin",
-                                                       figure_name=hyp.name + "_Nullclines and equilibria")
+        # model_configuration_service.plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
+        #                                                special_idx=disease_indices, model="6d", zmode="lin",
+        #                                                figure_name=hyp.name + "_Nullclines and equilibria")
 
         logger.info("\n\nRunning LSA...")
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
         lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
 
-        lsa_hypothesis.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")
-        lsa_service.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")
-
-        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, None)
+        # lsa_hypothesis.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")
+        # lsa_service.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")
+        #
+        # lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, None)
 
 
         # ------------------------------Simulation--------------------------------------
@@ -325,57 +384,62 @@ def main_fit_sim_hyplsa():
         # By default initial condition is set right on the equilibrium point.
         sim.config_simulation(initial_conditions=None)
 
-        convert_to_h5_model(sim.model).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5")
+        # convert_to_h5_model(sim.model).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5")
 
-        logger.info("\n\nSimulating...")
-        ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
-
-        convert_to_h5_model(sim.simulation_settings).write_to_h5(FOLDER_RES,
-                                                                 lsa_hypothesis.name + "_sim_settings.h5")
-
-        if not status:
-            warning("\nSimulation failed!")
-
+        ts_file = os.path.join(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts.mat")
+        if os.path.isfile(ts_file):
+            logger.info("\n\nLoading previously simulated time series...")
+            from scipy.io import loadmat
+            vois_ts_dict = loadmat(ts_file)
         else:
+            logger.info("\n\nSimulating...")
+            ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
 
-            time = np.array(ttavg, dtype='float32')
+            # convert_to_h5_model(sim.simulation_settings).write_to_h5(FOLDER_RES,
+            #                                                          lsa_hypothesis.name + "_sim_settings.h5")
 
-            output_sampling_time = np.mean(np.diff(time))
-            tavg_data = tavg_data[:, :, :, 0]
+            if not status:
+                warning("\nSimulation failed!")
 
-            logger.info("\n\nSimulated signal return shape: %s", tavg_data.shape)
-            logger.info("Time: %s - %s", time[0], time[-1])
-            logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
+            else:
 
-            # Variables of interest in a dictionary:
-            vois_ts_dict = prepare_vois_ts_dict(VOIS[model_name], tavg_data)
-            vois_ts_dict['time'] = time
-            vois_ts_dict['time_units'] = 'msec'
+                time = np.array(ttavg, dtype='float32')
 
-            compute_seeg_and_write_ts_h5_file(FOLDER_RES, lsa_hypothesis.name + "_ts.h5", sim.model, vois_ts_dict,
-                                              output_sampling_time, time_length,
-                                              hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
-                                              sensor_dicts_list=[head.sensorsSEEG])
+                output_sampling_time = np.mean(np.diff(time))
+                tavg_data = tavg_data[:, :, :, 0]
 
-            # Plot results
-            plot_sim_results(sim.model, lsa_hypothesis.propagation_indices, lsa_hypothesis.name, head, vois_ts_dict,
-                             head.sensorsSEEG.keys(), hpf_flag=True, trajectories_plot=trajectories_plot,
-                             spectral_raster_plot=spectral_raster_plot, log_scale=True)
+                logger.info("\n\nSimulated signal return shape: %s", tavg_data.shape)
+                logger.info("Time: %s - %s", time[0], time[-1])
+                logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
 
-            # Optionally save results in mat files
-            # from scipy.io import savemat
-            # savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), vois_ts_dict)
+                # Variables of interest in a dictionary:
+                vois_ts_dict = prepare_vois_ts_dict(VOIS[model_name], tavg_data)
+                vois_ts_dict['time'] = time
+                vois_ts_dict['time_units'] = 'msec'
 
-            model, data = prepare_model_and_data_for_fitting(model_configuration, lsa_hypothesis, fs,
-                                                             vois_ts_dict["x1"],
-                                                             active_regions=None,
-                                                             active_regions_th=0.1,
-                                                             observation_model=3,
-                                                             mixing=None)
+                vois_ts_dict=compute_seeg_and_write_ts_h5_file(FOLDER_RES, lsa_hypothesis.name + "_ts.h5", sim.model,
+                                                               vois_ts_dict, output_sampling_time, time_length,
+                                                               hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
+                                                               sensor_dicts_list=[head.sensorsSEEG])
 
-            fit,  est = stanfit_model(model, data, mode="sampling", chains=1)
+                # Plot results
+                plot_sim_results(sim.model, lsa_hypothesis.propagation_indices, lsa_hypothesis.name, head, vois_ts_dict,
+                                 head.sensorsSEEG.keys(), hpf_flag=True, trajectories_plot=trajectories_plot,
+                                 spectral_raster_plot=spectral_raster_plot, log_scale=True)
 
-            print("Done!")
+                # Optionally save results in mat files
+                from scipy.io import savemat
+                savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), vois_ts_dict)
+
+        model = compile_model(model_path=os.path.join(STATISTICAL_MODELS_PATH, "vep_original_DP.stan"))
+
+        data = prepare_data_for_fitting_vep_original(model_configuration, lsa_hypothesis, fsAVG, vois_ts_dict["x1"],
+                                                     sim.model, active_regions=None, active_regions_th=0.1,
+                                                     observation_model=3, mixing=None)
+
+        fit = stanfit_model(model, data, mode="optimizing")
+
+        print("Done!")
 
 
 
