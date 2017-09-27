@@ -95,8 +95,8 @@ def gamma_from_mu_std(mu, std):
 
 
 def gamma_to_mu_std(p):
-    if p.get("a", False) and p.get("beta", False):
-        return p["a"] / p["beta"], np.sqrt(p["a"]) / p["beta"]
+    if p.get("alpha", False) and p.get("beta", False):
+        return p["alpha"] / p["beta"], np.sqrt(p["aalpha"]) / p["beta"]
 
     elif p.get("k", False) and p.get("theta", False):
         return p["k"] * p["theta"], np.sqrt(p["k"]) * p["theta"]
