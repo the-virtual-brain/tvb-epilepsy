@@ -147,7 +147,7 @@ class SimulatorCustom(ABCSimulator):
 
         try:
             status = subprocess.call(opts, shell=True)
-            print status
+            print(status)
 
         except:
             status = False
