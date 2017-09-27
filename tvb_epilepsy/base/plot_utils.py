@@ -23,7 +23,7 @@ try:
     from mpldatacursor import HighlightingDataCursor #datacursor
     MOUSEHOOVER = True
 except:
-    warning("\n No mpldatacursor module found! MOUSEHOOVER will not be available.")
+    warning("\nNo mpldatacursor module found! MOUSEHOOVER will not be available.")
     MOUSEHOOVER = False
 
 
@@ -597,7 +597,7 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 
 
 
-def plot_sim_results(hyp_name, head, res, signal, time=None, seizure_indices=None, trajectories_plot=False,
+def plot_fit_results(hyp_name, head, res, signal, time=None, seizure_indices=None, trajectories_plot=False,
                      save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
                      figure_format=FIG_FORMAT,
                      **kwargs):

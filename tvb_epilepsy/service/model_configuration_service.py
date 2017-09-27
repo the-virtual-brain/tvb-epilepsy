@@ -26,7 +26,7 @@ try:
     from mpldatacursor import HighlightingDataCursor #datacursor
     MOUSEHOOVER = True
 except:
-    warning("\n No mpldatacursor module found! MOUSEHOOVER will not be available.")
+    warning("\nNo mpldatacursor module found! MOUSEHOOVER will not be available.")
     MOUSEHOOVER = False
 
 # NOTES:
@@ -222,7 +222,9 @@ class ModelConfigurationService(object):
 
         return self.configure_model_from_equilibrium(x1EQ, zEQ, connectivity_matrix)
 
-    def plot_nullclines_eq(self, model_config, region_labels, special_idx, model, zmode, figure_name):
+    def plot_nullclines_eq(self, model_config, region_labels, special_idx, model, zmode, figure_name,
+                           show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
+                           figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
         add_name = " " + "Epileptor " + model + " z-" + str(zmode)
         figure_name = figure_name + add_name
 
@@ -323,5 +325,5 @@ class ModelConfigurationService(object):
         else:
             figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
 
-        save_figure(SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name=figure_name)
-        check_show(SHOW_FLAG)
+        save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
+        check_show(show_flag)
