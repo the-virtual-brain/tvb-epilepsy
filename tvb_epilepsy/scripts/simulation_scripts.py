@@ -167,6 +167,8 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
         for i_sensor, sensor in enumerate(sensor_dict.keys()):
             write_ts_seeg_epi(vois_ts_dict[sensor.s_type+'%d' % i_sensor], dt, folder, filename)
 
+    return vois_ts_dict
+
 
 def set_time_scales(fs=2048.0, time_length=100000.0, scale_fsavg=None, report_every_n_monitor_steps=100):
     dt = 1000.0 / fs
