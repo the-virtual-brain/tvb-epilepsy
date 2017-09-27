@@ -4,7 +4,6 @@ Service to do X0/e_values Hypothesis configuration.
 """
 import numpy
 from matplotlib import pyplot
-from mpldatacursor import HighlightingDataCursor
 
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, I_EXT2_DEF, A_DEF, \
                                         B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, X1_DEF, X0_CR_DEF, FIG_SIZE, \
@@ -19,6 +18,16 @@ from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r, calc_
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z, eq_x1_hypo_x0_linTaylor, \
                                                                   eq_x1_hypo_x0_optimize, def_x1lin, calc_eq_y1
 from tvb_epilepsy.base.plot_utils import save_figure, check_show
+
+try:
+    #https://github.com/joferkington/mpldatacursor
+    #pip install mpldatacursor
+    #Not working with the MacosX graphic's backend
+    from mpldatacursor import HighlightingDataCursor #datacursor
+    MOUSEHOOVER = True
+except:
+    warning("\n No mpldatacursor module found! MOUSEHOOVER will not be available.")
+    MOUSEHOOVER = False
 
 # NOTES:
 # In the future all the related to model configuration parameters might be part of the disease hypothesis:

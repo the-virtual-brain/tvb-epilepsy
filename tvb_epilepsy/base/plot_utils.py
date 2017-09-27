@@ -12,6 +12,7 @@ from scipy.stats.mstats import zscore
 
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.constants import *
+from tvb_epilepsy.base.utils import warning
 from tvb_epilepsy.tvb_api.epileptor_models import *
 from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
 
@@ -21,8 +22,9 @@ try:
     #Not working with the MacosX graphic's backend
     from mpldatacursor import HighlightingDataCursor #datacursor
     MOUSEHOOVER = True
-except ImportError:
-    pass
+except:
+    warning("\n No mpldatacursor module found! MOUSEHOOVER will not be available.")
+    MOUSEHOOVER = False
 
 
 def check_show(show_flag=SHOW_FLAG):
@@ -520,6 +522,7 @@ def plot_spectral_analysis_raster(time, data, time_units="ms", freq=None, specia
 
     return fig, ax, img, line, time, freq, stf, psd
 
+
 def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, hpf_flag=False,
                      trajectories_plot=False, spectral_raster_plot=False,
                      save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
@@ -593,7 +596,31 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
                         figure_format=figure_format, labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
 
 
-# def plot_head(head, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
+
+def plot_sim_results(hyp_name, head, res, signal, time=None, seizure_indices=None, trajectories_plot=False,
+                     save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
+                     figure_format=FIG_FORMAT,
+                     **kwargs):
+
+    if time is None:
+        time = np.array(range(signal.shape[0]))
+
+    plot_raster(time, {'observation signal': signal, 'x': res["x"]}, special_idx=seizure_indices,
+                time_units=res.get('time_units', "ms"),
+                title=hyp_name + ": Observation signal vs fit x rasterplot", offset=3.0,
+                labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
+                figure_format=figure_format, figsize=VERY_LARGE_SIZE)
+
+    if trajectories_plot:
+        plot_trajectories({'x': res['x'], 'z(t)': res['z']}, special_idx=seizure_indices,
+                      title='Fit state space trajectories', figure_name='Trajectories',
+                      labels=head.connectivity.region_labels, show_flag=show_flag, save_flag=save_flag,
+                      figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
+
+
+
+
+    # def plot_head(head, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
 #               figsize=LARGE_SIZE):
 #     plot_connectivity(head.connectivity, show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,
 #                       figure_format=figure_format, figsize=figsize)

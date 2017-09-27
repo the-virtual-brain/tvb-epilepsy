@@ -7,7 +7,7 @@ from tvb.basic.profile import TvbProfile
 TvbProfile.set_profile(TvbProfile.LIBRARY_PROFILE)
 
 import os
-from tvb_epilepsy.base.utils import warning, ensure_list, calculate_projection
+from tvb_epilepsy.base.utils import warning, ensure_list
 from tvb_epilepsy.base.model.model_vep import Connectivity, Surface, Sensors, Head
 from tvb_epilepsy.base.readers import ABCReader
 
@@ -88,7 +88,7 @@ class TVBReader(ABCReader):
                 projection = self.read_projection(os.path.join(root_folder, sensor_file[1]), s_type)
                 if projection == []:
                     warning("Calculating projection matrix based solely on euclidean distance!")
-                    projection = calculate_projection(sensor, conn)
+                    projection = sensor.calculate_projection(conn)
                 sensors_dict[sensor] = projection
         return sensors_dict
 
