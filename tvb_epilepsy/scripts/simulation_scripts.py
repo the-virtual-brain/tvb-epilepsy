@@ -133,7 +133,7 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
             idx_proj = -1
             for sensor, projection in sensor_dict.iteritems():
                 idx_proj += 1
-                vois_ts_dict[sensor.s_type + '%d' % idx_proj] = vois_ts_dict['z'].dot(projection.T)
+                vois_ts_dict[sensor.s_type + '%d' % idx_proj] = vois_ts_dict['x1'].dot(projection.T)
 
     else:
 
