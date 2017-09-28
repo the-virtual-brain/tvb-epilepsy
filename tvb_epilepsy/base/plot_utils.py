@@ -328,16 +328,16 @@ def plot_raster(time, data_dict, time_units="ms", special_idx=None, title='Time 
         lines.append([])
         if special_idx is None:
             for iTS in range(nTS):
-                line, = pyplot.plot(time, data[:,iTS]+offset*iTS, 'k', label = labels[iTS])
+                line, = pyplot.plot(time, -data[:,iTS]+offset*iTS, 'k', label = labels[iTS])
                 lines[i].append(line)
         else:
             mask = np.array(range(nTS))
             mask = np.delete(mask,special_idx)
             for iTS in special_idx:
-                line, = pyplot.plot(time, data[:, iTS]+offset*iTS, 'r', label = labels[iTS])
+                line, = pyplot.plot(time, -data[:, iTS]+offset*iTS, 'r', label = labels[iTS])
                 lines[i].append(line)
             for iTS in mask:
-                line, = pyplot.plot(time, data[:, iTS]+offset*iTS, 'k', label = labels[iTS])
+                line, = pyplot.plot(time, -data[:, iTS]+offset*iTS, 'k', label = labels[iTS])
                 lines[i].append(line)
         pyplot.ylabel(subtitle)
         ax.set_autoscalex_on(False)
@@ -533,6 +533,7 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
                         special_idx=seizure_indices, title=hyp_name + ": Simulated TAVG",
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+
     else:
         plot_timeseries(res['time'], {'LFP(t)': res['lfp'], 'z(t)': res['z']}, time_units=res.get('time_units', "ms"),
                         special_idx=seizure_indices, title=hyp_name + ": Simulated LFP-z",
@@ -569,7 +570,7 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 
     if trajectories_plot:
         plot_trajectories({'x1': res['x1'], 'z(t)': res['z']}, special_idx=seizure_indices,
-                          title='State space trajectories', figure_name='Trajectories',
+                          title=hyp_name + ': State space trajectories', figure_name=hyp_name+'StateSpaceTrajectories',
                           labels=head.connectivity.region_labels, show_flag=show_flag, save_flag=save_flag,
                           figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
 
@@ -606,15 +607,16 @@ def plot_fit_results(hyp_name, head, res, signal, time=None, seizure_indices=Non
 
     time = time.flatten()
 
-    plot_raster(time, {'observation signal': signal, 'x': res["x"].T}, special_idx=seizure_indices,
+    plot_raster(time, {'observation signal': signal, 'x1': res["x"].T, 'z': res["z"].T}, special_idx=seizure_indices,
                 time_units=res.get('time_units', "ms"),
                 title=hyp_name + ": Observation signal vs fit x rasterplot", offset=3.0,
+                figure_name=hyp_name + 'ObservationSignal_vs_FitHiddenStates_rasterplot',
                 labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                 figure_format=figure_format, figsize=VERY_LARGE_SIZE)
 
     if trajectories_plot:
-        plot_trajectories({'x': res['x'].T, 'z(t)': res['z'].T}, special_idx=seizure_indices,
-                      title='Fit state space trajectories', figure_name='Trajectories',
+        plot_trajectories({'x1': res['x'].T, 'z(t)': res['z'].T}, special_idx=seizure_indices,
+                      title=hyp_name+': Fit state space trajectories', figure_name=hyp_name+'FitHiddenStateTrajectories',
                       labels=head.connectivity.region_labels, show_flag=show_flag, save_flag=save_flag,
                       figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
 
