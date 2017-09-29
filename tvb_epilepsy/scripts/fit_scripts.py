@@ -2,6 +2,8 @@ import os
 import time
 import numpy as np
 import pystan as ps
+from scipy.io import savemat, loadmat
+import pickle
 
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_DEF, X0_CR_DEF, VOIS, X0_DEF, E_DEF, TVB, DATA_MODE, \
                                         SIMULATION_MODE
@@ -39,16 +41,16 @@ else:
 logger = initialize_logger(__name__)
 
 
-def compile_model(model_path=os.path.join(STATISTICAL_MODELS_PATH, "vep_autoregress.stan"), **kwargs):
+def compile_model(model_stan_code_path=os.path.join(STATISTICAL_MODELS_PATH, "vep_autoregress.stan"), **kwargs):
     tic = time.time()
     logger.info("Compiling model...")
-    model = ps.StanModel(file=model_path, model_name=kwargs.get("model_name", 'vep_epileptor2D_autoregress'))
+    model = ps.StanModel(file=model_stan_code_path, model_name=kwargs.get("model_name", 'vep_epileptor2D_autoregress'))
     logger.info(str(time.time() - tic) + ' sec required to compile')
     return model
 
 
-def prepare_data_for_fitting(model_configuration, hypothesis, fs, signals, dynamic_model=None, active_regions=None,
-                             active_regions_th=0.1, observation_model=3, mixing=None, **kwargs):
+def prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynamic_model=None, noise_intensity=None,
+                             active_regions=None, active_regions_th=0.1, observation_model=3, mixing=None, **kwargs):
 
     logger.info("Constructing data dictionary...")
     active_regions_flag = np.zeros((hypothesis.number_of_regions, ), dtype="i")
@@ -80,12 +82,16 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, signals, dynam
     tau1 = gamma_from_mu_std(kwargs.get("tau1_mu", tau1_mu), kwargs.get("tau1_std", 3*tau1_mu))
     tau0_mu = tau0_def
     tau0 = gamma_from_mu_std(kwargs.get("tau0_mu", tau0_mu), kwargs.get("tau0_std", 3*10000.0))
-    K = gamma_from_mu_std(kwargs.get("K_mu", 10.0 / hypothesis.number_of_regions),
-                          kwargs.get("K_std", 300.0 / hypothesis.number_of_regions))
+    K_def = np.mean(model_configuration.K)
+    K = gamma_from_mu_std(kwargs.get("K_mu", K_def),
+                          kwargs.get("K_std", 10*K_def))
     # zero effective connectivity:
     conn0 = gamma_from_mu_std(kwargs.get("conn0_mu", 0.001), kwargs.get("conn0_std", 0.001))
-    sig_mu = np.mean(model_noise_intensity_dict["EpileptorDP2D"])
-    sig = gamma_from_mu_std(kwargs.get("sig_mu", sig_mu), kwargs.get("sig_std", sig_mu))
+    if noise_intensity is None:
+        sig_mu = np.mean(model_noise_intensity_dict["EpileptorDP2D"])
+    else:
+        sig_mu = noise_intensity
+    sig = gamma_from_mu_std(kwargs.get("sig_mu", sig_mu), kwargs.get("sig_std", 3*sig_mu))
     sig_eq_mu = (X1_EQ_CR_DEF - X1_DEF) / 3.0
     sig_eq_std = 3*sig_eq_mu
     sig_eq = gamma_from_mu_std(kwargs.get("sig_eq_mu", sig_eq_mu), kwargs.get("sig_eq_std", sig_eq_std))
@@ -93,10 +99,21 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, signals, dynam
     sig_init_std = sig_init_mu
     sig_init = gamma_from_mu_std(kwargs.get("sig_init_mu", sig_init_mu), kwargs.get("sig_init_std", sig_init_std))
 
+    # signals = (sim_ts["x1"][:, active_regions].T - np.expand_dims(model_configuration.x1EQ[active_regions], 1)).T + \
+    #           (sim_ts["z"][:, active_regions].T - np.expand_dims(model_configuration.zEQ[active_regions], 1)).T
+    # signals = signals / 2.75
+
+    signals = (sim_ts["x1"][:, active_regions].T - np.expand_dims(model_configuration.x1EQ[active_regions], 1)).T / 2.0
+
     if mixing is None:
-        observation_model = 3
-        mixing = np.eye(n_active_regions)
-        signals = signals[:, active_regions]
+        if observation_model == 2:
+            mixing = np.random.rand(n_active_regions, n_active_regions)
+            for ii in range(n_active_regions):
+                mixing[ii, :] = mixing[ii, :]/np.sum(mixing[ii, :])
+        else:
+            observation_model = 3
+            mixing = np.eye(n_active_regions)
+    signals = (np.dot(mixing, signals.T)).T
 
     data = {"n_regions": hypothesis.number_of_regions,
             "n_active_regions": n_active_regions,
@@ -106,6 +123,7 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, signals, dynam
             "n_signals": signals.shape[1],
             "x0_nonactive": model_configuration.x0[~active_regions_flag.astype("bool")],
             "x1eq0": model_configuration.x1EQ,
+            "zeq0": model_configuration.zEQ,
             "x1eq_lo": kwargs.get("x1eq_lo", -2.0),
             "x1eq_hi": kwargs.get("x1eq_hi", X1_EQ_CR_DEF),
             "x1init_lo": kwargs.get("x1init_lo", -2.0),
@@ -114,23 +132,23 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, signals, dynam
             "x1_hi": kwargs.get("x1_hi", 1.5),
             "z_lo": kwargs.get("z_lo", 2.0),
             "z_hi": kwargs.get("z_hi", 5.0),
-            "tau1_lo": kwargs.get("tau1_lo", 0.001),
-            "tau1_hi": kwargs.get("tau1_hi", 1.0),
-            "tau0_lo": kwargs.get("tau0_lo", 1000.0),
-            "tau0_hi": kwargs.get("tau0_hi", 100000.0),
+            "tau1_lo": kwargs.get("tau1_lo", tau1_mu / 10.0),
+            "tau1_hi": kwargs.get("tau1_hi", np.min([10 * tau1_mu, 1.0])),
+            "tau0_lo": kwargs.get("tau0_lo", tau0_mu/10.0),
+            "tau0_hi": kwargs.get("tau0_hi", np.min([10 * tau1_mu, 10.0])),
             "tau1_a": kwargs.get("tau1_a", tau1["alpha"]),
             "tau1_b": kwargs.get("tau1_b", tau1["beta"]),
             "tau0_a": kwargs.get("tau0_a", tau0["alpha"]),
             "tau0_b": kwargs.get("tau0_b", tau0["beta"]),
             "SC": model_configuration.connectivity_matrix,
             "SC_sig": kwargs.get("SC_sig", 0.1),
-            "K_lo": kwargs.get("K_lo", 0.0),
-            "K_hi": kwargs.get("K_hi", 300.0 / hypothesis.number_of_regions),
+            "K_lo": kwargs.get("K_lo", K_def / 10.0),
+            "K_hi": kwargs.get("K_hi", 30.0 * K_def),
             "K_a": kwargs.get("K_a", K["alpha"]),
             "K_b": kwargs.get("K_b", K["beta"]),
             "gamma0": kwargs.get("gamma0", np.array([conn0["alpha"], conn0["beta"]])),
             "dt": 1000.0 / fs,
-            "sig_hi": kwargs.get("sig_hi", 1.0 / fs),
+            "sig_hi": kwargs.get("sig_hi", 2*sig_mu),
             "sig_a": kwargs.get("sig_a", sig["alpha"]),
             "sig_b": kwargs.get("sig_b", sig["beta"]),
             "sig_eq_hi": kwargs.get("sig_eq_hi", 3*sig_eq_std),
@@ -176,12 +194,13 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, signals, dynam
     return data, tau0_def, tau1_def
 
 
-def prepare_data_for_fitting_vep_original(model_configuration, hypothesis, fs, signals, dynamic_model=None,
-                                          active_regions=None, active_regions_th=0.1, observation_model=3, mixing=None,
-                                          **kwargs):
+def prepare_data_for_fitting_vep_original(model_configuration, hypothesis, fs, sim_ts, dynamic_model=None,
+                                          noise_intensity=None, active_regions=None, active_regions_th=0.1,
+                                          observation_model=3, mixing=None, **kwargs):
 
-    p, tau0_def, tau1_def = prepare_data_for_fitting(model_configuration, hypothesis, fs, signals, dynamic_model, active_regions,
-                                 active_regions_th, observation_model, mixing, **kwargs)
+    p, tau0_def, tau1_def = prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynamic_model,
+                                                     noise_intensity, active_regions, active_regions_th,
+                                                     observation_model, mixing, **kwargs)
 
     active_regions = np.where(p["active_regions_flag"])[0]
     non_active_regions = np.where(1-p["active_regions_flag"])[0]
@@ -193,8 +212,10 @@ def prepare_data_for_fitting_vep_original(model_configuration, hypothesis, fs, s
     data.update({"I1": p["Iext1"]})
     data.update({"tau0": tau0_def})
     data.update({"dt": p["dt"]})
+    data.update({"xeq": p["x1eq0"][active_regions]})
+    data.update({"zeq": p["zeq0"][active_regions]})
     data.update({"gain": p["mixing"]})
-    data.update({"seeg_log_power": p["signals"]})
+    data.update({"signals": p["signals"]})
     data.update({"Ic": np.sum(p["SC"][active_regions][:, non_active_regions], axis=1)})
     data.update({"SC": p["SC"][active_regions][:, active_regions]})
     data.update({"SC_var": p["SC_sig"]})
@@ -214,21 +235,79 @@ def prepare_data_for_fitting_vep_original(model_configuration, hypothesis, fs, s
     data.update({"amp": 1.0})
     data.update({"offset": 0.0})
 
-    return data, p["signals"]
+    logger.info("data dictionary completed with " + str(len(data)) + " fields:\n" + str(data.keys()))
+
+    return data, active_regions
 
 
 def stanfit_model(model, data, mode="sampling", **kwargs):
 
-    logger.info("Model sampling...")
+    logger.info("Model fitting with " + mode + "...")
     fit = getattr(model, mode)(data=data, **kwargs)
 
-    if mode is "sampling":
+    if mode is "optimizing":
+        return fit, None
+    else:
         logger.info("Extracting estimates...")
-        est = fit.extract(permuted=True)
+        if mode is "sampling":
+            est = fit.extract(permuted=True)
+        elif mode is "vb":
+            est = read_vb_results(fit)
         return est, fit
 
-    else:
-        return fit, None
+
+
+def read_vb_results(fit):
+    est = {}
+    for ip, p in enumerate(fit['sampler_param_names']):
+        p_split = p.split('.')
+        p_name = p_split.pop(0)
+        p_name_samples = p_name + "_s"
+        if est.get(p_name) is None:
+            est.update({p_name_samples: []})
+            est.update({p_name: []})
+        if len(p_split) == 0:
+            # scalar parameters
+            est[p_name_samples] = fit["sampler_params"][ip]
+            est[p_name] = fit["mean_pars"][ip]
+        else:
+            if len(p_split) == 1:
+                # vector parameters
+                est[p_name_samples].append(fit["sampler_params"][ip])
+                est[p_name].append(fit["mean_pars"][ip])
+            else:
+                ii = int(p_split.pop(0)) - 1
+                if len(p_split) == 0:
+                    # 2D matrix parameters
+                    if len(est[p_name]) < ii + 1:
+                        est[p_name_samples].append([fit["sampler_params"][ip]])
+                        est[p_name].append([fit["mean_pars"][ip]])
+                    else:
+                        est[p_name_samples][ii].append(fit["sampler_params"][ip])
+                        est[p_name][ii].append(fit["mean_pars"][ip])
+                else:
+                    if len(est[p_name]) < ii + 1:
+                        est[p_name_samples].append([])
+                        est[p_name].append([])
+                    jj = int(p_split.pop(0)) - 1
+                    if len(p_split) == 0:
+                        # 3D matrix parameters
+                        if len(est[p_name][ii]) < jj + 1:
+                            est[p_name_samples][ii].append([fit["sampler_params"][ip]])
+                            est[p_name][ii].append([fit["mean_pars"][ip]])
+                        else:
+                            if len(est[p_name][ii]) < jj + 1:
+                                est[p_name_samples][ii].append([])
+                                est[p_name][ii].append([])
+                            est[p_name_samples][ii][jj].append(fit["sampler_params"][ip])
+                            est[p_name][ii][jj].append(fit["mean_pars"][ip])
+                    else:
+                        raise_not_implemented_error("Extracting of parameters of more than 3 dimensions is not " +
+                                    "implemented yet for vb!", logger)
+    for key in est.keys():
+        if isinstance(est[key], list):
+            est[key] = np.squeeze(np.array(est[key]))
+    return est
 
 
 def main_fit_sim_hyplsa():
@@ -309,10 +388,10 @@ def main_fit_sim_hyplsa():
         hypotheses = (hyp_x0, hyp_E)
 
     # --------------------------Simulation preparations-----------------------------------
-
+    tau1 = 0.2
     # TODO: maybe use a custom Monitor class
-    fs = 2048.0  # this is the simulation sampling rate that is necessary for the simulation to be stable
-    time_length = 10000.0  # =100 secs, the final output nominal time length of the simulation
+    fs = 10*2048.0*(2*tau1)  # this is the simulation sampling rate that is necessary for the simulation to be stable
+    time_length = 50.0 / tau1  # msecs, the final output nominal time length of the simulation
     report_every_n_monitor_steps = 100.0
     (dt, fsAVG, sim_length, monitor_period, n_report_blocks) = \
         set_time_scales(fs=fs, time_length=time_length, scale_fsavg=1,
@@ -342,7 +421,7 @@ def main_fit_sim_hyplsa():
 
     # --------------------------Hypothesis and LSA-----------------------------------
 
-    for hyp in hypotheses:
+    for hyp in (hyp_x0, ): #hypotheses:
 
         logger.info("\n\nRunning hypothesis: " + hyp.name)
 
@@ -374,14 +453,26 @@ def main_fit_sim_hyplsa():
         #
         # lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, None)
 
+        # ------------------------------Model code--------------------------------------
+        # Compile or load model:
+        model_file = os.path.join(FOLDER_VEP_HOME, lsa_hypothesis.name + "_stan_model.pkl")
+        if os.path.isfile(model_file):
+            model = pickle.load(open(model_file, 'rb'))
+        else:
+            model = compile_model(model_stan_code_path=os.path.join(STATISTICAL_MODELS_PATH, "vep_original_DP.stan"))
+            with open(model_file, 'wb') as f:
+                pickle.dump(model, f)
 
         # ------------------------------Simulation--------------------------------------
         logger.info("\n\nConfiguring simulation...")
+        noise_intensity = 10 ** -4
         sim = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt,
                                                         sim_length, monitor_period, model_name,
                                                         zmode=np.array(zmode), pmode=np.array(pmode),
-                                                        noise_instance=None, noise_intensity=None,
+                                                        noise_instance=None, noise_intensity=noise_intensity,
                                                         monitor_expressions=None)
+        sim.model.tau1 = tau1
+        sim.model.tau0 = 100.0
 
         # Integrator and initial conditions initialization.
         # By default initial condition is set right on the equilibrium point.
@@ -392,7 +483,6 @@ def main_fit_sim_hyplsa():
         ts_file = os.path.join(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts.mat")
         if os.path.isfile(ts_file):
             logger.info("\n\nLoading previously simulated time series...")
-            from scipy.io import loadmat
             vois_ts_dict = loadmat(ts_file)
         else:
             logger.info("\n\nSimulating...")
@@ -406,7 +496,7 @@ def main_fit_sim_hyplsa():
 
             else:
 
-                time = np.array(ttavg, dtype='float32')
+                time = np.array(ttavg, dtype='float32').flatten()
 
                 output_sampling_time = np.mean(np.diff(time))
                 tavg_data = tavg_data[:, :, :, 0]
@@ -427,24 +517,27 @@ def main_fit_sim_hyplsa():
 
                 # Plot results
                 plot_sim_results(sim.model, lsa_hypothesis.propagation_indices, lsa_hypothesis.name, head, vois_ts_dict,
-                                 head.sensorsSEEG.keys(), hpf_flag=True, trajectories_plot=trajectories_plot,
+                                 head.sensorsSEEG.keys(), hpf_flag=False, trajectories_plot=trajectories_plot,
                                  spectral_raster_plot=spectral_raster_plot, log_scale=True)
 
                 # Optionally save results in mat files
-                from scipy.io import savemat
                 savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), vois_ts_dict)
 
-        model = compile_model(model_path=os.path.join(STATISTICAL_MODELS_PATH, "vep_original_DP.stan"))
-
-        data, signals = prepare_data_for_fitting_vep_original(model_configuration, lsa_hypothesis, fsAVG,
-                                                                     vois_ts_dict["x1"], sim.model, active_regions=None,
+        # Get data and observation signals:
+        data, active_regions = prepare_data_for_fitting_vep_original(model_configuration, lsa_hypothesis, fsAVG,
+                                                                     vois_ts_dict, sim.model,
+                                                                     noise_intensity, active_regions=None,
                                                                      active_regions_th=0.1, observation_model=3,
                                                                      mixing=None)
+        savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_data.mat"), data)
 
-        est, fit = stanfit_model(model, data, mode="optimizing", iter=100)
+        # Fit and get estimates:
+        est, fit = stanfit_model(model, data, mode="optimizing", iter=60000)
+        savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), est)
 
-        plot_fit_results(lsa_hypothesis.name, head, est, signals, time=vois_ts_dict['time'],
-                         seizure_indices=[0, 1], trajectories_plot=True)
+        plot_fit_results(lsa_hypothesis.name, head, est, data, active_regions,
+                         time=vois_ts_dict['time'], seizure_indices=[0, 1], trajectories_plot=True)
+
 
         print("Done!")
 

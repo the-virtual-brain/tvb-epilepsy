@@ -12,7 +12,7 @@ from scipy.stats.mstats import zscore
 
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.constants import *
-from tvb_epilepsy.base.utils import warning
+from tvb_epilepsy.base.utils import warning, sort_dict
 from tvb_epilepsy.tvb_api.epileptor_models import *
 from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
 
@@ -308,20 +308,19 @@ def plot_timeseries(time, data_dict, time_units="ms", special_idx=None, title='T
     check_show(show_flag)
 
 
-def plot_raster(time, data_dict, time_units="ms", special_idx=None, title='Time Series', offset=3.0,
+def plot_raster(time, data_dict, time_units="ms", special_idx=None, title='Time Series', subtitles=[], offset=3.0,
                 figure_name='TimeSeries', labels=None, show_flag=SHOW_FLAG, save_flag=False, figure_dir=FOLDER_FIGURES,
                 figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
-
     pyplot.figure(title, figsize=figsize)
     no_rows = len(data_dict)
     lines = []
-    for i, subtitle in enumerate(data_dict):
+    for i, var in enumerate(data_dict):
         ax = pyplot.subplot(1, no_rows, i + 1)
         pyplot.hold(True)
-        if i == 0:
-            pyplot.title(title)
-        data = data_dict[subtitle]
-        data = zscore(data,axis=None)
+        if len(subtitles) > i:
+            pyplot.title(subtitles[i])
+        data = data_dict[var]
+        data = zscore(data, axis=None)
         nTS = data.shape[1]
         if labels is None:
             labels = np.array(range(nTS)).astype(str)
@@ -339,7 +338,7 @@ def plot_raster(time, data_dict, time_units="ms", special_idx=None, title='Time 
             for iTS in mask:
                 line, = pyplot.plot(time, -data[:, iTS]+offset*iTS, 'k', label = labels[iTS])
                 lines[i].append(line)
-        pyplot.ylabel(subtitle)
+        pyplot.ylabel(var)
         ax.set_autoscalex_on(False)
         ax.set_xlim([time[0], time[-1]])
         ax.invert_yaxis()
@@ -351,6 +350,7 @@ def plot_raster(time, data_dict, time_units="ms", special_idx=None, title='Time 
     pyplot.xlabel("Time (" + time_units + ")")
 
     fig = pyplot.gcf()
+    fig.suptitle(title)
     if len(fig.get_label())==0:
         fig.set_label(figure_name)
     else:
@@ -597,29 +597,51 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
                         figure_format=figure_format, labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
 
 
-def plot_fit_results(hyp_name, head, res, signal, time=None, seizure_indices=None, trajectories_plot=False,
-                     save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
+def plot_fit_results(hyp_name, head, res, data, active_regions, time=None, seizure_indices=None,
+                     trajectories_plot=False, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
                      figure_format=FIG_FORMAT,
                      **kwargs):
 
     if time is None:
-        time = np.array(range(signal.shape[0]))
+        time = np.array(range(data['signals'].shape[0]))
 
     time = time.flatten()
 
-    plot_raster(time, {'observation signal': signal, 'x1': res["x"].T, 'z': res["z"].T}, special_idx=seizure_indices,
-                time_units=res.get('time_units', "ms"),
-                title=hyp_name + ": Observation signal vs fit x rasterplot", offset=3.0,
-                figure_name=hyp_name + 'ObservationSignal_vs_FitHiddenStates_rasterplot',
+    plot_raster(time, sort_dict({'observation signals':  data['signals'],
+                                 'observation signals fit':  res['fit_signals'],
+                                 'x1': res["x"].T, 'z': res["z"].T}),
+                special_idx=seizure_indices, time_units=res.get('time_units', "ms"),
+                title=hyp_name + ": Observation signals vs fit rasterplot",
+                subtitles=['observation signals ' +
+                                '\ndynamic noise prior: sig = ' + str(data["sig_hi"]/2) +
+                                '\nobservation noise prior: eps =  ' + str(data["eps_hi"]/2),
+                           'observation signals fit',
+                           'hidden state x1' + '\ndynamic noise fit sig = : ' + str(res["sig"]) +
+                                '\nobservation noise fit eps = : ' + str(res["eps"]),
+                           'hidden state z'],  offset=3.0,
+                figure_name=hyp_name + 'ObservationSignals_vs_FitHiddenStates_rasterplot',
                 labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                 figure_format=figure_format, figsize=VERY_LARGE_SIZE)
 
     if trajectories_plot:
         plot_trajectories({'x1': res['x'].T, 'z(t)': res['z'].T}, special_idx=seizure_indices,
-                      title=hyp_name+': Fit state space trajectories', figure_name=hyp_name+'FitHiddenStateTrajectories',
-                      labels=head.connectivity.region_labels, show_flag=show_flag, save_flag=save_flag,
-                      figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
+                          title=hyp_name+': Fit state space trajectories' + "\n x0 fit: " + str(res["x0"]),
+                          figure_name=hyp_name+'FitHiddenStateTrajectories',
+                          labels=head.connectivity.region_labels, show_flag=show_flag, save_flag=save_flag,
+                          figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
 
+    # plot connectivity
+    conn_figure_name ="Structural and Effective Connectivity"
+    pyplot.figure(conn_figure_name, VERY_LARGE_SIZE)
+    # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
+    plot_regions2regions(data['SC'], head.connectivity.region_labels[active_regions], 121, "Structural Connectivity" +
+                         "\nglobal scaling prior: K = " + str(data["K_u"] * data["K_v"]))
+    plot_regions2regions(res['FC'], head.connectivity.region_labels[active_regions], 122, "Effective Connectivity"  +
+                         "\nglobal scaling fit: K = " + str(res["K"]))
+    if save_flag:
+        save_figure(figure_dir=figure_dir, figure_format=figure_format,
+                    figure_name=conn_figure_name.replace(" ", "_").replace("\t", "_"))
+    check_show(show_flag=show_flag)
 
 
 
