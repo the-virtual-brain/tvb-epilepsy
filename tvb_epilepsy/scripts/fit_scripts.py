@@ -50,7 +50,8 @@ def compile_model(model_stan_code_path=os.path.join(STATISTICAL_MODELS_PATH, "ve
 
 
 def prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynamic_model=None, noise_intensity=None,
-                             active_regions=None, active_regions_th=0.1, observation_model=3, mixing=None, **kwargs):
+                             active_regions=None, active_regions_th=0.1, euler_method=-1, observation_model=3,
+                             mixing=None, **kwargs):
 
     logger.info("Constructing data dictionary...")
     active_regions_flag = np.zeros((hypothesis.number_of_regions, ), dtype="i")
@@ -99,12 +100,12 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynami
     sig_init_std = sig_init_mu
     sig_init = gamma_from_mu_std(kwargs.get("sig_init_mu", sig_init_mu), kwargs.get("sig_init_std", sig_init_std))
 
-    # signals = (sim_ts["x1"][:, active_regions].T - np.expand_dims(model_configuration.x1EQ[active_regions], 1)).T + \
-    #           (sim_ts["z"][:, active_regions].T - np.expand_dims(model_configuration.zEQ[active_regions], 1)).T
-    # signals = signals / 2.75
+    signals = (sim_ts["x1"][:, active_regions].T - np.expand_dims(model_configuration.x1EQ[active_regions], 1)).T + \
+              (sim_ts["z"][:, active_regions].T - np.expand_dims(model_configuration.zEQ[active_regions], 1)).T
+    signals = signals / 2.75
 
-    signals = (sim_ts["x1"][:, active_regions].T - np.expand_dims(model_configuration.x1EQ[active_regions], 1)).T / 2.0
-
+    # signals = (sim_ts["x1"][:, active_regions].T - np.expand_dims(model_configuration.x1EQ[active_regions], 1)).T / 2.0
+    # signals = sim_ts["x1"][:, active_regions]
     if mixing is None:
         if observation_model == 2:
             mixing = np.random.rand(n_active_regions, n_active_regions)
@@ -132,10 +133,10 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynami
             "x1_hi": kwargs.get("x1_hi", 1.5),
             "z_lo": kwargs.get("z_lo", 2.0),
             "z_hi": kwargs.get("z_hi", 5.0),
-            "tau1_lo": kwargs.get("tau1_lo", tau1_mu / 10.0),
-            "tau1_hi": kwargs.get("tau1_hi", np.min([10 * tau1_mu, 1.0])),
-            "tau0_lo": kwargs.get("tau0_lo", tau0_mu/10.0),
-            "tau0_hi": kwargs.get("tau0_hi", np.min([10 * tau1_mu, 10.0])),
+            "tau1_lo": kwargs.get("tau1_lo", tau1_mu / 2),
+            "tau1_hi": kwargs.get("tau1_hi", np.min([3 * tau1_mu/2, 1.0])),
+            "tau0_lo": kwargs.get("tau0_lo", np.min([tau0_mu/2, 10])),
+            "tau0_hi": kwargs.get("tau0_hi", np.max([3 * tau1_mu/2, 30.0])),
             "tau1_a": kwargs.get("tau1_a", tau1["alpha"]),
             "tau1_b": kwargs.get("tau1_b", tau1["beta"]),
             "tau0_a": kwargs.get("tau0_a", tau0["alpha"]),
@@ -148,7 +149,7 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynami
             "K_b": kwargs.get("K_b", K["beta"]),
             "gamma0": kwargs.get("gamma0", np.array([conn0["alpha"], conn0["beta"]])),
             "dt": 1000.0 / fs,
-            "sig_hi": kwargs.get("sig_hi", 2*sig_mu),
+            "sig_hi": kwargs.get("sig_hi", 3*sig_mu),
             "sig_a": kwargs.get("sig_a", sig["alpha"]),
             "sig_b": kwargs.get("sig_b", sig["beta"]),
             "sig_eq_hi": kwargs.get("sig_eq_hi", 3*sig_eq_std),
@@ -158,6 +159,7 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynami
             "sig_init_a": kwargs.get("sig_init_a", sig_init["alpha"]),
             "sig_init_b": kwargs.get("sig_init_b", sig_init["beta"]),
             "observation_model": observation_model,
+            "euler_method": euler_method,
             "signals": signals,
             "mixing": mixing,
             "eps_hi": kwargs.get("eps_hi", (np.max(signals.flatten()) - np.min(signals.flatten()) / 100.0)),
@@ -196,7 +198,7 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynami
 
 def prepare_data_for_fitting_vep_original(model_configuration, hypothesis, fs, sim_ts, dynamic_model=None,
                                           noise_intensity=None, active_regions=None, active_regions_th=0.1,
-                                          observation_model=3, mixing=None, **kwargs):
+                                          euler_method=-1, observation_model=3, mixing=None, **kwargs):
 
     p, tau0_def, tau1_def = prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynamic_model,
                                                      noise_intensity, active_regions, active_regions_th,
@@ -205,7 +207,7 @@ def prepare_data_for_fitting_vep_original(model_configuration, hypothesis, fs, s
     active_regions = np.where(p["active_regions_flag"])[0]
     non_active_regions = np.where(1-p["active_regions_flag"])[0]
 
-    data = {"observation_model": p["observation_model"]}
+    data = {"observation_model": p["observation_model"], "euler_method": p["euler_method"]}
     data.update({"nn": p["n_active_regions"]})
     data.update({"nt": p["n_time"]})
     data.update({"ns": p["n_signals"]})
@@ -231,9 +233,9 @@ def prepare_data_for_fitting_vep_original(model_configuration, hypothesis, fs, s
     data.update({"eps_hi": p["eps_hi"]})
     data.update({"sig_hi": p["sig_hi"]})
     data.update({"zlim": np.array([p["z_lo"], p["z_hi"]])})
-    data.update({"tt": tau1_def})
-    data.update({"amp": 1.0})
-    data.update({"offset": 0.0})
+    data.update({"tau1": tau1_def})
+    data.update({"amp_mu": 1.0})
+    data.update({"offset_mu": 0.2})
 
     logger.info("data dictionary completed with " + str(len(data)) + " fields:\n" + str(data.keys()))
 
@@ -388,7 +390,7 @@ def main_fit_sim_hyplsa():
         hypotheses = (hyp_x0, hyp_E)
 
     # --------------------------Simulation preparations-----------------------------------
-    tau1 = 0.2
+    tau1 = 0.5
     # TODO: maybe use a custom Monitor class
     fs = 10*2048.0*(2*tau1)  # this is the simulation sampling rate that is necessary for the simulation to be stable
     time_length = 50.0 / tau1  # msecs, the final output nominal time length of the simulation
@@ -465,14 +467,14 @@ def main_fit_sim_hyplsa():
 
         # ------------------------------Simulation--------------------------------------
         logger.info("\n\nConfiguring simulation...")
-        noise_intensity = 10 ** -4
+        noise_intensity = 10 ** -3
         sim = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt,
                                                         sim_length, monitor_period, model_name,
                                                         zmode=np.array(zmode), pmode=np.array(pmode),
                                                         noise_instance=None, noise_intensity=noise_intensity,
                                                         monitor_expressions=None)
         sim.model.tau1 = tau1
-        sim.model.tau0 = 100.0
+        sim.model.tau0 = 30.0
 
         # Integrator and initial conditions initialization.
         # By default initial condition is set right on the equilibrium point.
@@ -527,12 +529,13 @@ def main_fit_sim_hyplsa():
         data, active_regions = prepare_data_for_fitting_vep_original(model_configuration, lsa_hypothesis, fsAVG,
                                                                      vois_ts_dict, sim.model,
                                                                      noise_intensity, active_regions=None,
-                                                                     active_regions_th=0.1, observation_model=3,
+                                                                     active_regions_th=0.1, euler_method=1,
+                                                                     observation_model=3,
                                                                      mixing=None)
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_data.mat"), data)
 
         # Fit and get estimates:
-        est, fit = stanfit_model(model, data, mode="optimizing", iter=60000)
+        est, fit = stanfit_model(model, data, mode="sampling") #, iter=60000
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), est)
 
         plot_fit_results(lsa_hypothesis.name, head, est, data, active_regions,
