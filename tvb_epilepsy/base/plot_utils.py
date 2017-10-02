@@ -310,7 +310,7 @@ def plot_timeseries(time, data_dict, time_units="ms", special_idx=None, title='T
 
 def plot_raster(time, data_dict, time_units="ms", special_idx=None, title='Time Series', subtitles=[], offset=3.0,
                 figure_name='TimeSeries', labels=None, show_flag=SHOW_FLAG, save_flag=False, figure_dir=FOLDER_FIGURES,
-                figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
+                figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE):
     pyplot.figure(title, figsize=figsize)
     no_rows = len(data_dict)
     lines = []
@@ -455,10 +455,11 @@ def plot_spectral_analysis_raster(time, data, time_units="ms", freq=None, specia
     if log_norm:
         psd_label = "log" + psd_label
     stf, time, freq, psd = time_spectral_analysis(data, fs,
+                                                  freq=freq,
                                                   mode=mode,
                                                   nfft=kwargs.get("nfft"),
                                                   window=kwargs.get("window", 'hanning'),
-                                                  nperseg=kwargs.get("nperseg", 256),
+                                                  nperseg=kwargs.get("nperseg", int(np.round(fs/2))),
                                                   detrend=kwargs.get("detrend", 'constant'),
                                                   noverlap=kwargs.get("noverlap"),
                                                   f_low=kwargs.get("f_low", 10.0),
