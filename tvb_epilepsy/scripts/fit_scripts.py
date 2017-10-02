@@ -156,6 +156,7 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynami
             "sig_eq_hi": kwargs.get("sig_eq_hi", 3*sig_eq_std),
             "sig_eq_a": kwargs.get("sig_eq_a", sig_eq["alpha"]),
             "sig_eq_b": kwargs.get("sig_eq_b", sig_eq["beta"]),
+            "sig_init_mu": kwargs.get("sig_init_mu", sig_init_mu),
             "sig_init_hi": kwargs.get("sig_init_hi", 3 * sig_init_std),
             "sig_init_a": kwargs.get("sig_init_a", sig_init["alpha"]),
             "sig_init_b": kwargs.get("sig_init_b", sig_init["beta"]),
@@ -197,9 +198,9 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynami
     return data, tau0_def, tau1_def
 
 
-def prepare_data_for_fitting_vep_original(model_configuration, hypothesis, fs, sim_ts, dynamic_model=None,
-                                          noise_intensity=None, active_regions=None, active_regions_th=0.1,
-                                          euler_method=-1, observation_model=3, mixing=None, **kwargs):
+def prepare_data_for_fitting_vep(model, model_configuration, hypothesis, fs, sim_ts, dynamic_model=None,
+                                 noise_intensity=None, active_regions=None, active_regions_th=0.1,
+                                 euler_method=-1, observation_model=3, mixing=None, **kwargs):
 
     p, tau0_def, tau1_def = prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynamic_model,
                                                      noise_intensity, active_regions, active_regions_th,
@@ -208,7 +209,7 @@ def prepare_data_for_fitting_vep_original(model_configuration, hypothesis, fs, s
     active_regions = np.where(p["active_regions_flag"])[0]
     non_active_regions = np.where(1-p["active_regions_flag"])[0]
 
-    data = {"observation_model": p["observation_model"], "euler_method": p["euler_method"]}
+    data = {"observation_model": p["observation_model"]}
     data.update({"nn": p["n_active_regions"]})
     data.update({"nt": p["n_time"]})
     data.update({"ns": p["n_signals"]})
@@ -237,6 +238,10 @@ def prepare_data_for_fitting_vep_original(model_configuration, hypothesis, fs, s
     data.update({"tau1": tau1_def})
     data.update({"amp_mu": 1.0})
     data.update({"offset_mu": 0.2})
+    if model is "vep_dWt":
+        data.update({"sig_init": p["sig_init_mu"]})
+    elif model is "vep_original":
+        data.update({"euler_method": p["euler_method"]})
 
     logger.info("data dictionary completed with " + str(len(data)) + " fields:\n" + str(data.keys()))
 
@@ -447,7 +452,8 @@ def main_fit_sim_hyplsa(EMPIRICAL=''):
         if os.path.isfile(model_file):
             model = pickle.load(open(model_file, 'rb'))
         else:
-            model = compile_model(model_stan_code_path=os.path.join(STATISTICAL_MODELS_PATH, "vep_original_DP.stan"))
+            # vep_original_DP
+            model = compile_model(model_stan_code_path=os.path.join(STATISTICAL_MODELS_PATH, "vep_dWt.stan"))
             with open(model_file, 'wb') as f:
                 pickle.dump(model, f)
 
@@ -515,16 +521,16 @@ def main_fit_sim_hyplsa(EMPIRICAL=''):
                     savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), vois_ts_dict)
 
         # Get data and observation signals:
-        data, active_regions = prepare_data_for_fitting_vep_original(model_configuration, lsa_hypothesis, fsAVG,
-                                                                     vois_ts_dict, sim.model,
-                                                                     noise_intensity, active_regions=None,
-                                                                     active_regions_th=0.1, euler_method=1,
-                                                                     observation_model=3,
-                                                                     mixing=None)
+        data, active_regions = prepare_data_for_fitting_vep("vep_dWt", model_configuration, lsa_hypothesis,
+                                                            fsAVG, vois_ts_dict, sim.model,
+                                                            noise_intensity, active_regions=None,
+                                                            active_regions_th=0.1, euler_method=1,
+                                                            observation_model=3,
+                                                            mixing=None)
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_data.mat"), data)
 
         # Fit and get estimates:
-        est, fit = stanfit_model(model, data, mode="vb", iter=2000000, tol_rel_obj=0.00001) #
+        est, fit = stanfit_model(model, data, mode="optimizing", iter=30000) #
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), est)
 
         plot_fit_results(lsa_hypothesis.name, head, est, data, active_regions,
@@ -595,12 +601,13 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
 
 if __name__ == "__main__":
 
-    # main_fit_sim_hyplsa()
-    HOME = '/Users/dionperd/CBR/VEP/CC'
-    VEP_FOLDER = os.path.join(HOME, 'TVB3')
-    CT = os.path.join(VEP_FOLDER, 'CT')
-    SEEG = os.path.join(VEP_FOLDER, 'SEEG')
-    SEEG_data = os.path.join(VEP_FOLDER, 'SEEG_data')
-    channels = ["G'1", "G'2", "G'8", "G'9", "G'10", "G'11", "G'12", "M'6", "M'7", "M'8", "L'4", "L'5", "L'6", "L'7",
-                "L'8", "L'9"]
-    prepare_seeg_observable(os.path.join(SEEG_data, 'SZ2_0001.edf'), [15.0, 40.0], channels)
+    main_fit_sim_hyplsa()
+
+    # HOME = '/Users/dionperd/CBR/VEP/CC'
+    # VEP_FOLDER = os.path.join(HOME, 'TVB3')
+    # CT = os.path.join(VEP_FOLDER, 'CT')
+    # SEEG = os.path.join(VEP_FOLDER, 'SEEG')
+    # SEEG_data = os.path.join(VEP_FOLDER, 'SEEG_data')
+    # channels = ["G'1", "G'2", "G'8", "G'9", "G'10", "G'11", "G'12", "M'6", "M'7", "M'8", "L'4", "L'5", "L'6", "L'7",
+    #             "L'8", "L'9"]
+    # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ2_0001.edf'), [15.0, 40.0], channels)
