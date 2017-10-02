@@ -534,7 +534,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL=''):
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_data.mat"), data)
 
         # Fit and get estimates:
-        est, fit = stanfit_model(stats_model, data, mode="optimizing", iter=10000) #
+        est, fit = stanfit_model(stats_model, data, mode="optimizing", iter=20000) #
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), est)
 
         plot_fit_results(lsa_hypothesis.name, head, est, data, active_regions,
