@@ -245,7 +245,9 @@ def prepare_data_for_fitting_vep_original(model_configuration, hypothesis, fs, s
 def stanfit_model(model, data, mode="sampling", **kwargs):
 
     logger.info("Model fitting with " + mode + "...")
+    tic = time.time()
     fit = getattr(model, mode)(data=data, **kwargs)
+    logger.info(str(time.time() - tic) + ' sec required to fit')
 
     if mode is "optimizing":
         return fit, None
@@ -535,7 +537,7 @@ def main_fit_sim_hyplsa():
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_data.mat"), data)
 
         # Fit and get estimates:
-        est, fit = stanfit_model(model, data, mode="sampling") #, iter=60000
+        est, fit = stanfit_model(model, data, mode="vb", iter=2000000, tol_rel_obj=0.00001) #
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), est)
 
         plot_fit_results(lsa_hypothesis.name, head, est, data, active_regions,
