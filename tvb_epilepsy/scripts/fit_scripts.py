@@ -198,7 +198,7 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynami
     return data, tau0_def, tau1_def
 
 
-def prepare_data_for_fitting_vep(model, model_configuration, hypothesis, fs, sim_ts, dynamic_model=None,
+def prepare_data_for_fitting_vep(stats_model_name, model_configuration, hypothesis, fs, sim_ts, dynamic_model=None,
                                  noise_intensity=None, active_regions=None, active_regions_th=0.1,
                                  euler_method=-1, observation_model=3, mixing=None, **kwargs):
 
@@ -238,9 +238,9 @@ def prepare_data_for_fitting_vep(model, model_configuration, hypothesis, fs, sim
     data.update({"tau1": tau1_def})
     data.update({"amp_mu": 1.0})
     data.update({"offset_mu": 0.2})
-    if model is "vep_dWt":
+    if stats_model_name is "vep_dWt":
         data.update({"sig_init": p["sig_init_mu"]})
-    elif model is "vep_original":
+    elif stats_model_name is "vep_original":
         data.update({"euler_method": p["euler_method"]})
 
     logger.info("data dictionary completed with " + str(len(data)) + " fields:\n" + str(data.keys()))
@@ -320,7 +320,22 @@ def read_vb_results(fit):
     return est
 
 
-def main_fit_sim_hyplsa(EMPIRICAL=''):
+def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL=''):
+
+    # ------------------------------Model code--------------------------------------
+    # Compile or load model:
+    model_file = os.path.join(FOLDER_VEP_HOME, stats_model_name + "_stan_model.pkl")
+    if os.path.isfile(model_file):
+        stats_model = pickle.load(open(model_file, 'rb'))
+    else:
+        # vep_original_DP
+        if stats_model_name is "vep_dWt":
+            model_path = os.path.join(STATISTICAL_MODELS_PATH, "vep_dWt.stan")
+        else:
+            model_path = os.path.join(STATISTICAL_MODELS_PATH, "vep_original_DP.stan")
+        stats_model = compile_model(model_stan_code_path=model_path)
+        with open(model_file, 'wb') as f:
+            pickle.dump(stats_model, f)
 
     # -------------------------------Reading data-----------------------------------
 
@@ -446,17 +461,6 @@ def main_fit_sim_hyplsa(EMPIRICAL=''):
         #
         # lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, None)
 
-        # ------------------------------Model code--------------------------------------
-        # Compile or load model:
-        model_file = os.path.join(FOLDER_VEP_HOME, lsa_hypothesis.name + "_stan_model.pkl")
-        if os.path.isfile(model_file):
-            model = pickle.load(open(model_file, 'rb'))
-        else:
-            # vep_original_DP
-            model = compile_model(model_stan_code_path=os.path.join(STATISTICAL_MODELS_PATH, "vep_dWt.stan"))
-            with open(model_file, 'wb') as f:
-                pickle.dump(model, f)
-
         # ------------------------------Simulation--------------------------------------
         logger.info("\n\nConfiguring simulation...")
         noise_intensity = 10 ** -3
@@ -521,7 +525,7 @@ def main_fit_sim_hyplsa(EMPIRICAL=''):
                     savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), vois_ts_dict)
 
         # Get data and observation signals:
-        data, active_regions = prepare_data_for_fitting_vep("vep_dWt", model_configuration, lsa_hypothesis,
+        data, active_regions = prepare_data_for_fitting_vep(stats_model_name, model_configuration, lsa_hypothesis,
                                                             fsAVG, vois_ts_dict, sim.model,
                                                             noise_intensity, active_regions=None,
                                                             active_regions_th=0.1, euler_method=1,
@@ -530,7 +534,7 @@ def main_fit_sim_hyplsa(EMPIRICAL=''):
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_data.mat"), data)
 
         # Fit and get estimates:
-        est, fit = stanfit_model(model, data, mode="optimizing", iter=30000) #
+        est, fit = stanfit_model(stats_model, data, mode="optimizing", iter=10000) #
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), est)
 
         plot_fit_results(lsa_hypothesis.name, head, est, data, active_regions,
@@ -601,7 +605,8 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
 
 if __name__ == "__main__":
 
-    main_fit_sim_hyplsa()
+    stats_model_name = "vep_original"
+    main_fit_sim_hyplsa(stats_model_name)
 
     # HOME = '/Users/dionperd/CBR/VEP/CC'
     # VEP_FOLDER = os.path.join(HOME, 'TVB3')
