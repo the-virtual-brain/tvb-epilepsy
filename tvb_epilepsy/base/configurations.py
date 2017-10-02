@@ -24,7 +24,7 @@ else:
         DATA_TVB = os.path.join(USER_HOME, 'CBR', 'svn', 'tvb', 'tvb-data', 'tvb-data')
         # DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH')
         # DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/JUNCH')
-        DATA_CUSTOM = os.path.join(FOLDER_VEP, 'CC/TVB1')
+        DATA_CUSTOM = os.path.join(FOLDER_VEP, 'CC/TVB3')
 
     else:
         SOFTWARE_PATH = os.path.join(USER_HOME, 'VirtualVEP', 'software')
@@ -33,7 +33,7 @@ else:
         DATA_TVB = os.path.join(USER_HOME, 'CBR_software', 'svn-tvb', 'tvb-data', 'tvb-data')
         # DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/Results/PATI_HH')
         # DATA_CUSTOM = os.path.join(USER_HOME, 'Dropbox/Work/VBtech/DenisVEP/JUNCH')
-        DATA_CUSTOM = os.path.join(FOLDER_VEP, 'CC/TVB1')
+        DATA_CUSTOM = os.path.join(FOLDER_VEP, 'CC/TVB3')
 
     if not (os.path.isdir(FOLDER_VEP_HOME)):
         os.mkdir(FOLDER_VEP_HOME)
