@@ -390,7 +390,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
     # disease_indices = x0_indices + e_indices
 
     # ...or reading a custom file:
-    ep_name = "ep_l_frontal_complex_stronger_x0"
+    ep_name = "ep_l_frontal_complex_stronger"
     # FOLDER_RES = os.path.join(data_folder, ep_name)
     from tvb_epilepsy.custom.readers_custom import CustomReader
 
