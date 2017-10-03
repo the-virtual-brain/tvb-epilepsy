@@ -131,9 +131,9 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, ts, dynamic_mo
         # signals = ts["x1"][:, active_regions]
         signals = (np.dot(mixing, signals.T)).T
 
-    from matplotlib import pyplot
-    pyplot.plot(signals)
-    pyplot.show()
+    # from matplotlib import pyplot
+    # pyplot.plot(signals)
+    # pyplot.show()
     data = {"n_regions": hypothesis.number_of_regions,
             "n_active_regions": n_active_regions,
             "n_nonactive_regions": hypothesis.number_of_regions-n_active_regions,
@@ -170,11 +170,11 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, ts, dynamic_mo
             "sig_hi": kwargs.get("sig_hi", 3*sig_mu),
             "sig_a": kwargs.get("sig_a", sig["alpha"]),
             "sig_b": kwargs.get("sig_b", sig["beta"]),
-            "sig_eq_hi": kwargs.get("sig_eq_hi", 3*sig_eq_std),
+            "sig_eq_hi": kwargs.get("sig_eq_hi", sig_eq_std),
             "sig_eq_a": kwargs.get("sig_eq_a", sig_eq["alpha"]),
             "sig_eq_b": kwargs.get("sig_eq_b", sig_eq["beta"]),
             "sig_init_mu": kwargs.get("sig_init_mu", sig_init_mu),
-            "sig_init_hi": kwargs.get("sig_init_hi", 3 * sig_init_std),
+            "sig_init_hi": kwargs.get("sig_init_hi", sig_init_std),
             "sig_init_a": kwargs.get("sig_init_a", sig_init["alpha"]),
             "sig_init_b": kwargs.get("sig_init_b", sig_init["beta"]),
             "observation_model": observation_model,
@@ -254,10 +254,13 @@ def prepare_data_for_fitting_vep(stats_model_name, model_configuration, hypothes
     data.update({"tau1": tau1_def})
     data.update({"amp_mu": 1.0})
     data.update({"offset_mu": 0.2})
-    if stats_model_name is "vep_dWt":
+    if stats_model_name == "vep_dWt":
         data.update({"sig_init": p["sig_init_mu"]})
-    elif stats_model_name is "vep_original":
+    elif stats_model_name[:12] == "vep_original":
         data.update({"euler_method": euler_method})
+    if stats_model_name == "vep_original_x0":
+        data.update({'x0mu': model_configuration.x0[active_regions]})
+        data.update({'sig_x0_hi': p["sig_eq_hi"]})
 
     logger.info("data dictionary completed with " + str(len(data)) + " fields:\n" + str(data.keys()))
 
@@ -348,6 +351,8 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
         # vep_original_DP
         if stats_model_name is "vep_dWt":
             model_path = os.path.join(STATISTICAL_MODELS_PATH, "vep_dWt.stan")
+        elif stats_model_name is "vep_original_x0":
+            model_path = os.path.join(STATISTICAL_MODELS_PATH, "vep_original_x0.stan")
         else:
             model_path = os.path.join(STATISTICAL_MODELS_PATH, "vep_original_DP.stan")
         stats_model = compile_model(model_stan_code_path=model_path)
@@ -563,7 +568,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_data.mat"), data)
 
         # Fit and get estimates:
-        est, fit = stanfit_model(stats_model, data, mode="optimizing", iter=500) #
+        est, fit = stanfit_model(stats_model, data, mode="optimizing", iter=60000) #
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), est)
 
         plot_fit_results(lsa_hypothesis.name, head, est, data, active_regions,
@@ -726,7 +731,7 @@ if __name__ == "__main__":
 
     # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ5_0001.edf'), [20.0, 45.0], channels)
 
-    stats_model_name = "vep_original"
+    stats_model_name = "vep_original_x0"
     main_fit_sim_hyplsa(stats_model_name, EMPIRICAL=os.path.join(SEEG_data, 'SZ1_0001.edf'), times_on_off=[10.0, 35.0],
                        channel_lbls=channels, channel_inds=channel_inds)
     # main_fit_sim_hyplsa(stats_model_name, channel_lbls=channels, channel_inds=channel_inds)
