@@ -6,6 +6,12 @@ class Connectivity
 class Surface
 class Sensors
 """
+# encoding=utf8
+import sys
+
+reload(sys)
+sys.setdefaultencoding('utf8')
+
 from collections import OrderedDict
 
 import numpy as np
@@ -15,7 +21,8 @@ from itertools import product
 
 from tvb_epilepsy.base.constants import LARGE_SIZE, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
-from tvb_epilepsy.base.utils import reg_dict, formal_repr, normalize_weights, calculate_in_degree, sort_dict
+from tvb_epilepsy.base.utils import raise_value_error, reg_dict, formal_repr, normalize_weights, calculate_in_degree, \
+                                    sort_dict, ensure_list, curve_elbow_point
 from tvb_epilepsy.base.plot_utils import plot_vector, plot_regions2regions, save_figure, check_show
 
 
@@ -67,6 +74,43 @@ class Head(object):
 
     def __str__(self):
         return self.__repr__()
+
+    def compute_nearest_regions_to_sensors(self, s_type, target_contacts=None, id_sensor=0, n_regions=None, th=0.95):
+        if s_type is "EEG":
+            sensors_dict = self.sensorsEEG
+        elif s_type is "MEG":
+            sensors_dict = self.sensorsMEG
+        else:
+            sensors_dict = self.sensorsSEEG
+        sensors = sensors_dict.keys()[id_sensor]
+        n_contacts = sensors.labels.shape[0]
+
+        if isinstance(target_contacts, (list, tuple, np.ndarray)):
+            target_contacts = ensure_list(target_contacts)
+            for itc, tc in enumerate(target_contacts):
+                if isinstance(tc, int):
+                    continue
+                elif isinstance(tc, basestring):
+                    target_contacts[itc] = sensors.contact_label_to_index([tc])
+                else:
+                    raise_value_error("target_contacts[" + str(itc) + "] = " + str(tc) +
+                                      "is neither an integer nor a string!")
+        else:
+            target_contacts = range(n_contacts)
+        auto_flag = False
+        if n_regions is "all":
+            n_regions = self.connectivity.number_of_regions
+        elif n_regions is "auto" or not(isinstance(n_regions, int)):
+            auto_flag = True
+        nearest_regions = []
+        for tc in target_contacts:
+            projs = sensors_dict[sensors][tc]
+            inds = np.argsort(projs)[::-1]
+            n_regions = curve_elbow_point(projs[inds])
+            nearest_regions.append((inds[:n_regions],
+                                    self.connectivity.region_labels[inds[:n_regions]],
+                                    projs[inds[:n_regions]]))
+        return nearest_regions
 
     def plot(self, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
 
@@ -232,6 +276,18 @@ class Sensors(object):
 
     def __str__(self):
         return self.__repr__()
+
+    def contact_label_to_index(self, labels):
+        indexes = []
+        for label in labels:
+            try:
+                indexes.append(np.where([np.array(lbl) == np.array(label) for lbl in self.labels])[0][0])
+            except:
+                print("WTF")
+        if len(indexes) == 1:
+            return indexes[0]
+        else:
+            return indexes
 
     def calculate_projection(self, connectivity):
         n_sensors = self.number_of_sensors
