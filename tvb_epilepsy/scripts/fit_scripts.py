@@ -390,7 +390,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
     # disease_indices = x0_indices + e_indices
 
     # ...or reading a custom file:
-    ep_name = "ep_l_frontal_complex"
+    ep_name = "ep_l_frontal_complex_stronger_x0"
     # FOLDER_RES = os.path.join(data_folder, ep_name)
     from tvb_epilepsy.custom.readers_custom import CustomReader
 
@@ -420,7 +420,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
                                excitability_hypothesis={tuple(x0_indices): x0_values},
                                epileptogenicity_hypothesis={}, connectivity_hypothesis={})
 
-    # This is an example of Excitability Hypothesis:
+    # This is an example of Mixed Hypothesis:
     hyp_x0_E = DiseaseHypothesis(head.connectivity.number_of_regions,
                                excitability_hypothesis={tuple(x0_indices): x0_values},
                                epileptogenicity_hypothesis={tuple(e_indices): e_values}, connectivity_hypothesis={})
@@ -429,8 +429,10 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
     # --------------------------Simulation preparations-----------------------------------
     tau1 = 0.5
     # TODO: maybe use a custom Monitor class
-    fs = 10*2048.0*(2*tau1)  # this is the simulation sampling rate that is necessary for the simulation to be stable
-    time_length = 50.0 / tau1  # msecs, the final output nominal time length of the simulation
+    # fs = 10*2048.0*(2*tau1)  # this is the simulation sampling rate that is necessary for the simulation to be stable
+    # time_length = 50.0 / tau1  # msecs, the final output nominal time length of the simulation
+    fs = 8 * 2048.0 * (2 * tau1)  # this is the simulation sampling rate that is necessary for the simulation to be stable
+    time_length = 30000.0 / tau1  # msecs, the final output nominal time length of the simulation
     report_every_n_monitor_steps = 100.0
     (dt, fsAVG, sim_length, monitor_period, n_report_blocks) = \
         set_time_scales(fs=fs, time_length=time_length, scale_fsavg=1,
@@ -448,12 +450,12 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
     zmode = "lin"  # by default, or "sig" for the sigmoidal expression for the slow z variable in Proix et al. 2014
     pmode = "z"  # by default, "g" or "z*g" for the feedback coupling to Iext2 and slope for EpileptorDPrealistic
 
-    model_name = "EpileptorDP2D"
+    model_name = "EpileptorDPrealistic"
     if model_name is "EpileptorDP2D":
         spectral_raster_plot = False
         trajectories_plot = True
     else:
-        spectral_raster_plot = "lfp"
+        spectral_raster_plot = False # "lfp"
         trajectories_plot = False
     # We don't want any time delays for the moment
     # head.connectivity.tract_lengths *= TIME_DELAYS_FLAG
@@ -494,14 +496,14 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
 
         # ------------------------------Simulation--------------------------------------
         logger.info("\n\nConfiguring simulation...")
-        noise_intensity = 10 ** -2.8
+        noise_intensity = 10 ** -3.5 #-2.8
         sim = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt,
                                                         sim_length, monitor_period, model_name,
                                                         zmode=np.array(zmode), pmode=np.array(pmode),
                                                         noise_instance=None, noise_intensity=noise_intensity,
                                                         monitor_expressions=None)
         sim.model.tau1 = tau1
-        sim.model.tau0 = 30.0
+        sim.model.tau0 = 300.0
 
         # Integrator and initial conditions initialization.
         # By default initial condition is set right on the equilibrium point.
@@ -616,6 +618,19 @@ def get_bipolar_channels(channels_inds, channel_lbls=[]):
             bipolar_channels.append(channel_lbls[iS] + "-" + channel_lbls[iS + 1])
             bipolar_ch_inds.append(channels_inds[iS])
     return bipolar_ch_inds, bipolar_channels
+
+
+def save_seeg_observable(seeg_path, data_folder, on_off_set, low_freq=10.0, high_freq=None, plot_flag=False):
+    import re
+    from scipy.signal import resample_poly, decimate
+    from pylab import detrend_linear
+    from mne.io import read_raw_edf
+    from mne.viz import plot_raw
+    from tvb_epilepsy.base.plot_utils import plot_raster, plot_spectral_analysis_raster
+    reader = Reader()
+    raw_data = read_raw_edf(seeg_path, preload=True)
+    rois = np.where([np.in1d(s.split("POL ")[-1], channels) for s in raw_data.ch_names])[0]
+    head = reader.read_head(data_folder, seeg_sensors_files=[("SensorsInternal.h5", "")])
 
 
 def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_freq=10.0, high_freq=None, log_flag=True,
@@ -736,6 +751,6 @@ if __name__ == "__main__":
     # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ5_0001.edf'), [20.0, 45.0], channels)
 
     stats_model_name = "vep_original"
-    main_fit_sim_hyplsa(stats_model_name, EMPIRICAL=os.path.join(SEEG_data, 'SZ1_0001.edf'), times_on_off=[10.0, 35.0],
-                       channel_lbls=channels, channel_inds=channel_inds)
-    # main_fit_sim_hyplsa(stats_model_name, channel_lbls=channels, channel_inds=channel_inds)
+    # main_fit_sim_hyplsa(stats_model_name, EMPIRICAL=os.path.join(SEEG_data, 'SZ1_0001.edf'), times_on_off=[10.0, 35.0],
+    #                    channel_lbls=channels, channel_inds=channel_inds)
+    main_fit_sim_hyplsa(stats_model_name, channel_lbls=channels, channel_inds=channel_inds)

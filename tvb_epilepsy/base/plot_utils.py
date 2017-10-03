@@ -462,7 +462,7 @@ def plot_spectral_analysis_raster(time, data, time_units="ms", freq=None, specia
                                                   mode=mode,
                                                   nfft=kwargs.get("nfft"),
                                                   window=kwargs.get("window", 'hanning'),
-                                                  nperseg=kwargs.get("nperseg", int(np.round(fs/2))),
+                                                  nperseg=kwargs.get("nperseg", int(np.round(fs/4))),
                                                   detrend=kwargs.get("detrend", 'constant'),
                                                   noverlap=kwargs.get("noverlap"),
                                                   f_low=kwargs.get("f_low", 10.0),

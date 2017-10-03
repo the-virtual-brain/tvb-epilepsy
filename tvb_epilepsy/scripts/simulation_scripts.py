@@ -148,7 +148,7 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
 
         if hpf_flag:
             hpf_low = max(hpf_low, 1000.0 / time_length)
-            hpf_high = min(fsAVG / 2.0, hpf_high)
+            hpf_high = min(fsAVG / 2.0 - 10.0, hpf_high)
         for sensor_dict in sensor_dicts_list:
             idx_proj = -1
             for sensor, projection in sensor_dict.iteritems():
