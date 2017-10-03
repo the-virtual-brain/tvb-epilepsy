@@ -107,7 +107,7 @@ class CustomReader(ABCReader):
                     projection_file = os.path.join(root_folder, sensor_file[1])
                     if os.path.isfile(projection_file):
                         projection = self.read_projection(os.path.join(root_folder, sensor_file[1]), s_type)
-                if projection is []:
+                if projection == []:
                     warning("Calculating projection matrix based solely on euclidean distance!")
                     projection = sensor.calculate_projection(conn)
                 sensors_dict[sensor] = projection
