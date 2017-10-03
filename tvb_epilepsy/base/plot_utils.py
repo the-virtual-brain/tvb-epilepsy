@@ -314,6 +314,7 @@ def plot_raster(time, data_dict, time_units="ms", special_idx=None, title='Time 
     pyplot.figure(title, figsize=figsize)
     no_rows = len(data_dict)
     lines = []
+
     for i, var in enumerate(data_dict):
         ax = pyplot.subplot(1, no_rows, i + 1)
         pyplot.hold(True)
@@ -322,6 +323,7 @@ def plot_raster(time, data_dict, time_units="ms", special_idx=None, title='Time 
         data = data_dict[var]
         data = zscore(data, axis=None)
         nTS = data.shape[1]
+        ticks = (offset*np.array([range(nTS)])).tolist()
         if labels is None:
             labels = np.array(range(nTS)).astype(str)
         lines.append([])
@@ -341,6 +343,8 @@ def plot_raster(time, data_dict, time_units="ms", special_idx=None, title='Time 
         pyplot.ylabel(var)
         ax.set_autoscalex_on(False)
         ax.set_xlim([time[0], time[-1]])
+        # ax.set_yticks(ticks)
+        # ax.set_yticklabels(labels)
         ax.invert_yaxis()
         if MOUSEHOOVER:
             #datacursor( lines[i], formatter='{label}'.format, bbox=dict(fc='white'),
@@ -348,7 +352,6 @@ def plot_raster(time, data_dict, time_units="ms", special_idx=None, title='Time 
             HighlightingDataCursor(lines[i], formatter='{label}'.format, bbox=dict(fc='white'),
                                    arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )
     pyplot.xlabel("Time (" + time_units + ")")
-
     fig = pyplot.gcf()
     fig.suptitle(title)
     if len(fig.get_label())==0:
@@ -534,6 +537,11 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
                         special_idx=seizure_indices, title=hyp_name + ": Simulated TAVG",
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         labels=head.connectivity.region_labels, figsize=VERY_LARGE_SIZE)
+        plot_raster(res['time'], {'x1': res['x1']},
+                    time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
+                    title=hyp_name + ": Simulated x1 rasterplot", offset=5.0, labels=head.connectivity.region_labels,
+                    save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
+                    figsize=VERY_LARGE_SIZE)
 
     else:
         plot_timeseries(res['time'], {'LFP(t)': res['lfp'], 'z(t)': res['z']}, time_units=res.get('time_units', "ms"),
@@ -584,18 +592,16 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
                                       figure_format=figure_format, figsize=LARGE_SIZE, **kwargs)
 
     for i in range(len(sensorsSEEG)):
-        start_plot = int(np.round(0.01*res['SEEG'+str(i)].shape[0]))
-        plot_raster(res['time'][start_plot:], {'SEEG': res['SEEG'+str(i)][start_plot:, :]},
-                    time_units=res.get('time_units', "ms"),
-                    title=hyp_name + ": Simulated SEEG" + str(i) + " raster plot",
-                    offset=10.0, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
-                    figure_format=figure_format, labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
         if hpf_flag:
-            plot_raster(res['time'][start_plot:], {'SEEG hpf': res['SEEG' + str(i)][start_plot:, :]},
-                        time_units=res.get('time_units', "ms"),
-                        title=hyp_name + ": Simulated high pass filtered SEEG" + str(i) + " raster plot",
-                        offset=10.0, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
-                        figure_format=figure_format, labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
+            title = hyp_name + ": Simulated high pass filtered SEEG" + str(i) + " raster plot"
+            start_plot = int(np.round(0.01 * res['SEEG' + str(i)].shape[0]))
+        else:
+            title = hyp_name + ": Simulated SEEG" + str(i) + " raster plot"
+            start_plot = 0
+        plot_raster(res['time'][start_plot:], {'SEEG': res['SEEG'+str(i)][start_plot:, :]},
+                    time_units=res.get('time_units', "ms"), title=title,
+                    offset=1.0, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
+                    figure_format=figure_format, labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
 
 
 def plot_fit_results(hyp_name, head, res, data, active_regions, time=None, seizure_indices=None,
