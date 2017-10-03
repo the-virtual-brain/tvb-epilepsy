@@ -131,6 +131,9 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, ts, dynamic_mo
         # signals = ts["x1"][:, active_regions]
         signals = (np.dot(mixing, signals.T)).T
 
+    from matplotlib import pyplot
+    pyplot.plot(signals)
+    pyplot.show()
     data = {"n_regions": hypothesis.number_of_regions,
             "n_active_regions": n_active_regions,
             "n_nonactive_regions": hypothesis.number_of_regions-n_active_regions,
@@ -363,7 +366,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
     # head.plot()
 
     if len(channel_inds) > 1:
-        channels_inds, channel_lbls = get_bipolar_channels(channel_inds, channel_lbls)
+        channel_inds, _ = get_bipolar_channels(channel_inds, channel_lbls)
 
     # --------------------------Hypothesis definition-----------------------------------
 
@@ -499,7 +502,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
 
         if os.path.isfile(EMPIRICAL):
 
-            observation, time, fs = prepare_seeg_observable(EMPIRICAL, times_on_off, channel_lbls)
+            observation, time, fs = prepare_seeg_observable(EMPIRICAL, times_on_off, channel_lbls, log_flag=True)
             vois_ts_dict = {"time": time, "signals": observation}
             #
             # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ2_0001.edf'), [15.0, 40.0], channel_lbls)
@@ -555,7 +558,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
                                                             fsAVG, vois_ts_dict, sim.model,
                                                             noise_intensity, active_regions=None,
                                                             active_regions_th=0.1, euler_method=1,
-                                                            observation_model=3, channel_inds=channel_inds,
+                                                            observation_model=1, channel_inds=channel_inds,
                                                             mixing=head.sensorsSEEG.values()[0])
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_data.mat"), data)
 
@@ -578,17 +581,18 @@ def get_bipolar_channels(channels_inds, channel_lbls=[]):
     bipolar_channels = []
     bipolar_ch_inds = []
     for iS in range(n_channels - 1):
-        if (channels[iS][0] == channels[iS + 1][0]) and \
-                (int(re.findall(r'\d+', channels[iS])[0]) == int(re.findall(r'\d+', channels[iS + 1])[0]) - 1):
-            bipolar_channels.append(channels[iS] + "-" + channels[iS + 1])
-            bipolar_ch_inds.append(iS)  
+        if (channel_lbls[iS][0] == channel_lbls[iS + 1][0]) and \
+                (int(re.findall(r'\d+', channel_lbls[iS])[0]) == int(re.findall(r'\d+', channel_lbls[iS + 1])[0]) - 1):
+            bipolar_channels.append(channel_lbls[iS] + "-" + channel_lbls[iS + 1])
+            bipolar_ch_inds.append(channels_inds[iS])
     return bipolar_ch_inds, bipolar_channels
 
 
-def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_freq=10.0, high_freq=None, log_flag=False,
+def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_freq=10.0, high_freq=None, log_flag=True,
                             plot_flag=False):
     import re
     from scipy.signal import resample_poly, decimate
+    from pylab import detrend_linear
     from mne.io import read_raw_edf
     from mne.viz import plot_raw
     from tvb_epilepsy.base.plot_utils import plot_raster, plot_spectral_analysis_raster
@@ -633,6 +637,8 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
     del data_filtered
     if log_flag:
         observation = np.log(observation)
+    for iS in range(observation.shape[1]):
+        observation[:, iS] = detrend_linear(observation[:, iS])
     observation -= observation.min()
     for iS in range(observation.shape[1]):
         observation[:, iS] = np.convolve(observation[:, iS], np.ones((np.round(win_len * fs),)), mode='same')
@@ -700,6 +706,6 @@ if __name__ == "__main__":
     # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ5_0001.edf'), [20.0, 45.0], channels)
 
     stats_model_name = "vep_original"
-    # main_fit_sim_hyplsa(stats_model_name, EMPIRICAL=os.path.join(SEEG_data, 'SZ1_0001.edf'), times_on_off=[10.0, 35.0],
-    #                    channel_lbls=channels, channel_inds=channels_inds)
-    main_fit_sim_hyplsa(stats_model_name, channel_lbls=channels, channel_inds=channel_inds)
+    main_fit_sim_hyplsa(stats_model_name, EMPIRICAL=os.path.join(SEEG_data, 'SZ1_0001.edf'), times_on_off=[10.0, 35.0],
+                       channel_lbls=channels, channel_inds=channel_inds)
+    # main_fit_sim_hyplsa(stats_model_name, channel_lbls=channels, channel_inds=channel_inds)
