@@ -13,7 +13,7 @@ import pickle
 
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_DEF, X0_CR_DEF, VOIS, X0_DEF, E_DEF, TVB, DATA_MODE, \
                                         SIMULATION_MODE
-from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM, STATISTICAL_MODELS_PATH, FOLDER_VEP_HOME
+from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM, STATISTICAL_MODELS_PATH, FOLDER_VEP_HOME, USER_HOME
 from tvb_epilepsy.base.utils import warning, raise_not_implemented_error, initialize_logger
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
@@ -25,7 +25,7 @@ from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D, EpileptorDPrealistic, EpileptorDP
-from tvb_epilepsy.base.plot_utils import plot_sim_results, plot_fit_results
+from tvb_epilepsy.base.plot_utils import plot_sim_results, plot_fit_results, plot_timeseries
 from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
                                                     compute_seeg_and_write_ts_h5_file
 from tvb_epilepsy.base .computations.analyzers_utils import filter_data
@@ -56,21 +56,22 @@ def compile_model(model_stan_code_path=os.path.join(STATISTICAL_MODELS_PATH, "ve
     return model
 
 
-def prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynamic_model=None, noise_intensity=None,
-                             active_regions=None, active_regions_th=0.1, euler_method=-1, observation_model=3,
-                             mixing=None, **kwargs):
+def prepare_data_for_fitting(model_configuration, hypothesis, fs, ts, dynamic_model=None, noise_intensity=None,
+                             active_regions=None, active_regions_th=0.1, observation_model=3,
+                             channel_inds=[], mixing=None, **kwargs):
 
     logger.info("Constructing data dictionary...")
     active_regions_flag = np.zeros((hypothesis.number_of_regions, ), dtype="i")
 
-    if active_regions is None:
-        if len(hypothesis.propagation_strengths) > 0:
-            active_regions = np.where(hypothesis.propagation_strengths / np.max(hypothesis.propagation_strengths)
-                                      > active_regions_th)[0]
-        else:
-            raise_not_implemented_error("There is no other way of automatic selection of " +
-                                        "active regions implemented yet!")
+    # if active_regions is None:
+    #     if len(hypothesis.propagation_strengths) > 0:
+    #         active_regions = np.where(hypothesis.propagation_strengths / np.max(hypothesis.propagation_strengths)
+    #                                   > active_regions_th)[0]
+    #     else:
+    #         raise_not_implemented_error("There is no other way of automatic selection of " +
+    #                                     "active regions implemented yet!")
 
+    active_regions = np.where(model_configuration.e_values > active_regions_th)[0]
     active_regions_flag[active_regions] = 1
     n_active_regions = len(active_regions)
 
@@ -107,21 +108,28 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynami
     sig_init_std = sig_init_mu
     sig_init = gamma_from_mu_std(kwargs.get("sig_init_mu", sig_init_mu), kwargs.get("sig_init_std", sig_init_std))
 
-    signals = (sim_ts["x1"][:, active_regions].T - np.expand_dims(model_configuration.x1EQ[active_regions], 1)).T + \
-              (sim_ts["z"][:, active_regions].T - np.expand_dims(model_configuration.zEQ[active_regions], 1)).T
-    signals = signals / 2.75
-
-    # signals = (sim_ts["x1"][:, active_regions].T - np.expand_dims(model_configuration.x1EQ[active_regions], 1)).T / 2.0
-    # signals = sim_ts["x1"][:, active_regions]
-    if mixing is None:
+    if mixing is None or len(channel_inds) < 1:
         if observation_model == 2:
             mixing = np.random.rand(n_active_regions, n_active_regions)
-            for ii in range(n_active_regions):
+            for ii in range(len(n_active_regions)):
                 mixing[ii, :] = mixing[ii, :]/np.sum(mixing[ii, :])
         else:
             observation_model = 3
             mixing = np.eye(n_active_regions)
-    signals = (np.dot(mixing, signals.T)).T
+
+    else:
+        mixing = mixing[channel_inds][:, active_regions]
+        for ii in range(len(channel_inds)):
+            mixing[ii, :] = mixing[ii, :] / np.sum(mixing[ii, :])
+
+    signals = ts.get("signals", None)
+    if signals is None:
+        signals = (ts["x1"][:, active_regions].T - np.expand_dims(model_configuration.x1EQ[active_regions], 1)).T + \
+                  (ts["z"][:, active_regions].T - np.expand_dims(model_configuration.zEQ[active_regions], 1)).T
+        signals = signals / 2.75
+        # signals = (ts["x1"][:, active_regions].T - np.expand_dims(model_configuration.x1EQ[active_regions], 1)).T / 2.0
+        # signals = ts["x1"][:, active_regions]
+        signals = (np.dot(mixing, signals.T)).T
 
     data = {"n_regions": hypothesis.number_of_regions,
             "n_active_regions": n_active_regions,
@@ -167,7 +175,6 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynami
             "sig_init_a": kwargs.get("sig_init_a", sig_init["alpha"]),
             "sig_init_b": kwargs.get("sig_init_b", sig_init["beta"]),
             "observation_model": observation_model,
-            "euler_method": euler_method,
             "signals": signals,
             "mixing": mixing,
             "eps_hi": kwargs.get("eps_hi", (np.max(signals.flatten()) - np.min(signals.flatten()) / 100.0)),
@@ -204,13 +211,13 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynami
     return data, tau0_def, tau1_def
 
 
-def prepare_data_for_fitting_vep(stats_model_name, model_configuration, hypothesis, fs, sim_ts, dynamic_model=None,
+def prepare_data_for_fitting_vep(stats_model_name, model_configuration, hypothesis, fs, ts, dynamic_model=None,
                                  noise_intensity=None, active_regions=None, active_regions_th=0.1,
-                                 euler_method=-1, observation_model=3, mixing=None, **kwargs):
+                                 euler_method=1, observation_model=3, channel_inds=[], mixing=None, **kwargs):
 
-    p, tau0_def, tau1_def = prepare_data_for_fitting(model_configuration, hypothesis, fs, sim_ts, dynamic_model,
+    p, tau0_def, tau1_def = prepare_data_for_fitting(model_configuration, hypothesis, fs, ts, dynamic_model,
                                                      noise_intensity, active_regions, active_regions_th,
-                                                     observation_model, mixing, **kwargs)
+                                                     observation_model, channel_inds, mixing, **kwargs)
 
     active_regions = np.where(p["active_regions_flag"])[0]
     non_active_regions = np.where(1-p["active_regions_flag"])[0]
@@ -247,7 +254,7 @@ def prepare_data_for_fitting_vep(stats_model_name, model_configuration, hypothes
     if stats_model_name is "vep_dWt":
         data.update({"sig_init": p["sig_init_mu"]})
     elif stats_model_name is "vep_original":
-        data.update({"euler_method": p["euler_method"]})
+        data.update({"euler_method": euler_method})
 
     logger.info("data dictionary completed with " + str(len(data)) + " fields:\n" + str(data.keys()))
 
@@ -326,7 +333,8 @@ def read_vb_results(fit):
     return est
 
 
-def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL=''):
+def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_off=[], channel_lbls=[],
+                        channel_inds=[]):
 
     # ------------------------------Model code--------------------------------------
     # Compile or load model:
@@ -354,6 +362,9 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL=''):
 
     # head.plot()
 
+    if len(channel_inds) > 1:
+        channels_inds, channel_lbls = get_bipolar_channels(channel_inds, channel_lbls)
+
     # --------------------------Hypothesis definition-----------------------------------
 
     n_samples = 100
@@ -367,7 +378,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL=''):
     # disease_indices = x0_indices + e_indices
 
     # ...or reading a custom file:
-    ep_name = "ep_test1"
+    ep_name = "ep_l_frontal_complex"
     # FOLDER_RES = os.path.join(data_folder, ep_name)
     from tvb_epilepsy.custom.readers_custom import CustomReader
 
@@ -376,10 +387,13 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL=''):
     disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
     disease_indices, = np.where(disease_values > np.min([X0_DEF, E_DEF]))
     disease_values = disease_values[disease_indices]
-    x0_indices = disease_indices.tolist()
-    x0_values = disease_values.tolist()
-    e_indices = []
-    e_values = []
+    inds = np.argsort(disease_values)
+    disease_values = disease_values[inds]
+    disease_indices = disease_indices[inds]
+    x0_indices = [disease_indices[-1]]
+    x0_values = [disease_values[-1]]
+    e_indices = disease_indices[0:-1].tolist()
+    e_values = disease_values[0:-1].tolist()
     disease_indices = list(disease_indices)
 
     n_x0 = len(x0_indices)
@@ -391,9 +405,15 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL=''):
 
     # This is an example of Excitability Hypothesis:
     hyp_x0 = DiseaseHypothesis(head.connectivity.number_of_regions,
-                               excitability_hypothesis={tuple(disease_indices): disease_values},
+                               excitability_hypothesis={tuple(x0_indices): x0_values},
                                epileptogenicity_hypothesis={}, connectivity_hypothesis={})
 
+    # This is an example of Excitability Hypothesis:
+    hyp_x0_E = DiseaseHypothesis(head.connectivity.number_of_regions,
+                               excitability_hypothesis={tuple(x0_indices): x0_values},
+                               epileptogenicity_hypothesis={tuple(e_indices): e_values}, connectivity_hypothesis={})
+
+    hypos = (hyp_x0_E, )
     # --------------------------Simulation preparations-----------------------------------
     tau1 = 0.5
     # TODO: maybe use a custom Monitor class
@@ -428,14 +448,14 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL=''):
 
     # --------------------------Hypothesis and LSA-----------------------------------
 
-    for hyp in (hyp_x0, ): #hypotheses:
+    for hyp in hypos: #hypotheses:
 
         logger.info("\n\nRunning hypothesis: " + hyp.name)
 
         # hyp.write_to_h5(FOLDER_RES, hyp.name + ".h5")
 
         logger.info("\n\nCreating model configuration...")
-        model_configuration_service = ModelConfigurationService(hyp.number_of_regions)
+        model_configuration_service = ModelConfigurationService(hyp.number_of_regions, K=10.0)
         # model_configuration_service.write_to_h5(FOLDER_RES, hyp.name + "_model_config_service.h5")
 
         if hyp.type == "Epileptogenicity":
@@ -444,7 +464,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL=''):
         else:
             model_configuration = model_configuration_service. \
                 configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
-        # model_configuration.write_to_h5(FOLDER_RES, hyp.name + "_ModelConfig.h5")
+        model_configuration.write_to_h5(FOLDER_RES, hyp.name + "_ModelConfig.h5")
 
         # Plot nullclines and equilibria of model configuration
         model_configuration_service.plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
@@ -462,7 +482,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL=''):
 
         # ------------------------------Simulation--------------------------------------
         logger.info("\n\nConfiguring simulation...")
-        noise_intensity = 10 ** -3
+        noise_intensity = 10 ** -2.8
         sim = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt,
                                                         sim_length, monitor_period, model_name,
                                                         zmode=np.array(zmode), pmode=np.array(pmode),
@@ -478,8 +498,15 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL=''):
         # convert_to_h5_model(sim.model).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5")
 
         if os.path.isfile(EMPIRICAL):
-            vois_ts_dict = loadmat(EMPIRICAL)
+
+            observation, time, fs = prepare_seeg_observable(EMPIRICAL, times_on_off, channel_lbls)
+            vois_ts_dict = {"time": time, "signals": observation}
+            #
+            # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ2_0001.edf'), [15.0, 40.0], channel_lbls)
+
+            # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ5_0001.edf'), [20.0, 45.0], channel_lbls)
         else:
+
             ts_file = os.path.join(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts.mat")
             if os.path.isfile(ts_file):
                 logger.info("\n\nLoading previously simulated time series...")
@@ -528,12 +555,12 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL=''):
                                                             fsAVG, vois_ts_dict, sim.model,
                                                             noise_intensity, active_regions=None,
                                                             active_regions_th=0.1, euler_method=1,
-                                                            observation_model=3,
-                                                            mixing=None)
+                                                            observation_model=3, channel_inds=channel_inds,
+                                                            mixing=head.sensorsSEEG.values()[0])
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_data.mat"), data)
 
         # Fit and get estimates:
-        est, fit = stanfit_model(stats_model, data, mode="optimizing", iter=20000) #
+        est, fit = stanfit_model(stats_model, data, mode="optimizing", iter=30000) #
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), est)
 
         plot_fit_results(lsa_hypothesis.name, head, est, data, active_regions,
@@ -543,41 +570,60 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL=''):
         print("Done!")
 
 
-def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_freq=10.0, high_freq=None):
+def get_bipolar_channels(channels_inds, channel_lbls=[]):
     import re
+    n_channels = len(channels)
+    if channel_lbls == []:
+        channel_lbls = str(range(n_channels))
+    bipolar_channels = []
+    bipolar_ch_inds = []
+    for iS in range(n_channels - 1):
+        if (channels[iS][0] == channels[iS + 1][0]) and \
+                (int(re.findall(r'\d+', channels[iS])[0]) == int(re.findall(r'\d+', channels[iS + 1])[0]) - 1):
+            bipolar_channels.append(channels[iS] + "-" + channels[iS + 1])
+            bipolar_ch_inds.append(iS)  
+    return bipolar_ch_inds, bipolar_channels
+
+
+def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_freq=10.0, high_freq=None, log_flag=False,
+                            plot_flag=False):
+    import re
+    from scipy.signal import resample_poly, decimate
     from mne.io import read_raw_edf
     from mne.viz import plot_raw
     from tvb_epilepsy.base.plot_utils import plot_raster, plot_spectral_analysis_raster
     raw_data = read_raw_edf(seeg_path, preload=True)
     rois = np.where([np.in1d(s.split("POL ")[-1], channels) for s in raw_data.ch_names])[0]
-    raw_data.resample(256.0)
+    raw_data.resample(128.0)
     fs = raw_data.info['sfreq']
     data, times = raw_data[:, :]
     data = data[rois].T
-    plot_spectral_analysis_raster(times, data, time_units="sec", freq=np.array(range(1,51,1)),
+    if plot_flag:
+        plot_spectral_analysis_raster(times, data, time_units="sec", freq=np.array(range(1,51,1)),
                                   title='Spectral Analysis',
-                                  figure_name='Spectral Analysis', labels=channels,
-                                  show_flag=True, save_flag=False, log_scale=True)
+                                  figure_name='Spectral Analysis', labels=channels,  log_scale=True)
     data_bipolar = []
     bipolar_channels = []
     data_filtered = []
+    bipolar_ch_inds = []
     for iS in range(data.shape[1]-1):
         if (channels[iS][0] == channels[iS+1][0]) and \
                 (int(re.findall(r'\d+', channels[iS])[0]) == int(re.findall(r'\d+', channels[iS+1])[0])-1):
             data_bipolar.append(data[:, iS] - data[:, iS+1])
             bipolar_channels.append(channels[iS] + "-" + channels[iS+1])
-            data_filtered.append(filter_data(data_bipolar[-1], low_freq, 100.0, fs, order=3))
+            data_filtered.append(filter_data(data_bipolar[-1], low_freq, 60.0, fs, order=3))
+            bipolar_ch_inds.append(iS)
     data_bipolar = np.array(data_bipolar).T
     data_filtered = np.array(data_filtered).T
     # filter_data, times = raw_data.filter(low_freq, 100.0, picks=rois)[:, :]
-    plot_spectral_analysis_raster(times, data_bipolar, time_units="sec", freq=np.array(range(1, 51, 1)),
+    if plot_flag:
+        plot_spectral_analysis_raster(times, data_bipolar, time_units="sec", freq=np.array(range(1, 51, 1)),
                                   title='Spectral Analysis',
                                   figure_name='Spectral Analysis', labels=bipolar_channels,
                                   show_flag=True, save_flag=False, log_scale=True)
-    plot_spectral_analysis_raster(times, data_filtered, time_units="sec", freq=np.array(range(1, 51, 1)),
+        plot_spectral_analysis_raster(times, data_filtered, time_units="sec", freq=np.array(range(1, 51, 1)),
                                   title='Spectral Analysis',
-                                  figure_name='Spectral Analysis', labels=bipolar_channels,
-                                  show_flag=True, save_flag=False, log_scale=True)
+                                  figure_name='Spectral Analysis', labels=bipolar_channels, log_scale=True)
     del data
     t_onset = np.where(times > (on_off_set[0] - 2 * win_len))[0][0]
     t_offset = np.where(times > (on_off_set[1] + 2 * win_len))[0][0]
@@ -585,38 +631,54 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
     data_filtered = data_filtered[t_onset:t_offset]
     observation = np.abs(data_filtered)
     del data_filtered
-    # observation = np.log(observation)
+    if log_flag:
+        observation = np.log(observation)
     observation -= observation.min()
     for iS in range(observation.shape[1]):
         observation[:, iS] = np.convolve(observation[:, iS], np.ones((np.round(win_len * fs),)), mode='same')
-    t_onset = np.where(times > (on_off_set[0] - win_len))[0][0]
-    t_offset = np.where(times > (on_off_set[1] + win_len))[0][0]
+    n_times = times.shape[0]
+    dtimes = n_times - 4096
+    t_onset = int(np.ceil(dtimes / 2.0))
+    t_offset = n_times-int(np.floor(dtimes / 2.0))
+    # t_onset = np.where(times > (on_off_set[0] - win_len))[0][0]
+    # t_offset = np.where(times > (on_off_set[1] + win_len))[0][0]
     times = times[t_onset:t_offset]
     observation = observation[t_onset:t_offset]
+    if plot_flag:
+        plot_raster(times, {"observation": observation}, time_units="sec", special_idx=None, title='Time Series',
+                    offset=1.0, figure_name='TimeSeries', labels=bipolar_channels)
+    # n_times = times.shape[0]
+    # observation = resample_poly(observation, 2048, n_times)
+    observation = decimate(observation, 2, axis=0, zero_phase=True)
+    times = decimate(times, 2, zero_phase=True)
     observation -= observation.min()
     observation /= observation.max()
-    plot_raster(times, {"observation": observation}, time_units="sec", special_idx=None, title='Time Series',
-                offset=1.0, figure_name='TimeSeries', labels=bipolar_channels, show_flag=True, save_flag=False)
-    return observation, times, fs
+    if plot_flag:
+        plot_timeseries(times, {"observation": observation}, time_units="sec", special_idx=None, title='Time Series',
+                    figure_name='TimeSeries', labels=bipolar_channels) #, show_flag=True, save_flag=False
+
+    return observation, times, fs/2
 
 
 
 
 if __name__ == "__main__":
 
-    stats_model_name = "vep_original"
-    main_fit_sim_hyplsa(stats_model_name)
-
-    # HOME = '/Users/dionperd/CBR/VEP/CC'
-    # VEP_FOLDER = os.path.join(HOME, 'TVB3')
-    # CT = os.path.join(VEP_FOLDER, 'CT')
-    # SEEG = os.path.join(VEP_FOLDER, 'SEEG')
-    # SEEG_data = os.path.join(VEP_FOLDER, 'SEEG_data')
-    # channels = [u"G'1", u"G'2", u"G'3", u"G'8", u"G'9", u"G'10", u"G'11", u"G'12", u"M'6", u"M'7", u"M'8", u"L'4", u"L'5",
-    #             u"L'6", u"L'7", u"L'8", u"L'9"]
-    # channels_inds = [67, 68, 69, 74, 75, 76, 77, 78, 21, 22, 23, 43, 44, 45, 46, 47, 48]
-    # # -------------------------------Reading data-----------------------------------
+    VEP_HOME = os.path.join(USER_HOME, 'VEP/CC')
+    VEP_FOLDER = os.path.join(VEP_HOME, 'TVB3')
+    CT = os.path.join(VEP_FOLDER, 'CT')
+    SEEG = os.path.join(VEP_FOLDER, 'SEEG')
+    SEEG_data = os.path.join(VEP_FOLDER, 'SEEG_data')
     #
+    channels = [u"G'1", u"G'2", u"G'3", u"G'8", u"G'9", u"G'10", u"G'11", u"G'12", u"M'6", u"M'7", u"M'8", u"L'4",
+                u"L'5",  u"L'6", u"L'7", u"L'8", u"L'9"]
+
+    channel_inds = [67, 68, 69, 74, 75, 76, 77, 78, 21, 22, 23, 43, 44, 45, 46,  47, 48] #
+
+
+    # -------------------------------Reading data-----------------------------------
+
+
     # data_folder = os.path.join(DATA_CUSTOM, 'Head')
     #
     # reader = Reader()
@@ -625,4 +687,19 @@ if __name__ == "__main__":
     # head = reader.read_head(data_folder, seeg_sensors_files=[("SensorsInternal.h5", "")])
     # nearest_regions = head.compute_nearest_regions_to_sensors("SEEG", channels_inds)
     #
+    # for ic, ch in enumerate(channels):
+    #     print("\n" + ch + "<-" + str(nearest_regions[ic][1]) + str(nearest_regions[ic][2]))
+
+    channels = [u"G'1", u"G'2", u"G'11", u"G'12", u"M'6", u"M'7", u"L'6", u"L'7"]
+    channel_inds = [67, 68, 77, 78, 21, 22, 45, 46]
+
+    # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ1_0001.edf'), [10.0, 35.0], channels)
+    #
     # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ2_0001.edf'), [15.0, 40.0], channels)
+
+    # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ5_0001.edf'), [20.0, 45.0], channels)
+
+    stats_model_name = "vep_original"
+    # main_fit_sim_hyplsa(stats_model_name, EMPIRICAL=os.path.join(SEEG_data, 'SZ1_0001.edf'), times_on_off=[10.0, 35.0],
+    #                    channel_lbls=channels, channel_inds=channels_inds)
+    main_fit_sim_hyplsa(stats_model_name, channel_lbls=channels, channel_inds=channel_inds)
