@@ -385,7 +385,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
     # disease_indices = x0_indices + e_indices
 
     # ...or reading a custom file:
-    ep_name = "ep_lCaudalCingulate"
+    ep_name = "ep_l_frontal_complex"
     # FOLDER_RES = os.path.join(data_folder, ep_name)
     from tvb_epilepsy.custom.readers_custom import CustomReader
 
@@ -568,6 +568,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
 
         # Fit and get estimates:
         est, fit = stanfit_model(stats_model, data, mode="optimizing", iter=60000) #
+        est, fit = stanfit_model(stats_model, data, mode="optimizing", iter=500) #
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), est)
 
         plot_fit_results(lsa_hypothesis.name, head, est, data, active_regions,
@@ -588,6 +589,27 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
         connectivity_matrix_fit[active_regions][:, active_regions] = est["FC"]
         model_configuration_fit = fit_model_configuration_service.configure_model_from_hypothesis(hyp_fit,
                                                                                                   connectivity_matrix_fit)
+        model_configuration_fit.write_to_h5(FOLDER_RES, hyp_fit.name + "_ModelConfig.h5")
+
+        # Plot nullclines and equilibria of model configuration
+        model_configuration_service.plot_nullclines_eq(model_configuration_fit, head.connectivity.region_labels,
+                                                       special_idx=disease_indices, model="6d", zmode="lin",
+                                                       figure_name=hyp_fit.name + "_Nullclines and equilibria")
+        # Reconfigure model after fitting:
+        fit_model_configuration_service = ModelConfigurationService(hyp.number_of_regions,
+                                                                    K=est['K'] * hyp.number_of_regions)
+
+        x0_values_fit = fit_model_configuration_service._compute_x0_values_from_x0_model(est['x0'])
+        disease_indices = active_regions.tolist()
+        hyp_fit = DiseaseHypothesis(head.connectivity.number_of_regions,
+                                       excitability_hypothesis={tuple(disease_indices): x0_values_fit},
+                                       epileptogenicity_hypothesis={}, connectivity_hypothesis={},
+                                       name='fit_' + hyp_x0.name)
+
+        connectivity_matrix_fit = np.array(model_configuration.connectivity_matrix)
+        connectivity_matrix_fit[active_regions][:, active_regions] = est["FC"]
+        model_configuration_fit = fit_model_configuration_service.configure_model_from_hypothesis(hyp_fit,
+                                                                                                connectivity_matrix_fit)
         model_configuration_fit.write_to_h5(FOLDER_RES, hyp_fit.name + "_ModelConfig.h5")
 
         # Plot nullclines and equilibria of model configuration

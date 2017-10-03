@@ -129,9 +129,12 @@ class ModelConfigurationService(object):
     def _compute_coupling_at_equilibrium(self, x1EQ, connectivity_matrix):
         return calc_coupling(x1EQ, self.K, connectivity_matrix)
 
+    def _compute_x0_values_from_x0_model(self, x0):
+        return calc_model_x0_to_x0_val(x0, self.yc, self.Iext1, self.a, self.b, self.d, self.zmode)
+
     def _compute_x0_values(self, x1EQ, zEQ, connectivity_matrix):
         x0 = calc_x0(x1EQ, zEQ, self.K, connectivity_matrix)
-        return calc_model_x0_to_x0_val(x0, self.yc, self.Iext1, self.a, self.b, self.d, self.zmode)
+        return self._compute_x0_values_from_x0_model(x0)
 
     def _compute_e_values(self, x1EQ):
         return 3.0 * x1EQ + 5.0
