@@ -615,18 +615,24 @@ def plot_fit_results(hyp_name, head, res, data, active_regions, time=None, seizu
     time = time.flatten()
 
     plot_raster(time, sort_dict({'observation signals':  data['signals'],
-                                 'observation signals fit':  res['fit_signals'],
-                                 'x1': res["x"].T, 'z': res["z"].T}),
+                                 'observation signals fit':  res['fit_signals']}),
                 special_idx=seizure_indices, time_units=res.get('time_units', "ms"),
                 title=hyp_name + ": Observation signals vs fit rasterplot",
                 subtitles=['observation signals ' +
                                 '\ndynamic noise prior: sig = ' + str(data["sig_hi"]/2) +
                                 '\nobservation noise prior: eps =  ' + str(data["eps_hi"]/2),
-                           'observation signals fit',
-                           'hidden state x1' + '\ndynamic noise fit sig = : ' + str(res["sig"]) +
-                                '\nobservation noise fit eps = : ' + str(res["eps"]),
-                           'hidden state z'],  offset=3.0,
-                figure_name=hyp_name + 'ObservationSignals_vs_FitHiddenStates_rasterplot',
+                           'observation signals fit'],  offset=3.0,
+                figure_name=hyp_name + 'ObservationSignals_vs_Fit_rasterplot',
+                labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
+                figure_format=figure_format, figsize=VERY_LARGE_SIZE)
+
+    plot_raster(time, sort_dict({'x1': res["x"].T, 'z': res["z"].T}),
+                special_idx=seizure_indices, time_units=res.get('time_units', "ms"),
+                title=hyp_name + ": Hidden states fit rasterplot",
+                subtitles=['hidden state x1' + '\ndynamic noise fit sig = : ' + str(res["sig"]) +
+                           '\nobservation noise fit eps = : ' + str(res["eps"]),
+                           'hidden state z'], offset=3.0,
+                figure_name=hyp_name + 'FitHiddenStates_rasterplot',
                 labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                 figure_format=figure_format, figsize=VERY_LARGE_SIZE)
 
