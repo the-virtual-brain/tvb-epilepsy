@@ -2,15 +2,16 @@
 from scipy.optimize import root
 import numpy as np
 
-from tvb_epilepsy.base.constants import A_DEF, B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, I_EXT1_DEF, I_EXT2_DEF, \
-                                        YC_DEF, TAU0_DEF, TAU1_DEF, TAU2_DEF
-from tvb_epilepsy.base.utils import warning, raise_import_error, raise_value_error, shape_to_size
+from tvb_epilepsy.base.utils import warning, raise_import_error, initialize_logger
 from tvb_epilepsy.base.computations.equations_utils import *
 
 # TODO: find out why I cannot import anything from utils here
 # from tvb_epilepsy.base.utils import assert_array_shape as sc2arr
 from tvb_epilepsy.base.constants import X0_CR_DEF, X1_EQ_CR_DEF, X0_DEF
 from tvb_epilepsy.base.constants import X1_DEF
+
+logger = initialize_logger(__name__)
+
 
 try:
     from tvb_epilepsy.base.computations.symbolic_utils import *
@@ -29,7 +30,7 @@ def confirm_calc_mode(calc_mode):
     if np.all(calc_mode == "symbol"):
 
         if SYMBOLIC_IMPORT:
-            print "Executing symbolic calculations..."
+            logger.info( "Executing symbolic calculations...")
 
         else:
             warning("\nNot possible to execute symbolic calculations! Turning to non-symbolic ones!..")
