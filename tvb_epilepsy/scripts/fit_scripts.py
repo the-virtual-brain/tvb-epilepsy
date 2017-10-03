@@ -568,7 +568,6 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
 
         # Fit and get estimates:
         est, fit = stanfit_model(stats_model, data, mode="optimizing", iter=60000) #
-        est, fit = stanfit_model(stats_model, data, mode="optimizing", iter=500) #
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), est)
 
         plot_fit_results(lsa_hypothesis.name, head, est, data, active_regions,
@@ -588,7 +587,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
         connectivity_matrix_fit = np.array(model_configuration.connectivity_matrix)
         connectivity_matrix_fit[active_regions][:, active_regions] = est["FC"]
         model_configuration_fit = fit_model_configuration_service.configure_model_from_hypothesis(hyp_fit,
-                                                                                                  connectivity_matrix_fit)
+                                                                                             connectivity_matrix_fit)
         model_configuration_fit.write_to_h5(FOLDER_RES, hyp_fit.name + "_ModelConfig.h5")
 
         # Plot nullclines and equilibria of model configuration
