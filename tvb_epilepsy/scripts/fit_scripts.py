@@ -63,15 +63,18 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, ts, dynamic_mo
     logger.info("Constructing data dictionary...")
     active_regions_flag = np.zeros((hypothesis.number_of_regions, ), dtype="i")
 
-    # if active_regions is None:
-    #     if len(hypothesis.propagation_strengths) > 0:
-    #         active_regions = np.where(hypothesis.propagation_strengths / np.max(hypothesis.propagation_strengths)
-    #                                   > active_regions_th)[0]
-    #     else:
-    #         raise_not_implemented_error("There is no other way of automatic selection of " +
-    #                                     "active regions implemented yet!")
+    if active_regions is None:
+        if len(hypothesis.propagation_strengths) > 0:
+            active_regions = np.where(hypothesis.propagation_strengths / np.max(hypothesis.propagation_strengths)
+                                      > active_regions_th)[0]
+        else:
+            raise_not_implemented_error("There is no other way of automatic selection of " +
+                                        "active regions implemented yet!")
 
-    active_regions = np.where(model_configuration.e_values > active_regions_th)[0]
+    if len(active_regions) < 6:
+        active_regions = np.unique(active_regions.tolist() +
+                                   (np.where(model_configuration.e_values > active_regions_th)[0]).tolist())
+
     active_regions_flag[active_regions] = 1
     n_active_regions = len(active_regions)
 
@@ -134,6 +137,7 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, ts, dynamic_mo
     # from matplotlib import pyplot
     # pyplot.plot(signals)
     # pyplot.show()
+
     data = {"n_regions": hypothesis.number_of_regions,
             "n_active_regions": n_active_regions,
             "n_nonactive_regions": hypothesis.number_of_regions-n_active_regions,
@@ -581,14 +585,14 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
         x0_values_fit = fit_model_configuration_service._compute_x0_values_from_x0_model(est['x0'])
         disease_indices = active_regions.tolist()
         hyp_fit = DiseaseHypothesis(head.connectivity.number_of_regions,
-                                       excitability_hypothesis={tuple(disease_indices): x0_values_fit},
-                                       epileptogenicity_hypothesis={}, connectivity_hypothesis={},
-                                       name='fit_' + hyp_x0.name)
+                                    excitability_hypothesis={tuple(disease_indices): x0_values_fit},
+                                    epileptogenicity_hypothesis={}, connectivity_hypothesis={},
+                                    name='fit_' + hyp_x0.name)
 
         connectivity_matrix_fit = np.array(model_configuration.connectivity_matrix)
         connectivity_matrix_fit[active_regions][:, active_regions] = est["FC"]
         model_configuration_fit = fit_model_configuration_service.configure_model_from_hypothesis(hyp_fit,
-                                                                                                connectivity_matrix_fit)
+                                                                                             connectivity_matrix_fit)
         model_configuration_fit.write_to_h5(FOLDER_RES, hyp_fit.name + "_ModelConfig.h5")
 
         # Plot nullclines and equilibria of model configuration
@@ -731,7 +735,7 @@ if __name__ == "__main__":
 
     # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ5_0001.edf'), [20.0, 45.0], channels)
 
-    stats_model_name = "vep_original_x0"
+    stats_model_name = "vep_original"
     main_fit_sim_hyplsa(stats_model_name, EMPIRICAL=os.path.join(SEEG_data, 'SZ1_0001.edf'), times_on_off=[10.0, 35.0],
                        channel_lbls=channels, channel_inds=channel_inds)
     # main_fit_sim_hyplsa(stats_model_name, channel_lbls=channels, channel_inds=channel_inds)
