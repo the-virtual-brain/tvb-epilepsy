@@ -1,3 +1,9 @@
+# encoding=utf8
+import sys
+
+reload(sys)
+sys.setdefaultencoding('utf8')
+
 import os
 import time
 import numpy as np
@@ -344,7 +350,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL=''):
     reader = Reader()
 
     logger.info("Reading from: " + data_folder)
-    head = reader.read_head(data_folder)
+    head = reader.read_head(data_folder, seeg_sensors_files=[("SensorsInternal.h5", "")])
 
     # head.plot()
 
@@ -370,17 +376,10 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL=''):
     disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
     disease_indices, = np.where(disease_values > np.min([X0_DEF, E_DEF]))
     disease_values = disease_values[disease_indices]
-    if disease_values.size > 1:
-        inds_split = np.ceil(disease_values.size * 1.0 / 2).astype("int")
-        x0_indices = disease_indices[:inds_split].tolist()
-        e_indices = disease_indices[inds_split:].tolist()
-        x0_values = disease_values[:inds_split].tolist()
-        e_values = disease_values[inds_split:].tolist()
-    else:
-        x0_indices = disease_indices.tolist()
-        x0_values = disease_values.tolist()
-        e_indices = []
-        e_values = []
+    x0_indices = disease_indices.tolist()
+    x0_values = disease_values.tolist()
+    e_indices = []
+    e_values = []
     disease_indices = list(disease_indices)
 
     n_x0 = len(x0_indices)
@@ -448,18 +447,18 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL=''):
         # model_configuration.write_to_h5(FOLDER_RES, hyp.name + "_ModelConfig.h5")
 
         # Plot nullclines and equilibria of model configuration
-        # model_configuration_service.plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
-        #                                                special_idx=disease_indices, model="6d", zmode="lin",
-        #                                                figure_name=hyp.name + "_Nullclines and equilibria")
+        model_configuration_service.plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
+                                                       special_idx=disease_indices, model="6d", zmode="lin",
+                                                       figure_name=hyp.name + "_Nullclines and equilibria")
 
         logger.info("\n\nRunning LSA...")
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
         lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
 
-        # lsa_hypothesis.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")
-        # lsa_service.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")
-        #
-        # lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, None)
+        lsa_hypothesis.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")
+        lsa_service.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")
+
+        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, None)
 
         # ------------------------------Simulation--------------------------------------
         logger.info("\n\nConfiguring simulation...")
@@ -613,6 +612,17 @@ if __name__ == "__main__":
     # CT = os.path.join(VEP_FOLDER, 'CT')
     # SEEG = os.path.join(VEP_FOLDER, 'SEEG')
     # SEEG_data = os.path.join(VEP_FOLDER, 'SEEG_data')
-    # channels = ["G'1", "G'2", "G'8", "G'9", "G'10", "G'11", "G'12", "M'6", "M'7", "M'8", "L'4", "L'5", "L'6", "L'7",
-    #             "L'8", "L'9"]
+    # channels = [u"G'1", u"G'2", u"G'3", u"G'8", u"G'9", u"G'10", u"G'11", u"G'12", u"M'6", u"M'7", u"M'8", u"L'4", u"L'5",
+    #             u"L'6", u"L'7", u"L'8", u"L'9"]
+    # channels_inds = [67, 68, 69, 74, 75, 76, 77, 78, 21, 22, 23, 43, 44, 45, 46, 47, 48]
+    # # -------------------------------Reading data-----------------------------------
+    #
+    # data_folder = os.path.join(DATA_CUSTOM, 'Head')
+    #
+    # reader = Reader()
+    #
+    # logger.info("Reading from: " + data_folder)
+    # head = reader.read_head(data_folder, seeg_sensors_files=[("SensorsInternal.h5", "")])
+    # nearest_regions = head.compute_nearest_regions_to_sensors("SEEG", channels_inds)
+    #
     # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ2_0001.edf'), [15.0, 40.0], channels)
