@@ -139,7 +139,11 @@ class LSAService(object):
             # Normalize by the maximum
             lsa_propagation_strength /= numpy.max(lsa_propagation_strength)
 
-
+        # # TODO: this has to be corrected
+        # if self.eigen_vectors_number < 0.2 * disease_hypothesis.number_of_regions:
+        #     propagation_strength_elbow = numpy.max([self.get_curve_elbow_point(lsa_propagation_strength),
+        #                                     self.eigen_vectors_number])
+        # else:
         propagation_strength_elbow = self.get_curve_elbow_point(lsa_propagation_strength)
         propagation_indices = lsa_propagation_strength.argsort()[-propagation_strength_elbow:]
 
