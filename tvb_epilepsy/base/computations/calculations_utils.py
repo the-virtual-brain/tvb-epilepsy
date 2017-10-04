@@ -2,7 +2,7 @@
 from scipy.optimize import root
 import numpy as np
 
-from tvb_epilepsy.base.utils import warning, raise_import_error, initialize_logger
+from tvb_epilepsy.base.utils import warning, raise_import_error, initialize_logger, shape_to_size
 from tvb_epilepsy.base.computations.equations_utils import *
 
 # TODO: find out why I cannot import anything from utils here
