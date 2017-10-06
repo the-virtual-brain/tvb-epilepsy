@@ -38,11 +38,23 @@ def check_show(show_flag=SHOW_FLAG):
         pyplot.close()
 
 
-def save_figure(save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name='figure'):
+def figure_filename(fig=None, figure_name=None):
+    if fig is None:
+        fig = pyplot.gcf()
+    if figure_name is None:
+        figure_name = fig.get_label()
+    else:
+        figure_name = figure_name.replace(": ", "_").replace(" ", "_").replace("\t", "_")
+    return figure_name
+
+
+def save_figure(save_flag=SAVE_FLAG, fig=None, figure_name=None, figure_dir=FOLDER_FIGURES,
+                figure_format=FIG_FORMAT):
     if save_flag:
         if not (os.path.isdir(figure_dir)):
             os.mkdir(figure_dir)
-        figure_name = figure_name.replace(" ", "_").replace("\t", "_") + '.' + figure_format
+            figure_name = figure_filename(fig, figure_name)
+            figure_name = figure_name[:np.min([100, len(figure_name)])] + '.' + figure_format
         pyplot.savefig(os.path.join(figure_dir, figure_name))
 
 
@@ -181,7 +193,7 @@ def plot_regions2regions(adj, labels, subplot, title, show_y_labels=True, show_x
 
 
 def plot_in_columns(data_dict_list, labels, width_ratios=[], left_ax_focus_indices=[], right_ax_focus_indices=[],
-                    description="", title="", figure_name='', show_flag=False, save_flag=True,
+                    description="", title="", figure_name=None, show_flag=False, save_flag=True,
                     figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, **kwargs):
 
     fig = pyplot.figure(title, frameon=False, figsize=figsize)
@@ -230,10 +242,7 @@ def plot_in_columns(data_dict_list, labels, width_ratios=[], left_ax_focus_indic
     _set_axis_labels(fig, 121, n_regions, labels, left_ax_focus_indices, 'r')
     _set_axis_labels(fig, 122, n_regions, labels, right_ax_focus_indices, 'r', 'right')
 
-    if figure_name == '':
-        figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
-
-    save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
+    save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
     check_show(show_flag)
 
     return fig
@@ -258,7 +267,7 @@ def _set_axis_labels(fig, sub, n_regions, region_labels, indices2emphasize, colo
     big_ax.set_axis_bgcolor('none')
 
 
-def plot_timeseries(time, data_dict, time_units="ms", special_idx=None, title='Time Series', figure_name='TimeSeries',
+def plot_timeseries(time, data_dict, time_units="ms", special_idx=None, title='Time Series', figure_name=None,
                     labels=None, show_flag=SHOW_FLAG, save_flag=False, figure_dir=FOLDER_FIGURES,
                     figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
 
@@ -298,18 +307,12 @@ def plot_timeseries(time, data_dict, time_units="ms", special_idx=None, title='T
                                    arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )
     pyplot.xlabel("Time (" + time_units + ")")
 
-    fig = pyplot.gcf()
-    if len(fig.get_label())==0:
-        fig.set_label(figure_name)
-    else:
-        figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
-
-    save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
+    save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
     check_show(show_flag)
 
 
 def plot_raster(time, data_dict, time_units="ms", special_idx=None, title='Time Series', subtitles=[], offset=3.0,
-                figure_name='TimeSeries', labels=None, show_flag=SHOW_FLAG, save_flag=False, figure_dir=FOLDER_FIGURES,
+                figure_name=None, labels=None, show_flag=SHOW_FLAG, save_flag=False, figure_dir=FOLDER_FIGURES,
                 figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE):
     pyplot.figure(title, figsize=figsize)
     no_rows = len(data_dict)
@@ -352,17 +355,12 @@ def plot_raster(time, data_dict, time_units="ms", special_idx=None, title='Time 
             HighlightingDataCursor(lines[i], formatter='{label}'.format, bbox=dict(fc='white'),
                                    arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )
     pyplot.xlabel("Time (" + time_units + ")")
-    fig = pyplot.gcf()
-    fig.suptitle(title)
-    if len(fig.get_label())==0:
-        fig.set_label(figure_name)
-    else:
-        figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
-    save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
+
+    save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
     check_show(show_flag)
 
 
-def plot_trajectories(data_dict, special_idx=None, title='State space trajectories', figure_name='Trajectories',
+def plot_trajectories(data_dict, special_idx=None, title='State space trajectories', figure_name=None,
                       labels=None, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
                       figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
 
@@ -421,20 +419,14 @@ def plot_trajectories(data_dict, special_idx=None, title='State space trajectori
         HighlightingDataCursor(lines[0], formatter='{label}'.format, bbox=dict(fc='white'),
                                    arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )
 
-    fig = pyplot.gcf()
-    if len(fig.get_label())==0:
-        fig.set_label(figure_name)
-    else:
-        figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
-
-    save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
+    save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
     check_show(show_flag)
 
 
 def plot_spectral_analysis_raster(time, data, time_units="ms", freq=None, special_idx=None, title='Spectral Analysis',
-                                  figure_name='Spectral Analysis', labels=None,
-                                  show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
-                                  figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, **kwargs):
+                                  figure_name=None, labels=None, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
+                                  figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE,
+                                  **kwargs):
 
     if time_units in ("ms", "msec"):
         fs=1000.0
@@ -515,13 +507,8 @@ def plot_spectral_analysis_raster(time, data, time_units="ms", freq=None, specia
     cax = pyplot.subplot(gs[:, 22])
     pyplot.colorbar(img[0], cax=pyplot.subplot(gs[:, 22]))  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
     cax.set_title(psd_label)
-    # fig = pyplot.gcf()
-    if len(fig.get_label()) == 0:
-        fig.set_label(figure_name)
-    else:
-        figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
 
-    save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
+    save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
     check_show(show_flag)
 
     return fig, ax, img, line, time, freq, stf, psd
@@ -579,9 +566,9 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
 
     if trajectories_plot:
         plot_trajectories({'x1': res['x1'], 'z(t)': res['z']}, special_idx=seizure_indices,
-                          title=hyp_name + ': State space trajectories', figure_name=hyp_name+'StateSpaceTrajectories',
-                          labels=head.connectivity.region_labels, show_flag=show_flag, save_flag=save_flag,
-                          figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
+                          title=hyp_name + ': State space trajectories', labels=head.connectivity.region_labels,
+                          show_flag=show_flag, save_flag=save_flag, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
+                          figsize=LARGE_SIZE)
 
     if spectral_raster_plot is "lfp":
         plot_spectral_analysis_raster(res["time"], res['lfp'], time_units=res.get('time_units', "ms"),
@@ -622,7 +609,6 @@ def plot_fit_results(hyp_name, head, res, data, active_regions, time=None, seizu
                                 '\ndynamic noise prior: sig = ' + str(data["sig_hi"]/2) +
                                 '\nobservation noise prior: eps =  ' + str(data["eps_hi"]/2),
                            'observation signals fit'],  offset=3.0,
-                figure_name=hyp_name + 'ObservationSignals_vs_Fit_rasterplot',
                 labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                 figure_format=figure_format, figsize=VERY_LARGE_SIZE)
 
@@ -632,15 +618,17 @@ def plot_fit_results(hyp_name, head, res, data, active_regions, time=None, seizu
                 subtitles=['hidden state x1' + '\ndynamic noise fit sig = : ' + str(res["sig"]) +
                            '\nobservation noise fit eps = : ' + str(res["eps"]),
                            'hidden state z'], offset=3.0,
-                figure_name=hyp_name + 'FitHiddenStates_rasterplot',
                 labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                 figure_format=figure_format, figsize=VERY_LARGE_SIZE)
 
     if trajectories_plot:
+        title = hyp_name + ': Fit hidden state space trajectories'
+        x0mu = data.get("x0mu")
+        if x0mu is not None:
+            title += "\n prior x0mu: " + str(x0mu)
+        title += "\n x0 fit: " + str(res["x0"])
         plot_trajectories({'x1': res['x'].T, 'z(t)': res['z'].T}, special_idx=seizure_indices,
-                          title=hyp_name+': Fit state space trajectories' + "\n x0 fit: " + str(res["x0"]),
-                          figure_name=hyp_name+'FitHiddenStateTrajectories',
-                          labels=head.connectivity.region_labels, show_flag=show_flag, save_flag=save_flag,
+                          title=title, labels=head.connectivity.region_labels, show_flag=show_flag, save_flag=save_flag,
                           figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
 
     # plot connectivity
@@ -651,9 +639,7 @@ def plot_fit_results(hyp_name, head, res, data, active_regions, time=None, seizu
                          "\nglobal scaling prior: K = " + str(data["K_u"] * data["K_v"]))
     plot_regions2regions(res['FC'], head.connectivity.region_labels[active_regions], 122, "Effective Connectivity"  +
                          "\nglobal scaling fit: K = " + str(res["K"]))
-    if save_flag:
-        save_figure(figure_dir=figure_dir, figure_format=figure_format,
-                    figure_name=conn_figure_name.replace(" ", "_").replace("\t", "_"))
+    save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
     check_show(show_flag=show_flag)
 
 
@@ -682,8 +668,8 @@ def plot_fit_results(hyp_name, head, res, data, active_regions, time=None, seizu
 #     plot_regions2regions(conn.normalized_weights, conn.region_labels, 121, "normalised weights")
 #     plot_regions2regions(conn.tract_lengths, conn.region_labels, 122, "tract lengths")
 #
-#     _save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
-#     _check_show(show_flag=show_flag)
+#     save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
+#     check_show(show_flag=show_flag)
 #
 #
 # def plot_head_stats(conn, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
@@ -694,8 +680,8 @@ def plot_fit_results(hyp_name, head, res, data, active_regions, time=None, seizu
 #     if conn.areas is not None:
 #         ax = plot_vector(conn.areas, conn.region_labels, 122, "region areas")
 #         ax.invert_yaxis()
-#     _save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
-#     _check_show(show_flag=show_flag)
+#     save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
+#     check_show(show_flag=show_flag)
 #
 #
 # def _show_projections_dict(connectivity, sensors_dict, current_count=1, show_flag=SHOW_FLAG,
@@ -746,8 +732,8 @@ def plot_fit_results(hyp_name, head, res, data, active_regions, time=None, seizu
 #     cax1 = divider.append_axes("right", size="5%", pad=0.05)
 #     pyplot.colorbar(img, cax=cax1)  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
 #
-#     _save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=title)
-#     _check_show(show_flag)
+#     save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
+#     check_show(show_flag)
 #
 #     return figure
 
@@ -866,8 +852,8 @@ def plot_fit_results(hyp_name, head, res, data, active_regions, time=None, seizu
 #     else:
 #         figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
 #
-#     _save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
-#     _check_show(show_flag)
+#     save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
+#     check_show(show_flag)
 
 
 # def plot_hypothesis_model_configuration_and_lsa(hypothesis, model_configuration, plot_equilibria=False, n_eig=None,
@@ -924,8 +910,8 @@ def plot_fit_results(hyp_name, head, res, data, active_regions, time=None, seizu
 #     if figure_name == '':
 #         figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
 #
-#     _save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
-#     _check_show(show_flag)
+#     save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
+#     check_show(show_flag)
 #
 #
 # def plot_lsa_pse(hypothesis, model_configuration, pse_results, plot_equilibria=False, n_eig=None,
@@ -1012,5 +998,5 @@ def plot_fit_results(hyp_name, head, res, data, active_regions, time=None, seizu
 #     if figure_name == '':
 #         figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
 #
-#     _save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
-#     _check_show(show_flag)
+#     save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
+#     check_show(show_flag)
