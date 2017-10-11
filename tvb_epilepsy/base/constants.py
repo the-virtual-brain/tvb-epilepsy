@@ -69,3 +69,9 @@ VOIS = {
     "EpileptorDPrealistic": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp', 'x0_t', 'slope_t', 'Iext1_t', 'Iext2_t', 'K_t'],
     "EpileptorDP2D": ['x1', 'z']
 }
+
+# Soon also: autoregression_dWt, ode, ode_lsa, ...
+
+STATISTICAL_MODEL_TYPES=["autoregression"]
+OBSERVATION_MODEL_EXPRESSIONS=["x1z_offset", "x1_offset", "x1"]
+OBSERVATION_MODELS=["logpower", "linear_mixing", "linear"]
