@@ -63,9 +63,9 @@ class Head(object):
     def __repr__(self):
         d = {"1. name": self.name,
              "2. connectivity": self.connectivity,
-             "5. surface": self.cortical_surface,
              "3. RM": reg_dict(self.region_mapping, self.connectivity.region_labels),
              "4. VM": reg_dict(self.volume_mapping, self.connectivity.region_labels),
+             "5. surface": self.cortical_surface,
              "6. T1": self.t1_background,
              "7. SEEG": self.sensorsSEEG,
              "8. EEG": self.sensorsEEG,
