@@ -6,15 +6,24 @@ class Connectivity
 class Surface
 class Sensors
 """
+# encoding=utf8
+import sys
+
+reload(sys)
+sys.setdefaultencoding('utf8')
+
 from collections import OrderedDict
+
 import numpy as np
-
-from tvb_epilepsy.base.utils import reg_dict, formal_repr, normalize_weights, calculate_in_degree, sort_dict
-
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from tvb_epilepsy.base.constants import FOLDER_FIGURES, LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
-from tvb_epilepsy.base.plot_factory import _plot_vector, _plot_regions2regions, _save_figure, _check_show
+from itertools import product
+
+from tvb_epilepsy.base.constants import LARGE_SIZE, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
+from tvb_epilepsy.base.configurations import FOLDER_FIGURES
+from tvb_epilepsy.base.utils import raise_value_error, reg_dict, formal_repr, normalize_weights, calculate_in_degree, \
+                                    sort_dict, ensure_list, curve_elbow_point
+from tvb_epilepsy.base.plot_utils import plot_vector, plot_regions2regions, save_figure, check_show
 
 
 class Head(object):
@@ -54,9 +63,9 @@ class Head(object):
     def __repr__(self):
         d = {"1. name": self.name,
              "2. connectivity": self.connectivity,
-             "5. surface": self.cortical_surface,
              "3. RM": reg_dict(self.region_mapping, self.connectivity.region_labels),
              "4. VM": reg_dict(self.volume_mapping, self.connectivity.region_labels),
+             "5. surface": self.cortical_surface,
              "6. T1": self.t1_background,
              "7. SEEG": self.sensorsSEEG,
              "8. EEG": self.sensorsEEG,
@@ -65,6 +74,43 @@ class Head(object):
 
     def __str__(self):
         return self.__repr__()
+
+    def compute_nearest_regions_to_sensors(self, s_type, target_contacts=None, id_sensor=0, n_regions=None, th=0.95):
+        if s_type is "EEG":
+            sensors_dict = self.sensorsEEG
+        elif s_type is "MEG":
+            sensors_dict = self.sensorsMEG
+        else:
+            sensors_dict = self.sensorsSEEG
+        sensors = sensors_dict.keys()[id_sensor]
+        n_contacts = sensors.labels.shape[0]
+
+        if isinstance(target_contacts, (list, tuple, np.ndarray)):
+            target_contacts = ensure_list(target_contacts)
+            for itc, tc in enumerate(target_contacts):
+                if isinstance(tc, int):
+                    continue
+                elif isinstance(tc, basestring):
+                    target_contacts[itc] = sensors.contact_label_to_index([tc])
+                else:
+                    raise_value_error("target_contacts[" + str(itc) + "] = " + str(tc) +
+                                      "is neither an integer nor a string!")
+        else:
+            target_contacts = range(n_contacts)
+        auto_flag = False
+        if n_regions is "all":
+            n_regions = self.connectivity.number_of_regions
+        elif n_regions is "auto" or not(isinstance(n_regions, int)):
+            auto_flag = True
+        nearest_regions = []
+        for tc in target_contacts:
+            projs = sensors_dict[sensors][tc]
+            inds = np.argsort(projs)[::-1]
+            n_regions = curve_elbow_point(projs[inds])
+            nearest_regions.append((inds[:n_regions],
+                                    self.connectivity.region_labels[inds[:n_regions]],
+                                    projs[inds[:n_regions]]))
+        return nearest_regions
 
     def plot(self, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
 
@@ -80,6 +126,7 @@ class Head(object):
                                  figure_dir, figure_format)
         count = plot_sensor_dict(self.sensorsMEG, self.connectivity.region_labels, count, show_flag, save_flag,
                                  figure_dir, figure_format)
+
 
 class Connectivity(object):
     file_path = None
@@ -107,6 +154,15 @@ class Connectivity(object):
         self.orientations = orientation
         self.areas = areas
 
+    def regions_labels2inds(self, labels):
+        inds = []
+        for lbl in labels:
+            inds.append(np.where(self.region_labels == lbl)[0][0])
+        if len(inds)==1:
+            return inds[0]
+        else:
+            return inds
+
     def summary(self):
         d = {"a. centers": reg_dict(self.centers, self.region_labels),
 #             "c. normalized weights": self.normalized_weights,
@@ -133,31 +189,33 @@ class Connectivity(object):
         return self.__repr__()
 
     def plot(self, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
-                      figure_format=FIG_FORMAT, figure_name='Connectivity ', figsize=LARGE_SIZE):
+                      figure_format=FIG_FORMAT, figure_name='Connectivity ', figsize=VERY_LARGE_SIZE):
 
         # plot connectivity
         pyplot.figure(figure_name + str(self.number_of_regions), figsize)
-        # _plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
-        _plot_regions2regions(self.normalized_weights, self.region_labels, 121, "normalised weights")
-        _plot_regions2regions(self.tract_lengths, self.region_labels, 122, "tract lengths")
+        # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
+        plot_regions2regions(self.normalized_weights, self.region_labels, 121, "normalised weights")
+        plot_regions2regions(self.tract_lengths, self.region_labels, 122, "tract lengths")
 
         if save_flag:
-            _save_figure(figure_dir=figure_dir, figure_format=figure_format,
-                         figure_name=figure_name.replace(" ", "_").replace("\t", "_"))
-        _check_show(show_flag=show_flag)
+            save_figure(figure_dir=figure_dir, figure_format=figure_format,
+                        figure_name=figure_name.replace(" ", "_").replace("\t", "_"))
+        check_show(show_flag=show_flag)
 
     def plot_stats(self, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
-                    figure_name='HeadStats '):
-        pyplot.figure("Head stats " + str(self.number_of_regions), figsize=LARGE_SIZE)
-        ax = _plot_vector(calculate_in_degree(self.normalized_weights), self.region_labels, 121, "w in-degree")
+                   figsize=VERY_LARGE_SIZE, figure_name='HeadStats '):
+        pyplot.figure("Head stats " + str(self.number_of_regions), figsize=figsize)
+        areas_flag = len(self.areas) == len(self.region_labels)
+        ax = plot_vector(calculate_in_degree(self.normalized_weights), self.region_labels, 111+10*areas_flag,
+                         "w in-degree")
         ax.invert_yaxis()
         if len(self.areas) == len(self.region_labels):
-            ax = _plot_vector(self.areas, self.region_labels, 122, "region areas")
+            ax = plot_vector(self.areas, self.region_labels, 122, "region areas")
             ax.invert_yaxis()
         if save_flag:
-            _save_figure(figure_dir=figure_dir, figure_format=figure_format,
-                         figure_name=figure_name.replace(" ", "").replace("\t", ""))
-        _check_show(show_flag=show_flag)
+            save_figure(figure_dir=figure_dir, figure_format=figure_format,
+                        figure_name=figure_name.replace(" ", "").replace("\t", ""))
+        check_show(show_flag=show_flag)
 
 
 class Surface(object):
@@ -219,12 +277,38 @@ class Sensors(object):
     def __str__(self):
         return self.__repr__()
 
+    def contact_label_to_index(self, labels):
+        indexes = []
+        for label in labels:
+            try:
+                indexes.append(np.where([np.array(lbl) == np.array(label) for lbl in self.labels])[0][0])
+            except:
+                print("WTF")
+        if len(indexes) == 1:
+            return indexes[0]
+        else:
+            return indexes
+
+    def calculate_projection(self, connectivity):
+        n_sensors = self.number_of_sensors
+        n_regions = connectivity.number_of_regions
+        projection = np.zeros((n_sensors, n_regions))
+        dist = np.zeros((n_sensors, n_regions))
+
+        for iS, iR in product(range(n_sensors), range(n_regions)):
+            dist[iS, iR] = np.abs(np.sum((self.locations[iS, :] - connectivity.centers[iR, :]) ** 2))
+            projection[iS, iR] = 1 / dist[iS, iR]
+
+        projection /= np.percentile(projection, 95)
+        #projection[projection > 1.0] = 1.0
+        return projection
+
     def plot(self, projection, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1,
              x_ticks=np.array([]), y_ticks=np.array([]), show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
-             figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figure_name=''):
+             figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, figure_name=''):
 
         if not (isinstance(figure, pyplot.Figure)):
-            figure = pyplot.figure(title, figsize=LARGE_SIZE)
+            figure = pyplot.figure(title, figsize=figsize)
 
         n_sensors = self.number_of_sensors
         n_regions = len(region_labels)
@@ -259,8 +343,8 @@ class Sensors(object):
         if figure_name == "":
             figure_name = title
 
-        _save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=title)
-        _check_show(show_flag)
+        save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=title)
+        check_show(show_flag)
 
         return figure
 
@@ -268,7 +352,7 @@ class Sensors(object):
 def plot_sensor_dict(sensor_dict, region_labels, count=1, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
                      figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
     # plot sensors:
-    for sensors, projection in sensor_dict.sensorsSEEG.iteritems():
+    for sensors, projection in sensor_dict.iteritems():
         if len(projection) == 0:
             continue
         sensors.plot(projection, region_labels, title=str(count) + " - " + sensors.s_type + " - Projection",

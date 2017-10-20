@@ -4,11 +4,11 @@ Extend TVB Models, with new ones, specific for Epilepsy.
 """
 
 import numpy
-from tvb.simulator.common import get_logger
-import tvb.datatypes.arrays as arrays
 import tvb.basic.traits.types_basic as basic
-from tvb.simulator.models import Model, Epileptor
-
+import tvb.datatypes.arrays as arrays
+from tvb.simulator.common import get_logger
+from tvb.simulator.models import Model
+from tvb_epilepsy.base.utils import raise_value_error, raise_not_implemented_error
 LOG = get_logger(__name__)
 
 
@@ -17,8 +17,8 @@ class EpileptorDP(Model):
     The Epileptor is a composite neural mass model of six dimensions which
     has been crafted to model the phenomenology of epileptic seizures.
     (see [Jirsaetal_2014]_). 
-    ->x0 parameters are shifted for the bifurcation
-      to be at x0=1, where x0>1 is the supercritical region.
+    ->x0_values parameters are shifted for the bifurcation
+      to be at x0_values=1, where x0_values>1 is the supercritical region.
     ->there is a choice for linear or sigmoidal z dynamics (see [Proixetal_2014]_)
     ->some parameters change their names to be more similar to the equations.
 
@@ -94,8 +94,8 @@ class EpileptorDP(Model):
         .. math::
             f_z(x_{1})  =
             \begin{cases}
-            4 * (x_{1} - x0) & \text{linear} \\
-            \frac{3}{1+e^{-10*(x_{1}+0.5)}} - x0  & \text{sigmoidal} \\
+            4 * (x_{1} - x0_values) & \text{linear} \\
+            \frac{3}{1+e^{-10*(x_{1}+0.5)}} - x0_values  & \text{sigmoidal} \\
             \end{cases}
     and:
 
@@ -108,7 +108,7 @@ class EpileptorDP(Model):
     """
 
     _ui_name = "EpileptorDP"
-    ui_configurable_parameters = ["Iext1", "Iext2", "tau0", "x0", "slope"]
+    ui_configurable_parameters = ["Iext1", "Iext2", "tau0", "x0_values", "slope"]
 
     zmode = arrays.FloatArray(
         label="zmode",
@@ -116,17 +116,17 @@ class EpileptorDP(Model):
         doc="zmode = numpy.array(""lin"") for linear and numpy.array(""sig"") for sigmoidal z dynamics",
         order=-1)
 
-#    a = arrays.FloatArray(
-#        label="a",
-#        default=numpy.array([1]),
-#        doc="Coefficient of the cubic term in the first state variable",
-#        order=-1)
+    a = arrays.FloatArray(
+       label="a",
+       default=numpy.array([1]),
+       doc="Coefficient of the cubic term in the first state variable",
+       order=-1)
 
-#    b = arrays.FloatArray(
-#        label="b",
-#        default=numpy.array([3]),
-#        doc="Coefficient of the squared term in the first state variabel",
-#        order=-1)
+    b = arrays.FloatArray(
+       label="b",
+       default=numpy.array([3]),
+       doc="Coefficient of the squared term in the first state variabel",
+       order=-1)
 
     yc = arrays.FloatArray(
         label="yc",
@@ -134,27 +134,20 @@ class EpileptorDP(Model):
         doc="Additive coefficient for the second state variable",
         order=-1)
 
-#    d = arrays.FloatArray(
-#        label="d",
-#        default=numpy.array([5]),
-#        doc="Coefficient of the squared term in the second state variable",
-#        order=-1)
+    d = arrays.FloatArray(
+       label="d",
+       default=numpy.array([5]),
+       doc="Coefficient of the squared term in the second state variable",
+       order=-1)
 
-    tau0 = arrays.FloatArray(
-        label="r",
-        range=basic.Range(lo=100.0, hi=5000, step=10),
-        default=numpy.array([2857.0]),
-        doc="Temporal scaling in the third state variable",
-        order=4)
-
-#    s = arrays.FloatArray(
-#        label="s",
-#        default=numpy.array([4]),
-#        doc="Linear coefficient in the third state variable",
-#        order=-1)
+    s = arrays.FloatArray(
+       label="s",
+       default=numpy.array([4]),
+       doc="Linear coefficient in the third state variable",
+       order=-1)
 
     x0 = arrays.FloatArray(
-        label="x0",
+        label="x0_values",
         range=basic.Range(lo=-0.5, hi=1.5, step=0.1),
         default=numpy.array([0.0]),
         doc="Excitability parameter",
@@ -174,18 +167,19 @@ class EpileptorDP(Model):
         doc="Linear coefficient in the first state variable",
         order=5)
 
+    gamma = arrays.FloatArray(
+        label="gamma",
+        range=basic.Range(lo=0.01, hi=0.2, step=0.01),
+        default=numpy.array([0.1]),
+        doc="Linear coefficient in the sixth state variable",
+        order=5)
+
     Iext2 = arrays.FloatArray(
         label="Iext2",
         range=basic.Range(lo=0.0, hi=1.0, step=0.05),
         default=numpy.array([0.45]),
         doc="External input current to the second population",
         order=2)
-
-    tau2 = arrays.FloatArray(
-        label="tau2",
-        default=numpy.array([10]),
-        doc="Temporal scaling coefficient in fifth state variable",
-        order=-1)
 
     Kvf = arrays.FloatArray(
         label="K_vf",
@@ -210,32 +204,45 @@ class EpileptorDP(Model):
 
     tau1 = arrays.FloatArray(
         label="tau1",
-        default=numpy.array([0.25]),
-        range=basic.Range(lo=0.001, hi=10.0, step=0.001),
+        default=numpy.array([0.2]),
+        range=basic.Range(lo=0.01, hi=2.0, step=0.01),
         doc="Time scaling of the whole system",
         order=9)
 
+    tau0 = arrays.FloatArray(
+        label="r",
+        range=basic.Range(lo=1000.0, hi=50000, step=1000),
+        default=numpy.array([40000.0]),
+        doc="Temporal scaling in the third state variable",
+        order=4)
+
+    tau2 = arrays.FloatArray(
+        label="tau2",
+        default=numpy.array([10]),
+        doc="Temporal scaling coefficient in fifth state variable",
+        order=-1)
+
     state_variable_range = basic.Dict(
         label="State variable ranges [lo, hi]",
-        default={"y0": numpy.array([-2., 2.]),
+        default={"x1": numpy.array([-2., 1.]),
                  "y1": numpy.array([-20., 2.]),
-                 "y2": numpy.array([2.0, 20.0]),
-                 "y3": numpy.array([-2., 0.]),
-                 "y4": numpy.array([0., 2.]),
-                 "y5": numpy.array([-1., 1.])},
-        doc="n/a",
+                 "z": numpy.array([2.0, 5.0]),
+                 "x2": numpy.array([-2., 0.]),
+                 "y2": numpy.array([0., 2.]),
+                 "g": numpy.array([-1., 1.])},
+        doc="Typical bounds on state variables in the Epileptor model.",
         order=16
     )
 
     variables_of_interest = basic.Enumerate(
         label="Variables watched by Monitors",
-        options=["y0", "y1", "y2", "y3", "y4", "y5", "y3 - y0"],
-        default=["y3 - y0", "y2"],
+        options=['x1', 'y1', 'z', 'x2', 'y2', 'g', 'x2 - x1'],
+        default=["x2 - x1", 'z'],
         select_multiple=True,
-        doc="""default state variables to be monitored""",
+        doc="Quantities of the Epileptor available to monitor.",
         order=-1)
 
-    state_variables = ["y0", "y1", "y2", "y3", "y4", "y5"]
+    state_variables = ['x1', 'y1', 'z', 'x2', 'y2', 'g']
 
     _nvar = 6
     cvar = numpy.array([0, 3], dtype=numpy.int32)
@@ -277,8 +284,8 @@ class EpileptorDP(Model):
             .. math::
                 f_z(y_{0})  =
                 \begin{cases}
-                4 * (y_{0} - x0) & \text{linear} \\
-                \frac{3}{1+e^{-10*(y_{0}+0.5)}} - x0 & \text{sigmoidal} \\
+                4 * (y_{0} - x0_values) & \text{linear} \\
+                \frac{3}{1+e^{-10*(y_{0}+0.5)}} - x0_values & \text{sigmoidal} \\
                 \end{cases}
         and:
 
@@ -302,13 +309,13 @@ class EpileptorDP(Model):
 
         # population 1
         # if_ydot0 = - self.a * y[0] ** 2 + self.b * y[0]
-        if_ydot0 = -y[0] ** 2 + 3.0 * y[0]  # self.a=1.0, self.b=3.0
+        if_ydot0 = -self.a * y[0] ** 2 + self.b * y[0]  # self.a=1.0, self.b=3.0
         # else_ydot0 = self.slope - y[3] + 0.6 * (y[2] - 4.0) ** 2
         else_ydot0 = self.slope - y[3] + 0.6 * (y[2] - 4.0) ** 2
         # ydot[0] = self.tt * (y[1] - y[2] + Iext + self.Kvf * c_pop1 + where(y[0] < 0., if_ydot0, else_ydot0) * y[0])
         ydot[0] = self.tau1 * (y[1] - y[2] + Iext1 + self.Kvf * c_pop1 + where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
         # ydot[1] = self.tt * (self.c - self.d * y[0] ** 2 - y[1])
-        ydot[1] = self.tau1 * (self.yc - 5.0 * y[0] ** 2 - y[1])  # self.d=5
+        ydot[1] = self.tau1 * (self.yc - self.d * y[0] ** 2 - y[1])  # self.d=5
 
         # energy
         # if_ydot2 = - 0.1 * y[2] ** 7
@@ -317,14 +324,14 @@ class EpileptorDP(Model):
         else_ydot2 = 0
 
         if self.zmode == 'lin':
-            # self.r * (4 * (y[0] - self.x0) - y[2]      + where(y[2] < 0., if_ydot2, else_ydot2)
+            # self.r * (4 * (y[0] - self.x0_values) - y[2]      + where(y[2] < 0., if_ydot2, else_ydot2)
             fz = 4 * (y[0] - self.x0) + where(y[2] < 0., if_ydot2, else_ydot2)
 
         elif self.zmode == 'sig':
             fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.x0
 
         else:
-            raise ValueError("zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), " +
+            raise_value_error("zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), " +
                              "respectively")
 
         # ydot[2] = self.tt * (        ...+ self.Ks * c_pop1))
@@ -336,20 +343,19 @@ class EpileptorDP(Model):
         # if_ydot4 = 0
         if_ydot4 = 0
         # else_ydot4 = self.aa * (y[3] + 0.25)
-        else_ydot4 = 6.0 * (y[3] + 0.25)  # self.s = 6.0
+        else_ydot4 = self.s * (y[3] + 0.25)  # self.s = 6.0
         # ydot[4] = self.tt * ((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4)) / self.tau)
         ydot[4] = self.tau1 * ((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4)) / self.tau2)
 
         # filter
         # ydot[5] = self.tt * (-0.01 * (y[5] - 0.1 * y[0]))
-        ydot[5] = self.tau1 * (-0.01 * (y[5] - 0.1 * y[0]))
+        ydot[5] = self.tau1 * (-0.01 * (y[5] - self.gamma * y[0]))
 
         return ydot
 
     def jacobian(self, state_variables, coupling, local_coupling=0.0,
                  array=numpy.array, where=numpy.where, concat=numpy.concatenate):
-
-        return None
+        raise_not_implemented_error("Jacobian calculation of model " + self._ui_name + " is not implemented yet!")
 
 
 class EpileptorDPrealistic(Model):
@@ -357,13 +363,13 @@ class EpileptorDPrealistic(Model):
     The Epileptor is a composite neural mass model of six dimensions which
     has been crafted to model the phenomenology of epileptic seizures.
     (see [Jirsaetal_2014]_).
-    ->x0 parameters are shifted for the bifurcation
-      to be at x0=1, where x0>1 is the supercritical region.
+    ->x0_values parameters are shifted for the bifurcation
+      to be at x0_values=1, where x0_values>1 is the supercritical region.
     ->there is a choice for linear or sigmoidal z dynamics (see [Proixetal_2014]_).
 
     Equations and default parameters are taken from [Jirsaetal_2014]_.
 
-    The realistic Epileptor allows for state variables I_{ext1}, I_{ext2}, x0, slope and K
+    The realistic Epileptor allows for state variables I_{ext1}, I_{ext2}, x0_values, slope and K
     to fluctuate as linear dynamical equations, driven by the corresponding
     parameter values. It could be combined with multiplicative and/or pink noise.
 
@@ -437,8 +443,8 @@ class EpileptorDPrealistic(Model):
         .. math::
             f_z(x_{1})  =
             \begin{cases}
-            4 * (x_{1} - x0) & \text{linear} \\
-            \frac{3}{1+e^{-10*(x_{1}+0.5)}} - x0 & \text{sigmoidal} \\
+            4 * (x_{1} - x0_values) & \text{linear} \\
+            \frac{3}{1+e^{-10*(x_{1}+0.5)}} - x0_values & \text{sigmoidal} \\
             \end{cases}
     and:
 
@@ -451,7 +457,7 @@ class EpileptorDPrealistic(Model):
     """
 
     _ui_name = "EpileptorDPrealistic"
-    ui_configurable_parameters = ["Iext1", "Iext2", "tau0", "x0", "slope"]
+    ui_configurable_parameters = ["Iext1", "Iext2", "tau0", "x0_values", "slope"]
 
     zmode = arrays.FloatArray(
         label="zmode",
@@ -465,17 +471,17 @@ class EpileptorDPrealistic(Model):
         doc="pmode = numpy.array(""g""), numpy.array(""z""), numpy.array(""z*g"") or numpy.array(""const"") parameters following the g, z, z*g dynamics or staying constamt, respectively",
         order=-1)
 
-#    a = arrays.FloatArray(
-#        label="a",
-#        default=numpy.array([1]),
-#        doc="Coefficient of the cubic term in the first state variable",
-#        order=-1)
+    a = arrays.FloatArray(
+       label="a",
+       default=numpy.array([1]),
+       doc="Coefficient of the cubic term in the first state variable",
+       order=-1)
 
-#    b = arrays.FloatArray(
-#        label="b",
-#        default=numpy.array([3]),
-#        doc="Coefficient of the squared term in the first state variabel",
-#        order=-1)
+    b = arrays.FloatArray(
+       label="b",
+       default=numpy.array([3]),
+       doc="Coefficient of the squared term in the first state variabel",
+       order=-1)
 
     yc = arrays.FloatArray(
         label="yc",
@@ -483,27 +489,20 @@ class EpileptorDPrealistic(Model):
         doc="Additive coefficient for the second state variable",
         order=-1)
 
-#    d = arrays.FloatArray(
-#        label="d",
-#        default=numpy.array([5]),
-#        doc="Coefficient of the squared term in the second state variable",
-#        order=-1)
+    d = arrays.FloatArray(
+       label="d",
+       default=numpy.array([5]),
+       doc="Coefficient of the squared term in the second state variable",
+       order=-1)
 
-    tau0 = arrays.FloatArray(
-        label="r",
-        range=basic.Range(lo=100.0, hi=5000, step=10),
-        default=numpy.array([10000.0]),
-        doc="Temporal scaling in the third state variable",
-        order=4)
-
-#    s = arrays.FloatArray(
-#        label="s",
-#        default=numpy.array([4]),
-#        doc="Linear coefficient in the third state variable",
-#        order=-1)
+    s = arrays.FloatArray(
+       label="s",
+       default=numpy.array([4]),
+       doc="Linear coefficient in the third state variable",
+       order=-1)
 
     x0 = arrays.FloatArray(
-        label="x0",
+        label="x0_values",
         range=basic.Range(lo=-0.5, hi=1.5, step=0.1),
         default=numpy.array([0.0]),
         doc="Excitability parameter",
@@ -523,6 +522,13 @@ class EpileptorDPrealistic(Model):
         doc="Linear coefficient in the first state variable",
         order=5)
 
+    gamma = arrays.FloatArray(
+        label="gamma",
+        range=basic.Range(lo=0.01, hi=0.2, step=0.01),
+        default=numpy.array([0.1]),
+        doc="Linear coefficient in the sixth state variable",
+        order=5)
+
     Iext2 = arrays.FloatArray(
         label="Iext2",
         range=basic.Range(lo=0.0, hi=1.0, step=0.05),
@@ -530,11 +536,12 @@ class EpileptorDPrealistic(Model):
         doc="External input current to the second population",
         order=2)
 
-    tau2 = arrays.FloatArray(
-        label="tau2",
-        default=numpy.array([10]),
-        doc="Temporal scaling coefficient in fifth state variable",
-        order=-1)
+    tau1 = arrays.FloatArray(
+        label="tau1",
+        default=numpy.array([0.2]),
+        range=basic.Range(lo=0.01, hi=2.0, step=0.01),
+        doc="Time scaling of the whole system",
+        order=9)
 
     Kvf = arrays.FloatArray(
         label="K_vf",
@@ -559,37 +566,50 @@ class EpileptorDPrealistic(Model):
 
     tau1 = arrays.FloatArray(
         label="tau1",
-        default=numpy.array([0.25]),
-        range=basic.Range(lo=0.001, hi=10.0, step=0.001),
+        default=numpy.array([0.2]),
+        range=basic.Range(lo=0.01, hi=2.0, step=0.01),
         doc="Time scaling of the whole system",
         order=9)
 
+    tau0 = arrays.FloatArray(
+        label="r",
+        range=basic.Range(lo=1000.0, hi=50000, step=1000),
+        default=numpy.array([40000.0]),
+        doc="Temporal scaling in the third state variable",
+        order=4)
+
+    tau2 = arrays.FloatArray(
+        label="tau2",
+        default=numpy.array([10]),
+        doc="Temporal scaling coefficient in fifth state variable",
+        order=-1)
+
     state_variable_range = basic.Dict(
         label="State variable ranges [lo, hi]",
-        default={"y0": numpy.array([-2., 2.]),  # x1
-                 "y1": numpy.array([-20., 2.]),  # y1
-                 "y2": numpy.array([2.0, 20.0]),  # z
-                 "y3": numpy.array([-2., 0.]),  # x2
-                 "y4": numpy.array([0., 2.]),  # y2
-                 "y5": numpy.array([-1., 1.]),  # g
-                 "y6": numpy.array([-2, 2]),  # x0
-                 "y7": numpy.array([-20., 6.]),  # slope
-                 "y8": numpy.array([1.5, 5.]),  # Iext1
-                 "y9": numpy.array([0., 1.]),  # Iext2
-                 "y10": numpy.array([-50., 50.])},  # K
-        doc="n/a",
+        default={"x1": numpy.array([-2., 1.]),
+                 "y1": numpy.array([-20., 2.]),
+                 "z": numpy.array([2.0, 5.0]),
+                 "x2": numpy.array([-2., 0.]),
+                 "y2": numpy.array([0., 2.]),
+                 "g": numpy.array([-1., 1.]),
+                 "x0_t": numpy.array([-2., 2.]),
+                 "slope_t": numpy.array([-20., 6.]),
+                 "Iext1_t": numpy.array([1.5, 5.]),
+                 "Iext2_t": numpy.array([0., 1.]),
+                 "K_t": numpy.array([-50., 50.])},
+        doc="Typical bounds on state variables in the Epileptor model.",
         order=16
     )
 
     variables_of_interest = basic.Enumerate(
         label="Variables watched by Monitors",
-        options=["y0", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8", "y9", "y10", "y3 - y0"],
-        default=["y3 - y0", "y2"],
+        options=['x1', 'y1', 'z', 'x2', 'y2', 'g', 'x2 - x1', 'x0_t', 'slope_t', 'Iext1_t', 'Iext2_t', 'K_t'],
+        default=["x2 - x1", 'z'],
         select_multiple=True,
-        doc="""default state variables to be monitored""",
+        doc="Quantities of the Epileptor available to monitor.",
         order=-1)
 
-    state_variables = ["y0", "y1", "y2", "y3", "y4", "y5", "y6", "y7", "y8", "y9", "y10"]
+    state_variables = ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'x0_t', 'slope_t', 'Iext1_t', 'Iext2_t', 'K_t']
 
     _nvar = 11
     cvar = numpy.array([0, 3], dtype=numpy.int32)
@@ -597,7 +617,7 @@ class EpileptorDPrealistic(Model):
     @staticmethod
     def fun_slope_Iext2(z, g, pmode, slope, Iext2):
 
-        from tvb_epilepsy.base.analyzers_factory import interval_scaling
+        from tvb_epilepsy.base.computations.analyzers_utils import interval_scaling
 
         if (pmode == numpy.array(['g', 'z', 'z*g'])).any():
 
@@ -662,8 +682,8 @@ class EpileptorDPrealistic(Model):
             .. math::
                 f_z(y_{0})  =
                 \begin{cases}
-                4 * (y_{0} - x0) & \text{linear} \\
-                \frac{3}{1+e^{-10*(y_{0}-7/6)}} - x0 & \text{sigmoidal} \\
+                4 * (y_{0} - x0_values) & \text{linear} \\
+                \frac{3}{1+e^{-10*(y_{0}-7/6)}} - x0_values & \text{sigmoidal} \\
                 \end{cases}
         and:
 
@@ -691,10 +711,10 @@ class EpileptorDPrealistic(Model):
         c_pop2 = coupling[1, :]
 
         # population 1
-        if_ydot0 = -y[0] ** 2 + 3.0 * y[0]  # self.a=1.0, self.b=3.0
+        if_ydot0 = -self.a * y[0] ** 2 + self.b * y[0]  # self.a=1.0, self.b=3.0
         else_ydot0 = slope - y[3] + 0.6 * (y[2] - 4.0) ** 2
         ydot[0] = self.tau1 * (y[1] - y[2] + Iext1 + self.Kvf * c_pop1 + where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
-        ydot[1] = self.tau1 * (self.yc - 5.0 * y[0] ** 2 - y[1])  # self.d=5
+        ydot[1] = self.tau1 * (self.yc - self.d * y[0] ** 2 - y[1])  # self.d=5
 
         # energy
         if_ydot2 = - 0.1 * y[2] ** 7
@@ -707,21 +727,21 @@ class EpileptorDPrealistic(Model):
             fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - x0
 
         else:
-            raise ValueError("zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively")
+            raise_value_error("zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively")
         ydot[2] = self.tau1 * ((fz - y[2] + K * c_pop1) / self.tau0)
 
         # population 2
         ydot[3] = self.tau1 * (-y[4] + y[3] - y[3] ** 3 + Iext2 + 2 * y[5] - 0.3 * (y[2] - 3.5) + self.Kf * c_pop2)
         if_ydot4 = 0
-        else_ydot4 = 6.0 * (y[3] + 0.25)  # self.s = 6.0
+        else_ydot4 = self.s * (y[3] + 0.25)  # self.s = 6.0
         ydot[4] = self.tau1 * ((-y[4] + where(y[3] < -0.25, if_ydot4, else_ydot4)) / self.tau2)
 
         # filter
-        ydot[5] = self.tau1 * (-0.01 * (y[5] - 0.1 * y[0]))
+        ydot[5] = self.tau1 * (-0.01 * (y[5] - self.gamma * y[0]))
 
         slope_eq, Iext2_eq = self.fun_slope_Iext2(y[2], y[5], self.pmode, self.slope, self.Iext2)
 
-        # x0
+        # x0_values
         ydot[6] = self.tau1 * (-y[6] + self.x0)
         # slope
         ydot[7] = 10 * self.tau1 * (-y[7] + slope_eq)  # 5*
@@ -736,8 +756,7 @@ class EpileptorDPrealistic(Model):
 
     def jacobian(self, state_variables, coupling, local_coupling=0.0,
                  array=numpy.array, where=numpy.where, concat=numpy.concatenate):
-
-        return None
+        raise_not_implemented_error("Jacobian calculation of model " + self._ui_name + " is not implemented yet!")
 
 
 class EpileptorDP2D(Model):
@@ -746,8 +765,8 @@ class EpileptorDP2D(Model):
     has been crafted to model the phenomenology of epileptic seizures in a
     reduced form. This model is used for Linear Stability Analysis
     (see [Proixetal_2014]_).
-    ->x0 parameters are shifted for the bifurcation
-      to be at x0=1, where x0>1 is the supercritical region.
+    ->x0_values parameters are shifted for the bifurcation
+      to be at x0_values=1, where x0_values>1 is the supercritical region.
     ->there is a choice for linear or sigmoidal z dynamics (see [Proixetal_2014]_)
     ->some parameters change their names to be more similar to the equations.
 
@@ -818,14 +837,14 @@ class EpileptorDP2D(Model):
         .. math::
             f_z(x_{1})  =
             \begin{cases}
-            4 * (x_{1} - r_{x0}*x0 + x0_{cr}) & \text{linear} \\
-            \frac{3}{1+e^{-10*(x_{1}-7/6)}} - r_{x0}*x0 + x0_{cr} & \text{sigmoidal} \\
+            4 * (x_{1} - r_{x0_values}*x0_values + x0_{cr}) & \text{linear} \\
+            \frac{3}{1+e^{-10*(x_{1}-7/6)}} - r_{x0_values}*x0_values + x0_{cr} & \text{sigmoidal} \\
             \end{cases}
 
     """
 
     _ui_name = "EpileptorDP2D"
-    ui_configurable_parameters = ["Iext1", "tau0", "x0", "slope"]
+    ui_configurable_parameters = ["Iext1", "tau0", "x0_values", "slope"]
 
     zmode = arrays.FloatArray(
         label="zmode",
@@ -833,17 +852,17 @@ class EpileptorDP2D(Model):
         doc="zmode = numpy.array(""lin"") for linear and numpy.array(""sig"") for sigmoidal z dynamics",
         order=-1)
 
-#    a = arrays.FloatArray(
-#        label="a",
-#        default=numpy.array([1]),
-#        doc="Coefficient of the cubic term in the first state variable",
-#        order=-1)
+    a = arrays.FloatArray(
+       label="a",
+       default=numpy.array([1]),
+       doc="Coefficient of the cubic term in the first state variable",
+       order=-1)
 
-#    b = arrays.FloatArray(
-#        label="b",
-#        default=numpy.array([3]),
-#        doc="Coefficient of the squared term in the first state variabel",
-#        order=-1)
+    b = arrays.FloatArray(
+       label="b",
+       default=numpy.array([3]),
+       doc="Coefficient of the squared term in the first state variabel",
+       order=-1)
 
     yc = arrays.FloatArray(
         label="yc",
@@ -851,45 +870,24 @@ class EpileptorDP2D(Model):
         doc="Additive coefficient for the second state variable",
         order=-1)
 
-#    d = arrays.FloatArray(
-#        label="d",
-#        default=numpy.array([5]),
-#        doc="Coefficient of the squared term in the second state variable",
-#        order=-1)
+    d = arrays.FloatArray(
+       label="d",
+       default=numpy.array([5]),
+       doc="Coefficient of the squared term in the second state variable",
+       order=-1)
 
-    tau0 = arrays.FloatArray(
-        label="tau0",
-        range=basic.Range(lo=100.0, hi=5000, step=10),
-        default=numpy.array([2857.0]),
-        doc="Temporal scaling in the z state variable",
-        order=4)
-
-#    s = arrays.FloatArray(
-#        label="s",
-#        default=numpy.array([4]),
-#        doc="Linear coefficient in the third state variable",
-#        order=-1)
+    # s = arrays.FloatArray(
+    #    label="s",
+    #    default=numpy.array([4]),
+    #    doc="Linear coefficient in the third state variable",
+    #    order=-1)
 
     x0 = arrays.FloatArray(
-        label="x0",
+        label="x0_values",
         range=basic.Range(lo=-0.5, hi=1.5, step=0.1),
         default=numpy.array([0.0]),
         doc="Excitability parameter",
         order=3)
-
-    x0cr = arrays.FloatArray(
-        label="x0cr",
-        range=basic.Range(lo=-1.0, hi=1.0, step=0.1),
-        default=numpy.array([2.46018518518519]),
-        doc="Critical excitability parameter",
-        order=-1)
-
-    r = arrays.FloatArray(
-        label="r",
-        range=basic.Range(lo=0.0, hi=1.0, step=0.1),
-        default=numpy.array([43.0 / 108.0]),
-        doc="Excitability parameter scaling",
-        order=-1)
 
     Iext1 = arrays.FloatArray(
         label="Iext1",
@@ -921,28 +919,35 @@ class EpileptorDP2D(Model):
 
     tau1 = arrays.FloatArray(
         label="tau1",
-        default=numpy.array([0.25]),
-        range=basic.Range(lo=0.001, hi=10.0, step=0.001),
+        default=numpy.array([0.2]),
+        range=basic.Range(lo=0.01, hi=2.0, step=0.01),
         doc="Time scaling of the whole system",
         order=9)
 
+    tau0 = arrays.FloatArray(
+        label="r",
+        range=basic.Range(lo=1000.0, hi=50000, step=1000),
+        default=numpy.array([40000.0]),
+        doc="Temporal scaling in the third state variable",
+        order=4)
+
     state_variable_range = basic.Dict(
         label="State variable ranges [lo, hi]",
-        default={"y0": numpy.array([-2., 2.]),
-                 "y1": numpy.array([-2.0, 5.0])},
-        doc="n/a",
+        default={"x1": numpy.array([-2., 1.]),
+                 "z": numpy.array([2.0, 5.0])},
+        doc="Typical bounds on state variables in the Epileptor model.",
         order=16
     )
 
     variables_of_interest = basic.Enumerate(
         label="Variables watched by Monitors",
-        options=["y0", "y1"],
-        default=["y0", "y1"],
+        options=['x1', 'z'],
+        default=['x1', 'z'],
         select_multiple=True,
-        doc="""default state variables to be monitored""",
+        doc="Quantities of the Epileptor available to monitor.",
         order=-1)
 
-    state_variables = ["y0", "y1"]
+    state_variables = ['x1', 'z']
 
     _nvar = 2
     cvar = numpy.array([0, 1], dtype=numpy.int32)
@@ -981,8 +986,8 @@ class EpileptorDP2D(Model):
             .. math::
                 f_z(y_{0})  =
                 \begin{cases}
-                4 * (y_{0} - r*x0 + x0_{cr}) & \text{linear} \\
-                \frac{3}{1+e^{-10*(y_{0}-7/6)}} - r*x0 + x0_{cr} & \text{sigmoidal} \\
+                4 * (y_{0} - r*x0_values + x0_{cr}) & \text{linear} \\
+                \frac{3}{1+e^{-10*(y_{0}-7/6)}} - r*x0_values + x0_{cr} & \text{sigmoidal} \\
                 \end{cases}
 
 
@@ -995,8 +1000,8 @@ class EpileptorDP2D(Model):
         c_pop1 = coupling[0, :]
 
         # population 1
-        if_ydot0 = y[0] ** 2 + 2.0 * y[0]  # self.a=1.0, self.b=-2.0
-        else_ydot0 = 5 * y[0] - 0.6 * (y[1] - 4.0) ** 2 - self.slope
+        if_ydot0 = self.a * y[0] ** 2 + (self.d - self.b) * y[0]  # self.a=1.0, self.b=3.0, self.d=5.0
+        else_ydot0 = self.d * y[0] - 0.6 * (y[1] - 4.0) ** 2 - self.slope
         ydot[0] = self.tau1 * (
         self.yc - y[1] + Iext1 + self.Kvf * c_pop1 - where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
 
@@ -1005,21 +1010,21 @@ class EpileptorDP2D(Model):
         else_ydot1 = 0
 
         if self.zmode == 'lin':
-            fz = 4 * (y[0] - self.r * self.x0 + self.x0cr) + where(y[1] < 0.0, if_ydot1, else_ydot1)  # self.x0
+            fz = 4 * (y[0] - self.x0) + where(y[1] < 0.0, if_ydot1, else_ydot1)
 
         elif self.zmode == 'sig':
-            fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.r * self.x0 + self.x0cr
+            fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.x0
 
         else:
-            raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
+            raise_value_error('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
 
         ydot[1] = self.tau1 * (fz - y[1] + self.K * c_pop1) / self.tau0
 
         return ydot
 
-
-    # def jacobian(self, state_variables, coupling, local_coupling=0.0,
-    #         array=numpy.array, where=numpy.where, concat=numpy.concatenate):
+    def jacobian(self, state_variables, coupling, local_coupling=0.0,
+                 array=numpy.array, where=numpy.where, concat=numpy.concatenate):
+        raise_not_implemented_error("Jacobian calculation of model " + self._ui_name + " is not implemented yet!")
     #     r"""
     #     Computes the Jacobian of the state variables of the Epileptor
     #     with respect to time.
@@ -1052,8 +1057,8 @@ class EpileptorDP2D(Model):
     #         .. math::
     #             f_z(y_{0})  =
     #             \begin{cases}
-    #             4 * (y_{0} - r*x0 + x0_{cr}) & \text{linear} \\
-    #             \frac{3}{1+e^{-10*(y_{0}-7/6)}} - r*x0 + x0_{cr} & \text{sigmoidal} \\
+    #             4 * (y_{0} - r*x0_values + x0_{cr}) & \text{linear} \\
+    #             \frac{3}{1+e^{-10*(y_{0}-7/6)}} - r*x0_values + x0_{cr} & \text{sigmoidal} \\
     #             \end{cases}
     #
     #
@@ -1079,6 +1084,6 @@ class EpileptorDP2D(Model):
     #         exp_fun = numpy.exp(-10.0 * (y[0] + 0.5))
     #         jac_zx = numpy.diag(30.0 * exp_fun / (1.0 + exp_fun) ** 2)/ self.tau0
     #     else:
-    #         raise ValueError('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
+    #         raise_value_error('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
     #
     #     return concat([numpy.hstack([jac_xx, jac_xz]),numpy.hstack([jac_zx, jac_zz])],axis=0)

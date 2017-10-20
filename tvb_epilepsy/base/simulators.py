@@ -1,15 +1,15 @@
 """
 Mechanism for launching and configuring generic Simulations (it will have TVB or custom implementations)
 """
-from collections import OrderedDict
+
+from abc import ABCMeta, abstractmethod
 
 import numpy
 
-from abc import ABCMeta, abstractmethod
 from tvb_epilepsy.base.constants import NOISE_SEED
-from tvb_epilepsy.base.model_vep import formal_repr
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.equilibrium_computation import calc_equilibrium_point
+from tvb_epilepsy.base.computations.equilibrium_computation import calc_equilibrium_point
+from tvb_epilepsy.base.utils import formal_repr
 
 
 class SimulationSettings(object):
@@ -90,12 +90,13 @@ class ABCSimulator(object):
                                                     self.connectivity.normalized_weights)
 
         # -------------------The lines below are for a specific "realistic" demo simulation:---------------------------------
-        # if isinstance(model,EpileptorDPrealistic):
-        #   shape = initial_conditions[6].shape
-        #   type = initial_conditions[6].dtype
-        #   initial_conditions[6] = 0.0** numpy.ones(shape,dtype=type) # hypothesis.x0.T
-        #   initial_conditions[7] = 1.0 * numpy.ones((1,hypothesis.n_regions))#model.slope * numpy.ones((hypothesis.n_regions,1))
-        #   initial_conditions[9] = 0.0 * numpy.ones((1,hypothesis.n_regions))#model.Iext2.T * numpy.ones((hypothesis.n_regions,1))
+        if (self.model._nvar > 6):
+          shape = initial_conditions[5].shape
+          n_regions = max(shape)
+          type = initial_conditions[5].dtype
+          initial_conditions[6] = 0.0** numpy.ones(shape,dtype=type) # hypothesis.x0_values.T
+          initial_conditions[7] = 1.0 * numpy.ones((1, n_regions))#model.slope * numpy.ones((hypothesis.n_regions,1))
+          initial_conditions[9] = 0.0 * numpy.ones((1, n_regions))#model.Iext2.T * numpy.ones((hypothesis.n_regions,1))
         # ------------------------------------------------------------------------------------------------------------------
 
         initial_conditions = numpy.expand_dims(initial_conditions, 2)

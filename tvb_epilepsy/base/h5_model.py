@@ -1,12 +1,11 @@
 import os
-import warnings
+from collections import OrderedDict
+from copy import deepcopy
 
 import h5py
-from collections import OrderedDict
-
 import numpy as np
 
-from tvb_epilepsy.base.utils import initialize_logger, ensure_unique_file, change_filename_or_overwrite, \
+from tvb_epilepsy.base.utils import warning, initialize_logger, change_filename_or_overwrite, \
                                     set_list_item_by_reference_safely, get_list_or_tuple_item_safely, \
                                     list_or_tuple_to_dict, dict_to_list_or_tuple, sort_dict
 
@@ -56,7 +55,7 @@ class H5Model(object):
             try:
                 os.remove(final_path)
             except:
-                warnings.warn("\nFile to overwrite not found!")
+                warning("\nFile to overwrite not found!")
 
         logger.info("Writing %s at: %s" % (self, final_path))
 
@@ -70,7 +69,7 @@ class H5Model(object):
 
         h5_file.close()
 
-    def convert_from_h5_model(self, obj=dict(), children_dict=class_dict):
+    def convert_from_h5_model(self, obj=dict(), children_dict=class_dict, hypothesis=False):
 
         children_dict.update(getattr(obj, "children_dict", {}))
 
@@ -94,16 +93,35 @@ class H5Model(object):
         if np.in1d(output, ["tuple", "list"]):
             obj = dict_to_list_or_tuple(obj, output)
 
+        if hypothesis:
+            # TODO: make this hack work also recursively, if needed...
+            if isinstance(obj, dict):
+                set_field = lambda obj, key, value: obj.update({key: value})
+                get_field = lambda obj, key: obj.get(key, None)
+            else:
+                set_field = lambda obj, attribute, value: setattr(obj, attribute, value)
+                get_field = lambda obj, attribute: getattr(obj, attribute, None)
+
+            for var_str in ["x0_values", "e", "w"]:
+                ind = get_field(obj, var_str + "_indices")
+                var_key = var_str + "_values"
+                var = np.array(get_field(obj, var_key))
+                if len(ind) > 0:
+                    set_field(obj, var_key, var[ind])
+                else:
+                    set_field(obj, var_key, np.array([]))
+
+
         return obj
 
 
 def convert_to_h5_model(obj):
     h5_model = H5Model(OrderedDict(), OrderedDict())
-    object_to_h5_model_recursively(h5_model, obj, "")
+    object_to_h5_model_recursively(h5_model, obj, "", root=True)
     return h5_model
 
 
-def object_to_h5_model_recursively(h5_model, obj, name=""):
+def object_to_h5_model_recursively(h5_model, obj, name="", root=False):
 
     # Use in some cases the name of the class as key, when name is empty string. Otherwise, class_name = name.
     name_empty = (len(name) == 0)
@@ -111,8 +129,6 @@ def object_to_h5_model_recursively(h5_model, obj, name=""):
 
     if obj is None:
         h5_model.add_or_update_metadata_attribute(class_name, "None")
-
-
 
     if isinstance(obj, (float, int, long, complex, str, np.ndarray)):
 
@@ -140,7 +156,7 @@ def object_to_h5_model_recursively(h5_model, obj, name=""):
 
                 for class_type in class_list:
                     if obj.__class__.__name__ == class_type:
-                        name = name + ":" + obj.__class__.__name__
+                        name = name + "#" + obj.__class__.__name__
                         break
 
                 if isinstance(obj, (list, tuple)):
@@ -152,6 +168,7 @@ def object_to_h5_model_recursively(h5_model, obj, name=""):
                         temp = np.array(obj)
                         # those that can be converted to np arrays get in datasets
                         if temp.dtype != "O":
+                            # h5_model.add_or_update_metadata_attribute(name, str(temp))
                             h5_model.add_or_update_datasets_attribute(name, temp)
                             return
                     except:
@@ -172,7 +189,8 @@ def object_to_h5_model_recursively(h5_model, obj, name=""):
 
         for key, value in obj.iteritems():
 
-            key = name + (len(name) > 0) * "/" + key
+            if not(root):
+                key = name + (len(name) > 0) * "/" + key
 
             if key.find("children_dict") < 0 :
                 # call recursively...
@@ -209,7 +227,7 @@ def build_hierarchical_object_recursively(obj, key, value, children_dict=class_d
     else:
 
         this_name = key.split('/', 1)[0]
-        split_name = this_name.split(':')
+        split_name = this_name.split('#')
         if len(split_name) == 2:
             name = split_name[0]
             class_name = split_name[1]
@@ -261,7 +279,7 @@ def build_hierarchical_object_recursively(obj, key, value, children_dict=class_d
                     child_object = tuple(child_object)
                 set_field(obj, name, child_object)
         except:
-            warnings.warn("Failed to set attribute " + str(key) + " of object " + obj.__class__.__name__ + "!")
+            warning("Failed to set attribute " + str(key) + " of object " + obj.__class__.__name__ + "!")
 
 
 def read_h5_model(path):
@@ -294,72 +312,3 @@ def return_h5_dataset_paths_recursively(group):
         return paths
     except:
         return [group.name]
-
-
-if __name__ == "__main__":
-
-    from copy import deepcopy
-
-    from tvb_epilepsy.base.constants import FOLDER_RES, DATA_MODE, DATA_CUSTOM, TVB
-    from tvb_epilepsy.base.utils import assert_equal_objects
-    from tvb_epilepsy.base.model_vep import Connectivity
-    from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
-
-    if DATA_MODE is TVB:
-        from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
-    else:
-        from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
-
-    # -------------------------------Reading data-----------------------------------
-
-    empty_connectivity = Connectivity("", np.array([]), np.array([]))
-    empty_hypothesis = DiseaseHypothesis(empty_connectivity)
-
-    data_folder = os.path.join(DATA_CUSTOM, 'Head')
-
-    reader = Reader()
-
-    logger.info("Reading from: " + data_folder)
-    head = reader.read_head(data_folder)
-
-    # # Manual definition of hypothesis...:
-    x0_indices = [20]
-    x0_values = [0.9]
-    e_indices = [70]
-    e_values = [0.9]
-    disease_values = x0_values + e_values
-    disease_indices = x0_indices + e_indices
-
-    # This is an example of x0 mixed Excitability and Epileptogenicity Hypothesis:
-    hyp_x0_E = DiseaseHypothesis(head.connectivity, excitability_hypothesis={tuple(x0_indices): x0_values},
-                                 epileptogenicity_hypothesis={tuple(e_indices): e_values},
-                                 connectivity_hypothesis={})
-
-    obj = {"hyp_x0_E": hyp_x0_E,
-            "test_dict":
-                {"list0": ["l00", 1, {"d020": "a", "d021": [True, False, np.inf, np.nan, None, [], (), {}, ""]}]}}
-    logger.info("\n\nOriginal object:\n" + str(obj))
-
-    logger.info("\n\nWriting object to h5 file...")
-    h5_model = convert_to_h5_model(obj)
-
-    h5_model.write_to_h5(FOLDER_RES, "test_h5_model.h5")
-
-    h5_model1 = read_h5_model(FOLDER_RES + "/test_h5_model.h5")
-    obj1 = h5_model1.convert_from_h5_model(deepcopy(obj))
-
-    if assert_equal_objects(obj, obj1):
-        logger.info("\n\nRead identical object:\n" + str(obj1))
-    else:
-        logger.info("\n\nComparison failed!:\n" + str(obj1))
-
-    h5_model2 = read_h5_model(FOLDER_RES + "/test_h5_model.h5")
-    obj2 = h5_model2.convert_from_h5_model(children_dict={"DiseaseHypothesis": empty_hypothesis})
-
-    if assert_equal_objects(obj, obj2):
-        logger.info("\n\nRead object as dictionary:\n" + str(obj2))
-    else:
-        logger.info("\n\nComparison failed!:\n" + str(obj2))
-
-
-

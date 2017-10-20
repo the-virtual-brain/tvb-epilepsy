@@ -4,20 +4,17 @@ Mechanism for launching TVB simulations.
 
 import sys
 import time
-import warnings
 
 import numpy
-from tvb.datatypes import connectivity, equations
+from tvb.datatypes import connectivity
 from tvb.simulator import coupling, integrators, monitors, noise, simulator
-from tvb.simulator.models import Epileptor
 
-from tvb_epilepsy.base.constants import *
-from tvb_epilepsy.base.epileptor_model_factory import model_build_dict, model_noise_intensity_dict, \
-    model_noise_type_dict
-from tvb_epilepsy.base.model_vep import Connectivity
+from tvb_epilepsy.base.constants import TIME_DELAYS_FLAG
+from tvb_epilepsy.base.utils import warning
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
+from tvb_epilepsy.base.simulators import ABCSimulator
 from tvb_epilepsy.custom.read_write import epileptor_model_attributes_dict
+from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 
 
 class SimulatorTVB(ABCSimulator):
@@ -32,11 +29,12 @@ class SimulatorTVB(ABCSimulator):
         if connectivity_matrix is None:
             connectivity_matrix = vep_conn.normalized_weights
         return connectivity.Connectivity(use_storage=False, weights=connectivity_matrix,
-                                         tract_lengths=vep_conn.tract_lengths, region_labels=vep_conn.region_labels,
+                                         tract_lengths=TIME_DELAYS_FLAG*vep_conn.tract_lengths,
+                                         region_labels=vep_conn.region_labels,
                                          centres=vep_conn.centers, hemispheres=vep_conn.hemispheres,
                                          orientations=vep_conn.orientations, areas=vep_conn.areas)
 
-    def config_simulation(self):
+    def config_simulation(self, initial_conditions=None):
 
         if isinstance(self.model_configuration.connectivity_matrix, numpy.ndarray):
             tvb_connectivity = self._vep2tvb_connectivity(self.connectivity,
@@ -80,7 +78,7 @@ class SimulatorTVB(ABCSimulator):
                                           simulation_length=self.simulation_settings.simulated_period)
         self.simTVB.configure()
 
-        self.configure_initial_conditions()
+        self.configure_initial_conditions(initial_conditions=initial_conditions)
 
     def launch_simulation(self, n_report_blocks=1):
 
@@ -91,9 +89,10 @@ class SimulatorTVB(ABCSimulator):
         if n_report_blocks < 2:
             try:
                 tavg_time, tavg_data = self.simTVB.run()[0]
-            except:
+
+            except Exception, error_message:
                 status = False
-                warnings.warn("Something went wrong with this simulation...")
+                warning("Something went wrong with this simulation...:" + "\n" + error_message)
                 return None, None, status
 
             return tavg_time, tavg_data, status
@@ -127,15 +126,12 @@ class SimulatorTVB(ABCSimulator):
                         sys.stdout.write(print_this)
                         sys.stdout.flush()
                         curr_block += 1.0
-            except:
+            except Exception, error_message:
                 status = False
-                warnings.warn("Something went wrong with this simulation...")
+                warning("Something went wrong with this simulation...:" + "\n" + error_message)
                 return None, None, status
 
             return numpy.array(tavg_time), numpy.array(tavg_data), status
-
-    # def launch_pse(self, hypothesis, head, settings=SimulationSettings()):
-    #     raise NotImplementedError()
 
     def _prepare_for_h5(self):
 
@@ -170,4 +166,3 @@ class SimulatorTVB(ABCSimulator):
 
         else:
             self.simTVB.initial_conditions = self.prepare_initial_conditions(self.simTVB.good_history_shape[0])
-

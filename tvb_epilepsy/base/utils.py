@@ -6,13 +6,13 @@ import os
 import warnings
 from collections import OrderedDict
 from datetime import datetime
-from itertools import product
 
 import h5py
 import numpy as np
 from matplotlib import use
 
-from tvb_epilepsy.base.constants import FOLDER_LOGS, WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
+from tvb_epilepsy.base.constants import WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
+from tvb_epilepsy.base.configurations import FOLDER_LOGS
 
 use('Qt4Agg')
 from matplotlib import pyplot
@@ -39,7 +39,7 @@ def initialize_logger(name, target_folder=FOLDER_LOGS):
 
 
 def warning(msg, logger=None, print_warning=True):
-    msg = "\n\n" + msg
+    msg = "\n\n" + msg  + "\n"
     if logger is not None:
         logger.warning(msg)
     if print_warning:
@@ -48,19 +48,25 @@ def warning(msg, logger=None, print_warning=True):
 
 def raise_value_error(msg, logger=None):
     if logger is not None:
-        logger.error("\n\nValueError: " + msg)
+        logger.error("\n\nValueError: " + msg + "\n")
     raise ValueError(msg)
+
+
+def raise_error(msg, logger=None):
+    if logger is not None:
+        logger.error("\n\nError: " + msg + "\n")
+    raise
 
 
 def raise_import_error(msg, logger=None):
     if logger is not None:
-        logger.error("\n\nImportError: " + msg)
+        logger.error("\n\nImportError: " + msg + "\n")
     raise ImportError(msg)
 
 
 def raise_not_implemented_error(msg, logger=None):
     if logger is not None:
-        logger.error("\n\nNotImplementedError: " + msg)
+        logger.error("\n\nNotImplementedError: " + msg + "\n")
     raise NotImplementedError(msg)
 
 
@@ -391,42 +397,27 @@ def normalize_weights(weights, percentile=WEIGHTS_NORM_PERCENT):  # , max_w=1.0
 
     if len(weights) > 0:
         normalized_w = np.array(weights)
-    
+
         # Remove diagonal elements
         n_regions = normalized_w.shape[0]
         normalized_w *= 1 - np.eye(n_regions)
-    
+
         # Normalize with the 95th percentile
         # if np.max(normalized_w) - max_w > 1e-6:
         normalized_w = np.array(normalized_w / np.percentile(normalized_w, percentile))
         #    else:
         #        normalized_w = np.array(weights)
-    
+
         # normalized_w[normalized_w > max_w] = max_w
-    
+
         return normalized_w
-    
+
     else:
         return np.array([])
 
 
 def calculate_in_degree(weights):
     return np.expand_dims(np.sum(weights, axis=1), 1).T
-
-
-def calculate_projection(sensors, connectivity):
-    n_sensors = sensors.number_of_sensors
-    n_regions = connectivity.number_of_regions
-    projection = np.zeros((n_sensors, n_regions))
-    dist = np.zeros((n_sensors, n_regions))
-
-    for iS, iR in product(range(n_sensors), range(n_regions)):
-        dist[iS, iR] = np.sqrt(np.sum((sensors.locations[iS, :] - connectivity.centers[iR, :]) ** 2))
-        projection[iS, iR] = 1 / dist[iS, iR] ** 2
-
-    projection /= np.percentile(projection, 95)
-    #projection[projection > 1.0] = 1.0
-    return projection
 
 
 def curve_elbow_point(vals):
@@ -541,10 +532,10 @@ def change_filename_or_overwrite(parent_folder, original_filename):
     return final_path, overwrite
 
 
-def print_metadata(h5_file):
-    print "\n\nMetadata:"
+def print_metadata(h5_file, logger):
+    logger.info("\n\nMetadata:")
     for key, val in h5_file["/"].attrs.iteritems():
-        print "\t", key, val
+        logger.info("\t" + str(key) + ", " + str(val))
 
 
 def write_metadata(meta_dict, h5_file, key_date, key_version, path="/"):
@@ -709,7 +700,7 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
 
     def print_not_equal_message(attr, logger):
         # logger.error("\n\nValueError: Original and read object field "+ attr + " not equal!")
-        # raise ValueError("\n\nOriginal and read object field " + attr + " not equal!")
+        # raise_value_error("\n\nOriginal and read object field " + attr + " not equal!")
         warning("Original and read object field " + attr + " not equal!", logger)
 
     if isinstance(obj1, dict):
@@ -746,11 +737,21 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
                     print_not_equal_message(attributes_dict[attribute], logger)
                     equal = False
 
-            # For numeric types
-            elif isinstance(field1, (int, float, long, complex, np.number, np.ndarray)) \
-                and not (isinstance(field1, np.ndarray) and field1.dtype.kind in 'OSU'):
-                # TODO: handle better accuracy differences and complex numbers...
-                if np.any(np.float32(field1) - np.float32(field2) > 0):
+            # For numeric numpy arrays:
+            elif isinstance(field1, np.ndarray) and not field1.dtype.kind in 'OSU':
+                # TODO: handle better accuracy differences, empty matrices and complex numbers...
+
+                if field1.shape != field2.shape:
+                    print_not_equal_message(attributes_dict[attribute], logger)
+                    equal = False
+
+                elif np.any(np.float32(field1) - np.float32(field2) > 0):
+                    print_not_equal_message(attributes_dict[attribute], logger)
+                    equal = False
+
+            # For numeric scalar types
+            elif isinstance(field1, (int, float, long, complex, np.number)):
+                if np.float32(field1) - np.float32(field2) > 0:
                     print_not_equal_message(attributes_dict[attribute], logger)
                     equal = False
 
@@ -763,7 +764,7 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
 
         except:
             try:
-                warnings("Comparing str(objects) for field "
+                warning("Comparing str(objects) for field "
                               + attributes_dict[attribute] + " because there was an error!", logger)
                 if np.any(str(field1) != str(field2)):
                     print_not_equal_message(attributes_dict[attribute], logger)
@@ -776,3 +777,16 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
         return True
     else:
         return False
+
+
+def parcellation_correspondance(inds_from, labels_from, labels_to):
+
+    inds_to = []
+    for ind in inds_from:
+        lbl = labels_from[ind]
+        inds_to.append(np.where(labels_to==lbl)[0][0])
+
+    if len(inds_to)!=1:
+        return inds_to
+    else:
+        return inds_to[0]

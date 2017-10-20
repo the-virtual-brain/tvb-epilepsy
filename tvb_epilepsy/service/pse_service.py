@@ -2,53 +2,47 @@
 Mechanism for parameter search exploration for LSA and simulations (it will have TVB or custom implementations)
 """
 
-import subprocess
-import warnings
-from collections import OrderedDict
 from copy import deepcopy
 
 import numpy as np
+from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
+from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 
-from tvb.basic.logger.builder import get_logger
 from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
-from tvb_epilepsy.base.utils import formal_repr
+from tvb_epilepsy.base.utils import warning, raise_not_implemented_error, raise_value_error, initialize_logger, \
+                                   formal_repr
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.simulators import ABCSimulator
-from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.base.model_configuration import ModelConfiguration
-from tvb_epilepsy.base.model_configuration_service import ModelConfigurationService
-from tvb_epilepsy.base.lsa_service import LSAService
-from tvb_epilepsy.base.epileptor_model_factory import model_build_dict
-from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
-from tvb_epilepsy.custom.simulator_custom import SimulatorCustom, custom_model_builder
 from tvb_epilepsy.custom.read_write import read_ts
+from tvb_epilepsy.custom.simulator_custom import custom_model_builder
+from tvb_epilepsy.service.lsa_service import LSAService
+from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
 
-
-LOG = get_logger(__name__)
+logger = initialize_logger(__name__)
 
 
 def set_object_attribute_recursively(object, path, values, indices):
-
     # Convert the parameter's path to a list of strings separated by "."
     path = path.split(".")
 
     # If there is more than one levels...
     if len(path) > 1:
-        #...call the function recursively
+        # ...call the function recursively
         set_object_attribute_recursively(getattr(object, path[0]), ".".join(path[1:]), values, indices)
 
     else:
         # ...else, set the parameter values for the specified indices
         temp = getattr(object, path[0])
         if len(indices) > 0:
-            temp[indices] = values #index has to be linear... i.e., 1D...
+            temp[indices] = values  # index has to be linear... i.e., 1D...
         else:
             temp = values
         setattr(object, path[0], temp)
 
 
 def pop_object_parameters(object_type, params_paths, params_values, params_indices):
-
     object_params_paths = []
     object_params_values = []
     object_params_indices = []
@@ -78,10 +72,9 @@ def update_object(object, object_type, params_paths, params_values, params_indic
     return object, params_paths, params_values, params_indices, update_flag
 
 
-def update_hypothesis(hypothesis_input, params_paths, params_values, params_indices,
+def update_hypothesis(hypothesis_input, connectivity_matrix, params_paths, params_values, params_indices,
                       model_configuration_service_input=None,
                       yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize"):
-
     # Assign possible hypothesis parameters on a new hypothesis object:
     hypothesis = deepcopy(hypothesis_input)
     hypothesis, params_paths, params_values, params_indices = \
@@ -92,7 +85,8 @@ def update_hypothesis(hypothesis_input, params_paths, params_values, params_indi
     if isinstance(model_configuration_service_input, ModelConfigurationService):
         model_configuration_service = deepcopy(model_configuration_service_input)
     else:
-        model_configuration_service = ModelConfigurationService(yc=yc, Iext1=Iext1, K=K, a=a, b=b, x1eq_mode=x1eq_mode)
+        model_configuration_service = ModelConfigurationService(hypothesis_input.number_of_regions,
+                                                                yc=yc, Iext1=Iext1, K=K, a=a, b=b, x1eq_mode=x1eq_mode)
 
     # ...modify possible related parameters:
     model_configuration_service, params_paths, params_values, params_indices = \
@@ -101,9 +95,11 @@ def update_hypothesis(hypothesis_input, params_paths, params_values, params_indi
 
     # ...and compute a new model_configuration:
     if hypothesis.type == "Epileptogenicity":
-        model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hypothesis)
+        model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hypothesis,
+                                                                                            connectivity_matrix)
     else:
-        model_configuration = model_configuration_service.configure_model_from_hypothesis(hypothesis)
+        model_configuration = model_configuration_service.configure_model_from_hypothesis(hypothesis,
+                                                                                          connectivity_matrix)
 
     return hypothesis, model_configuration, params_paths, params_values, params_indices
 
@@ -117,16 +113,15 @@ def lsa_out_fun(hypothesis, model_configuration=None, **kwargs):
         hypothesis.propagation_strenghts
 
 
-def lsa_run_fun(hypothesis_input, params_paths, params_values, params_indices, out_fun=lsa_out_fun,
+def lsa_run_fun(hypothesis_input, connectivity_matrix, params_paths, params_values, params_indices, out_fun=lsa_out_fun,
                 model_configuration_service_input=None,
                 yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",
                 lsa_service_input=None,
                 n_eigenvectors=EIGENVECTORS_NUMBER_SELECTION, weighted_eigenvector_sum=True):
-
     try:
         # Update hypothesis and create a new model_configuration:
-        hypothesis, model_configuration, params_paths, params_values, params_indices\
-            = update_hypothesis(hypothesis_input, params_paths, params_values, params_indices,
+        hypothesis, model_configuration, params_paths, params_values, params_indices \
+            = update_hypothesis(hypothesis_input, connectivity_matrix, params_paths, params_values, params_indices,
                                 model_configuration_service_input, yc, Iext1, K, a, b, x1eq_mode)
 
         # ...create/update lsa service:
@@ -155,18 +150,17 @@ def lsa_run_fun(hypothesis_input, params_paths, params_values, params_indices, o
 
 
 def sim_out_fun(simulator, time, data, **kwargs):
-
     if data is None:
         time, data = read_ts(simulator.results_path, data="data")
 
     return {"time": time, "data": data}
 
 
-def sim_run_fun(simulator_input, params_paths, params_values, params_indices, out_fun=sim_out_fun, hypothesis_input=None,
+def sim_run_fun(simulator_input, connectivity_matrix, params_paths, params_values, params_indices, out_fun=sim_out_fun,
+                hypothesis_input=None,
                 model_configuration_service_input=None,
                 yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",
                 update_initial_conditions=True):
-
     # Create new objects from the input simulator
     simulator = deepcopy(simulator_input)
     model_configuration = deepcopy(simulator_input.model_configuration)
@@ -177,7 +171,7 @@ def sim_run_fun(simulator_input, params_paths, params_values, params_indices, ou
         # First try to update model_configuration via an input hypothesis...:
         if isinstance(hypothesis_input, DiseaseHypothesis):
             hypothesis, model_configuration, params_paths, params_values, params_indices = \
-                update_hypothesis(hypothesis_input, params_paths, params_values, params_indices,
+                update_hypothesis(hypothesis_input, connectivity_matrix, params_paths, params_values, params_indices,
                                   model_configuration_service_input, yc, Iext1, K, a, b, x1eq_mode)
             # Update model configuration:
             simulator.model_configuration = model_configuration
@@ -214,13 +208,12 @@ def sim_run_fun(simulator_input, params_paths, params_values, params_indices, ou
 
 
 class PSEService(object):
-
     def __init__(self, task, hypothesis=[], simulator=[], params_pse=None, run_fun=None, out_fun=None):
 
         if task not in ["LSA", "SIMULATION"]:
-            warnings.warn("\ntask = " + str(task) + " is not a valid pse task." +
-                             "\nSelect one of 'LSA', or 'SIMULATION' to perform parameter search exploration of " +
-                             "\n hypothesis Linear Stability Analysis, or simulation, " + "respectively")
+            warning("\ntask = " + str(task) + " is not a valid pse task." +
+                    "\nSelect one of 'LSA', or 'SIMULATION' to perform parameter search exploration of " +
+                    "\n hypothesis Linear Stability Analysis, or simulation, " + "respectively")
 
         self.task = task
         self.params_names = []
@@ -236,7 +229,7 @@ class PSEService(object):
                 self.pse_object = hypothesis
 
             else:
-                warnings.warn("\ntask = " + str(task) + " but hypothesis is not a Hypothesis object!")
+                warning("\ntask = " + str(task) + " but hypothesis is not a Hypothesis object!")
 
             def_run_fun = lsa_run_fun
             def_out_fun = lsa_out_fun
@@ -247,8 +240,8 @@ class PSEService(object):
                 self.pse_object = simulator
 
             else:
-                raise warnings.warn("\ntask = " + str(task) + " but simulator is not an object of" +
-                                    " one of the available simulator classes!")
+                warning("\ntask = " + str(task) + " but simulator is not an object of" +
+                        " one of the available simulator classes!")
 
             def_run_fun = sim_run_fun
             def_out_fun = sim_out_fun
@@ -259,19 +252,18 @@ class PSEService(object):
             def_out_fun = None
 
         if not (callable(run_fun)):
-            warnings.warn("\nUser defined run_fun is not callable. Using default one for task " + str(task) +"!")
+            warning("\nUser defined run_fun is not callable. Using default one for task " + str(task) + "!")
             self.run_fun = def_run_fun
         else:
             self.run_fun = run_fun
 
         if not (callable(out_fun)):
-            warnings.warn("\nUser defined out_fun is not callable. Using default one for task " + str(task) +"!")
+            warning("\nUser defined out_fun is not callable. Using default one for task " + str(task) + "!")
             self.out_fun = def_out_fun
         else:
             self.out_fun = out_fun
 
         if isinstance(params_pse, list):
-
 
             temp = []
             for param in params_pse:
@@ -289,9 +281,9 @@ class PSEService(object):
             self.n_params_vals = np.array(self.n_params_vals)
             self.n_params = len(self.params_paths)
 
-            if not(np.all(self.n_params_vals == self.n_params_vals[0])):
-                raise ValueError("\nNot all parameters have the same number of samples!: " +
-                                 "\n" + str(self.params_paths) + " = " + str( self.n_params_vals))
+            if not (np.all(self.n_params_vals == self.n_params_vals[0])):
+                raise_value_error("\nNot all parameters have the same number of samples!: " +
+                                  "\n" + str(self.params_paths) + " = " + str(self.n_params_vals))
             else:
                 self.n_params_vals = self.n_params_vals[0]
 
@@ -305,7 +297,7 @@ class PSEService(object):
             print "leading to " + str(self.n_loops) + " total execution loops"
 
         else:
-            warnings.warn("\nparams_pse is not a list of tuples!")
+            warning("\nparams_pse is not a list of tuples!")
 
     def __repr__(self):
 
@@ -321,10 +313,11 @@ class PSEService(object):
 
     def _prepare_for_h5(self):
         h5_model = convert_to_h5_model({"task": self.task, "n_loops": self.n_loops,
-                                   "params_names": self.params_names,
-                                   "params_paths": self.params_paths,
-                                   "params_indices": np.array([str(inds) for inds in self.params_indices], dtype="S"),
-                                   "params_samples": self.pse_params.T})
+                                        "params_names": self.params_names,
+                                        "params_paths": self.params_paths,
+                                        "params_indices": np.array([str(inds) for inds in self.params_indices],
+                                                                   dtype="S"),
+                                        "params_samples": self.pse_params.T})
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         return h5_model
 
@@ -334,16 +327,20 @@ class PSEService(object):
         h5_model = self._prepare_for_h5()
         h5_model.write_to_h5(folder, filename)
 
-    def run_pse(self, grid_mode=False, **kwargs):
+    def run_pse(self, connectivity_matrix, grid_mode=False, **kwargs):
 
         results = []
         execution_status = []
 
+        loop_tenth = 1
         for iloop in range(self.n_loops):
 
             params = self.pse_params[iloop, :]
 
-            print "\nExecuting loop " + str(iloop) + " of " + str(self.n_loops)
+            if iloop == 0 or iloop + 1 >= loop_tenth * self.n_loops / 10.0:
+                print "\nExecuting loop " + str(iloop + 1) + " of " + str(self.n_loops)
+                if iloop > 0:
+                    loop_tenth += 1
             # print "\nParameters:"
             # for ii in range(len(params)):
             #      print self.params_paths[ii] + "[" + str(self.params_indices[ii]) + "] = " + str(params[ii])
@@ -352,14 +349,14 @@ class PSEService(object):
             output = None
 
             try:
-                status, output = self.run_fun(self.pse_object, self.params_paths, params, self.params_indices,
-                                              self.out_fun, **kwargs)
+                status, output = self.run_fun(self.pse_object, connectivity_matrix,
+                                              self.params_paths, params, self.params_indices, self.out_fun, **kwargs)
 
             except:
                 pass
 
             if not status:
-                warnings.warn("\nExecution of loop " + str(iloop) + "failed!")
+                warning("\nExecution of loop " + str(iloop) + " failed!")
 
             results.append(output)
             execution_status.append(status)
@@ -370,79 +367,6 @@ class PSEService(object):
 
         return results, execution_status
 
-    def run_pse_parallel(self, grid_mode=False):
+    def run_pse_parallel(self, connectivity_matrix, grid_mode=False):
         # TODO: start each loop on a separate process, gather results and return them
-        raise NotImplementedError
-
-
-if __name__ == "__main__":
-
-    import os
-    from tvb_epilepsy.base.constants import DATA_CUSTOM, FOLDER_RES
-    from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
-    from tvb_epilepsy.base.sampling_service import StochasticSamplingService
-    from tvb_epilepsy.base.helper_functions import pse_from_hypothesis
-
-    # -------------------------------Reading data-----------------------------------
-
-    data_folder = os.path.join(DATA_CUSTOM, 'Head')
-
-    reader = Reader()
-
-    head = reader.read_head(data_folder)
-
-    # --------------------------Hypothesis definition-----------------------------------
-
-    n_samples = 100
-
-    # Sampling of the global coupling parameter
-    stoch_sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampler="norm", trunc_limits={"low": 0.0},
-                                              random_seed=1000, loc=10.0, scale=3.0)
-    K_samples, K_sample_stats = stoch_sampler.generate_samples(stats=True)
-
-    #
-    # Manual definition of hypothesis...:
-    x0_indices = [20]
-    x0_values = [0.9]
-    e_indices = [70]
-    e_values = [0.9]
-    disease_indices = x0_indices + e_indices
-    n_disease = len(disease_indices)
-
-    n_x0 = len(x0_indices)
-    n_e = len(e_indices)
-    all_regions_indices = np.array(range(head.number_of_regions))
-    healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
-    n_healthy = len(healthy_indices)
-    # This is an example of x0 mixed Excitability and Epileptogenicity Hypothesis:
-    hyp_x0_E = DiseaseHypothesis(head.connectivity, excitability_hypothesis={tuple(x0_indices): x0_values},
-                                 epileptogenicity_hypothesis={tuple(e_indices): e_values},
-                                 connectivity_hypothesis={})
-
-    LOG.info("Running hypothesis: " + hyp_x0_E.name)
-
-    LOG.info("creating model configuration...")
-    model_configuration_service = ModelConfigurationService(hyp_x0_E.get_number_of_regions())
-    model_configuration = model_configuration_service.configure_model_from_hypothesis(hyp_x0_E)
-
-    LOG.info("running LSA...")
-    lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
-    lsa_hypothesis = lsa_service.run_lsa(hyp_x0_E, model_configuration)
-
-    LOG.info("running PSE LSA...")
-    pse_results = pse_from_hypothesis(lsa_hypothesis, n_samples, half_range=0.1,
-                                      global_coupling=[{"indices": all_regions_indices}],
-                                      healthy_regions_parameters=[{"name": "x0", "indices": healthy_indices}],
-                                      model_configuration=model_configuration,
-                                      model_configuration_service=model_configuration_service,
-                                      lsa_service=lsa_service, save_services=True)[0]
-
-    lsa_hypothesis.plot_lsa_pse(pse_results, model_configuration,
-                                weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
-                                n_eig=lsa_service.eigen_vectors_number)
-    # , show_flag=True, save_flag=False
-    convert_to_h5_model(pse_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")
-
-
-
-
+        raise_not_implemented_error

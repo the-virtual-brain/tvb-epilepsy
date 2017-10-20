@@ -1,0 +1,9 @@
+[submodule "extern/tvb-library"]
+	path = extern/tvb-library
+	url = https://github.com/the-virtual-brain/tvb-library
+[submodule "extern/tvb-data"]
+	path = extern/tvb-data
+	url = https://github.com/the-virtual-brain/tvb-data
+[submodule "extern/tvb-geodesic"]
+	path = extern/tvb-geodesic
+	url = https://github.com/the-virtual-brain/tvb-geodesic

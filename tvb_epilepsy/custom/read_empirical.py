@@ -5,8 +5,9 @@
 import os
 import numpy
 from scipy.io import loadmat
-from tvb_epilepsy.custom.read_write import write_sensors, write_ts, write_ts_seeg, PATIENT_VIRTUAL_HEAD
+from tvb_epilepsy.custom.read_write import write_sensors, write_ts, write_ts_seeg_epi, PATIENT_VIRTUAL_HEAD
 from tvb_epilepsy.custom.readers_custom import CustomReader
+
 
 def correlate_sensors(empirical_file="/Users/lia.domide/Downloads/TRECempirical/110223B-EEX_0004.EEG.mat",
                       existing_ep_file="/WORK/episense/episense-root/trunk/demo-data/SensorsSEEG_125.h5"):
@@ -44,7 +45,8 @@ def import_seeg(empirical_file="/Users/lia.domide/Downloads/TRECempirical/110223
 
     raw_data = numpy.zeros((1000, 88, 3))
     write_ts(raw_data, sampling_period, ts_path)
-    write_ts_seeg(seeg_data, sampling_period, ts_path)
+    (folder_path, filename) = os.path.split(ts_path)
+    write_ts_seeg_epi(seeg_data, sampling_period, folder=folder_path, filename=filename)
 
 
 if __name__ == "__main__":

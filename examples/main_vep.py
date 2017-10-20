@@ -2,30 +2,23 @@
 Entry point for working with VEP
 """
 import os
-import warnings
-
 from copy import deepcopy
 
 import numpy as np
 
-from tvb_epilepsy.base.constants import FOLDER_RES, SIMULATION_MODE, TVB, DATA_MODE, VOIS, DATA_CUSTOM, X0_DEF, E_DEF, \
-                                        FOLDER_FIGURES, SAVE_FLAG, SHOW_FLAG
-from tvb_epilepsy.base.utils import assert_equal_objects
-from tvb_epilepsy.base.model_vep import Connectivity
-from tvb_epilepsy.base.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.base.model_configuration_service import ModelConfigurationService
-from tvb_epilepsy.base.lsa_service import LSAService
-from tvb_epilepsy.base.plot_factory import plot_sim_results
-from tvb_epilepsy.base.utils import initialize_logger, calculate_projection
-from tvb_epilepsy.base.analyzers_factory import filter_data
-from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
+from tvb_epilepsy.base.constants import SIMULATION_MODE, TVB, DATA_MODE, VOIS, X0_DEF, E_DEF, TIME_DELAYS_FLAG
+from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM
+from tvb_epilepsy.base.utils import warning, assert_equal_objects, initialize_logger
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
-from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
-from tvb_epilepsy.custom.simulator_custom import EpileptorModel
+from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.service.lsa_service import LSAService
+from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
+from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
+from tvb_epilepsy.base.plot_utils import plot_sim_results
+from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
+                                                    compute_seeg_and_write_ts_h5_file
 
-
-from tvb_epilepsy.base.helper_functions import pse_from_hypothesis, sensitivity_analysis_pse_from_hypothesis, \
-    set_time_scales
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
@@ -33,58 +26,17 @@ else:
     from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
 
 if SIMULATION_MODE is TVB:
-    from tvb_epilepsy.base.helper_functions import setup_TVB_simulation_from_model_configuration \
+    from tvb_epilepsy.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration \
         as setup_simulation_from_model_configuration
 else:
-    from tvb_epilepsy.custom.simulator_custom import setup_custpm_simulation_from_model_configuration \
+    from tvb_epilepsy.scripts.simulation_scripts import setup_custom_simulation_from_model_configuration \
         as setup_simulation_from_model_configuration
 
 
-def prepare_vois_ts_dict(vois, data):
-    # Pack results into a dictionary:
-    vois_ts_dict = dict()
-    for idx_voi, voi in enumerate(vois):
-        vois_ts_dict[voi] = data[:, idx_voi, :].astype('f')
-
-    return vois_ts_dict
-
-
-def prepare_ts_and_seeg_h5_file(folder, filename, model, projections, vois_ts_dict, hpf_flag, hpf_low, hpf_high, fsAVG,
-                                dt):
-    # High pass filter, and compute SEEG:
-    if isinstance(model, EpileptorDP2D):
-        raw_data = np.dstack(
-            [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x1"]])
-        lfp_data = vois_ts_dict["x1"]
-
-        for idx_proj, proj in enumerate(projections):
-            vois_ts_dict['seeg%d' % idx_proj] = vois_ts_dict['z'].dot(proj.T)
-
-    else:
-        if isinstance(model, EpileptorModel):
-            lfp_data = vois_ts_dict["x2"] - vois_ts_dict["x1"]
-
-        else:
-            lfp_data = vois_ts_dict["lfp"]
-
-        raw_data = np.dstack(
-            [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x2"]])
-
-        for idx_proj, proj in enumerate(projections):
-            vois_ts_dict['seeg%d' % idx_proj] = vois_ts_dict['lfp'].dot(proj.T)
-            if hpf_flag:
-                for i in range(vois_ts_dict['seeg'].shape[0]):
-                    vois_ts_dict['seeg_hpf%d' % i][:, i] = filter_data(
-                        vois_ts_dict['seeg%d' % i][:, i], hpf_low, hpf_high,
-                        fsAVG)
-    # Write files:
-    write_ts_epi(raw_data, dt, lfp_data, folder, filename)
-
-    for i in range(len(projections)):
-        write_ts_seeg_epi(vois_ts_dict['seeg%d' % i], dt, folder, filename)
-
-
-def main_vep(test_write_read=False):
+PSE_FLAG = False
+SA_PSE_FLAG = False
+SIM_FLAG = True
+def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG):
 
     logger = initialize_logger(__name__)
 
@@ -96,6 +48,8 @@ def main_vep(test_write_read=False):
 
     logger.info("Reading from: " + data_folder)
     head = reader.read_head(data_folder)
+
+    head.plot()
 
     # --------------------------Hypothesis definition-----------------------------------
 
@@ -141,56 +95,58 @@ def main_vep(test_write_read=False):
 
 
     # This is an example of Excitability Hypothesis:
-    hyp_x0 = DiseaseHypothesis(head.connectivity, excitability_hypothesis={tuple(disease_indices): disease_values},
+    hyp_x0 = DiseaseHypothesis(head.connectivity.number_of_regions,
+                               excitability_hypothesis={tuple(disease_indices): disease_values},
                                epileptogenicity_hypothesis={}, connectivity_hypothesis={})
 
     # This is an example of Epileptogenicity Hypothesis:
-    hyp_E = DiseaseHypothesis(head.connectivity, excitability_hypothesis={},
+    hyp_E = DiseaseHypothesis(head.connectivity.number_of_regions,
+                              excitability_hypothesis={},
                               epileptogenicity_hypothesis={tuple(disease_indices): disease_values},
                               connectivity_hypothesis={})
 
     if len(e_indices) > 0:
-        # This is an example of x0 mixed Excitability and Epileptogenicity Hypothesis:
-        hyp_x0_E = DiseaseHypothesis(head.connectivity, excitability_hypothesis={tuple(x0_indices): x0_values},
+        # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
+        hyp_x0_E = DiseaseHypothesis(head.connectivity.number_of_regions,
+                                     excitability_hypothesis={tuple(x0_indices): x0_values},
                                      epileptogenicity_hypothesis={tuple(e_indices): e_values},
                                      connectivity_hypothesis={})
         hypotheses = (hyp_x0, hyp_E, hyp_x0_E)
     else:
         hypotheses = (hyp_x0, hyp_E)
 
-    # --------------------------Projections computations-----------------------------------
-
-    sensorsSEEG = []
-    projections = []
-    for sensors, projection in head.sensorsSEEG.iteritems():
-        if projection is None:
-            continue
-        else:
-            projection = calculate_projection(sensors, head.connectivity)
-            head.sensorsSEEG[sensors] = projection
-            sensorsSEEG.append(sensors)
-            projections.append(projection)
 
     # --------------------------Simulation preparations-----------------------------------
 
     # TODO: maybe use a custom Monitor class
-    fs = 2 * 4096.0
-    scale_time = 2.0
-    time_length = 10000.0
-    scale_fsavg = 2.0
-    report_every_n_monitor_steps = 10.0
+    fs = 2048.0 # this is the simulation sampling rate that is necessary for the simulation to be stable
+    time_length = 10000.0  # =100 secs, the final output nominal time length of the simulation
+    report_every_n_monitor_steps = 100.0
     (dt, fsAVG, sim_length, monitor_period, n_report_blocks) = \
-        set_time_scales(fs=fs, dt=None, time_length=time_length, scale_time=scale_time, scale_fsavg=scale_fsavg,
+        set_time_scales(fs=fs, time_length=time_length, scale_fsavg=None,
                         report_every_n_monitor_steps=report_every_n_monitor_steps)
 
-    model_name = "EpileptorDP"
+    # Choose model
+    # Available models beyond the TVB Epileptor (they all encompass optional variations from the different papers):
+    # EpileptorDP: similar to the TVB Epileptor + optional variations,
+    # EpileptorDP2D: reduced 2D model, following Proix et all 2014 +optional variations,
+    # EpleptorDPrealistic: starting from the TVB Epileptor + optional variations, but:
+    #      -x0, Iext1, Iext2, slope and K become noisy state variables,
+    #      -Iext2 and slope are coupled to z, g, or z*g in order for spikes to appear before seizure,
+    #      -multiplicative correlated noise is also used
+    # Optional variations:
+    zmode = "lin"  # by default, or "sig" for the sigmoidal expression for the slow z variable in Proix et al. 2014
+    pmode = "z"  # by default, "g" or "z*g" for the feedback coupling to Iext2 and slope for EpileptorDPrealistic
 
+    model_name = "EpileptorDPrealistic"
+    if model_name is "EpileptorDP2D":
+        spectral_raster_plot = False
+        trajectories_plot = True
+    else:
+        spectral_raster_plot = "lfp"
+        trajectories_plot = False
     # We don't want any time delays for the moment
-    head.connectivity.tract_lengths *= 0.0
-
-    hpf_flag = False
-    hpf_low = max(16.0, 1000.0 / time_length)  # msec
-    hpf_high = min(250.0, fsAVG)
+    # head.connectivity.tract_lengths *= TIME_DELAYS_FLAG
 
     # --------------------------Hypothesis and LSA-----------------------------------
 
@@ -201,22 +157,32 @@ def main_vep(test_write_read=False):
         # hyp.write_to_h5(FOLDER_RES, hyp.name + ".h5")
 
         logger.info("\n\nCreating model configuration...")
-        model_configuration_service = ModelConfigurationService(hyp.get_number_of_regions())
+        model_configuration_service = ModelConfigurationService(hyp.number_of_regions)
         model_configuration_service.write_to_h5(FOLDER_RES, hyp.name + "_model_config_service.h5")
+        if test_write_read:
+            logger.info("Written and read model configuration services are identical?: "+
+                        str(assert_equal_objects(model_configuration_service,
+                                 read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_model_config_service.h5")).
+                                    convert_from_h5_model(obj=deepcopy(model_configuration_service)), logger=logger)))
 
         if hyp.type == "Epileptogenicity":
-            model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hyp)
+            model_configuration = model_configuration_service.\
+                                            configure_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
         else:
-            model_configuration = model_configuration_service.configure_model_from_hypothesis(hyp)
+            model_configuration = model_configuration_service.\
+                                              configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
         model_configuration.write_to_h5(FOLDER_RES, hyp.name + "_ModelConfig.h5")
+        if test_write_read:
+            logger.info("Written and read model configuration are identical?: " +
+                        str(assert_equal_objects(model_configuration,
+                                                 read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_ModelConfig.h5")).
+                                                 convert_from_h5_model(obj=deepcopy(model_configuration)),
+                                                 logger=logger)))
 
-        # # Plot nullclines and equilibria of model configuration
-        # model_configuration.plot_nullclines_eq(head.connectivity.region_labels,
-        #                                        special_idx=lsa_hypothesis.propagation_indices,
-        #                                        model=str(model.nvar) + "d", zmode=model.zmode,
-        #                                        figure_name=lsa_hypothesis.name + "_Nullclines and equilibria",
-        #                                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
-        #                                        figure_dir=FOLDER_FIGURES)
+        # Plot nullclines and equilibria of model configuration
+        model_configuration_service.plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
+                                               special_idx=disease_indices, model="6d", zmode="lin",
+                                               figure_name=hyp.name + "_Nullclines and equilibria")
 
         logger.info("\n\nRunning LSA...")
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
@@ -224,131 +190,144 @@ def main_vep(test_write_read=False):
 
         lsa_hypothesis.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")
         lsa_service.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")
-
-        lsa_hypothesis.plot_lsa(model_configuration, weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
-                            n_eig=lsa_service.eigen_vectors_number, figure_name=lsa_hypothesis.name+"_LSA.h5")
-
-        #--------------Parameter Search Exploration (PSE)-------------------------------
-
-        logger.info("\n\nRunning PSE LSA...")
-        pse_results = pse_from_hypothesis(lsa_hypothesis, n_samples, half_range=0.1,
-                                          global_coupling=[{"indices": all_regions_indices}],
-                                          healthy_regions_parameters=[{"name": "x0", "indices": healthy_indices}],
-                                          model_configuration=model_configuration,
-                                          model_configuration_service=model_configuration_service,
-                                          lsa_service=lsa_service)[0]
-
-        lsa_hypothesis.plot_lsa_pse(pse_results, model_configuration,
-                                    weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
-                                    n_eig=lsa_service.eigen_vectors_number)
-        # , show_flag=True, save_flag=False
-
-        convert_to_h5_model(pse_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")
-
-        # --------------Sensitivity Analysis Parameter Search Exploration (PSE)-------------------------------
-
-        logger.info("\n\nrunning sensitivity analysis PSE LSA...")
-        sa_results, pse_sa_results = \
-            sensitivity_analysis_pse_from_hypothesis(lsa_hypothesis, n_samples, method="sobol", half_range=0.1,
-                                     global_coupling=[{"indices": all_regions_indices,
-                                                       "bounds":[0.0, 2 * model_configuration_service.K_unscaled[ 0]]}],
-                                     healthy_regions_parameters=[{"name": "x0", "indices": healthy_indices}],
-                                     model_configuration=model_configuration,
-                                     model_configuration_service=model_configuration_service, lsa_service=lsa_service)
-
-        lsa_hypothesis.plot_lsa_pse(pse_sa_results, model_configuration,
-                                    weighted_eigenvector_sum=lsa_service.weighted_eigenvector_sum,
-                                    n_eig=lsa_service.eigen_vectors_number,
-                                    figure_name="SA PSE LSA overview " + lsa_hypothesis.name)
-        # , show_flag=True, save_flag=False
-
-        convert_to_h5_model(pse_sa_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")
-        convert_to_h5_model(sa_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_SA_LSA_results.h5")
-
-        # ------------------------------Simulation--------------------------------------
-        logger.info("\n\nSimulating...")
-        sim = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt,
-                                                                       sim_length, monitor_period, model_name,
-                                                                       scale_time=scale_time, noise_intensity=10 ** -8)
-
-        sim.config_simulation()
-        ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
-
-        convert_to_h5_model(sim.simulation_settings).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")
-
-        if not status:
-            warnings.warn("\nSimulation failed!")
-
-        else:
-
-            tavg_data = tavg_data[:, :, :, 0]
-
-            vois = VOIS[model_name]
-
-            model = sim.model
-
-            logger.info("\n\nSimulated signal return shape: %s", tavg_data.shape)
-            logger.info("Time: %s - %s", scale_time * ttavg[0], scale_time * ttavg[-1])
-            logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
-
-            time = scale_time * np.array(ttavg, dtype='float32')
-            sampling_time = np.min(np.diff(time))
-
-            vois_ts_dict = prepare_vois_ts_dict(vois, tavg_data)
-
-            prepare_ts_and_seeg_h5_file(FOLDER_RES, lsa_hypothesis.name + "_ts.h5", model, projections, vois_ts_dict,
-                                        hpf_flag, hpf_low, hpf_high, fsAVG, sampling_time)
-
-            vois_ts_dict['time'] = time
-
-            # Plot results
-            plot_sim_results(model, lsa_hypothesis.propagation_indices, lsa_hypothesis.name, head, vois_ts_dict,
-                             sensorsSEEG, hpf_flag)
-
-            # Save results
-            vois_ts_dict['time_units'] = 'msec'
-            # savemat(os.path.join(FOLDER_RES, hypothesis.name + "_ts.mat"), vois_ts_dict)
-
         if test_write_read:
 
-            hypothesis_template = DiseaseHypothesis(Connectivity("", np.array([]), np.array([])))
+            hypothesis_template = DiseaseHypothesis(hyp.number_of_regions)
 
-            logger.info("Written and read model configuration services are identical?: "+
-                        assert_equal_objects(model_configuration_service,
-                                 read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_model_config_service.h5")).
-                                 convert_from_h5_model(obj=deepcopy(model_configuration_service))))
-            logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(model_configuration,
-                                 read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_ModelConfig.h5")).
-                                 convert_from_h5_model(obj=deepcopy(model_configuration))))
-            logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(lsa_service,
+            logger.info("Written and read LSA services are identical?: " +
+                        str(assert_equal_objects(lsa_service,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")).
-                                 convert_from_h5_model(obj=deepcopy(lsa_service))))
-            logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(lsa_hypothesis,
+                                    convert_from_h5_model(obj=deepcopy(lsa_service)), logger=logger)))
+            logger.info("Written and read LSA hypotheses are identical (input object check)?: " +
+                        str(assert_equal_objects(lsa_hypothesis,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
-                                 convert_from_h5_model(obj=deepcopy(lsa_hypothesis))))
-            logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(lsa_hypothesis,
-                                             read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
-                                             convert_from_h5_model(children_dict=hypothesis_template)))
-            logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(pse_results,
-                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")).
-                                 convert_from_h5_model()))
-            logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(pse_sa_results,
-                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).
-                                 convert_from_h5_model()))
-            logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(sa_results,
-                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_LSA_results.h5")).
-                                 convert_from_h5_model()))
-            logger.info("Written and read model configuration services are identical?: " +
-                        assert_equal_objects(sim.simulation_settings,
-                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")).
-                                 convert_from_h5_model(obj=deepcopy(sim.simulation_settings))))
+                                    convert_from_h5_model(obj=deepcopy(lsa_hypothesis), hypothesis=True),
+                                                 logger=logger)))
+            logger.info("Written and read LSA hypotheses are identical (input template check)?: " +
+                        str(assert_equal_objects(lsa_hypothesis,
+                                read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
+                                    convert_from_h5_model(obj=hypothesis_template, hypothesis=True), logger=logger)))
+
+        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels,  None)
+
+        if pse_flag:
+            #--------------Parameter Search Exploration (PSE)-------------------------------
+
+            logger.info("\n\nRunning PSE LSA...")
+            pse_results = pse_from_lsa_hypothesis(lsa_hypothesis,
+                                              head.connectivity.normalized_weights,
+                                              head.connectivity.region_labels,
+                                              n_samples, half_range=0.1,
+                                              global_coupling=[{"indices": all_regions_indices}],
+                                              healthy_regions_parameters=[{"name": "x0_values", "indices": healthy_indices}],
+                                              model_configuration_service=model_configuration_service,
+                                              lsa_service=lsa_service, logger=logger)[0]
+
+            lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, pse_results)
+            # , show_flag=True, save_flag=False
+
+            convert_to_h5_model(pse_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")
+            if test_write_read:
+                logger.info("Written and read sensitivity analysis parameter search results are identical?: " +
+                            str(assert_equal_objects(pse_results,
+                                      read_h5_model(os.path.join(FOLDER_RES,
+                                               lsa_hypothesis.name + "_PSE_LSA_results.h5")).convert_from_h5_model(),
+                                                     logger=logger)))
+
+        if sa_pse_flag:
+            # --------------Sensitivity Analysis Parameter Search Exploration (PSE)-------------------------------
+
+            logger.info("\n\nrunning sensitivity analysis PSE LSA...")
+            sa_results, pse_sa_results = \
+                sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis,
+                                                         head.connectivity.normalized_weights,
+                                                         head.connectivity.region_labels,
+                                                         n_samples, method="sobol", half_range=0.1,
+                                         global_coupling=[{"indices": all_regions_indices,
+                                                     "bounds":[0.0, 2 * model_configuration_service.K_unscaled[ 0]]}],
+                                         healthy_regions_parameters=[{"name": "x0_values", "indices": healthy_indices}],
+                                         model_configuration_service=model_configuration_service,
+                                         lsa_service=lsa_service, logger=logger)
+
+            lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, pse_sa_results,
+                                 title="SA PSE Hypothesis Overview")
+            # , show_flag=True, save_flag=False
+
+            convert_to_h5_model(pse_sa_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")
+            convert_to_h5_model(sa_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_SA_LSA_results.h5")
+            if test_write_read:
+                logger.info("Written and read sensitivity analysis results are identical?: " +
+                            str(assert_equal_objects(sa_results,
+                                      read_h5_model(os.path.join(FOLDER_RES,
+                                                  lsa_hypothesis.name + "_SA_LSA_results.h5")).convert_from_h5_model(),
+                                                     logger=logger)))
+                logger.info("Written and read sensitivity analysis parameter search results are identical?: " +
+                            str(assert_equal_objects(pse_sa_results,
+                                    read_h5_model(os.path.join(FOLDER_RES,
+                                            lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).convert_from_h5_model(),
+                                                     logger=logger)))
+
+        if sim_flag:
+            # ------------------------------Simulation--------------------------------------
+            logger.info("\n\nConfiguring simulation...")
+            sim = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt,
+                                                            sim_length, monitor_period, model_name,
+                                                            zmode=np.array(zmode), pmode=np.array(pmode),
+                                                            noise_instance=None, noise_intensity=None,
+                                                            monitor_expressions=None)
+
+            # Integrator and initial conditions initialization.
+            # By default initial condition is set right on the equilibrium point.
+            sim.config_simulation(initial_conditions=None)
+
+            convert_to_h5_model(sim.model).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5")
+
+            logger.info("\n\nSimulating...")
+            ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
+
+            convert_to_h5_model(sim.simulation_settings).write_to_h5(FOLDER_RES,
+                                                                     lsa_hypothesis.name + "_sim_settings.h5")
+
+            if test_write_read:
+                logger.info("Written and read simulation settings are identical?: " +
+                            str(assert_equal_objects(sim.simulation_settings,
+                                                     read_h5_model(os.path.join(FOLDER_RES,
+                                                                            lsa_hypothesis.name + "_sim_settings.h5")).
+                                                     convert_from_h5_model(obj=deepcopy(sim.simulation_settings)),
+                                                     logger=logger)))
+
+            if not status:
+                warning("\nSimulation failed!")
+
+            else:
+
+                time = np.array(ttavg, dtype='float32')
+
+                output_sampling_time = np.mean(np.diff(time))
+                tavg_data = tavg_data[:, :, :, 0]
+
+                logger.info("\n\nSimulated signal return shape: %s", tavg_data.shape)
+                logger.info("Time: %s - %s", time[0], time[-1])
+                logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
+
+                # Variables of interest in a dictionary:
+                vois_ts_dict = prepare_vois_ts_dict(VOIS[model_name], tavg_data)
+                vois_ts_dict['time'] = time
+                vois_ts_dict['time_units'] = 'msec'
+
+                vois_ts_dict=compute_seeg_and_write_ts_h5_file(FOLDER_RES, lsa_hypothesis.name + "_ts.h5", sim.model,
+                                                                vois_ts_dict, output_sampling_time, time_length,
+                                                                hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
+                                                                sensor_dicts_list=[head.sensorsSEEG])
+
+                # Plot results
+                plot_sim_results(sim.model, lsa_hypothesis.propagation_indices, lsa_hypothesis.name, head, vois_ts_dict,
+                                 head.sensorsSEEG.keys(), hpf_flag=True, trajectories_plot=trajectories_plot,
+                                 spectral_raster_plot=spectral_raster_plot, log_scale=True)
+
+                # Optionally save results in mat files
+                # from scipy.io import savemat
+                # savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), vois_ts_dict)
 
 
 
