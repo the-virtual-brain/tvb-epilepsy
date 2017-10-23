@@ -675,7 +675,7 @@ def plot_fit_results(hyp_name, head, res, data, active_regions, time=None, seizu
 # def plot_head_stats(conn, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
 #                     figure_name='HeadStats '):
 #     pyplot.figure("Head stats " + str(conn.number_of_regions), figsize=LARGE_SIZE)
-#     ax = plot_vector(calculate_in_degree(conn.normalized_weights), conn.region_labels, 121, "w in-degree")
+#     ax = plot_vector(compute_in_degree(conn.normalized_weights), conn.region_labels, 121, "w in-degree")
 #     ax.invert_yaxis()
 #     if conn.areas is not None:
 #         ax = plot_vector(conn.areas, conn.region_labels, 122, "region areas")
