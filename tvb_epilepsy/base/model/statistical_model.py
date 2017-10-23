@@ -135,7 +135,7 @@ class StatisticalModel(object):
                 if isinstance(p, Parameter):
                     self.parameters.update({p.name: p})
                 else:
-                    raise_value_error("Not valid Parameter object detected!")
+                    raise_value_error("Not valid Parameter object detected!:\n" + str(p))
         except:
             raise_value_error("Failed to set StatisticalModel parameters=\n" + str(parameters))
         self.n_parameters = len(self.parameters)
