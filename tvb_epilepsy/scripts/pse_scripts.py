@@ -1,4 +1,3 @@
-
 import numpy as np
 
 from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE
@@ -6,8 +5,8 @@ from tvb_epilepsy.base.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils import initialize_logger, linear_index_to_coordinate_tuples, \
     dicts_of_lists_to_lists_of_dicts, list_of_dicts_to_dicts_of_ndarrays
 from tvb_epilepsy.service.sampling_service import StochasticSamplingService
-from tvb_epilepsy.service.pse_service import PSEService
 from tvb_epilepsy.scripts.hypothesis_scripts import start_lsa_run
+
 
 ###
 # These functions are helper functions to run parameter search exploration (pse) for Linear Stability Analysis (LSA).
@@ -17,7 +16,6 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
                             healthy_regions_parameters=[],
                             model_configuration_service=None, lsa_service=None,
                             save_services=False, logger=None, **kwargs):
-
     if logger is None:
         logger = initialize_logger(__name__)
 
@@ -75,7 +73,7 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
 
     kloc = model_configuration_service.K_unscaled[0]
     for val in global_coupling:
-        pse_params["path"].append("model.configuration.service.K_unscaled")
+        pse_params["path"].append("model_configuration_service.K_unscaled")
         inds = val.get("indices", all_regions_indices)
         if np.all(inds == all_regions_indices):
             pse_params["name"].append("Global coupling")
@@ -123,7 +121,6 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
 
 def pse_from_hypothesis(hypothesis, connectivity_matrix, region_labels, n_samples, half_range=0.1, global_coupling=[],
                         healthy_regions_parameters=[], save_services=False, logger=None, **kwargs):
-
     if logger is None:
         logger = initialize_logger(__name__)
 

@@ -106,11 +106,11 @@ def update_hypothesis(hypothesis_input, connectivity_matrix, params_paths, param
 
 def lsa_out_fun(hypothesis, model_configuration=None, **kwargs):
     if isinstance(model_configuration, ModelConfiguration):
-        return {"propagation_strengths": hypothesis.propagation_strenghts, "x0_values": model_configuration.x0_values,
+        return {"propagation_strengths": hypothesis.propagation_strengths, "x0_values": model_configuration.x0_values,
                 "e_values": model_configuration.e_values, "x1EQ": model_configuration.x1EQ,
                 "zEQ": model_configuration.zEQ, "Ceq": model_configuration.Ceq}
     else:
-        hypothesis.propagation_strenghts
+        hypothesis.propagation_strengths
 
 
 def lsa_run_fun(hypothesis_input, connectivity_matrix, params_paths, params_values, params_indices, out_fun=lsa_out_fun,
