@@ -5,10 +5,10 @@ Service to do LSA computation.
 import numpy
 
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM, \
-                                        FIG_FORMAT,  SAVE_FLAG, SHOW_FLAG
+    FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.utils import warning, raise_value_error, initialize_logger, formal_repr, \
-                                    weighted_vector_sum,curve_elbow_point
+    weighted_vector_sum, curve_elbow_point
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
@@ -17,19 +17,19 @@ from tvb_epilepsy.base.plot_utils import plot_in_columns
 
 logger = initialize_logger(__name__)
 
+
 # TODO: it might be useful to store eigenvalues and eigenvectors, as well as the parameters of the computation, such as
 # eigen_vectors_number and LSAService in a h5 file
 
 
 class LSAService(object):
-
     def __init__(self, eigen_vectors_number_selection=EIGENVECTORS_NUMBER_SELECTION, eigen_vectors_number=None,
                  weighted_eigenvector_sum=WEIGHTED_EIGENVECTOR_SUM, normalize_propagation_strength=False):
         self.eigen_vectors_number_selection = eigen_vectors_number_selection
         self.eigen_values = []
         self.eigen_vectors = []
         self.eigen_vectors_number = eigen_vectors_number
-        self.weighted_eigenvector_sum=weighted_eigenvector_sum
+        self.weighted_eigenvector_sum = weighted_eigenvector_sum
         self.normalize_propagation_strength = normalize_propagation_strength
 
     def __repr__(self):
@@ -75,7 +75,7 @@ class LSAService(object):
 
             else:
                 raise_value_error("\n" + self.eigen_vectors_number_selection +
-                                 "is not a valid option when for automatic computation of self.eigen_vectors_number")
+                                  "is not a valid option when for automatic computation of self.eigen_vectors_number")
         else:
             self.eigen_vectors_number_selection = "user_defined"
 
@@ -88,15 +88,15 @@ class LSAService(object):
         if temp.any():
             correction_value = X1_EQ_CR_DEF - 10 ** (-3)
             warning("Equibria x1EQ[" + str(numpy.where(temp)[0]) + "]  = " + str(model_configuration.x1EQ[temp]) +
-            "\nwere corrected for LSA to value: X1_EQ_CR_DEF - 10 ** (-3) = " + str(correction_value)
+                    "\nwere corrected for LSA to value: X1_EQ_CR_DEF - 10 ** (-3) = " + str(correction_value)
                     + " to be sub-critical!")
             model_configuration.x1EQ[temp] = correction_value
             i_temp = numpy.ones(model_configuration.x1EQ.shape)
-            zEQ[temp] = calc_eq_z(model_configuration.x1EQ[temp], model_configuration.yc*i_temp[temp],
-                                  model_configuration.Iext1*i_temp[temp], "2d", 0.0,
-                                  model_configuration.slope*i_temp[temp],
-                                  model_configuration.a*i_temp[temp], model_configuration.b*i_temp[temp],
-                                  model_configuration.d*i_temp[temp])
+            zEQ[temp] = calc_eq_z(model_configuration.x1EQ[temp], model_configuration.yc * i_temp[temp],
+                                  model_configuration.Iext1 * i_temp[temp], "2d", 0.0,
+                                  model_configuration.slope * i_temp[temp],
+                                  model_configuration.a * i_temp[temp], model_configuration.b * i_temp[temp],
+                                  model_configuration.d * i_temp[temp])
 
         fz_jacobian = calc_fz_jac_square_taylor(model_configuration.zEQ, model_configuration.yc,
                                                 model_configuration.Iext1, model_configuration.K,
@@ -131,7 +131,8 @@ class LSAService(object):
             # Calculate the propagation strength index by summing the first n eigenvectors (minimum 1)
             if self.weighted_eigenvector_sum:
                 lsa_propagation_strength = numpy.abs(weighted_vector_sum(self.eigen_values[:sorted_indices],
-                                                           self.eigen_vectors[:, :sorted_indices], normalize=True))
+                                                                         self.eigen_vectors[:, :sorted_indices],
+                                                                         normalize=True))
             else:
                 lsa_propagation_strength = numpy.abs(numpy.sum(self.eigen_vectors[:, :sorted_indices], axis=1))
 
@@ -191,3 +192,9 @@ class LSAService(object):
                                figure_dir=figure_dir,
                                figure_format=figure_format,
                                show_flag=show_flag, save_flag=save_flag)
+
+    def update_for_pse(self, values, paths, indices):
+        for i, val in enumerate(paths):
+            vals = val.split(".")
+            if vals[0] == "lsa_service":
+                getattr(self, vals[1])[indices[i]] = values[i]

@@ -6,24 +6,25 @@ import numpy
 from matplotlib import pyplot
 
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, I_EXT2_DEF, A_DEF, \
-                                        B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, X1_DEF, X0_CR_DEF, FIG_SIZE, \
-                                        SAVE_FLAG, SHOW_FLAG, FIG_FORMAT, MOUSEHOOVER
+    B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, X1_DEF, X0_CR_DEF, FIG_SIZE, \
+    SAVE_FLAG, SHOW_FLAG, FIG_FORMAT, MOUSEHOOVER
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.utils import warning, initialize_logger, formal_repr, ensure_list
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r, calc_coupling, calc_x0, calc_fx1, \
-                                                              calc_fx1_2d_taylor, calc_fz, calc_x0_val__to_model_x0, \
-                                                              calc_model_x0_to_x0_val
+    calc_fx1_2d_taylor, calc_fz, calc_x0_val__to_model_x0, \
+    calc_model_x0_to_x0_val
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z, eq_x1_hypo_x0_linTaylor, \
-                                                                  eq_x1_hypo_x0_optimize, def_x1lin, calc_eq_y1
+    eq_x1_hypo_x0_optimize, def_x1lin, calc_eq_y1
 from tvb_epilepsy.base.plot_utils import save_figure, check_show
 
 try:
-    #https://github.com/joferkington/mpldatacursor
-    #pip install mpldatacursor
-    #Not working with the MacosX graphic's backend
-    from mpldatacursor import HighlightingDataCursor #datacursor
+    # https://github.com/joferkington/mpldatacursor
+    # pip install mpldatacursor
+    # Not working with the MacosX graphic's backend
+    from mpldatacursor import HighlightingDataCursor  # datacursor
+
     MOUSEHOOVER = True
 except:
     warning("\nNo mpldatacursor module found! MOUSEHOOVER will not be available.")
@@ -207,7 +208,7 @@ class ModelConfigurationService(object):
         # ...and some  excitability-diseased ones:
         x0_values[disease_hypothesis.x0_indices] = disease_hypothesis.x0_values
         # x0_values values must have size of len(x0_indices):
-        x0_values = numpy.delete(x0_values ,disease_hypothesis.e_indices)
+        x0_values = numpy.delete(x0_values, disease_hypothesis.e_indices)
 
         # There might be some epileptogenicity-diseased regions as well:
         # Initialize with the default e_values
@@ -255,7 +256,7 @@ class ModelConfigurationService(object):
 
         # z nullcine
         zX1 = calc_fx1(x1, z=0, y1=y1, Iext1=Iext1, slope=slope, a=a, b=b, d=d, tau1=1.0, x1_neg=None, model=model,
-                          x2=0.0,)  # yc + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
+                       x2=0.0, )  # yc + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
 
         # approximations:
         # linear:
@@ -278,7 +279,7 @@ class ModelConfigurationService(object):
         x0ne = calc_x0_val__to_model_x0(X0_DEF, yc, Iext1, a=a, b=b, d=d, zmode=zmode)
         # z nullcline:
         zZe = calc_fz(x1, z=0.0, x0=x0e, tau1=1.0, tau0=1.0, zmode=zmode)  # for epileptogenic regions
-        zZne = calc_fz(x1, z=0.0, x0=x0ne, tau1=1.0, tau0=1.0,zmode=zmode)  # for non-epileptogenic regions
+        zZne = calc_fz(x1, z=0.0, x0=x0ne, tau1=1.0, tau0=1.0, zmode=zmode)  # for non-epileptogenic regions
 
         fig = pyplot.figure(figure_name, figsize=FIG_SIZE)
         x1null, = pyplot.plot(x1, zX1, 'b-', label='x1 nullcline', linewidth=1)
@@ -330,3 +331,9 @@ class ModelConfigurationService(object):
 
         save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
         check_show(show_flag)
+
+    def update_for_pse(self, values, paths, indices):
+        for i, val in enumerate(paths):
+            vals = val.split(".")
+            if vals[0] == "model_configuration_service":
+                getattr(self, vals[1])[indices[i]] = values[i]

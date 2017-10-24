@@ -9,7 +9,6 @@ from tvb_epilepsy.base.utils import initialize_logger, formal_repr, ensure_list,
 
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
-
 # NOTES:
 #  For the moment a hypothesis concerns the excitability and/or epileptogenicity of each brain region,
 #  and/or scalings of specific connectivity weights.
@@ -114,7 +113,7 @@ class DiseaseHypothesis(object):
                 plot_types = ["vector", "regions2regions"]
 
             plot_dict_list = dicts_of_lists_to_lists_of_dicts({"name": names, "data": data, "focus_indices": indices,
-                                                                "plot_type": plot_types})
+                                                               "plot_type": plot_types})
 
         return plot_dict_list
 
@@ -132,7 +131,7 @@ class DiseaseHypothesis(object):
                 values += value * n
             else:
                 raise_value_error("Length of disease indices " + str(len(key)) + " and values " + str(len(value)) +
-                                 " do not match!")
+                                  " do not match!")
         arg_sort = np.argsort(indices)
         return np.array(indices)[arg_sort].tolist(), np.array(values)[arg_sort]
 
@@ -193,3 +192,9 @@ class DiseaseHypothesis(object):
 
     def get_x0_values_for_all_regions(self):
         return self.get_regions_disease()[self.x0_indices]
+
+    def update_for_pse(self, values, paths, indices):
+        for i, val in enumerate(paths):
+            vals = val.split(".")
+            if vals[0] == "hypothesis":
+                getattr(self, vals[1])[indices[i]] = values[i]
