@@ -17,12 +17,11 @@ from collections import OrderedDict
 import numpy as np
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from itertools import product
 
 from tvb_epilepsy.base.constants import LARGE_SIZE, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
-from tvb_epilepsy.base.utils import raise_value_error, reg_dict, formal_repr, normalize_weights, calculate_in_degree, \
-                                    sort_dict, ensure_list, curve_elbow_point
+from tvb_epilepsy.base.utils import raise_value_error, reg_dict, formal_repr, normalize_weights, compute_in_degree, \
+                                    sort_dict, ensure_list, curve_elbow_point, compute_projection
 from tvb_epilepsy.base.plot_utils import plot_vector, plot_regions2regions, save_figure, check_show
 
 
@@ -206,7 +205,7 @@ class Connectivity(object):
                    figsize=VERY_LARGE_SIZE, figure_name='HeadStats '):
         pyplot.figure("Head stats " + str(self.number_of_regions), figsize=figsize)
         areas_flag = len(self.areas) == len(self.region_labels)
-        ax = plot_vector(calculate_in_degree(self.normalized_weights), self.region_labels, 111+10*areas_flag,
+        ax = plot_vector(compute_in_degree(self.normalized_weights), self.region_labels, 111 + 10 * areas_flag,
                          "w in-degree")
         ax.invert_yaxis()
         if len(self.areas) == len(self.region_labels):
@@ -290,18 +289,7 @@ class Sensors(object):
             return indexes
 
     def calculate_projection(self, connectivity):
-        n_sensors = self.number_of_sensors
-        n_regions = connectivity.number_of_regions
-        projection = np.zeros((n_sensors, n_regions))
-        dist = np.zeros((n_sensors, n_regions))
-
-        for iS, iR in product(range(n_sensors), range(n_regions)):
-            dist[iS, iR] = np.abs(np.sum((self.locations[iS, :] - connectivity.centers[iR, :]) ** 2))
-            projection[iS, iR] = 1 / dist[iS, iR]
-
-        projection /= np.percentile(projection, 95)
-        #projection[projection > 1.0] = 1.0
-        return projection
+        return compute_projection(self.locations, connectivity.centers, normalize=95, ceil=False)
 
     def plot(self, projection, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1,
              x_ticks=np.array([]), y_ticks=np.array([]), show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,

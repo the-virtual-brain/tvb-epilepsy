@@ -10,6 +10,7 @@ from datetime import datetime
 import h5py
 import numpy as np
 from matplotlib import use
+from itertools import product
 
 from tvb_epilepsy.base.constants import WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
 from tvb_epilepsy.base.configurations import FOLDER_LOGS
@@ -416,8 +417,23 @@ def normalize_weights(weights, percentile=WEIGHTS_NORM_PERCENT):  # , max_w=1.0
         return np.array([])
 
 
-def calculate_in_degree(weights):
+def compute_in_degree(weights):
     return np.expand_dims(np.sum(weights, axis=1), 1).T
+
+
+def compute_projection(locations1, locations2, normalize=95, ceil=False):
+    n1 = locations1.shape[0]
+    n2 = locations2.shape[0]
+    projection = np.zeros((n1, n2))
+    dist = np.zeros((n1, n2))
+    for i1, i2 in product(range(n1), range(n2)):
+        dist[i1, i2] = np.abs(np.sum((locations1[i1, :] - locations2[i2, :]) ** 2))
+        projection[i1, i2] = 1 / dist[i1, i2]
+    if normalize:
+        projection /= np.percentile(projection, normalize)
+    if ceil:
+        projection[projection > ceil] = ceil
+    return projection
 
 
 def curve_elbow_point(vals):
