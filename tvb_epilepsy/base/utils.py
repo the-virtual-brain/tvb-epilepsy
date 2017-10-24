@@ -99,6 +99,17 @@ def dict_str(d):
     return s
 
 
+def isequal_string(a, b, case_sensitive=False):
+    if case_sensitive:
+        return a == b
+    else:
+        try:
+            return a.lower() == b.lower()
+        except AttributeError:
+            warning("Case sensitive comparison!")
+            return a == b
+
+
 def formal_repr(instance, attr_dict):
     """ A formal string representation for an object.
     :param attr_dict: dictionary attribute_name: attribute_value
@@ -435,8 +446,19 @@ def compute_projection(locations1, locations2, normalize=95, ceil=False):
         projection[projection > ceil] = ceil
     return projection
 
+def get_greater_values_array_inds(values, n_vals=1):
+    return np.argsort(values)[::-1][:n_vals]
 
-def curve_elbow_point(vals):
+def select_greater_values_array_inds(values, threshold=None, verbose=False):
+    if isinstance(threshold, np.float):
+        return np.where(values > threshold)[0]
+    else:
+        if verbose:
+            warning("Switching to curve elbow point method since threshold=" + str(threshold))
+        elbow_point = curve_elbow_point(values)
+        return get_greater_values_array_inds(values, elbow_point + 1)
+
+def curve_elbow_point(vals, interactive=INTERACTIVE_ELBOW_POINT):
 
     logger = initialize_logger(__name__)
 
@@ -452,7 +474,7 @@ def curve_elbow_point(vals):
 
     elbow = np.argmax(grad)
 
-    if INTERACTIVE_ELBOW_POINT:
+    if interactive:
 
         pyplot.ion()
 
