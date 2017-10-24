@@ -115,12 +115,17 @@ class Parameter(object):
 
 class StatisticalModel(object):
 
-    def __init__(self, name, type, parameters, n_regions=0, n_active_regions=0, n_signals=0, n_times=0,
+    def __init__(self, name, type, parameters, n_regions=0, active_regions=[], n_signals=0, n_times=0,
                  euler_method="backward", observation_model="logpower", observation_expression="x1z_offset"):
 
         self.n_regions = n_regions
-        self.n_active_regions = n_active_regions
-        self.n_nonactive_regions = self.n_regions - self.n_active_regions
+        if np.all(np.in1d(active_regions, range(self.n_regions))):
+            self.active_regions = np.unique(active_regions).tolist()
+            self.n_active_regions = len(active_regions)
+            self.n_nonactive_regions = self.n_regions - self.n_active_regions
+        else:
+            raise_value_error("Active regions indices:\n" + str(active_regions) +
+                              "\nbeyond number of regions (" + str(self.n_regions) + ")!")
         self.n_signals = n_signals
         self.n_times = n_times
 
@@ -166,19 +171,29 @@ class StatisticalModel(object):
                               " is not one of the valid ones: "
                               + str(OBSERVATION_MODELS) + "!")
 
+    def update_active_regions(self, active_regions):
+        if np.all(np.in1d(active_regions, range(self.n_regions))):
+            self.active_regions = np.unique(ensure_list(active_regions) + self.active_regions).tolist()
+            self.n_active_regions = len(active_regions)
+            self.n_nonactive_regions = self.n_regions - self.n_active_regions
+        else:
+            raise_value_error("Active regions indices:\n" + str(active_regions) +
+                              "\nbeyond number of regions (" + str(self.n_regions) + ")!")
+
     def __repr__(self):
         d = {"1. name": self.name,
              "2. type": self.type,
              "3. number of regions": self.n_regions,
-             "4. number of active regions": self.n_active_regions,
-             "5. number of nonactive regions": self.n_nonactive_regions,
-             "6. number of observation signals": self.n_signals,
-             "7. number of time points": self.n_times,
-             "8. euler_method": self.euler_method,
-             "9. observation_expression": self.observation_expression,
-             "10. observation_model": self.observation_model,
-             "11. number of parameters": self.n_parameters,
-             "12. parameters": [p.__str__ for p in self.parameters.items()]}
+             "4. active regions": self.active_regions,
+             "5. number of active regions": self.n_active_regions,
+             "6. number of nonactive regions": self.n_nonactive_regions,
+             "7. number of observation signals": self.n_signals,
+             "8. number of time points": self.n_times,
+             "9. euler_method": self.euler_method,
+             "10. observation_expression": self.observation_expression,
+             "11. observation_model": self.observation_model,
+             "12. number of parameters": self.n_parameters,
+             "13. parameters": [p.__str__ for p in self.parameters.items()]}
         return formal_repr(self, sort_dict(d))
 
     def __str__(self):
