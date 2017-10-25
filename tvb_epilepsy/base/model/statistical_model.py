@@ -113,10 +113,21 @@ class Parameter(object):
         h5_model.write_to_h5(folder, filename)
 
 
+# Observation models:
+# seeg_power
+# seeg_logpower
+# lfp_power
+# lfp_logpower
+
+# Observation expressions:
+# x1z_offset
+# x1_offset
+# x1
+
 class StatisticalModel(object):
 
     def __init__(self, name, type, parameters, n_regions=0, active_regions=[], n_signals=0, n_times=0,
-                 euler_method="backward", observation_model="logpower", observation_expression="x1z_offset"):
+                 euler_method="backward", observation_model="seeg_logpower", observation_expression="x1z_offset"):
 
         self.n_regions = n_regions
         if np.all(np.in1d(active_regions, range(self.n_regions))):
