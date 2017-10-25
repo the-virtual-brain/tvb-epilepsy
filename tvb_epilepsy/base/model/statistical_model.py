@@ -8,7 +8,7 @@ from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 class Parameter(object):
 
-    def __init__(self, name, low=None, high=None, loc=None, scale=None, shape=(1,), distribution="uniform"):
+    def __init__(self, name, low=None, high=None, loc=None, scale=None, shape=(1,), pdf="uniform"):
 
         # TODO: better controls for the inputs given!
 
@@ -23,11 +23,11 @@ class Parameter(object):
             raise_value_error("Parameter's " + str(self.name) + " shape="
                               + str(shape) + " is not a shape tuple!")
 
-        if isinstance(distribution, basestring):
-            self.distribution = distribution
+        if isinstance(pdf, basestring):
+            self.pdf = pdf
         else:
-            raise_value_error("Parameter's " + str(self.name) + " distribution="
-                              + str(distribution) + " is not a string!")
+            raise_value_error("Parameter's " + str(self.name) + " pdf="
+                              + str(pdf) + " is not a string!")
 
         if low is None:
             warning("Lowest value for parameter + " + self.name + " is -inf!")
@@ -94,7 +94,7 @@ class Parameter(object):
              "3. high": self.high,
              "4. location": self.loc,
              "5. scale": self.scale,
-             "6. distribution": self.distribution,
+             "6. pdf": self.pdf,
              "7. shape": self.shape}
         return formal_repr(self, sort_dict(d))
 

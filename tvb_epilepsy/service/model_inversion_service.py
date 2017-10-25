@@ -46,108 +46,38 @@ class ModelInversionService(object):
                     "\nSetting default values for time scales and dynamic noise intensity parameters!")
         logger.info("Model Inversion Service instance created!")
 
-    def configure_statistical_model_for_vep_autoregress(self, statistical_model_name, euler_method="backward",
-                                                        observation_model="logpower",
-                                                        observation_expression="x1z_offset",
-                                                        active_regions=[],  n_signals=0, n_times=0,
-                                                        logger=LOG, **kwargs):
-        logger.info("Setting time scale and dynamic noise intensity default parameters...")
+    def get_default_tau0(self):
         if isinstance(self.dynamical_model, AVAILABLE_DYNAMICAL_MODELS):
-            noise_intensity = kwargs.get("noise_intensity", model_noise_intensity_dict[self.dynamical_model._ui_name])
-            sig_def = np.mean(noise_intensity)
             if isinstance(self.dynamic_model, (Epileptor, EpileptorModel)):
-                tau1_def = kwargs.get("tau1", np.mean(1.0 / self.dynamical_model.r))
-                tau0_def = kwargs.get("tau0", np.mean(self.dynamical_model.tt))
-
+                return np.mean(self.dynamical_model.tt)
             elif isinstance(self.dynamic_model, (EpileptorDP, EpileptorDP2D, EpileptorDPrealistic)):
-                tau1_def = kwargs.get("tau1", np.mean(self.dynamical_model.tau1))
-                self.time_scales.update("tau0", kwargs.get("tau0", np.mean(self.dynamical_model.tau0)))
-
+                return np.mean(self.dynamical_model.tau0)
         else:
-            tau1_def = kwargs.get("tau1", 0.5)
-            tau0_def = kwargs.get("tau0", 30)
-            sig_def = kwargs.get("noise_intensity", 10 ** -4)
-        sig_eq_def = kwargs.get("sig_eq", (X1_EQ_CR_DEF - X1_DEF) / 3.0)
-        sig_init_def = kwargs.get("sig_init", 0.1)
+            return 30.0
 
-        parameters = []
+    def get_default_tau1(self):
+        if isinstance(self.dynamical_model, AVAILABLE_DYNAMICAL_MODELS):
+            if isinstance(self.dynamic_model, (Epileptor, EpileptorModel)):
+                return np.mean(1.0 / self.dynamical_model.r)
+            elif isinstance(self.dynamic_model, (EpileptorDP, EpileptorDP2D, EpileptorDPrealistic)):
+                return np.mean(self.dynamical_model.tau1)
+        else:
+            return 0.5
 
-        # Generative model:
-        # Epileptor:
-        parameters.append(Parameter("x1eq", low=kwargs.get("x1eq_lo", X1_DEF),
-                                            high=kwargs.get("x1eq_hi", X1_EQ_CR_DEF),
-                                            loc=kwargs.get("x1eq_loc", self.model_config.x1EQ),
-                                            scale="parameter sig_eq",
-                                            shape=(self.self.hypothesis.number_of_regions,),
-                                            distribution="normal"))
-        parameters.append(Parameter("K", low=kwargs.get("K_lo", self.model_config.K / 10),
-                                         high=kwargs.get("K_hi", 10*self.model_config.K),
-                                         loc=kwargs.get("K_loc", self.model_config.K),
-                                         scale=kwargs.get("K_sc", self.model_config.K),
-                                         shape=(1,),
-                                         distribution="gamma"))
-        parameters.append(Parameter("tau1", low=kwargs.get("tau1_lo", 0.1),
-                                            high=kwargs.get("tau1_hi", 0.9),
-                                            loc=kwargs.get("tau1_loc", tau1_def),
-                                            scale=None,
-                                            shape=(1,),
-                                            distribution="uniform"))
-        parameters.append(Parameter("tau0", low=kwargs.get("tau0_lo", 3.0),
-                                            high=kwargs.get("tau0_hi", 30000.0),
-                                            loc=kwargs.get("tau0_loc", tau0_def),
-                                            scale=kwargs.get("tau0_sc", tau0_def),
-                                            shape=(1,),
-                                            distribution="gamma"))
-        # Coupling:
-        parameters.append(Parameter("EC", low=kwargs.get("ec_lo", 10 ** -6),
-                                          high=kwargs.get("ec_hi", 100.0),
-                                          loc=kwargs.get("ec_loc", self.model_config.connectivity_matrix),
-                                          scale=kwargs.get("ec_sc", 1.0),
-                                          shape=self.model_config.connectivity_matrix.shape,
-                                          distribution="gamma"))
-        # Integration:
-        parameters.append(Parameter("sig", low=kwargs.get("sig_lo", sig_def / 10.0),
-                                           high=kwargs.get("sig_hi", 10*sig_def),
-                                           loc=kwargs.get("sig_loc", sig_def),
-                                           scale=kwargs.get("sig_sc", sig_def),
-                                           shape=(1,),
-                                           distribution="gamma"))
-        parameters.append(Parameter("sig_eq", low=kwargs.get("sig_eq_lo", sig_eq_def / 10.0),
-                                    high=kwargs.get("sig_eq_hi", 3 * sig_eq_def),
-                                    loc=kwargs.get("sig_eq_loc", sig_eq_def),
-                                    scale=kwargs.get("sig_eq_sc", sig_eq_def),
-                                    shape=(1,),
-                                    distribution="gamma"))
-        parameters.append(Parameter("sig_init", low=kwargs.get("sig_init_lo", sig_init_def / 10.0),
-                                    high=kwargs.get("sig_init_hi", 3 * sig_init_def),
-                                    loc=kwargs.get("sig_init_loc", sig_init_def),
-                                    scale=kwargs.get("sig_init_sc", sig_init_def),
-                                    shape=(1,),
-                                    distribution="gamma"))
+    def get_default_sig(self):
+        if isinstance(self.dynamical_model, AVAILABLE_DYNAMICAL_MODELS):
+            if self.dynamic_model.nvars == 2:
+                return model_noise_intensity_dict[self.dynamical_model._ui_name][1]
+            else:
+                return model_noise_intensity_dict[self.dynamical_model._ui_name][2]
+        else:
+            return 10 ** -4
 
-        # Observation model
-        parameters.append(Parameter("eps", low=kwargs.get("eps_lo", 0.0),
-                                    high=kwargs.get("eps_hi", 1.0),
-                                    loc=kwargs.get("eps_loc", 0.1),
-                                    scale=kwargs.get("eps_sc", 0.1),
-                                    shape=(1,),
-                                    distribution="gamma"))
-        parameters.append(Parameter("scale_signal", low=kwargs.get("scale_signal_lo", 0.1),
-                                    high=kwargs.get("scale_signal_hi", 2.0),
-                                    loc=kwargs.get("scale_signal_loc", 1.0),
-                                    scale=kwargs.get("scale_signal", 1.0),
-                                    shape=(1,),
-                                    distribution="gamma"))
-        parameters.append(Parameter("offset_signal", low=kwargs.get("offset_signal_lo", 0.0),
-                                    high=kwargs.get("offset_signal_hi", 1.0),
-                                    loc=kwargs.get("offset_signal_loc", 0.0),
-                                    scale=kwargs.get("offset_signal", 0.1),
-                                    shape=(1,),
-                                    distribution="gamma"))
+    def get_default_sig_eq(self, x1eq_def=X1_DEF, x1eq_cr=X1_EQ_CR_DEF):
+        return (x1eq_cr - x1eq_def) / 3.0
 
-        return StatisticalModel(statistical_model_name, "vep_autoregress", parameters,
-                                self.hypothesis.number_of_regions, active_regions, n_signals, n_times, euler_method,
-                                observation_model, observation_expression)
+    def get_default_sig_init(self):
+        return 0.1
 
     def get_projection(self, raise_error=False):
         projection = None
@@ -179,27 +109,104 @@ class ModelInversionService(object):
         else:
             return sensor_labels
 
-    def update_active_regions(self, statistical_model, methods=["e_values", "LSA"], logger=LOG, **kwargs):
-        n_methods = len(methods)
-        active_regions_th = kwargs.get("active_regions_th", [None])
-        n_thresholds = len(active_regions_th)
-        if n_thresholds != n_methods:
-            if n_thresholds ==1 and n_methods > 1:
-                active_regions_th = np.repeat(active_regions_th, n_methods).tolist()
-            else:
-                raise_value_error("Number of input methods:\n" + str(methods) +
-                                  "and active region thresholds:\n" + str(active_regions_th) +
-                                  "does not match!")
-        for m, th in methods, active_regions_th:
-            if isequal_string(m, "e_values"):
-                self.update_active_regions_e_values(statistical_model, th, logger=logger)
-            elif isequal_string(m, "x0_values"):
-                self.update_active_regions_x0_values(statistical_model, th, logger=logger)
-            elif isequal_string(m, "lsa"):
-                self.update_active_regions_lsa(statistical_model, th, logger=logger)
-            elif isequal_string(m, "seeg"):
-                self.update_active_regions_seeg(statistical_model, th, projection=kwargs.get("projection"),
-                                                seeg_inds=kwargs.get("seeg_inds"), logger=LOG)
+    def configure_statistical_model_for_vep_autoregress(self, statistical_model_name, euler_method="backward",
+                                                        observation_model="logpower",
+                                                        observation_expression="x1z_offset",
+                                                        active_regions=[],  n_signals=0, n_times=0,
+                                                        logger=LOG, **kwargs):
+        parameters = []
+
+        # Generative model:
+        # Epileptor:
+        parameters.append(Parameter("x1eq",
+                                    low=kwargs.get("x1eq_lo", X1_DEF),
+                                    high=kwargs.get("x1eq_hi", X1_EQ_CR_DEF),
+                                    loc=kwargs.get("x1eq_loc", self.model_config.x1EQ),
+                                    scale="parameter sig_eq",
+                                    shape=(self.self.hypothesis.number_of_regions,),
+                                    pdf="normal"))
+        parameters.append(Parameter("K",
+                                    low=kwargs.get("K_lo", self.model_config.K / 10),
+                                    high=kwargs.get("K_hi", 10*self.model_config.K),
+                                    loc=kwargs.get("K_loc", self.model_config.K),
+                                    scale=kwargs.get("K_sc", self.model_config.K),
+                                    shape=(1,),
+                                    pdf="gamma"))
+        parameters.append(Parameter("tau1",
+                                    low=kwargs.get("tau1_lo", 0.1),
+                                    high=kwargs.get("tau1_hi", 0.9),
+                                    loc=kwargs.get("tau1_loc", self.get_default_tau1()),
+                                    scale=None,
+                                    shape=(1,),
+                                    pdf="uniform"))
+        tau0_def = self.get_default_tau0()
+        parameters.append(Parameter("tau0",
+                                    low=kwargs.get("tau0_lo", 3.0),
+                                    high=kwargs.get("tau0_hi", 30000.0),
+                                    loc=kwargs.get("tau0_loc", tau0_def),
+                                    scale=kwargs.get("tau0_sc", tau0_def),
+                                    shape=(1,),
+                                    pdf="gamma"))
+        # Coupling:
+        parameters.append(Parameter("EC",
+                                    low=kwargs.get("ec_lo", 10 ** -6),
+                                    high=kwargs.get("ec_hi", 100.0),
+                                    loc=kwargs.get("ec_loc", self.model_config.connectivity_matrix),
+                                    scale=kwargs.get("ec_sc", 1.0),
+                                    shape=self.model_config.connectivity_matrix.shape,
+                                    pdf="gamma"))
+        # Integration:
+        sig_def = self.get_default_sig()
+        parameters.append(Parameter("sig",
+                                    low=kwargs.get("sig_lo", sig_def / 10.0),
+                                    high=kwargs.get("sig_hi", 10*sig_def),
+                                    loc=kwargs.get("sig_loc", sig_def),
+                                    scale=kwargs.get("sig_sc", sig_def),
+                                    shape=(1,),
+                                    pdf="gamma"))
+        sig_eq_def = self.get_default_sig_eq()
+        parameters.append(Parameter("sig_eq",
+                                    low=kwargs.get("sig_eq_lo", sig_eq_def / 10.0),
+                                    high=kwargs.get("sig_eq_hi", 3 * sig_eq_def),
+                                    loc=kwargs.get("sig_eq_loc", sig_eq_def),
+                                    scale=kwargs.get("sig_eq_sc", sig_eq_def),
+                                    shape=(1,),
+                                    pdf="gamma"))
+        sig_init_def = self.get_default_sig_init()
+        parameters.append(Parameter("sig_init",
+                                    low=kwargs.get("sig_init_lo", sig_init_def / 10.0),
+                                    high=kwargs.get("sig_init_hi", 3 * sig_init_def),
+                                    loc=kwargs.get("sig_init_loc", sig_init_def),
+                                    scale=kwargs.get("sig_init_sc", sig_init_def),
+                                    shape=(1,),
+                                    pdf="gamma"))
+
+        # Observation model
+        parameters.append(Parameter("eps",
+                                    low=kwargs.get("eps_lo", 0.0),
+                                    high=kwargs.get("eps_hi", 1.0),
+                                    loc=kwargs.get("eps_loc", 0.1),
+                                    scale=kwargs.get("eps_sc", 0.1),
+                                    shape=(1,),
+                                    pdf="gamma"))
+        parameters.append(Parameter("scale_signal",
+                                    low=kwargs.get("scale_signal_lo", 0.1),
+                                    high=kwargs.get("scale_signal_hi", 2.0),
+                                    loc=kwargs.get("scale_signal_loc", 1.0),
+                                    scale=kwargs.get("scale_signal", 1.0),
+                                    shape=(1,),
+                                    pdf="gamma"))
+        parameters.append(Parameter("offset_signal",
+                                    low=kwargs.get("offset_signal_lo", 0.0),
+                                    high=kwargs.get("offset_signal_hi", 1.0),
+                                    loc=kwargs.get("offset_signal_loc", 0.0),
+                                    scale=kwargs.get("offset_signal", 0.1),
+                                    shape=(1,),
+                                    pdf="gamma"))
+
+        return StatisticalModel(statistical_model_name, "vep_autoregress", parameters,
+                                self.hypothesis.number_of_regions, active_regions, n_signals, n_times, euler_method,
+                                observation_model, observation_expression)
 
     def update_active_regions_e_values(self, statistical_model, active_regions_th=0.1, reset=False, logger=LOG):
         if reset:
@@ -234,6 +241,28 @@ class ModelInversionService(object):
             for proj in projection:
                 active_regions += select_greater_values_array_inds(proj, active_regions_th).tolist()
             return statistical_model.update_active_regions(active_regions.tolist())
+
+    def update_active_regions(self, statistical_model, methods=["e_values", "LSA"], logger=LOG, **kwargs):
+        n_methods = len(methods)
+        active_regions_th = kwargs.get("active_regions_th", [None])
+        n_thresholds = len(active_regions_th)
+        if n_thresholds != n_methods:
+            if n_thresholds ==1 and n_methods > 1:
+                active_regions_th = np.repeat(active_regions_th, n_methods).tolist()
+            else:
+                raise_value_error("Number of input methods:\n" + str(methods) +
+                                  "and active region thresholds:\n" + str(active_regions_th) +
+                                  "does not match!")
+        for m, th in methods, active_regions_th:
+            if isequal_string(m, "e_values"):
+                self.update_active_regions_e_values(statistical_model, th, logger=logger)
+            elif isequal_string(m, "x0_values"):
+                self.update_active_regions_x0_values(statistical_model, th, logger=logger)
+            elif isequal_string(m, "lsa"):
+                self.update_active_regions_lsa(statistical_model, th, logger=logger)
+            elif isequal_string(m, "seeg"):
+                self.update_active_regions_seeg(statistical_model, th, projection=kwargs.get("projection"),
+                                                seeg_inds=kwargs.get("seeg_inds"), logger=LOG)
 
     def select_seeg_contacts(self, active_regions=None, projection=None, projection_th=0.5,
                                    seeg_power=None, seeg_power_inds=[], seeg_power_th=0.5, logger=LOG):
