@@ -174,10 +174,9 @@ class ModelConfigurationService(object):
     def configure_model_from_equilibrium(self, x1EQ, zEQ, connectivity_matrix):
         # x1EQ, zEQ = self._ensure_equilibrum(x1EQ, zEQ) # We don't this by default anymore
         x0, Ceq, x0_values, e_values = self._compute_params_after_equilibration(x1EQ, zEQ, connectivity_matrix)
-        model_configuration = ModelConfiguration(self.yc, self.Iext1, self.Iext2, self.K, self.a, self.b, self.d,
+        return ModelConfiguration(self.yc, self.Iext1, self.Iext2, self.K, self.a, self.b, self.d,
                                                  self.slope, self.s, self.gamma, x1EQ, zEQ, Ceq, x0, x0_values,
                                                  e_values, self.zmode, connectivity_matrix)
-        return model_configuration
 
     def configure_model_from_E_hypothesis(self, disease_hypothesis, connectivity_matrix):
         # Always normalize K first

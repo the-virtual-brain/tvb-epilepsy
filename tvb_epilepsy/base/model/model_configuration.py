@@ -17,7 +17,7 @@ from tvb_epilepsy.base.plot_utils import plot_in_columns
 class ModelConfiguration(object):
     def __init__(self, yc=YC_DEF, Iext1=I_EXT1_DEF, Iext2=I_EXT2_DEF, K=K_DEF, a=A_DEF, b=B_DEF, d=D_DEF,
                  slope=SLOPE_DEF, s=S_DEF,gamma=GAMMA_DEF, x1EQ=None, zEQ=None, Ceq=None, x0=None,
-                 x0_values=X0_DEF, e_values=None, zmode=np.array("lin"), connectivity_matrix=None):
+                 x0_values=X0_DEF, e_values=None, zmode=np.array("lin"), connectivity_matrix=None, n_regions=None):
 
         # These parameters are used for every Epileptor Model...
         self.x0_values = x0_values
@@ -43,8 +43,14 @@ class ModelConfiguration(object):
 
         self.connectivity_matrix = connectivity_matrix
 
+        if n_regions is None:
+            self.n_regions = connectivity_matrix.shape[0]
+        else:
+            self.n_regions = 0
+
     def __repr__(self):
         d = {
+            "00. number of regions": self.n_regions,
             "01. Excitability": self.x0_values,
             "02. Epileptor Model Excitability": self.x0,
             "03. x1EQ": self.x1EQ,
