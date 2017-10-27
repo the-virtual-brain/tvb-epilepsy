@@ -6,12 +6,12 @@ This will be used to populate a Model instance needed in order to launch a simul
 
 import numpy as np
 
-from tvb_epilepsy.base.constants import X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, I_EXT2_DEF, A_DEF, B_DEF, D_DEF, SLOPE_DEF, \
-                                        S_DEF, GAMMA_DEF, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, dicts_of_lists_to_lists_of_dicts
+from tvb_epilepsy.base.constants import X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, I_EXT2_DEF, A_DEF, B_DEF, D_DEF, SLOPE_DEF, \
+    S_DEF, GAMMA_DEF, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.plot_utils import plot_in_columns
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, dicts_of_lists_to_lists_of_dicts
+from tvb_epilepsy.base.utils.plot_utils import plot_in_columns
 
 
 class ModelConfiguration(object):

@@ -11,7 +11,7 @@ import pystan as ps
 from scipy.io import savemat, loadmat
 import pickle
 
-from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_DEF, X0_CR_DEF, VOIS, X0_DEF, E_DEF, TVB, DATA_MODE, \
+from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_CR_DEF, VOIS, X0_DEF, E_DEF, TVB, DATA_MODE, \
                                         SIMULATION_MODE
 from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM, STATISTICAL_MODELS_PATH, FOLDER_VEP_HOME, USER_HOME
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_not_implemented_error
@@ -19,13 +19,12 @@ from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
 from tvb_epilepsy.service.sampling_service import gamma_from_mu_std, gamma_to_mu_std
 from tvb_epilepsy.service.epileptor_model_factory import model_noise_intensity_dict
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D, EpileptorDPrealistic, EpileptorDP
-from tvb_epilepsy.base.plot_utils import plot_sim_results, plot_fit_results, plot_timeseries
+from tvb_epilepsy.base.utils.plot_utils import plot_sim_results, plot_fit_results, plot_timeseries
 from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
                                                     compute_seeg_and_write_ts_h5_file
 from tvb_epilepsy.base .computations.analyzers_utils import filter_data
@@ -625,11 +624,10 @@ def get_bipolar_channels(channels_inds, channel_lbls=[]):
 def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_freq=10.0, high_freq=None, log_flag=True,
                             plot_flag=False):
     import re
-    from scipy.signal import resample_poly, decimate
+    from scipy.signal import decimate
     from pylab import detrend_linear
     from mne.io import read_raw_edf
-    from mne.viz import plot_raw
-    from tvb_epilepsy.base.plot_utils import plot_raster, plot_spectral_analysis_raster
+    from tvb_epilepsy.base.utils.plot_utils import plot_raster, plot_spectral_analysis_raster
     raw_data = read_raw_edf(seeg_path, preload=True)
     rois = np.where([np.in1d(s.split("POL ")[-1], channels) for s in raw_data.ch_names])[0]
     raw_data.resample(128.0)

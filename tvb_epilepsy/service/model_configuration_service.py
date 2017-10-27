@@ -5,20 +5,20 @@ Service to do X0/e_values Hypothesis configuration.
 import numpy
 from matplotlib import pyplot
 
-from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, I_EXT2_DEF, A_DEF, \
-    B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, X1_DEF, X0_CR_DEF, FIG_SIZE, \
-    SAVE_FLAG, SHOW_FLAG, FIG_FORMAT, MOUSEHOOVER
-from tvb_epilepsy.base.configurations import FOLDER_FIGURES
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r, calc_coupling, calc_x0, calc_fx1, \
     calc_fx1_2d_taylor, calc_fz, calc_x0_val__to_model_x0, \
     calc_model_x0_to_x0_val
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z, eq_x1_hypo_x0_linTaylor, \
     eq_x1_hypo_x0_optimize, def_x1lin, calc_eq_y1
-from tvb_epilepsy.base.plot_utils import save_figure, check_show
+from tvb_epilepsy.base.configurations import FOLDER_FIGURES
+from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, I_EXT2_DEF, A_DEF, \
+    B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, X1_DEF, X0_CR_DEF, FIG_SIZE, \
+    SAVE_FLAG, SHOW_FLAG, FIG_FORMAT, MOUSEHOOVER
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
 
 try:
     # https://github.com/joferkington/mpldatacursor

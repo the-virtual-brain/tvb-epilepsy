@@ -6,9 +6,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.constants import SHOW_FLAG, SAVE_FLAG, FIG_FORMAT, VERY_LARGE_SIZE
-from tvb_epilepsy.base.plot_utils import save_figure, check_show
 from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict
 from tvb_epilepsy.base.utils.math_utils import compute_projection
+from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
 
 
 class Sensors(object):
