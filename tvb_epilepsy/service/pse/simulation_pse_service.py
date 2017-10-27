@@ -3,7 +3,6 @@ from copy import deepcopy
 from tvb_epilepsy.base.utils import raise_not_implemented_error, formal_repr
 from tvb_epilepsy.custom.simulator_custom import custom_model_builder
 from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.pse.pse_service import ABCPSEService
 from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
 
@@ -30,7 +29,7 @@ class SimulationPSEService(ABCPSEService):
     def run_pse_parallel(self):
         raise_not_implemented_error("PSE parallel not implemented!", self.logger)
 
-    def run(self, conn_matrix, params, hypothesis):
+    def run(self, conn_matrix, params, hypothesis, model_config_service):
         # Create new objects from the input simulator
         copy_simulator = deepcopy(self.simulator)
         copy_model = deepcopy(copy_simulator.model)
@@ -40,8 +39,8 @@ class SimulationPSEService(ABCPSEService):
             copy_hypo = deepcopy(hypothesis)
             copy_hypo.update_for_pse(params, self.params_paths, self.params_indices)
 
-            # Create ModelConfigurationService and update
-            model_configuration_service = ModelConfigurationService(copy_hypo.number_of_regions)
+            # Copy ModelConfigurationService and update
+            model_configuration_service = deepcopy(model_config_service)
             model_configuration_service.update_for_pse(params, self.params_paths, self.params_indices)
 
             # Generate ModelConfiguration

@@ -1,9 +1,6 @@
 import numpy
 from copy import deepcopy
-from tvb_epilepsy.base.constants import WEIGHTED_EIGENVECTOR_SUM
 from tvb_epilepsy.base.utils import formal_repr, raise_not_implemented_error
-from tvb_epilepsy.service.lsa_service import LSAService
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.pse.pse_service import ABCPSEService
 
 
@@ -29,14 +26,14 @@ class LSAPSEService(ABCPSEService):
     def run_pse_parallel(self):
         raise_not_implemented_error("PSE parallel not implemented!", self.logger)
 
-    def run(self, conn_matrix, params, n_eigenvectors=None, weighted_eigenvector_sum=WEIGHTED_EIGENVECTOR_SUM):
+    def run(self, conn_matrix, params, lsa_service, model_config_service):
         try:
             # Copy and update hypothesis
             hypo_copy = deepcopy(self.hypothesis)
             hypo_copy.update_for_pse(params, self.params_paths, self.params_indices)
 
             # Create a ModelConfigService and update it
-            model_configuration_service = ModelConfigurationService(hypo_copy.number_of_regions)
+            model_configuration_service = deepcopy(model_config_service)
             model_configuration_service.update_for_pse(params, self.params_paths, self.params_indices)
 
             # Obtain Modelconfiguration
@@ -47,9 +44,8 @@ class LSAPSEService(ABCPSEService):
                 model_configuration = model_configuration_service.configure_model_from_hypothesis(hypo_copy,
                                                                                                   conn_matrix)
 
-            # Copy/Create a LSAService and update it
-            lsa_service = LSAService(eigen_vectors_number=n_eigenvectors,
-                                     weighted_eigenvector_sum=weighted_eigenvector_sum)
+            # Copy a LSAService and update it
+            lsa_service = deepcopy(lsa_service)
             lsa_service.update_for_pse(params, self.params_paths, self.params_indices)
 
             lsa_hypothesis = lsa_service.run_lsa(hypo_copy, model_configuration)

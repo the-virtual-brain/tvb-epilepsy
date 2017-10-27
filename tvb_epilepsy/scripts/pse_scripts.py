@@ -111,6 +111,10 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
     pse_results, execution_status = pse.run_pse(connectivity_matrix, grid_mode=False, lsa_service_input=lsa_service,
                                                 model_configuration_service_input=model_configuration_service)
 
+    # Call to new PSEService:
+    # pse = LSAPSEService(lsa_hypothesis, pse_params_list)
+    # pse_results, execution_status = pse.run_pse(connectivity_matrix, False, lsa_service, model_configuration_service)
+
     pse_results = list_of_dicts_to_dicts_of_ndarrays(pse_results)
 
     if save_services:
