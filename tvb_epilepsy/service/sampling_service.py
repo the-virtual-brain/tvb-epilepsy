@@ -8,13 +8,12 @@ import scipy.stats as ss
 import scipy as scp
 from SALib.sample import saltelli, fast_sampler, morris, ff
 
-from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, dicts_of_lists, \
-    dicts_of_lists_to_lists_of_dicts
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, \
     raise_not_implemented_error
+from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, dicts_of_lists, \
+    dicts_of_lists_to_lists_of_dicts, isequal_string
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
-from tvb.basic.logger.builder import get_logger
 
 # Helper functions to match normal distributions with several others we might use...
 # Input parameters should be scalars or ndarrays! Not lists!
@@ -138,7 +137,7 @@ def binomial_to_mu_std(p):
     return mu, np.sqrt(mu * (1 - p["p"]))
 
 
-def mean_std_to_distribution_params(distribution, mu, std=1.0):
+def mean_std_to_distribution_params(distribution, mu, std=1.0, output="dict", **kwargs):
 
     if np.any(std <= 0.0):
         raise_value_error("Standard deviation std = " + str(std) + " <= 0!")
@@ -157,8 +156,21 @@ def mean_std_to_distribution_params(distribution, mu, std=1.0):
     p = distrib_dict[distribution]["from_mu_std"](mu, std)
 
     if distrib_dict[distribution]["constraint"](p):
-        return p
-
+        if isequal_string(output, "dict"):
+            return p
+        else:
+            if isequal_string(distribution, "gamma"):
+                gamma_mode = kwargs.get("gamma_mode")
+                if isequal_string(str(gamma_mode), "alpha_beta"):
+                    return (p["alpha"], p["beta"])
+                elif isequal_string(str(gamma_mode), "k_theta"):
+                    return (p["k"], p["theta"])
+            else:
+                p = tuple(p.values())
+                if len(p) == 1:
+                    return p[0]
+                else:
+                    return p
     else:
         for key, val in p.iteritems():
             logger.info("\n" + str(key) + ": " + str(val))
