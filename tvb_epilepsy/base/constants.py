@@ -70,8 +70,12 @@ VOIS = {
     "EpileptorDP2D": ['x1', 'z']
 }
 
-# Soon also: autoregression_dWt, ode, ode_lsa, ...
+EPILEPTOR_MODEL_NVARS = {
+         "CustomEpileptor": 6,
+         "Epileptor": 6,
+         "EpileptorDP": 6,
+         "EpileptorDPrealistic": 11,
+         "EpileptorDP2D": 2
+}
 
-STATISTICAL_MODEL_TYPES=["autoregression"]
-OBSERVATION_MODEL_EXPRESSIONS=["x1z_offset", "x1_offset", "x1"]
-OBSERVATION_MODELS=["logpower", "linear_mixing", "linear"]
+STATISTICAL_MODEL_TYPES=["autoregressive", "autoregressive_dWt", "ode", "lsa"]
