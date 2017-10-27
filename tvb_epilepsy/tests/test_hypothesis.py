@@ -2,7 +2,7 @@ import os
 from copy import deepcopy
 from tvb_epilepsy.base.h5_model import read_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.base.utils import assert_equal_objects
+from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.tests.base import get_temporary_files_path, remove_temporary_test_files
 from tvb_epilepsy.base.configurations import FOLDER_RES, FOLDER_LOGS, FOLDER_FIGURES
 

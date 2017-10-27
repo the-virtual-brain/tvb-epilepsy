@@ -9,7 +9,8 @@ from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_D
     B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, X1_DEF, X0_CR_DEF, FIG_SIZE, \
     SAVE_FLAG, SHOW_FLAG, FIG_FORMAT, MOUSEHOOVER
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
-from tvb_epilepsy.base.utils import warning, initialize_logger, formal_repr, ensure_list
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r, calc_coupling, calc_x0, calc_fx1, \

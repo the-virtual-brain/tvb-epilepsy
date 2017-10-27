@@ -8,7 +8,8 @@ import numpy as np
 
 from tvb_epilepsy.base.constants import SIMULATION_MODE, TVB, DATA_MODE, VOIS, X0_DEF, E_DEF, TIME_DELAYS_FLAG
 from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM
-from tvb_epilepsy.base.utils import warning, assert_equal_objects, initialize_logger
+from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.lsa_service import LSAService

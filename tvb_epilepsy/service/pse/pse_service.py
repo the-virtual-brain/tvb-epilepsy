@@ -1,7 +1,7 @@
 import numpy
 from abc import abstractmethod, ABCMeta
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.utils import initialize_logger, warning, raise_value_error
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
 
 
 class ABCPSEService(object):

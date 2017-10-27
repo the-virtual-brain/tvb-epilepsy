@@ -8,9 +8,10 @@ import scipy.stats as ss
 import scipy as scp
 from SALib.sample import saltelli, fast_sampler, morris, ff
 
-from tvb_epilepsy.base.utils import initialize_logger, formal_repr, warning, raise_value_error, \
-                                    raise_not_implemented_error, dict_str, dicts_of_lists, \
-                                    dicts_of_lists_to_lists_of_dicts
+from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, dicts_of_lists, \
+    dicts_of_lists_to_lists_of_dicts
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, \
+    raise_not_implemented_error
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 from tvb.basic.logger.builder import get_logger

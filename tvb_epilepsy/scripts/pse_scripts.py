@@ -2,8 +2,9 @@ import numpy as np
 
 from tvb_epilepsy.base.constants import MAX_DISEASE_VALUE
 from tvb_epilepsy.base.configurations import FOLDER_RES
-from tvb_epilepsy.base.utils import initialize_logger, linear_index_to_coordinate_tuples, \
-    dicts_of_lists_to_lists_of_dicts, list_of_dicts_to_dicts_of_ndarrays
+from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
+    dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.service.pse_service import PSEService
 from tvb_epilepsy.service.sampling_service import StochasticSamplingService
 from tvb_epilepsy.scripts.hypothesis_scripts import start_lsa_run

@@ -6,10 +6,10 @@ import os
 import h5py
 import numpy
 
-from tvb_epilepsy.base.utils import warning, raise_error, raise_value_error, change_filename_or_overwrite, \
-                                    read_object_from_h5_file, print_metadata, write_metadata
+from tvb_epilepsy.base.utils.file_utils import change_filename_or_overwrite, print_metadata, write_metadata, \
+    read_object_from_h5_file
 # TODO: solve problems with setting up a logger
-from tvb_epilepsy.base.utils import initialize_logger
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, raise_error
 from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.base.simulators import SimulationSettings
 

@@ -1,18 +1,18 @@
 import numpy as np
-
-from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
-from tvb_epilepsy.base.utils import raise_value_error, warning, formal_repr, sort_dict, ensure_list, isequal_string, \
-                            initialize_logger, compute_projection, select_greater_values_array_inds
-from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
-from tvb_epilepsy.base.model.model_vep import Head, Connectivity, Sensors
-from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.base.model.statistical_model import Parameter, StatisticalModel
-from tvb_epilepsy.service.epileptor_model_factory import model_noise_intensity_dict
-from tvb_epilepsy.tvb_api.epileptor_models import *
-from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 from tvb.simulator.models import Epileptor
 
+from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
+from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
+from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
+from tvb_epilepsy.base.model.model_vep import Head, Connectivity
+from tvb_epilepsy.base.model.statistical_model import Parameter, StatisticalModel
+from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.custom.simulator_custom import EpileptorModel
+from tvb_epilepsy.service.epileptor_model_factory import model_noise_intensity_dict
+from tvb_epilepsy.tvb_api.epileptor_models import *
 
 AVAILABLE_DYNAMICAL_MODELS = (Epileptor, EpileptorModel, EpileptorDP2D, EpileptorDP, EpileptorDPrealistic)
 

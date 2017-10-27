@@ -7,8 +7,9 @@ import numpy
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM, \
     FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
-from tvb_epilepsy.base.utils import warning, raise_value_error, initialize_logger, formal_repr, \
-    weighted_vector_sum, curve_elbow_point
+from tvb_epilepsy.base.utils.math_utils import weighted_vector_sum, curve_elbow_point
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
 from tvb_epilepsy.base.h5_model import convert_to_h5_model

@@ -7,7 +7,8 @@ from tvb.basic.profile import TvbProfile
 TvbProfile.set_profile(TvbProfile.LIBRARY_PROFILE)
 
 import os
-from tvb_epilepsy.base.utils import warning, ensure_list
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
+from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.model.model_vep import Connectivity, Surface, Sensors, Head
 from tvb_epilepsy.base.readers import ABCReader
 

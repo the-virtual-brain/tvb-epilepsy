@@ -14,7 +14,7 @@ import pickle
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_DEF, X0_CR_DEF, VOIS, X0_DEF, E_DEF, TVB, DATA_MODE, \
                                         SIMULATION_MODE
 from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM, STATISTICAL_MODELS_PATH, FOLDER_VEP_HOME, USER_HOME
-from tvb_epilepsy.base.utils import warning, raise_not_implemented_error, initialize_logger
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_not_implemented_error
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
 from tvb_epilepsy.service.sampling_service import gamma_from_mu_std, gamma_to_mu_std

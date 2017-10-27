@@ -2,7 +2,8 @@ import numpy as np
 
 from tvb_epilepsy.base.constants import STATISTICAL_MODEL_TYPES, OBSERVATION_MODEL_EXPRESSIONS, OBSERVATION_MODELS
 
-from tvb_epilepsy.base.utils import raise_value_error, warning, formal_repr, sort_dict, ensure_list
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
+from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 

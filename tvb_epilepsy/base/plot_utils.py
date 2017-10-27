@@ -12,7 +12,8 @@ from scipy.stats.mstats import zscore
 
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.constants import *
-from tvb_epilepsy.base.utils import warning, sort_dict
+from tvb_epilepsy.base.utils.data_structures_utils import sort_dict
+from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.tvb_api.epileptor_models import *
 from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
 

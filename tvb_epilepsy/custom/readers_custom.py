@@ -6,7 +6,8 @@ import os
 
 import h5py
 
-from tvb_epilepsy.base.utils import warning, ensure_list, initialize_logger
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.model.model_vep import Connectivity, Surface, Sensors, Head
 from tvb_epilepsy.base.readers import ABCReader
 
