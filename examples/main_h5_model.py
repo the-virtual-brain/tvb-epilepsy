@@ -7,7 +7,7 @@ from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.model.model_vep import Connectivity
+from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 
 if DATA_MODE is TVB:

@@ -6,7 +6,8 @@ from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
-from tvb_epilepsy.base.model.model_vep import Head, Connectivity
+from tvb_epilepsy.base.model.vep.connectivity import Connectivity
+from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 from tvb_epilepsy.tvb_api.epileptor_models import *
 

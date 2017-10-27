@@ -5,7 +5,7 @@ from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
-from tvb_epilepsy.base.model.model_vep import Connectivity
+from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
