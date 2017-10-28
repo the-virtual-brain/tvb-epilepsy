@@ -1,9 +1,7 @@
 import numpy as np
 
-from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, K_DEF
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
 from tvb_epilepsy.base.model.statistical_models.parameter import Parameter
 
@@ -47,6 +45,7 @@ class OdeStatisticalModel(StatisticalModel):
                               " is not one of the valid ones: "
                               + str(OBSERVATION_MODELS) + "!")
 
+        # Further parameter setting:
         # Integration
         sig_init_def = parameters.get("sig_init_def", 0.1)
         self.parameters.append(Parameter("sig_init",
@@ -78,7 +77,6 @@ class OdeStatisticalModel(StatisticalModel):
                                          scale=parameters.get("offset_signal", 0.1),
                                          shape=(1,),
                                          pdf="gamma"))
-
         self.n_parameters = len(self.parameters)
 
     def update_active_regions(self, active_regions):
@@ -92,30 +90,16 @@ class OdeStatisticalModel(StatisticalModel):
 
     def __repr__(self):
         d = {"1. name": self.name,
-             "2. type": self.type,
-             "3. number of regions": self.n_regions,
-             "4. active regions": self.active_regions,
-             "5. number of active regions": self.n_active_regions,
-             "6. number of nonactive regions": self.n_nonactive_regions,
-             "7. number of observation signals": self.n_signals,
-             "8. number of time points": self.n_times,
+             "2. number of regions": self.n_regions,
+             "3. active regions": self.active_regions,
+             "4. number of active regions": self.n_active_regions,
+             "5. number of nonactive regions": self.n_nonactive_regions,
+             "6. number of observation signals": self.n_signals,
+             "7. number of time points": self.n_times,
+             "8. time step": self.dt,
              "9. euler_method": self.euler_method,
              "10. observation_expression": self.observation_expression,
              "11. observation_model": self.observation_model,
              "12. number of parameters": self.n_parameters,
-             "13. parameters": [p.__str__ for p in self.parameters.items()]}
+             "13. parameters": self.parameters}
         return formal_repr(self, sort_dict(d))
-
-    def __str__(self):
-        return self.__repr__()
-
-    def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model(self)
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "StatisicalModel")
-        return h5_model
-
-    def write_to_h5(self, folder, filename=""):
-        if filename == "":
-            filename = self.name + ".h5"
-        h5_model = self._prepare_for_h5()
-        h5_model.write_to_h5(folder, filename)

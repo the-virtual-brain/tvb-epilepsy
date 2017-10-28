@@ -1,8 +1,9 @@
 import numpy as np
 
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, K_DEF
-from tvb_epilepsy.base.model.statistical_models.parameter import Parameter
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
+from tvb_epilepsy.base.model.statistical_models.parameter import Parameter
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 
 class StatisticalModel(object):
@@ -16,6 +17,7 @@ class StatisticalModel(object):
         else:
             raise_value_error("Statistical model's name " + str(name) + " is not a string!")
 
+        # Parameter setting:
         self.parameters = []
         # Generative model:
         # Epileptor:
@@ -50,11 +52,12 @@ class StatisticalModel(object):
                                     shape=(1,),
                                     pdf="gamma"))
         # Coupling:
+        structural_connectivity = parameters.get("structural_connectivity", 10 ** -6 * np.ones((n_regions, n_regions)))
         self.parameters.append(Parameter("EC",
                                     low=parameters.get("ec_lo", 10 ** -6),
                                     high=parameters.get("ec_hi", 100.0),
-                                    loc=parameters.get("ec_loc"),
-                                    scale=parameters.get("ec_sc", 1.0),
+                                    loc=structural_connectivity,
+                                    scale=structural_connectivity,
                                     shape=(self.n_regions, self.n_regions),
                                     pdf="gamma"))
         # Integration:
@@ -77,3 +80,17 @@ class StatisticalModel(object):
                                     pdf="gamma"))
 
         self.n_parameters = len(self.parameters)
+
+    def __str__(self):
+        return self.__repr__()
+
+    def _prepare_for_h5(self):
+        h5_model = convert_to_h5_model(self)
+        h5_model.add_or_update_metadata_attribute("EPI_Type", "StatisicalModel")
+        return h5_model
+
+    def write_to_h5(self, folder, filename=""):
+        if filename == "":
+            filename = self.name + ".h5"
+        h5_model = self._prepare_for_h5()
+        h5_model.write_to_h5(folder, filename)

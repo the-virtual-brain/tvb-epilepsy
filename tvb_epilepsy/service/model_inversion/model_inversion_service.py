@@ -8,6 +8,7 @@ from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
+from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
@@ -21,6 +22,7 @@ class ModelInversionService(object):
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None,
                  model=None, model_code=None, model_code_path="", target_data=None, target_data_type="",
                  logger=LOG, **kwargs):
+        self.logger = logger
         self.results = {}
         self.model = model
         self.model_code = model_code
@@ -30,24 +32,25 @@ class ModelInversionService(object):
         if self.target_data is not None:
             self.observation_shape = target_data.shape
         else:
-            self.observation_shape = 0
+            self.observation_shape = (0,0)
         if isinstance(model_configuration, ModelConfiguration):
             self.model_config = model_configuration
-            logger.info("Input model configuration set...")
+            self.logger.info("Input model configuration set...")
+            self.n_regions = self.model_config.n_regions
         else:
             raise_value_error("Invalid input model configuration!:\n" + str(model_configuration))
         if isinstance(hypothesis, DiseaseHypothesis):
             self.hypothesis = hypothesis
-            logger.info("Input hypothesis set...")
+            self.logger.info("Input hypothesis set...")
         if isinstance(head, Head):
             self.head = head
-            logger.info("Input head set...")
+            self.logger.info("Input head set...")
         if isinstance(dynamical_model, AVAILABLE_DYNAMICAL_MODELS):
             self.dynamical_model = dynamical_model
-        logger.info("Model Inversion Service instance created!")
+        self.logger.info("Model Inversion Service instance created!")
 
-    def get_epileptor_parameters(self, logger=LOG):
-        logger.info("Unpacking epileptor parameters...")
+    def get_epileptor_parameters(self):
+        self.logger.info("Unpacking epileptor parameters...")
         epileptor_params = {}
         for p in ["a", "b", "d", "yc", "Iext1", "slope"]:
             temp = getattr(self.model_config, p)
@@ -95,3 +98,6 @@ class ModelInversionService(object):
 
     def get_default_sig_eq(self, x1eq_def=X1_DEF, x1eq_cr=X1_EQ_CR_DEF):
         return (x1eq_cr - x1eq_def) / 3.0
+
+    def generate_statistical_model(self, statistical_model_name, **kwargs):
+        return StatisticalModel(statistical_model_name, kwargs, self.n_regions)

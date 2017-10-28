@@ -1,11 +1,11 @@
 import numpy as np
 
-from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
-from tvb_epilepsy.base.model.vep.connectivity import Connectivity
+from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
+from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import OdeStatisticalModel
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
@@ -16,18 +16,25 @@ LOG = initialize_logger(__name__)
 class OdeModelInversionService(ModelInversionService):
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None,
-                 model=None, model_code=None, model_code_path="", target_data=None, target_data_type="",
+                 model=None, model_code=None, model_code_path="", target_data=None, target_data_type="", time=None,
                  logger=LOG, **kwargs):
 
         super(ModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
                                                     model, model_code, model_code_path, target_data, target_data_type,
                                                     logger)
 
-        self.n_times = self.observation_shape[0]
-        self.n_signals = self.observation_shape[0]
-
-    def get_default_sig_eq(self, x1eq_def=X1_DEF, x1eq_cr=X1_EQ_CR_DEF):
-        return (x1eq_cr - x1eq_def) / 3.0
+        (self.n_times, self.n_signals) = self.observation_shape
+        if time is None:
+            self.time = np.linespace(self.n_times)
+            self.dt = 1
+        else:
+            if len(time) == self.n_times and self.n_times != 0:
+                raise_value_error("The length of the input time vector (" + str(len(time)) +
+                                  ") does not match the one of the target_data (" + str(self.n_times) + ")!")
+            else:
+                self.time = time
+                self.dt = np.mean(self.time)
+        self.mixing = None
 
     def get_default_sig_init(self):
         return 0.1
@@ -42,16 +49,6 @@ class OdeModelInversionService(ModelInversionService):
         else:
             return projection
 
-    def get_region_labels(self, raise_error=False):
-        region_labels = None
-        if self.head is not None:
-            if isinstance(self.head.connectivity, Connectivity):
-                region_labels = self.head.connectivity.region_labels
-        if region_labels is None and raise_error:
-            raise_value_error("No region labels found!")
-        else:
-            return region_labels
-
     def get_sensor_labels(self, raise_error=False):
         sensor_labels = None
         if self.head is not None:
@@ -65,7 +62,8 @@ class OdeModelInversionService(ModelInversionService):
     def set_empirical_target_data(self, target_data, time, **kwargs):
         self.target_data_type = kwargs.get("target_data_type", "empirical")
         self.target_data = target_data
-        (self.n_times, self.n_signals) = self.target_data.shape
+        self.observation_shape = self.target_data.shape
+        (self.n_times, self.n_signals) = self.observation_shape
         time = np.array(time)
         if time.size == 1:
             self.dt = time
@@ -92,16 +90,17 @@ class OdeModelInversionService(ModelInversionService):
         else: # statistical_models.observation_expression == "x1"
             self.target_data = target_data["x1"]
         if statistical_model.observation_model.find("seeg") > 0:
-            self.target_data = (np.dot(kwargs.get("projection"), self.signals.T)).T
-        (self.n_times, self.n_signals) = self.target_data
+            self.target_data = (np.dot(kwargs.get("projection"), self.target_data.T)).T
+        self.observation_shape = self.target_data.shape
+        (self.n_times, self.n_signals) = self.observation_shape
         self.time = target_data["time"]
         if self.time.size != self.n_times:
             raise_value_error("Input time is not a vector of length equal to target_data.shape[0]!" +
                               "\ntime = " + str(self.time))
         self.dt = np.mean(self.time)
 
-    def get_epileptor_parameters(self, logger=LOG):
-        logger.info("Unpacking epileptor parameters...")
+    def get_epileptor_parameters(self):
+        self.logger.info("Unpacking epileptor parameters...")
         epileptor_params = {}
         for p in ["a", "b", "d", "yc", "Iext1", "slope"]:
             temp = getattr(self.model_config, p)
@@ -119,19 +118,19 @@ class OdeModelInversionService(ModelInversionService):
         epileptor_params.update({"x0cr": x0cr, "rx0": rx0})
         return epileptor_params
 
-    def update_active_regions_e_values(self, statistical_model, active_regions_th=0.1, reset=False, logger=LOG):
+    def update_active_regions_e_values(self, statistical_model, active_regions_th=0.1, reset=False):
         if reset:
             statistical_model.update_active_regions([])
         return statistical_model.update_active_regions(statistical_model.active_regions +
-                        select_greater_values_array_inds(self.model_configuration.e_values, active_regions_th).tolist())
+                        select_greater_values_array_inds(self.model_config.e_values, active_regions_th).tolist())
 
-    def update_active_regions_x0_values(self, statistical_model, active_regions_th=0.1, reset=False, logger=LOG):
+    def update_active_regions_x0_values(self, statistical_model, active_regions_th=0.1, reset=False):
         if reset:
             statistical_model.update_active_regions([])
         return statistical_model.update_active_regions(statistical_model.active_regions +
-                       select_greater_values_array_inds(self.model_configuration.x0_values, active_regions_th).tolist())
+                       select_greater_values_array_inds(self.model_config.x0_values, active_regions_th).tolist())
 
-    def update_active_regions_lsa(self, statistical_model, active_regions_th=0.1, reset=False, logger=LOG):
+    def update_active_regions_lsa(self, statistical_model, active_regions_th=0.1, reset=False):
         if reset:
             statistical_model.update_active_regions([])
         if len(self.hypothesis.propagation_strengths) > 0:
@@ -140,7 +139,7 @@ class OdeModelInversionService(ModelInversionService):
                                              select_greater_values_array_inds(ps_strengths, active_regions_th).tolist())
 
     def update_active_regions_seeg(self, statistical_model, active_regions_th=0.5, projection=None, seeg_inds=None,
-                                   reset=False, logger=LOG):
+                                   reset=False):
         if reset:
             statistical_model.update_active_regions()
         if projection is None:
@@ -153,7 +152,7 @@ class OdeModelInversionService(ModelInversionService):
                 active_regions += select_greater_values_array_inds(proj, active_regions_th).tolist()
             return statistical_model.update_active_regions(active_regions.tolist())
 
-    def update_active_regions(self, statistical_model, methods=["e_values", "LSA"], logger=LOG, **kwargs):
+    def update_active_regions(self, statistical_model, methods=["e_values", "LSA"], **kwargs):
         n_methods = len(methods)
         active_regions_th = kwargs.get("active_regions_th", [None])
         n_thresholds = len(active_regions_th)
@@ -166,26 +165,32 @@ class OdeModelInversionService(ModelInversionService):
                                   "does not match!")
         for m, th in methods, active_regions_th:
             if isequal_string(m, "e_values"):
-                self.update_active_regions_e_values(statistical_model, th, logger=logger)
+                self.update_active_regions_e_values(statistical_model, th, logger=self.logger)
             elif isequal_string(m, "x0_values"):
-                self.update_active_regions_x0_values(statistical_model, th, logger=logger)
+                self.update_active_regions_x0_values(statistical_model, th, logger=self.logger)
             elif isequal_string(m, "lsa"):
-                self.update_active_regions_lsa(statistical_model, th, logger=logger)
+                self.update_active_regions_lsa(statistical_model, th, logger=self.logger)
             elif isequal_string(m, "seeg"):
                 self.update_active_regions_seeg(statistical_model, th, projection=kwargs.get("projection"),
-                                                seeg_inds=kwargs.get("seeg_inds"), logger=LOG)
+                                                seeg_inds=kwargs.get("seeg_inds"), logger=self.logger)
 
     def select_seeg_contacts(self, active_regions=None, projection=None, projection_th=0.5,
-                                   seeg_power=None, seeg_power_inds=[], seeg_power_th=0.5, logger=LOG):
+                                   seeg_power=None, seeg_power_inds=[], seeg_power_th=0.5):
         seeg_inds = []
         if active_regions is not None:
-            logger.info("Selecting SEEG contacts based on projections from active regions...")
+            self.logger.info("Selecting SEEG contacts based on projections from active regions...")
             if projection is None:
                 projection = self.get_projection(raise_error=True).T[active_regions]
                 for proj in projection:
                     seeg_inds += select_greater_values_array_inds(proj, projection_th).tolist()
         if seeg_power is not None:
-            logger.info("Selecting SEEG contacts based on their total power per time point...")
+            self.logger.info("Selecting SEEG contacts based on their total power per time point...")
             seeg_inds += seeg_power_inds[select_greater_values_array_inds(seeg_power, seeg_power_th)]
         return np.unique(seeg_inds).tolist()
+
+    def generate_statistical_model(self, statistical_model_name, **kwargs):
+        return OdeStatisticalModel(statistical_model_name, kwargs, self.n_regions,
+                                              kwargs.get("active_regions", []), self.n_signals, self.n_times, self.dt,
+                                              kwargs.get("euler_method"), kwargs.get("observation_model"),
+                                              kwargs.get("observation_expression"))
 
