@@ -6,30 +6,35 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.constants import SHOW_FLAG, SAVE_FLAG, FIG_FORMAT, VERY_LARGE_SIZE
-from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict
+from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list
 from tvb_epilepsy.base.utils.math_utils import compute_projection
 from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
 
 
+TYPE_EEG = 'EEG'
+TYPE_MEG = "MEG"
+TYPE_SEEG = "SEEG"
+SENSORS_TYPES = [TYPE_SEEG, TYPE_MEG, TYPE_EEG]
+
+
 class Sensors(object):
-    TYPE_EEG = 'EEG'
-    TYPE_MEG = "MEG"
-    TYPE_SEEG = "SEEG"
 
     labels = np.array([])
     locations = np.array([])
-    orientations = np.array([])
+    orientations = None
+    projection = None
     s_type = ''
 
-    def __init__(self, labels, locations, orientations=np.array([]), s_type=TYPE_SEEG):
+    def __init__(self, labels, locations, orientations=None, projection=None, s_type=TYPE_SEEG):
         self.labels = labels
         self.locations = locations
         self.orientations = orientations
+        self.projection = projection
         self.s_type = s_type
 
     def summary(self):
-        d = {"a. sensors type": self.s_type,
-             "b. locations": reg_dict(self.locations, self.labels)}
+        d = {"1. sensors type": self.s_type,
+             "2. locations": reg_dict(self.locations, self.labels)}
         return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0]) ) )
 
 
@@ -38,10 +43,11 @@ class Sensors(object):
         return self.locations.shape[0]
 
     def __repr__(self):
-        d = {"a. sensors type": self.s_type,
-             "b. labels": reg_dict(self.labels),
-             "c. locations": reg_dict(self.locations, self.labels),
-             "d. orientations": reg_dict(self.orientations, self.labels) }
+        d = {"1. sensors type": self.s_type,
+             "2. labels": reg_dict(self.labels),
+             "3. locations": reg_dict(self.locations, self.labels),
+             "4. orientations": reg_dict(self.orientations, self.labels),
+             "5. projection": self.projection}
         return formal_repr(self, sort_dict(d))
 
     def __str__(self):
@@ -62,23 +68,19 @@ class Sensors(object):
     def calculate_projection(self, connectivity):
         return compute_projection(self.locations, connectivity.centers, normalize=95, ceil=False)
 
-    def plot(self, projection, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1,
+    def plot_projection(self, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1,
              x_ticks=np.array([]), y_ticks=np.array([]), show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
              figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, figure_name=''):
-
         if not (isinstance(figure, pyplot.Figure)):
             figure = pyplot.figure(title, figsize=figsize)
-
         n_sensors = self.number_of_sensors
         n_regions = len(region_labels)
-
         if len(x_ticks) == 0:
             x_ticks = np.array(range(n_sensors), dtype=np.int32)
         if len(y_ticks) == 0:
             y_ticks = np.array(range(n_regions), dtype=np.int32)
-
         cmap = pyplot.set_cmap('autumn_r')
-        img = pyplot.imshow(projection[x_ticks][:, y_ticks].T, cmap=cmap, interpolation='none')
+        img = pyplot.imshow(self.projection[x_ticks][:, y_ticks].T, cmap=cmap, interpolation='none')
         pyplot.grid(True, color='black')
         if y_labels > 0:
             region_labels = np.array(["%d. %s" % l for l in zip(range(n_regions), region_labels)])
@@ -90,33 +92,25 @@ class Sensors(object):
             pyplot.xticks(x_ticks, sensor_labels[x_ticks], rotation=90)
         else:
             pyplot.xticks(x_ticks)
-
         ax = figure.get_axes()[0]
         ax.autoscale(tight=True)
         pyplot.title(title)
-
         divider = make_axes_locatable(ax)
         cax1 = divider.append_axes("right", size="5%", pad=0.05)
         pyplot.colorbar(img, cax=cax1)  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
-
         if figure_name == "":
             figure_name = title
-
         save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=title)
         check_show(show_flag)
-
         return figure
 
-
-def plot_sensor_dict(sensor_dict, region_labels, count=1, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
-                     figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
-    # plot sensors:
-    for sensors, projection in sensor_dict.iteritems():
-        if len(projection) == 0:
-            continue
-        sensors.plot(projection, region_labels, title=str(count) + " - " + sensors.s_type + " - Projection",
-                                show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,
-                                figure_format=figure_format)
+    def plot(self, region_labels, count=1, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
+             figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
+        # plot sensors:
+        if self.projection is None:
+            return count
+        self.plot_projection(region_labels, title=str(count) + " - " + self.s_type + " - Projection",
+                     show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,
+                     figure_format=figure_format)
         count += 1
-
-    return count
+        return count

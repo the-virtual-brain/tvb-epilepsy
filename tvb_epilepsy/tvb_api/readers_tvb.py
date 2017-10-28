@@ -10,7 +10,7 @@ import os
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.model.vep.surface import Surface
-from tvb_epilepsy.base.model.vep.sensors import Sensors
+from tvb_epilepsy.base.model.vep.sensors import Sensors, TYPE_SEEG, TYPE_EEG, TYPE_MEG
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.readers import ABCReader
@@ -59,42 +59,33 @@ class TVBReader(ABCReader):
             return []
 
     def read_sensors(self, path, s_type):
-        if os.path.isfile(path):
-            if s_type == Sensors.TYPE_EEG:
-                tvb_sensors = sensors.SensorsEEG.from_file(path)
-            elif s_type == Sensors.TYPE_MEG:
-                tvb_sensors = sensors.SensorsMEG.from_file(path)
+        path = ensure_list(path)
+        if os.path.isfile(path[0]):
+            if s_type == TYPE_EEG:
+                tvb_sensors = sensors.SensorsEEG.from_file(path[0])
+            elif s_type == TYPE_MEG:
+                tvb_sensors = sensors.SensorsMEG.from_file(path[0])
             else:
-                tvb_sensors = sensors.SensorsInternal.from_file(path)
-            return Sensors(tvb_sensors.labels, tvb_sensors.locations, tvb_sensors.orientations, s_type)
+                tvb_sensors = sensors.SensorsInternal.from_file(path[0])
+            if len(path) > 1:
+                projection = self.read_projection(path[1], s_type)
+            return Sensors(tvb_sensors.labels, tvb_sensors.locations, tvb_sensors.orientations, projection, s_type)
         else:
             warning("\nNo Sensor file found at path " + path + "!")
-            return []
+            return None
 
     def read_projection(self, path, s_type):
         if os.path.isfile(path):
-            if s_type == Sensors.TYPE_EEG:
+            if s_type == TYPE_EEG:
                 tvb_prj = projections.ProjectionSurfaceEEG.from_file(path)
-            elif s_type == Sensors.TYPE_MEG:
+            elif s_type == TYPE_MEG:
                 tvb_prj = projections.ProjectionSurfaceMEG.from_file(path)
             else:
                 tvb_prj = projections.ProjectionSurfaceSEEG.from_file(path)
             return tvb_prj.projection_data
         else:
             warning("\nNo Projection Matrix file found at path " + path + "!")
-            return []
-
-    def read_sensors_projections(self, root_folder, conn, sensor_files, s_type):
-        sensors_dict = {}
-        for sensor_file in ensure_list(sensor_files):
-            sensor = self.read_sensors(os.path.join(root_folder, sensor_file[0]), s_type)
-            if isinstance(sensor, Sensors):
-                projection = self.read_projection(os.path.join(root_folder, sensor_file[1]), s_type)
-                if projection == []:
-                    warning("Calculating projection matrix based solely on euclidean distance!")
-                    projection = sensor.calculate_projection(conn)
-                sensors_dict[sensor] = projection
-        return sensors_dict
+            return None
 
     def read_head(self, root_folder, name='',
                   connectivity_file="connectivity.zip",
@@ -109,11 +100,13 @@ class TVBReader(ABCReader):
         rm = self.read_region_mapping(os.path.join(root_folder, region_mapping_file))
         vm = None
         t1 = None
-
-        seeg_sensors_dict = self.read_sensors_projections(root_folder, conn, seeg_sensors_files, Sensors.TYPE_SEEG)
-
-        eeg_sensors_dict = self.read_sensors_projections(root_folder, conn, eeg_sensors_files, Sensors.TYPE_EEG)
-
-        meg_sensors_dict = self.read_sensors_projections(root_folder, conn, meg_sensors_files, Sensors.TYPE_MEG)
-
-        return Head(conn, srf, rm, vm, t1, name, eeg_sensors_dict, meg_sensors_dict, seeg_sensors_dict)
+        sensorsSEEG = []
+        for s_files in ensure_list(seeg_sensors_files):
+            sensorsSEEG.append(self.read_sensors(s_files, TYPE_SEEG))
+        sensorsEEG = []
+        for s_files in ensure_list(eeg_sensors_files):
+            sensorsEEG.append(self.read_sensors(s_files, TYPE_EEG))
+        sensorsMEG = []
+        for s_files in ensure_list(meg_sensors_files):
+            sensorsMEG.append(self.read_sensors(s_files, TYPE_MEG))
+        return Head(conn, srf, rm, vm, t1, name, sensorsSEEG=sensorsSEEG, sensorsEEG=sensorsEEG, sensorsMEG=sensorsMEG)

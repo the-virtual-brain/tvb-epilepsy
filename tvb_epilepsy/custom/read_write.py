@@ -158,7 +158,8 @@ def import_sensors(src_txt_file):
     write_sensors(labels, locations)
 
 
-def write_sensors(labels, locations, folder=os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name=None, logger=logger):
+def write_sensors(labels, locations, orientations=[], projection=[],
+                  folder=os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name=None, logger=logger):
     """
     Store Sensors in a file to be shared by multiple patient virtualizations (heads)
     """
@@ -179,6 +180,8 @@ def write_sensors(labels, locations, folder=os.path.dirname(PATIENT_VIRTUAL_HEAD
     write_metadata({KEY_TYPE: "SeegSensors", KEY_SENSORS: len(labels)}, h5_file, KEY_DATE, KEY_VERSION)
     h5_file.create_dataset("/labels", data=labels)
     h5_file.create_dataset("/locations", data=locations)
+    h5_file.create_dataset("/orientations", data=orientations)
+    h5_file.create_dataset("/projection", data=projection)
     h5_file.close()
 
 

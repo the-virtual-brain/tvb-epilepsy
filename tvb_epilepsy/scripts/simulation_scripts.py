@@ -1,6 +1,7 @@
 import numpy as np
 
 from tvb_epilepsy.base.constants import VOIS
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
@@ -116,57 +117,41 @@ def prepare_vois_ts_dict(vois, data):
 
 
 def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt, time_length, hpf_flag=False,
-                                      hpf_low=10.0, hpf_high=256.0, sensor_dicts_list=[]):
-
+                                      hpf_low=10.0, hpf_high=256.0, sensors_list=[]):
     fsAVG = 1000.0 / dt
-
-    if not(isinstance(sensor_dicts_list, list)):
-        sensor_dicts_list = [sensor_dicts_list]
-
+    sensors_list = ensure_list(sensors_list)
     # Optionally high pass filter, and compute SEEG:
     if isinstance(model, EpileptorDP2D):
         raw_data = np.dstack(
             [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x1"]])
         lfp_data = vois_ts_dict["x1"]
-
-        for sensor_dict in sensor_dicts_list:
-            idx_proj = -1
-            for sensor, projection in sensor_dict.iteritems():
-                idx_proj += 1
-                vois_ts_dict[sensor.s_type + '%d' % idx_proj] = vois_ts_dict['x1'].dot(projection.T)
-
+        idx_proj = -1
+        for sensor in sensors_list:
+            idx_proj += 1
+            vois_ts_dict[sensor.s_type + '%d' % idx_proj] = vois_ts_dict['x1'].dot(sensor.projection.T)
     else:
-
         if isinstance(model, EpileptorModel):
             lfp_data = vois_ts_dict["x2"] - vois_ts_dict["x1"]
-
         else:
             lfp_data = vois_ts_dict["lfp"]
-
         raw_data = np.dstack(
             [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x2"]])
-
         if hpf_flag:
             hpf_low = max(hpf_low, 1000.0 / time_length)
             hpf_high = min(fsAVG / 2.0 - 10.0, hpf_high)
-        for sensor_dict in sensor_dicts_list:
-            idx_proj = -1
-            for sensor, projection in sensor_dict.iteritems():
-                idx_proj += 1
-                sensor_name = sensor.s_type + '%d' % idx_proj
-                vois_ts_dict[sensor_name] = vois_ts_dict['lfp'].dot(projection.T)
-                if hpf_flag:
-                    for i in range(vois_ts_dict[sensor_name].shape[1]):
-                        vois_ts_dict[sensor_name][:, i] = filter_data(
-                                                              vois_ts_dict[sensor_name][:, i], hpf_low, hpf_high, fsAVG)
-
+        idx_proj = -1
+        for sensor in sensors_list:
+            idx_proj += 1
+            sensor_name = sensor.s_type + '%d' % idx_proj
+            vois_ts_dict[sensor_name] = vois_ts_dict['lfp'].dot(sensor.projection.T)
+            if hpf_flag:
+                for i in range(vois_ts_dict[sensor_name].shape[1]):
+                    vois_ts_dict[sensor_name][:, i] = filter_data(
+                        vois_ts_dict[sensor_name][:, i], hpf_low, hpf_high, fsAVG)
     # Write files:
     write_ts_epi(raw_data, dt, lfp_data, folder, filename)
-
-    for sensor_dict in sensor_dicts_list:
-        for i_sensor, sensor in enumerate(sensor_dict.keys()):
-            write_ts_seeg_epi(vois_ts_dict[sensor.s_type+'%d' % i_sensor], dt, folder, filename)
-
+    for i_sensor, sensor in enumerate(sensors_list):
+        write_ts_seeg_epi(vois_ts_dict[sensor.s_type+'%d' % i_sensor], dt, folder, filename)
     return vois_ts_dict
 
 

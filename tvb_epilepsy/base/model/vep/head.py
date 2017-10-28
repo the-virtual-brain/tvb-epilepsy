@@ -2,12 +2,12 @@ import numpy as np
 
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.constants import SHOW_FLAG, SAVE_FLAG, FIG_FORMAT
-from tvb_epilepsy.base.model.vep.surface import Surface
-from tvb_epilepsy.base.model.vep.sensors import Sensors, plot_sensor_dict
-from tvb_epilepsy.base.model.vep.connectivity import Connectivity
-from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
+from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list
 from tvb_epilepsy.base.utils.math_utils import curve_elbow_point
+from tvb_epilepsy.base.model.vep.surface import Surface
+from tvb_epilepsy.base.model.vep.sensors import Sensors, TYPE_SEEG, SENSORS_TYPES
+from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 
 
 class Head(object):
@@ -15,18 +15,18 @@ class Head(object):
     One patient virtualization. Fully configured for defining hypothesis on it.
     """
 
-    def __init__(self, connectivity, cortical_surface, rm, vm, t1, name='',
-                 eeg_sensors_dict={}, meg_sensors_dict={}, seeg_sensors_dict={}):
+    def __init__(self, connectivity, cortical_surface, rm, vm, t1, name='', **kwargs):
 
         self.connectivity = connectivity
         self.cortical_surface = cortical_surface
         self.region_mapping = rm
         self.volume_mapping = vm
         self.t1_background = t1
-
-        self.sensorsEEG = eeg_sensors_dict
-        self.sensorsMEG = meg_sensors_dict
-        self.sensorsSEEG = seeg_sensors_dict
+        self.sensorsSEEG = None
+        self.sensorsEEG = None
+        self.sensorsMEG = None
+        for s_type in SENSORS_TYPES:
+            self.set_sensors(kwargs.get("sensors" + s_type), sensors_type=s_type)
 
         if len(name) == 0:
             self.name = 'Head' + str(self.number_of_regions)
@@ -59,16 +59,48 @@ class Head(object):
     def __str__(self):
         return self.__repr__()
 
-    def compute_nearest_regions_to_sensors(self, s_type, target_contacts=None, id_sensor=0, n_regions=None, th=0.95):
-        if s_type is "EEG":
-            sensors_dict = self.sensorsEEG
-        elif s_type is "MEG":
-            sensors_dict = self.sensorsMEG
+    def get_sensors(self, sensors_type=TYPE_SEEG):
+        if np.in1d(sensors_type.upper(), SENSORS_TYPES):
+            return getattr("sensors" + sensors_type)
         else:
-            sensors_dict = self.sensorsSEEG
-        sensors = sensors_dict.keys()[id_sensor]
-        n_contacts = sensors.labels.shape[0]
+            raise_value_error("Invalid input sensor type " + str(sensors_type))
 
+    def set_sensors(self, input_sensors, sensors_type=TYPE_SEEG, reset=False):
+        sensors = self.get_sensors(sensors_type)
+        if reset==False or sensors is None:
+            sensors = []
+        for s in ensure_list(input_sensors):
+            if isinstance(s, Sensors) and (s.type == sensors_type):
+                sensors.append(s)
+            else:
+                if s is not None:
+                    raise_value_error("Input sensors:\n" + str(s) +
+                                      "\nis not a valid Sensors object of type " + str(sensors_type) + "!")
+        if len(sensors) == 0:
+            self.set_sensors(self, None, sensors_type)
+        elif len(sensors) == 1:
+            self.set_sensors(self, sensors[0], sensors_type)
+        else:
+            self.set_sensors(self, sensors, sensors_type)
+
+    def get_sensors_id(self, sensors_type=TYPE_SEEG, sensor_ids=0):
+        sensors = self.get_sensors(sensors_type)
+        if sensors is None:
+            return sensors
+        else:
+            out_sensors = []
+            for iS, s in enumerate(ensure_list(sensors)):
+                if np.in1d(iS, sensor_ids):
+                    out_sensors.append(sensors[iS])
+            if len(out_sensors) == 0:
+                return None
+            elif len(out_sensors) == 1:
+                return out_sensors[0]
+            else:
+                return out_sensors
+
+    def compute_nearest_regions_to_sensors(self, sensors, target_contacts=None, id_sensor=0, n_regions=None, th=0.95):
+        n_contacts = sensors.labels.shape[0]
         if isinstance(target_contacts, (list, tuple, np.ndarray)):
             target_contacts = ensure_list(target_contacts)
             for itc, tc in enumerate(target_contacts):
@@ -88,7 +120,7 @@ class Head(object):
             auto_flag = True
         nearest_regions = []
         for tc in target_contacts:
-            projs = sensors_dict[sensors][tc]
+            projs = sensors.projection[tc]
             inds = np.argsort(projs)[::-1]
             n_regions = curve_elbow_point(projs[inds])
             nearest_regions.append((inds[:n_regions],
@@ -97,16 +129,14 @@ class Head(object):
         return nearest_regions
 
     def plot(self, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
-
         # plot connectivity
         self.connectivity.plot(show_flag, save_flag, figure_dir, figure_format)
-
         self.connectivity.plot_stats(show_flag, save_flag, figure_dir,figure_format)
-
         # plot sensor projections
-        count = plot_sensor_dict(self.sensorsSEEG, self.connectivity.region_labels, 1, show_flag, save_flag,
-                                 figure_dir, figure_format)
-        count = plot_sensor_dict(self.sensorsEEG, self.connectivity.region_labels, count, show_flag, save_flag,
-                                 figure_dir, figure_format)
-        count = plot_sensor_dict(self.sensorsMEG, self.connectivity.region_labels, count, show_flag, save_flag,
-                                 figure_dir, figure_format)
+        count = 1
+        for s_type in SENSORS_TYPES:
+            sensors = getattr(self, "sensors" + s_type)
+            if isinstance(sensors, (list, Sensors)):
+                for s in ensure_list(sensors):
+                    count = s.plot(self.connectivity.region_labels, count, show_flag, save_flag, figure_dir,
+                                   figure_format)
