@@ -3,7 +3,6 @@ import numpy as np
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
-from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import OdeStatisticalModel
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
@@ -34,30 +33,9 @@ class OdeModelInversionService(ModelInversionService):
             else:
                 self.time = time
                 self.dt = np.mean(self.time)
-        self.mixing = None
 
     def get_default_sig_init(self):
         return 0.1
-
-    def get_projection(self, raise_error=False):
-        projection = None
-        if self.head is not None:
-            if isinstance(self.head.sensorsSEEG, dict):
-                projection = self.head.sensorsSEEG.values()[0]
-        if projection is None and raise_error:
-            raise_value_error("No projection found!")
-        else:
-            return projection
-
-    def get_sensor_labels(self, raise_error=False):
-        sensor_labels = None
-        if self.head is not None:
-            if isinstance(self.head.sensorsSEEG, dict):
-                sensor_labels = self.head.sensorsSEEG.keys()[0].labels
-        if sensor_labels is None and raise_error:
-            raise_value_error("No sensor labels found!")
-        else:
-            return sensor_labels
 
     def set_empirical_target_data(self, target_data, time, **kwargs):
         self.target_data_type = kwargs.get("target_data_type", "empirical")
@@ -173,20 +151,6 @@ class OdeModelInversionService(ModelInversionService):
             elif isequal_string(m, "seeg"):
                 self.update_active_regions_seeg(statistical_model, th, projection=kwargs.get("projection"),
                                                 seeg_inds=kwargs.get("seeg_inds"), logger=self.logger)
-
-    def select_seeg_contacts(self, active_regions=None, projection=None, projection_th=0.5,
-                                   seeg_power=None, seeg_power_inds=[], seeg_power_th=0.5):
-        seeg_inds = []
-        if active_regions is not None:
-            self.logger.info("Selecting SEEG contacts based on projections from active regions...")
-            if projection is None:
-                projection = self.get_projection(raise_error=True).T[active_regions]
-                for proj in projection:
-                    seeg_inds += select_greater_values_array_inds(proj, projection_th).tolist()
-        if seeg_power is not None:
-            self.logger.info("Selecting SEEG contacts based on their total power per time point...")
-            seeg_inds += seeg_power_inds[select_greater_values_array_inds(seeg_power, seeg_power_th)]
-        return np.unique(seeg_inds).tolist()
 
     def generate_statistical_model(self, statistical_model_name, **kwargs):
         return OdeStatisticalModel(statistical_model_name, kwargs, self.n_regions,

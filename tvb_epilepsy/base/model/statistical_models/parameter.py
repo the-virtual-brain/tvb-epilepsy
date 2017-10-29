@@ -1,3 +1,6 @@
+
+import sys
+
 import numpy as np
 
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string
@@ -6,9 +9,18 @@ from tvb_epilepsy.service.sampling_service import mean_std_to_distribution_param
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 
+AVAILABLE_DISTRIBUTIONS = ["uniform", "normal", "gamma", "lognormal", "exponential", "beta", "binomial", "chisquare",
+                           "poisson", "bernoulli"]
+
+MAX_VALUE = sys.float_info.max
+MIN_VALUE = sys.float_info.min
+
+# TODO: Rules and checks for low, high, loc, and scale parameters to agree with each other and with the pdf...
+
+
 class Parameter(object):
 
-    def __init__(self, name, low=None, high=None, loc=None, scale=None, shape=(1,), pdf="uniform"):
+    def __init__(self, name, low=MIN_VALUE, high=MAX_VALUE, loc=0.0, scale=1.0, shape=(1,), pdf="uniform"):
         if isinstance(name, basestring):
             self.name = name
         else:

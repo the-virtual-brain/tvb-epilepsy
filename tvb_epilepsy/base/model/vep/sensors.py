@@ -6,8 +6,9 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.constants import SHOW_FLAG, SAVE_FLAG, FIG_FORMAT, VERY_LARGE_SIZE
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list
-from tvb_epilepsy.base.utils.math_utils import compute_projection
+from tvb_epilepsy.base.utils.math_utils import compute_projection, select_greater_values_array_inds
 from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
 
 
@@ -67,6 +68,18 @@ class Sensors(object):
 
     def calculate_projection(self, connectivity):
         return compute_projection(self.locations, connectivity.centers, normalize=95, ceil=False)
+
+    def select_contacts(self, rois=None, projection_th=0.5, power=None, power_inds=[], power_th=0.5):
+        seeg_inds = []
+        if rois is not None:
+            if self.projection is None:
+                raise_value_error("Projection matrix is not set!")
+            else:
+                for proj in self.projection:
+                    seeg_inds += select_greater_values_array_inds(proj, projection_th).tolist()
+        if power is not None:
+            seeg_inds += power_inds[select_greater_values_array_inds(power, power_th)]
+        return np.unique(seeg_inds).tolist()
 
     def plot_projection(self, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1,
              x_ticks=np.array([]), y_ticks=np.array([]), show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,

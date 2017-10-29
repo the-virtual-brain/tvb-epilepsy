@@ -12,6 +12,21 @@ class AutoregressiveStatisticalModel(OdeStatisticalModel):
                                                   euler_method, observation_model, observation_expression)
 
         # Further parameter setting:
+        # State variables:
+        self.parameters.append(Parameter("x1",
+                                        low=parameters.get("x1_lo", -2.0),
+                                        high=parameters.get("x1_hi", 2.0),
+                                        loc=None,
+                                        scale=None,
+                                        shape=(self.n_times, self.n_active_regions),
+                                        pdf="normal"))
+        self.parameters.append(Parameter("z",
+                                         low=parameters.get("z_lo", 2.0),
+                                         high=parameters.get("z_hi", 5.0),
+                                         loc=None,
+                                         scale=None,
+                                         shape=(self.n_times, self.n_active_regions),
+                                         pdf="normal"))
         # Integration
         sig_def = parameters.get("sig_def", 10**-4)
         self.parameters.append(Parameter("sig",

@@ -57,7 +57,7 @@ class StatisticalModel(object):
                                     low=parameters.get("ec_lo", 10 ** -6),
                                     high=parameters.get("ec_hi", 100.0),
                                     loc=structural_connectivity,
-                                    scale=structural_connectivity,
+                                    scale=parameters.get("ec_sc", np.median(structural_connectivity.flatten())),
                                     shape=(self.n_regions, self.n_regions),
                                     pdf="gamma"))
         # Integration:
