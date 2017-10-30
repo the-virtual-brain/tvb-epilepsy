@@ -1,5 +1,5 @@
+
 import numpy as np
-from tvb.simulator.models import Epileptor
 
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
@@ -9,8 +9,10 @@ from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
+from tvb_epilepsy.service.model_inversion.pystan_service import PystanService
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 from tvb_epilepsy.tvb_api.epileptor_models import *
+from tvb.simulator.models import Epileptor
 
 AVAILABLE_DYNAMICAL_MODELS = (Epileptor, EpileptorModel, EpileptorDP2D, EpileptorDP, EpileptorDPrealistic)
 
@@ -19,14 +21,16 @@ LOG = initialize_logger(__name__)
 
 class ModelInversionService(object):
 
-    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None,
-                 model=None, model_code=None, model_code_path="", target_data=None, target_data_type="",
-                 logger=LOG, **kwargs):
+    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, pystan=None,
+                 model_name=None, model=None, model_code=None, model_code_path="", fitmode="sampling",
+                 target_data=None, target_data_type="", logger=LOG, **kwargs):
         self.logger = logger
-        self.results = {}
-        self.model = model
-        self.model_code = model_code
-        self.model_code_path = model_code_path
+        self.model_data = {}
+        self.estimates = {}
+        if pystan is None:
+            self.pystan = PystanService(model, model_code, model_code_path, fitmode, logger)
+        else:
+            self.pystan = pystan
         self.target_data_type = target_data_type
         self.target_data = target_data
         if self.target_data is not None:
@@ -101,3 +105,4 @@ class ModelInversionService(object):
 
     def generate_statistical_model(self, statistical_model_name, **kwargs):
         return StatisticalModel(statistical_model_name, kwargs, self.n_regions)
+

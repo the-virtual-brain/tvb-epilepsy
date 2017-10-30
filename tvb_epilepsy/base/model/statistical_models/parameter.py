@@ -2,7 +2,7 @@
 import sys
 
 import numpy as np
-
+import scipy.stats as ss
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.service.sampling_service import mean_std_to_distribution_params
@@ -87,3 +87,14 @@ class Parameter(object):
             return (self.loc, self.scale)
         else:
             return mean_std_to_distribution_params(self.loc, self.scale, output="dict", gamma_mode="alpha_beta")
+
+    # def get_pdf_samples(self, n_samples=100):
+    #     x = np.linspace()
+    #     # Following: https://stackoverflow.com/questions/25141250/
+    #     # how-to-truncate-a-numpy-scipy-exponential-distribution-in-an-efficient-way
+    #     # TODO: to have distributions parameters valid for the truncated distributions instead for the original one
+    #     # pystan might be needed for that...
+    #     rnd_cdf = np.random.uniform(getattr(ss, self.pdf)(**kwargs).cdf(x=trunc_limits.get("low", -np.inf)),
+    #                          getattr(ss, self.pdf)(**kwargs).cdf(x=trunc_limits.get("high", np.inf)),
+    #                          size=size)
+    #     return getattr(ss, distribution)(**kwargs).ppf(q=rnd_cdf)
