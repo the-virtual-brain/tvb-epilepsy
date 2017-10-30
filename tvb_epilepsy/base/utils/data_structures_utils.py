@@ -1,14 +1,10 @@
-"""
-Various transformation/computation functions will be placed here.
-"""
+# Data structure manipulations and conversions:
 
 from collections import OrderedDict
+
 import numpy as np
 
-from tvb_epilepsy.base.utils.log_error_utils import *
-
-
-# Data structure manipulations and conversions:
+from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error, raise_import_error
 
 
 def vector2scalar(x):
@@ -201,6 +197,80 @@ def linear_index_to_coordinate_tuples(linear_index, shape):
         return []
 
 
+# This function is meant to confirm that two objects assumingly of the same type are equal, i.e., identical
+def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
+
+    def print_not_equal_message(attr, logger):
+        # logger.error("\n\nValueError: Original and read object field "+ attr + " not equal!")
+        # raise_value_error("\n\nOriginal and read object field " + attr + " not equal!")
+        warning("Original and read object field " + attr + " not equal!", logger)
+
+    if isinstance(obj1, dict):
+        get_field1 = lambda obj, key: obj[key]
+        if not (isinstance(attributes_dict, dict)):
+            attributes_dict = dict()
+            for key in obj1.keys():
+                attributes_dict.update({key: key})
+    else:
+        get_field1 = lambda obj, attribute: getattr(obj, attribute)
+        if not (isinstance(attributes_dict, dict)):
+            attributes_dict = dict()
+            for key in obj1.__dict__.keys():
+                attributes_dict.update({key: key})
+    if isinstance(obj2, dict):
+        get_field2 = lambda obj, key: obj.get(key, None)
+    else:
+        get_field2 = lambda obj, attribute: getattr(obj, attribute, None)
+
+    equal = True
+    for attribute in attributes_dict:
+        # print attributes_dict[attribute]
+        field1 = get_field1(obj1, attributes_dict[attribute])
+        field2 = get_field2(obj2, attributes_dict[attribute])
+        try:
+            # TODO: a better hack for the stupid case of an ndarray of a string, such as model.zmode or pmode
+            # For non numeric types
+            if isinstance(field1, basestring) or isinstance(field1, list) or isinstance(field1, dict) \
+                    or (isinstance(field1, np.ndarray) and field1.dtype.kind in 'OSU'):
+                if np.any(field1 != field2):
+                    print_not_equal_message(attributes_dict[attribute], logger)
+                    equal = False
+            # For numeric numpy arrays:
+            elif isinstance(field1, np.ndarray) and not field1.dtype.kind in 'OSU':
+                # TODO: handle better accuracy differences, empty matrices and complex numbers...
+                if field1.shape != field2.shape:
+                    print_not_equal_message(attributes_dict[attribute], logger)
+                    equal = False
+                elif np.any(np.float32(field1) - np.float32(field2) > 0):
+                    print_not_equal_message(attributes_dict[attribute], logger)
+                    equal = False
+            # For numeric scalar types
+            elif isinstance(field1, (int, float, long, complex, np.number)):
+                if np.float32(field1) - np.float32(field2) > 0:
+                    print_not_equal_message(attributes_dict[attribute], logger)
+                    equal = False
+            else:
+                warning("Comparing str(objects) for field "
+                        + attributes_dict[attribute] + " because it is of unknown type!", logger)
+                if np.any(str(field1) != str(field2)):
+                    print_not_equal_message(attributes_dict[attribute], logger)
+                    equal = False
+        except:
+            try:
+                warning("Comparing str(objects) for field "
+                        + attributes_dict[attribute] + " because there was an error!", logger)
+                if np.any(str(field1) != str(field2)):
+                    print_not_equal_message(attributes_dict[attribute], logger)
+                    equal = False
+            except:
+                raise_value_error("ValueError: Something went wrong when trying to compare "
+                                  + attributes_dict[attribute] + " !", logger)
+
+    if equal:
+        return True
+    else:
+        return False
+
 def shape_to_size(shape):
     shape = np.array(shape)
     shape = shape[shape > 0]
@@ -245,7 +315,6 @@ def assert_arrays(params, shape=None, transpose=False):
                     raise_value_error("Inputs are of at least two distinct sizes > 1")
                 elif params[ip].size > size:
                     size = params[ip].size
-
             # Construct a kind of histogram of all different shapes of the inputs:
             ind = np.array([(x == params[ip].shape) for x in shapes])
             if np.any(ind):
@@ -264,10 +333,10 @@ def assert_arrays(params, shape=None, transpose=False):
         ind = np.array([shape_to_size(s) == size for s in shapes])
         shapes = np.array(shapes)[ind]
         n_shapes = np.array(n_shapes)[ind]
-
         # Find the most frequent shape
         ind = np.argmax(n_shapes)
         shape = tuple(shapes[ind])
+
     if transpose and len(shape) > 1:
         if (transpose is "horizontal" or "row" and shape[0] > shape[1]) or \
            (transpose is "vertical" or "column" and shape[0] < shape[1]):
@@ -294,76 +363,12 @@ def assert_arrays(params, shape=None, transpose=False):
         return tuple(params)
 
 
-# This function is meant to confirm that two objects assumingly of the same type are equal, i.e., identical
-def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
-
-    def print_not_equal_message(attr, logger):
-        # logger.error("\n\nValueError: Original and read object field "+ attr + " not equal!")
-        # raise_value_error("\n\nOriginal and read object field " + attr + " not equal!")
-        warning("Original and read object field " + attr + " not equal!", logger)
-
-    if isinstance(obj1, dict):
-        get_field1 = lambda obj, key: obj[key]
-        if not(isinstance(attributes_dict, dict)):
-            attributes_dict = dict()
-            for key in obj1.keys():
-                attributes_dict.update({key: key})
+def parcellation_correspondance(inds_from, labels_from, labels_to):
+    inds_to = []
+    for ind in inds_from:
+        lbl = labels_from[ind]
+        inds_to.append(np.where(labels_to == lbl)[0][0])
+    if len(inds_to) != 1:
+        return inds_to
     else:
-        get_field1 = lambda obj, attribute: getattr(obj, attribute)
-        if not (isinstance(attributes_dict, dict)):
-            attributes_dict = dict()
-            for key in obj1.__dict__.keys():
-                attributes_dict.update({key: key})
-    if isinstance(obj2, dict):
-        get_field2 = lambda obj, key: obj.get(key, None)
-    else:
-        get_field2 = lambda obj, attribute: getattr(obj, attribute, None)
-
-    equal = True
-    for attribute in attributes_dict:
-        #print attributes_dict[attribute]
-        field1 = get_field1(obj1, attributes_dict[attribute])
-        field2 = get_field2(obj2, attributes_dict[attribute])
-        try:
-            #TODO: a better hack for the stupid case of an ndarray of a string, such as model.zmode or pmode
-            # For non numeric types
-            if isinstance(field1, basestring) or isinstance(field1, list) or isinstance(field1, dict) \
-                    or (isinstance(field1, np.ndarray) and field1.dtype.kind in 'OSU'):
-                if np.any(field1 != field2):
-                    print_not_equal_message(attributes_dict[attribute], logger)
-                    equal = False
-            # For numeric numpy arrays:
-            elif isinstance(field1, np.ndarray) and not field1.dtype.kind in 'OSU':
-                # TODO: handle better accuracy differences, empty matrices and complex numbers...
-                if field1.shape != field2.shape:
-                    print_not_equal_message(attributes_dict[attribute], logger)
-                    equal = False
-                elif np.any(np.float32(field1) - np.float32(field2) > 0):
-                    print_not_equal_message(attributes_dict[attribute], logger)
-                    equal = False
-            # For numeric scalar types
-            elif isinstance(field1, (int, float, long, complex, np.number)):
-                if np.float32(field1) - np.float32(field2) > 0:
-                    print_not_equal_message(attributes_dict[attribute], logger)
-                    equal = False
-            else:
-                warning("Comparing str(objects) for field "
-                        + attributes_dict[attribute] + " because it is of unknown type!", logger)
-                if np.any(str(field1) != str(field2)):
-                    print_not_equal_message(attributes_dict[attribute], logger)
-                    equal = False
-        except:
-            try:
-                warning("Comparing str(objects) for field "
-                        + attributes_dict[attribute] + " because there was an error!", logger)
-                if np.any(str(field1) != str(field2)):
-                    print_not_equal_message(attributes_dict[attribute], logger)
-                    equal = False
-            except:
-                raise_value_error("ValueError: Something went wrong when trying to compare "
-                                  + attributes_dict[attribute] + " !", logger)
-
-    if equal:
-        return True
-    else:
-        return False
+        return inds_to[0]

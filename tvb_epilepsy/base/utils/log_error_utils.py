@@ -1,12 +1,10 @@
+# Logs and errors
 
 import logging
 import os
 import warnings
 
 from tvb_epilepsy.base.configurations import FOLDER_LOGS
-
-
-# Logs and errors
 
 
 def initialize_logger(name, target_folder=FOLDER_LOGS):

@@ -5,19 +5,20 @@ Service to do X0/e_values Hypothesis configuration.
 import numpy
 from matplotlib import pyplot
 
-from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, I_EXT2_DEF, A_DEF, \
-    B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, X1_DEF, X0_CR_DEF, FIG_SIZE, \
-    SAVE_FLAG, SHOW_FLAG, FIG_FORMAT, MOUSEHOOVER
-from tvb_epilepsy.base.configurations import FOLDER_FIGURES
-from tvb_epilepsy.base.utils import warning, initialize_logger, formal_repr, ensure_list
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r, calc_coupling, calc_x0, calc_fx1, \
     calc_fx1_2d_taylor, calc_fz, calc_x0_val__to_model_x0, \
     calc_model_x0_to_x0_val
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z, eq_x1_hypo_x0_linTaylor, \
     eq_x1_hypo_x0_optimize, def_x1lin, calc_eq_y1
-from tvb_epilepsy.base.plot_utils import save_figure, check_show
+from tvb_epilepsy.base.configurations import FOLDER_FIGURES
+from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, I_EXT2_DEF, A_DEF, \
+    B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, X1_DEF, X0_CR_DEF, FIG_SIZE, \
+    SAVE_FLAG, SHOW_FLAG, FIG_FORMAT, MOUSEHOOVER
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
 
 try:
     # https://github.com/joferkington/mpldatacursor
@@ -173,10 +174,9 @@ class ModelConfigurationService(object):
     def configure_model_from_equilibrium(self, x1EQ, zEQ, connectivity_matrix):
         # x1EQ, zEQ = self._ensure_equilibrum(x1EQ, zEQ) # We don't this by default anymore
         x0, Ceq, x0_values, e_values = self._compute_params_after_equilibration(x1EQ, zEQ, connectivity_matrix)
-        model_configuration = ModelConfiguration(self.yc, self.Iext1, self.Iext2, self.K, self.a, self.b, self.d,
+        return ModelConfiguration(self.yc, self.Iext1, self.Iext2, self.K, self.a, self.b, self.d,
                                                  self.slope, self.s, self.gamma, x1EQ, zEQ, Ceq, x0, x0_values,
                                                  e_values, self.zmode, connectivity_matrix)
-        return model_configuration
 
     def configure_model_from_E_hypothesis(self, disease_hypothesis, connectivity_matrix):
         # Always normalize K first

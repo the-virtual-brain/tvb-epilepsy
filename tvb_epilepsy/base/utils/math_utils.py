@@ -1,19 +1,12 @@
-"""
-Various transformation/computation functions will be placed here.
-"""
+# Some math tools
 
 from itertools import product
-import numpy as np
-from matplotlib import use, pyplot
 
-use('Qt4Agg')
+import numpy as np
 from matplotlib import pyplot
 
 from tvb_epilepsy.base.constants import WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
-from tvb_epilepsy.base.u
-
-
-# Some math:
+from tvb_epilepsy.base.utils.log_error_utils import warning, initialize_logger
 
 
 def weighted_vector_sum(weights, vectors, normalize=True):
@@ -94,13 +87,13 @@ def curve_elbow_point(vals, interactive=INTERACTIVE_ELBOW_POINT):
         lines=[]
         lines.append(ax.plot(xdata, cumsum_vals, 'g*', picker=None, label="values' cumulative sum")[0])
         lines.append(ax.plot(xdata, vals, 'bo', picker=None, label="values in descending order")[0])
-
         lines.append(ax.plot(elbow, vals[elbow], "rd",
                              label="suggested elbow point (maximum of third central difference)")[0])
         lines.append(ax.plot(elbow, cumsum_vals[elbow], "rd")[0])
         pyplot.legend(handles=lines[:2])
 
         class MyClickableLines(object):
+
             def __init__(self, fig, ax, lines):
                 self.x = None
                 #self.y = None
@@ -110,22 +103,26 @@ def curve_elbow_point(vals, interactive=INTERACTIVE_ELBOW_POINT):
                 self.ax.set_title(title)
                 self.lines = lines
                 self.fig = fig
+
             def event_loop(self):
                 self.fig.canvas.mpl_connect('button_press_event', self.onclick)
                 self.fig.canvas.mpl_connect('key_press_event', self.onkey)
                 self.fig.canvas.draw_idle()
                 self.fig.canvas.start_event_loop(timeout=-1)
                 return
+
             def onkey(self, event):
                 if event.key == "enter":
                     self.fig.canvas.stop_event_loop()
                 return
+
             def onclick(self, event):
                 if event.inaxes != self.lines[0].axes: return
                 dist = np.sqrt((self.lines[0].get_xdata() - event.xdata) ** 2.0)  # + (self.lines[0].get_ydata() - event.ydata) ** 2.)
                 self.x = np.argmin(dist)
                 self.fig.canvas.stop_event_loop()
                 return
+
         click_point = MyClickableLines(fig, ax, lines)
         click_point.event_loop()
         if click_point.x is not None:
@@ -134,6 +131,7 @@ def curve_elbow_point(vals, interactive=INTERACTIVE_ELBOW_POINT):
         else:
             logger.info("\nautomatic selection: " + str(elbow))
         return elbow
+
     else:
         return elbow
 

@@ -6,10 +6,10 @@ import os
 import h5py
 import numpy
 
-from tvb_epilepsy.base.utils import warning, raise_error, raise_value_error, change_filename_or_overwrite, \
-                                    read_object_from_h5_file, print_metadata, write_metadata
+from tvb_epilepsy.base.utils.file_utils import change_filename_or_overwrite, print_metadata, write_metadata, \
+    read_object_from_h5_file
 # TODO: solve problems with setting up a logger
-from tvb_epilepsy.base.utils import initialize_logger
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, raise_error
 from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.base.simulators import SimulationSettings
 
@@ -158,7 +158,8 @@ def import_sensors(src_txt_file):
     write_sensors(labels, locations)
 
 
-def write_sensors(labels, locations, folder=os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name=None, logger=logger):
+def write_sensors(labels, locations, orientations=[], projection=[],
+                  folder=os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name=None, logger=logger):
     """
     Store Sensors in a file to be shared by multiple patient virtualizations (heads)
     """
@@ -179,6 +180,8 @@ def write_sensors(labels, locations, folder=os.path.dirname(PATIENT_VIRTUAL_HEAD
     write_metadata({KEY_TYPE: "SeegSensors", KEY_SENSORS: len(labels)}, h5_file, KEY_DATE, KEY_VERSION)
     h5_file.create_dataset("/labels", data=labels)
     h5_file.create_dataset("/locations", data=locations)
+    h5_file.create_dataset("/orientations", data=orientations)
+    h5_file.create_dataset("/projection", data=projection)
     h5_file.close()
 
 

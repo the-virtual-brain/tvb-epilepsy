@@ -7,8 +7,9 @@ from scipy.optimize import root
 
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, SYMBOLIC_CALCULATIONS_FLAG, A_DEF, B_DEF, D_DEF, \
                                         SLOPE_DEF, S_DEF, GAMMA_DEF
-from tvb_epilepsy.base.utils import assert_arrays, warning, raise_value_error, raise_not_implemented_error, \
-                                    initialize_logger
+from tvb_epilepsy.base.utils.data_structures_utils import assert_arrays
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, \
+    raise_not_implemented_error
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0, calc_fx1, calc_fx1z, calc_fy1, calc_fz, calc_fg,\
                                                   calc_coupling, calc_dfun, calc_fx1z_2d_x1neg_zpos_jac, calc_fx1z_diff
 

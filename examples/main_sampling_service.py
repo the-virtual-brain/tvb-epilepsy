@@ -1,6 +1,7 @@
 import numpy as np
 from tvb_epilepsy.base.configurations import FOLDER_RES
-from tvb_epilepsy.base.utils import dict_str, initialize_logger
+from tvb_epilepsy.base.utils.data_structures_utils import dict_str
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.service.sampling_service import distribution_params_to_mean_std, mean_std_to_distribution_params, \
     distrib_dict, StochasticSamplingService, DeterministicSamplingService
 

@@ -1,6 +1,6 @@
 
 from tvb_epilepsy.base.constants import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM
-from tvb_epilepsy.base.utils import initialize_logger
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.lsa_service import LSAService
 

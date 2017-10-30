@@ -1,16 +1,11 @@
-"""
-Various transformation/computation functions will be placed here.
-"""
+# File writing/reading and manipulations
 import os
 from datetime import datetime
 
 import h5py
 import numpy as np
 
-from tvb_epilepsy.base.utils.log_error_utils import *
-
-
-# File writing/reading and manipulations
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 
 
 def ensure_unique_file(parent_folder, filename):
@@ -124,7 +119,6 @@ def write_object_to_h5_file(obj, h5_file, attributes_dict=None,  add_overwrite_f
                 except:
                     raise_value_error("ValueError: Failed to write " + attribute + " as a scalar value!", logger)
             # logger.info("dataset " + attribute +"value " + str(h5_file['/' + attribute][()]))
-
     if isinstance(h5_file, basestring):
         h5_file.close()
 
@@ -156,7 +150,6 @@ def read_object_from_h5_file(obj, h5_file, attributes_dict=None, add_overwrite_f
 
     if isinstance(h5_file, basestring):
         h5_file.close()
-
     if isinstance(add_overwrite_fields_dict, dict):
         for attribute in add_overwrite_fields_dict:
             logger.info("\nSetting or overwritting " + attribute + "... ")

@@ -1,7 +1,7 @@
 import numpy as np
 import os
 from tvb_epilepsy.base.configurations import DATA_CUSTOM, FOLDER_RES
-from tvb_epilepsy.base.utils import initialize_logger
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
 from tvb_epilepsy.service.sampling_service import StochasticSamplingService
 from tvb_epilepsy.base.h5_model import convert_to_h5_model

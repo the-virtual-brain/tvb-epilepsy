@@ -1,14 +1,12 @@
 
 from scipy.optimize import root
-import numpy as np
 
-from tvb_epilepsy.base.utils import warning, raise_import_error, initialize_logger, shape_to_size
 from tvb_epilepsy.base.computations.equations_utils import *
-
 # TODO: find out why I cannot import anything from utils here
 # from tvb_epilepsy.base.utils import assert_array_shape as sc2arr
 from tvb_epilepsy.base.constants import X0_CR_DEF, X1_EQ_CR_DEF, X0_DEF
 from tvb_epilepsy.base.constants import X1_DEF
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_import_error
 
 logger = initialize_logger(__name__)
 

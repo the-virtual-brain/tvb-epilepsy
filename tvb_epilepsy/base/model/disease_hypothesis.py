@@ -4,8 +4,9 @@ Class for defining and storing the state of a hypothesis.
 """
 import numpy as np
 
-from tvb_epilepsy.base.utils import initialize_logger, formal_repr, ensure_list, dicts_of_lists_to_lists_of_dicts, \
-    linear_index_to_coordinate_tuples, raise_value_error
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, dicts_of_lists_to_lists_of_dicts, ensure_list, \
+    linear_index_to_coordinate_tuples
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
 
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 

@@ -12,7 +12,8 @@ from copy import copy
 import numpy
 
 from tvb_epilepsy.base.constants import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
-from tvb_epilepsy.base.utils import warning, obj_to_dict, assert_arrays
+from tvb_epilepsy.base.utils.data_structures_utils import obj_to_dict, assert_arrays
+from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val__to_model_x0

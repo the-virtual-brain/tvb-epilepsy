@@ -6,19 +6,19 @@ from copy import deepcopy
 
 import numpy as np
 
-from tvb_epilepsy.base.constants import SIMULATION_MODE, TVB, DATA_MODE, VOIS, X0_DEF, E_DEF, TIME_DELAYS_FLAG
 from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM
-from tvb_epilepsy.base.utils import warning, assert_equal_objects, initialize_logger
+from tvb_epilepsy.base.constants import SIMULATION_MODE, TVB, DATA_MODE, VOIS, X0_DEF, E_DEF
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.service.lsa_service import LSAService
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.plot_utils import plot_sim_results
 from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
-from tvb_epilepsy.base.plot_utils import plot_sim_results
 from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
-                                                    compute_seeg_and_write_ts_h5_file
-
+    compute_seeg_and_write_ts_h5_file
+from tvb_epilepsy.service.lsa_service import LSAService
+from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
@@ -318,11 +318,11 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                 vois_ts_dict=compute_seeg_and_write_ts_h5_file(FOLDER_RES, lsa_hypothesis.name + "_ts.h5", sim.model,
                                                                 vois_ts_dict, output_sampling_time, time_length,
                                                                 hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
-                                                                sensor_dicts_list=[head.sensorsSEEG])
+                                                                sensors_list=head.sensorsSEEG)
 
                 # Plot results
                 plot_sim_results(sim.model, lsa_hypothesis.propagation_indices, lsa_hypothesis.name, head, vois_ts_dict,
-                                 head.sensorsSEEG.keys(), hpf_flag=True, trajectories_plot=trajectories_plot,
+                                 head.sensorsSEEG, hpf_flag=True, trajectories_plot=trajectories_plot,
                                  spectral_raster_plot=spectral_raster_plot, log_scale=True)
 
                 # Optionally save results in mat files

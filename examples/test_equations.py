@@ -1,8 +1,7 @@
-from tvb_epilepsy.base.constants import K_DEF, A_DEF, B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, I_EXT1_DEF, \
-                                        I_EXT2_DEF, YC_DEF, TAU0_DEF, TAU1_DEF, TAU2_DEF
-from tvb_epilepsy.base.utils import initialize_logger
 from tvb_epilepsy.base.computations.calculations_utils import *
 from tvb_epilepsy.base.computations.equilibrium_computation import *
+from tvb_epilepsy.base.constants import K_DEF
+from tvb_epilepsy.base.utils.data_structures_utils import assert_arrays
 
 if __name__ == "__main__":
 

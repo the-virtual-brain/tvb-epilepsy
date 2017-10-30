@@ -1,10 +1,10 @@
 import numpy
 from numpy import array, empty_like, reshape
-from sympy import Symbol, solve, solveset, lambdify,series, Matrix  # diff, ArraySymbol
+from sympy import Symbol, solve, solveset, lambdify, series, Matrix  # diff, ArraySymbol
 from sympy.tensor.array import Array
 
-from tvb_epilepsy.base.utils import shape_to_size, raise_value_error
 from tvb_epilepsy.base.computations.equations_utils import *
+from tvb_epilepsy.base.utils.data_structures_utils import shape_to_size
 
 
 def symbol_vars(n_regions, vars_str, dims=1, ind_str="_", shape=None, output_flag="numpy_array"):
