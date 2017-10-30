@@ -92,6 +92,7 @@ def plot_vector(vector, labels, subplot, title, show_y_labels=True, indices_red=
     ax.autoscale(tight=True)
     return ax
 
+
 def plot_vector_violin(vector, dataset, labels, subplot, title, colormap="YlOrRd", show_y_labels=True,
                        indices_red=None, sharey=None):
     ax = pyplot.subplot(subplot, sharey=sharey)

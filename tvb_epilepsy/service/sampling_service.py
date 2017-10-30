@@ -397,7 +397,7 @@ class StochasticSamplingService(SamplingService):
 
             samples = sampler(problem, size, **other_params)
 
-        #Adjust samples number:
+        # Adjust samples number:
         self.n_samples = samples.shape[0]
         self.shape = (self.n_outputs, self.n_samples)
 
@@ -423,7 +423,7 @@ class StochasticSamplingService(SamplingService):
                                                                              self.n_samples))
                 elif len(params) == self.n_outputs:
                     for io in range(self.n_outputs):
-                        samples.append(self._truncated_distribution_sampling(self.sampler,trunc_limits[io],
+                        samples.append(self._truncated_distribution_sampling(self.sampler, trunc_limits[io],
                                                                              self.n_samples, **(params[io])))
                 else:
                     raise_value_error("\nParameters are neither an empty list nor a list of n_parameters = "
