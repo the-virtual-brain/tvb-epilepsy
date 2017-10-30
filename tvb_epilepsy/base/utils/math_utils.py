@@ -80,7 +80,6 @@ def curve_elbow_point(vals, interactive=INTERACTIVE_ELBOW_POINT):
     cumsum_vals = np.cumsum(vals)
     grad = np.gradient(np.gradient(np.gradient(cumsum_vals)))
     elbow = np.argmax(grad)
-
     if interactive:
         pyplot.ion()
         fig, ax = pyplot.subplots()

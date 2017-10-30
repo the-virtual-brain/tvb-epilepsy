@@ -1,4 +1,3 @@
-
 # Data structure manipulations and conversions:
 
 from collections import OrderedDict
@@ -272,7 +271,6 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
     else:
         return False
 
-
 def shape_to_size(shape):
     shape = np.array(shape)
     shape = shape[shape > 0]
@@ -310,7 +308,6 @@ def assert_arrays(params, shape=None, transpose=False):
             else:
                 raise_value_error("Input " + str(params[ip]) + " of type " + str(type(params[ip])) + " is not numeric, "
                                                                                   "of type np.ndarray, nor Symbol")
-
         if shape is None:
             # Only one size > 1 is acceptable
             if params[ip].size != size:
@@ -353,7 +350,6 @@ def assert_arrays(params, shape=None, transpose=False):
     for ip in range(len(params)):
         try:
             if params[ip].shape != shape:
-
                 if params[ip].size in [0, 1]:
                     params[ip] = np.tile(params[ip], shape)
                 else:
@@ -376,5 +372,3 @@ def parcellation_correspondance(inds_from, labels_from, labels_to):
         return inds_to
     else:
         return inds_to[0]
-
-

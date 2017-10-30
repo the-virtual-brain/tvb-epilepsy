@@ -69,7 +69,6 @@ def write_object_to_h5_file(obj, h5_file, attributes_dict=None,  add_overwrite_f
         try:
             logger.info("\nWriting " + attributes_dict[attribute] + "...")
             if isinstance(field, basestring):
-
                 logger.info("\nString length: " + str(len(field)))
                 h5_file.create_dataset("/" + attribute, data=field)
                 logger.info("\nString written length: " + str(len(h5_file['/' + attribute][()])))
