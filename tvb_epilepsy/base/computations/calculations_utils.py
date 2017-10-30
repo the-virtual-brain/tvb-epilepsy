@@ -18,6 +18,7 @@ try:
 except:
     warning("Unable to load symbolic_equations module! Symbolic calculations are not possible!")
     SYMBOLIC_IMPORT = False
+from tvb_epilepsy.base.utils.data_structures_utils import shape_to_size
 
 #if SYMBOLIC_CALCULATIONS_FLAG:
 
@@ -59,9 +60,9 @@ def calc_coupling(x1, K, w, ix=None, jx=None, shape=None, calc_mode="non_symbol"
 
 
 def calc_x0(x1, z, K=0.0, w=0.0, zmode=np.array("lin"), z_pos=True, shape=None, calc_mode="non_symbol"):
-    
+
     calc_mode = confirm_calc_mode(calc_mode)
-    
+
     x1, z,  K = assert_arrays([x1, z,  K], shape)
     w = assert_arrays([w], (z.size, z.size))
 
@@ -78,9 +79,9 @@ def calc_x0(x1, z, K=0.0, w=0.0, zmode=np.array("lin"), z_pos=True, shape=None, 
 
 def calc_fx1(x1=0.0, z=0.0, y1=0.0, Iext1=I_EXT1_DEF, slope=SLOPE_DEF, a=A_DEF, b=B_DEF, d=D_DEF, tau1=TAU1_DEF, x2=0.0,
              model="2d", x1_neg=True, shape=None, calc_mode="non_symbol"):
-    
+
     calc_mode = confirm_calc_mode(calc_mode)
-    
+
     x1, z, y1, Iext1, slope, a, b, d, tau1 = assert_arrays([x1, z, y1, Iext1, slope, a, b, d, tau1], shape)
 
     if np.all(calc_mode == "symbol"):
@@ -111,9 +112,9 @@ def calc_fx1(x1=0.0, z=0.0, y1=0.0, Iext1=I_EXT1_DEF, slope=SLOPE_DEF, a=A_DEF, 
 
 
 def calc_fy1(x1, yc, y1=0, d=D_DEF, tau1=TAU1_DEF, shape=None, calc_mode="non_symbol"):
-    
+
     calc_mode = confirm_calc_mode(calc_mode)
-    
+
     x1, yc, y1, d, tau1 = assert_arrays([x1, yc, y1, d, tau1], shape)
 
     if np.all(calc_mode == "symbol"):
@@ -126,9 +127,9 @@ def calc_fy1(x1, yc, y1=0, d=D_DEF, tau1=TAU1_DEF, shape=None, calc_mode="non_sy
 
 def calc_fz(x1=0.0, z=0, x0=0.0, K=0.0, w=0.0, tau1=TAU1_DEF, tau0=TAU0_DEF, zmode=np.array("lin"), z_pos=True,
             shape=None, calc_mode="non_symbol"):
-    
+
     calc_mode = confirm_calc_mode(calc_mode)
-    
+
     x1, z,  x0, K, tau1, tau0 = assert_arrays([x1, z,  x0, K, tau1, tau0], shape)
     w = assert_arrays([w], (z.size, z.size))
 
@@ -146,9 +147,9 @@ def calc_fz(x1=0.0, z=0, x0=0.0, K=0.0, w=0.0, tau1=TAU1_DEF, tau0=TAU0_DEF, zmo
 
 
 def calc_fx2(x2, y2=0.0, z=0.0, g=0.0, Iext2=I_EXT2_DEF, tau1=TAU1_DEF, shape=None, calc_mode="non_symbol"):
-    
+
     calc_mode = confirm_calc_mode(calc_mode)
-    
+
     x2, y2, z, g, Iext2, tau1 = assert_arrays([x2, y2, z, g, Iext2, tau1], shape)
 
     if np.all(calc_mode == "symbol"):
