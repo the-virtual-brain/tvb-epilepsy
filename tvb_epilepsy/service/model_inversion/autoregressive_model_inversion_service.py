@@ -68,11 +68,10 @@ class AutoregressiveModelInversionService(OdeModelInversionService):
             if isequal_string(p.name, "x1") or isequal_string(p.name, "z"):
                 pass
             elif isequal_string(p.name, "EC"):
-                self.model_data.update({p.name + "_p2": p.scale})
+                self.model_data.update({p.name + "_p2": p.pdf_params[0]})
             else:
-                pdf_params = ensure_list(p.get_pdf_params())
-                self.model_data.update({p.name + "_p1": pdf_params[0]})
-                if len(ensure_list(pdf_params)) == 1:
-                    self.model_data.update({p.name + "_p2": pdf_params[0]})
+                self.model_data.update({p.name + "_p1": p.pdf_params[0]})
+                if len(p.pdf_params) == 1:
+                    self.model_data.update({p.name + "_p2": p.pdf_params[0]})
                 else:
-                    self.model_data.update({p.name + "_p2": pdf_params[1]})
+                    self.model_data.update({p.name + "_p2": p.pdf_params[1]})
