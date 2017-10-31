@@ -2,8 +2,9 @@ import numpy as np
 from tvb_epilepsy.base.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import dict_str
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.service.sampling_service import distribution_params_to_mean_std, mean_std_to_distribution_params, \
-    distrib_dict, StochasticSamplingService, DeterministicSamplingService
+from tvb_epilepsy.service.sampling_service import StochasticSamplingService, DeterministicSamplingService
+from tvb_epilepsy.base.computations.statistics_utils import distrib_dict, mean_std_to_distribution_params, \
+    distribution_params_to_mean_std
 
 logger = initialize_logger(__name__)
 
