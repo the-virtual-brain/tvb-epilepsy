@@ -3,8 +3,9 @@ import sys
 
 import numpy as np
 import scipy.stats as ss
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string
+
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string
 from tvb_epilepsy.base.computations.statistics_utils import mean_std_to_distribution_params
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
@@ -20,7 +21,7 @@ MIN_VALUE = sys.float_info.min
 
 class Parameter(object):
 
-    def __init__(self, name, pdf_params, low=MIN_VALUE, high=MAX_VALUE, shape=(1,), pdf="uniform"):
+    def __init__(self, name, pdf_params={}, low=MIN_VALUE, high=MAX_VALUE, shape=(1,), pdf_name="uniform"):
         if isinstance(name, basestring):
             self.name = name
         else:
@@ -30,11 +31,11 @@ class Parameter(object):
         else:
             raise_value_error("Parameter's " + str(self.name) + " shape="
                               + str(shape) + " is not a shape tuple!")
-        if isinstance(pdf, basestring):
-            self.pdf = pdf
+        if isinstance(pdf_name, basestring):
+            self.pdf = pdf_name
         else:
             raise_value_error("Parameter's " + str(self.name) + " pdf="
-                              + str(pdf) + " is not a string!")
+                              + str(pdf_name) + " is not a string!")
         self.low = low
         self.high = high
         self.pdf_params = pdf_params

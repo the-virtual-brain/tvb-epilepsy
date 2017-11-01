@@ -18,7 +18,7 @@ class OdeModelInversionService(ModelInversionService):
                  model=None, model_code=None, model_code_path="", target_data=None, target_data_type="", time=None,
                  logger=LOG, **kwargs):
 
-        super(ModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
+        super(OdeModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
                                                     model, model_code, model_code_path, target_data, target_data_type,
                                                     logger)
 

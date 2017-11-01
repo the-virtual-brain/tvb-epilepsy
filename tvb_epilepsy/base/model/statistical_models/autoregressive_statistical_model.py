@@ -8,8 +8,8 @@ class AutoregressiveStatisticalModel(OdeStatisticalModel):
     def __init__(self, name, parameters, n_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
                        euler_method="forward", observation_model="seeg_logpower", observation_expression="x1z_offset"):
 
-        super(OdeStatisticalModel, self).__init__(name, parameters, n_regions, active_regions, n_signals, n_times, dt,
-                                                  euler_method, observation_model, observation_expression)
+        super(AutoregressiveStatisticalModel, self).__init__(name, parameters, n_regions, active_regions, n_signals,
+                                                             n_times, dt, euler_method, observation_model, observation_expression)
 
         # Further parameter setting:
         # State variables:

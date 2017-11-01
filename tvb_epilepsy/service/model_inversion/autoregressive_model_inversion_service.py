@@ -18,9 +18,9 @@ class AutoregressiveModelInversionService(OdeModelInversionService):
                  model=None, model_code=None, model_code_path="", target_data=None, target_data_type="", time=None,
                  logger=LOG):
 
-        super(OdeModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model, model,
-                                                       model_code, model_code_path, target_data, target_data_type, time,
-                                                       logger)
+        super(AutoregressiveModelInversionService, self).__init__(model_configuration, hypothesis, head,
+                                                                  dynamical_model, model, model_code, model_code_path,
+                                                                  target_data, target_data_type, time, logger)
 
     def get_default_sig(self):
             if EPILEPTOR_MODEL_NVARS.get([self.dynamic_model]) == 2:
@@ -64,7 +64,7 @@ class AutoregressiveModelInversionService(OdeModelInversionService):
             self.model_data.update({key: val})
         for p in statistical_model.paramereters.values():
             self.model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high,
-                                    p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.pdf))[0]})
+                                    p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.pdf_name))[0]})
             if isequal_string(p.name, "x1") or isequal_string(p.name, "z"):
                 pass
             elif isequal_string(p.name, "EC"):

@@ -12,28 +12,34 @@ from tvb_epilepsy.service.sampling_service import logger
 
 distrib_dict = {"uniform": {"constraint": lambda a, b: np.all(a < b),
                              "constraint_str": "a < b",
-                             "mu": lambda a, b: 0.5 * (a + b),
-                             "med": lambda a, b: 0.5 * (a + b),
-                             "mod": raise_value_error("No definite mode for uniform distribution!"),
-                             "std": lambda a, b: 0.5 * (b - a) / np.sqrt(3),
+                             "mu": lambda a=0.0, b=1.0: 0.5 * (a + b),
+                             "median": lambda a=0.0, b=1.0: 0.5 * (a + b),
+                             "mode": lambda a=0.0, b=1.0: raise_value_error("No definite mode for uniform distribution!"),
+                             "std": lambda a=0.0, b=1.0: 0.5 * (b - a) / np.sqrt(3),
+                             "skew": lambda a=0.0, b=1.0: 0.0,
+                             "exkurt": lambda a=0.0, b=1.0: -6.0/5.0,
                              # "from_mu_std": lambda mu, std: {"a": mu - std * np.sqrt(3),
                              #                                 "b": mu + std * np.sqrt(3)}
                             },
-                 "normal": {"constraint": lambda mu, sigma: np.all(sigma > 0.0),
+                 "normal": {"constraint": lambda mu=0.0, sigma=1.0: np.all(sigma > 0.0),
                              "constraint_str": "sigma > 0",
-                             "mu": lambda mu, sigma: mu,
-                             "med": lambda mu, sigma: mu,
-                             "mod": lambda mu, sigma: mu,
-                             "std": lambda mu, sigma: sigma,
+                             "mu": lambda mu=0.0, sigma=1.0: mu,
+                             "median": lambda mu=0.0, sigma=1.0: mu,
+                             "mode": lambda mu=0.0, sigma=1.0: mu,
+                             "std": lambda mu=0.0, sigma=1.0: sigma,
+                             "skew": lambda mu=0.0, sigma=1.0: 0.0,
+                             "exkurt": lambda mu=0.0, sigma=1.0: 0.0,
                              # "from_mu_std": lambda mu, std: {"mu": mu,
                              #                                 "sigma": std}
                             },
                  "lognormal": {"constraint": lambda mu, sigma: np.all(sigma > 0.0),
                                "constraint_str": "sigma > 0",
-                               "mu": lambda mu, sigma: lognormal_to_mu(mu, sigma),
-                               "med": lambda mu, sigma: lognormal_to_med(mu, sigma),
-                               "mod": lambda mu, sigma: lognormal_to_mod(mu, sigma),
+                               "mu": lambda mu=0.0, sigma=1.0: lognormal_to_mu(mu, sigma),
+                               "med": lambda mu, sigma: lognormal_to_median(mu, sigma),
+                               "mod": lambda mu, sigma: lognormal_to_mode(mu, sigma),
                                "std": lambda mu, sigma: lognormal_to_std(mu, sigma),
+                               "skew": lambda mu, sigma: 0.0,
+                               "exkurt": lambda mu, sigma: 0.0,
                                # "from_mu_std": lambda mu, std: lognormal_from_mu_std(mu, std)
                                },
 
@@ -43,8 +49,10 @@ distrib_dict = {"uniform": {"constraint": lambda a, b: np.all(a < b),
                            "constraint_str": "(alpha > 0 and beta > 0) or (k > 0 and theta > 0)",
                            "mu": lambda alpha=-1, beta=-1, k=-1, theta=-1: gamma_to_mu(alpha, beta, k, theta),
                            "med": raise_value_error("No simple close form median for gamma distribution!"),
-                           "mod": lambda alpha=-1, beta=-1, k=-1, theta=-1: gamma_to_mod(alpha, beta, k, theta),
+                           "mod": lambda alpha=-1, beta=-1, k=-1, theta=-1: gamma_to_mode(alpha, beta, k, theta),
                            "std": lambda alpha=-1, beta=-1, k=-1, theta=-1: gamma_to_std(alpha, beta, k, theta),
+                           "skew": lambda mu, sigma: 0.0,
+                           "exkurt": lambda mu, sigma: 0.0,
                            },
                 "chisquare": {"constraint": lambda p: np.all(np.abs(p["k"] - np.round(p["k"]) < 10 ** -6))
                                                       and np.all(p["k"] > 0),
@@ -92,11 +100,11 @@ def lognormal_to_mu(mu, sigma):
     return np.exp(mu + 0.5 * sigma ** 2)
 
 
-def lognormal_to_med(mu, sigma):
+def lognormal_to_median(mu, sigma):
     return np.exp(mu)
 
 
-def lognormal_to_mod(mu, sigma):
+def lognormal_to_mode(mu, sigma):
     return np.exp(mu - 0.5 * sigma ** 2)
 
 
@@ -121,7 +129,7 @@ def gamma_to_mu(alpha=-1, beta=-1, k=-1, theta=-1):
                           "k, theta one!")
 
 
-def gamma_to_mod(alpha=-1, beta=-1, k=-1, theta=-1):
+def gamma_to_mode(alpha=-1, beta=-1, k=-1, theta=-1):
     if (np.all(alpha > 0.0) and np.all(beta > 0.0)):
         if alpha >= 1.0:
             return (alpha - 1.0) / beta
@@ -147,32 +155,6 @@ def gamma_to_std(alpha=-1, beta=-1, k=-1, theta=-1):
     else:
         raise_value_error("The input gamma distribution parameters are neither of the a, beta system, nor of the "
                           "k, theta one!")
-
-
-
-def gamma_to_loc_sc(p):
-    if p.get("alpha", False) and p.get("beta", False):
-        if p["alpha"] >= 1.0:
-            sc = 1.0 / p["beta"]
-            return (p["alpha"] - 1.0) * sc, sc
-        else:
-            raise_value_error("alpha = " + str(p["alpha"]) +
-                              " is not >= 1.0, as it should be for location (mode) to be well defined!")
-
-    elif p.get("k", False) and p.get("theta", False):
-        if p["k"] >= 1.0:
-            return (p["k"] - 1.0) * p["theta"], p["theta"]
-        else:
-            raise_value_error("k = " + str(p["k"]) +
-                              " is not >= 1.0, as it should be for location (mode) to be well defined!")
-    else:
-        raise_value_error("The input gamma distribution parameters are neither of the a, beta system, nor of the "
-                          "k, theta one!")
-
-
-def gamma_from_mu_std(loc, sc):
-    k = loc / sc + 1.0
-    return {"k": k, "theta": sc, "alpha": k, "beta": 1.0 / sc}
 
 
 def beta_from_mu_std(mu, std):
