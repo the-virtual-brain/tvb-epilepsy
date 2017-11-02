@@ -1,6 +1,7 @@
 
 import importlib
 from collections import OrderedDict
+from copy import deepcopy
 
 import numpy as np
 import numpy.random as nr
@@ -10,8 +11,7 @@ from SALib.sample import saltelli, fast_sampler, morris, ff
 
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, \
     raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, dicts_of_lists, \
-    dicts_of_lists_to_lists_of_dicts, isequal_string
+from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, isequal_string
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 
@@ -20,28 +20,24 @@ logger = initialize_logger(__name__)
 
 class SamplingService(object):
 
-    def __init__(self, n_samples=10, n_outputs=1):
+    def __init__(self, n_samples=10):
         self.sampler = None
         self.sampling_module = ""
         self.n_samples = n_samples
-        self.n_outputs = n_outputs
-        self.shape = (n_outputs, n_samples)
+        self.shape = (1, n_samples)
         self.stats = {}
 
     def __repr__(self):
         d = {"01. Sampling module": self.sampling_module,
              "02. Sampler": self.sampler,
              "03. Number of samples": self.n_samples,
-             "04. Number of output parameters": self.n_outputs,
-             "05. Samples' shape": self.shape,
+             "04. Samples' shape": self.shape,
              }
-        return formal_repr(self, d) + "\n06. Distribution parameters: " + dict_str(self.params) + \
-                                      "\n07 Resulting statistics: " + dict_str(self.stats)
+        return formal_repr(self, d) + "\n05. Resulting statistics: " + dict_str(self.stats)
 
     def _prepare_for_h5(self):
         h5_model = convert_to_h5_model({"sampling_module": self.sampling_module, "sampler": self.sampler,
-                                        "n_samples": self.n_samples, "n_outputs": self.n_outputs, "shape": self.shape,
-                                        "stats": self.stats})
+                                        "n_samples": self.n_samples, "shape": self.shape, "stats": self.stats})
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         return h5_model
 
@@ -51,11 +47,11 @@ class SamplingService(object):
         h5_model = self._prepare_for_h5()
         h5_model.write_to_h5(folder, filename)
 
-    def adjust_to_parameters_shape(self, parameter_shape):
-        shape = [self.n_outputs]
-        for s in parameter_shape:
-            shape.append(s)
-        shape += [self.samples]
+    def adjust_shape(self, parameter_shape):
+        shape = []
+        for p in parameter_shape:
+            shape.append(p)
+        shape.append(self.n_samples)
         self.shape = shape
 
     def compute_stats(self, samples):
@@ -69,9 +65,7 @@ class SamplingService(object):
                             ("p90", np.percentile(samples, 90, axis=-1)), ("p95", np.percentile(samples, 95, axis=-1)),
                             ("p99", np.percentile(samples, 99, axis=-1))])
 
-    def generate_samples(self, parameter, stats=False, force_parameters_shape=False, **kwargs):
-        if force_parameters_shape:
-            self.adjust_to_parameters_shape(parameter.shape)
+    def generate_samples(self, parameter, stats=False, **kwargs):
         samples = self.sample(parameter, **kwargs)
         self.stats = self.compute_stats(samples)
         if stats:
@@ -82,92 +76,89 @@ class SamplingService(object):
 
 class DeterministicSamplingService(SamplingService):
 
-    def __init__(self, n_samples=10, n_outputs=1, grid_mode=True):
-        super(DeterministicSamplingService, self).__init__(n_samples, n_outputs)
+    def __init__(self, n_samples=10, grid_mode=True):
+        super(DeterministicSamplingService, self).__init__(n_samples)
         self.sampling_module = "numpy.linspace"
         self.sampler = np.linspace
         self.grid_mode = grid_mode
-        if self.grid_mode:
-            self.shape = (self.n_outputs, np.power(self.n_samples, self.n_outputs))
+        self.shape = (1, self.n_samples)
 
     def sample(self, parameter, **kwargs):
-        i1 = np.ones((self.n_outputs,))
-        low = (np.array(parameter.low) * i1).tolist()
-        high = (np.array(parameter.high) * i1).tolist()
+        self.adjust_shape(parameter.shape)
+        i1 = np.ones(parameter.shape)
+        low = np.array(parameter.low) * i1
+        high = np.array(parameter.high) * i1
         samples = []
-        if len(self.shape) > 2:
-            shape = tuple(list(self.shape)[1:-1] + [1])
-        else:
-            shape = 1
-        for io in range(self.n_outputs):
-            samples.append(np.tile(self.sampler(low[io], high[io], self.n_samples), shape))
+        for (lo, hi) in zip(low.flatten(), high.flatten()):
+            samples.append(self.sampler(lo, hi, self.n_samples))
         if self.grid_mode:
-            samples_grids = np.meshgrid(*(samples.tolist()), sparse=False, indexing="ij")
+            samples_grids = np.meshgrid(*(samples), sparse=False, indexing="ij")
             samples = []
             for sb in samples_grids:
                 samples.append(sb.flatten())
-        return np.array(samples)
+                samples = np.array(samples)
+                self.shape = samples.shape
+        else:
+            samples = np.array(samples)
+            transpose_shape = tuple([self.n_samples] + list(self.shape)[0:-1])
+            samples = np.reshape(samples, transpose_shape).T
+        return samples
 
 
 # TODO: Add pystan as a stochastic sampling module, when/if needed.
 
 class StochasticSamplingService(SamplingService):
 
-    def __init__(self, n_samples=10, n_outputs=1, sampling_module="scipy", sampler=None, random_seed=None):
-        super(StochasticSamplingService, self).__init__(n_samples, n_outputs)
+    def __init__(self, n_samples=10, sampling_module="scipy", sampler=None, random_seed=None):
+        super(StochasticSamplingService, self).__init__(n_samples)
         self.random_seed = random_seed
         self.sampling_module = sampling_module.lower()
-        if isequal_string(sampling_module, "salib"):
-            self.sampler = sampler
-            self.sampling_module = "SALib.sample" + self.sampler + ".sampler"
+        self.sampler = sampler
 
     def __repr__(self):
 
         d = {"01. Sampling module": self.sampling_module,
              "02. Sampler": self.sampler,
              "03. Number of samples": self.n_samples,
-             "04. Number of output parameters": self.n_outputs,
-             "05. Samples' shape": self.shape,
-             "06. Random seed": self.random_seed,
+             "04. Samples' shape": self.shape,
+             "05. Random seed": self.random_seed,
              }
-        return formal_repr(self, d) + "\n07. Resulting statistics: " + dict_str(self.stats)
+        return formal_repr(self, d) + "\n06. Resulting statistics: " + dict_str(self.stats)
 
     def __str__(self):
         return self.__repr__()
 
     def _prepare_for_h5(self):
         h5_model = convert_to_h5_model({"sampling_module": self.sampling_module, "sampler": self.sampler,
-                                        "n_samples": self.n_samples, "n_outputs": self.n_outputs, "shape": self.shape,
+                                        "n_samples": self.n_samples, "shape": self.shape,
                                         "random_seed": self.random_seed, "stats": self.stats})
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         return h5_model
 
     def _salib_sample(self, bounds, **kwargs):
-        sampler = importlib.import_module("SALib.sample." + self.sampler).sample
-        size = self.n_samples
-        problem = {'num_vars': self.n_outputs, 'bounds': bounds}
-        if sampler is ff.sample:
-            samples = sampler(problem)
+        self.sampler = importlib.import_module("SALib.sample." + self.sampler).sample
+        size = self.n_sample
+        n_outputs = len(bounds)
+        problem = {'num_vars': 1, 'bounds': bounds}
+        if self.sampler is ff.sample:
+            samples = (self.sampler(problem)).T
         else:
             other_params = {}
-            if sampler is saltelli.sample:
-                size = int(np.round(1.0*size / (2*self.n_outputs + 2)))
-            elif sampler is fast_sampler.sample:
+            if self.sampler is saltelli.sample:
+                size = int(np.round(1.0 * size / (2 * n_outputs + 2)))
+            elif self.sampler is fast_sampler.sample:
                 other_params = {"M": kwargs.get("M", 4)}
-            elif sampler is morris.sample:
+            elif self.sampler is morris.sample:
                 # I don't understand this method and its inputs. I don't think we will ever use it.
                 raise_not_implemented_error()
-            samples = sampler(problem, size, **other_params).T
-            # Adjust samples number:
-            self.n_samples = samples[1]
-            if len(self.shape) > 2:
-                shape = tuple(list(self.shape)[1:-1] + [1])
-                out_samples = []
-                for s in samples:
-                    out_samples.append(np.tile(s, shape))
-                samples = np.array(out_samples)
-        self.shape = samples.shape
-        return samples
+            samples = self.sampler(problem, size, **other_params)
+        # Adjust samples number:
+        self.n_samples = samples[0]
+        self.shape = list(self.shape)
+        self.shape[-1] = self.n_samples
+        self.shape = tuple(self.shape)
+        transpose_shape = tuple([self.n_samples] + list(self.shape)[0:-1])
+        return np.reshape(samples.T, transpose_shape).T
 
     def _truncated_distribution_sampling(self, trunc_limits, size):
         # Following: https://stackoverflow.com/questions/25141250/
@@ -181,29 +172,43 @@ class StochasticSamplingService(SamplingService):
 
     def sample(self, parameter, **kwargs):
         nr.seed(self.random_seed)
-        i1 = np.ones((self.n_outputs))
-        low = (np.array(parameter.low) * i1).tolist()
-        high = (np.array(parameter.high) * i1).tolist()
+        self.adjust_shape(self, parameter.shape)
+        i1 = np.ones(parameter.shape)
+        low = (np.array(parameter.low) * i1).flatten().tolist()
+        high = (np.array(parameter.high) * i1).flatten().tolist()
         if self.sampling_module.find("SALib") >= 0:
             if np.any(low == -np.inf) or np.any(high == np.inf):
                 raise_value_error("SALib sampling is not possible with infinite bounds!")
             return self._salib_sample(bounds=zip(low, high), **kwargs)
         else:
+            prob_distr = np.array(deepcopy(parameter.prob_distr))
+            if prob_distr.shape != parameter.shape:
+                prob_distr = np.tile(prob_distr, parameter.shape)
+                if prob_distr.shape != parameter.shape:
+                    raise_value_error("Distribution's shape (" + str(parameter.prob_distr) +
+                                      ") and parameter's (" + str(parameter.shape) + ") shape do not match!")
+            prob_distr = prob_distr.flatten().tolist()
+            samples = []
+            samplers = []
             if np.any(low > -np.inf) or np.any(high < np.inf):
                 if not(isequal_string(self.sampling_module, "scipy")):
                     warning("Switching to scipy for truncated distributions' sampling!")
-                self.sampler = parameter.prob_distr.scipy
-                trunc_limits = dicts_of_lists_to_lists_of_dicts({"low": low, "high": high})
-                samples = []
-                output_shape = tuple(list(self.shape)[1:])
-                for io in range(self.n_outputs):
+                    self.sampling_module="scipy"
+                for (lo, hi, pd) in zip(low, high, prob_distr):
+                    self.sampler = pd.scipy
+                    samplers.append(self.sampler)
                     samples.append(
-                        self._truncated_distribution_sampling(self.sampler, trunc_limits[io], output_shape))
-                return np.array(samples)
+                        self._truncated_distribution_sampling({"low": lo, "high": hi}, (self.n_samples, 1)))
             elif self.sampling_module.find("scipy") >= 0:
-                self.sampler = parameter.prob_distr.scipy
-                return (self.sampler).rvs(size=self.shape)
+                for pd in prob_distr:
+                    self.sampler = pd.scipy
+                    samplers.append(self.sampler)
+                    samples.append(self.sampler.rvs(size=(self.n_samples, 1)))
             elif self.sampling_module.find("numpy") >= 0:
-                self.sampler = getattr(nr, parameter.prob_distr.name)
-                return self.sampler(*parameter.prob_distr.params.values(), size=self.shape)
-
+                for pd in prob_distr:
+                    self.sampler = getattr(nr, pd.name)
+                    samplers.append(self.sampler)
+                    samples.append(self.sampler(*pd.params.values(), size=(self.n_samples, 1)))
+            self.sampler = samplers
+            transpose_shape=tuple([self.n_samples] + list(self.shape)[0:-1])
+            return np.reshape(np.array(samples), transpose_shape).T
