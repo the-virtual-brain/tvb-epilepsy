@@ -1,5 +1,4 @@
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
-from tvb_epilepsy.base.model.statistical_models.parameter import Parameter
+from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import OdeStatisticalModel
 
 

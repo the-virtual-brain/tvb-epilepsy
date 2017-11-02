@@ -1,10 +1,9 @@
 import numpy as np
 
-from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
+from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
-from tvb_epilepsy.base.model.statistical_models.parameter import Parameter
-
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 
 OBSERVATION_MODEL_EXPRESSIONS=["x1z_offset", "x1_offset", "x1"]
 OBSERVATION_MODELS=["seeg_power", "seeg_logpower", "lfp_power", "lfp_logpower"]

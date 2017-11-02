@@ -1,9 +1,9 @@
 import numpy as np
 
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, K_DEF
-from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
-from tvb_epilepsy.base.model.statistical_models.parameter import Parameter
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.model.parameter import Parameter
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 
 
 class StatisticalModel(object):

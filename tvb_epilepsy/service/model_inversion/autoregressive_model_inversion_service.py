@@ -1,13 +1,12 @@
 import numpy as np
 
 from tvb_epilepsy.base.constants import EPILEPTOR_MODEL_NVARS
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string
-from tvb_epilepsy.base.model.statistical_models.parameter import AVAILABLE_DISTRIBUTIONS
+from tvb_epilepsy.base.model.parameter import AVAILABLE_DISTRIBUTIONS
 from tvb_epilepsy.base.model.statistical_models.autoregressive_statistical_model import AutoregressiveStatisticalModel
-from tvb_epilepsy.service.model_inversion.ode_model_inversion_service import OdeModelInversionService
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.service.epileptor_model_factory import model_noise_intensity_dict
-
+from tvb_epilepsy.service.model_inversion.ode_model_inversion_service import OdeModelInversionService
 
 LOG = initialize_logger(__name__)
 
