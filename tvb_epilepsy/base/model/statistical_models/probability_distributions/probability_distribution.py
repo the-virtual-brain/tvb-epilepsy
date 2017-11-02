@@ -154,24 +154,25 @@ class ProbabilityDistribution(object):
         else:
             return self.calc_exkurt_manual()
 
-    def calc_distributions_params(self, target_params, **kwargs):
-        fobj = []
-        if len(target_params) != self.n_params:
-            raise_value_error("Target parameters are " + str(len(target_params)) +
+    def compute_distributions_params(self, target_stats, **kwargs):
+        if len(target_stats) != self.n_params:
+            raise_value_error("Target parameters are " + str(len(target_stats)) +
                               ", whereas the characteristic parameters of distribution " + self.name +
                               " are " + str(self.n_params) + "!")
+        fobjs = []
         p_keys = self.params.keys()
-        for p_key, p_val in target_params.iteritems():
-            fobj.append(
-          lambda p: (getattr(self.__class__.__init__(**dict(zip(p_keys, *p))), "calc_" + p_key)(**kwargs)) - p_val) ** 2
+        for p_key, p_val in target_stats.iteritems():
+            fobjs.append(
+          lambda p: (getattr(self.__class__.__init__(**dict(zip(p_keys, p))), "calc_" + p_key)(**kwargs)) - p_val) ** 2
+        fobj = lambda p: np.sum([f(p) for f in fobjs])
         sol = root(fobj, self.params.values(), method='lm', tol=10 ** (-12), callback=None, options=None)
         if sol.success:
             if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
                 raise_value_error("nan or inf values in solution x\n" + sol.message)
-            return dict(zip(p_keys, *sol.x))
+            return dict(zip(p_keys, sol.x))
         else:
             raise_value_error(sol.message)
 
-    def calc_and_update_params(self, **target_params):
-        params = self.calc_distributions_params(**target_params)
+    def compute_and_update_params(self, **target_stats):
+        params = self.compute_distributions_params(**target_stats)
         self.update_params(**params)
