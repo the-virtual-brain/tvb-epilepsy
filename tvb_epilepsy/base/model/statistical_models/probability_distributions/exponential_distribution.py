@@ -14,20 +14,10 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
         self.name = "exponential"
         self.scipy_name = "expon"
         self.params = {"scale": np.float(scale)}
-        self.n_params = len(self.params)
         self.constraint_string = "scale > 0"
-        if not(self.constraint()):
-            raise_value_error("Constraint for " + self.name + " distribution " + self.constraint_string +
-                              "\nwith parameters " + str(self.params) + " is not satisfied!")
-        self.rate = 1.0 / self.params["scale"]
-        self.lamda = self.rate
-        self.mu = self.calc_mu()
-        self.median = self.calc_median()
-        self.mode = self.calc_mode()
-        self.var = self.calc_var()
-        self.std = self.calc_std()
-        self.skew = self.calc_skew()
-        self.exkurt = self.calc_exkurt()
+        self.__update_params__(**self.params)
+        self.lamda = 1.0/ scale
+        self.rate = self.lamda
 
     def __str__(self):
         this_str = super(ExponentialDistribution, self).__str__()
@@ -35,48 +25,35 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
         this_str += "\n" + "13. rate or lamda" + " = " + str(self.rate) + "}"
         return this_str
 
+    def update_params(self, **params):
+        self.__update_params__(**self.params)
+        self.lamda = 1.0 / self.params["scale"]
+        self.rate = self.lamda
+
     def constraint(self):
         return np.all(self.params["scale"] > 0)
 
     def scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(loc=loc, scale=self.params["scale"])
 
-    def calc_mu(self, use="scipy"):
-        if isequal_string(use, "scipy"):
-            return self.scipy().stats(moments="m")
-        else:
-            return self.params["scale"]
+    def calc_mu_manual(self):
+        return self.params["scale"]
 
-    def calc_median(self, use="scipy"):
-        if isequal_string(use, "scipy"):
-            return self.scipy().median()
-        else:
-            warning("Approximate calculation for median of chisquare distribution!")
-            return self.params["scale"] * np.log(2)
+    def calc_median_manual(self):
+        warning("Approximate calculation for median of chisquare distribution!")
+        return self.params["scale"] * np.log(2)
 
-    def calc_mode(self):
+    def calc_mode_manual(self):
         return 0.0
 
-    def calc_var(self, use="scipy"):
-        if isequal_string(use, "scipy"):
-            return self.scipy().var()
-        else:
-            return self.params["scale"] ** 2
+    def calc_var_manual(self):
+        return self.params["scale"] ** 2
 
-    def calc_std(self, use="scipy"):
-        if isequal_string(use, "scipy"):
-            return self.scipy().std()
-        else:
-            return self.params["scale"]
+    def calc_std_manual(self):
+        return self.params["scale"]
 
-    def calc_skew(self, use="scipy"):
-        if isequal_string(use, "scipy"):
-            return self.scipy().stats(moments="s")
-        else:
-            return 2.0
+    def calc_skew_manual(self):
+        return 2.0
 
-    def calc_exkurt(self, use="scipy"):
-        if isequal_string(use, "scipy"):
-            return self.scipy().stats(moments="k")
-        else:
-            return 6.0
+    def calc_exkurt_manual(self):
+        return 6.0

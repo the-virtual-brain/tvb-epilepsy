@@ -14,18 +14,11 @@ class BetaDistribution(ContinuousProbabilityDistribution):
         self.name = "beta"
         self.scipy_name = "beta"
         self.params = {"alpha": np.float(alpha), "beta": np.float(beta)}
-        self.n_params = len(self.params)
         self.constraint_string = "alpha > 0 and beta > 0"
-        if not(self.constraint()):
-            raise_value_error("Constraint for " + self.name + " distribution " + self.constraint_string +
-                              "\nwith parameters " + str(self.params) + " is not satisfied!")
-        self.mu = self.calc_mu()
-        self.median = None
-        self.mode = self.calc_mode()
-        self.var = self.calc_var()
-        self.std = self.calc_std()
-        self.skew = self.calc_skew()
-        self.exkurt = self.calc_exkurt()
+        self.__update_params__(**self.params)
+
+    def update_params(self, **params):
+        self.__update_params__(**self.params)
 
     def constraint(self):
         return self.params["alpha"] > 0.0 and self.params["beta"] > 0.0
