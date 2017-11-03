@@ -13,7 +13,8 @@ class DiscreteProbabilityDistribution(ProbabilityDistribution):
 
     def scipy_pdf(self, x=None, q=[0.01, 0.99], loc=0.0, scale=1.0):
         if x is None:
-            x = np.linspace(self.scipy(loc, scale).ppf(q[0]), self.scipy(loc, scale).ppf(q[0]), 101)
+            x = np.linspace(np.min(self.scipy(loc, scale).ppf(q[0])),
+                            np.min(self.scipy(loc, scale).ppf(q[1])), 101)
         return self.scipy(loc, scale).pmf(x), x
 
     @abstractmethod

@@ -1,3 +1,4 @@
+import sys
 
 import importlib
 from collections import OrderedDict
@@ -174,41 +175,31 @@ class StochasticSamplingService(SamplingService):
         nr.seed(self.random_seed)
         self.adjust_shape(self, parameter.shape)
         i1 = np.ones(parameter.shape)
-        low = (np.array(parameter.low) * i1).flatten().tolist()
-        high = (np.array(parameter.high) * i1).flatten().tolist()
+        low = np.array(parameter.low) * i1
+        high = np.array(parameter.high) * i1
         if self.sampling_module.find("SALib") >= 0:
-            if np.any(low == -np.inf) or np.any(high == np.inf):
-                raise_value_error("SALib sampling is not possible with infinite bounds!")
-            return self._salib_sample(bounds=zip(low, high), **kwargs)
+            id = (low == -np.inf)
+            if np.any(id):
+                warning("SALib sampling is not possible with infinite bounds! Setting lowest system value for low!")
+                low[id] = sys.floatinfo["MIN"]
+            id = (high == np.inf)
+            if np.any(id):
+                warning("SALib sampling is not possible with infinite bounds! Setting highest system value for high!")
+                high[id] = sys.floatinfo["MAX"]
+            return self._salib_sample(bounds=zip(low.flatten().tolist(), high.flatten().tolist()), **kwargs)
         else:
-            prob_distr = np.array(deepcopy(parameter.probability_distribution))
-            if prob_distr.shape != parameter.shape:
-                prob_distr = np.tile(prob_distr, parameter.shape)
-                if prob_distr.shape != parameter.shape:
-                    raise_value_error("Distribution's shape (" + str(parameter.prob_distr) +
-                                      ") and parameter's (" + str(parameter.shape) + ") shape do not match!")
-            prob_distr = prob_distr.flatten().tolist()
-            samples = []
-            samplers = []
+            prob_distr = deepcopy(parameter.probability_distribution)
+            out_shape = tuple([self.n_samples] + list(self.shape)[:-1])
             if np.any(low > -np.inf) or np.any(high < np.inf):
                 if not(isequal_string(self.sampling_module, "scipy")):
                     warning("Switching to scipy for truncated distributions' sampling!")
-                    self.sampling_module="scipy"
-                for (lo, hi, pd) in zip(low, high, prob_distr):
-                    self.sampler = pd.scipy
-                    samplers.append(self.sampler)
-                    samples.append(
-                        self._truncated_distribution_sampling({"low": lo, "high": hi}, (self.n_samples, 1)))
+                    self.sampling_module = "scipy"
+                    self.sampler = prob_distr.scipy
+                    samples = self._truncated_distribution_sampling({"low": low, "high": high}, out_shape)
             elif self.sampling_module.find("scipy") >= 0:
-                for pd in prob_distr:
-                    self.sampler = pd.scipy
-                    samplers.append(self.sampler)
-                    samples.append(self.sampler.rvs(size=(self.n_samples, 1)))
+                self.sampler = prob_distr.scipy
+                samples = self.sampler.rvs(size=out_shape)
             elif self.sampling_module.find("numpy") >= 0:
-                for pd in prob_distr:
-                    self.sampler = getattr(nr, pd.name)
-                    samplers.append(self.sampler)
-                    samples.append(self.sampler(*pd.params.values(), size=(self.n_samples, 1)))
-            self.sampler = samplers
-            transpose_shape=tuple([self.n_samples] + list(self.shape)[0:-1])
-            return np.reshape(np.array(samples), transpose_shape).T
+                self.sampler = getattr(nr, prob_distr.name)
+                samples = self.sampler(*prob_distr.params.values(), size=out_shape)
+            return samples.T

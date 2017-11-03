@@ -2,8 +2,7 @@
 import numpy as np
 import scipy.stats as ss
 
-from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+from tvb_epilepsy.base.utils.data_structures_utils import make_float
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
                                                                                 import ContinuousProbabilityDistribution
 
@@ -13,7 +12,7 @@ class NormalDistribution(ContinuousProbabilityDistribution):
     def __init__(self, mu=0.0, sigma=1.0):
         self.name = "normal"
         self.scipy_name = "norm"
-        self.params = {"mu": np.float(mu), "sigma": np.float(sigma)}
+        self.params = {"mu": make_float(mu), "sigma": make_float(sigma)}
         self.constraint_string = "sigma > 0"
         self.__update_params__(**self.params)
 
@@ -21,7 +20,7 @@ class NormalDistribution(ContinuousProbabilityDistribution):
         self.__update_params__(**self.params)
 
     def constraint(self):
-        return self.params["sigma"] > 0.0
+        return np.all(self.params["sigma"] > 0.0)
 
     def scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(loc=self.params["mu"], scale=self.params["sigma"])

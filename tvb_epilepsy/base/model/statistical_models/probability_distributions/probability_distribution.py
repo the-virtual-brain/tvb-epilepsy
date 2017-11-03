@@ -9,6 +9,10 @@ from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 
+AVAILABLE_DISTRIBUTIONS = ["uniform", "normal", "gamma", "lognormal", "exponential", "beta", "chisquare",
+                           "binomial", "bernoulli", "poisson"]
+
+
 class ProbabilityDistribution(object):
 
     __metaclass__ = ABCMeta
@@ -16,6 +20,7 @@ class ProbabilityDistribution(object):
     name = ""
     params = {}
     n_params = 0.0
+    shape = ()
     constraint_string = ""
     mu = None
     median = None
@@ -61,17 +66,24 @@ class ProbabilityDistribution(object):
 
     def __update_params__(self, **params):
         self.params = params
+        self.shape = self.calc_shape()
         self.n_params = len(self.params)
         if not (self.constraint()):
             raise_value_error("Constraint for " + self.name + " distribution " + self.constraint_string +
                               "\nwith parameters " + str(self.params) + " is not satisfied!")
         self.mu = self.calc_mu()
         self.median = self.calc_median()
-        self.mode = self.calc_mode()
+        self.mode = self.calc_mode_manual()
         self.var = self.calc_var()
         self.std = self.calc_std()
         self.skew = self.calc_skew()
         self.exkurt = self.calc_exkurt()
+
+    def calc_shape(self):
+        psum = np.array(0)
+        for pval in self.params.values():
+            psum += np.array(pval, dtype='i')
+        return psum.shape
 
     @abstractmethod
     def update_params(self, **params):
@@ -154,18 +166,43 @@ class ProbabilityDistribution(object):
         else:
             return self.calc_exkurt_manual()
 
-    def compute_distributions_params(self, target_stats, **kwargs):
+    def compute_distributions_params(self, target_shape=None, **target_stats):
         if len(target_stats) != self.n_params:
             raise_value_error("Target parameters are " + str(len(target_stats)) +
                               ", whereas the characteristic parameters of distribution " + self.name +
                               " are " + str(self.n_params) + "!")
-        fobjs = []
+        i1 = np.ones(self.shape)
+        try:
+            if isinstance(target_shape, tuple):
+                i1 *= np.ones(target_shape)
+        except:
+            raise_value_error("Target (" + str(target_shape) +
+                              ") and distribution (" + str(self.shape) + ") shapes do not match/propagate!")
+        try:
+            for ts in target_stats.values():
+                i1 *= np.ones(np.array(ts).shape)
+        except:
+            raise_value_error("Target statistics (" + str([np.array(ts).shape for ts in target_stats.values()]) +
+                              ") and distribution (" + str(self.shape) + ") shapes do not match/propagate!")
+        shape = i1.shape
+        for ts_key in target_stats.keys():
+            target_stats[ts_key] *= i1
+        params_vector = []
+        for p_key in self.params.keys():
+            self.params[p_key] *= i1
+            params_vector += self.params[p_key].flatten().tolist()
+        size = len(params_vector)
+        params_vector = np.array(params_vector)
         p_keys = self.params.keys()
-        for p_key, p_val in target_stats.iteritems():
-            fobjs.append(
-          lambda p: (getattr(self.__class__.__init__(**dict(zip(p_keys, p))), "calc_" + p_key)(**kwargs)) - p_val) ** 2
-        fobj = lambda p: np.sum([f(p) for f in fobjs])
-        sol = root(fobj, self.params.values(), method='lm', tol=10 ** (-12), callback=None, options=None)
+        def fobj(p):
+            params = {}
+            for ik, p_key in enumerate(p_keys):
+                params.update({p_key: np.reshape(p[ik*size:(ik+1)*size], shape)})
+            f = 0
+            for ts_key, ts_val in target_stats.iteritems():
+                f += (getattr(self.__class__(**params), "calc_" + ts_key)() - ts_val) ** 2
+            return f
+        sol = root(fobj, params_vector, method='lm', tol=10 ** (-12), callback=None, options=None)
         if sol.success:
             if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
                 raise_value_error("nan or inf values in solution x\n" + sol.message)
@@ -173,10 +210,6 @@ class ProbabilityDistribution(object):
         else:
             raise_value_error(sol.message)
 
-    def compute_and_update_params(self, **target_stats):
-        params = self.compute_distributions_params(**target_stats)
+    def compute_and_update_params(self, target_shape=None, **target_stats):
+        params = self.compute_distributions_params(target_shape, **target_stats)
         self.update_params(**params)
-
-
-AVAILABLE_DISTRIBUTIONS = ["uniform", "normal", "gamma", "lognormal", "exponential", "beta", "chisquare",
-                           "binomial", "bernoulli", "poisson"]

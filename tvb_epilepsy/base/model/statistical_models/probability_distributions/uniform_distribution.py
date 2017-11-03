@@ -4,8 +4,8 @@ import sys
 import numpy as np
 import scipy.stats as ss
 
-from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+from tvb_epilepsy.base.utils.log_error_utils import warning
+from tvb_epilepsy.base.utils.data_structures_utils import make_float
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
                                                                                 import ContinuousProbabilityDistribution
 
@@ -19,7 +19,7 @@ class UniformDistribution(ContinuousProbabilityDistribution):
     def __init__(self, a=MIN_VALUE, b=MAX_VALUE):
         self.name = "uniform"
         self.scipy_name = "uniform"
-        self.params = {"a": np.float(a), "b": np.float(b)}
+        self.params = {"a": make_float(a), "b": make_float(b)}
         self.constraint_string = "a < b"
         self.__update_params__(**self.params)
 
@@ -27,7 +27,7 @@ class UniformDistribution(ContinuousProbabilityDistribution):
         self.__update_params__(**self.params)
 
     def constraint(self):
-        return self.params["a"] < self.params["b"]
+        return np.all(self.params["a"] < self.params["b"])
 
     def scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(loc=self.params["a"], scale=self.params["b"]-self.params["a"])

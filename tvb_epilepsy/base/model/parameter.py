@@ -28,6 +28,15 @@ class Parameter(object):
             raise_value_error("Parameter's " + str(self.name) + " shape="
                               + str(shape) + " is not a shape tuple!")
         if isinstance(probability_distribution, ProbabilityDistribution):
+            try:
+                if (np.ones(self.shape) + np.ones(probability_distribution.shape)).shape != self.shape:
+                    raise_value_error("Parameter's (" + str(self.shape) +
+                                      ") and distribution's (" + str(probability_distribution.shape) +
+                                      ") shapes do not match!")
+            except:
+                raise_value_error("Parameter's (" + str(self.shape) +
+                                  ") and distribution's (" + str(probability_distribution.shape) +
+                                  ") shapes do not propagate!")
             self.probability_distribution = probability_distribution
         else:
             raise_value_error("Parameter's " + str(self.name) + " probability distribution ="
@@ -65,20 +74,20 @@ class Parameter(object):
         h5_model = self._prepare_for_h5()
         h5_model.write_to_h5(folder, filename)
 
-    def get_distrib_params(self):
-        if len(ensure_list(self.probability_distribution))==1:
-            return self.probability_distribution.params
-        else:
-            params = []
-            for pd in self.probability_distribution.flatten().tolist():
-                params.append(pd.params)
-            return np.reshape(params, self.shape)
-
-    def get_distrib_stats(self, stat):
-        if len(ensure_list(self.probability_distribution))==1:
-            return getattr(self.probability_distribution, stat)
-        else:
-            stats = []
-            for pd in self.probability_distribution.flatten().tolist():
-                stats.append(getattr(pd, stat))
-            return np.reshape(stats, self.shape)
+    # def get_distrib_params(self):
+    #     if len(ensure_list(self.probability_distribution))==1:
+    #         return self.probability_distribution.params
+    #     else:
+    #         params = []
+    #         for pd in self.probability_distribution.flatten().tolist():
+    #             params.append(pd.params)
+    #         return np.reshape(params, self.shape)
+    #
+    # def get_distrib_stats(self, stat):
+    #     if len(ensure_list(self.probability_distribution))==1:
+    #         return getattr(self.probability_distribution, stat)
+    #     else:
+    #         stats = []
+    #         for pd in self.probability_distribution.flatten().tolist():
+    #             stats.append(getattr(pd, stat))
+    #         return np.reshape(stats, self.shape)

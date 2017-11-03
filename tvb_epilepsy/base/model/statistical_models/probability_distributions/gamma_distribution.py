@@ -2,8 +2,8 @@
 import numpy as np
 import scipy.stats as ss
 
-from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+from tvb_epilepsy.base.utils.log_error_utils import warning
+from tvb_epilepsy.base.utils.data_structures_utils import make_float
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
                                                                                 import ContinuousProbabilityDistribution
 
@@ -13,13 +13,13 @@ class GammaDistribution(ContinuousProbabilityDistribution):
     def __init__(self, shape=1.0, scale=1.0):
         self.name = "gamma"
         self.scipy_name = "gamma"
-        self.params = {"shape": np.float(shape), "scale": np.float(scale)}
+        self.params = {"shape": make_float(shape), "scale": make_float(scale)}
         self.constraint_string = "shape > 0 and scale > 0"
         self.__update_params__(**self.params)
         self.k = shape
         self.theta = scale
         self.alpha = shape
-        self.beta =  1.0 / scale
+        self.beta = 1.0 / scale
 
     def __str__(self):
         this_str = super(GammaDistribution, self).__str__()
@@ -38,7 +38,7 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         self.beta = 1.0 / self.params["scale"]
 
     def constraint(self):
-        return self.params["shape"] > 0.0 and self.params["scale"] > 0.0
+        return np.all(self.params["shape"] > 0.0) and np.all(self.params["scale"] > 0.0)
 
     def scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(self.params["shape"], loc=loc, scale=self.params["scale"])

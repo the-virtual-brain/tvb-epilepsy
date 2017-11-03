@@ -2,8 +2,8 @@
 import numpy as np
 import scipy.stats as ss
 
-from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+from tvb_epilepsy.base.utils.log_error_utils import warning
+from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.discrete_probability_distribution  \
                                                                                   import DiscreteProbabilityDistribution
 
@@ -13,7 +13,7 @@ class PoissoniDistribution(DiscreteProbabilityDistribution):
     def __init__(self, lamda=0.5):
         self.name = "poisson"
         self.scipy_name = "poisson"
-        self.params = {"lamda": np.float(lamda)}
+        self.params = {"lamda": make_float(lamda)}
         self.constraint_string = "0 < lamda < 1"
         self.__update_params__(**self.params)
 
@@ -21,7 +21,7 @@ class PoissoniDistribution(DiscreteProbabilityDistribution):
         self.__update_params__(**self.params)
 
     def constraint(self):
-        return self.params["lamda"] > 0.0
+        return np.all(self.params["lamda"] > 0.0)
 
     def scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(self.params["lamda"], loc=loc, scale=scale)
@@ -34,14 +34,14 @@ class PoissoniDistribution(DiscreteProbabilityDistribution):
         return np.int(np.round(self.params["lamda"] + 1.0/3 - 0.02 / self.params["lamda"]))
 
     def calc_mode_manual(self):
-        if self.params["p"] < 0.5:
-            return 0.0
-        elif self.params["p"] > 0.5:
-            return 1.0
-        else:
+        mode = np.ones(np.array(self.params["p"]).shape)
+        mode[np.where(self.params["p"] < 0.5)[0]] = 0.0
+        p05 = self.params["p"] == 0.5
+        if np.any(p05):
             warning("The mode of poisson distribution for p=0.5 consists of two values (lamda-1 and lamda)!")
-            lamda = np.int(np.round(self.params["lamda"]))
-            return lamda - 1, lamda
+            mode = mode.astype('O')
+            lamda = make_int(np.round(self.params["lamda"]))
+            mode[np.where(p05)[0]] = (lamda - 1, lamda)
 
     def calc_var_manual(self):
         return self.params["lamda"]

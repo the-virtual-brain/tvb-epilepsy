@@ -371,6 +371,20 @@ def assert_arrays(params, shape=None, transpose=False):
         return tuple(params)
 
 
+def make_float(x):
+    if isinstance(x, np.ndarray):
+        return x.astype("f")
+    else:
+        return np.float(x)
+
+
+def make_int(x):
+    if isinstance(x, np.ndarray):
+        return x.astype("i")
+    else:
+        return np.int(x)
+
+
 def parcellation_correspondance(inds_from, labels_from, labels_to):
     inds_to = []
     for ind in inds_from:
@@ -380,3 +394,4 @@ def parcellation_correspondance(inds_from, labels_from, labels_to):
         return inds_to
     else:
         return inds_to[0]
+

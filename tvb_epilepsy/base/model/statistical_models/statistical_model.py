@@ -2,7 +2,6 @@ import numpy as np
 
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, K_DEF
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.uniform_distribution \
@@ -31,12 +30,8 @@ class StatisticalModel(object):
         if parameter is None:
             probability_distribution = parameters.get("x1eq_pdf")
             if probability_distribution is None:
-                probability_distributions = []
                 x1eq = parameters.get("x1eq", (X1_EQ_CR_DEF-X1_DEF)/2) * np.ones((self.n_regions,))
-                for sc in range(self.n_regions):
-                    probability_distribution = NormalDistribution(mu=x1eq, sigma=parameters.get("x1eq_sig", 0.1))
-                    probability_distributions.append(probability_distribution)
-                probability_distribution = np.array(probability_distributions)
+                probability_distribution = NormalDistribution(mu=x1eq, sigma=parameters.get("x1eq_sig", 0.1))
             parameter = Parameter("x1eq",
                                   low=parameters.get("x1eq_lo", X1_DEF),
                                   high=parameters.get("x1eq_hi", X1_EQ_CR_DEF),
@@ -88,13 +83,9 @@ class StatisticalModel(object):
             if probability_distribution is None:
                 structural_connectivity = parameters.get("structural_connectivity",
                                                          10 ** -3 * np.ones((n_regions, n_regions)))
-                EC_sig = parameters.get("EC_sig", structural_connectivity.flatten().median())
-                probability_distributions = []
-                for sc in structural_connectivity.flatten().tolist():
-                    probability_distribution = GammaDistribution()
-                    probability_distribution.compute_and_update_params({"mode": sc, "std": EC_sig})
-                    probability_distributions.append(probability_distribution)
-                probability_distribution = np.reshape(probability_distributions, structural_connectivity.shape)
+                EC_sig = parameters.get("EC_sig", structural_connectivity)
+                probability_distribution = GammaDistribution()
+                probability_distribution.compute_and_update_params({"mode": structural_connectivity, "std": EC_sig})
             parameter = Parameter("EC",
                                   low=parameters.get("ec_lo", 10 ** -6),
                                   high=parameters.get("ec_hi", 100.0),
