@@ -62,6 +62,7 @@ class OdeStatisticalModel(StatisticalModel):
                                       probability_distribution=probability_distribution,
                                       shape=(1,))
         self.parameters.append(parameter)
+
         # Observation model
         parameter = parameters.get("scale_signal")
         if parameter is None:
@@ -78,6 +79,7 @@ class OdeStatisticalModel(StatisticalModel):
                                       probability_distribution=probability_distribution,
                                       shape=(1,))
         self.parameters.append(parameter)
+
         parameter = parameters.get("offset_signal")
         if parameter is None:
             offset_signal_def = parameters.get("offset_signal_def", 0.0)

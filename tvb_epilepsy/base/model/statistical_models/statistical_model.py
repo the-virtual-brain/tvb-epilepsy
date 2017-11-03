@@ -27,14 +27,23 @@ class StatisticalModel(object):
         self.parameters = []
         # Generative model:
         # Epileptor:
-        self.parameters.append(parameters.get("x1eq", Parameter("x1eq",
-                                                                low=parameters.get("x1eq_lo", X1_DEF),
-                                                                high=parameters.get("x1eq_hi", X1_EQ_CR_DEF),
-                                                                probability_distribution=parameters.get("x1eq_pdf",
-                                                                  NormalDistribution(
-                                                                    mu=parameters.get("x1eq", (X1_EQ_CR_DEF-X1_DEF)/2),
-                                                                    sigma=parameters.get("x1eq_sig", 0.1))),
-                                                                shape=(self.n_regions, ))))
+        parameter = parameters.get("x1eq")
+        if parameter is None:
+            probability_distribution = parameters.get("x1eq_pdf")
+            if probability_distribution is None:
+                probability_distributions = []
+                x1eq = parameters.get("x1eq", (X1_EQ_CR_DEF-X1_DEF)/2) * np.ones((self.n_regions,))
+                for sc in range(self.n_regions):
+                    probability_distribution = NormalDistribution(mu=x1eq, sigma=parameters.get("x1eq_sig", 0.1))
+                    probability_distributions.append(probability_distribution)
+                probability_distribution = np.array(probability_distributions)
+            parameter = Parameter("x1eq",
+                                  low=parameters.get("x1eq_lo", X1_DEF),
+                                  high=parameters.get("x1eq_hi", X1_EQ_CR_DEF),
+                                  probability_distribution=probability_distribution,
+                                  shape=(self.n_regions, ))
+        self.parameters.append(parameter)
+
         parameter = parameters.get("K")
         if parameter is None:
             probability_distribution = parameters.get("K_pdf")
@@ -47,6 +56,7 @@ class StatisticalModel(object):
                                        probability_distribution=probability_distribution,
                                        shape=(self.n_regions,))
         self.parameters.append(parameter)
+
         # tau1_def = parameters.get("tau1_def", 0.5)
         low = parameters.get("tau1_lo", 0.1)
         high = parameters.get("tau1_hi", 0.9)
@@ -56,6 +66,7 @@ class StatisticalModel(object):
                                                                 probability_distribution=
                                                                   UniformDistribution(a=low, b=high),
                                                                 shape=(1,))))
+
         parameter = parameters.get("tau0")
         if parameter is None:
             tau0_def = parameters.get("tau0_def", 30.0)
@@ -69,6 +80,7 @@ class StatisticalModel(object):
                                               probability_distribution=probability_distribution,
                                               shape=(1,))
         self.parameters.append(parameter)
+
         # Coupling:
         parameter = parameters.get("EC")
         if parameter is None:

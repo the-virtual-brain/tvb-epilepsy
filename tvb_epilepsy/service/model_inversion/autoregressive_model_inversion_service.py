@@ -1,9 +1,10 @@
 import numpy as np
 
 from tvb_epilepsy.base.constants import EPILEPTOR_MODEL_NVARS
-from tvb_epilepsy.base.model.parameter import AVAILABLE_DISTRIBUTIONS
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
+    AVAILABLE_DISTRIBUTIONS
 from tvb_epilepsy.base.model.statistical_models.autoregressive_statistical_model import AutoregressiveStatisticalModel
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, arrays_of_dicts_to_dicts_of_ndarrays
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.service.epileptor_model_factory import model_noise_intensity_dict
 from tvb_epilepsy.service.model_inversion.ode_model_inversion_service import OdeModelInversionService
@@ -63,14 +64,18 @@ class AutoregressiveModelInversionService(OdeModelInversionService):
             self.model_data.update({key: val})
         for p in statistical_model.paramereters.values():
             self.model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high,
-                                    p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.pdf_name))[0]})
+                                    p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS,
+                                                                      p.probability_distribution.name))[0]})
             if isequal_string(p.name, "x1") or isequal_string(p.name, "z"):
                 pass
-            elif isequal_string(p.name, "EC"):
-                self.model_data.update({p.name + "_p2": p.pdf_params[0]})
             else:
-                self.model_data.update({p.name + "_p1": p.pdf_params[0]})
-                if len(p.pdf_params) == 1:
-                    self.model_data.update({p.name + "_p2": p.pdf_params[0]})
+                # TODO: take care of gamma distribution scale to rate conversion!
+                pdf_params = p.get_distrib_params()
+                if isinstance(pdf_params, np.ndarray):
+                    pdf_params = arrays_of_dicts_to_dicts_of_ndarrays(pdf_params)
+                pdf_params = pdf_params.values()
+                self.model_data.update({p.name + "_p1": pdf_params[0]})
+                if len(pdf_params) == 1:
+                    self.model_data.update({p.name + "_p2": pdf_params[0]})
                 else:
-                    self.model_data.update({p.name + "_p2": p.pdf_params[1]})
+                    self.model_data.update({p.name + "_p2": pdf_params[1]})

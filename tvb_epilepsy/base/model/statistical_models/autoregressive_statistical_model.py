@@ -1,5 +1,6 @@
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import OdeStatisticalModel
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.normal_distribution import NormalDistribution
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.gamma_distribution import GammaDistribution
 
 
@@ -14,20 +15,18 @@ class AutoregressiveStatisticalModel(OdeStatisticalModel):
 
         # Further parameter setting:
         # State variables:
-        self.parameters.append(Parameter("x1",
-                                        low=parameters.get("x1_lo", -2.0),
-                                        high=parameters.get("x1_hi", 2.0),
-                                        loc=None,
-                                        scale=None,
-                                        shape=(self.n_times, self.n_active_regions),
-                                        pdf="normal"))
-        self.parameters.append(Parameter("z",
-                                         low=parameters.get("z_lo", 2.0),
-                                         high=parameters.get("z_hi", 5.0),
-                                         loc=None,
-                                         scale=None,
-                                         shape=(self.n_times, self.n_active_regions),
-                                         pdf="normal"))
+        self.parameters.append(parameters.get("x1", Parameter("x1",
+                                                                low=parameters.get("x1_lo", -2.0),
+                                                                high=parameters.get("x1_hi", 2.0),
+                                                                probability_distribution=
+                                                                    parameters.get("x1_pdf", NormalDistribution()),
+                                                                shape=(self.n_times, self.n_active_regions))))
+        self.parameters.append(parameters.get("z", Parameter("z",
+                                                              low=parameters.get("z_lo", 2.0),
+                                                              high=parameters.get("z_hi", 5.0),
+                                                              probability_distribution=
+                                                                parameters.get("z_pdf", NormalDistribution()),
+                                                              shape=(self.n_times, self.n_active_regions))))
 
         # Integration
         parameter = parameters.get("sig")

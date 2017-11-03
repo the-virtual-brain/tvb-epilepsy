@@ -176,3 +176,7 @@ class ProbabilityDistribution(object):
     def compute_and_update_params(self, **target_stats):
         params = self.compute_distributions_params(**target_stats)
         self.update_params(**params)
+
+
+AVAILABLE_DISTRIBUTIONS = ["uniform", "normal", "gamma", "lognormal", "exponential", "beta", "chisquare",
+                           "binomial", "bernoulli", "poisson"]
