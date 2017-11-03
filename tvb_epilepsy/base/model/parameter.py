@@ -1,11 +1,8 @@
 
-import sys
-
 import numpy as np
-import scipy.stats as ss
 
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution \
                                                                                           import ProbabilityDistribution
@@ -67,3 +64,21 @@ class Parameter(object):
             filename = self.name + ".h5"
         h5_model = self._prepare_for_h5()
         h5_model.write_to_h5(folder, filename)
+
+    def get_distrib_params(self):
+        if len(ensure_list(self.probability_distribution))==1:
+            return self.probability_distribution.params
+        else:
+            params = []
+            for pd in self.probability_distribution.flatten().tolist():
+                params.append(pd.params)
+            return np.reshape(params, self.shape)
+
+    def get_distrib_stats(self, stat):
+        if len(ensure_list(self.probability_distribution))==1:
+            return getattr(self.probability_distribution, stat)
+        else:
+            stats = []
+            for pd in self.probability_distribution.flatten().tolist():
+                stats.append(getattr(pd, stat))
+            return np.reshape(stats, self.shape)
