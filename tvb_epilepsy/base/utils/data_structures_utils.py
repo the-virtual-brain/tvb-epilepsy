@@ -163,6 +163,15 @@ def list_of_dicts_to_dicts_of_ndarrays(lst):
     return d
 
 
+def arrays_of_dicts_to_dicts_of_ndarrays(arr):
+    shape = arr.shape
+    lst = arr.flatten().tolist()
+    d = list_of_dicts_to_dicts_of_ndarrays(lst)
+    for key, val in d.iteritems():
+        d[key] = np.reshape(d[key], arr.shape)
+    return d
+
+
 def dicts_of_lists_to_lists_of_dicts(dictionary):
     return [dict(zip(dictionary,t)) for t in zip(*dictionary.values())]
 
