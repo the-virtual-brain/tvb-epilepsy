@@ -15,7 +15,7 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.unifor
 
 class Parameter(object):
 
-    def __init__(self, name, low=-np.inf, high=np.inf, shape=(1,), prob_distr=None):
+    def __init__(self, name, low=-np.inf, high=np.inf, shape=(1,), probability_distribution=None):
         if isinstance(name, basestring):
             self.name = name
         else:
@@ -30,24 +30,27 @@ class Parameter(object):
         else:
             raise_value_error("Parameter's " + str(self.name) + " shape="
                               + str(shape) + " is not a shape tuple!")
-        if isinstance(prob_distr, ProbabilityDistribution):
-            self.prob_distr = prob_distr
+        if isinstance(probability_distribution, ProbabilityDistribution):
+            self.probability_distribution = probability_distribution
         else:
             raise_value_error("Parameter's " + str(self.name) + " probability distribution ="
-                              + str(prob_distr.name) + "\n is not an instance of ProbabilityDistribution class!")
-        if isinstance(prob_distr, UniformDistribution):
-            if np.any(self.prob_distr.a < self.low):
+                              + str(probability_distribution.name) +
+                              "\n is not an instance of ProbabilityDistribution class!")
+        if isinstance(probability_distribution, UniformDistribution):
+            if np.any(self.probability_distribution.a < self.low):
                 raise_value_error("Parameter's " + str(self.name) + " uniform distribution's parameter a (" +
-                                  str(self.prob_distr.a) + "\n does not match low value (" + str(self.low) + ")!")
-            if np.any(self.prob_distr.b > self.high):
+                                  str(self.probability_distribution.a) +
+                                  "\n does not match low value (" + str(self.low) + ")!")
+            if np.any(self.probability_distribution.b > self.high):
                 raise_value_error("Parameter's " + str(self.name) + " uniform distribution's parameter b (" +
-                                  str(self.prob_distr.b) + "\n does not match high value (" + str(self.high) + ")!")
+                                  str(self.probability_distribution.b) +
+                                  "\n does not match high value (" + str(self.high) + ")!")
 
     def __repr__(self):
         d = {"1. name": self.name,
              "2. low": self.low,
              "3. high": self.high,
-             "4. prob_distr": self.prob_distr,
+             "4. probability distribution": self.probability_distribution,
              "5. shape": self.shape}
         return formal_repr(self, sort_dict(d))
 

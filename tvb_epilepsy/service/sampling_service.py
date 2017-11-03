@@ -181,7 +181,7 @@ class StochasticSamplingService(SamplingService):
                 raise_value_error("SALib sampling is not possible with infinite bounds!")
             return self._salib_sample(bounds=zip(low, high), **kwargs)
         else:
-            prob_distr = np.array(deepcopy(parameter.prob_distr))
+            prob_distr = np.array(deepcopy(parameter.probability_distribution))
             if prob_distr.shape != parameter.shape:
                 prob_distr = np.tile(prob_distr, parameter.shape)
                 if prob_distr.shape != parameter.shape:

@@ -1,9 +1,11 @@
 import numpy as np
 
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
-from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.gamma_distribution import GammaDistribution
+
 
 OBSERVATION_MODEL_EXPRESSIONS=["x1z_offset", "x1_offset", "x1"]
 OBSERVATION_MODELS=["seeg_power", "seeg_logpower", "lfp_power", "lfp_logpower"]
@@ -46,36 +48,51 @@ class OdeStatisticalModel(StatisticalModel):
 
         # Further parameter setting:
         # Integration
-        sig_init_def = parameters.get("sig_init_def", 0.1)
-        self.parameters.append(Parameter("sig_init",
-                                         low=parameters.get("sig_init_lo", sig_init_def / 10.0),
-                                         high=parameters.get("sig_init_hi", 3 * sig_init_def),
-                                         loc=parameters.get("sig_init_loc", sig_init_def),
-                                         scale=parameters.get("sig_init_sc", sig_init_def),
-                                         shape=(1,),
-                                         pdf="gamma"))
+        parameter = parameters.get("sig_init")
+        if parameter is None:
+            sig_init_def = parameters.get("sig_init_def", 0.1)
+            probability_distribution = parameters.get("sig_init_pdf")
+            if probability_distribution is None:
+                probability_distribution = GammaDistribution()
+                probability_distribution.compute_and_update_params({"mode": sig_init_def,
+                                                                    "std": parameters.get("sig_init_sig", sig_init_def)})
+                parameter = Parameter("sig_init",
+                                      low=parameters.get("sig_init_lo", sig_init_def / 10.0),
+                                      high=parameters.get("sig_init_hi", 3 * sig_init_def),
+                                      probability_distribution=probability_distribution,
+                                      shape=(1,))
+        self.parameters.append(parameter)
         # Observation model
-        self.parameters.append(Parameter("eps",
-                                         low=parameters.get("eps_lo", 0.0),
-                                         high=parameters.get("eps_hi", 1.0),
-                                         loc=parameters.get("eps_loc", 0.1),
-                                         scale=parameters.get("eps_sc", 0.1),
-                                         shape=(1,),
-                                         pdf="gamma"))
-        self.parameters.append(Parameter("scale_signal",
-                                         low=parameters.get("scale_signal_lo", 0.1),
-                                         high=parameters.get("scale_signal_hi", 2.0),
-                                         loc=parameters.get("scale_signal_loc", 1.0),
-                                         scale=parameters.get("scale_signal", 1.0),
-                                         shape=(1,),
-                                         pdf="gamma"))
-        self.parameters.append(Parameter("offset_signal",
-                                         low=parameters.get("offset_signal_lo", 0.0),
-                                         high=parameters.get("offset_signal_hi", 1.0),
-                                         loc=parameters.get("offset_signal_loc", 0.0),
-                                         scale=parameters.get("offset_signal", 0.1),
-                                         shape=(1,),
-                                         pdf="gamma"))
+        parameter = parameters.get("scale_signal")
+        if parameter is None:
+            scale_signal_def = parameters.get("scale_signal_def", 1.0)
+            probability_distribution = parameters.get("scale_signal_pdf")
+            if probability_distribution is None:
+                probability_distribution = GammaDistribution()
+                probability_distribution.compute_and_update_params({"mode": scale_signal_def,
+                                                                    "std": parameters.get("scale_signal_sig",
+                                                                                          scale_signal_def)})
+                parameter = Parameter("scale_signal",
+                                      low=parameters.get("scale_signal_lo", 0.1),
+                                      high=parameters.get("scale_signal_hi", 2.0),
+                                      probability_distribution=probability_distribution,
+                                      shape=(1,))
+        self.parameters.append(parameter)
+        parameter = parameters.get("offset_signal")
+        if parameter is None:
+            offset_signal_def = parameters.get("offset_signal_def", 0.0)
+            probability_distribution = parameters.get("offset_signal_pdf")
+            if probability_distribution is None:
+                probability_distribution = GammaDistribution()
+                probability_distribution.compute_and_update_params({"mode": offset_signal_def,
+                                                                    "std": parameters.get("offset_signal_sig", 0.1)})
+                parameter = Parameter("offset_signal",
+                                      low=parameters.get("offset_signal_lo", 0.0),
+                                      high=parameters.get("offset_signal_hi", 1.0),
+                                      probability_distribution=probability_distribution,
+                                      shape=(1,))
+        self.parameters.append(parameter)
+
         self.n_parameters = len(self.parameters)
 
     def update_active_regions(self, active_regions):

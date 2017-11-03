@@ -1,5 +1,6 @@
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import OdeStatisticalModel
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.gamma_distribution import GammaDistribution
 
 
 class AutoregressiveStatisticalModel(OdeStatisticalModel):
@@ -8,7 +9,8 @@ class AutoregressiveStatisticalModel(OdeStatisticalModel):
                        euler_method="forward", observation_model="seeg_logpower", observation_expression="x1z_offset"):
 
         super(AutoregressiveStatisticalModel, self).__init__(name, parameters, n_regions, active_regions, n_signals,
-                                                             n_times, dt, euler_method, observation_model, observation_expression)
+                                                             n_times, dt, euler_method, observation_model,
+                                                             observation_expression)
 
         # Further parameter setting:
         # State variables:
@@ -26,14 +28,22 @@ class AutoregressiveStatisticalModel(OdeStatisticalModel):
                                          scale=None,
                                          shape=(self.n_times, self.n_active_regions),
                                          pdf="normal"))
+
         # Integration
-        sig_def = parameters.get("sig_def", 10**-4)
-        self.parameters.append(Parameter("sig",
-                                         low=parameters.get("sig_lo", sig_def / 10.0),
-                                         high=parameters.get("sig_hi", 10 * sig_def),
-                                         loc=parameters.get("sig_loc", sig_def),
-                                         scale=parameters.get("sig_sc", sig_def),
-                                         shape=(1,),
-                                         pdf=parameters.get("pdf", "gamma")))
+        parameter = parameters.get("sig")
+        if parameter is None:
+            sig_def = parameters.get("sig_def", 10**-4)
+            probability_distribution = parameters.get("sig_pdf")
+            if probability_distribution is None:
+                probability_distribution = GammaDistribution()
+                probability_distribution.compute_and_update_params({"mode": sig_def,
+                                                                    "std": parameters.get("sig_sig", sig_def)})
+                parameter = Parameter("sig",
+                                      low=parameters.get("sig_lo", sig_def / 10.0),
+                                      high=parameters.get("sig_hi", 10 * sig_def),
+                                      probability_distribution=probability_distribution,
+                                      shape=(1,))
+        self.parameters.append(parameter)
+
         self.n_parameters = len(self.parameters)
 
