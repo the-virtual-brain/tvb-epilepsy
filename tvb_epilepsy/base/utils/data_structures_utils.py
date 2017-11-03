@@ -164,7 +164,6 @@ def list_of_dicts_to_dicts_of_ndarrays(lst):
 
 
 def arrays_of_dicts_to_dicts_of_ndarrays(arr):
-    shape = arr.shape
     lst = arr.flatten().tolist()
     d = list_of_dicts_to_dicts_of_ndarrays(lst)
     for key, val in d.iteritems():
