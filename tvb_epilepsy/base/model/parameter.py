@@ -6,7 +6,7 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.probab
     import ProbabilityDistribution
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.uniform_distribution \
     import UniformDistribution
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 
 
