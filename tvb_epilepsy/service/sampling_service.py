@@ -11,9 +11,12 @@ import scipy.stats as ss
 from SALib.sample import saltelli, fast_sampler, morris, ff
 
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, \
-    raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, isequal_string
+                                                                                            raise_not_implemented_error
+from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, isequal_string, shape_to_size
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.model.parameter import Parameter
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution \
+                                                                                          import ProbabilityDistribution
 
 
 logger = initialize_logger(__name__)
@@ -85,10 +88,18 @@ class DeterministicSamplingService(SamplingService):
         self.shape = (1, self.n_samples)
 
     def sample(self, parameter, **kwargs):
-        self.adjust_shape(parameter.shape)
-        i1 = np.ones(parameter.shape)
-        low = np.array(parameter.low) * i1
-        high = np.array(parameter.high) * i1
+        if isinstance(parameter, Parameter):
+            parameter_shape = parameter.shape
+            low = parameter.low
+            high = parameter.high
+        else:
+            parameter_shape = parameter["shape"]
+            low = parameter["low"]
+            high = parameter["high"]
+        self.adjust_shape(parameter_shape)
+        i1 = np.ones(parameter_shape)
+        low = np.array(low) * i1
+        high = np.array(high) * i1
         samples = []
         for (lo, hi) in zip(low.flatten(), high.flatten()):
             samples.append(self.sampler(lo, hi, self.n_samples))
@@ -136,11 +147,38 @@ class StochasticSamplingService(SamplingService):
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         return h5_model
 
-    def _salib_sample(self, bounds, **kwargs):
+    def _salib_sample(self, parameter, **kwargs):
+        if isinstance(parameter, Parameter):
+            parameter_shape = parameter.shape
+            low = np.array(parameter.low)
+            high = np.array(parameter.high)
+            d = (low == -np.inf)
+            if np.any(id):
+                warning("SALib sampling is not possible with infinite bounds! Setting lowest system value for low!")
+                low[id] = sys.floatinfo["MIN"]
+            id = (high == np.inf)
+            if np.any(id):
+                warning("SALib sampling is not possible with infinite bounds! Setting highest system value for high!")
+                high[id] = sys.floatinfo["MAX"]
+            i1 = np.ones(parameter_shape)
+            low = (np.array(low) * i1).tolist()
+            high = (np.array(high) * i1).tolist()
+            bounds = [list(b) for b in zip(low, high)]
+            n_outputs = len(bounds)
+        else:
+            bounds = parameter["bounds"]
+            parameter_shape = parameter.get("shape", len(bounds))
+            n_outputs = shape_to_size(parameter_shape)
+            if len(bounds) < n_outputs:
+                if len(bounds) == 1:
+                    bounds = bounds * n_outputs
+                else:
+                    raise_value_error("Parameters shape (" + str(parameter_shape) +
+                                      ") and bounds length (" + str(len(bounds)) + ") do not match!")
+        self.adjust_shape(parameter_shape)
         self.sampler = importlib.import_module("SALib.sample." + self.sampler).sample
-        size = self.n_sample
-        n_outputs = len(bounds)
-        problem = {'num_vars': 1, 'bounds': bounds}
+        size = self.n_samples
+        problem = {'num_vars': n_outputs, 'bounds': bounds}
         if self.sampler is ff.sample:
             samples = (self.sampler(problem)).T
         else:
@@ -171,35 +209,49 @@ class StochasticSamplingService(SamplingService):
                              size=size)
         return self.sampler.ppf(q=rnd_cdf)
 
+
     def sample(self, parameter, **kwargs):
         nr.seed(self.random_seed)
-        self.adjust_shape(self, parameter.shape)
-        i1 = np.ones(parameter.shape)
-        low = np.array(parameter.low) * i1
-        high = np.array(parameter.high) * i1
         if self.sampling_module.find("SALib") >= 0:
-            id = (low == -np.inf)
-            if np.any(id):
-                warning("SALib sampling is not possible with infinite bounds! Setting lowest system value for low!")
-                low[id] = sys.floatinfo["MIN"]
-            id = (high == np.inf)
-            if np.any(id):
-                warning("SALib sampling is not possible with infinite bounds! Setting highest system value for high!")
-                high[id] = sys.floatinfo["MAX"]
-            return self._salib_sample(bounds=zip(low.flatten().tolist(), high.flatten().tolist()), **kwargs)
+            self._salib_sample(parameter, **kwargs)
         else:
-            prob_distr = deepcopy(parameter.probability_distribution)
+            if isinstance(parameter, Parameter):
+                parameter_shape = parameter.shape
+                low = parameter.low
+                high = parameter.high
+                prob_distr = parameter.probability_distribution
+            else:
+                parameter_shape = parameter["shape"]
+                low = parameter.get("low", -np.inf)
+                high = parameter.get("high", -np.inf)
+                prob_distr = parameter["probability_distribution", "uniform"]
+            self.adjust_shape(self, parameter_shape)
+            i1 = np.ones(parameter_shape)
+            low = np.array(low) * i1
+            high = np.array(high) * i1
             out_shape = tuple([self.n_samples] + list(self.shape)[:-1])
             if np.any(low > -np.inf) or np.any(high < np.inf):
                 if not(isequal_string(self.sampling_module, "scipy")):
                     warning("Switching to scipy for truncated distributions' sampling!")
                     self.sampling_module = "scipy"
-                    self.sampler = prob_distr.scipy
+                    if isinstance(prob_distr, basestring):
+                        self.sampler = getattr(ss, prob_distr)(**kwargs)
+                    elif isinstance(prob_distr, ProbabilityDistribution):
+                        self.sampler = prob_distr.scipy
                     samples = self._truncated_distribution_sampling({"low": low, "high": high}, out_shape)
             elif self.sampling_module.find("scipy") >= 0:
-                self.sampler = prob_distr.scipy
+                if isinstance(prob_distr, basestring):
+                    self.sampler = getattr(ss, prob_distr)(**kwargs)
+                elif isinstance(prob_distr, ProbabilityDistribution):
+                    self.sampler = prob_distr.scipy
                 samples = self.sampler.rvs(size=out_shape)
             elif self.sampling_module.find("numpy") >= 0:
-                self.sampler = getattr(nr, prob_distr.name)
-                samples = self.sampler(*prob_distr.params.values(), size=out_shape)
+                if isinstance(prob_distr, basestring):
+                    pdf_name = prob_distr
+                    pdf_params = kwargs
+                elif isinstance(prob_distr, ProbabilityDistribution):
+                    pdf_name = prob_distr.name
+                    pdf_params = prob_distr.params
+                self.sampler = getattr(nr, pdf_name.name)
+                samples = self.sampler(*pdf_params.values(), size=out_shape)
             return samples.T
