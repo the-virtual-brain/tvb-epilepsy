@@ -147,7 +147,7 @@ class StochasticSamplingService(SamplingService):
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         return h5_model
 
-    def _salib_sample(self, parameter, **kwargs):
+    def _salib_sample(self, parameter):
         if isinstance(parameter, Parameter):
             parameter_shape = parameter.shape
             low = np.array(parameter.low)
@@ -186,7 +186,7 @@ class StochasticSamplingService(SamplingService):
             if self.sampler is saltelli.sample:
                 size = int(np.round(1.0 * size / (2 * n_outputs + 2)))
             elif self.sampler is fast_sampler.sample:
-                other_params = {"M": kwargs.get("M", 4)}
+                other_params = {"M": parameter.get("M", 4)}
             elif self.sampler is morris.sample:
                 # I don't understand this method and its inputs. I don't think we will ever use it.
                 raise_not_implemented_error()
@@ -213,7 +213,7 @@ class StochasticSamplingService(SamplingService):
     def sample(self, parameter, **kwargs):
         nr.seed(self.random_seed)
         if self.sampling_module.find("SALib") >= 0:
-            self._salib_sample(parameter, **kwargs)
+            self._salib_sample(parameter)
         else:
             if isinstance(parameter, Parameter):
                 parameter_shape = parameter.shape
@@ -221,10 +221,10 @@ class StochasticSamplingService(SamplingService):
                 high = parameter.high
                 prob_distr = parameter.probability_distribution
             else:
-                parameter_shape = parameter["shape"]
-                low = parameter.get("low", -np.inf)
-                high = parameter.get("high", -np.inf)
-                prob_distr = parameter["probability_distribution", "uniform"]
+                parameter_shape = parameter.pop("shape", (1,))
+                low = parameter.pop("low", -np.inf)
+                high = parameter.pop("high", -np.inf)
+                prob_distr = parameter.pop("probability_distribution", "uniform")
             self.adjust_shape(self, parameter_shape)
             i1 = np.ones(parameter_shape)
             low = np.array(low) * i1
@@ -235,20 +235,20 @@ class StochasticSamplingService(SamplingService):
                     warning("Switching to scipy for truncated distributions' sampling!")
                     self.sampling_module = "scipy"
                     if isinstance(prob_distr, basestring):
-                        self.sampler = getattr(ss, prob_distr)(**kwargs)
+                        self.sampler = getattr(ss, prob_distr)(**parameter)
                     elif isinstance(prob_distr, ProbabilityDistribution):
                         self.sampler = prob_distr.scipy
                     samples = self._truncated_distribution_sampling({"low": low, "high": high}, out_shape)
             elif self.sampling_module.find("scipy") >= 0:
                 if isinstance(prob_distr, basestring):
-                    self.sampler = getattr(ss, prob_distr)(**kwargs)
+                    self.sampler = getattr(ss, prob_distr)(**parameter)
                 elif isinstance(prob_distr, ProbabilityDistribution):
                     self.sampler = prob_distr.scipy
                 samples = self.sampler.rvs(size=out_shape)
             elif self.sampling_module.find("numpy") >= 0:
                 if isinstance(prob_distr, basestring):
                     pdf_name = prob_distr
-                    pdf_params = kwargs
+                    pdf_params = parameter
                 elif isinstance(prob_distr, ProbabilityDistribution):
                     pdf_name = prob_distr.name
                     pdf_params = prob_distr.params
