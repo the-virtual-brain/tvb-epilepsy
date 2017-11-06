@@ -34,7 +34,7 @@ class GammaDistribution(ContinuousProbabilityDistribution):
                     "\n" + "16. beta" + " = " + str(self.beta) + "}"
         return this_str
 
-    def params(self, parametrization="alpha-beta"):
+    def params(self, parametrization="shape-scale"):
         if isequal_string(parametrization, "alpha-beta"):
             return {"alpha": self.shape, "beta": self.beta}
         elif isequal_string(parametrization, "k-theta"):

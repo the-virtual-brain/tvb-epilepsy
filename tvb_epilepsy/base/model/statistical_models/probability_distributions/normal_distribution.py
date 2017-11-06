@@ -21,7 +21,7 @@ class NormalDistribution(ContinuousProbabilityDistribution):
 
     def params(self, parametrization="mean-sigma"):
         if isequal_string(parametrization, "scipy") or isequal_string(parametrization, "numpy"):
-            return {"loc": self.shape, "scale": self.scale}
+            return {"loc": self.pdf_shape, "scale": self.scale}
         else:
             return {"mean": self.mean, "sigma": self.sigma}
 

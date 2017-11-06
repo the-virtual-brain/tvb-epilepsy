@@ -31,7 +31,7 @@ class StatisticalModel(object):
             probability_distribution = parameters.get("x1eq_pdf")
             if probability_distribution is None:
                 x1eq = parameters.get("x1eq", (X1_EQ_CR_DEF-X1_DEF)/2) * np.ones((self.n_regions,))
-                probability_distribution = NormalDistribution(mu=x1eq, sigma=parameters.get("x1eq_sig", 0.1))
+                probability_distribution = NormalDistribution(mean=x1eq, sigma=parameters.get("x1eq_sig", 0.1))
             parameter = Parameter("x1eq",
                                   low=parameters.get("x1eq_lo", X1_DEF),
                                   high=parameters.get("x1eq_hi", X1_EQ_CR_DEF),
@@ -59,7 +59,7 @@ class StatisticalModel(object):
                                                                 low=low,
                                                                 high=high,
                                                                 probability_distribution=
-                                                                  UniformDistribution(a=low, b=high),
+                                                                UniformDistribution(a=low, b=high),
                                                                 shape=(1,))))
 
         parameter = parameters.get("tau0")

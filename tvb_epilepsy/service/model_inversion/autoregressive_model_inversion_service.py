@@ -70,7 +70,7 @@ class AutoregressiveModelInversionService(OdeModelInversionService):
                 pass
             else:
                 # TODO: take care of gamma distribution scale to rate conversion!
-                pdf_params = p.probability_distribution.values()
+                pdf_params = p.probability_distribution.params().values()
                 self.model_data.update({p.name + "_p1": pdf_params[0]})
                 if len(pdf_params) == 1:
                     self.model_data.update({p.name + "_p2": pdf_params[0]})

@@ -5,7 +5,7 @@ import numpy as np
 import scipy as scp
 import scipy.stats as ss
 
-from tvb_epilepsy.base.constants import MAX_SYSTEM_VALUE
+from tvb_epilepsy.base.constants import MAX_SINGLE_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, shape_to_size
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
@@ -56,12 +56,12 @@ class SamplingService(object):
         id = (low == -np.inf)
         if np.any(id):
             warning("Sampling is not possible with infinite bounds! Setting lowest system value for low!")
-            low[id] = -MAX_SYSTEM_VALUE
+            low[id] = -MAX_SINGLE_VALUE
         id = (high == np.inf)
         if np.any(id):
             warning(
                 "Sampling is not possible with infinite bounds! Setting highest system value for high!")
-            high[id] = MAX_SYSTEM_VALUE
+            high[id] = MAX_SINGLE_VALUE
         return low, high
 
     def check_size(self, low, high, parameter_shape):

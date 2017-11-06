@@ -22,7 +22,7 @@ LOG = initialize_logger(__name__)
 class ModelInversionService(object):
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, pystan=None,
-                 model_name=None, model=None, model_code=None, model_code_path="", fitmode="sampling",
+                 model=None, model_code=None, model_code_path="", fitmode="sampling",
                  target_data=None, target_data_type="", logger=LOG, **kwargs):
         self.logger = logger
         self.model_data = {}

@@ -19,7 +19,7 @@ class ProbabilityDistribution(object):
 
     name = ""
     n_params = 0.0
-    shape = ()
+    pdf_shape = ()
     constraint_string = ""
     mean = None
     median = None
@@ -37,9 +37,10 @@ class ProbabilityDistribution(object):
 
     def __repr__(self):
         d = {"1. name": self.name,
-             "2. params": self.params,
+             "2. params": self.params(),
              "3. n_params": self.n_params,
              "4. constraint": self.constraint_string,
+             "5. pdf shape": self.pdf_shape,
              "5. mean": self.mean,
              "6. median": self.median,
              "7. mode": self.mode,
@@ -67,11 +68,11 @@ class ProbabilityDistribution(object):
 
     def __update_params__(self, **params):
         self.set_params(**params)
-        self.shape = self.calc_shape()
+        self.pdf_shape = self.calc_shape()
         self.n_params = len(self.params())
         if not (self.constraint()):
             raise_value_error("Constraint for " + self.name + " distribution " + self.constraint_string +
-                              "\nwith parameters " + str(self.params) + " is not satisfied!")
+                              "\nwith parameters " + str(self.params()) + " is not satisfied!")
         self.mean = self.calc_mean()
         self.median = self.calc_median()
         self.mode = self.calc_mode_manual()
@@ -81,12 +82,12 @@ class ProbabilityDistribution(object):
         self.kurt = self.calc_kurt()
 
     def set_params(self, **params):
-        for p_key, p_val in params:
+        for p_key, p_val in params.iteritems():
             setattr(self, p_key, p_val)
 
     def calc_shape(self):
         psum = np.array(0.0)
-        for pval in self.params.values():
+        for pval in self.params().values():
             psum += np.array(pval, dtype='f')
         return psum.shape
 
@@ -184,29 +185,29 @@ class ProbabilityDistribution(object):
             raise_value_error("Target parameters are " + str(len(target_stats)) +
                               ", whereas the characteristic parameters of distribution " + self.name +
                               " are " + str(self.n_params) + "!")
-        i1 = np.ones(self.shape)
+        i1 = np.ones(self.pdf_shape)
         try:
             if isinstance(target_shape, tuple):
                 i1 *= np.ones(target_shape)
         except:
             raise_value_error("Target (" + str(target_shape) +
-                              ") and distribution (" + str(self.shape) + ") shapes do not match/propagate!")
+                              ") and distribution (" + str(self.pdf_shape) + ") shapes do not match/propagate!")
         try:
             for ts in target_stats.values():
                 i1 *= np.ones(np.array(ts).shape)
         except:
             raise_value_error("Target statistics (" + str([np.array(ts).shape for ts in target_stats.values()]) +
-                              ") and distribution (" + str(self.shape) + ") shapes do not match/propagate!")
+                              ") and distribution (" + str(self.pdf_shape) + ") shapes do not match/propagate!")
         shape = i1.shape
         for ts_key in target_stats.keys():
             target_stats[ts_key] *= i1
         params_vector = []
-        for p_key in self.params.keys():
-            self.params[p_key] *= i1
-            params_vector += self.params[p_key].flatten().tolist()
+        p_keys = self.params().keys()
+        for p_key in p_keys:
+            self.set_params(**{p_key: np.array(self.params()[p_key]) * i1})
+            params_vector += self.params()[p_key].flatten().tolist()
         size = len(params_vector) / self.n_params
         params_vector = np.array(params_vector)
-        p_keys = self.params.keys()
         def fobj(p):
             params = {}
             for ik, p_key in enumerate(p_keys):
@@ -214,7 +215,7 @@ class ProbabilityDistribution(object):
             f = []
             self.update_params(**params)
             for ts_key, ts_val in target_stats.iteritems():
-                f.append((getattr(self, "calc_" + ts_key)() - ts_val) ** 2)
+                f.append((getattr(self, "calc_" + ts_key)(use="manual") - ts_val) ** 2)
             return f
         sol = root(fobj, params_vector, method='lm', tol=10 ** (-12), callback=None, options=None)
         if sol.success:

@@ -14,8 +14,9 @@ logger = initialize_logger(__name__)
 
 
 if __name__ == "__main__":
+    n_samples = 100
     logger.info("\nDeterministic numpy.linspace sampling:")
-    sampler = DeterministicSamplingService(n_samples=10, grid_mode=True)
+    sampler = DeterministicSamplingService(n_samples=n_samples, grid_mode=True)
     samples, stats = sampler.generate_samples(low=1.0, high=2.0, shape= (2,), stats=True)
     for key, value in stats.iteritems():
         print("\n" + key + ": " + str(value))
@@ -23,7 +24,7 @@ if __name__ == "__main__":
     sampler.write_to_h5(FOLDER_RES, "test_Stochastic_Sampler.h5")
 
     logger.info("\nStochastic uniform sampling with numpy:")
-    sampler = StochasticSamplingService(n_samples=10, sampling_module="numpy")
+    sampler = StochasticSamplingService(n_samples=n_samples, sampling_module="numpy")
     #                                      a (low), b (high)
     samples, stats = sampler.generate_samples(parameter=(1.0, 2.0), probability_distribution="uniform", shape=(2,),
                                               stats= True)
@@ -34,7 +35,7 @@ if __name__ == "__main__":
     sampler.write_to_h5(FOLDER_RES, "test1_Stochastic_Sampler.h5")
 
     logger.info("\nStochastic truncated normal sampling with scipy:")
-    sampler = StochasticSamplingService(n_samples=10)
+    sampler = StochasticSamplingService(n_samples=n_samples)
     #                                   loc (mean), scale (sigma)
     samples, stats = sampler.generate_samples(parameter=(1.5, 1.0), probability_distribution="norm", low=1, high=2,
                                               shape=(2,), stats=True)
@@ -44,7 +45,7 @@ if __name__ == "__main__":
     sampler.write_to_h5(FOLDER_RES, "test2_Stochastic_Sampler.h5")
 
     logger.info("\nSensitivity analysis sampling:")
-    sampler = SalibSamplingService(n_samples=10, sampler="latin")
+    sampler = SalibSamplingService(n_samples=n_samples, sampler="latin")
     samples, stats = sampler.generate_samples(low=1, high=2, shape=(2,), stats=True)
     for key, value in stats.iteritems():
         print("\n" + key + ": " + str(value))
@@ -52,8 +53,9 @@ if __name__ == "__main__":
     sampler.write_to_h5(FOLDER_RES, "test3_Stochastic_Sampler.h5")
 
     logger.info("\nTesting distribution class and conversions...")
-    sampler = StochasticSamplingService(n_samples=100)
+    sampler = StochasticSamplingService(n_samples=n_samples)
     for distrib_name in AVAILABLE_DISTRIBUTIONS:
+        print("\n" + distrib_name)
         logger.info("\nmean, std to distribution " + distrib_name + ":")
         if np.in1d(distrib_name, ["exponential", "chisquare"]):
             target_stats = {"mean": 1.0}
@@ -63,12 +65,11 @@ if __name__ == "__main__":
             target_stats = {"mean": 1.0}
         else:
             target_stats = {"mean": 1.0, "std": 2.0}
-        parameter = Parameter(probability_distribution=generate_distribution(distrib_name, target_stats=target_stats),
-                              low=-10**6, high=10**6)
+        parameter = Parameter(probability_distribution=generate_distribution(distrib_name, target_stats=target_stats))
         logger.info(str(parameter))
         samples = sampler.generate_samples(parameter=parameter, stats=True)
         for key, value in stats.iteritems():
             print("\n" + key + ": " + str(value))
         diff = target_stats["mean"] - stats["mean"]
-        if np.abs(diff) > 10 ** -2:
+        if np.any(np.abs(diff) > 10.0/n_samples):
             warning("Large difference between target and resulting samples' mean!: " + str(diff))

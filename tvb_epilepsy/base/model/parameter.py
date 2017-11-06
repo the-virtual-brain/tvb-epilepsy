@@ -1,7 +1,7 @@
 
 import numpy as np
 
-from tvb_epilepsy.base.constants import MAX_SYSTEM_VALUE
+from tvb_epilepsy.base.constants import MAX_SINGLE_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
@@ -13,7 +13,7 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.unifor
 
 class Parameter(object):
 
-    def __init__(self, name="Parameter", low=-MAX_SYSTEM_VALUE, high=MAX_SYSTEM_VALUE, shape=(1,),
+    def __init__(self, name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, shape=(1,),
                  probability_distribution=None):
         if isinstance(name, basestring):
             self.name = name
@@ -41,11 +41,11 @@ class Parameter(object):
                                   ") shapes do not propagate!")
             self.probability_distribution = probability_distribution
             if isinstance(probability_distribution, UniformDistribution):
-                if np.any(self.probability_distribution.a < self.low):
+                if np.any(self.probability_distribution.low < self.low):
                     raise_value_error("Parameter's " + str(self.name) + " uniform distribution's parameter a (" +
                                       str(self.probability_distribution.a) +
                                       "\n does not match low value (" + str(self.low) + ")!")
-                if np.any(self.probability_distribution.b > self.high):
+                if np.any(self.probability_distribution.high > self.high):
                     raise_value_error("Parameter's " + str(self.name) + " uniform distribution's parameter b (" +
                                       str(self.probability_distribution.b) +
                                       "\n does not match high value (" + str(self.high) + ")!")
