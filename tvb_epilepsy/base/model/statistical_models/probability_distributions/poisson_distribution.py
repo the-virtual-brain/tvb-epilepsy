@@ -57,5 +57,5 @@ class PoissoniDistribution(DiscreteProbabilityDistribution):
     def calc_skew_manual(self):
         return 1.0 / self.calc_std_manual()
 
-    def calc_exkurt_manual(self, use="scipy"):
+    def calc_kurt_manual(self, use="scipy"):
         return 1.0 / self.params["lamda"]

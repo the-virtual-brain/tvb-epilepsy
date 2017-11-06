@@ -72,5 +72,5 @@ class GammaDistribution(ContinuousProbabilityDistribution):
     def calc_skew_manual(self):
         return 2.0 / np.sqrt(self.params["shape"])
 
-    def calc_exkurt_manual(self):
+    def calc_kurt_manual(self):
         return 6.0 / self.params["shape"]

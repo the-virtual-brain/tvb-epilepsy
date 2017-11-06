@@ -63,5 +63,5 @@ class ChisquareDistribution(ContinuousProbabilityDistribution):
     def calc_skew_manual(self):
         return np.sqrt(8.0 / self.params["k"])
 
-    def calc_exkurt_manual(self):
+    def calc_kurt_manual(self):
         return 12.0 / self.params["k"]

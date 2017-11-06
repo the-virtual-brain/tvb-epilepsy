@@ -1,4 +1,3 @@
-import sys
 
 from collections import OrderedDict
 
@@ -6,6 +5,7 @@ import numpy as np
 import scipy as scp
 import scipy.stats as ss
 
+from tvb_epilepsy.base.constants import MAX_SYSTEM_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, shape_to_size
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
@@ -56,12 +56,12 @@ class SamplingService(object):
         id = (low == -np.inf)
         if np.any(id):
             warning("Sampling is not possible with infinite bounds! Setting lowest system value for low!")
-            low[id] = sys.floatinfo["MIN"]
+            low[id] = -MAX_SYSTEM_VALUE
         id = (high == np.inf)
         if np.any(id):
             warning(
                 "Sampling is not possible with infinite bounds! Setting highest system value for high!")
-            high[id] = sys.floatinfo["MAX"]
+            high[id] = MAX_SYSTEM_VALUE
         return low, high
 
     def check_size(self, low, high, parameter_shape):
@@ -83,9 +83,9 @@ class SamplingService(object):
         return low, high, n_params, parameter_shape
 
     def compute_stats(self, samples):
-        return OrderedDict([("mean", samples.mean(axis=-1)), ("m", scp.median(samples, axis=-1)),
+        return OrderedDict([("mean", samples.mean(axis=-1)), ("median", scp.median(samples, axis=-1)),
                             ("std", samples.std(axis=-1)), ("var", samples.var(axis=-1)),
-                            ("k", ss.kurtosis(samples, axis=-1)), ("skew", ss.skew(samples, axis=-1)),
+                            ("kurt", ss.kurtosis(samples, axis=-1)), ("skew", ss.skew(samples, axis=-1)),
                             ("min", samples.min(axis=-1)), ("max", samples.max(axis=-1)),
                             ("1%", np.percentile(samples, 1, axis=-1)), ("5%", np.percentile(samples, 5, axis=-1)),
                             ("10%", np.percentile(samples, 10, axis=-1)), ("p25", np.percentile(samples, 25, axis=-1)),

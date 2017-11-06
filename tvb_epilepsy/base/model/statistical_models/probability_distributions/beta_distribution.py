@@ -76,7 +76,7 @@ class BetaDistribution(ContinuousProbabilityDistribution):
         return 2.0 * (self.params["beta"] - self.params["alpha"]) * np.sqrt(a_plus_b + 1.0) / \
                (a_plus_b + 2) / np.sqrt(self.params["alpha"] * self.params["beta"])
 
-    def calc_exkurt_manual(self):
+    def calc_kurt_manual(self):
         a_plus_b = self.params["alpha"] + self.params["beta"]
         ab = self.params["alpha"] * self.params["beta"]
         return 6.0 * (((self.params["alpha"] - self.params["beta"]) ** 2) * (a_plus_b + 1.0) - ab * (a_plus_b + 2.0)) \

@@ -1,6 +1,7 @@
 
 import numpy as np
 
+from tvb_epilepsy.base.constants import MAX_SYSTEM_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
@@ -12,7 +13,8 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.unifor
 
 class Parameter(object):
 
-    def __init__(self, name="Parameter", low=-np.inf, high=np.inf, shape=(1,), probability_distribution=None):
+    def __init__(self, name="Parameter", low=-MAX_SYSTEM_VALUE, high=MAX_SYSTEM_VALUE, shape=(1,),
+                 probability_distribution=None):
         if isinstance(name, basestring):
             self.name = name
         else:

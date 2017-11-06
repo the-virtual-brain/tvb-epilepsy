@@ -5,19 +5,16 @@ import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
 
+from tvb_epilepsy.base.constants import MAX_SYSTEM_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import make_float
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
                                                                                 import ContinuousProbabilityDistribution
 
 
-MAX_VALUE = sys.float_info.max
-MIN_VALUE = sys.float_info.min
-
-
 class UniformDistribution(ContinuousProbabilityDistribution):
 
-    def __init__(self, a=MIN_VALUE, b=MAX_VALUE):
+    def __init__(self, a=-np.sqrt(MAX_SYSTEM_VALUE)/2, b=np.sqrt(MAX_SYSTEM_VALUE)/2):
         self.name = "uniform"
         self.scipy_name = "uniform"
         self.numpy_name = "uniform"
@@ -56,5 +53,5 @@ class UniformDistribution(ContinuousProbabilityDistribution):
     def calc_skew_manual(self):
         return 0.0
 
-    def calc_exkurt_manual(self):
+    def calc_kurt_manual(self):
         return -1.2

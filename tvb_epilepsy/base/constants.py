@@ -79,3 +79,9 @@ EPILEPTOR_MODEL_NVARS = {
 }
 
 STATISTICAL_MODEL_TYPES=["autoregressive", "autoregressive_dWt", "ode", "lsa"]
+
+import sys
+MIN_SYSTEM_VALUE = sys.float_info[3]
+MAX_SYSTEM_VALUE = sys.float_info[0]
+
+

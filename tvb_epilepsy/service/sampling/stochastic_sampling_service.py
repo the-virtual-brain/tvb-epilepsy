@@ -1,12 +1,9 @@
-import sys
-
-import importlib
 
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-from SALib.sample import saltelli, fast_sampler, morris, ff
 
+from tvb_epilepsy.base.constants import MAX_SYSTEM_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, isequal_string, shape_to_size
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
@@ -65,25 +62,22 @@ class StochasticSamplingService(SamplingService):
             prob_distr = parameter.probability_distribution
         else:
             parameter_shape = kwargs.pop("shape", (1,))
-            low = kwargs.pop("low", sys.floatinfo["MIN"])
-            high = kwargs.pop("high", sys.floatinfo["MAX"])
+            low = kwargs.pop("low", -MAX_SYSTEM_VALUE)
+            high = kwargs.pop("high", MAX_SYSTEM_VALUE)
             prob_distr = kwargs.pop("probability_distribution", "uniform")
         low, high = self.check_for_infinite_bounds(low, high)
         low, high, n_outputs, parameter_shape = self.check_size(low, high, parameter_shape)
-        self.adjust_shape(self, parameter_shape)
-        i1 = np.ones(parameter_shape)
-        low = np.array(low) * i1
-        high = np.array(high) * i1
+        self.adjust_shape(parameter_shape)
         out_shape = tuple([self.n_samples] + list(self.shape)[:-1])
-        if np.any(low > -np.inf) or np.any(high < np.inf):
+        if np.any(low > -MAX_SYSTEM_VALUE) or np.any(high < MAX_SYSTEM_VALUE):
             if not(isequal_string(self.sampling_module, "scipy")):
                 warning("Switching to scipy for truncated distributions' sampling!")
-                self.sampling_module = "scipy"
-                if isinstance(prob_distr, basestring):
-                    self.sampler = getattr(ss, prob_distr)(*parameter, **kwargs)
-                elif isinstance(prob_distr, ProbabilityDistribution):
-                    self.sampler = prob_distr.scipy
-                samples = self._truncated_distribution_sampling({"low": low, "high": high}, out_shape)
+            self.sampling_module = "scipy"
+            if isinstance(prob_distr, basestring):
+                self.sampler = getattr(ss, prob_distr)(*parameter, **kwargs)
+            elif isinstance(prob_distr, ProbabilityDistribution):
+                self.sampler = prob_distr.scipy
+            samples = self._truncated_distribution_sampling({"low": low, "high": high}, out_shape)
         elif self.sampling_module.find("scipy") >= 0:
             if isinstance(prob_distr, basestring):
                 self.sampler = getattr(ss, prob_distr)(*parameter, **kwargs)

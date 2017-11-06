@@ -50,6 +50,6 @@ class LognormalDistribution(ContinuousProbabilityDistribution):
         sigma2exp = np.exp(self.params["sigma"] ** 2)
         return (sigma2exp + 2.0) * np.sqrt(sigma2exp - 1.0)
 
-    def calc_exkurt_manual(self):
+    def calc_kurt_manual(self):
         sigma2 = self.params["sigma"] ** 2
         return np.exp(4.0 * sigma2) + 2.0 * np.exp(3.0 * sigma2) + 3.0 * np.exp(2.0 * sigma2) - 6.0

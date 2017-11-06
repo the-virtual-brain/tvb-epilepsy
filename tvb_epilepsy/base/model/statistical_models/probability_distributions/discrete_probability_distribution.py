@@ -50,5 +50,5 @@ class DiscreteProbabilityDistribution(ProbabilityDistribution):
         pass
 
     @abstractmethod
-    def calc_exkurt(self, use="scipy"):
+    def calc_kurt(self, use="scipy"):
         pass

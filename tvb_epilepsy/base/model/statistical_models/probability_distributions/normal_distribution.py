@@ -48,5 +48,5 @@ class NormalDistribution(ContinuousProbabilityDistribution):
     def calc_skew_manual(self):
         return 0.0
 
-    def calc_exkurt_manual(self):
+    def calc_kurt_manual(self):
         return 0.0

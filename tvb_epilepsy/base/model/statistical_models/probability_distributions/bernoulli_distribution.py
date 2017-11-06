@@ -59,6 +59,6 @@ class BernoulliDistribution(DiscreteProbabilityDistribution):
     def calc_skew_manual(self):
         return (1.0 - 2.0 * self.params["p"]) / self.calc_std_manual()
 
-    def calc_exkurt_manual(self):
+    def calc_kurt_manual(self):
         var = self.calc_var_manual()
         return (1.0 - 6.0 * var) / var

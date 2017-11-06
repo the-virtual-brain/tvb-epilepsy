@@ -1,7 +1,7 @@
-import sys
 
 import numpy as np
 
+from tvb_epilepsy.base.constants import MAX_SYSTEM_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, \
                                                                                             raise_not_implemented_error
 from tvb_epilepsy.base.model.parameter import Parameter
@@ -27,8 +27,8 @@ class DeterministicSamplingService(SamplingService):
             high = parameter.high
         else:
             parameter_shape = kwargs.pop("shape", (1,))
-            low = kwargs.pop("low", sys.floatinfo["MIN"])
-            high = kwargs.pop("high", sys.floatinfo["MAX"])
+            low = kwargs.pop("low", -MAX_SYSTEM_VALUE)
+            high = kwargs.pop("high", MAX_SYSTEM_VALUE)
         low, high = self.check_for_infinite_bounds(low, high)
         low, high, n_outputs, parameter_shape = self.check_size(low, high, parameter_shape)
         self.adjust_shape(parameter_shape)
@@ -40,12 +40,14 @@ class DeterministicSamplingService(SamplingService):
             samples = []
             for sb in samples_grids:
                 samples.append(sb.flatten())
-                samples = np.array(samples)
-                self.shape = samples.shape
+            samples = np.array(samples)
+            self.shape = samples.shape
+            self.n_samples = self.shape[1]
         else:
             samples = np.array(samples)
-            transpose_shape = tuple([self.n_samples] + list(self.shape)[0:-1])
-            samples = np.reshape(samples, transpose_shape).T
+        transpose_shape = tuple([self.n_samples] + list(self.shape)[0:-1])
+        samples = np.reshape(samples, transpose_shape).T
+        self.shape = samples.shape
         return samples
 
 

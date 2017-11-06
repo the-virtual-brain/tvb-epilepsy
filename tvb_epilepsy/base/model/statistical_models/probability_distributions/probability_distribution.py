@@ -28,7 +28,7 @@ class ProbabilityDistribution(object):
     var = None
     std = None
     skew = None
-    exkurt = None
+    kurt = None
     scipy_name = ""
     numpy_name = ""
 
@@ -47,7 +47,7 @@ class ProbabilityDistribution(object):
              "8. var": self.var,
              "9. std": self.std,
              "10. skew": self.skew,
-             "11. exkurt": self.exkurt,
+             "11. kurt": self.kurt,
              "12. scipy_name": self.scipy_name,
              "13. numpy_name": self.numpy_name}
         return formal_repr(self, sort_dict(d))
@@ -79,12 +79,12 @@ class ProbabilityDistribution(object):
         self.var = self.calc_var()
         self.std = self.calc_std()
         self.skew = self.calc_skew()
-        self.exkurt = self.calc_exkurt()
+        self.kurt = self.calc_kurt()
 
     def calc_shape(self):
-        psum = np.array(0)
+        psum = np.array(0.0)
         for pval in self.params.values():
-            psum += np.array(pval, dtype='i')
+            psum += np.array(pval, dtype='f')
         return psum.shape
 
     @abstractmethod
@@ -128,7 +128,7 @@ class ProbabilityDistribution(object):
         pass
 
     @abstractmethod
-    def calc_exkurt_manual(self):
+    def calc_kurt_manual(self):
         pass
 
     def calc_mean(self, use="scipy"):
@@ -166,11 +166,11 @@ class ProbabilityDistribution(object):
         else:
             return self.calc_skew_manual()
 
-    def calc_exkurt(self, use="scipy"):
+    def calc_kurt(self, use="scipy"):
         if isequal_string(use, "scipy"):
             return self.scipy().stats(moments="k")
         else:
-            return self.calc_exkurt_manual()
+            return self.calc_kurt_manual()
 
     def compute_distributions_params(self, target_shape=None, **target_stats):
         if len(target_stats) != self.n_params:
@@ -197,16 +197,17 @@ class ProbabilityDistribution(object):
         for p_key in self.params.keys():
             self.params[p_key] *= i1
             params_vector += self.params[p_key].flatten().tolist()
-        size = len(params_vector)
+        size = len(params_vector) / self.n_params
         params_vector = np.array(params_vector)
         p_keys = self.params.keys()
         def fobj(p):
             params = {}
             for ik, p_key in enumerate(p_keys):
                 params.update({p_key: np.reshape(p[ik*size:(ik+1)*size], shape)})
-            f = 0
+            f = []
+            self.update_params(**params)
             for ts_key, ts_val in target_stats.iteritems():
-                f += (getattr(self.__class__(**params), "calc_" + ts_key)() - ts_val) ** 2
+                f.append((getattr(self, "calc_" + ts_key)() - ts_val) ** 2)
             return f
         sol = root(fobj, params_vector, method='lm', tol=10 ** (-12), callback=None, options=None)
         if sol.success:
@@ -219,3 +220,15 @@ class ProbabilityDistribution(object):
     def compute_and_update_params(self, target_shape=None, **target_stats):
         params = self.compute_distributions_params(target_shape, **target_stats)
         self.update_params(**params)
+
+
+def generate_distribution(distrib_name, target_stats=None, target_shape=None, **kwargs):
+    if np.in1d(distrib_name.lower(), AVAILABLE_DISTRIBUTIONS):
+        exec("from ." + distrib_name.lower() + "_distribution import " + distrib_name.title() + "Distribution")
+        distribution = eval(distrib_name.title() + "Distribution(**kwargs)")
+        if isinstance(distribution, ProbabilityDistribution) and isinstance(target_stats, dict):
+            distribution.compute_and_update_params(target_shape, **target_stats)
+        return distribution
+    else:
+        raise_value_error(distrib_name + " is not one of the available distributions!: " + str(AVAILABLE_DISTRIBUTIONS))
+

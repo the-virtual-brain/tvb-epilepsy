@@ -60,5 +60,5 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
     def calc_skew_manual(self):
         return 2.0
 
-    def calc_exkurt_manual(self):
+    def calc_kurt_manual(self):
         return 6.0

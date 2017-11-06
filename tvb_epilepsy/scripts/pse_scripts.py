@@ -26,6 +26,7 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
 
     pse_params = {"path": [], "indices": [], "name": [], "samples": []}
+
     sampler = StochasticSamplingService(n_samples=n_samples, random_seed=kwargs.get("random_seed", None))
 
     # First build from the hypothesis the input parameters of the parameter search exploration.
@@ -82,9 +83,6 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
         pse_params["indices"].append(inds)
 
         # Now generate samples susing a truncated normal distribution
-        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampling_module="scipy",
-                                            random_seed=kwargs.get("random_seed", None),
-                                            trunc_limits={"low": 0.0}, sampler="norm", loc=kloc, scale=30 * half_range)
         pse_params["samples"].append(
             sampler.generate_samples(parameter=(kloc,  # loc
                                                 30 * half_range),  # scale
