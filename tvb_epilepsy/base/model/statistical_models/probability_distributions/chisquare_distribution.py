@@ -4,21 +4,20 @@ import numpy.random as nr
 import scipy.stats as ss
 
 from tvb_epilepsy.base.utils.log_error_utils import warning
-from tvb_epilepsy.base.utils.data_structures_utils import make_int
+from tvb_epilepsy.base.utils.data_structures_utils import make_int, isequal_string
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
                                                                                 import ContinuousProbabilityDistribution
 
 
 class ChisquareDistribution(ContinuousProbabilityDistribution):
 
-    def __init__(self, k=1):
+    def __init__(self, df=1):
         self.name = "chisquare"
         self.scipy_name = "chi"
         self.numpy_name = "chisquare"
-        self.params = {"k": make_int(k)}
         self.constraint_string = "int(k) > 0"
-        self.__update_params__(**self.params)
-        self.df = self.k
+        self.df = make_int(df)
+        self.__update_params__(df=self.df)
 
     def __str__(self):
         this_str = super(ChisquareDistribution, self).__str__()
@@ -26,28 +25,30 @@ class ChisquareDistribution(ContinuousProbabilityDistribution):
         this_str += "\n" + "13. degrees of freedom" + " = " + str(self.df) + "}"
         return this_str
 
-    def update_params(self, **params):
-        self.__update_params__(**self.params)
-        self.df = self.k
+    def params(self, parametrization="df"):
+        return {"df": self.df}
+
+    def update_params(self, df=1):
+        self.__update_params__(df=make_int(df))
 
     def constraint(self):
-        return np.all(self.params["k"] > 0)
+        return np.all(self.df > 0)
 
     def scipy(self, loc=0.0, scale=1.0):
-        return ss.chi(self.params["k"], loc=loc, scale=scale)
+        return ss.chi(df=self.df, loc=loc, scale=scale)
 
     def numpy(self, size=(1,)):
-        return lambda: nr.chisquare(self.params["k"], size=size)
+        return lambda: nr.chisquare(df=self.df, size=size)
 
     def calc_mean_manual(self):
-        return self.params["k"]
+        return self.df
 
     def calc_median_manual(self):
         warning("Approximate calculation for median of chisquare distribution!")
-        return self.params["k"] * (1 - 2.0 / (9 * self.params["k"])) ** 3
+        return self.df * (1 - 2.0 / (9 * self.df)) ** 3
 
     def calc_mode_manual(self):
-        kmax = np.array(self.params["k"], dtype='i')
+        kmax = np.array(self.df, dtype='i')
         shape = kmax.shape
         kmax = (np.max(kmax.flatten()) - 2).tolist()
         for id in range(len(kmax)):
@@ -55,13 +56,13 @@ class ChisquareDistribution(ContinuousProbabilityDistribution):
         return np.reshape(kmax, shape)
 
     def calc_var_manual(self):
-        return 2 * self.params["k"]
+        return 2 * self.df
 
     def calc_std_manual(self):
         return np.sqrt(self.calc_var_manual())
 
     def calc_skew_manual(self):
-        return np.sqrt(8.0 / self.params["k"])
+        return np.sqrt(8.0 / self.df)
 
     def calc_kurt_manual(self):
-        return 12.0 / self.params["k"]
+        return 12.0 / self.df

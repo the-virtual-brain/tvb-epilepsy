@@ -18,7 +18,6 @@ class ProbabilityDistribution(object):
     __metaclass__ = ABCMeta
 
     name = ""
-    params = {}
     n_params = 0.0
     shape = ()
     constraint_string = ""
@@ -67,9 +66,9 @@ class ProbabilityDistribution(object):
         h5_model.write_to_h5(folder, filename)
 
     def __update_params__(self, **params):
-        self.params = params
+        self.set_params(**params)
         self.shape = self.calc_shape()
-        self.n_params = len(self.params)
+        self.n_params = len(self.params())
         if not (self.constraint()):
             raise_value_error("Constraint for " + self.name + " distribution " + self.constraint_string +
                               "\nwith parameters " + str(self.params) + " is not satisfied!")
@@ -81,11 +80,19 @@ class ProbabilityDistribution(object):
         self.skew = self.calc_skew()
         self.kurt = self.calc_kurt()
 
+    def set_params(self, **params):
+        for p_key, p_val in params:
+            setattr(self, p_key, p_val)
+
     def calc_shape(self):
         psum = np.array(0.0)
         for pval in self.params.values():
             psum += np.array(pval, dtype='f')
         return psum.shape
+
+    @abstractmethod
+    def params(self):
+        pass
 
     @abstractmethod
     def update_params(self, **params):

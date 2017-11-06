@@ -4,24 +4,26 @@ import numpy.random as nr
 import scipy.stats as ss
 
 from tvb_epilepsy.base.utils.log_error_utils import warning
-from tvb_epilepsy.base.utils.data_structures_utils import make_float
+from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
                                                                                 import ContinuousProbabilityDistribution
 
 
 class GammaDistribution(ContinuousProbabilityDistribution):
 
-    def __init__(self, shape=1.0, scale=1.0):
+    def __init__(self, **params):
         self.name = "gamma"
         self.scipy_name = "gamma"
         self.numpy_name = "gamma"
-        self.params = {"shape": make_float(shape), "scale": make_float(scale)}
         self.constraint_string = "shape > 0 and scale > 0"
-        self.__update_params__(**self.params)
-        self.k = shape
-        self.theta = scale
-        self.alpha = shape
-        self.beta = 1.0 / scale
+        self.shape = make_float(params.get("shape", params.get("alpha", params.get("k", 1.0))))
+        self.scale = make_float(params.get("scale", params.get("theta",
+                                                               1.0 / params.get("beta", params.get("rate", 1.0)))))
+        self.k = self.shape
+        self.theta = self.scale
+        self.alpha = self.shape
+        self.beta = 1.0 / self.scale
+        self.__update_params__(shape=self.shape, scale=self.scale)
 
     def __str__(self):
         this_str = super(GammaDistribution, self).__str__()
@@ -32,45 +34,59 @@ class GammaDistribution(ContinuousProbabilityDistribution):
                     "\n" + "16. beta" + " = " + str(self.beta) + "}"
         return this_str
 
+    def params(self, parametrization="alpha-beta"):
+        if isequal_string(parametrization, "alpha-beta"):
+            return {"alpha": self.shape, "beta": self.beta}
+        elif isequal_string(parametrization, "k-theta"):
+            return {"k": self.k, "theta": self.theta}
+        elif isequal_string(parametrization, "shape-rate"):
+            return {"shape": self.shape, "rate": 1.0 / self.scale}
+        elif isequal_string(parametrization, "scipy"):
+            return {"a": self.shape, "scale": self.scale}
+        else:
+            return {"shape": self.shape, "scale": self.scale}
+
     def update_params(self, **params):
-        self.__update_params__(**self.params)
-        self.k = self.params["shape"]
-        self.theta = self.params["scale"]
-        self.alpha = self.params["shape"]
-        self.beta = 1.0 / self.params["scale"]
+        self.__update_params__(shape=make_float(params.get("shape", params.get("alpha", params.get("k", 1.0)))),
+                               scale=make_float(params.get("scale", params.get("theta",
+                                                               1.0 / params.get("beta", params.get("rate", 1.0))))))
+        self.k = self.shape
+        self.theta = self.scale
+        self.alpha = self.shape
+        self.beta = 1.0 / self.scale
 
     def constraint(self):
-        return np.all(self.params["shape"] > 0.0) and np.all(self.params["scale"] > 0.0)
+        return np.all(self.shape > 0.0) and np.all(self.scale > 0.0)
 
     def scipy(self, loc=0.0, scale=1.0):
-        return getattr(ss, self.scipy_name)(self.params["shape"], loc=loc, scale=self.params["scale"])
+        return getattr(ss, self.scipy_name)(a=self.shape, loc=loc, scale=self.scale)
 
     def numpy(self, size=(1,)):
-        return lambda: nr.gamma(self.params["shape"], self.params["scale"], size=size)
+        return lambda: nr.gamma(shape=self.shape, scale=self.scale, size=size)
 
     def calc_mean_manual(self):
-        return self.params["shape"] * self.params["scale"]
+        return self.shape * self.scale
 
     def calc_median_manual(self):
         warning("Gamma distribution does not have a simple closed form median! Returning nan!")
         return np.nan
 
     def calc_mode_manual(self):
-        if self.params["shape"] >= 1.0:
-            return (self.params["shape"] - 1.0) * self.params["scale"]
+        if self.shape >= 1.0:
+            return (self.shape - 1.0) * self.scale
         else:
             warning("Mode cannot be calculate for gamma distribution when the shape parameter is smaller than 1.0! "
                     "Returning nan!")
             return np.nan
 
     def calc_var_manual(self):
-        return self.params["shape"] * self.params["scale"] ** 2
+        return self.shape * self.scale ** 2
 
     def calc_std_manual(self):
-       return np.sqrt(self.params["shape"]) * self.params["scale"]
+       return np.sqrt(self.shape) * self.scale
 
     def calc_skew_manual(self):
-        return 2.0 / np.sqrt(self.params["shape"])
+        return 2.0 / np.sqrt(self.shape)
 
     def calc_kurt_manual(self):
-        return 6.0 / self.params["shape"]
+        return 6.0 / self.shape

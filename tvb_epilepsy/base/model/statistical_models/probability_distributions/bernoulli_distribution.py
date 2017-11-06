@@ -14,35 +14,38 @@ class BernoulliDistribution(DiscreteProbabilityDistribution):
         self.name = "bernoulli"
         self.scipy_name = "bernoulli"
         self.numpy_name = ""
-        self.params = {"p": make_float(p)}
         self.constraint_string = "0 < p < 1"
-        self.__update_params__(**self.params)
+        self.p = make_float(p)
+        self.__update_params__(p=self.p)
 
-    def update_params(self, **params):
-        self.__update_params__(**self.params)
+    def params(self):
+        return {"p": self.p}
+
+    def update_params(self, p=0.5):
+        self.__update_params__(p=make_float(p))
 
     def constraint(self):
-        return np.all(self.params["p"] > 0.0) and np.all(self.params["p"] < 1.0)
+        return np.all(self.p > 0.0) and np.all(self.p < 1.0)
 
     def scipy(self, loc=0.0, scale=1.0):
-        return ss.bernoulli(self.params["p"], loc=loc, scale=scale)
+        return ss.bernoulli(p=self.p, loc=loc, scale=scale)
 
     def numpy(self, size=(1,)):
         raise_not_implemented_error("No implementation of bernoulli distribution in numpy.random module!")
 
     def calc_mean_manual(self):
-        return self.params["p"]
+        return self.p
 
     def calc_median_manual(self):
-        median = 0.5 * np.ones(np.array(self.params["p"]).shape)
-        median[np.where(self.params["p"] < 0.5)[0]] = 0.0
-        median[np.where(self.params["p"] > 0.5)[0]] = 1.0
+        median = 0.5 * np.ones(np.array(self.p).shape)
+        median[np.where(self.p < 0.5)[0]] = 0.0
+        median[np.where(self.p > 0.5)[0]] = 1.0
         return median
 
     def calc_mode_manual(self):
-        mode = np.ones(np.array(self.params["p"]).shape)
-        mode[np.where(self.params["p"] < 0.5)[0]] = 0.0
-        p05 = self.params["p"] == 0.5
+        mode = np.ones(np.array(self.p).shape)
+        mode[np.where(self.p < 0.5)[0]] = 0.0
+        p05 = self.p == 0.5
         if np.any(p05):
             warning("The mode of bernoulli distribution for p=0.5 consists of two values (0.0 and 1.0)!")
             mode = mode.astype('O')
@@ -51,13 +54,13 @@ class BernoulliDistribution(DiscreteProbabilityDistribution):
 
 
     def calc_var_manual(self):
-        return self.params["p"] * (1 - self.params["p"])
+        return self.p * (1 - self.p)
 
     def calc_std_manual(self):
         return np.sqrt(self.calc_var_manual())
 
     def calc_skew_manual(self):
-        return (1.0 - 2.0 * self.params["p"]) / self.calc_std_manual()
+        return (1.0 - 2.0 * self.p) / self.calc_std_manual()
 
     def calc_kurt_manual(self):
         var = self.calc_var_manual()
