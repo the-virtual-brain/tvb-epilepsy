@@ -1,5 +1,6 @@
 
 import numpy as np
+import numpy.random as nr
 import scipy.stats as ss
 
 from tvb_epilepsy.base.utils.log_error_utils import warning
@@ -13,6 +14,7 @@ class GammaDistribution(ContinuousProbabilityDistribution):
     def __init__(self, shape=1.0, scale=1.0):
         self.name = "gamma"
         self.scipy_name = "gamma"
+        self.numpy_name = "gamma"
         self.params = {"shape": make_float(shape), "scale": make_float(scale)}
         self.constraint_string = "shape > 0 and scale > 0"
         self.__update_params__(**self.params)
@@ -43,7 +45,10 @@ class GammaDistribution(ContinuousProbabilityDistribution):
     def scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(self.params["shape"], loc=loc, scale=self.params["scale"])
 
-    def calc_mu_manual(self):
+    def numpy(self, size=(1,)):
+        return lambda: nr.gamma(self.params["shape"], self.params["scale"], size=size)
+
+    def calc_mean_manual(self):
         return self.params["shape"] * self.params["scale"]
 
     def calc_median_manual(self):

@@ -5,7 +5,8 @@ from tvb_epilepsy.base.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
     dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
-from tvb_epilepsy.service.sampling_service import StochasticSamplingService
+from tvb_epilepsy.service.sampling.salib_sampling_service import SalibSamplingService
+from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
 from tvb_epilepsy.service.pse_service import PSEService
 from tvb_epilepsy.service.sensitivity_analysis_service import SensitivityAnalysisService, METHODS
 from tvb_epilepsy.scripts.hypothesis_scripts import start_lsa_run
@@ -39,7 +40,7 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
     disease_indices = lsa_hypothesis.get_regions_disease_indices()
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
 
-    pse_params = {"path": [], "indices": [], "name": [], "bounds": []}
+    pse_params = {"path": [], "indices": [], "name": [], "low": [], "high": []}
     n_inputs = 0
 
     # First build from the hypothesis the input parameters of the sensitivity analysis.
@@ -51,8 +52,8 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
         pse_params["path"].append("hypothesis.x0_values")
         pse_params["name"].append(str(region_labels[lsa_hypothesis.x0_indices[ii]]) +
                                   " Excitability")
-        pse_params["bounds"].append([lsa_hypothesis.x0_values[ii] - half_range,
-                                     np.min([MAX_DISEASE_VALUE, lsa_hypothesis.x0_values[ii] + half_range])])
+        pse_params["low"].append(lsa_hypothesis.x0_values[ii] - half_range)
+        pse_params["high"].append(np.min([MAX_DISEASE_VALUE, lsa_hypothesis.x0_values[ii] + half_range]))
 
     for ii in range(len(lsa_hypothesis.e_values)):
         n_inputs += 1
@@ -60,8 +61,8 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
         pse_params["path"].append("hypothesis.e_values")
         pse_params["name"].append(str(region_labels[lsa_hypothesis.e_indices[ii]]) +
                                   " Epileptogenicity")
-        pse_params["bounds"].append([lsa_hypothesis.e_values[ii] - half_range,
-                                     np.min([MAX_DISEASE_VALUE, lsa_hypothesis.e_values[ii] + half_range])])
+        pse_params["low"].append(lsa_hypothesis.e_values[ii] - half_range)
+        pse_params["high"].append(np.min([MAX_DISEASE_VALUE, lsa_hypothesis.e_values[ii] + half_range]))
 
     for ii in range(len(lsa_hypothesis.w_values)):
         n_inputs += 1
@@ -73,8 +74,8 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
                                       str(region_labels[inds[0][0]]) + " Connectivity")
         else:
             pse_params["name"].append("Connectivity[" + str(inds), + "]")
-            pse_params["bounds"].append([np.max([lsa_hypothesis.w_values[ii] - half_range, 0.0]),
-                                         lsa_hypothesis.w_values[ii] + half_range])
+            pse_params["low"].append(np.max([lsa_hypothesis.w_values[ii] - half_range, 0.0]))
+            pse_params["high"].append(lsa_hypothesis.w_values[ii] + half_range)
 
     for val in global_coupling:
         n_inputs += 1
@@ -85,30 +86,28 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
         else:
             pse_params["name"].append("Afferent coupling[" + str(inds) + "]")
         pse_params["indices"].append(inds)
-        pse_params["bounds"].append(val["bounds"])
+        pse_params["low"].append(val.get("low", 0.0))
+        pse_params["high"].append(val.get("high"))
 
     # Now generate samples suitable for sensitivity analysis
-    sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=n_inputs, sampler=sampler, trunc_limits={},
-                                        sampling_module="salib", random_seed=kwargs.get("random_seed", None),
-                                        bounds=pse_params["bounds"])
+    sampler = SalibSamplingService(n_samples=n_samples, sampler=sampler, random_seed=kwargs.get("random_seed", None))
 
-    input_samples = sampler.generate_samples(**kwargs)
+    input_samples = sampler.generate_samples(low=pse_params["low"], high=pse_params["high"], **kwargs)
     n_samples = input_samples.shape[1]
     pse_params.update({"samples": [np.array(value) for value in input_samples.tolist()]})
 
     pse_params_list = dicts_of_lists_to_lists_of_dicts(pse_params)
 
     # Add a random jitter to the healthy regions if required...:
+    sampler = StochasticSamplingService(n_samples=n_samples, random_seed=kwargs.get("random_seed", None))
     for val in healthy_regions_parameters:
         inds = val.get("indices", healthy_indices)
         name = val.get("name", "x0_values")
         n_params = len(inds)
-        sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=n_params, sampler="uniform",
-                                            trunc_limits={"low": 0.0}, sampling_module="scipy",
-                                            random_seed=kwargs.get("random_seed", None),
-                                            loc=kwargs.get("loc", 0.0), scale=kwargs.get("scale", 2 * half_range))
+        samples = sampler.generate_samples(parameter=(kwargs.get("loc", 0.0),  # loc
+                                                      kwargs.get("scale", 2 * half_range)),  # scale
+                                           probability_distribution="uniform", low=0.0, shape=(n_params,))
 
-        samples = sampler.generate_samples(**kwargs)
         for ii in range(n_params):
             pse_params_list.append({"path": "model_configuration_service." + name, "samples": samples[ii],
                                     "indices": [inds[ii]], "name": name})

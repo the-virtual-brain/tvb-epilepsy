@@ -2,7 +2,7 @@
 import numpy as np
 import scipy.stats as ss
 
-from tvb_epilepsy.base.utils.log_error_utils import warning
+from tvb_epilepsy.base.utils.log_error_utils import warning, raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import make_float
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.discrete_probability_distribution  \
                                                                                   import DiscreteProbabilityDistribution
@@ -13,6 +13,7 @@ class BernoulliDistribution(DiscreteProbabilityDistribution):
     def __init__(self, p=0.5):
         self.name = "bernoulli"
         self.scipy_name = "bernoulli"
+        self.numpy_name = ""
         self.params = {"p": make_float(p)}
         self.constraint_string = "0 < p < 1"
         self.__update_params__(**self.params)
@@ -24,9 +25,12 @@ class BernoulliDistribution(DiscreteProbabilityDistribution):
         return np.all(self.params["p"] > 0.0) and np.all(self.params["p"] < 1.0)
 
     def scipy(self, loc=0.0, scale=1.0):
-        return getattr(ss, self.scipy_name)(self.params["p"], loc=loc, scale=scale)
+        return ss.bernoulli(self.params["p"], loc=loc, scale=scale)
 
-    def calc_mu_manual(self):
+    def numpy(self, size=(1,)):
+        raise_not_implemented_error("No implementation of bernoulli distribution in numpy.random module!")
+
+    def calc_mean_manual(self):
         return self.params["p"]
 
     def calc_median_manual(self):

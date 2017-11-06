@@ -1,5 +1,6 @@
 
 import numpy as np
+import numpy.random as nr
 import scipy.stats as ss
 
 from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int
@@ -12,6 +13,7 @@ class BinomialDistribution(DiscreteProbabilityDistribution):
     def __init__(self, n=1, p=0.5):
         self.name = "bionomial"
         self.scipy_name = "binom"
+        self.numpy_name = "binomial"
         self.params = {"n": make_int(n), "p": make_float(p)}
         self.constraint_string = "n > 0 and 0 < p < 1"
         self.__update_params__(**self.params)
@@ -23,13 +25,16 @@ class BinomialDistribution(DiscreteProbabilityDistribution):
         return np.all(self.params["n"] > 0) and np.all(self.params["p"] > 0.0) and np.all(self.params["p"] < 1.0)
 
     def scipy(self, loc=0.0, scale=1.0):
-        return getattr(ss, self.scipy_name)(self.params["n"], self.params["p"], loc=loc, scale=scale)
+        return ss.binom(self.params["n"], self.params["p"], loc=loc, scale=scale)
 
-    def calc_mu_manual(self):
+    def numpy(self, size=(1,)):
+        return lambda: nr.binomial(self.params["n"], self.params["p"], size=size)
+
+    def calc_mean_manual(self):
         return self.params["n"] * self.params["p"]
 
     def calc_median_manual(self):
-        return make_int(np.round(self.calc_mu_manual()))
+        return make_int(np.round(self.calc_mean_manual()))
 
     def calc_mode_manual(self):
         return make_int(np.round((self.params["n"] + 1) * self.params["p"]) - 1)

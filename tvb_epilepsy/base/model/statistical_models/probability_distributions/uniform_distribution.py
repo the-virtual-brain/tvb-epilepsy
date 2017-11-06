@@ -2,6 +2,7 @@
 import sys
 
 import numpy as np
+import numpy.random as nr
 import scipy.stats as ss
 
 from tvb_epilepsy.base.utils.log_error_utils import warning
@@ -19,6 +20,7 @@ class UniformDistribution(ContinuousProbabilityDistribution):
     def __init__(self, a=MIN_VALUE, b=MAX_VALUE):
         self.name = "uniform"
         self.scipy_name = "uniform"
+        self.numpy_name = "uniform"
         self.params = {"a": make_float(a), "b": make_float(b)}
         self.constraint_string = "a < b"
         self.__update_params__(**self.params)
@@ -32,7 +34,10 @@ class UniformDistribution(ContinuousProbabilityDistribution):
     def scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(loc=self.params["a"], scale=self.params["b"]-self.params["a"])
 
-    def calc_mu_manual(self):
+    def numpy(self, size=(1,)):
+        return lambda: nr.beta(self.params["a"], self.params["b"], size=size)
+
+    def calc_mean_manual(self):
         return 0.5 * (self.params["a"] + self.params["b"])
 
     def calc_median_manual(self):

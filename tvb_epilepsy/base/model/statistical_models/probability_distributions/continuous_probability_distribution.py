@@ -26,7 +26,7 @@ class ContinuousProbabilityDistribution(ProbabilityDistribution):
     #     pass
     #
     # @abstractmethod
-    # def calc_mu(self, use="scipy"):
+    # def calc_mean(self, use="scipy"):
     #     pass
     #
     # @abstractmethod

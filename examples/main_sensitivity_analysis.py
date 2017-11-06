@@ -56,7 +56,7 @@ if __name__ == "__main__":
                                                          head.connectivity.region_labels,
                                                          n_samples, method=m, half_range=0.1,
                                                          global_coupling=[{"indices": all_regions_indices,
-                                                                           "bounds": [0.0, 2 * K_DEF]}],
+                                                                           "low": 0.0, "high":2*K_DEF}],
                                                          healthy_regions_parameters=[
                                                              {"name": "x0_values", "indices": healthy_indices}],
                                                          logger=logger, save_services=True)

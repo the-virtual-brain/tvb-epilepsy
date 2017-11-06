@@ -22,7 +22,7 @@ class ProbabilityDistribution(object):
     n_params = 0.0
     shape = ()
     constraint_string = ""
-    mu = None
+    mean = None
     median = None
     mode = None
     var = None
@@ -30,6 +30,7 @@ class ProbabilityDistribution(object):
     skew = None
     exkurt = None
     scipy_name = ""
+    numpy_name = ""
 
     @abstractmethod
     def __init__(self):
@@ -40,14 +41,15 @@ class ProbabilityDistribution(object):
              "2. params": self.params,
              "3. n_params": self.n_params,
              "4. constraint": self.constraint_string,
-             "5. mu": self.mu,
+             "5. mean": self.mean,
              "6. median": self.median,
              "7. mode": self.mode,
              "8. var": self.var,
              "9. std": self.std,
              "10. skew": self.skew,
              "11. exkurt": self.exkurt,
-             "12. scipy_name": self.scipy_name}
+             "12. scipy_name": self.scipy_name,
+             "13. numpy_name": self.numpy_name}
         return formal_repr(self, sort_dict(d))
 
     def __str__(self):
@@ -71,7 +73,7 @@ class ProbabilityDistribution(object):
         if not (self.constraint()):
             raise_value_error("Constraint for " + self.name + " distribution " + self.constraint_string +
                               "\nwith parameters " + str(self.params) + " is not satisfied!")
-        self.mu = self.calc_mu()
+        self.mean = self.calc_mean()
         self.median = self.calc_median()
         self.mode = self.calc_mode_manual()
         self.var = self.calc_var()
@@ -98,7 +100,11 @@ class ProbabilityDistribution(object):
         pass
 
     @abstractmethod
-    def calc_mu_manual(self):
+    def numpy(self, size=(1,)):
+        pass
+
+    @abstractmethod
+    def calc_mean_manual(self):
         pass
 
     @abstractmethod
@@ -125,11 +131,11 @@ class ProbabilityDistribution(object):
     def calc_exkurt_manual(self):
         pass
 
-    def calc_mu(self, use="scipy"):
+    def calc_mean(self, use="scipy"):
         if isequal_string(use, "scipy"):
             return self.scipy().stats(moments="m")
         else:
-            return self.calc_mu_manual()
+            return self.calc_mean_manual()
 
     def calc_median(self, use="scipy"):
         if isequal_string(use, "scipy"):

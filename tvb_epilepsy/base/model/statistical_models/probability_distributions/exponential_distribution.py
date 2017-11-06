@@ -1,5 +1,6 @@
 
 import numpy as np
+import numpy.random as nr
 import scipy.stats as ss
 
 from tvb_epilepsy.base.utils.log_error_utils import warning
@@ -13,6 +14,7 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
     def __init__(self, scale=1.0):
         self.name = "exponential"
         self.scipy_name = "expon"
+        self.numpy_name = "exponential"
         self.params = {"scale": make_float(scale)}
         self.constraint_string = "scale > 0"
         self.__update_params__(**self.params)
@@ -34,9 +36,12 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
         return np.all(self.params["scale"] > 0)
 
     def scipy(self, loc=0.0, scale=1.0):
-        return getattr(ss, self.scipy_name)(loc=loc, scale=self.params["scale"])
+        return ss.expon(loc=loc, scale=self.params["scale"])
 
-    def calc_mu_manual(self):
+    def numpy(self, size=(1,)):
+        return lambda: nr.exponential(self.params["scale"], size=size)
+
+    def calc_mean_manual(self):
         return self.params["scale"]
 
     def calc_median_manual(self):

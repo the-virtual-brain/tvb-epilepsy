@@ -1,5 +1,6 @@
 
 import numpy as np
+import numpy.random as nr
 import scipy.stats as ss
 
 from tvb_epilepsy.base.utils.data_structures_utils import make_float
@@ -12,7 +13,8 @@ class NormalDistribution(ContinuousProbabilityDistribution):
     def __init__(self, mu=0.0, sigma=1.0):
         self.name = "normal"
         self.scipy_name = "norm"
-        self.params = {"mu": make_float(mu), "sigma": make_float(sigma)}
+        self.numpy_name = "normal"
+        self.params = {"mean": make_float(mu), "sigma": make_float(sigma)}
         self.constraint_string = "sigma > 0"
         self.__update_params__(**self.params)
 
@@ -23,16 +25,19 @@ class NormalDistribution(ContinuousProbabilityDistribution):
         return np.all(self.params["sigma"] > 0.0)
 
     def scipy(self, loc=0.0, scale=1.0):
-        return getattr(ss, self.scipy_name)(loc=self.params["mu"], scale=self.params["sigma"])
+        return getattr(ss, self.scipy_name)(loc=self.params["mean"], scale=self.params["sigma"])
 
-    def calc_mu_manual(self):
-        return self.params["mu"]
+    def numpy(self, size=(1,)):
+        return lambda: nr.gamma(self.params["mean"], self.params["sigma"], size=size)
+
+    def calc_mean_manual(self):
+        return self.params["mean"]
 
     def calc_median_manual(self, ):
-        return self.params["mu"]
+        return self.params["mean"]
 
     def calc_mode_manual(self):
-        return self.params["mu"]
+        return self.params["mean"]
 
     def calc_var_manual(self):
         return self.params["std"] ** 2

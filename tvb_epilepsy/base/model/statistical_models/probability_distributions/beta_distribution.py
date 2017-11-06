@@ -1,5 +1,6 @@
 
 import numpy as np
+import numpy.random as nr
 import scipy.stats as ss
 
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
@@ -13,6 +14,7 @@ class BetaDistribution(ContinuousProbabilityDistribution):
     def __init__(self, alpha=1.0, beta=1.0):
         self.name = "beta"
         self.scipy_name = "beta"
+        self.numpy_name = "beta"
         self.params = {"alpha": make_float(alpha), "beta": make_float(beta)}
         self.constraint_string = "alpha > 0 and beta > 0"
         self.__update_params__(**self.params)
@@ -24,9 +26,12 @@ class BetaDistribution(ContinuousProbabilityDistribution):
         return np.all(self.params["alpha"] > 0.0) and np.all(self.params["beta"] > 0.0)
 
     def scipy(self, loc=0.0, scale=1.0):
-        return getattr(ss, self.scipy_name)(self.params["alpha"], self.params["beta"], loc=loc, scale=scale)
+        return ss.beta(self.params["alpha"], self.params["beta"], loc=loc, scale=scale)
 
-    def calc_mu_manual(self, use="scipy"):
+    def numpy(self, size=(1,)):
+        return lambda: nr.beta(self.params["alpha"], self.params["beta"], size=size)
+
+    def calc_mean_manual(self, use="scipy"):
         if isequal_string(use, "scipy"):
             return self.scipy().stats(moments="m")
         else:

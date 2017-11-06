@@ -1,5 +1,6 @@
 
 import numpy as np
+import numpy.random as nr
 import scipy.stats as ss
 
 from tvb_epilepsy.base.utils.log_error_utils import warning
@@ -13,6 +14,7 @@ class ChisquareDistribution(ContinuousProbabilityDistribution):
     def __init__(self, k=1):
         self.name = "chisquare"
         self.scipy_name = "chi"
+        self.numpy_name = "chisquare"
         self.params = {"k": make_int(k)}
         self.constraint_string = "int(k) > 0"
         self.__update_params__(**self.params)
@@ -32,9 +34,12 @@ class ChisquareDistribution(ContinuousProbabilityDistribution):
         return np.all(self.params["k"] > 0)
 
     def scipy(self, loc=0.0, scale=1.0):
-        return getattr(ss, self.scipy_name)(self.params["k"], loc=loc, scale=scale)
+        return ss.chi(self.params["k"], loc=loc, scale=scale)
 
-    def calc_mu_manual(self):
+    def numpy(self, size=(1,)):
+        return lambda: nr.chisquare(self.params["k"], size=size)
+
+    def calc_mean_manual(self):
         return self.params["k"]
 
     def calc_median_manual(self):

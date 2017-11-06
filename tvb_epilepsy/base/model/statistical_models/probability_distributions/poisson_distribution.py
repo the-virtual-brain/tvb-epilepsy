@@ -1,5 +1,6 @@
 
 import numpy as np
+import numpy.random as nr
 import scipy.stats as ss
 
 from tvb_epilepsy.base.utils.log_error_utils import warning
@@ -13,6 +14,7 @@ class PoissoniDistribution(DiscreteProbabilityDistribution):
     def __init__(self, lamda=0.5):
         self.name = "poisson"
         self.scipy_name = "poisson"
+        self.numpy_name = "poisson"
         self.params = {"lamda": make_float(lamda)}
         self.constraint_string = "0 < lamda < 1"
         self.__update_params__(**self.params)
@@ -26,7 +28,10 @@ class PoissoniDistribution(DiscreteProbabilityDistribution):
     def scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(self.params["lamda"], loc=loc, scale=scale)
 
-    def calc_mu_manual(self):
+    def numpy(self, size=(1,)):
+        return lambda: nr.exponential(self.params["lamda"], size=size)
+
+    def calc_mean_manual(self):
         return self.params["lamda"]
 
     def calc_median_manual(self):
