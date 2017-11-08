@@ -371,18 +371,38 @@ def assert_arrays(params, shape=None, transpose=False):
         return tuple(params)
 
 
-def make_float(x):
+def make_float(x, precision="64"):
     if isinstance(x, np.ndarray):
-        return x.astype("f")
+        if isequal_string(precision, "64"):
+            return x.astype(np.float64)
+        elif isequal_string(precision, "32"):
+            return x.astype(np.float32)
+        else:
+            return x.astype(np.float)
     else:
-        return np.float(x)
+        if isequal_string(precision, "64"):
+            return np.float64(x)
+        elif isequal_string(precision, "32"):
+            np.float32(x)
+        else:
+            return np.float(x)
 
 
-def make_int(x):
+def make_int(x, precision="64"):
     if isinstance(x, np.ndarray):
-        return x.astype("i")
+        if isequal_string(precision, "64"):
+            return x.astype(np.int64)
+        elif isequal_string(precision, "32"):
+            return x.astype(np.int32)
+        else:
+            return x.astype(np.int)
     else:
-        return np.int(x)
+        if isequal_string(precision, "64"):
+            return np.int64(x)
+        elif isequal_string(precision, "32"):
+            np.int32(x)
+        else:
+            return np.int(x)
 
 
 def parcellation_correspondance(inds_from, labels_from, labels_to):
