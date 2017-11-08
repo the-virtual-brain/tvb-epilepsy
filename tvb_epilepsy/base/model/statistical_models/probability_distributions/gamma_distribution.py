@@ -56,7 +56,9 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         self.beta = 1.0 / self.scale
 
     def constraint(self):
-        return np.all(self.shape > 0.0) and np.all(self.scale > 0.0)
+        # By default expr >= 0
+        return np.hstack([np.array(self.shape).flatten() - np.finfo(np.float64).eps,
+                          np.array(self.scale).flatten() - np.finfo(np.float64).eps])
 
     def scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(a=self.shape, loc=loc, scale=self.scale)

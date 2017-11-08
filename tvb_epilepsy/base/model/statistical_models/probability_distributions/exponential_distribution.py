@@ -41,7 +41,8 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
         self.rate = self.lamda
 
     def constraint(self):
-        return np.all(self.scale > 0)
+        # By default expr >= 0
+        return np.array(self.scale).flatten() - np.finfo(np.float64).eps
 
     def scipy(self, loc=0.0, scale=1.0):
         return ss.expon(loc=loc, scale=self.scale)

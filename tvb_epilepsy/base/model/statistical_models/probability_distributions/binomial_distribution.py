@@ -26,7 +26,9 @@ class BinomialDistribution(DiscreteProbabilityDistribution):
         self.__update_params__(n=make_int(n), p=make_float(p))
 
     def constraint(self):
-        return np.all(self.n > 0) and np.all(self.p > 0.0) and np.all(self.p < 1.0)
+        # By default expr >= 0
+        p = np.array(self.p).flatten() - np.finfo(np.float64).eps
+        return np.hstack([np.array(self.n).flatten() - 1, p, 1.0 - p + np.finfo(np.float64).eps])
 
     def scipy(self, loc=0.0, scale=1.0):
         return ss.binom(n=self.n, p=self.p, loc=loc, scale=scale)

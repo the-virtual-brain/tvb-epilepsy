@@ -37,7 +37,9 @@ class BetaDistribution(ContinuousProbabilityDistribution):
         self.b = self.beta
 
     def constraint(self):
-        return np.all(self.alpha > 0.0) and np.all(self.beta > 0.0)
+        # By default expr >= 0
+        return np.hstack([np.array(self.alpha).flatten() - np.finfo(np.float64).eps,
+                         np.array(self.beta).flatten() - np.finfo(np.float64).eps])
 
     def scipy(self, loc=0.0, scale=1.0):
         return ss.beta(a=self.alpha, b=self.beta, loc=loc, scale=scale)

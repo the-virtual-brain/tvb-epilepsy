@@ -67,10 +67,10 @@ class ProbabilityDistribution(object):
         h5_model.write_to_h5(folder, filename)
 
     def __update_params__(self, **params):
-        self.set_params(**params)
-        self.pdf_shape = self.calc_shape()
+        self.__set_params__(**params)
+        self.pdf_shape = self.__calc_shape__()
         self.n_params = len(self.params())
-        if not (self.check_constraints()):
+        if not (self.__check_constraints__()):
             raise_value_error("Constraint for " + self.name + " distribution " + self.constraint_string +
                               "\nwith parameters " + str(self.params()) + " is not satisfied!")
         self.mean = self.calc_mean()
@@ -81,21 +81,18 @@ class ProbabilityDistribution(object):
         self.skew = self.calc_skew()
         self.kurt = self.calc_kurt()
 
-    def set_params(self, **params):
+    def __set_params__(self, **params):
         for p_key, p_val in params.iteritems():
             setattr(self, p_key, p_val)
 
-    def calc_shape(self):
+    def __calc_shape__(self):
         psum = np.array(0.0)
         for pval in self.params().values():
             psum += np.array(pval, dtype='f')
         return psum.shape
 
-    def check_constraints(self):
-        constraint = True
-        for con in self.constraints():
-            constraint = np.logical_and(constraint, con(self.params()))
-        return constraint
+    def __check_constraints__(self):
+        return np.all(self.constraints() > 0)
 
     @abstractmethod
     def params(self):
@@ -187,7 +184,6 @@ class ProbabilityDistribution(object):
             return self.calc_kurt_manual()
 
     def compute_distributions_params(self, constraints=[], target_shape=None, **target_stats):
-        constraints.append(self.constraint())
         if len(target_stats) != self.n_params:
             raise_value_error("Target parameters are " + str(len(target_stats)) +
                               ", whereas the characteristic parameters of distribution " + self.name +
@@ -213,26 +209,36 @@ class ProbabilityDistribution(object):
         bounds = []
         p_keys = self.params().keys()
         for p_key in p_keys:
-            self.set_params(**{p_key: np.array(self.params()[p_key]) * i1})
+            self.__set_params__(**{p_key: np.array(self.params()[p_key]) * i1})
             params_vector += self.params()[p_key].flatten().tolist()
             bounds += [self.bounds()[p_key]] * size
         params_vector = np.array(params_vector).astype(np.float64)
+
         def construct_params_dict(p):
             p = p.astype(np.float64)
             params = {}
             for ik, p_key in enumerate(p_keys):
                 params.update({p_key: np.reshape(p[ik * size:(ik + 1) * size], shape)})
             return params
+
+        # Scalar objective  function
         def fobj(p):
             params = construct_params_dict(p)
-            f = []
+            f = 0.0
             self.update_params(**params)
             for ts_key, ts_val in target_stats.iteritems():
-                f.append((getattr(self, "calc_" + ts_key)(use="manual") - ts_val) ** 2)
-            return np.sum(f)
-        constraints.append(self.constraint())
-        for ic, con in enumerate(constraints):
-            constraints[ic] = {"type": "ineq", "fun": lambda p: con(construct_params_dict(p))}
+                f += (getattr(self, "calc_" + ts_key)(use="manual") - ts_val) ** 2
+            return f
+
+        # Vector constraints function
+        def fconstr(p):
+            params = construct_params_dict(p)
+            self.update_params(**params)
+            return self.constraints()
+
+        # Vector valued constraints' functions
+        constraints.append({"type": "ineq", "fun": lambda p: fconstr(p)})
+        # TODO solve the problem for integer parameters...
         sol = minimize(fobj, params_vector, constraints=constraints)
         if sol.success:
             if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):

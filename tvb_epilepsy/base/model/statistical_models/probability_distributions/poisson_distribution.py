@@ -33,7 +33,9 @@ class PoissoniDistribution(DiscreteProbabilityDistribution):
         self.mu = self.lamda
 
     def constraint(self):
-        return np.all(self.lamda > 0.0)
+        # By default expr >= 0
+        lamda = np.array(self.lamda).flatten()
+        return np.hstack([lamda - np.finfo(np.float64).eps, 1.0 - lamda + np.finfo(np.float64).eps])
 
     def scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(self.lamda, loc=loc, scale=scale)

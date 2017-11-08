@@ -29,7 +29,8 @@ class NormalDistribution(ContinuousProbabilityDistribution):
         self.__update_params__(**params)
 
     def constraint(self):
-        return np.all(self.sigma > 0.0)
+        # By default expr >= 0
+        return np.array(self.sigma).flatten() - np.finfo(np.float64).eps
 
     def scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(loc=self.mean, scale=self.sigma)

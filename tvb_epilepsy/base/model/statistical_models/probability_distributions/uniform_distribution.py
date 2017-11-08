@@ -48,7 +48,8 @@ class UniformDistribution(ContinuousProbabilityDistribution):
         self.scale = self.b - self.a
 
     def constraint(self):
-        return np.all(self.a < self.b)
+        # By default expr >= 0
+        return np.array(self.b).flatten() - np.array(self.a).flatten() - np.finfo(np.float64).eps
 
     def scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(loc=self.a, scale=self.b-self.a)

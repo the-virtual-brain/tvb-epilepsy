@@ -34,7 +34,8 @@ class LognormalDistribution(ContinuousProbabilityDistribution):
         self.scale = np.exp(self.mean)
         
     def constraint(self):
-        return np.all(self.sigma > 0.0)
+        # By default expr >= 0
+        return np.array(self.sigma).flatten() - np.finfo(np.float64).eps
 
     def scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(shape=self.sigma, loc=loc, scale=np.exp(self.mean))

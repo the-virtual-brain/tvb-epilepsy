@@ -42,7 +42,7 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
             sampler.generate_samples(parameter=(lsa_hypothesis.x0_values[ii]-half_range, # loc
                                                  2*half_range),                         # scale
                                      probability_distribution="uniform",
-                                     high=MAX_DISEASE_VALUE), shape=(1,))
+                                     high=MAX_DISEASE_VALUE, shape=(1,)))
 
     for ii in range(len(lsa_hypothesis.e_values)):
         pse_params["indices"].append([ii])
@@ -54,7 +54,7 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
             sampler.generate_samples(parameter=(lsa_hypothesis.e_values[ii] - half_range,  # loc
                                                 2 * half_range),  # scale
                                      probability_distribution="uniform",
-                                     high=MAX_DISEASE_VALUE), shape=(1,))
+                                     high=MAX_DISEASE_VALUE, shape=(1,)))
 
     for ii in range(len(lsa_hypothesis.w_values)):
         pse_params["indices"].append([ii])
@@ -70,7 +70,7 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
         pse_params["samples"].append(
             sampler.generate_samples(parameter=(lsa_hypothesis.w_values[ii],  # loc
                                                 half_range),  # scale
-                                     probability_distribution="norm", low=0.0), shape=(1,))
+                                     probability_distribution="norm", low=0.0, shape=(1,)))
 
     kloc = model_configuration_service.K_unscaled[0]
     for val in global_coupling:
@@ -86,7 +86,7 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
         pse_params["samples"].append(
             sampler.generate_samples(parameter=(kloc,  # loc
                                                 30 * half_range),  # scale
-                                     probability_distribution="norm", low=0.0), shape=(1,))
+                                     probability_distribution="norm", low=0.0, shape=(1,)))
 
     pse_params_list = dicts_of_lists_to_lists_of_dicts(pse_params)
 

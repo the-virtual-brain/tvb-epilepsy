@@ -52,14 +52,12 @@ def figure_filename(fig=None, figure_name=None):
 def save_figure(save_flag=SAVE_FLAG, fig=None, figure_name=None, figure_dir=FOLDER_FIGURES,
                 figure_format=FIG_FORMAT):
     if save_flag:
+        figure_name = figure_filename(fig, figure_name)
+        figure_name = figure_name[:np.min([100, len(figure_name)])] + '.' + figure_format
         if not (os.path.isdir(figure_dir)):
             os.mkdir(figure_dir)
-            figure_name = figure_filename(fig, figure_name)
-            figure_name = figure_name[:np.min([100, len(figure_name)])] + '.' + figure_format
-        try:
-            pyplot.savefig(os.path.join(figure_dir, figure_name))
-        except:
-            print("WTF")
+        pyplot.savefig(os.path.join(figure_dir, figure_name))
+
 
 
 def plot_vector(vector, labels, subplot, title, show_y_labels=True, indices_red=None, sharey=None):

@@ -32,7 +32,8 @@ class ChisquareDistribution(ContinuousProbabilityDistribution):
         self.__update_params__(df=make_int(df))
 
     def constraint(self):
-        return np.all(self.df > 0)
+        # By default expr >= 0
+        return np.array(self.df).flatten() - 1
 
     def scipy(self, loc=0.0, scale=1.0):
         return ss.chi(df=self.df, loc=loc, scale=scale)
