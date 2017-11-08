@@ -12,7 +12,7 @@ from scipy.stats.mstats import zscore
 
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.constants import *
-from tvb_epilepsy.base.utils.data_structures_utils import sort_dict
+from tvb_epilepsy.base.utils.data_structures_utils import sort_dict, ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.tvb_api.epileptor_models import *
 from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
@@ -56,14 +56,16 @@ def save_figure(save_flag=SAVE_FLAG, fig=None, figure_name=None, figure_dir=FOLD
             os.mkdir(figure_dir)
             figure_name = figure_filename(fig, figure_name)
             figure_name = figure_name[:np.min([100, len(figure_name)])] + '.' + figure_format
-        pyplot.savefig(os.path.join(figure_dir, figure_name))
+        try:
+            pyplot.savefig(os.path.join(figure_dir, figure_name))
+        except:
+            print("WTF")
 
 
 def plot_vector(vector, labels, subplot, title, show_y_labels=True, indices_red=None, sharey=None):
     ax = pyplot.subplot(subplot, sharey=sharey)
     pyplot.title(title)
     n_vector = labels.shape[0]
-
     y_ticks = np.array(range(n_vector), dtype=np.int32)
     color = 'k'
     colors = np.repeat([color], n_vector)
@@ -88,7 +90,6 @@ def plot_vector(vector, labels, subplot, title, show_y_labels=True, indices_red=
             ax.yaxis.set_ticklabels(labels)
     else:
         ax.set_yticklabels([])
-
     ax.autoscale(tight=True)
     return ax
 
@@ -100,7 +101,6 @@ def plot_vector_violin(vector, dataset, labels, subplot, title, colormap="YlOrRd
     pyplot.title(title)
     n_vector = labels.shape[0]
     y_ticks = np.array(range(n_vector), dtype=np.int32)
-
     # the vector plot
     coldif = False
     if len(vector) == n_vector:
@@ -111,7 +111,6 @@ def plot_vector_violin(vector, dataset, labels, subplot, title, colormap="YlOrRd
             coldif = True
         for ii in range(n_vector):
             ax.plot(vector[ii], y_ticks[ii], '*', mfc=colors[ii], mec=colors[ii], ms=5)
-
     # the violin plot
     n_samples = dataset.shape[0]
     colormap = mp.cm.ScalarMappable(cmap=pyplot.set_cmap(colormap))
@@ -128,7 +127,6 @@ def plot_vector_violin(vector, dataset, labels, subplot, title, colormap="YlOrRd
         violin_parts['bodies'][ii]._alpha = 0.75
         violin_parts['bodies'][ii]._edgecolors = np.reshape(colormap[ii], (1,4))
         violin_parts['bodies'][ii]._facecolors = np.reshape(colormap[ii], (1,4))
-
     # ax.invert_yaxis()
     ax.grid(True, color='grey')
     ax.set_yticks(y_ticks)
@@ -142,7 +140,6 @@ def plot_vector_violin(vector, dataset, labels, subplot, title, colormap="YlOrRd
             ax.yaxis.set_ticklabels(labels)
     else:
         ax.set_yticklabels([])
-
     ax.autoscale(tight=True)
     return ax
 
@@ -150,7 +147,6 @@ def plot_regions2regions(adj, labels, subplot, title, show_y_labels=True, show_x
                          indices_red_x=None, sharey=None):
     ax = pyplot.subplot(subplot, sharey=sharey)
     pyplot.title(title)
-
     y_color = 'k'
     adj_size = adj.shape[0]
     y_ticks = np.array(range(adj_size), dtype=np.int32)
@@ -166,7 +162,6 @@ def plot_regions2regions(adj, labels, subplot, title, show_y_labels=True, show_x
     img = ax.imshow(adj[indices_red_x, :].T, cmap=cmap, interpolation='none')
     ax.set_xticks(x_ticks)
     ax.grid(True, color='grey')
-
     if show_y_labels:
         region_labels = np.array(["%d. %s" % l for l in zip(range(adj_size), labels)])
         ax.set_yticks(y_ticks)
@@ -178,39 +173,31 @@ def plot_regions2regions(adj, labels, subplot, title, show_y_labels=True, show_x
             ax.yaxis.set_ticklabels(labels)
     else:
         ax.set_yticklabels([])
-
     if show_x_labels:
         ax.set_xticklabels(region_labels[indices_red_x], rotation=270, color=x_color)
     else:
         ax.set_xticklabels([])
-
     ax.autoscale(tight=True)
-
     # make a color bar
     divider = make_axes_locatable(ax)
     cax1 = divider.append_axes("right", size="5%", pad=0.05)
     pyplot.colorbar(img, cax=cax1)  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
-
     return ax
 
 
 def plot_in_columns(data_dict_list, labels, width_ratios=[], left_ax_focus_indices=[], right_ax_focus_indices=[],
                     description="", title="", figure_name=None, show_flag=False, save_flag=True,
                     figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, **kwargs):
-
     fig = pyplot.figure(title, frameon=False, figsize=figsize)
     fig.suptitle(description)
     n_subplots = len(data_dict_list)
     if width_ratios == []:
         width_rations = np.ones((n_subplots, )).tolist()
-
     mp.gridspec.GridSpec(1, n_subplots, width_ratios)
-
     if n_subplots < 10 and n_subplots > 0:
         subplot_ind0 = 100 + 10*n_subplots
     else:
         raise ValueError("\nSubplots' number " + str(n_subplots) + "is not between 1 and 9!")
-
     n_regions = len(labels)
     subplot_ind = subplot_ind0
     ax = None
@@ -219,34 +206,27 @@ def plot_in_columns(data_dict_list, labels, width_ratios=[], left_ax_focus_indic
         subplot_ind += 1
         data = data_dict["data"]
         focus_indices = data_dict.get("focus_indices")
-
         if subplot_ind == 0:
             if left_ax_focus_indices == []:
                 left_ax_focus_indices = focus_indices
         else:
             ax0 = ax
-
         if data_dict.get("plot_type") == "vector_violin":
             ax = plot_vector_violin(data, data_dict.get("data_samples", []), labels, subplot_ind, data_dict["name"],
                                     colormap=kwargs.get("colormap", "YlOrRd"), show_y_labels=False,
                                     indices_red=focus_indices, sharey=ax0)
-
         elif data_dict.get("plot_type") == "regions2regions":
             ax = plot_regions2regions(data, labels, subplot_ind, data_dict["name"], show_y_labels=False,
                                       show_x_labels=True, indices_red_x=focus_indices, sharey=ax0)
         else:
             ax = plot_vector(data, labels, subplot_ind, data_dict["name"], show_y_labels=False,
                              indices_red=focus_indices, sharey=ax0)
-
     if right_ax_focus_indices == []:
         right_ax_focus_indices = focus_indices
-
     _set_axis_labels(fig, 121, n_regions, labels, left_ax_focus_indices, 'r')
     _set_axis_labels(fig, 122, n_regions, labels, right_ax_focus_indices, 'r', 'right')
-
     save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
     check_show(show_flag)
-
     return fig
 
 
@@ -272,8 +252,9 @@ def _set_axis_labels(fig, sub, n_regions, region_labels, indices2emphasize, colo
 def plot_timeseries(time, data_dict, time_units="ms", special_idx=None, title='Time Series', figure_name=None,
                     labels=None, show_flag=SHOW_FLAG, save_flag=False, figure_dir=FOLDER_FIGURES,
                     figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
-
     pyplot.figure(title, figsize=figsize)
+    if not(isinstance(figure_name, basestring)):
+        figure_name = title.replace(".", "").replace(' ', "")
     no_rows = len(data_dict)
     lines = []
     for i, subtitle in enumerate(data_dict):
@@ -308,7 +289,6 @@ def plot_timeseries(time, data_dict, time_units="ms", special_idx=None, title='T
             HighlightingDataCursor(lines[i], formatter='{label}'.format, bbox=dict(fc='white'),
                                    arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )
     pyplot.xlabel("Time (" + time_units + ")")
-
     save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
     check_show(show_flag)
 
@@ -580,17 +560,18 @@ def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, h
                                       show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,
                                       figure_format=figure_format, figsize=LARGE_SIZE, **kwargs)
 
-    for i in range(len(sensorsSEEG)):
-        if hpf_flag:
-            title = hyp_name + ": Simulated high pass filtered SEEG" + str(i) + " raster plot"
-            start_plot = int(np.round(0.01 * res['SEEG' + str(i)].shape[0]))
-        else:
-            title = hyp_name + ": Simulated SEEG" + str(i) + " raster plot"
-            start_plot = 0
-        plot_raster(res['time'][start_plot:], {'SEEG': res['SEEG'+str(i)][start_plot:, :]},
-                    time_units=res.get('time_units', "ms"), title=title,
-                    offset=1.0, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
-                    figure_format=figure_format, labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
+    if sensorsSEEG is not None:
+        for i in range(len(ensure_list(sensorsSEEG))):
+            if hpf_flag:
+                title = hyp_name + ": Simulated high pass filtered SEEG" + str(i) + " raster plot"
+                start_plot = int(np.round(0.01 * res['SEEG' + str(i)].shape[0]))
+            else:
+                title = hyp_name + ": Simulated SEEG" + str(i) + " raster plot"
+                start_plot = 0
+            plot_raster(res['time'][start_plot:], {'SEEG': res['SEEG'+str(i)][start_plot:, :]},
+                        time_units=res.get('time_units', "ms"), title=title,
+                        offset=1.0, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
+                        figure_format=figure_format, labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
 
 
 def plot_fit_results(hyp_name, head, res, data, active_regions, time=None, seizure_indices=None,

@@ -2,7 +2,7 @@ import numpy as np
 
 from tvb_epilepsy.base.configurations import FOLDER_FIGURES
 from tvb_epilepsy.base.constants import SHOW_FLAG, SAVE_FLAG, FIG_FORMAT
-from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
+from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list
 from tvb_epilepsy.base.utils.math_utils import curve_elbow_point
 from tvb_epilepsy.base.model.vep.surface import Surface
@@ -61,27 +61,34 @@ class Head(object):
 
     def get_sensors(self, sensors_type=TYPE_SEEG):
         if np.in1d(sensors_type.upper(), SENSORS_TYPES):
-            return getattr("sensors" + sensors_type)
+            return getattr(self, "sensors" + sensors_type)
         else:
             raise_value_error("Invalid input sensor type " + str(sensors_type))
 
     def set_sensors(self, input_sensors, sensors_type=TYPE_SEEG, reset=False):
+        if input_sensors is None:
+            return
         sensors = self.get_sensors(sensors_type)
-        if reset==False or sensors is None:
+        if reset == False or sensors is None:
             sensors = []
         for s in ensure_list(input_sensors):
-            if isinstance(s, Sensors) and (s.type == sensors_type):
+            if isinstance(s, Sensors) and (s.s_type == sensors_type):
+                if s.projection == None:
+                    warning("No projection found in sensors! Computing and adding projection!")
+                    s.projection = s.calculate_projection(self.connectivity)
+                # if s.orientations == None:
+                #     warning("No orientations found in sensors!")
                 sensors.append(s)
             else:
                 if s is not None:
                     raise_value_error("Input sensors:\n" + str(s) +
                                       "\nis not a valid Sensors object of type " + str(sensors_type) + "!")
         if len(sensors) == 0:
-            self.set_sensors(self, None, sensors_type)
+            setattr(self, "sensors"+sensors_type, None)
         elif len(sensors) == 1:
-            self.set_sensors(self, sensors[0], sensors_type)
+            setattr(self, "sensors" + sensors_type, sensors[0])
         else:
-            self.set_sensors(self, sensors, sensors_type)
+            setattr(self, "sensors" + sensors_type, sensors)
 
     def get_sensors_id(self, sensors_type=TYPE_SEEG, sensor_ids=0):
         sensors = self.get_sensors(sensors_type)

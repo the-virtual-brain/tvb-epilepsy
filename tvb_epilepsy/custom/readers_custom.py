@@ -86,8 +86,14 @@ class CustomReader(ABCReader):
             labels = h5_file['/labels'][()]
             locations = h5_file['/locations'][()]
             # TODO: check if h5py returns None for non existing datasets
-            orientations = h5_file['/orientations'][()]
-            projection = h5_file['/projection'][()]
+            if '/orientations' in h5_file:
+                orientations = h5_file['/orientations'][()]
+            else:
+                orientations = None
+            if '/projection' in h5_file:
+                projection = h5_file['/projection'][()]
+            else:
+                projection = None
             h5_file.close()
             return Sensors(labels, locations, orientations, projection, s_type=s_type)
         else:
@@ -118,13 +124,13 @@ class CustomReader(ABCReader):
         t1 = self.read_volume_mapping(os.path.join(root_folder, "StructuralMRI.h5"))
         sensorsSEEG = []
         for s_file in ensure_list(seeg_sensors_files):
-            sensorsSEEG.append(self.read_sensors(s_file, TYPE_SEEG))
+            sensorsSEEG.append(self.read_sensors(os.path.join(root_folder, s_file), TYPE_SEEG))
         sensorsEEG = []
         for s_file in ensure_list(eeg_sensors_files):
-            sensorsEEG.append(self.read_sensors(s_file, TYPE_EEG))
+            sensorsEEG.append(self.read_sensors(os.path.join(root_folder, s_file), TYPE_EEG))
         sensorsMEG = []
         for s_file in ensure_list(meg_sensors_files):
-            sensorsMEG.append(self.read_sensors(s_file, TYPE_MEG))
+            sensorsMEG.append(self.read_sensors(os.path.join(root_folder, s_file), TYPE_MEG))
         return Head(conn, srf, rm, vm, t1, name, sensorsSEEG=sensorsSEEG, sensorsEEG=sensorsEEG, sensorsMEG=sensorsMEG)
 
     def read_epileptogenicity(self, root_folder, name="ep"):
