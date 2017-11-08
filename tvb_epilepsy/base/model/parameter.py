@@ -2,7 +2,7 @@
 import numpy as np
 
 from tvb_epilepsy.base.constants import MAX_SINGLE_VALUE
-from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
+from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution \
@@ -31,24 +31,29 @@ class Parameter(object):
                               + str(shape) + " is not a shape tuple!")
         if isinstance(probability_distribution, ProbabilityDistribution):
             try:
-                if (np.ones(self.shape) + np.ones(probability_distribution.shape)).shape != self.shape:
+                if (np.ones(self.shape) + np.ones(probability_distribution.pdf_shape)).shape != self.shape:
                     raise_value_error("Parameter's (" + str(self.shape) +
-                                      ") and distribution's (" + str(probability_distribution.shape) +
+                                      ") and distribution's (" + str(probability_distribution.pdf_shape) +
                                       ") shapes do not match!")
             except:
                 raise_value_error("Parameter's (" + str(self.shape) +
-                                  ") and distribution's (" + str(probability_distribution.shape) +
+                                  ") and distribution's (" + str(probability_distribution.pdf_shape) +
                                   ") shapes do not propagate!")
             self.probability_distribution = probability_distribution
             if isinstance(probability_distribution, UniformDistribution):
                 if np.any(self.probability_distribution.low < self.low):
-                    raise_value_error("Parameter's " + str(self.name) + " uniform distribution's parameter a (" +
-                                      str(self.probability_distribution.a) +
-                                      "\n does not match low value (" + str(self.low) + ")!")
+                    # TODO: Decide whether we should throw an error here instead of the warning
+                    warning("Parameter's " + str(self.name) + " uniform distribution's parameter a (" +
+                            str(self.probability_distribution.low) +
+                            "\n does not match low value (" + str(self.low) + ")!" +
+                            "\nAdjusting probability distribution accordingly!")
+                    self.probability_distribution.update_params(low=self.low)
                 if np.any(self.probability_distribution.high > self.high):
-                    raise_value_error("Parameter's " + str(self.name) + " uniform distribution's parameter b (" +
-                                      str(self.probability_distribution.b) +
-                                      "\n does not match high value (" + str(self.high) + ")!")
+                    warning("Parameter's " + str(self.name) + " uniform distribution's parameter b (" +
+                            str(self.probability_distribution.high) +
+                            "\n does not match high value (" + str(self.high) + ")!" +
+                            "\nAdjusting probability distribution accordingly!")
+                    self.probability_distribution.update_params(high=self.high)
 
     def __repr__(self):
         d = {"1. name": self.name,

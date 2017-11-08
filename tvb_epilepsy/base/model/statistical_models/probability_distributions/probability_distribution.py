@@ -2,10 +2,10 @@
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
-from scipy.optimize import root
+from scipy.optimize import minimize
 
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_size
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 
@@ -70,7 +70,7 @@ class ProbabilityDistribution(object):
         self.set_params(**params)
         self.pdf_shape = self.calc_shape()
         self.n_params = len(self.params())
-        if not (self.constraint()):
+        if not (self.check_constraints()):
             raise_value_error("Constraint for " + self.name + " distribution " + self.constraint_string +
                               "\nwith parameters " + str(self.params()) + " is not satisfied!")
         self.mean = self.calc_mean()
@@ -91,6 +91,12 @@ class ProbabilityDistribution(object):
             psum += np.array(pval, dtype='f')
         return psum.shape
 
+    def check_constraints(self):
+        constraint = True
+        for con in self.constraints():
+            constraint = np.logical_and(constraint, con(self.params()))
+        return constraint
+
     @abstractmethod
     def params(self):
         pass
@@ -100,11 +106,11 @@ class ProbabilityDistribution(object):
         pass
 
     @abstractmethod
-    def constraint(self):
+    def scipy(self, loc=0.0, scale=1.0):
         pass
 
     @abstractmethod
-    def scipy(self, loc=0.0, scale=1.0):
+    def constraints(self):
         pass
 
     @abstractmethod
@@ -180,7 +186,8 @@ class ProbabilityDistribution(object):
         else:
             return self.calc_kurt_manual()
 
-    def compute_distributions_params(self, target_shape=None, **target_stats):
+    def compute_distributions_params(self, constraints=[], target_shape=None, **target_stats):
+        constraints.append(self.constraint())
         if len(target_stats) != self.n_params:
             raise_value_error("Target parameters are " + str(len(target_stats)) +
                               ", whereas the characteristic parameters of distribution " + self.name +
@@ -199,28 +206,39 @@ class ProbabilityDistribution(object):
             raise_value_error("Target statistics (" + str([np.array(ts).shape for ts in target_stats.values()]) +
                               ") and distribution (" + str(self.pdf_shape) + ") shapes do not match/propagate!")
         shape = i1.shape
+        size = shape_to_size(shape)
         for ts_key in target_stats.keys():
             target_stats[ts_key] *= i1
         params_vector = []
+        bounds = []
         p_keys = self.params().keys()
         for p_key in p_keys:
             self.set_params(**{p_key: np.array(self.params()[p_key]) * i1})
             params_vector += self.params()[p_key].flatten().tolist()
-        size = len(params_vector) / self.n_params
-        params_vector = np.array(params_vector)
-        def fobj(p):
+            bounds += [self.bounds()[p_key]] * size
+        params_vector = np.array(params_vector).astype(np.float64)
+        def construct_params_dict(p):
+            p = p.astype(np.float64)
             params = {}
             for ik, p_key in enumerate(p_keys):
-                params.update({p_key: np.reshape(p[ik*size:(ik+1)*size], shape)})
+                params.update({p_key: np.reshape(p[ik * size:(ik + 1) * size], shape)})
+            return params
+        def fobj(p):
+            params = construct_params_dict(p)
             f = []
             self.update_params(**params)
             for ts_key, ts_val in target_stats.iteritems():
                 f.append((getattr(self, "calc_" + ts_key)(use="manual") - ts_val) ** 2)
-            return f
-        sol = root(fobj, params_vector, method='lm', tol=10 ** (-12), callback=None, options=None)
+            return np.sum(f)
+        constraints.append(self.constraint())
+        for ic, con in enumerate(constraints):
+            constraints[ic] = {"type": "ineq", "fun": lambda p: con(construct_params_dict(p))}
+        sol = minimize(fobj, params_vector, constraints=constraints)
         if sol.success:
             if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
                 raise_value_error("nan or inf values in solution x\n" + sol.message)
+            if sol.fun > 10 ** -3:
+                warning("Not accurate solution! sol.fun = " + str(sol.fun))
             return dict(zip(p_keys, sol.x))
         else:
             raise_value_error(sol.message)
@@ -230,12 +248,12 @@ class ProbabilityDistribution(object):
         self.update_params(**params)
 
 
-def generate_distribution(distrib_name, target_stats=None, target_shape=None, **kwargs):
+def generate_distribution(distrib_name, constraints=[], target_stats=None, target_shape=None, **kwargs):
     if np.in1d(distrib_name.lower(), AVAILABLE_DISTRIBUTIONS):
         exec("from ." + distrib_name.lower() + "_distribution import " + distrib_name.title() + "Distribution")
         distribution = eval(distrib_name.title() + "Distribution(**kwargs)")
         if isinstance(distribution, ProbabilityDistribution) and isinstance(target_stats, dict):
-            distribution.compute_and_update_params(target_shape, **target_stats)
+            distribution.compute_and_update_params(constraints, target_shape, **target_stats)
         return distribution
     else:
         raise_value_error(distrib_name + " is not one of the available distributions!: " + str(AVAILABLE_DISTRIBUTIONS))
