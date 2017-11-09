@@ -282,7 +282,7 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
 def shape_to_size(shape):
     shape = np.array(shape)
     shape = shape[shape > 0]
-    return shape.prod()
+    return np.max([shape.prod(), 1])
 
 
 def assert_arrays(params, shape=None, transpose=False):
