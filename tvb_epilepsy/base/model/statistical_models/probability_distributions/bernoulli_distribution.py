@@ -21,8 +21,8 @@ class BernoulliDistribution(DiscreteProbabilityDistribution):
     def params(self):
         return {"p": self.p}
 
-    def update_params(self, p=0.5):
-        self.__update_params__(p=make_float(p))
+    def update_params(self, **params):
+        self.__update_params__(p=make_float(params.get("p", self.p)))
 
     def constraint(self):
         # By default expr >= 0

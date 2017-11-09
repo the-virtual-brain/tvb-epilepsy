@@ -72,5 +72,5 @@ if __name__ == "__main__":
         for key, value in stats.iteritems():
             print("\n" + key + ": " + str(value))
         diff = target_stats["mean"] - stats["mean"]
-        if np.any(np.abs(diff) > 10.0/n_samples):
+        if np.any(np.abs(diff.flatten()) > 0.001):
             warning("Large difference between target and resulting samples' mean!: " + str(diff))

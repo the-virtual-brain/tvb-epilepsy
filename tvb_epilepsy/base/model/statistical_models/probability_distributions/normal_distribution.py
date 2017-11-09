@@ -26,7 +26,8 @@ class NormalDistribution(ContinuousProbabilityDistribution):
             return {"mean": self.mean, "sigma": self.sigma}
 
     def update_params(self, **params):
-        self.__update_params__(**params)
+        self.__update_params__(mean=make_float(params.get("mean", self.mean)),
+                               sigma=make_float(params.get("sigma", self.sigma)))
 
     def constraint(self):
         # By default expr >= 0

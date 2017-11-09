@@ -15,7 +15,7 @@ class LognormalDistribution(ContinuousProbabilityDistribution):
         self.scipy_name = "lognorm"
         self.numpy_name = "lognormal"
         self.constraint_string = "sigma > 0"
-        self.mean = make_float(params.get("mean", np.log(params.get("scale"), 1.0)))
+        self.mean = make_float(params.get("mean", np.log(params.get("scale", 1.0))))
         self.sigma = make_float(params.get("sigma", params.get("shape", 1.0)))
         self.__update_params__(mean=self.mean, sigma=self.sigma)
         self.shape = self.sigma
@@ -28,8 +28,8 @@ class LognormalDistribution(ContinuousProbabilityDistribution):
             return {"mean": self.mean, "sigma": self.sigma}
         
     def update_params(self, **params):
-        self.__update_params__(mean=make_float(params.get("mean", np.log(params.get("scale"), 1.0))),
-                               sigma=make_float(params.get("sigma", params.get("shape", 1.0))))
+        self.__update_params__(mean=make_float(params.get("mean", np.log(params.get("scale", self.scale))),
+                               sigma=make_float(params.get("sigma", params.get("shape", self.shape)))))
         self.shape = self.sigma
         self.scale = np.exp(self.mean)
         
@@ -38,7 +38,7 @@ class LognormalDistribution(ContinuousProbabilityDistribution):
         return np.array(self.sigma).flatten() - np.finfo(np.float64).eps
 
     def scipy(self, loc=0.0, scale=1.0):
-        return getattr(ss, self.scipy_name)(shape=self.sigma, loc=loc, scale=np.exp(self.mean))
+        return getattr(ss, self.scipy_name)(s=self.sigma, loc=loc, scale=np.exp(self.mean))
 
     def numpy(self, size=(1,)):
         return lambda: nr.lognormal(mean=self.mean, sigma=self.sigma, size=size)

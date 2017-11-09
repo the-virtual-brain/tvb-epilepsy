@@ -22,8 +22,8 @@ class BinomialDistribution(DiscreteProbabilityDistribution):
     def params(self):
         return {"n": self.n, "p": self.p}
 
-    def update_params(self, n=1, p=0.5):
-        self.__update_params__(n=make_int(n), p=make_float(p))
+    def update_params(self, **params):
+        self.__update_params__(n=make_int(params.get("n", self.n)), p=make_float(params.get("p", self.p)))
 
     def constraint(self):
         # By default expr >= 0

@@ -28,8 +28,8 @@ class ChisquareDistribution(ContinuousProbabilityDistribution):
     def params(self, parametrization="df"):
         return {"df": self.df}
 
-    def update_params(self, df=1):
-        self.__update_params__(df=make_int(df))
+    def update_params(self, **params):
+        self.__update_params__(df=make_int(params.get("df", self.df)))
 
     def constraint(self):
         # By default expr >= 0

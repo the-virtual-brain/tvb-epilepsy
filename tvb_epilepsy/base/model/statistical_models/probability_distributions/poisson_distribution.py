@@ -29,7 +29,7 @@ class PoissoniDistribution(DiscreteProbabilityDistribution):
             return {"lamda": self.lamda}
 
     def update_params(self, **params):
-        self.__update_params__(lamda=make_float(params.get("lamda", params.get("lam", params.get("mu", 0.5)))))
+        self.__update_params__(lamda=make_float(params.get("lamda", params.get("lam", params.get("mu", self.lamda)))))
         self.mu = self.lamda
 
     def constraint(self):

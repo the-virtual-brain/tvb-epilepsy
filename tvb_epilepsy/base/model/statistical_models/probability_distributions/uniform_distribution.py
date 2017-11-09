@@ -39,9 +39,9 @@ class UniformDistribution(ContinuousProbabilityDistribution):
             return {"a": self.a, "b": self.b}
 
     def update_params(self, **params):
-        self.__update_params__(a=make_float(params.get("a", params.get("low", params.get("loc", DEFAULT_LOW_VALUE)))),
+        self.__update_params__(a=make_float(params.get("a", params.get("low", params.get("loc", self.a)))),
                                b=make_float(params.get("b", params.get("high",
-                                                    params.get("scale", 2.0*DEFAULT_HIGH_VALUE) - DEFAULT_HIGH_VALUE))))
+                                                                       params.get("scale", self.scale) + self.a))))
         self.low = self.a
         self.high = self.b
         self.loc = self.a

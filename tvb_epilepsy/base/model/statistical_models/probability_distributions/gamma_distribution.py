@@ -47,9 +47,9 @@ class GammaDistribution(ContinuousProbabilityDistribution):
             return {"shape": self.shape, "scale": self.scale}
 
     def update_params(self, **params):
-        self.__update_params__(shape=make_float(params.get("shape", params.get("alpha", params.get("k", 1.0)))),
-                               scale=make_float(params.get("scale", params.get("theta",
-                                                               1.0 / params.get("beta", params.get("rate", 1.0))))))
+        self.__update_params__(shape=make_float(params.get("shape", params.get("alpha", params.get("k", self.shape)))),
+                               scale=make_float(params.get("scale",
+                                         params.get("theta", 1.0 / params.get("beta", params.get("rate", self.beta))))))
         self.k = self.shape
         self.theta = self.scale
         self.alpha = self.shape

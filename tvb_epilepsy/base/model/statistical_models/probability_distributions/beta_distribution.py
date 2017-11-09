@@ -31,8 +31,8 @@ class BetaDistribution(ContinuousProbabilityDistribution):
             return {"alpha": self.alpha, "beta": self.beta}
 
     def update_params(self, **params):
-        self.__update_params__(alpha=make_float(params.get("alpha", params.get("a", 1.0))),
-                               beta=make_float(params.get("beta", params.get("b", 1.0))))
+        self.__update_params__(alpha=make_float(params.get("alpha", params.get("a", self.alpha))),
+                               beta=make_float(params.get("beta", params.get("b", self.beta))))
         self.a = self.alpha
         self.b = self.beta
 

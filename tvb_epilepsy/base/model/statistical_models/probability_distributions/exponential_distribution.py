@@ -36,7 +36,8 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
             return {"scale": self.scale}
 
     def update_params(self, **params):
-        self.__update_params__(scale=make_float(params.get("scale", 1.0/params.get("lamda", params.get("rate", 1.0)))))
+        self.__update_params__(scale=make_float(params.get("scale",
+                                                           1.0/params.get("lamda", params.get("rate", self.lamda)))))
         self.lamda = 1.0 / self.scale
         self.rate = self.lamda
 
