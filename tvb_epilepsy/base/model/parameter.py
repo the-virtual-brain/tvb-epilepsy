@@ -41,14 +41,14 @@ class Parameter(object):
                                   ") shapes do not propagate!")
             self.probability_distribution = probability_distribution
             if isinstance(probability_distribution, UniformDistribution):
-                if np.any(self.probability_distribution.low < self.low):
+                if np.any(self.probability_distribution.low > self.low):
                     # TODO: Decide whether we should throw an error here instead of the warning
                     warning("Parameter's " + str(self.name) + " uniform distribution's parameter a (" +
                             str(self.probability_distribution.low) +
                             "\n does not match low value (" + str(self.low) + ")!" +
                             "\nAdjusting probability distribution accordingly!")
                     self.probability_distribution.update_params(low=self.low)
-                if np.any(self.probability_distribution.high > self.high):
+                if np.any(self.probability_distribution.high < self.high):
                     warning("Parameter's " + str(self.name) + " uniform distribution's parameter b (" +
                             str(self.probability_distribution.high) +
                             "\n does not match high value (" + str(self.high) + ")!" +

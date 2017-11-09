@@ -65,7 +65,7 @@ if __name__ == "__main__":
             target_stats = {"mean": 1.0}
         else:
             target_stats = {"mean": 1.0, "std": 2.0}
-        parameter = Parameter(probability_distribution=generate_distribution(distrib_name, target_stats=target_stats),
+        parameter = Parameter(probability_distribution=generate_distribution(distrib_name, **target_stats),
                               low=0.0, high=2.0)
         logger.info(str(parameter))
         samples = sampler.generate_samples(parameter=parameter, stats=True)
@@ -74,3 +74,4 @@ if __name__ == "__main__":
         diff = target_stats["mean"] - stats["mean"]
         if np.any(np.abs(diff.flatten()) > 0.001):
             warning("Large difference between target and resulting samples' mean!: " + str(diff))
+        del(parameter)

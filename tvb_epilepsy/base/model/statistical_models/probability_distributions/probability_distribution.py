@@ -5,10 +5,9 @@ from copy import deepcopy
 import numpy as np
 from scipy.optimize import minimize
 
-from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_size
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
-
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_size
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
 
 AVAILABLE_DISTRIBUTIONS = ["uniform", "normal", "gamma", "lognormal", "exponential", "beta", "chisquare",
                            "binomial", "bernoulli", "poisson"]
@@ -21,6 +20,7 @@ class ProbabilityDistribution(object):
     name = ""
     n_params = 0.0
     pdf_shape = ()
+    pdf_size = 0
     constraint_string = ""
     mean = None
     median = None
@@ -72,6 +72,7 @@ class ProbabilityDistribution(object):
             params = self.params()
         self.__set_params__(**params)
         self.pdf_shape = self.__calc_shape__()
+        self.pdf_size = shape_to_size(self.pdf_shape)
         self.n_params = len(self.params())
         if check_constraint and not(self.__check_constraint__()):
             raise_value_error("Constraint for " + self.name + " distribution " + self.constraint_string +
@@ -92,7 +93,7 @@ class ProbabilityDistribution(object):
         return np.all(self.constraint() > 0)
 
     def __calc_shape__(self):
-        psum = np.array(0.0)
+        psum = np.zeros(self.pdf_shape)
         for pval in self.params().values():
             psum += np.array(pval, dtype='f')
         return psum.shape
@@ -194,91 +195,104 @@ class ProbabilityDistribution(object):
         else:
             return self.calc_kurt_manual()
 
-    def compute_distributions_params(self, constraints=[], target_shape=None, **target_stats):
-        self_copy = deepcopy(self)
-        # Check if the number of target stats is exactly the same as the number of distribution parameters to optimize:
-        if len(target_stats) != self_copy.n_params:
-            raise_value_error("Target parameters are " + str(len(target_stats)) +
-                              ", whereas the characteristic parameters of distribution " + self_copy.name +
-                              " are " + str(self_copy.n_params) + "!")
-        # Make sure that tha shapes of distribution, target stats and target shape are all matching one to the other:
-        i1 = np.ones(self_copy.pdf_shape)
-        try:
-            if isinstance(target_shape, tuple):
-                i1 *= np.ones(target_shape)
-        except:
-            raise_value_error("Target (" + str(target_shape) +
-                              ") and distribution (" + str(self_copy.pdf_shape) + ") shapes do not propagate!")
-        try:
-            for ts in target_stats.values():
-                i1 *= np.ones(np.array(ts).shape)
-        except:
-            raise_value_error("Target statistics (" + str([np.array(ts).shape for ts in target_stats.values()]) +
-                              ") and distribution (" + str(self_copy.pdf_shape) + ") shapes do not propagate!")
-        for ts_key in target_stats.keys():
-            target_stats[ts_key] *= i1
-        if self_copy.pdf_shape != i1.shape:
-            self_copy.__shape_parameters__(i1.shape)
-        pdf_size = shape_to_size(self_copy.pdf_shape)
-        # Form the initial condition that will determine the dimensionality of the parameters' vector
-        params_vector = []
-        for p_val in self_copy.params().values():
-            params_vector += p_val.flatten().tolist()
-        params_vector = np.array(params_vector).astype(np.float64)
-        params_vector[np.where(params_vector > 10.0)[0]] = 10.0
-        params_vector[np.where(params_vector < -10.0)[0]] = -10.0
-        p_keys = self_copy.params().keys()
-
-        # This function converts the parameters' vector to the parameters' dictionary
-        def construct_params_dict(p):
-            # Make sure p in denormalized and of float64 type
-            # TODO solve the problem for integer distribution parameters...
-            p = p.astype(np.float64)
-            params = {}
-            for ik, p_key in enumerate(p_keys):
-                params.update({p_key: np.reshape(p[ik * pdf_size:(ik + 1) * pdf_size], self.pdf_shape)})
-            return params
-
-        # Scalar objective  function
-        def fobj(p):
-            params = construct_params_dict(p)
-            self_copy.__update_params__(check_constraint=False, **params)
-            f = 0.0
-            for ts_key, ts_val in target_stats.iteritems():
-                f += (getattr(self_copy, "calc_" + ts_key)(use="manual") - ts_val) ** 2
-            return f
-
-        # Vector constraint function. By default expr >= 0
-        def fconstr(p):
-            params = construct_params_dict(p)
-            self_copy.__update_params__(check_constraint=False, **params)
-            return self_copy.constraint()
-
-        # Vector valued constraint' functions
-        constraints.append({"type": "ineq", "fun": lambda p: fconstr(p)})
-        # Run optimization
-        sol = minimize(fobj, params_vector, method="COBYLA", constraints=constraints, options={"tol": 10 ** -6,
-                                                                                               "catol": 10 ** -12,})
-        if sol.success:
-            if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
-                raise_value_error("nan or inf values in solution x\n" + sol.message)
-            if sol.fun > 10 ** -6:
-                warning("Not accurate solution! sol.fun = " + str(sol.fun))
-            return construct_params_dict(sol.x)
-        else:
-            raise_value_error(sol.message)
-
-    def compute_and_update_params(self, constraints=[], target_shape=None, **target_stats):
-        self.update_params(**(self.compute_distributions_params(constraints, target_shape, **target_stats)))
+    def compute_and_update_params(self, target_shape=None, constraints=[], **target_stats):
+        if target_shape is None:
+            target_shape = self.pdf_shape
+        self.update_params(**(compute_distributions_params(self.name, target_stats, target_shape, constraints)))
 
 
-def generate_distribution(distrib_name, constraints=[], target_stats=None, target_shape=None, **kwargs):
+def generate_distribution(distrib_name, target_shape=None, constraints=[], **target):
     if np.in1d(distrib_name.lower(), AVAILABLE_DISTRIBUTIONS):
         exec("from ." + distrib_name.lower() + "_distribution import " + distrib_name.title() + "Distribution")
-        distribution = eval(distrib_name.title() + "Distribution(**kwargs)")
-        if isinstance(distribution, ProbabilityDistribution) and isinstance(target_stats, dict):
-            distribution.compute_and_update_params(constraints, target_shape, **target_stats)
+        distribution = eval(distrib_name.title() + "Distribution()")
+        if isinstance(target_shape, tuple):
+            distribution.__shape_parameters__(target_shape)
+        if len(target) > 0:
+            try:
+                distribution.update(**target)
+            except:
+                target = compute_distributions_params(distribution.name, target, target_shape, constraints)
+                distribution.update_params(**target)
         return distribution
     else:
         raise_value_error(distrib_name + " is not one of the available distributions!: " + str(AVAILABLE_DISTRIBUTIONS))
+
+
+# This function converts the parameters' vector to the parameters' dictionary
+def construct_params_dict(p, p_keys, pdf_shape, pdf_size):
+    # Make sure p in denormalized and of float64 type
+    # TODO solve the problem for integer distribution parameters...
+    p = p.astype(np.float64)
+    params = {}
+    for ik, p_key in enumerate(p_keys):
+        params.update({p_key: np.reshape(p[ik * pdf_size:(ik + 1) * pdf_size], pdf_shape)})
+    return params
+
+
+# Scalar objective  function
+def fobj(p, pdf_name, pdf_shape, target_stats):
+    pdf = generate_distribution(pdf_name, target_shape=pdf_shape)
+    params = construct_params_dict(p, pdf.params().keys(), pdf.pdf_shape, pdf.pdf_size)
+    pdf.__update_params__(check_constraint=False, **params)
+    f = 0.0
+    for ts_key, ts_val in target_stats.iteritems():
+        f += (getattr(pdf, "calc_" + ts_key)(use="manual") - ts_val) ** 2
+    return f
+
+
+# Vector constraint function. By default expr >= 0
+def fconstr(p, pdf_name, pdf_shape):
+    pdf = generate_distribution(pdf_name, target_shape=pdf_shape)
+    params = construct_params_dict(p, pdf.params().keys(), pdf.pdf_shape, pdf.pdf_size)
+    pdf.__update_params__(check_constraint=False, **params)
+    return pdf.constraint()
+
+
+def compute_distributions_params(distrib_name, target_stats, target_shape=None, constraints=[]):
+    distribution = generate_distribution(distrib_name, target_shape=target_shape)
+    # Check if the number of target stats is exactly the same as the number of distribution parameters to optimize:
+    if len(target_stats) != distribution.n_params:
+        raise_value_error("Target parameters are " + str(len(target_stats)) +
+                          ", whereas the characteristic parameters of distribution " + distribution.name +
+                          " are " + str(distribution.n_params) + "!")
+    # Make sure that tha shapes of distribution, target stats and target shape are all matching one to the other:
+    i1 = np.ones(distribution.pdf_shape)
+    try:
+        if isinstance(target_shape, tuple):
+            i1 *= np.ones(target_shape)
+    except:
+        raise_value_error("Target (" + str(target_shape) +
+                          ") and distribution (" + str(distribution.pdf_shape) + ") shapes do not propagate!")
+    try:
+        for ts in target_stats.values():
+            i1 *= np.ones(np.array(ts).shape)
+    except:
+        raise_value_error("Target statistics (" + str([np.array(ts).shape for ts in target_stats.values()]) +
+                          ") and distribution (" + str(distribution.pdf_shape) + ") shapes do not propagate!")
+    for ts_key in target_stats.keys():
+        target_stats[ts_key] *= i1
+    if distribution.pdf_shape != i1.shape:
+        distribution.__shape_parameters__(i1.shape)
+    # Preparing initial conditions' parameters' vector:
+    params_vector = []
+    for p_val in distribution.params().values():
+        params_vector += p_val.flatten().tolist()
+    params_vector = np.array(params_vector).astype(np.float64)
+    # Bounding initial condition:
+    params_vector[np.where(params_vector > 10.0)[0]] = 10.0
+    params_vector[np.where(params_vector < -10.0)[0]] = -10.0
+    # Preparing contraints:
+    constraints.append({"type": "ineq", "fun": lambda p, pdf_name, pdf_shape: fconstr(p, pdf_name, pdf_shape),
+                        "args": (distribution.name, distribution.pdf_shape)})
+    # Run optimization
+    sol = minimize(fobj, params_vector, args=(distribution.name, distribution.pdf_shape, target_stats), method="COBYLA",
+                   constraints=constraints, options={"tol": 10 ** -6, "catol": 10 ** -12})
+    if sol.success:
+        if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
+            raise_value_error("nan or inf values in solution x\n" + sol.message)
+        if sol.fun > 10 ** -6:
+            warning("Not accurate solution! sol.fun = " + str(sol.fun))
+        return construct_params_dict(sol.x, distribution.params().keys(), distribution.pdf_shape, distribution.pdf_size)
+    else:
+        raise_value_error(sol.message)
 
