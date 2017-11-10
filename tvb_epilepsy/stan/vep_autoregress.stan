@@ -34,6 +34,30 @@ functions {
         return fz;
     }
 
+    real sample_lpdf(int pdf, real lo, real hi, real p1, real p2) {
+        real lpdf
+        if (pdf == 1) {
+            // normal
+            sample = normal_lpdf(p1, p2)T[lo, hi];
+        } else if (pdf == 2) {
+            // gamma: convert to rate from scale!
+            sample = gamma_lpdf(p1, 1.0 / p2)T[lo, hi];
+        } else if (pdf == 3) {
+            // lognormal
+            sample = lognormal_lpdf(p1, p2)T[lo, hi];
+        } else if (pdf == 4) {
+            // exponential
+            sample = exponential_lpdf(p1)T[lo, hi];
+        } else if (pdf == 5) {
+            // beta
+            sample = beta_lpdf(p1, p2)T[lo, hi];
+        } else {
+            // uniform:
+            sample = uniform_lpdf(lo, hi)T[lo, hi];
+        }
+        return lpdf;
+    }
+
 }
 
 
