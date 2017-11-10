@@ -1,18 +1,22 @@
 
 import numpy as np
 
-from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
-from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
+from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF, K_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
+from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
+                                                                                                   generate_distribution
+from tvb.simulator.models import Epileptor
 from tvb_epilepsy.service.model_inversion.pystan_service import PystanService
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 from tvb_epilepsy.tvb_api.epileptor_models import *
-from tvb.simulator.models import Epileptor
+
 
 AVAILABLE_DYNAMICAL_MODELS = (Epileptor, EpileptorModel, EpileptorDP2D, EpileptorDP, EpileptorDPrealistic)
 
@@ -103,6 +107,125 @@ class ModelInversionService(object):
     def get_default_sig_eq(self, x1eq_def=X1_DEF, x1eq_cr=X1_EQ_CR_DEF):
         return (x1eq_cr - x1eq_def) / 3.0
 
+    def generate_model_parameters(self, **kwargs):
+        parameters = []
+        # Generative model:
+        # Epileptor:
+        parameter = kwargs.get("x1eq", None)
+        if not(isinstance(parameter, Parameter)):
+            probability_distribution = kwargs.get("x1eq_pdf", "normal")
+            if isinstance(probability_distribution, basestring):
+                x1eq = kwargs.get("x1eq", (X1_EQ_CR_DEF - X1_DEF) / 2) * np.ones((self.n_regions,))
+                probability_distribution = generate_distribution(probability_distribution,
+                                                                 target_shape=(self.n_regions,),
+                                                                 mode=x1eq, std=kwargs.get("x1eq_sig", 0.1))
+            parameter = Parameter("x1eq",
+                                  low=kwargs.get("x1eq_lo", X1_DEF),
+                                  high=kwargs.get("x1eq_hi", X1_EQ_CR_DEF),
+                                  probability_distribution=probability_distribution,
+                                  shape=(self.n_regions,))
+        parameters.append(parameter)
+
+        parameter = kwargs.get("K", None)
+        if not(isinstance(parameter, Parameter)):
+            probability_distribution = kwargs.get("K_pdf", "gamma")
+            if isinstance(probability_distribution, basestring):
+                probability_distribution = generate_distribution(probability_distribution,
+                                                                 target_shape=(),
+                                                                 mode=kwargs.get("K_def", K_DEF),
+                                                                 std=kwargs.get("K_sig", K_DEF))
+            parameter = Parameter("K", low=kwargs.get("K_lo", 0.01),
+                                  high=kwargs.get("K_hi", 2.0),
+                                  probability_distribution=probability_distribution,
+                                  shape=())
+        parameters.append(parameter)
+
+        # tau1_def = kwargs.get("tau1_def", 0.5)
+        parameter = kwargs.get("tau1", None)
+        if not (isinstance(parameter, Parameter)):
+            probability_distribution = kwargs.get("tau1", "gamma")
+            if isinstance(probability_distribution, basestring):
+                tau1_def = kwargs.get("tau1_def", 0.5)
+                probability_distribution = generate_distribution(probability_distribution,
+                                                                 target_shape=(),
+                                                                 mode=tau1_def,
+                                                                 std=kwargs.get("tau1_sig", tau1_def))
+            parameter = Parameter("tau1",
+                                  low=kwargs.get("tau1_lo", 0.1),
+                                  high=kwargs.get("tau1_hi", 0.9),
+                                  probability_distribution=probability_distribution,
+                                  shape=())
+        parameters.append(parameter)
+
+        parameter = kwargs.get("tau0", None)
+        if not(isinstance(parameter, Parameter)):
+            tau0_def = kwargs.get("tau0_def", 30.0)
+            probability_distribution = kwargs.get("tau0_pdf", "gamma")
+            if isinstance(probability_distribution, basestring):
+                probability_distribution = generate_distribution(probability_distribution,
+                                                                 target_shape=(),
+                                                                 mode=tau0_def,
+                                                                 std=kwargs.get("tau0_sig", tau0_def))
+                parameter = Parameter("tau0",
+                                      low=kwargs.get("tau0_lo", 3.0),
+                                      high=kwargs.get("tau0_hi", 30000.0),
+                                      probability_distribution=probability_distribution,
+                                      shape=())
+        parameters.append(parameter)
+
+        # Coupling:
+        parameter = kwargs.get("EC", None)
+        if not(isinstance(parameter, Parameter)):
+            probability_distribution = kwargs.get("EC_pdf", "gamma")
+            if isinstance(probability_distribution, basestring):
+                structural_connectivity = kwargs.get("structural_connectivity",
+                                                         10 ** -3 * np.ones((self.n_regions, self.n_regions)))
+                probability_distribution = generate_distribution(probability_distribution,
+                                                                 target_shape=(self.n_regions, self.n_regions),
+                                                                 mode=structural_connectivity,
+                                                                 std=kwargs.get("EC_sig", structural_connectivity))
+            parameter = Parameter("EC",
+                                  low=kwargs.get("EC_lo", 10 ** -6),
+                                  high=kwargs.get("EC_hi", 100.0),
+                                  probability_distribution=probability_distribution,
+                                  shape=(self.n_regions, self.n_regions))
+        parameters.append(parameter)
+
+        # Integration:
+        parameter = kwargs.get("sig_eq", None)
+        if not(isinstance(parameter, Parameter)):
+            probability_distribution = kwargs.get("sig_eq_pdf", "gamma")
+            if isinstance(probability_distribution, basestring):
+                sig_eq_def = kwargs.get("sig_eq_def", 0.1)
+                probability_distribution = generate_distribution(probability_distribution,
+                                                                 target_shape=(),
+                                                                 mode=sig_eq_def,
+                                                                 std=kwargs.get("sig_eq_sig", sig_eq_def))
+                parameter = Parameter("sig_eq",
+                                      low=kwargs.get("sig_eq_lo", sig_eq_def / 10.0),
+                                      high=kwargs.get("sig_eq_hi", 3 * sig_eq_def),
+                                      probability_distribution=probability_distribution,
+                                      shape=())
+        parameters.append(parameter)
+
+        # Observation model
+        parameter = kwargs.get("eps", None)
+        if not(isinstance(parameter, Parameter)):
+            probability_distribution = kwargs.get("eps_pdf", "gamma")
+            if isinstance(probability_distribution, basestring):
+                eps_def = kwargs.get("eps_def", 0.1)
+                probability_distribution = generate_distribution(probability_distribution,
+                                                                 target_shape=(),
+                                                                 mode=eps_def,
+                                                                 std=kwargs.get("eps_sig", eps_def))
+                parameter = Parameter("eps",
+                                      low=kwargs.get("eps_lo", 0.0),
+                                      high=kwargs.get("eps_hi", 1.0),
+                                      probability_distribution=probability_distribution,
+                                      shape=())
+        parameters.append(parameter)
+        return parameters
+        
     def generate_statistical_model(self, statistical_model_name, **kwargs):
-        return StatisticalModel(statistical_model_name, kwargs, self.n_regions)
+        return StatisticalModel(statistical_model_name, self.generate_model_parameters( **kwargs), self.n_regions)
 

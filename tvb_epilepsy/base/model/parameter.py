@@ -29,31 +29,32 @@ class Parameter(object):
         else:
             raise_value_error("Parameter's " + str(self.name) + " shape="
                               + str(shape) + " is not a shape tuple!")
-        if isinstance(probability_distribution, ProbabilityDistribution):
-            try:
-                if (np.ones(self.shape) + np.ones(probability_distribution.pdf_shape)).shape != self.shape:
+        if isinstance(probability_distribution, (ProbabilityDistribution, basestring)):
+            self.probability_distribution = probability_distribution
+            if isinstance(probability_distribution, ProbabilityDistribution):
+                try:
+                    if (np.ones(self.shape) + np.ones(probability_distribution.pdf_shape)).shape != self.shape:
+                        raise_value_error("Parameter's (" + str(self.shape) +
+                                          ") and distribution's (" + str(probability_distribution.pdf_shape) +
+                                          ") shapes do not match!")
+                except:
                     raise_value_error("Parameter's (" + str(self.shape) +
                                       ") and distribution's (" + str(probability_distribution.pdf_shape) +
-                                      ") shapes do not match!")
-            except:
-                raise_value_error("Parameter's (" + str(self.shape) +
-                                  ") and distribution's (" + str(probability_distribution.pdf_shape) +
-                                  ") shapes do not propagate!")
-            self.probability_distribution = probability_distribution
-            if isinstance(probability_distribution, UniformDistribution):
-                if np.any(self.probability_distribution.low > self.low):
-                    # TODO: Decide whether we should throw an error here instead of the warning
-                    warning("Parameter's " + str(self.name) + " uniform distribution's parameter a (" +
-                            str(self.probability_distribution.low) +
-                            "\n does not match low value (" + str(self.low) + ")!" +
-                            "\nAdjusting probability distribution accordingly!")
-                    self.probability_distribution.update_params(low=self.low)
-                if np.any(self.probability_distribution.high < self.high):
-                    warning("Parameter's " + str(self.name) + " uniform distribution's parameter b (" +
-                            str(self.probability_distribution.high) +
-                            "\n does not match high value (" + str(self.high) + ")!" +
-                            "\nAdjusting probability distribution accordingly!")
-                    self.probability_distribution.update_params(high=self.high)
+                                      ") shapes do not propagate!")
+                if isinstance(probability_distribution, UniformDistribution):
+                    if np.any(self.probability_distribution.low > self.low):
+                        # TODO: Decide whether we should throw an error here instead of the warning
+                        warning("Parameter's " + str(self.name) + " uniform distribution's parameter a (" +
+                                str(self.probability_distribution.low) +
+                                "\n does not match low value (" + str(self.low) + ")!" +
+                                "\nAdjusting probability distribution accordingly!")
+                        self.probability_distribution.update_params(low=self.low)
+                    if np.any(self.probability_distribution.high < self.high):
+                        warning("Parameter's " + str(self.name) + " uniform distribution's parameter b (" +
+                                str(self.probability_distribution.high) +
+                                "\n does not match high value (" + str(self.high) + ")!" +
+                                "\nAdjusting probability distribution accordingly!")
+                        self.probability_distribution.update_params(high=self.high)
 
     def __repr__(self):
         d = {"1. name": self.name,

@@ -5,7 +5,10 @@ from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
+from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import OdeStatisticalModel
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
+                                                                                                   generate_distribution
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
@@ -153,8 +156,61 @@ class OdeModelInversionService(ModelInversionService):
                 self.update_active_regions_seeg(statistical_model, th, projection=kwargs.get("projection"),
                                                 seeg_inds=kwargs.get("seeg_inds"), logger=self.logger)
 
+    def generate_model_parameters(self, **kwargs):
+        parameters = ModelInversionService.generate_model_parameters(**kwargs)
+        # Integration
+        parameter = kwargs.get("sig_init", None)
+        if parameter is None:
+            probability_distribution = kwargs.get("sig_init_pdf", "gamma")
+            if isinstance(probability_distribution, basestring):
+                sig_init_def = kwargs.get("sig_init_def", 0.1)
+                probability_distribution = generate_distribution(probability_distribution,
+                                                                 target_shape=(),
+                                                                 mode=sig_init_def,
+                                                                 std=kwargs.get("tau1_sig", sig_init_def))
+                parameter = Parameter("sig_init",
+                                      low=kwargs.get("sig_init_lo", sig_init_def / 10.0),
+                                      high=kwargs.get("sig_init_hi", 3 * sig_init_def),
+                                      probability_distribution=probability_distribution,
+                                      shape=())
+        parameters.append(parameter)
+
+        # Observation model
+        parameter = kwargs.get("scale_signal")
+        if parameter is None:
+            probability_distribution = kwargs.get("scale_signal_pdf", "gamma")
+            if isinstance(probability_distribution, basestring):
+                scale_signal_def = kwargs.get("scale_signal_def", 1.0)
+                probability_distribution = generate_distribution(probability_distribution,
+                                                                 target_shape=(),
+                                                                 mode=scale_signal_def,
+                                                                 std=kwargs.get("scale_signal_sig", scale_signal_def))
+                parameter = Parameter("scale_signal",
+                                      low=kwargs.get("scale_signal_lo", 0.1),
+                                      high=kwargs.get("scale_signal_hi", 2.0),
+                                      probability_distribution=probability_distribution,
+                                      shape=())
+        arameters.append(parameter)
+
+        parameter = kwargs.get("offset_signal")
+        if parameter is None:
+            probability_distribution = kwargs.get("offset_signal_pdf", "gamma")
+            if isinstance(probability_distribution, basestring):
+                offset_signal_def = kwargs.get("offset_signal_def", 0.0)
+                probability_distribution = generate_distribution(probability_distribution,
+                                                                 target_shape=(),
+                                                                 mode=offset_signal_def,
+                                                                 std=kwargs.get("scale_signal_sig", offset_signal_def))
+                parameter = Parameter("offset_signal",
+                                      low=kwargs.get("offset_signal_lo", 0.0),
+                                      high=kwargs.get("offset_signal_hi", 1.0),
+                                      probability_distribution=probability_distribution,
+                                      shape=())
+        parameters.append(parameter)
+        return parameters
+
     def generate_statistical_model(self, statistical_model_name, **kwargs):
-        return OdeStatisticalModel(statistical_model_name, kwargs, self.n_regions,
+        return OdeStatisticalModel(statistical_model_name, self.generate_model_parameters(**kwargs), self.n_regions,
                                               kwargs.get("active_regions", []), self.n_signals, self.n_times, self.dt,
                                               kwargs.get("euler_method"), kwargs.get("observation_model"),
                                               kwargs.get("observation_expression"))

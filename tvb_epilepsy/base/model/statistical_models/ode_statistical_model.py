@@ -1,6 +1,6 @@
 import numpy as np
 
-from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
+from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
@@ -8,7 +8,8 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.gamma_
 
 
 OBSERVATION_MODEL_EXPRESSIONS=["x1z_offset", "x1_offset", "x1"]
-OBSERVATION_MODELS=["seeg_power", "seeg_logpower", "lfp_power", "lfp_logpower"]
+OBSERVATION_MODELS=[ "seeg_logpower", "seeg_power", "lfp_power"]
+EULER_METHODS = ["backward", "midpoint", "forward"]
 
 
 class OdeStatisticalModel(StatisticalModel):
@@ -28,74 +29,25 @@ class OdeStatisticalModel(StatisticalModel):
         self.n_signals = n_signals
         self.n_times = n_times
         self.dt = dt
-        if np.in1d(euler_method, ["backward", "forward"]):
-            self.euler_method = euler_method
+        if np.in1d(euler_method.lower(), EULER_METHODS):
+            if euler_method.lower() == "midpoint":
+                warning("Midpoint Euler method is not implemented yet! Switching to default forward one!")
+            self.euler_method = euler_method.lower()
         else:
             raise_value_error("Statistical model's euler_method " + str(euler_method) + " is not one of the valid ones: "
                               + str(["backward", "forward"]) + "!")
-        if np.in1d(observation_expression, OBSERVATION_MODEL_EXPRESSIONS):
-            self.observation_expression = observation_expression
+        if np.in1d(observation_expression.lower(), OBSERVATION_MODEL_EXPRESSIONS):
+            self.observation_expression = observation_expression.lower()
         else:
             raise_value_error("Statistical model's observation expression " + str(observation_expression) +
                               " is not one of the valid ones: "
                               + str(OBSERVATION_MODEL_EXPRESSIONS) + "!")
-        if np.in1d(observation_model, OBSERVATION_MODELS):
-            self.observation_model = observation_model
+        if np.in1d(observation_model.lower(), OBSERVATION_MODELS):
+            self.observation_model = observation_model.lower()
         else:
             raise_value_error("Statistical model's observation expression " + str(observation_model) +
                               " is not one of the valid ones: "
                               + str(OBSERVATION_MODELS) + "!")
-
-        # Further parameter setting:
-        # Integration
-        parameter = parameters.get("sig_init")
-        if parameter is None:
-            sig_init_def = parameters.get("sig_init_def", 0.1)
-            probability_distribution = parameters.get("sig_init_pdf")
-            if probability_distribution is None:
-                probability_distribution = GammaDistribution()
-                probability_distribution.compute_and_update_params({"mode": sig_init_def,
-                                                                    "std": parameters.get("sig_init_sig", sig_init_def)})
-                parameter = Parameter("sig_init",
-                                      low=parameters.get("sig_init_lo", sig_init_def / 10.0),
-                                      high=parameters.get("sig_init_hi", 3 * sig_init_def),
-                                      probability_distribution=probability_distribution,
-                                      shape=(1,))
-        self.parameters.append(parameter)
-
-        # Observation model
-        parameter = parameters.get("scale_signal")
-        if parameter is None:
-            scale_signal_def = parameters.get("scale_signal_def", 1.0)
-            probability_distribution = parameters.get("scale_signal_pdf")
-            if probability_distribution is None:
-                probability_distribution = GammaDistribution()
-                probability_distribution.compute_and_update_params({"mode": scale_signal_def,
-                                                                    "std": parameters.get("scale_signal_sig",
-                                                                                          scale_signal_def)})
-                parameter = Parameter("scale_signal",
-                                      low=parameters.get("scale_signal_lo", 0.1),
-                                      high=parameters.get("scale_signal_hi", 2.0),
-                                      probability_distribution=probability_distribution,
-                                      shape=(1,))
-        self.parameters.append(parameter)
-
-        parameter = parameters.get("offset_signal")
-        if parameter is None:
-            offset_signal_def = parameters.get("offset_signal_def", 0.0)
-            probability_distribution = parameters.get("offset_signal_pdf")
-            if probability_distribution is None:
-                probability_distribution = GammaDistribution()
-                probability_distribution.compute_and_update_params({"mode": offset_signal_def,
-                                                                    "std": parameters.get("offset_signal_sig", 0.1)})
-                parameter = Parameter("offset_signal",
-                                      low=parameters.get("offset_signal_lo", 0.0),
-                                      high=parameters.get("offset_signal_hi", 1.0),
-                                      probability_distribution=probability_distribution,
-                                      shape=(1,))
-        self.parameters.append(parameter)
-
-        self.n_parameters = len(self.parameters)
 
     def update_active_regions(self, active_regions):
         if np.all(np.in1d(active_regions, range(self.n_regions))):
