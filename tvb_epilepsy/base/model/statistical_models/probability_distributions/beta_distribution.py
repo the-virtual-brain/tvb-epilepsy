@@ -1,4 +1,6 @@
 
+from collections import OrderedDict
+
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
@@ -23,12 +25,15 @@ class BetaDistribution(ContinuousProbabilityDistribution):
         self.__update_params__(alpha=self.alpha, beta=self.beta)
 
     def params(self, parametrization="alpha-beta"):
+        p = OrderedDict()
         if isequal_string(parametrization, "a-b") or \
            isequal_string(parametrization, "scipy") or \
            isequal_string(parametrization, "numpy"):
-            return {"a": self.a, "b": self.b}
+            p.update(zip(["a", "b"], [self.a, self.b]))
+            return p
         else:
-            return {"alpha": self.alpha, "beta": self.beta}
+            p.update(zip(["alpha", "beta"], [self.alpha, self.beta]))
+            return p
 
     def update_params(self, **params):
         self.__update_params__(alpha=make_float(params.get("alpha", params.get("a", self.alpha))),

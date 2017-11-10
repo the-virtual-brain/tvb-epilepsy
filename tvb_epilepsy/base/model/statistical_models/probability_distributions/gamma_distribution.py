@@ -1,4 +1,6 @@
 
+from collections import OrderedDict
+
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
@@ -35,16 +37,22 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         return this_str
 
     def params(self, parametrization="shape-scale"):
+        p = OrderedDict()
         if isequal_string(parametrization, "alpha-beta"):
-            return {"alpha": self.shape, "beta": self.beta}
+            p.update(zip(["alpha", "beta"], [self.alpha, self.beta]))
+            return p
         elif isequal_string(parametrization, "k-theta"):
-            return {"k": self.k, "theta": self.theta}
+            p.update(zip(["k", "theta"], [self.k, self.theta]))
+            return p
         elif isequal_string(parametrization, "shape-rate"):
-            return {"shape": self.shape, "rate": 1.0 / self.scale}
+            p.update(zip(["shape", "rate"], [self.shape, 1.0 / self.scale]))
+            return p
         elif isequal_string(parametrization, "scipy"):
-            return {"a": self.shape, "scale": self.scale}
+            p.update(zip(["a", "scale"], [self.shape, self.scale]))
+            return p
         else:
-            return {"shape": self.shape, "scale": self.scale}
+            p.update(zip(["shape", "scale"], [self.shape, self.scale]))
+            return p
 
     def update_params(self, **params):
         self.__update_params__(shape=make_float(params.get("shape", params.get("alpha", params.get("k", self.shape)))),

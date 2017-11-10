@@ -1,4 +1,6 @@
 
+from collections import OrderedDict
+
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
@@ -16,18 +18,23 @@ class NormalDistribution(ContinuousProbabilityDistribution):
         self.numpy_name = "normal"
         self.mean = make_float(mean)
         self.sigma = make_float(sigma)
+        self.loc = self.mean
+        self.scale = self.sigma
         self.constraint_string = "sigma > 0"
         self.__update_params__(mean=self.mean, sigma=self.sigma)
 
     def params(self, parametrization="mean-sigma"):
+        p = OrderedDict()
         if isequal_string(parametrization, "scipy") or isequal_string(parametrization, "numpy"):
-            return {"loc": self.pdf_shape, "scale": self.scale}
+            p.update(zip(["loc", "scale"], [self.loc, self.scale]))
+            return p
         else:
-            return {"mean": self.mean, "sigma": self.sigma}
+            p.update(zip(["mean", "sigma"], [self.mean, self.sigma]))
+            return p
 
     def update_params(self, **params):
-        self.__update_params__(mean=make_float(params.get("mean", self.mean)),
-                               sigma=make_float(params.get("sigma", self.sigma)))
+        self.__update_params__(mean=make_float(params.get("mean", params.get("loc", self.mean))),
+                               sigma=make_float(params.get("sigma", params.get("scale", self.sigma))))
 
     def constraint(self):
         # By default expr >= 0

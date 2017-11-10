@@ -1,5 +1,5 @@
 
-import sys
+from collections import OrderedDict
 
 import numpy as np
 import numpy.random as nr
@@ -31,12 +31,16 @@ class UniformDistribution(ContinuousProbabilityDistribution):
         self.scale = self.b - self.a
 
     def params(self, parametrization="a-b"):
+        p = OrderedDict()
         if isequal_string(parametrization, "scipy"):
-            return {"loc": self.loc, "scale": self.scale}
+            p.update(zip(["loc", "scale"], [self.loc, self.scale]))
+            return p
         elif isequal_string(parametrization, "numpy"):
-            return {"low": self.low, "high": self.high}
+            p.update(zip(["low", "high"], [self.low, self.high]))
+            return p
         else:
-            return {"a": self.a, "b": self.b}
+            p.update(zip(["a", "b"], [self.a, self.b]))
+            return p
 
     def update_params(self, **params):
         self.__update_params__(a=make_float(params.get("a", params.get("low", params.get("loc", self.a)))),

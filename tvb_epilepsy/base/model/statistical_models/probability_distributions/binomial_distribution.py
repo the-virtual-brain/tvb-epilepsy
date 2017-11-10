@@ -1,4 +1,6 @@
 
+from collections import OrderedDict
+
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
@@ -20,7 +22,9 @@ class BinomialDistribution(DiscreteProbabilityDistribution):
         self.__update_params__(n=self.n, p=self.p)
 
     def params(self):
-        return {"n": self.n, "p": self.p}
+        p = OrderedDict()
+        p.update(zip(["n", "p"], [self.n, self.p]))
+        return p
 
     def update_params(self, **params):
         self.__update_params__(n=make_int(params.get("n", self.n)), p=make_float(params.get("p", self.p)))

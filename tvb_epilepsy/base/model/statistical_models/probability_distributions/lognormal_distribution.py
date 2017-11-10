@@ -1,4 +1,6 @@
 
+from collections import OrderedDict
+
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
@@ -22,10 +24,13 @@ class LognormalDistribution(ContinuousProbabilityDistribution):
         self.scale = np.exp(self.mean)
 
     def params(self, parametrization="mean-sigma"):
-        if isequal_string(parametrization, "scipy"):
-            return {"shape": self.shape, "scale": self.scale}
+        p = OrderedDict()
+        if isequal_string(parametrization, "scipy") or isequal_string(parametrization, "numpy"):
+            p.update(zip(["shape", "scale"], [self.shape, self.scale]))
+            return p
         else:
-            return {"mean": self.mean, "sigma": self.sigma}
+            p.update(zip(["mean", "sigma"], [self.mean, self.sigma]))
+            return p
         
     def update_params(self, **params):
         self.__update_params__(mean=make_float(params.get("mean", np.log(params.get("scale", self.scale))),
