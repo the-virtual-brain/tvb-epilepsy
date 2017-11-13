@@ -11,7 +11,7 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.discre
 class BernoulliDistribution(DiscreteProbabilityDistribution):
 
     def __init__(self, **params):
-        self.name = "bernoulli"
+        self.type = "bernoulli"
         self.scipy_name = "bernoulli"
         self.numpy_name = ""
         self.constraint_string = "0 < p < 1"

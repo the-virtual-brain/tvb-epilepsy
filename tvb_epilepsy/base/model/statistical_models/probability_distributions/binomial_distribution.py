@@ -13,7 +13,7 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.discre
 class BinomialDistribution(DiscreteProbabilityDistribution):
 
     def __init__(self, **params):
-        self.name = "bionomial"
+        self.type = "bionomial"
         self.scipy_name = "binom"
         self.numpy_name = "binomial"
         self.constraint_string = "n > 0 and 0 < p < 1"

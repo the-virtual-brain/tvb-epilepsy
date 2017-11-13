@@ -14,7 +14,7 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.contin
 class GammaDistribution(ContinuousProbabilityDistribution):
 
     def __init__(self, **params):
-        self.name = "gamma"
+        self.type = "gamma"
         self.scipy_name = "gamma"
         self.numpy_name = "gamma"
         self.constraint_string = "p_shape > 0 and scale > 0"

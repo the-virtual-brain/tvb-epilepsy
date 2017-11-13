@@ -14,10 +14,11 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.contin
 DEFAULT_LOW_VALUE = -MAX_SINGLE_VALUE
 DEFAULT_HIGH_VALUE = MAX_SINGLE_VALUE
 
+
 class UniformDistribution(ContinuousProbabilityDistribution):
 
     def __init__(self, **params):
-        self.name = "uniform"
+        self.type = "uniform"
         self.scipy_name = "uniform"
         self.numpy_name = "uniform"
         self.constraint_string = "a < b"

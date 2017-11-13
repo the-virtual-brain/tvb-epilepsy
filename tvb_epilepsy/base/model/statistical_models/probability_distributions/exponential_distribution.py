@@ -12,7 +12,7 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.contin
 class ExponentialDistribution(ContinuousProbabilityDistribution):
 
     def __init__(self, **params):
-        self.name = "exponential"
+        self.type = "exponential"
         self.scipy_name = "expon"
         self.numpy_name = "exponential"
         self.constraint_string = "scale > 0"

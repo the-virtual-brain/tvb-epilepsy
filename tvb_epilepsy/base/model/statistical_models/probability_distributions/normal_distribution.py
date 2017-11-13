@@ -13,7 +13,7 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.contin
 class NormalDistribution(ContinuousProbabilityDistribution):
 
     def __init__(self, **params):
-        self.name = "normal"
+        self.type = "normal"
         self.scipy_name = "norm"
         self.numpy_name = "normal"
         self.mean = make_float(params.get("mean", params.get("loc", 0.0)))

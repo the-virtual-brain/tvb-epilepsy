@@ -219,20 +219,19 @@ def generate_distribution(distrib_type, target_shape=None, **target):
 
 
 # This function converts the parameters' vector to the parameters' dictionary
-def construct_pdf_params_dict(p, p_keys, pdf_shape, pdf_size):
+def construct_pdf_params_dict(p, pdf):
     # Make sure p in denormalized and of float64 type
     # TODO solve the problem for integer distribution parameters...
     p = p.astype(np.float64)
     params = {}
-    for ik, p_key in enumerate(p_keys):
-        params.update({p_key: np.reshape(p[ik * pdf_size:(ik + 1) * pdf_size], pdf_shape)})
+    for ik, p_key in enumerate(pdf.pdf_params().keys()):
+        params.update({p_key: np.reshape(p[ik * pdf.p_size:(ik + 1) * pdf.p_size], pdf.p_shape)})
     return params
 
 
 # Scalar objective  function
-def fobj(p, pdf_name, pdf_shape, target_stats):
-    pdf = generate_distribution(pdf_name, target_shape=pdf_shape)
-    params = construct_pdf_params_dict(p, pdf.pdf_params().keys(), pdf.pdf_shape, pdf.pdf_size)
+def fobj(p, pdf, target_stats):
+    params = construct_pdf_params_dict(p, pdf)
     pdf.__update_params__(check_constraint=False, **params)
     f = 0.0
     for ts_key, ts_val in target_stats.iteritems():
@@ -241,9 +240,8 @@ def fobj(p, pdf_name, pdf_shape, target_stats):
 
 
 # Vector constraint function. By default expr >= 0
-def fconstr(p, pdf_name, pdf_shape):
-    pdf = generate_distribution(pdf_name, target_shape=pdf_shape)
-    params = construct_pdf_params_dict(p, pdf.pdf_params().keys(), pdf.pdf_shape, pdf.pdf_size)
+def fconstr(p, pdf):
+    params = construct_pdf_params_dict(p, pdf)
     pdf.__update_params__(check_constraint=False, **params)
     return pdf.constraint()
 
@@ -256,22 +254,22 @@ def compute_pdf_params(distrib_type, target_stats, target_shape=None):
                           ", whereas the characteristic parameters of distribution " + distribution.type +
                           " are " + str(distribution.n_params) + "!")
     # Make sure that tha shapes of distribution, target stats and target p_shape are all matching one to the other:
-    i1 = np.ones(distribution.pdf_shape)
+    i1 = np.ones(distribution.p_shape)
     try:
         if isinstance(target_shape, tuple):
             i1 *= np.ones(target_shape)
     except:
         raise_value_error("Target (" + str(target_shape) +
-                          ") and distribution (" + str(distribution.pdf_shape) + ") shapes do not propagate!")
+                          ") and distribution (" + str(distribution.p_shape) + ") shapes do not propagate!")
     try:
         for ts in target_stats.values():
             i1 *= np.ones(np.array(ts).shape)
     except:
         raise_value_error("Target statistics (" + str([np.array(ts).shape for ts in target_stats.values()]) +
-                          ") and distribution (" + str(distribution.pdf_shape) + ") shapes do not propagate!")
+                          ") and distribution (" + str(distribution.p_shape) + ") shapes do not propagate!")
     for ts_key in target_stats.keys():
         target_stats[ts_key] *= i1
-    if distribution.pdf_shape != i1.shape:
+    if distribution.p_shape != i1.shape:
         distribution.__shape_parameters__(i1.shape)
     # Preparing initial conditions' parameters' vector:
     params_vector = []
@@ -282,17 +280,16 @@ def compute_pdf_params(distrib_type, target_stats, target_shape=None):
     params_vector[np.where(params_vector > 10.0)[0]] = 10.0
     params_vector[np.where(params_vector < -10.0)[0]] = -10.0
     # Preparing contraints:
-    constraints = {"type": "ineq", "fun": lambda p, pdf_name, pdf_shape: fconstr(p, pdf_name, pdf_shape),
-                        "args": (distribution.type, distribution.pdf_shape) }
+    constraints = {"type": "ineq", "fun": lambda p: fconstr(p, distribution)}
     # Run optimization
-    sol = minimize(fobj, params_vector, args=(distribution.type, distribution.pdf_shape, target_stats), method="COBYLA",
+    sol = minimize(fobj, params_vector, args=(distribution, target_stats), method="COBYLA",
                    constraints=constraints, options={"tol": 10 ** -6, "catol": 10 ** -12})
     if sol.success:
         if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
             raise_value_error("nan or inf values in solution x\n" + sol.message)
         if sol.fun > 10 ** -6:
             warning("Not accurate solution! sol.fun = " + str(sol.fun))
-        return construct_pdf_params_dict(sol.x, distribution.pdf_params().keys(), distribution.pdf_shape, distribution.pdf_size)
+        return construct_pdf_params_dict(sol.x, distribution)
     else:
         raise_value_error(sol.message)
 

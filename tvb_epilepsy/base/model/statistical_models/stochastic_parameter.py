@@ -16,7 +16,7 @@ def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=
                                   probability_distribution.lower() + "_distribution")
     ProbabilityDistribution = eval("pdf_module." + probability_distribution.title() + "Distribution")
     if optimize:
-        pdf_params = compute_pdf_params(probability_distribution.lower(), pdf_params, target_shape=shape)
+        pdf_params = compute_pdf_params(probability_distribution.lower(), pdf_params)
 
     class StochasticParameter(Parameter, ProbabilityDistribution):
 
@@ -28,8 +28,22 @@ def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=
             d = {"1. type": self.name,
                  "2. low": self.low,
                  "3. high": self.high,
-                 "4. probability distribution": self.probability_distribution,
-                 "5. p_shape": self.shape}
+                 "4. shape": self.p_shape,
+                 "5. distribution": self.type,
+                 "6. pdf_params": self.pdf_params(),
+                 "7. n_params": self.n_params,
+                 "8. constraint": self.constraint_string,
+                 "9. shape": self.p_shape,
+                 "10. mean": self.mean,
+                 "11. median": self.median,
+                 "12. mode": self.mode,
+                 "13. var": self.var,
+                 "14. std": self.std,
+                 "15. skew": self.skew,
+                 "16. kurt": self.kurt,
+                 "17. scipy_name": self.scipy_name,
+                 "18. numpy_name": self.numpy_name
+                 }
             return formal_repr(self, sort_dict(d))
 
         def __str__(self):
@@ -73,4 +87,9 @@ def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=
     #             axes = fig.add_subplot(n_rows, n_cols, title=kwargs.get("title", self.name + " pdf",
     #                                                                     figsize=kwargs.get("figsize", VERY_LARGE_SIZE)))
 
-    return StochasticParameter(name, low, high, shape, **pdf_module)
+    return StochasticParameter(name, low, high, shape, **pdf_params)
+
+
+if __name__ == "__main__":
+    sp = generate_stochastic_parameter("test", probability_distribution="normal", optimize=True, mean=1.0, std=2.0)
+    print(sp)

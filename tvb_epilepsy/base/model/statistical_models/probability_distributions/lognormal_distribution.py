@@ -13,7 +13,7 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.contin
 class LognormalDistribution(ContinuousProbabilityDistribution):
 
     def __init__(self, **params):
-        self.name = "lognormal"
+        self.type = "lognormal"
         self.scipy_name = "lognorm"
         self.numpy_name = "lognormal"
         self.constraint_string = "sigma > 0"

@@ -12,7 +12,7 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.contin
 class ChisquareDistribution(ContinuousProbabilityDistribution):
 
     def __init__(self, params):
-        self.name = "chisquare"
+        self.type = "chisquare"
         self.scipy_name = "chi"
         self.numpy_name = "chisquare"
         self.constraint_string = "int(df) > 0"

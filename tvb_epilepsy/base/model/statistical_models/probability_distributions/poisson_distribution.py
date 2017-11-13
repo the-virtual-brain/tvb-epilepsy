@@ -12,7 +12,7 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.discre
 class PoissoniDistribution(DiscreteProbabilityDistribution):
 
     def __init__(self, **params):
-        self.name = "poisson"
+        self.type = "poisson"
         self.scipy_name = "poisson"
         self.numpy_name = "poisson"
         self.lamda = make_float(params.get("lamda", params.get("lam", params.get("mu", 0.5))))

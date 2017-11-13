@@ -14,7 +14,7 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.contin
 class BetaDistribution(ContinuousProbabilityDistribution):
 
     def __init__(self, **params):
-        self.name = "beta"
+        self.type = "beta"
         self.scipy_name = "beta"
         self.numpy_name = "beta"
         self.constraint_string = "alpha > 0 and beta > 0"
