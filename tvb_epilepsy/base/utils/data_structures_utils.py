@@ -279,6 +279,7 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
     else:
         return False
 
+
 def shape_to_size(shape):
     shape = np.array(shape)
     shape = shape[shape > 0]
