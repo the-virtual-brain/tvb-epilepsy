@@ -1,15 +1,11 @@
 import importlib
 
-import numpy as np
-
 from tvb_epilepsy.base.constants import MAX_SINGLE_VALUE
-from tvb_epilepsy.base.configurations import VERY_LARGE_SIZE
-from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_ndim, \
-                                                                                             shape_to_size, ensure_list
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
                                                                                                      compute_pdf_params
+
 
 def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, shape=(1,),
                                   probability_distribution="uniform", optimize=False, **pdf_params):

@@ -1,9 +1,4 @@
-import os
 
-import numpy as np
-import matplotlib.pyplot as pl
-
-from tvb_epilepsy.base.configurations import FOLDER_FIGURES, VERY_LARGE_SIZE
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
