@@ -285,6 +285,22 @@ def shape_to_size(shape):
     return np.max([shape.prod(), 1])
 
 
+def shape_to_ndim(shape, squeeze=False):
+    if squeeze:
+        shape = filter(lambda x: not(np.any(np.in1d(x, [0, 1]))), list(shape))
+    return len(shape)
+
+
+def squeeze_array_to_scalar(arr):
+    arr = np.array(arr)
+    if arr.size == 1:
+        return arr
+    elif np.all(arr == arr[0]):
+        return arr[0]
+    else:
+        return arr
+
+
 def assert_arrays(params, shape=None, transpose=False):
     # type: (object, object) -> object
     if shape is None or \
