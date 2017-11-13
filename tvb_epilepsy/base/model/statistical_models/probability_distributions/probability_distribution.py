@@ -5,7 +5,8 @@ import numpy as np
 from scipy.optimize import minimize
 
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_size
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_size, \
+                                                                                                squeeze_array_to_scalar
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 
@@ -92,9 +93,14 @@ class ProbabilityDistribution(object):
     def __check_constraint__(self):
         return np.all(self.constraint() > 0)
 
-    def __calc_shape__(self):
-        psum = np.zeros(self.p_shape)
-        for pval in self.pdf_params().values():
+    def __calc_shape__(self, params=None):
+        if not(isinstance(params, dict)):
+            params = self.pdf_params()
+            p_shape = self.p_shape
+        else:
+            p_shape = ()
+        psum = np.zeros(p_shape)
+        for pval in params.values():
             psum = psum + np.array(pval, dtype='f')
         return psum.shape
 
@@ -105,6 +111,15 @@ class ProbabilityDistribution(object):
         for p_key in self.pdf_params().keys():
             setattr(self, p_key, getattr(self, p_key) * i1)
         self.__update_params__()
+
+    def __squeeze_parameters__(self, update=False):
+        params = self.pdf_params()
+        for p_key, p_val in params.iteritems():
+            params.update({p_key: squeeze_array_to_scalar(p_val)})
+        if update:
+            self.__set_params__(**params)
+            self.__update_params__()
+        return params
 
     @abstractmethod
     def pdf_params(self):
