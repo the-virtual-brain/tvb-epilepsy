@@ -6,9 +6,8 @@ from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.model.parameter import Parameter
+from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import OdeStatisticalModel
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
-                                                                                                   generate_distribution
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
@@ -96,7 +95,7 @@ class OdeModelInversionService(ModelInversionService):
         x0cr, rx0 = calc_x0cr_r(epileptor_params["yc"], epileptor_params["Iext1"], epileptor_params["a"],
                                 epileptor_params["b"], epileptor_params["d"], zmode=np.array("lin"),
                                 x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF, test=False,
-                                shape=None, calc_mode="non_symbol")
+                                p_shape=None, calc_mode="non_symbol")
         epileptor_params.update({"x0cr": x0cr, "rx0": rx0})
         return epileptor_params
 
@@ -157,55 +156,46 @@ class OdeModelInversionService(ModelInversionService):
                                                 seeg_inds=kwargs.get("seeg_inds"), logger=self.logger)
 
     def generate_model_parameters(self, **kwargs):
-        parameters = ModelInversionService.generate_model_parameters(**kwargs)
+        parameters = super(OdeModelInversionService, self).generate_model_parameters(**kwargs)
         # Integration
         parameter = kwargs.get("sig_init", None)
-        if parameter is None:
-            probability_distribution = kwargs.get("sig_init_pdf", "gamma")
-            if isinstance(probability_distribution, basestring):
-                sig_init_def = kwargs.get("sig_init_def", 0.1)
-                probability_distribution = generate_distribution(probability_distribution,
-                                                                 target_shape=(),
-                                                                 mode=sig_init_def,
-                                                                 std=kwargs.get("tau1_sig", sig_init_def))
-                parameter = Parameter("sig_init",
-                                      low=kwargs.get("sig_init_lo", sig_init_def / 10.0),
-                                      high=kwargs.get("sig_init_hi", 3 * sig_init_def),
-                                      probability_distribution=probability_distribution,
-                                      shape=())
+        if not(isinstance(parameter, Parameter)):
+            sig_init_def = kwargs.get("sig_init_def", 0.1)
+            parameter = generate_stochastic_parameter("sig_init",
+                                                      low=kwargs.get("sig_init_lo", sig_init_def / 10.0),
+                                                      high=kwargs.get("sig_init_hi", 3 * sig_init_def),
+                                                      p_shape=(),
+                                                      probability_distribution=kwargs.get("sig_init_pdf", "gamma"),
+                                                      optimize=True,
+                                                      mode=sig_init_def,
+                                                      std=kwargs.get("tau1_sig", sig_init_def))
         parameters.append(parameter)
 
         # Observation model
         parameter = kwargs.get("scale_signal")
-        if parameter is None:
-            probability_distribution = kwargs.get("scale_signal_pdf", "gamma")
-            if isinstance(probability_distribution, basestring):
-                scale_signal_def = kwargs.get("scale_signal_def", 1.0)
-                probability_distribution = generate_distribution(probability_distribution,
-                                                                 target_shape=(),
-                                                                 mode=scale_signal_def,
-                                                                 std=kwargs.get("scale_signal_sig", scale_signal_def))
-                parameter = Parameter("scale_signal",
-                                      low=kwargs.get("scale_signal_lo", 0.1),
-                                      high=kwargs.get("scale_signal_hi", 2.0),
-                                      probability_distribution=probability_distribution,
-                                      shape=())
-        arameters.append(parameter)
+        if not(isinstance(parameter, Parameter)):
+            scale_signal_def = kwargs.get("scale_signal_def", 1.0)
+            parameter = generate_stochastic_parameter("scale_signal",
+                                                      low=kwargs.get("scale_signal_lo", 0.1),
+                                                      high=kwargs.get("scale_signal_hi", 2.0),
+                                                      p_shape=(),
+                                                      probability_distribution=kwargs.get("scale_signal_pdf", "gamma"),
+                                                      optimize=True,
+                                                      mode=scale_signal_def,
+                                                      std=kwargs.get("scale_signal_sig", scale_signal_def))
+        parameters.append(parameter)
 
         parameter = kwargs.get("offset_signal")
-        if parameter is None:
-            probability_distribution = kwargs.get("offset_signal_pdf", "gamma")
-            if isinstance(probability_distribution, basestring):
-                offset_signal_def = kwargs.get("offset_signal_def", 0.0)
-                probability_distribution = generate_distribution(probability_distribution,
-                                                                 target_shape=(),
-                                                                 mode=offset_signal_def,
-                                                                 std=kwargs.get("scale_signal_sig", offset_signal_def))
-                parameter = Parameter("offset_signal",
-                                      low=kwargs.get("offset_signal_lo", 0.0),
-                                      high=kwargs.get("offset_signal_hi", 1.0),
-                                      probability_distribution=probability_distribution,
-                                      shape=())
+        if not(isinstance(parameter, Parameter)):
+            offset_signal_def = kwargs.get("offset_signal_def", 0.0)
+            parameter = generate_stochastic_parameter("offset_signal",
+                                                      low=kwargs.get("offset_signal_lo", 0.0),
+                                                      high=kwargs.get("offset_signal_hi", 1.0),
+                                                      p_shape=(),
+                                                      probability_distribution=kwargs.get("offset_signal_pdf", "gamma"),
+                                                      optimize=True,
+                                                      mode=offset_signal_def,
+                                                      std=kwargs.get("scale_signal_sig", offset_signal_def))
         parameters.append(parameter)
         return parameters
 

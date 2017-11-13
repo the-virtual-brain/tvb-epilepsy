@@ -1,19 +1,17 @@
 import numpy as np
 
 from tvb_epilepsy.base.constants import EPILEPTOR_MODEL_NVARS
-
-from tvb_epilepsy.base.model.statistical_models.autoregressive_statistical_model import AutoregressiveStatisticalModel
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+from tvb_epilepsy.base.model.parameter import Parameter
+from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
                                                                                                 AVAILABLE_DISTRIBUTIONS
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import \
                                                         EULER_METHODS, OBSERVATION_MODEL_EXPRESSIONS, OBSERVATION_MODELS
-from tvb_epilepsy.service.epileptor_model_factory import model_noise_intensity_dict
-from tvb_epilepsy.base.model.parameter import Parameter
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
-                                                                                                   generate_distribution
+from tvb_epilepsy.base.model.statistical_models.autoregressive_statistical_model import AutoregressiveStatisticalModel
 from tvb_epilepsy.service.model_inversion.ode_model_inversion_service import OdeModelInversionService
+from tvb_epilepsy.service.epileptor_model_factory import model_noise_intensity_dict
 
 
 LOG = initialize_logger(__name__)
@@ -38,34 +36,31 @@ class AutoregressiveModelInversionService(OdeModelInversionService):
                 return
 
     def generate_model_parameters(self, **kwargs):
-        parameters = OdeModelInversionService.generate_model_parameters(**kwargs)
+        parameters = super(AutoregressiveModelInversionService, self).generate_model_parameters(**kwargs)
         # State variables:
-        parameters.append(kwargs.get("x1", Parameter("x1",
-                                                          low=kwargs.get("x1_lo", -2.0),
-                                                          high=kwargs.get("x1_hi", 2.0),
-                                                          probability_distribution="normal",
-                                                          shape=(self.n_times, self.n_active_regions))))
-        parameters.append(kwargs.get("z", Parameter("z",
-                                                         low=kwargs.get("z_lo", 2.0),
-                                                         high=kwargs.get("z_hi", 5.0),
-                                                         probability_distribution="normal",
-                                                         shape=(self.n_times, self.n_active_regions))))
+        parameters.append(kwargs.get("x1", generate_stochastic_parameter("x1",
+                                                                         low=kwargs.get("x1_lo", -2.0),
+                                                                         high=kwargs.get("x1_hi", 2.0),
+                                                                         shape=(self.n_times, self.n_active_regions),
+                                                                         probability_distribution="normal")))
+        parameters.append(kwargs.get("z", generate_stochastic_parameter("z",
+                                                                        low=kwargs.get("z_lo", 2.0),
+                                                                        high=kwargs.get("z_hi", 5.0),
+                                                                        shape=(self.n_times, self.n_active_regions),
+                                                                        probability_distribution="normal")))
 
         # Integration
         parameter = kwargs.get("sig", None)
-        if parameter is None:
-            probability_distribution = kwargs.get("sig_pdf", "gamma")
-            if isinstance(probability_distribution, basestring):
-                sig_def = kwargs.get("sig_def", 10 ** -4)
-                probability_distribution = generate_distribution(probability_distribution,
-                                                                 target_shape=(),
-                                                                 mode=sig_def,
-                                                                 std=kwargs.get("sig_sig", sig_def))
-                parameter = Parameter("sig",
-                                      low=kwargs.get("sig_lo", sig_def / 10.0),
-                                      high=kwargs.get("sig_hi", 10 * sig_def),
-                                      probability_distribution=probability_distribution,
-                                      shape=())
+        if not(isinstance(parameter, Parameter)):
+            sig_def = kwargs.get("sig_def", 10 ** -4)
+            parameter = generate_stochastic_parameter("sig",
+                                                      low=kwargs.get("sig_lo", sig_def / 10.0),
+                                                      high=kwargs.get("sig_hi", 10 * sig_def),
+                                                      shape=(),
+                                                      probability_distribution=kwargs.get("sig_pdf", "gamma"),
+                                                      optimize=True,
+                                                      mode=sig_def,
+                                                      std=kwargs.get("sig_sig", sig_def))
         parameters.append(parameter)
         return parameters
                 

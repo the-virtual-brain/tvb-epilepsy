@@ -9,9 +9,9 @@ from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.parameter import Parameter
+from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
 from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
-                                                                                                   generate_distribution
+
 from tvb.simulator.models import Epileptor
 from tvb_epilepsy.service.model_inversion.pystan_service import PystanService
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
@@ -72,7 +72,7 @@ class ModelInversionService(object):
         x0cr, rx0 = calc_x0cr_r(epileptor_params["yc"], epileptor_params["Iext1"], epileptor_params["a"],
                                 epileptor_params["b"], epileptor_params["d"], zmode=np.array("lin"),
                                 x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF, test=False,
-                                shape=None, calc_mode="non_symbol")
+                                p_shape=None, calc_mode="non_symbol")
         epileptor_params.update({"x0cr": x0cr, "rx0": rx0})
         return epileptor_params
 
@@ -113,116 +113,92 @@ class ModelInversionService(object):
         # Epileptor:
         parameter = kwargs.get("x1eq", None)
         if not(isinstance(parameter, Parameter)):
-            probability_distribution = kwargs.get("x1eq_pdf", "normal")
-            if isinstance(probability_distribution, basestring):
-                x1eq = kwargs.get("x1eq", (X1_EQ_CR_DEF - X1_DEF) / 2) * np.ones((self.n_regions,))
-                probability_distribution = generate_distribution(probability_distribution,
-                                                                 target_shape=(self.n_regions,),
-                                                                 mode=x1eq, std=kwargs.get("x1eq_sig", 0.1))
-            parameter = Parameter("x1eq",
-                                  low=kwargs.get("x1eq_lo", X1_DEF),
-                                  high=kwargs.get("x1eq_hi", X1_EQ_CR_DEF),
-                                  probability_distribution=probability_distribution,
-                                  shape=(self.n_regions,))
+            x1eq = kwargs.get("x1eq", (X1_EQ_CR_DEF - X1_DEF) / 2) * np.ones((self.n_regions,))
+            parameter = generate_stochastic_parameter("x1eq",
+                                                      low=kwargs.get("x1eq_lo", X1_DEF),
+                                                      high=kwargs.get("x1eq_hi", X1_EQ_CR_DEF),
+                                                      p_shape=(self.n_regions,),
+                                                      probability_distribution=kwargs.get("x1eq_pdf", "normal"),
+                                                      optimize=True,
+                                                      mode=x1eq, std=kwargs.get("x1eq_sig", 0.1))
         parameters.append(parameter)
 
         parameter = kwargs.get("K", None)
         if not(isinstance(parameter, Parameter)):
-            probability_distribution = kwargs.get("K_pdf", "gamma")
-            if isinstance(probability_distribution, basestring):
-                probability_distribution = generate_distribution(probability_distribution,
-                                                                 target_shape=(),
-                                                                 mode=kwargs.get("K_def", K_DEF),
-                                                                 std=kwargs.get("K_sig", K_DEF))
-            parameter = Parameter("K", low=kwargs.get("K_lo", 0.01),
-                                  high=kwargs.get("K_hi", 2.0),
-                                  probability_distribution=probability_distribution,
-                                  shape=())
+            parameter = generate_stochastic_parameter("K",
+                                                      low=kwargs.get("K_lo", 0.01),
+                                                      high=kwargs.get("K_hi", 2.0),  p_shape=(),
+                                                      probability_distribution= kwargs.get("K_pdf", "gamma"),
+                                                      optimize=True,
+                                                      mode=kwargs.get("K_def", K_DEF), std=kwargs.get("K_sig", K_DEF))
         parameters.append(parameter)
 
         # tau1_def = kwargs.get("tau1_def", 0.5)
         parameter = kwargs.get("tau1", None)
         if not (isinstance(parameter, Parameter)):
-            probability_distribution = kwargs.get("tau1", "gamma")
-            if isinstance(probability_distribution, basestring):
-                tau1_def = kwargs.get("tau1_def", 0.5)
-                probability_distribution = generate_distribution(probability_distribution,
-                                                                 target_shape=(),
-                                                                 mode=tau1_def,
-                                                                 std=kwargs.get("tau1_sig", tau1_def))
-            parameter = Parameter("tau1",
-                                  low=kwargs.get("tau1_lo", 0.1),
-                                  high=kwargs.get("tau1_hi", 0.9),
-                                  probability_distribution=probability_distribution,
-                                  shape=())
+            tau1_def = kwargs.get("tau1_def", 0.5)
+            parameter = generate_stochastic_parameter("tau1",
+                                                      low=kwargs.get("tau1_lo", 0.1),
+                                                      high=kwargs.get("tau1_hi", 0.9),
+                                                      p_shape=(),
+                                                      probability_distribution=kwargs.get("tau1", "gamma"),
+                                                      optimize=True,
+                                                      mode=tau1_def, std=kwargs.get("tau1_sig", tau1_def))
         parameters.append(parameter)
 
         parameter = kwargs.get("tau0", None)
         if not(isinstance(parameter, Parameter)):
             tau0_def = kwargs.get("tau0_def", 30.0)
-            probability_distribution = kwargs.get("tau0_pdf", "gamma")
-            if isinstance(probability_distribution, basestring):
-                probability_distribution = generate_distribution(probability_distribution,
-                                                                 target_shape=(),
-                                                                 mode=tau0_def,
-                                                                 std=kwargs.get("tau0_sig", tau0_def))
-                parameter = Parameter("tau0",
-                                      low=kwargs.get("tau0_lo", 3.0),
-                                      high=kwargs.get("tau0_hi", 30000.0),
-                                      probability_distribution=probability_distribution,
-                                      shape=())
+            parameter = generate_stochastic_parameter("tau0",
+                                                      low=kwargs.get("tau0_lo", 3.0),
+                                                      high=kwargs.get("tau0_hi", 30000.0),
+                                                      p_shape=(),
+                                                      probability_distribution=kwargs.get("tau0_pdf", "gamma"),
+                                                      optimize=True,
+                                                      mode=tau0_def,
+                                                      std=kwargs.get("tau0_sig", tau0_def))
         parameters.append(parameter)
 
         # Coupling:
         parameter = kwargs.get("EC", None)
         if not(isinstance(parameter, Parameter)):
-            probability_distribution = kwargs.get("EC_pdf", "gamma")
-            if isinstance(probability_distribution, basestring):
-                structural_connectivity = kwargs.get("structural_connectivity",
-                                                         10 ** -3 * np.ones((self.n_regions, self.n_regions)))
-                probability_distribution = generate_distribution(probability_distribution,
-                                                                 target_shape=(self.n_regions, self.n_regions),
-                                                                 mode=structural_connectivity,
-                                                                 std=kwargs.get("EC_sig", structural_connectivity))
-            parameter = Parameter("EC",
-                                  low=kwargs.get("EC_lo", 10 ** -6),
-                                  high=kwargs.get("EC_hi", 100.0),
-                                  probability_distribution=probability_distribution,
-                                  shape=(self.n_regions, self.n_regions))
+            structural_connectivity = kwargs.get("structural_connectivity",
+                                                 10 ** -3 * np.ones((self.n_regions, self.n_regions)))
+            parameter = generate_stochastic_parameter("EC",
+                                                      low=kwargs.get("EC_lo", 10 ** -6),
+                                                      high=kwargs.get("EC_hi", 100.0),
+                                                      p_shape=(self.n_regions, self.n_regions),
+                                                      probability_distribution=kwargs.get("EC_pdf", "gamma"),
+                                                      optimize=True,
+                                                      mode=structural_connectivity,
+                                                      std=kwargs.get('EC_sig', structural_connectivity/3.0))
         parameters.append(parameter)
 
         # Integration:
         parameter = kwargs.get("sig_eq", None)
         if not(isinstance(parameter, Parameter)):
-            probability_distribution = kwargs.get("sig_eq_pdf", "gamma")
-            if isinstance(probability_distribution, basestring):
-                sig_eq_def = kwargs.get("sig_eq_def", 0.1)
-                probability_distribution = generate_distribution(probability_distribution,
-                                                                 target_shape=(),
-                                                                 mode=sig_eq_def,
-                                                                 std=kwargs.get("sig_eq_sig", sig_eq_def))
-                parameter = Parameter("sig_eq",
-                                      low=kwargs.get("sig_eq_lo", sig_eq_def / 10.0),
-                                      high=kwargs.get("sig_eq_hi", 3 * sig_eq_def),
-                                      probability_distribution=probability_distribution,
-                                      shape=())
+            sig_eq_def = kwargs.get("sig_eq_def", 0.1)
+            parameter = generate_stochastic_parameter("sig_eq",
+                                                      low=kwargs.get("sig_eq_lo", sig_eq_def / 10.0),
+                                                      high=kwargs.get("sig_eq_hi", 3 * sig_eq_def),
+                                                      p_shape=(),
+                                                      probability_distribution=kwargs.get("sig_eq_pdf", "gamma"),
+                                                      optimize=True,
+                                                      mode=sig_eq_def,
+                                                      std = kwargs.get("sig_eq_sig", sig_eq_def))
         parameters.append(parameter)
 
         # Observation model
         parameter = kwargs.get("eps", None)
         if not(isinstance(parameter, Parameter)):
-            probability_distribution = kwargs.get("eps_pdf", "gamma")
-            if isinstance(probability_distribution, basestring):
-                eps_def = kwargs.get("eps_def", 0.1)
-                probability_distribution = generate_distribution(probability_distribution,
-                                                                 target_shape=(),
-                                                                 mode=eps_def,
-                                                                 std=kwargs.get("eps_sig", eps_def))
-                parameter = Parameter("eps",
-                                      low=kwargs.get("eps_lo", 0.0),
-                                      high=kwargs.get("eps_hi", 1.0),
-                                      probability_distribution=probability_distribution,
-                                      shape=())
+            eps_def = kwargs.get("eps_def", 0.1)
+            parameter = generate_stochastic_parameter("eps",
+                                                      low=kwargs.get("eps_lo", 0.0),
+                                                      high=kwargs.get("eps_hi", 1.0),
+                                                      probability_distribution=kwargs.get("eps_pdf", "gamma"),
+                                                      optimize=True,
+                                                      mode=eps_def,
+                                                      std=kwargs.get("eps_sig", eps_def))
         parameters.append(parameter)
         return parameters
         
