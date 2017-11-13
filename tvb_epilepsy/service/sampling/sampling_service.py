@@ -84,6 +84,7 @@ class SamplingService(object):
 
     def compute_stats(self, samples):
         return OrderedDict([("mean", samples.mean(axis=-1)), ("median", scp.median(samples, axis=-1)),
+                            ("mode", scp.stats.mode(samples, axis=-1)[0]),
                             ("std", samples.std(axis=-1)), ("var", samples.var(axis=-1)),
                             ("kurt", ss.kurtosis(samples, axis=-1)), ("skew", ss.skew(samples, axis=-1)),
                             ("min", samples.min(axis=-1)), ("max", samples.max(axis=-1)),
