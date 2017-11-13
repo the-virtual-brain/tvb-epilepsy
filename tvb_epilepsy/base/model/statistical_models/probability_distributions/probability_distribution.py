@@ -195,13 +195,13 @@ class ProbabilityDistribution(object):
         else:
             return self.calc_kurt_manual()
 
-    def compute_and_update_pdf_params(self, target_shape=None, constraints=[], **target_stats):
+    def compute_and_update_pdf_params(self, target_shape=None, **target_stats):
         if target_shape is None:
             target_shape = self.p_shape
-        self.update_params(**(compute_pdf_params(self.type, target_stats, target_shape, constraints)))
+        self.update_params(**(compute_pdf_params(self.type, target_stats, target_shape)))
 
 
-def generate_distribution(distrib_type, target_shape=None, constraints=[], **target):
+def generate_distribution(distrib_type, target_shape=None, **target):
     if np.in1d(distrib_type.lower(), AVAILABLE_DISTRIBUTIONS):
         exec("from ." + distrib_type.lower() + "_distribution import " + distrib_type.title() + "Distribution")
         distribution = eval(distrib_type.title() + "Distribution()")
@@ -211,7 +211,7 @@ def generate_distribution(distrib_type, target_shape=None, constraints=[], **tar
             try:
                 distribution.update(**target)
             except:
-                target = compute_pdf_params(distribution.type, target, target_shape, constraints)
+                target = compute_pdf_params(distribution.type, target, target_shape)
                 distribution.update_params(**target)
         return distribution
     else:
@@ -248,7 +248,7 @@ def fconstr(p, pdf_name, pdf_shape):
     return pdf.constraint()
 
 
-def compute_pdf_params(distrib_type, target_stats, target_shape=None, constraints=[]):
+def compute_pdf_params(distrib_type, target_stats, target_shape=None):
     distribution = generate_distribution(distrib_type, target_shape=target_shape)
     # Check if the number of target stats is exactly the same as the number of distribution parameters to optimize:
     if len(target_stats) != distribution.n_params:
@@ -282,8 +282,8 @@ def compute_pdf_params(distrib_type, target_stats, target_shape=None, constraint
     params_vector[np.where(params_vector > 10.0)[0]] = 10.0
     params_vector[np.where(params_vector < -10.0)[0]] = -10.0
     # Preparing contraints:
-    constraints.append({"type": "ineq", "fun": lambda p, pdf_name, pdf_shape: fconstr(p, pdf_name, pdf_shape),
-                        "args": (distribution.type, distribution.pdf_shape)})
+    constraints = {"type": "ineq", "fun": lambda p, pdf_name, pdf_shape: fconstr(p, pdf_name, pdf_shape),
+                        "args": (distribution.type, distribution.pdf_shape) }
     # Run optimization
     sol = minimize(fobj, params_vector, args=(distribution.type, distribution.pdf_shape, target_stats), method="COBYLA",
                    constraints=constraints, options={"tol": 10 ** -6, "catol": 10 ** -12})

@@ -111,7 +111,7 @@ class AutoregressiveModelInversionService(OdeModelInversionService):
             else:
                 self.model_data.update({p.name + "_pdf":
                                         np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.probability_distribution.name))[0]})
-                pdf_params = p.probability_distribution.params().values()
+                pdf_params = p.probability_distribution.pdf_params().values()
                 self.model_data.update({p.name + "_p1": pdf_params[0]})
                 if len(pdf_params) == 1:
                     self.model_data.update({p.name + "_p2": pdf_params[0]})

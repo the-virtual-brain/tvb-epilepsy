@@ -7,19 +7,22 @@ from tvb_epilepsy.base.configurations import VERY_LARGE_SIZE
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_ndim, \
                                                                                                             ensure_list
 from tvb_epilepsy.base.model.parameter import Parameter
-
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
+                                                                                                     compute_pdf_params
 
 def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, shape=(1,),
-                                  probability_distribution="uniform", **kwargs):
+                                  probability_distribution="uniform", optimize=False, **pdf_params):
     pdf_module = importlib.import_module("tvb_epilepsy.base.model.statistical_models.probability_distributions." +
                                   probability_distribution.lower() + "_distribution")
     ProbabilityDistribution = eval("pdf_module." + probability_distribution.title() + "Distribution")
+    if optimize:
+        pdf_params = compute_pdf_params(probability_distribution.lower(), pdf_params, target_shape=shape)
 
     class StochasticParameter(Parameter, ProbabilityDistribution):
 
-        def __init__(self, name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, shape=(1,), **kwargs):
+        def __init__(self, name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, shape=(1,), **pdf_params):
             Parameter.__init__(self, name, low, high, shape)
-            ProbabilityDistribution.__init__(self, **kwargs)
+            ProbabilityDistribution.__init__(self, **pdf_params)
 
         def __repr__(self):
             d = {"1. type": self.name,
@@ -70,5 +73,4 @@ def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=
     #             axes = fig.add_subplot(n_rows, n_cols, title=kwargs.get("title", self.name + " pdf",
     #                                                                     figsize=kwargs.get("figsize", VERY_LARGE_SIZE)))
 
-
-    return StochasticParameter(name, low, high, shape, **kwargs)
+    return StochasticParameter(name, low, high, shape, **pdf_module)
