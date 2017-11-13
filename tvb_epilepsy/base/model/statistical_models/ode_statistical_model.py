@@ -2,9 +2,7 @@ import numpy as np
 
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
-from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.gamma_distribution import GammaDistribution
 
 
 OBSERVATION_MODEL_EXPRESSIONS=["x1z_offset", "x1_offset", "x1"]
@@ -59,17 +57,18 @@ class OdeStatisticalModel(StatisticalModel):
                               "\nbeyond number of regions (" + str(self.n_regions) + ")!")
 
     def __repr__(self):
-        d = {"1. name": self.name,
-             "2. number of regions": self.n_regions,
-             "3. active regions": self.active_regions,
-             "4. number of active regions": self.n_active_regions,
-             "5. number of nonactive regions": self.n_nonactive_regions,
-             "6. number of observation signals": self.n_signals,
-             "7. number of time points": self.n_times,
-             "8. time step": self.dt,
-             "9. euler_method": self.euler_method,
-             "10. observation_expression": self.observation_expression,
-             "11. observation_model": self.observation_model,
-             "12. number of parameters": self.n_parameters,
-             "13. parameters": self.parameters}
-        return formal_repr(self, sort_dict(d))
+        form_repr = super(OdeStatisticalModel, self).__repr__()
+        d = {"5. active regions": self.active_regions,
+             "6. number of active regions": self.n_active_regions,
+             "7. number of nonactive regions": self.n_nonactive_regions,
+             "8. number of observation signals": self.n_signals,
+             "9. number of time points": self.n_times,
+             "10. time step": self.dt,
+             "11. euler_method": self.euler_method,
+             "12. observation_expression": self.observation_expression,
+             "13. observation_model": self.observation_model}
+        return form_repr + "\n" + formal_repr(self, sort_dict(d))
+
+    def plot(self, **kwargs):
+        for p in self.parameters:
+            p.plot(**kwargs)

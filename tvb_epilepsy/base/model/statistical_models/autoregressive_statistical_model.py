@@ -12,3 +12,9 @@ class AutoregressiveStatisticalModel(OdeStatisticalModel):
         super(AutoregressiveStatisticalModel, self).__init__(name, parameters, n_regions, active_regions, n_signals,
                                                              n_times, dt, euler_method, observation_model,
                                                              observation_expression)
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        return super(AutoregressiveStatisticalModel, self).__repr__()
