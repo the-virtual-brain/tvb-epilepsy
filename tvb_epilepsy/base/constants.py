@@ -2,15 +2,6 @@
 Various configurations which might or might not be system based, should be specified here.
 """
 
-VERY_LARGE_SIZE = (40, 20)
-LARGE_SIZE = (20, 15)
-SMALL_SIZE = (15, 10)
-FIG_SIZE = SMALL_SIZE
-FIG_FORMAT = 'png'
-SAVE_FLAG = True
-SHOW_FLAG = False
-MOUSEHOOVER = False
-
 TIME_DELAYS_FLAG = 0.0
 
 # Default model parameters

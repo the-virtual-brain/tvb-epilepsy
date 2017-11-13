@@ -1,7 +1,6 @@
 import numpy as np
 
-from tvb_epilepsy.base.configurations import FOLDER_FIGURES
-from tvb_epilepsy.base.constants import SHOW_FLAG, SAVE_FLAG, FIG_FORMAT
+from tvb_epilepsy.base.configurations import FOLDER_FIGURES, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list
 from tvb_epilepsy.base.utils.math_utils import curve_elbow_point

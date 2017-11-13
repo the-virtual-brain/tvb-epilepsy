@@ -54,3 +54,11 @@ else:
         os.mkdir(FOLDER_FIGURES)
 
     STATISTICAL_MODELS_PATH = os.path.join(SOFTWARE_PATH, "tvb-infer", "tvb_infer", "stan_epilepsy_models")
+VERY_LARGE_SIZE = (40, 20)
+LARGE_SIZE = (20, 15)
+SMALL_SIZE = (15, 10)
+FIG_SIZE = SMALL_SIZE
+FIG_FORMAT = 'png'
+SAVE_FLAG = True
+SHOW_FLAG = False
+MOUSEHOOVER = False

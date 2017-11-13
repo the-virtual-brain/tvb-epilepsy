@@ -4,9 +4,8 @@ Service to do LSA computation.
 """
 import numpy
 
-from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM, \
-    FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
-from tvb_epilepsy.base.configurations import FOLDER_FIGURES
+from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM
+from tvb_epilepsy.base.configurations import FOLDER_FIGURES, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
 from tvb_epilepsy.base.utils.math_utils import weighted_vector_sum, curve_elbow_point

@@ -3,19 +3,20 @@ Various plotting tools will be placed here.
 """
 # TODO: make a plot function for sensitivity analysis results
 import os
+
 import matplotlib as mp
-import numpy as np
 from matplotlib import pyplot, gridspec
 from matplotlib.colors import Normalize
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats.mstats import zscore
 
-from tvb_epilepsy.base.configurations import FOLDER_FIGURES
+from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
+from tvb_epilepsy.base.configurations import FOLDER_FIGURES, VERY_LARGE_SIZE, LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, \
+    SHOW_FLAG
 from tvb_epilepsy.base.constants import *
 from tvb_epilepsy.base.utils.data_structures_utils import sort_dict, ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.tvb_api.epileptor_models import *
-from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
 
 try:
     #https://github.com/joferkington/mpldatacursor

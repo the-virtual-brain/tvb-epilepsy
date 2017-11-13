@@ -3,8 +3,7 @@ from collections import OrderedDict
 import numpy as np
 from matplotlib import pyplot
 
-from tvb_epilepsy.base.configurations import FOLDER_FIGURES
-from tvb_epilepsy.base.constants import SHOW_FLAG, SAVE_FLAG, FIG_FORMAT, VERY_LARGE_SIZE
+from tvb_epilepsy.base.configurations import FOLDER_FIGURES, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict
 from tvb_epilepsy.base.utils.math_utils import normalize_weights, compute_in_degree
 from tvb_epilepsy.base.utils.plot_utils import plot_regions2regions, save_figure, check_show, plot_vector

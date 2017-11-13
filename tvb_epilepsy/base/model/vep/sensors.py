@@ -4,8 +4,7 @@ import numpy as np
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from tvb_epilepsy.base.configurations import FOLDER_FIGURES
-from tvb_epilepsy.base.constants import SHOW_FLAG, SAVE_FLAG, FIG_FORMAT, VERY_LARGE_SIZE
+from tvb_epilepsy.base.configurations import FOLDER_FIGURES, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list
 from tvb_epilepsy.base.utils.math_utils import compute_projection, select_greater_values_array_inds
