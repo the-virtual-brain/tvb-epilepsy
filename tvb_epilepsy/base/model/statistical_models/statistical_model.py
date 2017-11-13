@@ -42,34 +42,3 @@ class StatisticalModel(object):
             filename = self.name + ".h5"
         h5_model = self._prepare_for_h5()
         h5_model.write_to_h5(folder, filename)
-
-    def plot(self, mode="", **kwargs):
-        if isequal_string(mode, "single_figure"):
-            self.plot_single_figure(**kwargs)
-        else:
-            self.plot_multiple_figures(**kwargs)
-
-    def plot_multiple_figures(self, **kwargs):
-        kwargs.update({"figure_dir": kwargs.get("figure_dir", os.path.join(FOLDER_FIGURES,
-                                                                           "statistical_model_" +
-                                                                           self.name.replace(" ", "_")))})
-        for p in self.parameters:
-            kwargs.update({"title": p.name.replace(" ", "_")})
-            p.plot(**kwargs)
-
-    def plot_single_figure(self, **kwargs):
-        nparams2 = np.sqrt(self.n_parameters)
-        n_rows = np.int(np.ceil(nparams2))
-        n_cols = np.int(np.floor(nparams2))
-        while n_rows * n_cols < self.n_parameters:
-            n_rows +=1
-        fig, axes = kwargs.get("fig", pl.subplot(n_rows, n_cols,
-                                          title=kwargs.get("title", "statistical_model_" +
-                                                                           self.name.replace(" ", "_")),
-                                          figsize=kwargs.get("figsize", VERY_LARGE_SIZE)))
-
-        kwargs.update({"fig": fig})
-        for (p, ax) in (self.parameters, axes):
-            kwargs.update({"ax": ax, "subtitle": p.name.replace(" ", "_")})
-            p.plot(**kwargs)
-
