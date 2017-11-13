@@ -12,16 +12,16 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.discre
 
 class BinomialDistribution(DiscreteProbabilityDistribution):
 
-    def __init__(self, n=1, p=0.5):
+    def __init__(self, **params):
         self.name = "bionomial"
         self.scipy_name = "binom"
         self.numpy_name = "binomial"
         self.constraint_string = "n > 0 and 0 < p < 1"
-        self.n = make_int(n)
-        self.p = make_float(p)
+        self.n = make_int(params.get("n", 1))
+        self.p = make_float(params.get("p", 0.5))
         self.__update_params__(n=self.n, p=self.p)
 
-    def params(self):
+    def pdf_params(self):
         p = OrderedDict()
         p.update(zip(["n", "p"], [self.n, self.p]))
         return p

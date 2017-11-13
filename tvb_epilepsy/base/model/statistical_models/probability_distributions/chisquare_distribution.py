@@ -11,12 +11,12 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.contin
 
 class ChisquareDistribution(ContinuousProbabilityDistribution):
 
-    def __init__(self, df=1):
+    def __init__(self, params):
         self.name = "chisquare"
         self.scipy_name = "chi"
         self.numpy_name = "chisquare"
-        self.constraint_string = "int(k) > 0"
-        self.df = make_int(df)
+        self.constraint_string = "int(df) > 0"
+        self.df = make_int(params.get("df", 1))
         self.__update_params__(df=self.df)
 
     def __str__(self):
@@ -25,7 +25,7 @@ class ChisquareDistribution(ContinuousProbabilityDistribution):
         this_str += "\n" + "13. degrees of freedom" + " = " + str(self.df) + "}"
         return this_str
 
-    def params(self, parametrization="df"):
+    def pdf_params(self, parametrization="df"):
         return {"df": self.df}
 
     def update_params(self, **params):

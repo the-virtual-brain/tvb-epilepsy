@@ -343,8 +343,8 @@ class PSEService(object):
                 if iloop > 0:
                     loop_tenth += 1
             # print "\nParameters:"
-            # for ii in range(len(params)):
-            #      print self.params_paths[ii] + "[" + str(self.params_indices[ii]) + "] = " + str(params[ii])
+            # for ii in range(len(pdf_params)):
+            #      print self.params_paths[ii] + "[" + str(self.params_indices[ii]) + "] = " + str(pdf_params[ii])
 
             status = False
             output = None

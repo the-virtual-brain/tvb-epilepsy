@@ -28,7 +28,7 @@ class StochasticSamplingService(SamplingService):
         d = {"01. Sampling module": self.sampling_module,
              "02. Sampler": self.sampler,
              "03. Number of samples": self.n_samples,
-             "04. Samples' shape": self.shape,
+             "04. Samples' p_shape": self.shape,
              "05. Random seed": self.random_seed,
              }
         return formal_repr(self, d) + "\n06. Resulting statistics: " + dict_str(self.stats)
@@ -38,7 +38,7 @@ class StochasticSamplingService(SamplingService):
 
     def _prepare_for_h5(self):
         h5_model = convert_to_h5_model({"sampling_module": self.sampling_module, "sampler": self.sampler,
-                                        "n_samples": self.n_samples, "shape": self.shape,
+                                        "n_samples": self.n_samples, "p_shape": self.shape,
                                         "random_seed": self.random_seed, "stats": self.stats})
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         return h5_model
@@ -56,10 +56,10 @@ class StochasticSamplingService(SamplingService):
     def sample(self, parameter=(), **kwargs):
         nr.seed(self.random_seed)
         if isinstance(parameter, Parameter):
-            parameter_shape = parameter.shape
+            parameter_shape = parameter.p_shape
             low = parameter.low
             high = parameter.high
-            prob_distr = parameter.probability_distribution
+            prob_distr = parameter
         else:
             parameter_shape = kwargs.pop("shape", (1,))
             low = kwargs.pop("low", -MAX_SINGLE_VALUE)

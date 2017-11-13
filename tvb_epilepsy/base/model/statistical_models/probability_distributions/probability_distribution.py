@@ -1,13 +1,13 @@
 
 from abc import ABCMeta, abstractmethod
-from copy import deepcopy
 
 import numpy as np
 from scipy.optimize import minimize
 
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_size
-from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
+
 
 AVAILABLE_DISTRIBUTIONS = ["uniform", "normal", "gamma", "lognormal", "exponential", "beta", "chisquare",
                            "binomial", "bernoulli", "poisson"]
@@ -17,10 +17,10 @@ class ProbabilityDistribution(object):
 
     __metaclass__ = ABCMeta
 
-    name = ""
+    type = ""
     n_params = 0.0
-    pdf_shape = ()
-    pdf_size = 0
+    p_shape = ()
+    p_size = 0
     constraint_string = ""
     mean = None
     median = None
@@ -37,11 +37,11 @@ class ProbabilityDistribution(object):
         pass
 
     def __repr__(self):
-        d = {"1. name": self.name,
-             "2. params": self.params(),
+        d = {"1. type": self.type,
+             "2. pdf_params": self.pdf_params(),
              "3. n_params": self.n_params,
              "4. constraint": self.constraint_string,
-             "5. pdf shape": self.pdf_shape,
+             "5. shape": self.p_shape,
              "5. mean": self.mean,
              "6. median": self.median,
              "7. mode": self.mode,
@@ -63,20 +63,20 @@ class ProbabilityDistribution(object):
 
     def write_to_h5(self, folder, filename=""):
         if filename == "":
-            filename = self.name + ".h5"
+            filename = self.type + ".h5"
         h5_model = self._prepare_for_h5()
         h5_model.write_to_h5(folder, filename)
 
     def __update_params__(self, check_constraint=True, **params):
         if len(params) == 0:
-            params = self.params()
+            params = self.pdf_params()
         self.__set_params__(**params)
-        self.pdf_shape = self.__calc_shape__()
-        self.pdf_size = shape_to_size(self.pdf_shape)
-        self.n_params = len(self.params())
+        self.p_shape = self.__calc_shape__()
+        self.p_size = shape_to_size(self.p_shape)
+        self.n_params = len(self.pdf_params())
         if check_constraint and not(self.__check_constraint__()):
-            raise_value_error("Constraint for " + self.name + " distribution " + self.constraint_string +
-                              "\nwith parameters " + str(self.params()) + " is not satisfied!")
+            raise_value_error("Constraint for " + self.type + " distribution " + self.constraint_string +
+                              "\nwith parameters " + str(self.pdf_params()) + " is not satisfied!")
         self.mean = self.calc_mean()
         self.median = self.calc_median()
         self.mode = self.calc_mode_manual()
@@ -93,21 +93,21 @@ class ProbabilityDistribution(object):
         return np.all(self.constraint() > 0)
 
     def __calc_shape__(self):
-        psum = np.zeros(self.pdf_shape)
-        for pval in self.params().values():
+        psum = np.zeros(self.p_shape)
+        for pval in self.pdf_params().values():
             psum += np.array(pval, dtype='f')
         return psum.shape
 
     def __shape_parameters__(self, shape=None):
         if isinstance(shape, tuple):
-            self.pdf_shape = shape
-        i1 = np.ones(self.pdf_shape)
-        for p_key in self.params().keys():
+            self.p_shape = shape
+        i1 = np.ones(self.p_shape)
+        for p_key in self.pdf_params().keys():
             setattr(self, p_key, getattr(self, p_key) * i1)
         self.__update_params__()
 
     @abstractmethod
-    def params(self):
+    def pdf_params(self):
         pass
 
     @abstractmethod
@@ -195,31 +195,31 @@ class ProbabilityDistribution(object):
         else:
             return self.calc_kurt_manual()
 
-    def compute_and_update_params(self, target_shape=None, constraints=[], **target_stats):
+    def compute_and_update_pdf_params(self, target_shape=None, constraints=[], **target_stats):
         if target_shape is None:
-            target_shape = self.pdf_shape
-        self.update_params(**(compute_distributions_params(self.name, target_stats, target_shape, constraints)))
+            target_shape = self.p_shape
+        self.update_params(**(compute_pdf_params(self.type, target_stats, target_shape, constraints)))
 
 
-def generate_distribution(distrib_name, target_shape=None, constraints=[], **target):
-    if np.in1d(distrib_name.lower(), AVAILABLE_DISTRIBUTIONS):
-        exec("from ." + distrib_name.lower() + "_distribution import " + distrib_name.title() + "Distribution")
-        distribution = eval(distrib_name.title() + "Distribution()")
+def generate_distribution(distrib_type, target_shape=None, constraints=[], **target):
+    if np.in1d(distrib_type.lower(), AVAILABLE_DISTRIBUTIONS):
+        exec("from ." + distrib_type.lower() + "_distribution import " + distrib_type.title() + "Distribution")
+        distribution = eval(distrib_type.title() + "Distribution()")
         if isinstance(target_shape, tuple):
             distribution.__shape_parameters__(target_shape)
         if len(target) > 0:
             try:
                 distribution.update(**target)
             except:
-                target = compute_distributions_params(distribution.name, target, target_shape, constraints)
+                target = compute_pdf_params(distribution.type, target, target_shape, constraints)
                 distribution.update_params(**target)
         return distribution
     else:
-        raise_value_error(distrib_name + " is not one of the available distributions!: " + str(AVAILABLE_DISTRIBUTIONS))
+        raise_value_error(distrib_type + " is not one of the available distributions!: " + str(AVAILABLE_DISTRIBUTIONS))
 
 
 # This function converts the parameters' vector to the parameters' dictionary
-def construct_params_dict(p, p_keys, pdf_shape, pdf_size):
+def construct_pdf_params_dict(p, p_keys, pdf_shape, pdf_size):
     # Make sure p in denormalized and of float64 type
     # TODO solve the problem for integer distribution parameters...
     p = p.astype(np.float64)
@@ -232,7 +232,7 @@ def construct_params_dict(p, p_keys, pdf_shape, pdf_size):
 # Scalar objective  function
 def fobj(p, pdf_name, pdf_shape, target_stats):
     pdf = generate_distribution(pdf_name, target_shape=pdf_shape)
-    params = construct_params_dict(p, pdf.params().keys(), pdf.pdf_shape, pdf.pdf_size)
+    params = construct_pdf_params_dict(p, pdf.pdf_params().keys(), pdf.pdf_shape, pdf.pdf_size)
     pdf.__update_params__(check_constraint=False, **params)
     f = 0.0
     for ts_key, ts_val in target_stats.iteritems():
@@ -243,19 +243,19 @@ def fobj(p, pdf_name, pdf_shape, target_stats):
 # Vector constraint function. By default expr >= 0
 def fconstr(p, pdf_name, pdf_shape):
     pdf = generate_distribution(pdf_name, target_shape=pdf_shape)
-    params = construct_params_dict(p, pdf.params().keys(), pdf.pdf_shape, pdf.pdf_size)
+    params = construct_pdf_params_dict(p, pdf.pdf_params().keys(), pdf.pdf_shape, pdf.pdf_size)
     pdf.__update_params__(check_constraint=False, **params)
     return pdf.constraint()
 
 
-def compute_distributions_params(distrib_name, target_stats, target_shape=None, constraints=[]):
-    distribution = generate_distribution(distrib_name, target_shape=target_shape)
+def compute_pdf_params(distrib_type, target_stats, target_shape=None, constraints=[]):
+    distribution = generate_distribution(distrib_type, target_shape=target_shape)
     # Check if the number of target stats is exactly the same as the number of distribution parameters to optimize:
     if len(target_stats) != distribution.n_params:
         raise_value_error("Target parameters are " + str(len(target_stats)) +
-                          ", whereas the characteristic parameters of distribution " + distribution.name +
+                          ", whereas the characteristic parameters of distribution " + distribution.type +
                           " are " + str(distribution.n_params) + "!")
-    # Make sure that tha shapes of distribution, target stats and target shape are all matching one to the other:
+    # Make sure that tha shapes of distribution, target stats and target p_shape are all matching one to the other:
     i1 = np.ones(distribution.pdf_shape)
     try:
         if isinstance(target_shape, tuple):
@@ -275,7 +275,7 @@ def compute_distributions_params(distrib_name, target_stats, target_shape=None, 
         distribution.__shape_parameters__(i1.shape)
     # Preparing initial conditions' parameters' vector:
     params_vector = []
-    for p_val in distribution.params().values():
+    for p_val in distribution.pdf_params().values():
         params_vector += p_val.flatten().tolist()
     params_vector = np.array(params_vector).astype(np.float64)
     # Bounding initial condition:
@@ -283,16 +283,16 @@ def compute_distributions_params(distrib_name, target_stats, target_shape=None, 
     params_vector[np.where(params_vector < -10.0)[0]] = -10.0
     # Preparing contraints:
     constraints.append({"type": "ineq", "fun": lambda p, pdf_name, pdf_shape: fconstr(p, pdf_name, pdf_shape),
-                        "args": (distribution.name, distribution.pdf_shape)})
+                        "args": (distribution.type, distribution.pdf_shape)})
     # Run optimization
-    sol = minimize(fobj, params_vector, args=(distribution.name, distribution.pdf_shape, target_stats), method="COBYLA",
+    sol = minimize(fobj, params_vector, args=(distribution.type, distribution.pdf_shape, target_stats), method="COBYLA",
                    constraints=constraints, options={"tol": 10 ** -6, "catol": 10 ** -12})
     if sol.success:
         if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
             raise_value_error("nan or inf values in solution x\n" + sol.message)
         if sol.fun > 10 ** -6:
             warning("Not accurate solution! sol.fun = " + str(sol.fun))
-        return construct_params_dict(sol.x, distribution.params().keys(), distribution.pdf_shape, distribution.pdf_size)
+        return construct_pdf_params_dict(sol.x, distribution.pdf_params().keys(), distribution.pdf_shape, distribution.pdf_size)
     else:
         raise_value_error(sol.message)
 

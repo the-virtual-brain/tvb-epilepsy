@@ -23,7 +23,7 @@ class SalibSamplingService(StochasticSamplingService):
 
     def sample(self, parameter=(), **kwargs):
         if isinstance(parameter, Parameter):
-            parameter_shape = parameter.shape
+            parameter_shape = parameter.p_shape
             low = parameter.low
             high = parameter.high
         else:

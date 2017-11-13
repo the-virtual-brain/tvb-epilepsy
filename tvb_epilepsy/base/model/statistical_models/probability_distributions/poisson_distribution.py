@@ -20,7 +20,7 @@ class PoissoniDistribution(DiscreteProbabilityDistribution):
         self.__update_params__(lamda=self.lamda)
         self.mu = self.lamda
 
-    def params(self, parametrization="lamda"):
+    def pdf_params(self, parametrization="lamda"):
         if isequal_string(parametrization, "scipy"):
             return {"mu": self.mu}
         elif isequal_string(parametrization, "numpy"):
@@ -51,9 +51,9 @@ class PoissoniDistribution(DiscreteProbabilityDistribution):
         return np.int(np.round(self.lamda + 1.0/3 - 0.02 / self.lamda))
 
     def calc_mode_manual(self):
-        mode = np.ones(np.array(self.params["p"]).shape)
-        mode[np.where(self.params["p"] < 0.5)[0]] = 0.0
-        p05 = self.params["p"] == 0.5
+        mode = np.ones(np.array(self.pdf_params["p"]).shape)
+        mode[np.where(self.pdf_params["p"] < 0.5)[0]] = 0.0
+        p05 = self.pdf_params["p"] == 0.5
         if np.any(p05):
             warning("The mode of poisson distribution for p=0.5 consists of two values (lamda-1 and lamda)!")
             mode = mode.astype('O')

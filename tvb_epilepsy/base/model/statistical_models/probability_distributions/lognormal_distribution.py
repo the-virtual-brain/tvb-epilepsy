@@ -18,15 +18,15 @@ class LognormalDistribution(ContinuousProbabilityDistribution):
         self.numpy_name = "lognormal"
         self.constraint_string = "sigma > 0"
         self.mean = make_float(params.get("mean", np.log(params.get("scale", 1.0))))
-        self.sigma = make_float(params.get("sigma", params.get("shape", 1.0)))
+        self.sigma = make_float(params.get("sigma", params.get("p_shape", 1.0)))
         self.__update_params__(mean=self.mean, sigma=self.sigma)
         self.shape = self.sigma
         self.scale = np.exp(self.mean)
 
-    def params(self, parametrization="mean-sigma"):
+    def pdf_params(self, parametrization="mean-sigma"):
         p = OrderedDict()
         if isequal_string(parametrization, "scipy") or isequal_string(parametrization, "numpy"):
-            p.update(zip(["shape", "scale"], [self.shape, self.scale]))
+            p.update(zip(["p_shape", "scale"], [self.shape, self.scale]))
             return p
         else:
             p.update(zip(["mean", "sigma"], [self.mean, self.sigma]))
@@ -34,7 +34,7 @@ class LognormalDistribution(ContinuousProbabilityDistribution):
         
     def update_params(self, **params):
         self.__update_params__(mean=make_float(params.get("mean", np.log(params.get("scale", self.scale))),
-                               sigma=make_float(params.get("sigma", params.get("shape", self.shape)))))
+                               sigma=make_float(params.get("sigma", params.get("p_shape", self.shape)))))
         self.shape = self.sigma
         self.scale = np.exp(self.mean)
         

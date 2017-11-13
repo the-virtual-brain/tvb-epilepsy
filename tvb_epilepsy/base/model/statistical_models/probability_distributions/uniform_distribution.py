@@ -30,7 +30,7 @@ class UniformDistribution(ContinuousProbabilityDistribution):
         self.loc = self.a
         self.scale = self.b - self.a
 
-    def params(self, parametrization="a-b"):
+    def pdf_params(self, parametrization="a-b"):
         p = OrderedDict()
         if isequal_string(parametrization, "scipy"):
             p.update(zip(["loc", "scale"], [self.loc, self.scale]))

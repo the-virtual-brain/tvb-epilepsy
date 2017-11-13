@@ -17,8 +17,8 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         self.name = "gamma"
         self.scipy_name = "gamma"
         self.numpy_name = "gamma"
-        self.constraint_string = "shape > 0 and scale > 0"
-        self.shape = make_float(params.get("shape", params.get("alpha", params.get("k", 1.0))))
+        self.constraint_string = "p_shape > 0 and scale > 0"
+        self.shape = make_float(params.get("p_shape", params.get("alpha", params.get("k", 1.0))))
         self.scale = make_float(params.get("scale", params.get("theta",
                                                                1.0 / params.get("beta", params.get("rate", 1.0)))))
         self.k = self.shape
@@ -36,7 +36,7 @@ class GammaDistribution(ContinuousProbabilityDistribution):
                     "\n" + "16. beta" + " = " + str(self.beta) + "}"
         return this_str
 
-    def params(self, parametrization="shape-scale"):
+    def pdf_params(self, parametrization="p_shape-scale"):
         p = OrderedDict()
         if isequal_string(parametrization, "alpha-beta"):
             p.update(zip(["alpha", "beta"], [self.alpha, self.beta]))
@@ -44,18 +44,18 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         elif isequal_string(parametrization, "k-theta"):
             p.update(zip(["k", "theta"], [self.k, self.theta]))
             return p
-        elif isequal_string(parametrization, "shape-rate"):
-            p.update(zip(["shape", "rate"], [self.shape, 1.0 / self.scale]))
+        elif isequal_string(parametrization, "p_shape-rate"):
+            p.update(zip(["p_shape", "rate"], [self.shape, 1.0 / self.scale]))
             return p
         elif isequal_string(parametrization, "scipy"):
             p.update(zip(["a", "scale"], [self.shape, self.scale]))
             return p
         else:
-            p.update(zip(["shape", "scale"], [self.shape, self.scale]))
+            p.update(zip(["p_shape", "scale"], [self.shape, self.scale]))
             return p
 
     def update_params(self, **params):
-        self.__update_params__(shape=make_float(params.get("shape", params.get("alpha", params.get("k", self.shape)))),
+        self.__update_params__(shape=make_float(params.get("p_shape", params.get("alpha", params.get("k", self.shape)))),
                                scale=make_float(params.get("scale",
                                          params.get("theta", 1.0 / params.get("beta", params.get("rate", self.beta))))))
         self.k = self.shape
@@ -85,7 +85,7 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         if self.shape >= 1.0:
             return (self.shape - 1.0) * self.scale
         else:
-            warning("Mode cannot be calculate for gamma distribution when the shape parameter is smaller than 1.0! "
+            warning("Mode cannot be calculate for gamma distribution when the p_shape parameter is smaller than 1.0! "
                     "Returning nan!")
             return np.nan
 

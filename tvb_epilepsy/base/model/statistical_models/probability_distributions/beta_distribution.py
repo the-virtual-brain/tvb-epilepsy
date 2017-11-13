@@ -24,7 +24,7 @@ class BetaDistribution(ContinuousProbabilityDistribution):
         self.b = self.beta
         self.__update_params__(alpha=self.alpha, beta=self.beta)
 
-    def params(self, parametrization="alpha-beta"):
+    def pdf_params(self, parametrization="alpha-beta"):
         p = OrderedDict()
         if isequal_string(parametrization, "a-b") or \
            isequal_string(parametrization, "scipy") or \

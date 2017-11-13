@@ -10,15 +10,15 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.discre
 
 class BernoulliDistribution(DiscreteProbabilityDistribution):
 
-    def __init__(self, p=0.5):
+    def __init__(self, **params):
         self.name = "bernoulli"
         self.scipy_name = "bernoulli"
         self.numpy_name = ""
         self.constraint_string = "0 < p < 1"
-        self.p = make_float(p)
+        self.p = make_float(params.get("p", 0.5))
         self.__update_params__(p=self.p)
 
-    def params(self):
+    def pdf_params(self):
         return {"p": self.p}
 
     def update_params(self, **params):
@@ -53,7 +53,6 @@ class BernoulliDistribution(DiscreteProbabilityDistribution):
             mode = mode.astype('O')
             mode[np.where(p05)[0]] = (0.0, 1.0)
         return mode
-
 
     def calc_var_manual(self):
         return self.p * (1 - self.p)

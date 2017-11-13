@@ -27,7 +27,7 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
         this_str += "\n" + "13. rate or lamda" + " = " + str(self.rate) + "}"
         return this_str
 
-    def params(self, parametrization="lamda"):
+    def pdf_params(self, parametrization="lamda"):
         if isequal_string(parametrization, "lamda"):
             return {"lamda": self.lamda}
         elif isequal_string(parametrization, "rate"):

@@ -12,18 +12,18 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.contin
 
 class NormalDistribution(ContinuousProbabilityDistribution):
 
-    def __init__(self, mean=0.0, sigma=1.0):
+    def __init__(self, **params):
         self.name = "normal"
         self.scipy_name = "norm"
         self.numpy_name = "normal"
-        self.mean = make_float(mean)
-        self.sigma = make_float(sigma)
+        self.mean = make_float(params.get("mean", params.get("loc", 0.0)))
+        self.sigma = make_float(make_float(params.get("sigma", params.get("scale", 1.0))))
         self.loc = self.mean
         self.scale = self.sigma
         self.constraint_string = "sigma > 0"
         self.__update_params__(mean=self.mean, sigma=self.sigma)
 
-    def params(self, parametrization="mean-sigma"):
+    def pdf_params(self, parametrization="mean-sigma"):
         p = OrderedDict()
         if isequal_string(parametrization, "scipy") or isequal_string(parametrization, "numpy"):
             p.update(zip(["loc", "scale"], [self.loc, self.scale]))
