@@ -4,8 +4,9 @@ import numpy as np
 
 from tvb_epilepsy.base.constants import MAX_SINGLE_VALUE
 from tvb_epilepsy.base.configurations import VERY_LARGE_SIZE
+from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_ndim, \
-                                                                                                            ensure_list
+                                                                                             shape_to_size, ensure_list
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
                                                                                                      compute_pdf_params
@@ -54,38 +55,6 @@ def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=
 
         def write_to_h5(self, folder, filename=""):
             Parameter.write_to_h5(self)
-
-    #     def plot(self, **kwargs):
-    #         mode = ensure_list(kwargs.get("mode", "pdf"))
-    #         output = []
-    #         if "pdf" in mode:
-    #             pdf_fig, pdf_ax = self.plot_pdf(**kwargs)
-    #             output = [pdf_fig, pdf_ax]
-    #         if len(mode) > 0 or not (isequal_string(mode[0], "pdf")):
-    #             stats_fig, stats_ax = self.plot_stats(**kwargs.get("stats", {}))
-    #             return tuple(output + [stats_fig, stats_ax])
-    #         else:
-    #             return tuple(output)
-    #     #
-    #     # def plot_stats(self, **kwargs):
-    # #     raise_not_implemented_error()
-    # #
-    # def plot_pdf(self, **kwargs):
-    #     ndim = shape_to_ndim(self.p_shape)
-    #     low = kwargs.get("low", -np.inf)
-    #     high = kwargs.get("high", np.inf)
-    #     ax = kwargs.get("ax", None)
-    #     fig = kwargs.get("fig")
-    #     if ax is None:
-    #         pdf_size2 = np.sqrt(self.p_size)
-    #         n_rows = np.int(np.ceil(pdf_size2))
-    #         n_cols = np.int(np.floor(pdf_size2))
-    #         if fig is None:
-    #             fig, axes = pl.subplot(n_rows, n_cols, title=kwargs.get("title", self.name + " pdf",
-    #                                                                     figsize=kwargs.get("figsize", VERY_LARGE_SIZE)))
-    #         else:
-    #             axes = fig.add_subplot(n_rows, n_cols, title=kwargs.get("title", self.name + " pdf",
-    #                                                                     figsize=kwargs.get("figsize", VERY_LARGE_SIZE)))
 
     return StochasticParameter(name, low, high, shape, **pdf_params)
 
