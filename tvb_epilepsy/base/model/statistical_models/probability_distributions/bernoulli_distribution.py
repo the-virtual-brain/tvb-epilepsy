@@ -39,20 +39,22 @@ class BernoulliDistribution(DiscreteProbabilityDistribution):
         return self.p
 
     def calc_median_manual(self):
-        median = 0.5 * np.ones(np.array(self.p).shape)
+        median = 0.5 * np.ones(np.array(self.p * np.ones((1,))).shape)
         median[np.where(self.p < 0.5)[0]] = 0.0
         median[np.where(self.p > 0.5)[0]] = 1.0
-        return median
+        return np.reshape(median, self.p_shape)
 
     def calc_mode_manual(self):
-        mode = np.ones(np.array(self.p).shape)
-        mode[np.where(self.p < 0.5)[0]] = 0.0
-        p05 = self.p == 0.5
+        p = np.array(self.p)
+        shape = p.shape
+        mode = np.ones(p * np.ones((1,)).shape)
+        mode[np.where(p < 0.5)[0]] = 0.0
+        p05 = p == 0.5
         if np.any(p05):
             warning("The mode of bernoulli distribution for p=0.5 consists of two values (0.0 and 1.0)!")
             mode = mode.astype('O')
             mode[np.where(p05)[0]] = (0.0, 1.0)
-        return mode
+        return np.reshape(mode, shape)
 
     def calc_var_manual(self):
         return self.p * (1 - self.p)

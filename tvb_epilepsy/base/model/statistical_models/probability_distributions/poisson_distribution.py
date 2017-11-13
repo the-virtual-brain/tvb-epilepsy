@@ -51,14 +51,17 @@ class PoissoniDistribution(DiscreteProbabilityDistribution):
         return np.int(np.round(self.lamda + 1.0/3 - 0.02 / self.lamda))
 
     def calc_mode_manual(self):
-        mode = np.ones(np.array(self.pdf_params["p"]).shape)
-        mode[np.where(self.pdf_params["p"] < 0.5)[0]] = 0.0
-        p05 = self.pdf_params["p"] == 0.5
+        shape = np.array(self.p).shape
+        mode = np.ones(np.array(self.p * np.ones((1,))).shape)
+        mode[np.where(self.p < 0.5)[0]] = 0.0
+        p05 = self.p == 0.5
         if np.any(p05):
             warning("The mode of poisson distribution for p=0.5 consists of two values (lamda-1 and lamda)!")
             mode = mode.astype('O')
-            lamda = make_int(np.round(self.lamda))
-            mode[np.where(p05)[0]] = (lamda - 1, lamda)
+            lamda = make_int(np.round(self.lamda * np.ones((1,))))
+            p05 = np.where(p05)[0]
+            mode[p05] = (lamda[p05] - 1, lamda[p05])
+        return np.reshape(mode, shape)
 
     def calc_var_manual(self):
         return self.lamda

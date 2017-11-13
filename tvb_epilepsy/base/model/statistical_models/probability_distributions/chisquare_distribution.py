@@ -49,12 +49,12 @@ class ChisquareDistribution(ContinuousProbabilityDistribution):
         return self.df * (1 - 2.0 / (9 * self.df)) ** 3
 
     def calc_mode_manual(self):
-        kmax = np.array(self.df, dtype='i')
-        shape = kmax.shape
-        kmax = (np.max(kmax.flatten()) - 2).tolist()
-        for id in range(len(kmax)):
-            kmax[id] = np.max([kmax[id], 0])
-        return np.reshape(kmax, shape)
+        shape = np.array(self.df).shape
+        dfmax = np.array(self.df * np.ones((1,)), dtype='i')
+        dfmax = (np.max(dfmax.flatten()) - 2).tolist()
+        for id in range(len(dfmax)):
+            dfmax[id] = np.max([dfmax[id], 0])
+        return np.reshape(dfmax, shape)
 
     def calc_var_manual(self):
         return 2 * self.df

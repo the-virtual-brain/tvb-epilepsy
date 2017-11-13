@@ -18,8 +18,8 @@ class BetaDistribution(ContinuousProbabilityDistribution):
         self.scipy_name = "beta"
         self.numpy_name = "beta"
         self.constraint_string = "alpha > 0 and beta > 0"
-        self.alpha = make_float(params.get("alpha", params.get("a", 1.0)))
-        self.beta = make_float(params.get("beta", params.get("b", 1.0)))
+        self.alpha = make_float(params.get("alpha", params.get("a", 2.0)))
+        self.beta = make_float(params.get("beta", params.get("b", 2.0)))
         self.a = self.alpha
         self.b = self.beta
         self.__update_params__(alpha=self.alpha, beta=self.beta)
@@ -52,38 +52,39 @@ class BetaDistribution(ContinuousProbabilityDistribution):
     def numpy(self, size=(1,)):
         return lambda: nr.beta(a=self.alpha, b=self.beta, size=size)
 
-    def calc_mean_manual(self, use="scipy"):
-        if isequal_string(use, "scipy"):
-            return self.scipy().stats(moments="m")
-        else:
-            return self.alpha / (self.alpha + self.beta)
+    def calc_mean_manual(self):
+        return self.alpha / (self.alpha + self.beta)
 
-    def calc_median_manual(self, use="scipy"):
+    def calc_median_manual(self):
+        shape = (self.a + self.b).shape
+        i1 = np.ones((1,))
+        alpha = self.alpha * i1
+        beta = self.beta * i1
         id = self.alpha > 1.0 and self.beta > 1.0
-        if np.any(id==False):
+        if np.any(id == False):
             warning("No closed form of median for beta distribution for alpha or beta <= 1.0!" + "\nReturning nan!")
-            alpha = np.array(self.alpha)
-            beta = np.array(self.beta)
             median = np.nan((alpha+beta).shape)
             id = np.where(id)[0]
             median[id] = (alpha[id] - 1.0/3) / (alpha[id] + beta[id] - 2.0/3)
+            return np.reshape(median, shape)
         else:
             warning("Approximate calculation for median of beta distribution!")
-            median = (self.alpha - 1.0/3) / (self.alpha + self.beta - 2.0/3)
-        return median
+            return (self.alpha - 1.0/3) / (self.alpha + self.beta - 2.0/3)
 
     def calc_mode_manual(self):
+        shape = (self.a + self.b).shape
+        i1 = np.ones((1,))
+        alpha = self.alpha * i1
+        beta = self.beta * i1
         id = self.alpha > 1.0 and self.beta > 1.0
         if np.any(id==False):
             warning("No closed form of mode for beta distribution for alpha or beta <= 1.0!" + "\nReturning nan!")
-            alpha = np.array(self.alpha)
-            beta = np.array(self.beta)
-            mode = np.nan((alpha + beta).shape)
+            mode = np.nan * np.ones((alpha + beta).shape)
             id = np.where(id)[0]
-            mode[id] =  (alpha[id] - 1.0) / (alpha[id] + beta[id] - 2.0)
+            mode[id] = (alpha[id] - 1.0) / (alpha[id] + beta[id] - 2.0)
+            return np.reshape(mode, shape)
         else:
-            mode = (self.alpha - 1.0) / (self.alpha + self.beta - 2.0)
-        return mode
+            return(self.alpha - 1.0) / (self.alpha + self.beta - 2.0)
 
     def calc_var_manual(self):
         a_plus_b = self.alpha + self.beta

@@ -20,8 +20,8 @@ def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=
 
     class StochasticParameter(Parameter, ProbabilityDistribution):
 
-        def __init__(self, name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, shape=(1,), **pdf_params):
-            Parameter.__init__(self, name, low, high, shape)
+        def __init__(self, name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, p_shape=(1,), **pdf_params):
+            Parameter.__init__(self, name, low, high, p_shape)
             ProbabilityDistribution.__init__(self, **pdf_params)
 
         def __repr__(self):

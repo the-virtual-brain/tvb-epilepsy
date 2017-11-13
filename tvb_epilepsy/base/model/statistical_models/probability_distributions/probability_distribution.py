@@ -95,7 +95,7 @@ class ProbabilityDistribution(object):
     def __calc_shape__(self):
         psum = np.zeros(self.p_shape)
         for pval in self.pdf_params().values():
-            psum += np.array(pval, dtype='f')
+            psum = psum + np.array(pval, dtype='f')
         return psum.shape
 
     def __shape_parameters__(self, shape=None):
@@ -169,7 +169,7 @@ class ProbabilityDistribution(object):
     def calc_mode(self, use="scipy"):
         if isequal_string(use, "scipy"):
             warning("No scipy calculation for mode! Switching to manual -following wikipedia- calculation!")
-        self.calc_mode_manual()
+        return self.calc_mode_manual()
 
     def calc_var(self, use="scipy"):
         if isequal_string(use, "scipy"):
@@ -205,14 +205,14 @@ def generate_distribution(distrib_type, target_shape=None, **target):
     if np.in1d(distrib_type.lower(), AVAILABLE_DISTRIBUTIONS):
         exec("from ." + distrib_type.lower() + "_distribution import " + distrib_type.title() + "Distribution")
         distribution = eval(distrib_type.title() + "Distribution()")
-        if isinstance(target_shape, tuple):
-            distribution.__shape_parameters__(target_shape)
         if len(target) > 0:
             try:
                 distribution.update(**target)
             except:
-                target = compute_pdf_params(distribution.type, target, target_shape)
+                target = compute_pdf_params(distribution.type, target)
                 distribution.update_params(**target)
+        if isinstance(target_shape, tuple):
+            distribution.__shape_parameters__(target_shape)
         return distribution
     else:
         raise_value_error(distrib_type + " is not one of the available distributions!: " + str(AVAILABLE_DISTRIBUTIONS))
@@ -235,8 +235,8 @@ def fobj(p, pdf, target_stats):
     pdf.__update_params__(check_constraint=False, **params)
     f = 0.0
     for ts_key, ts_val in target_stats.iteritems():
-        f += (getattr(pdf, "calc_" + ts_key)(use="manual") - ts_val) ** 2
-    return f
+        f += np.sum((getattr(pdf, "calc_" + ts_key)() - ts_val) ** 2)
+    return f.flatten()
 
 
 # Vector constraint function. By default expr >= 0
@@ -246,8 +246,8 @@ def fconstr(p, pdf):
     return pdf.constraint()
 
 
-def compute_pdf_params(distrib_type, target_stats, target_shape=None):
-    distribution = generate_distribution(distrib_type, target_shape=target_shape)
+def compute_pdf_params(distrib_type, target_stats):
+    distribution = generate_distribution(distrib_type, target_shape=())
     # Check if the number of target stats is exactly the same as the number of distribution parameters to optimize:
     if len(target_stats) != distribution.n_params:
         raise_value_error("Target parameters are " + str(len(target_stats)) +
@@ -256,14 +256,8 @@ def compute_pdf_params(distrib_type, target_stats, target_shape=None):
     # Make sure that tha shapes of distribution, target stats and target p_shape are all matching one to the other:
     i1 = np.ones(distribution.p_shape)
     try:
-        if isinstance(target_shape, tuple):
-            i1 *= np.ones(target_shape)
-    except:
-        raise_value_error("Target (" + str(target_shape) +
-                          ") and distribution (" + str(distribution.p_shape) + ") shapes do not propagate!")
-    try:
         for ts in target_stats.values():
-            i1 *= np.ones(np.array(ts).shape)
+            i1 = i1 * np.ones(np.array(ts).shape)
     except:
         raise_value_error("Target statistics (" + str([np.array(ts).shape for ts in target_stats.values()]) +
                           ") and distribution (" + str(distribution.p_shape) + ") shapes do not propagate!")
@@ -283,7 +277,7 @@ def compute_pdf_params(distrib_type, target_stats, target_shape=None):
     constraints = {"type": "ineq", "fun": lambda p: fconstr(p, distribution)}
     # Run optimization
     sol = minimize(fobj, params_vector, args=(distribution, target_stats), method="COBYLA",
-                   constraints=constraints, options={"tol": 10 ** -6, "catol": 10 ** -12})
+                   constraints=constraints, options={"tol": 10 ** -12, "catol": 10 ** -12})
     if sol.success:
         if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
             raise_value_error("nan or inf values in solution x\n" + sol.message)
