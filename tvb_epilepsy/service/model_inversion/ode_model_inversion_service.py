@@ -1,6 +1,10 @@
+
+import os
+
 import numpy as np
 
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
+from tvb_epilepsy.base.configurations import FOLDER_RES, STATS_MODELS_PATH
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
@@ -18,12 +22,14 @@ LOG = initialize_logger(__name__)
 class OdeModelInversionService(ModelInversionService):
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None,
-                 model=None, model_code=None, model_code_path="", target_data=None, target_data_type="", time=None,
+                 model_name="vep_ode", model=None, model_dir=os.path.join(FOLDER_RES, "model_inversion"),
+                 model_code=None, model_code_path=os.path.join(STATS_MODELS_PATH, "vep_ode.stan"),
+                 target_data=None, target_data_type="", time=None,
                  logger=LOG, **kwargs):
 
         super(OdeModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
-                                                    model, model_code, model_code_path, target_data, target_data_type,
-                                                    logger)
+                                                       model_name, model, model_dir, model_code, model_code_path,
+                                                       target_data, target_data_type, logger)
 
         (self.n_times, self.n_signals) = self.observation_shape
         if time is None:

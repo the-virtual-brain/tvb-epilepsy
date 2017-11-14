@@ -1,8 +1,11 @@
 
+import os
+
 import numpy as np
 
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF, K_DEF
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.base.configurations import FOLDER_RES
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
@@ -11,6 +14,7 @@ from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
 from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
+from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 
 from tvb.simulator.models import Epileptor
 from tvb_epilepsy.service.model_inversion.pystan_service import PystanService
@@ -26,13 +30,13 @@ LOG = initialize_logger(__name__)
 class ModelInversionService(object):
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, pystan=None,
-                 model=None, model_code=None, model_code_path="", fitmode="sampling",
-                 target_data=None, target_data_type="", logger=LOG, **kwargs):
+                 model_name="", model=None, model_dir=os.path.join(FOLDER_RES, "model_inversion"), model_code=None,
+                 model_code_path="", fitmode="sampling", target_data=None, target_data_type="", logger=LOG, **kwargs):
         self.logger = logger
         self.model_data = {}
         self.estimates = {}
         if pystan is None:
-            self.pystan = PystanService(model, model_code, model_code_path, fitmode, logger)
+            self.pystan = PystanService(model_name, model, model_dir, model_code, model_code_path, fitmode, logger)
         else:
             self.pystan = pystan
         self.target_data_type = target_data_type
@@ -55,6 +59,11 @@ class ModelInversionService(object):
             self.logger.info("Input head set...")
         if isinstance(dynamical_model, AVAILABLE_DYNAMICAL_MODELS):
             self.dynamical_model = dynamical_model
+        elif isinstance(dynamical_model, basestring) and isinstance(self.model_config, ModelConfiguration):
+            try:
+                self.dynamical_model = model_build_dict[dynamical_model](self.model_config)
+            except:
+                warning("Failed to create epileptor model " + dynamical_model)
         self.logger.info("Model Inversion Service instance created!")
 
     def get_epileptor_parameters(self):
@@ -204,4 +213,3 @@ class ModelInversionService(object):
         
     def generate_statistical_model(self, statistical_model_name, **kwargs):
         return StatisticalModel(statistical_model_name, self.generate_model_parameters( **kwargs), self.n_regions)
-

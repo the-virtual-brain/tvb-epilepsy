@@ -13,7 +13,7 @@ import pickle
 
 from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_CR_DEF, VOIS, X0_DEF, E_DEF, TVB, DATA_MODE, \
                                         SIMULATION_MODE
-from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM, STATISTICAL_MODELS_PATH, FOLDER_VEP_HOME, USER_HOME
+from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM, STATS_MODELS_PATH, FOLDER_VEP_HOME, USER_HOME
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_not_implemented_error
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
@@ -47,7 +47,7 @@ else:
 logger = initialize_logger(__name__)
 
 
-def compile_model(model_stan_code_path=os.path.join(STATISTICAL_MODELS_PATH, "vep_autoregress.stan"), **kwargs):
+def compile_model(model_stan_code_path=os.path.join(STATS_MODELS_PATH, "vep_autoregress.stan"), **kwargs):
     tic = time.time()
     logger.info("Compiling model...")
     model = ps.StanModel(file=model_stan_code_path, model_name=kwargs.get("model_name", 'vep_epileptor2D_autoregress'))
@@ -352,11 +352,11 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
     else:
         # vep_original_DP
         if stats_model_name is "vep_dWt":
-            model_path = os.path.join(STATISTICAL_MODELS_PATH, "vep_dWt.stan")
+            model_path = os.path.join(STATS_MODELS_PATH, "vep_dWt.stan")
         elif stats_model_name is "vep_original_x0":
-            model_path = os.path.join(STATISTICAL_MODELS_PATH, "vep_original_x0.stan")
+            model_path = os.path.join(STATS_MODELS_PATH, "vep_original_x0.stan")
         else:
-            model_path = os.path.join(STATISTICAL_MODELS_PATH, "vep_original_DP.stan")
+            model_path = os.path.join(STATS_MODELS_PATH, "vep_original_DP.stan")
         stats_model = compile_model(model_stan_code_path=model_path)
         with open(model_file, 'wb') as f:
             pickle.dump(stats_model, f)

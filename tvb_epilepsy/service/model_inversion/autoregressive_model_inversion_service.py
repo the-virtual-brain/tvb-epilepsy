@@ -1,6 +1,10 @@
+
+import os
+
 import numpy as np
 
 from tvb_epilepsy.base.constants import EPILEPTOR_MODEL_NVARS
+from tvb_epilepsy.base.configurations import STATS_MODELS_PATH, FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.model.parameter import Parameter
@@ -20,11 +24,14 @@ LOG = initialize_logger(__name__)
 class AutoregressiveModelInversionService(OdeModelInversionService):
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None,
-                 model=None, model_code=None, model_code_path="", target_data=None, target_data_type="", time=None,
+                 model_name="vep_autoregress", model=None, model_dir=os.path.join(FOLDER_RES, "model_inversion"),
+                 model_code=None, model_code_path=os.path.join(STATS_MODELS_PATH, "vep_autoregress.stan"),
+                 target_data=None, target_data_type="", time=None,
                  logger=LOG):
 
         super(AutoregressiveModelInversionService, self).__init__(model_configuration, hypothesis, head,
-                                                                  dynamical_model, model, model_code, model_code_path,
+                                                                  dynamical_model, model_name, model, model_dir,
+                                                                  model_code, model_code_path,
                                                                   target_data, target_data_type, time, logger)
 
     def get_default_sig(self):

@@ -1,8 +1,4 @@
 # encoding=utf8
-import sys
-
-reload(sys)
-sys.setdefaultencoding('utf8')
 
 import os
 import numpy as np
@@ -10,14 +6,18 @@ from scipy.io import savemat, loadmat
 import pickle
 
 from tvb_epilepsy.base.constants import VOIS, X0_DEF, E_DEF, TVB, DATA_MODE, SIMULATION_MODE
-from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM, STATISTICAL_MODELS_PATH, FOLDER_VEP_HOME, USER_HOME
+from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM, STATS_MODELS_PATH, FOLDER_VEP_HOME, USER_HOME
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.plot_utils import plot_sim_results, plot_fit_results
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
-from tvb_epilepsy.base.utils.plot_utils import plot_sim_results, plot_fit_results
+from tvb_epilepsy.service.model_inversion.pystan_service import PystanService
+from tvb_epilepsy.service.model_inversion.autoregressive_model_inversion_service import \
+                                                                                    AutoregressiveModelInversionService
 from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
                                                     compute_seeg_and_write_ts_h5_file
+from tvb_epilepsy.scripts.seeg_data_scripts import prepare_seeg_observable, get_bipolar_channels
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
@@ -35,25 +35,16 @@ else:
 logger = initialize_logger(__name__)
 
 
-def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_off=[], channel_lbls=[],
-                        channel_inds=[]):
+def main_fit_sim_hyplsa(stats_model_name="vep_autoregress", EMPIRICAL='', times_on_off=[], channel_lbls=[],
+                        channel_inds=[], fitmode="optimization", **kwargs):
 
-    # ------------------------------Model code--------------------------------------
+    # ------------------------------Stan model and service--------------------------------------
     # Compile or load model:
-    model_file = os.path.join(FOLDER_VEP_HOME, stats_model_name + "_stan_model.pkl")
-    if os.path.isfile(model_file):
-        stats_model = pickle.load(open(model_file, 'rb'))
-    else:
-        # vep_original_DP
-        if stats_model_name is "vep_dWt":
-            model_path = os.path.join(STATISTICAL_MODELS_PATH, "vep_dWt.stan")
-        elif stats_model_name is "vep_original_x0":
-            model_path = os.path.join(STATISTICAL_MODELS_PATH, "vep_original_x0.stan")
-        else:
-            model_path = os.path.join(STATISTICAL_MODELS_PATH, "vep_original_DP.stan")
-        stats_model = compile_model(model_stan_code_path=model_path)
-        with open(model_file, 'wb') as f:
-            pickle.dump(stats_model, f)
+    pystan_service = PystanService(model_name=stats_model_name, model=None,
+                                   model_dir=os.path.join(FOLDER_RES, "model_inversion"), model_code=None,
+                                   model_code_path=os.path.join(STATS_MODELS_PATH, stats_model_name, ".stan"),
+                                  fitmode=fitmode, logger=logger)
+    pystan_service.load_or_compile_model()
 
     # -------------------------------Reading model_data-----------------------------------
 
@@ -143,9 +134,8 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
     # Optional variations:
     zmode = "lin"  # by default, or "sig" for the sigmoidal expression for the slow z variable in Proix et al. 2014
     pmode = "z"  # by default, "g" or "z*g" for the feedback coupling to Iext2 and slope for EpileptorDPrealistic
-
-    model_name = "EpileptorDP2D"
-    if model_name is "EpileptorDP2D":
+    dynamical_model = "EpileptorDP2D"
+    if dynamical_model is "EpileptorDP2D":
         spectral_raster_plot = False
         trajectories_plot = True
     else:
@@ -192,7 +182,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
         logger.info("\n\nConfiguring simulation...")
         noise_intensity = 10 ** -2.8
         sim = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt,
-                                                        sim_length, monitor_period, model_name,
+                                                        sim_length, monitor_period, dynamical_model,
                                                         zmode=np.array(zmode), pmode=np.array(pmode),
                                                         noise_instance=None, noise_intensity=noise_intensity,
                                                         monitor_expressions=None)
@@ -203,10 +193,11 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
         # By default initial condition is set right on the equilibrium point.
         sim.config_simulation(initial_conditions=None)
 
+        dynamical_model = sim.model
         # convert_to_h5_model(sim.model).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5")
 
         if os.path.isfile(EMPIRICAL):
-
+            target_data_type = "empirical"
             observation, time, fs = prepare_seeg_observable(EMPIRICAL, times_on_off, channel_lbls, log_flag=True)
             vois_ts_dict = {"time": time, "signals": observation}
             #
@@ -214,7 +205,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
 
             # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ5_0001.edf'), [20.0, 45.0], channel_lbls)
         else:
-
+            target_data_type = "simulation"
             ts_file = os.path.join(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts.mat")
             if os.path.isfile(ts_file):
                 logger.info("\n\nLoading previously simulated time series...")
@@ -241,7 +232,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
                     logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
 
                     # Variables of interest in a dictionary:
-                    vois_ts_dict = prepare_vois_ts_dict(VOIS[model_name], tavg_data)
+                    vois_ts_dict = prepare_vois_ts_dict(VOIS[dynamical_model._ui_name], tavg_data)
                     vois_ts_dict['time'] = time
                     vois_ts_dict['time_units'] = 'msec'
 
@@ -259,19 +250,24 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
                     savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), vois_ts_dict)
 
         # Get model_data and observation signals:
-        data, active_regions = prepare_data_for_fitting_vep(stats_model_name, model_configuration, lsa_hypothesis,
-                                                            fsAVG, vois_ts_dict, sim.model,
-                                                            noise_intensity, active_regions=None,
-                                                            active_regions_th=0.1, euler_method=1,
-                                                            observation_model=1, channel_inds=channel_inds,
-                                                            mixing=head.sensorsSEEG.values()[0])
-        savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_data.mat"), data)
+        model_inversion_service = AutoregressiveModelInversionService(model_configuration, hyp, head, dynamical_model,
+                                                                     pystan=pystan_service,
+                                                                     target_data=vois_ts_dict["signals"],
+                                                                     target_data_type=target_data_type,
+                                                                     time=vois_ts_dict["time"],
+                                                                     logger=logger)
+        statistical_model = model_inversion_service.generate_statistical_model(**kwargs)
+        model_inversion_service.generate_model_data(statistical_model, head.sensorsSEEG.get_sensors_id().projection,
+                                                    logger=logger, **kwargs)
+
+        savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_data.mat"), model_inversion_service.model_data)
 
         # Fit and get estimates:
-        est, fit = stanfit_model(stats_model, data, mode="optimizing", iter=30000) #
+        est, fit = model_inversion_service.pystan.fit_stan_model(model_data=model_inversion_service.model_data,
+                                                                 **kwargs) #
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), est)
 
-        plot_fit_results(lsa_hypothesis.name, head, est, data, active_regions,
+        plot_fit_results(lsa_hypothesis.name, head, est, model_inversion_service.data, statistical_model.active_regions,
                          time=vois_ts_dict['time'], seizure_indices=[0, 1], trajectories_plot=True)
 
         # Reconfigure model after fitting:
@@ -279,14 +275,14 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
                                                                     K=est['K'] * hyp.number_of_regions)
 
         x0_values_fit = fit_model_configuration_service._compute_x0_values_from_x0_model(est['x0'])
-        disease_indices = active_regions.tolist()
+        disease_indices = statistical_model.active_regions.tolist()
         hyp_fit = DiseaseHypothesis(head.connectivity.number_of_regions,
                                     excitability_hypothesis={tuple(disease_indices): x0_values_fit},
                                     epileptogenicity_hypothesis={}, connectivity_hypothesis={},
                                     name='fit_' + hyp_x0.name)
 
         connectivity_matrix_fit = np.array(model_configuration.connectivity_matrix)
-        connectivity_matrix_fit[active_regions][:, active_regions] = est["FC"]
+        connectivity_matrix_fit[statistical_model.active_regions][:, statistical_model.active_regions] = est["FC"]
         model_configuration_fit = fit_model_configuration_service.configure_model_from_hypothesis(hyp_fit,
                                                                                              connectivity_matrix_fit)
         model_configuration_fit.write_to_h5(FOLDER_RES, hyp_fit.name + "_ModelConfig.h5")

@@ -2,10 +2,14 @@ import time
 import os
 from copy import deepcopy
 
+import pickle
+
 import numpy as np
 import pystan as ps
 
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error
+from tvb_epilepsy.base.configurations import FOLDER_RES
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error, \
+                                                                                                                warning
 
 
 LOG = initialize_logger(__name__)
@@ -13,18 +17,17 @@ LOG = initialize_logger(__name__)
 
 class PystanService(object):
 
-    def __init__(self, model_name=None, model=None, model_code=None, model_code_path="", fitmode="sampling", logger=LOG):
+    def __init__(self, model_name=None, model=None, model_dir=os.path.join(FOLDER_RES, "model_inversion"),
+                 model_code=None, model_code_path="", fitmode="sampling", logger=LOG):
         self.logger = logger
         self.fit = None
         self.est = {}
         self.fitmode = fitmode
+        self.model_name = model_name
         self.model = model
+        self.model_path = os.path.join(model_dir, self.model_name, "_stanmodel.pkl")
         self.model_code = model_code
         self.model_code_path = model_code_path
-        if isinstance(model_name, basestring) and len(model_name) > 0:
-            self.model_name = model_name
-        else:
-            self.model_name = os.path.basename(self.model_code_path)
         self.compilation_time = 0.0
         self.fitting_time = 0.0
 
@@ -35,10 +38,10 @@ class PystanService(object):
         self.compilation_time = time.time() - tic
         self.logger.info(str(self.compilation_time) + ' sec required to compile')
 
-    def fit_stan_model(self, **kwargs):
+    def fit_stan_model(self, model_data=None, **kwargs):
         self.logger.info("Model fitting with " + self.fitmode + "...")
         tic = time.time()
-        self.fit = getattr(self.model, self.fitmode)(data=self.model_data, **kwargs)
+        self.fit = getattr(self.model, self.fitmode)(data=model_data, **kwargs)
         self.fitting_time = time.time() - tic
         self.logger.info(str(self.fitting_time) + ' sec required to fit')
         if self.fitmode is "optimizing":
@@ -101,3 +104,21 @@ class PystanService(object):
         for key in self.est.keys():
             if isinstance(self.est[key], list):
                 self.est[key] = np.squeeze(np.array(self.est[key]))
+
+    def write_model_to_file(self):
+        with open(self.model_path, 'wb') as f:
+                pickle.dump(self.model, f)
+
+    def load_model_from_file(self):
+        self.model = pickle.load(open(self.model_path, 'rb'))
+
+    def load_or_compile_model(self):
+        if os.path.isfile(self.model_path):
+            try:
+                self.load_model_from_file()
+            except:
+                warning("Failed to load the model from file: " + str(self.model_path) + " !" +
+                        "\nTrying to compile model from file: " + str(self.model_code_path) + str("!"))
+            self.compile_stan_model()
+        else:
+            self.compile_stan_model()

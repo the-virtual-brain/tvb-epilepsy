@@ -53,7 +53,8 @@ else:
     if not (os.path.isdir(FOLDER_FIGURES)):
         os.mkdir(FOLDER_FIGURES)
 
-    STATISTICAL_MODELS_PATH = os.path.join(SOFTWARE_PATH, "tvb-infer", "tvb_infer", "stan_epilepsy_models")
+    STATS_MODELS_PATH = os.path.join(SOFTWARE_PATH, "tvb-epilepsy", "tvb_epilepsy", "stan")
+
 VERY_LARGE_SIZE = (40, 20)
 LARGE_SIZE = (20, 15)
 SMALL_SIZE = (15, 10)
