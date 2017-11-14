@@ -47,12 +47,53 @@ functions {
         } else if (pdf == 4) {
             // exponential
             return exponential_lpdf(x | p1);
+        /* Beta not used for now...
         } else if (pdf == 5) {
             // beta
             return beta_lpdf(x | p1, p2);
+        */
         } else {
-            // uniform: note that p1 and p2 are not used!
+            // uniform
             return uniform_lpdf(x | p1, p2);
+        }
+    }
+
+    real sample_from_stdnormal_lpdf(real x, int pdf, real p1, real p2) {
+        real n01
+        n01 = normal_lpdf(x | 0.0, 1.0)
+        if (pdf == 1) {
+            // Normal(mean, sigma**2) =  mean + sigma*Normal(0,1)
+            return p1 + p2 * n01;
+        } else if (pdf == 2) {
+        /* not possible! requires some of INDEPENDENT Gamma random variables!
+            // Gamma(shape, scale) = 2*shape*Gamma(1/2, scale) = 2*shape*Normal(0, scale/2)**2
+            // because:
+            // Normal(0,sigma)**2 = Gamma(1/2, 2*sigma**2)
+            //k*Gamma(shape, scale) = Gamma(k*shape, scale)
+            p2 = sqrt(p2/2)
+            n01 = p2 * n01
+            return 2 * p1 * n01*n01;*/
+            return gamma_lpdf(x | p1, 1.0 / p2);
+        } else if (pdf == 3) {
+            // lognormal(mean, sigma**2) = exp(Normal(mean, sigma**2)) = exp(mean + sigma*Normal(0,1))
+            return exp(p1 + p2 * n01);
+        } else if (pdf == 4) {
+        /* not possible! requires some of INDEPENDENT Gamma random variables!
+            // Exponential(scale) = Gamma(1, scale) and following the above for Gamma(), we get:
+            //Exponential(scale) = 2*Normal(0, scale/2)**2
+            p1 = sqrt(p1/2)
+            n01 = p1 * n01
+            return 2 * n01*n01;
+        */
+            return exponential_lpdf(x | p1);
+        /* Beta not used for now...
+        } else if (pdf == 5) {
+            // Beta(alpha, beta) = Gamma(alpha, c) / (Gamma(alpha, c) + Gamma(beta, c))
+            return beta_lpdf(x | p1, p2);
+        */
+        } else {
+            // Uniform(a, b) = a + (b-a)*Uniform(0, 1)  =  a + (b-a)*Normal(0, 1)_CDF
+            return p1 + (p2-p1)*normal_lcdf(x | 0.0, 1.0);
         }
     }
 
