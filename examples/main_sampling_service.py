@@ -4,8 +4,7 @@ from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
-                                                                          AVAILABLE_DISTRIBUTIONS
+from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DISTRIBUTIONS
 from tvb_epilepsy.service.sampling.deterministic_sampling_service import  DeterministicSamplingService
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
 from tvb_epilepsy.service.sampling.salib_sampling_service import SalibSamplingService
