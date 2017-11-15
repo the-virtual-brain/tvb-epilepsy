@@ -64,8 +64,8 @@ class Head(object):
     def set_sensors(self, input_sensors, sensors_type=TYPE_SEEG, reset=False):
         if input_sensors is None:
             return
-        sensors = self.get_sensors(sensors_type)
-        if reset == False or sensors is None:
+        sensors = ensure_list(self.get_sensors(sensors_type))
+        if reset is False or sensors is None:
             sensors = []
         for s in ensure_list(input_sensors):
             if isinstance(s, Sensors) and (s.s_type == sensors_type):
@@ -92,7 +92,8 @@ class Head(object):
             return sensors
         else:
             out_sensors = []
-            for iS, s in enumerate(ensure_list(sensors)):
+            sensors = ensure_list(sensors)
+            for iS, s in enumerate(sensors):
                 if np.in1d(iS, sensor_ids):
                     out_sensors.append(sensors[iS])
             if len(out_sensors) == 0:
