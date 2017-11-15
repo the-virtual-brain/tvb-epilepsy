@@ -1,5 +1,5 @@
 
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 
 import numpy as np
 
@@ -16,39 +16,3 @@ class ContinuousProbabilityDistribution(ProbabilityDistribution):
             x = np.linspace(np.min(self.scipy(loc, scale).ppf(q[0])),
                             np.min(self.scipy(loc, scale).ppf(q[1])), 101)
         return self.scipy(loc, scale).pdf(x), x
-
-    # @abstractmethod
-    # def constraint(self):
-    #     pass
-    #
-    # @abstractmethod
-    # def scipy(self, loc=0.0, scale=1.0):
-    #     pass
-    #
-    # @abstractmethod
-    # def calc_mean(self, use="scipy"):
-    #     pass
-    #
-    # @abstractmethod
-    # def calc_median(self, use="scipy"):
-    #     pass
-    #
-    # @abstractmethod
-    # def calc_mode(self):
-    #     pass
-    #
-    # @abstractmethod
-    # def calc_var(self, use="scipy"):
-    #     pass
-    #
-    # @abstractmethod
-    # def calc_std(self, use="scipy"):
-    #     pass
-    #
-    # @abstractmethod
-    # def calc_skew(self, use="scipy"):
-    #     pass
-    #
-    # @abstractmethod
-    # def calc_kurt(self, use="scipy"):
-    #     pass
