@@ -156,10 +156,14 @@ def dict_to_list_or_tuple(dictionary, output_obj="list"):
     return output
 
 
-def list_of_dicts_to_dicts_of_ndarrays(lst):
+def list_of_dicts_to_dicts_of_ndarrays(lst, shape=None):
     d = dict(zip(lst[0], zip(*list([d.values() for d in lst]))))
-    for key, val in d.iteritems():
-        d[key] = np.squeeze(np.stack(d[key]))
+    if isinstance(shape, tuple):
+        for key, val in d.iteritems():
+            d[key] = np.reshape(np.stack(d[key]), shape)
+    else:
+        for key, val in d.iteritems():
+            d[key] = np.squeeze(np.stack(d[key]))
     return d
 
 
