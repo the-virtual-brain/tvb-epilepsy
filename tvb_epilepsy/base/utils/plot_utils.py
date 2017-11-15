@@ -476,7 +476,7 @@ def plot_spectral_analysis_raster(time, data, time_units="ms", freq=None, specia
     return fig, ax, img, line, time, freq, stf, psd
 
 
-def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG, hpf_flag=False,
+def plot_sim_results(model, seizure_indices, hyp_name, head, res, sensorsSEEG=None, hpf_flag=False,
                      trajectories_plot=False, spectral_raster_plot=False,
                      save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
                      **kwargs):
