@@ -15,7 +15,6 @@ class Head(object):
     """
 
     def __init__(self, connectivity, cortical_surface, rm, vm, t1, name='', **kwargs):
-
         self.connectivity = connectivity
         self.cortical_surface = cortical_surface
         self.region_mapping = rm
@@ -26,12 +25,10 @@ class Head(object):
         self.sensorsMEG = None
         for s_type in SENSORS_TYPES:
             self.set_sensors(kwargs.get("sensors" + s_type), sensors_type=s_type)
-
         if len(name) == 0:
             self.name = 'Head' + str(self.number_of_regions)
         else:
             self.name = name
-
         self.children_dict = {"Connectivity": Connectivity("", np.array([]), np.array([])),
                               "Surface": Surface(np.array([]), np.array([])),
                               "Sensors": Sensors(np.array([]), np.array([]))}
