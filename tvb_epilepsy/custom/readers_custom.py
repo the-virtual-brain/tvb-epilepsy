@@ -79,10 +79,13 @@ class CustomReader(ABCReader):
             warning("\nNo Structural MRI file found at path " + h5_path + "!")
             return []
 
-    def read_sensors(self, h5_path, s_type):
-        if os.path.isfile(h5_path):
-            self.logger.info("Reading Sensors from: " + h5_path)
-            h5_file = h5py.File(h5_path, 'r', libver='latest')
+    def read_sensors(self, filename, root_folder, s_type):
+        filename = ensure_list(filename)
+        path = os.path.join(root_folder, filename[0])
+        projection = None
+        if os.path.isfile(path):
+            self.logger.info("Reading Sensors from: " + path)
+            h5_file = h5py.File(path, 'r', libver='latest')
             labels = h5_file['/labels'][()]
             locations = h5_file['/locations'][()]
             # TODO: check if h5py returns None for non existing datasets
@@ -92,12 +95,14 @@ class CustomReader(ABCReader):
                 orientations = None
             if '/projection' in h5_file:
                 projection = h5_file['/projection'][()]
-            else:
-                projection = None
+            elif len(filename) > 1:
+                path = os.path.join(root_folder, filename[1])
+                if os.path.isfile(path):
+                    projection = self.read_projection(path, s_type)
             h5_file.close()
             return Sensors(labels, locations, orientations, projection, s_type=s_type)
         else:
-            warning("\nNo Sensor file found at path " + h5_path + "!")
+            warning("\nNo Sensor file found at path " + path + "!")
             return None
 
     def read_projection(self, path, s_type):
@@ -113,7 +118,7 @@ class CustomReader(ABCReader):
                   region_mapping_file="RegionMapping.h5",
                   volume_mapping_file="VolumeMapping.h5",
                   structural_mri_file="StructuralMRI.h5",
-                  seeg_sensors_files=["SensorsSEEG_114.h5", "SensorsSEEG_125.h5"],
+                  seeg_sensors_files=[("SensorsSEEG_114.h5", ), ("SensorsSEEG_125.h5", )],
                   eeg_sensors_files=[],
                   meg_sensors_files=[],
                   ):
@@ -123,14 +128,14 @@ class CustomReader(ABCReader):
         vm = self.read_volume_mapping(os.path.join(root_folder, "VolumeMapping.h5"))
         t1 = self.read_volume_mapping(os.path.join(root_folder, "StructuralMRI.h5"))
         sensorsSEEG = []
-        for s_file in ensure_list(seeg_sensors_files):
-            sensorsSEEG.append(self.read_sensors(os.path.join(root_folder, s_file), TYPE_SEEG))
+        for s_files in ensure_list(seeg_sensors_files):
+            sensorsSEEG.append(self.read_sensors(s_files, root_folder, TYPE_SEEG))
         sensorsEEG = []
-        for s_file in ensure_list(eeg_sensors_files):
-            sensorsEEG.append(self.read_sensors(os.path.join(root_folder, s_file), TYPE_EEG))
+        for s_files in ensure_list(eeg_sensors_files):
+            sensorsEEG.append(self.read_sensors(s_files, root_folder, TYPE_EEG))
         sensorsMEG = []
-        for s_file in ensure_list(meg_sensors_files):
-            sensorsMEG.append(self.read_sensors(os.path.join(root_folder, s_file), TYPE_MEG))
+        for s_files in ensure_list(meg_sensors_files):
+            sensorsMEG.append(self.read_sensors(s_files, root_folder, TYPE_MEG))
         return Head(conn, srf, rm, vm, t1, name, sensorsSEEG=sensorsSEEG, sensorsEEG=sensorsEEG, sensorsMEG=sensorsMEG)
 
     def read_epileptogenicity(self, root_folder, name="ep"):
