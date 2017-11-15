@@ -24,7 +24,12 @@ class_dict = {"list": list(), "tuple": tuple(), "dict": OrderedDict()}
 class_list = ["list", "tuple", "dict",  "Connectivity", "Surface", "Sensors", "Head", "DiseaseHypothesis",
                  "ModelConfigurationService", "ModelConfiguration", "LSAService", "SamplingService", 
                  "DeterministicSamplingService", "StochasticSamplingService", "PSEService", 
-                 "SensitivityAnalysisService"]
+                 "SensitivityAnalysisService", "Parameter", "StochasticParameter", "StatisticalModel",
+              "ODEStatisticalModel", "SDEStatisticalModel", "ModelInversionService",
+              "ODEModelInversionService", "SDEModelInversionService"] + \
+             ["UniformDistribution", "NormalDistribution", "GammaDistribution", "LognormalDistribution",
+                           "ExponentialDistribution", "BetaDistribution", "ChisquareDistribution",
+                           "BinomialDistribution", "BernoulliDistribution", "PoissonDistribution"]
 
 class H5Model(object):
 
@@ -41,7 +46,6 @@ class H5Model(object):
     def append(self, h5_model):
         for key, value in h5_model.datasets_dict.iteritems():
             self.add_or_update_datasets_attribute(key, value)
-
         for key, value in h5_model.metadata_dict.iteritems():
             self.add_or_update_metadata_attribute(key, value)
 
@@ -51,49 +55,34 @@ class H5Model(object):
         """
         final_path, overwrite = change_filename_or_overwrite(folder_name, file_name)
         # final_path = ensure_unique_file(folder_name, file_name)
-
         if overwrite:
             try:
                 os.remove(final_path)
             except:
                 warning("\nFile to overwrite not found!")
-
         logger.info("Writing %s at: %s" % (self, final_path))
-
         h5_file = h5py.File(final_path, 'a', libver='latest')
-
         for attribute, field in self.datasets_dict.iteritems():
             h5_file.create_dataset("/" + attribute, data=field)
-
         for meta, val in self.metadata_dict.iteritems():
             h5_file.attrs.create(meta, val)
-
         h5_file.close()
 
     def convert_from_h5_model(self, obj=dict(), children_dict=class_dict, hypothesis=False):
-
         children_dict.update(getattr(obj, "children_dict", {}))
-
         output = obj.__class__.__name__
         if np.in1d(output, ["tuple", "list"]):
             obj = list_or_tuple_to_dict(obj)
-
         data = dict()
         data.update(self.datasets_dict)
         data.update(self.metadata_dict)
-
         data = sort_dict(data)
-
         for key, value in data.iteritems():
-
             if key[0] == "/":
                 key = key.split('/', 1)[1]
-
             build_hierarchical_object_recursively(obj, key, value, children_dict)
-
         if np.in1d(output, ["tuple", "list"]):
             obj = dict_to_list_or_tuple(obj, output)
-
         if hypothesis:
             # TODO: make this hack work also recursively, if needed...
             if isinstance(obj, dict):
@@ -102,7 +91,6 @@ class H5Model(object):
             else:
                 set_field = lambda obj, attribute, value: setattr(obj, attribute, value)
                 get_field = lambda obj, attribute: getattr(obj, attribute, None)
-
             for var_str in ["x0_values", "e", "w"]:
                 ind = get_field(obj, var_str + "_indices")
                 var_key = var_str + "_values"
@@ -111,8 +99,6 @@ class H5Model(object):
                     set_field(obj, var_key, var[ind])
                 else:
                     set_field(obj, var_key, np.array([]))
-
-
         return obj
 
 
@@ -123,24 +109,17 @@ def convert_to_h5_model(obj):
 
 
 def object_to_h5_model_recursively(h5_model, obj, name="", root=False):
-
     # Use in some cases the name of the class as key, when name is empty string. Otherwise, class_name = name.
     name_empty = (len(name) == 0)
     class_name = name_empty * obj.__class__.__name__ + name
-
     if obj is None:
         h5_model.add_or_update_metadata_attribute(class_name, "None")
-
     if isinstance(obj, (float, int, long, complex, str, np.ndarray)):
-
         if isinstance(obj, (float, int, long, complex, str)):
             h5_model.add_or_update_metadata_attribute(class_name, obj)
-
         elif isinstance(obj, np.ndarray):
             h5_model.add_or_update_datasets_attribute(class_name, obj)
-
     else:
-
         for key, val in bool_inf_nan_empty.iteritems():
             # Bool, inf, nan, or empty list/tuple/dict/str
             try:
@@ -149,17 +128,13 @@ def object_to_h5_model_recursively(h5_model, obj, name="", root=False):
                     return
             except:
                 continue
-
         # In any other case, make sure object is/becomes an alphabetically ordered dictionary:
         if not(isinstance(obj, dict)):
-
             try:
-
                 for class_type in class_list:
                     if obj.__class__.__name__ == class_type:
                         name = name + "#" + obj.__class__.__name__
                         break
-
                 if isinstance(obj, (list, tuple)):
                     try:
                         # empty list or tuple get into metadata
@@ -176,42 +151,32 @@ def object_to_h5_model_recursively(h5_model, obj, name="", root=False):
                         pass
                     # the rest are converted to dict
                     obj = list_or_tuple_to_dict(obj)
-
                 elif isinstance(obj, dict):
                     obj = sort_dict(obj)
-
                 else:
                     obj = sort_dict(vars(obj))
-
             except:
                 logger.info("Object " + name + (len(name) > 0) * "/" + key + "cannot be assigned to h5_model because it"
                                                                              "is has no __dict__ property")
                 return
-
         for key, value in obj.iteritems():
-
             if not(root):
                 key = name + (len(name) > 0) * "/" + key
-
             if key.find("children_dict") < 0 :
                 # call recursively...
                 object_to_h5_model_recursively(h5_model, value, key)
 
 
 def build_hierarchical_object_recursively(obj, key, value, children_dict=class_dict):
-
     if isinstance(obj, dict):
         set_field = lambda obj, key, value: obj.update({key: value})
         get_field = lambda obj, key: obj.get(key, None)
-
     elif isinstance(obj, list):
         set_field = lambda obj, key, value: set_list_item_by_reference_safely(int(key), value, obj)
         get_field = lambda obj, key: get_list_or_tuple_item_safely(obj, key)
-
     else:
         set_field = lambda obj, attribute, value: setattr(obj, attribute, value)
         get_field = lambda obj, attribute: getattr(obj, attribute, None)
-
     # Check whether value is an inf, nan, None, bool, or empty list/dict/tuple/str value
     try:
         bool_inf_nan_empty_value = bool_inf_nan_empty.get(value, "skip_bool_inf_nan_empty_value")
@@ -220,13 +185,10 @@ def build_hierarchical_object_recursively(obj, key, value, children_dict=class_d
             return
     except:
         pass
-
     child_object = get_field(obj, key)
     if child_object is not None:
         set_field(obj, key, value)
-
     else:
-
         this_name = key.split('/', 1)[0]
         split_name = this_name.split('#')
         if len(split_name) == 2:
@@ -235,9 +197,7 @@ def build_hierarchical_object_recursively(obj, key, value, children_dict=class_d
         else:
             class_name = ""
             name = this_name
-
         try:
-
            # value is not a container object, or it is an empty container object
             if this_name == key:
                 # just assign it:
@@ -247,7 +207,6 @@ def build_hierarchical_object_recursively(obj, key, value, children_dict=class_d
                         value = tuple(value)
                 set_field(obj, name, value)
                 return 1
-
             else:
                 child_key = key.split('/', 1)[1]
                 child_object = deepcopy(get_field(obj, name))
@@ -284,23 +243,16 @@ def build_hierarchical_object_recursively(obj, key, value, children_dict=class_d
 
 
 def read_h5_model(path):
-
     h5_file = h5py.File(path, 'r', libver='latest')
-
     datasets_dict = dict()
     metadata_dict = dict()
-
     for key, value in h5_file.attrs.iteritems():
         metadata_dict.update({key: value})
-
     datasets_keys = return_h5_dataset_paths_recursively(h5_file)
-
     for key in datasets_keys:
         datasets_dict.update({key: h5_file[key][()]})
-
     datasets_dict = sort_dict(datasets_dict)
     metadata_dict = sort_dict(metadata_dict)
-
     return H5Model(datasets_dict, metadata_dict)
 
 
