@@ -9,30 +9,30 @@ from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
-                                                                                                AVAILABLE_DISTRIBUTIONS
+from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DISTRIBUTIONS
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import \
                                                         EULER_METHODS, OBSERVATION_MODEL_EXPRESSIONS, OBSERVATION_MODELS
-from tvb_epilepsy.base.model.statistical_models.autoregressive_statistical_model import AutoregressiveStatisticalModel
-from tvb_epilepsy.service.model_inversion.ode_model_inversion_service import OdeModelInversionService
+from tvb_epilepsy.base.model.statistical_models.sde_statistical_model import SDEStatisticalModel
+from tvb_epilepsy.service.model_inversion.ode_model_inversion_service import ODEModelInversionService
 from tvb_epilepsy.service.epileptor_model_factory import model_noise_intensity_dict
 
 
 LOG = initialize_logger(__name__)
 
 
-class AutoregressiveModelInversionService(OdeModelInversionService):
+class SDEModelInversionService(ODEModelInversionService):
 
-    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None,
-                 model_name="vep_autoregress", model=None, model_dir=os.path.join(FOLDER_RES, "model_inversion"),
-                 model_code=None, model_code_path=os.path.join(STATS_MODELS_PATH, "vep_autoregress.stan"),
-                 target_data=None, target_data_type="", time=None,
-                 logger=LOG):
+    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, pystan=None,
+                 model_name="vep_sde", model=None, model_dir=os.path.join(FOLDER_RES, "model_inversion"),
+                 model_code=None, model_code_path=os.path.join(STATS_MODELS_PATH, "vep_sde.stan"),
+                 fitmode="sampling", logger=LOG):
 
-        super(AutoregressiveModelInversionService, self).__init__(model_configuration, hypothesis, head,
-                                                                  dynamical_model, model_name, model, model_dir,
-                                                                  model_code, model_code_path,
-                                                                  target_data, target_data_type, time, logger)
+        super(SDEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model, pystan,
+                                                       model_name, model, model_dir, model_code, model_code_path,
+                                                       fitmode, logger)
+        self.children_dict = {"SDEStatisticalModel": SDEStatisticalModel("StatsModel"),
+                              "StochasticParameter": generate_stochastic_parameter("StochParam"),
+                              "PystanService": self.pystan}
 
     def get_default_sig(self):
             if EPILEPTOR_MODEL_NVARS.get([self.dynamic_model]) == 2:
@@ -43,17 +43,17 @@ class AutoregressiveModelInversionService(OdeModelInversionService):
                 return
 
     def generate_model_parameters(self, **kwargs):
-        parameters = super(AutoregressiveModelInversionService, self).generate_model_parameters(**kwargs)
+        parameters = super(SDEModelInversionService, self).generate_model_parameters(**kwargs)
         # State variables:
         parameters.append(kwargs.get("x1", generate_stochastic_parameter("x1",
                                                                          low=kwargs.get("x1_lo", -2.0),
                                                                          high=kwargs.get("x1_hi", 2.0),
-                                                                         shape=(self.n_times, self.n_active_regions),
+                                                                         p_shape=(self.n_times, self.n_active_regions),
                                                                          probability_distribution="normal")))
         parameters.append(kwargs.get("z", generate_stochastic_parameter("z",
                                                                         low=kwargs.get("z_lo", 2.0),
                                                                         high=kwargs.get("z_hi", 5.0),
-                                                                        shape=(self.n_times, self.n_active_regions),
+                                                                        p_shape=(self.n_times, self.n_active_regions),
                                                                         probability_distribution="normal")))
 
         # Integration
@@ -63,7 +63,7 @@ class AutoregressiveModelInversionService(OdeModelInversionService):
             parameter = generate_stochastic_parameter("sig",
                                                       low=kwargs.get("sig_lo", sig_def / 10.0),
                                                       high=kwargs.get("sig_hi", 10 * sig_def),
-                                                      shape=(),
+                                                      p_shape=(),
                                                       probability_distribution=kwargs.get("sig_pdf", "gamma"),
                                                       optimize=True,
                                                       mode=sig_def,
@@ -71,12 +71,12 @@ class AutoregressiveModelInversionService(OdeModelInversionService):
         parameters.append(parameter)
         return parameters
                 
-    def generate_statistical_model(self, statistical_model_name, **kwargs):
-        return AutoregressiveStatisticalModel(statistical_model_name, self.generate_model_parameters(**kwargs),
-                                              self.n_regions, kwargs.get("active_regions", []), self.n_signals,
-                                              self.n_times, self.dt,
-                                              kwargs.get("euler_method"), kwargs.get("observation_model"),
-                                              kwargs.get("observation_expression"))
+    def generate_statistical_model(self, statistical_model_name="vep_sde", **kwargs):
+        return SDEStatisticalModel(statistical_model_name, self.generate_model_parameters(**kwargs),
+                                   self.n_regions, kwargs.get("active_regions", []), self.n_signals,
+                                   self.n_times, self.dt,
+                                   kwargs.get("euler_method"), kwargs.get("observation_model"),
+                                   kwargs.get("observation_expression"))
 
     def generate_model_data(self, statistical_model, projection):
         active_regions_flag = np.zeros((statistical_model.n_regions,), dtype="i")

@@ -59,8 +59,8 @@ functions {
     }
 
     real sample_from_stdnormal_lpdf(real x, int pdf, real p1, real p2) {
-        real n01
-        n01 = normal_lpdf(x | 0.0, 1.0)
+        real n01;
+        n01 = normal_lpdf(x | 0.0, 1.0);
         if (pdf == 1) {
             // Normal(mean, sigma**2) =  mean + sigma*Normal(0,1)
             return p1 + p2 * n01;

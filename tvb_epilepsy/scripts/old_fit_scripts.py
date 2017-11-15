@@ -46,7 +46,7 @@ else:
 logger = initialize_logger(__name__)
 
 
-def compile_model(model_stan_code_path=os.path.join(STATS_MODELS_PATH, "vep_autoregress.stan"), **kwargs):
+def compile_model(model_stan_code_path=os.path.join(STATS_MODELS_PATH, "vep_sde.stan"), **kwargs):
     tic = time.time()
     logger.info("Compiling model...")
     model = ps.StanModel(file=model_stan_code_path, model_name=kwargs.get("model_name", 'vep_epileptor2D_autoregress'))

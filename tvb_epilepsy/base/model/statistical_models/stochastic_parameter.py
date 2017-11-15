@@ -7,7 +7,8 @@ from tvb_epilepsy.base.constants import MAX_SINGLE_VALUE
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
-                                                    ProbabilityDistribution, compute_pdf_params, generate_distribution
+                                                    ProbabilityDistribution
+from tvb_epilepsy.service.probability_distribution_factory import generate_distribution, compute_pdf_params
 
 
 class StochasticParameterBase(Parameter, ProbabilityDistribution):
@@ -49,6 +50,7 @@ def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=
 
             return StochasticParameterBase.__str__(self) + "\n" \
                    + "\n".join(thisProbabilityDistribution.__str__(self).splitlines()[1:])
+
     return StochasticParameter(name, low, high, p_shape, **pdf_params)
 
 

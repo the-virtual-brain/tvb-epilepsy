@@ -10,12 +10,12 @@ OBSERVATION_MODELS=[ "seeg_logpower", "seeg_power", "lfp_power"]
 EULER_METHODS = ["backward", "midpoint", "forward"]
 
 
-class OdeStatisticalModel(StatisticalModel):
+class ODEStatisticalModel(StatisticalModel):
 
-    def __init__(self, name, parameters, n_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
+    def __init__(self, name, parameters=[], n_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
                  euler_method="forward", observation_model="seeg_logpower", observation_expression="x1z_offset"):
 
-        super(OdeStatisticalModel, self).__init__(name, parameters, n_regions)
+        super(ODEStatisticalModel, self).__init__(name, parameters, n_regions)
 
         if np.all(np.in1d(active_regions, range(self.n_regions))):
             self.active_regions = np.unique(active_regions).tolist()
@@ -57,7 +57,7 @@ class OdeStatisticalModel(StatisticalModel):
                               "\nbeyond number of regions (" + str(self.n_regions) + ")!")
 
     def __repr__(self):
-        form_repr = super(OdeStatisticalModel, self).__repr__()
+        form_repr = super(ODEStatisticalModel, self).__repr__()
         d = {"5. active regions": self.active_regions,
              "6. number of active regions": self.n_active_regions,
              "7. number of nonactive regions": self.n_nonactive_regions,

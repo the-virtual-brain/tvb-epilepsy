@@ -7,7 +7,7 @@ from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 class Parameter(object):
 
-    def __init__(self, name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, shape=(1,), **kwargs):
+    def __init__(self, name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, p_shape=(1,), **kwargs):
         if isinstance(name, basestring):
             self.name = name
         else:
@@ -17,11 +17,11 @@ class Parameter(object):
             self.high = high
         else:
             raise_value_error("low (" + str(low) + ") is not smaller than high(" + str(high) + ")!")
-        if isinstance(shape, tuple):
-            self.p_shape = shape
+        if isinstance(p_shape, tuple):
+            self.p_shape = p_shape
         else:
             raise_value_error("Parameter's " + str(self.name) + " p_shape="
-                              + str(shape) + " is not a shape tuple!")
+                              + str(p_shape) + " is not a shape tuple!")
 
     def __repr__(self):
         d = {"1. name": self.name,

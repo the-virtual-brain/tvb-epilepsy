@@ -7,9 +7,8 @@ import pickle
 import numpy as np
 import pystan as ps
 
-from tvb_epilepsy.base.configurations import FOLDER_RES
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error, \
-                                                                                                                warning
+from tvb_epilepsy.base.configurations import FOLDER_VEP_HOME
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error, warning
 
 
 LOG = initialize_logger(__name__)
@@ -17,7 +16,7 @@ LOG = initialize_logger(__name__)
 
 class PystanService(object):
 
-    def __init__(self, model_name=None, model=None, model_dir=os.path.join(FOLDER_RES, "model_inversion"),
+    def __init__(self, model_name=None, model=None, model_dir=os.path.join(FOLDER_VEP_HOME, "stan_models"),
                  model_code=None, model_code_path="", fitmode="sampling", logger=LOG):
         self.logger = logger
         self.fit = None
@@ -25,18 +24,22 @@ class PystanService(object):
         self.fitmode = fitmode
         self.model_name = model_name
         self.model = model
-        self.model_path = os.path.join(model_dir, self.model_name, "_stanmodel.pkl")
+        if not(os.path.isdir(model_dir)):
+            os.mkdir(model_dir)
+        self.model_path = os.path.join(model_dir, self.model_name + "_stanmodel.pkl")
         self.model_code = model_code
         self.model_code_path = model_code_path
         self.compilation_time = 0.0
         self.fitting_time = 0.0
 
-    def compile_stan_model(self):
+    def compile_stan_model(self, write_model=True):
         tic = time.time()
         self.logger.info("Compiling model...")
         self.model = ps.StanModel(file=self.model_code_path, model_name=self.model_name)
         self.compilation_time = time.time() - tic
         self.logger.info(str(self.compilation_time) + ' sec required to compile')
+        if write_model:
+            self.write_model_to_file()
 
     def fit_stan_model(self, model_data=None, **kwargs):
         self.logger.info("Model fitting with " + self.fitmode + "...")
@@ -119,6 +122,6 @@ class PystanService(object):
             except:
                 warning("Failed to load the model from file: " + str(self.model_path) + " !" +
                         "\nTrying to compile model from file: " + str(self.model_code_path) + str("!"))
-            self.compile_stan_model()
+                self.compile_stan_model()
         else:
             self.compile_stan_model()

@@ -108,7 +108,15 @@ class ProbabilityDistribution(object):
             self.p_shape = shape
         i1 = np.ones(self.p_shape)
         for p_key in self.pdf_params().keys():
-            setattr(self, p_key, getattr(self, p_key) * i1)
+            try:
+                setattr(self, p_key, getattr(self, p_key) * i1)
+            except:
+                try:
+                    setattr(self, p_key, np.reshape(getattr(self, p_key), self.p_shape))
+                except:
+                    raise_value_error("Neither propagation nor reshaping worked for distribution parameter " + p_key +
+                                      " reshaping\nto shape " + str(self.p_shape) +
+                                      "\nfrom shape " + str(getattr(self, p_key)) + "!")
         self.__update_params__()
 
     def __squeeze_parameters__(self, update=False):

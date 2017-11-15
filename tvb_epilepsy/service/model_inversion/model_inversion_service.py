@@ -64,6 +64,9 @@ class ModelInversionService(object):
                 self.dynamical_model = model_build_dict[dynamical_model](self.model_config)
             except:
                 warning("Failed to create epileptor model " + dynamical_model)
+        self.children_dict = {"ODEStatisticalModel": StatisticalModel("StatsModel"),
+                              "StochasticParameter": generate_stochastic_parameter("StochParam"),
+                              "PystanService": self.pystan}
         self.logger.info("Model Inversion Service instance created!")
 
     def get_epileptor_parameters(self):
@@ -122,7 +125,7 @@ class ModelInversionService(object):
         # Epileptor:
         parameter = kwargs.get("x1eq", None)
         if not(isinstance(parameter, Parameter)):
-            x1eq = kwargs.get("x1eq", (X1_EQ_CR_DEF - X1_DEF) / 2) * np.ones((self.n_regions,))
+            x1eq = kwargs.get("x1eq", self.model_config.x1EQ)
             parameter = generate_stochastic_parameter("x1eq",
                                                       low=kwargs.get("x1eq_lo", X1_DEF),
                                                       high=kwargs.get("x1eq_hi", X1_EQ_CR_DEF),
@@ -134,18 +137,19 @@ class ModelInversionService(object):
 
         parameter = kwargs.get("K", None)
         if not(isinstance(parameter, Parameter)):
+            K_def = np.mean(self.model_config.K)
             parameter = generate_stochastic_parameter("K",
                                                       low=kwargs.get("K_lo", 0.01),
                                                       high=kwargs.get("K_hi", 2.0),  p_shape=(),
                                                       probability_distribution= kwargs.get("K_pdf", "gamma"),
                                                       optimize=True,
-                                                      mode=kwargs.get("K_def", K_DEF), std=kwargs.get("K_sig", K_DEF))
+                                                      mode=kwargs.get("K_def", K_def), std=kwargs.get("K_sig", K_def))
         parameters.append(parameter)
 
         # tau1_def = kwargs.get("tau1_def", 0.5)
         parameter = kwargs.get("tau1", None)
         if not (isinstance(parameter, Parameter)):
-            tau1_def = kwargs.get("tau1_def", 0.5)
+            tau1_def = kwargs.get("tau1_def", self.get_default_tau1())
             parameter = generate_stochastic_parameter("tau1",
                                                       low=kwargs.get("tau1_lo", 0.1),
                                                       high=kwargs.get("tau1_hi", 0.9),
@@ -157,7 +161,7 @@ class ModelInversionService(object):
 
         parameter = kwargs.get("tau0", None)
         if not(isinstance(parameter, Parameter)):
-            tau0_def = kwargs.get("tau0_def", 30.0)
+            tau0_def = kwargs.get("tau0_def", self.get_default_tau0())
             parameter = generate_stochastic_parameter("tau0",
                                                       low=kwargs.get("tau0_lo", 3.0),
                                                       high=kwargs.get("tau0_hi", 30000.0),
@@ -171,8 +175,7 @@ class ModelInversionService(object):
         # Coupling:
         parameter = kwargs.get("EC", None)
         if not(isinstance(parameter, Parameter)):
-            structural_connectivity = kwargs.get("structural_connectivity",
-                                                 10 ** -3 * np.ones((self.n_regions, self.n_regions)))
+            structural_connectivity = kwargs.get("structural_connectivity", self.model_config.connectivity_matrix)
             parameter = generate_stochastic_parameter("EC",
                                                       low=kwargs.get("EC_lo", 10 ** -6),
                                                       high=kwargs.get("EC_hi", 100.0),

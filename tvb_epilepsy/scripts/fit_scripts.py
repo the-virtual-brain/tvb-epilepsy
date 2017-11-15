@@ -1,9 +1,11 @@
 # encoding=utf8
 
+from shutil import copyfile
+import pickle
+
 import os
 import numpy as np
 from scipy.io import savemat, loadmat
-import pickle
 
 from tvb_epilepsy.base.constants import VOIS, X0_DEF, E_DEF, TVB, DATA_MODE, SIMULATION_MODE
 from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM, STATS_MODELS_PATH, FOLDER_VEP_HOME, USER_HOME
@@ -13,8 +15,8 @@ from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.model_inversion.pystan_service import PystanService
-from tvb_epilepsy.service.model_inversion.autoregressive_model_inversion_service import \
-                                                                                    AutoregressiveModelInversionService
+from tvb_epilepsy.service.model_inversion.sde_model_inversion_service import \
+                                                                                    SDEModelInversionService
 from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
                                                     compute_seeg_and_write_ts_h5_file
 from tvb_epilepsy.scripts.seeg_data_scripts import prepare_seeg_observable, get_bipolar_channels
@@ -35,15 +37,14 @@ else:
 logger = initialize_logger(__name__)
 
 
-def main_fit_sim_hyplsa(stats_model_name="vep_autoregress", EMPIRICAL='', times_on_off=[], channel_lbls=[],
+def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[], channel_lbls=[],
                         channel_inds=[], fitmode="optimization", **kwargs):
 
     # ------------------------------Stan model and service--------------------------------------
     # Compile or load model:
-    pystan_service = PystanService(model_name=stats_model_name, model=None,
-                                   model_dir=os.path.join(FOLDER_RES, "model_inversion"), model_code=None,
-                                   model_code_path=os.path.join(STATS_MODELS_PATH, stats_model_name, ".stan"),
-                                  fitmode=fitmode, logger=logger)
+    pystan_service = PystanService(model_name=stats_model_name, model=None, model_code=None,
+                                   model_code_path=os.path.join(STATS_MODELS_PATH, stats_model_name + ".stan"),
+                                   fitmode=fitmode, logger=logger)
     pystan_service.load_or_compile_model()
 
     # -------------------------------Reading model_data-----------------------------------
@@ -239,19 +240,21 @@ def main_fit_sim_hyplsa(stats_model_name="vep_autoregress", EMPIRICAL='', times_
                     vois_ts_dict=compute_seeg_and_write_ts_h5_file(FOLDER_RES, lsa_hypothesis.name + "_ts.h5", sim.model,
                                                                    vois_ts_dict, output_sampling_time, time_length,
                                                                    hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
-                                                                   sensor_list=head.sensorsSEEG)
+                                                                   sensors_list=head.sensorsSEEG)
 
                     # Plot results
-                    plot_sim_results(sim.model, lsa_hypothesis.propagation_indices, lsa_hypothesis.name, head, vois_ts_dict,
-                                     head.sensorsSEEG.keys(), hpf_flag=False, trajectories_plot=trajectories_plot,
-                                     spectral_raster_plot=spectral_raster_plot, log_scale=True)
+                    plot_sim_results(sim.model, lsa_hypothesis.propagation_indices, lsa_hypothesis.name, head,
+                                     vois_ts_dict, hpf_flag=False, trajectories_plot=trajectories_plot,
+                                     spectral_raster_plot=spectral_raster_plot, log_scale=True) #head.sensorsSEEG,
 
                     # Optionally save results in mat files
-                    savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), vois_ts_dict)
+                    this_ts_file = os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat")
+                    savemat(this_ts_file, vois_ts_dict)
+                    copyfile(this_ts_file, ts_file)
 
         # Get model_data and observation signals:
-        model_inversion_service = AutoregressiveModelInversionService(model_configuration, hyp, head, dynamical_model,
-                                                                     pystan=pystan_service, logger=logger)
+        model_inversion_service = SDEModelInversionService(model_configuration, hyp, head, dynamical_model,
+                                                           pystan=pystan_service, logger=logger)
         statistical_model = model_inversion_service.generate_statistical_model(**kwargs)
         model_inversion_service.update_active_regions(statistical_model, methods=["e_values", "LSA"],
                                                       active_regions_th=0.1)
@@ -333,11 +336,11 @@ if __name__ == "__main__":
 
     # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ1_0001.edf'), [10.0, 35.0], channels)
     #
-    # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ2_0001.edf'), [15.0, 40.0], channels)
+    # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ2_0002.edf'), [15.0, 40.0], channels)
 
-    # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ5_0001.edf'), [20.0, 45.0], channels)
+    # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ5_0003.edf'), [20.0, 45.0], channels)
 
-    stats_model_name = "vep_original_x0"
-    main_fit_sim_hyplsa(stats_model_name, EMPIRICAL=os.path.join(SEEG_data, 'SZ1_0001.edf'), times_on_off=[10.0, 35.0],
-                       channel_lbls=channels, channel_inds=channel_inds)
-    # main_fit_sim_hyplsa(stats_model_name, channel_lbls=channels, channel_inds=channel_inds)
+    stats_model_name = "vep_sde"
+    # main_fit_sim_hyplsa(stats_model_name, EMPIRICAL=os.path.join(SEEG_data, 'SZ1_0001.edf'), times_on_off=[10.0, 35.0],
+    #                    channel_lbls=channels, channel_inds=channel_inds)
+    main_fit_sim_hyplsa(stats_model_name, channel_lbls=channels, channel_inds=channel_inds)

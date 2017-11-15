@@ -11,7 +11,7 @@ from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
-from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import OdeStatisticalModel
+from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
@@ -19,19 +19,22 @@ from tvb_epilepsy.tvb_api.epileptor_models import *
 LOG = initialize_logger(__name__)
 
 
-class OdeModelInversionService(ModelInversionService):
+class ODEModelInversionService(ModelInversionService):
 
-    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None,
+    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, pystan=None,
                  model_name="vep_ode", model=None, model_dir=os.path.join(FOLDER_RES, "model_inversion"),
                  model_code=None, model_code_path=os.path.join(STATS_MODELS_PATH, "vep_ode.stan"),
-                 logger=LOG, **kwargs):
-        super(OdeModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
+                 fitmode="sampling", logger=LOG, **kwargs):
+        super(ODEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model, pystan,
                                                        model_name, model, model_dir, model_code, model_code_path,
-                                                       None, "", logger)
+                                                       fitmode, logger)
         self.time = None
         self.dt = 0.0
         self.n_times = 0
         self.n_signals = 0
+        self.children_dict = {"StatisticalModel": ODEStatisticalModel("StatsModel"),
+                              "StochasticParameter": generate_stochastic_parameter("StochParam"),
+                              "PystanService": self.pystan}
 
     def get_default_sig_init(self):
         return 0.1
@@ -112,7 +115,7 @@ class OdeModelInversionService(ModelInversionService):
         x0cr, rx0 = calc_x0cr_r(epileptor_params["yc"], epileptor_params["Iext1"], epileptor_params["a"],
                                 epileptor_params["b"], epileptor_params["d"], zmode=np.array("lin"),
                                 x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF, test=False,
-                                p_shape=None, calc_mode="non_symbol")
+                                shape=None, calc_mode="non_symbol")
         epileptor_params.update({"x0cr": x0cr, "rx0": rx0})
         return epileptor_params
 
@@ -173,7 +176,7 @@ class OdeModelInversionService(ModelInversionService):
                                                 seeg_inds=kwargs.get("seeg_inds"), logger=self.logger)
 
     def generate_model_parameters(self, **kwargs):
-        parameters = super(OdeModelInversionService, self).generate_model_parameters(**kwargs)
+        parameters = super(ODEModelInversionService, self).generate_model_parameters(**kwargs)
         # Integration
         parameter = kwargs.get("sig_init", None)
         if not(isinstance(parameter, Parameter)):
@@ -216,9 +219,9 @@ class OdeModelInversionService(ModelInversionService):
         parameters.append(parameter)
         return parameters
 
-    def generate_statistical_model(self, statistical_model_name, **kwargs):
-        return OdeStatisticalModel(statistical_model_name, self.generate_model_parameters(**kwargs), self.n_regions,
-                                              kwargs.get("active_regions", []), self.n_signals, self.n_times, self.dt,
-                                              kwargs.get("euler_method"), kwargs.get("observation_model"),
-                                              kwargs.get("observation_expression"))
+    def generate_statistical_model(self, statistical_model_name="vep_ode", **kwargs):
+        return ODEStatisticalModel(statistical_model_name, self.generate_model_parameters(**kwargs), self.n_regions,
+                                   kwargs.get("active_regions", []), self.n_signals, self.n_times, self.dt,
+                                   kwargs.get("euler_method"), kwargs.get("observation_model"),
+                                   kwargs.get("observation_expression"))
 
