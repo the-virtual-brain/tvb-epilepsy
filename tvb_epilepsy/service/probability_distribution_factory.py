@@ -14,6 +14,7 @@ AVAILABLE_DISTRIBUTIONS = ["uniform", "normal", "gamma", "lognormal", "exponenti
 
 CONSTRAINT_ABS_TOL = 0.1
 
+
 def generate_distribution(distrib_type, target_shape=None, **target):
     if np.in1d(distrib_type.lower(), AVAILABLE_DISTRIBUTIONS):
         exec("from tvb_epilepsy.base.model.statistical_models.probability_distributions."

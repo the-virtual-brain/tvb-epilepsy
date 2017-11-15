@@ -90,18 +90,18 @@ class ModelInversionService(object):
 
     def get_default_tau0(self):
         if isinstance(self.dynamical_model, AVAILABLE_DYNAMICAL_MODELS):
-            if isinstance(self.dynamic_model, (Epileptor, EpileptorModel)):
+            if isinstance(self.dynamical_model, (Epileptor, EpileptorModel)):
                 return np.mean(self.dynamical_model.tt)
-            elif isinstance(self.dynamic_model, (EpileptorDP, EpileptorDP2D, EpileptorDPrealistic)):
+            elif isinstance(self.dynamical_model, (EpileptorDP, EpileptorDP2D, EpileptorDPrealistic)):
                 return np.mean(self.dynamical_model.tau0)
         else:
             return 30.0
 
     def get_default_tau1(self):
         if isinstance(self.dynamical_model, AVAILABLE_DYNAMICAL_MODELS):
-            if isinstance(self.dynamic_model, (Epileptor, EpileptorModel)):
+            if isinstance(self.dynamical_model, (Epileptor, EpileptorModel)):
                 return np.mean(1.0 / self.dynamical_model.r)
-            elif isinstance(self.dynamic_model, (EpileptorDP, EpileptorDP2D, EpileptorDPrealistic)):
+            elif isinstance(self.dynamical_model, (EpileptorDP, EpileptorDP2D, EpileptorDPrealistic)):
                 return np.mean(self.dynamical_model.tau1)
         else:
             return 0.5

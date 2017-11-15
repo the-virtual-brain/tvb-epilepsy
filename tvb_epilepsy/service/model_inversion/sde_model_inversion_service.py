@@ -35,10 +35,10 @@ class SDEModelInversionService(ODEModelInversionService):
                               "PystanService": self.pystan}
 
     def get_default_sig(self):
-            if EPILEPTOR_MODEL_NVARS.get([self.dynamic_model]) == 2:
-                return model_noise_intensity_dict[self.dynamic_model][1]
-            elif EPILEPTOR_MODEL_NVARS.get([self.dynamic_model]) > 2:
-                return model_noise_intensity_dict[self.dynamic_model][2]
+            if EPILEPTOR_MODEL_NVARS.get([self.dynamical_model]) == 2:
+                return model_noise_intensity_dict[self.dynamical_model][1]
+            elif EPILEPTOR_MODEL_NVARS.get([self.dynamical_model]) > 2:
+                return model_noise_intensity_dict[self.dynamical_model][2]
             else:
                 return
 
