@@ -38,16 +38,19 @@ class ProbabilityDistribution(object):
         pass
 
     def __repr__(self):
-        d = {"1. type": self.type,
-             "2. pdf_params": self.pdf_params(),
-             "3. n_params": self.n_params,
-             "4. constraint": self.constraint_string,
-             "5. shape": self.p_shape,
-             "5. mean": self.mean,
-             "6. median": self.median,
-             "7. mode": self.mode,
-             "8. var": self.var,
-             "9. std": self.std,
+        self._repr()
+
+    def _repr(self):
+        d = {"01. type": self.type,
+             "02. pdf_params": self.pdf_params(),
+             "03. n_params": self.n_params,
+             "04. constraint": self.constraint_string,
+             "05. shape": self.p_shape,
+             "05. mean": self.mean,
+             "06. median": self.median,
+             "07. mode": self.mode,
+             "08. var": self.var,
+             "09. std": self.std,
              "10. skew": self.skew,
              "11. kurt": self.kurt,
              "12. scipy_name": self.scipy_name,
@@ -55,7 +58,7 @@ class ProbabilityDistribution(object):
         return formal_repr(self, sort_dict(d))
 
     def __str__(self):
-        return self.__repr__()
+        return self._repr()
 
     def _prepare_for_h5(self):
         h5_model = convert_to_h5_model(self)
