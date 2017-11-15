@@ -99,6 +99,14 @@ def compute_pdf_params(distrib_type, target_stats):
                           ") and distribution (" + str(distribution.p_shape) + ") shapes do not propagate!")
     for ts_key in target_stats.keys():
         target_stats[ts_key] *= target_shape
+        target_stats[ts_key] = target_stats[ts_key].flatten()
+    target_shape = target_shape.shape
+    target_size = shape_to_size(target_shape)
+    target_stats_array = np.around(np.vstack(target_stats.values()).T, decimals=3, out=None)
+    target_stats_unique = np.vstack({tuple(row) for row in target_stats_array})
+    target_stats_unique = dict(zip(target_stats.keys(),
+                                 [target_stats_unique[:, ii].tolist() for ii in range(distribution.n_params)]))
+    target_stats_unique = dicts_of_lists_to_lists_of_dicts(target_stats_unique)
     # Preparing contraints:
     constraints = [{"type": "ineq", "fun": lambda p: fconstr(p, distribution)}]
     if isequal_string(distribution.type, "gamma") and np.any(np.in1d("mode", target_stats.keys())):
@@ -106,22 +114,21 @@ def compute_pdf_params(distrib_type, target_stats):
     elif isequal_string(distribution.type, "beta") and np.any(np.in1d(["mode", "median"], target_stats.keys())):
         constraints.append({"type": "ineq", "fun": lambda p: fconstr_beta_mode_median(p, distribution)})
     # Run optimization
-    target_size = shape_to_size(target_shape)
-    target_stats = dicts_of_lists(target_stats, n=target_size)
-    target_stats = dicts_of_lists_to_lists_of_dicts(target_stats)
-    sol_params = []
-    for ts in target_stats:
+    sol_params = np.empty((target_size, distribution.n_params))
+    for ts in target_stats_unique:
         sol = minimize(fobj, params_vector, args=(distribution, ts), method="COBYLA", constraints=constraints,
-                       options={"tol": 10 ** -6, "catol": CONSTRAINT_ABS_TOL, 'rhobeg': CONSTRAINT_ABS_TOL})
+                       options={"tol": 10 ** -3, "catol": CONSTRAINT_ABS_TOL, 'rhobeg': CONSTRAINT_ABS_TOL})
         if sol.success:
             if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
                 raise_value_error("nan or inf values in solution x\n" + sol.message)
-            if sol.fun > 10 ** -6:
+            if sol.fun > 10 ** -3:
                 warning("Not accurate solution! sol.fun = " + str(sol.fun))
-            sol_params.append(construct_pdf_params_dict(sol.x, distribution))
+            inds = np.where([np.all(target_stats_array[ii] == np.array(ts.values())) for ii in range(target_size)])[0]
+            sol_params[inds] = sol.x
         else:
             raise_value_error(sol.message)
-    sol_params = list_of_dicts_to_dicts_of_ndarrays(sol_params, shape=target_shape)
+    sol_params= dict(zip(distribution.pdf_params().keys(),
+                    [np.reshape(sol_params[:, ii], target_shape) for ii in range(distribution.n_params)]))
     return sol_params
 
 
