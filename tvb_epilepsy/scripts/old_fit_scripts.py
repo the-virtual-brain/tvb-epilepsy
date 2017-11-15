@@ -17,7 +17,6 @@ from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM, STATS_MODE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_not_implemented_error
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
-from tvb_epilepsy.base.computations.statistics_utils import gamma_from_mu_std, gamma_to_mu_std
 from tvb_epilepsy.service.epileptor_model_factory import model_noise_intensity_dict
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.lsa_service import LSAService

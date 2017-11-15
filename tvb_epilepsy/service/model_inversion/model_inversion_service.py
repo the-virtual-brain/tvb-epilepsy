@@ -41,10 +41,10 @@ class ModelInversionService(object):
             self.pystan = pystan
         self.target_data_type = target_data_type
         self.target_data = target_data
-        if self.target_data is not None:
-            self.observation_shape = target_data.shape
+        if isinstance(self.target_data, np.ndarray):
+            self.observation_shape = self.target_data.shape
         else:
-            self.observation_shape = (0,0)
+            self.observation_shape = ()
         if isinstance(model_configuration, ModelConfiguration):
             self.model_config = model_configuration
             self.logger.info("Input model configuration set...")

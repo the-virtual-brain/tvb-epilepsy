@@ -78,7 +78,7 @@ class AutoregressiveModelInversionService(OdeModelInversionService):
                                               kwargs.get("euler_method"), kwargs.get("observation_model"),
                                               kwargs.get("observation_expression"))
 
-    def generate_model_data(self, statistical_model, projection, logger=LOG, **kwargs):
+    def generate_model_data(self, statistical_model, projection):
         active_regions_flag = np.zeros((statistical_model.n_regions,), dtype="i")
         active_regions_flag[statistical_model.active_regions] = 1
         self.model_data = {"n_regions": statistical_model.n_regions,
@@ -99,7 +99,7 @@ class AutoregressiveModelInversionService(OdeModelInversionService):
                            "signals": self.target_data,
                            "mixing": projection,
                            "x1eq0": statistical_model.paramereters["x1eq"].mean}
-        for key, val in self.get_epileptor_parameters(logger=logger).iteritems():
+        for key, val in self.get_epileptor_parameters().iteritems():
             self.model_data.update({key: val})
         for p in statistical_model.paramereters.values():
             self.model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high,

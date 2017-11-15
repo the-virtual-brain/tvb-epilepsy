@@ -205,7 +205,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_autoregress", EMPIRICAL='', times_
 
             # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ5_0001.edf'), [20.0, 45.0], channel_lbls)
         else:
-            target_data_type = "simulation"
+            target_data_type = "simulated"
             ts_file = os.path.join(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts.mat")
             if os.path.isfile(ts_file):
                 logger.info("\n\nLoading previously simulated time series...")
@@ -239,7 +239,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_autoregress", EMPIRICAL='', times_
                     vois_ts_dict=compute_seeg_and_write_ts_h5_file(FOLDER_RES, lsa_hypothesis.name + "_ts.h5", sim.model,
                                                                    vois_ts_dict, output_sampling_time, time_length,
                                                                    hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
-                                                                   sensor_dicts_list=[head.sensorsSEEG])
+                                                                   sensor_list=head.sensorsSEEG)
 
                     # Plot results
                     plot_sim_results(sim.model, lsa_hypothesis.propagation_indices, lsa_hypothesis.name, head, vois_ts_dict,
@@ -251,30 +251,34 @@ def main_fit_sim_hyplsa(stats_model_name="vep_autoregress", EMPIRICAL='', times_
 
         # Get model_data and observation signals:
         model_inversion_service = AutoregressiveModelInversionService(model_configuration, hyp, head, dynamical_model,
-                                                                     pystan=pystan_service,
-                                                                     target_data=vois_ts_dict["signals"],
-                                                                     target_data_type=target_data_type,
-                                                                     time=vois_ts_dict["time"],
-                                                                     logger=logger)
+                                                                     pystan=pystan_service, logger=logger)
         statistical_model = model_inversion_service.generate_statistical_model(**kwargs)
-        model_inversion_service.generate_model_data(statistical_model, head.sensorsSEEG.get_sensors_id().projection,
-                                                    logger=logger, **kwargs)
+        model_inversion_service.update_active_regions(statistical_model, methods=["e_values", "LSA"],
+                                                      active_regions_th=0.1)
+        model_inversion_service.set_target_data_and_time(target_data_type, vois_ts_dict,
+                                                         statistical_model=statistical_model,
+                                                         projection=head.sensorsSEEG.get_sensors_id().projection)
+        if target_data_type == "empirical":
+            model_inversion_service.update_active_regions_seeg(statistical_model, active_regions_th=0.5, seeg_inds=None,
+                                                               projection=head.sensorsSEEG.get_sensors_id().projection)
+        model_inversion_service.generate_model_data(statistical_model, head.sensorsSEEG.get_sensors_id().projection)
 
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_data.mat"), model_inversion_service.model_data)
 
         # Fit and get estimates:
-        est, fit = model_inversion_service.pystan.fit_stan_model(model_data=model_inversion_service.model_data,
-                                                                 **kwargs) #
-        savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), est)
+        model_inversion_service.pystan.fit_stan_model(model_data=model_inversion_service.model_data, **kwargs)
+        savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), model_inversion_service.est)
 
-        plot_fit_results(lsa_hypothesis.name, head, est, model_inversion_service.data, statistical_model.active_regions,
-                         time=vois_ts_dict['time'], seizure_indices=[0, 1], trajectories_plot=True)
+        plot_fit_results(lsa_hypothesis.name, head, model_inversion_service.est, model_inversion_service.model_data,
+                         statistical_model.active_regions, time=vois_ts_dict['time'], seizure_indices=[0, 1],
+                         trajectories_plot=True)
 
         # Reconfigure model after fitting:
-        fit_model_configuration_service = ModelConfigurationService(hyp.number_of_regions,
-                                                                    K=est['K'] * hyp.number_of_regions)
+        fit_model_configuration_service = \
+            ModelConfigurationService(hyp.number_of_regions, K=model_inversion_service.est['K']*hyp.number_of_regions)
 
-        x0_values_fit = fit_model_configuration_service._compute_x0_values_from_x0_model(est['x0'])
+        x0_values_fit = \
+            fit_model_configuration_service._compute_x0_values_from_x0_model(model_inversion_service.est['x0'])
         disease_indices = statistical_model.active_regions.tolist()
         hyp_fit = DiseaseHypothesis(head.connectivity.number_of_regions,
                                     excitability_hypothesis={tuple(disease_indices): x0_values_fit},
@@ -282,7 +286,8 @@ def main_fit_sim_hyplsa(stats_model_name="vep_autoregress", EMPIRICAL='', times_
                                     name='fit_' + hyp_x0.name)
 
         connectivity_matrix_fit = np.array(model_configuration.connectivity_matrix)
-        connectivity_matrix_fit[statistical_model.active_regions][:, statistical_model.active_regions] = est["FC"]
+        connectivity_matrix_fit[statistical_model.active_regions][:, statistical_model.active_regions] = \
+            model_inversion_service.est["FC"]
         model_configuration_fit = fit_model_configuration_service.configure_model_from_hypothesis(hyp_fit,
                                                                                              connectivity_matrix_fit)
         model_configuration_fit.write_to_h5(FOLDER_RES, hyp_fit.name + "_ModelConfig.h5")

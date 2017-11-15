@@ -24,67 +24,78 @@ class OdeModelInversionService(ModelInversionService):
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None,
                  model_name="vep_ode", model=None, model_dir=os.path.join(FOLDER_RES, "model_inversion"),
                  model_code=None, model_code_path=os.path.join(STATS_MODELS_PATH, "vep_ode.stan"),
-                 target_data=None, target_data_type="", time=None,
                  logger=LOG, **kwargs):
-
         super(OdeModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
                                                        model_name, model, model_dir, model_code, model_code_path,
-                                                       target_data, target_data_type, logger)
-
-        (self.n_times, self.n_signals) = self.observation_shape
-        if time is None:
-            self.time = np.linespace(self.n_times)
-            self.dt = 1
-        else:
-            if len(time) == self.n_times and self.n_times != 0:
-                raise_value_error("The length of the input time vector (" + str(len(time)) +
-                                  ") does not match the one of the target_data (" + str(self.n_times) + ")!")
-            else:
-                self.time = time
-                self.dt = np.mean(self.time)
+                                                       None, "", logger)
+        self.time = None
+        self.dt = 0.0
+        self.n_times = 0
+        self.n_signals = 0
 
     def get_default_sig_init(self):
         return 0.1
 
-    def set_empirical_target_data(self, target_data, time, **kwargs):
-        self.target_data_type = kwargs.get("target_data_type", "empirical")
-        self.target_data = target_data
-        self.observation_shape = self.target_data.shape
-        (self.n_times, self.n_signals) = self.observation_shape
-        time = np.array(time)
-        if time.size == 1:
-            self.dt = time
-            self.time = np.arange(self.dt * (self.n_times - 1))
-        elif time.size == self.n_times:
-            self.time = time
-            self.dt = np.mean(self.time)
+    def set_time(self, time=None):
+        if time is not None:
+            time = np.array(time)
+            try:
+                if time.size == 1:
+                    self.dt = time
+                    self.time = np.arange(self.dt * (self.n_times - 1))
+                elif time.size == self.n_times:
+                    self.time = time
+                    self.dt = np.mean(self.time)
+                else:
+                    raise_value_error("Input time is neither a scalar nor a vector of length equal to target_data.shape[0]!" +
+                                      "\ntime = " + str(time))
+            except:
+                raise_value_error(
+                    "Input time is neither a scalar nor a vector of length equal to target_data.shape[0]!" +
+                    "\ntime = " + str(time))
         else:
             raise_value_error("Input time is neither a scalar nor a vector of length equal to target_data.shape[0]!" +
                               "\ntime = " + str(time))
 
-    def set_simulated_target_data(self, statistical_model, target_data, **kwargs):
-        #TODO: this function needs to be improved substantially. It lacks generality right now.
-        self.target_data_type = "simulated"
-        self.target_data = target_data.get("signals", None)
-        if statistical_model.observation_expression == "x1z_offset":
-            self.target_data = (target_data["x1"].T - np.expand_dims(self.model_config.x1EQ, 1)).T + \
-                               (target_data["z"].T - np.expand_dims(self.model_config.zEQ, 1)).T
-            # TODO: a better normalization
-            self.target_data = target_data["x1"] / 2.75
-        elif statistical_model.observation_expression == "x1_offset":
-            # TODO: a better normalization
-            self.target_data = (target_data["x1"].T - np.expand_dims(self.model_config.x1EQ, 1)).T / 2.0
-        else: # statistical_models.observation_expression == "x1"
-            self.target_data = target_data["x1"]
-        if statistical_model.observation_model.find("seeg") > 0:
-            self.target_data = (np.dot(kwargs.get("projection"), self.target_data.T)).T
+    def set_target_data_and_time(self, target_data_type, target_data, time=None, **kwargs):
+        if isequal_string(target_data_type, "simulated"):
+            self.set_simulated_target_data(target_data, statistical_model=kwargs.get("statistical_model", None),
+                                           time=kwargs.get("time", None), projection=kwargs.get("projection", None))
+            self.target_data_type = "simulated"
+        else:  # isequal_string(target_data_type, "empirical"):
+            self.set_empirical_target_data(target_data, time)
+            self.target_data_type = "empirical"
+        if time is None and isinstance(target_data, dict):
+            self.set_time(target_data.get("time", None))
+
+    def set_empirical_target_data(self, target_data, time=None):
+        if isinstance(target_data, dict):
+            self.target_data = target_data.get("signals", target_data.get("target_data", None))
         self.observation_shape = self.target_data.shape
         (self.n_times, self.n_signals) = self.observation_shape
-        self.time = target_data["time"]
-        if self.time.size != self.n_times:
-            raise_value_error("Input time is not a vector of length equal to target_data.shape[0]!" +
-                              "\ntime = " + str(self.time))
-        self.dt = np.mean(self.time)
+
+    def set_simulated_target_data(self, target_data,  statistical_model=None, time=None, projection=None):
+        #TODO: this function needs to be improved substantially. It lacks generality right now.
+        if statistical_model is None or not(isequal_string(target_data, dict)):
+            self.set_empirical_target_data(target_data, time)
+        else:
+            if statistical_model.observation_expression == "x1z_offset":
+                self.target_data = ((target_data["x1"].T - np.expand_dims(self.model_config.x1EQ, 1)).T + \
+                                   (target_data["z"].T - np.expand_dims(self.model_config.zEQ, 1)).T) / 2.75
+                # TODO: a better normalization
+            elif statistical_model.observation_expression == "x1_offset":
+                # TODO: a better normalization
+                self.target_data = (target_data["x1"].T - np.expand_dims(self.model_config.x1EQ, 1)).T / 2.0
+            else: # statistical_models.observation_expression == "x1"
+                self.target_data = target_data["x1"]
+            self.observation_shape = self.target_data.shape
+            (self.n_times, self.n_signals) = self.observation_shape
+            if self.time.size != self.n_times:
+                raise_value_error("Input time is not a vector of length equal to target_data.shape[0]!" +
+                                  "\ntime = " + str(self.time))
+            if statistical_model.observation_model.find("seeg") > 0:
+                if projection is not None:
+                    self.target_data = (np.dot(projection[statistical_model.active_regions], self.target_data.T)).T
 
     def get_epileptor_parameters(self):
         self.logger.info("Unpacking epileptor parameters...")
