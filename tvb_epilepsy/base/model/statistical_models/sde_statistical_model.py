@@ -18,3 +18,6 @@ class SDEStatisticalModel(ODEStatisticalModel):
 
     def __repr__(self):
         return super(SDEStatisticalModel, self).__repr__()
+
+    # def plot(self):
+    #     figure_dir = os.path.join(FOLDER_FIGURES, "_ASM_" + self.name)
