@@ -64,7 +64,7 @@ if __name__ == "__main__":
             target_stats = {"mean": np.ones((2,))}
             stats_m = "mean"
         elif isequal_string(distrib_name, "binomial"):
-            target_stats = {"mean": np.ones((2,))}
+            target_stats = {"mean": np.ones((2,)), "std": 2.0}
             stats_m = "mean"
         else:
             if isequal_string(distrib_name, "uniform"):
@@ -73,7 +73,7 @@ if __name__ == "__main__":
             else:
                 target_stats = {"mode": np.ones((2,)), "std": 2.0}
                 stats_m = "mode"
-        parameter = generate_stochastic_parameter(name="test_" + distrib_name, low=0.0, high=2.0, shape=(2,2),
+        parameter = generate_stochastic_parameter(name="test_" + distrib_name, low=0.0, high=2.0, p_shape=(2,2),
                               probability_distribution=distrib_name, optimize=True, **target_stats)
         logger.info(str(parameter))
         samples = sampler.generate_samples(parameter=parameter, stats=True)

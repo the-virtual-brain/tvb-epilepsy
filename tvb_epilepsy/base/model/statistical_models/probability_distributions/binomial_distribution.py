@@ -13,7 +13,7 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.discre
 class BinomialDistribution(DiscreteProbabilityDistribution):
 
     def __init__(self, **params):
-        self.type = "bionomial"
+        self.type = "binomial"
         self.scipy_name = "binom"
         self.numpy_name = "binomial"
         self.constraint_string = "n > 0 and 0 < p < 1"
@@ -32,10 +32,10 @@ class BinomialDistribution(DiscreteProbabilityDistribution):
     def constraint(self):
         # By default expr >= 0
         p = np.array(self.p).flatten() - np.finfo(np.float64).eps
-        return np.hstack([np.array(self.n).flatten() - 1, p, 1.0 - p + np.finfo(np.float64).eps])
+        return np.hstack([np.array(self.n).flatten() - np.finfo(np.float64).eps, p, 1.0 - p + np.finfo(np.float64).eps])
 
     def scipy(self, loc=0.0, scale=1.0):
-        return ss.binom(n=self.n, p=self.p, loc=loc, scale=scale)
+        return ss.binom(n=self.n, p=self.p, loc=loc)
 
     def numpy(self, size=(1,)):
         return lambda: nr.binomial(n=self.n, p=self.p, size=size)

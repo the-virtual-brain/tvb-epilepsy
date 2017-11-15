@@ -11,7 +11,7 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.contin
 
 class ChisquareDistribution(ContinuousProbabilityDistribution):
 
-    def __init__(self, params):
+    def __init__(self, **params):
         self.type = "chisquare"
         self.scipy_name = "chi"
         self.numpy_name = "chisquare"
@@ -33,7 +33,7 @@ class ChisquareDistribution(ContinuousProbabilityDistribution):
 
     def constraint(self):
         # By default expr >= 0
-        return np.array(self.df).flatten() - 1
+        return np.array(self.df).flatten() - np.finfo(np.float64).eps
 
     def scipy(self, loc=0.0, scale=1.0):
         return ss.chi(df=self.df, loc=loc, scale=scale)
@@ -51,7 +51,7 @@ class ChisquareDistribution(ContinuousProbabilityDistribution):
     def calc_mode_manual(self):
         shape = np.array(self.df).shape
         dfmax = np.array(self.df * np.ones((1,)), dtype='i')
-        dfmax = (np.max(dfmax.flatten()) - 2).tolist()
+        dfmax = (dfmax.flatten() - 2).tolist()
         for id in range(len(dfmax)):
             dfmax[id] = np.max([dfmax[id], 0])
         return np.reshape(dfmax, shape)

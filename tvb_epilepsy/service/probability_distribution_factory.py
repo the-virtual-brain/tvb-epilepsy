@@ -5,13 +5,14 @@ import numpy as np
 from scipy.optimize import minimize
 
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
-from tvb_epilepsy.base.utils.data_structures_utils import shape_to_size, dicts_of_lists, \
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, shape_to_size, dicts_of_lists, \
                                                     dicts_of_lists_to_lists_of_dicts, list_of_dicts_to_dicts_of_ndarrays
 
 
 AVAILABLE_DISTRIBUTIONS = ["uniform", "normal", "gamma", "lognormal", "exponential", "beta", "chisquare",
                            "binomial", "bernoulli", "poisson"]
 
+CONSTRAINT_ABS_TOL = 0.1
 
 def generate_distribution(distrib_type, target_shape=None, **target):
     if np.in1d(distrib_type.lower(), AVAILABLE_DISTRIBUTIONS):
@@ -50,7 +51,7 @@ def fobj(p, pdf, target_stats):
     f = 0.0
     for ts_key, ts_val in target_stats.iteritems():
         f += np.sum((getattr(pdf, "calc_" + ts_key)(use="manual") - ts_val) ** 2)
-    if np.isnan(f):
+    if np.isnan(f) or np.isinf(f):
         print("WTF?")
     return f.flatten()
 
@@ -59,7 +60,20 @@ def fobj(p, pdf, target_stats):
 def fconstr(p, pdf):
     params = construct_pdf_params_dict(p, pdf)
     pdf.__update_params__(check_constraint=False, **params)
-    return pdf.constraint()
+    f = pdf.constraint() - CONSTRAINT_ABS_TOL
+    return f
+
+# Vector constraint function for gamma distribution median optimization. By default expr >= 0
+def fconstr_gamma_mode(p, pdf):
+    params = construct_pdf_params_dict(p, pdf)
+    f = params["shape"] - 1.0 - CONSTRAINT_ABS_TOL
+    return f
+
+# Vector constraint function for beta distribution mode and median optimization. By default expr >= 0
+def fconstr_beta_mode_median(p, pdf):
+    params = construct_pdf_params_dict(p, pdf)
+    f = np.stack(params.values()) - 1.0 - CONSTRAINT_ABS_TOL
+    return f
 
 
 def compute_pdf_params(distrib_type, target_stats):
@@ -85,7 +99,11 @@ def compute_pdf_params(distrib_type, target_stats):
     for ts_key in target_stats.keys():
         target_stats[ts_key] *= target_shape
     # Preparing contraints:
-    constraints = {"type": "ineq", "fun": lambda p: fconstr(p, distribution)}
+    constraints = [{"type": "ineq", "fun": lambda p: fconstr(p, distribution)}]
+    if isequal_string(distribution.type, "gamma") and np.any(np.in1d("mode", target_stats.keys())):
+        constraints.append({"type": "ineq", "fun": lambda p: fconstr_gamma_mode(p, distribution)})
+    elif isequal_string(distribution.type, "beta") and np.any(np.in1d(["mode", "median"], target_stats.keys())):
+        constraints.append({"type": "ineq", "fun": lambda p: fconstr_beta_mode_median(p, distribution)})
     # Run optimization
     target_size = shape_to_size(target_shape)
     target_stats = dicts_of_lists(target_stats, n=target_size)
@@ -93,15 +111,15 @@ def compute_pdf_params(distrib_type, target_stats):
     sol_params = []
     for ts in target_stats:
         sol = minimize(fobj, params_vector, args=(distribution, ts), method="COBYLA", constraints=constraints,
-                       options={"tol": 10 ** -6, "catol": 10 ** -6})
+                       options={"tol": 10 ** -6, "catol": CONSTRAINT_ABS_TOL, 'rhobeg': CONSTRAINT_ABS_TOL})
         if sol.success:
             if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
                 raise_value_error("nan or inf values in solution x\n" + sol.message)
             if sol.fun > 10 ** -6:
                 warning("Not accurate solution! sol.fun = " + str(sol.fun))
-        sol_params.append(construct_pdf_params_dict(sol.x, distribution))
-    else:
-        raise_value_error(sol.message)
+            sol_params.append(construct_pdf_params_dict(sol.x, distribution))
+        else:
+            raise_value_error(sol.message)
     sol_params = list_of_dicts_to_dicts_of_ndarrays(sol_params, shape=target_shape)
     return sol_params
 

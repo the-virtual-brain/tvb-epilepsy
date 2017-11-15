@@ -60,7 +60,7 @@ class BetaDistribution(ContinuousProbabilityDistribution):
         i1 = np.ones((1,))
         alpha = self.alpha * i1
         beta = self.beta * i1
-        id = self.alpha > 1.0 and self.beta > 1.0
+        id = np.logical_and(self.alpha > 1.0, self.beta > 1.0)
         if np.any(id == False):
             warning("No closed form of median for beta distribution for alpha or beta <= 1.0!" + "\nReturning nan!")
             median = np.nan((alpha+beta).shape)
@@ -76,7 +76,7 @@ class BetaDistribution(ContinuousProbabilityDistribution):
         i1 = np.ones((1,))
         alpha = self.alpha * i1
         beta = self.beta * i1
-        id = self.alpha > 1.0 and self.beta > 1.0
+        id = np.logical_and(self.alpha > 1.0, self.beta > 1.0)
         if np.any(id==False):
             warning("No closed form of mode for beta distribution for alpha or beta <= 1.0!" + "\nReturning nan!")
             mode = np.nan * np.ones((alpha + beta).shape)

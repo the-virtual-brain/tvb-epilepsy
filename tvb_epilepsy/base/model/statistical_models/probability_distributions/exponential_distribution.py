@@ -55,7 +55,6 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
         return self.scale
 
     def calc_median_manual(self):
-        warning("Approximate calculation for median of chisquare distribution!")
         return self.scale * np.log(2)
 
     def calc_mode_manual(self):

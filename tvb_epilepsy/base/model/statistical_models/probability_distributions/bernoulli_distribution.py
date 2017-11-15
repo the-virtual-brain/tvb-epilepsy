@@ -27,10 +27,10 @@ class BernoulliDistribution(DiscreteProbabilityDistribution):
     def constraint(self):
         # By default expr >= 0
         p = np.array(self.p).flatten()
-        return np.hstack([p- np.finfo(np.float64).eps,  1.0 - p + np.finfo(np.float64).eps])
+        return np.hstack([p - np.finfo(np.float64).eps,  1.0 - p + np.finfo(np.float64).eps])
 
     def scipy(self, loc=0.0, scale=1.0):
-        return ss.bernoulli(p=self.p, loc=loc, scale=scale)
+        return ss.bernoulli(p=self.p, loc=loc)
 
     def numpy(self, size=(1,)):
         raise_not_implemented_error("No implementation of bernoulli distribution in numpy.random module!")
