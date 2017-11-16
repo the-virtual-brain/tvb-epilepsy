@@ -230,7 +230,7 @@ class ODEModelInversionService(ModelInversionService):
                                    kwargs.get("euler_method"), kwargs.get("observation_model"),
                                    kwargs.get("observation_expression"))
 
-    def generate_model_data_sde(self, statistical_model, projection):
+    def generate_model_data(self, statistical_model, projection, x1var="", zvar=""):
         active_regions_flag = np.zeros((statistical_model.n_regions,), dtype="i")
         active_regions_flag[statistical_model.active_regions] = 1
         self.model_data = {"n_regions": statistical_model.n_regions,
@@ -257,7 +257,9 @@ class ODEModelInversionService(ModelInversionService):
             self.model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high,
                                     p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS,
                                                                       p.probability_distribution.name))[0]})
-            if isequal_string(p.name, "x1eq") or isequal_string(p.name, "x1init") or isequal_string(p.name, "zinit"):
+            if isequal_string(p.name, x1var) or isequal_string(p.name, zvar):
+                pass
+            elif isequal_string(p.name, "x1eq") or isequal_string(p.name, "x1init") or isequal_string(p.name, "zinit"):
                     warning("For the moment only normal distribution is allowed for parameters " + p.name +
                             "!\nIgnoring the selected probability distribution!")
             else:
