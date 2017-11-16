@@ -254,7 +254,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[
 
         # Get model_data and observation signals:
         model_inversion_service = SDEModelInversionService(model_configuration, hyp, head, dynamical_model,
-                                                           pystan=pystan_service, logger=logger)
+                                                           pystan=pystan_service, sde_mode="x1z", logger=logger)
         statistical_model = model_inversion_service.generate_statistical_model(**kwargs)
         model_inversion_service.update_active_regions(statistical_model, methods=["e_values", "LSA"],
                                                       active_regions_th=0.1)
