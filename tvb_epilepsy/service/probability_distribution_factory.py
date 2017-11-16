@@ -5,8 +5,8 @@ import numpy as np
 from scipy.optimize import minimize
 
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, shape_to_size, dicts_of_lists, \
-                                                    dicts_of_lists_to_lists_of_dicts, list_of_dicts_to_dicts_of_ndarrays
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, shape_to_size, \
+                                                                                       dicts_of_lists_to_lists_of_dicts
 
 
 AVAILABLE_DISTRIBUTIONS = ["uniform", "normal", "gamma", "lognormal", "exponential", "beta", "chisquare",
@@ -64,17 +64,20 @@ def fconstr(p, pdf):
     f = pdf.constraint() - CONSTRAINT_ABS_TOL
     return f
 
+
 # Vector constraint function for gamma distribution median optimization. By default expr >= 0
 def fconstr_gamma_mode(p, pdf):
     params = construct_pdf_params_dict(p, pdf)
     f = params["shape"] - 1.0 - CONSTRAINT_ABS_TOL
     return f
 
+
 # Vector constraint function for beta distribution mode and median optimization. By default expr >= 0
 def fconstr_beta_mode_median(p, pdf):
     params = construct_pdf_params_dict(p, pdf)
     f = np.stack(params.values()) - 1.0 - CONSTRAINT_ABS_TOL
     return f
+
 
 def prepare_contraints(distribution, target_stats):
     # Preparing contraints:
@@ -145,5 +148,3 @@ def compute_pdf_params(distrib_type, target_stats):
     sol_params= dict(zip(distribution.pdf_params().keys(),
                     [np.reshape(sol_params[:, ii], target_shape) for ii in range(distribution.n_params)]))
     return sol_params
-
-
