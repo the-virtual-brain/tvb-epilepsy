@@ -1,9 +1,7 @@
 functions {
 
     real EpileptorDP2D_fun_x1(real x1, real z, real yc, real Iext1, real a, real db, real d, real slope, real tau1) {
-
         real fx1;
-
         // population 1
         if (x1 <= 0.0) {
             // if_ydot0 = a * x1 ** 2 + (d - b) * y[0],
@@ -15,14 +13,11 @@ functions {
         }
         // ydot[0] = tau1 * (yc - y[1] + Iext1 - where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
         fx1 = tau1 * (yc - z + Iext1 - fx1 * x1);
-
         return fx1;
     }
 
     real EpileptorDP2D_fun_z_lin(real x1, real z, real x0, real coupling, real tau0, real tau1) {
-
         real fz;
-
         // slow energy variable with a linear form (original Epileptor)
         // ydot[1] = tau1 * (4 * (y[0] - x0) + where(y[1] < 0.0, if_ydot1, else_ydot1) - y[1] + K * c_pop1) / tau0
         fz = 4.0 * (x1 - x0) - z - coupling;
@@ -60,31 +55,19 @@ functions {
 
     real sample_from_stdnormal_lpdf(real x, int pdf, real p1, real p2) {
         real n01;
-        n01 = normal_lpdf(x | 0.0, 1.0);
         if (pdf == 1) {
             // Normal(mean, sigma**2) =  mean + sigma*Normal(0,1)
+            n01 = normal_lpdf(x | 0.0, 1.0);
             return p1 + p2 * n01;
         } else if (pdf == 2) {
-        /* not possible! requires some of INDEPENDENT Gamma random variables!
-            // Gamma(shape, scale) = 2*shape*Gamma(1/2, scale) = 2*shape*Normal(0, scale/2)**2
-            // because:
-            // Normal(0,sigma)**2 = Gamma(1/2, 2*sigma**2)
-            //k*Gamma(shape, scale) = Gamma(k*shape, scale)
-            p2 = sqrt(p2/2)
-            n01 = p2 * n01
-            return 2 * p1 * n01*n01;*/
+        // not possible! requires sum of INDEPENDENT Gamma random variables!
             return gamma_lpdf(x | p1, 1.0 / p2);
         } else if (pdf == 3) {
             // lognormal(mean, sigma**2) = exp(Normal(mean, sigma**2)) = exp(mean + sigma*Normal(0,1))
+            n01 = normal_lpdf(x | 0.0, 1.0);
             return exp(p1 + p2 * n01);
         } else if (pdf == 4) {
-        /* not possible! requires some of INDEPENDENT Gamma random variables!
-            // Exponential(scale) = Gamma(1, scale) and following the above for Gamma(), we get:
-            //Exponential(scale) = 2*Normal(0, scale/2)**2
-            p1 = sqrt(p1/2)
-            n01 = p1 * n01
-            return 2 * n01*n01;
-        */
+        // not possible! requires sum of INDEPENDENT Gamma random variables!
             return exponential_lpdf(x | p1);
         /* Beta not used for now...
         } else if (pdf == 5) {
@@ -92,8 +75,8 @@ functions {
             return beta_lpdf(x | p1, p2);
         */
         } else {
-            // Uniform(a, b) = a + (b-a)*Uniform(0, 1)  =  a + (b-a)*Normal(0, 1)_CDF
-            return p1 + (p2-p1)*normal_lcdf(x | 0.0, 1.0);
+            // Not possible!
+            return uniform_lpdf(x | p1, p2);
         }
     }
 
@@ -232,9 +215,7 @@ data {
 
 
 transformed data {
-
     real db;
-
     // Calculate db parameter, which corresponds to parameter b for the 2D reduced Epileptor (Proix etal 2014)
     db = d - b;
 }
@@ -286,7 +267,6 @@ transformed parameters {
 
     /* Coupling
     We place it here for the moment because it has a high diagnostic value */
-
     for (ii in 1:n_regions) {
         coupling_eq[ii] = 0.0;
         for (jj in 1:n_regions) {
@@ -295,7 +275,6 @@ transformed parameters {
             }
         }
     }
-
     for (tt in 1:n_times) {
         for (ii in 1:n_active_regions) {
             coupling[ii, tt] = 0.0;
@@ -312,9 +291,7 @@ transformed parameters {
                coupling[ii, tt] = coupling[ii, tt] +
                              EC[active_regions[ii], nonactive_regions[jj]] * (x1eq[nonactive_regions[jj]] - x1[ii, tt]);
             }
-
         }
-
     }
 
     /* x0 */
