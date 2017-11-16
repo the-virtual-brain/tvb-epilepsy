@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 
-from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF, K_DEF
+from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
 from tvb_epilepsy.base.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
@@ -28,6 +28,19 @@ LOG = initialize_logger(__name__)
 
 
 class ModelInversionService(object):
+
+    X1EQ_MIN = -2.0
+
+    TAU1_MIN = 0.1
+    TAU1_MAX = 1.0
+
+    TAU0_MIN = 3.0
+    TAU0_MAX = 3000.0
+
+    K_MIN = 0.0
+    K_MAX = 2.0
+
+    EC_MIN = 0.0
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, pystan=None,
                  model_name="", model=None, model_dir=os.path.join(FOLDER_RES, "model_inversion"), model_code=None,
@@ -125,23 +138,23 @@ class ModelInversionService(object):
         # Epileptor:
         parameter = kwargs.get("x1eq", None)
         if not(isinstance(parameter, Parameter)):
-            x1eq = kwargs.get("x1eq", self.model_config.x1EQ)
+            x1eq = np.maximum(kwargs.get("x1eq", self.model_config.x1EQ), X1_DEF)
             parameter = generate_stochastic_parameter("x1eq",
-                                                      low=kwargs.get("x1eq_lo", X1_DEF),
+                                                      low=kwargs.get("x1eq_lo", self.X1EQ_MIN),
                                                       high=kwargs.get("x1eq_hi", X1_EQ_CR_DEF),
                                                       p_shape=(self.n_regions,),
-                                                      probability_distribution=kwargs.get("x1eq_pdf", "normal"),
-                                                      optimize=True,
-                                                      mode=x1eq, std=kwargs.get("x1eq_sig", 0.1))
+                                                      probability_distribution="normal",
+                                                      optimize=False,
+                                                      mean=x1eq, sigma=kwargs.get("x1eq_sig", 0.1))
         parameters.append(parameter)
 
         parameter = kwargs.get("K", None)
         if not(isinstance(parameter, Parameter)):
-            K_def = np.mean(self.model_config.K)
+            K_def = np.maximum(kwargs.get("K_def", np.mean(self.model_config.K)), 0.1)
             parameter = generate_stochastic_parameter("K",
-                                                      low=kwargs.get("K_lo", 0.01),
-                                                      high=kwargs.get("K_hi", 2.0),  p_shape=(),
-                                                      probability_distribution= kwargs.get("K_pdf", "gamma"),
+                                                      low=kwargs.get("K_lo", self.K_MIN),
+                                                      high=kwargs.get("K_hi", self.K_MAX),  p_shape=(),
+                                                      probability_distribution= kwargs.get("K_pdf", "lognormal"),
                                                       optimize=True,
                                                       mode=kwargs.get("K_def", K_def), std=kwargs.get("K_sig", K_def))
         parameters.append(parameter)
@@ -151,10 +164,10 @@ class ModelInversionService(object):
         if not (isinstance(parameter, Parameter)):
             tau1_def = kwargs.get("tau1_def", self.get_default_tau1())
             parameter = generate_stochastic_parameter("tau1",
-                                                      low=kwargs.get("tau1_lo", 0.1),
-                                                      high=kwargs.get("tau1_hi", 0.9),
+                                                      low=kwargs.get("tau1_lo", self.TAU1_MIN),
+                                                      high=kwargs.get("tau1_hi", self.TAU1_MAX),
                                                       p_shape=(),
-                                                      probability_distribution=kwargs.get("tau1", "gamma"),
+                                                      probability_distribution=kwargs.get("tau1", "lognormal"),
                                                       optimize=True,
                                                       mode=tau1_def, std=kwargs.get("tau1_sig", tau1_def))
         parameters.append(parameter)
@@ -163,10 +176,10 @@ class ModelInversionService(object):
         if not(isinstance(parameter, Parameter)):
             tau0_def = kwargs.get("tau0_def", self.get_default_tau0())
             parameter = generate_stochastic_parameter("tau0",
-                                                      low=kwargs.get("tau0_lo", 3.0),
-                                                      high=kwargs.get("tau0_hi", 30000.0),
+                                                      low=kwargs.get("tau0_lo", self.TAU0_MIN),
+                                                      high=kwargs.get("tau0_hi", self.TAU0_MAX),
                                                       p_shape=(),
-                                                      probability_distribution=kwargs.get("tau0_pdf", "gamma"),
+                                                      probability_distribution=kwargs.get("tau0_pdf", "lognormal"),
                                                       optimize=True,
                                                       mode=tau0_def,
                                                       std=kwargs.get("tau0_sig", tau0_def))
@@ -176,14 +189,15 @@ class ModelInversionService(object):
         parameter = kwargs.get("EC", None)
         if not(isinstance(parameter, Parameter)):
             structural_connectivity = kwargs.get("structural_connectivity", self.model_config.connectivity_matrix)
+            p0595 = np.percentile(structural_connectivity.flatten(), [5, 95])
+            mode = numpy.minimum(p0595[0], structural_connectivity)
             parameter = generate_stochastic_parameter("EC",
-                                                      low=kwargs.get("EC_lo", 10 ** -6),
-                                                      high=kwargs.get("EC_hi", 100.0),
+                                                      low=kwargs.get("EC_lo", self.EC_MIN),
+                                                      high=kwargs.get("EC_hi", 3 * p0595[1]),
                                                       p_shape=(self.n_regions, self.n_regions),
-                                                      probability_distribution=kwargs.get("EC_pdf", "gamma"),
+                                                      probability_distribution=kwargs.get("EC_pdf", "lognormal"),
                                                       optimize=True,
-                                                      mode=structural_connectivity,
-                                                      std=kwargs.get('EC_sig', structural_connectivity/3.0))
+                                                      mode=mode, std=kwargs.get('EC_sig', mode / 3.0))
         parameters.append(parameter)
 
         # Integration:
@@ -191,10 +205,10 @@ class ModelInversionService(object):
         if not(isinstance(parameter, Parameter)):
             sig_eq_def = kwargs.get("sig_eq_def", 0.1)
             parameter = generate_stochastic_parameter("sig_eq",
-                                                      low=kwargs.get("sig_eq_lo", sig_eq_def / 10.0),
-                                                      high=kwargs.get("sig_eq_hi", 3 * sig_eq_def),
+                                                      low=kwargs.get("sig_eq_lo", 0.0),
+                                                      high=kwargs.get("sig_eq_hi", 2 * sig_eq_def),
                                                       p_shape=(),
-                                                      probability_distribution=kwargs.get("sig_eq_pdf", "gamma"),
+                                                      probability_distribution=kwargs.get("sig_eq_pdf", "lognormal"),
                                                       optimize=True,
                                                       mode=sig_eq_def,
                                                       std = kwargs.get("sig_eq_sig", sig_eq_def))
@@ -207,7 +221,7 @@ class ModelInversionService(object):
             parameter = generate_stochastic_parameter("eps",
                                                       low=kwargs.get("eps_lo", 0.0),
                                                       high=kwargs.get("eps_hi", 1.0),
-                                                      probability_distribution=kwargs.get("eps_pdf", "gamma"),
+                                                      probability_distribution=kwargs.get("eps_pdf", "lognormal"),
                                                       optimize=True,
                                                       mode=eps_def,
                                                       std=kwargs.get("eps_sig", eps_def))

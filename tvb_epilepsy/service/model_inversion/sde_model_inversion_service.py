@@ -49,25 +49,26 @@ class SDEModelInversionService(ODEModelInversionService):
                                                                          low=kwargs.get("x1_lo", -2.0),
                                                                          high=kwargs.get("x1_hi", 2.0),
                                                                          p_shape=(self.n_times, self.n_active_regions),
-                                                                         probability_distribution="normal")))
+                                                                         probability_distribution="normal"),
+                                                                         mean=0.0, sigma=1.0))
         parameters.append(kwargs.get("z", generate_stochastic_parameter("z",
                                                                         low=kwargs.get("z_lo", 2.0),
                                                                         high=kwargs.get("z_hi", 5.0),
                                                                         p_shape=(self.n_times, self.n_active_regions),
-                                                                        probability_distribution="normal")))
+                                                                        probability_distribution="normal"),
+                                                                        mean=3.5, sigma=1.0))
 
         # Integration
         parameter = kwargs.get("sig", None)
         if not(isinstance(parameter, Parameter)):
             sig_def = kwargs.get("sig_def", 10 ** -4)
             parameter = generate_stochastic_parameter("sig",
-                                                      low=kwargs.get("sig_lo", sig_def / 10.0),
+                                                      low=kwargs.get("sig_lo", 0.0),
                                                       high=kwargs.get("sig_hi", 10 * sig_def),
                                                       p_shape=(),
                                                       probability_distribution=kwargs.get("sig_pdf", "gamma"),
                                                       optimize=True,
-                                                      mode=sig_def,
-                                                      std=kwargs.get("sig_sig", sig_def))
+                                                      mode=sig_def, std=kwargs.get("sig_sig", sig_def))
         parameters.append(parameter)
         return parameters
                 

@@ -182,13 +182,13 @@ class ODEModelInversionService(ModelInversionService):
         if not(isinstance(parameter, Parameter)):
             sig_init_def = kwargs.get("sig_init_def", 0.1)
             parameter = generate_stochastic_parameter("sig_init",
-                                                      low=kwargs.get("sig_init_lo", sig_init_def / 10.0),
-                                                      high=kwargs.get("sig_init_hi", 3 * sig_init_def),
+                                                      low=kwargs.get("sig_init_lo", 0.0),
+                                                      high=kwargs.get("sig_init_hi", 2 * sig_init_def),
                                                       p_shape=(),
-                                                      probability_distribution=kwargs.get("sig_init_pdf", "gamma"),
-                                                      optimize=True,
-                                                      mode=sig_init_def,
-                                                      std=kwargs.get("tau1_sig", sig_init_def))
+                                                      probability_distribution=kwargs.get("sig_init_pdf", "lognormal"),
+                                                      optimize=False,
+                                                      mean=sig_init_def,
+                                                      sigma=kwargs.get("tau1_sig", sig_init_def))
         parameters.append(parameter)
 
         # Observation model
@@ -199,7 +199,8 @@ class ODEModelInversionService(ModelInversionService):
                                                       low=kwargs.get("scale_signal_lo", 0.1),
                                                       high=kwargs.get("scale_signal_hi", 2.0),
                                                       p_shape=(),
-                                                      probability_distribution=kwargs.get("scale_signal_pdf", "gamma"),
+                                                      probability_distribution=
+                                                      kwargs.get("scale_signal_pdf", "lognormal"),
                                                       optimize=True,
                                                       mode=scale_signal_def,
                                                       std=kwargs.get("scale_signal_sig", scale_signal_def))
@@ -209,13 +210,14 @@ class ODEModelInversionService(ModelInversionService):
         if not(isinstance(parameter, Parameter)):
             offset_signal_def = kwargs.get("offset_signal_def", 0.0)
             parameter = generate_stochastic_parameter("offset_signal",
-                                                      low=kwargs.get("offset_signal_lo", 0.0),
+                                                      low=kwargs.get("offset_signal_lo", -1.0),
                                                       high=kwargs.get("offset_signal_hi", 1.0),
                                                       p_shape=(),
-                                                      probability_distribution=kwargs.get("offset_signal_pdf", "gamma"),
-                                                      optimize=True,
-                                                      mode=offset_signal_def,
-                                                      std=kwargs.get("scale_signal_sig", offset_signal_def))
+                                                      probability_distribution=
+                                                                            kwargs.get("offset_signal_pdf", "normal"),
+                                                      optimize=False,
+                                                      mean=offset_signal_def,
+                                                      sigma=kwargs.get("scale_signal_sig", offset_signal_def))
         parameters.append(parameter)
         return parameters
 
