@@ -11,13 +11,12 @@ from tvb_epilepsy.base.utils.math_utils import compute_projection, select_greate
 from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
 
 
-TYPE_EEG = 'EEG'
-TYPE_MEG = "MEG"
-TYPE_SEEG = "SEEG"
-SENSORS_TYPES = [TYPE_SEEG, TYPE_MEG, TYPE_EEG]
-
-
 class Sensors(object):
+
+    TYPE_EEG = 'EEG'
+    TYPE_MEG = "MEG"
+    TYPE_SEEG = "SEEG"
+    SENSORS_TYPES = [TYPE_SEEG, TYPE_MEG, TYPE_EEG]
 
     labels = np.array([])
     locations = np.array([])
