@@ -12,7 +12,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, shape_
 AVAILABLE_DISTRIBUTIONS = ["uniform", "normal", "gamma", "lognormal", "exponential", "beta", "chisquare",
                            "binomial", "bernoulli", "poisson"]
 
-CONSTRAINT_ABS_TOL = 0.1
+CONSTRAINT_ABS_TOL = 0.001
 
 
 def generate_distribution(distrib_type, target_shape=None, **target):
@@ -50,11 +50,15 @@ def fobj(p, pdf, target_stats):
     params = construct_pdf_params_dict(p, pdf)
     pdf.__update_params__(check_constraint=False, **params)
     f = 0.0
+    norm = 0.0
     for ts_key, ts_val in target_stats.iteritems():
-        f += np.sum((getattr(pdf, "calc_" + ts_key)(use="manual") - ts_val) ** 2)
-    if np.isnan(f) or np.isinf(f):
-        print("WTF?")
-    return f.flatten()
+        norm += ts_val ** 2
+        f += (getattr(pdf, "calc_" + ts_key)(use="manual") - ts_val) ** 2
+    # if np.isnan(f) or np.isinf(f):
+    #     print("WTF?")
+    if norm > 0.0:
+        f /= norm
+    return f
 
 
 # Vector constraint function. By default expr >= 0
@@ -103,15 +107,17 @@ def prepare_target_stats(distribution, target_stats):
         target_stats[ts_key] = target_stats[ts_key].flatten()
     target_shape = target_shape.shape
     target_size = shape_to_size(target_shape)
-    target_stats_array = np.around(np.vstack(target_stats.values()).T, decimals=3, out=None)
-    target_stats_unique = np.vstack({tuple(row) for row in target_stats_array})
+    target_stats_array = np.around(np.vstack(target_stats.values()).T, decimals=3)
+    target_stats_unique = np.unique(target_stats_array, axis=0)
+    # target_stats_unique = np.vstack({tuple(row) for row in target_stats_array})
     target_stats_unique = dict(zip(target_stats.keys(),
-                                   [target_stats_unique[:, ii].tolist() for ii in range(distribution.n_params)]))
+                                   [np.around(target_stats_unique[:, ii], decimals=3) for ii in range(distribution.n_params)]))
     target_stats_unique = dicts_of_lists_to_lists_of_dicts(target_stats_unique)
     return target_stats_unique, target_stats_array, target_shape, target_size
 
 
 def prepare_intial_condition(distribution, low_limit=-10.0, high_limit=10):
+    # TODO: find a better to initialize this...
     # Preparing initial conditions' parameters' vector:
     p0 = np.stack(distribution.pdf_params().values())
     # Bounding initial condition:
@@ -131,20 +137,29 @@ def compute_pdf_params(distrib_type, target_stats):
         prepare_target_stats(distribution, target_stats)
     constraints = prepare_contraints(distribution, target_stats)
     p0 = prepare_intial_condition(distribution, low_limit=-10.0, high_limit=10)
+    # p0 = [2.0, 2.0]
     # Run optimization
-    sol_params = np.empty((target_size, distribution.n_params))
-    for ts in target_stats_unique:
-        sol = minimize(fobj, p0, args=(distribution, ts), method="COBYLA", constraints=constraints,
-                       options={"tol": 10 ** -3, "catol": CONSTRAINT_ABS_TOL, 'rhobeg': CONSTRAINT_ABS_TOL})
-        if sol.success:
-            if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
-                raise_value_error("nan or inf values in solution x\n" + sol.message)
-            if sol.fun > 10 ** -3:
-                warning("Not accurate solution! sol.fun = " + str(sol.fun))
-            inds = np.where([np.all(target_stats_array[ii] == np.array(ts.values())) for ii in range(target_size)])[0]
-            sol_params[inds] = sol.x
-        else:
-            raise_value_error(sol.message)
+    sol_params = np.ones((target_size, distribution.n_params)) * p0
+    sol_params_sum = np.zeros(p0.shape)
+    for ii, ts in enumerate(target_stats_unique):
+        if ii > 0:
+            p0 = sol_params_sum / ii
+        try:
+            # For: "COBYLA"  options={tol": 10 ** -3, "catol": CONSTRAINT_ABS_TOL, 'rhobeg': CONSTRAINT_ABS_TOL}
+            sol = minimize(fobj, p0, args=(distribution, ts), method="SLSQP", constraints=constraints, tol=None,
+                           options={"ftol": 10 ** -6})
+            if sol.success:
+                if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
+                    raise_value_error("nan or inf values in solution x\n" + sol.message)
+                if sol.fun > 10 ** -3:
+                    warning("Not accurate solution! sol.fun = " + str(sol.fun))
+                inds = np.where([np.all(target_stats_array[ii] == np.array(ts.values())) for ii in range(target_size)])[0]
+                sol_params[inds] = sol.x
+                sol_params_sum += sol.x
+            else:
+                raise_value_error(sol.message)
+        except:
+            print("WTF?")
     sol_params= dict(zip(distribution.pdf_params().keys(),
                     [np.reshape(sol_params[:, ii], target_shape) for ii in range(distribution.n_params)]))
     return sol_params
