@@ -1,125 +1,87 @@
 import os
 import pickle
 import time
-from copy import deepcopy
 
 import numpy as np
 import pystan as ps
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_VEP_HOME
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error, warning
+from tvb_epilepsy.service.model_inversion.stan_service import StanService
 
 LOG = initialize_logger(__name__)
 
 
-class PystanService(object):
+class PystanService(StanService):
 
     def __init__(self, model_name=None, model=None, model_dir=os.path.join(FOLDER_VEP_HOME, "stan_models"),
                  model_code=None, model_code_path="", fitmode="sampling", logger=LOG):
-        self.logger = logger
-        self.fit = None
-        self.est = {}
-        self.fitmode = fitmode
-        self.model_name = model_name
-        self.model = model
-        if not(os.path.isdir(model_dir)):
-            os.mkdir(model_dir)
-        self.model_path = os.path.join(model_dir, self.model_name + "_stanmodel.pkl")
-        self.model_code = model_code
-        self.model_code_path = model_code_path
-        self.compilation_time = 0.0
-        self.fitting_time = 0.0
-
-    def compile_stan_model(self, write_model=True):
-        tic = time.time()
-        self.logger.info("Compiling model...")
-        self.model = ps.StanModel(file=self.model_code_path, model_name=self.model_name)
-        self.compilation_time = time.time() - tic
-        self.logger.info(str(self.compilation_time) + ' sec required to compile')
-        if write_model:
-            self.write_model_to_file()
+        super(PystanService, self).__init__(model_name, model, model_dir, model_code, model_code_path, fitmode, logger)
 
     def fit_stan_model(self, model_data=None, **kwargs):
         self.logger.info("Model fitting with " + self.fitmode + "...")
         tic = time.time()
-        self.fit = getattr(self.model, self.fitmode)(data=model_data, **kwargs)
+        fit = getattr(self.model, self.fitmode)(data=model_data, **kwargs)
         self.fitting_time = time.time() - tic
         self.logger.info(str(self.fitting_time) + ' sec required to fit')
         if self.fitmode is "optimizing":
-            self.est = deepcopy(self.fit)
-            self.fit = None
+            return fit,
         else:
             self.logger.info("Extracting estimates...")
             if self.fitmode is "sampling":
-                self.est = self.fit.extract(permuted=True)
+                est = fit.extract(permuted=True)
             elif self.fitmode is "vb":
-                self.est = self.read_vb_results()
+                est = self.read_vb_results(fit)
+            return est, fit
 
-    def read_vb_results(self):
-        self.est = {}
-        for ip, p in enumerate(self.fit['sampler_param_names']):
+    def read_vb_results(self, fit):
+        est = {}
+        for ip, p in enumerate(fit['sampler_param_names']):
             p_split = p.split('.')
             p_name = p_split.pop(0)
             p_name_samples = p_name + "_s"
-            if self.est.get(p_name) is None:
-                self.est.update({p_name_samples: []})
-                self.est.update({p_name: []})
+            if est.get(p_name) is None:
+                est.update({p_name_samples: []})
+                est.update({p_name: []})
             if len(p_split) == 0:
                 # scalar parameters
-                self.est[p_name_samples] = self.fit["sampler_params"][ip]
-                self.est[p_name] = self.fit["mean_pars"][ip]
+                est[p_name_samples] = fit["sampler_params"][ip]
+                est[p_name] = fit["mean_pars"][ip]
             else:
                 if len(p_split) == 1:
                     # vector parameters
-                    self.est[p_name_samples].append(self.fit["sampler_params"][ip])
-                    self.est[p_name].append(self.fit["mean_pars"][ip])
+                    est[p_name_samples].append(fit["sampler_params"][ip])
+                    est[p_name].append(fit["mean_pars"][ip])
                 else:
                     ii = int(p_split.pop(0)) - 1
                     if len(p_split) == 0:
                         # 2D matrix parameters
-                        if len(self.est[p_name]) < ii + 1:
-                            self.est[p_name_samples].append([self.fit["sampler_params"][ip]])
-                            self.est[p_name].append([self.fit["mean_pars"][ip]])
+                        if len(est[p_name]) < ii + 1:
+                            est[p_name_samples].append([fit["sampler_params"][ip]])
+                            est[p_name].append([fit["mean_pars"][ip]])
                         else:
-                            self.est[p_name_samples][ii].append(self.fit["sampler_params"][ip])
-                            self.est[p_name][ii].append(self.fit["mean_pars"][ip])
+                            est[p_name_samples][ii].append(fit["sampler_params"][ip])
+                            est[p_name][ii].append(fit["mean_pars"][ip])
                     else:
-                        if len(self.est[p_name]) < ii + 1:
-                            self.est[p_name_samples].append([])
-                            self.est[p_name].append([])
+                        if len(est[p_name]) < ii + 1:
+                            est[p_name_samples].append([])
+                            est[p_name].append([])
                         jj = int(p_split.pop(0)) - 1
                         if len(p_split) == 0:
                             # 3D matrix parameters
-                            if len(self.est[p_name][ii]) < jj + 1:
-                                self.est[p_name_samples][ii].append([self.fit["sampler_params"][ip]])
-                                self.est[p_name][ii].append([self.fit["mean_pars"][ip]])
+                            if len(est[p_name][ii]) < jj + 1:
+                                est[p_name_samples][ii].append([fit["sampler_params"][ip]])
+                                est[p_name][ii].append([fit["mean_pars"][ip]])
                             else:
-                                if len(self.est[p_name][ii]) < jj + 1:
-                                    self.est[p_name_samples][ii].append([])
-                                    self.est[p_name][ii].append([])
-                                self.est[p_name_samples][ii][jj].append(self.fit["sampler_params"][ip])
-                                self.est[p_name][ii][jj].append(self.fit["mean_pars"][ip])
+                                if len(est[p_name][ii]) < jj + 1:
+                                    est[p_name_samples][ii].append([])
+                                    est[p_name][ii].append([])
+                                est[p_name_samples][ii][jj].append(fit["sampler_params"][ip])
+                                est[p_name][ii][jj].append(fit["mean_pars"][ip])
                         else:
                             raise_not_implemented_error("Extracting of parameters of more than 3 dimensions is not " +
                                                         "implemented yet for vb!", self.logger)
-        for key in self.est.keys():
-            if isinstance(self.est[key], list):
-                self.est[key] = np.squeeze(np.array(self.est[key]))
-
-    def write_model_to_file(self):
-        with open(self.model_path, 'wb') as f:
-                pickle.dump(self.model, f)
-
-    def load_model_from_file(self):
-        self.model = pickle.load(open(self.model_path, 'rb'))
-
-    def load_or_compile_model(self):
-        if os.path.isfile(self.model_path):
-            try:
-                self.load_model_from_file()
-            except:
-                warning("Failed to load the model from file: " + str(self.model_path) + " !" +
-                        "\nTrying to compile model from file: " + str(self.model_code_path) + str("!"))
-                self.compile_stan_model()
-        else:
-            self.compile_stan_model()
+        for key in est.keys():
+            if isinstance(est[key], list):
+                est[key] = np.squeeze(np.array(est[key]))
+        return est
