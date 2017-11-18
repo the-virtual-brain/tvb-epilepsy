@@ -53,24 +53,6 @@ LIB_PATH = "/Applications/Episense.app/Contents/Java"
 JAR_PATH = "/Applications/Episense.app/Contents/Java/episense-fx-app.jar"
 JAVA_MAIN_SIM = "de.codebox.episense.fx.StartSimulation"
 
-VOIS = {
-    "CustomEpileptor": ['x1', 'z', 'x2'],
-    "Epileptor": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp'],
-    "EpileptorDP": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp'],
-    "EpileptorDPrealistic": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp', 'x0_t', 'slope_t', 'Iext1_t', 'Iext2_t', 'K_t'],
-    "EpileptorDP2D": ['x1', 'z']
-}
-
-EPILEPTOR_MODEL_NVARS = {
-         "CustomEpileptor": 6,
-         "Epileptor": 6,
-         "EpileptorDP": 6,
-         "EpileptorDPrealistic": 11,
-         "EpileptorDP2D": 2
-}
-
-STATISTICAL_MODEL_TYPES=["autoregressive", "autoregressive_dWt", "ode", "lsa"]
-
 import numpy as np
 MIN_SINGLE_VALUE = np.finfo("single").min
 MAX_SINGLE_VALUE = np.finfo("single").max
