@@ -11,13 +11,13 @@ import pystan as ps
 from scipy.io import savemat, loadmat
 import pickle
 
-from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_CR_DEF, VOIS, X0_DEF, E_DEF, TVB, DATA_MODE, \
+from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_CR_DEF, X0_DEF, E_DEF, TVB, DATA_MODE, \
                                         SIMULATION_MODE
 from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM, STATS_MODELS_PATH, FOLDER_VEP_HOME, USER_HOME
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_not_implemented_error
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
-from tvb_epilepsy.service.epileptor_model_factory import model_noise_intensity_dict
+from tvb_epilepsy.service.epileptor_model_factory import model_noise_intensity_dict, VOIS
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService

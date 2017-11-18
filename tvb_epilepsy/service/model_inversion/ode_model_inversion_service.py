@@ -1,14 +1,15 @@
 
+import time
 import os
 
 import numpy as np
 
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
-from tvb_epilepsy.base.configurations import FOLDER_RES, STATS_MODELS_PATH
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
+from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import \
                                                         EULER_METHODS, OBSERVATION_MODEL_EXPRESSIONS, OBSERVATION_MODELS
 from tvb_epilepsy.base.model.parameter import Parameter
@@ -24,20 +25,14 @@ LOG = initialize_logger(__name__)
 
 class ODEModelInversionService(ModelInversionService):
 
-    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, pystan=None,
-                 model_name="vep_ode", model=None, model_dir=os.path.join(FOLDER_RES, "model_inversion"),
-                 model_code=None, model_code_path=os.path.join(STATS_MODELS_PATH, "vep_ode.stan"),
-                 fitmode="sampling", logger=LOG, **kwargs):
-        super(ODEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model, pystan,
-                                                       model_name, model, model_dir, model_code, model_code_path,
-                                                       fitmode, logger)
+    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="vep_ode",
+                 logger=LOG, **kwargs):
+        super(ODEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
+                                                       model_name, logger **kwargs)
         self.time = None
         self.dt = 0.0
         self.n_times = 0
         self.n_signals = 0
-        self.children_dict = {"StatisticalModel": ODEStatisticalModel("ODEStatsModel"),
-                              "StochasticParameter": generate_stochastic_parameter("StochParam"),
-                              "PystanService": self.pystan}
 
     def get_default_sig_init(self):
         return 0.1
@@ -86,12 +81,12 @@ class ODEModelInversionService(ModelInversionService):
             self.set_empirical_target_data(target_data, time)
         else:
             if statistical_model.observation_expression == "x1z_offset":
-                self.target_data = ((target_data["x1"].T - np.expand_dims(self.model_config.x1EQ, 1)).T + \
-                                   (target_data["z"].T - np.expand_dims(self.model_config.zEQ, 1)).T) / 2.75
+                self.target_data = ((target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T + \
+                                   (target_data["z"].T - np.expand_dims(self.zEQ, 1)).T) / 2.75
                 # TODO: a better normalization
             elif statistical_model.observation_expression == "x1_offset":
                 # TODO: a better normalization
-                self.target_data = (target_data["x1"].T - np.expand_dims(self.model_config.x1EQ, 1)).T / 2.0
+                self.target_data = (target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T / 2.0
             else: # statistical_models.observation_expression == "x1"
                 self.target_data = target_data["x1"]
             self.observation_shape = self.target_data.shape
@@ -107,7 +102,7 @@ class ODEModelInversionService(ModelInversionService):
         self.logger.info("Unpacking epileptor parameters...")
         epileptor_params = {}
         for p in ["a", "b", "d", "yc", "Iext1", "slope"]:
-            temp = getattr(self.model_config, p)
+            temp = getattr(self, p)
             if isinstance(temp, (np.ndarray, list)):
                 if np.all(temp[0], np.array(temp)):
                     temp = temp[0]
@@ -126,28 +121,32 @@ class ODEModelInversionService(ModelInversionService):
         if reset:
             statistical_model.update_active_regions([])
         return statistical_model.update_active_regions(statistical_model.active_regions +
-                        select_greater_values_array_inds(self.model_config.e_values, active_regions_th).tolist())
+                        select_greater_values_array_inds(self.e_values, active_regions_th).tolist())
 
     def update_active_regions_x0_values(self, statistical_model, active_regions_th=0.1, reset=False):
         if reset:
             statistical_model.update_active_regions([])
         return statistical_model.update_active_regions(statistical_model.active_regions +
-                       select_greater_values_array_inds(self.model_config.x0_values, active_regions_th).tolist())
+                       select_greater_values_array_inds(self.x0_values, active_regions_th).tolist())
 
     def update_active_regions_lsa(self, statistical_model, active_regions_th=0.1, reset=False):
         if reset:
             statistical_model.update_active_regions([])
-        if len(self.hypothesis.propagation_strengths) > 0:
-            ps_strengths = self.hypothesis.propagation_strengths / np.max(self.hypothesis.propagation_strengths)
-        return statistical_model.update_active_regions(statistical_model.active_regions +
+        if len(self.lsa_propagation_strengths) > 0:
+            ps_strengths = self.lsa_propagation_strengths / np.max(self.lsa_propagation_strengths)
+            return statistical_model.update_active_regions(statistical_model.active_regions +
                                              select_greater_values_array_inds(ps_strengths, active_regions_th).tolist())
+        else:
+            warning("No LSA results found (empty propagations_strengths vector)!" +
+                    "\nSkipping of setting active_regios according to LSA!")
+            return statistical_model
 
     def update_active_regions_seeg(self, statistical_model, active_regions_th=0.5, projection=None, seeg_inds=None,
                                    reset=False):
         if reset:
             statistical_model.update_active_regions()
         if projection is None:
-            projection = self.get_projection(raise_error=True)
+            projection = self.projection
         if projection is not None:
             active_regions = statistical_model.active_regions
             if seeg_inds is not None:
@@ -155,10 +154,13 @@ class ODEModelInversionService(ModelInversionService):
             for proj in projection:
                 active_regions += select_greater_values_array_inds(proj, active_regions_th).tolist()
             return statistical_model.update_active_regions(active_regions.tolist())
+        else:
+            warning("Projection is not found!" + "\nSkipping of setting active_regios according to SEEG power!")
+            return statistical_model
 
     def update_active_regions(self, statistical_model, methods=["e_values", "LSA"], **kwargs):
         n_methods = len(methods)
-        active_regions_th = kwargs.get("active_regions_th", [None])
+        active_regions_th = ensure_list(kwargs.get("active_regions_th", None))
         n_thresholds = len(active_regions_th)
         if n_thresholds != n_methods:
             if n_thresholds ==1 and n_methods > 1:
@@ -167,16 +169,20 @@ class ODEModelInversionService(ModelInversionService):
                 raise_value_error("Number of input methods:\n" + str(methods) +
                                   "and active region thresholds:\n" + str(active_regions_th) +
                                   "does not match!")
-        for m, th in methods, active_regions_th:
+        for m, th in zip(methods, active_regions_th):
             if isequal_string(m, "e_values"):
-                self.update_active_regions_e_values(statistical_model, th, logger=self.logger)
+                statistical_model = self.update_active_regions_e_values(statistical_model, th)
             elif isequal_string(m, "x0_values"):
-                self.update_active_regions_x0_values(statistical_model, th, logger=self.logger)
+                statistical_model = self.update_active_regions_x0_values(statistical_model, th)
             elif isequal_string(m, "lsa"):
-                self.update_active_regions_lsa(statistical_model, th, logger=self.logger)
+                if isinstance(self.hypothesis, DiseaseHypothesis):
+                    statistical_model = self.update_active_regions_lsa(statistical_model, th)
+                warning("No DiseaseHypothesis object found! Skipping of setting active_regios according to LSA!")
             elif isequal_string(m, "seeg"):
-                self.update_active_regions_seeg(statistical_model, th, projection=kwargs.get("projection"),
-                                                seeg_inds=kwargs.get("seeg_inds"), logger=self.logger)
+                statistical_model = self.update_active_regions_seeg(statistical_model, th,
+                                                                    projection=kwargs.get("projection"),
+                                                                    seeg_inds=kwargs.get("seeg_inds"))
+        return statistical_model
 
     def generate_model_parameters(self, **kwargs):
         parameters = super(ODEModelInversionService, self).generate_model_parameters(**kwargs)
@@ -189,9 +195,9 @@ class ODEModelInversionService(ModelInversionService):
                                                       high=kwargs.get("sig_init_hi", 2 * sig_init_def),
                                                       p_shape=(),
                                                       probability_distribution=kwargs.get("sig_init_pdf", "lognormal"),
-                                                      optimize=False,
-                                                      mean=sig_init_def,
-                                                      sigma=kwargs.get("tau1_sig", sig_init_def))
+                                                      optimize=True,
+                                                      mode=sig_init_def,
+                                                      std=kwargs.get("tau1_sig", sig_init_def))
         parameters.append(parameter)
 
         # Observation model
@@ -220,15 +226,20 @@ class ODEModelInversionService(ModelInversionService):
                                                                             kwargs.get("offset_signal_pdf", "normal"),
                                                       optimize=False,
                                                       mean=offset_signal_def,
-                                                      sigma=kwargs.get("scale_signal_sig", offset_signal_def))
+                                                      sigma=kwargs.get("scale_signal_sig", 1.0))
         parameters.append(parameter)
         return parameters
 
-    def generate_statistical_model(self, statistical_model_name="vep_ode", **kwargs):
-        return ODEStatisticalModel(statistical_model_name, self.generate_model_parameters(**kwargs), self.n_regions,
-                                   kwargs.get("active_regions", []), self.n_signals, self.n_times, self.dt,
-                                   kwargs.get("euler_method"), kwargs.get("observation_model"),
-                                   kwargs.get("observation_expression"))
+    def generate_statistical_model(self, model_name=None, **kwargs):
+        if model_name is None:
+            model_name = self.model_name
+        tic = time.time()
+        self.logger.info("Generating model...")
+        model = ODEStatisticalModel(model_name, self.generate_model_parameters(**kwargs), self.n_regions,
+                                   kwargs.get("active_regions", []), self.n_signals, self.n_times, self.dt, **kwargs)
+        self.model_generation_time = time.time() - tic
+        self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
+        return model
 
     def generate_model_data(self, statistical_model, projection, x1var="", zvar=""):
         active_regions_flag = np.zeros((statistical_model.n_regions,), dtype="i")
@@ -241,7 +252,6 @@ class ODEModelInversionService(ModelInversionService):
                            "active_regions_flag": active_regions_flag,
                            "active_regions": statistical_model.active_regions,
                            "nonactive_regions": np.where(1 - active_regions_flag)[0],
-                           "x0_nonactive": self.model_configuration.x0[~active_regions_flag.astype("bool")],
                            "dt": self.dt,
                            "euler_method": np.where(np.in1d(EULER_METHODS, statistical_model.euler_method))[0] - 1,
                            "observation_model": np.where(np.in1d(OBSERVATION_MODELS,
@@ -251,7 +261,7 @@ class ODEModelInversionService(ModelInversionService):
                            "signals": self.target_data,
                            "mixing": projection,
                            "x1eq0": statistical_model.paramereters["x1eq"].mean}
-        for key, val in self.get_epileptor_parameters().iteritems():
+        for key, val in self.epileptor_params.iteritems():
             self.model_data.update({key: val})
         for p in statistical_model.paramereters.values():
             self.model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high,

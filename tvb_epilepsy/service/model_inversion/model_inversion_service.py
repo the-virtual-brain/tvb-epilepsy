@@ -1,28 +1,24 @@
 
+import time
 import os
 
 import numpy as np
 
 from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
-from tvb_epilepsy.base.configurations import FOLDER_RES
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.base.utils.data_structures_utils import copy_object_attributes
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
+from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
 from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
-from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
+from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_TAU1, \
+                                                                                                    EPILEPTOR_MODEL_TAU0
 
-from tvb.simulator.models import Epileptor
-from tvb_epilepsy.service.model_inversion.pystan_service import PystanService
-from tvb_epilepsy.custom.simulator_custom import EpileptorModel
-from tvb_epilepsy.tvb_api.epileptor_models import *
-
-
-AVAILABLE_DYNAMICAL_MODELS = (Epileptor, EpileptorModel, EpileptorDP2D, EpileptorDP, EpileptorDPrealistic)
 
 LOG = initialize_logger(__name__)
 
@@ -31,9 +27,11 @@ class ModelInversionService(object):
 
     X1EQ_MIN = -2.0
 
+    TAU1_DEF = 0.5
     TAU1_MIN = 0.1
     TAU1_MAX = 1.0
 
+    TAU0_DEF = 30.0
     TAU0_MIN = 3.0
     TAU0_MAX = 3000.0
 
@@ -42,16 +40,13 @@ class ModelInversionService(object):
 
     EC_MIN = 0.0
 
-    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, pystan=None,
-                 model_name="", model=None, model_dir=os.path.join(FOLDER_RES, "model_inversion"), model_code=None,
-                 model_code_path="", fitmode="sampling", target_data=None, target_data_type="", logger=LOG, **kwargs):
+    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="",
+                 target_data=None, target_data_type="", logger=LOG, **kwargs):
         self.logger = logger
+        self.model_name = model_name
+        self.model_generation_time = 0.0
         self.model_data = {}
         self.estimates = {}
-        if pystan is None:
-            self.pystan = PystanService(model_name, model, model_dir, model_code, model_code_path, fitmode, logger)
-        else:
-            self.pystan = pystan
         self.target_data_type = target_data_type
         self.target_data = target_data
         if isinstance(self.target_data, np.ndarray):
@@ -59,34 +54,55 @@ class ModelInversionService(object):
         else:
             self.observation_shape = ()
         if isinstance(model_configuration, ModelConfiguration):
-            self.model_config = model_configuration
             self.logger.info("Input model configuration set...")
-            self.n_regions = self.model_config.n_regions
+            self.n_regions = model_configuration.n_regions
+            self._copy_attributes(model_configuration,
+                                  ["K", "x1EQ", "zEQ", "e_values", "x0_values", "connectivity_matrix"], deep_copy=True)
+            self.epileptor_params = self.get_epileptor_parameters(model_configuration)
         else:
             raise_value_error("Invalid input model configuration!:\n" + str(model_configuration))
+        self.lsa_propagation_strengths = kwargs.get("lsa_propagation_strengths", None)
+        self.hypothesis_type = kwargs.get("hypothesis_type", None)
         if isinstance(hypothesis, DiseaseHypothesis):
-            self.hypothesis = hypothesis
+            self._copy_attributes(hypothesis, ["lsa_propagation_strengths", "hypothesis_type"],
+                                  ["propagation_strengths", "type"], deep_copy=True, check_none=True)
             self.logger.info("Input hypothesis set...")
+        self.projection = kwargs.get("projection", None)
+        self.sensors_locations = kwargs.get("sensors_locations", None)
+        self.sensors_labels = kwargs.get("sensors_labels", None)
+        sensors = kwargs.get("sensors", None)
+        self.region_centers = kwargs.get("region_centers", None)
+        self.region_labels = kwargs.get("region_labels", None)
+        self.region_orientations = kwargs.get("region_orientations", None)
+        connectivity = kwargs.get("connectivity", None)
         if isinstance(head, Head):
-            self.head = head
-            self.logger.info("Input head set...")
-        if isinstance(dynamical_model, AVAILABLE_DYNAMICAL_MODELS):
-            self.dynamical_model = dynamical_model
-        elif isinstance(dynamical_model, basestring) and isinstance(self.model_config, ModelConfiguration):
-            try:
-                self.dynamical_model = model_build_dict[dynamical_model](self.model_config)
-            except:
-                warning("Failed to create epileptor model " + dynamical_model)
-        self.children_dict = {"ODEStatisticalModel": StatisticalModel("StatsModel"),
-                              "StochasticParameter": generate_stochastic_parameter("StochParam"),
-                              "PystanService": self.pystan}
+            connectivity = head.connectivity
+            if not(isinstance(sensors, Sensors)):
+                sensors = head.get_sensors_id(sensor_ids=kwargs.get("seeg_sensor_id", 0),
+                                              sensors_type=Sensors.TYPE_SEEG)
+        if isinstance(connectivity, Connectivity):
+            self._copy_attributes(connectivity, ["region_labels", "region_centers", "region_orientations"],
+                              ["region_labels", "centers", "orientations"], deep_copy=True, check_none=True)
+        if isinstance(sensors, Sensors):
+            self._copy_attributes(sensors, ["sensors_labels", "sensors_locations", "projection"],
+                                  ["labels", "locations", "projection"], deep_copy=True, check_none=True)
+        self.tau1 = self.TAU1_DEF
+        self.tau0 = self.TAU0_DEF
+        if np.in1d(dynamical_model, AVAILABLE_DYNAMICAL_MODELS_NAMES):
+            self.tau1 = self.get_default_tau1(dynamical_model)
+            self.tau0 = self.get_default_tau0(dynamical_model)
+        self.sig_eq = self.get_default_sig_eq(x1eq_def=kwargs.get("x1eq_def", X1_DEF),
+                                              x1eq_cr=kwargs.get("x1eq_cr", X1_EQ_CR_DEF))
         self.logger.info("Model Inversion Service instance created!")
 
-    def get_epileptor_parameters(self):
+    def _copy_attributes(self, obj, attributes_self, attributes_obj=None, deep_copy=False, check_none=False):
+        copy_object_attributes(obj, self, attributes_self, attributes_obj, deep_copy, check_none)
+
+    def get_epileptor_parameters(self, model_config):
         self.logger.info("Unpacking epileptor parameters...")
         epileptor_params = {}
         for p in ["a", "b", "d", "yc", "Iext1", "slope"]:
-            temp = getattr(self.model_config, p)
+            temp = getattr(model_config, p)
             if isinstance(temp, (np.ndarray, list)):
                 if np.all(temp[0], np.array(temp)):
                     temp = temp[0]
@@ -101,33 +117,11 @@ class ModelInversionService(object):
         epileptor_params.update({"x0cr": x0cr, "rx0": rx0})
         return epileptor_params
 
-    def get_default_tau0(self):
-        if isinstance(self.dynamical_model, AVAILABLE_DYNAMICAL_MODELS):
-            if isinstance(self.dynamical_model, (Epileptor, EpileptorModel)):
-                return np.mean(self.dynamical_model.tt)
-            elif isinstance(self.dynamical_model, (EpileptorDP, EpileptorDP2D, EpileptorDPrealistic)):
-                return np.mean(self.dynamical_model.tau0)
-        else:
-            return 30.0
+    def get_default_tau1(self, dynamical_model):
+        return EPILEPTOR_MODEL_TAU1[dynamical_model]
 
-    def get_default_tau1(self):
-        if isinstance(self.dynamical_model, AVAILABLE_DYNAMICAL_MODELS):
-            if isinstance(self.dynamical_model, (Epileptor, EpileptorModel)):
-                return np.mean(1.0 / self.dynamical_model.r)
-            elif isinstance(self.dynamical_model, (EpileptorDP, EpileptorDP2D, EpileptorDPrealistic)):
-                return np.mean(self.dynamical_model.tau1)
-        else:
-            return 0.5
-
-    def get_region_labels(self, raise_error=False):
-        region_labels = None
-        if self.head is not None:
-            if isinstance(self.head.connectivity, Connectivity):
-                region_labels = self.head.connectivity.region_labels
-        if region_labels is None and raise_error:
-            raise_value_error("No region labels found!")
-        else:
-            return region_labels
+    def get_default_tau0(self, dynamical_model):
+        return EPILEPTOR_MODEL_TAU0[dynamical_model]
 
     def get_default_sig_eq(self, x1eq_def=X1_DEF, x1eq_cr=X1_EQ_CR_DEF):
         return (x1eq_cr - x1eq_def) / 3.0
@@ -138,7 +132,7 @@ class ModelInversionService(object):
         # Epileptor:
         parameter = kwargs.get("x1eq", None)
         if not(isinstance(parameter, Parameter)):
-            x1eq = np.maximum(kwargs.get("x1eq", self.model_config.x1EQ), X1_DEF)
+            x1eq = np.maximum(kwargs.get("x1eq", self.x1EQ), X1_DEF)
             parameter = generate_stochastic_parameter("x1eq",
                                                       low=kwargs.get("x1eq_lo", self.X1EQ_MIN),
                                                       high=kwargs.get("x1eq_hi", X1_EQ_CR_DEF),
@@ -150,7 +144,7 @@ class ModelInversionService(object):
 
         parameter = kwargs.get("K", None)
         if not(isinstance(parameter, Parameter)):
-            K_def = np.maximum(kwargs.get("K_def", np.mean(self.model_config.K)), 0.1)
+            K_def = np.maximum(kwargs.get("K_def", np.mean(self.K)), 0.1)
             parameter = generate_stochastic_parameter("K",
                                                       low=kwargs.get("K_lo", self.K_MIN),
                                                       high=kwargs.get("K_hi", self.K_MAX),  p_shape=(),
@@ -162,7 +156,7 @@ class ModelInversionService(object):
         # tau1_def = kwargs.get("tau1_def", 0.5)
         parameter = kwargs.get("tau1", None)
         if not (isinstance(parameter, Parameter)):
-            tau1_def = kwargs.get("tau1_def", self.get_default_tau1())
+            tau1_def = kwargs.get("tau1_def", self.tau1)
             parameter = generate_stochastic_parameter("tau1",
                                                       low=kwargs.get("tau1_lo", self.TAU1_MIN),
                                                       high=kwargs.get("tau1_hi", self.TAU1_MAX),
@@ -174,7 +168,7 @@ class ModelInversionService(object):
 
         parameter = kwargs.get("tau0", None)
         if not(isinstance(parameter, Parameter)):
-            tau0_def = kwargs.get("tau0_def", self.get_default_tau0())
+            tau0_def = kwargs.get("tau0_def", self.tau0)
             parameter = generate_stochastic_parameter("tau0",
                                                       low=kwargs.get("tau0_lo", self.TAU0_MIN),
                                                       high=kwargs.get("tau0_hi", self.TAU0_MAX),
@@ -188,9 +182,9 @@ class ModelInversionService(object):
         # Coupling:
         parameter = kwargs.get("EC", None)
         if not(isinstance(parameter, Parameter)):
-            structural_connectivity = kwargs.get("structural_connectivity", self.model_config.connectivity_matrix)
+            structural_connectivity = kwargs.get("structural_connectivity", self.connectivity_matrix)
             p0595 = np.percentile(structural_connectivity.flatten(), [5, 95])
-            mode = numpy.minimum(p0595[0], structural_connectivity)
+            mode = numpy.maximum(p0595[0], structural_connectivity)
             parameter = generate_stochastic_parameter("EC",
                                                       low=kwargs.get("EC_lo", self.EC_MIN),
                                                       high=kwargs.get("EC_hi", 3 * p0595[1]),
@@ -228,5 +222,15 @@ class ModelInversionService(object):
         parameters.append(parameter)
         return parameters
         
-    def generate_statistical_model(self, statistical_model_name, **kwargs):
-        return StatisticalModel(statistical_model_name, self.generate_model_parameters( **kwargs), self.n_regions)
+    def generate_statistical_model(self, model_name=None, **kwargs):
+        if model_name is None:
+            model_name = self.model_name
+        tic = time.time()
+        self.logger.info("Generating model...")
+        model = StatisticalModel(model_name, self.generate_model_parameters( **kwargs), self.n_regions)
+        self.model_generation_time = time.time() - tic
+        self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
+        return model
+
+
+STATISTICAL_MODEL_TYPES=["autoregressive", "autoregressive_dWt", "ode", "lsa"]

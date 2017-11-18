@@ -1,13 +1,13 @@
 # encoding=utf8
 
 from shutil import copyfile
-import pickle
 
 import os
 import numpy as np
 from scipy.io import savemat, loadmat
 
-from tvb_epilepsy.base.constants import VOIS, X0_DEF, E_DEF, TVB, DATA_MODE, SIMULATION_MODE
+from tvb_epilepsy.base.constants import X0_DEF, E_DEF, TVB, DATA_MODE, SIMULATION_MODE
+from tvb_epilepsy.service.epileptor_model_factory import VOIS
 from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM, STATS_MODELS_PATH, FOLDER_VEP_HOME, USER_HOME
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.plot_utils import plot_sim_results, plot_fit_results
@@ -253,23 +253,26 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[
                     copyfile(this_ts_file, ts_file)
 
         # Get model_data and observation signals:
-        model_inversion_service = SDEModelInversionService(model_configuration, hyp, head, dynamical_model,
-                                                           pystan=pystan_service, sde_mode="x1z", logger=logger)
+        model_inversion_service = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
+                                                           sde_mode="x1z", logger=logger)
         statistical_model = model_inversion_service.generate_statistical_model(**kwargs)
-        model_inversion_service.update_active_regions(statistical_model, methods=["e_values", "LSA"],
-                                                      active_regions_th=0.1)
+        print(model_inversion_service.model_generation_time)
+        statistical_model = model_inversion_service.update_active_regions(statistical_model,
+                                                                          methods=["e_values", "LSA"],
+                                                                          active_regions_th=0.1)
         model_inversion_service.set_target_data_and_time(target_data_type, vois_ts_dict,
                                                          statistical_model=statistical_model,
-                                                         projection=head.sensorsSEEG.get_sensors_id().projection)
+                                                         projection=head.get_sensors_id().projection)
         if target_data_type == "empirical":
-            model_inversion_service.update_active_regions_seeg(statistical_model, active_regions_th=0.5, seeg_inds=None,
-                                                               projection=head.sensorsSEEG.get_sensors_id().projection)
+            statistical_model = \
+                model_inversion_service.update_active_regions_seeg(statistical_model,
+                                                                active_regions_th=0.5, seeg_inds=None,
+                                                                projection=head.sensorsSEEG.get_sensors_id().projection)
         model_inversion_service.generate_model_data(statistical_model, head.sensorsSEEG.get_sensors_id().projection)
-
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_data.mat"), model_inversion_service.model_data)
 
         # Fit and get estimates:
-        model_inversion_service.pystan.fit_stan_model(model_data=model_inversion_service.model_data, **kwargs)
+        pystan_service.fit_stan_model(model_data=model_inversion_service.model_data, **kwargs)
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), model_inversion_service.est)
 
         plot_fit_results(lsa_hypothesis.name, head, model_inversion_service.est, model_inversion_service.model_data,

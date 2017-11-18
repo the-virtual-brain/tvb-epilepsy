@@ -8,7 +8,7 @@ from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import gene
 
 class StatisticalModel(object):
 
-    def __init__(self, name, parameters=[], n_regions=0):
+    def __init__(self, name, parameters=[], n_regions=0, **kwargs):
         self.n_regions = n_regions
         if isinstance(name, basestring):
             self.name = name
