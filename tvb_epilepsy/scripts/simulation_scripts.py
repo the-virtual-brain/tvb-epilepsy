@@ -1,9 +1,9 @@
 import numpy as np
 
-from tvb_epilepsy.base.constants import VOIS
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.model.vep.sensors import Sensors
+from tvb_epilepsy.service.epileptor_model_factory import VOIS
 from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D

@@ -7,18 +7,19 @@ from copy import deepcopy
 import numpy as np
 
 from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM
-from tvb_epilepsy.base.constants import SIMULATION_MODE, TVB, DATA_MODE, VOIS, X0_DEF, E_DEF
-from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.base.constants import SIMULATION_MODE, TVB, DATA_MODE, X0_DEF, E_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.plot_utils import plot_sim_results
+from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
+from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.service.lsa_service import LSAService
+from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.service.epileptor_model_factory import VOIS
 from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
 from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
     compute_seeg_and_write_ts_h5_file
-from tvb_epilepsy.service.lsa_service import LSAService
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
