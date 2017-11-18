@@ -40,8 +40,8 @@ class DiseaseHypothesis(object):
         else:
             self.name = name
 
-        self.propagation_indices = np.array(propagation_indices)
-        self.propagation_strengths = np.array(propagation_strenghts)
+        self.lsa_propagation_indices = np.array(propagation_indices)
+        self.lsa_propagation_strengths = np.array(propagation_strenghts)
 
     def __repr__(self):
         d = {"01. Name": self.name,
@@ -54,12 +54,12 @@ class DiseaseHypothesis(object):
              "08. Connectivity disease indices":
                  linear_index_to_coordinate_tuples(self.w_indices, (self.number_of_regions, self.number_of_regions)),
              "09. Connectivity disease values": self.w_values,
-             "10. Propagation indices": self.propagation_indices,
+             "10. Propagation indices": self.lsa_propagation_indices,
              }
-        if len(self.propagation_indices):
-            d.update({"11. Propagation strengths of indices": self.propagation_strengths[self.propagation_indices]})
+        if len(self.lsa_propagation_indices):
+            d.update({"11. Propagation strengths of indices": self.lsa_propagation_strengths[self.lsa_propagation_indices]})
         else:
-            d.update({"11. Propagation strengths of indices": self.propagation_strengths})
+            d.update({"11. Propagation strengths of indices": self.lsa_propagation_strengths})
         # d.update({"11. Connectivity": str(self.connectivity)})
         return formal_repr(self, d)
 
@@ -97,20 +97,20 @@ class DiseaseHypothesis(object):
     def prepare_for_plot(self, connectivity_matrix=None):
         width_ratios = []
 
-        if len(self.propagation_indices) > 0:
+        if len(self.lsa_propagation_indices) > 0:
             if connectivity_matrix is None:
                 width_ratios += [1]
                 name = "LSA Propagation Strength"
                 names = [name]
-                data = [self.propagation_strengths]
-                indices = [self.propagation_indices]
+                data = [self.lsa_propagation_strengths]
+                indices = [self.lsa_propagation_indices]
                 plot_types = ["vector"]
             else:
                 width_ratios += [1, 2]
                 name = "LSA Propagation Strength"
                 names = [name, "Afferent connectivity \n from seizuring regions"]
-                data = [self.propagation_strengths, connectivity_matrix]
-                indices = [self.propagation_indices, self.propagation_indices]
+                data = [self.lsa_propagation_strengths, connectivity_matrix]
+                indices = [self.lsa_propagation_indices, self.lsa_propagation_indices]
                 plot_types = ["vector", "regions2regions"]
 
             plot_dict_list = dicts_of_lists_to_lists_of_dicts({"name": names, "data": data, "focus_indices": indices,

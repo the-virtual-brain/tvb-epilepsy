@@ -59,9 +59,9 @@ class LSAPSEService(ABCPSEService):
 
     def prepare_run_results(self, lsa_hypothesis, model_configuration=None):
         if model_configuration is None:
-            return {"propagation_strengths": lsa_hypothesis.propagation_strenghts}
+            return {"lsa_propagation_strengths": lsa_hypothesis.propagation_strenghts}
 
-        return {"propagation_strengths": lsa_hypothesis.propagation_strengths,
+        return {"lsa_propagation_strengths": lsa_hypothesis.propagation_strengths,
                 "x0_values": model_configuration.x0_values,
                 "e_values": model_configuration.e_values, "x1EQ": model_configuration.x1EQ,
                 "zEQ": model_configuration.zEQ, "Ceq": model_configuration.Ceq}

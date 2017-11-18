@@ -65,7 +65,7 @@ class ModelInversionService(object):
         self.hypothesis_type = kwargs.get("hypothesis_type", None)
         if isinstance(hypothesis, DiseaseHypothesis):
             self._copy_attributes(hypothesis, ["lsa_propagation_strengths", "hypothesis_type"],
-                                  ["propagation_strengths", "type"], deep_copy=True, check_none=True)
+                                  ["lsa_propagation_strengths", "type"], deep_copy=True, check_none=True)
             self.logger.info("Input hypothesis set...")
         self.projection = kwargs.get("projection", None)
         self.sensors_locations = kwargs.get("sensors_locations", None)

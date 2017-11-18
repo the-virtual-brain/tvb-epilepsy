@@ -123,7 +123,7 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
     # NOTE!: Without the jittered healthy regions which we don' want to include into the sensitivity analysis!
     inputs = dicts_of_lists_to_lists_of_dicts(pse_params)
 
-    outputs = [{"names": ["LSA Propagation Strength"], "values": pse_results["propagation_strengths"]}]
+    outputs = [{"names": ["LSA Propagation Strength"], "values": pse_results["lsa_propagation_strengths"]}]
     sensitivity_analysis_service = SensitivityAnalysisService(inputs, outputs, method=method,
                                                               calc_second_order=kwargs.get("calc_second_order", True),
                                                               conf_level=kwargs.get("conf_level", 0.95))

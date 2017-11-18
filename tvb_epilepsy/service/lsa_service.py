@@ -169,7 +169,7 @@ class LSAService(object):
         if pse_results is not None and isinstance(pse_results, dict):
             fig_name = disease_hypothesis.name + " PSE " + title
             ind_ps = len(plot_dict_list) - 2
-            for ii, value in enumerate(["propagation_strengths", "e_values", "x0_values"]):
+            for ii, value in enumerate(["lsa_propagation_strengths", "e_values", "x0_values"]):
                 ind = ind_ps - ii
                 if ind >= 0:
                     if pse_results.get(value, False).any():
