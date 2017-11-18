@@ -1,6 +1,7 @@
 # Data structure manipulations and conversions:
 
 from collections import OrderedDict
+from copy import deepcopy
 
 import numpy as np
 
@@ -424,6 +425,26 @@ def make_int(x, precision="64"):
             np.int32(x)
         else:
             return np.int(x)
+
+
+def copy_object_attributes(obj1, obj2, attr1, attr2=None, deep_copy=False, check_none=False):
+    attr1 = ensure_list(attr1)
+    if attr2 is None:
+        attr2 = attr1
+    else:
+        attr2 = ensure_list(attr2)
+    if deep_copy:
+        fcopy = lambda a1, a2: setattr(obj2, a1, deepcopy(getattr(obj1, a1)))
+    else:
+        fcopy = lambda a1, a2: setattr(obj2, a1, getattr(obj1, a1))
+    if check_none:
+        for a1, a2 in zip([attr1, attr2]):
+            if getattr(obj2, a2) is None:
+                fcopy(a1, a2)
+    else:
+        for a1, a2 in zip([attr1, attr2]):
+            fcopy(a1, a2)
+    return obj2
 
 
 def parcellation_correspondance(inds_from, labels_from, labels_to):
