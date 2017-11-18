@@ -5,7 +5,7 @@ import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
 
-from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
+from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, make_float
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
                                                                                 import ContinuousProbabilityDistribution

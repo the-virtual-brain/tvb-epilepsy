@@ -5,13 +5,13 @@ import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
 
-from tvb_epilepsy.base.constants import MAX_SINGLE_VALUE
+from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE, MIN_SINGLE_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
                                                                                 import ContinuousProbabilityDistribution
 
-DEFAULT_LOW_VALUE = -MAX_SINGLE_VALUE
+DEFAULT_LOW_VALUE = MIN_SINGLE_VALUE
 DEFAULT_HIGH_VALUE = MAX_SINGLE_VALUE
 
 
