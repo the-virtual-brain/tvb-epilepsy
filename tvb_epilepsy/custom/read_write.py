@@ -2,20 +2,20 @@
     Python Demo for reading and writing
 """
 
+import ntpath
 import os
 import h5py
 import numpy
 
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, raise_error
 from tvb_epilepsy.base.utils.file_utils import change_filename_or_overwrite, print_metadata, write_metadata, \
     read_object_from_h5_file
 # TODO: solve problems with setting up a logger
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, raise_error
-from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.base.simulators import SimulationSettings
+from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
+
 
 PATIENT_VIRTUAL_HEAD = "/WORK/episense/episense-root/trunk/demo-data/Head_TREC"
-
-import ntpath
 
 logger = initialize_logger("log_" + ntpath.split(PATIENT_VIRTUAL_HEAD)[1])
 

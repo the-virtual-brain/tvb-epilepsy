@@ -4,12 +4,10 @@ from scipy.optimize import root
 from tvb_epilepsy.base.computations.equations_utils import *
 # TODO: find out why I cannot import anything from utils here
 # from tvb_epilepsy.base.utils import assert_array_shape as sc2arr
-from tvb_epilepsy.base.constants import X0_CR_DEF, X1_EQ_CR_DEF, X0_DEF
-from tvb_epilepsy.base.constants import X1_DEF
+from tvb_epilepsy.base.constants.model_constants import X0_CR_DEF, X1_EQ_CR_DEF, X0_DEF, X1_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_import_error
 
 logger = initialize_logger(__name__)
-
 
 try:
     from tvb_epilepsy.base.computations.symbolic_utils import *
@@ -19,6 +17,7 @@ except:
     warning("Unable to load symbolic_equations module! Symbolic calculations are not possible!")
     SYMBOLIC_IMPORT = False
 from tvb_epilepsy.base.utils.data_structures_utils import shape_to_size
+
 
 #if SYMBOLIC_CALCULATIONS_FLAG:
 

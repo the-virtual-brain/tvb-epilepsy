@@ -1,15 +1,13 @@
-import time
 import os
-from copy import deepcopy
-
 import pickle
+import time
+from copy import deepcopy
 
 import numpy as np
 import pystan as ps
 
-from tvb_epilepsy.base.configurations import FOLDER_VEP_HOME
+from tvb_epilepsy.base.constants.configurations import FOLDER_VEP_HOME
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error, warning
-
 
 LOG = initialize_logger(__name__)
 

@@ -1,7 +1,9 @@
-import numpy
 from abc import abstractmethod, ABCMeta
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
+
+import numpy as np
+
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 
 class ABCPSEService(object):
@@ -46,8 +48,8 @@ class ABCPSEService(object):
             execution_status.append(status)
 
         if grid_mode:
-            results = numpy.reshape(numpy.array(results, dtype="O"), tuple(self.n_params_vals))
-            execution_status = numpy.reshape(numpy.array(execution_status), tuple(self.n_params_vals))
+            results = np.reshape(np.array(results, dtype="O"), tuple(self.n_params_vals))
+            execution_status = np.reshape(np.array(execution_status), tuple(self.n_params_vals))
 
         return results, execution_status
 
@@ -77,18 +79,18 @@ class ABCPSEService(object):
                 self.params_indices.append(indices)
                 self.params_names.append(param.get("name", param["path"].rsplit('.', 1)[-1] + str(indices)))
 
-            self.n_params_vals = numpy.array(self.n_params_vals)
+            self.n_params_vals = np.array(self.n_params_vals)
             self.n_params = len(self.params_paths)
 
-            if not (numpy.all(self.n_params_vals == self.n_params_vals[0])):
+            if not (np.all(self.n_params_vals == self.n_params_vals[0])):
                 raise_value_error("\nNot all parameters have the same number of samples!: " +
                                   "\n" + str(self.params_paths) + " = " + str(self.n_params_vals))
             else:
                 self.n_params_vals = self.n_params_vals[0]
 
-            self.params_vals = numpy.vstack(temp).T
-            self.params_paths = numpy.array(self.params_paths)
-            self.params_indices = numpy.array(self.params_indices)
+            self.params_vals = np.vstack(temp).T
+            self.params_paths = np.array(self.params_paths)
+            self.params_indices = np.array(self.params_indices)
             self.n_loops = self.params_vals.shape[0]
 
             print "\nGenerated a parameter search exploration for " + str("lsa/sim task") + ","
@@ -102,7 +104,7 @@ class ABCPSEService(object):
         h5_model = convert_to_h5_model({"task": "LSA", "n_loops": self.n_loops,
                                         "params_names": self.params_names,
                                         "params_paths": self.params_paths,
-                                        "params_indices": numpy.array([str(inds) for inds in self.params_indices],
+                                        "params_indices": np.array([str(inds) for inds in self.params_indices],
                                                                       dtype="S"),
                                         "params_samples": self.params_vals.T})
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")

@@ -3,7 +3,7 @@ import numpy as np
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.model.vep.sensors import Sensors
-from tvb_epilepsy.service.epileptor_model_factory import VOIS
+from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
@@ -41,10 +41,11 @@ def setup_TVB_simulation_from_model_configuration(model_configuration, connectiv
                                                   model_name="EpileptorDP", zmode=np.array("lin"), pmode=np.array("z"),
                                                   noise_instance=None, noise_intensity=None, monitor_expressions=None,
                                                   monitors_instance=None):
-    from tvb_epilepsy.base.constants import ADDITIVE_NOISE, NOISE_SEED
+    from tvb_epilepsy.base.constants.module_constants import ADDITIVE_NOISE, NOISE_SEED
     from tvb_epilepsy.base.simulators import SimulationSettings
-    from tvb_epilepsy.service.epileptor_model_factory import model_build_dict, model_noise_intensity_dict, \
-        model_noise_type_dict
+    from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
+    from tvb_epilepsy.base.constants.model_constants import model_noise_type_dict
+    from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
     from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
     from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic, EpileptorDP2D
     from tvb.datatypes import equations

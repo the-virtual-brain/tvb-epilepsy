@@ -11,17 +11,17 @@ from copy import copy
 
 import numpy
 
-from tvb_epilepsy.base.constants import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
-from tvb_epilepsy.base.utils.data_structures_utils import obj_to_dict, assert_arrays
+from tvb_epilepsy.base.constants.module_constants import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
 from tvb_epilepsy.base.utils.log_error_utils import warning
+from tvb_epilepsy.base.utils.data_structures_utils import obj_to_dict, assert_arrays
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val__to_model_x0
-from tvb_epilepsy.custom.read_write import read_ts
 
 
 # TODO: It is imperative to allow for modification of the connectivity.normalized_weights of the Connecitivity.h5
 # according to the model_configuration.connectivity
+
 
 class SimulationSettings(object):
     def __init__(self, integration_step=0.01220703125, noise_seed=42, noise_intensity=10 ** -6, simulated_period=5000,
@@ -59,7 +59,22 @@ class EpileptorModel(object):
     _ui_name = "CustomEpileptor"
     _nvar = 2
 
-    def __init__(self, a=1.0, b=3.0, c=1.0, d=5.0, aa=6.0, r=0.00035, kvf=0.0, kf=0.0, ks=1.5, tau=10.0, iext=3.1,
+    a = 1.0
+    b = 3.0
+    c = 1.0
+    d = 5.0
+    aa = 6.0
+    r = 0.00035
+    Kvf = 0.0
+    Kf = 0.0
+    Ks = 1.0
+    tau = 10.0
+    Iext = 3.1
+    Iext2 = 0.45
+    slope = 0.0
+    tt = 1.0
+
+    def __init__(self, a=1.0, b=3.0, c=1.0, d=5.0, aa=6.0, r=0.00035, kvf=0.0, kf=0.0, ks=1.0, tau=10.0, iext=3.1,
                  iext2=0.45, slope=0.0, x0=-2.1, tt=1.0):
         a, b, c, d, aa, r, kvf, kf, ks, tau, iext, iext2, slope, x0, tt = \
             assert_arrays([a, b, c, d, aa, r, kvf, kf, ks, tau, iext, iext2, slope, x0, tt])
@@ -154,6 +169,7 @@ class SimulatorCustom(ABCSimulator):
             status = False
             warning("Something went wrong with this simulation...")
 
+        from tvb_epilepsy.custom.read_write import read_ts
         time, data = read_ts(os.path.join(self.head_path, "full-configuration", "ts.h5"), data="data")
         return time, data, status
 

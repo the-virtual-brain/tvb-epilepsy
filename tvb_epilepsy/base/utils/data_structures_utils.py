@@ -447,13 +447,5 @@ def copy_object_attributes(obj1, obj2, attr1, attr2=None, deep_copy=False, check
     return obj2
 
 
-def parcellation_correspondance(inds_from, labels_from, labels_to):
-    inds_to = []
-    for ind in inds_from:
-        lbl = labels_from[ind]
-        inds_to.append(np.where(labels_to == lbl)[0][0])
-    if len(inds_to) != 1:
-        return inds_to
-    else:
-        return inds_to[0]
+
 

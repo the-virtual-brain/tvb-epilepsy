@@ -9,7 +9,7 @@ import numpy as np
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.model.vep.surface import Surface
-from tvb_epilepsy.base.model.vep.sensors import Sensors, TYPE_SEEG, TYPE_EEG, TYPE_MEG
+from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.readers import ABCReader
@@ -129,13 +129,13 @@ class CustomReader(ABCReader):
         t1 = self.read_volume_mapping(os.path.join(root_folder, "StructuralMRI.h5"))
         sensorsSEEG = []
         for s_files in ensure_list(seeg_sensors_files):
-            sensorsSEEG.append(self.read_sensors(s_files, root_folder, TYPE_SEEG))
+            sensorsSEEG.append(self.read_sensors(s_files, root_folder, Sensors.TYPE_SEEG))
         sensorsEEG = []
         for s_files in ensure_list(eeg_sensors_files):
-            sensorsEEG.append(self.read_sensors(s_files, root_folder, TYPE_EEG))
+            sensorsEEG.append(self.read_sensors(s_files, root_folder, Sensors.TYPE_EEG))
         sensorsMEG = []
         for s_files in ensure_list(meg_sensors_files):
-            sensorsMEG.append(self.read_sensors(s_files, root_folder, TYPE_MEG))
+            sensorsMEG.append(self.read_sensors(s_files, root_folder, Sensors.TYPE_MEG))
         return Head(conn, srf, rm, vm, t1, name, sensorsSEEG=sensorsSEEG, sensorsEEG=sensorsEEG, sensorsMEG=sensorsMEG)
 
     def read_epileptogenicity(self, root_folder, name="ep"):

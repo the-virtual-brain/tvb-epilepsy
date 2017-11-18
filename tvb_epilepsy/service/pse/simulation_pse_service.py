@@ -1,11 +1,14 @@
-import numpy
+
 from copy import deepcopy
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
+
+import numpy
+
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
-from tvb_epilepsy.custom.simulator_custom import custom_model_builder
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
 from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.service.pse.pse_service import ABCPSEService
 from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
+from tvb_epilepsy.custom.simulator_custom import custom_model_builder
 
 
 class SimulationPSEService(ABCPSEService):

@@ -4,7 +4,7 @@ import os
 
 import numpy as np
 
-from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
+from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
@@ -28,7 +28,7 @@ class ODEModelInversionService(ModelInversionService):
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="vep_ode",
                  logger=LOG, **kwargs):
         super(ODEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
-                                                       model_name, logger **kwargs)
+                                                       model_name, logger, **kwargs)
         self.time = None
         self.dt = 0.0
         self.n_times = 0

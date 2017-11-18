@@ -1,25 +1,26 @@
 # encoding=utf8
 
+import os
 from shutil import copyfile
 
-import os
 import numpy as np
 from scipy.io import savemat, loadmat
 
-from tvb_epilepsy.base.constants import X0_DEF, E_DEF, TVB, DATA_MODE, SIMULATION_MODE
-from tvb_epilepsy.service.epileptor_model_factory import VOIS
-from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM, STATS_MODELS_PATH, FOLDER_VEP_HOME, USER_HOME
+from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE, SIMULATION_MODE
+from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF, VOIS
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, STATS_MODELS_PATH, FOLDER_VEP_HOME, \
+    USER_HOME
+from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.plot_utils import plot_sim_results, plot_fit_results
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.scripts.seeg_data_scripts import prepare_seeg_observable, get_bipolar_channels
+from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
+    compute_seeg_and_write_ts_h5_file
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.model_inversion.pystan_service import PystanService
 from tvb_epilepsy.service.model_inversion.sde_model_inversion_service import \
-                                                                                    SDEModelInversionService
-from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
-                                                    compute_seeg_and_write_ts_h5_file
-from tvb_epilepsy.scripts.seeg_data_scripts import prepare_seeg_observable, get_bipolar_channels
+    SDEModelInversionService
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader

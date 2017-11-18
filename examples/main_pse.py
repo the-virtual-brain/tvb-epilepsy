@@ -1,13 +1,14 @@
-import numpy as np
 import os
-from tvb_epilepsy.base.configurations import DATA_CUSTOM, FOLDER_RES
+
+import numpy as np
+
+from tvb_epilepsy.base.constants.configurations import DATA_CUSTOM, FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
 from tvb_epilepsy.scripts.pse_scripts import pse_from_hypothesis
 from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
-
 
 logger = initialize_logger(__name__)
 

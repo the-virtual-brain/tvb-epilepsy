@@ -1,7 +1,7 @@
 import numpy as np
 
-from tvb_epilepsy.base.constants import A_DEF, B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, I_EXT1_DEF, I_EXT2_DEF, \
-                                        YC_DEF, TAU0_DEF, TAU1_DEF, TAU2_DEF
+from tvb_epilepsy.base.constants.model_constants import A_DEF, B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, \
+                                                                    I_EXT1_DEF, I_EXT2_DEF, TAU0_DEF, TAU1_DEF, TAU2_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import assert_arrays
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 

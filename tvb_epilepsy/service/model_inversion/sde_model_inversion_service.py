@@ -1,18 +1,16 @@
 
 import time
-import os
 
 import numpy as np
 
-from tvb_epilepsy.base.configurations import STATS_MODELS_PATH, FOLDER_RES
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.model.parameter import Parameter
-from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
 from tvb_epilepsy.base.model.statistical_models.sde_statistical_model import SDEStatisticalModel
+from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_NVARS
+from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
 from tvb_epilepsy.service.model_inversion.ode_model_inversion_service import ODEModelInversionService
-from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_NVARS, \
-                                                                                            model_noise_intensity_dict
 
 LOG = initialize_logger(__name__)
 

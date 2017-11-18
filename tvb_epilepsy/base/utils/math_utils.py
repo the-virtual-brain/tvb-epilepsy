@@ -5,7 +5,7 @@ from itertools import product
 import numpy as np
 from matplotlib import pyplot
 
-from tvb_epilepsy.base.constants import WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
+from tvb_epilepsy.base.constants.module_constants import WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
 from tvb_epilepsy.base.utils.log_error_utils import warning, initialize_logger
 
 

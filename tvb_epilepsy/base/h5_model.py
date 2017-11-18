@@ -1,14 +1,16 @@
+
 import os
 from collections import OrderedDict
 from copy import deepcopy
-
 import h5py
+
 import numpy as np
 
-from tvb_epilepsy.base.utils.file_utils import change_filename_or_overwrite
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import sort_dict, list_or_tuple_to_dict, dict_to_list_or_tuple, \
     set_list_item_by_reference_safely, get_list_or_tuple_item_safely
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.file_utils import change_filename_or_overwrite
+
 
 logger = initialize_logger(__name__)
 

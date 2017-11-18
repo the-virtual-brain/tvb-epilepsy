@@ -1,7 +1,5 @@
-from tvb_epilepsy.base.model.parameter import Parameter
+
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.normal_distribution import NormalDistribution
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.gamma_distribution import GammaDistribution
 
 
 class SDEStatisticalModel(ODEStatisticalModel):

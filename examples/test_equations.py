@@ -1,7 +1,6 @@
+from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF
 from tvb_epilepsy.base.computations.calculations_utils import *
 from tvb_epilepsy.base.computations.equilibrium_computation import *
-from tvb_epilepsy.base.constants import K_DEF
-from tvb_epilepsy.base.utils.data_structures_utils import assert_arrays
 
 if __name__ == "__main__":
 

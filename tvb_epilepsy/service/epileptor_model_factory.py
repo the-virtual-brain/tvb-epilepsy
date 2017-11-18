@@ -10,10 +10,8 @@ Also, dictionaries to keep noise intensity and type for each model type.
 import numpy
 from tvb.simulator.models import Epileptor
 
-from tvb_epilepsy.base.constants import ADDITIVE_NOISE, MULTIPLICATIVE_NOISE
-from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D, EpileptorDP, EpileptorDPrealistic
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
-
+from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D, EpileptorDP, EpileptorDPrealistic
 
 AVAILABLE_DYNAMICAL_MODELS = (Epileptor, EpileptorModel, EpileptorDP2D, EpileptorDP, EpileptorDPrealistic)
 
@@ -83,55 +81,30 @@ model_build_dict = {
     "EpileptorDP2D": build_ep_2sv_model
 }
 
-
-model_noise_intensity_dict = {
-    "Epileptor": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
-    "EpileptorModel": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
-    "EpileptorDP": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
-    "EpileptorDPrealistic": numpy.array([0., 0., 1e-7, 0.0, 1e-7, 0., 1e-8, 1e-3, 1e-8, 1e-3, 1e-9])*0.1,
-    "EpileptorDP2D": numpy.array([0., 5e-8])
-}
-
-
-model_noise_type_dict = {
-    "Epileptor": ADDITIVE_NOISE,
-    "EpileptorDP": ADDITIVE_NOISE,
-    "EpileptorDPrealistic": MULTIPLICATIVE_NOISE,
-    "EpileptorDP2D": ADDITIVE_NOISE
-}
-
-
 EPILEPTOR_MODEL_NVARS = {
-         "EpileptorModel": EpileptorModel.nvar,
-         "Epileptor": Epileptor.nvar,
-         "EpileptorDP": EpileptorDP.nvar,
-         "EpileptorDPrealistic": EpileptorDPrealistic.nvar,
-         "EpileptorDP2D": EpileptorDP2D.nvar
+         "EpileptorModel": EpileptorModel._nvar,
+         "Epileptor": Epileptor._nvar,
+         "EpileptorDP": EpileptorDP._nvar,
+         "EpileptorDPrealistic": EpileptorDPrealistic._nvar,
+         "EpileptorDP2D": EpileptorDP2D._nvar
 }
 
 
 EPILEPTOR_MODEL_TAU1 = {
-         "EpileptorModel": EpileptorModel.tau,
-         "Epileptor": Epileptor.tt,
-         "EpileptorDP": EpileptorDP.tau1,
-         "EpileptorDPrealistic": EpileptorDPrealistic.tau1,
-         "EpileptorDP2D": EpileptorDP2D.tau1
+         "EpileptorModel": EpileptorModel.tt,
+         "Epileptor": EpileptorDP().tau1,
+         "EpileptorDP": EpileptorDP().tau1,
+         "EpileptorDPrealistic": EpileptorDPrealistic().tau1,
+         "EpileptorDP2D": EpileptorDP2D().tau1
 }
 
 
 EPILEPTOR_MODEL_TAU0 = {
          "EpileptorModel": 1.0 / EpileptorModel.r,
-         "Epileptor": 1.0 / Epileptor.r,
-         "EpileptorDP": EpileptorDP.tau0,
-         "EpileptorDPrealistic": EpileptorDPrealistic.tau0,
-         "EpileptorDP2D": EpileptorDP2D.tau0
+         "Epileptor": 1.0 / Epileptor().r,
+         "EpileptorDP": EpileptorDP().tau0,
+         "EpileptorDPrealistic": EpileptorDPrealistic().tau0,
+         "EpileptorDP2D": EpileptorDP2D().tau0
 }
 
 
-VOIS = {
-    "EpileptorModel": ['x1', 'z', 'x2'],
-    "Epileptor": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp'],
-    "EpileptorDP": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp'],
-    "EpileptorDPrealistic": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp', 'x0_t', 'slope_t', 'Iext1_t', 'Iext2_t', 'K_t'],
-    "EpileptorDP2D": ['x1', 'z']
-}

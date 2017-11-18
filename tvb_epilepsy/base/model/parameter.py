@@ -1,5 +1,5 @@
 
-from tvb_epilepsy.base.constants import MAX_SINGLE_VALUE
+from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE, MIN_SINGLE_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
@@ -7,7 +7,7 @@ from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 class Parameter(object):
 
-    def __init__(self, name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, p_shape=(1,), **kwargs):
+    def __init__(self, name="Parameter", low=MIN_SINGLE_VALUE, high=MAX_SINGLE_VALUE, p_shape=(1,), **kwargs):
         if isinstance(name, basestring):
             self.name = name
         else:

@@ -6,7 +6,7 @@ from abc import ABCMeta, abstractmethod
 
 import numpy
 
-from tvb_epilepsy.base.constants import NOISE_SEED
+from tvb_epilepsy.base.constants.module_constants import NOISE_SEED
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_equilibrium_point
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr

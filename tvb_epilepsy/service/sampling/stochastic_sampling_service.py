@@ -3,9 +3,9 @@ import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
 
-from tvb_epilepsy.base.constants import MAX_SINGLE_VALUE
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, isequal_string, shape_to_size
+from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, isequal_string
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution \

@@ -1,7 +1,10 @@
-import numpy
+
 from copy import deepcopy
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
+
+import numpy
+
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
 from tvb_epilepsy.service.pse.pse_service import ABCPSEService
 
 

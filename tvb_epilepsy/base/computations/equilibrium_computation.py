@@ -5,8 +5,9 @@ Module to compute the resting equilibrium point of a Virtual Epileptic Patient m
 import numpy
 from scipy.optimize import root
 
-from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, SYMBOLIC_CALCULATIONS_FLAG, A_DEF, B_DEF, D_DEF, \
-                                        SLOPE_DEF, S_DEF, GAMMA_DEF
+from tvb_epilepsy.base.constants.module_constants import SYMBOLIC_CALCULATIONS_FLAG
+from tvb_epilepsy.base.constants.model_constants import X1_DEF, X1_EQ_CR_DEF, A_DEF, B_DEF, D_DEF, SLOPE_DEF, \
+                                                                                                       S_DEF, GAMMA_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import assert_arrays
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, \
     raise_not_implemented_error

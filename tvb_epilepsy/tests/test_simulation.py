@@ -1,11 +1,14 @@
-import numpy
 import os
+
+import numpy as np
+
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.tvb_api.readers_tvb import TVBReader
 from tvb_epilepsy.custom.readers_custom import CustomReader
 from tvb_epilepsy.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration, set_time_scales, \
     setup_custom_simulation_from_model_configuration
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
-from tvb_epilepsy.tvb_api.readers_tvb import TVBReader
+
 
 data_dir = "data"
 
@@ -17,7 +20,7 @@ class TestSimulationRun():
     (dt, fsAVG, sim_length, monitor_period, n_report_blocks) = set_time_scales(fs=fs, time_length=time_length,
                                                                                scale_fsavg=None,
                                                                                report_every_n_monitor_steps=report_every_n_monitor_steps)
-    zmode = numpy.array("lin")
+    zmode = np.array("lin")
     epileptor_model = "EpileptorDP2D"
     noise_intensity = 10 ** -8
 

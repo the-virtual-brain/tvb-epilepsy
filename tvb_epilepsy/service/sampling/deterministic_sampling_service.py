@@ -1,9 +1,8 @@
 
 import numpy as np
 
-from tvb_epilepsy.base.constants import MAX_SINGLE_VALUE
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, \
-                                                                                            raise_not_implemented_error
+from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.service.sampling.sampling_service import SamplingService
 

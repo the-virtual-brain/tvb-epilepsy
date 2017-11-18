@@ -3,18 +3,18 @@ import importlib
 from abc import ABCMeta
 
 
-from tvb_epilepsy.base.constants import MAX_SINGLE_VALUE
+from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE, MIN_SINGLE_VALUE
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
                                                     ProbabilityDistribution
-from tvb_epilepsy.service.probability_distribution_factory import generate_distribution, compute_pdf_params
+from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_params
 
 
 class StochasticParameterBase(Parameter, ProbabilityDistribution):
     __metaclass__ = ABCMeta
 
-    def __init__(self, name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, p_shape=(1,), **pdf_params):
+    def __init__(self, name="Parameter", low=MIN_SINGLE_VALUE, high=MAX_SINGLE_VALUE, p_shape=(1,), **pdf_params):
         Parameter.__init__(self, name, low, high, p_shape)
 
     def __repr__(self):

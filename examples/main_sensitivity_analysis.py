@@ -1,14 +1,16 @@
-import warnings
-import numpy as np
 import os
-from tvb_epilepsy.base.configurations import DATA_CUSTOM, FOLDER_RES
-from tvb_epilepsy.base.constants import K_DEF
+import warnings
+
+import numpy as np
+
+from tvb_epilepsy.base.constants.model_constants import K_DEF
+from tvb_epilepsy.base.constants.configurations import DATA_CUSTOM, FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_hypothesis
+from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.sensitivity_analysis_service import METHODS
+from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_hypothesis
+from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
 
 
 logger = initialize_logger(__name__)
