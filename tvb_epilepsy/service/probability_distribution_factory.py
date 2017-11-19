@@ -5,8 +5,7 @@ import numpy as np
 from scipy.optimize import minimize
 
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, shape_to_size, \
-                                                                                       dicts_of_lists_to_lists_of_dicts
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, dicts_of_lists_to_lists_of_dicts
 
 
 AVAILABLE_DISTRIBUTIONS = ["uniform", "normal", "gamma", "lognormal", "exponential", "beta", "chisquare",
@@ -95,7 +94,7 @@ def prepare_contraints(distribution, target_stats):
 
 def prepare_target_stats(distribution, target_stats):
     # Make sure that the shapes of target stats are all matching one to the other:
-    target_shape = np.ones((1,))
+    target_shape = np.ones(())
     try:
         for ts in target_stats.values():
             target_shape = target_shape * np.ones(np.array(ts).shape)
@@ -104,9 +103,10 @@ def prepare_target_stats(distribution, target_stats):
                           ") and distribution (" + str(distribution.p_shape) + ") shapes do not propagate!")
     for ts_key in target_stats.keys():
         target_stats[ts_key] *= target_shape
-        target_stats[ts_key] = target_stats[ts_key].flatten()
+        if  np.sum(target_stats[ts_key].shape) > 0:
+            target_stats[ts_key] = target_stats[ts_key].flatten()
+    target_size = target_shape.size
     target_shape = target_shape.shape
-    target_size = shape_to_size(target_shape)
     target_stats_array = np.around(np.vstack(target_stats.values()).T, decimals=3)
     target_stats_unique = np.unique(target_stats_array, axis=0)
     # target_stats_unique = np.vstack({tuple(row) for row in target_stats_array})

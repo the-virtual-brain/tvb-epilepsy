@@ -1,15 +1,13 @@
 
 import time
-import os
+from copy import deepcopy
 
 import numpy as np
 
-from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
-from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import \
                                                         EULER_METHODS, OBSERVATION_MODEL_EXPRESSIONS, OBSERVATION_MODELS
 from tvb_epilepsy.base.model.parameter import Parameter
@@ -25,6 +23,11 @@ LOG = initialize_logger(__name__)
 
 class ODEModelInversionService(ModelInversionService):
 
+    X1INIT_MIN = -2.0
+    X1INIT_MAX = 0.0
+    ZINIT_MIN = 1.0
+    ZINIT_MAX = 5.0
+
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="vep_ode",
                  logger=LOG, **kwargs):
         super(ODEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
@@ -33,6 +36,7 @@ class ODEModelInversionService(ModelInversionService):
         self.dt = 0.0
         self.n_times = 0
         self.n_signals = 0
+        self.signals_inds = range(self.n_signals)
 
     def get_default_sig_init(self):
         return 0.1
@@ -48,8 +52,8 @@ class ODEModelInversionService(ModelInversionService):
                     self.time = time
                     self.dt = np.mean(self.time)
                 else:
-                    raise_value_error("Input time is neither a scalar nor a vector of length equal to target_data.shape[0]!" +
-                                      "\ntime = " + str(time))
+                    raise_value_error("Input time is neither a scalar nor a vector of length equal " +
+                                      "to target_data.shape[0]!" + "\ntime = " + str(time))
             except:
                 raise_value_error(
                     "Input time is neither a scalar nor a vector of length equal to target_data.shape[0]!" +
@@ -58,107 +62,128 @@ class ODEModelInversionService(ModelInversionService):
             raise_value_error("Input time is neither a scalar nor a vector of length equal to target_data.shape[0]!" +
                               "\ntime = " + str(time))
 
-    def set_target_data_and_time(self, target_data_type, target_data, time=None, **kwargs):
+    def select_signals(self, signals, **kwargs):
+        sensors = Sensors(self.sensors_labels, self.sensors_locations, projection=self.projection)
+        power=kwargs.get("power", None)
+        if power:
+            if not(isinstance(power, np.ndarray)):
+                power_inds = kwargs.get("power_inds", range(self.n_signals))
+                power = np.sum(signals ** 2, axis=0)
+                power = power/np.max(power)
+        return sensors.select_contacts(rois=kwargs.get("rois", None), projection_th=kwargs.get("rois", None),
+                                       power=power, power_inds=power_inds, power_th=kwargs.get("power_th", None))
+
+    def set_signals_inds(self, signals, **kwargs):
+        if kwargs.pop("select_signals", False):
+            signals_inds = self.select_signals(signals, **kwargs)
+        else:
+            signals_inds = kwargs.get("signals_inds", self.signals_inds)
+        if len(signals_inds) == 0:
+            signals_inds = range(self.n_signals)
+        elif len(signals_inds) < self.n_signals:
+            try:
+                signals = signals[:, signals_inds]
+                self.observation_shape = signals.shape
+                (self.n_times, self.n_signals) = self.observation_shape
+            except:
+                raise_value_error("Failed to extract signals with indices " + str(self.signals_inds) +
+                                  " from signals' array with shape " + str(self.observation_shape) + "!")
+        else:
+            raise_value_error("Signals indices " + str(self.signals_inds) +
+                              " more than signals'number " + str(self.n_signals) + "!")
+        self.signals_inds = signals_inds
+        return signals
+
+    def set_target_data_and_time(self, target_data_type, target_data, statistical_model, **kwargs):
         if isequal_string(target_data_type, "simulated"):
-            self.set_simulated_target_data(target_data, statistical_model=kwargs.get("statistical_model", None),
-                                           time=kwargs.get("time", None), projection=kwargs.get("projection", None))
+            signals = self.set_simulated_target_data(target_data, statistical_model)
             self.target_data_type = "simulated"
         else:  # isequal_string(target_data_type, "empirical"):
-            self.set_empirical_target_data(target_data, time)
+            signals = self.set_empirical_target_data(target_data)
             self.target_data_type = "empirical"
-        if time is None and isinstance(target_data, dict):
-            self.set_time(target_data.get("time", None))
+        time = self.set_time(target_data.get("time", None))
+        signals = self.set_signals_inds(signals, **kwargs)
+        statistical_model.n_signals = self.n_signals
+        statistical_model.n_times = self.n_times
+        statistical_model.dt = self.dt
+        return signals, time, statistical_model
 
-    def set_empirical_target_data(self, target_data, time=None):
+    def set_empirical_target_data(self, target_data):
         if isinstance(target_data, dict):
-            self.target_data = target_data.get("signals", target_data.get("target_data", None))
-        self.observation_shape = self.target_data.shape
+            signals = target_data.get("signals", target_data.get("target_data", None))
+        self.observation_shape = signals
         (self.n_times, self.n_signals) = self.observation_shape
+        return signals
 
-    def set_simulated_target_data(self, target_data,  statistical_model=None, time=None, projection=None):
+    def set_simulated_target_data(self, target_data,  statistical_model=None):
         #TODO: this function needs to be improved substantially. It lacks generality right now.
-        if statistical_model is None or not(isequal_string(target_data, dict)):
-            self.set_empirical_target_data(target_data, time)
+        if statistical_model is None or not(isinstance(target_data, dict)):
+            signals = self.set_empirical_target_data(target_data)
         else:
             if statistical_model.observation_expression == "x1z_offset":
-                self.target_data = ((target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T + \
-                                   (target_data["z"].T - np.expand_dims(self.zEQ, 1)).T) / 2.75
+                signals = ((target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T + \
+                           (target_data["z"].T - np.expand_dims(self.zEQ, 1)).T) / 2.75
                 # TODO: a better normalization
             elif statistical_model.observation_expression == "x1_offset":
                 # TODO: a better normalization
-                self.target_data = (target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T / 2.0
+                signals = (target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T / 2.0
             else: # statistical_models.observation_expression == "x1"
-                self.target_data = target_data["x1"]
-            self.observation_shape = self.target_data.shape
-            (self.n_times, self.n_signals) = self.observation_shape
-            if self.time.size != self.n_times:
-                raise_value_error("Input time is not a vector of length equal to target_data.shape[0]!" +
-                                  "\ntime = " + str(self.time))
-            if statistical_model.observation_model.find("seeg") > 0:
-                if projection is not None:
-                    self.target_data = (np.dot(projection[statistical_model.active_regions], self.target_data.T)).T
-
-    def get_epileptor_parameters(self):
-        self.logger.info("Unpacking epileptor parameters...")
-        epileptor_params = {}
-        for p in ["a", "b", "d", "yc", "Iext1", "slope"]:
-            temp = getattr(self, p)
-            if isinstance(temp, (np.ndarray, list)):
-                if np.all(temp[0], np.array(temp)):
-                    temp = temp[0]
+                signals = target_data["x1"]
+            signals = signals[:, statistical_model.active_regions]
+            if statistical_model.observation_model.find("seeg") >= 0:
+                if not(isinstance(self.projection, np.ndarray)):
+                    projection = np.eye(statistical_model.n_active_regions)
                 else:
-                    raise_not_implemented_error("Statistical models where not all regions have the same value " +
-                                                " for parameter " + p + " are not implemented yet!")
-            self.epileptor_params.update({p: temp})
-        x0cr, rx0 = calc_x0cr_r(epileptor_params["yc"], epileptor_params["Iext1"], epileptor_params["a"],
-                                epileptor_params["b"], epileptor_params["d"], zmode=np.array("lin"),
-                                x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF, test=False,
-                                shape=None, calc_mode="non_symbol")
-        epileptor_params.update({"x0cr": x0cr, "rx0": rx0})
-        return epileptor_params
+                    projection = self.projection[statistical_model.active_regions]
+                signals = (np.dot(projection.T, signals.T)).T
+            self.observation_shape = signals.shape
+            (self.n_times, self.n_signals) = self.observation_shape
+        return signals
 
     def update_active_regions_e_values(self, statistical_model, active_regions_th=0.1, reset=False):
         if reset:
             statistical_model.update_active_regions([])
-        return statistical_model.update_active_regions(statistical_model.active_regions +
-                        select_greater_values_array_inds(self.e_values, active_regions_th).tolist())
+        statistical_model.update_active_regions(statistical_model.active_regions +
+                                            select_greater_values_array_inds(self.e_values, active_regions_th).tolist())
+        return statistical_model
 
     def update_active_regions_x0_values(self, statistical_model, active_regions_th=0.1, reset=False):
         if reset:
             statistical_model.update_active_regions([])
-        return statistical_model.update_active_regions(statistical_model.active_regions +
-                       select_greater_values_array_inds(self.x0_values, active_regions_th).tolist())
+        statistical_model.update_active_regions(statistical_model.active_regions +
+                                           select_greater_values_array_inds(self.x0_values, active_regions_th).tolist())
+        return statistical_model
 
-    def update_active_regions_lsa(self, statistical_model, active_regions_th=0.1, reset=False):
+    def update_active_regions_lsa(self, statistical_model, active_regions_th=None, reset=False):
         if reset:
             statistical_model.update_active_regions([])
         if len(self.lsa_propagation_strengths) > 0:
             ps_strengths = self.lsa_propagation_strengths / np.max(self.lsa_propagation_strengths)
-            return statistical_model.update_active_regions(statistical_model.active_regions +
+            statistical_model.update_active_regions(statistical_model.active_regions +
                                              select_greater_values_array_inds(ps_strengths, active_regions_th).tolist())
         else:
             warning("No LSA results found (empty propagations_strengths vector)!" +
                     "\nSkipping of setting active_regios according to LSA!")
-            return statistical_model
+        return statistical_model
 
-    def update_active_regions_seeg(self, statistical_model, active_regions_th=0.5, projection=None, seeg_inds=None,
-                                   reset=False):
+    def update_active_regions_seeg(self, statistical_model, active_regions_th=None, seeg_inds=[], reset=False):
         if reset:
-            statistical_model.update_active_regions()
-        if projection is None:
-            projection = self.projection
-        if projection is not None:
+            statistical_model.update_active_regions([])
+        if self.projection is not None:
             active_regions = statistical_model.active_regions
-            if seeg_inds is not None:
-                projection = projection[seeg_inds]
+            if len(seeg_inds) == 0:
+                seeg_inds = self.signals_inds
+            if len(seeg_inds) != 0:
+                projection = self.projection[:, seeg_inds].T
             for proj in projection:
                 active_regions += select_greater_values_array_inds(proj, active_regions_th).tolist()
-            return statistical_model.update_active_regions(active_regions.tolist())
+            statistical_model.update_active_regions(active_regions)
         else:
             warning("Projection is not found!" + "\nSkipping of setting active_regios according to SEEG power!")
-            return statistical_model
+        return statistical_model
 
-    def update_active_regions(self, statistical_model, methods=["e_values", "LSA"], **kwargs):
+    def update_active_regions(self, statistical_model, methods=["e_values", "LSA"], reset=False, **kwargs):
+        methods = ensure_list(methods)
         n_methods = len(methods)
         active_regions_th = ensure_list(kwargs.get("active_regions_th", None))
         n_thresholds = len(active_regions_th)
@@ -169,24 +194,47 @@ class ODEModelInversionService(ModelInversionService):
                 raise_value_error("Number of input methods:\n" + str(methods) +
                                   "and active region thresholds:\n" + str(active_regions_th) +
                                   "does not match!")
+        if reset:
+            statistical_model.update_active_regions([])
         for m, th in zip(methods, active_regions_th):
             if isequal_string(m, "e_values"):
                 statistical_model = self.update_active_regions_e_values(statistical_model, th)
             elif isequal_string(m, "x0_values"):
                 statistical_model = self.update_active_regions_x0_values(statistical_model, th)
             elif isequal_string(m, "lsa"):
-                if isinstance(self.hypothesis, DiseaseHypothesis):
-                    statistical_model = self.update_active_regions_lsa(statistical_model, th)
-                warning("No DiseaseHypothesis object found! Skipping of setting active_regios according to LSA!")
+                statistical_model = self.update_active_regions_lsa(statistical_model, th)
             elif isequal_string(m, "seeg"):
                 statistical_model = self.update_active_regions_seeg(statistical_model, th,
-                                                                    projection=kwargs.get("projection"),
                                                                     seeg_inds=kwargs.get("seeg_inds"))
         return statistical_model
 
     def generate_model_parameters(self, **kwargs):
         parameters = super(ODEModelInversionService, self).generate_model_parameters(**kwargs)
         # Integration
+        parameter = kwargs.get("x1init", None)
+        if not (isinstance(parameter, Parameter)):
+            x1init_def = kwargs.get("x1init_def", self.x1EQ)
+            parameter = generate_stochastic_parameter("x1init",
+                                                      low=kwargs.get("x1init_lo", self.X1INIT_MIN),
+                                                      high=kwargs.get("x1init_hi", self.X1INIT_MAX),
+                                                      p_shape=(self.n_regions,),
+                                                      probability_distribution="normal",
+                                                      optimize=False,
+                                                      mean=x1init_def, sigma=kwargs.get("x1init_sig", 0.1))
+        parameters.update({parameter.name: parameter})
+
+        parameter = kwargs.get("zinit", None)
+        if not (isinstance(parameter, Parameter)):
+            zinit_def = kwargs.get("zinit_def", self.zEQ)
+            parameter = generate_stochastic_parameter("zinit",
+                                                      low=kwargs.get("zinit_lo", self.ZINIT_MIN),
+                                                      high=kwargs.get("zinit_hi", self.ZINIT_MAX),
+                                                      p_shape=(self.n_regions,),
+                                                      probability_distribution="normal",
+                                                      optimize=False,
+                                                      mean=zinit_def, sigma=kwargs.get("zinit_sig", 0.1))
+        parameters.update({parameter.name: parameter})
+
         parameter = kwargs.get("sig_init", None)
         if not(isinstance(parameter, Parameter)):
             sig_init_def = kwargs.get("sig_init_def", 0.1)
@@ -198,7 +246,7 @@ class ODEModelInversionService(ModelInversionService):
                                                       optimize=True,
                                                       mode=sig_init_def,
                                                       std=kwargs.get("tau1_sig", sig_init_def))
-        parameters.append(parameter)
+        parameters.update({parameter.name: parameter})
 
         # Observation model
         parameter = kwargs.get("scale_signal")
@@ -213,7 +261,7 @@ class ODEModelInversionService(ModelInversionService):
                                                       optimize=True,
                                                       mode=scale_signal_def,
                                                       std=kwargs.get("scale_signal_sig", scale_signal_def))
-        parameters.append(parameter)
+        parameters.update({parameter.name: parameter})
 
         parameter = kwargs.get("offset_signal")
         if not(isinstance(parameter, Parameter)):
@@ -227,7 +275,7 @@ class ODEModelInversionService(ModelInversionService):
                                                       optimize=False,
                                                       mean=offset_signal_def,
                                                       sigma=kwargs.get("scale_signal_sig", 1.0))
-        parameters.append(parameter)
+        parameters.update({parameter.name: parameter})
         return parameters
 
     def generate_statistical_model(self, model_name=None, **kwargs):
@@ -241,44 +289,50 @@ class ODEModelInversionService(ModelInversionService):
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model
 
-    def generate_model_data(self, statistical_model, projection, x1var="", zvar=""):
+    def generate_model_data(self, statistical_model, signals, projection=None, x1var="", zvar=""):
         active_regions_flag = np.zeros((statistical_model.n_regions,), dtype="i")
         active_regions_flag[statistical_model.active_regions] = 1
-        self.model_data = {"n_regions": statistical_model.n_regions,
-                           "n_times": statistical_model.n_times,
-                           "n_signals": statistical_model.n_signals,
-                           "n_active_regions": statistical_model.n_active_regions,
-                           "n_nonactive_regions": statistical_model.n_nonactive_regions,
-                           "active_regions_flag": active_regions_flag,
-                           "active_regions": statistical_model.active_regions,
-                           "nonactive_regions": np.where(1 - active_regions_flag)[0],
-                           "dt": self.dt,
-                           "euler_method": np.where(np.in1d(EULER_METHODS, statistical_model.euler_method))[0] - 1,
-                           "observation_model": np.where(np.in1d(OBSERVATION_MODELS,
-                                                                 statistical_model.observation_model))[0],
-                           "observation_expression": np.where(np.in1d(OBSERVATION_MODEL_EXPRESSIONS,
-                                                                      statistical_model.observation_expression))[0],
-                           "signals": self.target_data,
-                           "mixing": projection,
-                           "x1eq0": statistical_model.paramereters["x1eq"].mean}
-        for key, val in self.epileptor_params.iteritems():
-            self.model_data.update({key: val})
-        for p in statistical_model.paramereters.values():
-            self.model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high,
-                                    p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS,
-                                                                      p.probability_distribution.name))[0]})
+        if projection is None:
+            projection = self.projection
+        mixing = deepcopy(projection)
+        mixing = mixing.T
+        if mixing.shape[0] > len(self.signals_inds):
+            mixing = mixing[self.signals_inds]
+        if mixing.shape[1] > statistical_model.n_active_regions:
+            mixing = mixing[:, statistical_model.active_regions]
+        model_data = {"n_regions": statistical_model.n_regions,
+                      "n_times": statistical_model.n_times,
+                      "n_signals": statistical_model.n_signals,
+                      "n_active_regions": statistical_model.n_active_regions,
+                      "n_nonactive_regions": statistical_model.n_nonactive_regions,
+                      "active_regions_flag": active_regions_flag,
+                      "active_regions": statistical_model.active_regions,
+                      "nonactive_regions": np.where(1 - active_regions_flag)[0],
+                      "dt": statistical_model.dt,
+                      "euler_method": np.where(np.in1d(EULER_METHODS, statistical_model.euler_method))[0][0] - 1,
+                      "observation_model": np.where(np.in1d(OBSERVATION_MODELS,
+                                                            statistical_model.observation_model))[0][0],
+                      "observation_expression": np.where(np.in1d(OBSERVATION_MODEL_EXPRESSIONS,
+                                                                 statistical_model.observation_expression))[0][0],
+                      "signals": signals,
+                      "mixing": mixing,
+                      "x1eq0": statistical_model.parameters["x1eq"].mean}
+        for key, val in self.epileptor_parameters.iteritems():
+            model_data.update({key: val})
+        for p in statistical_model.parameters.values():
+            model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high})
             if isequal_string(p.name, x1var) or isequal_string(p.name, zvar):
                 pass
             elif isequal_string(p.name, "x1eq") or isequal_string(p.name, "x1init") or isequal_string(p.name, "zinit"):
-                    warning("For the moment only normal distribution is allowed for parameters " + p.name +
-                            "!\nIgnoring the selected probability distribution!")
+                    self.logger.info("For the moment only normal distribution is allowed for parameters " + p.name +
+                                     "!\nIgnoring the selected probability distribution!")
             else:
-                self.model_data.update({p.name + "_pdf":
-                                        np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.probability_distribution.name))[0]})
-                pdf_params = p.probability_distribution.pdf_params().values()
-                self.model_data.update({p.name + "_p1": pdf_params[0]})
+                model_data.update({p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.type))[0][0]})
+                pdf_params = p.pdf_params().values()
+                model_data.update({p.name + "_p1": pdf_params[0]})
                 if len(pdf_params) == 1:
-                    self.model_data.update({p.name + "_p2": pdf_params[0]})
+                    model_data.update({p.name + "_p2": pdf_params[0]})
                 else:
-                    self.model_data.update({p.name + "_p2": pdf_params[1]})
+                    model_data.update({p.name + "_p2": pdf_params[1]})
+        return sort_dict(model_data)
 

@@ -18,6 +18,10 @@ LOG = initialize_logger(__name__)
 class SDEModelInversionService(ODEModelInversionService):
 
     SIG_DEF = 10 ** -4
+    X1_MIN = -3.0
+    X1_MAX = 3.0
+    Z_MIN = 0.0
+    Z_MAX = 7.0
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name=None, 
                  sde_mode="dWt", logger=LOG, **kwargs):
@@ -25,7 +29,7 @@ class SDEModelInversionService(ODEModelInversionService):
         if isequal_string(sde_mode, "dWt"):
             self.x1var = "x1_dWt"
             self.zvar = "z_dWt"
-            default_model = "vep_sde_dWt"
+            default_model = "vep_dWt"
         else:
             self.x1var = "x1"
             self.zvar = "z"
@@ -46,31 +50,31 @@ class SDEModelInversionService(ODEModelInversionService):
 
     def generate_state_variables_parameters(self, parameters, **kwargs):
         if isequal_string(self.sde_mode, "dWt"):
-            parameters.append(kwargs.get("x1_dWt", generate_stochastic_parameter("x1_dWt",
+            parameters.update({"x1_dWt": kwargs.get("x1_dWt", generate_stochastic_parameter("x1_dWt",
                                                                              low=kwargs.get("x1_dWt_lo", -1.0),
                                                                              high=kwargs.get("x1_dWt_hi", 1.0),
                                                                              p_shape=(),
                                                                              probability_distribution="normal",
-                                                                             mean=0.0, sigma=1.0)))
-            parameters.append(kwargs.get("z_dWt", generate_stochastic_parameter("z_dWt",
+                                                                             mean=0.0, sigma=1.0))})
+            parameters.update({"z_dWt": kwargs.get("z_dWt", generate_stochastic_parameter("z_dWt",
                                                                             low=kwargs.get("z_dWt_lo", -1.0),
                                                                             high=kwargs.get("z_dWt_hi", 1.0),
                                                                             p_shape=(),
                                                                             probability_distribution="normal",
-                                                                            mean=0.0, sigma=1.0)))
+                                                                            mean=0.0, sigma=1.0))})
         else:
-            parameters.append(kwargs.get("x1", generate_stochastic_parameter("x1",
-                                                                             low=kwargs.get("x1_lo", -2.0),
-                                                                             high=kwargs.get("x1_hi", 2.0),
+            parameters.update({"x1": kwargs.get("x1", generate_stochastic_parameter("x1",
+                                                                             low=kwargs.get("x1_lo", self.X1_MIN),
+                                                                             high=kwargs.get("x1_hi", self.X1_MAX),
                                                                              p_shape=(),
                                                                              probability_distribution="normal",
-                                                                             mean=0.0, sigma=1.0)))
-            parameters.append(kwargs.get("z", generate_stochastic_parameter("z",
-                                                                            low=kwargs.get("z_lo", 2.0),
-                                                                            high=kwargs.get("z_hi", 5.0),
+                                                                             mean=self.x1EQ, sigma=1.0))})
+            parameters.update({"z": kwargs.get("z", generate_stochastic_parameter("z",
+                                                                            low=kwargs.get("z_lo", self.Z_MIN),
+                                                                            high=kwargs.get("z_hi", self.Z_MAX),
                                                                             p_shape=(),
                                                                             probability_distribution="normal",
-                                                                            mean=3.5, sigma=1.0)))
+                                                                            mean=self.zEQ, sigma=1.0))})
         return parameters
 
     def generate_model_parameters(self, **kwargs):
@@ -88,7 +92,7 @@ class SDEModelInversionService(ODEModelInversionService):
                                                       probability_distribution=kwargs.get("sig_pdf", "gamma"),
                                                       optimize=True,
                                                       mode=sig_def, std=kwargs.get("sig_sig", sig_def))
-        parameters.append(parameter)
+        parameters.update({parameter.name: parameter})
         return parameters
                 
     def generate_statistical_model(self, model_name=None, **kwargs):
@@ -102,6 +106,6 @@ class SDEModelInversionService(ODEModelInversionService):
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model
 
-    def generate_model_data(self, statistical_model, projection):
-        super(SDEModelInversionService, self).generate_model_data(statistical_model, projection, x1var=self.x1var,
-                                                                                                 zvar=self.zvar)
+    def generate_model_data(self, statistical_model, signals, projection=None):
+        return super(SDEModelInversionService, self).generate_model_data(statistical_model, signals, projection,
+                                                                         x1var=self.x1var, zvar=self.zvar)

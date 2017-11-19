@@ -1,11 +1,13 @@
 
 import time
+from collections import OrderedDict
 
 import numpy as np
 
 from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import copy_object_attributes
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.sensors import Sensors
@@ -20,6 +22,9 @@ from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MOD
 
 
 LOG = initialize_logger(__name__)
+
+
+STATISTICAL_MODEL_TYPES=["vep_sde", "vep_dWt", "vep_ode", "vep_lsa"]
 
 
 class ModelInversionService(object):
@@ -40,31 +45,25 @@ class ModelInversionService(object):
     EC_MIN = 0.0
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="",
-                 target_data=None, target_data_type="", logger=LOG, **kwargs):
+                 logger=LOG, **kwargs):
         self.logger = logger
         self.model_name = model_name
         self.model_generation_time = 0.0
-        self.model_data = {}
-        self.estimates = {}
-        self.target_data_type = target_data_type
-        self.target_data = target_data
-        if isinstance(self.target_data, np.ndarray):
-            self.observation_shape = self.target_data.shape
-        else:
-            self.observation_shape = ()
+        self.target_data_type = ""
+        self.observation_shape = ()
         if isinstance(model_configuration, ModelConfiguration):
             self.logger.info("Input model configuration set...")
             self.n_regions = model_configuration.n_regions
             self._copy_attributes(model_configuration,
                                   ["K", "x1EQ", "zEQ", "e_values", "x0_values", "connectivity_matrix"], deep_copy=True)
-            self.epileptor_params = self.get_epileptor_parameters(model_configuration)
+            self.epileptor_parameters = self.get_epileptor_parameters(model_configuration)
         else:
             raise_value_error("Invalid input model configuration!:\n" + str(model_configuration))
         self.lsa_propagation_strengths = kwargs.get("lsa_propagation_strengths", None)
         self.hypothesis_type = kwargs.get("hypothesis_type", None)
         if isinstance(hypothesis, DiseaseHypothesis):
-            self._copy_attributes(hypothesis, ["lsa_propagation_strengths", "hypothesis_type"],
-                                  ["lsa_propagation_strengths", "type"], deep_copy=True, check_none=True)
+            self._copy_attributes(hypothesis, ["lsa_propagation_strengths", "type"],
+                                  ["lsa_propagation_strengths", "hypothesis_type"],  deep_copy=True, check_none=True)
             self.logger.info("Input hypothesis set...")
         self.projection = kwargs.get("projection", None)
         self.sensors_locations = kwargs.get("sensors_locations", None)
@@ -80,11 +79,11 @@ class ModelInversionService(object):
                 sensors = head.get_sensors_id(sensor_ids=kwargs.get("seeg_sensor_id", 0),
                                               sensors_type=Sensors.TYPE_SEEG)
         if isinstance(connectivity, Connectivity):
-            self._copy_attributes(connectivity, ["region_labels", "region_centers", "region_orientations"],
-                              ["region_labels", "centers", "orientations"], deep_copy=True, check_none=True)
+            self._copy_attributes(connectivity, ["region_labels", "centers", "orientations"],
+                                  ["region_labels", "region_centers", "region_orientations"], deep_copy=True, check_none=True)
         if isinstance(sensors, Sensors):
-            self._copy_attributes(sensors, ["sensors_labels", "sensors_locations", "projection"],
-                                  ["labels", "locations", "projection"], deep_copy=True, check_none=True)
+            self._copy_attributes(sensors, ["labels", "locations", "projection"],
+                                  ["sensors_labels", "sensors_locations", "projection"], deep_copy=True, check_none=True)
         self.tau1 = self.TAU1_DEF
         self.tau0 = self.TAU0_DEF
         if np.in1d(dynamical_model, AVAILABLE_DYNAMICAL_MODELS_NAMES):
@@ -94,8 +93,19 @@ class ModelInversionService(object):
                                               x1eq_cr=kwargs.get("x1eq_cr", X1_EQ_CR_DEF))
         self.logger.info("Model Inversion Service instance created!")
 
-    def _copy_attributes(self, obj, attributes_self, attributes_obj=None, deep_copy=False, check_none=False):
-        copy_object_attributes(obj, self, attributes_self, attributes_obj, deep_copy, check_none)
+    def _prepare_for_h5(self):
+        h5_model = convert_to_h5_model(self)
+        h5_model.add_or_update_metadata_attribute("EPI_Type", "ModelInversionService")
+        return h5_model
+
+    def write_to_h5(self, folder, filename=""):
+        if filename == "":
+            filename = self.name + ".h5"
+        h5_model = self._prepare_for_h5()
+        h5_model.write_to_h5(folder, filename)
+
+    def _copy_attributes(self, obj, attributes_obj, attributes_self=None, deep_copy=False, check_none=False):
+        copy_object_attributes(obj, self, attributes_obj, attributes_self, deep_copy, check_none)
 
     def get_epileptor_parameters(self, model_config):
         self.logger.info("Unpacking epileptor parameters...")
@@ -108,11 +118,11 @@ class ModelInversionService(object):
                 else:
                     raise_not_implemented_error("Statistical models where not all regions have the same value " +
                                                 " for parameter " + p + " are not implemented yet!")
-            self.epileptor_params.update({p: temp})
+            epileptor_params.update({p: temp})
         x0cr, rx0 = calc_x0cr_r(epileptor_params["yc"], epileptor_params["Iext1"], epileptor_params["a"],
                                 epileptor_params["b"], epileptor_params["d"], zmode=np.array("lin"),
                                 x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF, test=False,
-                                p_shape=None, calc_mode="non_symbol")
+                                shape=None, calc_mode="non_symbol")
         epileptor_params.update({"x0cr": x0cr, "rx0": rx0})
         return epileptor_params
 
@@ -126,7 +136,7 @@ class ModelInversionService(object):
         return (x1eq_cr - x1eq_def) / 3.0
 
     def generate_model_parameters(self, **kwargs):
-        parameters = []
+        parameters = OrderedDict()
         # Generative model:
         # Epileptor:
         parameter = kwargs.get("x1eq", None)
@@ -139,7 +149,7 @@ class ModelInversionService(object):
                                                       probability_distribution="normal",
                                                       optimize=False,
                                                       mean=x1eq, sigma=kwargs.get("x1eq_sig", 0.1))
-        parameters.append(parameter)
+        parameters.update({parameter.name: parameter})
 
         parameter = kwargs.get("K", None)
         if not(isinstance(parameter, Parameter)):
@@ -150,7 +160,7 @@ class ModelInversionService(object):
                                                       probability_distribution= kwargs.get("K_pdf", "lognormal"),
                                                       optimize=True,
                                                       mode=kwargs.get("K_def", K_def), std=kwargs.get("K_sig", K_def))
-        parameters.append(parameter)
+        parameters.update({parameter.name: parameter})
 
         # tau1_def = kwargs.get("tau1_def", 0.5)
         parameter = kwargs.get("tau1", None)
@@ -163,7 +173,7 @@ class ModelInversionService(object):
                                                       probability_distribution=kwargs.get("tau1", "lognormal"),
                                                       optimize=True,
                                                       mode=tau1_def, std=kwargs.get("tau1_sig", tau1_def))
-        parameters.append(parameter)
+        parameters.update({parameter.name: parameter})
 
         parameter = kwargs.get("tau0", None)
         if not(isinstance(parameter, Parameter)):
@@ -176,14 +186,14 @@ class ModelInversionService(object):
                                                       optimize=True,
                                                       mode=tau0_def,
                                                       std=kwargs.get("tau0_sig", tau0_def))
-        parameters.append(parameter)
+        parameters.update({parameter.name: parameter})
 
         # Coupling:
         parameter = kwargs.get("EC", None)
         if not(isinstance(parameter, Parameter)):
             structural_connectivity = kwargs.get("structural_connectivity", self.connectivity_matrix)
             p0595 = np.percentile(structural_connectivity.flatten(), [5, 95])
-            mode = numpy.maximum(p0595[0], structural_connectivity)
+            mode = np.maximum(p0595[0], structural_connectivity)
             parameter = generate_stochastic_parameter("EC",
                                                       low=kwargs.get("EC_lo", self.EC_MIN),
                                                       high=kwargs.get("EC_hi", 3 * p0595[1]),
@@ -191,7 +201,7 @@ class ModelInversionService(object):
                                                       probability_distribution=kwargs.get("EC_pdf", "lognormal"),
                                                       optimize=True,
                                                       mode=mode, std=kwargs.get('EC_sig', mode / 3.0))
-        parameters.append(parameter)
+        parameters.update({parameter.name: parameter})
 
         # Integration:
         parameter = kwargs.get("sig_eq", None)
@@ -205,7 +215,7 @@ class ModelInversionService(object):
                                                       optimize=True,
                                                       mode=sig_eq_def,
                                                       std = kwargs.get("sig_eq_sig", sig_eq_def))
-        parameters.append(parameter)
+        parameters.update({parameter.name: parameter})
 
         # Observation model
         parameter = kwargs.get("eps", None)
@@ -218,7 +228,7 @@ class ModelInversionService(object):
                                                       optimize=True,
                                                       mode=eps_def,
                                                       std=kwargs.get("eps_sig", eps_def))
-        parameters.append(parameter)
+        parameters.update({parameter.name: parameter})
         return parameters
         
     def generate_statistical_model(self, model_name=None, **kwargs):
@@ -232,4 +242,3 @@ class ModelInversionService(object):
         return model
 
 
-STATISTICAL_MODEL_TYPES=["autoregressive", "autoregressive_dWt", "ode", "lsa"]

@@ -14,7 +14,7 @@ from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_pa
 class StochasticParameterBase(Parameter, ProbabilityDistribution):
     __metaclass__ = ABCMeta
 
-    def __init__(self, name="Parameter", low=MIN_SINGLE_VALUE, high=MAX_SINGLE_VALUE, p_shape=(1,), **pdf_params):
+    def __init__(self, name="Parameter", low=MIN_SINGLE_VALUE, high=MAX_SINGLE_VALUE, p_shape=(), **pdf_params):
         Parameter.__init__(self, name, low, high, p_shape)
 
     def __repr__(self):
@@ -34,7 +34,7 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
         Parameter.write_to_h5(self)
 
 
-def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, p_shape=(1,),
+def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, p_shape=(),
                                   probability_distribution="uniform", optimize=False, **pdf_params):
     pdf_module = importlib.import_module("tvb_epilepsy.base.model.statistical_models.probability_distributions." +
                                   probability_distribution.lower() + "_distribution")
@@ -43,11 +43,10 @@ def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=
         pdf_params = compute_pdf_params(probability_distribution.lower(), pdf_params)
 
     class StochasticParameter(StochasticParameterBase, thisProbabilityDistribution):
-        def __init__(self, name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, p_shape=(1,), **pdf_params):
+        def __init__(self, name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, p_shape=(), **pdf_params):
             StochasticParameterBase.__init__(self, name, low, high, p_shape)
             thisProbabilityDistribution.__init__(self, **pdf_params)
         def __str__(self):
-
             return StochasticParameterBase.__str__(self) + "\n" \
                    + "\n".join(thisProbabilityDistribution.__str__(self).splitlines()[1:])
 

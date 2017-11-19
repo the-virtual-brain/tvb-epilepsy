@@ -4,7 +4,7 @@ from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODE
 
 class SDEStatisticalModel(ODEStatisticalModel):
 
-    def __init__(self, name, parameters=[], n_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
+    def __init__(self, name="sde_vep", parameters={}, n_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
                        euler_method="forward", observation_model="seeg_logpower", observation_expression="x1z_offset",
                  **kwargs):
         super(SDEStatisticalModel, self).__init__(name, parameters, n_regions, active_regions, n_signals,

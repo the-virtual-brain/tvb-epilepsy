@@ -12,14 +12,14 @@ EULER_METHODS = ["backward", "midpoint", "forward"]
 
 class ODEStatisticalModel(StatisticalModel):
 
-    def __init__(self, name, parameters=[], n_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
+    def __init__(self, name, parameters={}, n_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
                  euler_method="forward", observation_model="seeg_logpower", observation_expression="x1z_offset",
                  **kwargs):
         super(ODEStatisticalModel, self).__init__(name, parameters, n_regions, **kwargs)
 
         if np.all(np.in1d(active_regions, range(self.n_regions))):
             self.active_regions = np.unique(active_regions).tolist()
-            self.n_active_regions = len(active_regions)
+            self.n_active_regions = len(self.active_regions)
             self.n_nonactive_regions = self.n_regions - self.n_active_regions
         else:
             raise_value_error("Active regions indices:\n" + str(active_regions) +
@@ -50,7 +50,7 @@ class ODEStatisticalModel(StatisticalModel):
     def update_active_regions(self, active_regions):
         if np.all(np.in1d(active_regions, range(self.n_regions))):
             self.active_regions = np.unique(ensure_list(active_regions) + self.active_regions).tolist()
-            self.n_active_regions = len(active_regions)
+            self.n_active_regions = len(self.active_regions)
             self.n_nonactive_regions = self.n_regions - self.n_active_regions
         else:
             raise_value_error("Active regions indices:\n" + str(active_regions) +

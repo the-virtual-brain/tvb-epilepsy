@@ -145,7 +145,7 @@ class ProbabilityDistribution(object):
         pass
 
     @abstractmethod
-    def numpy(self, size=(1,)):
+    def numpy(self, size=()):
         pass
 
     @abstractmethod

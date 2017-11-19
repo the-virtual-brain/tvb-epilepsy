@@ -8,7 +8,7 @@ from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import gene
 
 class StatisticalModel(object):
 
-    def __init__(self, name, parameters=[], n_regions=0, **kwargs):
+    def __init__(self, name, parameters={}, n_regions=0, **kwargs):
         self.n_regions = n_regions
         if isinstance(name, basestring):
             self.name = name
@@ -31,7 +31,7 @@ class StatisticalModel(object):
 
     def _prepare_for_h5(self):
         h5_model = convert_to_h5_model(self)
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "StatisicalModel")
+        h5_model.add_or_update_metadata_attribute("EPI_Type", "StatisticalModel")
         return h5_model
 
     def write_to_h5(self, folder, filename=""):

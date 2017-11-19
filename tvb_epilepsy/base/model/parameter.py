@@ -7,7 +7,7 @@ from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 class Parameter(object):
 
-    def __init__(self, name="Parameter", low=MIN_SINGLE_VALUE, high=MAX_SINGLE_VALUE, p_shape=(1,), **kwargs):
+    def __init__(self, name="Parameter", low=MIN_SINGLE_VALUE, high=MAX_SINGLE_VALUE, p_shape=(), **kwargs):
         if isinstance(name, basestring):
             self.name = name
         else:

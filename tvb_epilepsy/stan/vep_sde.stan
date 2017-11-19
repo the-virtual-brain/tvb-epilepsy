@@ -119,48 +119,48 @@ data {
     real slope;
     real x0cr;
     real rx0;
-    real zeq_lo;
-    real zeq_hi;
     // real x0_lo;
     // real x0_hi;
-    /* x1eq parameter (only normal distribution, ignoring _pdf) */
-    real x1eq_lo;
-    real x1eq_hi;
-    vector[n_regions] x1eq0;
-    /* x1init parameter (only normal distribution, ignoring _pdf) */
-    real x1init_lo;
-    real x1init_hi;
-    /* zinit parameter (only normal distribution, ignoring _pdf) */
-    real zinit_lo;
-    real zinit_hi;
-    /* tau1 parameter (default: gamma distribution) */
-    real<lower=0.0> tau1_lo;
-    real<lower=0.0> tau1_hi;
-    real<lower=0.0> tau1_p1;
-    real<lower=0.0> tau1_p2;
-    int<lower=0> tau1_pdf;
-    /* tau0 parameter (default: gamma distribution) */
-    real<lower=0.0> tau0_lo;
-    real<lower=0.0> tau0_hi;
-    real<lower=0.0> tau0_p1;
-    real<lower=0.0> tau0_p2;
-    int<lower=0> tau0_pdf;
     /* x1 parameter (only normal distribution for autoregressive model) */
     real x1_lo;
     real x1_hi;
     /* z parameter (only normal distribution for autoregressive model) */
     real z_lo;
     real z_hi;
+    /* x1eq parameter (only normal distribution, ignoring _pdf) */
+    real x1eq_lo;
+    real x1eq_hi;
+    vector[n_regions] x1eq0;
+    //real zeq_lo;
+    //real zeq_hi;
+    /* x1init parameter (only normal distribution, ignoring _pdf) */
+    real x1init_lo;
+    real x1init_hi;
+    /* zinit parameter (only normal distribution, ignoring _pdf) */
+    real zinit_lo;
+    real zinit_hi;
+    /* tau1 parameter (default: lognormal distribution) */
+    real<lower=0.0> tau1_lo;
+    real<lower=0.0> tau1_hi;
+    real tau1_p1;
+    real<lower=0.0> tau1_p2;
+    int<lower=0> tau1_pdf;
+    /* tau0 parameter (default: lognormal distribution) */
+    real<lower=0.0> tau0_lo;
+    real<lower=0.0> tau0_hi;
+    real tau0_p1;
+    real<lower=0.0> tau0_p2;
+    int<lower=0> tau0_pdf;
 
     /* Coupling */
-    /* K (global coupling) parameter (default: gamma distribution) */
+    /* K (global coupling) parameter (default: lognormal distribution) */
     real<lower=0.0> K_lo;
     real<lower=0.0> K_hi;
-    real<lower=0.0> K_p1;
+    real K_p1;
     real<lower=0.0> K_p2;
     int<lower=0> K_pdf;
-    /* EC (effective connectivity) parameter (default: gamma distribution) */
-    matrix<lower=0.0>[n_regions, n_regions] EC_p1;
+    /* EC (effective connectivity) parameter (default: lognormal distribution) */
+    matrix[n_regions, n_regions] EC_p1;
     matrix<lower=0.0>[n_regions, n_regions] EC_p2;
     real<lower=0.0> EC_lo;
     real<lower=0.0> EC_hi;
@@ -172,19 +172,19 @@ data {
     /* Dynamic noise strength parameter (default: gamma distribution) */
     real<lower=0.0> sig_hi;
     real<lower=0.0> sig_lo;
-    real<lower=0.0> sig_p1;
+    real sig_p1;
     real<lower=0.0> sig_p2;
     int<lower=0> sig_pdf;
-    /* Equilibrium point variability parameter (default: gamma distribution) */
+    /* Equilibrium point variability parameter (default: lognormal distribution) */
     real<lower=0.0> sig_eq_lo;
     real<lower=0.0> sig_eq_hi;
-    real<lower=0.0> sig_eq_p1;
+    real sig_eq_p1;
     real<lower=0.0> sig_eq_p2;
     int<lower=0> sig_eq_pdf;
-    /* Initial condition variability parameter (default: gamma distribution) */
+    /* Initial condition variability parameter (default: lognormal distribution) */
     real<lower=0.0> sig_init_hi;
     real<lower=0.0> sig_init_lo;
-    real<lower=0.0> sig_init_p1;
+    real sig_init_p1;
     real<lower=0.0> sig_init_p2;
     int<lower=0> sig_init_pdf;
 
@@ -193,23 +193,23 @@ data {
     int observation_model;
     matrix[n_signals, n_active_regions] mixing;
     matrix[n_times, n_signals] signals;
-    /* Observation variability parameter (default: gamma distribution) */
+    /* Observation variability parameter (default: lognormal distribution) */
     real<lower=0.0> eps_lo;
     real<lower=0.0> eps_hi;
-    real<lower=0.0> eps_p1;
+    real eps_p1;
     real<lower=0.0> eps_p2;
     int<lower=0> eps_pdf;
     /* Observation signal scaling parameter (default: uniform distribution) */
     real<lower=0.0> scale_signal_lo;
     real<lower=0.0> scale_signal_hi;
-    real<lower=0.0> scale_signal_p1;
+    real scale_signal_p1;
     real<lower=0.0> scale_signal_p2;
     int<lower=0> scale_signal_pdf;
     /* Observation signal offset parameter (default: uniform distribution) */
-    real<upper=0.0> offset_signal_lo;
-    real<lower=0.0> offset_signal_hi;
+    real offset_signal_lo;
+    real offset_signal_hi;
     real offset_signal_p1;
-    real offset_signal_p2;
+    real<lower=0.0> offset_signal_p2;
     int<lower=0> offset_signal_pdf;
 }
 
@@ -376,7 +376,7 @@ model {
             // just x1 with some mixing, scaling and offset_signal
             signals[tt] ~ normal(scale_signal * mixing * observation + offset_signal, eps);
         } else {
-            // just x1 with some mixing, scaling and offset_signal
+            // just x1 with some mixing, scaling and offset_signal, without mixing
             signals[tt] ~ normal(scale_signal * observation + offset_signal, eps);
         }
     }
@@ -420,7 +420,7 @@ generated quantities {
                 // seeg power: just x1 with some mixing, scaling and offset_signal
                 fit_signals[tt] = (scale_signal * mixing * observation + offset_signal)';
             } else {
-                // lfp power: just x1 with some mixing, scaling and offset_signal
+                // lfp power: just with some x1 scaling and offset_signal
                 fit_signals[tt] = (scale_signal * observation + offset_signal)';
             }
         }
