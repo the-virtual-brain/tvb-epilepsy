@@ -288,7 +288,7 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
 def shape_to_size(shape):
     shape = np.array(shape)
     shape = shape[shape > 0]
-    return np.max([shape.prod(), 1])
+    return np.int(np.max([shape.prod(), 1]))
 
 
 def shape_to_ndim(shape, squeeze=False):
@@ -438,11 +438,11 @@ def copy_object_attributes(obj1, obj2, attr1, attr2=None, deep_copy=False, check
     else:
         fcopy = lambda a1, a2: setattr(obj2, a1, getattr(obj1, a1))
     if check_none:
-        for a1, a2 in zip([attr1, attr2]):
+        for a1, a2 in zip(attr1, attr2):
             if getattr(obj2, a2) is None:
                 fcopy(a1, a2)
     else:
-        for a1, a2 in zip([attr1, attr2]):
+        for a1, a2 in zip(attr1, attr2):
             fcopy(a1, a2)
     return obj2
 
