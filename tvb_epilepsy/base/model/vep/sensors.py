@@ -38,15 +38,16 @@ class Sensors(object):
 
 
     @property
-    def number_of_sensors(self):
+    def number_of_contacts(self):
         return self.locations.shape[0]
 
     def __repr__(self):
-        d = {"1. sensors type": self.s_type,
-             "2. labels": reg_dict(self.labels),
-             "3. locations": reg_dict(self.locations, self.labels),
-             "4. orientations": reg_dict(self.orientations, self.labels),
-             "5. projection": self.projection}
+        d = {"1. sensors' type": self.s_type,
+             "2. contacts' number": self.number_of_contacts,
+             "3. labels": reg_dict(self.labels),
+             "4. locations": reg_dict(self.locations, self.labels),
+             "5. orientations": reg_dict(self.orientations, self.labels),
+             "6. projection": self.projection}
         return formal_repr(self, sort_dict(d))
 
     def __str__(self):
@@ -65,7 +66,7 @@ class Sensors(object):
             return indexes
 
     def calculate_projection(self, connectivity):
-        return compute_projection(self.locations, connectivity.centers, normalize=95, ceil=False)
+        return compute_projection(connectivity.centers, self.locations, normalize=95, ceil=1.0)
 
     def select_contacts(self, rois=None, projection_th=0.5, power=None, power_inds=[], power_th=0.5):
         seeg_inds = []
@@ -73,10 +74,12 @@ class Sensors(object):
             if self.projection is None:
                 raise_value_error("Projection matrix is not set!")
             else:
-                for proj in self.projection:
+                for proj in self.projection[rois]:
                     seeg_inds += select_greater_values_array_inds(proj, projection_th).tolist()
         if power is not None:
-            seeg_inds += power_inds[select_greater_values_array_inds(power, power_th)]
+            if len(power_inds) == 0:
+                power_inds = range(self.number_of_contacts)
+            seeg_inds += (np.array(power_inds)[select_greater_values_array_inds(power, power_th)]).tolist()
         return np.unique(seeg_inds).tolist()
 
     def plot_projection(self, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1,
@@ -84,7 +87,7 @@ class Sensors(object):
              figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, figure_name=''):
         if not (isinstance(figure, pyplot.Figure)):
             figure = pyplot.figure(title, figsize=figsize)
-        n_sensors = self.number_of_sensors
+        n_sensors = self.number_of_contacts
         n_regions = len(region_labels)
         if len(x_ticks) == 0:
             x_ticks = np.array(range(n_sensors), dtype=np.int32)
