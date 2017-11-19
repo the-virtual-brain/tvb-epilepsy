@@ -42,7 +42,7 @@ def compute_in_degree(weights):
     return np.expand_dims(np.sum(weights, axis=1), 1).T
 
 
-def compute_projection(locations1, locations2, normalize=95, ceil=False):
+def compute_projection(locations1, locations2, normalize=95, ceil=True):
     n1 = locations1.shape[0]
     n2 = locations2.shape[0]
     projection = np.zeros((n1, n2))
@@ -53,6 +53,8 @@ def compute_projection(locations1, locations2, normalize=95, ceil=False):
     if normalize:
         projection /= np.percentile(projection, normalize)
     if ceil:
+        if ceil is True:
+            ceil = 1.0
         projection[projection > ceil] = ceil
     return projection
 
