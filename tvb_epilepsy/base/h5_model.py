@@ -70,7 +70,7 @@ class H5Model(object):
             h5_file.attrs.create(meta, val)
         h5_file.close()
 
-    def convert_from_h5_model(self, obj=dict(), children_dict=class_dict, hypothesis=False):
+    def convert_from_h5_model(self, obj=OrderedDict(), children_dict=class_dict, hypothesis=False):
         children_dict.update(getattr(obj, "children_dict", {}))
         output = obj.__class__.__name__
         if np.in1d(output, ["tuple", "list"]):
@@ -164,7 +164,7 @@ def object_to_h5_model_recursively(h5_model, obj, name="", root=False):
         for key, value in obj.iteritems():
             if not(root):
                 key = name + (len(name) > 0) * "/" + key
-            if key.find("children_dict") < 0 :
+            if key.find("children_dict") < 0 and key.find("logger") < 0 and key.find("LOG") < 0:
                 # call recursively...
                 object_to_h5_model_recursively(h5_model, value, key)
 
@@ -232,7 +232,7 @@ def build_hierarchical_object_recursively(obj, key, value, children_dict=class_d
                 # If still not created, make a dict() by default:
                 if child_object is None:
                     logger.warning("\n Child object " + str(name) +
-                                   " still not created! Creating an Ordereddict() by default!")
+                                   " still not created! Creating an OrderedDict() by default!")
                     child_object = OrderedDict()
                 # ...and continue to further specify it...
                 children_dict.update(getattr(child_object, "children_dict", {}))
