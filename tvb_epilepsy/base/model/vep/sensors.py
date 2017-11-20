@@ -1,3 +1,4 @@
+
 from collections import OrderedDict
 
 import numpy as np
@@ -66,7 +67,7 @@ class Sensors(object):
             return indexes
 
     def calculate_projection(self, connectivity):
-        return compute_projection(connectivity.centers, self.locations, normalize=95, ceil=1.0)
+        return compute_projection(self.locations, connectivity.centers, normalize=95, ceil=1.0)
 
     def select_contacts(self, rois=None, projection_th=0.5, power=None, power_inds=[], power_th=0.5):
         seeg_inds = []
@@ -74,7 +75,7 @@ class Sensors(object):
             if self.projection is None:
                 raise_value_error("Projection matrix is not set!")
             else:
-                for proj in self.projection[rois]:
+                for proj in self.projection.T[rois]:
                     seeg_inds += select_greater_values_array_inds(proj, projection_th).tolist()
         if power is not None:
             if len(power_inds) == 0:

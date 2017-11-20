@@ -1,6 +1,7 @@
 import numpy as np
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
+from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
@@ -103,7 +104,9 @@ class Head(object):
             else:
                 return out_sensors
 
-    def compute_nearest_regions_to_sensors(self, sensors, target_contacts=None, id_sensor=0, n_regions=None, th=0.95):
+    def compute_nearest_regions_to_sensors(self, sensors=None, target_contacts=None, s_type=Sensors.TYPE_SEEG, sensors_id=0, n_regions=None, projection_th=None):
+        if not(isinstance(sensors, Sensors)):
+            sensors = self.get_sensors_id(s_type=s_type, sensors_ids=sensors_id)
         n_contacts = sensors.labels.shape[0]
         if isinstance(target_contacts, (list, tuple, np.ndarray)):
             target_contacts = ensure_list(target_contacts)
@@ -120,16 +123,16 @@ class Head(object):
         auto_flag = False
         if n_regions is "all":
             n_regions = self.connectivity.number_of_regions
-        elif n_regions is "auto" or not(isinstance(n_regions, int)):
+        elif not(isinstance(n_regions, int)):
             auto_flag = True
         nearest_regions = []
         for tc in target_contacts:
             projs = sensors.projection[tc]
             inds = np.argsort(projs)[::-1]
-            n_regions = curve_elbow_point(projs[inds])
-            nearest_regions.append((inds[:n_regions],
-                                    self.connectivity.region_labels[inds[:n_regions]],
-                                    projs[inds[:n_regions]]))
+            if auto_flag:
+                n_regions = select_greater_values_array_inds(projs[inds], threshold=projection_th)
+            inds = inds[:n_regions]
+            nearest_regions.append((inds, self.connectivity.region_labels[inds], projs[inds]))
         return nearest_regions
 
     def plot(self, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
