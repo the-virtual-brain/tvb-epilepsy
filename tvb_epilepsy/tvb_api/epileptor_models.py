@@ -10,6 +10,7 @@ from tvb.simulator.common import get_logger
 from tvb.simulator.models import Model
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, raise_not_implemented_error
 
+
 LOG = get_logger(__name__)
 
 

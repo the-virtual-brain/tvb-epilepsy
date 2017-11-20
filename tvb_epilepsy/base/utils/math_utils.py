@@ -133,7 +133,6 @@ def curve_elbow_point(vals, interactive=INTERACTIVE_ELBOW_POINT):
         else:
             logger.info("\nautomatic selection: " + str(elbow))
         return elbow
-
     else:
         return elbow
 

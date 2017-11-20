@@ -3,8 +3,10 @@
 """
 
 import os
+
 import numpy
 from scipy.io import loadmat
+
 from tvb_epilepsy.custom.read_write import write_sensors, write_ts, write_ts_seeg_epi, PATIENT_VIRTUAL_HEAD
 from tvb_epilepsy.custom.readers_custom import CustomReader
 
@@ -13,10 +15,8 @@ def correlate_sensors(empirical_file="/Users/lia.domide/Downloads/TRECempirical/
                       existing_ep_file="/WORK/episense/episense-root/trunk/demo-data/SensorsSEEG_125.h5"):
     data = loadmat(empirical_file)
     desired_labels = [str(i).strip().lower() for i in data["channel_names"]]
-
     reader = CustomReader()
     labels, locations = reader.read_sensors(existing_ep_file,"SEEG")
-
     new_labels = []
     new_locations = []
     ignored_indices = []
@@ -28,7 +28,6 @@ def correlate_sensors(empirical_file="/Users/lia.domide/Downloads/TRECempirical/
         idx = numpy.where(labels == label)
         new_labels.append(label)
         new_locations.append(locations[idx])
-
     write_sensors(new_labels, new_locations)
     return ignored_indices
 
@@ -42,7 +41,6 @@ def import_seeg(empirical_file="/Users/lia.domide/Downloads/TRECempirical/110223
     seeg_data= numpy.delete(seeg_data, ignored_indices, axis=0)
     seeg_data = seeg_data.transpose()
     print seeg_data.min(), seeg_data.max()
-
     raw_data = numpy.zeros((1000, 88, 3))
     write_ts(raw_data, sampling_period, ts_path)
     (folder_path, filename) = os.path.split(ts_path)

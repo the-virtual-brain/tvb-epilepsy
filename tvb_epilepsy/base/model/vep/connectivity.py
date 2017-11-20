@@ -71,13 +71,11 @@ class Connectivity(object):
 
     def plot(self, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
                       figure_format=FIG_FORMAT, figure_name='Connectivity ', figsize=VERY_LARGE_SIZE):
-
         # plot connectivity
         pyplot.figure(figure_name + str(self.number_of_regions), figsize)
         # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
         plot_regions2regions(self.normalized_weights, self.region_labels, 121, "normalised weights")
         plot_regions2regions(self.tract_lengths, self.region_labels, 122, "tract lengths")
-
         if save_flag:
             save_figure(figure_dir=figure_dir, figure_format=figure_format,
                         figure_name=figure_name.replace(" ", "_").replace("\t", "_"))

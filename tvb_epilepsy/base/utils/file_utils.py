@@ -63,7 +63,6 @@ def write_object_to_h5_file(obj, h5_file, attributes_dict=None,  add_overwrite_f
             attributes_dict = dict()
             for key in obj.__dict__.keys():
                 attributes_dict.update({key: key})
-
     for attribute in attributes_dict:
         field = get_field(obj, attributes_dict[attribute])
         try:
@@ -91,7 +90,6 @@ def write_object_to_h5_file(obj, h5_file, attributes_dict=None,  add_overwrite_f
         except:
             raise_value_error("ValueError: " + attribute + " not found in the object!", logger)
         #logger.info("dataset " + attribute +"value " + str(h5_file['/' + attribute][()]))
-
     if isinstance(add_overwrite_fields_dict, dict):
         for attribute in add_overwrite_fields_dict:
             logger.info("\nAdding or overwritting " + attribute + "... ")
@@ -139,7 +137,6 @@ def read_object_from_h5_file(obj, h5_file, attributes_dict=None, add_overwrite_f
     else:
         set_field = lambda obj, attribute, data: setattr(obj, attribute, data)
         get_field = lambda obj, attribute: getattr(obj, attribute)
-
     for attribute in attributes_dict:
         logger.info("\nReading " + attributes_dict[attribute] + "... ")
         try:
@@ -147,7 +144,6 @@ def read_object_from_h5_file(obj, h5_file, attributes_dict=None, add_overwrite_f
         except:
             raise_value_error("ValueError: Failed to read " + attribute + "!", logger)
         # logger.info("dataset " + attribute + "value " + str(get_field(obj, attributes_dict[attribute])))
-
     if isinstance(h5_file, basestring):
         h5_file.close()
     if isinstance(add_overwrite_fields_dict, dict):
@@ -158,5 +154,4 @@ def read_object_from_h5_file(obj, h5_file, attributes_dict=None, add_overwrite_f
             except:
                 raise_value_error("ValueError: Failed to set " + attribute + "!", logger)
             # logger.info("dataset " + attribute " value " + str(get_field(obj, attribute)))
-
     return obj

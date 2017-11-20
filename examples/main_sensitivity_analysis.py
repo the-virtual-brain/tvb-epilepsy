@@ -17,18 +17,11 @@ logger = initialize_logger(__name__)
 
 if __name__ == "__main__":
     # -------------------------------Reading data-----------------------------------
-
     data_folder = os.path.join(DATA_CUSTOM, 'Head')
-
     reader = Reader()
-
     head = reader.read_head(data_folder)
-
     # --------------------------Hypothesis definition-----------------------------------
-
     n_samples = 100
-
-    #
     # Manual definition of hypothesis...:
     x0_indices = [20]
     x0_values = [0.9]
@@ -36,7 +29,6 @@ if __name__ == "__main__":
     e_values = [0.9]
     disease_indices = x0_indices + e_indices
     n_disease = len(disease_indices)
-
     n_x0 = len(x0_indices)
     n_e = len(e_indices)
     all_regions_indices = np.array(range(head.connectivity.number_of_regions))
@@ -47,7 +39,6 @@ if __name__ == "__main__":
                                  excitability_hypothesis={tuple(x0_indices): x0_values},
                                  epileptogenicity_hypothesis={tuple(e_indices): e_values},
                                  connectivity_hypothesis={})
-
     # Now running the sensitivity analysis:
     logger.info("running sensitivity analysis PSE LSA...")
     for m in METHODS:
@@ -62,11 +53,9 @@ if __name__ == "__main__":
                                                          healthy_regions_parameters=[
                                                              {"name": "x0_values", "indices": healthy_indices}],
                                                          logger=logger, save_services=True)
-
             lsa_service.plot_lsa(lsa_hypothesis, model_configuration, region_labels=head.connectivity.region_labels,
                                  pse_results=pse_results, title=m + "_PSE_LSA_overview_" + lsa_hypothesis.name)
             # , show_flag=True, save_flag=False
-
             convert_to_h5_model(pse_results).write_to_h5(FOLDER_RES,
                                                          m + "_PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
             convert_to_h5_model(sa_results).write_to_h5(FOLDER_RES,

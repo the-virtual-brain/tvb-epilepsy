@@ -35,11 +35,9 @@ class LSAPSEService(ABCPSEService):
             # Copy and update hypothesis
             hypo_copy = deepcopy(self.hypothesis)
             hypo_copy.update_for_pse(params, self.params_paths, self.params_indices)
-
             # Create a ModelConfigService and update it
             model_configuration_service = deepcopy(model_config_service)
             model_configuration_service.update_for_pse(params, self.params_paths, self.params_indices)
-
             # Obtain Modelconfiguration
             if hypo_copy.type == "Epileptogenicity":
                 model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hypo_copy,
@@ -47,16 +45,12 @@ class LSAPSEService(ABCPSEService):
             else:
                 model_configuration = model_configuration_service.configure_model_from_hypothesis(hypo_copy,
                                                                                                   conn_matrix)
-
             # Copy a LSAService and update it
             lsa_service = deepcopy(lsa_service)
             lsa_service.update_for_pse(params, self.params_paths, self.params_indices)
-
             lsa_hypothesis = lsa_service.run_lsa(hypo_copy, model_configuration)
-
             output = self.prepare_run_results(lsa_hypothesis, model_configuration)
             return True, output
-
         except:
             return False, None
 
@@ -64,7 +58,7 @@ class LSAPSEService(ABCPSEService):
         if model_configuration is None:
             return {"lsa_propagation_strengths": lsa_hypothesis.propagation_strenghts}
 
-        return {"lsa_propagation_strengths": lsa_hypothesis.propagation_strengths,
+        return {"lsa_propagation_strengths": lsa_hypothesis.lsa_propagation_strengths,
                 "x0_values": model_configuration.x0_values,
                 "e_values": model_configuration.e_values, "x1EQ": model_configuration.x1EQ,
                 "zEQ": model_configuration.zEQ, "Ceq": model_configuration.Ceq}

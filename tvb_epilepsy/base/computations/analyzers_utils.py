@@ -139,12 +139,9 @@ def spectral_analysis(x, fs, freq=None, method="periodogram", output="spectrum",
     if freq is None:
         freq = np.linspace(f_low, nperseg, nperseg - f_low - 1)
         df = freq[1] - freq[0]
-
     psd = []
     for iS in range(x.shape[1]):
-
         if method is welch:
-
             f, temp_psd = welch(x[:, iS],
                            fs=fs,  # sample rate
                            nfft=nfft,
@@ -164,20 +161,15 @@ def spectral_analysis(x, fs, freq=None, method="periodogram", output="spectrum",
                                  scaling="spectrum",
                                  return_onesided=True,
                                  axis=0)
-
         f = interp1d(f, temp_psd)
         temp_psd = f(freq)
         if output == "density":
             temp_psd /= (np.sum(temp_psd) * df)
-
         psd.append(temp_psd)
-
     # Stack them to a ndarray
     psd = np.stack(psd, axis=1)
-
     if output == "energy":
         return np.sum(psd, axis=0)
-
     else:
         if log_scale:
             psd = np.log(psd)
@@ -186,29 +178,21 @@ def spectral_analysis(x, fs, freq=None, method="periodogram", output="spectrum",
 
 def time_spectral_analysis(x, fs, freq=None, mode="psd", nfft=None, window='hanning', nperseg=256, detrend='constant',
                            noverlap=None, f_low=10.0, calculate_psd=True, log_scale=False):
-
     # TODO: add a Continuous Wavelet Transform implementation
-
     if freq is None:
         freq = np.linspace(f_low, nperseg, nperseg - f_low - 1)
-
     stf = []
     for iS in range(x.shape[1]):
         f, t, temp_s = spectrogram(x[:, iS], fs=fs, nperseg=nperseg, nfft=nfft, window=window, mode=mode,
                                 noverlap=noverlap, detrend=detrend, return_onesided=True, scaling='spectrum', axis=0)
-
         t_mesh, f_mesh = np.meshgrid(t, f, indexing="ij")
-
         temp_s = griddata((t_mesh.flatten(), f_mesh.flatten()), temp_s.T.flatten(),
                           tuple(np.meshgrid(t, freq, indexing="ij")), method='linear')
-
         stf.append(temp_s)
-
     # Stack them to a ndarray
     stf = np.stack(stf, axis=2)
     if log_scale:
         stf = np.log(stf)
-
     if calculate_psd:
         psd, _ = spectral_analysis(x, fs, freq=freq, method="periodogram", output="spectrum", nfft=nfft, window=window,
                                    nperseg=nperseg, detrend=detrend, noverlap=noverlap, log_scale=log_scale)

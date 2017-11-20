@@ -28,7 +28,6 @@ def build_tvb_model(model_configuration, zmode=numpy.array("lin")):
                                Ks=K, c=model_configuration.yc,
                                a=model_configuration.a, b=model_configuration.b, d=model_configuration.d,
                                aa=model_configuration.s)
-
     return model_instance
 
 
@@ -41,7 +40,6 @@ def build_ep_2sv_model(model_configuration, zmode=numpy.array("lin")):
     model = EpileptorDP2D(x0=model_configuration.x0, Iext1=model_configuration.Iext1, K=K,
                           yc=model_configuration.yc, a=model_configuration.a, b=model_configuration.b,
                           d=model_configuration.d, zmode=zmode)
-
     return model
 
 
@@ -55,7 +53,6 @@ def build_ep_6sv_model(model_configuration, zmode=numpy.array("lin")):
                         K=K, yc=model_configuration.yc, a=model_configuration.a,
                         b=model_configuration.b, d=model_configuration.d, s=model_configuration.s,
                         gamma=model_configuration.gamma, zmode=zmode)
-
     return model
 
 
@@ -69,7 +66,6 @@ def build_ep_11sv_model(model_configuration, zmode=numpy.array("lin"), pmode=num
                                  Iext2=model_configuration.Iext2, K=K, yc=model_configuration.yc,
                                  a=model_configuration.a, b=model_configuration.b, d=model_configuration.d,
                                  s=model_configuration.s, gamma=model_configuration.gamma, zmode=zmode, pmode=pmode)
-
     return model
 
 
@@ -80,6 +76,7 @@ model_build_dict = {
     "EpileptorDPrealistic": build_ep_11sv_model,
     "EpileptorDP2D": build_ep_2sv_model
 }
+
 
 EPILEPTOR_MODEL_NVARS = {
          "EpileptorModel": EpileptorModel._nvar,
