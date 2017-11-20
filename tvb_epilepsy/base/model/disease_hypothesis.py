@@ -19,10 +19,8 @@ logger = initialize_logger(__name__)
 
 class DiseaseHypothesis(object):
     def __init__(self, number_of_regions, excitability_hypothesis={}, epileptogenicity_hypothesis={},
-                 connectivity_hypothesis={}, propagation_indices=[], propagation_strenghts=[], name=""):
-
+                 connectivity_hypothesis={}, lsa_propagation_indices=[], lsa_propagation_strenghts=[], name=""):
         self.number_of_regions = number_of_regions
-
         self.type = []
         self.x0_indices, self.x0_values = self.sort_disease_indices_values(excitability_hypothesis)
         if len(self.x0_indices) > 0:
@@ -38,9 +36,8 @@ class DiseaseHypothesis(object):
             self.name = self.type + "_Hypothesis"
         else:
             self.name = name
-
-        self.lsa_propagation_indices = np.array(propagation_indices)
-        self.lsa_propagation_strengths = np.array(propagation_strenghts)
+        self.lsa_propagation_indices = np.array(lsa_propagation_indices)
+        self.lsa_propagation_strengths = np.array(lsa_propagation_strenghts)
 
     def __repr__(self):
         d = {"01. Name": self.name,
@@ -66,11 +63,9 @@ class DiseaseHypothesis(object):
         return self.__repr__()
 
     def _prepare_for_h5(self):
-
         h5_model = convert_to_h5_model(self)
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         h5_model.add_or_update_metadata_attribute("Number_of_nodes", self.number_of_regions)
-
         all_regions = np.zeros(self.number_of_regions)
         x0_values = np.array(all_regions)
         x0_values[self.x0_indices] = self.x0_values
@@ -78,13 +73,9 @@ class DiseaseHypothesis(object):
         e_values[self.e_indices] = self.e_values
         w_values = np.array(all_regions)
         w_values[self.w_indices] = self.w_values
-
         h5_model.add_or_update_datasets_attribute("x0_values", x0_values)
         h5_model.add_or_update_datasets_attribute("e_values", e_values)
         h5_model.add_or_update_datasets_attribute("w_values", w_values)
-
-        # TODO: resolve this possible disagreement with Episense with the propagation indices being converted to flags:
-
         return h5_model
 
     def write_to_h5(self, folder, filename=""):
@@ -95,7 +86,6 @@ class DiseaseHypothesis(object):
 
     def prepare_for_plot(self, connectivity_matrix=None):
         width_ratios = []
-
         if len(self.lsa_propagation_indices) > 0:
             if connectivity_matrix is None:
                 width_ratios += [1]
@@ -111,10 +101,8 @@ class DiseaseHypothesis(object):
                 data = [self.lsa_propagation_strengths, connectivity_matrix]
                 indices = [self.lsa_propagation_indices, self.lsa_propagation_indices]
                 plot_types = ["vector", "regions2regions"]
-
             plot_dict_list = dicts_of_lists_to_lists_of_dicts({"name": names, "data": data, "focus_indices": indices,
                                                                "plot_type": plot_types})
-
         return plot_dict_list
 
     def sort_disease_indices_values(self, disease_dict):
@@ -173,7 +161,6 @@ class DiseaseHypothesis(object):
         regions_disease = np.zeros(self.number_of_regions)
         regions_disease[self.x0_indices] = self.x0_values
         regions_disease[self.e_indices] = self.e_values
-
         return regions_disease
 
     def get_connectivity_disease(self):
@@ -183,7 +170,6 @@ class DiseaseHypothesis(object):
         indexes = np.unravel_index(self.get_connectivity_disease_indices(), connectivity_shape)
         connectivity_disease[indexes[0], indexes[1]] = self.w_values
         connectivity_disease[indexes[1], indexes[0]] = self.w_values
-
         return connectivity_disease
 
     # Do we really need those two?:
