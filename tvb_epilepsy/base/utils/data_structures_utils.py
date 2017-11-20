@@ -142,7 +142,7 @@ def dicts_of_lists(dictionary, n=1):
     return dictionary
 
 
-def list_or_tuple_to_dict(obj):
+def iterable_to_dict(obj):
     d = OrderedDict()
     for ind, value in enumerate(obj):
         d[str(ind)] = value
