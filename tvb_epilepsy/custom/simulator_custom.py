@@ -13,7 +13,7 @@ import numpy
 
 from tvb_epilepsy.base.constants.module_constants import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
 from tvb_epilepsy.base.utils.log_error_utils import warning
-from tvb_epilepsy.base.utils.data_structures_utils import obj_to_dict, assert_arrays
+from tvb_epilepsy.base.utils.data_structures_utils import obj_to_dict, assert_arrays, construct_import_path
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val__to_model_x0
@@ -33,6 +33,8 @@ class SimulationSettings(object):
         self.chunk_length = 2048
         self.downsampling_period = numpy.round(downsampling_period / integration_step)
         self.simulated_period = simulated_period
+        self.context_str = "from " + construct_import_path(__file__) + " import SimulationSettings"
+        self.create_str = "SimulationSettings()"
 
 
 class EpileptorParams(object):
@@ -54,6 +56,8 @@ class EpileptorParams(object):
         self.slope = slope
         self.x0 = x0
         self.tt = tt
+        self.context_str = "from " + construct_import_path(__file__) + " import EpileptorParams"
+        self.create_str = "EpileptorParams()"
 
 
 class EpileptorModel(object):
@@ -74,6 +78,8 @@ class EpileptorModel(object):
     Iext2 = 0.45
     slope = 0.0
     tt = 1.0
+    context_str = "from " + construct_import_path(__file__) + " import EpileptorModel"
+    create_str = "EpileptorModel()"
 
     def __init__(self, a=1.0, b=3.0, c=1.0, d=5.0, aa=6.0, r=0.00035, kvf=0.0, kf=0.0, ks=1.0, tau=10.0, iext=3.1,
                  iext2=0.45, slope=0.0, x0=-2.1, tt=1.0):
@@ -96,24 +102,28 @@ class EpileptorModel(object):
         self.slope = slope
         self.x0 = x0
         self.tt = tt
+        self.context_str = "from " + construct_import_path(__file__) + " import EpileptorModel"
+        self.create_str = "EpileptorModel()"
 
 
 class FullConfiguration(object):
 
-    def __init__(self, name="full-configuration", connectivity_path="Connectivity.h5", epileptor_paramses=[],
+    def __init__(self, name="full-configuration", connectivity_path="Connectivity.h5", epileptor_params=[],
                  settings=SimulationSettings(), initial_states=None, initial_states_shape=None):
         self.configurationName = name
         self.connectivityPath = connectivity_path
         self.settings = settings
         self.variantName = None
-        self.epileptorParamses = epileptor_paramses
+        self.epileptorParams = epileptor_params
         if initial_states is not None and initial_states_shape is not None:
             self.initialStates = initial_states
             self.initialStatesShape = initial_states_shape
+        self.context_str = "from " + construct_import_path(__file__) + " import FullConfiguration"
+        self.create_str = "FullConfiguration()"
 
     def set(self, at_indices, ep_param):
         for i in at_indices:
-            self.epileptorParamses[i] = copy(ep_param)
+            self.epileptorParams[i] = copy(ep_param)
 
 
 class SimulatorCustom(ABCSimulator):
@@ -129,6 +139,8 @@ class SimulatorCustom(ABCSimulator):
         self.simulation_settings = simulation_settings
         self.model_configuration = model_configuration
         self.connectivity = connectivity
+        self.context_str = "from " + construct_import_path(__file__) + " import SimulatorCustom"
+        self.create_str = "SimulatorCustom()"
 
     @staticmethod
     def _save_serialized(ep_full_config, result_path):

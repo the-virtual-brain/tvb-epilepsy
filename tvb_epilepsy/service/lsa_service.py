@@ -4,15 +4,15 @@ Service to do LSA computation.
 """
 import numpy
 
-from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
-from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
 from tvb_epilepsy.base.constants.module_constants import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM
 from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF
 from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, construct_import_path
+from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
+from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
 from tvb_epilepsy.base.utils.math_utils import weighted_vector_sum, curve_elbow_point
 from tvb_epilepsy.base.utils.plot_utils import plot_in_columns
 
@@ -32,6 +32,8 @@ class LSAService(object):
         self.eigen_vectors_number = eigen_vectors_number
         self.weighted_eigenvector_sum = weighted_eigenvector_sum
         self.normalize_propagation_strength = normalize_propagation_strength
+        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
+        self.create_str = self.__class__.__name__ + "()"
 
     def __repr__(self):
         d = {"01. Eigenvectors' number selection mode": self.eigen_vectors_number_selection,

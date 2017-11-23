@@ -5,7 +5,7 @@ import numpy as np
 
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_size, \
-    squeeze_array_to_scalar
+    squeeze_array_to_scalar, construct_import_path
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
 from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_params
 
@@ -28,6 +28,9 @@ class ProbabilityDistribution(object):
     kurt = None
     scipy_name = ""
     numpy_name = ""
+    context_str = "from " + construct_import_path(__file__) + " import ProbabilityDistribution"
+    create_str = "ProbabilityDistribution('" + type + "')"
+    update_str = "obj.update_params()"
 
     @abstractmethod
     def __init__(self):

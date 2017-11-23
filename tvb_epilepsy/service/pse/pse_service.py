@@ -3,6 +3,7 @@ from abc import abstractmethod, ABCMeta
 import numpy as np
 
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
+from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 
@@ -17,6 +18,8 @@ class ABCPSEService(object):
     params_names = []
     n_params_vals = []
     n_params = 0
+    context_str = "from " + construct_import_path(__file__) + " import ABCPSEService"
+    create_str = "ABCPSEService()"
 
     def run_pse(self, conn_matrix, grid_mode, *kwargs):
         results = []

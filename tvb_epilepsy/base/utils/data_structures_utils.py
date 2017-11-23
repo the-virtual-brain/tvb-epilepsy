@@ -45,6 +45,11 @@ def isequal_string(a, b, case_sensitive=False):
             return a == b
 
 
+def construct_import_path(path, package="tvb_epilepsy"):
+    path = path.split(".py")[0]
+    start = path.find(package)
+    return path[start:].replace("/", ".")
+
 def formal_repr(instance, attr_dict):
     """ A formal string representation for an object.
     :param attr_dict: dictionary attribute_name: attribute_value
@@ -145,7 +150,7 @@ def dicts_of_lists(dictionary, n=1):
 def iterable_to_dict(obj):
     d = OrderedDict()
     for ind, value in enumerate(obj):
-        d[str(ind)] = value
+        d["%02d" % ind] = value
     return d
 
 
@@ -213,10 +218,12 @@ def linear_index_to_coordinate_tuples(linear_index, shape):
 # This function is meant to confirm that two objects assumingly of the same type are equal, i.e., identical
 def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
 
-    def print_not_equal_message(attr, logger):
+    def print_not_equal_message(attr, field1, field2, logger):
         # logger.error("\n\nValueError: Original and read object field "+ attr + " not equal!")
         # raise_value_error("\n\nOriginal and read object field " + attr + " not equal!")
-        warning("Original and read object field " + attr + " not equal!", logger)
+        warning("Original and read object field " + attr + " not equal!" +
+                "\nOriginal field:\n" + str(field1) +
+                "\nRead object field:\n" + str(field2), logger)
 
     if isinstance(obj1, dict):
         get_field1 = lambda obj, key: obj[key]
@@ -224,6 +231,10 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
             attributes_dict = dict()
             for key in obj1.keys():
                 attributes_dict.update({key: key})
+    elif isinstance(obj1, (list, tuple)):
+        get_field1 = lambda obj, key: get_list_or_tuple_item_safely(obj, key)
+        indices = range(len(obj1))
+        attributes_dict = dict(zip([str(ind) for ind in indices], indices))
     else:
         get_field1 = lambda obj, attribute: getattr(obj, attribute)
         if not (isinstance(attributes_dict, dict)):
@@ -232,6 +243,8 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
                 attributes_dict.update({key: key})
     if isinstance(obj2, dict):
         get_field2 = lambda obj, key: obj.get(key, None)
+    elif isinstance(obj2, (list, tuple)):
+        get_field2 = lambda obj, key: get_list_or_tuple_item_safely(obj, key)
     else:
         get_field2 = lambda obj, attribute: getattr(obj, attribute, None)
 
@@ -246,34 +259,30 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
             if isinstance(field1, basestring) or isinstance(field1, list) or isinstance(field1, dict) \
                     or (isinstance(field1, np.ndarray) and field1.dtype.kind in 'OSU'):
                 if np.any(field1 != field2):
-                    print_not_equal_message(attributes_dict[attribute], logger)
+                    print_not_equal_message(attributes_dict[attribute], field1, field2, logger)
                     equal = False
             # For numeric numpy arrays:
             elif isinstance(field1, np.ndarray) and not field1.dtype.kind in 'OSU':
                 # TODO: handle better accuracy differences, empty matrices and complex numbers...
                 if field1.shape != field2.shape:
-                    print_not_equal_message(attributes_dict[attribute], logger)
+                    print_not_equal_message(attributes_dict[attribute], field1, field2, logger)
                     equal = False
                 elif np.any(np.float32(field1) - np.float32(field2) > 0):
-                    print_not_equal_message(attributes_dict[attribute], logger)
+                    print_not_equal_message(attributes_dict[attribute], field1, field2, logger)
                     equal = False
             # For numeric scalar types
             elif isinstance(field1, (int, float, long, complex, np.number)):
                 if np.float32(field1) - np.float32(field2) > 0:
-                    print_not_equal_message(attributes_dict[attribute], logger)
+                    print_not_equal_message(attributes_dict[attribute], field1, field2, logger)
                     equal = False
             else:
-                warning("Comparing str(objects) for field "
-                        + attributes_dict[attribute] + " because it is of unknown type!", logger)
-                if np.any(str(field1) != str(field2)):
-                    print_not_equal_message(attributes_dict[attribute], logger)
-                    equal = False
+                equal = assert_equal_objects(field1, field2, logger=logger)
         except:
             try:
                 warning("Comparing str(objects) for field "
                         + attributes_dict[attribute] + " because there was an error!", logger)
                 if np.any(str(field1) != str(field2)):
-                    print_not_equal_message(attributes_dict[attribute], logger)
+                    print_not_equal_message(attributes_dict[attribute], field1, field2, logger)
                     equal = False
             except:
                 raise_value_error("ValueError: Something went wrong when trying to compare "

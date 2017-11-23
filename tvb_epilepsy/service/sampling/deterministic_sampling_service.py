@@ -3,6 +3,7 @@ import numpy as np
 
 from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.service.sampling.sampling_service import SamplingService
 
@@ -18,6 +19,8 @@ class DeterministicSamplingService(SamplingService):
         self.sampler = np.linspace
         self.grid_mode = grid_mode
         self.shape = (1, self.n_samples)
+        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
+        self.create_str = self.__class__.__name__ + "()"
 
     def sample(self, parameter=(), **kwargs):
         if isinstance(parameter, Parameter):

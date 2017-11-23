@@ -9,7 +9,7 @@ import numpy
 from tvb_epilepsy.base.constants.module_constants import NOISE_SEED
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_equilibrium_point
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, construct_import_path
 
 
 class SimulationSettings(object):
@@ -33,6 +33,8 @@ class SimulationSettings(object):
         self.monitor_expressions = monitor_expressions
         self.variables_names = variables_names
         self.initial_conditions = initial_conditions
+        self.context_str = "from " + construct_import_path(__file__) + " import SimulationSettings"
+        self.create_str = "SimulationSettings()"
 
     def __repr__(self):
         d = {"01. integration_step": self.integration_step,

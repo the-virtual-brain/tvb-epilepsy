@@ -1,13 +1,12 @@
 import numpy as np
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
-from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
-from tvb_epilepsy.base.model.vep.connectivity import Connectivity
-from tvb_epilepsy.base.model.vep.sensors import Sensors
-from tvb_epilepsy.base.model.vep.surface import Surface
-from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
-from tvb_epilepsy.base.utils.math_utils import curve_elbow_point
+from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list, \
+                                                                                                  construct_import_path
+from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.model.vep.sensors import Sensors
 
 
 class Head(object):
@@ -15,7 +14,7 @@ class Head(object):
     One patient virtualization. Fully configured for defining hypothesis on it.
     """
 
-    def __init__(self, connectivity, cortical_surface, rm, vm, t1, name='', **kwargs):
+    def __init__(self, connectivity, cortical_surface, rm={}, vm={}, t1={}, name='', **kwargs):
         self.connectivity = connectivity
         self.cortical_surface = cortical_surface
         self.region_mapping = rm
@@ -25,14 +24,17 @@ class Head(object):
         self.sensorsEEG = None
         self.sensorsMEG = None
         for s_type in Sensors.SENSORS_TYPES:
-            self.set_sensors(kwargs.get("sensors" + s_type), sensors_type=s_type)
+            self.set_sensors(kwargs.get("sensors" + s_type), s_type=s_type)
         if len(name) == 0:
             self.name = 'Head' + str(self.number_of_regions)
         else:
             self.name = name
-        self.children_dict = {"Connectivity": Connectivity("", np.array([]), np.array([])),
-                              "Surface": Surface(np.array([]), np.array([])),
-                              "Sensors": Sensors(np.array([]), np.array([]))}
+        path = construct_import_path(__file__).split("head")[0]
+        self.context_str = "from " + path + "head"  + " import Head; " + \
+                           "from " + path + "connectivity" + " import Connectivity; " + \
+                           "from " + path + "surface" + " import Surface; "
+        self.create_str = "Head(Connectivity('" + self.connectivity.file_path + "', np.array([]), np.array([])), " + \
+                               "Surface(np.array([]), np.array([])))"
 
     @property
     def number_of_regions(self):
@@ -56,20 +58,31 @@ class Head(object):
     def __str__(self):
         return self.__repr__()
 
-    def get_sensors(self, sensors_type=Sensors.TYPE_SEEG):
-        if np.in1d(sensors_type.upper(), Sensors.SENSORS_TYPES):
-            return getattr(self, "sensors" + sensors_type)
-        else:
-            raise_value_error("Invalid input sensor type " + str(sensors_type))
+    def _prepare_for_h5(self):
+        h5_model = convert_to_h5_model(self)
+        h5_model.add_or_update_metadata_attribute("EPI_Type", "HeadModel")
+        return h5_model
 
-    def set_sensors(self, input_sensors, sensors_type=Sensors.TYPE_SEEG, reset=False):
+    def write_to_h5(self, folder, filename=""):
+        if filename == "":
+            filename = self.name + ".h5"
+        h5_model = self._prepare_for_h5()
+        h5_model.write_to_h5(folder, filename)
+
+    def get_sensors(self, s_type=Sensors.TYPE_SEEG):
+        if np.in1d(s_type.upper(), Sensors.SENSORS_TYPES):
+            return getattr(self, "sensors" + s_type)
+        else:
+            raise_value_error("Invalid input sensor type " + str(s_type))
+
+    def set_sensors(self, input_sensors, s_type=Sensors.TYPE_SEEG, reset=False):
         if input_sensors is None:
             return
-        sensors = ensure_list(self.get_sensors(sensors_type))
+        sensors = ensure_list(self.get_sensors(s_type))
         if reset is False or sensors is None:
             sensors = []
         for s in ensure_list(input_sensors):
-            if isinstance(s, Sensors) and (s.s_type == sensors_type):
+            if isinstance(s, Sensors) and (s.s_type == s_type):
                 if s.projection == None:
                     warning("No projection found in sensors! Computing and adding projection!")
                     s.projection = s.calculate_projection(self.connectivity)
@@ -79,16 +92,16 @@ class Head(object):
             else:
                 if s is not None:
                     raise_value_error("Input sensors:\n" + str(s) +
-                                      "\nis not a valid Sensors object of type " + str(sensors_type) + "!")
+                                      "\nis not a valid Sensors object of type " + str(s_type) + "!")
         if len(sensors) == 0:
-            setattr(self, "sensors"+sensors_type, None)
+            setattr(self, "sensors"+s_type, None)
         elif len(sensors) == 1:
-            setattr(self, "sensors" + sensors_type, sensors[0])
+            setattr(self, "sensors" + s_type, sensors[0])
         else:
-            setattr(self, "sensors" + sensors_type, sensors)
+            setattr(self, "sensors" + s_type, sensors)
 
-    def get_sensors_id(self, sensors_type=Sensors.TYPE_SEEG, sensor_ids=0):
-        sensors = self.get_sensors(sensors_type)
+    def get_sensors_id(self, s_type=Sensors.TYPE_SEEG, sensor_ids=0):
+        sensors = self.get_sensors(s_type)
         if sensors is None:
             return sensors
         else:

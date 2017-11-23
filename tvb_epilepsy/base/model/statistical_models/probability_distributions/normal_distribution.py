@@ -5,7 +5,7 @@ import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
 
-from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string
+from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string, construct_import_path
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
                                                                                 import ContinuousProbabilityDistribution
 
@@ -22,6 +22,9 @@ class NormalDistribution(ContinuousProbabilityDistribution):
         self.scale = self.sigma
         self.constraint_string = "sigma > 0"
         self.__update_params__(mean=self.mean, sigma=self.sigma)
+        self.context_str = "from " + construct_import_path(__file__) + " import NormalDistribution"
+        self.create_str = "NormalDistribution('" + self.type + "')"
+        self.update_str = "obj.update_params()"
 
     def pdf_params(self, parametrization="mean-sigma"):
         p = OrderedDict()

@@ -5,7 +5,7 @@ from copy import deepcopy
 import numpy as np
 
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, construct_import_path
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import \
@@ -37,6 +37,9 @@ class ODEModelInversionService(ModelInversionService):
         self.n_times = 0
         self.n_signals = 0
         self.signals_inds = range(self.n_signals)
+        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
+        self.context_str += "; from tvb_epilepsy.base.model.model_configuration import ModelConfiguration"
+        self.create_str = "ODEModelInversionService(ModelConfiguration())"
 
     def get_default_sig_init(self):
         return 0.1
@@ -134,8 +137,8 @@ class ODEModelInversionService(ModelInversionService):
                 if not(isinstance(self.projection, np.ndarray)):
                     projection = np.eye(statistical_model.n_active_regions)
                 else:
-                    projection = self.projection[statistical_model.active_regions]
-                signals = (np.dot(projection.T, signals.T)).T
+                    projection = self.projection[:, statistical_model.active_regions]
+                signals = (np.dot(projection, signals.T)).T
             self.observation_shape = signals.shape
             (self.n_times, self.n_signals) = self.observation_shape
         return signals
@@ -174,7 +177,7 @@ class ODEModelInversionService(ModelInversionService):
             if len(seeg_inds) == 0:
                 seeg_inds = self.signals_inds
             if len(seeg_inds) != 0:
-                projection = self.projection[:, seeg_inds].T
+                projection = self.projection[seeg_inds]
             for proj in projection:
                 active_regions += select_greater_values_array_inds(proj, active_regions_th).tolist()
             statistical_model.update_active_regions(active_regions)
@@ -295,7 +298,6 @@ class ODEModelInversionService(ModelInversionService):
         if projection is None:
             projection = self.projection
         mixing = deepcopy(projection)
-        mixing = mixing.T
         if mixing.shape[0] > len(self.signals_inds):
             mixing = mixing[self.signals_inds]
         if mixing.shape[1] > statistical_model.n_active_regions:

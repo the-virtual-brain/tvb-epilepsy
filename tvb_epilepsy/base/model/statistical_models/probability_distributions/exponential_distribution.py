@@ -3,7 +3,7 @@ import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
 
-from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string
+from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string, construct_import_path
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
                                                                                 import ContinuousProbabilityDistribution
 
@@ -19,6 +19,9 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
         self.lamda = 1.0 / self.scale
         self.rate = self.lamda
         self.__update_params__(scale=self.scale)
+        self.context_str = "from " + construct_import_path(__file__) + " import ExponentialDistribution"
+        self.create_str = "ExponentialDistribution('" + self.type + "')"
+        self.update_str = "obj.update_params()"
 
     def __str__(self):
         this_str = super(ExponentialDistribution, self).__str__()

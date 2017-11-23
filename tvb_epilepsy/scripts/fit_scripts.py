@@ -226,7 +226,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[
             #                                     convert_from_h5_model(obj=SDEModelInversionService(model_configuration))
             # else:
             model_inversion_service = SDEModelInversionService(model_configuration, lsa_hypothesis, head,
-                                                                    dynamical_model, sde_mode="x1z", logger=logger)
+                                                               dynamical_model, sde_mode="x1z", logger=logger)
             # stats_model_path = os.path.join(FOLDER_VEP_HOME, lsa_hypothesis.name + "_StatsModel.h5")
             # if os.path.isfile(stats_model_path):
             #   TODO: make statistical model readable, i.e., make StochasticParameter readable
@@ -240,7 +240,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[
             signals, time, statistical_model = \
                 model_inversion_service.set_target_data_and_time(target_data_type, vois_ts_dict, statistical_model,
                                                                  select_signals=True, power=True) # rois=statistical_model.active_regions,
-            if len(model_inversion_service.signals_inds) < head.get_sensors_id().number_of_contacts:
+            if len(model_inversion_service.signals_inds) < head.get_sensors_id().number_of_sensors:
                 statistical_model = \
                     model_inversion_service.update_active_regions_seeg(statistical_model)
             model_inversion_service.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_ModelInversionService.h5")

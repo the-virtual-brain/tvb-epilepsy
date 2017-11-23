@@ -10,7 +10,7 @@ from tvb_epilepsy.base.constants.module_constants import EIGENVECTORS_NUMBER_SEL
 from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, \
     raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, construct_import_path
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
@@ -192,6 +192,8 @@ class PSEService(object):
                     "\nSelect one of 'LSA', or 'SIMULATION' to perform parameter search exploration of " +
                     "\n hypothesis Linear Stability Analysis, or simulation, " + "respectively")
         self.task = task
+        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
+        self.create_str = self.__class__.__name__ + "('" + self.task + "')"
         self.params_names = []
         self.params_paths = []
         self.n_params_vals = []

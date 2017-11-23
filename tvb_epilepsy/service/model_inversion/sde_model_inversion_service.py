@@ -3,14 +3,15 @@ import time
 
 import numpy as np
 
+from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, construct_import_path
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.sde_statistical_model import SDEStatisticalModel
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_NVARS
-from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
 from tvb_epilepsy.service.model_inversion.ode_model_inversion_service import ODEModelInversionService
+
 
 LOG = initialize_logger(__name__)
 
@@ -41,6 +42,9 @@ class SDEModelInversionService(ODEModelInversionService):
            self.get_default_sig(dynamical_model)
         super(SDEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model, 
                                                        model_name, logger, **kwargs)
+        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
+        self.context_str += "; from tvb_epilepsy.base.model.model_configuration import ModelConfiguration"
+        self.create_str = "ODEModelInversionService(ModelConfiguration())"
 
     def get_default_sig(self, dynamical_model):
             if EPILEPTOR_MODEL_NVARS.get([self.dynamical_model]) == 2:
@@ -92,6 +96,9 @@ class SDEModelInversionService(ODEModelInversionService):
                                                       probability_distribution=kwargs.get("sig_pdf", "gamma"),
                                                       optimize=True,
                                                       mode=sig_def, std=kwargs.get("sig_sig", sig_def))
+        mm = np.max([parameter.mean, parameter.mode])
+        if parameter.high < 10*mm:
+            parameter.high = 10*mm
         parameters.update({parameter.name: parameter})
         return parameters
                 

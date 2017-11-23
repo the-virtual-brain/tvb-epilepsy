@@ -4,7 +4,7 @@ import numpy.random as nr
 import scipy.stats as ss
 
 from tvb_epilepsy.base.utils.log_error_utils import warning
-from tvb_epilepsy.base.utils.data_structures_utils import make_int, isequal_string
+from tvb_epilepsy.base.utils.data_structures_utils import make_int, construct_import_path
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
                                                                                 import ContinuousProbabilityDistribution
 
@@ -18,6 +18,9 @@ class ChisquareDistribution(ContinuousProbabilityDistribution):
         self.constraint_string = "int(df) > 0"
         self.df = make_int(params.get("df", 1))
         self.__update_params__(df=self.df)
+        self.context_str = "from " + construct_import_path(__file__) + " import ChisquareDistribution"
+        self.create_str = "ChisquareDistribution('" + self.type + "')"
+        self.update_str = "obj.update_params()"
 
     def __str__(self):
         this_str = super(ChisquareDistribution, self).__str__()

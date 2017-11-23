@@ -6,7 +6,7 @@ import numpy as np
 
 from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import copy_object_attributes
+from tvb_epilepsy.base.utils.data_structures_utils import copy_object_attributes, construct_import_path
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
@@ -92,6 +92,9 @@ class ModelInversionService(object):
         self.sig_eq = self.get_default_sig_eq(x1eq_def=kwargs.get("x1eq_def", X1_DEF),
                                               x1eq_cr=kwargs.get("x1eq_cr", X1_EQ_CR_DEF))
         self.logger.info("Model Inversion Service instance created!")
+        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
+        self.context_str += "; from tvb_epilepsy.base.model.model_configuration import ModelConfiguration"
+        self.create_str = "ModelInversionService(ModelConfiguration())"
 
     def _prepare_for_h5(self):
         h5_model = convert_to_h5_model(self)

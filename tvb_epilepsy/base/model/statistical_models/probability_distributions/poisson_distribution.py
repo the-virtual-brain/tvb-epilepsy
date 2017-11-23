@@ -4,7 +4,7 @@ import numpy.random as nr
 import scipy.stats as ss
 
 from tvb_epilepsy.base.utils.log_error_utils import warning
-from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int, isequal_string
+from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int, isequal_string, construct_import_path
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.discrete_probability_distribution  \
                                                                                   import DiscreteProbabilityDistribution
 
@@ -19,6 +19,9 @@ class PoissoniDistribution(DiscreteProbabilityDistribution):
         self.constraint_string = "0 < lamda < 1"
         self.__update_params__(lamda=self.lamda)
         self.mu = self.lamda
+        self.context_str = "from " + construct_import_path(__file__) + " import PoissoniDistribution"
+        self.create_str = "PoissoniDistribution('" + self.type + "')"
+        self.update_str = "obj.update_params()"
 
     def pdf_params(self, parametrization="lamda"):
         if isequal_string(parametrization, "scipy"):

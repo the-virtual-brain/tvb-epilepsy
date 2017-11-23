@@ -15,7 +15,7 @@ from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r, calc_
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z, eq_x1_hypo_x0_linTaylor, \
     eq_x1_hypo_x0_optimize, def_x1lin, calc_eq_y1
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list, construct_import_path
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
@@ -43,7 +43,7 @@ logger = initialize_logger(__name__)
 class ModelConfigurationService(object):
     x1EQcr = X1_EQ_CR_DEF
 
-    def __init__(self, number_of_regions, x0_values=X0_DEF, e_values=E_DEF, yc=YC_DEF, Iext1=I_EXT1_DEF,
+    def __init__(self, number_of_regions=1, x0_values=X0_DEF, e_values=E_DEF, yc=YC_DEF, Iext1=I_EXT1_DEF,
                  Iext2=I_EXT2_DEF, K=K_DEF, a=A_DEF, b=B_DEF, d=D_DEF, slope=SLOPE_DEF, s=S_DEF, gamma=GAMMA_DEF,
                  zmode=numpy.array("lin"), x1eq_mode="optimize"):
         self.number_of_regions = number_of_regions
@@ -72,6 +72,8 @@ class ModelConfigurationService(object):
         self.x0cr = 0.0
         self.rx0 = 0.0
         self._compute_critical_x0_scaling()
+        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
+        self.create_str = self.__class__.__name__ + "()"
 
     def __repr__(self):
         d = {"01. Number of regions": self.number_of_regions,

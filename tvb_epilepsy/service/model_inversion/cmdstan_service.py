@@ -1,13 +1,15 @@
 import os
-import pickle
+# import pickle
 import time
 
-import numpy as np
+# import numpy as np
 import pystan as ps
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_VEP_HOME
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error, warning
+from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
 from tvb_epilepsy.service.model_inversion.stan_service import StanService
+
 
 LOG = initialize_logger(__name__)
 
@@ -17,8 +19,20 @@ class CmdstanService(StanService):
     def __init__(self, model_name=None, model=None, model_dir=os.path.join(FOLDER_VEP_HOME, "stan_models"),
                  model_code=None, model_code_path="", fitmode="sampling", logger=LOG):
         super(CmdstanService, self).__init__(model_name, model, model_dir, model_code, model_code_path, fitmode, logger)
+        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
+        self.create_str = self.__class__.__name__ + "()"
 
-    # def fit_stan_model(self, model_data=None, **kwargs):
+
+    def compile_stan_model(self, write_model=True):
+        tic = time.time()
+        self.logger.info("Compiling model...")
+        self.model = ps.StanModel(file=self.model_code_path, model_name=self.model_name)
+        self.compilation_time = time.time() - tic
+        self.logger.info(str(self.compilation_time) + ' sec required to compile')
+        if write_model:
+            self.write_model_to_file()
+
+            # def fit_stan_model(self, model_data=None, **kwargs):
     #     self.logger.info("Model fitting with " + self.fitmode + "...")
     #     tic = time.time()
     #     fit = getattr(self.model, self.fitmode)(data=model_data, **kwargs)

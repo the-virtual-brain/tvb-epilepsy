@@ -3,7 +3,7 @@ import numpy as np
 import scipy.stats as ss
 
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import make_float
+from tvb_epilepsy.base.utils.data_structures_utils import make_float, construct_import_path
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.discrete_probability_distribution  \
                                                                                   import DiscreteProbabilityDistribution
 
@@ -17,6 +17,9 @@ class BernoulliDistribution(DiscreteProbabilityDistribution):
         self.constraint_string = "0 < p < 1"
         self.p = make_float(params.get("p", 0.5))
         self.__update_params__(p=self.p)
+        self.context_str = "from " + construct_import_path(__file__) + " import BernoulliDistribution"
+        self.create_str = "BernoulliDistribution('" + self.type + "')"
+        self.update_str = "obj.update_params()"
 
     def pdf_params(self):
         return {"p": self.p}

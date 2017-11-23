@@ -7,7 +7,7 @@ import scipy.stats as ss
 
 from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
-from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, shape_to_size
+from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, shape_to_size, construct_import_path
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 
@@ -22,6 +22,8 @@ class SamplingService(object):
         self.n_samples = n_samples
         self.shape = (1, n_samples)
         self.stats = {}
+        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
+        self.create_str = self.__class__.__name__ + "()"
 
     def __repr__(self):
         d = {"01. Sampling module": self.sampling_module,

@@ -1,4 +1,5 @@
 
+from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
 
 
@@ -10,6 +11,8 @@ class SDEStatisticalModel(ODEStatisticalModel):
         super(SDEStatisticalModel, self).__init__(name, parameters, n_regions, active_regions, n_signals,
                                                   n_times, dt, euler_method, observation_model,
                                                   observation_expression, **kwargs)
+        self.context_str = "from " + construct_import_path(__file__) + " import SDEStatisticalModel"
+        self.create_str = "SDEStatisticalModel('" + self.name + "')"
 
     def __str__(self):
         return self.__repr__()

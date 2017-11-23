@@ -6,10 +6,11 @@ from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
-from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict
+from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, construct_import_path
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.math_utils import compute_projection, select_greater_values_array_inds
 from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 
 class Sensors(object):
@@ -31,6 +32,8 @@ class Sensors(object):
         self.orientations = orientations
         self.projection = projection
         self.s_type = s_type
+        self.context_str = "from " + construct_import_path(__file__) + " import Sensors"
+        self.create_str = "Sensors(np.array([]), np.array([]), s_type='" + self.s_type + "')"
 
     def summary(self):
         d = {"1. sensors type": self.s_type,
@@ -39,12 +42,12 @@ class Sensors(object):
 
 
     @property
-    def number_of_contacts(self):
+    def number_of_sensors(self):
         return self.locations.shape[0]
 
     def __repr__(self):
         d = {"1. sensors' type": self.s_type,
-             "2. contacts' number": self.number_of_contacts,
+             "2. number of sensors": self.number_of_sensors,
              "3. labels": reg_dict(self.labels),
              "4. locations": reg_dict(self.locations, self.labels),
              "5. orientations": reg_dict(self.orientations, self.labels),
@@ -53,6 +56,19 @@ class Sensors(object):
 
     def __str__(self):
         return self.__repr__()
+
+    def _prepare_for_h5(self):
+        h5_model = convert_to_h5_model(self)
+        h5_model.add_or_update_metadata_attribute("EPI_Type", "Sensors")
+        h5_model.add_or_update_metadata_attribute("Number_of_sensors", self.number_of_sensors)
+        h5_model.add_or_update_metadata_attribute("Sensors_subtype", self.s_type)
+        return h5_model
+
+    def write_to_h5(self, folder, filename=""):
+        if filename == "":
+            filename = self.name + ".h5"
+        h5_model = self._prepare_for_h5()
+        h5_model.write_to_h5(folder, filename)
 
     def contact_label_to_index(self, labels):
         indexes = []
@@ -79,7 +95,7 @@ class Sensors(object):
                     seeg_inds += select_greater_values_array_inds(proj, projection_th).tolist()
         if power is not None:
             if len(power_inds) == 0:
-                power_inds = range(self.number_of_contacts)
+                power_inds = range(self.number_of_sensors)
             seeg_inds += (np.array(power_inds)[select_greater_values_array_inds(power, power_th)]).tolist()
         return np.unique(seeg_inds).tolist()
 
@@ -88,7 +104,7 @@ class Sensors(object):
              figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, figure_name=''):
         if not (isinstance(figure, pyplot.Figure)):
             figure = pyplot.figure(title, figsize=figsize)
-        n_sensors = self.number_of_contacts
+        n_sensors = self.number_of_sensors
         n_regions = len(region_labels)
         if len(x_ticks) == 0:
             x_ticks = np.array(range(n_sensors), dtype=np.int32)

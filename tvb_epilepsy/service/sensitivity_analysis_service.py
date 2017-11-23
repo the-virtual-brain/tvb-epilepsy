@@ -3,7 +3,8 @@ import numpy as np
 from SALib.analyze import sobol, delta, fast, morris, dgsm,  ff
 
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, list_of_dicts_to_dicts_of_ndarrays
+from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, list_of_dicts_to_dicts_of_ndarrays, \
+                                                                                                construct_import_path
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 METHODS = ["sobol", "latin", "delta", "dgsm", "fast", "fast_sampler", "morris", "ff", "fractional_factorial"]
@@ -24,12 +25,13 @@ class SensitivityAnalysisService(object):
         self._set_method(method)
         self._set_calc_second_order(calc_second_order)
         self._set_conf_level(conf_level)
-
         self.n_samples = []
         self.input_names = []
         self.input_bounds = []
         self.input_samples = []
         self.n_inputs = len(inputs)
+        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
+        self.create_str = self.__class__.__name__ + "({}, {})"
 
         for input in inputs:
 

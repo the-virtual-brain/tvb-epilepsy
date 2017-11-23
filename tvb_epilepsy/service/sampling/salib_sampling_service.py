@@ -7,6 +7,7 @@ from SALib.sample import saltelli, fast_sampler, morris, ff
 
 from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error
+from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
 
@@ -20,6 +21,8 @@ class SalibSamplingService(StochasticSamplingService):
         super(SalibSamplingService, self).__init__(n_samples, "salib", random_seed)
         self.sampling_module = "SALib"
         self.sampler = sampler.lower()
+        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
+        self.create_str = self.__class__.__name__ + "()"
 
     def sample(self, parameter=(), **kwargs):
         if isinstance(parameter, Parameter):

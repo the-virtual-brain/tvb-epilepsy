@@ -1,7 +1,7 @@
 import numpy as np
 
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list, construct_import_path
 from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
 
 
@@ -12,10 +12,12 @@ EULER_METHODS = ["backward", "midpoint", "forward"]
 
 class ODEStatisticalModel(StatisticalModel):
 
-    def __init__(self, name, parameters={}, n_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
+    def __init__(self, name='vep_ode', parameters={}, n_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
                  euler_method="forward", observation_model="seeg_logpower", observation_expression="x1z_offset",
                  **kwargs):
         super(ODEStatisticalModel, self).__init__(name, parameters, n_regions, **kwargs)
+        self.context_str = "from " + construct_import_path(__file__) + " import ODEStatisticalModel"
+        self.create_str = "ODEStatisticalModel('" + self.name + "')"
 
         if np.all(np.in1d(active_regions, range(self.n_regions))):
             self.active_regions = np.unique(active_regions).tolist()

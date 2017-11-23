@@ -6,7 +6,7 @@ import numpy.random as nr
 import scipy.stats as ss
 
 from tvb_epilepsy.base.utils.log_error_utils import warning
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, make_float
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, make_float, construct_import_path
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
                                                                                 import ContinuousProbabilityDistribution
 
@@ -23,6 +23,9 @@ class BetaDistribution(ContinuousProbabilityDistribution):
         self.a = self.alpha
         self.b = self.beta
         self.__update_params__(alpha=self.alpha, beta=self.beta)
+        self.context_str = "from " + construct_import_path(__file__) + " import BetaDistribution"
+        self.create_str = "BetaDistribution('" + self.type + "')"
+        self.update_str = "obj.update_params()"
 
     def pdf_params(self, parametrization="alpha-beta"):
         p = OrderedDict()

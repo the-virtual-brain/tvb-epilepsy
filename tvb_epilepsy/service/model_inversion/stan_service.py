@@ -7,8 +7,8 @@ import numpy as np
 import pystan as ps
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_VEP_HOME
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error, warning
-
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
 LOG = initialize_logger(__name__)
 
 
@@ -27,15 +27,8 @@ class StanService(object):
         self.model_code_path = model_code_path
         self.compilation_time = 0.0
         self.fitting_time = 0.0
-
-    def compile_stan_model(self, write_model=True):
-        tic = time.time()
-        self.logger.info("Compiling model...")
-        self.model = ps.StanModel(file=self.model_code_path, model_name=self.model_name)
-        self.compilation_time = time.time() - tic
-        self.logger.info(str(self.compilation_time) + ' sec required to compile')
-        if write_model:
-            self.write_model_to_file()
+        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
+        self.create_str = self.__class__.__name__ + "()"
 
     def write_model_to_file(self):
         with open(self.model_path, 'wb') as f:

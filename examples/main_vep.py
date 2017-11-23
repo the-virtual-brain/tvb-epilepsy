@@ -46,6 +46,12 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     logger.info("Reading from: " + data_folder)
     head = reader.read_head(data_folder)
     head.plot()
+    if test_write_read:
+        head.write_to_h5(FOLDER_RES, "Head.h5")
+        logger.info("Written and read simulation settings are identical?: " +
+                    str(assert_equal_objects(head,
+                                             read_h5_model(os.path.join(FOLDER_RES, "Head.h5")).
+                                             convert_from_h5_model(), logger=logger)))
     # --------------------------Hypothesis definition-----------------------------------
     n_samples = 100
     # # Manual definition of hypothesis...:
@@ -140,7 +146,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
             logger.info("Written and read model configuration services are identical?: "+
                         str(assert_equal_objects(model_configuration_service,
                                  read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_model_config_service.h5")).
-                                    convert_from_h5_model(obj=deepcopy(model_configuration_service)), logger=logger)))
+                                    convert_from_h5_model(), logger=logger)))
         if hyp.type == "Epileptogenicity":
             model_configuration = model_configuration_service.\
                                             configure_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
@@ -152,8 +158,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
             logger.info("Written and read model configuration are identical?: " +
                         str(assert_equal_objects(model_configuration,
                                                  read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_ModelConfig.h5")).
-                                                 convert_from_h5_model(obj=deepcopy(model_configuration)),
-                                                 logger=logger)))
+                                                 convert_from_h5_model(), logger=logger)))
         # Plot nullclines and equilibria of model configuration
         model_configuration_service.plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
                                                special_idx=disease_indices, model="6d", zmode="lin",
@@ -168,16 +173,19 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
             logger.info("Written and read LSA services are identical?: " +
                         str(assert_equal_objects(lsa_service,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")).
-                                    convert_from_h5_model(obj=deepcopy(lsa_service)), logger=logger)))
+                                    convert_from_h5_model(), logger=logger)))
             logger.info("Written and read LSA hypotheses are identical (input object check)?: " +
                         str(assert_equal_objects(lsa_hypothesis,
                                  read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
-                                    convert_from_h5_model(obj=deepcopy(lsa_hypothesis), hypothesis=True),
-                                                 logger=logger)))
+                                    convert_from_h5_model(obj=deepcopy(lsa_hypothesis)), logger=logger)))
             logger.info("Written and read LSA hypotheses are identical (input template check)?: " +
                         str(assert_equal_objects(lsa_hypothesis,
                                 read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
-                                    convert_from_h5_model(obj=hypothesis_template, hypothesis=True), logger=logger)))
+                                    convert_from_h5_model(obj=hypothesis_template), logger=logger)))
+            logger.info("Written and read LSA hypotheses are identical (no input check)?: " +
+                        str(assert_equal_objects(lsa_hypothesis,
+                                read_h5_model(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")).
+                                    convert_from_h5_model(), logger=logger)))
         lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels,  None)
         if pse_flag:
             #--------------Parameter Search Exploration (PSE)-------------------------------
@@ -197,8 +205,8 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                 logger.info("Written and read sensitivity analysis parameter search results are identical?: " +
                             str(assert_equal_objects(pse_results,
                                       read_h5_model(os.path.join(FOLDER_RES,
-                                               lsa_hypothesis.name + "_PSE_LSA_results.h5")).convert_from_h5_model(),
-                                                     logger=logger)))
+                                                                 lsa_hypothesis.name + "_PSE_LSA_results.h5")).
+                                            convert_from_h5_model(), logger=logger)))
         if sa_pse_flag:
             # --------------Sensitivity Analysis Parameter Search Exploration (PSE)-------------------------------
             logger.info("\n\nrunning sensitivity analysis PSE LSA...")
@@ -221,13 +229,13 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                 logger.info("Written and read sensitivity analysis results are identical?: " +
                             str(assert_equal_objects(sa_results,
                                       read_h5_model(os.path.join(FOLDER_RES,
-                                                  lsa_hypothesis.name + "_SA_LSA_results.h5")).convert_from_h5_model(),
-                                                     logger=logger)))
+                                                                 lsa_hypothesis.name + "_SA_LSA_results.h5")).
+                                            convert_from_h5_model(), logger=logger)))
                 logger.info("Written and read sensitivity analysis parameter search results are identical?: " +
                             str(assert_equal_objects(pse_sa_results,
                                     read_h5_model(os.path.join(FOLDER_RES,
-                                            lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).convert_from_h5_model(),
-                                                     logger=logger)))
+                                                               lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")).
+                                        convert_from_h5_model(), logger=logger)))
         if sim_flag:
             # ------------------------------Simulation--------------------------------------
             logger.info("\n\nConfiguring simulation...")
@@ -245,12 +253,12 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
             convert_to_h5_model(sim.simulation_settings).write_to_h5(FOLDER_RES,
                                                                      lsa_hypothesis.name + "_sim_settings.h5")
             if test_write_read:
+                # TODO: find out why it cannot set monitor expressions
                 logger.info("Written and read simulation settings are identical?: " +
                             str(assert_equal_objects(sim.simulation_settings,
                                                      read_h5_model(os.path.join(FOLDER_RES,
                                                                             lsa_hypothesis.name + "_sim_settings.h5")).
-                                                     convert_from_h5_model(obj=deepcopy(sim.simulation_settings)),
-                                                     logger=logger)))
+                                                        convert_from_h5_model(), logger=logger)))
             if not status:
                 warning("\nSimulation failed!")
             else:

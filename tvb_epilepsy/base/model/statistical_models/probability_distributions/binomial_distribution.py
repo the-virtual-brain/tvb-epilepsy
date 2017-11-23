@@ -5,7 +5,7 @@ import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
 
-from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int
+from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int, construct_import_path
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.discrete_probability_distribution  \
                                                                                   import DiscreteProbabilityDistribution
 
@@ -20,6 +20,9 @@ class BinomialDistribution(DiscreteProbabilityDistribution):
         self.n = make_int(params.get("n", 1))
         self.p = make_float(params.get("p", 0.5))
         self.__update_params__(n=self.n, p=self.p)
+        self.context_str = "from " + construct_import_path(__file__) + " import BinomialDistribution"
+        self.create_str = "BinomialDistribution('" + self.type + "')"
+        self.update_str = "obj.update_params()"
 
     def pdf_params(self):
         p = OrderedDict()

@@ -4,7 +4,7 @@ from copy import deepcopy
 import numpy
 
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, construct_import_path
 from tvb_epilepsy.service.pse.pse_service import ABCPSEService
 
 
@@ -15,12 +15,13 @@ class LSAPSEService(ABCPSEService):
         self.hypothesis = hypothesis
         self.params_pse = params_pse
         self.prepare_params(params_pse)
+        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
+        self.create_str = self.__class__.__name__ + "()"
 
     def __repr__(self):
         d = {"01. Task": "LSA",
              "02. Main PSE object": self.hypothesis,
-             "03. Number of computation loops": self.n_loops,
-             "04. Parameters": numpy.array(["%s" % l for l in self.params_names]),
+             "03. Parameters": numpy.array(["%s" % l for l in self.params_names]),
              }
         return formal_repr(self, d)
 

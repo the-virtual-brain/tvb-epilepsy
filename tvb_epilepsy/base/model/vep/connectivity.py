@@ -4,9 +4,10 @@ import numpy as np
 from matplotlib import pyplot
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
-from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict
+from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, construct_import_path
 from tvb_epilepsy.base.utils.math_utils import normalize_weights, compute_in_degree
 from tvb_epilepsy.base.utils.plot_utils import plot_regions2regions, save_figure, check_show, plot_vector
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 
 class Connectivity(object):
@@ -34,6 +35,8 @@ class Connectivity(object):
         self.hemispheres = hemispheres
         self.orientations = orientation
         self.areas = areas
+        self.context_str = "from " + construct_import_path(__file__) + " import Connectivity"
+        self.create_str = "Connectivity('" + self.file_path + "', np.array([]), np.array([]))"
 
     def regions_labels2inds(self, labels):
         inds = []
@@ -68,6 +71,18 @@ class Connectivity(object):
 
     def __str__(self):
         return self.__repr__()
+
+    def _prepare_for_h5(self):
+        h5_model = convert_to_h5_model(self)
+        h5_model.add_or_update_metadata_attribute("EPI_Type", "Connectivity")
+        h5_model.add_or_update_metadata_attribute("Number_of_regions", self.weights.shape[0])
+        return h5_model
+
+    def write_to_h5(self, folder, filename=""):
+        if filename == "":
+            filename = self.name + ".h5"
+        h5_model = self._prepare_for_h5()
+        h5_model.write_to_h5(folder, filename)
 
     def plot(self, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
                       figure_format=FIG_FORMAT, figure_name='Connectivity ', figsize=VERY_LARGE_SIZE):

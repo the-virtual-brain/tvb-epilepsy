@@ -6,7 +6,7 @@ import numpy.random as nr
 import scipy.stats as ss
 
 from tvb_epilepsy.base.utils.log_error_utils import warning
-from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string
+from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string, construct_import_path
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
                                                                                 import ContinuousProbabilityDistribution
 
@@ -26,6 +26,9 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         self.alpha = self.shape
         self.beta = 1.0 / self.scale
         self.__update_params__(shape=self.shape, scale=self.scale)
+        self.context_str = "from " + construct_import_path(__file__) + " import GammaDistribution"
+        self.create_str = "GammaDistribution('" + self.type + "')"
+        self.update_str = "obj.update_params()"
 
     def __str__(self):
         this_str = super(GammaDistribution, self).__str__()
