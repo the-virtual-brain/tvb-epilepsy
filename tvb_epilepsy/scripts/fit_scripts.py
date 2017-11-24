@@ -264,10 +264,10 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[
                                     excitability_hypothesis={tuple(disease_indices): x0_values_fit},
                                     epileptogenicity_hypothesis={}, connectivity_hypothesis={},
                                     name='fit_' + hyp_x0.name)
-        connectivity_matrix_fit = np.array(model_configuration.connectivity_matrix)
-        connectivity_matrix_fit[statistical_model.active_regions][:, statistical_model.active_regions] = est["EC"]
+        model_connectivity_fit = np.array(model_configuration.model_connectivity)
+        model_connectivity_fit[statistical_model.active_regions][:, statistical_model.active_regions] = est["EC"]
         model_configuration_fit = fit_model_configuration_service.configure_model_from_hypothesis(hyp_fit,
-                                                                                             connectivity_matrix_fit)
+                                                                                             model_connectivity_fit)
         model_configuration_fit.write_to_h5(FOLDER_RES, hyp_fit.name + "_ModelConfig.h5")
         # Plot nullclines and equilibria of model configuration
         model_configuration_service.plot_nullclines_eq(model_configuration_fit, head.connectivity.region_labels,

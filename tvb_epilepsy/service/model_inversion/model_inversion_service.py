@@ -42,7 +42,7 @@ class ModelInversionService(object):
     K_MIN = 0.0
     K_MAX = 2.0
 
-    EC_MIN = 0.0
+    MC_MIN = 0.0
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="",
                  logger=LOG, **kwargs):
@@ -55,7 +55,7 @@ class ModelInversionService(object):
             self.logger.info("Input model configuration set...")
             self.n_regions = model_configuration.n_regions
             self._copy_attributes(model_configuration,
-                                  ["K", "x1EQ", "zEQ", "e_values", "x0_values", "connectivity_matrix"], deep_copy=True)
+                                  ["K", "x1EQ", "zEQ", "e_values", "x0_values", "model_connectivity"], deep_copy=True)
             self.epileptor_parameters = self.get_epileptor_parameters(model_configuration)
         else:
             raise_value_error("Invalid input model configuration!:\n" + str(model_configuration))
@@ -192,18 +192,18 @@ class ModelInversionService(object):
         parameters.update({parameter.name: parameter})
 
         # Coupling:
-        parameter = kwargs.get("EC", None)
+        parameter = kwargs.get("MC", None)
         if not(isinstance(parameter, Parameter)):
             structural_connectivity = kwargs.get("structural_connectivity", self.connectivity_matrix)
             p0595 = np.percentile(structural_connectivity.flatten(), [5, 95])
             mode = np.maximum(p0595[0], structural_connectivity)
-            parameter = generate_stochastic_parameter("EC",
-                                                      low=kwargs.get("EC_lo", self.EC_MIN),
-                                                      high=kwargs.get("EC_hi", 3 * p0595[1]),
+            parameter = generate_stochastic_parameter("MC",
+                                                      low=kwargs.get("MC_lo", self.MC_MIN),
+                                                      high=kwargs.get("MC_hi", 3 * p0595[1]),
                                                       p_shape=(self.n_regions, self.n_regions),
-                                                      probability_distribution=kwargs.get("EC_pdf", "lognormal"),
+                                                      probability_distribution=kwargs.get("MC_pdf", "lognormal"),
                                                       optimize=True,
-                                                      mode=mode, std=kwargs.get('EC_sig', mode / 3.0))
+                                                      mode=mode, std=kwargs.get('MC_sig', mode / 3.0))
         parameters.update({parameter.name: parameter})
 
         # Integration:

@@ -17,8 +17,8 @@ from tvb_epilepsy.base.utils.plot_utils import plot_in_columns
 
 class ModelConfiguration(object):
     def __init__(self, yc=YC_DEF, Iext1=I_EXT1_DEF, Iext2=I_EXT2_DEF, K=K_DEF, a=A_DEF, b=B_DEF, d=D_DEF,
-                 slope=SLOPE_DEF, s=S_DEF,gamma=GAMMA_DEF, x1EQ=None, zEQ=None, Ceq=None, x0=None,
-                 x0_values=X0_DEF, e_values=None, zmode=np.array("lin"), connectivity_matrix=None, n_regions=None):
+                 slope=SLOPE_DEF, s=S_DEF, gamma=GAMMA_DEF, x1EQ=None, zEQ=None, Ceq=None, x0=None,
+                 x0_values=X0_DEF, e_values=None, zmode=np.array("lin"), model_connectivity=None, n_regions=None):
         # These parameters are used for every Epileptor Model...
         self.x0_values = x0_values
         self.x0 = x0
@@ -39,9 +39,9 @@ class ModelConfiguration(object):
         self.zEQ = zEQ
         self.Ceq = Ceq
         self.e_values = e_values
-        self.connectivity_matrix = connectivity_matrix
+        self.model_connectivity = model_connectivity
         if n_regions is None:
-            self.n_regions = connectivity_matrix.shape[0]
+            self.n_regions = model_connectivity.shape[0]
         else:
             self.n_regions = 0
         self.context_str = "from " + construct_import_path(__file__) + " import ModelConfiguration"
@@ -67,7 +67,7 @@ class ModelConfiguration(object):
             "15. slope": self.slope,
             "16. gamma": self.gamma,
             "17. zmode": self.zmode,
-            "18. Connectivity Matrix": self.connectivity_matrix
+            "18. Model connectivity": self.model_connectivity
         }
         return formal_repr(self, d)
 

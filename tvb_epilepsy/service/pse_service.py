@@ -71,7 +71,7 @@ def update_object(object, object_type, params_paths, params_values, params_indic
     return object, params_paths, params_values, params_indices, update_flag
 
 
-def update_hypothesis(hypothesis_input, connectivity_matrix, params_paths, params_values, params_indices,
+def update_hypothesis(hypothesis_input, model_connectivity, params_paths, params_values, params_indices,
                       model_configuration_service_input=None,
                       yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize"):
     # Assign possible hypothesis parameters on a new hypothesis object:
@@ -92,10 +92,10 @@ def update_hypothesis(hypothesis_input, connectivity_matrix, params_paths, param
     # ...and compute a new model_configuration:
     if hypothesis.type == "Epileptogenicity":
         model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hypothesis,
-                                                                                            connectivity_matrix)
+                                                                                            model_connectivity)
     else:
         model_configuration = model_configuration_service.configure_model_from_hypothesis(hypothesis,
-                                                                                          connectivity_matrix)
+                                                                                          model_connectivity)
     return hypothesis, model_configuration, params_paths, params_values, params_indices
 
 
@@ -108,7 +108,7 @@ def lsa_out_fun(hypothesis, model_configuration=None, **kwargs):
         hypothesis.lsa_propagation_strengths
 
 
-def lsa_run_fun(hypothesis_input, connectivity_matrix, params_paths, params_values, params_indices, out_fun=lsa_out_fun,
+def lsa_run_fun(hypothesis_input, model_connectivity, params_paths, params_values, params_indices, out_fun=lsa_out_fun,
                 model_configuration_service_input=None,
                 yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",
                 lsa_service_input=None,
@@ -116,7 +116,7 @@ def lsa_run_fun(hypothesis_input, connectivity_matrix, params_paths, params_valu
     try:
         # Update hypothesis and create a new model_configuration:
         hypothesis, model_configuration, params_paths, params_values, params_indices \
-            = update_hypothesis(hypothesis_input, connectivity_matrix, params_paths, params_values, params_indices,
+            = update_hypothesis(hypothesis_input, model_connectivity, params_paths, params_values, params_indices,
                                 model_configuration_service_input, yc, Iext1, K, a, b, x1eq_mode)
         # ...create/update lsa service:
         if isinstance(lsa_service_input, LSAService):
@@ -143,7 +143,7 @@ def sim_out_fun(simulator, time, data, **kwargs):
     return {"time": time, "data": data}
 
 
-def sim_run_fun(simulator_input, connectivity_matrix, params_paths, params_values, params_indices, out_fun=sim_out_fun,
+def sim_run_fun(simulator_input, model_connectivity, params_paths, params_values, params_indices, out_fun=sim_out_fun,
                 hypothesis_input=None,
                 model_configuration_service_input=None,
                 yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",
@@ -156,7 +156,7 @@ def sim_run_fun(simulator_input, connectivity_matrix, params_paths, params_value
         # First try to update model_configuration via an input hypothesis...:
         if isinstance(hypothesis_input, DiseaseHypothesis):
             hypothesis, model_configuration, params_paths, params_values, params_indices = \
-                update_hypothesis(hypothesis_input, connectivity_matrix, params_paths, params_values, params_indices,
+                update_hypothesis(hypothesis_input, model_connectivity, params_paths, params_values, params_indices,
                                   model_configuration_service_input, yc, Iext1, K, a, b, x1eq_mode)
             # Update model configuration:
             simulator.model_configuration = model_configuration
@@ -286,7 +286,7 @@ class PSEService(object):
         h5_model = self._prepare_for_h5()
         h5_model.write_to_h5(folder, filename)
 
-    def run_pse(self, connectivity_matrix, grid_mode=False, **kwargs):
+    def run_pse(self, model_connectivity, grid_mode=False, **kwargs):
         results = []
         execution_status = []
         loop_tenth = 1
@@ -302,7 +302,7 @@ class PSEService(object):
             status = False
             output = None
             try:
-                status, output = self.run_fun(self.pse_object, connectivity_matrix,
+                status, output = self.run_fun(self.pse_object, model_connectivity,
                                               self.params_paths, params, self.params_indices, self.out_fun, **kwargs)
             except:
                 pass
@@ -315,6 +315,6 @@ class PSEService(object):
             execution_status = np.reshape(np.array(execution_status), tuple(self.n_params_vals))
         return results, execution_status
 
-    def run_pse_parallel(self, connectivity_matrix, grid_mode=False):
+    def run_pse_parallel(self, model_connectivity, grid_mode=False):
         # TODO: start each loop on a separate process, gather results and return them
         raise_not_implemented_error

@@ -5,7 +5,7 @@ from tvb_epilepsy.service.model_configuration_service import ModelConfigurationS
 from tvb_epilepsy.service.lsa_service import LSAService
 
 
-def start_lsa_run(hypothesis, connectivity_matrix, logger=None):
+def start_lsa_run(hypothesis, model_connectivity, logger=None):
 
     if logger is None:
         logger = initialize_logger(__name__)
@@ -13,7 +13,7 @@ def start_lsa_run(hypothesis, connectivity_matrix, logger=None):
     logger.info("creating model configuration...")
     model_configuration_service = ModelConfigurationService(hypothesis.number_of_regions)
     model_configuration = model_configuration_service. \
-        configure_model_from_hypothesis(hypothesis, connectivity_matrix)
+        configure_model_from_hypothesis(hypothesis, model_connectivity)
 
     logger.info("running LSA...")
     lsa_service = LSAService(eigen_vectors_number_selection=EIGENVECTORS_NUMBER_SELECTION, eigen_vectors_number=None,

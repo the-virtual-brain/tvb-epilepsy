@@ -11,8 +11,8 @@ import pystan as ps
 from scipy.io import savemat, loadmat
 import pickle
 
-from tvb_epilepsy.base.constants import X1_DEF, X1_EQ_CR_DEF, X0_CR_DEF, X0_DEF, E_DEF, TVB, DATA_MODE, \
-                                        SIMULATION_MODE
+from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE, SIMULATION_MODE
+from tvb_epilepsy.base.constants.model_constants import X1_DEF, X1_EQ_CR_DEF, X0_CR_DEF, X0_DEF, E_DEF
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, STATS_MODELS_PATH, FOLDER_VEP_HOME, USER_HOME
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_not_implemented_error
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
@@ -161,7 +161,7 @@ def prepare_data_for_fitting(model_configuration, hypothesis, fs, ts, dynamic_mo
             "tau1_b": kwargs.get("tau1_b", tau1["beta"]),
             "tau0_a": kwargs.get("tau0_a", tau0["alpha"]),
             "tau0_b": kwargs.get("tau0_b", tau0["beta"]),
-            "SC": model_configuration.connectivity_matrix,
+            "SC": model_configuration.model_connectivity,
             "SC_sig": kwargs.get("SC_sig", 0.1),
             "K_lo": kwargs.get("K_lo", K_def / 10.0),
             "K_hi": kwargs.get("K_hi", 30.0 * K_def),
@@ -590,10 +590,10 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
                                     epileptogenicity_hypothesis={}, connectivity_hypothesis={},
                                     name='fit_' + hyp_x0.name)
 
-        connectivity_matrix_fit = np.array(model_configuration.connectivity_matrix)
-        connectivity_matrix_fit[active_regions][:, active_regions] = est["FC"]
+        model_connectivity_fit = np.array(model_configuration.model_connectivity)
+        model_connectivity_fit[active_regions][:, active_regions] = est["FC"]
         model_configuration_fit = fit_model_configuration_service.configure_model_from_hypothesis(hyp_fit,
-                                                                                             connectivity_matrix_fit)
+                                                                                             model_connectivity_fit)
         model_configuration_fit.write_to_h5(FOLDER_RES, hyp_fit.name + "_ModelConfig.h5")
 
         # Plot nullclines and equilibria of model configuration

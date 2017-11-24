@@ -13,7 +13,7 @@ from tvb_epilepsy.service.sampling.stochastic_sampling_service import Stochastic
 ###
 # These functions are helper functions to run parameter search exploration (pse) for Linear Stability Analysis (LSA).
 ###
-def pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
+def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
                             n_samples, half_range=0.1, global_coupling=[],
                             healthy_regions_parameters=[],
                             model_configuration_service=None, lsa_service=None,
@@ -53,7 +53,7 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
     for ii in range(len(lsa_hypothesis.w_values)):
         pse_params["indices"].append([ii])
         pse_params["path"].append("hypothesis.w_values")
-        inds = linear_index_to_coordinate_tuples(lsa_hypothesis.w_indices[ii], connectivity_matrix.shape)
+        inds = linear_index_to_coordinate_tuples(lsa_hypothesis.w_indices[ii], model_connectivity.shape)
         if len(inds) == 1:
             pse_params["name"].append(str(region_labels[inds[0][0]]) + "-" +
                                       str(region_labels[inds[0][0]]) + " Connectivity")
@@ -93,11 +93,11 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
                                     "indices": [inds[ii]], "name": name})
     # Now run pse service to generate output samples:
     pse = PSEService("LSA", hypothesis=lsa_hypothesis, params_pse=pse_params_list)
-    pse_results, execution_status = pse.run_pse(connectivity_matrix, grid_mode=False, lsa_service_input=lsa_service,
+    pse_results, execution_status = pse.run_pse(model_connectivity, grid_mode=False, lsa_service_input=lsa_service,
                                                 model_configuration_service_input=model_configuration_service)
     # Call to new PSEService:
     # pse = LSAPSEService(lsa_hypothesis, pse_params_list)
-    # pse_results, execution_status = pse.run_pse(connectivity_matrix, False, lsa_service, model_configuration_service)
+    # pse_results, execution_status = pse.run_pse(model_connectivity, False, lsa_service, model_configuration_service)
     pse_results = list_of_dicts_to_dicts_of_ndarrays(pse_results)
     if save_services:
         logger.info(pse.__repr__())
@@ -105,15 +105,15 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
     return pse_results, pse_params_list
 
 
-def pse_from_hypothesis(hypothesis, connectivity_matrix, region_labels, n_samples, half_range=0.1, global_coupling=[],
+def pse_from_hypothesis(hypothesis, model_connectivity, region_labels, n_samples, half_range=0.1, global_coupling=[],
                         healthy_regions_parameters=[], save_services=False, logger=None, **kwargs):
     if logger is None:
         logger = initialize_logger(__name__)
     # Compute lsa for this hypothesis before the parameter search:
     logger.info("Running hypothesis: " + hypothesis.name)
     model_configuration_service, model_configuration, lsa_service, lsa_hypothesis = \
-        start_lsa_run(hypothesis, connectivity_matrix, logger)
-    pse_results, pse_params_list = pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels,
+        start_lsa_run(hypothesis, model_connectivity, logger)
+    pse_results, pse_params_list = pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
                                                            n_samples, half_range, global_coupling,
                                                            healthy_regions_parameters,
                                                            model_configuration_service, lsa_service,

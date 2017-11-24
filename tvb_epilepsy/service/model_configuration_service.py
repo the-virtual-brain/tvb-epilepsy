@@ -131,23 +131,23 @@ class ModelConfigurationService(object):
     def _compute_critical_x0_scaling(self):
         (self.x0cr, self.rx0) = calc_x0cr_r(self.yc, self.Iext1, a=self.a, b=self.b, d=self.d, zmode=self.zmode)
 
-    def _compute_coupling_at_equilibrium(self, x1EQ, connectivity_matrix):
-        return calc_coupling(x1EQ, self.K, connectivity_matrix)
+    def _compute_coupling_at_equilibrium(self, x1EQ, model_connectivity):
+        return calc_coupling(x1EQ, self.K, model_connectivity)
 
     def _compute_x0_values_from_x0_model(self, x0):
         return calc_model_x0_to_x0_val(x0, self.yc, self.Iext1, self.a, self.b, self.d, self.zmode)
 
-    def _compute_x0_values(self, x1EQ, zEQ, connectivity_matrix):
-        x0 = calc_x0(x1EQ, zEQ, self.K, connectivity_matrix)
+    def _compute_x0_values(self, x1EQ, zEQ, model_connectivity):
+        x0 = calc_x0(x1EQ, zEQ, self.K, model_connectivity)
         return self._compute_x0_values_from_x0_model(x0)
 
     def _compute_e_values(self, x1EQ):
         return 3.0 * x1EQ + 5.0
 
-    def _compute_params_after_equilibration(self, x1EQ, zEQ, connectivity_matrix):
+    def _compute_params_after_equilibration(self, x1EQ, zEQ, model_connectivity):
         self._compute_critical_x0_scaling()
-        Ceq = self._compute_coupling_at_equilibrium(x1EQ, connectivity_matrix)
-        x0_values = self._compute_x0_values(x1EQ, zEQ, connectivity_matrix)
+        Ceq = self._compute_coupling_at_equilibrium(x1EQ, model_connectivity)
+        x0_values = self._compute_x0_values(x1EQ, zEQ, model_connectivity)
         e_values = self._compute_e_values(x1EQ)
         x0 = self._compute_model_x0(x0_values)
         return x0, Ceq, x0_values, e_values
@@ -157,37 +157,37 @@ class ModelConfigurationService(object):
         zEQ = self._compute_z_equilibrium(x1EQ)
         return x1EQ, zEQ
 
-    def _compute_x1_equilibrium(self, e_indices, x1EQ, zEQ, x0_values, connectivity_matrix):
+    def _compute_x1_equilibrium(self, e_indices, x1EQ, zEQ, x0_values, model_connectivity):
         self._compute_critical_x0_scaling()
         x0 = self._compute_model_x0(x0_values)
-        x0_indices = numpy.delete(numpy.array(range(connectivity_matrix.shape[0])), e_indices)
+        x0_indices = numpy.delete(numpy.array(range(model_connectivity.shape[0])), e_indices)
         if self.x1eq_mode == "linTaylor":
             x1EQ = \
                 eq_x1_hypo_x0_linTaylor(x0_indices, e_indices, x1EQ, zEQ, x0, self.K,
-                                        connectivity_matrix, self.yc, self.Iext1, self.a, self.b, self.d)[0]
+                                        model_connectivity, self.yc, self.Iext1, self.a, self.b, self.d)[0]
         else:
             x1EQ = \
                 eq_x1_hypo_x0_optimize(x0_indices, e_indices, x1EQ, zEQ, x0, self.K,
-                                       connectivity_matrix, self.yc, self.Iext1, self.a, self.b, self.d)[0]
+                                       model_connectivity, self.yc, self.Iext1, self.a, self.b, self.d)[0]
         return x1EQ
 
     def _normalize_global_coupling(self):
         self.K = self.K_unscaled / self.number_of_regions
 
-    def configure_model_from_equilibrium(self, x1EQ, zEQ, connectivity_matrix):
+    def configure_model_from_equilibrium(self, x1EQ, zEQ, model_connectivity):
         # x1EQ, zEQ = self._ensure_equilibrum(x1EQ, zEQ) # We don't this by default anymore
-        x0, Ceq, x0_values, e_values = self._compute_params_after_equilibration(x1EQ, zEQ, connectivity_matrix)
+        x0, Ceq, x0_values, e_values = self._compute_params_after_equilibration(x1EQ, zEQ, model_connectivity)
         return ModelConfiguration(self.yc, self.Iext1, self.Iext2, self.K, self.a, self.b, self.d,
                                                  self.slope, self.s, self.gamma, x1EQ, zEQ, Ceq, x0, x0_values,
-                                                 e_values, self.zmode, connectivity_matrix)
+                                                 e_values, self.zmode, model_connectivity)
 
-    def configure_model_from_E_hypothesis(self, disease_hypothesis, connectivity_matrix):
+    def configure_model_from_E_hypothesis(self, disease_hypothesis, model_connectivity):
         # Always normalize K first
         self._normalize_global_coupling()
 
         # Then apply connectivity disease hypothesis scaling if any:
         if len(disease_hypothesis.w_indices) > 0:
-            connectivity_matrix *= disease_hypothesis.get_connectivity_disease()
+            model_connectivity *= disease_hypothesis.get_connectivity_disease()
 
         # All nodes except for the diseased ones will get the default epileptogenicity:
         e_values = numpy.array(self.e_values)
@@ -196,15 +196,15 @@ class ModelConfigurationService(object):
         # Compute equilibrium from epileptogenicity:
         x1EQ, zEQ = self._compute_x1_and_z_equilibrium_from_E(e_values)
 
-        return self.configure_model_from_equilibrium(x1EQ, zEQ, connectivity_matrix)
+        return self.configure_model_from_equilibrium(x1EQ, zEQ, model_connectivity)
 
-    def configure_model_from_hypothesis(self, disease_hypothesis, connectivity_matrix):
+    def configure_model_from_hypothesis(self, disease_hypothesis, model_connectivity):
         # Always normalize K first
         self._normalize_global_coupling()
 
         # Then apply connectivity disease hypothesis scaling if any:
         if len(disease_hypothesis.w_indices) > 0:
-            connectivity_matrix *= disease_hypothesis.get_connectivity_disease()
+            model_connectivity *= disease_hypothesis.get_connectivity_disease()
 
         # We assume that all nodes have the default (healthy) excitability:
         x0_values = numpy.array(self.x0_values)
@@ -224,10 +224,10 @@ class ModelConfigurationService(object):
 
         # Now, solve the system in order to compute equilibrium:
         x1EQ = self._compute_x1_equilibrium(disease_hypothesis.e_indices, x1EQ_temp, zEQ_temp, x0_values,
-                                            connectivity_matrix)
+                                            model_connectivity)
         zEQ = self._compute_z_equilibrium(x1EQ)
 
-        return self.configure_model_from_equilibrium(x1EQ, zEQ, connectivity_matrix)
+        return self.configure_model_from_equilibrium(x1EQ, zEQ, model_connectivity)
 
     def plot_nullclines_eq(self, model_config, region_labels, special_idx, model, zmode, figure_name,
                            show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,

@@ -103,7 +103,7 @@ class LSAService(object):
 
         fz_jacobian = calc_fz_jac_square_taylor(model_configuration.zEQ, model_configuration.yc,
                                                 model_configuration.Iext1, model_configuration.K,
-                                                model_configuration.connectivity_matrix,
+                                                model_configuration.model_connectivity,
                                                 model_configuration.a, model_configuration.b, model_configuration.d)
 
         if numpy.any([numpy.any(numpy.isnan(fz_jacobian.flatten())), numpy.any(numpy.isinf(fz_jacobian.flatten()))]):
@@ -162,7 +162,7 @@ class LSAService(object):
                  figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
                  show_flag=SHOW_FLAG, save_flag=SAVE_FLAG):
 
-        hyp_dict_list = disease_hypothesis.prepare_for_plot(model_configuration.connectivity_matrix)
+        hyp_dict_list = disease_hypothesis.prepare_for_plot(model_configuration.model_connectivity)
         model_config_dict_list = model_configuration.prepare_for_plot()[:2]
 
         model_config_dict_list += hyp_dict_list
