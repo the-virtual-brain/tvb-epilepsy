@@ -8,19 +8,19 @@ from scipy.io import savemat, loadmat
 
 from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE, SIMULATION_MODE
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF, VOIS
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, STATS_MODELS_PATH, FOLDER_VEP_HOME, \
-                                                                                                              USER_HOME
-from tvb_epilepsy.base.h5_model import read_h5_model, convert_to_h5_model
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, STATS_MODELS_PATH, FOLDER_VEP_HOME
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.base.model.statistical_models.sde_statistical_model import SDEStatisticalModel
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.utils.plot_utils import plot_sim_results, plot_fit_results
+from tvb_epilepsy.base.h5_model import read_h5_model, convert_to_h5_model
 from tvb_epilepsy.scripts.seeg_data_scripts import prepare_seeg_observable, get_bipolar_channels
 from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
     compute_seeg_and_write_ts_h5_file
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
-from tvb_epilepsy.service.model_inversion.pystan_service import PystanService
+from tvb_epilepsy.service.model_inversion.pystan_service import PyStanService
+from tvb_epilepsy.service.model_inversion.cmdstan_service import CmdStanService
 from tvb_epilepsy.service.model_inversion.sde_model_inversion_service import \
     SDEModelInversionService
 
@@ -41,13 +41,18 @@ logger = initialize_logger(__name__)
 
 
 def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[], channel_lbls=[],
-                        channel_inds=[], fitmode="optimizing", **kwargs):
+                        channel_inds=[], fitmode="optimizing", stan_service="CmdStan",  **kwargs):
     # ------------------------------Stan model and service--------------------------------------
     # Compile or load model:
-    pystan_service = PystanService(model_name=stats_model_name, model=None, model_code=None,
-                                   model_code_path=os.path.join(STATS_MODELS_PATH, stats_model_name + ".stan"),
-                                   fitmode=fitmode, logger=logger)
-    pystan_service.load_or_compile_model()
+    if isequal_string(stan_service, "CmdStan"):
+        stan_service = CmdStanService(model_name=stats_model_name, model=None, model_code=None,
+                                     model_code_path=os.path.join(STATS_MODELS_PATH, stats_model_name + ".stan"),
+                                     fitmode=fitmode, logger=logger)
+    else:
+        stan_service = PyStanService(model_name=stats_model_name, model=None, model_code=None,
+                                       model_code_path=os.path.join(STATS_MODELS_PATH, stats_model_name + ".stan"),
+                                       fitmode=fitmode, logger=logger)
+    stan_service.load_or_compile_model()
     # -------------------------------Reading model_data-----------------------------------
     data_folder = os.path.join(DATA_CUSTOM, 'Head')
     reader = Reader()
@@ -249,7 +254,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[
             # convert_to_h5_model(model_data).write_to_h5(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ModelData.h5")
             savemat(model_data_path, model_data)
         # Fit and get estimates:
-        est, fit = pystan_service.fit_stan_model(model_data=model_data, **kwargs)
+        est, fit = stan_service.fit_stan_model(model_data=model_data, **kwargs)
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), est)
         plot_fit_results(lsa_hypothesis.name, head, est, model_data, statistical_model.active_regions, time,
                          seizure_indices=[0, 1], trajectories_plot=True)

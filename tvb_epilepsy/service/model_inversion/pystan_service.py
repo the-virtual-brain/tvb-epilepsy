@@ -1,23 +1,23 @@
 import os
-#import pickle
+import pickle
 import time
 
 import numpy as np
 import pystan as ps
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_VEP_HOME
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
 from tvb_epilepsy.service.model_inversion.stan_service import StanService
 
 LOG = initialize_logger(__name__)
 
 
-class PystanService(StanService):
+class PyStanService(StanService):
 
     def __init__(self, model_name=None, model=None, model_dir=os.path.join(FOLDER_VEP_HOME, "stan_models"),
                  model_code=None, model_code_path="", fitmode="sampling", logger=LOG):
-        super(PystanService, self).__init__(model_name, model, model_dir, model_code, model_code_path, fitmode, logger)
+        super(PyStanService, self).__init__(model_name, model, model_dir, model_code, model_code_path, fitmode, logger)
         self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
         self.create_str = self.__class__.__name__ + "()"
 
@@ -29,6 +29,25 @@ class PystanService(StanService):
         self.logger.info(str(self.compilation_time) + ' sec required to compile')
         if write_model:
             self.write_model_to_file()
+            self.model_path = os.path.join(self.model_code_path, self.model_name)
+
+    def write_model_to_file(self):
+        with open(self.model_path, 'wb') as f:
+                pickle.dump(self.model, f)
+
+    def load_model_from_file(self):
+        self.model = pickle.load(open(self.model_path, 'rb'))
+
+    def load_or_compile_model(self):
+        if os.path.isfile(self.model_path):
+            try:
+                self.load_model_from_file()
+            except:
+                warning("Failed to load the model from file: " + str(self.model_path) + " !" +
+                        "\nTrying to compile model from file: " + str(self.model_code_path) + str("!"))
+                self.compile_stan_model()
+        else:
+            self.compile_stan_model()
 
     def fit_stan_model(self, model_data=None, **kwargs):
         self.logger.info("Model fitting with " + self.fitmode + "...")
