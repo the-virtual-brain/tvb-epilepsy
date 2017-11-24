@@ -16,52 +16,45 @@ LOG = initialize_logger(__name__)
 class PyStanService(StanService):
 
     def __init__(self, model_name=None, model=None, model_dir=os.path.join(FOLDER_VEP_HOME, "stan_models"),
-                 model_code=None, model_code_path="", fitmode="sampling", logger=LOG):
-        super(PyStanService, self).__init__(model_name, model, model_dir, model_code, model_code_path, fitmode, logger)
+                 model_code=None, model_code_path="", fitmethod="sampling", logger=LOG, **options):
+        super(PyStanService, self).__init__(model_name, model, model_dir, model_code, model_code_path, fitmethod, logger)
         self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
         self.create_str = self.__class__.__name__ + "()"
 
-    def compile_stan_model(self, write_model=True):
+    def compile_stan_model(self, store_model=True, **kwargs):
+        self.model_code_path = kwargs.get("model_code_path", self.model_code_path)
         tic = time.time()
         self.logger.info("Compiling model...")
         self.model = ps.StanModel(file=self.model_code_path, model_name=self.model_name)
         self.compilation_time = time.time() - tic
         self.logger.info(str(self.compilation_time) + ' sec required to compile')
-        if write_model:
-            self.write_model_to_file()
-            self.model_path = os.path.join(self.model_code_path, self.model_name)
+        if store_model:
+            self.write_model_to_file(**kwargs)
 
-    def write_model_to_file(self):
+    def write_model_to_file(self, **kwargs):
+        self.model_path = kwargs.get("model_path", self.model_path)
         with open(self.model_path, 'wb') as f:
                 pickle.dump(self.model, f)
 
-    def load_model_from_file(self):
+    def set_model_from_file(self, **kwargs):
+        self.model_path = kwargs.get("model_path", self.model_path)
         self.model = pickle.load(open(self.model_path, 'rb'))
 
-    def load_or_compile_model(self):
-        if os.path.isfile(self.model_path):
-            try:
-                self.load_model_from_file()
-            except:
-                warning("Failed to load the model from file: " + str(self.model_path) + " !" +
-                        "\nTrying to compile model from file: " + str(self.model_code_path) + str("!"))
-                self.compile_stan_model()
-        else:
-            self.compile_stan_model()
-
-    def fit_stan_model(self, model_data=None, **kwargs):
-        self.logger.info("Model fitting with " + self.fitmode + "...")
+    def fit(self, model_data, **kwargs):
+        self.options.update(kwargs)
+        self.fitmethod = kwargs.get("fitmethod", self.fitmethod)
+        self.logger.info("Model fitting with " + self.fitmethod + "...")
         tic = time.time()
-        fit = getattr(self.model, self.fitmode)(data=model_data, **kwargs)
+        fit = getattr(self.model, self.fitmethod)(data=model_data, **self.options)
         self.fitting_time = time.time() - tic
         self.logger.info(str(self.fitting_time) + ' sec required to fit')
-        if self.fitmode is "optimizing":
+        if self.fitmethod is "optimizing":
             return fit,
         else:
             self.logger.info("Extracting estimates...")
-            if self.fitmode is "sampling":
+            if self.fitmethod is "sampling":
                 est = fit.extract(permuted=True)
-            elif self.fitmode is "vb":
+            elif self.fitmethod is "vb":
                 est = self.read_vb_results(fit)
             return est, fit
 

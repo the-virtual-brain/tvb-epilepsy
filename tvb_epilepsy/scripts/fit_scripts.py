@@ -41,17 +41,17 @@ logger = initialize_logger(__name__)
 
 
 def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[], channel_lbls=[],
-                        channel_inds=[], fitmode="optimizing", stan_service="CmdStan",  **kwargs):
+                        channel_inds=[], fitmethod="optimizing", stan_service="CmdStan", **kwargs):
     # ------------------------------Stan model and service--------------------------------------
     # Compile or load model:
     if isequal_string(stan_service, "CmdStan"):
         stan_service = CmdStanService(model_name=stats_model_name, model=None, model_code=None,
-                                     model_code_path=os.path.join(STATS_MODELS_PATH, stats_model_name + ".stan"),
-                                     fitmode=fitmode, logger=logger)
+                                      model_code_path=os.path.join(STATS_MODELS_PATH, stats_model_name + ".stan"),
+                                      fitmethod=fitmethod, logger=logger)
     else:
         stan_service = PyStanService(model_name=stats_model_name, model=None, model_code=None,
-                                       model_code_path=os.path.join(STATS_MODELS_PATH, stats_model_name + ".stan"),
-                                       fitmode=fitmode, logger=logger)
+                                     model_code_path=os.path.join(STATS_MODELS_PATH, stats_model_name + ".stan"),
+                                     fitmethod=fitmethod, logger=logger)
     stan_service.load_or_compile_model()
     # -------------------------------Reading model_data-----------------------------------
     data_folder = os.path.join(DATA_CUSTOM, 'Head')
