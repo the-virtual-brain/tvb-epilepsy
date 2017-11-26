@@ -1,14 +1,14 @@
 import os
-from abc import ABCMeta, abstractmethod
 import pickle
+from abc import ABCMeta, abstractmethod
 
-import pylab as pl
 import numpy as np
+import pylab as pl
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_VEP_HOME
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path, isequal_string
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path, isequal_string
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error
 
 
 LOG = initialize_logger(__name__)
@@ -18,7 +18,7 @@ class StanService(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, model_name="", model=None, model_dir=os.path.join(FOLDER_VEP_HOME, "stan_models"),
-                 model_code=None, model_code_path="", fitmethod="sampling", logger=LOG, **options):
+                 model_code=None, model_code_path="", fitmethod="sampling", logger=LOG):
         self.logger = logger
         self.fitmethod = fitmethod
         self.model_name = model_name
@@ -32,7 +32,6 @@ class StanService(object):
         else:
             self.model_code_path = self.model_path + ".stan"
         self.compilation_time = 0.0
-        self.options = options
         self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
         self.create_str = self.__class__.__name__ + "()"
 
@@ -71,18 +70,20 @@ class StanService(object):
         if isequal_string(filemode, "numpy"):
             np.save(model_data_path, model_data)
         elif isequal_string(filemode, "pickle"):
-            with open(model_data_path, 'wb') as f: pickle.dump(model_data, f)
+            with open(model_data_path, 'wb') as f:
+                pickle.dump(model_data, f)
         else:
             rdump(model_data_path, model_data)
 
     def load_model_data_from_file(self, model_data_path, **kwargs):
         if isequal_string(model_data_path[-3:], "npy"):
-            model_data = np.load(model_data_path).item()
+            return np.load(model_data_path).item()
         elif isequal_string(model_data_path[-3:], "pkl"):
             with open(model_data_path, 'wb') as f:
-                pickle.load(model_data_path)
+                return pickle.load(f)
         else:
             raise_not_implemented_error("model_data files that are neither .npy nor .pkl cannot be read!")
+
 
 def _rdump_array(key, val):
     c = 'c(' + ', '.join(map(str, val.T.flat)) + ')'
