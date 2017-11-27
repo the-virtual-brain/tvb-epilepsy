@@ -36,8 +36,8 @@ class LognormalDistribution(ContinuousProbabilityDistribution):
             return p
         
     def update_params(self, **params):
-        self.__update_params__(mu=make_float(params.get("mu", np.log(params.get("scale", self.scale))),
-                               sigma=make_float(params.get("sigma", params.get("shape", self.shape)))))
+        self.__update_params__(mu=make_float(params.get("mu", np.log(params.get("scale", self.scale)))),
+                                sigma=make_float(params.get("sigma", params.get("shape", self.shape))))
         self.shape = self.sigma
         self.scale = np.exp(self.mu)
         
