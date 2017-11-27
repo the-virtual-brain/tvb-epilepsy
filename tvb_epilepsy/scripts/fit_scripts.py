@@ -219,7 +219,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[
                     copyfile(this_ts_file, ts_file)
 
         try:
-            model_data = stan_service.load_model_from_file()
+            model_data = stan_service.load_model_data_from_file()
         except:
             # Get model_data and observation signals:
             # model_inversion_service_path = os.path.join(FOLDER_VEP_HOME,
@@ -235,7 +235,8 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[
             #     statistical_model = read_h5_model(stats_model_path).convert_from_h5_model(obj=SDEStatisticalModel())
             # else:
             #
-            statistical_model = model_inversion_service.generate_statistical_model(**kwargs)
+            statistical_model = model_inversion_service.generate_statistical_model(MC=os.path.join(FOLDER_VEP_HOME,
+                                                                                                   "MC.h5"))
             statistical_model = model_inversion_service.update_active_regions(statistical_model,
                                                                               methods=["e_values", "LSA"],
                                                                               active_regions_th=0.1, reset=True)
@@ -305,4 +306,4 @@ if __name__ == "__main__":
     stats_model_name = "vep_sde"
     # main_fit_sim_hyplsa(stats_model_name, EMPIRICAL=os.path.join(SEEG_data, 'SZ1_0001.edf'), times_on_off=[10.0, 35.0],
     #                    channel_lbls=channels, channel_inds=channel_inds)
-    main_fit_sim_hyplsa(stats_model_name, channel_lbls=channels, channel_inds=channel_inds, stan_service="PyStan",)
+    main_fit_sim_hyplsa(stats_model_name, channel_lbls=channels, channel_inds=channel_inds) #, stan_service="PyStan"

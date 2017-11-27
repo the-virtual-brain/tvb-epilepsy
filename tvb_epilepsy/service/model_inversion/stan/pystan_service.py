@@ -58,11 +58,14 @@ class PyStanService(StanService):
     def fit(self, **kwargs):
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
         self.fitmethod = kwargs.pop("method", self.fitmethod)
+        model_data = kwargs.pop("model_data", None)
+        if not(isinstance(model_data, dict)):
+            model_data = self.load_model_data_from_file()
         self.assert_fitmethod()
         self.options.update(kwargs)
         self.logger.info("Model fitting with " + self.fitmethod + "...")
         tic = time.time()
-        fit = getattr(self.model, self.fitmethod)(data=self.load_model_data_from_file(), **self.options)
+        fit = getattr(self.model, self.fitmethod)(data=model_data, **self.options)
         self.fitting_time = time.time() - tic
         self.logger.info(str(self.fitting_time) + ' sec required to fit')
         if self.fitmethod is "optimizing":

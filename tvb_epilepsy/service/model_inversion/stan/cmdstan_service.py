@@ -84,8 +84,6 @@ class CmdStanService(StanService):
                 copyfile(self.model_code_path[:-5], self.model_path)
 
     def generate_fit_command(self, output_filepath, diagnostic_filepath):
-        options = {}
-        options.update(self.options)
         command = self.model_path
         if isequal_string(self.fitmethod, "sample"):
             command += " method=sample"' \\ '
@@ -129,14 +127,15 @@ class CmdStanService(StanService):
         command += "random seed=" + str(self.options["random_seed"]) + ' \\ '
         if diagnostic_filepath == "":
             diagnostic_filepath = os.path.join(os.path.dirname(output_filepath), STAN_OUTPUT_OPTIONS["diagnostic_file"])
-        if self.chains > 1:
+        if self.options["chains"] > 1:
             commands=[]
             output_files = []
             diagnostic_files=[]
-            for id in range(self.chains):
+            for id in range(self.options["chains"]):
                 output_files.append(output_filepath[:-4] + str(id) + ".csv")
                 diagnostic_files.append(diagnostic_filepath[:-4] + str(id) + ".csv")
-                commands.append("for i in {1.." + str(self.chains) + "} do\n" + command + " id=" + str(id) + ' \\ '
+                commands.append("for i in {1.." + str(self.options["chains"]) + "} do\n" + command
+                                + " id=" + str(id) + ' \\ '
                                  "output file=" + output_files[id] + ' \\ ' +
                                  "diagnostic_file=" + diagnostic_files[id] + ' \\ ' +
                                  "refresh=" + str(self.options["refresh"]) + ' &' +
@@ -153,7 +152,6 @@ class CmdStanService(StanService):
         self.model_path = kwargs.pop("model_path", self.model_path)
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
         self.fitmethod = kwargs.pop("method", self.fitmethod)
-        self.chains = kwargs.pop("chains", self.chains)
         self.options = self.set_options(**kwargs)
         commands, output_files = self.generate_fit_command(output_filepath, diagnostic_filepath)[:2]
         self.logger.info("Model fitting with " + self.fitmethod +
