@@ -159,12 +159,12 @@ data {
     real K_p1;
     real<lower=0.0> K_p2;
     int<lower=0> K_pdf;
-    /* EC (effective connectivity) parameter (default: lognormal distribution) */
-    matrix[n_regions, n_regions] EC_p1;
-    matrix<lower=0.0>[n_regions, n_regions] EC_p2;
-    real<lower=0.0> EC_lo;
-    real<lower=0.0> EC_hi;
-    int<lower=0> EC_pdf;
+    /* MC (model connectivity) parameter (default: lognormal distribution) */
+    matrix[n_regions, n_regions] MC_p1;
+    matrix<lower=0.0>[n_regions, n_regions] MC_p2;
+    real<lower=0.0> MC_lo;
+    real<lower=0.0> MC_hi;
+    int<lower=0> MC_pdf;
 
     /* Integration */
     int euler_method;
@@ -233,7 +233,7 @@ parameters {
     real<lower=tau0_lo, upper=tau0_hi> tau0; // time scale separation [n_active_regions]
     /* Coupling */
     real<lower=K_lo, upper=K_hi> K; // global coupling scaling
-    matrix<lower=0.0>[n_regions, n_regions] EC; // Effective connectivity
+    matrix<lower=0.0>[n_regions, n_regions] MC; // Model connectivity
 
     /* Integration */
     real<lower=sig_lo, upper=sig_hi> sig; // variance of phase flow, i.e., dynamic noise
@@ -264,6 +264,7 @@ transformed parameters {
         // solving for zeq (z->0, tau1->1)
         zeq[ii] = EpileptorDP2D_fun_x1(x1eq[ii], 0.0, yc, Iext1, a, db, d, slope, 1.0);
     }
+    print("zeq=", zeq);
 
     /* Coupling
     We place it here for the moment because it has a high diagnostic value */
@@ -271,9 +272,10 @@ transformed parameters {
         coupling_eq[ii] = 0.0;
         for (jj in 1:n_regions) {
             if (ii!=jj) {
-                    coupling_eq[ii] = coupling_eq[ii] + EC[ii, jj] * (x1eq[jj] - x1eq[ii]);
+                    coupling_eq[ii] = coupling_eq[ii] + MC[ii, jj] * (x1eq[jj] - x1eq[ii]);
             }
         }
+        print("coupling_eq[ii]=", coupling_eq[ii]);
     }
     for (tt in 1:n_times) {
         for (ii in 1:n_active_regions) {
@@ -282,14 +284,14 @@ transformed parameters {
             for (jj in 1:n_active_regions) {
                if (ii!=jj) {
                    coupling[ii, tt] =
-                              coupling[ii, tt] + EC[active_regions[ii], active_regions[jj]] * (x1[jj, tt] - x1[ii, tt]);
+                              coupling[ii, tt] + MC[active_regions[ii], active_regions[jj]] * (x1[jj, tt] - x1[ii, tt]);
                }
             }
             // coupling nonactive -> active regions
             for (jj in 1:n_nonactive_regions) {
                // non active regions are assumed to always stay close to their equilibrium point
                coupling[ii, tt] = coupling[ii, tt] +
-                             EC[active_regions[ii], nonactive_regions[jj]] * (x1eq[nonactive_regions[jj]] - x1[ii, tt]);
+                             MC[active_regions[ii], nonactive_regions[jj]] * (x1eq[nonactive_regions[jj]] - x1[ii, tt]);
             }
         }
     }
@@ -299,6 +301,7 @@ transformed parameters {
         // solving for x0 (x0->0, tau0->1, tau1->1)
         x0[ii] = EpileptorDP2D_fun_z_lin(x1eq[ii], zeq[ii], 0.0, K * coupling_eq[ii], 1.0, 1.0) / 4.0;
     }
+    print("x0=", x0);
 
 }
 
@@ -310,19 +313,24 @@ model {
 
     /* Sampling of global coupling scaling */
     K ~ sample(K_pdf, K_p1, K_p2);
+    print("K=", K);
 
     /* Sampling of the various variances */
     sig ~ sample(sig_pdf, sig_p1, sig_p2);
+    print("sig=", sig);
     sig_eq ~ sample(sig_eq_pdf, sig_eq_p1, sig_eq_p2);
+    print("sig_eq=", sig_eq);
     sig_init ~ sample(sig_init_pdf, sig_init_p1, sig_init_p2);
+    print("sig_init=", sig_init);
 
     /* Sampling of x1 equilibrium point coordinate and effective connectivity */
     for (ii in 1:n_regions) {
         x1eq[ii] ~ normal(x1eq0[ii], sig_eq);
         for (jj in 1:n_regions) {
-            EC[ii, jj] ~ sample(EC_pdf, EC_p1[ii, jj], EC_p2[ii, jj]);
+            MC[ii, jj] ~ sample(MC_pdf, MC_p1[ii, jj], MC_p2[ii, jj]);
         }
     }
+    print("x1eq=", x1eq);
 
     /* Sampling of initial condition*/
     for (ii in 1:n_active_regions) {
@@ -331,14 +339,20 @@ model {
 //        tau0[ii] ~ sample(tau1_pdf, tau1_p1, tau1_p2);
 //        tau0[ii] ~ sample(tau0_pdf, tau0_p1, tau0_p2);
     }
+    print("x1[1]=", x1'[1]);
+    print("z[1]=", z'[1]);
 
     /* Sampling of time scales */
     tau1 ~ sample(tau1_pdf, tau1_p1, tau1_p2);
+    print("tau1=", tau1);
     tau0 ~ sample(tau1_pdf, tau0_p1, tau0_p2);
+    print("tau0=", tau0);
 
     /* Sampling of observation scaling and offset */
     scale_signal ~ sample(scale_signal_pdf, scale_signal_p1, scale_signal_p2);
     offset_signal ~ sample(offset_signal_pdf, offset_signal_p1, offset_signal_p2);
+    print("scale_signal=", scale_signal);
+    print("offset_signal=", offset_signal);
 
     /* Integrate & predict  */
     for (tt in 2:n_times) {
@@ -359,6 +373,8 @@ model {
                 z[ii, tt] ~ normal(z[ii, tt-1] + dt*df, sig); // T[z_lo, z_hi];
             }
         }
+        print("x1[tt]=", x1'[tt]);
+        print("z[tt]=", z'[tt]);
 
         /* Observation model  */
         if (observation_expression == 0) {
@@ -368,6 +384,7 @@ model {
         } else {
             observation = (col(x1, tt) - x1eq + col(z, tt) - zeq[]) / 2.75;
         }
+        print("observation[tt]=", observation);
 
         if  (observation_model == 1) {
             // seeg log power
@@ -379,6 +396,7 @@ model {
             // just x1 with some mixing, scaling and offset_signal, without mixing
             signals[tt] ~ normal(scale_signal * observation + offset_signal, eps);
         }
+        print("signals[tt]=", signals[tt]);
     }
 
 }
