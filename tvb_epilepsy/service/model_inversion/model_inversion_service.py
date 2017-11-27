@@ -157,80 +157,78 @@ class ModelInversionService(object):
         parameter = kwargs.get("K", None)
         if not(isinstance(parameter, Parameter)):
             K_def = np.maximum(kwargs.get("K_def", np.mean(self.K)), 0.1)
+            pdf_params = kwargs.get("K_pdf_params", {"mean": K_def, "std": kwargs.get("K_sig", K_def)})
             parameter = generate_stochastic_parameter("K",
                                                       low=kwargs.get("K_lo", self.K_MIN),
                                                       high=kwargs.get("K_hi", self.K_MAX),  p_shape=(),
                                                       probability_distribution= kwargs.get("K_pdf", "lognormal"),
-                                                      optimize=True,
-                                                      mode=kwargs.get("K_def", K_def), std=kwargs.get("K_sig", K_def))
+                                                      optimize=True, **pdf_params)
         parameters.update({parameter.name: parameter})
 
         # tau1_def = kwargs.get("tau1_def", 0.5)
         parameter = kwargs.get("tau1", None)
         if not (isinstance(parameter, Parameter)):
             tau1_def = kwargs.get("tau1_def", self.tau1)
+            pdf_params = kwargs.get("tau1_pdf_params", {"mean": tau1_def, "std": kwargs.get("tau1_sig", tau1_def)})
             parameter = generate_stochastic_parameter("tau1",
                                                       low=kwargs.get("tau1_lo", self.TAU1_MIN),
                                                       high=kwargs.get("tau1_hi", self.TAU1_MAX),
                                                       p_shape=(),
                                                       probability_distribution=kwargs.get("tau1", "lognormal"),
-                                                      optimize=True,
-                                                      mode=tau1_def, std=kwargs.get("tau1_sig", tau1_def))
+                                                      optimize=True, **pdf_params)
         parameters.update({parameter.name: parameter})
 
         parameter = kwargs.get("tau0", None)
         if not(isinstance(parameter, Parameter)):
             tau0_def = kwargs.get("tau0_def", self.tau0)
+            pdf_params = kwargs.get("tau0_pdf_params", {"mean": tau0_def, "std": kwargs.get("tau0_sig", tau0_def)})
             parameter = generate_stochastic_parameter("tau0",
                                                       low=kwargs.get("tau0_lo", self.TAU0_MIN),
                                                       high=kwargs.get("tau0_hi", self.TAU0_MAX),
                                                       p_shape=(),
                                                       probability_distribution=kwargs.get("tau0_pdf", "lognormal"),
-                                                      optimize=True,
-                                                      mode=tau0_def,
-                                                      std=kwargs.get("tau0_sig", tau0_def))
+                                                      optimize=True, **pdf_params)
         parameters.update({parameter.name: parameter})
 
         # Coupling:
         parameter = kwargs.get("MC", None)
         if not(isinstance(parameter, Parameter)):
-            structural_connectivity = kwargs.get("structural_connectivity", self.connectivity_matrix)
-            p0595 = np.percentile(structural_connectivity.flatten(), [5, 95])
-            mode = np.maximum(p0595[0], structural_connectivity)
+            model_connectivity = kwargs.get("structural_connectivity", self.model_connectiviy)
+            p0595 = np.percentile(model_connectivity.flatten(), [5, 95])
+            mean = np.maximum(p0595[0], model_connectivity)
+            pdf_params = kwargs.get("MC_pdf_params", {"mean": mean, "std": kwargs.get("MC_sig", mean/3.0)})
             parameter = generate_stochastic_parameter("MC",
                                                       low=kwargs.get("MC_lo", self.MC_MIN),
                                                       high=kwargs.get("MC_hi", 3 * p0595[1]),
                                                       p_shape=(self.n_regions, self.n_regions),
                                                       probability_distribution=kwargs.get("MC_pdf", "lognormal"),
-                                                      optimize=True,
-                                                      mode=mode, std=kwargs.get('MC_sig', mode / 3.0))
+                                                      optimize=True, **pdf_params)
         parameters.update({parameter.name: parameter})
 
         # Integration:
         parameter = kwargs.get("sig_eq", None)
         if not(isinstance(parameter, Parameter)):
             sig_eq_def = kwargs.get("sig_eq_def", 0.1)
+            pdf_params = kwargs.get("sig_eq_pdf_params", {"mean": sig_eq_def, 
+                                                          "std": kwargs.get("sig_eq_sig", sig_eq_def)})
             parameter = generate_stochastic_parameter("sig_eq",
                                                       low=kwargs.get("sig_eq_lo", 0.0),
                                                       high=kwargs.get("sig_eq_hi", 2 * sig_eq_def),
                                                       p_shape=(),
                                                       probability_distribution=kwargs.get("sig_eq_pdf", "lognormal"),
-                                                      optimize=True,
-                                                      mode=sig_eq_def,
-                                                      std = kwargs.get("sig_eq_sig", sig_eq_def))
+                                                      optimize=True, **pdf_params)
         parameters.update({parameter.name: parameter})
 
         # Observation model
         parameter = kwargs.get("eps", None)
         if not(isinstance(parameter, Parameter)):
             eps_def = kwargs.get("eps_def", 0.1)
+            pdf_params = kwargs.get("eps_pdf_params", {"mean": eps_def, "std": kwargs.get("eps_sig", eps_def)})
             parameter = generate_stochastic_parameter("eps",
                                                       low=kwargs.get("eps_lo", 0.0),
                                                       high=kwargs.get("eps_hi", 1.0),
                                                       probability_distribution=kwargs.get("eps_pdf", "lognormal"),
-                                                      optimize=True,
-                                                      mode=eps_def,
-                                                      std=kwargs.get("eps_sig", eps_def))
+                                                      optimize=True, **pdf_params)
         parameters.update({parameter.name: parameter})
         return parameters
         

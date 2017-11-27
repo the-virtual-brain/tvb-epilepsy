@@ -241,43 +241,43 @@ class ODEModelInversionService(ModelInversionService):
         parameter = kwargs.get("sig_init", None)
         if not(isinstance(parameter, Parameter)):
             sig_init_def = kwargs.get("sig_init_def", 0.1)
+            pdf_params = kwargs.get("sig_init_pdf_params", {"mean": sig_init_def,
+                                                            "std": kwargs.get("sig_init_sig", sig_init_def)})
             parameter = generate_stochastic_parameter("sig_init",
                                                       low=kwargs.get("sig_init_lo", 0.0),
                                                       high=kwargs.get("sig_init_hi", 2 * sig_init_def),
                                                       p_shape=(),
                                                       probability_distribution=kwargs.get("sig_init_pdf", "lognormal"),
-                                                      optimize=True,
-                                                      mode=sig_init_def,
-                                                      std=kwargs.get("tau1_sig", sig_init_def))
+                                                      optimize=True, **pdf_params)
         parameters.update({parameter.name: parameter})
 
         # Observation model
         parameter = kwargs.get("scale_signal")
         if not(isinstance(parameter, Parameter)):
             scale_signal_def = kwargs.get("scale_signal_def", 1.0)
+            pdf_params = kwargs.get("scale_signal_pdf_params",
+                                    {"mean": scale_signal_def, "std": kwargs.get("scale_signal_sig", scale_signal_def)})
             parameter = generate_stochastic_parameter("scale_signal",
                                                       low=kwargs.get("scale_signal_lo", 0.1),
                                                       high=kwargs.get("scale_signal_hi", 2.0),
                                                       p_shape=(),
                                                       probability_distribution=
                                                       kwargs.get("scale_signal_pdf", "lognormal"),
-                                                      optimize=True,
-                                                      mode=scale_signal_def,
-                                                      std=kwargs.get("scale_signal_sig", scale_signal_def))
+                                                      optimize=True, **pdf_params)
         parameters.update({parameter.name: parameter})
 
         parameter = kwargs.get("offset_signal")
         if not(isinstance(parameter, Parameter)):
             offset_signal_def = kwargs.get("offset_signal_def", 0.0)
+            pdf_params = kwargs.get("offset_signal_pdf_params",
+                                 {"mean": offset_signal_def, "std": kwargs.get("offset_signal_sig", offset_signal_def)})
             parameter = generate_stochastic_parameter("offset_signal",
                                                       low=kwargs.get("offset_signal_lo", -1.0),
                                                       high=kwargs.get("offset_signal_hi", 1.0),
                                                       p_shape=(),
                                                       probability_distribution=
                                                                             kwargs.get("offset_signal_pdf", "normal"),
-                                                      optimize=False,
-                                                      mean=offset_signal_def,
-                                                      sigma=kwargs.get("scale_signal_sig", 1.0))
+                                                      optimize=False, **pdf_params)
         parameters.update({parameter.name: parameter})
         return parameters
 

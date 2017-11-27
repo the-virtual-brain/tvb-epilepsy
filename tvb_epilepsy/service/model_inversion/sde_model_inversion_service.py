@@ -89,16 +89,15 @@ class SDEModelInversionService(ODEModelInversionService):
         parameter = kwargs.get("sig", None)
         if not(isinstance(parameter, Parameter)):
             sig_def = kwargs.get("sig_def", self.sig)
+            pdf_params = kwargs.get("sig_pdf_params", {"mean": sig_def, "std": kwargs.get("sig_sig", sig_def)})
             parameter = generate_stochastic_parameter("sig",
                                                       low=kwargs.get("sig_lo", 0.0),
                                                       high=kwargs.get("sig_hi", 10 * sig_def),
                                                       p_shape=(),
                                                       probability_distribution=kwargs.get("sig_pdf", "gamma"),
-                                                      optimize=True,
-                                                      mode=sig_def, std=kwargs.get("sig_sig", sig_def))
-        mm = np.max([parameter.mean, parameter.mode])
-        if parameter.high < 10*mm:
-            parameter.high = 10*mm
+                                                      optimize=True, **pdf_params)
+        if parameter.high < 10*parameter.mean:
+            parameter.high = 10*parameter.mean
         parameters.update({parameter.name: parameter})
         return parameters
                 
