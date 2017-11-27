@@ -121,12 +121,9 @@ def list_or_tuple_to_h5_model(h5_model, obj, path, container_path, obj_type):
         else:
             h5_model.add_or_update_datasets_attribute(path, "()")
         return h5_model, None
-    # if isinstance(obj, list):
-    #     h5_model.add_or_update_metadata_attribute(os.path.join(container_path[1:], "transform_str"),
-    #                                               "obj.values())")
-    # else:
-    #     h5_model.add_or_update_metadata_attribute(os.path.join(container_path[1:], "transform_str"),
-    #                                               "tuple(obj.values()))")
+    if isinstance(obj, tuple):
+        h5_model.add_or_update_metadata_attribute(os.path.join(container_path[1:], "transform_str"), "tuple(obj))")
+    h5_model.add_or_update_metadata_attribute(os.path.join(container_path[1:], "create_str"), "list()")
     return h5_model, iterable_to_dict(obj)
 
 
@@ -184,7 +181,9 @@ def object_to_h5_model_recursively(h5_model, obj, path="/"):
                 return
         except:
             continue
-    if isinstance(obj, (float, int, long, complex, basestring)):
+    if isinstance(obj, (float, np.float, np.float16, np.float32, np.float64,
+                        int, long, np.int, np.int8, np.int16, np.int32, np.int64, np.long,
+                        complex, basestring)):
         h5_model.add_or_update_metadata_attribute(path + "/type_str", obj_type)
         h5_model.add_or_update_datasets_attribute(path, obj)
         return
@@ -258,14 +257,10 @@ def check_for_last_granchild(child_path, metadata, object_strings=
 
 
 def assert_obj(obj, obj_name, obj_type):
-    if not(isequal_string(obj.__class__.__name__, obj_type)):
-        if isequal_string(obj_type, "list") and not (isinstance(obj, list)):
-            return []
-        if isequal_string(obj_type, "tuple") and not (isinstance(obj, tuple)):
-            return tuple()
-        if (isequal_string(obj_type, "dict") or isequal_string(obj_type, "OrderedDict"))\
-                and not (isinstance(obj, dict)):
-            return OrderedDict()
+    if (isequal_string(obj_type, "list") or isequal_string(obj_type, "tuple")) and not (isinstance(obj, list)):
+        return []
+    if (isequal_string(obj_type, "dict") or isequal_string(obj_type, "OrderedDict")) and not (isinstance(obj, dict)):
+        return OrderedDict()
     # If still not created, make an  OrderedDict() by default:
     if obj is None:
         logger.warning("\n Child object " + str(obj_name) + " still not created!" +
