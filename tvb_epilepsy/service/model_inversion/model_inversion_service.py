@@ -9,16 +9,15 @@ from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_val
 from tvb_epilepsy.base.utils.data_structures_utils import copy_object_attributes, construct_import_path
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
-from tvb_epilepsy.base.model.vep.connectivity import Connectivity
-from tvb_epilepsy.base.model.vep.sensors import Sensors
-from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
-from tvb_epilepsy.base.model.parameter import Parameter
-from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
 from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
+from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import set_model_parameter
+from tvb_epilepsy.base.model.vep.connectivity import Connectivity
+from tvb_epilepsy.base.model.vep.head import Head
+from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_TAU1, \
-                                                                                                    EPILEPTOR_MODEL_TAU0
+    EPILEPTOR_MODEL_TAU0
 
 
 LOG = initialize_logger(__name__)
@@ -30,18 +29,14 @@ STATISTICAL_MODEL_TYPES=["vep_sde", "vep_dWt", "vep_ode", "vep_lsa"]
 class ModelInversionService(object):
 
     X1EQ_MIN = -2.0
-
     TAU1_DEF = 0.5
     TAU1_MIN = 0.1
     TAU1_MAX = 1.0
-
     TAU0_DEF = 30.0
     TAU0_MIN = 3.0
     TAU0_MAX = 3000.0
-
     K_MIN = 0.0
     K_MAX = 2.0
-
     MC_MIN = 0.0
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="",
@@ -76,8 +71,7 @@ class ModelInversionService(object):
         if isinstance(head, Head):
             connectivity = head.connectivity
             if not(isinstance(sensors, Sensors)):
-                sensors = head.get_sensors_id(sensor_ids=kwargs.get("seeg_sensor_id", 0),
-                                              sensors_type=Sensors.TYPE_SEEG)
+                sensors = head.get_sensors_id(sensor_ids=kwargs.get("seeg_sensor_id", 0), s_type=Sensors.TYPE_SEEG)
         if isinstance(connectivity, Connectivity):
             self._copy_attributes(connectivity, ["region_labels", "centers", "orientations"],
                                   ["region_labels", "region_centers", "region_orientations"], deep_copy=True, check_none=True)
@@ -138,100 +132,6 @@ class ModelInversionService(object):
     def get_default_sig_eq(self, x1eq_def=X1_DEF, x1eq_cr=X1_EQ_CR_DEF):
         return (x1eq_cr - x1eq_def) / 3.0
 
-    def generate_model_parameters(self, **kwargs):
-        parameters = OrderedDict()
-        # Generative model:
-        # Epileptor:
-        parameter = kwargs.get("x1eq", None)
-        if not(isinstance(parameter, Parameter)):
-            x1eq = np.maximum(kwargs.get("x1eq", self.x1EQ), X1_DEF)
-            parameter = generate_stochastic_parameter("x1eq",
-                                                      low=kwargs.get("x1eq_lo", self.X1EQ_MIN),
-                                                      high=kwargs.get("x1eq_hi", X1_EQ_CR_DEF),
-                                                      p_shape=(self.n_regions,),
-                                                      probability_distribution="normal",
-                                                      optimize=False,
-                                                      mean=x1eq, sigma=kwargs.get("x1eq_sig", 0.1))
-        parameters.update({parameter.name: parameter})
-
-        parameter = kwargs.get("K", None)
-        if not(isinstance(parameter, Parameter)):
-            K_def = np.maximum(kwargs.get("K_def", np.mean(self.K)), 0.1)
-            pdf_params = kwargs.get("K_pdf_params", {"mean": K_def, "std": kwargs.get("K_sig", K_def)})
-            parameter = generate_stochastic_parameter("K",
-                                                      low=kwargs.get("K_lo", self.K_MIN),
-                                                      high=kwargs.get("K_hi", self.K_MAX),  p_shape=(),
-                                                      probability_distribution= kwargs.get("K_pdf", "lognormal"),
-                                                      optimize=True, **pdf_params)
-        parameters.update({parameter.name: parameter})
-
-        # tau1_def = kwargs.get("tau1_def", 0.5)
-        parameter = kwargs.get("tau1", None)
-        if not (isinstance(parameter, Parameter)):
-            tau1_def = kwargs.get("tau1_def", self.tau1)
-            pdf_params = kwargs.get("tau1_pdf_params", {"mean": tau1_def, "std": kwargs.get("tau1_sig", tau1_def)})
-            parameter = generate_stochastic_parameter("tau1",
-                                                      low=kwargs.get("tau1_lo", self.TAU1_MIN),
-                                                      high=kwargs.get("tau1_hi", self.TAU1_MAX),
-                                                      p_shape=(),
-                                                      probability_distribution=kwargs.get("tau1", "lognormal"),
-                                                      optimize=True, **pdf_params)
-        parameters.update({parameter.name: parameter})
-
-        parameter = kwargs.get("tau0", None)
-        if not(isinstance(parameter, Parameter)):
-            tau0_def = kwargs.get("tau0_def", self.tau0)
-            pdf_params = kwargs.get("tau0_pdf_params", {"mean": tau0_def, "std": kwargs.get("tau0_sig", tau0_def)})
-            parameter = generate_stochastic_parameter("tau0",
-                                                      low=kwargs.get("tau0_lo", self.TAU0_MIN),
-                                                      high=kwargs.get("tau0_hi", self.TAU0_MAX),
-                                                      p_shape=(),
-                                                      probability_distribution=kwargs.get("tau0_pdf", "lognormal"),
-                                                      optimize=True, **pdf_params)
-        parameters.update({parameter.name: parameter})
-
-        # Coupling:
-        parameter = kwargs.get("MC", None)
-        if not(isinstance(parameter, Parameter)):
-            model_connectivity = kwargs.get("structural_connectivity", self.model_connectiviy)
-            p0595 = np.percentile(model_connectivity.flatten(), [5, 95])
-            mean = np.maximum(p0595[0], model_connectivity)
-            pdf_params = kwargs.get("MC_pdf_params", {"mean": mean, "std": kwargs.get("MC_sig", mean/3.0)})
-            parameter = generate_stochastic_parameter("MC",
-                                                      low=kwargs.get("MC_lo", self.MC_MIN),
-                                                      high=kwargs.get("MC_hi", 3 * p0595[1]),
-                                                      p_shape=(self.n_regions, self.n_regions),
-                                                      probability_distribution=kwargs.get("MC_pdf", "lognormal"),
-                                                      optimize=True, **pdf_params)
-        parameters.update({parameter.name: parameter})
-
-        # Integration:
-        parameter = kwargs.get("sig_eq", None)
-        if not(isinstance(parameter, Parameter)):
-            sig_eq_def = kwargs.get("sig_eq_def", 0.1)
-            pdf_params = kwargs.get("sig_eq_pdf_params", {"mean": sig_eq_def, 
-                                                          "std": kwargs.get("sig_eq_sig", sig_eq_def)})
-            parameter = generate_stochastic_parameter("sig_eq",
-                                                      low=kwargs.get("sig_eq_lo", 0.0),
-                                                      high=kwargs.get("sig_eq_hi", 2 * sig_eq_def),
-                                                      p_shape=(),
-                                                      probability_distribution=kwargs.get("sig_eq_pdf", "lognormal"),
-                                                      optimize=True, **pdf_params)
-        parameters.update({parameter.name: parameter})
-
-        # Observation model
-        parameter = kwargs.get("eps", None)
-        if not(isinstance(parameter, Parameter)):
-            eps_def = kwargs.get("eps_def", 0.1)
-            pdf_params = kwargs.get("eps_pdf_params", {"mean": eps_def, "std": kwargs.get("eps_sig", eps_def)})
-            parameter = generate_stochastic_parameter("eps",
-                                                      low=kwargs.get("eps_lo", 0.0),
-                                                      high=kwargs.get("eps_hi", 1.0),
-                                                      probability_distribution=kwargs.get("eps_pdf", "lognormal"),
-                                                      optimize=True, **pdf_params)
-        parameters.update({parameter.name: parameter})
-        return parameters
-        
     def generate_statistical_model(self, model_name=None, **kwargs):
         if model_name is None:
             model_name = self.model_name
@@ -242,4 +142,30 @@ class ModelInversionService(object):
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model
 
-
+    def generate_model_parameters(self, **kwargs):
+        parameters = OrderedDict()
+        # Generative model:
+        # Epileptor:
+        parameters.update({"x1eq": set_model_parameter("x1eq", "normal",
+                                                       np.maximum(kwargs.get("x1eq", self.x1EQ), X1_DEF), 0.1,
+                                                       self.X1EQ_MIN, X1_EQ_CR_DEF, (self.n_regions,), False, **kwargs)})
+        parameters.update({"K": set_model_parameter("K", "lognormal",
+                                                    np.maximum(kwargs.get("K_def", np.mean(self.K)), 0.1), None,
+                                                    self.K_MIN, self.K_MAX, (), True, **kwargs)})
+        parameters.update({"tau1": set_model_parameter("tau1", "lognormal", self.tau1, None,
+                                                       self.TAU1_MIN, self.TAU1_MAX, (), True, **kwargs)})
+        parameters.update({"tau0": set_model_parameter("tau0", "lognormal", self.tau0, None,
+                                                       self.TAU0_MIN, self.TAU0_MAX, (), True, **kwargs)})
+        # Coupling:
+        model_connectivity = kwargs.get("model_connectivity", self.model_connectivity)
+        p0595 = np.percentile(model_connectivity.flatten(), [5, 95])
+        mean = np.maximum(p0595[0], model_connectivity)
+        parameters.update({"MC": set_model_parameter("MC", "lognormal", mean, lambda mc: mc/3.0,
+                                                     self.MC_MIN, 3 * p0595[1], (self.n_regions, self.n_regions), True,
+                                                     **kwargs)})
+        # Integration:
+        parameters.update({"sig_eq": set_model_parameter("sig_eq", "lognormal", 0.1, None,
+                                                         0.0, lambda s: 2 * s, (), True, **kwargs)})
+        # Observation model
+        parameters.update({"eps": set_model_parameter("eps", "lognormal", 0.1, None, 0.0, 1.0, (), True, **kwargs)})
+        return parameters

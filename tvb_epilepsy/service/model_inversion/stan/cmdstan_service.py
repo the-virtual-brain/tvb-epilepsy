@@ -4,10 +4,11 @@ import time
 from shutil import copyfile
 from copy import deepcopy
 
-from tvb_epilepsy.base.constants.configurations import FOLDER_VEP_HOME, CMDSTAN_PATH
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, CMDSTAN_PATH
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path, isequal_string
-from tvb_epilepsy.service.model_inversion.stan.stan_service import StanService, parse_csv
+from tvb_epilepsy.service.model_inversion.stan.stan_service import StanService
+from tvb_epilepsy.service.csv_factory import parse_csv
 from tvb_epilepsy.service.model_inversion.stan.stan_options import *
 
 
@@ -16,13 +17,13 @@ LOG = initialize_logger(__name__)
 
 class CmdStanService(StanService):
 
-    def __init__(self, model_name=None, model=None, model_dir=os.path.join(FOLDER_VEP_HOME, "stan_models"),
-                 model_code=None, model_code_path="", fitmethod="sample", random_seed=12345, init="random",
-                 cmdstanpath=CMDSTAN_PATH, logger=LOG, **options):
-        super(CmdStanService, self).__init__(model_name, model, model_dir, model_code, model_code_path, fitmethod,
-                                             logger)
+    def __init__(self, model_name=None, model=None, model_dir=FOLDER_RES,
+                 model_code=None, model_code_path="", model_data_path="", cmdstanpath=CMDSTAN_PATH,
+                 fitmethod="sample", random_seed=12345, init="random", logger=LOG, **options):
+        super(CmdStanService, self).__init__(model_name, model, model_dir, model_code, model_code_path, model_data_path,
+                                             fitmethod, logger)
         self.assert_fitmethod()
-        if not os.path.exists(os.path.join(cmdstanpath, 'runCmdStanTests.py')):
+        if not os.path.isfile(os.path.join(cmdstanpath, 'runCmdStanTests.py')):
             raise_value_error('Please provide CmdStan path, e.g. lib.cmdstan_path("/path/to/")!')
         self.path = cmdstanpath
         self.options = {"init": init, "random_seed": random_seed}
@@ -42,6 +43,16 @@ class CmdStanService(StanService):
         else:
             raise_value_error(self.fitmethod + " does not correspond to one of the input methods:\n" +
                               "sample, variational, optimize, diagnose")
+
+    def assert_model_data_path(self, reset_path=False):
+        model_data_path, extension = self.model_data_path.split(".", -1)
+        if extension != "R":
+            model_data_path = model_data_path + ".R"
+            self.write_model_data_to_file(self.load_model_data_from_file(self.model_data_path), reset_path=False,
+                                          model_data_path=model_data_path)
+        else:
+            model_data_path = self.model_data_path
+        return model_data_path
 
     def set_options(self, **options):
         self.fitmethod = options.get("method", self.fitmethod)
@@ -72,7 +83,7 @@ class CmdStanService(StanService):
             if self.model_path != self.model_code_path[:-5]:
                 copyfile(self.model_code_path[:-5], self.model_path)
 
-    def generate_fit_command(self, model_data_path, output_filepath, diagnostic_filepath):
+    def generate_fit_command(self, output_filepath, diagnostic_filepath):
         options = {}
         options.update(self.options)
         command = self.model_path
@@ -113,7 +124,7 @@ class CmdStanService(StanService):
                 adapt_options = STAN_VARIATIONAL_ADAPT_OPTIONS
             for option in adapt_options.keys():
                 command += option + "=" + str(self.options[option]) + ' \\ '
-        command += "data file="+ model_data_path + ' \\ '
+        command += "data file="+ self.assert_model_data_path() + ' \\ '
         command += "init=" + str(self.options["init"]) + ' \\ '
         command += "random seed=" + str(self.options["random_seed"]) + ' \\ '
         if diagnostic_filepath == "":
@@ -137,14 +148,14 @@ class CmdStanService(StanService):
             command += "refresh=" + str(self.options["refresh"]) + ' \\ '
             return [command], [output_filepath], [diagnostic_filepath]
 
-    def fit(self, model_data_path, output_filepath=STAN_OUTPUT_OPTIONS["file"], diagnostic_filepath="",
+    def fit(self, output_filepath=os.path.join(FOLDER_RES, STAN_OUTPUT_OPTIONS["file"]), diagnostic_filepath="",
             read_output=True, **kwargs):
         self.model_path = kwargs.pop("model_path", self.model_path)
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
         self.fitmethod = kwargs.pop("method", self.fitmethod)
         self.chains = kwargs.pop("chains", self.chains)
         self.options = self.set_options(**kwargs)
-        commands, output_files = self.generate_fit_command(model_data_path, output_filepath, diagnostic_filepath)[:2]
+        commands, output_files = self.generate_fit_command(output_filepath, diagnostic_filepath)[:2]
         self.logger.info("Model fitting with " + self.fitmethod +
                          "\nof model: " + self.model_path + "...")
         tic = time.time()

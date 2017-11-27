@@ -5,7 +5,7 @@ import time
 import numpy as np
 import pystan as ps
 
-from tvb_epilepsy.base.constants.configurations import FOLDER_VEP_HOME
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error, raise_value_error
 from tvb_epilepsy.service.model_inversion.stan.stan_service import StanService
@@ -15,13 +15,12 @@ LOG = initialize_logger(__name__)
 
 class PyStanService(StanService):
 
-    def __init__(self, model_name=None, model=None, model_dir=os.path.join(FOLDER_VEP_HOME, "stan_models"),
-                 model_code=None, model_code_path="", fitmethod="sampling",  random_seed=12345, init="random",
-                 logger=LOG, **options):
-        super(PyStanService, self).__init__(model_name, model, model_dir, model_code, model_code_path, fitmethod,
-                                            logger)
+    def __init__(self, model_name=None, model=None, model_dir=FOLDER_RES, model_code=None, model_code_path="",
+                 model_data_path="", fitmethod="sampling",  random_seed=12345, init = "random", logger=LOG, **options):
+        super(PyStanService, self).__init__(model_name, model, model_dir, model_code, model_code_path, model_data_path,
+                                            fitmethod, logger)
         self.assert_fitmethod()
-        self.options = {"init": init, "random_seed": random_seed}
+        self.options = {"init": init, "seed": random_seed}
         self.options.update(options)
         self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
         self.create_str = self.__class__.__name__ + "()"
@@ -56,14 +55,14 @@ class PyStanService(StanService):
         self.model_path = kwargs.get("model_path", self.model_path)
         self.model = pickle.load(open(self.model_path, 'rb'))
 
-    def fit(self, model_data, **kwargs):
+    def fit(self, **kwargs):
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
         self.fitmethod = kwargs.pop("method", self.fitmethod)
         self.assert_fitmethod()
         self.options.update(kwargs)
         self.logger.info("Model fitting with " + self.fitmethod + "...")
         tic = time.time()
-        fit = getattr(self.model, self.fitmethod)(data=model_data, **self.options)
+        fit = getattr(self.model, self.fitmethod)(data=self.load_model_data_from_file(), **self.options)
         self.fitting_time = time.time() - tic
         self.logger.info(str(self.fitting_time) + ' sec required to fit')
         if self.fitmethod is "optimizing":

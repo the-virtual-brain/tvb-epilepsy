@@ -45,13 +45,15 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[
     # Compile or load model:
     if isequal_string(stan_service, "CmdStan"):
         stan_service = CmdStanService(model_name=stats_model_name, model=None, model_code=None,
+                                      model_dir=FOLDER_VEP_HOME,
                                       model_code_path=os.path.join(STATS_MODELS_PATH, stats_model_name + ".stan"),
-                                      fitmethod=fitmethod, logger=logger)
+                                      fitmethod=fitmethod, random_seed=12345, init="random", logger=logger)
     else:
         stan_service = PyStanService(model_name=stats_model_name, model=None, model_code=None,
+                                     model_dir=FOLDER_VEP_HOME,
                                      model_code_path=os.path.join(STATS_MODELS_PATH, stats_model_name + ".stan"),
-                                     fitmethod=fitmethod, logger=logger)
-    stan_service.load_or_compile_model()
+                                     fitmethod=fitmethod, random_seed=12345, init="random", logger=logger)
+    stan_service.set_or_compile_model()
     # -------------------------------Reading model_data-----------------------------------
     data_folder = os.path.join(DATA_CUSTOM, 'Head')
     reader = Reader()
@@ -216,12 +218,9 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[
                     savemat(this_ts_file, vois_ts_dict)
                     copyfile(this_ts_file, ts_file)
 
-        model_data_path = os.path.join(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ModelData.mat")
-        # model_data_path = os.path.join(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ModelData.h5")
-        if os.path.isfile(model_data_path):
-            model_data = loadmat(model_data_path)
-            # model_data = read_h5_model(model_data_path).convert_from_h5_model()
-        else:
+        try:
+            model_data = stan_service.load_model_from_file()
+        except:
             # Get model_data and observation signals:
             # model_inversion_service_path = os.path.join(FOLDER_VEP_HOME,
             #                                             lsa_hypothesis.name + "_ModelInversionService.h5")
@@ -233,7 +232,6 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[
                                                                dynamical_model, sde_mode="x1z", logger=logger)
             # stats_model_path = os.path.join(FOLDER_VEP_HOME, lsa_hypothesis.name + "_StatsModel.h5")
             # if os.path.isfile(stats_model_path):
-            #   TODO: make statistical model readable, i.e., make StochasticParameter readable
             #     statistical_model = read_h5_model(stats_model_path).convert_from_h5_model(obj=SDEStatisticalModel())
             # else:
             #
@@ -250,10 +248,9 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[
             model_inversion_service.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_ModelInversionService.h5")
             statistical_model.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_StatsModel.h5")
             model_data = model_inversion_service.generate_model_data(statistical_model, signals)
-            # convert_to_h5_model(model_data).write_to_h5(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ModelData.h5")
-            savemat(model_data_path, model_data)
+            stan_service.write_model_data_to_file(model_data)
         # Fit and get estimates:
-        est, fit = stan_service.fit_stan_model(model_data=model_data, **kwargs)
+        est, fit = stan_service.fit(model_data=model_data, **kwargs)
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), est)
         plot_fit_results(lsa_hypothesis.name, head, est, model_data, statistical_model.active_regions, time,
                          seizure_indices=[0, 1], trajectories_plot=True)
@@ -277,7 +274,6 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[
         model_configuration_service.plot_nullclines_eq(model_configuration_fit, head.connectivity.region_labels,
                                                        special_idx=disease_indices, model="6d", zmode="lin",
                                                        figure_name=hyp_fit.name + "_Nullclines and equilibria")
-
         print("Done!")
 
 
@@ -309,4 +305,4 @@ if __name__ == "__main__":
     stats_model_name = "vep_sde"
     # main_fit_sim_hyplsa(stats_model_name, EMPIRICAL=os.path.join(SEEG_data, 'SZ1_0001.edf'), times_on_off=[10.0, 35.0],
     #                    channel_lbls=channels, channel_inds=channel_inds)
-    main_fit_sim_hyplsa(stats_model_name, channel_lbls=channels, channel_inds=channel_inds)
+    main_fit_sim_hyplsa(stats_model_name, channel_lbls=channels, channel_inds=channel_inds, stan_service="PyStan",)

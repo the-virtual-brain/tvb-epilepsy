@@ -3,6 +3,7 @@ import time
 from copy import deepcopy
 
 import numpy as np
+import pylab as pl
 
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, construct_import_path
@@ -10,8 +11,7 @@ from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import \
                                                         EULER_METHODS, OBSERVATION_MODEL_EXPRESSIONS, OBSERVATION_MODELS
-from tvb_epilepsy.base.model.parameter import Parameter
-from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
+from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import set_model_parameter
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
 from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DISTRIBUTIONS
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
@@ -214,71 +214,19 @@ class ODEModelInversionService(ModelInversionService):
     def generate_model_parameters(self, **kwargs):
         parameters = super(ODEModelInversionService, self).generate_model_parameters(**kwargs)
         # Integration
-        parameter = kwargs.get("x1init", None)
-        if not (isinstance(parameter, Parameter)):
-            x1init_def = kwargs.get("x1init_def", self.x1EQ)
-            parameter = generate_stochastic_parameter("x1init",
-                                                      low=kwargs.get("x1init_lo", self.X1INIT_MIN),
-                                                      high=kwargs.get("x1init_hi", self.X1INIT_MAX),
-                                                      p_shape=(self.n_regions,),
-                                                      probability_distribution="normal",
-                                                      optimize=False,
-                                                      mean=x1init_def, sigma=kwargs.get("x1init_sig", 0.1))
-        parameters.update({parameter.name: parameter})
-
-        parameter = kwargs.get("zinit", None)
-        if not (isinstance(parameter, Parameter)):
-            zinit_def = kwargs.get("zinit_def", self.zEQ)
-            parameter = generate_stochastic_parameter("zinit",
-                                                      low=kwargs.get("zinit_lo", self.ZINIT_MIN),
-                                                      high=kwargs.get("zinit_hi", self.ZINIT_MAX),
-                                                      p_shape=(self.n_regions,),
-                                                      probability_distribution="normal",
-                                                      optimize=False,
-                                                      mean=zinit_def, sigma=kwargs.get("zinit_sig", 0.1))
-        parameters.update({parameter.name: parameter})
-
-        parameter = kwargs.get("sig_init", None)
-        if not(isinstance(parameter, Parameter)):
-            sig_init_def = kwargs.get("sig_init_def", 0.1)
-            pdf_params = kwargs.get("sig_init_pdf_params", {"mean": sig_init_def,
-                                                            "std": kwargs.get("sig_init_sig", sig_init_def)})
-            parameter = generate_stochastic_parameter("sig_init",
-                                                      low=kwargs.get("sig_init_lo", 0.0),
-                                                      high=kwargs.get("sig_init_hi", 2 * sig_init_def),
-                                                      p_shape=(),
-                                                      probability_distribution=kwargs.get("sig_init_pdf", "lognormal"),
-                                                      optimize=True, **pdf_params)
-        parameters.update({parameter.name: parameter})
-
+        parameters.update({"x1init": set_model_parameter("x1init", "normal", self.x1EQ, 0.1,
+                                                         self.X1INIT_MIN, self.X1INIT_MAX, (self.n_regions,), False,
+                                                          **kwargs)})
+        parameters.update({"zinit": set_model_parameter("zinit", "normal", self.zEQ, 0.1,
+                                                         self.ZINIT_MIN, self.ZINIT_MAX, (self.n_regions,), False,
+                                                         **kwargs)})
+        parameters.update({"sig_init": set_model_parameter("sig_init", "lognormal", 0.1, None,
+                                                            0.0, lambda s: 2 * s, (), True, **kwargs)})
         # Observation model
-        parameter = kwargs.get("scale_signal")
-        if not(isinstance(parameter, Parameter)):
-            scale_signal_def = kwargs.get("scale_signal_def", 1.0)
-            pdf_params = kwargs.get("scale_signal_pdf_params",
-                                    {"mean": scale_signal_def, "std": kwargs.get("scale_signal_sig", scale_signal_def)})
-            parameter = generate_stochastic_parameter("scale_signal",
-                                                      low=kwargs.get("scale_signal_lo", 0.1),
-                                                      high=kwargs.get("scale_signal_hi", 2.0),
-                                                      p_shape=(),
-                                                      probability_distribution=
-                                                      kwargs.get("scale_signal_pdf", "lognormal"),
-                                                      optimize=True, **pdf_params)
-        parameters.update({parameter.name: parameter})
-
-        parameter = kwargs.get("offset_signal")
-        if not(isinstance(parameter, Parameter)):
-            offset_signal_def = kwargs.get("offset_signal_def", 0.0)
-            pdf_params = kwargs.get("offset_signal_pdf_params",
-                                 {"mean": offset_signal_def, "std": kwargs.get("offset_signal_sig", offset_signal_def)})
-            parameter = generate_stochastic_parameter("offset_signal",
-                                                      low=kwargs.get("offset_signal_lo", -1.0),
-                                                      high=kwargs.get("offset_signal_hi", 1.0),
-                                                      p_shape=(),
-                                                      probability_distribution=
-                                                                            kwargs.get("offset_signal_pdf", "normal"),
-                                                      optimize=False, **pdf_params)
-        parameters.update({parameter.name: parameter})
+        parameters.update({"scale_signal": set_model_parameter("scale_signal", "lognormal", 1.0, None,
+                                                               lambda s: 0.5 * s, lambda s: 2 * s, (), True, **kwargs)})
+        parameters.update({"offset_signal": set_model_parameter("offset_signal", "lognormal", 0.0, 1.0,
+                                                                -1.0, 1.0, (), True, **kwargs)})
         return parameters
 
     def generate_statistical_model(self, model_name=None, **kwargs):
@@ -338,3 +286,52 @@ class ODEModelInversionService(ModelInversionService):
                     model_data.update({p.name + "_p2": pdf_params[1]})
         return sort_dict(model_data)
 
+
+def viz_phase_space(data):
+    opt = len(data['x']) == 1
+    npz = np.load('data.R.npz')
+    tr = lambda A: np.transpose(A, (0, 2, 1))
+    x, z = tr(data['x']), tr(data['z'])
+    tau0 = npz['tau0']
+    X, Z = np.mgrid[-5.0:5.0:50j, -5.0:5.0:50j]
+    dX = (npz['I1'] + 1.0) - X ** 3.0 - 2.0 * X ** 2.0 - Z
+    x0mean = data['x0'].mean(axis=0)
+    Kmean = data['K'].mean(axis=0)
+
+    def nullclines(i):
+        pl.contour(X, Z, dX, 0, colors='r')
+        dZ = (1.0 / tau0) * (4.0 * (X - x0mean[i])) - Z - Kmean * (-npz['Ic'][i] * (1.8 + X))
+        pl.contour(X, Z, dZ, 0, colors='b')
+
+    for i in range(x.shape[-1]):
+        pl.subplot(2, 3, i + 1)
+        if opt:
+            pl.plot(x[0, :, i], z[0, :, i], 'k', alpha=0.5)
+        else:
+            for j in range(1 if opt else 10):
+                pl.plot(x[-j, :, i], z[-j, :, i], 'k', alpha=0.2, linewidth=0.5)
+        nullclines(i)
+        pl.grid(True)
+        pl.xlabel('x(t)')
+        pl.ylabel('z(t)')
+        # pl.title(f'node {i}')
+    pl.tight_layout()
+
+
+def viz_pair_plots(csv, keys, skip=0):
+    n = len(keys)
+    if isinstance(csv, dict):
+        csv = [csv]  # following assumes list of chains' results
+    for i, key_i in enumerate(keys):
+        for j, key_j in enumerate(keys):
+            pl.subplot(n, n, i * n + j + 1)
+            for csvi in csv:
+                if i == j:
+                    pl.hist(csvi[key_i][skip:], 20, log=True)
+                else:
+                    pl.plot(csvi[key_j][skip:], csvi[key_i][skip:], '.')
+            if i == 0:
+                pl.title(key_j)
+            if j == 0:
+                pl.ylabel(key_i)
+    pl.tight_layout()
