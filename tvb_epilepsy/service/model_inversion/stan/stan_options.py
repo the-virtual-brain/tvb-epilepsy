@@ -66,43 +66,35 @@ def generate_cmdstan_options(method, **kwargs):
     options = OrderedDict()
     if isequal_string(method, "sample"):  # for sample or sampling
         for option, value in STAN_SAMPLE_OPTIONS.iteritems():
-            if kwargs.pop(option):
-                options.update({option: kwargs.pop(option, value)})
+            options.update({option: kwargs.pop(option, value)})
         if isequal_string(options["algorithm"], "hmc"):
             for option, value in STAN_HMC_OPTIONS.iteritems():
-                if kwargs.pop(option):
-                    options.update({option: kwargs.pop(option, value)})
+                options.update({option: kwargs.pop(option, value)})
             if isequal_string(options["engine"], "nuts"):
                 options.update({"max_depth": kwargs.pop("max_depth", STAN_NUTS_OPTIONS["max_depth"])})
             elif isequal_string(options["engine"], "static"):
                 options.update({"int_time": kwargs.pop("int_time", STAN_STATIC_OPTIONS["int_time"])})
         for option, value in STAN_SAMPLE_ADAPT_OPTIONS.iteritems():
-            if kwargs.pop(option):
-                options.update({option: kwargs.pop(option, value)})
+            options.update({option: kwargs.pop(option, value)})
     elif isequal_string(method, "variational"):  # for variational or vb or advi
         for option, value in STAN_VARIATIONAL_OPTIONS.iteritems():
-            if kwargs.pop(option):
-                options.update({option: kwargs.pop(option, value)})
+            options.update({option: kwargs.pop(option, value)})
         for option, value in STAN_VARIATIONAL_ADAPT_OPTIONS.iteritems():
-            if kwargs.pop(option):
-                options.update({option: kwargs.pop(option, value)})
+            options.update({option: kwargs.pop(option, value)})
     elif isequal_string(method, "optimize"):  # for optimization or optimizing or optimize
         for option, value in STAN_OPTIMIZE_OPTIONS.iteritems():
-            if kwargs.pop(option):
-                options.update({option: kwargs.pop(option, value)})
+            options.update({option: kwargs.pop(option, value)})
         if (options["algorithm"].find("bfgs") >= 0):
             for option, value in STAN_BFGS_OPTIONS.iteritems():
-                if kwargs.pop(option):
-                    options.update({option: kwargs.pop(option, value)})
+                options.update({option: kwargs.pop(option, value)})
     elif isequal_string(method, "diagnose"):  # for diagnose or diagnosing
         for option, value in STAN_DIAGNOSE_TEST_GRADIENT_OPTIONS.iteritems():
-            if kwargs.pop(option):
-                options.update({option: kwargs.pop(option, value)})
-    for option, value in STAN_OUTPUT_OPTIONS.iteritems():
-        if kwargs.pop(option):
             options.update({option: kwargs.pop(option, value)})
-    options.update(kwargs.get("init", ""))
-    options.update(kwargs.get("random_seed", options["random_seed"]))
-    options.update(kwargs.get("seed", options["random_seed"]))
-    options.update(kwargs.get("refresh", 100))
+    for option, value in STAN_OUTPUT_OPTIONS.iteritems():
+        options.update({option: kwargs.pop(option, value)})
+    options.update({"init": kwargs.get("init", "random")})
+    options.update({"random_seed": kwargs.get("random_seed", 12345)})
+    options.update({"random_seed": kwargs.get("seed", options["random_seed"])})
+    options.update({"refresh": kwargs.get("refresh", 100)})
+    options.update({"chains": kwargs.get("chains", 4)})
     return options
