@@ -472,7 +472,7 @@ model {
             }
             print("min(MC(cols))=", minMC);
             print("max(MC(cols))=", maxMC);
-        } else {
+        } else if (DEBUG >= 2) {
             for (ii in 1:n_regions) {
                 print("MC[", ii, "] = ", MC[ii]);
             }
@@ -520,18 +520,18 @@ model {
         /* Auto-regressive generative model  */
         if (euler_method==-1){ // backward euler method
             for (ii in 1:n_active_regions) {
-                df = EpileptorDP2D_fun_x1(x1[tt, ii-1], z[tt, ii-1], yc, Iext1, a, db, d, slope, tau1); //tau1[ii]
-                x1[tt, ii] ~ normal(x1[tt, ii-1] + dt*df, sig); // T[x1_lo, x1_hi];
-                df = EpileptorDP2D_fun_z_lin(x1[tt, ii-1], z[tt, ii-1], x0[active_regions[ii]], K*coupling[tt, ii-1], tau0, tau1); // tau0
-                z[tt, ii] ~ normal(z[tt, ii-1] + dt*df, sig); // T[z_lo, z_hi];
+                df = EpileptorDP2D_fun_x1(x1[tt, ii], z[tt, ii], yc, Iext1, a, db, d, slope, tau1); //tau1[ii]
+                x1[tt, ii] ~ normal(x1[tt-1, ii] + dt*df, sig); // T[x1_lo, x1_hi];
+                df = EpileptorDP2D_fun_z_lin(x1[tt, ii], z[tt, ii], x0[active_regions[ii]], K*coupling[tt, ii], tau0, tau1); // tau0
+                z[tt, ii] ~ normal(z[tt-1, ii] + dt*df, sig); // T[z_lo, z_hi];
             }
             // TODO: code for midpoint euler method
         } else {// forward euler method
             for (ii in 1:n_active_regions) {
-                df = EpileptorDP2D_fun_x1(x1[tt, ii], z[tt, ii], yc, Iext1, a, db, d, slope, tau1); //tau1[ii]
-                x1[tt, ii] ~ normal(x1[tt, ii-1] + dt*df, sig); // T[x1_lo, x1_hi];
-                df = EpileptorDP2D_fun_z_lin(x1[tt, ii], z[tt, ii], x0[active_regions[ii]], K*coupling[tt, ii], tau0, tau1); // tau0[ii]
-                z[tt, ii] ~ normal(z[tt, ii-1] + dt*df, sig); // T[z_lo, z_hi];
+                df = EpileptorDP2D_fun_x1(x1[tt-1, ii], z[tt-1, ii], yc, Iext1, a, db, d, slope, tau1); //tau1[ii]
+                x1[tt, ii] ~ normal(x1[tt-1, ii] + dt*df, sig); // T[x1_lo, x1_hi];
+                df = EpileptorDP2D_fun_z_lin(x1[tt-1, ii], z[tt-1, ii], x0[active_regions[ii]], K*coupling[tt-1, ii], tau0, tau1); // tau0[ii]
+                z[tt, ii] ~ normal(z[tt-1, ii] + dt*df, sig); // T[z_lo, z_hi];
             }
         }
         if (DEBUG == 1) {

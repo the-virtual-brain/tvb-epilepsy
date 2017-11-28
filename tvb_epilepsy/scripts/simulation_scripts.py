@@ -1,12 +1,24 @@
+
+import os
+from shutil import copyfile
+
 import numpy as np
 
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, FOLDER_FIGURES
+from tvb_epilepsy.base.constants.module_constants import TVB, SIMULATION_MODE
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
+from tvb_epilepsy.base.h5_model import read_h5_model, convert_to_h5_model
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
+from tvb_epilepsy.base.utils.plot_utils import plot_sim_results
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
+
+
+LOG = initialize_logger(__name__)
 
 
 ###
@@ -119,7 +131,7 @@ def prepare_vois_ts_dict(vois, data):
 
 
 def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt, time_length, hpf_flag=False,
-                                      hpf_low=10.0, hpf_high=256.0, sensors_list=[]):
+                                      hpf_low=10.0, hpf_high=256.0, sensors_list=[], save_flag=True):
     fsAVG = 1000.0 / dt
     sensors_list = ensure_list(sensors_list)
     # Optionally high pass filter, and compute SEEG:
@@ -152,11 +164,12 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
                     for i in range(vois_ts_dict[sensor_name].shape[1]):
                         vois_ts_dict[sensor_name][:, i] = filter_data(
                             vois_ts_dict[sensor_name][:, i], hpf_low, hpf_high, fsAVG)
-    # Write files:
-    if idx_proj > -1:
-        write_ts_epi(raw_data, dt, lfp_data, folder, filename)
-        for i_sensor, sensor in enumerate(sensors_list):
-            write_ts_seeg_epi(vois_ts_dict[sensor.s_type+'%d' % i_sensor], dt, folder, filename)
+    if save_flag:
+        # Write files:
+        if idx_proj > -1:
+            write_ts_epi(raw_data, dt, lfp_data, folder, filename)
+            for i_sensor, sensor in enumerate(sensors_list):
+                write_ts_seeg_epi(vois_ts_dict[sensor.s_type+'%d' % i_sensor], dt, folder, filename)
     return vois_ts_dict
 
 
@@ -170,3 +183,93 @@ def set_time_scales(fs=2048.0, time_length=100000.0, scale_fsavg=None, report_ev
     time_length_avg = np.round(sim_length / monitor_period)
     n_report_blocks = max(report_every_n_monitor_steps * np.round(time_length_avg / 100), 1.0)
     return dt, fsAVG, sim_length, monitor_period, n_report_blocks
+
+
+def from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis, dynamical_model="EpileptorDP2D",
+                                           simulation_mode=SIMULATION_MODE, ts_file="", plot_flag=True,
+                                           save_flag=True, results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES,
+                                           logger=LOG, **kwargs):
+    if simulation_mode is TVB:
+        from tvb_epilepsy.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration \
+            as setup_simulation_from_model_configuration
+    else:
+        from tvb_epilepsy.scripts.simulation_scripts import setup_custom_simulation_from_model_configuration \
+            as setup_simulation_from_model_configuration
+    # --------------------------Simulation preparations------------------------------------------------------------------
+    # TODO: maybe use a custom Monitor class
+    # this is the simulation sampling rate that is necessary for the simulation to be stable:
+    tau1 = kwargs.get("tau1", "0.5")
+    fs = kwargs.get("fs", 10 * 2048.0 * (2 * tau1))
+    time_length = kwargs.get("time_length", 50.0 / tau1)  # msecs, the final output nominal time length of the simulation
+    (dt, fsAVG, sim_length, monitor_period, n_report_blocks) = \
+        set_time_scales(fs=fs, time_length=time_length, scale_fsavg=1, report_every_n_monitor_steps=100.0)
+    # Choose model
+    # Available models beyond the TVB Epileptor (they all encompass optional variations from the different papers):
+    # EpileptorDP: similar to the TVB Epileptor + optional variations,
+    # EpileptorDP2D: reduced 2D model, following Proix et all 2014 +optional variations,
+    # EpleptorDPrealistic: starting from the TVB Epileptor + optional variations, but:
+    #      -x0, Iext1, Iext2, slope and K become noisy state variables,
+    #      -Iext2 and slope are coupled to z, g, or z*g in order for spikes to appear before seizure,
+    #      -multiplicative correlated noise is also used
+    # Optional variations:
+    zmode = kwargs.get("zmode", "lin")  # by default, or "sig" for the sigmoidal expression for the slow z variable in Proix et al. 2014
+    pmode = kwargs.get("pmode", "z")  # by default, "g" or "z*g" for the feedback coupling to Iext2 and slope for EpileptorDPrealistic
+    if dynamical_model is "EpileptorDP2D":
+        spectral_raster_plot = False
+        trajectories_plot = True
+    else:
+        spectral_raster_plot = False  # "lfp"
+        trajectories_plot = False
+
+    # ------------------------------Simulation--------------------------------------
+    logger.info("\n\nConfiguring simulation...")
+    noise_intensity = kwargs.get("noise_intensity", 10 ** -2.8)
+    sim = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt,
+                                                    sim_length, monitor_period, dynamical_model,
+                                                    zmode=np.array(zmode), pmode=np.array(pmode),
+                                                    noise_instance=None, noise_intensity=noise_intensity,
+                                                    monitor_expressions=None)
+    sim.model.tau1 = tau1
+    sim.model.tau0 = kwargs.get("tau0", "30")
+    # Integrator and initial conditions initialization.
+    # By default initial condition is set right on the equilibrium point.
+    sim.config_simulation(initial_conditions=None)
+    dynamical_model = sim.model
+    # convert_to_h5_model(sim.model).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5")
+
+    if os.path.isfile(ts_file):
+        logger.info("\n\nLoading previously simulated time series...")
+        vois_ts_dict = read_h5_model(ts_file).convert_from_h5_model()
+    else:
+        logger.info("\n\nSimulating...")
+        ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
+        # if save_flag:
+        # convert_to_h5_model(sim.simulation_settings).write_to_h5(folder_dir,
+        #                                                          lsa_hypothesis.name + "_sim_settings.h5")
+        if not status:
+            warning("\nSimulation failed!")
+        else:
+            time = np.array(ttavg, dtype='float32').flatten()
+            output_sampling_time = np.mean(np.diff(time))
+            tavg_data = tavg_data[:, :, :, 0]
+            logger.info("\n\nSimulated signal return shape: %s", tavg_data.shape)
+            logger.info("Time: %s - %s", time[0], time[-1])
+            logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
+            # Variables of interest in a dictionary:
+            vois_ts_dict = prepare_vois_ts_dict(VOIS[dynamical_model._ui_name], tavg_data)
+            vois_ts_dict['time'] = time
+            vois_ts_dict['time_units'] = 'msec'
+            vois_ts_dict = compute_seeg_and_write_ts_h5_file(results_dir, lsa_hypothesis.name + "_ts.h5", sim.model,
+                                                             vois_ts_dict, output_sampling_time, time_length,
+                                                             hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
+                                                             sensors_list=head.sensorsSEEG, save_flag=save_flag)
+            if plot_flag:
+                # Plot results
+                plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, lsa_hypothesis.name, head,
+                                 vois_ts_dict, hpf_flag=False, trajectories_plot=trajectories_plot,
+                                 spectral_raster_plot=spectral_raster_plot, log_scale=True,
+                                 figure_dir=figure_dir)  # head.sensorsSEEG,
+            # Optionally save results in mat files
+            this_ts_file = os.path.join(results_dir, lsa_hypothesis.name + "_ts.h5")
+            copyfile(this_ts_file, ts_file)
+    return vois_ts_dict

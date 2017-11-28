@@ -2,10 +2,15 @@
 import time
 
 import numpy as np
+from matplotlib import pyplot
 
+from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMAT, LARGE_SIZE, VERY_LARGE_SIZE, \
+                                                                                                    SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, construct_import_path
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, construct_import_path, sort_dict
+from tvb_epilepsy.base.utils.plot_utils import plot_raster, plot_regions2regions, plot_trajectories, save_figure, \
+                                                                                                            check_show
 from tvb_epilepsy.base.model.statistical_models.sde_statistical_model import SDEStatisticalModel
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import set_model_parameter
 from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_NVARS
@@ -46,9 +51,9 @@ class SDEModelInversionService(ODEModelInversionService):
         self.create_str = "ODEModelInversionService(ModelConfiguration())"
 
     def get_default_sig(self, dynamical_model):
-            if EPILEPTOR_MODEL_NVARS.get([self.dynamical_model]) == 2:
+            if EPILEPTOR_MODEL_NVARS[dynamical_model] == 2:
                 return model_noise_intensity_dict[dynamical_model][1]
-            elif EPILEPTOR_MODEL_NVARS.get([dynamical_model]) > 2:
+            elif EPILEPTOR_MODEL_NVARS[dynamical_model] > 2:
                 return model_noise_intensity_dict[dynamical_model][2]
 
     def generate_state_variables_parameters(self, parameters, **kwargs):
@@ -89,3 +94,49 @@ class SDEModelInversionService(ODEModelInversionService):
     def generate_model_data(self, statistical_model, signals, projection=None):
         return super(SDEModelInversionService, self).generate_model_data(statistical_model, signals, projection,
                                                                          x1var=self.x1var, zvar=self.zvar)
+
+    def plot_fit_results(self, est, statistical_model, signals, time=None, seizure_indices=None, trajectories_plot=False,
+                        save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
+                        **kwargs):
+        if time is None:
+            time = np.array(range(signals.shape[0]))
+        time = time.flatten()
+        sig_prior = statistical_model.parameters["sig"].mean
+        eps_prior = statistical_model.parameters["eps"].mean
+        plot_raster(time, sort_dict({'observation signals': signals,
+                                     'observation signals fit': est['fit_signals']}),
+                    special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
+                    title=statistical_model.name + ": Observation signals vs fit rasterplot",
+                    subtitles=['observation signals ' +
+                               '\ndynamic noise prior: sig = ' + str(sig_prior) +
+                               '\nobservation noise prior: eps =  ' + str(eps_prior),
+                               'observation signals fit'], offset=3.0,
+                    labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
+                    figure_format=figure_format, figsize=VERY_LARGE_SIZE)
+        plot_raster(time, sort_dict({'x1': est["x1"], 'z': est["z"]}),
+                    special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
+                    title=statistical_model.name + ": Hidden states fit rasterplot",
+                    subtitles=['hidden state x1' + '\ndynamic noise fit sig = : ' + str(est["sig"]) +
+                               '\nobservation noise fit eps = : ' + str(est["eps"]),
+                               'hidden state z'], offset=3.0,
+                    labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
+                    figure_format=figure_format, figsize=VERY_LARGE_SIZE)
+        if trajectories_plot:
+            title = statistical_model.name + ': Fit hidden state space trajectories'
+            title += "\n prior x0: " + str(self.x0_values)
+            title += "\n x0 fit: " + str(est["PathologicalExcitability"])
+            plot_trajectories({'x1': est['x'], 'z(t)': est['z']}, special_idx=seizure_indices,
+                              title=title, labels=self.region_labels, show_flag=show_flag, save_flag=save_flag,
+                              figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
+        # plot connectivity
+        conn_figure_name = "Model Connectivity"
+        pyplot.figure(conn_figure_name, VERY_LARGE_SIZE)
+        # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
+        MC_prior = statistical_model.parameters["MC"].mean
+        K_prior = statistical_model.parameters["K"].mean
+        plot_regions2regions(MC_prior, self.region_labels[statistical_model.active_regions], 121,
+                             "Prior Model Connectivity" + "\nglobal scaling prior: K = " + str(K_prior))
+        plot_regions2regions(est['MC'], self.region_labels[statistical_model.active_regions], 122,
+                             "Posterior Model  Connectivity" + "\nglobal scaling fit: K = " + str(est["K"]))
+        save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
+        check_show(show_flag=show_flag)

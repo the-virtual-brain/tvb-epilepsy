@@ -124,7 +124,7 @@ class ODEModelInversionService(ModelInversionService):
             signals = self.set_empirical_target_data(target_data)
         else:
             if statistical_model.observation_expression == "x1z_offset":
-                signals = ((target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T + \
+                signals = ((target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T +
                            (target_data["z"].T - np.expand_dims(self.zEQ, 1)).T) / 2.75
                 # TODO: a better normalization
             elif statistical_model.observation_expression == "x1_offset":
@@ -178,6 +178,8 @@ class ODEModelInversionService(ModelInversionService):
                 seeg_inds = self.signals_inds
             if len(seeg_inds) != 0:
                 projection = self.projection[seeg_inds]
+            else:
+                projection = self.projection
             for proj in projection:
                 active_regions += select_greater_values_array_inds(proj, active_regions_th).tolist()
             statistical_model.update_active_regions(active_regions)
