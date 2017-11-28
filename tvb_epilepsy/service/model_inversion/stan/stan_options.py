@@ -92,7 +92,7 @@ def generate_cmdstan_options(method, **kwargs):
             options.update({option: kwargs.pop(option, value)})
     for option, value in STAN_OUTPUT_OPTIONS.iteritems():
         options.update({option: kwargs.pop(option, value)})
-    options.update({"init": kwargs.get("init", "random")})
+    options.update({"init": kwargs.get("init", "'random'")})
     options.update({"random_seed": kwargs.get("random_seed", 12345)})
     options.update({"random_seed": kwargs.get("seed", options["random_seed"])})
     options.update({"refresh": kwargs.get("refresh", 100)})
