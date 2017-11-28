@@ -6,7 +6,7 @@ import numpy as np
 import pystan as ps
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES
-from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
+from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path, sort_dict
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error, raise_value_error
 from tvb_epilepsy.service.model_inversion.stan.stan_service import StanService
 
@@ -20,7 +20,7 @@ class PyStanService(StanService):
         super(PyStanService, self).__init__(model_name, model, model_dir, model_code, model_code_path, model_data_path,
                                             fitmethod, logger)
         self.assert_fitmethod()
-        self.options = {"init": init, "seed": random_seed}
+        self.options = {"init": init, "seed": random_seed, "verbose": True}
         self.options.update(options)
         self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
         self.create_str = self.__class__.__name__ + "()"
@@ -55,12 +55,20 @@ class PyStanService(StanService):
         self.model_path = kwargs.get("model_path", self.model_path)
         self.model = pickle.load(open(self.model_path, 'rb'))
 
-    def fit(self, **kwargs):
+    def fit(self, debug=0, simulate=0, **kwargs):
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
         self.fitmethod = kwargs.pop("method", self.fitmethod)
         model_data = kwargs.pop("model_data", None)
         if not(isinstance(model_data, dict)):
             model_data = self.load_model_data_from_file()
+        # -1 for no debugging at all
+        # 0 for printing only scalar parameters
+        # 1 for printing scalar and vector parameters
+        # 2 for printing all (scalar, vector and matrix) parameters
+        model_data["DEBUG"] = debug
+        # > 0 for simulating without using the input observation data:
+        model_data["SIMULATE"] = simulate
+        model_data = sort_dict(model_data)
         self.assert_fitmethod()
         self.options.update(kwargs)
         self.logger.info("Model fitting with " + self.fitmethod + "...")

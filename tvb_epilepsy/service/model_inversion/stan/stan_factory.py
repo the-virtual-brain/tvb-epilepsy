@@ -1,4 +1,5 @@
 
+import os
 from collections import OrderedDict
 
 import numpy as np
@@ -92,9 +93,76 @@ def generate_cmdstan_options(method, **kwargs):
             options.update({option: kwargs.pop(option, value)})
     for option, value in STAN_OUTPUT_OPTIONS.iteritems():
         options.update({option: kwargs.pop(option, value)})
-    options.update({"init": kwargs.get("init", "'random'")})
+    options.update({"init": kwargs.get("init", 2)})
     options.update({"random_seed": kwargs.get("random_seed", 12345)})
     options.update({"random_seed": kwargs.get("seed", options["random_seed"])})
     options.update({"refresh": kwargs.get("refresh", 100)})
     options.update({"chains": kwargs.get("chains", 4)})
     return options
+
+
+def generate_cmdstan_fit_command(fitmethod, options, model_path, model_data_path, output_filepath, diagnostic_filepath,
+                                 command_path=None):
+    command = model_path
+    if isequal_string(fitmethod, "sample"):
+        command += " method=sample"' \\' + "\n"
+        command += "\t\talgorithm=" + options["algorithm"] + ' \\' + "\n"
+        if isequal_string(options["algorithm"], "hmc"):
+            command += "\t\t\t\tengine=" + options["engine"] + ' \\' + "\n"
+            if isequal_string(options["engine"], "nuts"):
+                command += "\t\t\t\t\t\tmax_depth=" + str(options["max_depth"]) + ' \\' + "\n"
+            elif isequal_string(options["engine"], "static"):
+                command += "\t\t\t\t\t\tint_time=" + str(options["int_time"]) + ' \\' + "\n"
+            hmc_options = dict(STAN_HMC_OPTIONS)
+            del hmc_options["engine"]
+            for option in STAN_HMC_OPTIONS.keys():
+                command += "\t\t\t\t" + option + "=" + str(options[option]) + ' \\' + "\n"
+    elif isequal_string(fitmethod, "variational"):
+        command += " method=variational"' \\' + "\n"
+        for option in STAN_VARIATIONAL_OPTIONS.keys():
+            # due to sort_dict, we know that algorithm is the first option
+            command += "\t\t\t\t" + option + "=" + str(options[option]) + ' \\' + "\n"
+    elif isequal_string(fitmethod, "optimize"):
+        command += " method=optimize"' \\' + "\n"
+        command += "\t\talgorithm=" + options["algorithm"] + ' \\' + "\n"
+        if (options["algorithm"].find("bfgs") >= 0):
+            for option in STAN_BFGS_OPTIONS.keys():
+                command += "\t\t\t\t" + option + "=" + str(options[option]) + ' \\' + "\n"
+    # + " data file=" + model_data_path
+    elif isequal_string(fitmethod, "diagnose"):
+        command += " method=diagnose"' \\' + "\n" + "\t\ttest=gradient "
+        for option in STAN_DIAGNOSE_TEST_GRADIENT_OPTIONS.keys():
+            command += "\t\t\t\t" + + option + "=" + str(options[option]) + ' \\' + "\n"
+    if isequal_string(fitmethod, "sample") or isequal_string(fitmethod, "variational"):
+        command += "\t\tadapt"' \\' + "\n"
+        if isequal_string(fitmethod, "sample"):
+            adapt_options = STAN_SAMPLE_ADAPT_OPTIONS
+        else:
+            adapt_options = STAN_VARIATIONAL_ADAPT_OPTIONS
+        for option in adapt_options.keys():
+            command += "\t\t\t\t" + option + "=" + str(options[option]) + ' \\' + "\n"
+    command += "\t\tdata file="+ model_data_path + ' \\' + "\n"
+    command += "\t\tinit=" + str(options["init"]) + ' \\' + "\n"
+    command += "\t\trandom seed=" + str(options["random_seed"]) + ' \\' + "\n"
+    if diagnostic_filepath == "":
+        diagnostic_filepath = os.path.join(os.path.dirname(output_filepath), STAN_OUTPUT_OPTIONS["diagnostic_file"])
+    if options["chains"] > 1:
+        command = ("for i in {1.." + str(options["chains"]) + "}\ndo\n" +
+                   "\t" + command +
+                   "\t\tid=$i" + ' \\' + "\n" +
+                   "\t\toutput file=" + output_filepath[:-4] + "$i.csv"' \\' + "\n" +
+                   "\t\tdiagnostic_file=" + diagnostic_filepath[:-4] + "$i.csv"' \\' + "\n" +
+                   "\t\trefresh=" + str(options["refresh"]) + " &" + "\n" +
+                   "done")
+    else:
+        command += "\t\toutput file=" + output_filepath + ' \\' + "\n"
+        command += "\t\tdiagnostic_file=" + diagnostic_filepath + ' \\' + "\n"
+        command += "\t\trefresh=" + str(options["refresh"])
+    command = "chmod +x " + model_path + "\n" + command
+    command = ''.join(command)
+    if isinstance(command_path, basestring):
+        command_path = os.path.join(os.path.dirname(output_filepath), "command.sh")
+        command_file = open(command_path, "w")
+        command_file.write("#!/bin/bash\n" + command.replace("\t", ""))
+        command_file.close()
+    return command, output_filepath, diagnostic_filepath

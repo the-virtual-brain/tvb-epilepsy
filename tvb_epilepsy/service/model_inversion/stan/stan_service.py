@@ -65,7 +65,7 @@ class StanService(object):
         model_data_path = kwargs.get("model_data_path", self.model_data_path)
         if reset_path:
             self.model_data_path = model_data_path
-        extension = self.model_data_path.split(".", -1)[-1]
+        extension = model_data_path.split(".", -1)[-1]
         if isequal_string(extension, "npy"):
             np.save(model_data_path, model_data)
         elif isequal_string(extension, "mat"):

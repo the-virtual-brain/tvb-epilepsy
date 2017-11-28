@@ -562,12 +562,12 @@ def plot_fit_results(hyp_name, head, res, data, active_regions, time=None, seizu
                 special_idx=seizure_indices, time_units=res.get('time_units', "ms"),
                 title=hyp_name + ": Observation signals vs fit rasterplot",
                 subtitles=['observation signals ' +
-                                '\ndynamic noise prior: sig = ' + str(data["sig_hi"]/2) +
+                                '\ndynamic noise prior: sig = ' + str(data["sig"]/2) +
                                 '\nobservation noise prior: eps =  ' + str(data["eps_hi"]/2),
                            'observation signals fit'],  offset=3.0,
                 labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                 figure_format=figure_format, figsize=VERY_LARGE_SIZE)
-    plot_raster(time, sort_dict({'x1': res["x"].T, 'z': res["z"].T}),
+    plot_raster(time, sort_dict({'x1': res["x1"], 'z': res["z"]}),
                 special_idx=seizure_indices, time_units=res.get('time_units', "ms"),
                 title=hyp_name + ": Hidden states fit rasterplot",
                 subtitles=['hidden state x1' + '\ndynamic noise fit sig = : ' + str(res["sig"]) +
@@ -581,16 +581,18 @@ def plot_fit_results(hyp_name, head, res, data, active_regions, time=None, seizu
         if x0mu is not None:
             title += "\n prior x0mu: " + str(x0mu)
         title += "\n x0 fit: " + str(res["x0"])
-        plot_trajectories({'x1': res['x'].T, 'z(t)': res['z'].T}, special_idx=seizure_indices,
+        plot_trajectories({'x1': res['x'], 'z(t)': res['z']}, special_idx=seizure_indices,
                           title=title, labels=head.connectivity.region_labels, show_flag=show_flag, save_flag=save_flag,
                           figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
     # plot connectivity
     conn_figure_name ="Structural and Effective Connectivity"
     pyplot.figure(conn_figure_name, VERY_LARGE_SIZE)
     # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
-    plot_regions2regions(data['SC'], head.connectivity.region_labels[active_regions], 121, "Structural Connectivity" +
-                         "\nglobal scaling prior: K = " + str(data["K_u"] * data["K_v"]))
-    plot_regions2regions(res['FC'], head.connectivity.region_labels[active_regions], 122, "Effective Connectivity"  +
-                         "\nglobal scaling fit: K = " + str(res["K"]))
+    MC_mean = np.exp(data['MC_p1'] + (data['MC_p2']**2) / 2)
+    K_mean = np.exp(data['K_p1'] + (data['K_p2'] ** 2) / 2)
+    plot_regions2regions(data['MC_mean'], head.connectivity.region_labels[active_regions], 121,
+                         "Prior Model Connectivity" + "\nglobal scaling prior: K = " + str(K_mean))
+    plot_regions2regions(res['MC'], head.connectivity.region_labels[active_regions], 122,
+                         "Posterior Model  Connectivity"  + "\nglobal scaling fit: K = " + str(res["K"]))
     save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
     check_show(show_flag=show_flag)

@@ -251,7 +251,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", times_on_off=[
             model_data = model_inversion_service.generate_model_data(statistical_model, signals)
             stan_service.write_model_data_to_file(model_data)
         # Fit and get estimates:
-        est, fit = stan_service.fit(model_data=model_data, **kwargs)
+        est, fit = stan_service.fit(model_data=model_data, debug=0, simulate=0, **kwargs)
         savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_fit_est.mat"), est)
         plot_fit_results(lsa_hypothesis.name, head, est, model_data, statistical_model.active_regions, time,
                          seizure_indices=[0, 1], trajectories_plot=True)

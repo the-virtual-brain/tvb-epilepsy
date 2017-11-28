@@ -220,7 +220,7 @@ class ODEModelInversionService(ModelInversionService):
         parameters.update({"zinit": set_model_parameter("zinit", "normal", self.zEQ, 0.1,
                                                          self.ZINIT_MIN, self.ZINIT_MAX, (self.n_regions,), False,
                                                          **kwargs)})
-        parameters.update({"sig_init": set_model_parameter("sig_init", "lognormal", 0.1, None,
+        parameters.update({"sig_init": set_model_parameter("sig_init", "lognormal", 0.003, None,
                                                             0.0, lambda s: 2 * s, (), True, **kwargs)})
         # Observation model
         parameters.update({"scale_signal": set_model_parameter("scale_signal", "lognormal", 1.0, None,
@@ -255,9 +255,9 @@ class ODEModelInversionService(ModelInversionService):
                       "n_signals": statistical_model.n_signals,
                       "n_active_regions": statistical_model.n_active_regions,
                       "n_nonactive_regions": statistical_model.n_nonactive_regions,
-                      "active_regions_flag": active_regions_flag,
-                      "active_regions": statistical_model.active_regions,
-                      "nonactive_regions": np.where(1 - active_regions_flag)[0],
+                      "active_regions_flag": np.array(active_regions_flag),
+                      "active_regions": np.array(statistical_model.active_regions) + 1,  # cmdstan cannot take lists!
+                      "nonactive_regions": np.where(1 - active_regions_flag)[0] + 1,  # indexing starts from 1!
                       "dt": statistical_model.dt,
                       "euler_method": np.where(np.in1d(EULER_METHODS, statistical_model.euler_method))[0][0] - 1,
                       "observation_model": np.where(np.in1d(OBSERVATION_MODELS,

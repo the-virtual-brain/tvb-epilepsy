@@ -164,7 +164,7 @@ class ModelInversionService(object):
                                                      self.MC_MIN, 3 * p0595[1], (self.n_regions, self.n_regions), True,
                                                      **kwargs)})
         # Integration:
-        parameters.update({"sig_eq": set_model_parameter("sig_eq", "lognormal", 0.1, None,
+        parameters.update({"sig_eq": set_model_parameter("sig_eq", "lognormal", 0.03, None,
                                                          0.0, lambda s: 2 * s, (), True, **kwargs)})
         # Observation model
         parameters.update({"eps": set_model_parameter("eps", "lognormal", 0.1, None, 0.0, 1.0, (), True, **kwargs)})
