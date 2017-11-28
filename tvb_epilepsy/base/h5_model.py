@@ -250,7 +250,7 @@ def check_for_last_granchild(child_path, metadata, object_strings=
     last_grandchild = True
     for key in metadata.keys():
         if key.find(child_path) >= 0:
-            if key.split(child_path + "/", 1)[1] not in object_strings:
+            if key.split(child_path + "/", 1)[-1] not in object_strings:
                 last_grandchild = False
                 break
     return last_grandchild
