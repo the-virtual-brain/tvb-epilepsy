@@ -215,6 +215,24 @@ def linear_index_to_coordinate_tuples(linear_index, shape):
         return []
 
 
+def extract_dict_stringkeys(d, keys, pop=False, remove=False):
+    if remove:
+        out_dict = deepcopy(d)
+    out_dict = {}
+    keys = ensure_list(keys)
+    for key, value in d.iteritems():
+        for k in keys:
+            if key.find(k) >= 0:
+                if remove:
+                    del out_dict[key]
+                else:
+                    out_dict.update({key: value})
+                if pop:
+                    del d[key]
+    return out_dict, d
+
+
+
 # This function is meant to confirm that two objects assumingly of the same type are equal, i.e., identical
 def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
 
