@@ -188,7 +188,10 @@ def dicts_of_lists_to_lists_of_dicts(dictionary):
 def ensure_list(arg):
     if not (isinstance(arg, list)):
         try: #if iterable
-            arg = list(arg)
+            if isinstance(arg, basestring):
+                arg = [arg]
+            else:
+                arg = list(arg)
         except: #if not iterable
             arg = [arg]
     return arg
@@ -215,10 +218,11 @@ def linear_index_to_coordinate_tuples(linear_index, shape):
         return []
 
 
-def extract_dict_stringkeys(d, keys, pop=False, remove=False):
+def extract_dict_stringkeys(d, keys, remove=False):
     if remove:
         out_dict = deepcopy(d)
-    out_dict = {}
+    else:
+        out_dict = {}
     keys = ensure_list(keys)
     for key, value in d.iteritems():
         for k in keys:
@@ -227,9 +231,7 @@ def extract_dict_stringkeys(d, keys, pop=False, remove=False):
                     del out_dict[key]
                 else:
                     out_dict.update({key: value})
-                if pop:
-                    del d[key]
-    return out_dict, d
+    return out_dict
 
 
 
