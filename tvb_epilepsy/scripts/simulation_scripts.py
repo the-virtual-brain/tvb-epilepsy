@@ -1,6 +1,5 @@
 
 import os
-from shutil import copyfile
 
 import numpy as np
 
@@ -271,5 +270,6 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
                                  figure_dir=figure_dir)  # head.sensorsSEEG,
             # Optionally save results in mat files
             this_ts_file = os.path.join(results_dir, lsa_hypothesis.name + "_ts.h5")
-            copyfile(this_ts_file, ts_file)
+            convert_to_h5_model(vois_ts_dict).write_to_h5(os.path.join(os.path.dirname(ts_file),
+                                                                       os.path.basename(ts_file)))
     return vois_ts_dict

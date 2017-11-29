@@ -98,8 +98,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         est, fit = stan_service.fit(model_data=model_data, debug=0, simulate=0, **kwargs)
-        convert_to_h5_model(est).write_to_h5(results_dir, lsa_hypothesis.name + "_fit_est.mat")
-        model_configuration_service.plot_fit_results(est, statistical_model, signals, time=None,
+        convert_to_h5_model(est).write_to_h5(results_dir, lsa_hypothesis.name + "_fit_est.h5")
+        model_inversion_service.plot_fit_results(est, statistical_model, signals, time=None,
                                                     seizure_indices=lsa_hypothesis.get_regions_disease(),
                                                     trajectories_plot=True)
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
