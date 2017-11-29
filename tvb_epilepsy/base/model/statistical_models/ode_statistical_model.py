@@ -13,10 +13,10 @@ EULER_METHODS = ["backward", "midpoint", "forward"]
 
 class ODEStatisticalModel(StatisticalModel):
 
-    def __init__(self, name='vep_ode', parameters={}, n_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
+    def __init__(self, name='vep_ode', n_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
                  euler_method="forward", observation_model="seeg_logpower", observation_expression="x1z_offset",
                  **defaults):
-        super(ODEStatisticalModel, self).__init__(name, parameters, n_regions, **defaults)
+        super(ODEStatisticalModel, self).__init__(name, n_regions, **defaults)
         self.context_str = "from " + construct_import_path(__file__) + " import ODEStatisticalModel"
         self.create_str = "ODEStatisticalModel('" + self.name + "')"
         if np.all(np.in1d(active_regions, range(self.n_regions))):
@@ -48,7 +48,7 @@ class ODEStatisticalModel(StatisticalModel):
             raise_value_error("Statistical model's observation expression " + str(observation_model) +
                               " is not one of the valid ones: "
                               + str(OBSERVATION_MODELS) + "!")
-        self._generate_parameters(**defaults)
+        self.__add_parameters(**defaults)
 
     def update_active_regions(self, active_regions):
         if np.all(np.in1d(active_regions, range(self.n_regions))):
@@ -72,7 +72,7 @@ class ODEStatisticalModel(StatisticalModel):
              "13. observation_model": self.observation_model}
         return form_repr + "\n" + formal_repr(self, sort_dict(d))
 
-    def __generate_parameters(self, **defaults):
+    def __add_parameters(self, **defaults):
         for p in ["x1init", "zinit"]:
             self.parameters.update({p: set_parameter(p, optimize=False, **defaults)})
         for p in ["sig_init", "scale_signal", "offset_signal"]:

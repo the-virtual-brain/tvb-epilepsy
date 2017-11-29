@@ -136,41 +136,41 @@ class ModelInversionService(object):
     def __set_default_parameters(self, **kwargs):
         # Generative model:
         # Epileptor:
-        self.default_parameters.update(set_parameter_defaults("x1eq", "normal", (self.n_regions,),  # name, pdf, shape
-                                                              self.X1EQ_MIN, X1_EQ_CR_DEF,          # min, max
-                                                              np.maximum(self.x1EQ, X1_DEF), **kwargs))  # mean, (std)
-        self.default_parameters.update(set_parameter_defaults("K", "lognormal", (),
-                                                              self.K_MIN,  self.K_MAX,
-                                                              np.mean(self.K), **kwargs))
+        self.default_parameters.update(set_parameter_defaults("x1eq", "normal", (self.n_regions,),
+                                                              self.X1EQ_MIN, X1_EQ_CR_DEF,
+                                                              np.maximum(self.x1EQ, X1_DEF), sigma=0.03))
+        self.default_parameters.update(set_parameter_defaults("K", "lognormal", (),         # name, pdf, shape
+                                                              self.K_MIN,  self.K_MAX,      # min, max
+                                                              np.mean(self.K), lambda m: m/6, **kwargs))   # mean, (std)
         self.default_parameters.update(set_parameter_defaults("tau1", "lognormal", (),
                                                               self.TAU1_MIN, self.TAU1_MAX,
-                                                              self.tau1, **kwargs))
+                                                              self.tau1, lambda m: m/3,  **kwargs))
         self.default_parameters.update(set_parameter_defaults("tau0", "lognormal", (),
                                                               self.TAU0_MIN, self.TAU0_MAX,
-                                                              self.tau0, **kwargs))
+                                                              self.tau0, lambda m: m/3, **kwargs))
         # Coupling:
         model_connectivity = kwargs.get("model_connectivity", self.model_connectivity)
         p0595 = np.percentile(model_connectivity.flatten(), [5, 95])
-        mean = np.minimum(np.maximum(p0595[0], model_connectivity), p0595[1])
+        mean = np.minimum(np.maximum(np.maximum(p0595[0], 0.001), model_connectivity), p0595[1])
         self.default_parameters.update(set_parameter_defaults("MC", "lognormal", (),
                                                               self.MC_MIN, 3 * p0595[1],
-                                                              mean, lambda mc: mc/6.0, **kwargs))
+                                                              mean, lambda m: m/6.0, **kwargs))
         # Integration:
         self.default_parameters.update(set_parameter_defaults("sig_eq", "lognormal", (),
                                                               0.0, lambda s: 3 * s,
                                                               0.03, lambda m: m / 6.0, **kwargs))
         # Observation model
         self.default_parameters.update(set_parameter_defaults("eps", "lognormal", (),
-                                                              0.0, 1.0,
-                                                              0.1, **kwargs))
+                                                              0.0, 0.5,
+                                                              0.1, 0.1, **kwargs))
 
     def generate_statistical_model(self, model_name=None, **kwargs):
         if model_name is None:
             model_name = self.model_name
         tic = time.time()
         self.logger.info("Generating model...")
-        self.defaults.update(kwargs)
-        model = StatisticalModel(model_name, self.n_regions, **self.defaults.update(kwargs))
+        self.default_parameters.update(kwargs)
+        model = StatisticalModel(model_name, self.n_regions, **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model

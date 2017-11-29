@@ -19,7 +19,7 @@ class StatisticalModel(object):
             raise_value_error("Statistical model's type " + str(name) + " is not a string!")
         # Parameter setting:
         self.parameters = {}
-        self.__generate_parameters(**defaults)
+        self._generate_parameters(**defaults)
         self.n_parameters = len(self.parameters)
         self.context_str = "from " + construct_import_path(__file__) + " import StatisticalModel"
         self.create_str = "StatisticalModel('" + self.name + "')"
@@ -45,7 +45,7 @@ class StatisticalModel(object):
         h5_model = self._prepare_for_h5()
         h5_model.write_to_h5(folder, filename)
 
-    def __generate_parameters(self, **defaults):
+    def _generate_parameters(self, **defaults):
         self.parameters.update({"x1eq": set_parameter("x1eq", optimize=False, **defaults)})
         for p in ["K", "tau1", "tau0", "MC", "sig_eq", "eps"]:
             self.parameters.update({p: set_parameter(p, optimize=True, **defaults)})

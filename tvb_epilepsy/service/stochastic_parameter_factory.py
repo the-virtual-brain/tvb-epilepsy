@@ -1,3 +1,4 @@
+
 import os
 
 import numpy as np
@@ -11,7 +12,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import extract_dict_stringkey
 
 
 def set_parameter(name, optimize=True, **kwargs):
-    parameter = kwargs.get(name, None)
+    parameter = kwargs.pop(name, None)
     # load parameter it is a file
     if isinstance(parameter, basestring):
         if os.path.isfile(parameter):
@@ -22,67 +23,84 @@ def set_parameter(name, optimize=True, **kwargs):
                         "Proceeding with generating it!")
     if not(isinstance(parameter, Parameter)):
         defaults = {}
-        # Get all keyword arguments that correspond to that parameter
-        defaults.update(extract_dict_stringkeys(kwargs, name, remove=False)[0])
-        # Add other keyword arguments that do NOT correspond to OTHER parameters, e.g., "mean", etc
-        defaults.update(extract_dict_stringkeys(kwargs, "_", remove=True)[0])
+        # Get all keyword arguments that correspond to that parameter name
+        defaults.update(extract_dict_stringkeys(kwargs, name + "_"))
         # assign the mean value if parameter is numeric
         if isinstance(parameter, (int, long, float)) or (isinstance(parameter, np.ndarray)
                                                          and np.issubdtype(np.dtype, np.number)):
             kwargs.update({"_".join([name, "def"]): parameter})
         # Generate defaults and eventually the parameter:
-        defaults = set_parameter_defaults(name, **defaults)
+        defaults = set_parameter_defaults(name, defaults.pop("_".join([name, "pdf_params"]), {}), name_flag=False,
+                                          **defaults)
+        # Strip the parameter name from the dictionary keys:
         parameter = generate_stochastic_parameter(name,
-                                                  probability_distribution=defaults.pop("_".join([name, "pdf"])),
-                                                  p_shape=defaults.pop("_".join([name, "shape"])),
-                                                  low=defaults.pop("_".join([name, "lo"])),
-                                                  high=defaults.pop("_".join([name, "hi"])),
-                                                  optimize=optimize, **defaults)
+                                                      probability_distribution=defaults.pop("pdf"),
+                                                      p_shape=defaults.pop("shape"),
+                                                      low=defaults.pop("lo"),
+                                                      high=defaults.pop("hi"),
+                                                      optimize=optimize, **defaults)
     return parameter
 
 
-def set_parameter_defaults(name, pdf="normal", shape=(), lo=MIN_SINGLE_VALUE, hi=MAX_SINGLE_VALUE, mean=None, std=None,
-                           **kwargs):
-    defaults = dict()
-    defaults.update({name + "_pdf": kwargs.pop("_".join([name, "pdf"]), kwargs.pop("pdf", pdf))})
-    defaults.update({name + "_shape": kwargs.pop("_".join([name, "shape"]), kwargs.pop("shape", shape))})
-    for pstring in ["median", "mode", "def", "mu", "m", "mean"]:
-        p_value = kwargs.pop("_".join([name, pstring]), kwargs.pop(pstring, None))
-        if p_value is not None:
-            mean = p_value
-            if isequal_string(pstring, "def") or isequal_string(pstring, "mu") or isequal_string(pstring, "m"):
-                pstring = "mean"
-            break
-    if mean is not None:
-        defaults.update({"_".join([name, pstring]): mean})
-    for pstring in ["sig", "sigma", "s", "var", "std"]:
-        std = kwargs.pop("_".join([name, pstring]), kwargs.pop(pstring, std))
-        if std is not None:
-            if pstring != "var":
-                pstring = "std"
-            break
-    if std is None:
-        if mean is not None:
-            std = np.abs(mean / 3.0)
+# This function takes position or keyword arguments of the form "param" or "name_param" and sets the default parameters
+# of a stochastic parameter in the form "name_param" if name_flag = True, or "param" otherwise,
+# ready to enter to the stochastic parameter generation function
+# The argument pdf_params has priority over mean, std or other variations thereof. It can be used to set other
+# possible parameters such as scale, shape, kurt etc
+# The values for std, lo and hi can be callables of mean.
+def set_parameter_defaults(name, _pdf="normal", _shape=(), _lo=MIN_SINGLE_VALUE, _hi=MAX_SINGLE_VALUE, _mean=None,
+                           _std=None, pdf_params={}, name_flag=True, **kwargs):
+    if name_flag:
+        out_name = lambda pkey: "_".join([name, pkey])
     else:
-        if callable(std) and mean is not None:
-            std = np.abs(std(mean))
-        if pstring == "var":
-            std = np.sqrt(np.abs(std))
-    if std is not None and not(np.any(std == 0.0)):
-        defaults.update({"_".join([name, pstring]): std})
+        out_name = lambda pkey: pkey
+    defaults = {}
+    defaults.update({out_name("pdf"): kwargs.pop("_".join([name, "pdf"]), kwargs.pop("pdf", _pdf))})
+    defaults.update({out_name("shape"): kwargs.pop("_".join([name, "shape"]), kwargs.pop("shape", _shape))})
+    # A set of pdf_params has priority over mean and str:
+    if len(pdf_params) > 0:
+        for pkey, pval in pdf_params.iteritems():
+            defaults.update({out_name(pkey.split(name + "_", 0)[-1]): pval})
+    else:
+        pkey="mean"
+        if _mean is None:
+            # go along mean and std and their kind...
+            for pkey in ["def", "median", "mode", "mu", "m", "mean"]:
+                _mean = kwargs.pop("_".join([name, pkey]), kwargs.pop(pkey, _mean))
+                if _mean is not None:
+                    if not(isequal_string(pkey, "median")) and not(isequal_string(pkey, "mode")):
+                        pkey = "mean"
+                    break
+        if _mean is not None:
+            defaults.update({out_name("mean"): _mean})
+        pkey = "std"
+        if _std is None:
+            for pkey in ["sig", "sigma", "s", "var", "std"]:
+                _std = kwargs.pop("_".join([name, pkey]), kwargs.pop(pkey, _std))
+                if _std is not None:
+                    if not(isequal_string(pkey, "sigma")) and not(isequal_string(pkey, "var")):
+                        pkey = "std"
+                    break
+        if _std is not None:
+            if callable(_std) and _mean is not None: # std can be a function of mean
+                _std = np.abs(_std(_mean))
+            if pkey == "var":
+                _std = np.sqrt(np.abs(_std))
+                pkey = "std"
+            if not(np.any(_std == 0.0)):
+                defaults.update({out_name(pkey): _std})
 
     def set_low_high(val, strings):
         value = val
-        for pstring in strings:
-            p_value = kwargs.pop("_".join([name, pstring]), kwargs.pop(pstring, None))
-            if p_value is not None:
-                value = p_value
+        for pkey in strings:
+            pval = kwargs.pop("_".join([name, pkey]), kwargs.pop(pkey, None))
+            if pval is not None:
+                value = pval
                 break
-        if callable(value) and mean is not None:
-            value = value(mean)
+        if callable(value) and _mean is not None:     # low and high can be functions of mean
+            value = value(_mean)
         return value
 
-    defaults.update({"_".join([name, "lo"]): set_low_high(lo, ["lo", "low", "min"])})
-    defaults.update({"_".join([name, "hi"]): set_low_high(lo, ["hi", "high", "max"])})
+    defaults.update({out_name("lo"): set_low_high(_lo, ["lo", "low", "min"])})
+    defaults.update({out_name("hi"): set_low_high(_hi, ["hi", "high", "max"])})
     return defaults

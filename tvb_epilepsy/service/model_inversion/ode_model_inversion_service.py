@@ -219,19 +219,19 @@ class ODEModelInversionService(ModelInversionService):
         # Integration:
         self.default_parameters.update(set_parameter_defaults("x1init", "normal", (self.n_regions,),  # name, pdf, shape
                                                               self.X1INIT_MIN, self.X1INIT_MAX,       # min, max
-                                                              self.x1EQ, **kwargs))                   # mean, (std)
+                                                              self.x1EQ, sigma=0.003))
         self.default_parameters.update(set_parameter_defaults("zinit", "normal", (self.n_regions,),  # name, pdf, shape
                                                               self.ZINIT_MIN, self.ZINIT_MAX,  # min, max
-                                                              self.zEQ, **kwargs))  # mean, (std)
+                                                              self.zEQ, sigma=0.003))
         self.default_parameters.update(set_parameter_defaults("sig_init", "lognormal", (),
                                                               0.0, lambda s: 3 * s,
                                                               0.003, lambda m: m / 6.0, **kwargs))
         self.default_parameters.update(set_parameter_defaults("scale_signal", "lognormal", (),
                                                              0.5, 1.5,
-                                                             1.0, **kwargs))
+                                                             1.0, 0.1, **kwargs))
         self.default_parameters.update(set_parameter_defaults("offset_signal", "lognormal", (),
                                                               -0.5, 0.5,
-                                                              0.0, **kwargs))
+                                                              0.0, 0.1, **kwargs))
 
     def generate_statistical_model(self, model_name=None, **kwargs):
         if model_name is None:
@@ -239,9 +239,9 @@ class ODEModelInversionService(ModelInversionService):
         tic = time.time()
         self.logger.info("Generating model...")
         active_regions = kwargs.pop("active_regions", [])
-        self.defaults.update(kwargs)
+        self.default_parameters.update(kwargs)
         model = ODEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
-                                    **self.defaults)
+                                    **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model

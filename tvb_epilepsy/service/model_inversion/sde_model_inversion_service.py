@@ -63,20 +63,20 @@ class SDEModelInversionService(ODEModelInversionService):
         if isequal_string(self.sde_mode, "dWt"):
             self.default_parameters.update(set_parameter_defaults("x1_dWt", "normal", (),  # name, pdf, shape
                                                                   -6.0, 6.0,               # min, max
-                                                                   0.0, 1.0, **kwargs))    # mean, (std)
+                                                                   0.0, sigma=1.0))
             self.default_parameters.update(set_parameter_defaults("z_dWt", "normal", (),  # name, pdf, shape
                                                                   -6.0, 6.0,              # min, max
-                                                                   0.0, 1.0, **kwargs))   # mean, (std)
+                                                                   0.0, sigma=1.0))
         else:
             self.default_parameters.update(set_parameter_defaults("x1", "normal", (),        # name, pdf, shape
                                                                   self.X1_MIN, self.X1_MAX,  # min, max
-                                                                  self.x1EQ, 1.0, **kwargs))  # mean, (std)
+                                                                  self.x1EQ, sigma=1.0))
             self.default_parameters.update(set_parameter_defaults("z", "normal", (),          # name, pdf, shape
                                                                   self.Z_MIN, self.Z_MAX,     # min, max
-                                                                  self.zEQ, 1.0, **kwargs))  # mean, (std)
+                                                                  self.zEQ, sigma=1.0))
         self.default_parameters.update(set_parameter_defaults("sig", "gamma", (),       # name, pdf, shape
                                                               0.0, lambda m: 3 * m,     # min, max
-                                                              self.sig, **kwargs))      # mean, (std)
+                                                              self.sig, self.sig, **kwargs))      # mean, (std)
 
     def generate_statistical_model(self, model_name=None, **kwargs):
         if model_name is None:
@@ -84,9 +84,9 @@ class SDEModelInversionService(ODEModelInversionService):
         tic = time.time()
         self.logger.info("Generating model...")
         active_regions = kwargs.pop("active_regions", [])
-        self.defaults.update(kwargs)
+        self.default_parameters.update(kwargs)
         model = SDEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
-                                    self.x1var, self.zvar, **self.defaults)
+                                    self.x1var, self.zvar, **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model
