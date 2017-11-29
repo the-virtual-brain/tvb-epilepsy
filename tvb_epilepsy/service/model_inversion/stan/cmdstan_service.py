@@ -114,6 +114,6 @@ class CmdStanService(StanService):
         self.fitting_time = time.time() - tic
         self.logger.info(str(self.fitting_time) + ' sec required to fit')
         if read_output:
-            return parse_csv(output_filepath.replace(".csv", "*"), merge=True), None
+            return parse_csv(output_filepath.replace(".csv", "*"), merge=kwargs.pop("merge_outputs", True)), None
         else:
             return None, None

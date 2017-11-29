@@ -98,6 +98,7 @@ class SDEModelInversionService(ODEModelInversionService):
     def plot_fit_results(self, est, statistical_model, signals, time=None, seizure_indices=None, trajectories_plot=False,
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
                         **kwargs):
+        name = statistical_model.name + kwargs.get("_id_est", "")
         if time is None:
             time = np.array(range(signals.shape[0]))
         time = time.flatten()
@@ -106,30 +107,30 @@ class SDEModelInversionService(ODEModelInversionService):
         plot_raster(time, sort_dict({'observation signals': signals,
                                      'observation signals fit': est['fit_signals']}),
                     special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
-                    title=statistical_model.name + ": Observation signals vs fit rasterplot",
+                    title=name + ": Observation signals vs fit rasterplot",
                     subtitles=['observation signals ' +
-                               '\ndynamic noise prior: sig = ' + str(sig_prior) +
-                               '\nobservation noise prior: eps =  ' + str(eps_prior),
+                               '\nobservation noise prior: eps =  ' + str(eps_prior)+
+                               '\nobservation noise fit eps = : ' + str(est["eps"]),
                                'observation signals fit'], offset=3.0,
                     labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                     figure_format=figure_format, figsize=VERY_LARGE_SIZE)
         plot_raster(time, sort_dict({'x1': est["x1"], 'z': est["z"]}),
                     special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
-                    title=statistical_model.name + ": Hidden states fit rasterplot",
-                    subtitles=['hidden state x1' + '\ndynamic noise fit sig = : ' + str(est["sig"]) +
-                               '\nobservation noise fit eps = : ' + str(est["eps"]),
+                    title=name + ": Hidden states fit rasterplot",
+                    subtitles=['hidden state x1' '\ndynamic noise prior: sig = ' + str(sig_prior) +
+                               '\ndynamic noise fit sig = : ' + str(est["sig"]),
                                'hidden state z'], offset=3.0,
                     labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                     figure_format=figure_format, figsize=VERY_LARGE_SIZE)
         if trajectories_plot:
-            title = statistical_model.name + ': Fit hidden state space trajectories'
+            title = name + ': Fit hidden state space trajectories'
             title += "\n prior x0: " + str(self.x0_values)
             title += "\n x0 fit: " + str(est["PathologicalExcitability"])
             plot_trajectories({'x1': est['x'], 'z(t)': est['z']}, special_idx=seizure_indices,
                               title=title, labels=self.region_labels, show_flag=show_flag, save_flag=save_flag,
                               figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
         # plot connectivity
-        conn_figure_name = "Model Connectivity"
+        conn_figure_name = name + "Model Connectivity"
         pyplot.figure(conn_figure_name, VERY_LARGE_SIZE)
         # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
         MC_prior = statistical_model.parameters["MC"].mean
