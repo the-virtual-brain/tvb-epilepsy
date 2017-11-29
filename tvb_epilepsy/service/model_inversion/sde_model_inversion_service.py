@@ -12,7 +12,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, constr
 from tvb_epilepsy.base.utils.plot_utils import plot_raster, plot_regions2regions, plot_trajectories, save_figure, \
                                                                                                             check_show
 from tvb_epilepsy.base.model.statistical_models.sde_statistical_model import SDEStatisticalModel
-from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import set_model_parameter
+from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
 from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_NVARS
 from tvb_epilepsy.service.model_inversion.ode_model_inversion_service import ODEModelInversionService
 
@@ -46,6 +46,7 @@ class SDEModelInversionService(ODEModelInversionService):
            self.get_default_sig(dynamical_model)
         super(SDEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model, 
                                                        model_name, logger, **kwargs)
+        self.set_default_parameters(**kwargs)
         self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
         self.context_str += "; from tvb_epilepsy.base.model.model_configuration import ModelConfiguration"
         self.create_str = "ODEModelInversionService(ModelConfiguration())"
@@ -56,37 +57,36 @@ class SDEModelInversionService(ODEModelInversionService):
             elif EPILEPTOR_MODEL_NVARS[dynamical_model] > 2:
                 return model_noise_intensity_dict[dynamical_model][2]
 
-    def generate_state_variables_parameters(self, parameters, **kwargs):
+    def set_default_parameters(self, **kwargs):
+        # Generative model:
+        # Integration:
         if isequal_string(self.sde_mode, "dWt"):
-            parameters.update({"x1_dWt": set_model_parameter("x1_dWt", "normal", 0.0, 1.0,
-                                                             -6.0, 6.0, (), False, **kwargs)})
-            parameters.update({"z_dWt": set_model_parameter("z_dWt", "normal", 0.0, 1.0,
-                                                             -6.0, 6.0, (), False, **kwargs)})
+            self.default_parameters.update(set_parameter_defaults("x1_dWt", "normal", (),  # name, pdf, shape
+                                                                  -6.0, 6.0,               # min, max
+                                                                   0.0, 1.0, **kwargs))    # mean, (std)
+            self.default_parameters.update(set_parameter_defaults("z_dWt", "normal", (),  # name, pdf, shape
+                                                                  -6.0, 6.0,              # min, max
+                                                                   0.0, 1.0, **kwargs))   # mean, (std)
         else:
-            parameters.update({"x1": set_model_parameter("x1", "normal", self.x1EQ, 1.0,
-                                                         self.X1_MIN, self.X1_MAX, (), False, **kwargs)})
-            parameters.update({"z": set_model_parameter("z", "normal", self.zEQ, 1.0,
-                                                         self.Z_MIN, self.Z_MAX, (), False, **kwargs)})
-        return parameters
-
-    def generate_model_parameters(self, **kwargs):
-        parameters = super(SDEModelInversionService, self).generate_model_parameters(**kwargs)
-        # State variables:
-        parameters = self.generate_state_variables_parameters(parameters, **kwargs)
-        # Integration
-        parameter = set_model_parameter("sig", "gamma", self.sig, None, 0.0, lambda s: 10 * s, (), True, **kwargs)
-        if parameter.high < 10*parameter.mean:
-            parameter.high = 10*parameter.mean
-        parameters.update({parameter.name: parameter})
-        return parameters
+            self.default_parameters.update(set_parameter_defaults("x1", "normal", (),        # name, pdf, shape
+                                                                  self.X1_MIN, self.X1_MAX,  # min, max
+                                                                  self.x1EQ, 1.0, **kwargs))  # mean, (std)
+            self.default_parameters.update(set_parameter_defaults("z", "normal", (),          # name, pdf, shape
+                                                                  self.Z_MIN, self.Z_MAX,     # min, max
+                                                                  self.zEQ, 1.0, **kwargs))  # mean, (std)
+        self.default_parameters.update(set_parameter_defaults("sig", "gamma", (),       # name, pdf, shape
+                                                              0.0, lambda m: 3 * m,     # min, max
+                                                              self.sig, **kwargs))      # mean, (std)
 
     def generate_statistical_model(self, model_name=None, **kwargs):
         if model_name is None:
             model_name = self.model_name
         tic = time.time()
         self.logger.info("Generating model...")
-        model = SDEStatisticalModel(model_name, self.generate_model_parameters(**kwargs), self.n_regions,
-                                    kwargs.get("active_regions", []), self.n_signals, self.n_times, self.dt, **kwargs)
+        active_regions = kwargs.pop("active_regions", [])
+        self.defaults.update(kwargs)
+        model = SDEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
+                                    self.x1var, self.zvar, **self.defaults)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model

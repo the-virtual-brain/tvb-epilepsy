@@ -11,7 +11,7 @@ from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import \
                                                         EULER_METHODS, OBSERVATION_MODEL_EXPRESSIONS, OBSERVATION_MODELS
-from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import set_model_parameter
+from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
 from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DISTRIBUTIONS
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
@@ -37,6 +37,7 @@ class ODEModelInversionService(ModelInversionService):
         self.n_times = 0
         self.n_signals = 0
         self.signals_inds = range(self.n_signals)
+        self._set_default_parameters(**kwargs)
         self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
         self.context_str += "; from tvb_epilepsy.base.model.model_configuration import ModelConfiguration"
         self.create_str = "ODEModelInversionService(ModelConfiguration())"
@@ -213,31 +214,34 @@ class ODEModelInversionService(ModelInversionService):
                                                                     seeg_inds=kwargs.get("seeg_inds"))
         return statistical_model
 
-    def generate_model_parameters(self, **kwargs):
-        parameters = super(ODEModelInversionService, self).generate_model_parameters(**kwargs)
-        # Integration
-        parameters.update({"x1init": set_model_parameter("x1init", "normal", self.x1EQ, 0.1,
-                                                         self.X1INIT_MIN, self.X1INIT_MAX, (self.n_regions,), False,
-                                                          **kwargs)})
-        parameters.update({"zinit": set_model_parameter("zinit", "normal", self.zEQ, 0.1,
-                                                         self.ZINIT_MIN, self.ZINIT_MAX, (self.n_regions,), False,
-                                                         **kwargs)})
-        parameters.update({"sig_init": set_model_parameter("sig_init", "lognormal", 0.003, None,
-                                                            0.0, lambda s: 2 * s, (), True, **kwargs)})
-        # Observation model
-        parameters.update({"scale_signal": set_model_parameter("scale_signal", "lognormal", 1.0, None,
-                                                               lambda s: 0.5 * s, lambda s: 2 * s, (), True, **kwargs)})
-        parameters.update({"offset_signal": set_model_parameter("offset_signal", "lognormal", 0.0, 1.0,
-                                                                -1.0, 1.0, (), True, **kwargs)})
-        return parameters
+    def _set_default_parameters(self, **kwargs):
+        # Generative model:
+        # Integration:
+        self.default_parameters.update(set_parameter_defaults("x1init", "normal", (self.n_regions,),  # name, pdf, shape
+                                                              self.X1INIT_MIN, self.X1INIT_MAX,       # min, max
+                                                              self.x1EQ, **kwargs))                   # mean, (std)
+        self.default_parameters.update(set_parameter_defaults("zinit", "normal", (self.n_regions,),  # name, pdf, shape
+                                                              self.ZINIT_MIN, self.ZINIT_MAX,  # min, max
+                                                              self.zEQ, **kwargs))  # mean, (std)
+        self.default_parameters.update(set_parameter_defaults("sig_init", "lognormal", (),
+                                                              0.0, lambda s: 3 * s,
+                                                              0.003, lambda m: m / 6.0, **kwargs))
+        self.default_parameters.update(set_parameter_defaults("scale_signal", "lognormal", (),
+                                                             0.5, 1.5,
+                                                             1.0, **kwargs))
+        self.default_parameters.update(set_parameter_defaults("offset_signal", "lognormal", (),
+                                                              -0.5, 0.5,
+                                                              0.0, **kwargs))
 
     def generate_statistical_model(self, model_name=None, **kwargs):
         if model_name is None:
             model_name = self.model_name
         tic = time.time()
         self.logger.info("Generating model...")
-        model = ODEStatisticalModel(model_name, self.generate_model_parameters(**kwargs), self.n_regions,
-                                   kwargs.get("active_regions", []), self.n_signals, self.n_times, self.dt, **kwargs)
+        active_regions = kwargs.pop("active_regions", [])
+        self.defaults.update(kwargs)
+        model = ODEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
+                                    **self.defaults)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model
