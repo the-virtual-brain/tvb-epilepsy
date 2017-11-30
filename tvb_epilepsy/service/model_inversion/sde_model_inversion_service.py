@@ -109,23 +109,22 @@ class SDEModelInversionService(ODEModelInversionService):
         if time is None:
             time = np.array(range(signals.shape[0]))
         time = time.flatten()
-        sig_prior = statistical_model.parameters["sig"].mean
+        sig_prior = statistical_model.parameters["sig"].mean / statistical_model.sig_scale
         eps_prior = statistical_model.parameters["eps"].mean
         plot_raster(time, sort_dict({'observation signals': signals,
                                      'observation signals fit': est['fit_signals']}),
                     special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                     title=name + ": Observation signals vs fit rasterplot",
                     subtitles=['observation signals ' +
-                               '\nobservation noise prior: eps =  ' + str(eps_prior)+
-                               '\nobservation noise fit eps = : ' + str(est["eps"]),
+                               '\nobservation noise eps_prior =  ' + str(eps_prior) + " eps_post =" + str(est["eps"]),
                                'observation signals fit'], offset=3.0,
                     labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                     figure_format=figure_format, figsize=VERY_LARGE_SIZE)
         plot_raster(time, sort_dict({'x1': est["x1"], 'z': est["z"]}),
                     special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                     title=name + ": Hidden states fit rasterplot",
-                    subtitles=['hidden state x1' '\ndynamic noise prior: sig = ' + str(sig_prior) +
-                               '\ndynamic noise fit sig = : ' + str(est["sig"]),
+                    subtitles=['hidden state x1' '\ndynamic noise sig_prior = ' + str(sig_prior) +
+                               " sig_post = " + str(est["sig"]/statistical_model.sig_scale),
                                'hidden state z'], offset=3.0,
                     labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                     figure_format=figure_format, figsize=VERY_LARGE_SIZE)
@@ -140,11 +139,13 @@ class SDEModelInversionService(ODEModelInversionService):
         conn_figure_name = name + "Model Connectivity"
         pyplot.figure(conn_figure_name, VERY_LARGE_SIZE)
         # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
-        MC_prior = statistical_model.parameters["MC"].mean
+        MC_prior = statistical_model.parameters["MC"].mean / statistical_model.MC_scale
         K_prior = statistical_model.parameters["K"].mean
-        plot_regions2regions(MC_prior, self.region_labels[statistical_model.active_regions], 121,
+        plot_regions2regions(MC_prior, self.region_labels[statistical_model.active_regions], 131,
                              "Prior Model Connectivity" + "\nglobal scaling prior: K = " + str(K_prior))
-        plot_regions2regions(est['MC'], self.region_labels[statistical_model.active_regions], 122,
+        plot_regions2regions(est['model_connectivity'], self.region_labels[statistical_model.active_regions], 132,
                              "Posterior Model  Connectivity" + "\nglobal scaling fit: K = " + str(est["K"]))
+        plot_regions2regions(est['MC']-1.0, self.region_labels[statistical_model.active_regions], 133,
+                             "Posterior-Prior MC")
         save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
         check_show(show_flag=show_flag)

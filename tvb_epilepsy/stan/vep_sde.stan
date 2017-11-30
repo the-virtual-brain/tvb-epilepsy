@@ -339,7 +339,7 @@ transformed parameters {
     matrix[n_times, n_active_regions] coupling; // actual effective coupling per time point
     matrix<lower=0.0>[n_regions, n_regions] model_connectivity;
 
-    model_connectivity = MC_scale * MC;
+    model_connectivity = MC_scale .* MC;
 
     /* zeq */
     for (ii in 1:n_regions) {
