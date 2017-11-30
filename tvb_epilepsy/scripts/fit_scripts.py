@@ -75,8 +75,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         # -------------------------- Get model_data and observation signals: -------------------------------------------
         model_inversion_service = SDEModelInversionService(model_configuration, lsa_hypothesis, head,
                                                             dynamical_model, sde_mode="x1z", logger=logger)
-        statistical_model = model_inversion_service.generate_statistical_model(MC=os.path.join(FOLDER_VEP_HOME,
-                                                                                                   "MC.h5"))
+        statistical_model = model_inversion_service.generate_statistical_model()
         if len(model_inversion_service.signals_inds) < head.get_sensors_id().number_of_sensors:
                 statistical_model = \
                     model_inversion_service.update_active_regions_seeg(statistical_model)

@@ -1,5 +1,6 @@
 
 import time
+from copy import deepcopy
 
 import numpy as np
 
@@ -49,7 +50,10 @@ class ModelInversionService(object):
             self.logger.info("Input model configuration set...")
             self.n_regions = model_configuration.n_regions
             self._copy_attributes(model_configuration,
-                                  ["K", "x1EQ", "zEQ", "e_values", "x0_values", "model_connectivity"], deep_copy=True)
+                                  ["K", "x1EQ", "zEQ", "e_values", "x0_values"], deep_copy=True)
+            self.model_connectivity = deepcopy(kwargs.pop("model_connectivity", model_configuration.model_connectivity))
+            p95 = np.percentile(self.model_connectivity.flatten(), 95)
+            self.model_connectivity = np.minimum(self.model_connectivity, p95)
             self.epileptor_parameters = self.get_epileptor_parameters(model_configuration)
         else:
             raise_value_error("Invalid input model configuration!:\n" + str(model_configuration))
@@ -82,8 +86,8 @@ class ModelInversionService(object):
         if np.in1d(dynamical_model, AVAILABLE_DYNAMICAL_MODELS_NAMES):
             self.tau1 = self.get_default_tau1(dynamical_model)
             self.tau0 = self.get_default_tau0(dynamical_model)
-        self.sig_eq = self.get_default_sig_eq(x1eq_def=kwargs.pop("x1eq_def", X1_DEF),
-                                              x1eq_cr=kwargs.pop("x1eq_cr", X1_EQ_CR_DEF))
+            self.sig_eq_scale = self.get_default_sig_eq(x1eq_def=kwargs.pop("x1eq_def", X1_DEF),
+                                                    x1eq_cr=kwargs.pop("x1eq_cr", X1_EQ_CR_DEF), **kwargs)
         self.default_parameters = {}
         self.__set_default_parameters(**kwargs)
         self.logger.info("Model Inversion Service instance created!")
@@ -130,8 +134,8 @@ class ModelInversionService(object):
     def get_default_tau0(self, dynamical_model):
         return EPILEPTOR_MODEL_TAU0[dynamical_model]
 
-    def get_default_sig_eq(self, x1eq_def=X1_DEF, x1eq_cr=X1_EQ_CR_DEF):
-        return (x1eq_cr - x1eq_def) / 3.0
+    def get_default_sig_eq(self, x1eq_def=X1_DEF, x1eq_cr=X1_EQ_CR_DEF, **kwargs):
+        return 1.0 / kwargs.pop("sig_eq", (x1eq_cr - x1eq_def) / 30.0)
 
     def __set_default_parameters(self, **kwargs):
         # Generative model:
@@ -139,26 +143,24 @@ class ModelInversionService(object):
         self.default_parameters.update(set_parameter_defaults("x1eq", "normal", (self.n_regions,),
                                                               self.X1EQ_MIN, X1_EQ_CR_DEF,
                                                               np.maximum(self.x1EQ, X1_DEF), sigma=0.03))
-        self.default_parameters.update(set_parameter_defaults("K", "lognormal", (),         # name, pdf, shape
-                                                              self.K_MIN,  self.K_MAX,      # min, max
-                                                              np.mean(self.K), lambda m: m/6, **kwargs))   # mean, (std)
-        self.default_parameters.update(set_parameter_defaults("tau1", "lognormal", (),
-                                                              self.TAU1_MIN, self.TAU1_MAX,
-                                                              self.tau1, lambda m: m/3,  **kwargs))
+        self.default_parameters.update(set_parameter_defaults("K", "lognormal", (),
+                                                              self.K_MIN,  self.K_MAX,
+                                                              np.minimum(np.mean(self.K), 0.1),
+                                                              lambda m: m/3, **kwargs))
+        self.default_parameters.update(set_parameter_defaults("tau1", "lognormal", (),               # name, pdf, shape
+                                                              self.TAU1_MIN, self.TAU1_MAX,          # min, max
+                                                              self.tau1, lambda m: m/3,  **kwargs))  # mean, (std)
         self.default_parameters.update(set_parameter_defaults("tau0", "lognormal", (),
                                                               self.TAU0_MIN, self.TAU0_MAX,
                                                               self.tau0, lambda m: m/3, **kwargs))
         # Coupling:
-        model_connectivity = kwargs.get("model_connectivity", self.model_connectivity)
-        p0595 = np.percentile(model_connectivity.flatten(), [5, 95])
-        mean = np.minimum(np.maximum(np.maximum(p0595[0], 0.001), model_connectivity), p0595[1])
-        self.default_parameters.update(set_parameter_defaults("MC", "lognormal", (),
-                                                              self.MC_MIN, 3 * p0595[1],
-                                                              mean, lambda m: m/6.0, **kwargs))
+        self.default_parameters.update(set_parameter_defaults("MC", "lognormal", (self.n_regions, self.n_regions),
+                                                              self.MC_MIN, 3.0,
+                                                              1.0, 1.0 / 6.0, **kwargs))
         # Integration:
         self.default_parameters.update(set_parameter_defaults("sig_eq", "lognormal", (),
-                                                              0.0, lambda s: 3 * s,
-                                                              0.03, lambda m: m / 6.0, **kwargs))
+                                                              0.0, 3.0,
+                                                              1.0, 1.0 / 3.0, **kwargs))
         # Observation model
         self.default_parameters.update(set_parameter_defaults("eps", "lognormal", (),
                                                               0.0, 0.5,
@@ -170,7 +172,8 @@ class ModelInversionService(object):
         tic = time.time()
         self.logger.info("Generating model...")
         self.default_parameters.update(kwargs)
-        model = StatisticalModel(model_name, self.n_regions, **self.default_parameters)
+        model = StatisticalModel(model_name, self.n_regions, self.model_connectivity, self.sig_eq_scale,
+                                 **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model

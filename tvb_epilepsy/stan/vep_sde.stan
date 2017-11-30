@@ -162,11 +162,12 @@ data {
     real<lower=0.0> K_p2;
     int<lower=0> K_pdf;
     /* MC (model connectivity) parameter (default: lognormal distribution) */
-    matrix[n_regions, n_regions] MC_p1;
-    matrix<lower=0.0>[n_regions, n_regions] MC_p2;
+    real MC_p1;
+    real<lower=0.0> MC_p2;
     real<lower=0.0> MC_lo;
     real<lower=0.0> MC_hi;
     int<lower=0> MC_pdf;
+    matrix<lower=0.0>[n_regions, n_regions] MC_scale;
 
     /* Integration */
     int euler_method;
@@ -177,18 +178,21 @@ data {
     real sig_eq_p1;
     real<lower=0.0> sig_eq_p2;
     int<lower=0> sig_eq_pdf;
+    real<lower=0.0> sig_eq_scale;
     /* Initial condition variability parameter (default: lognormal distribution) */
     real<lower=0.0> sig_init_hi;
     real<lower=0.0> sig_init_lo;
     real sig_init_p1;
     real<lower=0.0> sig_init_p2;
     int<lower=0> sig_init_pdf;
+    real<lower=0.0> sig_init_scale;
         /* Dynamic noise strength parameter (default: gamma distribution) */
     real<lower=0.0> sig_hi;
     real<lower=0.0> sig_lo;
     real sig_p1;
     real<lower=0.0> sig_p2;
     int<lower=0> sig_pdf;
+    real<lower=0.0> sig_scale;
 
     /* Observation model */
     int observation_expression;
@@ -242,37 +246,18 @@ transformed data {
         print("tau1_lo =", tau1_lo, ", tau1_hi =", tau1_hi, ", tau1_p1 =", tau1_p1, ", tau1_p2 =", tau1_p2, ", tau1_pdf =", tau1_pdf);
         print("tau0_lo =", tau0_lo, ", tau0_hi =", tau0_hi, ", tau0_p1 =", tau0_p1, ", tau0_p2 =", tau0_p2, ", tau0_pdf =", tau0_pdf);
         print("K_lo =", K_lo, ", K_hi =", K_hi, ", K_p1 =", K_p1, ", K_p2 =", K_p2, ", K_pdf =", K_pdf);
-        print("MC_lo =", MC_lo, ", MC_hi =", MC_hi, ", MC_pdf =", MC_pdf);
-        if (DEBUG == 1){
-            vector[n_regions] maxMC_p1;
-            vector[n_regions] minMC_p1;
-            vector[n_regions] maxMC_p2;
-            vector[n_regions] minMC_p2;
+        print("MC_lo =", MC_lo, ", MC_hi =", MC_hi, " MC_p1 =", MC_p1, " MC_p2 =", MC_p2, ", MC_pdf =", MC_pdf);
+        if (DEBUG == 3){
             for (ii in 1:n_regions) {
-                vector[n_regions] MCcol_p1;
-                vector[n_regions] MCcol_p2;
-                MCcol_p1 = col(MC_p1, ii);
-                MCcol_p2 = col(MC_p2, ii);
-                maxMC_p1[ii] = max(MCcol_p1);
-                minMC_p1[ii] = min(MCcol_p1);
-                maxMC_p2[ii] = max(MCcol_p2);
-                minMC_p2[ii] = min(MCcol_p2);
-            }
-            print("min(MC_p1(cols))=", minMC_p1);
-            print("max(MC_p1(cols))=", maxMC_p1);
-            print("min(MC_p2(cols))=", minMC_p2);
-            print("max(MC_p2(cols))=", maxMC_p2);
-        } else {
-            for (ii in 1:n_regions) {
-                print("MC_p1[", ii, "] = ", MC_p1[ii]);
-                print("MC_p2[", ii, "] = ", MC_p2[ii]);
+                print("MC_scale[", ii, "] = ", MC_scale[ii]);
+                print("MC_scale[", ii, "] = ", MC_scale[ii]);
             }
         }
         print("euler_method =", euler_method);
         print("dt =", dt);
-        print("sig_eq_lo =", sig_eq_lo, ", sig_eq_hi =", sig_eq_hi, ", sig_eq_p1 =", sig_eq_p1, ", sig_eq_p2 =", sig_eq_p2, ", sig_eq_pdf =", sig_eq_pdf);
-        print("sig_init_lo =", sig_init_lo, ", sig_init_hi =", sig_init_hi, ", sig_init_p1 =", sig_init_p1, ", sig_init_p2 =", sig_init_p2, ", sig_init_pdf =", sig_init_pdf);
-        print("sig_lo =", sig_lo, ", sig_hi =", sig_hi, ", sig_p1 =", sig_p1, ", sig_p2 =", sig_p2, ", sig_pdf =", sig_pdf);
+        print("sig_eq_scale =", sig_eq_scale, " sig_eq_lo =", sig_eq_lo, ", sig_eq_hi =", sig_eq_hi, ", sig_eq_p1 =", sig_eq_p1, ", sig_eq_p2 =", sig_eq_p2, ", sig_eq_pdf =", sig_eq_pdf);
+        print("sig_init_scale =", sig_init_scale, " sig_init_lo =", sig_init_lo, ", sig_init_hi =", sig_init_hi, ", sig_init_p1 =", sig_init_p1, ", sig_init_p2 =", sig_init_p2, ", sig_init_pdf =", sig_init_pdf);
+        print("sig_scale =", sig_scale, " sig_lo =", sig_lo, ", sig_hi =", sig_hi, ", sig_p1 =", sig_p1, ", sig_p2 =", sig_p2, ", sig_pdf =", sig_pdf);
         print("observation_expression =", observation_expression, ", observation_model =", observation_model);
         print("min(mixing) =",min(mixing), ", max(mixing) =", max(mixing));
         if (DEBUG == 1){
@@ -352,6 +337,9 @@ transformed parameters {
     /* Coupling */
     vector[n_regions] coupling_eq; // coupling at equilibrium
     matrix[n_times, n_active_regions] coupling; // actual effective coupling per time point
+    matrix<lower=0.0>[n_regions, n_regions] model_connectivity;
+
+    model_connectivity = MC_scale * MC;
 
     /* zeq */
     for (ii in 1:n_regions) {
@@ -371,7 +359,7 @@ transformed parameters {
         coupling_eq[ii] = 0.0;
         for (jj in 1:n_regions) {
             if (ii!=jj) {
-                    coupling_eq[ii] = coupling_eq[ii] + MC[ii, jj] * (x1eq[jj] - x1eq[ii]);
+                    coupling_eq[ii] = coupling_eq[ii] + model_connectivity[ii, jj] * (x1eq[jj] - x1eq[ii]);
             }
         }
     }
@@ -389,14 +377,14 @@ transformed parameters {
             for (jj in 1:n_active_regions) {
                if (ii!=jj) {
                    coupling[tt, ii] =
-                              coupling[tt, ii] + MC[active_regions[ii], active_regions[jj]] * (x1[tt, jj] - x1[tt, ii]);
+                              coupling[tt, ii] + model_connectivity[active_regions[ii], active_regions[jj]] * (x1[tt, jj] - x1[tt, ii]);
                }
             }
             // coupling nonactive -> active regions
             for (jj in 1:n_nonactive_regions) {
                // non active regions are assumed to always stay close to their equilibrium point
                coupling[tt, ii] = coupling[tt, ii] +
-                             MC[active_regions[ii], nonactive_regions[jj]] * (x1eq[nonactive_regions[jj]] - x1[tt, ii]);
+                             model_connectivity[active_regions[ii], nonactive_regions[jj]] * (x1eq[nonactive_regions[jj]] - x1[tt, ii]);
             }
         }
         if (DEBUG == 1) {
@@ -451,9 +439,9 @@ model {
 
     /* Sampling of x1 equilibrium point coordinate and effective connectivity */
     for (ii in 1:n_regions) {
-        x1eq[ii] ~ normal(x1eq0[ii], sig_eq);
+        x1eq[ii] ~ normal(x1eq0[ii], sig_eq/sig_eq_scale);
         for (jj in 1:n_regions) {
-            MC[ii, jj] ~ sample(MC_pdf, MC_p1[ii, jj], MC_p2[ii, jj]);
+            MC[ii, jj] ~ sample(MC_pdf, MC_p1, MC_p2);
         }
     }
     if (DEBUG >= 0){
@@ -481,8 +469,8 @@ model {
 
     /* Sampling of initial condition*/
     for (ii in 1:n_active_regions) {
-        x1[ii, 1] ~ normal(x1eq[active_regions[ii]], sig_init);
-        z[ii, 1] ~ normal(zeq[active_regions[ii]], sig_init);
+        x1[ii, 1] ~ normal(x1eq[active_regions[ii]], sig_init/sig_init_scale);
+        z[ii, 1] ~ normal(zeq[active_regions[ii]], sig_init/sig_init_scale);
 //        tau0[ii] ~ sample(tau1_pdf, tau1_p1, tau1_p2);
 //        tau0[ii] ~ sample(tau0_pdf, tau0_p1, tau0_p2);
     }
@@ -521,17 +509,17 @@ model {
         if (euler_method==-1){ // backward euler method
             for (ii in 1:n_active_regions) {
                 df = EpileptorDP2D_fun_x1(x1[tt, ii], z[tt, ii], yc, Iext1, a, db, d, slope, tau1); //tau1[ii]
-                x1[tt, ii] ~ normal(x1[tt-1, ii] + dt*df, sig); // T[x1_lo, x1_hi];
+                x1[tt, ii] ~ normal(x1[tt-1, ii] + dt*df, sig/sig_scale); // T[x1_lo, x1_hi];
                 df = EpileptorDP2D_fun_z_lin(x1[tt, ii], z[tt, ii], x0[active_regions[ii]], K*coupling[tt, ii], tau0, tau1); // tau0
-                z[tt, ii] ~ normal(z[tt-1, ii] + dt*df, sig); // T[z_lo, z_hi];
+                z[tt, ii] ~ normal(z[tt-1, ii] + dt*df, sig/sig_scale); // T[z_lo, z_hi];
             }
             // TODO: code for midpoint euler method
         } else {// forward euler method
             for (ii in 1:n_active_regions) {
                 df = EpileptorDP2D_fun_x1(x1[tt-1, ii], z[tt-1, ii], yc, Iext1, a, db, d, slope, tau1); //tau1[ii]
-                x1[tt, ii] ~ normal(x1[tt-1, ii] + dt*df, sig); // T[x1_lo, x1_hi];
+                x1[tt, ii] ~ normal(x1[tt-1, ii] + dt*df, sig/sig_scale); // T[x1_lo, x1_hi];
                 df = EpileptorDP2D_fun_z_lin(x1[tt-1, ii], z[tt-1, ii], x0[active_regions[ii]], K*coupling[tt-1, ii], tau0, tau1); // tau0[ii]
-                z[tt, ii] ~ normal(z[tt-1, ii] + dt*df, sig); // T[z_lo, z_hi];
+                z[tt, ii] ~ normal(z[tt-1, ii] + dt*df, sig/sig_scale); // T[z_lo, z_hi];
             }
         }
         if (DEBUG == 1) {

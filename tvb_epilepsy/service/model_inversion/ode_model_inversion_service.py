@@ -37,13 +37,14 @@ class ODEModelInversionService(ModelInversionService):
         self.n_times = 0
         self.n_signals = 0
         self.signals_inds = range(self.n_signals)
+        self.sig_init_scale = self.get_default_sig_init(**kwargs)
         self._set_default_parameters(**kwargs)
         self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
         self.context_str += "; from tvb_epilepsy.base.model.model_configuration import ModelConfiguration"
         self.create_str = "ODEModelInversionService(ModelConfiguration())"
 
-    def get_default_sig_init(self):
-        return 0.1
+    def get_default_sig_init(self, **kwargs):
+        return 1.0 / kwargs.pop("sig_init", 1.0 / (3*self.sig_eq_scale))
 
     def set_time(self, time=None):
         if time is not None:
@@ -224,8 +225,8 @@ class ODEModelInversionService(ModelInversionService):
                                                               self.ZINIT_MIN, self.ZINIT_MAX,  # min, max
                                                               self.zEQ, sigma=0.003))
         self.default_parameters.update(set_parameter_defaults("sig_init", "lognormal", (),
-                                                              0.0, lambda s: 3 * s,
-                                                              0.003, lambda m: m / 6.0, **kwargs))
+                                                              0.0, 3.0,
+                                                              1.0, 1.0 / 6.0, **kwargs))
         self.default_parameters.update(set_parameter_defaults("scale_signal", "lognormal", (),
                                                              0.5, 1.5,
                                                              1.0, 0.1, **kwargs))
@@ -240,8 +241,8 @@ class ODEModelInversionService(ModelInversionService):
         self.logger.info("Generating model...")
         active_regions = kwargs.pop("active_regions", [])
         self.default_parameters.update(kwargs)
-        model = ODEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
-                                    **self.default_parameters)
+        model = ODEStatisticalModel(model_name, self.n_regions, self.model_connectivity, active_regions, self.n_signals,
+                                    self.n_times, self.dt, self.sig_eq_scale, self.sig_init_scale, **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model
@@ -264,6 +265,9 @@ class ODEModelInversionService(ModelInversionService):
                       "active_regions_flag": np.array(active_regions_flag),
                       "active_regions": np.array(statistical_model.active_regions) + 1,  # cmdstan cannot take lists!
                       "nonactive_regions": np.where(1 - active_regions_flag)[0] + 1,  # indexing starts from 1!
+                      "MC_scale": statistical_model.model_connectivity,
+                      "sig_eq_scale": statistical_model.sig_eq_scale,
+                      "sig_init_scale": statistical_model.sig_init_scale,
                       "dt": statistical_model.dt,
                       "euler_method": np.where(np.in1d(EULER_METHODS, statistical_model.euler_method))[0][0] - 1,
                       "observation_model": np.where(np.in1d(OBSERVATION_MODELS,

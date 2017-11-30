@@ -107,7 +107,7 @@ def prepare_target_stats(distribution, target_stats):
             target_stats[ts_key] = target_stats[ts_key].flatten()
     target_size = target_shape.size
     target_shape = target_shape.shape
-    target_stats_array = np.around(np.vstack(target_stats.values()).T, decimals=3)
+    target_stats_array = np.around(np.vstack(target_stats.values()).T, decimals=2)
     target_stats_unique = np.unique(target_stats_array, axis=0)
     # target_stats_unique = np.vstack({tuple(row) for row in target_stats_array})
     target_stats_unique = dict(zip(target_stats.keys(),
