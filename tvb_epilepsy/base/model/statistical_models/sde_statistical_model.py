@@ -8,14 +8,11 @@ from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
 
 class SDEStatisticalModel(ODEStatisticalModel):
 
-    def __init__(self, name="sde_vep", n_regions=0, model_connectivity=np.array([]), active_regions=[], n_signals=0,
-                       n_times=0, dt=1.0, sig_eq_scale=30.0, sig_init_scale=90.0, sig_scale=1000.0,
-                       euler_method="forward", observation_model="seeg_logpower", observation_expression="x1z_offset",
-                       x1var="x1", zvar="z", **defaults):
-        super(SDEStatisticalModel, self).__init__(name, n_regions, model_connectivity, active_regions, n_signals,
-                                                  n_times, dt, sig_eq_scale, sig_init_scale,  euler_method,
+    def __init__(self, name="sde_vep", n_regions=0, active_regions=[], n_signals=0,
+                       n_times=0, dt=1.0, euler_method="forward", observation_model="seeg_logpower",
+                       observation_expression="x1z_offset", x1var="x1", zvar="z", **defaults):
+        super(SDEStatisticalModel, self).__init__(name, n_regions, active_regions, n_signals, n_times, dt, euler_method,
                                                   observation_model, observation_expression, **defaults)
-        self.sig_scale = sig_scale
         self._add_parameters(x1var, zvar, **defaults)
         self.context_str = "from " + construct_import_path(__file__) + " import SDEStatisticalModel"
         self.create_str = "SDEStatisticalModel('" + self.name + "')"
@@ -28,8 +25,8 @@ class SDEStatisticalModel(ODEStatisticalModel):
 
     def _add_parameters(self, x1var="x1", zvar="z", **defaults):
         for p in [x1var, zvar]:
-            self.parameters.update({p: set_parameter(p, optimize=False, **defaults)})
-        self.parameters.update({"sig": set_parameter("sig", optimize=True, **defaults)})
+            self.parameters.update({p: set_parameter(p, optimize_pdf=False, **defaults)})
+        self.parameters.update({"sig": set_parameter("sig", optimize_pdf=False, **defaults)})
 
     # def plot(self):
     #     figure_dir = os.path.join(FOLDER_FIGURES, "_ASM_" + self.name)

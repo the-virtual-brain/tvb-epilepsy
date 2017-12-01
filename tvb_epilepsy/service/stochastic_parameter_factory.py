@@ -47,6 +47,7 @@ def set_parameter_defaults(name, _pdf="normal", _shape=(), _lo=MIN_SINGLE_VALUE,
                 defaults.update({out_name("mode"): _mean})
     else:
         defaults.update({out_name("mean"): _mean})
+    pkey = "std"
     if _std is None:
         _std, pkey = get_val_key_for_firt_keymatch_in_dict(name, ["var", "v", "std", "sig", "sigma", "s"], **kwargs)
     if _std is not None:
@@ -89,8 +90,8 @@ def set_parameter(name, optimize_pdf=False, use="manual", **kwargs):
                                                          and np.issubdtype(np.dtype, np.number)):
             kwargs.update({"_".join([name, "def"]): parameter})
         # Generate defaults and eventually the parameter:
-        defaults = set_parameter_defaults(name, defaults.pop("_".join([name, "pdf_params"]), {}), remove_name=True,
-                                          **defaults)
+        defaults = set_parameter_defaults(name, pdf_params=defaults.pop("_".join([name, "pdf_params"]), {}),
+                                          remove_name=True, **defaults)
         # Strip the parameter name from the dictionary keys:
         parameter = generate_stochastic_parameter(name, probability_distribution=defaults.pop("pdf"),
                                                         p_shape=defaults.pop("shape"),

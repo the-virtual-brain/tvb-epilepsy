@@ -101,6 +101,5 @@ class StanService(object):
         try:
             self.set_model_from_file(**kwargs)
         except:
-            self.logger.info("Failed to load the model from file: " + str(self.model_path) + " !" +
-                             "\nTrying to compile model from file: " + str(self.model_code_path) + str("!"))
+            self.logger.info("Trying to compile model from file: " + str(self.model_code_path) + str("!"))
             self.compile_stan_model(store_model=kwargs.get("store_model", True), **kwargs)

@@ -137,17 +137,18 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
     if isinstance(model, EpileptorDP2D):
         raw_data = np.dstack(
             [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x1"]])
-        lfp_data = vois_ts_dict["x1"]
+        vois_ts_dict["lfp"] = vois_ts_dict["x1"]
         idx_proj = -1
         for sensor in sensors_list:
             if isinstance(sensor, Sensors):
                 idx_proj += 1
-                vois_ts_dict[sensor.s_type + '%d' % idx_proj] = vois_ts_dict['x1'].dot(sensor.projection.T)
+                sensor_name = sensor.s_type + '%d' % idx_proj
+                vois_ts_dict[sensor_name] = vois_ts_dict['x1'].dot(sensor.projection.T)
+                vois_ts_dict[sensor_name] -= np.min(vois_ts_dict[sensor_name])
+                vois_ts_dict[sensor_name] /= np.max(vois_ts_dict[sensor_name])
     else:
         if isinstance(model, EpileptorModel):
-            lfp_data = vois_ts_dict["x2"] - vois_ts_dict["x1"]
-        else:
-            lfp_data = vois_ts_dict["lfp"]
+            vois_ts_dict["lfp"] = vois_ts_dict["x2"] - vois_ts_dict["x1"]
         raw_data = np.dstack(
             [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x2"]])
         if hpf_flag:
@@ -163,10 +164,13 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
                     for i in range(vois_ts_dict[sensor_name].shape[1]):
                         vois_ts_dict[sensor_name][:, i] = filter_data(
                             vois_ts_dict[sensor_name][:, i], hpf_low, hpf_high, fsAVG)
+            vois_ts_dict[sensor_name] -= np.min(vois_ts_dict[sensor_name])
+            vois_ts_dict[sensor_name] /= np.max(vois_ts_dict[sensor_name])
+
     if save_flag:
         # Write files:
         if idx_proj > -1:
-            write_ts_epi(raw_data, dt, lfp_data, folder, filename)
+            write_ts_epi(raw_data, dt, vois_ts_dict["lfp"], folder, filename)
             for i_sensor, sensor in enumerate(sensors_list):
                 write_ts_seeg_epi(vois_ts_dict[sensor.s_type+'%d' % i_sensor], dt, folder, filename)
     return vois_ts_dict
@@ -236,6 +240,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     dynamical_model = sim.model
     # convert_to_h5_model(sim.model).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5")
 
+    vois_ts_dict = {}
     if os.path.isfile(ts_file):
         logger.info("\n\nLoading previously simulated time series...")
         vois_ts_dict = read_h5_model(ts_file).convert_from_h5_model()
@@ -262,13 +267,15 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
                                                              vois_ts_dict, output_sampling_time, time_length,
                                                              hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
                                                              sensors_list=head.sensorsSEEG, save_flag=save_flag)
-            if plot_flag:
-                # Plot results
-                plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, lsa_hypothesis.name, head,
-                                 vois_ts_dict, hpf_flag=False, trajectories_plot=trajectories_plot,
-                                 spectral_raster_plot=spectral_raster_plot, log_scale=True,
-                                 figure_dir=figure_dir)  # head.sensorsSEEG,
             # Optionally save results in mat files
             this_ts_file = os.path.join(results_dir, lsa_hypothesis.name + "_ts.h5")
             convert_to_h5_model(vois_ts_dict).write_to_h5(os.path.dirname(ts_file), os.path.basename(ts_file))
+    if plot_flag and len(vois_ts_dict) > 0:
+        # Plot results
+        plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, lsa_hypothesis.name,
+                         vois_ts_dict, sensorsSEEG=head.sensorsSEEG, hpf_flag=False,
+                         trajectories_plot=trajectories_plot,
+                         spectral_raster_plot=spectral_raster_plot, log_scale=True,
+                         region_labels=head.connectivity.region_labels,
+                         figure_dir=figure_dir)  # ,
     return vois_ts_dict

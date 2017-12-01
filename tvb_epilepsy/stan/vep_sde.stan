@@ -29,54 +29,54 @@ functions {
         return fz;
     }
 
-    real sample_lpdf(real x, int pdf, real p1, real p2) {
+    real sample_lpdf(real x, int pdf, real[] shape) {
         if (pdf == 1) {
             // normal
-            return normal_lpdf(x | p1, p2);
+            return normal_lpdf(x | shape[1], shape[2]);
         } else if (pdf == 2) {
             // gamma: convert to rate from scale!
-            return gamma_lpdf(x | p1, 1.0 / p2);
+            return gamma_lpdf(x | shape[1], 1.0 / shape[2]);
         } else if (pdf == 3) {
             // lognormal
-            return lognormal_lpdf(x | p1, p2);
+            return lognormal_lpdf(x | shape[1], shape[2]);
         } else if (pdf == 4) {
             // exponential
-            return exponential_lpdf(x | p1);
+            return exponential_lpdf(x | shape[1]);
         /* Beta not used for now...
         } else if (pdf == 5) {
             // beta
-            return beta_lpdf(x | p1, p2);
+            return beta_lpdf(x | shape[1], shape[2]);
         */
         } else {
             // uniform
-            return uniform_lpdf(x | p1, p2);
+            return uniform_lpdf(x | shape[1], shape[2]);
         }
     }
 
-    real sample_from_stdnormal_lpdf(real x, int pdf, real p1, real p2) {
+    real sample_from_stdnormal_lpdf(real x, int pdf, real[] shape) {
         real n01;
         if (pdf == 1) {
             // Normal(mean, sigma**2) =  mean + sigma*Normal(0,1)
             n01 = normal_lpdf(x | 0.0, 1.0);
-            return p1 + p2 * n01;
+            return shape[1] + shape[2] * n01;
         } else if (pdf == 2) {
         // not possible! requires sum of INDEPENDENT Gamma random variables!
-            return gamma_lpdf(x | p1, 1.0 / p2);
+            return gamma_lpdf(x | shape[1], 1.0 / shape[2]);
         } else if (pdf == 3) {
             // lognormal(mean, sigma**2) = exp(Normal(mean, sigma**2)) = exp(mean + sigma*Normal(0,1))
             n01 = normal_lpdf(x | 0.0, 1.0);
-            return exp(p1 + p2 * n01);
+            return exp(shape[1] + shape[2] * n01);
         } else if (pdf == 4) {
         // not possible! requires sum of INDEPENDENT Gamma random variables!
-            return exponential_lpdf(x | p1);
+            return exponential_lpdf(x | shape[1]);
         /* Beta not used for now...
         } else if (pdf == 5) {
             // Beta(alpha, beta) = Gamma(alpha, c) / (Gamma(alpha, c) + Gamma(beta, c))
-            return beta_lpdf(x | p1, p2);
+            return beta_lpdf(x | shape[1], shape[2]);
         */
         } else {
             // Not possible!
-            return uniform_lpdf(x | p1, p2);
+            return uniform_lpdf(x | shape[1], shape[2]);
         }
     }
 }
@@ -107,8 +107,8 @@ data {
             3. lognormal
             5. exponential
             5. beta
-       _p1 stands for a distribution's first parameter
-       _p2 stands for a distribution's second parameter, if any, otherwise, _p2 = _p1 */
+       _p[1] stands for a distribution's first parameter
+       _p[2] stands for a distribution's second parameter, if any, otherwise, _p[2] = _p[1] */
 
     /* Generative model */
     /* Epileptor */
@@ -144,30 +144,34 @@ data {
     /* tau1 parameter (default: lognormal distribution) */
     real<lower=0.0> tau1_lo;
     real<lower=0.0> tau1_hi;
-    real tau1_p1;
-    real<lower=0.0> tau1_p2;
+    real tau1_loc;
+    real<lower=0.0> tau1_scale;
+    real tau1_p[2];
     int<lower=0> tau1_pdf;
     /* tau0 parameter (default: lognormal distribution) */
     real<lower=0.0> tau0_lo;
     real<lower=0.0> tau0_hi;
-    real tau0_p1;
-    real<lower=0.0> tau0_p2;
+    real tau0_loc;
+    real<lower=0.0> tau0_scale;
+    real tau0_p[2];
     int<lower=0> tau0_pdf;
 
     /* Coupling */
     /* K (global coupling) parameter (default: lognormal distribution) */
     real<lower=0.0> K_lo;
     real<lower=0.0> K_hi;
-    real K_p1;
-    real<lower=0.0> K_p2;
+    real K_loc;
+    real<lower=0.0> K_scale;
+    real K_p[2];
     int<lower=0> K_pdf;
     /* MC (model connectivity) parameter (default: lognormal distribution) */
-    real MC_p1;
-    real<lower=0.0> MC_p2;
     real<lower=0.0> MC_lo;
     real<lower=0.0> MC_hi;
-    int<lower=0> MC_pdf;
+    matrix[n_regions, n_regions] MC_loc;
     matrix<lower=0.0>[n_regions, n_regions] MC_scale;
+    real MC_p[2];
+    int<lower=0> MC_pdf;
+
 
     /* Integration */
     int euler_method;
@@ -175,24 +179,24 @@ data {
     /* Equilibrium point variability parameter (default: lognormal distribution) */
     real<lower=0.0> sig_eq_lo;
     real<lower=0.0> sig_eq_hi;
-    real sig_eq_p1;
-    real<lower=0.0> sig_eq_p2;
-    int<lower=0> sig_eq_pdf;
+    real sig_eq_loc;
     real<lower=0.0> sig_eq_scale;
+    real sig_eq_p[2];
+    int<lower=0> sig_eq_pdf;
     /* Initial condition variability parameter (default: lognormal distribution) */
-    real<lower=0.0> sig_init_hi;
     real<lower=0.0> sig_init_lo;
-    real sig_init_p1;
-    real<lower=0.0> sig_init_p2;
-    int<lower=0> sig_init_pdf;
+    real<lower=0.0> sig_init_hi;
+    real sig_init_loc;
     real<lower=0.0> sig_init_scale;
-        /* Dynamic noise strength parameter (default: gamma distribution) */
-    real<lower=0.0> sig_hi;
+    real sig_init_p[2];
+    int<lower=0> sig_init_pdf;
+    /* Dynamic noise strength parameter (default: gamma distribution) */
     real<lower=0.0> sig_lo;
-    real sig_p1;
-    real<lower=0.0> sig_p2;
-    int<lower=0> sig_pdf;
+    real<lower=0.0> sig_hi;
+    real sig_loc;
     real<lower=0.0> sig_scale;
+    real sig_p[2];
+    int<lower=0> sig_pdf;
 
     /* Observation model */
     int observation_expression;
@@ -202,20 +206,23 @@ data {
     /* Observation variability parameter (default: lognormal distribution) */
     real<lower=0.0> eps_lo;
     real<lower=0.0> eps_hi;
-    real eps_p1;
-    real<lower=0.0> eps_p2;
+    real eps_loc;
+    real<lower=0.0> eps_scale;
+    real eps_p[2];
     int<lower=0> eps_pdf;
     /* Observation signal scaling parameter (default: uniform distribution) */
     real<lower=0.0> scale_signal_lo;
     real<lower=0.0> scale_signal_hi;
-    real scale_signal_p1;
-    real<lower=0.0> scale_signal_p2;
+    real scale_signal_loc;
+    real<lower=0.0> scale_signal_scale;
+    real scale_signal_p[2];
     int<lower=0> scale_signal_pdf;
     /* Observation signal offset parameter (default: uniform distribution) */
     real offset_signal_lo;
     real offset_signal_hi;
-    real offset_signal_p1;
-    real<lower=0.0> offset_signal_p2;
+    real offset_signal_loc;
+    real<lower=0.0> offset_signal_scale;
+    real offset_signal_p[2];
     int<lower=0> offset_signal_pdf;
 }
 
@@ -243,11 +250,15 @@ transformed data {
         }
         print("x1init_lo =", x1init_lo, ", x1init_hi =", x1init_hi);
         print("zinit_lo =", zinit_lo, ", zinit_hi =", zinit_hi);
-        print("tau1_lo =", tau1_lo, ", tau1_hi =", tau1_hi, ", tau1_p1 =", tau1_p1, ", tau1_p2 =", tau1_p2, ", tau1_pdf =", tau1_pdf);
-        print("tau0_lo =", tau0_lo, ", tau0_hi =", tau0_hi, ", tau0_p1 =", tau0_p1, ", tau0_p2 =", tau0_p2, ", tau0_pdf =", tau0_pdf);
-        print("K_lo =", K_lo, ", K_hi =", K_hi, ", K_p1 =", K_p1, ", K_p2 =", K_p2, ", K_pdf =", K_pdf);
-        print("MC_lo =", MC_lo, ", MC_hi =", MC_hi, " MC_p1 =", MC_p1, " MC_p2 =", MC_p2, ", MC_pdf =", MC_pdf);
+        print("tau1_lo =", tau1_lo, ", tau1_hi =", tau1_hi, ", tau1_p =", tau1_p, ", tau1_loc =", tau1_loc, ", tau1_scale =", tau1_scale, ", tau1_pdf =", tau1_pdf);
+        print("tau0_lo =", tau0_lo, ", tau0_hi =", tau0_hi, ", tau0_p =", tau0_p, ", tau0_loc =", tau0_loc, ", tau0_scale =", tau0_scale, ", tau0_pdf =", tau0_pdf);
+        print("K_lo =", K_lo, ", K_hi =", K_hi, ", K_p =", K_p, ", K_loc =", K_loc, ", K_scale =", K_scale, ", K_pdf =", K_pdf);
+        print("MC_lo =", MC_lo, ", MC_hi =", MC_hi, " MC_p =", MC_p, ", MC_pdf =", MC_pdf);
         if (DEBUG == 3){
+        for (ii in 1:n_regions) {
+                print("MC_loc[", ii, "] = ", MC_loc[ii]);
+                print("MC_loc[", ii, "] = ", MC_loc[ii]);
+            }
             for (ii in 1:n_regions) {
                 print("MC_scale[", ii, "] = ", MC_scale[ii]);
                 print("MC_scale[", ii, "] = ", MC_scale[ii]);
@@ -255,9 +266,9 @@ transformed data {
         }
         print("euler_method =", euler_method);
         print("dt =", dt);
-        print("sig_eq_scale =", sig_eq_scale, " sig_eq_lo =", sig_eq_lo, ", sig_eq_hi =", sig_eq_hi, ", sig_eq_p1 =", sig_eq_p1, ", sig_eq_p2 =", sig_eq_p2, ", sig_eq_pdf =", sig_eq_pdf);
-        print("sig_init_scale =", sig_init_scale, " sig_init_lo =", sig_init_lo, ", sig_init_hi =", sig_init_hi, ", sig_init_p1 =", sig_init_p1, ", sig_init_p2 =", sig_init_p2, ", sig_init_pdf =", sig_init_pdf);
-        print("sig_scale =", sig_scale, " sig_lo =", sig_lo, ", sig_hi =", sig_hi, ", sig_p1 =", sig_p1, ", sig_p2 =", sig_p2, ", sig_pdf =", sig_pdf);
+        print("sig_eq_scale =", sig_eq_scale, " sig_eq_lo =", sig_eq_lo, ", sig_eq_hi =", sig_eq_hi, ", sig_eq_p =", sig_eq_p, ", sig_eq_loc =", sig_eq_loc, ", sig_eq_scale =", sig_eq_scale, ", sig_eq_pdf =", sig_eq_pdf);
+        print("sig_init_scale =", sig_init_scale, " sig_init_lo =", sig_init_lo, ", sig_init_hi =", sig_init_hi, ", sig_init_p =", sig_init_p, ", sig_init_loc =", sig_init_loc, ", sig_init_scale =", sig_init_scale, ", sig_init_pdf =", sig_init_pdf);
+        print("sig_scale =", sig_scale, ", sig_lo =", sig_lo, ", sig_hi =", sig_hi, ", sig_p =", sig_p, ", sig_loc =", sig_loc, ", sig_scale =", sig_scale, ", sig_pdf =", sig_pdf);
         print("observation_expression =", observation_expression, ", observation_model =", observation_model);
         print("min(mixing) =",min(mixing), ", max(mixing) =", max(mixing));
         if (DEBUG == 1){
@@ -293,9 +304,9 @@ transformed data {
                 print("signals[", tt, "] = ", signals[tt]);
             }
         }
-        print("eps_lo =", eps_lo, ", eps_hi =", eps_hi, ", eps_p1 =", eps_p1, ", eps_p2 =", eps_p2, ", eps_pdf =", eps_pdf);
-        print("scale_signal_lo =", scale_signal_lo, ", scale_signal_hi =", scale_signal_hi, ", scale_signal_p1 =", scale_signal_p1, ", scale_signal_p2 =", scale_signal_p2, ", scale_signal_pdf =", scale_signal_pdf);
-        print("offset_signal_lo =", offset_signal_lo, ", offset_signal_hi =", offset_signal_hi, ", offset_signal_p1 =", offset_signal_p1, ", offset_signal_p2 =", offset_signal_p2, ", offset_signal_pdf =", offset_signal_pdf);
+        print("eps_lo =", eps_lo, ", eps_hi =", eps_hi, ", eps_p =", eps_p, ", eps_loc =", eps_loc, ", eps_scale =", eps_scale, ", eps_pdf =", eps_pdf);
+        print("scale_signal_lo =", scale_signal_lo, ", scale_signal_hi =", scale_signal_hi, ", scale_signal_p =", scale_signal_p, ", scale_signal_loc =", scale_signal_loc, ", scale_signal_scale =", scale_signal_scale, ", scale_signal_pdf =", scale_signal_pdf);
+        print("offset_signal_lo =", offset_signal_lo, ", offset_signal_hi =", offset_signal_hi, ", offset_signal_p =", offset_signal_p, ", offset_signal_loc =", offset_signal_loc, ", offset_signal_scalec =", offset_signal_scale, ", offset_signal_pdf =", offset_signal_pdf);
     }
 }
 
@@ -308,21 +319,21 @@ parameters {
     vector<lower=x1init_lo, upper=x1init_hi>[n_active_regions] x1init; // x1 equilibrium point coordinate
     matrix<lower=x1_lo, upper=x1_hi>[n_times, n_active_regions] x1; // x1 state variable
     matrix<lower=z_lo, upper=z_hi>[n_times, n_active_regions] z; // z state variable
-    real<lower=tau1_lo, upper=tau1_hi> tau1; // time scale [n_active_regions]
-    real<lower=K_lo, upper=tau0_hi> tau0; // time scale separation [n_active_regions]
+    real<lower=tau1_lo, upper=tau1_hi> tau1_star; // time scale [n_active_regions]
+    real<lower=K_lo, upper=tau0_hi> tau0_star; // time scale separation [n_active_regions]
     /* Coupling */
-    real<lower=K_lo, upper=K_hi> K; // global coupling scaling
-    matrix<lower=0.0>[n_regions, n_regions] MC; // Model connectivity
+    real<lower=K_lo, upper=K_hi> K_star; // global coupling scaling
+    matrix<lower=0.0>[n_regions, n_regions] MC_star; // Model connectivity
 
     /* Integration */
-    real<lower=sig_lo, upper=sig_hi> sig; // variance of phase flow, i.e., dynamic noise
-    real<lower=sig_eq_lo, upper=sig_eq_hi> sig_eq; // variance of equilibrium point
-    real<lower=sig_init_lo, upper=sig_init_hi> sig_init; // variance of initial condition
+    real<lower=sig_lo, upper=sig_hi> sig_star; // variance of phase flow, i.e., dynamic noise
+    real<lower=sig_eq_lo, upper=sig_eq_hi> sig_eq_star; // variance of equilibrium point
+    real<lower=sig_init_lo, upper=sig_init_hi> sig_init_star; // variance of initial condition
 
     /* Observation model */
-    real<lower=eps_lo, upper=eps_hi> eps; // variance of observation noise
-    real<lower=scale_signal_lo, upper=scale_signal_hi> scale_signal; // observation signal scaling
-    real<lower=offset_signal_lo, upper=offset_signal_hi> offset_signal; // observation signal offset
+    real<lower=eps_lo, upper=eps_hi> eps_star; // variance of observation noise
+    real<lower=scale_signal_lo, upper=scale_signal_hi> scale_signal_star; // observation signal scaling
+    real<lower=offset_signal_lo, upper=offset_signal_hi> offset_signal_star; // observation signal offset
 
 }
 
@@ -333,13 +344,82 @@ transformed parameters {
     /* Epileptor */
     vector[n_regions] zeq; // z equilibrium point coordinate
     vector[n_regions] x0; // excitability parameter
-
+    real<lower=0.0> tau1; // time scale [n_active_regions]
+    real<lower=0.0> tau0; // time scale separation [n_active_regions]
     /* Coupling */
+    real<lower=0.0> K; // global coupling scaling
+    matrix<lower=0.0>[n_regions, n_regions] MC; // Model connectivity
     vector[n_regions] coupling_eq; // coupling at equilibrium
     matrix[n_times, n_active_regions] coupling; // actual effective coupling per time point
-    matrix<lower=0.0>[n_regions, n_regions] model_connectivity;
 
-    model_connectivity = MC_scale .* MC;
+    /* Integration */
+    real<lower=0.0> sig; // variance of phase flow, i.e., dynamic noise
+    real<lower=0.0> sig_eq; // variance of equilibrium point
+    real<lower=0.0> sig_init; // variance of initial condition
+
+    /* Observation model */
+    real<lower=0.0> eps; // variance of observation noise
+    real<lower=0.0> scale_signal; // observation signal scaling
+    real offset_signal; // observation signal offset
+        
+    tau1 = tau1_star * tau1_scale + tau1_loc;
+    if (DEBUG >= 0){
+        print("tau1=", tau1);
+    }
+    tau0 = tau0_star * tau0_scale + tau0_loc;
+    if (DEBUG >= 0){
+        print("tau0=", tau0);
+    }
+    K = K_star * K_scale + K_loc;
+    if (DEBUG >= 0){
+        print("K=", K);
+    }
+    MC = MC_star * MC_scale + MC_loc;
+    if (DEBUG >= 0){
+        print("min(MC)=", min(MC), ", max(MC)=", max(MC));
+        if (DEBUG == 1){
+            vector[n_regions] maxMC;
+            vector[n_regions] minMC;
+            print("x1eq=", x1eq);
+            print("x1eq=", x1eq);
+            for (ii in 1:n_regions) {
+                vector[n_regions] colMC;
+                colMC = col(MC, ii);
+                maxMC[ii] = max(colMC);
+                minMC[ii] = min(colMC);
+            }
+            print("min(MC(cols))=", minMC);
+            print("max(MC(cols))=", maxMC);
+        } else if (DEBUG >= 2) {
+            for (ii in 1:n_regions) {
+                print("MC[", ii, "] = ", MC[ii]);
+            }
+        }
+    }
+    sig_eq = sig_eq_star * sig_eq_scale + sig_eq_loc;
+    if (DEBUG >= 0){
+        print("sig_eq=", sig_eq);
+    }
+    sig_init = sig_init_star * sig_init_scale + sig_init_loc;
+    if (DEBUG >= 0){
+        print("sig_init=", sig_init);
+    }
+    sig = sig_star * sig_scale + sig_loc;
+    if (DEBUG >= 0){
+        print("sig=", sig);
+    }
+    eps = eps_star * eps_scale + eps_loc;
+    if (DEBUG >= 0){
+        print("eps=", eps);
+    }
+    scale_signal = scale_signal_star * scale_signal_scale + scale_signal_loc;
+    if (DEBUG >= 0){
+        print("scale_signal=", scale_signal);
+    }
+    offset_signal = offset_signal_star * offset_signal_scale + offset_signal_loc;
+    if (DEBUG >= 0){
+        print("offset_signal=", offset_signal);
+    }
 
     /* zeq */
     for (ii in 1:n_regions) {
@@ -359,7 +439,7 @@ transformed parameters {
         coupling_eq[ii] = 0.0;
         for (jj in 1:n_regions) {
             if (ii!=jj) {
-                    coupling_eq[ii] = coupling_eq[ii] + model_connectivity[ii, jj] * (x1eq[jj] - x1eq[ii]);
+                    coupling_eq[ii] = coupling_eq[ii] + MC[ii, jj] * (x1eq[jj] - x1eq[ii]);
             }
         }
     }
@@ -377,14 +457,14 @@ transformed parameters {
             for (jj in 1:n_active_regions) {
                if (ii!=jj) {
                    coupling[tt, ii] =
-                              coupling[tt, ii] + model_connectivity[active_regions[ii], active_regions[jj]] * (x1[tt, jj] - x1[tt, ii]);
+                              coupling[tt, ii] + MC[active_regions[ii], active_regions[jj]] * (x1[tt, jj] - x1[tt, ii]);
                }
             }
             // coupling nonactive -> active regions
             for (jj in 1:n_nonactive_regions) {
                // non active regions are assumed to always stay close to their equilibrium point
                coupling[tt, ii] = coupling[tt, ii] +
-                             model_connectivity[active_regions[ii], nonactive_regions[jj]] * (x1eq[nonactive_regions[jj]] - x1[tt, ii]);
+                             MC[active_regions[ii], nonactive_regions[jj]] * (x1eq[nonactive_regions[jj]] - x1[tt, ii]);
             }
         }
         if (DEBUG == 1) {
@@ -418,61 +498,61 @@ model {
     real df;
 
     /* Sampling of global coupling scaling */
-    K ~ sample(K_pdf, K_p1, K_p2);
+    K_star ~ sample(K_pdf, K_p);
     if (DEBUG >= 0){
-        print("K=", K);
+        print("K_star=", K_star);
     }
 
     /* Sampling of the various variances */
-    sig_eq ~ sample(sig_eq_pdf, sig_eq_p1, sig_eq_p2);
+    sig_eq_star ~ sample(sig_eq_pdf, sig_eq_p);
     if (DEBUG >= 0){
-        print("sig_eq=", sig_eq);
+        print("sig_eq_star=", sig_eq_star);
     }
-    sig_init ~ sample(sig_init_pdf, sig_init_p1, sig_init_p2);
+    sig_init_star ~ sample(sig_init_pdf, sig_init_p);
     if (DEBUG >= 0){
-        print("sig_init=", sig_init);
+        print("sig_init_star=", sig_p);
     }
-    sig ~ sample(sig_pdf, sig_p1, sig_p2);
+    sig_star ~ sample(sig_pdf, sig_p);
     if (DEBUG >= 0){
-        print("sig=", sig);
+        print("sig_star=", sig_star);
     }
 
     /* Sampling of x1 equilibrium point coordinate and effective connectivity */
     for (ii in 1:n_regions) {
-        x1eq[ii] ~ normal(x1eq0[ii], sig_eq/sig_eq_scale);
+        x1eq[ii] ~ normal(x1eq0[ii], sig_eq);
         for (jj in 1:n_regions) {
-            MC[ii, jj] ~ sample(MC_pdf, MC_p1, MC_p2);
+            MC_star[ii, jj] ~ sample(MC_pdf, MC_p);
         }
     }
     if (DEBUG >= 0){
         print("min(x1eq)=", min(x1eq), ", max(x1eq)=", max(x1eq));
-        print("min(MC)=", min(MC), ", max(MC)=", max(MC));
+        print("min(MC_star)=", min(MC_star), ", max(MC_star)=", max(MC_star));
         if (DEBUG == 1){
-            vector[n_regions] maxMC;
-            vector[n_regions] minMC;
+            vector[n_regions] maxMC_star;
+            vector[n_regions] minMC_star;
             print("x1eq=", x1eq);
             print("x1eq=", x1eq);
             for (ii in 1:n_regions) {
-                vector[n_regions] MCcol;
-                MCcol = col(MC, ii);
-                maxMC[ii] = max(MCcol);
-                minMC[ii] = min(MCcol);
+                vector[n_regions] colMC_star;
+                colMC_star = col(MC, ii);
+                maxMC_star[ii] = max(colMC_star);
+                minMC_star[ii] = min(colMC_star);
             }
-            print("min(MC(cols))=", minMC);
-            print("max(MC(cols))=", maxMC);
+            print("min(MC_star(cols))=", minMC_star);
+            print("max(MC_star(cols))=", maxMC_star);
         } else if (DEBUG >= 2) {
             for (ii in 1:n_regions) {
-                print("MC[", ii, "] = ", MC[ii]);
+                print("MC_star[", ii, "] = ", MC_star[ii]);
             }
         }
     }
 
     /* Sampling of initial condition*/
     for (ii in 1:n_active_regions) {
-        x1[ii, 1] ~ normal(x1eq[active_regions[ii]], sig_init/sig_init_scale);
-        z[ii, 1] ~ normal(zeq[active_regions[ii]], sig_init/sig_init_scale);
-//        tau0[ii] ~ sample(tau1_pdf, tau1_p1, tau1_p2);
-//        tau0[ii] ~ sample(tau0_pdf, tau0_p1, tau0_p2);
+        x1[ii, 1] ~ normal(x1eq[active_regions[ii]], sig_init);
+        z[ii, 1] ~ normal(zeq[active_regions[ii]], sig_init);
+//        tau0_star[ii] ~ sample(tau1_pdf, tau1_p);
+//        tau0_star[ii] ~ sample(tau0_pdf, tau0_shap);
     }
     if (DEBUG >= 0){
         print("min(x1init)=", min(x1[,1]), ", max(x1init)=", max(x1[,1]));
@@ -484,23 +564,23 @@ model {
     }
 
     /* Sampling of time scales */
-    tau1 ~ sample(tau1_pdf, tau1_p1, tau1_p2);
+    tau1_star ~ sample(tau1_pdf, tau1_p);
     if (DEBUG >= 0){
-        print("tau1=", tau1);
+        print("tau1_star=", tau1_star);
     }
-    tau0 ~ sample(tau1_pdf, tau0_p1, tau0_p2);
+    tau0_star ~ sample(tau1_pdf, tau0_p);
     if (DEBUG >= 0){
-        print("tau0=", tau0);
+        print("tau0_star=", tau0_star);
     }
 
     /* Sampling of observation scaling and offset */
-    scale_signal ~ sample(scale_signal_pdf, scale_signal_p1, scale_signal_p2);
+    scale_signal_star ~ sample(scale_signal_pdf, scale_signal_p);
     if (DEBUG >= 0){
-        print("scale_signal=", scale_signal);
+        print("scale_signal_star=", scale_signal_star);
     }
-    offset_signal ~ sample(offset_signal_pdf, offset_signal_p1, offset_signal_p2);
+    offset_signal_star ~ sample(offset_signal_pdf, offset_signal_p);
     if (DEBUG >= 0){
-        print("offset_signal=", offset_signal);
+        print("offset_signal_star=", offset_signal_star);
     }
 
     /* Integrate & predict  */
@@ -509,17 +589,17 @@ model {
         if (euler_method==-1){ // backward euler method
             for (ii in 1:n_active_regions) {
                 df = EpileptorDP2D_fun_x1(x1[tt, ii], z[tt, ii], yc, Iext1, a, db, d, slope, tau1); //tau1[ii]
-                x1[tt, ii] ~ normal(x1[tt-1, ii] + dt*df, sig/sig_scale); // T[x1_lo, x1_hi];
+                x1[tt, ii] ~ normal(x1[tt-1, ii] + dt*df, sig); // T[x1_lo, x1_hi];
                 df = EpileptorDP2D_fun_z_lin(x1[tt, ii], z[tt, ii], x0[active_regions[ii]], K*coupling[tt, ii], tau0, tau1); // tau0
-                z[tt, ii] ~ normal(z[tt-1, ii] + dt*df, sig/sig_scale); // T[z_lo, z_hi];
+                z[tt, ii] ~ normal(z[tt-1, ii] + dt*df, sig); // T[z_lo, z_hi];
             }
             // TODO: code for midpoint euler method
         } else {// forward euler method
             for (ii in 1:n_active_regions) {
                 df = EpileptorDP2D_fun_x1(x1[tt-1, ii], z[tt-1, ii], yc, Iext1, a, db, d, slope, tau1); //tau1[ii]
-                x1[tt, ii] ~ normal(x1[tt-1, ii] + dt*df, sig/sig_scale); // T[x1_lo, x1_hi];
+                x1[tt, ii] ~ normal(x1[tt-1, ii] + dt*df, sig); // T[x1_lo, x1_hi];
                 df = EpileptorDP2D_fun_z_lin(x1[tt-1, ii], z[tt-1, ii], x0[active_regions[ii]], K*coupling[tt-1, ii], tau0, tau1); // tau0[ii]
-                z[tt, ii] ~ normal(z[tt-1, ii] + dt*df, sig/sig_scale); // T[z_lo, z_hi];
+                z[tt, ii] ~ normal(z[tt-1, ii] + dt*df, sig); // T[z_lo, z_hi];
             }
         }
         if (DEBUG == 1) {

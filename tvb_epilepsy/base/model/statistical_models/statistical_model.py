@@ -11,15 +11,13 @@ from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
 
 class StatisticalModel(object):
 
-    def __init__(self, name='vep', n_regions=0, model_connectivity=np.array([]), sig_eq_scale=30.0, **defaults):
+    def __init__(self, name='vep', n_regions=0, **defaults):
         self.n_regions = n_regions
         if isinstance(name, basestring):
             self.name = name
         else:
             raise_value_error("Statistical model's type " + str(name) + " is not a string!")
         # Parameter setting:
-        self.model_connectivity = model_connectivity
-        self.sig_eq_scale = sig_eq_scale
         self.parameters = {}
         self._generate_parameters(**defaults)
         self.n_parameters = len(self.parameters)
@@ -48,6 +46,6 @@ class StatisticalModel(object):
         h5_model.write_to_h5(folder, filename)
 
     def _generate_parameters(self, **defaults):
-        self.parameters.update({"x1eq": set_parameter("x1eq", optimize=False, **defaults)})
+        self.parameters.update({"x1eq": set_parameter("x1eq", optimize_pdf=False, **defaults)})
         for p in ["K", "tau1", "tau0", "MC", "sig_eq", "eps"]:
-            self.parameters.update({p: set_parameter(p, optimize=True, **defaults)})
+            self.parameters.update({p: set_parameter(p, optimize_pdf=False, **defaults)})

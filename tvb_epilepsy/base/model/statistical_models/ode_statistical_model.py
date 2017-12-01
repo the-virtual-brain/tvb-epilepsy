@@ -6,18 +6,17 @@ from tvb_epilepsy.base.model.statistical_models.statistical_model import Statist
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
 
 
-OBSERVATION_MODEL_EXPRESSIONS=["x1z_offset", "x1_offset", "x1"]
+OBSERVATION_MODEL_EXPRESSIONS=["x1z_offset", "x1_offset", "lfp"]
 OBSERVATION_MODELS=[ "seeg_logpower", "seeg_power", "lfp_power"]
 EULER_METHODS = ["backward", "midpoint", "forward"]
 
 
 class ODEStatisticalModel(StatisticalModel):
 
-    def __init__(self, name='vep_ode', n_regions=0, model_connectivity=np.array([]), active_regions=[], n_signals=0,
-                 n_times=0, dt=1.0, sig_eq_scale=30.0, sig_init_scale=90.0, euler_method="forward",
-                 observation_model="seeg_logpower", observation_expression="x1z_offset", **defaults):
-        super(ODEStatisticalModel, self).__init__(name, n_regions, model_connectivity, sig_eq_scale, **defaults)
-        self.sig_init_scale = sig_init_scale
+    def __init__(self, name='vep_ode', n_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
+                 euler_method="forward", observation_model="seeg_logpower", observation_expression="x1z_offset",
+                 **defaults):
+        super(ODEStatisticalModel, self).__init__(name, n_regions, **defaults)
         self.context_str = "from " + construct_import_path(__file__) + " import ODEStatisticalModel"
         self.create_str = "ODEStatisticalModel('" + self.name + "')"
         if np.all(np.in1d(active_regions, range(self.n_regions))):
@@ -75,9 +74,9 @@ class ODEStatisticalModel(StatisticalModel):
 
     def __add_parameters(self, **defaults):
         for p in ["x1init", "zinit"]:
-            self.parameters.update({p: set_parameter(p, optimize=False, **defaults)})
+            self.parameters.update({p: set_parameter(p, optimize_pdf=False, **defaults)})
         for p in ["sig_init", "scale_signal", "offset_signal"]:
-            self.parameters.update({p: set_parameter(p, optimize=True, **defaults)})
+            self.parameters.update({p: set_parameter(p, optimize_pdf=False, **defaults)})
 
     def plot(self, **kwargs):
         for p in self.parameters:

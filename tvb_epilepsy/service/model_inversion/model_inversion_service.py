@@ -36,7 +36,7 @@ class ModelInversionService(object):
     TAU0_MIN = 3.0
     TAU0_MAX = 3000.0
     K_MIN = 0.0
-    K_MAX = 2.0
+    K_MAX = 3.0
     MC_MIN = 0.0
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="",
@@ -73,7 +73,7 @@ class ModelInversionService(object):
         connectivity = kwargs.pop("connectivity", None)
         if isinstance(head, Head):
             connectivity = head.connectivity
-            if not(isinstance(sensors, Sensors)):
+            if not(isinstance(sensors, list)):
                 sensors = head.get_sensors_id(sensor_ids=kwargs.pop("seeg_sensor_id", 0), s_type=Sensors.TYPE_SEEG)
         if isinstance(connectivity, Connectivity):
             self._copy_attributes(connectivity, ["region_labels", "centers", "orientations"],
@@ -86,8 +86,8 @@ class ModelInversionService(object):
         if np.in1d(dynamical_model, AVAILABLE_DYNAMICAL_MODELS_NAMES):
             self.tau1 = self.get_default_tau1(dynamical_model)
             self.tau0 = self.get_default_tau0(dynamical_model)
-            self.sig_eq_scale = self.get_default_sig_eq(x1eq_def=kwargs.pop("x1eq_def", X1_DEF),
-                                                    x1eq_cr=kwargs.pop("x1eq_cr", X1_EQ_CR_DEF), **kwargs)
+            self.sig_eq = self.get_default_sig_eq(x1eq_def=kwargs.pop("x1eq_def", X1_DEF),
+                                                  x1eq_cr=kwargs.pop("x1eq_cr", X1_EQ_CR_DEF), **kwargs)
         self.default_parameters = {}
         self.__set_default_parameters(**kwargs)
         self.logger.info("Model Inversion Service instance created!")
@@ -135,32 +135,34 @@ class ModelInversionService(object):
         return EPILEPTOR_MODEL_TAU0[dynamical_model]
 
     def get_default_sig_eq(self, x1eq_def=X1_DEF, x1eq_cr=X1_EQ_CR_DEF, **kwargs):
-        return 1.0 / kwargs.pop("sig_eq", (x1eq_cr - x1eq_def) / 30.0)
+        return kwargs.pop("sig_eq", (x1eq_cr - x1eq_def) / 30.0)
 
     def __set_default_parameters(self, **kwargs):
         # Generative model:
         # Epileptor:
         self.default_parameters.update(set_parameter_defaults("x1eq", "normal", (self.n_regions,),
                                                               self.X1EQ_MIN, X1_EQ_CR_DEF,
-                                                              np.maximum(self.x1EQ, X1_DEF), sigma=0.03))
+                                                              pdf_params={"mean": np.maximum(self.x1EQ, X1_DEF),
+                                                                          "sigma": 0.03}))
         self.default_parameters.update(set_parameter_defaults("K", "lognormal", (),
                                                               self.K_MIN,  self.K_MAX,
-                                                              np.minimum(np.mean(self.K), 0.1),
-                                                              lambda m: m/3, **kwargs))
+                                                              np.maximum(np.mean(self.K), 0.001),
+                                                              lambda m: m, **kwargs))
         self.default_parameters.update(set_parameter_defaults("tau1", "lognormal", (),               # name, pdf, shape
                                                               self.TAU1_MIN, self.TAU1_MAX,          # min, max
-                                                              self.tau1, lambda m: m/3,  **kwargs))  # mean, (std)
+                                                              self.tau1, self.tau1/3,  **kwargs))  # mean, (std)
         self.default_parameters.update(set_parameter_defaults("tau0", "lognormal", (),
                                                               self.TAU0_MIN, self.TAU0_MAX,
-                                                              self.tau0, lambda m: m/3, **kwargs))
+                                                              self.TAU0_DEF, self.TAU0_DEF, **kwargs))
         # Coupling:
+        mean = np.minimum(np.maximum(self.model_connectivity, 0.001), np.percentile(self.model_connectivity, 95))
         self.default_parameters.update(set_parameter_defaults("MC", "lognormal", (self.n_regions, self.n_regions),
                                                               self.MC_MIN, 3.0,
-                                                              1.0, 1.0 / 6.0, **kwargs))
+                                                              mean, mean / 6.0, **kwargs))
         # Integration:
         self.default_parameters.update(set_parameter_defaults("sig_eq", "lognormal", (),
-                                                              0.0, 3.0,
-                                                              1.0, 1.0 / 3.0, **kwargs))
+                                                              0.0, 3*self.sig_eq,
+                                                              self.sig_eq, self.sig_eq / 3.0, **kwargs))
         # Observation model
         self.default_parameters.update(set_parameter_defaults("eps", "lognormal", (),
                                                               0.0, 0.5,
@@ -172,8 +174,7 @@ class ModelInversionService(object):
         tic = time.time()
         self.logger.info("Generating model...")
         self.default_parameters.update(kwargs)
-        model = StatisticalModel(model_name, self.n_regions, self.model_connectivity, self.sig_eq_scale,
-                                 **self.default_parameters)
+        model = StatisticalModel(model_name, self.n_regions, **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model

@@ -68,7 +68,7 @@ class CmdStanService(StanService):
     def set_model_from_file(self, **kwargs):
         self.model_path = kwargs.pop("model_path", self.model_path)
         if not(os.path.exists(self.model_path)):
-            raise
+            raise_value_error("Failed to load the model from file: " + str(self.model_path) + " !")
 
     def compile_stan_model(self, store_model=True, **kwargs):
         self.model_code_path = kwargs.pop("model_code_path", self.model_code_path)

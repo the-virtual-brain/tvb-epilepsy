@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.signal import decimate
 
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.utils.plot_utils import plot_timeseries
@@ -9,20 +10,36 @@ def get_bipolar_channels(channels_inds, channel_lbls=[]):
     n_channels = len(channels_inds)
     if channel_lbls == []:
         channel_lbls = str(range(n_channels))
-    bipolar_channels = []
+    bipolar_channel_lbls = []
     bipolar_ch_inds = []
     for iS in range(n_channels - 1):
         if (channel_lbls[iS][0] == channel_lbls[iS + 1][0]) and \
                 (int(re.findall(r'\d+', channel_lbls[iS])[0]) == int(re.findall(r'\d+', channel_lbls[iS + 1])[0]) - 1):
-            bipolar_channels.append(channel_lbls[iS] + "-" + channel_lbls[iS + 1])
+            bipolar_channel_lbls.append(channel_lbls[iS] + "-" + channel_lbls[iS + 1])
             bipolar_ch_inds.append(channels_inds[iS])
-    return bipolar_ch_inds, bipolar_channels
+    return bipolar_ch_inds, bipolar_channel_lbls
+
+
+def decimate_signals(time, signals, decim_ratio):
+    signals = decimate(signals, decim_ratio, axis=0, zero_phase=True)
+    time = decimate(time, decim_ratio, zero_phase=True)
+    dt = np.mean(time)
+    observation_shape = signals.shape
+    (n_times, n_signals) = observation_shape
+    return signals, time, dt, n_times, n_signals, observation_shape
+
+
+def cut_signals_tails(time, signals, cut_tails):
+    signals = signals[cut_tails[0]:-cut_tails[-1]]
+    time = time[cut_tails[0]:-cut_tails[-1]]
+    observation_shape = signals.shape
+    (n_times, n_signals) = observation_shape
+    return signals, time, n_times, n_signals, observation_shape
 
 
 def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_freq=10.0, high_freq=None, log_flag=True,
                             plot_flag=False):
     import re
-    from scipy.signal import decimate
     from pylab import detrend_linear
     from mne.io import read_raw_edf
     from tvb_epilepsy.base.utils.plot_utils import plot_raster, plot_spectral_analysis_raster
@@ -34,8 +51,8 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
     data = data[rois].T
     if plot_flag:
         plot_spectral_analysis_raster(times, data, time_units="sec", freq=np.array(range(1,51,1)),
-                                  title='Spectral Analysis',
-                                  figure_name='Spectral Analysis', labels=channels,  log_scale=True)
+                                      title='Spectral Analysis', figure_name='Spectral Analysis', labels=channels,
+                                      log_scale=True)
     data_bipolar = []
     bipolar_channels = []
     data_filtered = []
@@ -71,7 +88,7 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
         observation[:, iS] = detrend_linear(observation[:, iS])
     observation -= observation.min()
     for iS in range(observation.shape[1]):
-        observation[:, iS] = np.convolve(observation[:, iS], np.ones((np.round(win_len * fs),)), mode='same')
+        observation[:, iS] = np.convolve(observation[:, iS], np.ones((np.int(np.round(win_len * fs),))), mode='same')
     n_times = times.shape[0]
     dtimes = n_times - 4096
     t_onset = int(np.ceil(dtimes / 2.0))
@@ -92,5 +109,4 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
     if plot_flag:
         plot_timeseries(times, {"observation": observation}, time_units="sec", special_idx=None, title='Time Series',
                     figure_name='TimeSeries', labels=bipolar_channels) #, show_flag=True, save_flag=False
-
     return observation, times, fs/2
