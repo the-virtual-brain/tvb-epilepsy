@@ -66,7 +66,10 @@ class H5Model(object):
             if dataset_path == "":
                 h5_file.attrs.create(attribute_name, val)
             else:
-                h5_file[dataset_path].attrs.create(attribute_name, val)
+                try:
+                    h5_file[dataset_path].attrs.create(attribute_name, val)
+                except:
+                    print("WTF")
         h5_file.close()
 
     def convert_from_h5_model(self, obj=None, output_shape=None):
@@ -156,6 +159,9 @@ def object_to_h5_model_recursively(h5_model, obj, path="/"):
     container_path = path
     if path == "/":
         path += obj_type
+    if callable(obj):
+        h5_model.add_or_update_metadata_attribute(path, str(obj))
+        return
     if isinstance(obj, dict):
         h5_model, obj_dict = dict_to_h5_model(h5_model, obj, path, container_path)
         if obj_dict is None:
