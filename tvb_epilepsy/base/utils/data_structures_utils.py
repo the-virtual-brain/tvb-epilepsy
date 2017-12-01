@@ -2,11 +2,13 @@
 
 from collections import OrderedDict
 from copy import deepcopy
+import re
 
 import numpy as np
 
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error, raise_import_error
 from tvb_epilepsy.base.constants.module_constants import MAX_INT_VALUE
+
 
 def vector2scalar(x):
     if not (isinstance(x, np.ndarray)):
@@ -45,10 +47,20 @@ def isequal_string(a, b, case_sensitive=False):
             return a == b
 
 
+def split_string_text_numbers(ls):
+    items = []
+    for s in ensure_list(ls):
+        match = re.findall('(\d+|\D+)', s)
+        if match:
+            items.append(tuple(match[:2]))
+    return items
+
+
 def construct_import_path(path, package="tvb_epilepsy"):
     path = path.split(".py")[0]
     start = path.find(package)
     return path[start:].replace("/", ".")
+
 
 def formal_repr(instance, attr_dict):
     """ A formal string representation for an object.
@@ -472,9 +484,9 @@ def copy_object_attributes(obj1, obj2, attr1, attr2=None, deep_copy=False, check
     else:
         attr2 = ensure_list(attr2)
     if deep_copy:
-        fcopy = lambda a1, a2: setattr(obj2, a1, deepcopy(getattr(obj1, a1)))
+        fcopy = lambda a1, a2: setattr(obj2, a2, deepcopy(getattr(obj1, a1)))
     else:
-        fcopy = lambda a1, a2: setattr(obj2, a1, getattr(obj1, a1))
+        fcopy = lambda a1, a2: setattr(obj2, a2, getattr(obj1, a1))
     if check_none:
         for a1, a2 in zip(attr1, attr2):
             if getattr(obj2, a2) is None:
