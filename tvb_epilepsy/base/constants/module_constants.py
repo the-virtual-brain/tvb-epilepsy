@@ -37,5 +37,7 @@ JAVA_MAIN_SIM = "de.codebox.episense.fx.StartSimulation"
 import numpy as np
 MIN_SINGLE_VALUE = np.finfo("single").min
 MAX_SINGLE_VALUE = np.finfo("single").max
+MAX_INT_VALUE = np.iinfo(np.int64).max
+MIN_INT_VALUE = np.iinfo(np.int64).max
 
 
