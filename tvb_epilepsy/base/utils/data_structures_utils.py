@@ -6,7 +6,7 @@ from copy import deepcopy
 import numpy as np
 
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error, raise_import_error
-
+from tvb_epilepsy.base.constants.module_constants import MAX_INT_VALUE
 
 def vector2scalar(x):
     if not (isinstance(x, np.ndarray)):
@@ -218,19 +218,28 @@ def linear_index_to_coordinate_tuples(linear_index, shape):
         return []
 
 
-def extract_dict_stringkeys(d, keys, remove=False):
+def extract_dict_stringkeys(d, keys, modefun="find", break_after=MAX_INT_VALUE, remove=False):
+    if isequal_string(modefun, "equal"):
+        modefun = lambda x, y: isequal_string(x, y)
+    else:
+        modefun = lambda x, y: x.find(y) >= 0
     if remove:
         out_dict = deepcopy(d)
     else:
         out_dict = {}
     keys = ensure_list(keys)
+    counts = 0
     for key, value in d.iteritems():
         for k in keys:
-            if key.find(k) >= 0:
+            if modefun(key, k):
                 if remove:
                     del out_dict[key]
+                    counts += 1
                 else:
                     out_dict.update({key: value})
+                    counts += 1
+            if counts >= break_after:
+                return out_dict
     return out_dict
 
 
