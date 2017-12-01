@@ -17,15 +17,13 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         self.type = "gamma"
         self.scipy_name = "gamma"
         self.numpy_name = "gamma"
-        self.constraint_string = "shape > 0 and scale > 0"
-        self.shape = make_float(params.get("shape", params.get("alpha", params.get("k", 2.0))))
-        self.scale = make_float(params.get("scale", params.get("theta",
-                                                               1.0 / params.get("beta", params.get("rate", 0.5)))))
-        self.k = self.shape
-        self.theta = self.scale
-        self.alpha = self.shape
-        self.beta = 1.0 / self.scale
-        self.__update_params__(shape=self.shape, scale=self.scale)
+        self.constraint_string = "alpha > 0 and beta > 0"
+        self.alpha = make_float(params.get("alpha", params.get("k", params.get("shape", 2.0))))
+        self.beta = make_float(params.get("beta", params.get("rate",
+                                                                  1.0 / params.get("theta", params.get("scale", 0.5)))))
+        self.k = self.alpha
+        self.theta = 1.0 / self.beta
+        self.__update_params__(alpha=self.alpha, theta=self.theta)
         self.context_str = "from " + construct_import_path(__file__) + " import GammaDistribution"
         self.create_str = "GammaDistribution('" + self.type + "')"
         self.update_str = "obj.update_params()"
@@ -39,75 +37,77 @@ class GammaDistribution(ContinuousProbabilityDistribution):
                     "\n" + "16. beta" + " = " + str(self.beta) + "}"
         return this_str
 
-    def pdf_params(self, parametrization="shape-scale"):
+    def pdf_params(self, parametrization="alpha-beta"):
         p = OrderedDict()
-        if isequal_string(parametrization, "alpha-beta"):
-            p.update(zip(["alpha", "beta"], [self.alpha, self.beta]))
+        if isequal_string(parametrization, "shape-scale"):
+            p.update(zip(["shape", "scale"], [self.alpha, self.theta]))
             return p
         elif isequal_string(parametrization, "k-theta"):
             p.update(zip(["k", "theta"], [self.k, self.theta]))
             return p
         elif isequal_string(parametrization, "shape-rate"):
-            p.update(zip(["shape", "rate"], [self.shape, 1.0 / self.scale]))
+            p.update(zip(["shape", "rate"], [self.alpha, self.beta]))
             return p
         elif isequal_string(parametrization, "scipy"):
-            p.update(zip(["a", "scale"], [self.shape, self.scale]))
+            p.update(zip(["a", "scale"], [self.alpha, self.theta]))
             return p
         else:
-            p.update(zip(["shape", "scale"], [self.shape, self.scale]))
+            p.update(zip(["alpha", "beta"], [self.alpha, self.beta]))
             return p
 
-    def update_params(self, **params):
-        self.__update_params__(shape=make_float(params.get("shape", params.get("alpha", params.get("k", self.shape)))),
-                               scale=make_float(params.get("scale",
-                                         params.get("theta", 1.0 / params.get("beta", params.get("rate", self.beta))))))
-        self.k = self.shape
-        self.theta = self.scale
-        self.alpha = self.shape
-        self.beta = 1.0 / self.scale
+    def scale_params(self, loc=0.0, scale=1.0):
+        return self.alpha, self.beta / scale
+
+    def update_params(self, loc=0.0, scale=1.0, use="scipy", **params):
+        self.__update_params__(loc, scale, use,
+                               alpha=make_float(params.get("alpha", params.get("k", params.get("shape", self.alpha)))),
+                               beta=make_float(params.get("beta", 1.0 / params.get("theta",
+                                                              params.get("scale", params.get("rate", 1.0/self.beta))))))
+        self.k = self.alpha
+        self.theta = 1.0 / self.beta
 
     def constraint(self):
         # By default expr >= 0
-        return np.hstack([np.array(self.shape).flatten() - np.finfo(np.float64).eps,
-                          np.array(self.scale).flatten() - np.finfo(np.float64).eps])
+        return np.hstack([np.array(self.alpha).flatten() - np.finfo(np.float64).eps,
+                          np.array(self.theta).flatten() - np.finfo(np.float64).eps])
 
     def scipy(self, loc=0.0, scale=1.0):
-        return getattr(ss, self.scipy_name)(a=self.shape, loc=loc, scale=self.scale)
+        return getattr(ss, self.scipy_name)(a=self.alpha, loc=loc, scale=self.theta*scale)
 
-    def numpy(self, size=(1,)):
-        return lambda: nr.gamma(shape=self.shape, scale=self.scale, size=size)
+    def numpy(self, loc=0.0, scale=1.0, size=(1,)):
+        return lambda: nr.gamma(shape=self.alpha, scale=self.theta*scale, size=size) + loc
 
-    def calc_mean_manual(self):
-        return self.shape * self.scale
+    def calc_mean_manual(self, loc=0.0, scale=1.0):
+        return self.alpha * self.theta * scale + loc
 
-    def calc_median_manual(self):
+    def calc_median_manual(self, loc=0.0, scale=1.0):
         warning("Gamma distribution does not have a simple closed form median! Returning nan!")
         return np.nan
 
-    def calc_mode_manual(self):
-        orig_shape = np.array(self.shape + self.scale).shape
+    def calc_mode_manual(self, loc=0.0, scale=1.0):
+        orig_shape = np.array(self.alpha + self.theta).shape
         i1 = np.ones((1,))
-        shape = self.shape * i1
-        scale = self.scale * i1
+        shape = self.alpha * i1
+        np_scale = scale * self.theta * i1
         id = shape >= 1.0
         if not(np.all(id)):
             warning("Mode cannot be calculated for gamma distribution when the shape parameter is smaller than 1.0! "
                     "Returning nan!")
-            mode = np.nan * np.ones((shape + scale).shape)
+            mode = np.nan * np.ones((shape + np_scale).shape)
             id = np.where(id)[0]
-            mode[id] = (shape[id] - 1.0) * scale[id]
-            return np.reshape(mode, orig_shape)
+            mode[id] = (shape[id] - 1.0) * np_scale[id]
+            return np.reshape(mode, orig_shape) + loc
         else:
-            return (self.shape - 1.0) * self.scale
+            return (self.alpha - 1.0) * self.theta * scale + loc
 
-    def calc_var_manual(self):
-        return self.shape * self.scale ** 2
+    def calc_var_manual(self, loc=0.0, scale=1.0):
+        return self.alpha * (self.theta * scale) ** 2
 
-    def calc_std_manual(self):
-       return np.sqrt(self.shape) * self.scale
+    def calc_std_manual(self, loc=0.0, scale=1.0):
+       return np.sqrt(self.alpha) * (self.theta * scale)
 
-    def calc_skew_manual(self):
-        return 2.0 / np.sqrt(self.shape)
+    def calc_skew_manual(self, loc=0.0, scale=1.0):
+        return 2.0 / np.sqrt(self.alpha)
 
-    def calc_kurt_manual(self):
-        return 6.0 / self.shape
+    def calc_kurt_manual(self, loc=0.0, scale=1.0):
+        return 6.0 / self.alpha

@@ -34,8 +34,7 @@ class SamplingService(object):
         return formal_repr(self, d) + "\n05. Resulting statistics: " + dict_str(self.stats)
 
     def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model({"sampling_module": self.sampling_module, "sampler": self.sampler,
-                                        "n_samples": self.n_samples, "shape": self.shape, "stats": self.stats})
+        h5_model = convert_to_h5_model(self)
         h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
         return h5_model
 

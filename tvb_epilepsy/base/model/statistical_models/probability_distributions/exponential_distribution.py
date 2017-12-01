@@ -15,10 +15,9 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
         self.scipy_name = "expon"
         self.numpy_name = "exponential"
         self.constraint_string = "scale > 0"
-        self.scale = make_float(params.get("scale", 1.0/params.get("lamda", params.get("rate", 1.0))))
-        self.lamda = 1.0 / self.scale
+        self.lamda = make_float(params.get("lamda", params.get("rate", 1.0 / params.get("scale", 1.0))))
         self.rate = self.lamda
-        self.__update_params__(scale=self.scale)
+        self.__update_params__(lamda=self.lamda)
         self.context_str = "from " + construct_import_path(__file__) + " import ExponentialDistribution"
         self.create_str = "ExponentialDistribution('" + self.type + "')"
         self.update_str = "obj.update_params()"
@@ -26,50 +25,53 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
     def __str__(self):
         this_str = super(ExponentialDistribution, self).__str__()
         this_str = this_str[0:-1]
-        this_str += "\n" + "13. rate or lamda" + " = " + str(self.rate) + "}"
+        this_str += "\n" + "13. rate or lamda" + " = " + str(self.lamda) + "}"
         return this_str
 
     def pdf_params(self, parametrization="lamda"):
-        if isequal_string(parametrization, "lamda"):
-            return {"lamda": self.lamda}
+        if isequal_string(parametrization, "scale"):
+            return {"scale": 1.0 / self.lamda}
         elif isequal_string(parametrization, "rate"):
             return {"rate": self.rate}
         else:
-            return {"scale": self.scale}
+            return {"lamda": self.lamda}
 
-    def update_params(self, **params):
-        self.__update_params__(scale=make_float(params.get("scale",
-                                                           1.0/params.get("lamda", params.get("rate", self.lamda)))))
-        self.lamda = 1.0 / self.scale
+    def scale_params(self, loc=0.0, scale=1.0):
+        return self.lamda / scale
+
+    def update_params(self, loc=0.0, scale=1.0, use="scipy", **params):
+        self.__update_params__(loc, scale, use,
+                               lamda=make_float(params.get("lamda", params.get("rate", 1.0 / params.get("scale",
+                                                                                                  1.0 / self.lamda)))))
         self.rate = self.lamda
 
     def constraint(self):
         # By default expr >= 0
-        return np.array(self.scale).flatten() - np.finfo(np.float64).eps
+        return np.array(1.0 / self.lamda).flatten() - np.finfo(np.float64).eps
 
     def scipy(self, loc=0.0, scale=1.0):
-        return ss.expon(loc=loc, scale=self.scale)
+        return ss.expon(loc=loc, scale=scale/self.lamda)
 
-    def numpy(self, size=(1,)):
-        return lambda: nr.exponential(scale=self.scale, size=size)
+    def numpy(self, loc=0.0, scale=1.0, size=(1,)):
+        return lambda: nr.exponential(scale=scale/self.lamda, size=size) + loc
 
-    def calc_mean_manual(self):
-        return self.scale
+    def calc_mean_manual(self, loc=0.0, scale=1.0):
+        return scale / self.lamda + loc
 
-    def calc_median_manual(self):
-        return self.scale * np.log(2)
+    def calc_median_manual(self, loc=0.0, scale=1.0):
+        return scale / self.lamda * np.log(2) + loc
 
-    def calc_mode_manual(self):
-        return 0.0
+    def calc_mode_manual(self, loc=0.0, scale=1.0):
+        return 0.0 + loc
 
-    def calc_var_manual(self):
-        return self.scale ** 2
+    def calc_var_manual(self, loc=0.0, scale=1.0):
+        return scale**2 / self.lamda**2
 
-    def calc_std_manual(self):
-        return self.scale
+    def calc_std_manual(self, loc=0.0, scale=1.0):
+        return scale / self.lamda
 
-    def calc_skew_manual(self):
+    def calc_skew_manual(self, loc=0.0, scale=1.0):
         return 2.0
 
-    def calc_kurt_manual(self):
+    def calc_kurt_manual(self, loc=0.0, scale=1.0):
         return 6.0

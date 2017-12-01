@@ -29,8 +29,12 @@ class BinomialDistribution(DiscreteProbabilityDistribution):
         p.update(zip(["n", "p"], [self.n, self.p]))
         return p
 
-    def update_params(self, **params):
-        self.__update_params__(n=make_int(params.get("n", self.n)), p=make_float(params.get("p", self.p)))
+    def scale_params(self, loc=0.0, scale=1.0):
+        return self.n, self.p
+
+    def update_params(self, loc=0.0, scale=1.0, use="scipy", **params):
+        self.__update_params__(loc, scale, use,
+                               n=make_int(params.get("n", self.n)), p=make_float(params.get("p", self.p)))
 
     def constraint(self):
         # By default expr >= 0
@@ -40,26 +44,26 @@ class BinomialDistribution(DiscreteProbabilityDistribution):
     def scipy(self, loc=0.0, scale=1.0):
         return ss.binom(n=self.n, p=self.p, loc=loc)
 
-    def numpy(self, size=(1,)):
-        return lambda: nr.binomial(n=self.n, p=self.p, size=size)
+    def numpy(self, loc=0.0, scale=1.0, size=(1,)):
+        return lambda: nr.binomial(n=self.n, p=self.p, size=size) + loc
 
-    def calc_mean_manual(self):
-        return self.n * self.p
+    def calc_mean_manual(self, loc=0.0, scale=1.0):
+        return self.n * self.p + loc
 
-    def calc_median_manual(self):
-        return make_int(np.round(self.calc_mean_manual()))
+    def calc_median_manual(self, loc=0.0, scale=1.0):
+        return make_int(np.round(self.calc_mean_manual(loc=loc)))
 
-    def calc_mode_manual(self):
-        return make_int(np.round((self.n + 1) * self.p) - 1)
+    def calc_mode_manual(self, loc=0.0, scale=1.0):
+        return make_int(np.round((self.n + 1) * self.p + loc) - 1)
 
-    def calc_var_manual(self):
+    def calc_var_manual(self, loc=0.0, scale=1.0):
         return self.n * self.p * (1 - self.p)
 
-    def calc_std_manual(self):
+    def calc_std_manual(self, loc=0.0, scale=1.0):
         return np.sqrt(self.calc_var_manual())
 
-    def calc_skew_manual(self):
+    def calc_skew_manual(self, loc=0.0, scale=1.0):
         return (1.0 - 2.0 * self.p) / self.calc_std_manual()
 
-    def calc_kurt_manual(self):
+    def calc_kurt_manual(self, loc=0.0, scale=1.0):
         return (1.0 - 6.0 * self.p * (1.0-self.p)) / self.calc_var_manual()

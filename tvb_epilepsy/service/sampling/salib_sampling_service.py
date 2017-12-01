@@ -24,15 +24,20 @@ class SalibSamplingService(StochasticSamplingService):
         self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
         self.create_str = self.__class__.__name__ + "()"
 
-    def sample(self, parameter=(), **kwargs):
+    def sample(self, parameter=(), loc=0.0, scale=1.0, **kwargs):
         if isinstance(parameter, Parameter):
             parameter_shape = parameter.p_shape
             low = parameter.low
             high = parameter.high
+            loc = getattr(parameter, "loc", loc)
+            scale = getattr(parameter, "scale", scale)
         else:
             low = kwargs.pop("low", -MAX_SINGLE_VALUE)
             high = kwargs.pop("high", MAX_SINGLE_VALUE)
             parameter_shape = kwargs.pop("shape", (1,))
+        scale = (high-low) * scale
+        low = low + loc
+        high = low + scale
         low, high = self.check_for_infinite_bounds(low, high)
         low, high, n_outputs, parameter_shape = self.check_size(low, high, parameter_shape)
         bounds = [list(b) for b in zip(low.tolist(), high.tolist())]

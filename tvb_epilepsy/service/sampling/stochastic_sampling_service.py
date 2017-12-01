@@ -7,7 +7,7 @@ from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, isequal_string, construct_import_path
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.model.parameter import Parameter
+from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import StochasticParameterBase
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution \
                                                                                           import ProbabilityDistribution
 from tvb_epilepsy.service.sampling.sampling_service import SamplingService
@@ -55,13 +55,15 @@ class StochasticSamplingService(SamplingService):
                              size=size)
         return self.sampler.ppf(q=rnd_cdf)
 
-    def sample(self, parameter=(), **kwargs):
+    def sample(self, parameter=(), loc=0.0, scale=1.0, **kwargs):
         nr.seed(self.random_seed)
-        if isinstance(parameter, Parameter):
+        if isinstance(parameter, StochasticParameterBase):
             parameter_shape = parameter.p_shape
             low = parameter.low
             high = parameter.high
             prob_distr = parameter
+            loc = parameter.loc
+            scale = parameter.scale
         else:
             parameter_shape = kwargs.pop("shape", (1,))
             low = kwargs.pop("low", -MAX_SINGLE_VALUE)
@@ -77,19 +79,22 @@ class StochasticSamplingService(SamplingService):
             self.sampling_module = "scipy"
             if isinstance(prob_distr, basestring):
                 self.sampler = getattr(ss, prob_distr)(*parameter, **kwargs)
-            elif isinstance(prob_distr, ProbabilityDistribution):
-                self.sampler = prob_distr.scipy()
-            samples = self._truncated_distribution_sampling({"low": low, "high": high}, out_shape)
+                samples = self._truncated_distribution_sampling({"low": low, "high": high}, out_shape) * scale + loc
+            elif isinstance(prob_distr, StochasticParameterBase):
+                self.sampler = prob_distr._scipy()
+                samples = self._truncated_distribution_sampling({"low": low, "high": high}, out_shape)
         elif self.sampling_module.find("scipy") >= 0:
             if isinstance(prob_distr, basestring):
                 self.sampler = getattr(ss, prob_distr)(*parameter, **kwargs)
-            elif isinstance(prob_distr, ProbabilityDistribution):
-                self.sampler = prob_distr.scipy(**kwargs)
-            samples = self.sampler.rvs(size=out_shape)
+                samples = self.sampler.rvs(size=out_shape) * scale + loc
+            elif isinstance(prob_distr, StochasticParameterBase):
+                self.sampler = prob_distr._scipy(**kwargs)
+                samples = self.sampler.rvs(size=out_shape)
         elif self.sampling_module.find("numpy") >= 0:
             if isinstance(prob_distr, basestring):
                 self.sampler = lambda size: getattr(nr, prob_distr)(*parameter, size=size, **kwargs)
-            elif isinstance(prob_distr, ProbabilityDistribution):
-                self.sampler = lambda size: prob_distr.numpy(size=size)
-            samples = self.sampler(out_shape)
+                samples = self.sampler(out_shape) * scale + loc
+            elif isinstance(prob_distr, StochasticParameterBase):
+                self.sampler = lambda size: prob_distr._numpy(size=size)
+                samples = self.sampler(out_shape)
         return samples.T
