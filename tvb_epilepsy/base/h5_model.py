@@ -124,14 +124,25 @@ def list_or_tuple_to_h5_model(h5_model, obj, path, container_path, obj_type):
         else:
             h5_model.add_or_update_datasets_attribute(path, "()")
         return h5_model, None
-    if isinstance(obj, tuple):
-        h5_model.add_or_update_metadata_attribute(os.path.join(container_path[1:], "transform_str"), "tuple(obj))")
-    h5_model.add_or_update_metadata_attribute(os.path.join(container_path[1:], "create_str"), "list()")
-    return h5_model, iterable_to_dict(obj)
+    # Try to store it as a ndarray of numbers or strings but not objects...
+    temp = np.array(obj)
+    if not(isequal_string(str(temp.dtype)[0], "O")):
+        h5_model.add_or_update_metadata_attribute(path + "/type_str", obj.__class__.__name__)
+        if isinstance(obj, tuple):
+            h5_model.add_or_update_metadata_attribute(path + "/transform_str", "tuple(obj)")
+        else:
+            h5_model.add_or_update_metadata_attribute(path + "/transform_str", "obj.tolist()")
+        h5_model.add_or_update_datasets_attribute(path, temp)
+        return h5_model, None
+    else:
+        h5_model.add_or_update_metadata_attribute(os.path.join(container_path[1:], "create_str"), "list()")
+        if isinstance(obj, tuple):
+            h5_model.add_or_update_metadata_attribute(os.path.join(container_path[1:], "transform_str"), "tuple(obj))")
+        return h5_model, iterable_to_dict(obj)
 
 
 def array_to_h5_model(h5_model, obj, path, container_path, obj_type):
-    if obj.dtype == "O":
+    if isequal_string(str(obj.dtype)[0], "O"):
         h5_model.add_or_update_metadata_attribute(os.path.join(container_path, "create_str"), "list()")
         h5_model.add_or_update_metadata_attribute(os.path.join(container_path, "transform_str"),
                                                   "np.reshape(obj, " + str(obj.shape) + ")")
