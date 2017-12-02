@@ -120,14 +120,14 @@ class SDEModelInversionService(ODEModelInversionService):
                     special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                     title=name + ": Hidden states fit rasterplot",
                     subtitles=['hidden state x1' '\ndynamic noise sig_prior = ' + str(sig_prior) +
-                               " sig_post = " + str(est["sig"]/statistical_model.sig),
+                               " sig_post = " + str(est["sig"]),
                                'hidden state z'], offset=3.0,
                     labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                     figure_format=figure_format, figsize=VERY_LARGE_SIZE)
         if trajectories_plot:
             title = name + ': Fit hidden state space trajectories'
-            title += "\n prior x0: " + str(self.x0_values)
-            title += "\n x0 fit: " + str(est["PathologicalExcitability"])
+            title += "\n prior x0: " + str(self.x0_values[statistical_model.active_regions])
+            title += "\n x0 fit: " + str(est["PathologicalExcitability"][statistical_model.active_regions])
             plot_trajectories({'x1': est['x'], 'z(t)': est['z']}, special_idx=seizure_indices,
                               title=title, labels=self.region_labels, show_flag=show_flag, save_flag=save_flag,
                               figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
@@ -135,13 +135,11 @@ class SDEModelInversionService(ODEModelInversionService):
         conn_figure_name = name + "Model Connectivity"
         pyplot.figure(conn_figure_name, VERY_LARGE_SIZE)
         # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
-        MC_prior = statistical_model.parameters["MC"].mean / statistical_model.MC_scale
+        MC_prior = statistical_model.parameters["MC"].mean
         K_prior = statistical_model.parameters["K"].mean
-        plot_regions2regions(MC_prior, self.region_labels[statistical_model.active_regions], 131,
+        plot_regions2regions(MC_prior, self.region_labels[statistical_model.active_regions], 121,
                              "Prior Model Connectivity" + "\nglobal scaling prior: K = " + str(K_prior))
-        plot_regions2regions(est['model_connectivity'], self.region_labels[statistical_model.active_regions], 132,
+        plot_regions2regions(est['MC'], self.region_labels[statistical_model.active_regions], 122,
                              "Posterior Model  Connectivity" + "\nglobal scaling fit: K = " + str(est["K"]))
-        plot_regions2regions(est['MC']-1.0, self.region_labels[statistical_model.active_regions], 133,
-                             "Posterior-Prior MC")
         save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
         check_show(show_flag=show_flag)

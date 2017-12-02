@@ -96,7 +96,6 @@ def generate_cmdstan_options(method, **kwargs):
     options.update({"init": kwargs.get("init", 2)})
     options.update({"random_seed": kwargs.get("random_seed", 12345)})
     options.update({"random_seed": kwargs.get("seed", options["random_seed"])})
-    options.update({"refresh": kwargs.get("refresh", 100)})
     options.update({"chains": kwargs.get("chains", 4)})
     return options
 

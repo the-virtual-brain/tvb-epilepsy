@@ -343,6 +343,8 @@ transformed parameters {
     /* Generative model */
     /* Epileptor */
     vector[n_regions] zeq; // z equilibrium point coordinate
+    vector[n_active_regions] x1eq_active;
+    vector[n_active_regions] zeq_active;
     vector[n_regions] x0; // excitability parameter
     real<lower=0.0> tau1; // time scale [n_active_regions]
     real<lower=0.0> tau0; // time scale separation [n_active_regions]
@@ -431,6 +433,10 @@ transformed parameters {
         if (DEBUG >= 1){
             print("zeq=", zeq);
         }
+    }
+    for (ii in 1:n_active_regions) {
+        x1eq_active[ii] = x1eq[active_regions[ii]];
+        zeq_active[ii] = zeq[active_regions[ii]];
     }
 
     /* Coupling
@@ -524,6 +530,7 @@ model {
             MC_star[ii, jj] ~ sample(MC_pdf, MC_p);
         }
     }
+
     if (DEBUG >= 0){
         print("min(x1eq)=", min(x1eq), ", max(x1eq)=", max(x1eq));
         print("min(MC_star)=", min(MC_star), ", max(MC_star)=", max(MC_star));
@@ -610,14 +617,14 @@ model {
             print("x1[", tt, "] = ", x1[tt]);
             print("z[", tt, "] = ", z[tt]);
         }
-        if (SIMULATE > 0){
+        if (SIMULATE <= 0){
             /* Observation model  */
             if (observation_expression == 0) {
                 observation = to_vector(x1[tt]);
             } else if (observation_expression == 1){
-                observation = (to_vector(x1[tt]) - x1eq) / 2.0;
+                observation = (to_vector(x1[tt]) - x1eq_active) / 2.0;
             } else {
-                observation = (to_vector(x1[tt]) - x1eq + to_vector(z[tt]) - zeq) / 2.75;
+                observation = (to_vector(x1[tt]) - x1eq_active + to_vector(z[tt]) - zeq_active) / 2.75;
             }
             if (DEBUG == 1) {
                 print("min(observation[", tt, "]) = ", min(observation), ", max(observation[", tt, "]) = ", max(observation));
@@ -676,9 +683,9 @@ generated quantities {
             if (observation_expression == 0) {
                 observation = to_vector(x1[tt]);
             } else if (observation_expression == 1){
-                observation = (to_vector(x1[tt]) - x1eq) / 2.0;
+                observation = (to_vector(x1[tt]) - x1eq_active) / 2.0;
             } else {
-                observation = (to_vector(x1[tt]) - x1eq + to_vector(z[tt])- zeq) / 2.75;
+                observation = (to_vector(x1[tt]) - x1eq_active + to_vector(z[tt])- zeq_active) / 2.75;
             }
             if  (observation_model == 0) {
                 // seeg log power

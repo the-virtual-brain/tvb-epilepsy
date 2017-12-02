@@ -139,7 +139,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         stan_service.write_model_data_to_file(model_data)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        est, fit = stan_service.fit(model_data=model_data, debug=0, simulate=0, merge_outputs=False, chains=1, **kwargs)
+        est, fit = stan_service.fit(model_data=model_data, debug=1, simulate=0,
+                                    merge_outputs=False, chains=1, refresh=1, **kwargs)
         convert_to_h5_model(est).write_to_h5(results_dir, lsa_hypothesis.name + "_fit_est.h5")
         est = ensure_list(est)
         for id_est, this_est in enumerate(est):
