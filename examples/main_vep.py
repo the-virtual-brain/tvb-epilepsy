@@ -8,7 +8,7 @@ import numpy as np
 
 from tvb_epilepsy.base.constants.module_constants import SIMULATION_MODE, TVB, DATA_MODE
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_VEP
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
@@ -38,6 +38,10 @@ else:
 PSE_FLAG = False
 SA_PSE_FLAG = False
 SIM_FLAG = True
+
+DATA_CUSTOM = os.path.join(FOLDER_VEP, 'CC/TVB1')
+
+
 def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG):
     logger = initialize_logger(__name__)
     # -------------------------------Reading data-----------------------------------

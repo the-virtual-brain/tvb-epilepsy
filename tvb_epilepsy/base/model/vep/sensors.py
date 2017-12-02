@@ -36,8 +36,8 @@ class Sensors(object):
         self.s_type = s_type
         self.channel_labels = np.array([])
         self.channel_inds = np.array([])
-        self.channel_labels, self.channel_inds = self.group_contacts_to_electrodes()
-        self.group_contacts_to_electrodes()
+        if len(self.labels) > 1:
+            self.channel_labels, self.channel_inds = self.group_contacts_to_electrodes()
         self.context_str = "from " + construct_import_path(__file__) + " import Sensors"
         self.create_str = "Sensors(np.array([]), np.array([]), s_type='" + self.s_type + "')"
 

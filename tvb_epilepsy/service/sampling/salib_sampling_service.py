@@ -32,13 +32,13 @@ class SalibSamplingService(StochasticSamplingService):
             loc = getattr(parameter, "loc", loc)
             scale = getattr(parameter, "scale", scale)
         else:
-            low = kwargs.pop("low", -MAX_SINGLE_VALUE)
-            high = kwargs.pop("high", MAX_SINGLE_VALUE)
+            low = np.array(kwargs.pop("low", -MAX_SINGLE_VALUE))
+            high = np.array(kwargs.pop("high", MAX_SINGLE_VALUE))
             parameter_shape = kwargs.pop("shape", (1,))
         scale = (high-low) * scale
         low = low + loc
         high = low + scale
-        low, high = self.check_for_infinite_bounds(low, high)
+        low, high = self.check_for_infinite_bounds(low.tolist(), high.tolist())
         low, high, n_outputs, parameter_shape = self.check_size(low, high, parameter_shape)
         bounds = [list(b) for b in zip(low.tolist(), high.tolist())]
         self.adjust_shape(parameter_shape)
