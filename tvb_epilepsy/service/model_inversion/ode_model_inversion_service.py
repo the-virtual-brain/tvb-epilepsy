@@ -8,7 +8,7 @@ from scipy.signal import decimate
 
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, assert_arrays, \
-                                                                                                construct_import_path
+                                                                        extract_dict_stringkeys, construct_import_path
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import \
@@ -37,7 +37,8 @@ class ODEModelInversionService(ModelInversionService):
         self.time = None
         self.dt = 0.0
         self.n_times = 0
-        self.n_signals = 0
+        self.n_signals = self.n_regions
+        self.data_type = "lfp"
         self.signals_inds = range(self.n_signals)
         self.sig_init = self.set_default_sig_init(**kwargs)
         self._set_default_parameters(**kwargs)
@@ -69,58 +70,42 @@ class ODEModelInversionService(ModelInversionService):
             raise_value_error("Input time is neither a scalar nor a vector of length equal to target_data.shape[0]!" +
                               "\ntime = " + str(time))
 
-    def select_signals(self, signals, signals_inds, **kwargs):
+    def select_signals_seeg(self, signals, rois, auto_selection, **kwargs):
         sensors = Sensors(self.sensors_labels, self.sensors_locations, projection=self.projection)
-        power=kwargs.get("power", np.sum(signals[:, signals_inds]**2, axis=0)/signals.shape[0])
-        correlation = kwargs.get("correlation", np.corrcoef(signals[:, signals_inds].T))
-        if kwargs.get("rois", None) is not None and sensors.projection is not None:
-            current_selection = sensors.select_contacts_rois(kwargs.get("rois"), signals_inds,
-                                                        kwargs.get("projection_th", None))
-        current_selection_inds = [signals_inds.index(s) for s in current_selection]
-        current_selection = sensors.select_contacts_corr(correlation[current_selection_inds][:, current_selection_inds],
-                                                    current_selection, power=power,          # select_signals=False
-                                                    n_electrodes=kwargs.get("n_electrodes"),
-                                                    contacts_per_electrode=kwargs.get("contacts_per_electrode", 1),
-                                                    group_electrodes=kwargs.get("True", 1))
-        return np.unique(np.hstack(current_selection)).tolist()
-
-    def set_signals_inds(self, signals, **kwargs):
-        signals_inds = kwargs.pop("signals_inds", self.signals_inds)
-        if kwargs.pop("select_signals", False):
-            signals_inds = self.select_signals(signals, signals_inds, **kwargs)
-        if len(signals_inds) == 0:
-            signals_inds = range(self.n_signals)
-        elif len(signals_inds) < self.n_signals:
-            try:
-                signals = signals[:, signals_inds]
-                self.observation_shape = signals.shape
-                (self.n_times, self.n_signals) = self.observation_shape
-            except:
-                raise_value_error("Failed to extract signals with indices " + str(self.signals_inds) +
-                                  " from signals' array with shape " + str(self.observation_shape) + "!")
-        else:
-            raise_value_error("Signals indices " + str(self.signals_inds) +
-                              " more than signals'number " + str(self.n_signals) + "!")
-        self.signals_inds = signals_inds
+        if auto_selection.find("rois") >= 0:
+            if sensors.projection is not None:
+                current_selection = sensors.select_contacts_rois(kwargs.get("rois", rois), self.signals_inds,
+                                                                 kwargs.get("projection_th", None))
+                inds = np.where([s in current_selection for s in self.signals_inds])[0]
+                self.signals_inds = np.array(self.signals_inds)[inds].tolist()
+                signals = signals[:, inds]
+        if auto_selection.find("correlation-power") >= 0:
+            power = kwargs.get("power", np.sum(signals**2, axis=0)/signals.shape[0])
+            correlation = kwargs.get("correlation", np.corrcoef(signals.T))
+            current_selection = sensors.select_contacts_corr(correlation, self.signals_inds, power=power,
+                                                             n_electrodes=kwargs.get("n_electrodes"),
+                                                             contacts_per_electrode=kwargs.get("contacts_per_electrode", 1),
+                                                             group_electrodes=kwargs.get("group_electrodes", True))
+            inds = np.where([s in current_selection for s in self.signals_inds])[0]
+            self.signals_inds = np.array(self.signals_inds)[inds].tolist()
+        elif auto_selection.find("power"):
+            power = kwargs.get("power", np.sum(signals ** 2, axis=0) / signals.shape[0])
+            inds = select_greater_values_array_inds(power, kwargs.get("power_th", None))
+            self.signals_inds = (np.array(self.signals_inds)[inds]).tolist()
+        return signals[:, inds]
+    
+    def select_signals_lfp(self, signals, rois, auto_selection, **kwargs):
+        if auto_selection.find("rois") >= 0:
+            if kwargs.get("rois", rois):
+                inds = np.where([s in rois for s in self.signals_inds])[0]
+                signals = signals[:, inds]
+                self.signals_inds = np.array(self.signals_inds)[inds].tolist()
+        if auto_selection.find("power") >= 0:
+            power = kwargs.get("power", np.sum(signals**2, axis=0) / signals.shape[0])
+            inds = select_greater_values_array_inds(power, kwargs.get("power_th",  None))
+            signals = signals[:, inds]
+            self.signals_inds = (np.array(self.signals_inds)[inds]).tolist()
         return signals
-
-    def set_target_data_and_time(self, target_data_type, target_data, statistical_model, **kwargs):
-        if isequal_string(target_data_type, "simulated"):
-            signals, target_data = self.set_simulated_target_data(target_data, statistical_model)
-            self.target_data_type = "simulated"
-        else:  # isequal_string(target_data_type, "empirical"):
-            signals = self.set_empirical_target_data(target_data)
-            self.target_data_type = "empirical"
-        signals = self.set_signals_inds(signals, **kwargs)
-        time = self.set_time(target_data.get("time", None))
-        if kwargs.get("decimate", 1) > 1:
-            signals, time = self.decimate_signals(time, signals, kwargs.get("decimate"))
-        if np.sum(kwargs.get("cut_signals_tails", (0,0))) > 0:
-            signals, time = self.cut_signals_tails(time, signals, kwargs.get("cut_signals_tails"))
-        statistical_model.n_signals = self.n_signals
-        statistical_model.n_times = self.n_times
-        statistical_model.dt = self.dt
-        return signals, time, statistical_model, target_data
 
     def decimate_signals(self, time, signals, decim_ratio):
         signals = decimate(signals, decim_ratio, axis=0, zero_phase=True)
@@ -137,45 +122,83 @@ class ODEModelInversionService(ModelInversionService):
         (self.n_times, self.n_signals) = self.observation_shape
         return signals, time
 
-    def set_empirical_target_data(self, target_data):
+    def set_empirical_target_data(self, target_data, **kwargs):
+        self.data_type = "seeg"
+        self.signals_inds = range(len(self.sensors_labels))
+        manual_selection = kwargs.get("manual_selection", [])
+        if len(manual_selection) > 0:
+            self.signals_inds = manual_selection
         if isinstance(target_data, dict):
             signals = target_data.get("signals", target_data.get("target_data", None))
+        if len(self.signals_inds) != signals.shape[1]:
+            signals = signals[:, self.signals_inds]
         self.observation_shape = signals.shape
         (self.n_times, self.n_signals) = self.observation_shape
         return signals
 
-    def set_simulated_target_data(self, target_data,  statistical_model=None):
-        #TODO: this function needs to be improved substantially. It lacks generality right now.
-        if statistical_model is None or not(isinstance(target_data, dict)):
-            signals = self.set_empirical_target_data(target_data)
-        else:
+    def set_simulated_target_data(self, target_data,  statistical_model, **kwargs):
+        self.signals_inds = range(self.n_regions)
+        self.data_type = "lfp"
+        if statistical_model.observation_model.find("seeg") >= 0:
             project = True
-            if statistical_model.observation_expression == "x1z_offset":
-                signals = ((target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T +
-                           (target_data["z"].T - np.expand_dims(self.zEQ, 1)).T) / 2.75
-                # TODO: a better normalization
-            elif statistical_model.observation_expression == "x1_offset":
-                # TODO: a better normalization
-                signals = (target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T / 2.0
-            else: # statistical_models.observation_expression == "x1"
-                signals = target_data.get("SEEG0", None)
-                if signals is None:
-                    signals = target_data["x1"]
-                else:
+        if statistical_model.observation_expression == "x1z_offset":
+            signals = ((target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T +
+                       (target_data["z"].T - np.expand_dims(self.zEQ, 1)).T) / 2.75
+            # TODO: a better normalization
+        elif statistical_model.observation_expression == "x1_offset":
+            # TODO: a better normalization
+            signals = (target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T / 2.0
+        else: # statistical_models.observation_expression == "lfp"
+            if project:
+                # try for SEEG
+                signals = extract_dict_stringkeys(sort_dict(target_data), "SEEG",
+                                                  modefun="find", break_after=1)
+                if len(signals) > 0:
+                    signals = signals.values()[0]
                     project = False
-            signals = signals[:, statistical_model.active_regions]
-            if project and statistical_model.observation_model.find("seeg") >= 0:
-                if not(isinstance(self.projection, np.ndarray)):
-                    projection = np.eye(statistical_model.n_active_regions)
+                    self.data_type = "seeg"
+                    self.signals_inds = range(self.projection.shape[0])
                 else:
-                    projection = self.projection[:, statistical_model.active_regions]
-                signals = (np.dot(projection, signals.T)).T
-            signals -= signals.min()
-            signals /= signals.max()
-            self.observation_shape = signals.shape
-            (self.n_times, self.n_signals) = self.observation_shape
-            target_data["signals"] = signals
+                    signals = target_data.get("lfp", target_data["x1"])
+        target_data["signals"] = signals
+        manual_selection = kwargs.get("manual_selection", [])
+        if len(manual_selection) > 0:
+            self.signals_inds = manual_selection
+        if len(self.signals_inds) != signals.shape[1]:
+            signals = signals[:, self.signals_inds]
+        if project is True:
+            signals = (np.dot(self.projection[:, self.signals_inds], signals.T)).T
+            self.data_type = "seeg"
+            self.signals_inds = range(self.projection.shape[0])
+        self.observation_shape = signals.shape
+        (self.n_times, self.n_signals) = self.observation_shape
         return signals, target_data
+
+    def set_target_data_and_time(self, target_data_type, target_data, statistical_model, **kwargs):
+        if isequal_string(target_data_type, "simulated"):
+            signals, target_data = self.set_simulated_target_data(target_data, statistical_model, **kwargs)
+            self.target_data_type = "simulated"
+        else:  # isequal_string(target_data_type, "empirical"):
+            signals = self.set_empirical_target_data(target_data, **kwargs)
+            self.target_data_type = "empirical"
+        if kwargs.get("auto_selection", True) is not False:
+            if self.data_type == "lfp":
+                signals = self.select_signals_lfp(signals, statistical_model.active_regions,
+                                                  kwargs.pop("auto_selection", "rois"), **kwargs)
+            else:
+                signals = self.select_signals_seeg(signals,  statistical_model.active_regions,
+                                                   kwargs.pop("auto_selection", "rois-correlation-power"), **kwargs)
+        time = self.set_time(target_data.get("time", None))
+        if kwargs.get("decimate", 1) > 1:
+            signals, time = self.decimate_signals(time, signals, kwargs.get("decimate"))
+        if np.sum(kwargs.get("cut_signals_tails", (0, 0))) > 0:
+            signals, time = self.cut_signals_tails(time, signals, kwargs.get("cut_signals_tails"))
+        signals -= signals.min()
+        signals /= signals.max()
+        statistical_model.n_signals = self.n_signals
+        statistical_model.n_times = self.n_times
+        statistical_model.dt = self.dt
+        return signals, time, statistical_model, target_data
 
     def update_active_regions_e_values(self, statistical_model, active_regions_th=0.1, reset=False):
         if reset:

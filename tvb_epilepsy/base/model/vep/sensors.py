@@ -144,7 +144,7 @@ class Sensors(object):
                 else:
                     inds_select = range(n_select)
                 selection.append(initial_selection[cluster_inds[inds_select]])
-            return selection
+            return np.unique(np.hstack(selection)).tolist()
         else:
             warning("Number of contacts' left < 6!\n" + "Skipping clustering and returning all of them!")
             return initial_selection

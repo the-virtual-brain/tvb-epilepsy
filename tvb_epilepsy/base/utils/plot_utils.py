@@ -257,6 +257,13 @@ def plot_timeseries(time, data_dict, time_units="ms", special_idx=None, title='T
         figure_name = title.replace(".", "").replace(' ', "")
     no_rows = len(data_dict)
     lines = []
+
+    def plot_line(color, alpha):
+        try:
+            return pyplot.plot(time, data[:, iTS], color, alpha=alpha, label=labels[iTS])
+        except:
+            return pyplot.plot(time, data[:, iTS], color, alpha=alpha, label=str(iTS))
+
     for i, subtitle in enumerate(data_dict):
         ax = pyplot.subplot(no_rows, 1, i + 1)
         pyplot.hold(True)
@@ -269,16 +276,19 @@ def plot_timeseries(time, data_dict, time_units="ms", special_idx=None, title='T
         lines.append([])
         if special_idx is None:
             for iTS in range(nTS):
-                line, = pyplot.plot(time, data[:, iTS], 'k', alpha=0.3, label=labels[iTS])
+                # line, = pyplot.plot(time, data[:, iTS], 'k', alpha=0.3, label=labels[iTS])
+                line, = plot_line('k', 0.3)
                 lines[i].append(line)
         else:
             mask = np.array(range(nTS))
             mask = np.delete(mask,special_idx)
             for iTS in special_idx:
-                line, = pyplot.plot(time, data[:, iTS], 'r', alpha=0.7, label=labels[iTS])
+                # line, = pyplot.plot(time, data[:, iTS], 'r', alpha=0.7, label=labels[iTS])
+                line, = plot_line('r', 0.7)
                 lines[i].append(line)
             for iTS in mask:
-                line, = pyplot.plot(time, data[:, iTS], 'k', alpha=0.3, label=labels[iTS])
+                # line, = pyplot.plot(time, data[:, iTS], 'k', alpha=0.3, label=labels[iTS])
+                line, = plot_line('k', 0.3)
                 lines[i].append(line)
         pyplot.ylabel(subtitle)
         ax.set_autoscalex_on(False)
@@ -293,7 +303,7 @@ def plot_timeseries(time, data_dict, time_units="ms", special_idx=None, title='T
     check_show(show_flag)
 
 
-def plot_raster(time, data_dict, time_units="ms", special_idx=None, title='Time Series', subtitles=[], offset=3.0,
+def plot_raster(time, data_dict, time_units="ms", special_idx=None, title='Time Series', subtitles=[], offset=1.0,
                 figure_name=None, labels=None, show_flag=SHOW_FLAG, save_flag=False, figure_dir=FOLDER_FIGURES,
                 figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE):
     pyplot.figure(title, figsize=figsize)
@@ -304,7 +314,7 @@ def plot_raster(time, data_dict, time_units="ms", special_idx=None, title='Time 
         try:
             return pyplot.plot(time, -data[:, iTS]+offset*iTS, color, label=labels[iTS])
         except:
-            return pyplot.plot(time, -data[:, iTS] + offset * iTS, color, label="_".join(["SEEG", str(iTS)]))
+            return pyplot.plot(time, -data[:, iTS] + offset * iTS, color, label=str(iTS))
 
     for i, var in enumerate(data_dict):
         ax = pyplot.subplot(1, no_rows, i + 1)

@@ -56,14 +56,12 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         dynamical_model = "EpileptorDP2D"
 
         # -------------------------- Get model_data and observation signals: -------------------------------------------
-        model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head,
-                                                            dynamical_model, sde_mode="x1z", logger=logger)
-        statistical_model = model_inversion.generate_statistical_model()
-        statistical_model = model_inversion.update_active_regions(statistical_model,
-                                                                          methods=["e_values", "LSA"],
-                                                                          active_regions_th=0.1, reset=True)
+        model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head,  dynamical_model,
+                                                   sde_mode="x1z",  logger=logger)
+        statistical_model = model_inversion.generate_statistical_model(observation_expression="lfp")
+        statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
+                                                                                     active_regions_th=0.1, reset=True)
         decimate = 4
-        rois = statistical_model.active_regions
         cut_signals_tails = (6, 6)
         if os.path.isfile(EMPIRICAL):
             # ---------------------------------------Get empirical data----------------------------------------------
@@ -88,6 +86,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                 "channel_inds": channel_inds, "channel_lbls": channel_lbls}
                 convert_to_h5_model(vois_ts_dict).write_to_h5(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts_empirical.h5")
             model_inversion.sensors_labels[channel_inds] = channel_lbls
+            manual_selection = channel_inds
             n_electrodes = 3
             contacts_per_electrode = 2
         else:
@@ -101,29 +100,35 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                                        save_flag=True, results_dir=results_dir,
                                                        figure_dir=figure_dir, logger=logger, tau1=0.5, tau0=30.0,
                                                        noise_intensity=10**-2.8)
-            channel_inds = None
+            manual_selection = []
             n_electrodes = 8
             contacts_per_electrode = 1
             channel_lbls = model_inversion.sensors_labels
+        # -------------------------- Select and set observation signals -----------------------------------
         signals, time, statistical_model, vois_ts_dict = \
             model_inversion.set_target_data_and_time(target_data_type, vois_ts_dict, statistical_model,
-                                                     select_signals=True, rois=rois, signals_inds=channel_inds,
-                                                     n_electrodes=n_electrodes,
+                                                     select_signals=True, manual_selection=manual_selection,
+                                                     n_electrodes=n_electrodes, auto_selection="rois-correlation-power",
                                                      contacts_per_electrode=contacts_per_electrode,
+                                                     group_electrodes=False,
                                                      decimate=decimate, cut_signals_tails=cut_signals_tails)
-        if len(model_inversion.signals_inds) < head.get_sensors_id().number_of_sensors:
-            special_idx = model_inversion.signals_inds
-            statistical_model = \
-                    model_inversion.update_active_regions_seeg(statistical_model)
+        # if len(model_inversion.signals_inds) < head.get_sensors_id().number_of_sensors:
+        #     statistical_model = \
+        #             model_inversion.update_active_regions_seeg(statistical_model)
+        if model_inversion.data_type == "lfp":
+            labels = model_inversion.region_labels
         else:
-            special_idx = []
-        plot_raster(vois_ts_dict['time'], {'Target Signals': vois_ts_dict['signals']},
-                    time_units="ms", title= hyp.name + ' Target Signals raster', special_idx=special_idx, offset=1.0,
-                    labels=model_inversion.sensors_labels[model_inversion.signals_inds],
-                    save_flag=True, show_flag=False, figure_dir=figure_dir)
+            labels = model_inversion.sensors_labels
+        if vois_ts_dict.get("signals", None) is not None:
+            vois_ts_dict["signals"] -= vois_ts_dict["signals"].min()
+            vois_ts_dict["signals"] /= vois_ts_dict["signals"].max()
+            plot_raster(vois_ts_dict['time'], {'Target Signals': vois_ts_dict["signals"]},
+                        time_units="ms", title= hyp.name + ' Target Signals raster',
+                        special_idx=model_inversion.signals_inds, offset=0.1, labels=labels,
+                        save_flag=True, show_flag=False, figure_dir=figure_dir)
         plot_timeseries(time, {'Target Signals': signals},
                         time_units="ms", title= hyp.name + 'Target Signals ', 
-                        labels=model_inversion.sensors_labels[model_inversion.signals_inds],
+                        labels=labels[model_inversion.signals_inds],
                         save_flag=True, show_flag=False, figure_dir=figure_dir)
         model_inversion.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_ModelInversionService.h5")
         statistical_model.write_to_h5(results_dir, lsa_hypothesis.name + "_StatsModel.h5")
@@ -188,7 +193,7 @@ if __name__ == "__main__":
     # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ1_0001.edf'), [10.0, 35.0], channels)
     # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ2_0002.edf'), [15.0, 40.0], channels)
     # prepare_seeg_observable(os.path.join(SEEG_data, 'SZ5_0003.edf'), [20.0, 45.0], channels)
-    EMPIRICAL=True
+    EMPIRICAL = False
     if EMPIRICAL:
         main_fit_sim_hyplsa(p_name="ep_l_frontal_complex", data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                             stats_model_name="vep_sde", EMPIRICAL=os.path.join(SEEG_data, 'SZ1_0001.edf'),
