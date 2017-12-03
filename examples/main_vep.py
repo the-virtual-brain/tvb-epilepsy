@@ -281,9 +281,8 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                                 hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
                                                                 sensors_list=head.sensorsSEEG)
                 # Plot results
-                plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, lsa_hypothesis.name, head,
-                                 vois_ts_dict, head.sensorsSEEG, hpf_flag=True, trajectories_plot=trajectories_plot,
-                                 spectral_raster_plot=spectral_raster_plot, log_scale=True)
+                plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, lsa_hypothesis.name, vois_ts_dict, sensorsSEEG=None,
+                                 trajectories_plot=False, spectral_raster_plot=False, region_labels=head.connectivity.region_labels, log_scale=True)
                 # Optionally save results in mat files
                 # from scipy.io import savemat
                 # savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), vois_ts_dict)
