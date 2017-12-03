@@ -41,7 +41,7 @@ def raise_value_error(msg, logger=None):
 def raise_error(msg, logger=None):
     if logger is not None:
         logger.error("\n\nError: " + msg + "\n")
-    raise
+    raise Exception(msg)
 
 
 def raise_import_error(msg, logger=None):
