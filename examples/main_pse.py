@@ -54,7 +54,7 @@ if __name__ == "__main__":
     model_configuration, lsa_service, lsa_hypothesis, pse_results = pse_from_hypothesis(hyp_x0_E,
                                                                                         head.connectivity.normalized_weights,
                                                                                         head.connectivity.region_labels,
-                                                                                        n_samples, half_range=0.1,
+                                                                                        n_samples, param_range=0.1,
                                                                                         global_coupling=[{
                                                                                             "indices": all_regions_indices}],
                                                                                         healthy_regions_parameters=[
