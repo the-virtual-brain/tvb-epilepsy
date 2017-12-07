@@ -195,13 +195,13 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
             #--------------Parameter Search Exploration (PSE)-------------------------------
             logger.info("\n\nRunning PSE LSA...")
             pse_results = pse_from_lsa_hypothesis(lsa_hypothesis,
-                                              head.connectivity.normalized_weights,
-                                              head.connectivity.region_labels,
-                                              n_samples, half_range=0.1,
-                                              global_coupling=[{"indices": all_regions_indices}],
-                                              healthy_regions_parameters=[{"name": "x0_values", "indices": healthy_indices}],
-                                              model_configuration_service=model_configuration_service,
-                                              lsa_service=lsa_service, logger=logger)[0]
+                                                  head.connectivity.normalized_weights,
+                                                  head.connectivity.region_labels,
+                                                  n_samples, param_range=0.1,
+                                                  global_coupling=[{"indices": all_regions_indices}],
+                                                  healthy_regions_parameters=[{"name": "x0_values", "indices": healthy_indices}],
+                                                  model_configuration_service=model_configuration_service,
+                                                  lsa_service=lsa_service, logger=logger)[0]
             lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, pse_results)
             # , show_flag=True, save_flag=False
             convert_to_h5_model(pse_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")
@@ -218,7 +218,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                 sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis,
                                                          head.connectivity.normalized_weights,
                                                          head.connectivity.region_labels,
-                                                         n_samples, method="sobol", half_range=0.1,
+                                                         n_samples, method="sobol", param_range=0.1,
                                          global_coupling=[{"indices": all_regions_indices,
                                                      "bounds":[0.0, 2 * model_configuration_service.K_unscaled[ 0]]}],
                                          healthy_regions_parameters=[{"name": "x0_values", "indices": healthy_indices}],
@@ -281,8 +281,9 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                                 hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
                                                                 sensors_list=head.sensorsSEEG)
                 # Plot results
-                plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, lsa_hypothesis.name, vois_ts_dict, sensorsSEEG=None,
-                                 trajectories_plot=False, spectral_raster_plot=False, region_labels=head.connectivity.region_labels, log_scale=True)
+                plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, vois_ts_dict,
+                                 head.sensorsSEEG, hpf_flag=True, trajectories_plot=trajectories_plot,
+                                 spectral_raster_plot=spectral_raster_plot, log_scale=True)
                 # Optionally save results in mat files
                 # from scipy.io import savemat
                 # savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), vois_ts_dict)

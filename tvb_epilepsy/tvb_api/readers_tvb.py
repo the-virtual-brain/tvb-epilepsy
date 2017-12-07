@@ -70,6 +70,8 @@ class TVBReader(ABCReader):
                 tvb_sensors = sensors.SensorsInternal.from_file(path)
             if len(filename) > 1:
                 projection = self.read_projection(os.path.join(root_folder, filename[1]), s_type)
+            else:
+                projection = None
             return Sensors(tvb_sensors.labels, tvb_sensors.locations, tvb_sensors.orientations, projection, s_type)
         else:
             warning("\nNo Sensor file found at path " + path + "!")

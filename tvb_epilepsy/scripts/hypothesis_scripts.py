@@ -35,7 +35,8 @@ def start_lsa_run(hypothesis, model_connectivity, logger=None):
 
 
 def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
-                            plot_head=False, figure_dir=FOLDER_FIGURES, logger=LOG):
+                            plot_head=False, figure_dir=FOLDER_FIGURES, sensors_filename="SensorsInternal.h5",
+                            logger=LOG):
     if data_mode is TVB:
         from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
     else:
@@ -43,7 +44,7 @@ def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=os.path.jo
     # -------------------------------Reading model_data-----------------------------------
     reader = Reader()
     logger.info("Reading from: " + data_folder)
-    head = reader.read_head(data_folder, seeg_sensors_files=[("SensorsInternal.h5", "")])
+    head = reader.read_head(data_folder, seeg_sensors_files=[(sensors_filename, "")])
     if plot_head:
         head.plot(figure_dir=figure_dir)
     # --------------------------Hypothesis definition-----------------------------------

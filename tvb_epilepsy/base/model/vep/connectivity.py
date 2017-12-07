@@ -27,7 +27,7 @@ class Connectivity(object):
         self.file_path = file_path
         self.weights = weights
         if len(normalized_weights) == 0:
-            normalized_weights = normalize_weights(weights)
+            normalized_weights = normalize_weights(weights, remove_diagonal=True)
         self.normalized_weights = normalized_weights
         self.tract_lengths = tract_lengths
         self.region_labels = labels

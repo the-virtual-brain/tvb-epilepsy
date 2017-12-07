@@ -23,7 +23,7 @@ from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D, EpileptorDPrealistic, EpileptorDP
-from tvb_epilepsy.base.utils.plot_utils import plot_sim_results, plot_fit_results, plot_timeseries
+from tvb_epilepsy.base.utils.plot_utils import plot_sim_results, plot_timeseries # plot_fit_results,
 from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
                                                     compute_seeg_and_write_ts_h5_file
 from tvb_epilepsy.base .computations.analyzers_utils import filter_data

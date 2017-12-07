@@ -1,15 +1,13 @@
-import os
+
 import subprocess
 import time
 from shutil import copyfile
-from copy import deepcopy
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, CMDSTAN_PATH
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path, isequal_string
+from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
 from tvb_epilepsy.service.model_inversion.stan.stan_service import StanService
 from tvb_epilepsy.service.model_inversion.stan.stan_factory import *
-from tvb_epilepsy.service.csv_factory import parse_csv
 
 
 LOG = initialize_logger(__name__)
@@ -101,8 +99,9 @@ class CmdStanService(StanService):
                                          self.assert_model_data_path(debug, simulate, **kwargs),
                                          output_filepath, diagnostic_filepath)
         self.logger.info("Model fitting with " + self.fitmethod +
-                         "\nof model: " + self.model_path + "...")
+                         " method of model: " + self.model_path + "...")
         tic = time.time()
+        print(self.command.replace("\t", ""))
         proc = subprocess.Popen(self.command.replace("\t", ""), shell=True,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout = proc.stdout.read().decode('ascii').strip()
@@ -112,8 +111,8 @@ class CmdStanService(StanService):
         if stderr:
             print(stderr)
         self.fitting_time = time.time() - tic
-        self.logger.info(str(self.fitting_time) + ' sec required to fit')
+        self.logger.info(str(self.fitting_time) + ' sec required to ' + self.fitmethod + "!")
         if read_output:
-            return parse_csv(output_filepath.replace(".csv", "*"), merge=kwargs.pop("merge_outputs", True)), None
+            return self.read_output_csv(output_filepath, **kwargs), None
         else:
             return None, None

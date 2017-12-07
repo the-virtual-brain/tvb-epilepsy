@@ -12,7 +12,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, constr
 from tvb_epilepsy.base.utils.plot_utils import plot_raster, plot_regions2regions, plot_trajectories, save_figure, \
                                                                                                             check_show
 from tvb_epilepsy.base.model.statistical_models.sde_statistical_model import SDEStatisticalModel
-from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
+from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults, set_parameter
 from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_NVARS
 from tvb_epilepsy.service.model_inversion.ode_model_inversion_service import ODEModelInversionService
 
@@ -100,6 +100,8 @@ class SDEModelInversionService(ODEModelInversionService):
 
     def plot_fit_results(self, est, statistical_model, signals, time=None, seizure_indices=None, trajectories_plot=False,
                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
+                        x1_str="x", x0_str="PathologicalExcitability", mc_str="MC",
+                         signals_str="fit_signals", sig_str="sig", eps_str="eps",
                         **kwargs):
         name = statistical_model.name + kwargs.get("_id_est", "")
         if time is None:
@@ -108,27 +110,30 @@ class SDEModelInversionService(ODEModelInversionService):
         sig_prior = statistical_model.parameters["sig"].mean / statistical_model.sig
         eps_prior = statistical_model.parameters["eps"].mean
         plot_raster(time, sort_dict({'observation signals': signals,
-                                     'observation signals fit': est['fit_signals']}),
+                                     'observation signals fit': est[signals_str]}),
                     special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                     title=name + ": Observation signals vs fit rasterplot",
                     subtitles=['observation signals ' +
-                               '\nobservation noise eps_prior =  ' + str(eps_prior) + " eps_post =" + str(est["eps"]),
-                               'observation signals fit'], offset=3.0,
+                               '\nobservation noise eps_prior =  ' + str(eps_prior) + " eps_post =" + str(est[eps_str]),
+                               'observation signals fit'], offset=0.1,
                     labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                     figure_format=figure_format, figsize=VERY_LARGE_SIZE)
-        plot_raster(time, sort_dict({'x1': est["x1"], 'z': est["z"]}),
+        plot_raster(time, sort_dict({'x1': est[x1_str], 'z': est["z"]}),
                     special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                     title=name + ": Hidden states fit rasterplot",
                     subtitles=['hidden state x1' '\ndynamic noise sig_prior = ' + str(sig_prior) +
-                               " sig_post = " + str(est["sig"]),
+                               " sig_post = " + str(est[sig_str]),
                                'hidden state z'], offset=3.0,
                     labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                     figure_format=figure_format, figsize=VERY_LARGE_SIZE)
         if trajectories_plot:
             title = name + ': Fit hidden state space trajectories'
             title += "\n prior x0: " + str(self.x0_values[statistical_model.active_regions])
-            title += "\n x0 fit: " + str(est["PathologicalExcitability"][statistical_model.active_regions])
-            plot_trajectories({'x1': est['x'], 'z(t)': est['z']}, special_idx=seizure_indices,
+            x0 = est[x0_str]
+            if len(x0) > statistical_model.n_active_regions:
+                x0 = x0[statistical_model.active_regions]
+            title += "\n x0 fit: " + str(x0)
+            plot_trajectories({'x1': est[x1_str], 'z(t)': est['z']}, special_idx=seizure_indices,
                               title=title, labels=self.region_labels, show_flag=show_flag, save_flag=save_flag,
                               figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
         # plot connectivity
@@ -139,7 +144,7 @@ class SDEModelInversionService(ODEModelInversionService):
         K_prior = statistical_model.parameters["K"].mean
         plot_regions2regions(MC_prior, self.region_labels[statistical_model.active_regions], 121,
                              "Prior Model Connectivity" + "\nglobal scaling prior: K = " + str(K_prior))
-        plot_regions2regions(est['MC'], self.region_labels[statistical_model.active_regions], 122,
+        plot_regions2regions(est[mc_str], self.region_labels[statistical_model.active_regions], 122,
                              "Posterior Model  Connectivity" + "\nglobal scaling fit: K = " + str(est["K"]))
         save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
         check_show(show_flag=show_flag)

@@ -13,10 +13,13 @@ def get_bipolar_channels(channels_inds, channel_lbls=[]):
     bipolar_channel_lbls = []
     bipolar_ch_inds = []
     for iS in range(n_channels - 1):
-        if (channel_lbls[iS][0] == channel_lbls[iS + 1][0]) and \
-                (int(re.findall(r'\d+', channel_lbls[iS])[0]) == int(re.findall(r'\d+', channel_lbls[iS + 1])[0]) - 1):
-            bipolar_channel_lbls.append(channel_lbls[iS] + "-" + channel_lbls[iS + 1])
-            bipolar_ch_inds.append(channels_inds[iS])
+        try:
+            if (channel_lbls[iS][0] == channel_lbls[iS + 1][0]) and \
+                    (int(re.findall(r'\d+', channel_lbls[iS])[0]) == int(re.findall(r'\d+', channel_lbls[iS + 1])[0]) - 1):
+                bipolar_channel_lbls.append(channel_lbls[iS] + "-" + channel_lbls[iS + 1])
+                bipolar_ch_inds.append(channels_inds[iS])
+        except:
+            print("WTF?")
     return bipolar_ch_inds, bipolar_channel_lbls
 
 
@@ -52,7 +55,7 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
     if plot_flag:
         plot_spectral_analysis_raster(times, data, time_units="sec", freq=np.array(range(1,51,1)),
                                       title='Spectral Analysis', figure_name='Spectral Analysis', labels=channels,
-                                      log_scale=True)
+                                      log_scale=True, save_flag=True)
     data_bipolar = []
     bipolar_channels = []
     data_filtered = []
@@ -70,11 +73,11 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
     if plot_flag:
         plot_spectral_analysis_raster(times, data_bipolar, time_units="sec", freq=np.array(range(1, 51, 1)),
                                   title='Spectral Analysis',
-                                  figure_name='Spectral Analysis', labels=bipolar_channels,
-                                  show_flag=True, save_flag=False, log_scale=True)
+                                  figure_name='Spectral Analysis Bipolar', labels=bipolar_channels,
+                                  show_flag=True, save_flag=True, log_scale=True)
         plot_spectral_analysis_raster(times, data_filtered, time_units="sec", freq=np.array(range(1, 51, 1)),
-                                  title='Spectral Analysis',
-                                  figure_name='Spectral Analysis', labels=bipolar_channels, log_scale=True)
+                                  title='Spectral Analysis_bipolar', figure_name='Spectral Analysis Filtered', labels=bipolar_channels,
+                                      log_scale=True, save_flag=True)
     del data
     t_onset = np.where(times > (on_off_set[0] - 2 * win_len))[0][0]
     t_offset = np.where(times > (on_off_set[1] + 2 * win_len))[0][0]
@@ -99,7 +102,7 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
     observation = observation[t_onset:t_offset]
     if plot_flag:
         plot_raster(times, {"observation": observation}, time_units="sec", special_idx=None, title='Time Series',
-                    offset=1.0, figure_name='TimeSeries', labels=bipolar_channels)
+                    offset=1.0, figure_name='TimeSeries', labels=bipolar_channels, save_flag=True)
     # n_times = times.shape[0]
     # observation = resample_poly(observation, 2048, n_times)
     observation = decimate(observation, 2, axis=0, zero_phase=True)
@@ -108,5 +111,5 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
     observation /= observation.max()
     if plot_flag:
         plot_timeseries(times, {"observation": observation}, time_units="sec", special_idx=None, title='Time Series',
-                    figure_name='TimeSeries', labels=bipolar_channels) #, show_flag=True, save_flag=False
+                    figure_name='TimeSeriesDecimated', labels=bipolar_channels, show_flag=True, save_flag=True) #
     return observation, times, fs/2

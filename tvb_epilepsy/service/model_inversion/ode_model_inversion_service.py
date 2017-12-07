@@ -80,7 +80,7 @@ class ODEModelInversionService(ModelInversionService):
                 self.signals_inds = np.array(self.signals_inds)[inds].tolist()
                 signals = signals[:, inds]
         if auto_selection.find("correlation-power") >= 0:
-            power = kwargs.get("power", np.sum(signals**2, axis=0)/signals.shape[0])
+            power = kwargs.get("power", np.sum((signals-np.mean(signals, axis=0))**2, axis=0)/signals.shape[0])
             correlation = kwargs.get("correlation", np.corrcoef(signals.T))
             current_selection = sensors.select_contacts_corr(correlation, self.signals_inds, power=power,
                                                              n_electrodes=kwargs.get("n_electrodes"),
@@ -101,7 +101,7 @@ class ODEModelInversionService(ModelInversionService):
                 signals = signals[:, inds]
                 self.signals_inds = np.array(self.signals_inds)[inds].tolist()
         if auto_selection.find("power") >= 0:
-            power = kwargs.get("power", np.sum(signals**2, axis=0) / signals.shape[0])
+            power = kwargs.get("power", np.sum((signals-np.mean(signals, axis=0))**2, axis=0) / signals.shape[0])
             inds = select_greater_values_array_inds(power, kwargs.get("power_th",  None))
             signals = signals[:, inds]
             self.signals_inds = (np.array(self.signals_inds)[inds]).tolist()
@@ -275,7 +275,7 @@ class ODEModelInversionService(ModelInversionService):
         self.default_parameters.update(set_parameter_defaults("scale_signal", "lognormal", (),
                                                               0.5, 1.5,
                                                               1.0, 0.1, **kwargs))
-        self.default_parameters.update(set_parameter_defaults("offset_signal", "lognormal", (),
+        self.default_parameters.update(set_parameter_defaults("offset_signal", "normal", (),
                                                               -0.5, 0.5,
                                                               0.0, 0.1, **kwargs))
 
@@ -341,7 +341,7 @@ class ODEModelInversionService(ModelInversionService):
 
 
 def viz_phase_space(data):
-    opt = len(data['x']) == 1
+    opt = len(data['x1']) == 1
     npz = np.load('data.R.npz')
     tr = lambda A: np.transpose(A, (0, 2, 1))
     x, z = tr(data['x']), tr(data['z'])

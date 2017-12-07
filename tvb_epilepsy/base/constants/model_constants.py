@@ -1,5 +1,5 @@
 
-import numpy
+import numpy as np
 
 from .module_constants import ADDITIVE_NOISE, MULTIPLICATIVE_NOISE
 
@@ -25,11 +25,11 @@ X1_DEF = -5.0 / 3.0
 X1_EQ_CR_DEF = -4.0 / 3.0
 
 model_noise_intensity_dict = {
-    "Epileptor": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
-    "EpileptorModel": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
-    "EpileptorDP": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
-    "EpileptorDPrealistic": numpy.array([0., 0., 1e-7, 0.0, 1e-7, 0., 1e-8, 1e-3, 1e-8, 1e-3, 1e-9])*0.1,
-    "EpileptorDP2D": numpy.array([0., 5e-8])
+    "Epileptor": np.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
+    "EpileptorModel": np.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
+    "EpileptorDP": np.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
+    "EpileptorDPrealistic": np.array([0., 0., 1e-8, 0.0, 1e-8, 0., 1e-9, 1e-4, 1e-9, 1e-4, 1e-9]),
+    "EpileptorDP2D": np.array([0., 1e-7])
 }
 
 model_noise_type_dict = {

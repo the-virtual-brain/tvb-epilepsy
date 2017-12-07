@@ -3,13 +3,15 @@ import pickle
 from abc import ABCMeta, abstractmethod
 
 from scipy.io import savemat, loadmat
+from scipy.stats import describe
 import numpy as np
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path, isequal_string
+from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path, isequal_string, ensure_list, sort_dict
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.service.rdump_factory import rdump
+from tvb_epilepsy.service.csv_factory import parse_csv
 
 
 LOG = initialize_logger(__name__)
@@ -103,3 +105,25 @@ class StanService(object):
         except:
             self.logger.info("Trying to compile model from file: " + str(self.model_code_path) + str("!"))
             self.compile_stan_model(store_model=kwargs.get("store_model", True), **kwargs)
+
+    def read_output_csv(self, output_filepath, **kwargs):
+        csvs = parse_csv(output_filepath.replace(".csv", "*"), merge=kwargs.pop("merge_outputs", False))
+        ests = []
+        for csv in ensure_list(csvs):
+            est = {}
+            for pkey, pval in csv.iteritems():
+                try:
+                    est[pkey+"_s"] = csv[pkey]
+                    est[pkey+"_low"], est[pkey], est[pkey+"_std"] = describe(csv[pkey])[1:4]
+                    est[pkey+"_high"] = est[pkey+"_low"][1]
+                    est[pkey+"_low"] =  est[pkey+"_low"][0]
+                    est[pkey+"_std"] = np.sqrt(est[pkey+"_std"])
+                    for skey in [pkey, pkey+"_low", pkey+"_high", pkey+"_std"]:
+                        est[skey] = np.squeeze(est[skey])
+                except:
+                    est[pkey] = csv[pkey]
+            ests.append(sort_dict(est))
+        if len(ests) == 1:
+            return ests[0]
+        else:
+            return ests

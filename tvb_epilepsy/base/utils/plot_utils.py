@@ -46,8 +46,7 @@ def figure_filename(fig=None, figure_name=None):
         fig = pyplot.gcf()
     if figure_name is None:
         figure_name = fig.get_label()
-    else:
-        figure_name = figure_name.replace(": ", "_").replace(" ", "_").replace("\t", "_")
+    figure_name = figure_name.replace(": ", "_").replace(" ", "_").replace("\t", "_")
     return figure_name
 
 
@@ -497,61 +496,61 @@ def plot_spectral_analysis_raster(time, data, time_units="ms", freq=None, specia
     return fig, ax, img, line, time, freq, stf, psd
 
 
-def plot_sim_results(model, seizure_indices, hyp_name, res, sensorsSEEG=None, hpf_flag=False,
+def plot_sim_results(model, seizure_indices, res, sensorsSEEG=None, hpf_flag=False,
                      trajectories_plot=False, spectral_raster_plot=False, region_labels=None,
                      save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
                      **kwargs):
     if isinstance(model, EpileptorDP2D):
         plot_timeseries(res['time'], {'x1': res['x1'], 'z(t)': res['z']}, time_units=res.get('time_units', "ms"),
-                        special_idx=seizure_indices, title=hyp_name + ": Simulated TAVG",
+                        special_idx=seizure_indices, title=model._ui_name + ": Simulated TAVG",
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         labels=region_labels, figsize=VERY_LARGE_SIZE)
         plot_raster(res['time'], {'x1': res['x1']},
                     time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
-                    title=hyp_name + ": Simulated x1 rasterplot", offset=5.0, labels=region_labels,
+                    title=model._ui_name + ": Simulated x1 rasterplot", offset=5.0, labels=region_labels,
                     save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                     figsize=VERY_LARGE_SIZE)
     else:
         plot_timeseries(res['time'], {'LFP(t)': res['lfp'], 'z(t)': res['z']}, time_units=res.get('time_units', "ms"),
-                        special_idx=seizure_indices, title=hyp_name + ": Simulated LFP-z",
+                        special_idx=seizure_indices, title=model._ui_name + ": Simulated LFP-z",
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         labels=region_labels, figsize=VERY_LARGE_SIZE)
         plot_timeseries(res['time'], {'x1(t)': res['x1'], 'y1(t)': res['y1']},time_units=res.get('time_units', "ms"),
-                        special_idx=seizure_indices, title=hyp_name + ": Simulated pop1",
+                        special_idx=seizure_indices, title=model._ui_name + ": Simulated pop1",
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         labels=region_labels, figsize=VERY_LARGE_SIZE)
         plot_timeseries(res['time'], {'x2(t)': res['x2'], 'y2(t)': res['y2'], 'g(t)': res['g']},
                         time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
-                        title=hyp_name + ": Simulated pop2-g",
+                        title=model._ui_name + ": Simulated pop2-g",
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         labels=region_labels, figsize=VERY_LARGE_SIZE)
         start_plot = int(np.round(0.01 * res['lfp'].shape[0]))
         plot_raster(res['time'][start_plot:], {'lfp': res['lfp'][start_plot:, :]},
                     time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
-                    title=hyp_name + ": Simulated LFP rasterplot", offset=10.0, labels=region_labels,
+                    title=model._ui_name + ": Simulated LFP rasterplot", offset=10.0, labels=region_labels,
                     save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                     figsize=VERY_LARGE_SIZE)
     if isinstance(model, EpileptorDPrealistic):
         plot_timeseries(res['time'], {'1/(1+exp(-10(z-3.03))': 1 / (1 + np.exp(-10 * (res['z'] - 3.03))),
                                       'slope': res['slope_t'], 'Iext2': res['Iext2_t']},
                         time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
-                        title=hyp_name + ": Simulated controlled parameters", labels=region_labels,
+                        title=model._ui_name + ": Simulated controlled parameters", labels=region_labels,
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         figsize=VERY_LARGE_SIZE)
         plot_timeseries(res['time'], {'x0_values': res['x0_t'], 'Iext1':  res['Iext1_t'], 'K': res['K_t']},
                         time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
-                        title=hyp_name + ": Simulated parameters", labels=region_labels,
+                        title=model._ui_name + ": Simulated parameters", labels=region_labels,
                         save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir, figure_format=figure_format,
                         figsize=VERY_LARGE_SIZE)
     if trajectories_plot:
         plot_trajectories({'x1': res['x1'], 'z(t)': res['z']}, special_idx=seizure_indices,
-                          title=hyp_name + ': State space trajectories', labels=region_labels,
+                          title=model._ui_name + ': State space trajectories', labels=region_labels,
                           show_flag=show_flag, save_flag=save_flag, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
                           figsize=LARGE_SIZE)
     if spectral_raster_plot is "lfp":
         plot_spectral_analysis_raster(res["time"], res['lfp'], time_units=res.get('time_units', "ms"),
                                       freq=None, special_idx=seizure_indices,
-                                      title=hyp_name + ": Spectral Analysis",
+                                      title=model._ui_name + ": Spectral Analysis",
                                       labels=region_labels,
                                       show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,
                                       figure_format=figure_format, figsize=LARGE_SIZE, **kwargs)
@@ -559,10 +558,10 @@ def plot_sim_results(model, seizure_indices, hyp_name, res, sensorsSEEG=None, hp
         sensorsSEEG = ensure_list(sensorsSEEG)
         for i in range(len(sensorsSEEG)):
             if hpf_flag:
-                title = hyp_name + ": Simulated high pass filtered SEEG" + str(i) + " raster plot"
+                title = model._ui_name + ": Simulated high pass filtered SEEG" + str(i) + " raster plot"
                 start_plot = int(np.round(0.01 * res['SEEG' + str(i)].shape[0]))
             else:
-                title = hyp_name + ": Simulated SEEG" + str(i) + " raster plot"
+                title = model._ui_name + ": Simulated SEEG" + str(i) + " raster plot"
                 start_plot = 0
             plot_raster(res['time'][start_plot:], {'SEEG': res['SEEG'+str(i)][start_plot:, :]},
                         time_units=res.get('time_units', "ms"), title=title,
