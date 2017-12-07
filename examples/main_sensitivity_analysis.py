@@ -47,7 +47,7 @@ if __name__ == "__main__":
                 sensitivity_analysis_pse_from_hypothesis(hyp_x0_E,
                                                          head.connectivity.normalized_weights,
                                                          head.connectivity.region_labels,
-                                                         n_samples, method=m, half_range=0.1,
+                                                         n_samples, method=m, param_range=0.1,
                                                          global_coupling=[{"indices": all_regions_indices,
                                                                            "low": 0.0, "high":2*K_DEF}],
                                                          healthy_regions_parameters=[
