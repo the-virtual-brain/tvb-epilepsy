@@ -75,6 +75,8 @@ class CmdStanService(StanService):
         command = "make " + self.model_code_path.split(".stan", 1)[0] + " && " + \
                   "chmod +x " + self.model_code_path.split(".stan", 1)[0]
         proc = subprocess.Popen(command, cwd=self.path, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # use this to track the ongoing process:
+        # tail -n 1 vep-fe-rev-05.sample.*.out
         stdout = proc.stdout.read().decode('ascii').strip()
         if stdout:
             print(stdout)
@@ -104,6 +106,7 @@ class CmdStanService(StanService):
         print(self.command.replace("\t", ""))
         proc = subprocess.Popen(self.command.replace("\t", ""), shell=True,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # tail -n 1 vep-fe-rev-05.sample.*.out
         stdout = proc.stdout.read().decode('ascii').strip()
         if stdout:
             print(stdout)
@@ -113,6 +116,8 @@ class CmdStanService(StanService):
         self.fitting_time = time.time() - tic
         self.logger.info(str(self.fitting_time) + ' sec required to ' + self.fitmethod + "!")
         if read_output:
-            return self.read_output_csv(output_filepath, **kwargs), None
+            est, csv = self.read_output_csv(output_filepath, **kwargs)
+            # self.plot_HMCstats(output_filepath, self.model_name)
+            return est, None
         else:
             return None, None

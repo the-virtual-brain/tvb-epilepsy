@@ -26,14 +26,15 @@ logger = initialize_logger(__name__)
 FOLDER_VEP_HOME = "/Users/dionperd/CBR/VEP/tests"
 
 def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join(DATA_CUSTOM, 'Head'),
-                        sensors_filename="SensorsSEEG_116.h5", stats_model_name="vep_sde", EMPIRICAL="",
+                        sensors_filename="SensorsSEEG_116.h5", stats_model_name="vep_sde",
+                        model_code_dir="/Users/dionperd/CBR/software/git/vep_stan", EMPIRICAL="",
                         times_on_off=[], channel_lbls=[], channel_inds=[], fitmethod="optimizing",
                         stan_service="CmdStan", results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES, **kwargs):
 
     # ------------------------------Stan model and service--------------------------------------
     # Compile or load model:
     # model_code_path = os.path.join(STATS_MODELS_PATH, stats_model_name + ".stan")
-    model_code_path = os.path.join(FOLDER_VEP_HOME, stats_model_name + ".stan")
+    model_code_path = os.path.join(model_code_dir, stats_model_name + ".stan")
     if isequal_string(stan_service, "CmdStan"):
         stan_service = CmdStanService(model_name=stats_model_name, model=None, model_code=None,
                                       model_dir=FOLDER_VEP_HOME, model_code_path=model_code_path,
@@ -116,9 +117,9 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         # -------------------------- Select and set observation signals -----------------------------------
         signals, time, statistical_model, vois_ts_dict = \
             model_inversion.set_target_data_and_time(target_data_type, vois_ts_dict, statistical_model,
-                                                     select_signals=True, manual_selection=manual_selection, # auto_selection=False,
-                                                     n_electrodes=n_electrodes, auto_selection="correlation-power",
-                                                     contacts_per_electrode=contacts_per_electrode, group_electrodes=True,
+                                                     select_signals=True, manual_selection=manual_selection, auto_selection=False,
+                                                     # n_electrodes=n_electrodes, auto_selection="correlation-power",
+                                                     # contacts_per_electrode=contacts_per_electrode, group_electrodes=True,
                                                      decimate=decimate, cut_signals_tails=cut_signals_tails)
         # if len(model_inversion.signals_inds) < head.get_sensors_id().number_of_sensors:
         #     statistical_model = \
@@ -144,6 +145,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         #     model_data = stan_service.load_model_data_from_file()
         # except:
         model_data = model_inversion.generate_model_data(statistical_model, signals)
+        convert_to_h5_model(model_data).write_to_h5(results_dir, "dpModelData.h5")
+
         if stats_model_name == "vep-fe-rev-05":
 
             def convert_to_vep_stan(model_data, statistical_model):
@@ -154,8 +157,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                             "ns": model_data["n_signals"],
                             "dt": 0.75,  # model_data["dt"],
                             "I1": model_data["Iext1"],
-                            "x0_lo": -15.0,  #-4.0,
-                            "x0_hi": 5.0,  # -1.0
+                            "x0_lo": -3.0,
+                            "x0_hi": -1.0,
                             "tau0": 3.0,  # statistical_model.parameters["tau0"].mean,
                             "K_lo": statistical_model.parameters["K"].low,
                             "K_u": statistical_model.parameters["K"].mode,
@@ -204,7 +207,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
 
 
 if __name__ == "__main__":
-    SUBJECT = "TVB4"
+    SUBJECT = "TVB3"
     VEP_HOME = os.path.join("/Users/dionperd/Dropbox/Work/VBtech/VEP/results/CC")
     VEP_FOLDER = os.path.join(VEP_HOME, SUBJECT)
     DATA_CUSTOM = "/Users/dionperd/Dropbox/Work/VBtech/VEP/results/CC/" + SUBJECT
@@ -213,35 +216,36 @@ if __name__ == "__main__":
     # channel_lbls = [u"G'1", u"G'2", u"G'3", u"G'8", u"G'9", u"G'10", u"G'11", u"G'12", u"M'6", u"M'7", u"M'8", u"L'4",
     #                 u"L'5",  u"L'6", u"L'7", u"L'8", u"L'9"]
     # channel_inds = [28, 29, 30, 35, 36, 37, 38, 39, 63, 64, 65, 47, 48, 49, 50, 51, 52]
-    # # TVB3 selection:
-    # channel_lbls = [u"G'1", u"G'2", u"G'11", u"G'12", u"M'7", u"M'8", u"L'5", u"L'6"]
-    # channel_inds = [28, 29, 38, 39, 64, 65, 48, 49]
-    # seizure = 'SZ1_0001.edf'
-    # times_on_off=[15.0, 35.0]
-    # ep_name = "clinical_hypothesis_postseeg"
-    # sensors_filename = "SensorsSEEG_116.h5"
-    # TVB4 preselection:
-    channel_lbls = [u"D5" u"D6", u"D7",  u"D8", u"D9", u"D10", u"Z9", u"Z10", u"Z11", u"Z12", u"Z13", u"Z14",
-                    u"S1", u"S2", u"S3", u"D'3", u"D'4", u"D'10", u"D'11", u"D'12", u"D'13", u"D'14"]
-    channel_inds = [4, 5, 6, 7, 8, 9, 86, 87, 88, 89, 90, 91, 94, 95, 96, 112, 113, 119, 120, 121, 122, 123]
-    # TVB4:
-    seizure = 'SZ3_0001.edf'
-    sensors_filename = "SensorsSEEG_210.h5"
-    times_on_off = [20.0, 100.0]
-    ep_name = "clinical_hypothesis_preseeg_right"
+    # TVB3 selection:
+    channel_lbls = [u"G'1", u"G'2", u"G'11", u"G'12", u"M'7", u"M'8", u"L'5", u"L'6"]
+    channel_inds = [28, 29, 38, 39, 64, 65, 48, 49]
+    seizure = 'SZ1_0001.edf'
+    times_on_off=[15.0, 35.0]
+    ep_name = "clinical_hypothesis_postseeg"
+    sensors_filename = "SensorsSEEG_116.h5"
+    # # TVB4 preselection:
+    # channel_lbls = [u"D5", u"D6", u"D7",  u"D8", u"D9", u"D10", u"Z9", u"Z10", u"Z11", u"Z12", u"Z13", u"Z14",
+    #                 u"S1", u"S2", u"S3", u"D'3", u"D'4", u"D'10", u"D'11", u"D'12", u"D'13", u"D'14"]
+    # channel_inds = [4, 5, 6, 7, 8, 9, 86, 87, 88, 89, 90, 91, 94, 95, 96, 112, 113, 119, 120, 121, 122, 123]
+    # # TVB4:
+    # seizure = 'SZ3_0001.edf'
+    # sensors_filename = "SensorsSEEG_210.h5"
+    # times_on_off = [20.0, 100.0]
+    # ep_name = "clinical_hypothesis_preseeg_right"
     EMPIRICAL = True
     stats_model_name = "vep_sde"
     stats_model_name = "vep-fe-rev-05"
-    fitmethod = "optimize"
+    fitmethod = "sample"
+    model_code_dir = "/Users/dionperd/CBR/VEP/tests"
     if EMPIRICAL:
         main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
-                            sensors_filename=sensors_filename,
-                            stats_model_name=stats_model_name, EMPIRICAL=os.path.join(SEEG_data, seizure),
+                            sensors_filename=sensors_filename, stats_model_name=stats_model_name,
+                            model_code_dir=model_code_dir, EMPIRICAL=os.path.join(SEEG_data, seizure),
                             times_on_off=[15.0, 35.0], channel_lbls=channel_lbls, channel_inds=channel_inds,
-                            fitmethod=fitmethod, stan_service="CmdStan", results_dir=FOLDER_RES,
-                            figure_dir=FOLDER_FIGURES)  # , stan_service="PyStan"
+                            fitmethod=fitmethod, stan_service="CmdStan", results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES,
+                            save_warmup=1, num_warmup=200, num_samples=200, delta=0.8, max_depth=7)  # , stan_service="PyStan"
     else:
         main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
-                            sensors_filename=sensors_filename,
-                            stats_model_name=stats_model_name, fitmethod=fitmethod, stan_service="CmdStan",
+                            sensors_filename=sensors_filename, stats_model_name=stats_model_name,
+                            model_code_dir=model_code_dir, fitmethod=fitmethod, stan_service="CmdStan",
                             results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES) #, stan_service="PyStan"

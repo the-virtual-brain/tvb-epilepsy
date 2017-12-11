@@ -2,6 +2,10 @@ import os
 import pickle
 from abc import ABCMeta, abstractmethod
 
+# import vep_stan.lib
+
+from matplotlib import tight_layout, pyplot
+
 from scipy.io import savemat, loadmat
 from scipy.stats import describe
 import numpy as np
@@ -124,6 +128,33 @@ class StanService(object):
                     est[pkey] = csv[pkey]
             ests.append(sort_dict(est))
         if len(ests) == 1:
-            return ests[0]
+            return ests[0], csv[0]
         else:
-            return ests
+            return ests, csv
+
+    # def plot_HMC(self, csv, output_file_path, figure_name):
+    #     extras = 'K time_scale sigma epsilon amplitude'.split()
+    #     outout_folder = os.path.dirname(output_file_path)
+    #     vep_stan.lib.trace_nuts(csv, extras)
+    #     # tight_layout()
+    #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_stats.png"))
+    #     pyplot.ion()
+    #     pyplot.show()
+    #     pyplot.figure(figsize=(10, 10))
+    #     vep_stan.lib.pair_plots(csv, extras, skip=0)
+    #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_pairplots.png"))
+    #     pyplot.ion()
+    #     pyplot.show()
+    #     for i, csvi in enumerate(csv):
+    #         pyplot.figure()
+    #         vep_stan.lib.phase_space(csvi)
+    #         pyplot.suptitle("Chain {" + str(i) + "}")
+    #         # tight_layout()
+    #         pyplot.savefig(os.path.join(outout_folder, figure_name + "_state_space_" + str(i) + ".png"))
+    #     vep_stan.lib.ppc_seeg(csv[1], skip=200)
+    #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_seeg.png"))
+    #     vep_stan.lib.violin_x0(csv)
+    #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_x0.png"))
+    #     pyplot.imshow(csv[0]['FC'].mean(axis=0))
+    #     pyplot.colorbar()
+
