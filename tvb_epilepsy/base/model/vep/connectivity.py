@@ -75,7 +75,8 @@ class Connectivity(object):
     def _prepare_for_h5(self):
         h5_model = convert_to_h5_model(self)
         h5_model.add_or_update_metadata_attribute("EPI_Type", "Connectivity")
-        h5_model.add_or_update_metadata_attribute("Number_of_regions", self.weights.shape[0])
+        h5_model.add_or_update_metadata_attribute("EPI_Version", "1")
+        h5_model.add_or_update_metadata_attribute("Number_of_regions", str(self.weights.shape[0]))
         return h5_model
 
     def write_to_h5(self, folder, filename=""):
