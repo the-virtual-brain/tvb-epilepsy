@@ -96,7 +96,7 @@ def setup_TVB_simulation_from_model_configuration(model_configuration, connectiv
     if sim_type == "fast":
         noise_intensity *= 10
     elif sim_type == "fitting":
-        noise_intensity = 10 ** -2.8
+        noise_intensity = [0.0, 10 ** -3]
 
     if noise_instance is not None:
         noise_instance.nsig = noise_intensity
@@ -209,7 +209,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
         tau1 = 0.5
         tau0 = 30.0
         "fast"
-        time_length = kwargs.get("time_length", 100.0 / tau1)
+        time_length = kwargs.get("time_length", 50.0 / tau1)
     else:
         tau1 = 0.5
         tau0 = 3000
