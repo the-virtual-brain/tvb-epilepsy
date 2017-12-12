@@ -23,7 +23,7 @@ from tvb_epilepsy.scripts.seeg_data_scripts import prepare_seeg_observable, get_
 
 logger = initialize_logger(__name__)
 
-FOLDER_VEP_HOME = "/Users/dionperd/CBR/VEP/tests"
+FOLDER_VEP_HOME = "/Users/dionperd/VEPlocal/tests"
 
 def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                         sensors_filename="SensorsSEEG_116.h5", stats_model_name="vep_sde",
@@ -104,12 +104,12 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             target_data_type = "simulated"
             ts_file = os.path.join(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts.h5")
             vois_ts_dict = \
-                from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
-                                                       dynamical_model=dynamical_model,
-                                                       simulation_mode=TVB, ts_file=ts_file, plot_flag=True,
+                from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis, simulation_mode=TVB,
+                                                       sim_type="fitting", dynamical_model=dynamical_model,
+                                                       ts_file=ts_file, plot_flag=True,
                                                        save_flag=True, results_dir=results_dir,
-                                                       figure_dir=figure_dir, logger=logger, tau1=0.5, tau0=30.0,
-                                                       noise_intensity=10**-2.8)
+                                                       figure_dir=figure_dir, logger=logger, tau1=0.5, tau0=300.0,
+                                                       noise_intensity=10**-3)
             manual_selection = []
             n_electrodes = 8
             contacts_per_electrode = 1
@@ -117,9 +117,9 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         # -------------------------- Select and set observation signals -----------------------------------
         signals, time, statistical_model, vois_ts_dict = \
             model_inversion.set_target_data_and_time(target_data_type, vois_ts_dict, statistical_model,
-                                                     select_signals=True, manual_selection=manual_selection, auto_selection=False,
-                                                     # n_electrodes=n_electrodes, auto_selection="correlation-power",
-                                                     # contacts_per_electrode=contacts_per_electrode, group_electrodes=True,
+                                                     select_signals=True, manual_selection=manual_selection, # auto_selection=False,
+                                                     n_electrodes=n_electrodes, auto_selection="correlation-power",
+                                                     contacts_per_electrode=contacts_per_electrode, group_electrodes=True,
                                                      decimate=decimate, cut_signals_tails=cut_signals_tails)
         # if len(model_inversion.signals_inds) < head.get_sensors_id().number_of_sensors:
         #     statistical_model = \
@@ -232,11 +232,11 @@ if __name__ == "__main__":
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
     # ep_name = "clinical_hypothesis_preseeg_right"
-    EMPIRICAL = True
+    EMPIRICAL = False
     stats_model_name = "vep_sde"
     stats_model_name = "vep-fe-rev-05"
     fitmethod = "sample"
-    model_code_dir = "/Users/dionperd/CBR/VEP/tests"
+    model_code_dir = "/Users/dionperd/VEPlocal/tests"
     if EMPIRICAL:
         main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                             sensors_filename=sensors_filename, stats_model_name=stats_model_name,
