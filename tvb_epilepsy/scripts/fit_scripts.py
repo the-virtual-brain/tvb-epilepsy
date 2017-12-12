@@ -4,8 +4,7 @@ import os
 
 import numpy as np
 from scipy.io import loadmat, savemat
-from tvb_epilepsy.base.constants.configurations import USER_HOME, FOLDER_RES, DATA_CUSTOM, STATS_MODELS_PATH, \
-                                                                                        FOLDER_FIGURES
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES
 from tvb_epilepsy.base.constants.module_constants import TVB, CUSTOM
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
@@ -54,7 +53,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         # --------------------------Model configuration and LSA-----------------------------------
         model_configuration, lsa_hypothesis, model_configuration_service, lsa_service = \
             from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
-                                                plot_flag=True, figure_dir=figure_dir, logger=logger, K=10.0)
+                                                plot_flag=True, figure_dir=figure_dir, logger=logger, K=1.0)
 
         dynamical_model = "EpileptorDP2D"
 
@@ -108,7 +107,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                                        sim_type="fitting", dynamical_model=dynamical_model,
                                                        ts_file=ts_file, plot_flag=True,
                                                        save_flag=True, results_dir=results_dir,
-                                                       figure_dir=figure_dir, logger=logger, tau1=0.5, tau0=300.0,
+                                                       figure_dir=figure_dir, logger=logger, tau1=0.5, tau0=30.0,
                                                        noise_intensity=10**-3)
             manual_selection = []
             n_electrodes = 8
