@@ -57,7 +57,7 @@ class ODEModelInversionService(ModelInversionService):
                     self.dt = time
                     return np.arange(self.dt * (self.n_times - 1))
                 elif time.size == self.n_times:
-                    self.dt = np.mean(time)
+                    self.dt = np.mean(np.diff(time))
                     return time
                 else:
                     raise_value_error("Input time is neither a scalar nor a vector of length equal " +
@@ -110,7 +110,7 @@ class ODEModelInversionService(ModelInversionService):
     def decimate_signals(self, time, signals, decim_ratio):
         signals = decimate(signals, decim_ratio, axis=0, zero_phase=True)
         time = decimate(time, decim_ratio, zero_phase=True)
-        self.dt = np.mean(time)
+        self.dt = np.mean(np.diff(time))
         self.observation_shape = signals.shape
         (self.n_times, self.n_signals) = self.observation_shape
         return signals, time
