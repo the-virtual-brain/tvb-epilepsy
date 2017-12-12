@@ -15,14 +15,13 @@ if RUN_ENV == "test":
 else:
     FOLDER_VEP_ONLINE = os.path.join(USER_HOME, 'Dropbox', 'Work', 'VBtech', 'VEP', 'results')
     FOLDER_VEP = os.path.join(FOLDER_VEP_ONLINE, "CC")
+    VEP_SOFTWARE_PATH = os.path.join(USER_HOME, 'VEPtools', 'git')
     if platform.node() == 'dionperdMBP':
-        SOFTWARE_PATH = os.path.join(USER_HOME, 'CBR', 'software', 'git')
         FOLDER_VEP_TESTS = os.path.join(FOLDER_VEP_ONLINE, 'tests')
         # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR', 'svn', 'episense', 'demo-data')
         DATA_TVB = os.path.join(USER_HOME, 'CBR', 'svn', 'tvb', 'tvb-data', 'tvb-data')
         DATA_CUSTOM = os.path.join(FOLDER_VEP, 'TVB3')
     else:
-        SOFTWARE_PATH = os.path.join(USER_HOME, 'VirtualVEP', 'software')
         FOLDER_VEP_TESTS = os.path.join(FOLDER_VEP_ONLINE, 'tests')
         # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR_software', 'svn-episense', 'demo-data')
         DATA_TVB = os.path.join(USER_HOME, 'CBR_software', 'svn-tvb', 'tvb-data', 'tvb-data')
@@ -41,8 +40,8 @@ else:
     FOLDER_FIGURES = os.path.join(FOLDER_VEP_TESTS, 'figures' + datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M'))
     if not (os.path.isdir(FOLDER_FIGURES)):
         os.mkdir(FOLDER_FIGURES)
-    STATS_MODELS_PATH = os.path.join(SOFTWARE_PATH, "tvb-epilepsy", "tvb_epilepsy", "stan")
-    CMDSTAN_PATH = os.path.join(SOFTWARE_PATH, "cmdstan")
+    STATS_MODELS_PATH = os.path.join(VEP_SOFTWARE_PATH, "tvb-epilepsy", "tvb_epilepsy", "stan")
+CMDSTAN_PATH = os.path.join(USER_HOME, "ScientificSoftware/git/cmdstan")
 VERY_LARGE_SIZE = (40, 20)
 LARGE_SIZE = (20, 15)
 SMALL_SIZE = (15, 10)
