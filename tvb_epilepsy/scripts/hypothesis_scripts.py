@@ -85,7 +85,7 @@ def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=os.path.jo
     hyp_E = DiseaseHypothesis(head.connectivity.number_of_regions,
                                excitability_hypothesis={},
                                epileptogenicity_hypothesis={tuple(disease_indices): disease_values}, connectivity_hypothesis={})
-    hypos = (hyp_x0_E, hyp_x0, hyp_E)
+    hypos = (hyp_x0, hyp_E, hyp_x0_E)
     return head, hypos
 
 
