@@ -20,7 +20,7 @@ def weighted_vector_sum(weights, vectors, normalize=True):
     return np.array(vector_sum)
 
 
-def normalize_weights(weights, percentile=WEIGHTS_NORM_PERCENT, remove_diagonal=True):  # , max_w=1.0
+def normalize_weights(weights, percentile=WEIGHTS_NORM_PERCENT, remove_diagonal=True, ceil=1.0):  # , max_w=1.0
     # Create the normalized connectivity weights:
     if len(weights) > 0:
         normalized_w = np.array(weights)
@@ -29,11 +29,11 @@ def normalize_weights(weights, percentile=WEIGHTS_NORM_PERCENT, remove_diagonal=
             n_regions = normalized_w.shape[0]
             normalized_w *= 1 - np.eye(n_regions)
         # Normalize with the 95th percentile
-        # if np.max(normalized_w) - max_w > 1e-6:
         normalized_w = np.array(normalized_w / np.percentile(normalized_w, percentile))
-        #    else:
-        #        normalized_w = np.array(weights)
-        # normalized_w[normalized_w > max_w] = max_w
+        if ceil:
+            if ceil is True:
+                ceil = 1.0
+            normalized_w[normalized_w > ceil] = ceil
         return normalized_w
     else:
         return np.array([])
@@ -43,7 +43,7 @@ def compute_in_degree(weights):
     return np.expand_dims(np.sum(weights, axis=1), 1).T
 
 
-def compute_projection(locations1, locations2, normalize=95, ceil=True):
+def compute_projection(locations1, locations2, normalize=95, ceil=1.0):
     n1 = locations1.shape[0]
     n2 = locations2.shape[0]
     projection = np.zeros((n1, n2))
