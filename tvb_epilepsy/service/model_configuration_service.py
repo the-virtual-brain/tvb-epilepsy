@@ -10,7 +10,7 @@ from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, E_DEF, X0_
 from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG, \
     MOUSEHOOVER
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r, calc_coupling, calc_x0, calc_fx1, \
-    calc_fx1_2d_taylor, calc_fz, calc_x0_val__to_model_x0, \
+    calc_fx1_2d_taylor, calc_fz, calc_x0_val_to_model_x0, \
     calc_model_x0_to_x0_val
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z, eq_x1_hypo_x0_linTaylor, \
     eq_x1_hypo_x0_optimize, def_x1lin, calc_eq_y1
@@ -111,7 +111,7 @@ class ModelConfigurationService(object):
         h5_model.write_to_h5(folder, filename)
 
     def _compute_model_x0(self, x0_values):
-        return calc_x0_val__to_model_x0(x0_values, self.yc, self.Iext1, self.a, self.b, self.d, self.zmode)
+        return calc_x0_val_to_model_x0(x0_values, self.yc, self.Iext1, self.a, self.b, self.d, self.zmode)
 
     def _ensure_equilibrum(self, x1EQ, zEQ):
         temp = x1EQ > self.x1EQcr - 10 ** (-3)
@@ -278,8 +278,8 @@ class ModelConfigurationService(object):
                                    shape=x1sq.shape)  # + 2.0 * x1sq ** 2 + 16.0 * x1sq / 3.0 + yc + Iext1 + 64.0 / 27.0
         # center point (critical equilibrium point) without approximation:
         # zsq0 = yc + Iext1 - x1sq0 ** 3 - 2.0 * x1sq0 ** 2
-        x0e = calc_x0_val__to_model_x0(X0_CR_DEF, yc, Iext1, a=a, b=b, d=d, zmode=zmode)
-        x0ne = calc_x0_val__to_model_x0(X0_DEF, yc, Iext1, a=a, b=b, d=d, zmode=zmode)
+        x0e = calc_x0_val_to_model_x0(X0_CR_DEF, yc, Iext1, a=a, b=b, d=d, zmode=zmode)
+        x0ne = calc_x0_val_to_model_x0(X0_DEF, yc, Iext1, a=a, b=b, d=d, zmode=zmode)
         # z nullcline:
         zZe = calc_fz(x1, z=0.0, x0=x0e, tau1=1.0, tau0=1.0, zmode=zmode)  # for epileptogenic regions
         zZne = calc_fz(x1, z=0.0, x0=x0ne, tau1=1.0, tau0=1.0, zmode=zmode)  # for non-epileptogenic regions

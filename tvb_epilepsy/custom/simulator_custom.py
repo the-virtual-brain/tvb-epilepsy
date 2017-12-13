@@ -16,7 +16,7 @@ from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import obj_to_dict, assert_arrays, construct_import_path
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
-from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val__to_model_x0
+from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val_to_model_x0
 
 
 # TODO: It is imperative to allow for modification of the connectivity.normalized_weights of the Connecitivity.h5
@@ -215,7 +215,7 @@ class SimulatorCustom(ABCSimulator):
 
 # Some helper functions for model and simulator construction
 def custom_model_builder(model_configuration, a=1.0, b=3.0, d=5.0):
-    x0 = calc_x0_val__to_model_x0(model_configuration.x0_values, model_configuration.yc,
+    x0 = calc_x0_val_to_model_x0(model_configuration.x0_values, model_configuration.yc,
                                   model_configuration.Iext1, a, b - d)
     model = EpileptorModel(a=a, b=b, d=d, x0=x0, iext=model_configuration.Iext1,
                            ks=model_configuration.K,

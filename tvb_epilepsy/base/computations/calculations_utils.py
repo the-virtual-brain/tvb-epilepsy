@@ -693,7 +693,7 @@ def calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars=2,
     return f
 
 
-def calc_x0_val__to_model_x0(x0_values, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), shape=None,
+def calc_x0_val_to_model_x0(x0_values, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), shape=None,
                              calc_mode="non_symbol"):
     hyp_x0, yc, Iext1, a, b, d = \
         assert_arrays([x0_values, yc, Iext1, a, b, d], shape)
