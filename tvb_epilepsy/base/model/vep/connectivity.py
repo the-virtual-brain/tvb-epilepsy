@@ -16,12 +16,12 @@ class Connectivity(object):
     normalized_weights = None
     tract_lengths = None
     region_labels = None
-    centers = None
+    centres = None
     hemispheres = None
     orientations = None
     areas = None
 
-    def __init__(self, file_path, weights, tract_lengths, labels=np.array([]), centers=np.array([]),
+    def __init__(self, file_path, weights, tract_lengths, labels=np.array([]), centres=np.array([]),
                  hemispheres=np.array([]), orientation=np.array([]), areas=np.array([]),
                  normalized_weights=np.array([])):
         self.file_path = file_path
@@ -31,7 +31,7 @@ class Connectivity(object):
         self.normalized_weights = normalized_weights
         self.tract_lengths = tract_lengths
         self.region_labels = labels
-        self.centers = centers
+        self.centres = centres
         self.hemispheres = hemispheres
         self.orientations = orientation
         self.areas = areas
@@ -48,7 +48,7 @@ class Connectivity(object):
             return inds
 
     def summary(self):
-        d = {"a. centers": reg_dict(self.centers, self.region_labels),
+        d = {"a. centres": reg_dict(self.centres, self.region_labels),
 #             "c. normalized weights": self.normalized_weights,
 #             "d. tract_lengths": reg_dict(self.tract_lengths, self.region_labels),
              "b. areas": reg_dict(self.areas, self.region_labels)}
@@ -56,14 +56,14 @@ class Connectivity(object):
 
     @property
     def number_of_regions(self):
-        return self.centers.shape[0]
+        return self.centres.shape[0]
 
     def __repr__(self):
         d = {"f. normalized weights": reg_dict(self.normalized_weights, self.region_labels),
              "g. weights": reg_dict(self.weights, self.region_labels),
              "h. tract_lengths": reg_dict(self.tract_lengths, self.region_labels),
              "a. region_labels": reg_dict(self.region_labels),
-             "b. centers": reg_dict(self.centers, self.region_labels),
+             "b. centres": reg_dict(self.centres, self.region_labels),
              "c. hemispheres": reg_dict(self.hemispheres, self.region_labels),
              "d. orientations": reg_dict(self.orientations, self.region_labels),
              "e. areas": reg_dict(self.areas, self.region_labels)}

@@ -36,6 +36,7 @@ class Surface(object):
     def _prepare_for_h5(self):
         h5_model = convert_to_h5_model(self)
         h5_model.add_or_update_metadata_attribute("EPI_Type", "Surface")
+        h5_model.add_or_update_metadata_attribute("EPI_Version", "1")
         h5_model.add_or_update_metadata_attribute("Surface_subtype", self.surface_subtype)
         h5_model.add_or_update_metadata_attribute("Number_of_triangles", self.triangles.shape[0])
         h5_model.add_or_update_metadata_attribute("Number_of_vertices", self.vertices.shape[0])

@@ -71,11 +71,11 @@ class ODEModelInversionService(ModelInversionService):
                               "\ntime = " + str(time))
 
     def select_signals_seeg(self, signals, rois, auto_selection, **kwargs):
-        sensors = Sensors(self.sensors_labels, self.sensors_locations, projection=self.projection)
+        sensors = Sensors(self.sensors_labels, self.sensors_locations, gain_matrix=self.gain_matrix)
         if auto_selection.find("rois") >= 0:
-            if sensors.projection is not None:
+            if sensors.gain_matrix is not None:
                 current_selection = sensors.select_contacts_rois(kwargs.get("rois", rois), self.signals_inds,
-                                                                 kwargs.get("projection_th", None))
+                                                                 kwargs.get("gain_matrix_th", None))
                 inds = np.where([s in current_selection for s in self.signals_inds])[0]
                 self.signals_inds = np.array(self.signals_inds)[inds].tolist()
                 signals = signals[:, inds]
@@ -157,7 +157,7 @@ class ODEModelInversionService(ModelInversionService):
                     signals = signals.values()[0]
                     project = False
                     self.data_type = "seeg"
-                    self.signals_inds = range(self.projection.shape[0])
+                    self.signals_inds = range(self.gain_matrix.shape[0])
                 else:
                     signals = target_data.get("lfp", target_data["x1"])
         target_data["signals"] = signals
@@ -167,9 +167,9 @@ class ODEModelInversionService(ModelInversionService):
         if len(self.signals_inds) != signals.shape[1]:
             signals = signals[:, self.signals_inds]
         if project is True:
-            signals = (np.dot(self.projection[:, self.signals_inds], signals.T)).T
+            signals = (np.dot(self.gain_matrix[:, self.signals_inds], signals.T)).T
             self.data_type = "seeg"
-            self.signals_inds = range(self.projection.shape[0])
+            self.signals_inds = range(self.gain_matrix.shape[0])
         self.observation_shape = signals.shape
         (self.n_times, self.n_signals) = self.observation_shape
         return signals, target_data
@@ -229,15 +229,15 @@ class ODEModelInversionService(ModelInversionService):
     def update_active_regions_seeg(self, statistical_model, active_regions_th=None, seeg_inds=[], reset=False):
         if reset:
             statistical_model.update_active_regions([])
-        if self.projection is not None:
+        if self.gain_matrix is not None:
             active_regions = statistical_model.active_regions
             if len(seeg_inds) == 0:
                 seeg_inds = self.signals_inds
             if len(seeg_inds) != 0:
-                projection = self.projection[seeg_inds]
+                gain_matrix = self.gain_matrix[seeg_inds]
             else:
-                projection = self.projection
-            for proj in projection:
+                gain_matrix = self.gain_matrix
+            for proj in gain_matrix:
                 active_regions += select_greater_values_array_inds(proj, active_regions_th).tolist()
             statistical_model.update_active_regions(active_regions)
         else:
@@ -292,12 +292,12 @@ class ODEModelInversionService(ModelInversionService):
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model
 
-    def generate_model_data(self, statistical_model, signals, projection=None, x1var="", zvar=""):
+    def generate_model_data(self, statistical_model, signals, gain_matrix=None, x1var="", zvar=""):
         active_regions_flag = np.zeros((statistical_model.n_regions,), dtype="i")
         active_regions_flag[statistical_model.active_regions] = 1
-        if projection is None:
-            projection = self.projection
-        mixing = deepcopy(projection)
+        if gain_matrix is None:
+            gain_matrix = self.gain_matrix
+        mixing = deepcopy(gain_matrix)
         if mixing.shape[0] > len(self.signals_inds):
             mixing = mixing[self.signals_inds]
         if mixing.shape[1] > statistical_model.n_active_regions:

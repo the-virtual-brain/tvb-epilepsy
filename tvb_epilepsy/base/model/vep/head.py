@@ -20,9 +20,9 @@ class Head(object):
         self.region_mapping = rm
         self.volume_mapping = vm
         self.t1_background = t1
-        self.sensorsSEEG = None
-        self.sensorsEEG = None
-        self.sensorsMEG = None
+        self.sensorsSEEG = []
+        self.sensorsEEG = []
+        self.sensorsMEG = []
         for s_type in Sensors.SENSORS_TYPES:
             self.set_sensors(kwargs.get("sensors" + s_type), s_type=s_type)
         if len(name) == 0:
@@ -69,6 +69,15 @@ class Head(object):
         h5_model = self._prepare_for_h5()
         h5_model.write_to_h5(folder, filename)
 
+    def write_to_folder(self, folder, conn_filename="Connectivity", cortsurf_filename="CorticalSurface"):
+        self.connectivity.write_to_h5(folder, conn_filename + ".h5")
+        self.cortical_surface.write_to_h5(folder, cortsurf_filename + ".h5")
+        # TODO create classes and write functions for the rest of the contents of a Head
+        for sensor_list in (ensure_list(self.sensorsSEEG), ensure_list(self.sensorsEEG), ensure_list(self.sensorsMEG)):
+            for sensors in sensor_list:
+                sensors.write_to_h5(folder, "Sensors" + sensors.s_type + "_" + str(sensors.number_of_sensors) + ".h5")
+
+
     def get_sensors(self, s_type=Sensors.TYPE_SEEG):
         if np.in1d(s_type.upper(), Sensors.SENSORS_TYPES):
             return getattr(self, "sensors" + s_type)
@@ -79,14 +88,14 @@ class Head(object):
         if input_sensors is None:
             return
         sensors = ensure_list(self.get_sensors(s_type))
-        if reset is False or sensors is None:
+        if reset is False or len(sensors) == 0:
             sensors = []
         for s in ensure_list(input_sensors):
             if isinstance(s, Sensors) and (s.s_type == s_type):
-                if s.projection == None:
-                    warning("No projection found in sensors! Computing and adding projection!")
-                    s.projection = s.calculate_projection(self.connectivity)
-                # if s.orientations == None:
+                if s.gain_matrix is None or s.gain_matrix.shape != (s.number_of_sensors, self.number_of_regions):
+                    warning("No correctly sized gain matrix found in sensors! Computing and adding gain matrix!")
+                    s.gain_matrix = s.compute_gain_matrix(self.connectivity)
+                # if s.orientations == None or s.orientations.shape != (s.number_of_sensors, 3):
                 #     warning("No orientations found in sensors!")
                 sensors.append(s)
             else:
@@ -94,9 +103,7 @@ class Head(object):
                     raise_value_error("Input sensors:\n" + str(s) +
                                       "\nis not a valid Sensors object of type " + str(s_type) + "!")
         if len(sensors) == 0:
-            setattr(self, "sensors"+s_type, None)
-        elif len(sensors) == 1:
-            setattr(self, "sensors" + s_type, sensors[0])
+            setattr(self, "sensors"+s_type, [])
         else:
             setattr(self, "sensors" + s_type, sensors)
 
@@ -117,7 +124,7 @@ class Head(object):
             else:
                 return out_sensors
 
-    def compute_nearest_regions_to_sensors(self, sensors=None, target_contacts=None, s_type=Sensors.TYPE_SEEG, sensors_id=0, n_regions=None, projection_th=None):
+    def compute_nearest_regions_to_sensors(self, sensors=None, target_contacts=None, s_type=Sensors.TYPE_SEEG, sensors_id=0, n_regions=None, gain_matrix_th=None):
         if not(isinstance(sensors, Sensors)):
             sensors = self.get_sensors_id(s_type=s_type, sensors_ids=sensors_id)
         n_contacts = sensors.labels.shape[0]
@@ -140,10 +147,10 @@ class Head(object):
             auto_flag = True
         nearest_regions = []
         for tc in target_contacts:
-            projs = sensors.projection[tc]
+            projs = sensors.gain_matrix[tc]
             inds = np.argsort(projs)[::-1]
             if auto_flag:
-                n_regions = select_greater_values_array_inds(projs[inds], threshold=projection_th)
+                n_regions = select_greater_values_array_inds(projs[inds], threshold=gain_matrix_th)
             inds = inds[:n_regions]
             nearest_regions.append((inds, self.connectivity.region_labels[inds], projs[inds]))
         return nearest_regions
@@ -152,11 +159,13 @@ class Head(object):
         # plot connectivity
         self.connectivity.plot(show_flag, save_flag, figure_dir, figure_format)
         self.connectivity.plot_stats(show_flag, save_flag, figure_dir,figure_format)
-        # plot sensor projections
+        # plot sensor gain_matrixs
         count = 1
         for s_type in Sensors.SENSORS_TYPES:
             sensors = getattr(self, "sensors" + s_type)
             if isinstance(sensors, (list, Sensors)):
-                for s in ensure_list(sensors):
-                    count = s.plot(self.connectivity.region_labels, count, show_flag, save_flag, figure_dir,
-                                   figure_format)
+                sensors_list = ensure_list(sensors)
+                if len(sensors_list) > 0:
+                    for s in sensors_list:
+                        count = s.plot(self.connectivity.region_labels, count, show_flag, save_flag, figure_dir,
+                                       figure_format)
