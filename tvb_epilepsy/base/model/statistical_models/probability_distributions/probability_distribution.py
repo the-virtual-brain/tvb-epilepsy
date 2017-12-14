@@ -87,8 +87,8 @@ class ProbabilityDistribution(object):
         self.mode = self._calc_mode(loc, scale)
         self.var = self._calc_var(loc, scale, use)
         self.std = self._calc_std(loc, scale, use)
-        self.skew = self.calc_skew()
-        self.kurt = self.calc_kurt()
+        self.skew = self._calc_skew()
+        self.kurt = self._calc_kurt()
 
     def __set_params__(self, **params):
         for p_key, p_val in params.iteritems():
@@ -210,14 +210,13 @@ class ProbabilityDistribution(object):
         else:
             return self.calc_std_manual(loc, scale)
 
-    # Those are not affected by linear transforms of loc and scale:
-    def calc_skew(self, loc=0.0, scale=1.0, use="scipy"):
+    def _calc_skew(self, loc=0.0, scale=1.0, use="scipy"):
         if isequal_string(use, "scipy"):
             return self.scipy(loc, scale).stats(moments="s")
         else:
             return self.calc_skew_manual(loc, scale)
 
-    def calc_kurt(self, loc=0.0, scale=1.0, use="scipy"):
+    def _calc_kurt(self, loc=0.0, scale=1.0, use="scipy"):
         if isequal_string(use, "scipy"):
             return self.scipy(loc, scale).stats(moments="k")
         else:
