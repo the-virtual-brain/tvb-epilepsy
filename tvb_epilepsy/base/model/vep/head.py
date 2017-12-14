@@ -1,3 +1,6 @@
+
+import os
+
 import numpy as np
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
@@ -70,9 +73,11 @@ class Head(object):
         h5_model.write_to_h5(folder, filename)
 
     def write_to_folder(self, folder, conn_filename="Connectivity", cortsurf_filename="CorticalSurface"):
-        self.connectivity.write_to_h5(folder, conn_filename + ".h5")
-        self.cortical_surface.write_to_h5(folder, cortsurf_filename + ".h5")
+        if not(os.path.isdir(folder)):
+            os.mkdir(folder)
+        self.connectivity.write_to_h5(folder, conn_filename + ".h5", connectivity_variants=True)
         # TODO create classes and write functions for the rest of the contents of a Head
+        # self.cortical_surface.write_to_h5(folder, cortsurf_filename + ".h5")
         for sensor_list in (ensure_list(self.sensorsSEEG), ensure_list(self.sensorsEEG), ensure_list(self.sensorsMEG)):
             for sensors in sensor_list:
                 sensors.write_to_h5(folder, "Sensors" + sensors.s_type + "_" + str(sensors.number_of_sensors) + ".h5")

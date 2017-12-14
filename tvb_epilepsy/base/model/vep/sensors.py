@@ -75,6 +75,8 @@ class Sensors(object):
         h5_model.add_or_update_metadata_attribute("EPI_Version", "1")
         h5_model.add_or_update_metadata_attribute("Number_of_sensors", str(self.number_of_sensors))
         h5_model.add_or_update_metadata_attribute("Sensors_subtype", self.s_type)
+        h5_model.add_or_update_metadata_attribute("/gain_matrix/Min", str(self.gain_matrix.min()))
+        h5_model.add_or_update_metadata_attribute("/gain_matrix/Max", str(self.gain_matrix.max()))
         return h5_model
 
     def write_to_h5(self, folder, filename=""):

@@ -72,17 +72,24 @@ class Connectivity(object):
     def __str__(self):
         return self.__repr__()
 
-    def _prepare_for_h5(self):
+    def _prepare_for_h5(self, connectivity_variants=False):
         h5_model = convert_to_h5_model(self)
         h5_model.add_or_update_metadata_attribute("EPI_Type", "Connectivity")
         h5_model.add_or_update_metadata_attribute("EPI_Version", "1")
         h5_model.add_or_update_metadata_attribute("Number_of_regions", str(self.weights.shape[0]))
+        if connectivity_variants:
+            del h5_model.datasets_dict["/normalized_weights"]
+            h5_model.add_or_update_datasets_attribute("/normalized_weights/weights",
+                                                      self.normalized_weights)
+            h5_model.add_or_update_metadata_attribute("/normalized_weights/Operations",
+                                                    "[Removing diagonal, normalizing with 95th percentile, "
+                                                    "and ceiling to it]")
         return h5_model
 
-    def write_to_h5(self, folder, filename=""):
+    def write_to_h5(self, folder, filename="", connectivity_variants=False):
         if filename == "":
             filename = self.name + ".h5"
-        h5_model = self._prepare_for_h5()
+        h5_model = self._prepare_for_h5(connectivity_variants)
         h5_model.write_to_h5(folder, filename)
 
     def plot(self, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,

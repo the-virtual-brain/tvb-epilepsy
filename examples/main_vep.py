@@ -54,9 +54,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                     str(assert_equal_objects(head,
                                              read_h5_model(os.path.join(FOLDER_RES, "Head.h5")).
                                              convert_from_h5_model(), logger=logger)))
-        head_folder = os.path.join(FOLDER_RES, "Head")
-        os.mkdir(head_folder)
-        head.write_to_folder(head_folder)
+        head.write_to_folder(os.path.join(FOLDER_RES, "Head"))
     # --------------------------Hypothesis definition-----------------------------------
     n_samples = 100
     # # Manual definition of hypothesis...:
