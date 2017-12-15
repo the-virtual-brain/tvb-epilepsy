@@ -17,28 +17,28 @@ def scale(x, sc=1.0):
     return (x.T / np.array(sc)).T
 
 
-def mean_center(x):
-    return center(x, np.mean(x, axis=0))
+def mean_center(x, axis=0):
+    return center(x, np.mean(x, axis=axis))
 
 
-def median_center(x):
-    return center(x, np.median(x, axis=0))
+def median_center(x, axis=0):
+    return center(x, np.median(x, axis=axis))
 
 
 def zscore(x):
     return std_norm(mean_center(x))
 
 
-def max_norm(x):
-    return scale(x, np.max(x, axis=0))
+def max_norm(x, axis=0):
+    return scale(x, np.max(x, axis=axis))
 
 
-def maxabs_norm(x):
-    return scale(x, np.max(np.abs(x), axis=0))
+def maxabs_norm(x, axis=0):
+    return scale(x, np.max(np.abs(x), axis=axis))
 
 
-def std_norm(x):
-    return scale(x, np.std(x, axis=0))
+def std_norm(x, axis=0):
+    return scale(x, np.std(x, axis=axis))
 
 
 def interval_scaling(x, min_targ=0.0, max_targ=1.0, min_orig=None, max_orig=None):
@@ -115,20 +115,23 @@ def power(x, n=None):
 
 # Frequency domain:
 
-def _butterworth_bandpass(lowcut, highcut, fs, order=3):
+def _butterworth_bandpass(fs, mode, lowcut, highcut, order=3):
     """
     Build a diggital Butterworth filter
     """
     nyq = 0.5 * fs
-    low = lowcut / nyq  # normalize frequency
-    high = highcut / nyq  # normalize frequency
-    b, a = butter(order, [low, high], btype='band')
+    freqs = []
+    if lowcut is not None:
+        freqs.append(lowcut / nyq)  # normalize frequency
+    if highcut is not None:
+        freqs.append(highcut / nyq)  # normalize frequency
+    b, a = butter(order, freqs, btype=mode)
     return b, a
 
 
-def filter_data(data, lowcut, highcut, fs, order=3):
+def filter_data(data, fs, mode, lowcut=None, highcut=None, order=3):
     # get filter coefficients
-    b, a = _butterworth_bandpass(lowcut, highcut, fs, order=order)
+    b, a = _butterworth_bandpass(fs, mode, lowcut, highcut, order)
     # filter data
     y = lfilter(b, a, data)
     return y
