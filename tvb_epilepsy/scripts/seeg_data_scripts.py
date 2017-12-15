@@ -3,41 +3,7 @@ from scipy.signal import decimate
 
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.utils.plot_utils import plot_timeseries
-
-
-def get_bipolar_channels(channels_inds, channel_lbls=[]):
-    import re
-    n_channels = len(channels_inds)
-    if channel_lbls == []:
-        channel_lbls = str(range(n_channels))
-    bipolar_channel_lbls = []
-    bipolar_ch_inds = []
-    for iS in range(n_channels - 1):
-        try:
-            if (channel_lbls[iS][0] == channel_lbls[iS + 1][0]) and \
-                    (int(re.findall(r'\d+', channel_lbls[iS])[0]) == int(re.findall(r'\d+', channel_lbls[iS + 1])[0]) - 1):
-                bipolar_channel_lbls.append(channel_lbls[iS] + "-" + channel_lbls[iS + 1])
-                bipolar_ch_inds.append(channels_inds[iS])
-        except:
-            print("WTF?")
-    return bipolar_ch_inds, bipolar_channel_lbls
-
-
-def decimate_signals(time, signals, decim_ratio):
-    signals = decimate(signals, decim_ratio, axis=0, zero_phase=True)
-    time = decimate(time, decim_ratio, zero_phase=True)
-    dt = np.mean(time)
-    observation_shape = signals.shape
-    (n_times, n_signals) = observation_shape
-    return signals, time, dt, n_times, n_signals, observation_shape
-
-
-def cut_signals_tails(time, signals, cut_tails):
-    signals = signals[cut_tails[0]:-cut_tails[-1]]
-    time = time[cut_tails[0]:-cut_tails[-1]]
-    observation_shape = signals.shape
-    (n_times, n_signals) = observation_shape
-    return signals, time, n_times, n_signals, observation_shape
+from tvb_epilepsy.service.signal_factory import decimate_signals, cut_signals_tails
 
 
 def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_freq=10.0, high_freq=None, log_flag=True,
