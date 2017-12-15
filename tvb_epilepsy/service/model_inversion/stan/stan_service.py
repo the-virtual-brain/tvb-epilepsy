@@ -14,7 +14,7 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path, isequal_string, ensure_list, sort_dict
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
-from tvb_epilepsy.service.rdump_factory import rdump
+from tvb_epilepsy.service.rdump_factory import rdump, rload
 from tvb_epilepsy.service.csv_factory import parse_csv
 
 
@@ -90,7 +90,9 @@ class StanService(object):
         if reset_path:
             self.model_data_path = model_data_path
         extension = self.model_data_path.split(".", -1)[-1]
-        if isequal_string(extension, "npy"):
+        if isequal_string(extension, "R"):
+            return rload(self.model_data_path)
+        elif isequal_string(extension, "npy"):
             return np.load(self.model_data_path).item()
         elif isequal_string(extension, "mat"):
             return loadmat(self.model_data_path)
@@ -101,7 +103,7 @@ class StanService(object):
             return read_h5_model(self.model_data_path).convert_from_h5_model()
         else:
             raise_not_implemented_error("model_data file (" + model_data_path +
-                                        ") that are not one of (.npy, .mat, .pkl) cannot be read!")
+                                        ") that are not one of (.R, .npy, .mat, .pkl) cannot be read!")
 
     def set_or_compile_model(self, **kwargs):
         try:
@@ -132,26 +134,62 @@ class StanService(object):
         else:
             return ests, csv
 
-    # def plot_HMC(self, csv, output_file_path, figure_name):
-    #     extras = 'K time_scale sigma epsilon amplitude'.split()
+    def trace_nuts(self, csv, extras='', skip=0):
+        from pylab import subplot, plot, gca, title, grid, xticks
+        if isinstance(extras, str):
+            extras = extras.split()
+            for csvi in csv:
+                i = 1
+                for key in csvi.keys():
+                    if key[-2:] == '__' or key in extras:
+                        subplot(4, 4, i)
+                        plot(csvi[key][skip:], alpha=0.5)
+                        if key in ('stepsize__',):
+                            gca().set_yscale('log')
+                        title(key)
+                        grid(1)
+                        if ((i - 1) / 4) < 4:
+                            xticks(xticks()[0], [])
+                        i += 1
+
+    def pair_plots(self, csv, keys, skip=0):
+        import pylab as pl
+        n = len(keys)
+        if isinstance(csv, dict):
+            csv = [csv]  # following assumes list of chains' results
+        for i, key_i in enumerate(keys):
+            for j, key_j in enumerate(keys):
+                pl.subplot(n, n, i * n + j + 1)
+                for csvi in csv:
+                    if i == j:
+                        pl.hist(csvi[key_i][skip:], 20, log=True)
+                    else:
+                        pl.plot(csvi[key_j][skip:], csvi[key_i][skip:], '.')
+                if i == 0:
+                    pl.title(key_j)
+                if j == 0:
+                    pl.ylabel(key_i)
+        pl.tight_layout()
+
+    # def plot_HMC(self, csv, extras, output_file_path, figure_name):
     #     outout_folder = os.path.dirname(output_file_path)
-    #     vep_stan.lib.trace_nuts(csv, extras)
+    #     self.trace_nuts(csv)
     #     # tight_layout()
     #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_stats.png"))
     #     pyplot.ion()
     #     pyplot.show()
     #     pyplot.figure(figsize=(10, 10))
-    #     vep_stan.lib.pair_plots(csv, extras, skip=0)
+    #     self.pair_plots(csv, extras, skip=0)
     #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_pairplots.png"))
     #     pyplot.ion()
     #     pyplot.show()
     #     for i, csvi in enumerate(csv):
     #         pyplot.figure()
-    #         vep_stan.lib.phase_space(csvi)
+    #         self.phase_space(csvi)
     #         pyplot.suptitle("Chain {" + str(i) + "}")
     #         # tight_layout()
     #         pyplot.savefig(os.path.join(outout_folder, figure_name + "_state_space_" + str(i) + ".png"))
-    #     vep_stan.lib.ppc_seeg(csv[1], skip=200)
+    #     self.ppc_seeg(csv[1], skip=200)
     #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_seeg.png"))
     #     vep_stan.lib.violin_x0(csv)
     #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_x0.png"))

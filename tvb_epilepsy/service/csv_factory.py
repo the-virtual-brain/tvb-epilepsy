@@ -2,6 +2,7 @@ import numpy as np
 
 from tvb_epilepsy.service.rdump_factory import rdump
 
+
 def merge_csv_data(*csvs):
     data_ = {}
     for csv in csvs:

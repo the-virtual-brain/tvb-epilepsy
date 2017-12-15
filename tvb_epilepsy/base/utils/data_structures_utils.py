@@ -255,6 +255,16 @@ def extract_dict_stringkeys(d, keys, modefun="find", break_after=MAX_INT_VALUE, 
     return out_dict
 
 
+def labels_to_inds(labels, lbls):
+    idx = []
+    lbls = ensure_list(lbls)
+    for i, label in enumerate(labels):
+        for lbl in lbls:
+            if lbl in label or label in lbl:
+                idx.append(i)
+                break
+    return np.unique(idx)
+
 
 # This function is meant to confirm that two objects assumingly of the same type are equal, i.e., identical
 def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
