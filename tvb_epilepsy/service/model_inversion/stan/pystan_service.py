@@ -9,6 +9,7 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path, sort_dict
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error, raise_value_error
 from tvb_epilepsy.service.model_inversion.stan.stan_service import StanService
+from tvb_epilepsy.service.model_inversion.stan.stan_factory import STAN_OUTPUT_OPTIONS
 
 
 LOG = initialize_logger(__name__)
@@ -56,7 +57,10 @@ class PyStanService(StanService):
         self.model_path = kwargs.get("model_path", self.model_path)
         self.model = pickle.load(open(self.model_path, 'rb'))
 
-    def fit(self, debug=0, simulate=0, **kwargs):
+    def fit(self, output_filepath=os.path.join(FOLDER_RES, STAN_OUTPUT_OPTIONS["file"]), diagnostic_filepath="",
+            debug=0, simulate=0,  read_output=True, **kwargs):
+        if diagnostic_filepath == "":
+            diagnostic_filepath = os.path.join(os.path.dirname(output_filepath), STAN_OUTPUT_OPTIONS["diagnostic_file"])
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
         self.fitmethod = kwargs.pop("method", self.fitmethod)
         model_data = kwargs.pop("model_data", None)
@@ -74,18 +78,22 @@ class PyStanService(StanService):
         self.options.update(kwargs)
         self.logger.info("Model fitting with " + self.fitmethod + "...")
         tic = time.time()
-        fit = getattr(self.model, self.fitmethod)(data=model_data, **self.options)
+        fit = getattr(self.model, self.fitmethod)(data=model_data, sample_file=output_filepath,
+                                                  diagnostic_file=diagnostic_filepath, **self.options)
         self.fitting_time = time.time() - tic
         self.logger.info(str(self.fitting_time) + ' sec required to fit')
         if self.fitmethod is "optimizing":
             return fit,
         else:
-            self.logger.info("Extracting estimates...")
-            if self.fitmethod is "sampling":
-                est = fit.extract(permuted=True)
-            elif self.fitmethod is "vb":
-                est = self.read_vb_results(fit)
-            return est, fit
+            if read_output:
+                self.logger.info("Extracting estimates...")
+                if self.fitmethod is "sampling":
+                    est = fit.extract(permuted=True)
+                elif self.fitmethod is "vb":
+                    est = self.read_vb_results(fit)
+                return est, fit
+            else:
+                return fit,
 
     def read_vb_results(self, fit):
         est = {}
