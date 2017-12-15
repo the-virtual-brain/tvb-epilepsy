@@ -6,6 +6,7 @@ from shutil import copyfile
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, CMDSTAN_PATH
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
+from tvb_epilepsy.base.utils.command_line_utils import execute_command
 from tvb_epilepsy.service.model_inversion.stan.stan_service import StanService
 from tvb_epilepsy.service.model_inversion.stan.stan_factory import *
 
@@ -74,16 +75,17 @@ class CmdStanService(StanService):
         tic = time.time()
         command = "make " + self.model_code_path.split(".stan", 1)[0] + " && " + \
                   "chmod +x " + self.model_code_path.split(".stan", 1)[0]
-        proc = subprocess.Popen(command, cwd=self.path, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # use this to track the ongoing process:
-        # tail -n 1 vep-fe-rev-05.sample.*.out
-        stdout = proc.stdout.read().decode('ascii').strip()
-        if stdout:
-            print(stdout)
-        stderr = proc.stderr.read().decode('ascii').strip()
-        if stderr:
-            print(stderr)
-        self.compilation_time = time.time() - tic
+        self.compilation_time = execute_command(command, cwd=self.path, shell=True)[1]
+        # proc = subprocess.Popen(command, cwd=self.path, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # # use this to track the ongoing process:
+        # # tail -n 1 vep-fe-rev-05.sample.*.out
+        # stdout = proc.stdout.read().decode('ascii').strip()
+        # if stdout:
+        #     print(stdout)
+        # stderr = proc.stderr.read().decode('ascii').strip()
+        # if stderr:
+        #     print(stderr)
+        # self.compilation_time = time.time() - tic
         self.logger.info(str(self.compilation_time) + ' sec required to compile')
         if store_model:
             self.model_path = kwargs.pop("model_path", self.model_path)
@@ -91,7 +93,7 @@ class CmdStanService(StanService):
                 copyfile(self.model_code_path.split(".stan", 1)[0], self.model_path)
 
     def fit(self, output_filepath=os.path.join(FOLDER_RES, STAN_OUTPUT_OPTIONS["file"]), diagnostic_filepath="",
-            read_output=True, debug=0, simulate=0, **kwargs):
+           debug=0, simulate=0,  read_output=True, **kwargs):
         self.model_path = kwargs.pop("model_path", self.model_path)
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
         self.fitmethod = kwargs.pop("method", self.fitmethod)
@@ -102,18 +104,19 @@ class CmdStanService(StanService):
                                          output_filepath, diagnostic_filepath)
         self.logger.info("Model fitting with " + self.fitmethod +
                          " method of model: " + self.model_path + "...")
-        tic = time.time()
-        print(self.command.replace("\t", ""))
-        proc = subprocess.Popen(self.command.replace("\t", ""), shell=True,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # tail -n 1 vep-fe-rev-05.sample.*.out
-        stdout = proc.stdout.read().decode('ascii').strip()
-        if stdout:
-            print(stdout)
-        stderr = proc.stderr.read().decode('ascii').strip()
-        if stderr:
-            print(stderr)
-        self.fitting_time = time.time() - tic
+        self.fitting_time = execute_command(self.command.replace("\t", ""), shell=True)[1]
+        # tic = time.time()
+        # print(self.command.replace("\t", ""))
+        # proc = subprocess.Popen(self.command.replace("\t", ""), shell=True,
+        #                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # # tail -n 1 vep-fe-rev-05.sample.*.out
+        # stdout = proc.stdout.read().decode('ascii').strip()
+        # if stdout:
+        #     print(stdout)
+        # stderr = proc.stderr.read().decode('ascii').strip()
+        # if stderr:
+        #     print(stderr)
+        # self.fitting_time = time.time() - tic
         self.logger.info(str(self.fitting_time) + ' sec required to ' + self.fitmethod + "!")
         if read_output:
             est, csv = self.read_output_csv(output_filepath, **kwargs)
