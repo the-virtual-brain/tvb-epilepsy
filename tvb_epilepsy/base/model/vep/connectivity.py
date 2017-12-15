@@ -16,12 +16,12 @@ class Connectivity(object):
     normalized_weights = None
     tract_lengths = None
     region_labels = None
-    centers = None
+    centres = None
     hemispheres = None
     orientations = None
     areas = None
 
-    def __init__(self, file_path, weights, tract_lengths, labels=np.array([]), centers=np.array([]),
+    def __init__(self, file_path, weights, tract_lengths, labels=np.array([]), centres=np.array([]),
                  hemispheres=np.array([]), orientation=np.array([]), areas=np.array([]),
                  normalized_weights=np.array([])):
         self.file_path = file_path
@@ -31,7 +31,7 @@ class Connectivity(object):
         self.normalized_weights = normalized_weights
         self.tract_lengths = tract_lengths
         self.region_labels = labels
-        self.centers = centers
+        self.centres = centres
         self.hemispheres = hemispheres
         self.orientations = orientation
         self.areas = areas
@@ -48,7 +48,7 @@ class Connectivity(object):
             return inds
 
     def summary(self):
-        d = {"a. centers": reg_dict(self.centers, self.region_labels),
+        d = {"a. centres": reg_dict(self.centres, self.region_labels),
 #             "c. normalized weights": self.normalized_weights,
 #             "d. tract_lengths": reg_dict(self.tract_lengths, self.region_labels),
              "b. areas": reg_dict(self.areas, self.region_labels)}
@@ -56,14 +56,14 @@ class Connectivity(object):
 
     @property
     def number_of_regions(self):
-        return self.centers.shape[0]
+        return self.centres.shape[0]
 
     def __repr__(self):
         d = {"f. normalized weights": reg_dict(self.normalized_weights, self.region_labels),
              "g. weights": reg_dict(self.weights, self.region_labels),
              "h. tract_lengths": reg_dict(self.tract_lengths, self.region_labels),
              "a. region_labels": reg_dict(self.region_labels),
-             "b. centers": reg_dict(self.centers, self.region_labels),
+             "b. centres": reg_dict(self.centres, self.region_labels),
              "c. hemispheres": reg_dict(self.hemispheres, self.region_labels),
              "d. orientations": reg_dict(self.orientations, self.region_labels),
              "e. areas": reg_dict(self.areas, self.region_labels)}
@@ -72,17 +72,24 @@ class Connectivity(object):
     def __str__(self):
         return self.__repr__()
 
-    def _prepare_for_h5(self):
+    def _prepare_for_h5(self, connectivity_variants=False):
         h5_model = convert_to_h5_model(self)
         h5_model.add_or_update_metadata_attribute("EPI_Type", "Connectivity")
         h5_model.add_or_update_metadata_attribute("EPI_Version", "1")
         h5_model.add_or_update_metadata_attribute("Number_of_regions", str(self.weights.shape[0]))
+        if connectivity_variants:
+            del h5_model.datasets_dict["/normalized_weights"]
+            h5_model.add_or_update_datasets_attribute("/normalized_weights/weights",
+                                                      self.normalized_weights)
+            h5_model.add_or_update_metadata_attribute("/normalized_weights/Operations",
+                                                    "[Removing diagonal, normalizing with 95th percentile, "
+                                                    "and ceiling to it]")
         return h5_model
 
-    def write_to_h5(self, folder, filename=""):
+    def write_to_h5(self, folder, filename="", connectivity_variants=False):
         if filename == "":
             filename = self.name + ".h5"
-        h5_model = self._prepare_for_h5()
+        h5_model = self._prepare_for_h5(connectivity_variants)
         h5_model.write_to_h5(folder, filename)
 
     def plot(self, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,

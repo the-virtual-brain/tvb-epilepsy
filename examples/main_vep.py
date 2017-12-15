@@ -8,7 +8,7 @@ import numpy as np
 
 from tvb_epilepsy.base.constants.module_constants import SIMULATION_MODE, TVB, DATA_MODE
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_VEP
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
@@ -39,8 +39,6 @@ PSE_FLAG = False
 SA_PSE_FLAG = False
 SIM_FLAG = True
 
-DATA_CUSTOM = os.path.join(FOLDER_VEP, 'CC/TVB1')
-
 
 def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG):
     logger = initialize_logger(__name__)
@@ -48,7 +46,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     data_folder = os.path.join(DATA_CUSTOM, 'Head')
     reader = Reader()
     logger.info("Reading from: " + data_folder)
-    head = reader.read_head(data_folder)
+    head = reader.read_head(data_folder, seeg_sensors_files=[("SensorsSEEG_116.h5", )])
     head.plot()
     if test_write_read:
         head.write_to_h5(FOLDER_RES, "Head.h5")
@@ -56,6 +54,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                     str(assert_equal_objects(head,
                                              read_h5_model(os.path.join(FOLDER_RES, "Head.h5")).
                                              convert_from_h5_model(), logger=logger)))
+        head.write_to_folder(os.path.join(FOLDER_RES, "Head"))
     # --------------------------Hypothesis definition-----------------------------------
     n_samples = 100
     # # Manual definition of hypothesis...:
@@ -66,7 +65,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     # disease_values = x0_values + e_values
     # disease_indices = x0_indices + e_indices
     # ...or reading a custom file:
-    ep_name = "ep_test1"
+    ep_name = "ep_l_frontal_complex"
     #FOLDER_RES = os.path.join(data_folder, ep_name)
     from tvb_epilepsy.custom.readers_custom import CustomReader
     if not isinstance(reader, CustomReader):
@@ -244,10 +243,10 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
             # ------------------------------Simulation--------------------------------------
             logger.info("\n\nConfiguring simulation...")
             sim = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt,
-                                                            sim_length, monitor_period, model_name,
-                                                            zmode=np.array(zmode), pmode=np.array(pmode),
-                                                            noise_instance=None, noise_intensity=None,
-                                                            monitor_expressions=None)
+                                                            sim_length, monitor_period, sim_type="realistic",
+                                                            model_name=model_name, zmode=np.array(zmode),
+                                                            pmode=np.array(pmode), noise_instance=None,
+                                                            noise_intensity=None, monitor_expressions=None)
             # Integrator and initial conditions initialization.
             # By default initial condition is set right on the equilibrium point.
             sim.config_simulation(initial_conditions=None)

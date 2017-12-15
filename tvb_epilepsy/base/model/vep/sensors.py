@@ -10,7 +10,7 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, VERY_LARG
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
 from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list, \
                                                                        split_string_text_numbers, construct_import_path
-from tvb_epilepsy.base.utils.math_utils import compute_projection, select_greater_values_array_inds
+from tvb_epilepsy.base.utils.math_utils import compute_gain_matrix, select_greater_values_array_inds
 from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
@@ -24,20 +24,26 @@ class Sensors(object):
 
     labels = np.array([])
     locations = np.array([])
-    orientations = None
-    projection = None
+    needles = np.array([])
+    orientations = np.array([])
+    gain_matrix = np.array([])
     s_type = ''
 
-    def __init__(self, labels, locations, orientations=None, projection=None, s_type=TYPE_SEEG):
+    def __init__(self, labels, locations, needles=np.array([]), orientations=np.array([]), gain_matrix=np.array([]),
+                 s_type=TYPE_SEEG):
         self.labels = labels
         self.locations = locations
-        self.orientations = orientations
-        self.projection = projection
-        self.s_type = s_type
+        self.needles = needles
         self.channel_labels = np.array([])
-        self.channel_inds = np.array([])
+        self.orientations = orientations
+        self.gain_matrix = gain_matrix
+        self.s_type = s_type
         if len(self.labels) > 1:
-            self.channel_labels, self.channel_inds = self.group_contacts_to_electrodes()
+            if self.needles.size == self.number_of_sensors:
+                self.channel_labels, self.channel_inds = self.get_inds_labels_from_needles()
+            else:
+                self.channel_labels, self.channel_inds = self.group_contacts_to_electrodes()
+                self.get_needles_from_inds_labels()
         self.context_str = "from " + construct_import_path(__file__) + " import Sensors"
         self.create_str = "Sensors(np.array([]), np.array([]), s_type='" + self.s_type + "')"
 
@@ -57,7 +63,7 @@ class Sensors(object):
              "3. labels": reg_dict(self.labels),
              "4. locations": reg_dict(self.locations, self.labels),
              "5. orientations": reg_dict(self.orientations, self.labels),
-             "6. projection": self.projection}
+             "6. gain_matrix": self.gain_matrix}
         return formal_repr(self, sort_dict(d))
 
     def __str__(self):
@@ -66,8 +72,11 @@ class Sensors(object):
     def _prepare_for_h5(self):
         h5_model = convert_to_h5_model(self)
         h5_model.add_or_update_metadata_attribute("EPI_Type", "Sensors")
-        h5_model.add_or_update_metadata_attribute("Number_of_sensors", self.number_of_sensors)
+        h5_model.add_or_update_metadata_attribute("EPI_Version", "1")
+        h5_model.add_or_update_metadata_attribute("Number_of_sensors", str(self.number_of_sensors))
         h5_model.add_or_update_metadata_attribute("Sensors_subtype", self.s_type)
+        h5_model.add_or_update_metadata_attribute("/gain_matrix/Min", str(self.gain_matrix.min()))
+        h5_model.add_or_update_metadata_attribute("/gain_matrix/Max", str(self.gain_matrix.max()))
         return h5_model
 
     def write_to_h5(self, folder, filename=""):
@@ -88,8 +97,23 @@ class Sensors(object):
         else:
             return indexes
 
-    def calculate_projection(self, connectivity):
-        return compute_projection(self.locations, connectivity.centers, normalize=95, ceil=1.0)
+    def compute_gain_matrix(self, connectivity):
+        return compute_gain_matrix(self.locations, connectivity.centres, normalize=95, ceil=1.0)
+
+    def get_inds_labels_from_needles(self):
+        channel_inds = []
+        channel_labels = []
+        for id in np.unique(self.needles):
+            inds = np.where(self.needles == id)[0]
+            channel_inds.append(inds)
+            label = split_string_text_numbers(self.labels[inds[0]])[0][0]
+            channel_labels.append(label)
+        return channel_labels, channel_inds
+
+    def get_needles_from_inds_labels(self):
+        self.needles = np.zeros((self.number_of_sensors,), dtype="i")
+        for id, inds in enumerate(self.channel_inds):
+            self.needles[inds] = id
 
     def group_contacts_to_electrodes(self, labels=None):
         if labels is None:
@@ -101,15 +125,15 @@ class Sensors(object):
             channel_inds.append(np.where(contact_names[:, 0] == chlbl)[0])
         return channel_labels, channel_inds
 
-    def select_contacts_rois(self, rois=None, initial_selection=[], projection_th=0.5):
+    def select_contacts_rois(self, rois=None, initial_selection=[], gain_matrix_th=0.5):
         if len(initial_selection) == 0:
             initial_selection = range(self.number_of_sensors)
         selection = []
-        if self.projection is None:
+        if self.gain_matrix is None:
             raise_value_error("Projection matrix is not set!")
         else:
-            for proj in self.projection[initial_selection].T[rois]:
-                selection += (np.array(initial_selection)[select_greater_values_array_inds(proj, projection_th)]).tolist()
+            for proj in self.gain_matrix[initial_selection].T[rois]:
+                selection += (np.array(initial_selection)[select_greater_values_array_inds(proj, gain_matrix_th)]).tolist()
         return np.unique(selection).tolist()
 
     def select_contacts_power(self, power, selection=[], power_th=0.5):
@@ -149,7 +173,7 @@ class Sensors(object):
             warning("Number of contacts' left < 6!\n" + "Skipping clustering and returning all of them!")
             return initial_selection
 
-    def plot_projection(self, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1,
+    def plot_gain_matrix(self, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1,
              x_ticks=np.array([]), y_ticks=np.array([]), show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
              figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, figure_name=''):
         if not (isinstance(figure, pyplot.Figure)):
@@ -161,7 +185,7 @@ class Sensors(object):
         if len(y_ticks) == 0:
             y_ticks = np.array(range(n_regions), dtype=np.int32)
         cmap = pyplot.set_cmap('autumn_r')
-        img = pyplot.imshow(self.projection[x_ticks][:, y_ticks].T, cmap=cmap, interpolation='none')
+        img = pyplot.imshow(self.gain_matrix[x_ticks][:, y_ticks].T, cmap=cmap, interpolation='none')
         pyplot.grid(True, color='black')
         if y_labels > 0:
             region_labels = np.array(["%d. %s" % l for l in zip(range(n_regions), region_labels)])
@@ -188,9 +212,9 @@ class Sensors(object):
     def plot(self, region_labels, count=1, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
              figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
         # plot sensors:
-        if self.projection is None:
+        if self.gain_matrix is None:
             return count
-        self.plot_projection(region_labels, title=str(count) + " - " + self.s_type + " - Projection",
+        self.plot_gain_matrix(region_labels, title=str(count) + " - " + self.s_type + " - Projection",
                      show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,
                      figure_format=figure_format)
         count += 1

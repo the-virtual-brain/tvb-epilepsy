@@ -33,7 +33,7 @@ class ABCReader(object):
         pass
 
     @abstractmethod
-    def read_projection(self, path, s_type):
+    def read_gain_matrix(self, path, s_type):
         pass
 
     @abstractmethod

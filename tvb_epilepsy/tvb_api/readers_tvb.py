@@ -3,6 +3,8 @@ Read VEP related entities from TVB format and data-structures
 """
 import os
 
+import numpy as np
+
 from tvb.basic.profile import TvbProfile
 
 TvbProfile.set_profile(TvbProfile.LIBRARY_PROFILE)
@@ -69,15 +71,16 @@ class TVBReader(ABCReader):
             else:
                 tvb_sensors = sensors.SensorsInternal.from_file(path)
             if len(filename) > 1:
-                projection = self.read_projection(os.path.join(root_folder, filename[1]), s_type)
+                gain_matrix = self.read_gain_matrix(os.path.join(root_folder, filename[1]), s_type)
             else:
-                projection = None
-            return Sensors(tvb_sensors.labels, tvb_sensors.locations, tvb_sensors.orientations, projection, s_type)
+                gain_matrix = np.array([])
+            return Sensors(tvb_sensors.labels, tvb_sensors.locations,
+                           orientations=tvb_sensors.orientations, gain_matrix=gain_matrix, s_type=s_type)
         else:
             warning("\nNo Sensor file found at path " + path + "!")
             return None
 
-    def read_projection(self, path, s_type):
+    def read_gain_matrix(self, path, s_type):
         if os.path.isfile(path):
             if s_type == Sensors.TYPE_EEG:
                 tvb_prj = projections.ProjectionSurfaceEEG.from_file(path)
@@ -85,7 +88,7 @@ class TVBReader(ABCReader):
                 tvb_prj = projections.ProjectionSurfaceMEG.from_file(path)
             else:
                 tvb_prj = projections.ProjectionSurfaceSEEG.from_file(path)
-            return tvb_prj.projection_data
+            return tvb_prj.gain_matrix_data
         else:
             warning("\nNo Projection Matrix file found at path " + path + "!")
             return None
@@ -94,9 +97,9 @@ class TVBReader(ABCReader):
                   connectivity_file="connectivity.zip",
                   surface_file="surface.zip",
                   region_mapping_file="region_mapping.txt",
-                  eeg_sensors_files=[("eeg_brainstorm_65.txt", "projection_eeg_65_surface_16k.npy")],
-                  meg_sensors_files=[("meg_brainstorm_276.txt", "projection_meg_276_surface_16k.npy")],
-                  seeg_sensors_files=[("seeg_588.txt", "projection_seeg_588_surface_16k.npy")],
+                  eeg_sensors_files=[("eeg_brainstorm_65.txt", "gain_matrix_eeg_65_surface_16k.npy")],
+                  meg_sensors_files=[("meg_brainstorm_276.txt", "gain_matrix_meg_276_surface_16k.npy")],
+                  seeg_sensors_files=[("seeg_588.txt", "gain_matrix_seeg_588_surface_16k.npy")],
                   ):
         conn = self.read_connectivity(os.path.join(root_folder, connectivity_file))
         srf = self.read_cortical_surface(os.path.join(root_folder, surface_file))

@@ -94,8 +94,8 @@ class SDEModelInversionService(ODEModelInversionService):
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model
 
-    def generate_model_data(self, statistical_model, signals, projection=None):
-        return super(SDEModelInversionService, self).generate_model_data(statistical_model, signals, projection,
+    def generate_model_data(self, statistical_model, signals, gain_matrix=None):
+        return super(SDEModelInversionService, self).generate_model_data(statistical_model, signals, gain_matrix,
                                                                          x1var=self.x1var, zvar=self.zvar)
 
     def plot_fit_results(self, est, statistical_model, signals, time=None, seizure_indices=None, trajectories_plot=False,

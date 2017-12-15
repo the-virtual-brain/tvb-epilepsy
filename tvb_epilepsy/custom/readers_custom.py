@@ -22,7 +22,7 @@ class CustomReader(ABCReader):
     def read_connectivity(self, h5_path):
         """
         :param h5_path: Path towards a custom Connectivity H5 file
-        :return: Weights, Tracts, Region centers
+        :return: Weights, Tracts, Region centres
         """
         self.logger.info("Reading a Connectivity from: " + h5_path)
         h5_file = h5py.File(h5_path, 'r', libver='latest')
@@ -30,13 +30,13 @@ class CustomReader(ABCReader):
         self.logger.debug("Weights shape:" + str(h5_file['/weights'].shape))
         weights = h5_file['/weights'][()]
         tract_lengths = h5_file['/tract_lengths'][()]
-        # TODO: should change to English centers than French centres!
-        region_centers = h5_file['/centres'][()]
+        # TODO: should change to English centres than French centres!
+        region_centres = h5_file['/centres'][()]
         region_labels = h5_file['/region_labels'][()]
         orientations = h5_file['/orientations'][()]
         hemispheres = h5_file['/hemispheres'][()]
         h5_file.close()
-        return Connectivity(h5_path, weights, tract_lengths, region_labels, region_centers, hemispheres, orientations)
+        return Connectivity(h5_path, weights, tract_lengths, region_labels, region_centres, hemispheres, orientations)
 
     def read_cortical_surface(self, h5_path):
         if os.path.isfile(h5_path):
@@ -82,7 +82,7 @@ class CustomReader(ABCReader):
     def read_sensors(self, filename, root_folder, s_type):
         filename = ensure_list(filename)
         path = os.path.join(root_folder, filename[0])
-        projection = None
+        gain_matrix = None
         if os.path.isfile(path):
             self.logger.info("Reading Sensors from: " + path)
             h5_file = h5py.File(path, 'r', libver='latest')
@@ -93,19 +93,19 @@ class CustomReader(ABCReader):
                 orientations = h5_file['/orientations'][()]
             else:
                 orientations = None
-            if '/projection' in h5_file:
-                projection = h5_file['/projection'][()]
+            if '/gain_matrix' in h5_file:
+                gain_matrix = h5_file['/gain_matrix'][()]
             elif len(filename) > 1:
                 path = os.path.join(root_folder, filename[1])
                 if os.path.isfile(path):
-                    projection = self.read_projection(path, s_type)
+                    gain_matrix = self.read_gain_matrix(path, s_type)
             h5_file.close()
-            return Sensors(labels, locations, orientations, projection, s_type=s_type)
+            return Sensors(labels, locations, orientations=orientations, gain_matrix=gain_matrix, s_type=s_type)
         else:
             warning("\nNo Sensor file found at path " + path + "!")
             return None
 
-    def read_projection(self, path, s_type):
+    def read_gain_matrix(self, path, s_type):
         if os.path.isfile(path):
             return np.load(path)
         else:

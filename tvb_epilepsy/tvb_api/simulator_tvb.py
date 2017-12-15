@@ -31,7 +31,7 @@ class SimulatorTVB(ABCSimulator):
         return connectivity.Connectivity(use_storage=False, weights=model_connectivity,
                                          tract_lengths=TIME_DELAYS_FLAG*vep_conn.tract_lengths,
                                          region_labels=vep_conn.region_labels,
-                                         centres=vep_conn.centers, hemispheres=vep_conn.hemispheres,
+                                         centres=vep_conn.centres, hemispheres=vep_conn.hemispheres,
                                          orientations=vep_conn.orientations, areas=vep_conn.areas)
 
     def config_simulation(self, initial_conditions=None):

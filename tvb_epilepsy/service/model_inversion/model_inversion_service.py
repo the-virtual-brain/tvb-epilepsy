@@ -63,7 +63,7 @@ class ModelInversionService(object):
             self._copy_attributes(hypothesis, ["lsa_propagation_strengths", "type"],
                                   ["lsa_propagation_strengths", "hypothesis_type"],  deep_copy=True, check_none=True)
             self.logger.info("Input hypothesis set...")
-        self.projection = kwargs.pop("projection", None)
+        self.gain_matrix = kwargs.pop("gain_matrix", None)
         self.sensors_locations = kwargs.pop("sensors_locations", None)
         self.sensors_labels = kwargs.pop("sensors_labels", None)
         sensors = kwargs.pop("sensors", None)
@@ -79,8 +79,8 @@ class ModelInversionService(object):
             self._copy_attributes(connectivity, ["region_labels", "centers", "orientations"],
                                   ["region_labels", "region_centers", "region_orientations"], deep_copy=True, check_none=True)
         if isinstance(sensors, Sensors):
-            self._copy_attributes(sensors, ["labels", "locations", "projection"],
-                                  ["sensors_labels", "sensors_locations", "projection"], deep_copy=True, check_none=True)
+            self._copy_attributes(sensors, ["labels", "locations", "gain_matrix"],
+                                  ["sensors_labels", "sensors_locations", "gain_matrix"], deep_copy=True, check_none=True)
         self.tau1 = self.TAU1_DEF
         self.tau0 = self.TAU0_DEF
         if np.in1d(dynamical_model, AVAILABLE_DYNAMICAL_MODELS_NAMES):
