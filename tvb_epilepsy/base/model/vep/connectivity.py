@@ -4,7 +4,8 @@ import numpy as np
 from matplotlib import pyplot
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
-from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, construct_import_path
+from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, labels_to_inds, \
+                                                                                                   construct_import_path
 from tvb_epilepsy.base.utils.math_utils import normalize_weights, compute_in_degree
 from tvb_epilepsy.base.utils.plot_utils import plot_regions2regions, save_figure, check_show, plot_vector
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
@@ -91,6 +92,9 @@ class Connectivity(object):
             filename = self.name + ".h5"
         h5_model = self._prepare_for_h5(connectivity_variants)
         h5_model.write_to_h5(folder, filename)
+
+    def get_regions_inds_by_labels(self, lbls):
+        return labels_to_inds(self.region_labels, lbls)
 
     def plot(self, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
                       figure_format=FIG_FORMAT, figure_name='Connectivity ', figsize=VERY_LARGE_SIZE):
