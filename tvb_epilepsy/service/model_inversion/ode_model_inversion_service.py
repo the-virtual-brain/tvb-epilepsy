@@ -4,7 +4,6 @@ from copy import deepcopy
 
 import numpy as np
 import pylab as pl
-from scipy.signal import decimate
 
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, assert_arrays, \
@@ -13,8 +12,9 @@ from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import \
                                                         EULER_METHODS, OBSERVATION_MODEL_EXPRESSIONS, OBSERVATION_MODELS
-from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
+from tvb_epilepsy.service.signal_factory import decimate_signals, cut_signals_tails
+from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
 from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DISTRIBUTIONS
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
 from tvb_epilepsy.tvb_api.epileptor_models import *
@@ -72,9 +72,10 @@ class ODEModelInversionService(ModelInversionService):
 
     def select_signals_seeg(self, signals, rois, auto_selection, **kwargs):
         sensors = Sensors(self.sensors_labels, self.sensors_locations, gain_matrix=self.gain_matrix)
+        inds = range(signals.shape[1])
         if auto_selection.find("rois") >= 0:
             if sensors.gain_matrix is not None:
-                current_selection = sensors.select_contacts_rois(kwargs.get("rois", rois), self.signals_inds,
+                current_selection = sensors.select_sensors_rois(kwargs.get("rois", rois), self.signals_inds,
                                                                  kwargs.get("gain_matrix_th", None))
                 inds = np.where([s in current_selection for s in self.signals_inds])[0]
                 self.signals_inds = np.array(self.signals_inds)[inds].tolist()
@@ -82,9 +83,9 @@ class ODEModelInversionService(ModelInversionService):
         if auto_selection.find("correlation-power") >= 0:
             power = kwargs.get("power", np.sum((signals-np.mean(signals, axis=0))**2, axis=0)/signals.shape[0])
             correlation = kwargs.get("correlation", np.corrcoef(signals.T))
-            current_selection = sensors.select_contacts_corr(correlation, self.signals_inds, power=power,
+            current_selection = sensors.select_sensors_corr(correlation, self.signals_inds, power=power,
                                                              n_electrodes=kwargs.get("n_electrodes"),
-                                                             contacts_per_electrode=kwargs.get("contacts_per_electrode", 1),
+                                                             sensors_per_electrode=kwargs.get("sensors_per_electrode", 1),
                                                              group_electrodes=kwargs.get("group_electrodes", True))
             inds = np.where([s in current_selection for s in self.signals_inds])[0]
             self.signals_inds = np.array(self.signals_inds)[inds].tolist()
@@ -106,21 +107,6 @@ class ODEModelInversionService(ModelInversionService):
             signals = signals[:, inds]
             self.signals_inds = (np.array(self.signals_inds)[inds]).tolist()
         return signals
-
-    def decimate_signals(self, time, signals, decim_ratio):
-        signals = decimate(signals, decim_ratio, axis=0, zero_phase=True)
-        time = decimate(time, decim_ratio, zero_phase=True)
-        self.dt = np.mean(np.diff(time))
-        self.observation_shape = signals.shape
-        (self.n_times, self.n_signals) = self.observation_shape
-        return signals, time
-
-    def cut_signals_tails(self, time, signals, cut_tails):
-        signals = signals[cut_tails[0]:-cut_tails[-1]]
-        time = time[cut_tails[0]:-cut_tails[-1]]
-        self.observation_shape = signals.shape
-        (self.n_times, self.n_signals) = self.observation_shape
-        return signals, time
 
     def set_empirical_target_data(self, target_data, **kwargs):
         self.data_type = "seeg"
@@ -190,9 +176,11 @@ class ODEModelInversionService(ModelInversionService):
                                                    kwargs.pop("auto_selection", "rois-correlation-power"), **kwargs)
         time = self.set_time(target_data.get("time", None))
         if kwargs.get("decimate", 1) > 1:
-            signals, time = self.decimate_signals(time, signals, kwargs.get("decimate"))
+            signals, time, self.dt, self.n_times = decimate_signals(time, signals, kwargs.get("decimate"))
+            self.observation_shape = (self.n_times, self.n_signals)
         if np.sum(kwargs.get("cut_signals_tails", (0, 0))) > 0:
-            signals, time = self.cut_signals_tails(time, signals, kwargs.get("cut_signals_tails"))
+            signals, time, self.n_times = cut_signals_tails(time, signals, kwargs.get("cut_signals_tails"))
+            self.observation_shape = (self.n_times, self.n_signals)
         signals -= signals.min()
         signals /= signals.max()
         statistical_model.n_signals = self.n_signals
@@ -339,52 +327,14 @@ class ODEModelInversionService(ModelInversionService):
                 model_data.update({p.name + "_p": np.array(p.pdf_params().values()) + np.ones((2,))})
         return sort_dict(model_data)
 
-
-def viz_phase_space(data):
-    opt = len(data['x1']) == 1
-    npz = np.load('data.R.npz')
-    tr = lambda A: np.transpose(A, (0, 2, 1))
-    x, z = tr(data['x']), tr(data['z'])
-    tau0 = npz['tau0']
-    X, Z = np.mgrid[-5.0:5.0:50j, -5.0:5.0:50j]
-    dX = (npz['I1'] + 1.0) - X ** 3.0 - 2.0 * X ** 2.0 - Z
-    x0mean = data['x0'].mean(axis=0)
-    Kmean = data['K'].mean(axis=0)
-
-    def nullclines(i):
-        pl.contour(X, Z, dX, 0, colors='r')
-        dZ = (1.0 / tau0) * (4.0 * (X - x0mean[i])) - Z - Kmean * (-npz['Ic'][i] * (1.8 + X))
-        pl.contour(X, Z, dZ, 0, colors='b')
-
-    for i in range(x.shape[-1]):
-        pl.subplot(2, 3, i + 1)
-        if opt:
-            pl.plot(x[0, :, i], z[0, :, i], 'k', alpha=0.5)
-        else:
-            for j in range(1 if opt else 10):
-                pl.plot(x[-j, :, i], z[-j, :, i], 'k', alpha=0.2, linewidth=0.5)
-        nullclines(i)
-        pl.grid(True)
-        pl.xlabel('x(t)')
-        pl.ylabel('z(t)')
-        # pl.title(f'node {i}')
-    pl.tight_layout()
-
-
-def viz_pair_plots(csv, keys, skip=0):
-    n = len(keys)
-    if isinstance(csv, dict):
-        csv = [csv]  # following assumes list of chains' results
-    for i, key_i in enumerate(keys):
-        for j, key_j in enumerate(keys):
-            pl.subplot(n, n, i * n + j + 1)
-            for csvi in csv:
-                if i == j:
-                    pl.hist(csvi[key_i][skip:], 20, log=True)
-                else:
-                    pl.plot(csvi[key_j][skip:], csvi[key_i][skip:], '.')
-            if i == 0:
-                pl.title(key_j)
-            if j == 0:
-                pl.ylabel(key_i)
-    pl.tight_layout()
+    # def violin_x0(self, csv, skip=0, x0c=-1.8, x0lim=(-6, 0), per_chain=False):
+    #     from pylab import subplot, axhline, violinplot, ylim, legend, xlabel, title
+    #     if not per_chain:
+    #         from ..io.stan import merge_csv_data
+    #         csv = [merge_csv_data(*csv, skip=skip)]
+    #     for i, csvi in enumerate(csv):
+    #         subplot(1, len(csv), i + 1)
+    #         axhline(x0c, color='r');
+    #         violinplot(csvi['x0'])
+    #         ylim(x0lim)
+    #         legend((f'x0 < {x0c} healthy', 'p(x0)',)), xlabel('Region'), title(f'Chain {i+1}')
