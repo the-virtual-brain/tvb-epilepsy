@@ -26,7 +26,7 @@ FOLDER_VEP_HOME = "/Users/dionperd/VEPlocal/tests"
 
 def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                         sensors_filename="SensorsSEEG_116.h5", stats_model_name="vep_sde",
-                        model_code_dir="/Users/dionperd/CBR/software/git/vep_stan", EMPIRICAL="",
+                        model_code_dir="/Users/dionperd/VEPtools/git/vep_stan", EMPIRICAL="",
                         times_on_off=[], channel_lbls=[], channel_inds=[], fitmethod="optimizing",
                         stan_service="CmdStan", results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES, **kwargs):
 
@@ -97,7 +97,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             model_inversion.sensors_labels[vois_ts_dict["channel_inds"]] = channel_lbls
             manual_selection = channel_inds
             n_electrodes = 4
-            contacts_per_electrode = 2
+            sensors_per_electrode = 2
         else:
             # -------------------------- Get simulated data (simulate if necessary) -----------------------------------
             target_data_type = "simulated"
@@ -111,14 +111,14 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                                        noise_intensity=10**-3)
             manual_selection = []
             n_electrodes = 8
-            contacts_per_electrode = 1
+            sensors_per_electrode = 1
             channel_lbls = model_inversion.sensors_labels
         # -------------------------- Select and set observation signals -----------------------------------
         signals, time, statistical_model, vois_ts_dict = \
             model_inversion.set_target_data_and_time(target_data_type, vois_ts_dict, statistical_model,
                                                      select_signals=True, manual_selection=manual_selection, # auto_selection=False,
                                                      n_electrodes=n_electrodes, auto_selection="correlation-power",
-                                                     contacts_per_electrode=contacts_per_electrode, group_electrodes=True,
+                                                     sensors_per_electrode=sensors_per_electrode, group_electrodes=True,
                                                      decimate=decimate, cut_signals_tails=cut_signals_tails)
         # if len(model_inversion.signals_inds) < head.get_sensors_id().number_of_sensors:
         #     statistical_model = \
