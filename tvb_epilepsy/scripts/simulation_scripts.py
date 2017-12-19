@@ -93,10 +93,11 @@ def setup_TVB_simulation_from_model_configuration(model_configuration, connectiv
     if noise_intensity is None:
         noise_intensity = default_noise_intensity
 
-    if sim_type == "fast":
-        noise_intensity *= 10
-    elif sim_type == "fitting":
-        noise_intensity = [0.0, 10 ** -3]
+    if model._ui_name == "EpileptorDP2D":
+        if sim_type == "fast":
+            noise_intensity *= 10
+        elif sim_type == "fitting":
+            noise_intensity = [0.0, 10 ** -3]
 
     if noise_instance is not None:
         noise_instance.nsig = noise_intensity
