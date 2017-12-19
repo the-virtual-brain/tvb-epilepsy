@@ -128,7 +128,7 @@ class SimulatorTVB(ABCSimulator):
                         curr_block += 1.0
             except Exception, error_message:
                 status = False
-                warning("Something went wrong with this simulation...:" + "\n" + error_message)
+                warning("Something went wrong with this simulation...:" + "\n" + str(error_message))
                 return None, None, status
 
             return numpy.array(tavg_time), numpy.array(tavg_data), status
