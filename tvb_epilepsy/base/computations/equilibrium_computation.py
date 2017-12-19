@@ -96,12 +96,9 @@ def calc_eq_g(x1eq, gamma=GAMMA_DEF):
     return calc_fg(x1eq, 0.0, gamma, tau1=1.0)
 
 
-def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, y1eq=None, Iext1=None, x2=0.0,
-               slope=SLOPE_DEF, a=A_DEF, b=B_DEF, d=D_DEF, x1_neg=True, s=S_DEF, x2_neg=True):
+def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, s=S_DEF, x2_neg=True):
     if geq is None:
         geq = calc_eq_g(x1eq)
-    if zeq is None:
-        zeq = calc_eq_z(x1eq, y1eq, Iext1, "6d", x2, slope, a, b, d, x1_neg)
     zeq, geq, Iext2, s = assert_arrays([zeq, geq, Iext2, s])
     shape = zeq.shape
     n = zeq.size
@@ -225,10 +222,9 @@ def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, y1eq=None, Iext1
     return x2eq, x2_neg
 
 
-def calc_eq_pop2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, y1eq=None, Iext1=None, x2=0.0,
-                 a=A_DEF, b=B_DEF, d=D_DEF, slope=SLOPE_DEF, s=S_DEF, x1_neg=True, x2_neg=True):
-    x2eq, x2_neg = calc_eq_x2(Iext2, y2eq, zeq, geq, x1eq, y1eq, Iext1, x2, slope, a, b, d, s, x1_neg, x2_neg)
-    y2eq = calc_eq_y2(x2eq, s, x2_neg=x2_neg)
+def calc_eq_pop2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, s=S_DEF, x2_neg=True):
+    x2eq, x2_neg = calc_eq_x2(Iext2, y2eq, zeq, geq, x1eq, s, x2_neg)
+    y2eq = calc_eq_y2(x2eq, s, x2_neg)
     return x2eq, y2eq
 
 
@@ -432,15 +428,14 @@ def assert_equilibrium_point(epileptor_model, weights, equilibrium_point):
         #        + "\n" + "model dfun = " + str(dfun))
 
 
-def calc_eq_6d(x0, K, w, yc, Iext1, Iext2, x1eq=None, a=A_DEF, b=B_DEF, d=D_DEF, slope=SLOPE_DEF, s=S_DEF,
-               gamma=GAMMA_DEF, zmode=numpy.array("lin")):
+def calc_eq_6d(x0, K, w, yc, Iext1, Iext2, x1eq=None, a=A_DEF, b=B_DEF, d=D_DEF, s=S_DEF, gamma=GAMMA_DEF,
+               zmode=numpy.array("lin")):
     if x1eq is None:
         x1eq = calc_eq_x1(yc, Iext1, x0, K, w, a, b, d, zmode=zmode, model="6d")
     y1eq = calc_eq_y1(x1eq, yc, d)
     zeq = calc_eq_z(x1eq, y1eq, Iext1, "6d", x2=0.0, a=a, b=b, d=d)
     geq = calc_eq_g(x1eq, gamma)
-    x2eq, y2eq = calc_eq_pop2(Iext2, y2eq=None, zeq=zeq, geq=geq, x1eq=x1eq, y1eq=y1eq, slope=slope, a=a, b=b, d=d,
-                              s=s, x1_neg=(x1eq<0.0), x2_neg=True)
+    x2eq, y2eq = calc_eq_pop2(Iext2, y2eq=None, zeq=zeq, geq=geq, x1eq=x1eq, s=s, x2_neg=True)
     equilibrium_point = numpy.c_[x1eq, y1eq, zeq, x2eq, y2eq, geq].T
     return equilibrium_point
 
@@ -453,8 +448,7 @@ def calc_eq_11d(x0, K, w, yc, Iext1, Iext2, slope, fun_slope_Iext2, x1eq=None, a
     zeq = calc_eq_z(x1eq, y1eq, Iext1, "6d", x2=0.0, a=a, b=b, d=d)
     geq = calc_eq_g(x1eq, gamma)
     slope_eq, Iext2_eq = fun_slope_Iext2(zeq, geq, pmode, slope, Iext2)
-    x2eq, y2eq = calc_eq_pop2(Iext2, y2eq=None, zeq=zeq, geq=geq, x1eq=x1eq, y1eq=y1eq, slope=slope, a=a, b=b, d=d,
-                              s=s, x1_neg=(x1eq < 0.0), x2_neg=True)
+    x2eq, y2eq = calc_eq_pop2(Iext2, y2eq=None, zeq=zeq, geq=geq, x1eq=x1eq, s=s, x2_neg=True)
     equilibrium_point = numpy.c_[x1eq, y1eq, zeq, x2eq, y2eq, geq,
                                  x0, slope_eq, Iext1*numpy.ones(x1eq.shape), Iext2_eq, K].T
     return equilibrium_point, slope_eq, Iext2_eq
@@ -472,8 +466,8 @@ def calc_equilibrium_point(epileptor_model, model_configuration, weights):
         equilibrium_point = calc_eq_6d(epileptor_model.x0, epileptor_model.K, weights,
                                        epileptor_model.yc, epileptor_model.Iext1, epileptor_model.Iext2,
                                        model_configuration.x1EQ, epileptor_model.a, epileptor_model.b,
-                                       epileptor_model.d, epileptor_model.slope, epileptor_model.s,
-                                       epileptor_model.gamma, zmode=epileptor_model.zmode)
+                                       epileptor_model.d, epileptor_model.s, epileptor_model.gamma,
+                                       zmode=epileptor_model.zmode)
     elif epileptor_model._ui_name == "EpileptorDPrealistic":
             equilibrium_point = calc_eq_11d(epileptor_model.x0, epileptor_model.K, weights,
                                             epileptor_model.yc, epileptor_model.Iext1, epileptor_model.Iext2,
@@ -487,8 +481,7 @@ def calc_equilibrium_point(epileptor_model, model_configuration, weights):
         equilibrium_point = calc_eq_6d(epileptor_model.x0, epileptor_model.Ks, weights,
                                        epileptor_model.c, epileptor_model.Iext, epileptor_model.Iext2,
                                        model_configuration.x1EQ, epileptor_model.a, epileptor_model.b,
-                                       epileptor_model.d, epileptor_model.slope, epileptor_model.aa, gamma=GAMMA_DEF,
-                                       zmode=numpy.array("lin"))
+                                       epileptor_model.d, epileptor_model.aa, gamma=GAMMA_DEF, zmode=numpy.array("lin"))
     if (epileptor_model._ui_name != "CustomEpileptor"):
         assert_equilibrium_point(epileptor_model, weights, equilibrium_point)
     else:
