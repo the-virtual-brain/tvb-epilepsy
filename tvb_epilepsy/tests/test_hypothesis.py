@@ -9,7 +9,6 @@ from tvb_epilepsy.tests.base import get_temporary_files_path, remove_temporary_t
 
 
 class TestHypothesis():
-
     @classmethod
     def setup_class(cls):
         for direc in (FOLDER_LOGS, FOLDER_RES, FOLDER_FIGURES):
@@ -38,8 +37,7 @@ class TestHypothesis():
         lsa_hypothesis1 = read_h5_model(os.path.join(folder, file_name)).convert_from_h5_model(
             obj=deepcopy(lsa_hypothesis))
         assert_equal_objects(lsa_hypothesis, lsa_hypothesis1)
-        lsa_hypothesis2 = read_h5_model(os.path.join(folder, file_name)).convert_from_h5_model(
-            children_dict=hypothesis_template)
+        lsa_hypothesis2 = read_h5_model(os.path.join(folder, file_name)).convert_from_h5_model()
         assert_equal_objects(lsa_hypothesis, lsa_hypothesis2)
 
     @classmethod
