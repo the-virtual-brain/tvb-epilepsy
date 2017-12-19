@@ -22,7 +22,7 @@ else:
     from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
 
 
-PSE_FLAG = True
+PSE_FLAG = False
 SIM_FLAG = True
 
 
@@ -129,10 +129,9 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
                                               configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
         model_configuration.write_to_h5(folder_res, "ModelConfiguration.h5")
         # Plot nullclines and equilibria of model configuration
-        model_configuration_service.plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
-                                                       special_idx=disease_indices, model="6d", zmode="lin",
-                                                       figure_name=hyp.name + "_Nullclines and equilibria",
-                                                       figure_dir=folder_figs)
+        model_configuration_service.plot_state_space(model_configuration, head.connectivity.region_labels,
+                                                     special_idx=disease_indices, model="2d", zmode="lin",
+                                                     figure_name=hyp.name + "_StateSpace", figure_dir=folder_figs)
         logger.info("\n\nRunning LSA...")
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
         lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)

@@ -109,10 +109,10 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
         model_configuration.write_to_h5(results_dir, hyp.name + "_ModelConfig.h5")
     # Plot nullclines and equilibria of model configuration
     if plot_flag:
-        model_configuration_service.plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
-                                                   special_idx=hyp.get_regions_disease(), model="6d", zmode="lin",
-                                                   figure_name=hyp.name + "_Nullclines and equilibria",
-                                                   figure_dir=figure_dir)
+        model_configuration_service.plot_state_space(model_configuration, head.connectivity.region_labels,
+                                                     special_idx=hyp.get_regions_disease(), model="6d", zmode="lin",
+                                                     figure_name=hyp.name + "_Nullclines and equilibria",
+                                                     figure_dir=figure_dir)
 
     logger.info("\n\nRunning LSA...")
     lsa_service = LSAService(eigen_vectors_number=eigen_vectors_number,

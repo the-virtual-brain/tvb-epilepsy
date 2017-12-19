@@ -48,7 +48,7 @@ if __name__ == "__main__":
     # #                                                                                               this_est["MC"])
     # #     model_configuration_fit.write_to_h5(results_dir, hyp_fit.name + "_ModelConfig.h5")
     # #     # Plot nullclines and equilibria of model configuration
-    # #     model_configuration_service.plot_nullclines_eq(model_configuration_fit,
+    # #     model_configuration_service.plot_state_space(model_configuration_fit,
     # #                                                    model_configuration_service.region_labels,
     # #                                                    special_idx=statistical_model.active_regions,
     # #                                                    model="6d", zmode="lin",

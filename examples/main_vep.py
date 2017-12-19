@@ -163,9 +163,9 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                  read_h5_model(os.path.join(FOLDER_RES, hyp.name + "_ModelConfig.h5")).
                                                  convert_from_h5_model(), logger=logger)))
         # Plot nullclines and equilibria of model configuration
-        model_configuration_service.plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
-                                               special_idx=disease_indices, model="6d", zmode="lin",
-                                               figure_name=hyp.name + "_Nullclines and equilibria")
+        model_configuration_service.plot_state_space(model_configuration, head.connectivity.region_labels,
+                                                     special_idx=disease_indices, model="6d", zmode="lin",
+                                                     figure_name=hyp.name + "_Nullclines and equilibria")
         logger.info("\n\nRunning LSA...")
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
         lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)

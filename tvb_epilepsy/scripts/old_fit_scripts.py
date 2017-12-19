@@ -480,9 +480,9 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
         model_configuration.write_to_h5(FOLDER_RES, hyp.name + "_ModelConfig.h5")
 
         # Plot nullclines and equilibria of model configuration
-        model_configuration_service.plot_nullclines_eq(model_configuration, head.connectivity.region_labels,
-                                                       special_idx=disease_indices, model="6d", zmode="lin",
-                                                       figure_name=hyp.name + "_Nullclines and equilibria")
+        model_configuration_service.plot_state_space(model_configuration, head.connectivity.region_labels,
+                                                     special_idx=disease_indices, model="6d", zmode="lin",
+                                                     figure_name=hyp.name + "_Nullclines and equilibria")
 
         logger.info("\n\nRunning LSA...")
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
@@ -597,9 +597,9 @@ def main_fit_sim_hyplsa(stats_model_name="vep_original", EMPIRICAL='', times_on_
         model_configuration_fit.write_to_h5(FOLDER_RES, hyp_fit.name + "_ModelConfig.h5")
 
         # Plot nullclines and equilibria of model configuration
-        model_configuration_service.plot_nullclines_eq(model_configuration_fit, head.connectivity.region_labels,
-                                                       special_idx=disease_indices, model="6d", zmode="lin",
-                                                       figure_name=hyp_fit.name + "_Nullclines and equilibria")
+        model_configuration_service.plot_state_space(model_configuration_fit, head.connectivity.region_labels,
+                                                     special_idx=disease_indices, model="6d", zmode="lin",
+                                                     figure_name=hyp_fit.name + "_Nullclines and equilibria")
 
         print("Done!")
 
