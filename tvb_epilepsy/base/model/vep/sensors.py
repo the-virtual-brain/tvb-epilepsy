@@ -152,9 +152,9 @@ class Sensors(object):
         for ind in range(len(sensors_inds) - 1):
             iS1 = sensors_inds[ind]
             iS2 = sensors_inds[ind+1]
-            if (self.labels[iS1][0] == self.labels[iS2 + 1][0]) and \
-                    int(re.findall(r'\d+', self.labels[iS1])) == \
-                    int(re.findall(r'\d+', self.labels[iS2 + 1]) - 1):
+            if (self.labels[iS1][0] == self.labels[iS2][0]) and \
+                    int(re.findall(r'\d+', self.labels[iS1])[0]) == \
+                    int(re.findall(r'\d+', self.labels[iS2])[0]) - 1:
                 bipolar_sensors_lbls.append(self.labels[iS1] + "-" + self.labels[iS2])
                 bipolar_sensors_inds.append(iS1)
         return bipolar_sensors_inds, bipolar_sensors_lbls

@@ -4,7 +4,7 @@ import os
 
 import numpy as np
 from scipy.io import loadmat, savemat
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES, FOLDER_VEP_ONLINE
 from tvb_epilepsy.base.constants.module_constants import TVB, CUSTOM
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
@@ -17,17 +17,17 @@ from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanSer
 from tvb_epilepsy.service.model_inversion.stan.pystan_service import PyStanService
 from tvb_epilepsy.scripts.hypothesis_scripts import from_head_to_hypotheses, from_hypothesis_to_model_config_lsa
 from tvb_epilepsy.scripts.simulation_scripts import from_model_configuration_to_simulation
-from tvb_epilepsy.scripts.seeg_data_scripts import prepare_seeg_observable, get_bipolar_channels
+from tvb_epilepsy.scripts.seeg_data_scripts import prepare_seeg_observable
 
 
 logger = initialize_logger(__name__)
 
-FOLDER_VEP_HOME = "/Users/dionperd/VEPlocal/tests"
+FOLDER_VEP_HOME = os.path.join(FOLDER_VEP_ONLINE, "tests")
 
 def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                         sensors_filename="SensorsSEEG_116.h5", stats_model_name="vep_sde",
                         model_code_dir="/Users/dionperd/VEPtools/git/vep_stan", EMPIRICAL="",
-                        times_on_off=[], channel_lbls=[], channel_inds=[], fitmethod="optimizing",
+                        times_on_off=[], sensors_lbls=[], sensors_inds=[], fitmethod="optimizing",
                         stan_service="CmdStan", results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES, **kwargs):
 
     # ------------------------------Stan model and service--------------------------------------
@@ -73,29 +73,29 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                 # vois_ts_dict = read_h5_model(ts_file).convert_from_h5_model()
                 vois_ts_dict = loadmat(ts_file)
                 time = vois_ts_dict["time"].flatten()
-                channel_inds = np.array(channel_inds).flatten().tolist()
-                channel_lbls = np.array(channel_lbls).flatten().tolist()
-                vois_ts_dict.update({"time": time, "channel_inds": channel_inds, "channel_lbls": channel_lbls})
+                sensors_inds = np.array(vois_ts_dict["sensors_inds"]).flatten().tolist()
+                sensors_lbls = np.array(vois_ts_dict["sensors_lbls"]).flatten().tolist()
+                vois_ts_dict.update({"time": time, "sensors_inds": sensors_inds, "sensors_lbls": sensors_lbls})
                 # convert_to_h5_model(vois_ts_dict).write_to_h5(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts_empirical.h5")
                 savemat(ts_file, vois_ts_dict)
             except:
-                signals, time, fs = prepare_seeg_observable(EMPIRICAL, times_on_off, channel_lbls, plot_flag=True,
+                signals, time, fs = prepare_seeg_observable(EMPIRICAL, times_on_off, sensors_lbls, plot_flag=True,
                                                             log_flag=True)
-                if len(channel_inds) > 1:
-                    channel_inds, channel_lbls = get_bipolar_channels(channel_inds, channel_lbls)
-                inds = np.argsort(channel_inds)
-                channel_inds = np.array(channel_inds)[inds].flatten().tolist()
-                channel_lbls = np.array(channel_lbls)[inds].flatten().tolist()
+                if len(sensors_inds) > 1: # get_bipolar_channels(sensors_inds, sensors_lbls)
+                    sensors_inds, sensors_lbls = head.get_sensors_id().get_bipolar_sensors(sensors_inds=sensors_inds)
+                inds = np.argsort(sensors_inds)
+                sensors_inds = np.array(sensors_inds)[inds].flatten().tolist()
+                sensors_lbls = np.array(sensors_lbls)[inds].flatten().tolist()
                 all_signals = np.zeros((signals.shape[0], len(model_inversion.sensors_labels)))
-                all_signals[:, channel_inds] = signals[:,inds]
+                all_signals[:, sensors_inds] = signals[:,inds]
                 signals = all_signals
                 del all_signals
                 vois_ts_dict = {"time": time.flatten(), "signals": signals,
-                                "channel_inds": channel_inds, "channel_lbls": channel_lbls}
+                                "sensors_inds": sensors_inds, "sensors_lbls": sensors_lbls}
                #convert_to_h5_model(vois_ts_dict).write_to_h5(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts_empirical.h5")
                 savemat(ts_file, vois_ts_dict)
-            model_inversion.sensors_labels[vois_ts_dict["channel_inds"]] = channel_lbls
-            manual_selection = channel_inds
+            model_inversion.sensors_labels[vois_ts_dict["sensors_inds"]] = sensors_lbls
+            manual_selection = sensors_inds
             n_electrodes = 4
             sensors_per_electrode = 2
         else:
@@ -112,7 +112,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             manual_selection = []
             n_electrodes = 8
             sensors_per_electrode = 1
-            channel_lbls = model_inversion.sensors_labels
+            sensors_lbls = model_inversion.sensors_labels
         # -------------------------- Select and set observation signals -----------------------------------
         signals, time, statistical_model, vois_ts_dict = \
             model_inversion.set_target_data_and_time(target_data_type, vois_ts_dict, statistical_model,
@@ -212,26 +212,26 @@ if __name__ == "__main__":
     DATA_CUSTOM = "/Users/dionperd/Dropbox/Work/VBtech/VEP/results/CC/" + SUBJECT
     SEEG_data = os.path.join("/Users/dionperd/Dropbox/Work/VBtech/VEP/data/CC", SUBJECT, "raw/seeg/ts_seizure")
     # TVB3 preselection:
-    # channel_lbls = [u"G'1", u"G'2", u"G'3", u"G'8", u"G'9", u"G'10", u"G'11", u"G'12", u"M'6", u"M'7", u"M'8", u"L'4",
+    # sensors_lbls = [u"G'1", u"G'2", u"G'3", u"G'8", u"G'9", u"G'10", u"G'11", u"G'12", u"M'6", u"M'7", u"M'8", u"L'4",
     #                 u"L'5",  u"L'6", u"L'7", u"L'8", u"L'9"]
-    # channel_inds = [28, 29, 30, 35, 36, 37, 38, 39, 63, 64, 65, 47, 48, 49, 50, 51, 52]
+    # sensors_inds = [28, 29, 30, 35, 36, 37, 38, 39, 63, 64, 65, 47, 48, 49, 50, 51, 52]
     # TVB3 selection:
-    channel_lbls = [u"G'1", u"G'2", u"G'11", u"G'12", u"M'7", u"M'8", u"L'5", u"L'6"]
-    channel_inds = [28, 29, 38, 39, 64, 65, 48, 49]
+    sensors_lbls = [u"G'1", u"G'2", u"G'11", u"G'12", u"M'7", u"M'8", u"L'5", u"L'6"]
+    sensors_inds = [28, 29, 38, 39, 64, 65, 48, 49]
     seizure = 'SZ1_0001.edf'
     times_on_off=[15.0, 35.0]
     ep_name = "clinical_hypothesis_postseeg"
     sensors_filename = "SensorsSEEG_116.h5"
     # # TVB4 preselection:
-    # channel_lbls = [u"D5", u"D6", u"D7",  u"D8", u"D9", u"D10", u"Z9", u"Z10", u"Z11", u"Z12", u"Z13", u"Z14",
+    # sensors_lbls = [u"D5", u"D6", u"D7",  u"D8", u"D9", u"D10", u"Z9", u"Z10", u"Z11", u"Z12", u"Z13", u"Z14",
     #                 u"S1", u"S2", u"S3", u"D'3", u"D'4", u"D'10", u"D'11", u"D'12", u"D'13", u"D'14"]
-    # channel_inds = [4, 5, 6, 7, 8, 9, 86, 87, 88, 89, 90, 91, 94, 95, 96, 112, 113, 119, 120, 121, 122, 123]
+    # sensors_inds = [4, 5, 6, 7, 8, 9, 86, 87, 88, 89, 90, 91, 94, 95, 96, 112, 113, 119, 120, 121, 122, 123]
     # # TVB4:
     # seizure = 'SZ3_0001.edf'
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
     # ep_name = "clinical_hypothesis_preseeg_right"
-    EMPIRICAL = False
+    EMPIRICAL = True
     stats_model_name = "vep_sde"
     stats_model_name = "vep-fe-rev-05"
     fitmethod = "sample"
@@ -240,7 +240,7 @@ if __name__ == "__main__":
         main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                             sensors_filename=sensors_filename, stats_model_name=stats_model_name,
                             model_code_dir=model_code_dir, EMPIRICAL=os.path.join(SEEG_data, seizure),
-                            times_on_off=[15.0, 35.0], channel_lbls=channel_lbls, channel_inds=channel_inds,
+                            times_on_off=[15.0, 35.0], sensors_lbls=sensors_lbls, sensors_inds=sensors_inds,
                             fitmethod=fitmethod, stan_service="CmdStan", results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES,
                             save_warmup=1, num_warmup=200, num_samples=200, delta=0.8, max_depth=7)  # , stan_service="PyStan"
     else:
