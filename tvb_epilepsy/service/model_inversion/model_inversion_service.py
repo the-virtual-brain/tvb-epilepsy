@@ -76,7 +76,7 @@ class ModelInversionService(object):
             if not(isinstance(sensors, list)):
                 sensors = head.get_sensors_id(sensor_ids=kwargs.pop("seeg_sensor_id", 0), s_type=Sensors.TYPE_SEEG)
         if isinstance(connectivity, Connectivity):
-            self._copy_attributes(connectivity, ["region_labels", "centers", "orientations"],
+            self._copy_attributes(connectivity, ["region_labels", "centres", "orientations"],
                                   ["region_labels", "region_centers", "region_orientations"], deep_copy=True, check_none=True)
         if isinstance(sensors, Sensors):
             self._copy_attributes(sensors, ["labels", "locations", "gain_matrix"],
