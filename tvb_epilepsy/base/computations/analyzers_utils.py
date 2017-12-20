@@ -125,7 +125,7 @@ def _butterworth_bandpass(fs, mode, lowcut, highcut, order=3):
         freqs.append(lowcut / nyq)  # normalize frequency
     if highcut is not None:
         freqs.append(highcut / nyq)  # normalize frequency
-    b, a = butter(order, freqs, btype=mode)
+    b, a = butter(order, freqs, btype=mode)     # btype : {'lowpass', 'highpass', 'bandpass', 'bandstop}, optional
     return b, a
 
 
