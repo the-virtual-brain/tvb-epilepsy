@@ -336,7 +336,8 @@ class ModelConfigurationService(object):
             x2 = 0.0
         else:
             y1 = calc_eq_y1(X1, yc, d=d)
-            x2 = calc_eq_x2(Iext2, y2eq=None, zeq=X1, x1eq=Z, s=s)[0]
+            x2 = 0.0 # as a simplification for faster computation without important consequences
+            # x2 = calc_eq_x2(Iext2, y2eq=None, zeq=X1, x1eq=Z, s=s)[0]
         fx1 = calc_fx1(X1, Z, y1=y1, Iext1=Iext1, slope=slope, a=a, b=b, d=d, tau1=tau1, x1_neg=None, model=model,
                        x2=x2)
         fz = calc_fz(X1, Z, x0=x0, tau1=tau1, tau0=tau0, zmode=zmode)
