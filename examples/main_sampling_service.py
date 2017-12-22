@@ -81,7 +81,7 @@ if __name__ == "__main__":
         name2 = "test2_" + distrib_name
         defaults = set_parameter_defaults(name2, _pdf=distrib_name, _shape=(2,2), _lo=0.0, _hi=2.0,
                                           **(deepcopy(target_stats)))
-        parameter2 = set_parameter(name=name2, optimize_pdf=False, use="manual", **defaults)
+        parameter2 = set_parameter(name=name2, use="manual", **defaults)
         for parameter in (parameter1, parameter2):
             logger.info(str(parameter))
             samples = sampler.generate_samples(parameter=parameter, stats=True)

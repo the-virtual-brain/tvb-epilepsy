@@ -24,9 +24,8 @@ class SDEStatisticalModel(ODEStatisticalModel):
         return super(SDEStatisticalModel, self).__repr__()
 
     def _add_parameters(self, x1var="x1", zvar="z", **defaults):
-        for p in [x1var, zvar]:
-            self.parameters.update({p: set_parameter(p, optimize_pdf=False, **defaults)})
-        self.parameters.update({"sig": set_parameter("sig", optimize_pdf=False, **defaults)})
+        for p in [x1var, zvar, "sig"]:
+            self.parameters.update({p: set_parameter(p, **defaults)})
 
     # def plot(self):
     #     figure_dir = os.path.join(FOLDER_FIGURES, "_ASM_" + self.name)

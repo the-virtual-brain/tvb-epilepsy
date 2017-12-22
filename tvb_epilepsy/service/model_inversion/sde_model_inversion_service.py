@@ -22,15 +22,17 @@ LOG = initialize_logger(__name__)
 
 class SDEModelInversionService(ODEModelInversionService):
 
-    SIG_DEF = 10 ** -4
-    X1_MIN = -3.0
-    X1_MAX = 3.0
+    SIG_DEF = 10 ** -3
+    X1_MIN = -2.0
+    X1_MAX = 1.0
     Z_MIN = 0.0
-    Z_MAX = 7.0
+    Z_MAX = 6.0
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name=None, 
                  sde_mode="dWt", logger=LOG, **kwargs):
         self.sde_mode = sde_mode
+        for constant, default in zip(["SIG_DEF", "X1_MIN", "X1_MAX", "Z_MIN", "Z_MAX"], [10**-3, -2.0, 1.0, 0.0, 6.0]):
+            setattr(self, constant, kwargs.get(constant, default))
         if isequal_string(sde_mode, "dWt"):
             self.x1var = "x1_dWt"
             self.zvar = "z_dWt"
@@ -58,7 +60,7 @@ class SDEModelInversionService(ODEModelInversionService):
                 elif EPILEPTOR_MODEL_NVARS[dynamical_model] > 2:
                     return model_noise_intensity_dict[dynamical_model][2]
         else:
-            return 1.0 / self.SIG_DEF
+            return self.SIG_DEF
 
     def set_default_parameters(self, **kwargs):
         # Generative model:

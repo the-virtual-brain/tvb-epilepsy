@@ -1,18 +1,5 @@
 functions {
 
-    matrix vector_differencing(int ni, int nj, row_vector xi, row_vector xj) {
-        matrix[nj, ni] Dij;
-        for (j in 1:nj) {
-            Dij[j] = xi - x[j];
-        }
-        return Dij';
-    }
-
-    row_vector calc_coupling(int ni, int nj, row vector xi, row vector xj, matrix MC) {
-        row_vector[ni] Dij = matrix vector_differencing(nn, x);
-        row_vector[ni] coupling = to_row_vector(rows_dot_product(MC, Dij));
-    }
-
     row_vector EpileptorDP2D_fun_x1(int nn, row_vector x1, row_vector z, real yc, real Iext1,
                                     real a, real db, real d, real slope, real tau1) {
         row_vector[nn] constants = rep_row_vector(Iext1 + yc, nn);
@@ -152,7 +139,7 @@ data {
     /* x1eq parameter (only normal distribution, ignoring _pdf) */
     real x1eq_lo;
     real x1eq_hi;
-    row_vector[n_regions] x1eq0;
+    vector[n_regions] x1eq0;
     //real zeq_lo;
     //real zeq_hi;
     /* x1init parameter (only normal distribution, ignoring _pdf) */
@@ -251,6 +238,83 @@ transformed data {
     real db;
     // Calculate db parameter, which corresponds to parameter b for the 2D reduced Epileptor (Proix etal 2014)
     db = d - b;
+    if (DEBUG >= 0){
+        print("DEBUG =", DEBUG, ", SIMULATE =", SIMULATE);
+        print("n_regions =", n_regions, ", n_active_regions =", n_active_regions, ", n_nonactive_regions =", n_nonactive_regions);
+        print("n_times =", n_times, ", n_signals =", n_signals);
+        if (DEBUG >= 1){
+            print("active_regions_flag =", active_regions_flag);
+            print("active_regions =", active_regions);
+            print("nonactive_regions =", nonactive_regions);
+        }
+        print("a =", a, ", b =", b, ", d =", d, ", yc =", yc, ", Iext1 =", Iext1, ", slope =", slope, ", x0cr =", x0cr, ", rx0 =", rx0);
+        print("x1_lo =", x1_lo, ", x1_hi =", x1_hi);
+        print("z_lo =", z_lo, ", z_hi =", z_hi);
+        print("x1eq_lo =", x1eq_lo, ", x1eq_hi =", x1eq_hi);
+        print("min(x1eq0)=", min(x1eq0), ", , max(x1eq0)=", max(x1eq0));
+        if (DEBUG >= 1){
+            print("x1eq0 =", x1eq0);
+        }
+        print("x1init_lo =", x1init_lo, ", x1init_hi =", x1init_hi);
+        print("zinit_lo =", zinit_lo, ", zinit_hi =", zinit_hi);
+        print("tau1_lo =", tau1_lo, ", tau1_hi =", tau1_hi, ", tau1_p =", tau1_p, ", tau1_loc =", tau1_loc, ", tau1_scale =", tau1_scale, ", tau1_pdf =", tau1_pdf);
+        print("tau0_lo =", tau0_lo, ", tau0_hi =", tau0_hi, ", tau0_p =", tau0_p, ", tau0_loc =", tau0_loc, ", tau0_scale =", tau0_scale, ", tau0_pdf =", tau0_pdf);
+        print("K_lo =", K_lo, ", K_hi =", K_hi, ", K_p =", K_p, ", K_loc =", K_loc, ", K_scale =", K_scale, ", K_pdf =", K_pdf);
+        print("MC_lo =", MC_lo, ", MC_hi =", MC_hi, " MC_p =", MC_p, ", MC_pdf =", MC_pdf);
+        if (DEBUG == 3){
+        for (ii in 1:n_regions) {
+                print("MC_loc[", ii, "] = ", MC_loc[ii]);
+                print("MC_loc[", ii, "] = ", MC_loc[ii]);
+            }
+            for (ii in 1:n_regions) {
+                print("MC_scale[", ii, "] = ", MC_scale[ii]);
+                print("MC_scale[", ii, "] = ", MC_scale[ii]);
+            }
+        }
+        print("euler_method =", euler_method);
+        print("dt =", dt);
+        print("sig_eq_scale =", sig_eq_scale, " sig_eq_lo =", sig_eq_lo, ", sig_eq_hi =", sig_eq_hi, ", sig_eq_p =", sig_eq_p, ", sig_eq_loc =", sig_eq_loc, ", sig_eq_scale =", sig_eq_scale, ", sig_eq_pdf =", sig_eq_pdf);
+        print("sig_init_scale =", sig_init_scale, " sig_init_lo =", sig_init_lo, ", sig_init_hi =", sig_init_hi, ", sig_init_p =", sig_init_p, ", sig_init_loc =", sig_init_loc, ", sig_init_scale =", sig_init_scale, ", sig_init_pdf =", sig_init_pdf);
+        print("sig_scale =", sig_scale, ", sig_lo =", sig_lo, ", sig_hi =", sig_hi, ", sig_p =", sig_p, ", sig_loc =", sig_loc, ", sig_scale =", sig_scale, ", sig_pdf =", sig_pdf);
+        print("observation_expression =", observation_expression, ", observation_model =", observation_model);
+        print("min(mixing) =",min(mixing), ", max(mixing) =", max(mixing));
+        if (DEBUG == 1){
+            vector[n_active_regions] maxmixing;
+            vector[n_active_regions] minmixing;
+            for (ii in 1:n_active_regions) {
+                vector[n_signals] mixingcol;
+                mixingcol = col(mixing, ii);
+                maxmixing[ii] = max(mixingcol);
+                minmixing[ii] = min(mixingcol);
+            }
+            print("min(mixing(active_regions))=", minmixing);
+            print("max(mixing(active_regions))=", maxmixing);
+        } else {
+            for (ii in 1:n_active_regions) {
+                print("mixing[", ii, "] = ", col(mixing, ii));
+            }
+        }
+        print("min(signals) =", min(signals), ", max(signals) =", max(signals));
+        if (DEBUG == 1){
+            vector[n_times] maxsignals;
+            vector[n_times] minsignals;
+            for (tt in 1:n_times) {
+                vector[n_signals] signalstimes;
+                signalstimes = to_vector(signals[tt]);
+                maxsignals[tt] = max(signalstimes);
+                minsignals[tt] = min(signalstimes);
+            }
+            print("min(signals(cols))=", minsignals);
+            print("max(signals(cols))=", maxsignals);
+        } else if (DEBUG >= 3){
+            for (tt in 1:n_times) {
+                print("signals[", tt, "] = ", signals[tt]);
+            }
+        }
+        print("eps_lo =", eps_lo, ", eps_hi =", eps_hi, ", eps_p =", eps_p, ", eps_loc =", eps_loc, ", eps_scale =", eps_scale, ", eps_pdf =", eps_pdf);
+        print("scale_signal_lo =", scale_signal_lo, ", scale_signal_hi =", scale_signal_hi, ", scale_signal_p =", scale_signal_p, ", scale_signal_loc =", scale_signal_loc, ", scale_signal_scale =", scale_signal_scale, ", scale_signal_pdf =", scale_signal_pdf);
+        print("offset_signal_lo =", offset_signal_lo, ", offset_signal_hi =", offset_signal_hi, ", offset_signal_p =", offset_signal_p, ", offset_signal_loc =", offset_signal_loc, ", offset_signal_scalec =", offset_signal_scale, ", offset_signal_pdf =", offset_signal_pdf);
+    }
 }
 
 
@@ -258,8 +322,8 @@ parameters {
 
     /* Generative model */
     /* Epileptor */
-    row_vector<lower=x1eq_lo, upper=x1eq_hi>[n_regions] x1eq; // x1 equilibrium point coordinate
-    row_vector<lower=x1init_lo, upper=x1init_hi>[n_active_regions] x1init; // x1 equilibrium point coordinate
+    vector<lower=x1eq_lo, upper=x1eq_hi>[n_regions] x1eq; // x1 equilibrium point coordinate
+    vector<lower=x1init_lo, upper=x1init_hi>[n_active_regions] x1init; // x1 equilibrium point coordinate
     matrix<lower=x1_lo, upper=x1_hi>[n_times, n_active_regions] x1; // x1 state variable
     matrix<lower=z_lo, upper=z_hi>[n_times, n_active_regions] z; // z state variable
     real<lower=tau1_lo, upper=tau1_hi> tau1_star; // time scale [n_active_regions]
@@ -285,36 +349,159 @@ transformed parameters {
 
     /* Generative model */
     /* Epileptor */
-    tau1 = tau1_star * tau1_scale + tau1_loc;
-    tau0 = tau0_star * tau0_scale + tau0_loc;
-    /* zeq */
-    row_vector[n_regions] zeq = EpileptorDP2D_fun_x1(n_regions, x1eq, 0.0, yc, Iext1, a, db, d, slope, 1.0); // z equilibrium point coordinate
+    vector[n_regions] zeq; // z equilibrium point coordinate
+    vector[n_active_regions] x1eq_active;
+    vector[n_active_regions] zeq_active;
+    vector[n_regions] x0; // excitability parameter
     real<lower=0.0> tau1; // time scale [n_active_regions]
     real<lower=0.0> tau0; // time scale separation [n_active_regions]
     /* Coupling */
-    real<lower=0.0> K = K_star * K_scale + K_loc; // global coupling scaling
-    matrix<lower=0.0>[n_regions, n_regions] MC = MC_star * MC_scale + MC_loc;; // Model connectivity
-    row_vector[n_regions] coupling_eq = calc_coupling(n_regions, n_regions, x1eq, x1eq, MC); // coupling at equilibrium
+    real<lower=0.0> K; // global coupling scaling
+    matrix<lower=0.0>[n_regions, n_regions] MC; // Model connectivity
+    vector[n_regions] coupling_eq; // coupling at equilibrium
     matrix[n_times, n_active_regions] coupling; // actual effective coupling per time point
-    for (tt in 1:n_times) {
-        coupling[tt, ii] = calc_coupling(n_active_regions, n_active_regions, x1[tt],
-                                         x1[tt], MC[active_regions][active_regions]);
-        coupling[tt, ii] = calc_coupling(n_active_regions, n_nonactive_regions, x1[tt],
-                                         x1eq[nonactive_regions], MC[active_regions][nonactive_regions]);
-    }
-    /* x0 */
-    row_vector[n_regions] x0 =  EpileptorDP2D_fun_z_lin(n_regions, x1eq, zeq, 0.0, K * coupling_eq, 1.0, 1.0) / 4.0; // excitability parameter
 
     /* Integration */
-    real<lower=0.0> sig = sig_star * sig_scale + sig_loc; // variance of phase flow, i.e., dynamic noise
-    real<lower=0.0> sig_eq = sig_eq_star * sig_eq_scale + sig_eq_loc;// variance of equilibrium point
-    real<lower=0.0> sig_init = sig_init_star * sig_init_scale + sig_init_loc; // variance of initial condition
+    real<lower=0.0> sig; // variance of phase flow, i.e., dynamic noise
+    real<lower=0.0> sig_eq; // variance of equilibrium point
+    real<lower=0.0> sig_init; // variance of initial condition
 
     /* Observation model */
-    real<lower=0.0> eps = eps_star * eps_scale + eps_loc; // variance of observation noise
-    real<lower=0.0> scale_signal = scale_signal_star * scale_signal_scale + scale_signal_loc; // observation signal scaling
-    real offset_signal = offset_signal_star * offset_signal_scale + offset_signal_loc;; // observation signal offset
+    real<lower=0.0> eps; // variance of observation noise
+    real<lower=0.0> scale_signal; // observation signal scaling
+    real offset_signal; // observation signal offset
+        
+    tau1 = tau1_star * tau1_scale + tau1_loc;
+    if (DEBUG >= 0){
+        print("tau1=", tau1);
+    }
+    tau0 = tau0_star * tau0_scale + tau0_loc;
+    if (DEBUG >= 0){
+        print("tau0=", tau0);
+    }
+    K = K_star * K_scale + K_loc;
+    if (DEBUG >= 0){
+        print("K=", K);
+    }
+    MC = MC_star * MC_scale + MC_loc;
+    if (DEBUG >= 0){
+        print("min(MC)=", min(MC), ", max(MC)=", max(MC));
+        if (DEBUG == 1){
+            vector[n_regions] maxMC;
+            vector[n_regions] minMC;
+            print("x1eq=", x1eq);
+            print("x1eq=", x1eq);
+            for (ii in 1:n_regions) {
+                vector[n_regions] colMC;
+                colMC = col(MC, ii);
+                maxMC[ii] = max(colMC);
+                minMC[ii] = min(colMC);
+            }
+            print("min(MC(cols))=", minMC);
+            print("max(MC(cols))=", maxMC);
+        } else if (DEBUG >= 2) {
+            for (ii in 1:n_regions) {
+                print("MC[", ii, "] = ", MC[ii]);
+            }
+        }
+    }
+    sig_eq = sig_eq_star * sig_eq_scale + sig_eq_loc;
+    if (DEBUG >= 0){
+        print("sig_eq=", sig_eq);
+    }
+    sig_init = sig_init_star * sig_init_scale + sig_init_loc;
+    if (DEBUG >= 0){
+        print("sig_init=", sig_init);
+    }
+    sig = sig_star * sig_scale + sig_loc;
+    if (DEBUG >= 0){
+        print("sig=", sig);
+    }
+    eps = eps_star * eps_scale + eps_loc;
+    if (DEBUG >= 0){
+        print("eps=", eps);
+    }
+    scale_signal = scale_signal_star * scale_signal_scale + scale_signal_loc;
+    if (DEBUG >= 0){
+        print("scale_signal=", scale_signal);
+    }
+    offset_signal = offset_signal_star * offset_signal_scale + offset_signal_loc;
+    if (DEBUG >= 0){
+        print("offset_signal=", offset_signal);
+    }
 
+    /* zeq */
+    for (ii in 1:n_regions) {
+        // solving for zeq (z->0, tau1->1)
+        zeq[ii] = EpileptorDP2D_fun_x1(x1eq[ii], 0.0, yc, Iext1, a, db, d, slope, 1.0);
+    }
+    if (DEBUG >= 0){
+        print("min(zeq)=", min(zeq), ", max(zeq)=", max(zeq));
+        if (DEBUG >= 1){
+            print("zeq=", zeq);
+        }
+    }
+    for (ii in 1:n_active_regions) {
+        x1eq_active[ii] = x1eq[active_regions[ii]];
+        zeq_active[ii] = zeq[active_regions[ii]];
+    }
+
+    /* Coupling
+    We place it here for the moment because it has a high diagnostic value */
+    for (ii in 1:n_regions) {
+        coupling_eq[ii] = 0.0;
+        for (jj in 1:n_regions) {
+            if (ii!=jj) {
+                    coupling_eq[ii] = coupling_eq[ii] + MC[ii, jj] * (x1eq[jj] - x1eq[ii]);
+            }
+        }
+    }
+    if (DEBUG >= 0){
+        print("min(coupling_eq)=", min(coupling_eq), ", max(coupling_eq)=", max(coupling_eq));
+        if (DEBUG >= 1){
+            print("coupling_eq=", coupling_eq);
+        }
+    }
+
+    for (tt in 1:n_times) {
+        for (ii in 1:n_active_regions) {
+            coupling[tt, ii] = 0.0;
+            // coupling active -> active regions excluding self-coupling
+            for (jj in 1:n_active_regions) {
+               if (ii!=jj) {
+                   coupling[tt, ii] =
+                              coupling[tt, ii] + MC[active_regions[ii], active_regions[jj]] * (x1[tt, jj] - x1[tt, ii]);
+               }
+            }
+            // coupling nonactive -> active regions
+            for (jj in 1:n_nonactive_regions) {
+               // non active regions are assumed to always stay close to their equilibrium point
+               coupling[tt, ii] = coupling[tt, ii] +
+                             MC[active_regions[ii], nonactive_regions[jj]] * (x1eq[nonactive_regions[jj]] - x1[tt, ii]);
+            }
+        }
+        if (DEBUG == 1) {
+            print("min(coupling[", tt, "]) = ", min(coupling[tt]), ", max(coupling[", tt, "]) = ", max(coupling[tt]));
+        }
+        else if (DEBUG >= 2){
+            print("coupling[", tt, "] = ", coupling[tt]);
+        }
+    }
+    if (DEBUG >= 0){
+        print("min(coupling)=", min(coupling), ", max(coupling)=", max(coupling));
+    }
+
+    /* x0 */
+    for (ii in 1:n_regions) {
+        // solving for x0 (x0->0, tau0->1, tau1->1)
+        x0[ii] = EpileptorDP2D_fun_z_lin(x1eq[ii], zeq[ii], 0.0, K * coupling_eq[ii], 1.0, 1.0) / 4.0;
+    }
+    if (DEBUG >= 0){
+        print("min(x0)=", min(x0), ", max(x0)=", max(x0));
+        if (DEBUG >= 1){
+            print("x0=", x0);
+        }
+    }
 }
 
 
@@ -325,17 +512,52 @@ model {
 
     /* Sampling of global coupling scaling */
     K_star ~ sample(K_pdf, K_p);
+    if (DEBUG >= 0){
+        print("K_star=", K_star);
+    }
 
     /* Sampling of the various variances */
     sig_eq_star ~ sample(sig_eq_pdf, sig_eq_p);
+    if (DEBUG >= 0){
+        print("sig_eq_star=", sig_eq_star);
+    }
     sig_init_star ~ sample(sig_init_pdf, sig_init_p);
+    if (DEBUG >= 0){
+        print("sig_init_star=", sig_p);
+    }
     sig_star ~ sample(sig_pdf, sig_p);
+    if (DEBUG >= 0){
+        print("sig_star=", sig_star);
+    }
 
     /* Sampling of x1 equilibrium point coordinate and effective connectivity */
     for (ii in 1:n_regions) {
         x1eq[ii] ~ normal(x1eq0[ii], sig_eq);
         for (jj in 1:n_regions) {
             MC_star[ii, jj] ~ sample(MC_pdf, MC_p);
+        }
+    }
+
+    if (DEBUG >= 0){
+        print("min(x1eq)=", min(x1eq), ", max(x1eq)=", max(x1eq));
+        print("min(MC_star)=", min(MC_star), ", max(MC_star)=", max(MC_star));
+        if (DEBUG == 1){
+            vector[n_regions] maxMC_star;
+            vector[n_regions] minMC_star;
+            print("x1eq=", x1eq);
+            print("x1eq=", x1eq);
+            for (ii in 1:n_regions) {
+                vector[n_regions] colMC_star;
+                colMC_star = col(MC, ii);
+                maxMC_star[ii] = max(colMC_star);
+                minMC_star[ii] = min(colMC_star);
+            }
+            print("min(MC_star(cols))=", minMC_star);
+            print("max(MC_star(cols))=", maxMC_star);
+        } else if (DEBUG >= 2) {
+            for (ii in 1:n_regions) {
+                print("MC_star[", ii, "] = ", MC_star[ii]);
+            }
         }
     }
 
@@ -346,14 +568,34 @@ model {
 //        tau0_star[ii] ~ sample(tau1_pdf, tau1_p);
 //        tau0_star[ii] ~ sample(tau0_pdf, tau0_shap);
     }
+    if (DEBUG >= 0){
+        print("min(x1init)=", min(x1[,1]), ", max(x1init)=", max(x1[,1]));
+        print("min(zinit)=", min(z[,1]), ", max(zinit)=", max(z[,1]));
+        if (DEBUG >= 1){
+            print("x1init=", x1[,1]);
+            print("zinit=", z[,1]);
+        }
+    }
 
     /* Sampling of time scales */
     tau1_star ~ sample(tau1_pdf, tau1_p);
+    if (DEBUG >= 0){
+        print("tau1_star=", tau1_star);
+    }
     tau0_star ~ sample(tau1_pdf, tau0_p);
+    if (DEBUG >= 0){
+        print("tau0_star=", tau0_star);
+    }
 
     /* Sampling of observation scaling and offset */
     scale_signal_star ~ sample(scale_signal_pdf, scale_signal_p);
+    if (DEBUG >= 0){
+        print("scale_signal_star=", scale_signal_star);
+    }
     offset_signal_star ~ sample(offset_signal_pdf, offset_signal_p);
+    if (DEBUG >= 0){
+        print("offset_signal_star=", offset_signal_star);
+    }
 
     /* Integrate & predict  */
     for (tt in 2:n_times) {
@@ -374,7 +616,14 @@ model {
                 z[tt, ii] ~ normal(z[tt-1, ii] + dt*df, sig); // T[z_lo, z_hi];
             }
         }
-
+        if (DEBUG == 1) {
+            print("min(x1[", tt, "]) = ", min(x1[tt]), ", max(x1[", tt, "]) = ", max(x1[tt]));
+            print("min(z[", tt, "]) = ", min(z[tt]), ", max(z[", tt, "]) = ", max(z[tt]));
+        }
+        else if (DEBUG >= 2){
+            print("x1[", tt, "] = ", x1[tt]);
+            print("z[", tt, "] = ", z[tt]);
+        }
         if (SIMULATE <= 0){
             /* Observation model  */
             if (observation_expression == 0) {
@@ -384,7 +633,12 @@ model {
             } else {
                 observation = (to_vector(x1[tt]) - x1eq_active + to_vector(z[tt]) - zeq_active) / 2.75;
             }
-
+            if (DEBUG == 1) {
+                print("min(observation[", tt, "]) = ", min(observation), ", max(observation[", tt, "]) = ", max(observation));
+            }
+            else if (DEBUG >= 2){
+                print("observation[", tt, "] = ", observation);
+            }
             if  (observation_model == 0) {
                 // seeg log power: observation with some log mixing, scaling and offset_signal
                 signals[tt] ~ normal(scale_signal * log(mixing * exp(observation)) + offset_signal, eps);
@@ -396,6 +650,11 @@ model {
                 signals[tt] ~ normal(scale_signal * observation + offset_signal, eps);
             }
         }
+    }
+    if (DEBUG >= 0){
+        print("min(x1)=", min(x1), ", max(x1)=", max(x1));
+        print("min(z)=", min(z), ", max(z)=", max(z));
+    }
 }
 
 
@@ -413,6 +672,14 @@ generated quantities {
     for (ii in 1:n_nonactive_regions) {
         ModelEpileptogenicity[nonactive_regions[ii]] = 3.0*x1eq0[nonactive_regions[ii]] + 5.0;
         PathologicalExcitability[nonactive_regions[ii]] = rx0 * x0[nonactive_regions[ii]] - x0cr;
+    }
+    if (DEBUG >= 0) {
+        print("min(ModelEpileptogenicity) = ", min(ModelEpileptogenicity), ", max(ModelEpileptogenicity) = ", max(ModelEpileptogenicity));
+        print("min(PathologicalExcitability) = ", min(PathologicalExcitability), ", max(PathologicalExcitability) = ", max(PathologicalExcitability));
+        if (DEBUG >= 1){
+            print("ModelEpileptogenicity=", ModelEpileptogenicity);
+            print("PathologicalExcitability=", PathologicalExcitability);
+        }
     }
 
     {
@@ -444,5 +711,8 @@ generated quantities {
                 print("fit_signals[", tt, "] = ", fit_signals[tt]);
             }
         }
+    }
+    if (DEBUG >= 0) {
+        print("min(fit_signals) = ", min(fit_signals), ", max(fit_signals) = ", max(fit_signals));
     }
 }

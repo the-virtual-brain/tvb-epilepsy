@@ -46,6 +46,5 @@ class StatisticalModel(object):
         h5_model.write_to_h5(folder, filename)
 
     def _generate_parameters(self, **defaults):
-        self.parameters.update({"x1eq": set_parameter("x1eq", optimize_pdf=False, **defaults)})
-        for p in ["K", "tau1", "tau0", "MC", "sig_eq", "eps"]:
-            self.parameters.update({p: set_parameter(p, optimize_pdf=False, **defaults)})
+        for p in ["x1eq", "K", "tau1", "tau0", "MC", "sig_eq", "eps"]:
+            self.parameters.update({p: set_parameter(p, **defaults)})

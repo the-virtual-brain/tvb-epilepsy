@@ -29,6 +29,8 @@ STATISTICAL_MODEL_TYPES=["vep_sde", "vep_dWt", "vep_ode", "vep_lsa"]
 class ModelInversionService(object):
 
     X1EQ_MIN = -2.0
+    X1_REST = X1_DEF
+    X1_EQ_CR = X1_EQ_CR_DEF
     TAU1_DEF = 0.5
     TAU1_MIN = 0.1
     TAU1_MAX = 1.0
@@ -46,6 +48,10 @@ class ModelInversionService(object):
         self.model_generation_time = 0.0
         self.target_data_type = ""
         self.observation_shape = ()
+        for constant, default in zip(["X1EQ_MIN", "X1_REST", "X1_EQ_CR", "TAU1_DEF", "TAU1_MIN", "TAU1_MAX", "TAU0_DEF",
+                                      "TAU0_MIN", "TAU0_MAX", "K_MIN", "K_MAX", "MC_MIN"],
+                                     [ -2.0, X1_DEF, X1_EQ_CR_DEF, 0.5, 0.1, 1.0, 30.0, 3.0, 3000.0, 0.0, 3.0, 0.0]):
+            setattr(self, constant, kwargs.get(constant, default))
         if isinstance(model_configuration, ModelConfiguration):
             self.logger.info("Input model configuration set...")
             self.n_regions = model_configuration.n_regions
@@ -86,8 +92,7 @@ class ModelInversionService(object):
         if np.in1d(dynamical_model, AVAILABLE_DYNAMICAL_MODELS_NAMES):
             self.tau1 = self.get_default_tau1(dynamical_model)
             self.tau0 = self.get_default_tau0(dynamical_model)
-            self.sig_eq = self.get_default_sig_eq(x1eq_def=kwargs.pop("x1eq_def", X1_DEF),
-                                                  x1eq_cr=kwargs.pop("x1eq_cr", X1_EQ_CR_DEF), **kwargs)
+            self.sig_eq = self.get_default_sig_eq(**kwargs)
         self.default_parameters = {}
         self.__set_default_parameters(**kwargs)
         self.logger.info("Model Inversion Service instance created!")
@@ -134,31 +139,33 @@ class ModelInversionService(object):
     def get_default_tau0(self, dynamical_model):
         return EPILEPTOR_MODEL_TAU0[dynamical_model]
 
-    def get_default_sig_eq(self, x1eq_def=X1_DEF, x1eq_cr=X1_EQ_CR_DEF, **kwargs):
-        return kwargs.pop("sig_eq", (x1eq_cr - x1eq_def) / 30.0)
+    def get_default_sig_eq(self, **kwargs):
+        return kwargs.pop("sig_eq", (self.X1_EQ_CR - self.X1_REST) / 10.0)
 
     def __set_default_parameters(self, **kwargs):
         # Generative model:
         # Epileptor:
         self.default_parameters.update(set_parameter_defaults("x1eq", "normal", (self.n_regions,),
                                                               self.X1EQ_MIN, X1_EQ_CR_DEF,
-                                                              pdf_params={"mean": np.maximum(self.x1EQ, X1_DEF),
-                                                                          "sigma": 0.03}))
+                                                              pdf_params={"mean": np.maximum(self.x1EQ, self.X1_REST),
+                                                                          "sigma": (self.X1_CR - self.X1_REST) / 10}))
         self.default_parameters.update(set_parameter_defaults("K", "lognormal", (),
                                                               self.K_MIN,  self.K_MAX,
-                                                              np.maximum(np.mean(self.K), 0.001),
-                                                              lambda m: m, **kwargs))
+                                                              np.maximum(np.mean(self.K), 0.001), lambda m: m,
+                                                              **kwargs))
         self.default_parameters.update(set_parameter_defaults("tau1", "lognormal", (),               # name, pdf, shape
                                                               self.TAU1_MIN, self.TAU1_MAX,          # min, max
-                                                              self.tau1, self.tau1/3,  **kwargs))  # mean, (std)
+                                                              self.tau1, self.tau1/3,                # mean, (std)
+                                                              pdf_params={"std": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("tau0", "lognormal", (),
                                                               self.TAU0_MIN, self.TAU0_MAX,
-                                                              self.TAU0_DEF, self.TAU0_DEF, **kwargs))
+                                                              self.tau0, self.tau0/3, **kwargs))
         # Coupling:
         mean = np.minimum(np.maximum(self.model_connectivity, 0.001), np.percentile(self.model_connectivity, 95))
         self.default_parameters.update(set_parameter_defaults("MC", "lognormal", (self.n_regions, self.n_regions),
-                                                              self.MC_MIN, 3.0,
-                                                              mean, mean / 6.0, **kwargs))
+                                                              self.MC_MIN, 2.0,
+                                                              mean, mean / 6.0,
+                                                              pdf_params={"std": 1.0, "skew": 0.0}, **kwargs))
         # Integration:
         self.default_parameters.update(set_parameter_defaults("sig_eq", "lognormal", (),
                                                               0.0, 3*self.sig_eq,

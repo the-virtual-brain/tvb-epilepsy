@@ -10,7 +10,7 @@ from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import extract_dict_stringkeys, isequal_string
 
 
-def get_val_key_for_firt_keymatch_in_dict(name, pkeys, **kwargs):
+def get_val_key_for_first_keymatch_in_dict(name, pkeys, **kwargs):
     pkeys += ["_".join([name, pkey]) for pkey in pkeys]
     temp = extract_dict_stringkeys(kwargs, pkeys, modefun="equal", break_after=1)
     if len(temp) > 0:
@@ -36,8 +36,9 @@ def set_parameter_defaults(name, _pdf="normal", _shape=(), _lo=MIN_SINGLE_VALUE,
     defaults.update({out_name("shape"): kwargs.pop("_".join([name, "shape"]), kwargs.pop("shape", _shape))})
     defaults.update({out_name("pdf_params"): pdf_params})
     if _mean is None:
-        _mean, pkey = get_val_key_for_firt_keymatch_in_dict(name, ["def", "median", "med", "mode", "mod", "mean", "mu", "m"],
-                                                            **kwargs)
+        _mean, pkey = \
+            get_val_key_for_first_keymatch_in_dict(name, ["def", "median", "med", "mode", "mod", "mean", "mu", "m"],
+                                                   **kwargs)
         if _mean is not None:
             if pkey in ["def", "mu", "m", "mean"]:
                 defaults.update({out_name("mean"): _mean})
@@ -49,7 +50,7 @@ def set_parameter_defaults(name, _pdf="normal", _shape=(), _lo=MIN_SINGLE_VALUE,
         defaults.update({out_name("mean"): _mean})
     pkey = "std"
     if _std is None:
-        _std, pkey = get_val_key_for_firt_keymatch_in_dict(name, ["var", "v", "std", "sig", "sigma", "s"], **kwargs)
+        _std, pkey = get_val_key_for_first_keymatch_in_dict(name, ["var", "v", "std", "sig", "sigma", "s"], **kwargs)
     if _std is not None:
         if pkey in ["var", "v"]:
             pkey = "var"
@@ -61,7 +62,7 @@ def set_parameter_defaults(name, _pdf="normal", _shape=(), _lo=MIN_SINGLE_VALUE,
     for this_pval, pkey, pkeys in zip([_lo, _hi],
                                       ["lo", "hi"],
                                       [["lo", "low", "min"], ["hi", "high", "max"]]):
-        pval = get_val_key_for_firt_keymatch_in_dict(name, pkeys, **kwargs)[0]
+        pval = get_val_key_for_first_keymatch_in_dict(name, pkeys, **kwargs)[0]
         if pval is None:
             pval = this_pval
         if callable(pval) and _mean is not None:
@@ -70,7 +71,7 @@ def set_parameter_defaults(name, _pdf="normal", _shape=(), _lo=MIN_SINGLE_VALUE,
     return defaults
 
 
-def set_parameter(name, optimize_pdf=False, use="manual", **kwargs):
+def set_parameter(name, use="manual", **kwargs):
     parameter = kwargs.pop(name, None)
     # load parameter if it is a file
     if isinstance(parameter, basestring):
@@ -92,13 +93,19 @@ def set_parameter(name, optimize_pdf=False, use="manual", **kwargs):
         # Generate defaults and eventually the parameter:
         defaults = set_parameter_defaults(name, pdf_params=defaults.pop("_".join([name, "pdf_params"]), {}),
                                           remove_name=True, **defaults)
-        # Strip the parameter name from the dictionary keys:
+        # If there is a dictionary of pdf parameters, there has to be optimization of the pdf shape as well
+        pdf_params = defaults.pop("pdf_params", {})
+        if len(pdf_params) > 0:
+            optimize_pdf = True
+        else:
+            optimize_pdf = False
+        # Generate the parameter with or without optimization of its shape:
         parameter = generate_stochastic_parameter(name, probability_distribution=defaults.pop("pdf"),
                                                         p_shape=defaults.pop("shape"),
                                                         low=defaults.pop("lo"),
                                                         high=defaults.pop("hi"),
-                                                        optimize_pdf=optimize_pdf, use=use,
-                                                        **(defaults.pop("pdf_params", {})))
+                                                        optimize_pdf=optimize_pdf, use=use, **pdf_params)
+        # Update parameter's loc and scale if necessary by moving and/or scaling it accordingly
         if len(defaults) > 0:
             parameter._update_loc_scale(use=use, **defaults)
     return parameter

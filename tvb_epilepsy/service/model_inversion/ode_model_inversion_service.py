@@ -34,6 +34,8 @@ class ODEModelInversionService(ModelInversionService):
                  logger=LOG, **kwargs):
         super(ODEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
                                                        model_name, logger, **kwargs)
+        for constant, default in zip(["X1INIT_MIN", "X1INIT_MAX", "ZINIT_MIN", "ZINIT_MAX"], [-2.0, 0.0, 1.0, 5.0]):
+            setattr(self, constant, kwargs.get(constant, default))
         self.time = None
         self.dt = 0.0
         self.n_times = 0
@@ -47,7 +49,7 @@ class ODEModelInversionService(ModelInversionService):
         self.create_str = "ODEModelInversionService(ModelConfiguration())"
 
     def set_default_sig_init(self, **kwargs):
-        return kwargs.pop("sig_init", self.sig_eq / 3)
+        return kwargs.pop("sig_init", self.sig_eq)
 
     def set_time(self, time=None):
         if time is not None:
@@ -253,13 +255,13 @@ class ODEModelInversionService(ModelInversionService):
         # Integration:
         self.default_parameters.update(set_parameter_defaults("x1init", "normal", (self.n_regions,),  # name, pdf, shape
                                                               self.X1INIT_MIN, self.X1INIT_MAX,       # min, max
-                                                              pdf_params={"mean": self.x1EQ, "sigma":0.003}))
+                                                              self.x1EQ, 0.03, **kwargs))
         self.default_parameters.update(set_parameter_defaults("zinit", "normal", (self.n_regions,),  # name, pdf, shape
                                                               self.ZINIT_MIN, self.ZINIT_MAX,  # min, max
-                                                              pdf_params={"mean": self.zEQ, "sigma": 0.003}))
+                                                              self.zEQ, 0.03, **kwargs))
         self.default_parameters.update(set_parameter_defaults("sig_init", "lognormal", (),
                                                               0.0, 3.0*self.sig_init,
-                                                              self.sig_init, self.sig_init / 6.0, **kwargs))
+                                                              self.sig_init, self.sig_init / 3.0, **kwargs))
         self.default_parameters.update(set_parameter_defaults("scale_signal", "lognormal", (),
                                                               0.5, 1.5,
                                                               1.0, 0.1, **kwargs))

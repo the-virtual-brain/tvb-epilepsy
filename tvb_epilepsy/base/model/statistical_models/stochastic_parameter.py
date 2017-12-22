@@ -10,7 +10,7 @@ from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
     ProbabilityDistribution
 from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_params
-from tvb_epilepsy.service.stochastic_parameter_factory import get_val_key_for_firt_keymatch_in_dict
+from tvb_epilepsy.service.stochastic_parameter_factory import get_val_key_for_first_keymatch_in_dict
 
 
 class StochasticParameterBase(Parameter, ProbabilityDistribution):
@@ -76,17 +76,17 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
         target_s = self._calc_std(use=use)
         if len(target_stats) > 0:
             m_fun = lambda scale: self._calc_mean(scale=scale, use=use)
-            m, pkey = get_val_key_for_firt_keymatch_in_dict(self.name,
-                                                            ["def", "median", "med", "mode", "mod", "mean", "mu", "m"],
-                                                            **target_stats)
+            m, pkey = get_val_key_for_first_keymatch_in_dict(self.name,
+                                                             ["def", "median", "med", "mode", "mod", "mean", "mu", "m"],
+                                                             **target_stats)
             if m is not None:
                 target_m = m
                 if pkey in ["median", "med"]:
                     m_fun = lambda scale: self._calc_median(scale=scale, use=use)
                 elif pkey in ["mode", "mod"]:
                     m_fun = lambda scale: self._calc_mode(scale=scale)
-            s, pkey = get_val_key_for_firt_keymatch_in_dict(self.name, ["var", "v", "std", "sig", "sigma", "s"],
-                                                            **target_stats)
+            s, pkey = get_val_key_for_first_keymatch_in_dict(self.name, ["var", "v", "std", "sig", "sigma", "s"],
+                                                             **target_stats)
             if s is not None:
                 target_s = s
                 if pkey in ["var", "v"]:
