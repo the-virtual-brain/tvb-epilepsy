@@ -172,7 +172,7 @@ class Sensors(object):
             bipolar_sensors_inds, bipolar_sensors_lbls = self.get_bipolar_elecs(elecs_inds)
         return bipolar_sensors_inds, bipolar_sensors_lbls
 
-    def select_sensors_rois(self, rois=None, initial_selection=[], projection_th=0.5):
+    def select_sensors_rois(self, rois=None, initial_selection=[], gain_matrix_th=0.5):
         if len(initial_selection) == 0:
             initial_selection = range(self.number_of_sensors)
         selection = []
