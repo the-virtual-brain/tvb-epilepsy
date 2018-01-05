@@ -10,8 +10,8 @@ from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure
                                                                         extract_dict_stringkeys, construct_import_path
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.model.vep.sensors import Sensors
-from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import \
-                                                        EULER_METHODS, OBSERVATION_MODEL_EXPRESSIONS, OBSERVATION_MODELS
+from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import OBSERVATION_MODEL_EXPRESSIONS, \
+                                                                                    OBSERVATION_MODELS # EULER_METHODS,
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
 from tvb_epilepsy.service.signal_processor import decimate_signals, cut_signals_tails
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
@@ -42,14 +42,13 @@ class ODEModelInversionService(ModelInversionService):
         self.n_signals = self.n_regions
         self.data_type = "lfp"
         self.signals_inds = range(self.n_signals)
-        self.sig_init = self.set_default_sig_init(**kwargs)
         self._set_default_parameters(**kwargs)
         self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
         self.context_str += "; from tvb_epilepsy.base.model.model_configuration import ModelConfiguration"
         self.create_str = "ODEModelInversionService(ModelConfiguration())"
 
     def set_default_sig_init(self, **kwargs):
-        return kwargs.pop("sig_init", self.sig_eq)
+        return kwargs.get("sig_init", self.sig_eq)
 
     def set_time(self, time=None):
         if time is not None:
@@ -251,17 +250,18 @@ class ODEModelInversionService(ModelInversionService):
         return statistical_model
 
     def _set_default_parameters(self, **kwargs):
+        sig_init = kwargs.get("sig_init", self.get_default_sig_init(**kwargs)),
         # Generative model:
         # Integration:
         self.default_parameters.update(set_parameter_defaults("x1init", "normal", (self.n_regions,),  # name, pdf, shape
                                                               self.X1INIT_MIN, self.X1INIT_MAX,       # min, max
-                                                              self.x1EQ, 0.03, **kwargs))
+                                                              self.x1EQ, sig_init, **kwargs))
         self.default_parameters.update(set_parameter_defaults("zinit", "normal", (self.n_regions,),  # name, pdf, shape
                                                               self.ZINIT_MIN, self.ZINIT_MAX,  # min, max
-                                                              self.zEQ, 0.03, **kwargs))
-        self.default_parameters.update(set_parameter_defaults("sig_init", "lognormal", (),
-                                                              0.0, 3.0*self.sig_init,
-                                                              self.sig_init, self.sig_init / 3.0, **kwargs))
+                                                              self.zEQ, sig_init, **kwargs))
+        # self.default_parameters.update(set_parameter_defaults("sig_init", "lognormal", (),
+        #                                                       0.0, 3.0*self.sig_init,
+        #                                                       self.sig_init, self.sig_init / 3.0, **kwargs))
         self.default_parameters.update(set_parameter_defaults("scale_signal", "lognormal", (),
                                                               0.5, 1.5,
                                                               1.0, 0.1, **kwargs))
@@ -276,7 +276,8 @@ class ODEModelInversionService(ModelInversionService):
         self.logger.info("Generating model...")
         active_regions = kwargs.pop("active_regions", [])
         self.default_parameters.update(kwargs)
-        model = ODEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
+        model = ODEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times,
+                                    self.dt, self.get_default_sig_eq(**kwargs), self.get_default_sig_init(**kwargs),
                                     **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
@@ -290,18 +291,20 @@ class ODEModelInversionService(ModelInversionService):
         mixing = deepcopy(gain_matrix)
         if mixing.shape[0] > len(self.signals_inds):
             mixing = mixing[self.signals_inds]
-        if mixing.shape[1] > statistical_model.n_active_regions:
-            mixing = mixing[:, statistical_model.active_regions]
         model_data = {"n_regions": statistical_model.n_regions,
                       "n_times": statistical_model.n_times,
                       "n_signals": statistical_model.n_signals,
                       "n_active_regions": statistical_model.n_active_regions,
                       "n_nonactive_regions": statistical_model.n_nonactive_regions,
+                      "n_connections": statistical_model.n_regions*(statistical_model.n_regions-1)/2,
                       "active_regions_flag": np.array(active_regions_flag),
                       "active_regions": np.array(statistical_model.active_regions) + 1,  # cmdstan cannot take lists!
                       "nonactive_regions": np.where(1 - active_regions_flag)[0] + 1,  # indexing starts from 1!
+                      "SC": self.get_SC(),
+                      "sig_eq": statistical_model.sig_eq,
+                      "sig_init": statistical_model.sig_init,
                       "dt": statistical_model.dt,
-                      "euler_method": np.where(np.in1d(EULER_METHODS, statistical_model.euler_method))[0][0] - 1,
+                      #"euler_method": np.where(np.in1d(EULER_METHODS, statistical_model.euler_method))[0][0] - 1,
                       "observation_model": np.where(np.in1d(OBSERVATION_MODELS,
                                                             statistical_model.observation_model))[0][0],
                       "observation_expression": np.where(np.in1d(OBSERVATION_MODEL_EXPRESSIONS,
@@ -312,21 +315,12 @@ class ODEModelInversionService(ModelInversionService):
         for key, val in self.epileptor_parameters.iteritems():
             model_data.update({key: val})
         for p in statistical_model.parameters.values():
-            if isequal_string(p.name, x1var) or isequal_string(p.name, zvar):
-                # TODO: find better solution with these boundaries
-                model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high})
-                pass
-            elif isequal_string(p.name, "x1eq") or isequal_string(p.name, "x1init") or isequal_string(p.name, "zinit"):
-                model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high})
-                self.logger.info("For the moment only normal distribution is allowed for parameters " + p.name +
-                                 "!\nIgnoring the selected probability distribution!")
-            else:
-                # TODO: find better solution with these boundaries
-                model_data.update({p.name + "_lo": np.maximum(np.max(p.low / p.scale - p.loc), 0.0),
-                                   p.name + "_hi": np.min(p.high / p.scale - p.loc)})
-                model_data.update({p.name + "_loc": p.loc, p.name + "_scale": p.scale})
-                model_data.update({p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.type))[0][0]})
-                model_data.update({p.name + "_p": np.array(p.pdf_params().values()) + np.ones((2,))})
+            model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high,
+                               p.name + "_loc": p.loc, p.name + "_scale": p.scale,
+                               p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.type))[0][0],
+                               p.name + "_p": np.array(p.pdf_params().values()) * np.ones((2,))})
+            model_data["MC_scale"] = np.mean(statistical_model.parameters["MC"].std /
+                                             statistical_model.parameters["MC"].mean)
         return sort_dict(model_data)
 
     # def violin_x0(self, csv, skip=0, x0c=-1.8, x0lim=(-6, 0), per_chain=False):

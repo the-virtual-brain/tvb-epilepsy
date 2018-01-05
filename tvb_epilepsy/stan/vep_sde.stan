@@ -237,6 +237,8 @@ data {
     real offset_signal_hi;
     real offset_signal_loc;
     real<lower=0.0> offset_signal_scale;
+    // real offset_signal_p[2];
+    // int<lower=0> offset_signal_pdf;
 }
 
 
@@ -245,6 +247,26 @@ transformed data {
     real db = d - b;
     real sqrtdt = sqrt(dt);
     row_vector[n_regions] zeros = rep_row_vector(0.0, n_regions);
+    /* Transformation of low and high bounds for star parameters
+     * following (x-loc) / scale transformation of pdf support */
+    real tau1_star_lo = (tau1_lo - tau1_loc) / tau1_scale;
+    real tau1_star_hi = (tau1_hi - tau1_loc) / tau1_scale;
+    real tau0_star_lo = (tau0_lo - tau0_loc) / tau0_scale;
+    real tau0_star_hi = (tau0_hi - tau0_loc) / tau0_scale;
+    real K_star_lo = (K_lo - K_loc) / K_scale;
+    real K_star_hi = (K_hi - K_loc) / K_scale;
+    real sig_star_lo = (sig_lo - sig_loc) / sig_scale;
+    real sig_star_hi = (sig_hi - sig_loc) / sig_scale;
+    real eps_star_lo = (eps_lo - eps_loc) / eps_scale;
+    real eps_star_hi = (eps_hi - eps_loc) / eps_scale;
+    real scale_signal_star_lo = (scale_signal_lo - scale_signal_loc) / scale_signal_scale;
+    real scale_signal_star_hi = (scale_signal_hi - scale_signal_loc) / scale_signal_scale;
+    // TODO: Adjustment of signal scaling, offset and eps!
+    /* Figure out the correct ranges for scale_signal and offset_signal
+    real signals_lo = min(signals)
+    real signals_hi = max(signals)
+    real signals_scale = signal_hi - signal_lo
+    real signals_loc = mean(signals) */
 }
 
 
@@ -257,19 +279,19 @@ parameters {
     row_vector<lower=zinit_lo, upper=zinit_hi>[n_regions] zinit; // x1 initial condition coordinate
     // row_vector[n_active_regions] x1_dWt[n_times-1]; // x1 dWt
     row_vector[n_active_regions] z_dWt[n_times]; // z dWt
-    real<lower=tau1_lo, upper=tau1_hi> tau1_star; // time scale [n_active_regions]
-    real<lower=K_lo, upper=tau0_hi> tau0_star; // time scale separation [n_active_regions]
+    real<lower=tau1_star_lo, upper=tau1_star_hi> tau1_star; // time scale [n_active_regions]
+    real<lower=tau0_star_lo, upper=tau0_star_hi> tau0_star; // time scale separation [n_active_regions]
     /* Coupling */
-    real<lower=K_lo, upper=K_hi> K_star; // global coupling scaling
+    real<lower=K_star_lo, upper=K_star_hi> K_star; // global coupling scaling
     row_vector[n_connections] MC_split; // Model connectivity direction split
     matrix<lower=0.0>[n_regions, n_regions] MC; // Model connectivity
 
     /* Integration */
-    real<lower=sig_lo, upper=sig_hi> sig_star; // variance of phase flow, i.e., dynamic noise
+    real<lower=sig_star_lo, upper=sig_star_hi> sig_star; // variance of phase flow, i.e., dynamic noise
 
     /* Observation model */
-    real<lower=eps_lo, upper=eps_hi> eps_star; // variance of observation noise
-    real<lower=scale_signal_lo, upper=scale_signal_hi> scale_signal_star; // observation signal scaling
+    real<lower=eps_star_lo, upper=eps_star_hi> eps_star; // variance of observation noise
+    real<lower=scale_star_signal_lo, upper=scale_star_signal_hi> scale_signal_star; // observation signal scaling
     real<lower=offset_signal_lo, upper=offset_signal_hi> offset_signal; // observation signal offset
 }
 
@@ -355,7 +377,7 @@ model {
     for (ii in 1:n_regions) {
         for (jj in ii:n_regions) {
             if (ii == jj) {
-                MC[ii, jj] ~ normal(0.001, 0.0);
+                MC[ii, jj] ~ normal(0.0, 0.0);
             } else {
                 icon += 1;
                 MC_loc = SC[ii, jj] * MC_split[icon];
@@ -369,7 +391,7 @@ model {
     /* Sampling of x1 equilibrium point coordinate and initial condition */
     x1eq ~ normal(x1eq0, sig_eq);
     x1init ~ normal(x1eq, sig_init);
-    zinit ~ normal(zeq, sig_init);
+    zinit ~ normal(zeq, sig_init/2);
 
     /* Sampling of observation scaling and offset */
     scale_signal_star ~ sample(scale_signal_pdf, scale_signal_p);

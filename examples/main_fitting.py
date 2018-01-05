@@ -57,7 +57,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
 
         # -------------------------- Get model_data and observation signals: -------------------------------------------
         model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
-                                                   sde_mode="x1z", logger=logger)
+                                                   logger=logger)
         statistical_model = model_inversion.generate_statistical_model(observation_expression="lfp")
         statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
                                                                   active_regions_th=0.1, reset=True)
@@ -164,7 +164,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                             "SC_var": 5.0,  # 1/36 = 0.02777777,
                             "Ic": np.sum(SC, axis=1),
                             "sig_hi": 0.025,  # model_data["sig_hi"],
-                            "gain": model_data["mixing"],
+                            "gain": model_data["mixing"][:, statistical_model.active_regions],
                             "seeg_log_power": 9.0 * model_data["signals"] - 4.0,  # scale from (0, 1) to (-4, 5)
                             }
                 return vep_data
