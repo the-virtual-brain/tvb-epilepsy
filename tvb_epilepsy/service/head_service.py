@@ -49,8 +49,8 @@ class HeadService(object):
     def plot_head(self, head, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
                   figure_format=FIG_FORMAT):
         # plot connectivity
-        self.plot_connectivity(head.connectivity, show_flag, save_flag, figure_dir, figure_format)
-        self.plot_connectivity_stats(head.connectivity, show_flag, save_flag, figure_dir, figure_format)
+        self._plot_connectivity(head.connectivity, show_flag, save_flag, figure_dir, figure_format)
+        self._plot_connectivity_stats(head.connectivity, show_flag, save_flag, figure_dir, figure_format)
         # plot sensor gain_matrixs
         count = 1
         for s_type in Sensors.SENSORS_TYPES:
@@ -59,8 +59,8 @@ class HeadService(object):
                 sensors_list = ensure_list(sensors)
                 if len(sensors_list) > 0:
                     for s in sensors_list:
-                        count = self.plot_sensors(s, head.connectivity.region_labels, count, show_flag,
-                                                  save_flag, figure_dir, figure_format)
+                        count = self._plot_sensors(s, head.connectivity.region_labels, count, show_flag,
+                                                   save_flag, figure_dir, figure_format)
 
     def write_head_folder(self, head, folder, conn_filename="Connectivity"):
         if not (os.path.isdir(folder)):
@@ -72,8 +72,8 @@ class HeadService(object):
             for sensors in sensor_list:
                 sensors.write_to_h5(folder, "Sensors" + sensors.s_type + "_" + str(sensors.number_of_sensors) + ".h5")
 
-    def plot_connectivity(self, connectivity, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
-                          figure_format=FIG_FORMAT, figure_name='Connectivity ', figsize=VERY_LARGE_SIZE):
+    def _plot_connectivity(self, connectivity, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
+                           figure_format=FIG_FORMAT, figure_name='Connectivity ', figsize=VERY_LARGE_SIZE):
         # plot connectivity
         pyplot.figure(figure_name + str(connectivity.number_of_regions), figsize)
         # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
@@ -84,9 +84,10 @@ class HeadService(object):
                         figure_name=figure_name.replace(" ", "_").replace("\t", "_"))
         check_show(show_flag=show_flag)
 
-    def plot_connectivity_stats(self, connectivity, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
-                                figure_format=FIG_FORMAT,
-                                figsize=VERY_LARGE_SIZE, figure_name='HeadStats '):
+    def _plot_connectivity_stats(self, connectivity, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
+                                 figure_dir=FOLDER_FIGURES,
+                                 figure_format=FIG_FORMAT,
+                                 figsize=VERY_LARGE_SIZE, figure_name='HeadStats '):
         pyplot.figure("Head stats " + str(connectivity.number_of_regions), figsize=figsize)
         areas_flag = len(connectivity.areas) == len(connectivity.region_labels)
         ax = plot_vector(compute_in_degree(connectivity.normalized_weights), connectivity.region_labels,
@@ -101,20 +102,20 @@ class HeadService(object):
                         figure_name=figure_name.replace(" ", "").replace("\t", ""))
         check_show(show_flag=show_flag)
 
-    def plot_sensors(self, sensors, region_labels, count=1, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
-                     figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
+    def _plot_sensors(self, sensors, region_labels, count=1, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
+                      figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
         # plot sensors:
         if sensors.gain_matrix is None:
             return count
-        self.plot_gain_matrix(sensors, region_labels, title=str(count) + " - " + sensors.s_type + " - Projection",
-                              show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,
-                              figure_format=figure_format)
+        self._plot_gain_matrix(sensors, region_labels, title=str(count) + " - " + sensors.s_type + " - Projection",
+                               show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,
+                               figure_format=figure_format)
         count += 1
         return count
 
-    def plot_gain_matrix(self, sensors, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1,
-                         x_ticks=np.array([]), y_ticks=np.array([]), show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
-                         figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, figure_name=''):
+    def _plot_gain_matrix(self, sensors, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1,
+                          x_ticks=np.array([]), y_ticks=np.array([]), show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
+                          figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, figure_name=''):
         if not (isinstance(figure, pyplot.Figure)):
             figure = pyplot.figure(title, figsize=figsize)
         n_sensors = sensors.number_of_sensors
