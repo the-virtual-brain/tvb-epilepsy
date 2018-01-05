@@ -1,13 +1,14 @@
-import numpy as np
 import os
-from tvb_epilepsy.base.configurations import DATA_CUSTOM, FOLDER_RES
-from tvb_epilepsy.base.utils import initialize_logger
-from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
-from tvb_epilepsy.service.sampling_service import StochasticSamplingService
+
+import numpy as np
+
+from tvb_epilepsy.base.constants.configurations import DATA_CUSTOM, FOLDER_RES
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
 from tvb_epilepsy.scripts.pse_scripts import pse_from_hypothesis
-
+from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
 
 logger = initialize_logger(__name__)
 
@@ -25,10 +26,8 @@ if __name__ == "__main__":
     n_samples = 100
 
     # Sampling of the global coupling parameter
-    stoch_sampler = StochasticSamplingService(n_samples=n_samples, n_outputs=1, sampler="norm",
-                                              trunc_limits={"low": 0.0},
-                                              random_seed=1000, loc=10.0, scale=3.0)
-    K_samples, K_sample_stats = stoch_sampler.generate_samples(stats=True)
+    stoch_sampler = StochasticSamplingService(n_samples=n_samples, random_seed=1000, )
+    K_samples, K_sample_stats = stoch_sampler.generate_samples(parameter=(10.0, 3.0), shape=(1,), low=0.0, stats=True)
 
     #
     # Manual definition of hypothesis...:
@@ -55,7 +54,7 @@ if __name__ == "__main__":
     model_configuration, lsa_service, lsa_hypothesis, pse_results = pse_from_hypothesis(hyp_x0_E,
                                                                                         head.connectivity.normalized_weights,
                                                                                         head.connectivity.region_labels,
-                                                                                        n_samples, half_range=0.1,
+                                                                                        n_samples, param_range=0.1,
                                                                                         global_coupling=[{
                                                                                             "indices": all_regions_indices}],
                                                                                         healthy_regions_parameters=[

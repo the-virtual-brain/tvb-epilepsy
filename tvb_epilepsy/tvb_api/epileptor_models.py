@@ -8,7 +8,9 @@ import tvb.basic.traits.types_basic as basic
 import tvb.datatypes.arrays as arrays
 from tvb.simulator.common import get_logger
 from tvb.simulator.models import Model
-from tvb_epilepsy.base.utils import raise_value_error, raise_not_implemented_error
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, raise_not_implemented_error
+
+
 LOG = get_logger(__name__)
 
 
@@ -147,9 +149,9 @@ class EpileptorDP(Model):
        order=-1)
 
     x0 = arrays.FloatArray(
-        label="x0_values",
-        range=basic.Range(lo=-0.5, hi=1.5, step=0.1),
-        default=numpy.array([0.0]),
+        label="x0",
+        range=basic.Range(lo=-4.0, hi=1, step=0.1),
+        default=numpy.array([-2.0]),
         doc="Excitability parameter",
         order=3)
 
@@ -204,15 +206,15 @@ class EpileptorDP(Model):
 
     tau1 = arrays.FloatArray(
         label="tau1",
-        default=numpy.array([0.2]),
-        range=basic.Range(lo=0.01, hi=2.0, step=0.01),
+        default=numpy.array([0.5]),
+        range=basic.Range(lo=0.1, hi=2.0, step=0.1),
         doc="Time scaling of the whole system",
         order=9)
 
     tau0 = arrays.FloatArray(
         label="r",
-        range=basic.Range(lo=1000.0, hi=50000, step=1000),
-        default=numpy.array([40000.0]),
+        range=basic.Range(lo=3.0, hi=30000, step=100),
+        default=numpy.array([30.0]),
         doc="Temporal scaling in the third state variable",
         order=4)
 
@@ -502,9 +504,9 @@ class EpileptorDPrealistic(Model):
        order=-1)
 
     x0 = arrays.FloatArray(
-        label="x0_values",
-        range=basic.Range(lo=-0.5, hi=1.5, step=0.1),
-        default=numpy.array([0.0]),
+        label="x0",
+        range=basic.Range(lo=-4.0, hi=1, step=0.1),
+        default=numpy.array([-2.0]),
         doc="Excitability parameter",
         order=3)
 
@@ -566,15 +568,15 @@ class EpileptorDPrealistic(Model):
 
     tau1 = arrays.FloatArray(
         label="tau1",
-        default=numpy.array([0.2]),
-        range=basic.Range(lo=0.01, hi=2.0, step=0.01),
+        default=numpy.array([0.5]),
+        range=basic.Range(lo=0.1, hi=2.0, step=0.1),
         doc="Time scaling of the whole system",
         order=9)
 
     tau0 = arrays.FloatArray(
         label="r",
-        range=basic.Range(lo=1000.0, hi=50000, step=1000),
-        default=numpy.array([40000.0]),
+        range=basic.Range(lo=3.0, hi=30000, step=100),
+        default=numpy.array([30.0]),
         doc="Temporal scaling in the third state variable",
         order=4)
 
@@ -883,9 +885,9 @@ class EpileptorDP2D(Model):
     #    order=-1)
 
     x0 = arrays.FloatArray(
-        label="x0_values",
-        range=basic.Range(lo=-0.5, hi=1.5, step=0.1),
-        default=numpy.array([0.0]),
+        label="x0",
+        range=basic.Range(lo=-4.0, hi=1, step=0.1),
+        default=numpy.array([-2.0]),
         doc="Excitability parameter",
         order=3)
 
@@ -919,15 +921,15 @@ class EpileptorDP2D(Model):
 
     tau1 = arrays.FloatArray(
         label="tau1",
-        default=numpy.array([0.2]),
-        range=basic.Range(lo=0.01, hi=2.0, step=0.01),
+        default=numpy.array([0.5]),
+        range=basic.Range(lo=0.1, hi=2.0, step=0.1),
         doc="Time scaling of the whole system",
         order=9)
 
     tau0 = arrays.FloatArray(
         label="r",
-        range=basic.Range(lo=1000.0, hi=50000, step=1000),
-        default=numpy.array([40000.0]),
+        range=basic.Range(lo=3.0, hi=30000, step=100),
+        default=numpy.array([30.0]),
         doc="Temporal scaling in the third state variable",
         order=4)
 
