@@ -1,13 +1,7 @@
-
-import os
-
 import numpy as np
-
-from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list, \
-                                                                                                  construct_import_path
-from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
+    construct_import_path
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 
@@ -33,11 +27,11 @@ class Head(object):
         else:
             self.name = name
         path = construct_import_path(__file__).split("head")[0]
-        self.context_str = "from " + path + "head"  + " import Head; " + \
+        self.context_str = "from " + path + "head" + " import Head; " + \
                            "from " + path + "connectivity" + " import Connectivity; " + \
                            "from " + path + "surface" + " import Surface; "
         self.create_str = "Head(Connectivity('" + self.connectivity.file_path + "', np.array([]), np.array([])), " + \
-                               "Surface(np.array([]), np.array([])))"
+                          "Surface(np.array([]), np.array([])))"
 
     @property
     def number_of_regions(self):
@@ -55,7 +49,7 @@ class Head(object):
              "6. T1": self.t1_background,
              "7. SEEG": self.sensorsSEEG,
              "8. EEG": self.sensorsEEG,
-             "9. MEG": self.sensorsMEG }
+             "9. MEG": self.sensorsMEG}
         return formal_repr(self, sort_dict(d))
 
     def __str__(self):
@@ -71,17 +65,6 @@ class Head(object):
             filename = self.name + ".h5"
         h5_model = self._prepare_for_h5()
         h5_model.write_to_h5(folder, filename)
-
-    def write_to_folder(self, folder, conn_filename="Connectivity", cortsurf_filename="CorticalSurface"):
-        if not(os.path.isdir(folder)):
-            os.mkdir(folder)
-        self.connectivity.write_to_h5(folder, conn_filename + ".h5", connectivity_variants=True)
-        # TODO create classes and write functions for the rest of the contents of a Head
-        # self.cortical_surface.write_to_h5(folder, cortsurf_filename + ".h5")
-        for sensor_list in (ensure_list(self.sensorsSEEG), ensure_list(self.sensorsEEG), ensure_list(self.sensorsMEG)):
-            for sensors in sensor_list:
-                sensors.write_to_h5(folder, "Sensors" + sensors.s_type + "_" + str(sensors.number_of_sensors) + ".h5")
-
 
     def get_sensors(self, s_type=Sensors.TYPE_SEEG):
         if np.in1d(s_type.upper(), Sensors.SENSORS_TYPES):
@@ -108,7 +91,7 @@ class Head(object):
                     raise_value_error("Input sensors:\n" + str(s) +
                                       "\nis not a valid Sensors object of type " + str(s_type) + "!")
         if len(sensors) == 0:
-            setattr(self, "sensors"+s_type, [])
+            setattr(self, "sensors" + s_type, [])
         else:
             setattr(self, "sensors" + s_type, sensors)
 
@@ -128,49 +111,3 @@ class Head(object):
                 return out_sensors[0]
             else:
                 return out_sensors
-
-    def compute_nearest_regions_to_sensors(self, sensors=None, target_contacts=None, s_type=Sensors.TYPE_SEEG, sensors_id=0, n_regions=None, gain_matrix_th=None):
-        if not(isinstance(sensors, Sensors)):
-            sensors = self.get_sensors_id(s_type=s_type, sensors_ids=sensors_id)
-        n_contacts = sensors.labels.shape[0]
-        if isinstance(target_contacts, (list, tuple, np.ndarray)):
-            target_contacts = ensure_list(target_contacts)
-            for itc, tc in enumerate(target_contacts):
-                if isinstance(tc, int):
-                    continue
-                elif isinstance(tc, basestring):
-                    target_contacts[itc] = sensors.contact_label_to_index([tc])
-                else:
-                    raise_value_error("target_contacts[" + str(itc) + "] = " + str(tc) +
-                                      "is neither an integer nor a string!")
-        else:
-            target_contacts = range(n_contacts)
-        auto_flag = False
-        if n_regions is "all":
-            n_regions = self.connectivity.number_of_regions
-        elif not(isinstance(n_regions, int)):
-            auto_flag = True
-        nearest_regions = []
-        for tc in target_contacts:
-            projs = sensors.gain_matrix[tc]
-            inds = np.argsort(projs)[::-1]
-            if auto_flag:
-                n_regions = select_greater_values_array_inds(projs[inds], threshold=gain_matrix_th)
-            inds = inds[:n_regions]
-            nearest_regions.append((inds, self.connectivity.region_labels[inds], projs[inds]))
-        return nearest_regions
-
-    def plot(self, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
-        # plot connectivity
-        self.connectivity.plot(show_flag, save_flag, figure_dir, figure_format)
-        self.connectivity.plot_stats(show_flag, save_flag, figure_dir,figure_format)
-        # plot sensor gain_matrixs
-        count = 1
-        for s_type in Sensors.SENSORS_TYPES:
-            sensors = getattr(self, "sensors" + s_type)
-            if isinstance(sensors, (list, Sensors)):
-                sensors_list = ensure_list(sensors)
-                if len(sensors_list) > 0:
-                    for s in sensors_list:
-                        count = s.plot(self.connectivity.region_labels, count, show_flag, save_flag, figure_dir,
-                                       figure_format)

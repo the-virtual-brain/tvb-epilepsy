@@ -1,4 +1,3 @@
-
 import time
 from copy import deepcopy
 
@@ -7,24 +6,23 @@ import pylab as pl
 
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, assert_arrays, \
-                                                                        extract_dict_stringkeys, construct_import_path
+    extract_dict_stringkeys, construct_import_path
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import \
-                                                        EULER_METHODS, OBSERVATION_MODEL_EXPRESSIONS, OBSERVATION_MODELS
+    EULER_METHODS, OBSERVATION_MODEL_EXPRESSIONS, OBSERVATION_MODELS
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
+from tvb_epilepsy.service.head_service import HeadService
 from tvb_epilepsy.service.signal_processor import decimate_signals, cut_signals_tails
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
 from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DISTRIBUTIONS
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
-
 LOG = initialize_logger(__name__)
 
 
 class ODEModelInversionService(ModelInversionService):
-
     X1INIT_MIN = -2.0
     X1INIT_MAX = 0.0
     ZINIT_MIN = 1.0
@@ -75,20 +73,24 @@ class ODEModelInversionService(ModelInversionService):
     def select_signals_seeg(self, signals, rois, auto_selection, **kwargs):
         sensors = Sensors(self.sensors_labels, self.sensors_locations, gain_matrix=self.gain_matrix)
         inds = range(signals.shape[1])
+
+        head_service = HeadService()
         if auto_selection.find("rois") >= 0:
             if sensors.gain_matrix is not None:
-                current_selection = sensors.select_sensors_rois(kwargs.get("rois", rois), self.signals_inds,
-                                                                 kwargs.get("gain_matrix_th", None))
+                current_selection = head_service.select_sensors_rois(sensors, kwargs.get("rois", rois),
+                                                                    self.signals_inds,
+                                                                    kwargs.get("gain_matrix_th", None))
                 inds = np.where([s in current_selection for s in self.signals_inds])[0]
                 self.signals_inds = np.array(self.signals_inds)[inds].tolist()
                 signals = signals[:, inds]
         if auto_selection.find("correlation-power") >= 0:
-            power = kwargs.get("power", np.sum((signals-np.mean(signals, axis=0))**2, axis=0)/signals.shape[0])
+            power = kwargs.get("power", np.sum((signals - np.mean(signals, axis=0)) ** 2, axis=0) / signals.shape[0])
             correlation = kwargs.get("correlation", np.corrcoef(signals.T))
-            current_selection = sensors.select_sensors_corr(correlation, self.signals_inds, power=power,
-                                                             n_electrodes=kwargs.get("n_electrodes"),
-                                                             sensors_per_electrode=kwargs.get("sensors_per_electrode", 1),
-                                                             group_electrodes=kwargs.get("group_electrodes", True))
+            current_selection = head_service.select_sensors_corr(sensors, correlation, self.signals_inds, power=power,
+                                                            n_electrodes=kwargs.get("n_electrodes"),
+                                                            sensors_per_electrode=kwargs.get("sensors_per_electrode",
+                                                                                             1),
+                                                            group_electrodes=kwargs.get("group_electrodes", True))
             inds = np.where([s in current_selection for s in self.signals_inds])[0]
             self.signals_inds = np.array(self.signals_inds)[inds].tolist()
         elif auto_selection.find("power"):
@@ -96,7 +98,7 @@ class ODEModelInversionService(ModelInversionService):
             inds = select_greater_values_array_inds(power, kwargs.get("power_th", None))
             self.signals_inds = (np.array(self.signals_inds)[inds]).tolist()
         return signals[:, inds]
-    
+
     def select_signals_lfp(self, signals, rois, auto_selection, **kwargs):
         if auto_selection.find("rois") >= 0:
             if kwargs.get("rois", rois):
@@ -104,8 +106,8 @@ class ODEModelInversionService(ModelInversionService):
                 signals = signals[:, inds]
                 self.signals_inds = np.array(self.signals_inds)[inds].tolist()
         if auto_selection.find("power") >= 0:
-            power = kwargs.get("power", np.sum((signals-np.mean(signals, axis=0))**2, axis=0) / signals.shape[0])
-            inds = select_greater_values_array_inds(power, kwargs.get("power_th",  None))
+            power = kwargs.get("power", np.sum((signals - np.mean(signals, axis=0)) ** 2, axis=0) / signals.shape[0])
+            inds = select_greater_values_array_inds(power, kwargs.get("power_th", None))
             signals = signals[:, inds]
             self.signals_inds = (np.array(self.signals_inds)[inds]).tolist()
         return signals
@@ -124,7 +126,7 @@ class ODEModelInversionService(ModelInversionService):
         (self.n_times, self.n_signals) = self.observation_shape
         return signals
 
-    def set_simulated_target_data(self, target_data,  statistical_model, **kwargs):
+    def set_simulated_target_data(self, target_data, statistical_model, **kwargs):
         self.signals_inds = range(self.n_regions)
         self.data_type = "lfp"
         if statistical_model.observation_model.find("seeg") >= 0:
@@ -136,7 +138,7 @@ class ODEModelInversionService(ModelInversionService):
         elif statistical_model.observation_expression == "x1_offset":
             # TODO: a better normalization
             signals = (target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T / 2.0
-        else: # statistical_models.observation_expression == "lfp"
+        else:  # statistical_models.observation_expression == "lfp"
             if project:
                 # try for SEEG
                 signals = extract_dict_stringkeys(sort_dict(target_data), "SEEG",
@@ -174,7 +176,7 @@ class ODEModelInversionService(ModelInversionService):
                 signals = self.select_signals_lfp(signals, statistical_model.active_regions,
                                                   kwargs.pop("auto_selection", "rois"), **kwargs)
             else:
-                signals = self.select_signals_seeg(signals,  statistical_model.active_regions,
+                signals = self.select_signals_seeg(signals, statistical_model.active_regions,
                                                    kwargs.pop("auto_selection", "rois-correlation-power"), **kwargs)
         time = self.set_time(target_data.get("time", None))
         if kwargs.get("decimate", 1) > 1:
@@ -194,14 +196,16 @@ class ODEModelInversionService(ModelInversionService):
         if reset:
             statistical_model.update_active_regions([])
         statistical_model.update_active_regions(statistical_model.active_regions +
-                                            select_greater_values_array_inds(self.e_values, active_regions_th).tolist())
+                                                select_greater_values_array_inds(self.e_values,
+                                                                                 active_regions_th).tolist())
         return statistical_model
 
     def update_active_regions_x0_values(self, statistical_model, active_regions_th=0.1, reset=False):
         if reset:
             statistical_model.update_active_regions([])
         statistical_model.update_active_regions(statistical_model.active_regions +
-                                           select_greater_values_array_inds(self.x0_values, active_regions_th).tolist())
+                                                select_greater_values_array_inds(self.x0_values,
+                                                                                 active_regions_th).tolist())
         return statistical_model
 
     def update_active_regions_lsa(self, statistical_model, active_regions_th=None, reset=False):
@@ -210,7 +214,8 @@ class ODEModelInversionService(ModelInversionService):
         if len(self.lsa_propagation_strengths) > 0:
             ps_strengths = self.lsa_propagation_strengths / np.max(self.lsa_propagation_strengths)
             statistical_model.update_active_regions(statistical_model.active_regions +
-                                             select_greater_values_array_inds(ps_strengths, active_regions_th).tolist())
+                                                    select_greater_values_array_inds(ps_strengths,
+                                                                                     active_regions_th).tolist())
         else:
             warning("No LSA results found (empty propagations_strengths vector)!" +
                     "\nSkipping of setting active_regios according to LSA!")
@@ -254,13 +259,13 @@ class ODEModelInversionService(ModelInversionService):
         # Generative model:
         # Integration:
         self.default_parameters.update(set_parameter_defaults("x1init", "normal", (self.n_regions,),  # name, pdf, shape
-                                                              self.X1INIT_MIN, self.X1INIT_MAX,       # min, max
+                                                              self.X1INIT_MIN, self.X1INIT_MAX,  # min, max
                                                               self.x1EQ, 0.03, **kwargs))
         self.default_parameters.update(set_parameter_defaults("zinit", "normal", (self.n_regions,),  # name, pdf, shape
                                                               self.ZINIT_MIN, self.ZINIT_MAX,  # min, max
                                                               self.zEQ, 0.03, **kwargs))
         self.default_parameters.update(set_parameter_defaults("sig_init", "lognormal", (),
-                                                              0.0, 3.0*self.sig_init,
+                                                              0.0, 3.0 * self.sig_init,
                                                               self.sig_init, self.sig_init / 3.0, **kwargs))
         self.default_parameters.update(set_parameter_defaults("scale_signal", "lognormal", (),
                                                               0.5, 1.5,

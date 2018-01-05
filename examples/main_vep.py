@@ -19,6 +19,7 @@ from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysi
 from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
     compute_seeg_and_write_ts_h5_file
 from tvb_epilepsy.base.constants.model_constants import VOIS
+from tvb_epilepsy.service.head_service import HeadService
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 
@@ -47,7 +48,8 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     reader = Reader()
     logger.info("Reading from: " + data_folder)
     head = reader.read_head(data_folder, seeg_sensors_files=[("SensorsSEEG_116.h5", )])
-    head.plot()
+    head_service = HeadService()
+    head_service.plot_head(head)
     if test_write_read:
         head.write_to_h5(FOLDER_RES, "Head.h5")
         logger.info("Written and read simulation settings are identical?: " +

@@ -9,6 +9,7 @@ from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE, EIGENVE
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.service.head_service import HeadService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.lsa_service import LSAService
 
@@ -46,7 +47,9 @@ def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=os.path.jo
     logger.info("Reading from: " + data_folder)
     head = reader.read_head(data_folder, seeg_sensors_files=[(sensors_filename, "")])
     if plot_head:
-        head.plot(figure_dir=figure_dir)
+        head_service = HeadService()
+        head_service.plot_head(head, figure_dir=figure_dir)
+        # head.plot(figure_dir=figure_dir)
     # --------------------------Hypothesis definition-----------------------------------
     # # Manual definition of hypothesis...:
     # x0_indices = [20]
