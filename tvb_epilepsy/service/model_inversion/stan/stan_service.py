@@ -15,7 +15,7 @@ from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not
 from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path, isequal_string, ensure_list, sort_dict
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.service.rdump_factory import rdump, rload
-from tvb_epilepsy.service.csv_factory import parse_csv
+from tvb_epilepsy.io.csv import parse_csv
 
 
 LOG = initialize_logger(__name__)
