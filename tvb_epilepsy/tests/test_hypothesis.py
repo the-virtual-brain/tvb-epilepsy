@@ -1,6 +1,5 @@
 import os
 from copy import deepcopy
-
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, FOLDER_LOGS, FOLDER_FIGURES
 from tvb_epilepsy.base.h5_model import read_h5_model
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
@@ -30,7 +29,6 @@ class TestHypothesis():
         lsa_hypothesis = DiseaseHypothesis(nr_of_regions, excitability_hypothesis={tuple(x0_indices): x0_values},
                                            epileptogenicity_hypothesis={}, connectivity_hypothesis={},
                                            lsa_propagation_indices=[0], lsa_propagation_strenghts=[18])
-        hypothesis_template = DiseaseHypothesis(nr_of_regions)
         folder = get_temporary_files_path()
         file_name = "hypo.h5"
         lsa_hypothesis.write_to_h5(folder, file_name)
