@@ -9,7 +9,7 @@ import numpy
 from tvb.datatypes import connectivity
 from tvb.simulator import coupling, integrators, monitors, noise, simulator
 
-from tvb_epilepsy.base.constants import TIME_DELAYS_FLAG
+from tvb_epilepsy.base.constants.module_constants import TIME_DELAYS_FLAG
 from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.simulators import ABCSimulator
@@ -25,20 +25,20 @@ class SimulatorTVB(ABCSimulator):
         self.connectivity = connectivity
 
     @staticmethod
-    def _vep2tvb_connectivity(vep_conn, connectivity_matrix=None):
-        if connectivity_matrix is None:
-            connectivity_matrix = vep_conn.normalized_weights
-        return connectivity.Connectivity(use_storage=False, weights=connectivity_matrix,
+    def _vep2tvb_connectivity(vep_conn, model_connectivity=None):
+        if model_connectivity is None:
+            model_connectivity = vep_conn.normalized_weights
+        return connectivity.Connectivity(use_storage=False, weights=model_connectivity,
                                          tract_lengths=TIME_DELAYS_FLAG*vep_conn.tract_lengths,
                                          region_labels=vep_conn.region_labels,
-                                         centres=vep_conn.centers, hemispheres=vep_conn.hemispheres,
+                                         centres=vep_conn.centres, hemispheres=vep_conn.hemispheres,
                                          orientations=vep_conn.orientations, areas=vep_conn.areas)
 
     def config_simulation(self, initial_conditions=None):
 
-        if isinstance(self.model_configuration.connectivity_matrix, numpy.ndarray):
+        if isinstance(self.model_configuration.model_connectivity, numpy.ndarray):
             tvb_connectivity = self._vep2tvb_connectivity(self.connectivity,
-                                                          self.model_configuration.connectivity_matrix)
+                                                          self.model_configuration.model_connectivity)
         else:
             tvb_connectivity = self._vep2tvb_connectivity(self.connectivity)
         tvb_coupling = coupling.Difference(a=1.)
@@ -128,7 +128,7 @@ class SimulatorTVB(ABCSimulator):
                         curr_block += 1.0
             except Exception, error_message:
                 status = False
-                warning("Something went wrong with this simulation...:" + "\n" + error_message)
+                warning("Something went wrong with this simulation...:" + "\n" + str(error_message))
                 return None, None, status
 
             return numpy.array(tavg_time), numpy.array(tavg_data), status

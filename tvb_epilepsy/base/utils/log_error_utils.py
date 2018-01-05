@@ -4,7 +4,7 @@ import logging
 import os
 import warnings
 
-from tvb_epilepsy.base.configurations import FOLDER_LOGS
+from tvb_epilepsy.base.constants.configurations import FOLDER_LOGS
 
 
 def initialize_logger(name, target_folder=FOLDER_LOGS):
@@ -41,7 +41,7 @@ def raise_value_error(msg, logger=None):
 def raise_error(msg, logger=None):
     if logger is not None:
         logger.error("\n\nError: " + msg + "\n")
-    raise
+    raise Exception(msg)
 
 
 def raise_import_error(msg, logger=None):

@@ -1,10 +1,13 @@
 # Data structure manipulations and conversions:
 
 from collections import OrderedDict
+from copy import deepcopy
+import re
 
 import numpy as np
 
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error, raise_import_error
+from tvb_epilepsy.base.constants.module_constants import MAX_INT_VALUE
 
 
 def vector2scalar(x):
@@ -42,6 +45,21 @@ def isequal_string(a, b, case_sensitive=False):
         except AttributeError:
             warning("Case sensitive comparison!")
             return a == b
+
+
+def split_string_text_numbers(ls):
+    items = []
+    for s in ensure_list(ls):
+        match = re.findall('(\d+|\D+)', s)
+        if match:
+            items.append(tuple(match[:2]))
+    return items
+
+
+def construct_import_path(path, package="tvb_epilepsy"):
+    path = path.split(".py")[0]
+    start = path.find(package)
+    return path[start:].replace("/", ".")
 
 
 def formal_repr(instance, attr_dict):
@@ -141,10 +159,10 @@ def dicts_of_lists(dictionary, n=1):
     return dictionary
 
 
-def list_or_tuple_to_dict(obj):
+def iterable_to_dict(obj):
     d = OrderedDict()
     for ind, value in enumerate(obj):
-        d[str(ind)] = value
+        d["%02d" % ind] = value
     return d
 
 
@@ -156,10 +174,22 @@ def dict_to_list_or_tuple(dictionary, output_obj="list"):
     return output
 
 
-def list_of_dicts_to_dicts_of_ndarrays(lst):
+def list_of_dicts_to_dicts_of_ndarrays(lst, shape=None):
     d = dict(zip(lst[0], zip(*list([d.values() for d in lst]))))
+    if isinstance(shape, tuple):
+        for key, val in d.iteritems():
+            d[key] = np.reshape(np.stack(d[key]), shape)
+    else:
+        for key, val in d.iteritems():
+            d[key] = np.squeeze(np.stack(d[key]))
+    return d
+
+
+def arrays_of_dicts_to_dicts_of_ndarrays(arr):
+    lst = arr.flatten().tolist()
+    d = list_of_dicts_to_dicts_of_ndarrays(lst)
     for key, val in d.iteritems():
-        d[key] = np.squeeze(np.stack(d[key]))
+        d[key] = np.reshape(d[key], arr.shape)
     return d
 
 
@@ -170,7 +200,10 @@ def dicts_of_lists_to_lists_of_dicts(dictionary):
 def ensure_list(arg):
     if not (isinstance(arg, list)):
         try: #if iterable
-            arg = list(arg)
+            if isinstance(arg, basestring):
+                arg = [arg]
+            else:
+                arg = list(arg)
         except: #if not iterable
             arg = [arg]
     return arg
@@ -197,13 +230,51 @@ def linear_index_to_coordinate_tuples(linear_index, shape):
         return []
 
 
+def extract_dict_stringkeys(d, keys, modefun="find", break_after=MAX_INT_VALUE, remove=False):
+    if isequal_string(modefun, "equal"):
+        modefun = lambda x, y: isequal_string(x, y)
+    else:
+        modefun = lambda x, y: x.find(y) >= 0
+    if remove:
+        out_dict = deepcopy(d)
+    else:
+        out_dict = {}
+    keys = ensure_list(keys)
+    counts = 0
+    for key, value in d.iteritems():
+        for k in keys:
+            if modefun(key, k):
+                if remove:
+                    del out_dict[key]
+                    counts += 1
+                else:
+                    out_dict.update({key: value})
+                    counts += 1
+            if counts >= break_after:
+                return out_dict
+    return out_dict
+
+
+def labels_to_inds(labels, lbls):
+    idx = []
+    lbls = ensure_list(lbls)
+    for i, label in enumerate(labels):
+        for lbl in lbls:
+            if lbl in label or label in lbl:
+                idx.append(i)
+                break
+    return np.unique(idx)
+
+
 # This function is meant to confirm that two objects assumingly of the same type are equal, i.e., identical
 def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
 
-    def print_not_equal_message(attr, logger):
+    def print_not_equal_message(attr, field1, field2, logger):
         # logger.error("\n\nValueError: Original and read object field "+ attr + " not equal!")
         # raise_value_error("\n\nOriginal and read object field " + attr + " not equal!")
-        warning("Original and read object field " + attr + " not equal!", logger)
+        warning("Original and read object field " + attr + " not equal!" +
+                "\nOriginal field:\n" + str(field1) +
+                "\nRead object field:\n" + str(field2), logger)
 
     if isinstance(obj1, dict):
         get_field1 = lambda obj, key: obj[key]
@@ -211,6 +282,10 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
             attributes_dict = dict()
             for key in obj1.keys():
                 attributes_dict.update({key: key})
+    elif isinstance(obj1, (list, tuple)):
+        get_field1 = lambda obj, key: get_list_or_tuple_item_safely(obj, key)
+        indices = range(len(obj1))
+        attributes_dict = dict(zip([str(ind) for ind in indices], indices))
     else:
         get_field1 = lambda obj, attribute: getattr(obj, attribute)
         if not (isinstance(attributes_dict, dict)):
@@ -219,6 +294,8 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
                 attributes_dict.update({key: key})
     if isinstance(obj2, dict):
         get_field2 = lambda obj, key: obj.get(key, None)
+    elif isinstance(obj2, (list, tuple)):
+        get_field2 = lambda obj, key: get_list_or_tuple_item_safely(obj, key)
     else:
         get_field2 = lambda obj, attribute: getattr(obj, attribute, None)
 
@@ -233,34 +310,30 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
             if isinstance(field1, basestring) or isinstance(field1, list) or isinstance(field1, dict) \
                     or (isinstance(field1, np.ndarray) and field1.dtype.kind in 'OSU'):
                 if np.any(field1 != field2):
-                    print_not_equal_message(attributes_dict[attribute], logger)
+                    print_not_equal_message(attributes_dict[attribute], field1, field2, logger)
                     equal = False
             # For numeric numpy arrays:
             elif isinstance(field1, np.ndarray) and not field1.dtype.kind in 'OSU':
                 # TODO: handle better accuracy differences, empty matrices and complex numbers...
                 if field1.shape != field2.shape:
-                    print_not_equal_message(attributes_dict[attribute], logger)
+                    print_not_equal_message(attributes_dict[attribute], field1, field2, logger)
                     equal = False
                 elif np.any(np.float32(field1) - np.float32(field2) > 0):
-                    print_not_equal_message(attributes_dict[attribute], logger)
+                    print_not_equal_message(attributes_dict[attribute], field1, field2, logger)
                     equal = False
             # For numeric scalar types
             elif isinstance(field1, (int, float, long, complex, np.number)):
                 if np.float32(field1) - np.float32(field2) > 0:
-                    print_not_equal_message(attributes_dict[attribute], logger)
+                    print_not_equal_message(attributes_dict[attribute], field1, field2, logger)
                     equal = False
             else:
-                warning("Comparing str(objects) for field "
-                        + attributes_dict[attribute] + " because it is of unknown type!", logger)
-                if np.any(str(field1) != str(field2)):
-                    print_not_equal_message(attributes_dict[attribute], logger)
-                    equal = False
+                equal = assert_equal_objects(field1, field2, logger=logger)
         except:
             try:
                 warning("Comparing str(objects) for field "
                         + attributes_dict[attribute] + " because there was an error!", logger)
                 if np.any(str(field1) != str(field2)):
-                    print_not_equal_message(attributes_dict[attribute], logger)
+                    print_not_equal_message(attributes_dict[attribute], field1, field2, logger)
                     equal = False
             except:
                 raise_value_error("ValueError: Something went wrong when trying to compare "
@@ -271,10 +344,27 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
     else:
         return False
 
+
 def shape_to_size(shape):
     shape = np.array(shape)
     shape = shape[shape > 0]
-    return shape.prod()
+    return np.int(np.max([shape.prod(), 1]))
+
+
+def shape_to_ndim(shape, squeeze=False):
+    if squeeze:
+        shape = filter(lambda x: not(np.any(np.in1d(x, [0, 1]))), list(shape))
+    return len(shape)
+
+
+def squeeze_array_to_scalar(arr):
+    arr = np.array(arr)
+    if arr.size == 1:
+        return arr
+    elif np.all(arr == arr[0]):
+        return arr[0]
+    else:
+        return arr
 
 
 def assert_arrays(params, shape=None, transpose=False):
@@ -363,12 +453,59 @@ def assert_arrays(params, shape=None, transpose=False):
         return tuple(params)
 
 
-def parcellation_correspondance(inds_from, labels_from, labels_to):
-    inds_to = []
-    for ind in inds_from:
-        lbl = labels_from[ind]
-        inds_to.append(np.where(labels_to == lbl)[0][0])
-    if len(inds_to) != 1:
-        return inds_to
+def make_float(x, precision="64"):
+    if isinstance(x, np.ndarray):
+        if isequal_string(precision, "64"):
+            return x.astype(np.float64)
+        elif isequal_string(precision, "32"):
+            return x.astype(np.float32)
+        else:
+            return x.astype(np.float)
     else:
-        return inds_to[0]
+        if isequal_string(precision, "64"):
+            return np.float64(x)
+        elif isequal_string(precision, "32"):
+            np.float32(x)
+        else:
+            return np.float(x)
+
+
+def make_int(x, precision="64"):
+    if isinstance(x, np.ndarray):
+        if isequal_string(precision, "64"):
+            return x.astype(np.int64)
+        elif isequal_string(precision, "32"):
+            return x.astype(np.int32)
+        else:
+            return x.astype(np.int)
+    else:
+        if isequal_string(precision, "64"):
+            return np.int64(x)
+        elif isequal_string(precision, "32"):
+            np.int32(x)
+        else:
+            return np.int(x)
+
+
+def copy_object_attributes(obj1, obj2, attr1, attr2=None, deep_copy=False, check_none=False):
+    attr1 = ensure_list(attr1)
+    if attr2 is None:
+        attr2 = attr1
+    else:
+        attr2 = ensure_list(attr2)
+    if deep_copy:
+        fcopy = lambda a1, a2: setattr(obj2, a2, deepcopy(getattr(obj1, a1)))
+    else:
+        fcopy = lambda a1, a2: setattr(obj2, a2, getattr(obj1, a1))
+    if check_none:
+        for a1, a2 in zip(attr1, attr2):
+            if getattr(obj2, a2) is None:
+                fcopy(a1, a2)
+    else:
+        for a1, a2 in zip(attr1, attr2):
+            fcopy(a1, a2)
+    return obj2
+
+
+
+

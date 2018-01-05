@@ -1,13 +1,15 @@
+
+import os
+
 import numpy as np
 
-from tvb_epilepsy.base.configurations import FOLDER_FIGURES
-from tvb_epilepsy.base.constants import SHOW_FLAG, SAVE_FLAG, FIG_FORMAT
-from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list
-from tvb_epilepsy.base.utils.math_utils import curve_elbow_point
-from tvb_epilepsy.base.model.vep.surface import Surface
-from tvb_epilepsy.base.model.vep.sensors import Sensors, TYPE_SEEG, SENSORS_TYPES
-from tvb_epilepsy.base.model.vep.connectivity import Connectivity
+from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
+from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
+from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list, \
+                                                                                                  construct_import_path
+from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.model.vep.sensors import Sensors
 
 
 class Head(object):
@@ -15,27 +17,27 @@ class Head(object):
     One patient virtualization. Fully configured for defining hypothesis on it.
     """
 
-    def __init__(self, connectivity, cortical_surface, rm, vm, t1, name='', **kwargs):
-
+    def __init__(self, connectivity, cortical_surface, rm={}, vm={}, t1={}, name='', **kwargs):
         self.connectivity = connectivity
         self.cortical_surface = cortical_surface
         self.region_mapping = rm
         self.volume_mapping = vm
         self.t1_background = t1
-        self.sensorsSEEG = None
-        self.sensorsEEG = None
-        self.sensorsMEG = None
-        for s_type in SENSORS_TYPES:
-            self.set_sensors(kwargs.get("sensors" + s_type), sensors_type=s_type)
-
+        self.sensorsSEEG = []
+        self.sensorsEEG = []
+        self.sensorsMEG = []
+        for s_type in Sensors.SENSORS_TYPES:
+            self.set_sensors(kwargs.get("sensors" + s_type), s_type=s_type)
         if len(name) == 0:
             self.name = 'Head' + str(self.number_of_regions)
         else:
             self.name = name
-
-        self.children_dict = {"Connectivity": Connectivity("", np.array([]), np.array([])),
-                              "Surface": Surface(np.array([]), np.array([])),
-                              "Sensors": Sensors(np.array([]), np.array([]))}
+        path = construct_import_path(__file__).split("head")[0]
+        self.context_str = "from " + path + "head"  + " import Head; " + \
+                           "from " + path + "connectivity" + " import Connectivity; " + \
+                           "from " + path + "surface" + " import Surface; "
+        self.create_str = "Head(Connectivity('" + self.connectivity.file_path + "', np.array([]), np.array([])), " + \
+                               "Surface(np.array([]), np.array([])))"
 
     @property
     def number_of_regions(self):
@@ -59,37 +61,65 @@ class Head(object):
     def __str__(self):
         return self.__repr__()
 
-    def get_sensors(self, sensors_type=TYPE_SEEG):
-        if np.in1d(sensors_type.upper(), SENSORS_TYPES):
-            return getattr("sensors" + sensors_type)
-        else:
-            raise_value_error("Invalid input sensor type " + str(sensors_type))
+    def _prepare_for_h5(self):
+        h5_model = convert_to_h5_model(self)
+        h5_model.add_or_update_metadata_attribute("EPI_Type", "HeadModel")
+        return h5_model
 
-    def set_sensors(self, input_sensors, sensors_type=TYPE_SEEG, reset=False):
-        sensors = self.get_sensors(sensors_type)
-        if reset==False or sensors is None:
+    def write_to_h5(self, folder, filename=""):
+        if filename == "":
+            filename = self.name + ".h5"
+        h5_model = self._prepare_for_h5()
+        h5_model.write_to_h5(folder, filename)
+
+    def write_to_folder(self, folder, conn_filename="Connectivity", cortsurf_filename="CorticalSurface"):
+        if not(os.path.isdir(folder)):
+            os.mkdir(folder)
+        self.connectivity.write_to_h5(folder, conn_filename + ".h5", connectivity_variants=True)
+        # TODO create classes and write functions for the rest of the contents of a Head
+        # self.cortical_surface.write_to_h5(folder, cortsurf_filename + ".h5")
+        for sensor_list in (ensure_list(self.sensorsSEEG), ensure_list(self.sensorsEEG), ensure_list(self.sensorsMEG)):
+            for sensors in sensor_list:
+                sensors.write_to_h5(folder, "Sensors" + sensors.s_type + "_" + str(sensors.number_of_sensors) + ".h5")
+
+
+    def get_sensors(self, s_type=Sensors.TYPE_SEEG):
+        if np.in1d(s_type.upper(), Sensors.SENSORS_TYPES):
+            return getattr(self, "sensors" + s_type)
+        else:
+            raise_value_error("Invalid input sensor type " + str(s_type))
+
+    def set_sensors(self, input_sensors, s_type=Sensors.TYPE_SEEG, reset=False):
+        if input_sensors is None:
+            return
+        sensors = ensure_list(self.get_sensors(s_type))
+        if reset is False or len(sensors) == 0:
             sensors = []
         for s in ensure_list(input_sensors):
-            if isinstance(s, Sensors) and (s.type == sensors_type):
+            if isinstance(s, Sensors) and (s.s_type == s_type):
+                if s.gain_matrix is None or s.gain_matrix.shape != (s.number_of_sensors, self.number_of_regions):
+                    warning("No correctly sized gain matrix found in sensors! Computing and adding gain matrix!")
+                    s.gain_matrix = s.compute_gain_matrix(self.connectivity)
+                # if s.orientations == None or s.orientations.shape != (s.number_of_sensors, 3):
+                #     warning("No orientations found in sensors!")
                 sensors.append(s)
             else:
                 if s is not None:
                     raise_value_error("Input sensors:\n" + str(s) +
-                                      "\nis not a valid Sensors object of type " + str(sensors_type) + "!")
+                                      "\nis not a valid Sensors object of type " + str(s_type) + "!")
         if len(sensors) == 0:
-            self.set_sensors(self, None, sensors_type)
-        elif len(sensors) == 1:
-            self.set_sensors(self, sensors[0], sensors_type)
+            setattr(self, "sensors"+s_type, [])
         else:
-            self.set_sensors(self, sensors, sensors_type)
+            setattr(self, "sensors" + s_type, sensors)
 
-    def get_sensors_id(self, sensors_type=TYPE_SEEG, sensor_ids=0):
-        sensors = self.get_sensors(sensors_type)
+    def get_sensors_id(self, s_type=Sensors.TYPE_SEEG, sensor_ids=0):
+        sensors = self.get_sensors(s_type)
         if sensors is None:
             return sensors
         else:
             out_sensors = []
-            for iS, s in enumerate(ensure_list(sensors)):
+            sensors = ensure_list(sensors)
+            for iS, s in enumerate(sensors):
                 if np.in1d(iS, sensor_ids):
                     out_sensors.append(sensors[iS])
             if len(out_sensors) == 0:
@@ -99,7 +129,9 @@ class Head(object):
             else:
                 return out_sensors
 
-    def compute_nearest_regions_to_sensors(self, sensors, target_contacts=None, id_sensor=0, n_regions=None, th=0.95):
+    def compute_nearest_regions_to_sensors(self, sensors=None, target_contacts=None, s_type=Sensors.TYPE_SEEG, sensors_id=0, n_regions=None, gain_matrix_th=None):
+        if not(isinstance(sensors, Sensors)):
+            sensors = self.get_sensors_id(s_type=s_type, sensors_ids=sensors_id)
         n_contacts = sensors.labels.shape[0]
         if isinstance(target_contacts, (list, tuple, np.ndarray)):
             target_contacts = ensure_list(target_contacts)
@@ -116,27 +148,29 @@ class Head(object):
         auto_flag = False
         if n_regions is "all":
             n_regions = self.connectivity.number_of_regions
-        elif n_regions is "auto" or not(isinstance(n_regions, int)):
+        elif not(isinstance(n_regions, int)):
             auto_flag = True
         nearest_regions = []
         for tc in target_contacts:
-            projs = sensors.projection[tc]
+            projs = sensors.gain_matrix[tc]
             inds = np.argsort(projs)[::-1]
-            n_regions = curve_elbow_point(projs[inds])
-            nearest_regions.append((inds[:n_regions],
-                                    self.connectivity.region_labels[inds[:n_regions]],
-                                    projs[inds[:n_regions]]))
+            if auto_flag:
+                n_regions = select_greater_values_array_inds(projs[inds], threshold=gain_matrix_th)
+            inds = inds[:n_regions]
+            nearest_regions.append((inds, self.connectivity.region_labels[inds], projs[inds]))
         return nearest_regions
 
     def plot(self, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
         # plot connectivity
         self.connectivity.plot(show_flag, save_flag, figure_dir, figure_format)
         self.connectivity.plot_stats(show_flag, save_flag, figure_dir,figure_format)
-        # plot sensor projections
+        # plot sensor gain_matrixs
         count = 1
-        for s_type in SENSORS_TYPES:
+        for s_type in Sensors.SENSORS_TYPES:
             sensors = getattr(self, "sensors" + s_type)
             if isinstance(sensors, (list, Sensors)):
-                for s in ensure_list(sensors):
-                    count = s.plot(self.connectivity.region_labels, count, show_flag, save_flag, figure_dir,
-                                   figure_format)
+                sensors_list = ensure_list(sensors)
+                if len(sensors_list) > 0:
+                    for s in sensors_list:
+                        count = s.plot(self.connectivity.region_labels, count, show_flag, save_flag, figure_dir,
+                                       figure_format)

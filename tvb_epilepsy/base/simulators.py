@@ -6,10 +6,10 @@ from abc import ABCMeta, abstractmethod
 
 import numpy
 
-from tvb_epilepsy.base.constants import NOISE_SEED
+from tvb_epilepsy.base.constants.module_constants import NOISE_SEED
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_equilibrium_point
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, construct_import_path
 
 
 class SimulationSettings(object):
@@ -33,6 +33,8 @@ class SimulationSettings(object):
         self.monitor_expressions = monitor_expressions
         self.variables_names = variables_names
         self.initial_conditions = initial_conditions
+        self.context_str = "from " + construct_import_path(__file__) + " import SimulationSettings"
+        self.create_str = "SimulationSettings()"
 
     def __repr__(self):
         d = {"01. integration_step": self.integration_step,
@@ -88,7 +90,6 @@ class ABCSimulator(object):
         # ...after computing the equilibrium point (and correct it for zeql for a >=6D model
         initial_conditions = calc_equilibrium_point(self.model, self.model_configuration,
                                                     self.connectivity.normalized_weights)
-
         # -------------------The lines below are for a specific "realistic" demo simulation:---------------------------------
         if (self.model._nvar > 6):
           shape = initial_conditions[5].shape
@@ -98,7 +99,6 @@ class ABCSimulator(object):
           initial_conditions[7] = 1.0 * numpy.ones((1, n_regions))#model.slope * numpy.ones((hypothesis.n_regions,1))
           initial_conditions[9] = 0.0 * numpy.ones((1, n_regions))#model.Iext2.T * numpy.ones((hypothesis.n_regions,1))
         # ------------------------------------------------------------------------------------------------------------------
-
         initial_conditions = numpy.expand_dims(initial_conditions, 2)
         initial_conditions = numpy.tile(initial_conditions, (history_length, 1, 1, 1))
         return initial_conditions

@@ -9,7 +9,7 @@ import numpy as np
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.model.vep.surface import Surface
-from tvb_epilepsy.base.model.vep.sensors import Sensors, TYPE_SEEG, TYPE_EEG, TYPE_MEG
+from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.readers import ABCReader
@@ -22,7 +22,7 @@ class CustomReader(ABCReader):
     def read_connectivity(self, h5_path):
         """
         :param h5_path: Path towards a custom Connectivity H5 file
-        :return: Weights, Tracts, Region centers
+        :return: Weights, Tracts, Region centres
         """
         self.logger.info("Reading a Connectivity from: " + h5_path)
         h5_file = h5py.File(h5_path, 'r', libver='latest')
@@ -30,13 +30,13 @@ class CustomReader(ABCReader):
         self.logger.debug("Weights shape:" + str(h5_file['/weights'].shape))
         weights = h5_file['/weights'][()]
         tract_lengths = h5_file['/tract_lengths'][()]
-        # TODO: should change to English centers than French centres!
-        region_centers = h5_file['/centres'][()]
+        # TODO: should change to English centres than French centres!
+        region_centres = h5_file['/centres'][()]
         region_labels = h5_file['/region_labels'][()]
         orientations = h5_file['/orientations'][()]
         hemispheres = h5_file['/hemispheres'][()]
         h5_file.close()
-        return Connectivity(h5_path, weights, tract_lengths, region_labels, region_centers, hemispheres, orientations)
+        return Connectivity(h5_path, weights, tract_lengths, region_labels, region_centres, hemispheres, orientations)
 
     def read_cortical_surface(self, h5_path):
         if os.path.isfile(h5_path):
@@ -79,22 +79,33 @@ class CustomReader(ABCReader):
             warning("\nNo Structural MRI file found at path " + h5_path + "!")
             return []
 
-    def read_sensors(self, h5_path, s_type):
-        if os.path.isfile(h5_path):
-            self.logger.info("Reading Sensors from: " + h5_path)
-            h5_file = h5py.File(h5_path, 'r', libver='latest')
+    def read_sensors(self, filename, root_folder, s_type):
+        filename = ensure_list(filename)
+        path = os.path.join(root_folder, filename[0])
+        gain_matrix = None
+        if os.path.isfile(path):
+            self.logger.info("Reading Sensors from: " + path)
+            h5_file = h5py.File(path, 'r', libver='latest')
             labels = h5_file['/labels'][()]
             locations = h5_file['/locations'][()]
             # TODO: check if h5py returns None for non existing datasets
-            orientations = h5_file['/orientations'][()]
-            projection = h5_file['/projection'][()]
+            if '/orientations' in h5_file:
+                orientations = h5_file['/orientations'][()]
+            else:
+                orientations = None
+            if '/gain_matrix' in h5_file:
+                gain_matrix = h5_file['/gain_matrix'][()]
+            elif len(filename) > 1:
+                path = os.path.join(root_folder, filename[1])
+                if os.path.isfile(path):
+                    gain_matrix = self.read_gain_matrix(path, s_type)
             h5_file.close()
-            return Sensors(labels, locations, orientations, projection, s_type=s_type)
+            return Sensors(labels, locations, orientations=orientations, gain_matrix=gain_matrix, s_type=s_type)
         else:
-            warning("\nNo Sensor file found at path " + h5_path + "!")
+            warning("\nNo Sensor file found at path " + path + "!")
             return None
 
-    def read_projection(self, path, s_type):
+    def read_gain_matrix(self, path, s_type):
         if os.path.isfile(path):
             return np.load(path)
         else:
@@ -107,7 +118,7 @@ class CustomReader(ABCReader):
                   region_mapping_file="RegionMapping.h5",
                   volume_mapping_file="VolumeMapping.h5",
                   structural_mri_file="StructuralMRI.h5",
-                  seeg_sensors_files=["SensorsSEEG_114.h5", "SensorsSEEG_125.h5"],
+                  seeg_sensors_files=[("SensorsSEEG_114.h5", ), ("SensorsSEEG_125.h5", )],
                   eeg_sensors_files=[],
                   meg_sensors_files=[],
                   ):
@@ -117,14 +128,14 @@ class CustomReader(ABCReader):
         vm = self.read_volume_mapping(os.path.join(root_folder, "VolumeMapping.h5"))
         t1 = self.read_volume_mapping(os.path.join(root_folder, "StructuralMRI.h5"))
         sensorsSEEG = []
-        for s_file in ensure_list(seeg_sensors_files):
-            sensorsSEEG.append(self.read_sensors(s_file, TYPE_SEEG))
+        for s_files in ensure_list(seeg_sensors_files):
+            sensorsSEEG.append(self.read_sensors(s_files, root_folder, Sensors.TYPE_SEEG))
         sensorsEEG = []
-        for s_file in ensure_list(eeg_sensors_files):
-            sensorsEEG.append(self.read_sensors(s_file, TYPE_EEG))
+        for s_files in ensure_list(eeg_sensors_files):
+            sensorsEEG.append(self.read_sensors(s_files, root_folder, Sensors.TYPE_EEG))
         sensorsMEG = []
-        for s_file in ensure_list(meg_sensors_files):
-            sensorsMEG.append(self.read_sensors(s_file, TYPE_MEG))
+        for s_files in ensure_list(meg_sensors_files):
+            sensorsMEG.append(self.read_sensors(s_files, root_folder, Sensors.TYPE_MEG))
         return Head(conn, srf, rm, vm, t1, name, sensorsSEEG=sensorsSEEG, sensorsEEG=sensorsEEG, sensorsMEG=sensorsMEG)
 
     def read_epileptogenicity(self, root_folder, name="ep"):

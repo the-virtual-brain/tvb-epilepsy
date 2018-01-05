@@ -1,14 +1,15 @@
 import os
-import numpy as np
 from copy import deepcopy
 
-from tvb_epilepsy.base.constants import DATA_MODE, TVB
-from tvb_epilepsy.base.configurations import FOLDER_RES, DATA_CUSTOM
+import numpy as np
+
+from tvb_epilepsy.base.constants.module_constants import DATA_MODE, TVB
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
+from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.model.vep.connectivity import Connectivity
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader

@@ -5,7 +5,7 @@ from itertools import product
 import numpy as np
 from matplotlib import pyplot
 
-from tvb_epilepsy.base.constants import WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
+from tvb_epilepsy.base.constants.module_constants import WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
 from tvb_epilepsy.base.utils.log_error_utils import warning, initialize_logger
 
 
@@ -20,19 +20,20 @@ def weighted_vector_sum(weights, vectors, normalize=True):
     return np.array(vector_sum)
 
 
-def normalize_weights(weights, percentile=WEIGHTS_NORM_PERCENT):  # , max_w=1.0
+def normalize_weights(weights, percentile=WEIGHTS_NORM_PERCENT, remove_diagonal=True, ceil=1.0):  # , max_w=1.0
     # Create the normalized connectivity weights:
     if len(weights) > 0:
         normalized_w = np.array(weights)
-        # Remove diagonal elements
-        n_regions = normalized_w.shape[0]
-        normalized_w *= 1 - np.eye(n_regions)
+        if remove_diagonal:
+            # Remove diagonal elements
+            n_regions = normalized_w.shape[0]
+            normalized_w *= 1 - np.eye(n_regions)
         # Normalize with the 95th percentile
-        # if np.max(normalized_w) - max_w > 1e-6:
         normalized_w = np.array(normalized_w / np.percentile(normalized_w, percentile))
-        #    else:
-        #        normalized_w = np.array(weights)
-        # normalized_w[normalized_w > max_w] = max_w
+        if ceil:
+            if ceil is True:
+                ceil = 1.0
+            normalized_w[normalized_w > ceil] = ceil
         return normalized_w
     else:
         return np.array([])
@@ -42,7 +43,7 @@ def compute_in_degree(weights):
     return np.expand_dims(np.sum(weights, axis=1), 1).T
 
 
-def compute_projection(locations1, locations2, normalize=95, ceil=False):
+def compute_gain_matrix(locations1, locations2, normalize=95, ceil=1.0):
     n1 = locations1.shape[0]
     n2 = locations2.shape[0]
     projection = np.zeros((n1, n2))
@@ -53,6 +54,8 @@ def compute_projection(locations1, locations2, normalize=95, ceil=False):
     if normalize:
         projection /= np.percentile(projection, normalize)
     if ceil:
+        if ceil is True:
+            ceil = 1.0
         projection[projection > ceil] = ceil
     return projection
 
@@ -131,7 +134,6 @@ def curve_elbow_point(vals, interactive=INTERACTIVE_ELBOW_POINT):
         else:
             logger.info("\nautomatic selection: " + str(elbow))
         return elbow
-
     else:
         return elbow
 

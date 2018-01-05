@@ -4,15 +4,15 @@ Service to do LSA computation.
 """
 import numpy
 
+from tvb_epilepsy.base.constants.module_constants import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM
+from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF
+from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, construct_import_path
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
-from tvb_epilepsy.base.configurations import FOLDER_FIGURES
-from tvb_epilepsy.base.constants import X1_EQ_CR_DEF, EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM, \
-    FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
 from tvb_epilepsy.base.utils.math_utils import weighted_vector_sum, curve_elbow_point
 from tvb_epilepsy.base.utils.plot_utils import plot_in_columns
 
@@ -32,6 +32,8 @@ class LSAService(object):
         self.eigen_vectors_number = eigen_vectors_number
         self.weighted_eigenvector_sum = weighted_eigenvector_sum
         self.normalize_propagation_strength = normalize_propagation_strength
+        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
+        self.create_str = self.__class__.__name__ + "()"
 
     def __repr__(self):
         d = {"01. Eigenvectors' number selection mode": self.eigen_vectors_number_selection,
@@ -101,7 +103,7 @@ class LSAService(object):
 
         fz_jacobian = calc_fz_jac_square_taylor(model_configuration.zEQ, model_configuration.yc,
                                                 model_configuration.Iext1, model_configuration.K,
-                                                model_configuration.connectivity_matrix,
+                                                model_configuration.model_connectivity,
                                                 model_configuration.a, model_configuration.b, model_configuration.d)
 
         if numpy.any([numpy.any(numpy.isnan(fz_jacobian.flatten())), numpy.any(numpy.isinf(fz_jacobian.flatten()))]):
@@ -160,7 +162,7 @@ class LSAService(object):
                  figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
                  show_flag=SHOW_FLAG, save_flag=SAVE_FLAG):
 
-        hyp_dict_list = disease_hypothesis.prepare_for_plot(model_configuration.connectivity_matrix)
+        hyp_dict_list = disease_hypothesis.prepare_for_plot(model_configuration.model_connectivity)
         model_config_dict_list = model_configuration.prepare_for_plot()[:2]
 
         model_config_dict_list += hyp_dict_list
@@ -169,7 +171,7 @@ class LSAService(object):
         if pse_results is not None and isinstance(pse_results, dict):
             fig_name = disease_hypothesis.name + " PSE " + title
             ind_ps = len(plot_dict_list) - 2
-            for ii, value in enumerate(["propagation_strengths", "e_values", "x0_values"]):
+            for ii, value in enumerate(["lsa_propagation_strengths", "e_values", "x0_values"]):
                 ind = ind_ps - ii
                 if ind >= 0:
                     if pse_results.get(value, False).any():
@@ -188,7 +190,7 @@ class LSAService(object):
 
         return plot_in_columns(plot_dict_list, region_labels, width_ratios=[],
                                left_ax_focus_indices=disease_hypothesis.get_all_disease_indices(),
-                               right_ax_focus_indices=disease_hypothesis.propagation_indices,
+                               right_ax_focus_indices=disease_hypothesis.lsa_propagation_indices,
                                description=description, title=title, figure_name=fig_name,
                                figure_dir=figure_dir,
                                figure_format=figure_format,
