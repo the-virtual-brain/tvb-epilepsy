@@ -13,7 +13,7 @@ from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import \
                                                         EULER_METHODS, OBSERVATION_MODEL_EXPRESSIONS, OBSERVATION_MODELS
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
-from tvb_epilepsy.service.signal_factory import decimate_signals, cut_signals_tails
+from tvb_epilepsy.service.signal_processor import decimate_signals, cut_signals_tails
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
 from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DISTRIBUTIONS
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
@@ -178,10 +178,10 @@ class ODEModelInversionService(ModelInversionService):
                                                    kwargs.pop("auto_selection", "rois-correlation-power"), **kwargs)
         time = self.set_time(target_data.get("time", None))
         if kwargs.get("decimate", 1) > 1:
-            signals, time, self.dt, self.n_times = decimate_signals(time, signals, kwargs.get("decimate"))
+            signals, time, self.dt, self.n_times = decimate_signals(signals, time, kwargs.get("decimate"))
             self.observation_shape = (self.n_times, self.n_signals)
         if np.sum(kwargs.get("cut_signals_tails", (0, 0))) > 0:
-            signals, time, self.n_times = cut_signals_tails(time, signals, kwargs.get("cut_signals_tails"))
+            signals, time, self.n_times = cut_signals_tails(signals, time, kwargs.get("cut_signals_tails"))
             self.observation_shape = (self.n_times, self.n_signals)
         signals -= signals.min()
         signals /= signals.max()

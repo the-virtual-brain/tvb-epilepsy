@@ -2,10 +2,7 @@
 import numpy as np
 from scipy.signal import decimate
 
-from tvb_epilepsy.base.computations.analyzers_utils import filter_data
-
-
-def decimate_signals(time, signals, decim_ratio):
+def decimate_signals(signals, time, decim_ratio):
     signals = decimate(signals, decim_ratio, axis=0, zero_phase=True)
     time = decimate(time, decim_ratio, zero_phase=True)
     dt = np.mean(time)
@@ -13,13 +10,14 @@ def decimate_signals(time, signals, decim_ratio):
     return signals, time, dt, n_times
 
 
-def cut_signals_tails(time, signals, cut_tails):
+def cut_signals_tails(signals, time, cut_tails):
     signals = signals[cut_tails[0]:-cut_tails[-1]]
     time = time[cut_tails[0]:-cut_tails[-1]]
     (n_times, n_signals) = signals.shape
     return signals, time, n_times
 
 
+#TODO: Decide upon this commented method
 # def compute_envelope(data, time, samp_rate, hp_freq=5.0, lp_freq=0.1, benv_cut=100, cut_tails=None, order=3):
 #     if cut_tails is not None:
 #         start = cut_tails[0]

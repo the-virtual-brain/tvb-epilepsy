@@ -3,7 +3,6 @@ from scipy.signal import decimate
 
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.utils.plot_utils import plot_timeseries
-from tvb_epilepsy.service.signal_factory import decimate_signals, cut_signals_tails
 
 
 def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_freq=10.0, high_freq=None, log_flag=True,
