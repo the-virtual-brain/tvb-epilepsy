@@ -26,7 +26,7 @@ FOLDER_VEP_HOME = os.path.join(FOLDER_VEP_ONLINE, "tests")
 
 def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                         sensors_filename="SensorsSEEG_116.h5", stats_model_name="vep_sde",
-                        model_code_dir="/Users/dionperd/VEPtools/git/vep_stan", EMPIRICAL="",
+                        model_code_dir="/Users/dionperd/VEPtools/git/tvb-epilepsy/tvb_epilepsy/stan", EMPIRICAL="",
                         times_on_off=[], sensors_lbls=[], sensors_inds=[], fitmethod="optimizing",
                         stan_service="CmdStan", results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES, **kwargs):
 
@@ -233,9 +233,9 @@ if __name__ == "__main__":
     # ep_name = "clinical_hypothesis_preseeg_right"
     EMPIRICAL = True
     stats_model_name = "vep_sde"
-    stats_model_name = "vep-fe-rev-05"
+    # stats_model_name = "vep-fe-rev-05"
     fitmethod = "sample"
-    model_code_dir = "/Users/dionperd/VEPlocal/tests"
+    model_code_dir = "/Users/dionperd/VEPtools/git/tvb-epilepsy/tvb_epilepsy/stan"
     if EMPIRICAL:
         main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                             sensors_filename=sensors_filename, stats_model_name=stats_model_name,
