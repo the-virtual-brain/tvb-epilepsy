@@ -1,6 +1,6 @@
 import numpy as np
 
-from tvb_epilepsy.service.rdump_factory import rdump
+from tvb_epilepsy.io.rdump import rdump
 
 
 def merge_csv_data(*csvs):

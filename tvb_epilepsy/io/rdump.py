@@ -1,4 +1,3 @@
-
 import numpy as np
 
 
@@ -39,7 +38,7 @@ def rload(fname):
     for line in lines:
         lhs, rhs = [_.strip() for _ in line.split('<-')]
         if rhs.startswith('structure'):
-            vals, dim = rhs.replace('(', ' ').replace(')', ' ').split('c')[1:] #[1:] instead of *_,
+            vals, dim = rhs.replace('(', ' ').replace(')', ' ').split('c')[1:]  # [1:] instead of *_,
             vals = [float(v) for v in vals.split(',')[:-1]]
             dim = [int(v) for v in dim.split(',')]
             val = np.array(vals).reshape(dim[::-1]).T

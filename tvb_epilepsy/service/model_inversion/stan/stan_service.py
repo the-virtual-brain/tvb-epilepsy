@@ -14,9 +14,8 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path, isequal_string, ensure_list, sort_dict
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
-from tvb_epilepsy.service.rdump_factory import rdump, rload
+from tvb_epilepsy.io.rdump import rdump, rload
 from tvb_epilepsy.io.csv import parse_csv
-
 
 LOG = initialize_logger(__name__)
 
@@ -30,7 +29,7 @@ class StanService(object):
         self.fitmethod = fitmethod
         self.model_name = model_name
         self.model = model
-        if not(os.path.isdir(model_dir)):
+        if not (os.path.isdir(model_dir)):
             os.mkdir(model_dir)
         self.model_path = os.path.join(model_dir, self.model_name)
         self.model_code = model_code
@@ -119,12 +118,12 @@ class StanService(object):
             est = {}
             for pkey, pval in csv.iteritems():
                 try:
-                    est[pkey+"_s"] = csv[pkey]
-                    est[pkey+"_low"], est[pkey], est[pkey+"_std"] = describe(csv[pkey])[1:4]
-                    est[pkey+"_high"] = est[pkey+"_low"][1]
-                    est[pkey+"_low"] =  est[pkey+"_low"][0]
-                    est[pkey+"_std"] = np.sqrt(est[pkey+"_std"])
-                    for skey in [pkey, pkey+"_low", pkey+"_high", pkey+"_std"]:
+                    est[pkey + "_s"] = csv[pkey]
+                    est[pkey + "_low"], est[pkey], est[pkey + "_std"] = describe(csv[pkey])[1:4]
+                    est[pkey + "_high"] = est[pkey + "_low"][1]
+                    est[pkey + "_low"] = est[pkey + "_low"][0]
+                    est[pkey + "_std"] = np.sqrt(est[pkey + "_std"])
+                    for skey in [pkey, pkey + "_low", pkey + "_high", pkey + "_std"]:
                         est[skey] = np.squeeze(est[skey])
                 except:
                     est[pkey] = csv[pkey]
@@ -195,4 +194,3 @@ class StanService(object):
     #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_x0.png"))
     #     pyplot.imshow(csv[0]['FC'].mean(axis=0))
     #     pyplot.colorbar()
-
