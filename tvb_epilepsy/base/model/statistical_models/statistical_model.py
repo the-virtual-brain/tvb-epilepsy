@@ -10,6 +10,7 @@ from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
 
 SIG_EQ_DEF = (X1_EQ_CR_DEF-X1_DEF)/10
 
+
 class StatisticalModel(object):
 
     def __init__(self, name='vep', n_regions=0, sig_eq=SIG_EQ_DEF, **defaults):
