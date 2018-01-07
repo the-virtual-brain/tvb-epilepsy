@@ -1,23 +1,23 @@
 import numpy as np
-from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, X1_DEF
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error  # warning,
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
-from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
+from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel, SIG_EQ_DEF
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
 
 
-OBSERVATION_MODEL_EXPRESSIONS=["x1z_offset", "x1_offset", "lfp"]
+# OBSERVATION_MODEL_EXPRESSIONS=["lfp", "x1_offset", "x1z_offset"]
+# OBSERVATION_EXPRESSION_DEF = "lfp"
 OBSERVATION_MODELS=[ "seeg_logpower", "seeg_power", "lfp_power"]
+OBSERVATION_MODEL_DEF = "seeg_logpower"
 # EULER_METHODS = ["backward", "midpoint", "forward"]
 
-SIG_EQ_DEF = (X1_EQ_CR_DEF-X1_DEF)/10
 SIG_INIT_DEF = SIG_EQ_DEF
 
 class ODEStatisticalModel(StatisticalModel):
 
     def __init__(self, name='vep_ode', n_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
-                 sig_eq=SIG_EQ_DEF, sig_init=SIG_INIT_DEF, observation_model="seeg_logpower",
-                 observation_expression="x1z_offset", # euler_method="forward",
+                 sig_eq=SIG_EQ_DEF, sig_init=SIG_INIT_DEF, observation_model=OBSERVATION_MODEL_DEF,
+                 # observation_expression=OBSERVATION_EXPRESSION_DEF, euler_method="forward",
                  **defaults):
         super(ODEStatisticalModel, self).__init__(name, n_regions, sig_eq, **defaults)
         self.sig_init = sig_init
@@ -38,12 +38,12 @@ class ODEStatisticalModel(StatisticalModel):
         # else:
         #     raise_value_error("Statistical model's euler_method " + str(euler_method) + " is not one of the valid ones: "
         #                       + str(["backward", "forward"]) + "!")
-        if np.in1d(observation_expression.lower(), OBSERVATION_MODEL_EXPRESSIONS):
-            self.observation_expression = observation_expression.lower()
-        else:
-            raise_value_error("Statistical model's observation expression " + str(observation_expression) +
-                              " is not one of the valid ones: "
-                              + str(OBSERVATION_MODEL_EXPRESSIONS) + "!")
+        # if np.in1d(observation_expression.lower(), OBSERVATION_MODEL_EXPRESSIONS):
+        #     self.observation_expression = observation_expression.lower()
+        # else:
+        #     raise_value_error("Statistical model's observation expression " + str(observation_expression) +
+        #                       " is not one of the valid ones: "
+        #                       + str(OBSERVATION_MODEL_EXPRESSIONS) + "!")
         if np.in1d(observation_model.lower(), OBSERVATION_MODELS):
             self.observation_model = observation_model.lower()
         else:

@@ -1,13 +1,14 @@
 import time
 from copy import deepcopy
 import numpy as np
+import pylab as pl
+from tvb_epilepsy.base.constants.model_constants import X1_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, assert_arrays, \
     extract_dict_stringkeys
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.model.vep.sensors import Sensors
-from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import OBSERVATION_MODEL_EXPRESSIONS, \
-                                                                                    OBSERVATION_MODELS # EULER_METHODS,
+from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import OBSERVATION_MODELS
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
 from tvb_epilepsy.service.head_service import HeadService
 from tvb_epilepsy.service.signal_processor import decimate_signals, cut_signals_tails
@@ -39,7 +40,7 @@ class ODEModelInversionService(ModelInversionService):
         self.signals_inds = range(self.n_signals)
         self._set_default_parameters(**kwargs)
 
-    def set_default_sig_init(self, **kwargs):
+    def get_default_sig_init(self, **kwargs):
         return kwargs.get("sig_init", self.sig_eq)
 
     def set_time(self, time=None):
@@ -245,7 +246,7 @@ class ODEModelInversionService(ModelInversionService):
         return statistical_model
 
     def _set_default_parameters(self, **kwargs):
-        sig_init = kwargs.get("sig_init", self.get_default_sig_init(**kwargs)),
+        sig_init = self.get_default_sig_init(**kwargs)
         # Generative model:
         # Integration:
         self.default_parameters.update(set_parameter_defaults("x1init", "normal", (self.n_regions,),  # name, pdf, shape
@@ -258,11 +259,11 @@ class ODEModelInversionService(ModelInversionService):
         #                                                       0.0, 3.0*self.sig_init,
         #                                                       self.sig_init, self.sig_init / 3.0, **kwargs))
         self.default_parameters.update(set_parameter_defaults("scale_signal", "lognormal", (),
-                                                              0.5, 1.5,
-                                                              1.0, 0.1, **kwargs))
+                                                              0.8, 3.0,
+                                                              2.0, 0.2, **kwargs))
         self.default_parameters.update(set_parameter_defaults("offset_signal", "normal", (),
-                                                              -0.5, 0.5,
-                                                              0.0, 0.1, **kwargs))
+                                                              -X1_DEF-0.4, -X1_DEF+0.6,
+                                                              -X1_DEF, 0.1, **kwargs))
 
     def generate_statistical_model(self, model_name=None, **kwargs):
         if model_name is None:
@@ -302,8 +303,8 @@ class ODEModelInversionService(ModelInversionService):
                       #"euler_method": np.where(np.in1d(EULER_METHODS, statistical_model.euler_method))[0][0] - 1,
                       "observation_model": np.where(np.in1d(OBSERVATION_MODELS,
                                                             statistical_model.observation_model))[0][0],
-                      "observation_expression": np.where(np.in1d(OBSERVATION_MODEL_EXPRESSIONS,
-                                                                 statistical_model.observation_expression))[0][0],
+                      # "observation_expression": np.where(np.in1d(OBSERVATION_MODEL_EXPRESSIONS,
+                      #                                            statistical_model.observation_expression))[0][0],
                       "signals": signals,
                       "mixing": mixing,
                       "x1eq0": statistical_model.parameters["x1eq"].mean}

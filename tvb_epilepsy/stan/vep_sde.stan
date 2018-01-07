@@ -214,7 +214,6 @@ data {
     int<lower=0> sig_pdf;
 
     /* Observation model */
-    int observation_expression;
     int observation_model;
     matrix[n_signals, n_regions] mixing;
     row_vector[n_signals] signals[n_times];
@@ -262,11 +261,10 @@ transformed data {
     real scale_signal_star_lo = (scale_signal_lo - scale_signal_loc) / scale_signal_scale;
     real scale_signal_star_hi = (scale_signal_hi - scale_signal_loc) / scale_signal_scale;
     // TODO: Adjustment of signal scaling, offset and eps!
-    /* Figure out the correct ranges for scale_signal and offset_signal
-    real signals_lo = min(signals)
-    real signals_hi = max(signals)
-    real signals_scale = signal_hi - signal_lo
-    real signals_loc = mean(signals) */
+
+
+    }
+
 }
 
 
@@ -339,23 +337,15 @@ transformed parameters {
             z[tt, active_regions] = sde_step(n_regions, z[tt-1, active_regions], df, dt, z_dWt[tt-1] * sqrtdt);
             z[tt, nonactive_regions] = ode_step(n_regions, z[tt-1, active_regions], df, dt);
 
-            if (observation_expression == 0) {
-                observation = x1[tt];
-            } else if (observation_expression == 1){
-                observation = (x1[tt] - x1eq) / 2.0;
-            } else {
-                observation = (x1[tt] - x1eq + z[tt] - zeq) / 2.75;
-            }
-
             if  (observation_model == 0) {
                 // seeg log power: observation with some log mixing, scaling and offset_signal
-                fit_signals[tt] = (scale_signal * log(mixing * exp(observation')) + offset_signal)';
+                fit_signals[tt] = (scale_signal * log(mixing * exp(x1[tt]')) + offset_signal)';
             } else if (observation_model == 1){
                 // observation with some linear mixing, scaling and offset_signal
-                fit_signals[tt] = (scale_signal * mixing * observation' + offset_signal)';
+                fit_signals[tt] = (scale_signal * mixing * x1[tt]' + offset_signal)';
             } else {
                 // observation with some scaling and offset_signal, without mixing
-                fit_signals[tt] = scale_signal * observation + offset_signal;
+                fit_signals[tt] = scale_signal * x1[tt] + offset_signal;
             }
         }
     }

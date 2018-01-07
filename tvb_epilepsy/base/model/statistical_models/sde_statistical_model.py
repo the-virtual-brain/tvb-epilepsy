@@ -1,19 +1,20 @@
-from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
-from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, X1_DEF
+import numpy as np
+from tvb_epilepsy.base.model.statistical_models.statistical_model import SIG_EQ_DEF
+from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel, SIG_INIT_DEF, \
+                                                                                                OBSERVATION_MODEL_DEF
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
 
-
-SIG_EQ_DEF = (X1_EQ_CR_DEF-X1_DEF)/10
-SIG_INIT_DEF = SIG_EQ_DEF
 
 class SDEStatisticalModel(ODEStatisticalModel):
 
     def __init__(self, name="sde_vep", n_regions=0, active_regions=[], n_signals=0,
-                       n_times=0, dt=1.0, sig_eq=SIG_EQ_DEF, sig_init=SIG_INIT_DEF, # euler_method="forward",
-                       observation_model="seeg_logpower", observation_expression="x1z_offset", **defaults):
+                       n_times=0, dt=1.0, sig_eq=SIG_EQ_DEF, sig_init=SIG_INIT_DEF,
+                        # observation_expression="lfp", euler_method="forward",
+                       observation_model=OBSERVATION_MODEL_DEF,  **defaults):
         super(SDEStatisticalModel, self).__init__(name, n_regions, active_regions, n_signals, n_times, dt,
-                                                  sig_eq, sig_init, observation_model, observation_expression,
-                                                  **defaults) # euler_method,
+                                                  sig_eq, sig_init, observation_model,
+                                                  #  observation_expression, euler_method,
+                                                  **defaults)
         self._add_parameters(**defaults)
 
     def __str__(self):
