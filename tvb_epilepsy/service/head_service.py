@@ -17,7 +17,7 @@ class HeadService(object):
     def compute_nearest_regions_to_sensors(self, head, sensors=None, target_contacts=None, s_type=Sensors.TYPE_SEEG,
                                            sensors_id=0, n_regions=None, gain_matrix_th=None):
         if not (isinstance(sensors, Sensors)):
-            sensors = head.get_sensors_id(s_type=s_type, sensors_ids=sensors_id)
+            sensors = head.get_sensors_id(s_type=s_type, sensor_ids=sensors_id)
         n_contacts = sensors.labels.shape[0]
         if isinstance(target_contacts, (list, tuple, np.ndarray)):
             target_contacts = ensure_list(target_contacts)

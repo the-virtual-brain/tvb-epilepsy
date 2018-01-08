@@ -29,8 +29,6 @@ class TestHeadService():
 
         return head
 
-    # def test_compute_nearest_regions_to_sensors(self):
-
     def test_write_head_folder(self):
         head = self._prepare_dummy_head()
 
@@ -46,7 +44,7 @@ class TestHeadService():
 
     def test_plot_head(self):
         head = self._prepare_dummy_head()
-        #TODO: this filenames may change because they are composed inside the plotting functions
+        # TODO: this filenames may change because they are composed inside the plotting functions
         filename1 = "Connectivity_.png"
         filename2 = "HeadStats.png"
         filename3 = "1_-_SEEG_-_Projection.png"
@@ -61,11 +59,26 @@ class TestHeadService():
         assert os.path.exists(os.path.join(FOLDER_FIGURES, filename2))
         assert os.path.exists(os.path.join(FOLDER_FIGURES, filename3))
 
-    # def test_select_sensors_power(self):
+    def test_select_sensors_power(self):
+        head = self._prepare_dummy_head()
+        selected = self.head_service.select_sensors_power(head.sensorsSEEG[0], 0.4)
 
-    # def test_select_sensors_rois(self):
+        # TODO: better checks
+        assert isinstance(selected, list)
 
-    # def test_select_sensors_corr(self):
+    def test_select_sensors_rois(self):
+        head = self._prepare_dummy_head()
+        selected = self.head_service.select_sensors_rois(head.sensorsSEEG[0], [0])
+
+        # TODO: better checks
+        assert isinstance(selected, list)
+
+    def test_select_sensors_corr(self):
+        head = self._prepare_dummy_head()
+        selected = self.head_service.select_sensors_corr(head.sensorsSEEG[0], 0.1)
+
+        # TODO: better checks
+        assert isinstance(selected, list)
 
     @classmethod
     def teardown_class(cls):
