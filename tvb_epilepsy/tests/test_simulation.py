@@ -1,11 +1,13 @@
 import os
 import numpy as np
+
+from tvb_epilepsy.base.constants.configurations import DATA_TEST
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration, set_time_scales
 from tvb_epilepsy.tvb_api.readers_tvb import TVBReader
 
-data_dir = "data"
+head_dir = "head2"
 
 
 class TestSimulationRun():
@@ -29,7 +31,7 @@ class TestSimulationRun():
 
     def test_tvb_simulation(self):
         reader = TVBReader()
-        connectivity = reader.read_connectivity(os.path.join(data_dir, "connectivity_76.zip"))
+        connectivity = reader.read_connectivity(os.path.join(DATA_TEST, "connectivity_76.zip"))
         model_configuration = self._prepare_model_for_simulation(connectivity)
 
         simulator = setup_TVB_simulation_from_model_configuration(model_configuration, connectivity, self.dt,
@@ -46,7 +48,7 @@ class TestSimulationRun():
 
         # def test_custom_simulation(self):
         #     reader = CustomReader()
-        #     connectivity = reader.read_connectivity(os.path.join(data_dir, "Connectivity.h5"))
+        #     connectivity = reader.read_connectivity(os.path.join(DATA_TEST, head_dir, "Connectivity.h5"))
         #     model_configuration = self._prepare_model_for_simulation(connectivity)
         #
         #     simulator = setup_custom_simulation_from_model_configuration(model_configuration, connectivity, self.dt,

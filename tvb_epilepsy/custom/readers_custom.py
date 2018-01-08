@@ -142,7 +142,7 @@ class CustomReader(ABCReader):
         srf = self.read_cortical_surface(os.path.join(root_folder, surface_file))
         rm = self.read_region_mapping(os.path.join(root_folder, region_mapping_file))
         vm = self.read_volume_mapping(os.path.join(root_folder, volume_mapping_file))
-        t1 = self.read_volume_mapping(os.path.join(root_folder, structural_mri_file))
+        t1 = self.read_t1(os.path.join(root_folder, structural_mri_file))
 
         if seeg_sensors_files == [] and eeg_sensors_files == [] and meg_sensors_files == []:
             sensorsSEEG, sensorsEEG, sensorsMEG = self.read_sensors(root_folder)
