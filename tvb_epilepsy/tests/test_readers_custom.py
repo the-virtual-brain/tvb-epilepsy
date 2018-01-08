@@ -30,6 +30,9 @@ class TestReadersCustom():
         head = self.reader.read_head(os.path.join(DATA_TEST, head_dir))
 
         assert head.connectivity.number_of_regions == 76
+        assert head.cortical_surface.vertices.shape[0] == 16
+        assert len(head.region_mapping) == 16
+        assert head.volume_mapping.shape == (6, 5, 4)
         assert len(head.sensorsEEG) == 0
         assert len(head.sensorsMEG) == 0
         assert len(head.sensorsSEEG) > 0
