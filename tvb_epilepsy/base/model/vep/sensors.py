@@ -1,10 +1,8 @@
-from collections import OrderedDict
 import re
 import numpy as np
 from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, labels_to_inds, \
-    split_string_text_numbers, construct_import_path
+    split_string_text_numbers
 from tvb_epilepsy.base.utils.math_utils import compute_gain_matrix
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 
 class SensorsH5Field():
@@ -45,13 +43,6 @@ class Sensors(object):
             else:
                 self.channel_labels, self.channel_inds = self.group_sensors_to_electrodes()
                 self.get_needles_from_inds_labels()
-        self.context_str = "from " + construct_import_path(__file__) + " import Sensors"
-        self.create_str = "Sensors(np.array([]), np.array([]), s_type='" + self.s_type + "')"
-
-    def summary(self):
-        d = {"1. sensors type": self.s_type,
-             "2. locations": reg_dict(self.locations, self.labels)}
-        return formal_repr(self, OrderedDict(sorted(d.items(), key=lambda t: t[0])))
 
     @property
     def number_of_sensors(self):
@@ -69,22 +60,7 @@ class Sensors(object):
     def __str__(self):
         return self.__repr__()
 
-    def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model(self)
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "Sensors")
-        h5_model.add_or_update_metadata_attribute("EPI_Version", "1")
-        h5_model.add_or_update_metadata_attribute("Number_of_sensors", str(self.number_of_sensors))
-        h5_model.add_or_update_metadata_attribute("Sensors_subtype", self.s_type)
-        h5_model.add_or_update_metadata_attribute("/gain_matrix/Min", str(self.gain_matrix.min()))
-        h5_model.add_or_update_metadata_attribute("/gain_matrix/Max", str(self.gain_matrix.max()))
-        return h5_model
-
-    def write_to_h5(self, folder, filename=""):
-        if filename == "":
-            filename = self.name + ".h5"
-        h5_model = self._prepare_for_h5()
-        h5_model.write_to_h5(folder, filename)
-
+    #TODO: verify this try and change message
     def sensor_label_to_index(self, labels):
         indexes = []
         for label in labels:
@@ -109,10 +85,6 @@ class Sensors(object):
         for ind in elec_inds:
             sensors_inds += self.elec_inds[ind]
         return np.unique(sensors_inds)
-
-    # TODO: duplicated+not used
-    def calculate_projection(self, connectivity):
-        return compute_gain_matrix(self.locations, connectivity.centers, normalize=95, ceil=1.0)
 
     def compute_gain_matrix(self, connectivity):
         return compute_gain_matrix(self.locations, connectivity.centres, normalize=95, ceil=1.0)

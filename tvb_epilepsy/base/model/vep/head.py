@@ -1,8 +1,6 @@
 import numpy as np
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list, \
-    construct_import_path
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 
 
@@ -26,12 +24,6 @@ class Head(object):
             self.name = 'Head' + str(self.number_of_regions)
         else:
             self.name = name
-        path = construct_import_path(__file__).split("head")[0]
-        self.context_str = "from " + path + "head" + " import Head; " + \
-                           "from " + path + "connectivity" + " import Connectivity; " + \
-                           "from " + path + "surface" + " import Surface; "
-        self.create_str = "Head(Connectivity('" + self.connectivity.file_path + "', np.array([]), np.array([])), " + \
-                          "Surface(np.array([]), np.array([])))"
 
     @property
     def number_of_regions(self):
@@ -54,17 +46,6 @@ class Head(object):
 
     def __str__(self):
         return self.__repr__()
-
-    def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model(self)
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "HeadModel")
-        return h5_model
-
-    def write_to_h5(self, folder, filename=""):
-        if filename == "":
-            filename = self.name + ".h5"
-        h5_model = self._prepare_for_h5()
-        h5_model.write_to_h5(folder, filename)
 
     def get_sensors(self, s_type=Sensors.TYPE_SEEG):
         if np.in1d(s_type.upper(), Sensors.SENSORS_TYPES):
