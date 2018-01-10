@@ -62,16 +62,6 @@ class HeadService(object):
                         count = self._plot_sensors(s, head.connectivity.region_labels, count, show_flag,
                                                    save_flag, figure_dir, figure_format)
 
-    def write_head_folder(self, head, folder, conn_filename="Connectivity"):
-        if not (os.path.isdir(folder)):
-            os.mkdir(folder)
-        head.connectivity.write_to_h5(folder, conn_filename + ".h5", connectivity_variants=True)
-        # TODO create classes and write functions for the rest of the contents of a Head
-        # self.cortical_surface.write_to_h5(folder, cortsurf_filename + ".h5")
-        for sensor_list in (ensure_list(head.sensorsSEEG), ensure_list(head.sensorsEEG), ensure_list(head.sensorsMEG)):
-            for sensors in sensor_list:
-                sensors.write_to_h5(folder, "Sensors" + sensors.s_type + "_" + str(sensors.number_of_sensors) + ".h5")
-
     def _plot_connectivity(self, connectivity, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
                            figure_format=FIG_FORMAT, figure_name='Connectivity ', figsize=VERY_LARGE_SIZE):
         # plot connectivity
