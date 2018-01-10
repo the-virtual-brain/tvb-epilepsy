@@ -1,8 +1,13 @@
-
 import numpy as np
 
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, construct_import_path
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
+
+
+class SurfaceH5Field():
+    VERTICES = "vertices"
+    TRIANGLES = "triangles"
+    VERTEX_NORMALS = "vertex_normals"
 
 
 class Surface(object):
@@ -11,7 +16,8 @@ class Surface(object):
     vertex_normals = np.array([])
     triangle_normals = np.array([])
 
-    def __init__(self, vertices, triangles, surface_subtype="CORTICAL", vertex_normals=np.array([]), triangle_normals=np.array([])):
+    def __init__(self, vertices, triangles, surface_subtype="CORTICAL", vertex_normals=np.array([]),
+                 triangle_normals=np.array([])):
         self.vertices = vertices
         self.triangles = triangles
         self.vertex_normals = vertex_normals

@@ -7,6 +7,13 @@ from tvb_epilepsy.base.utils.math_utils import compute_gain_matrix
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 
+class SensorsH5Field():
+    GAIN_MATRIX = "gain_matrix"
+    LABELS = "labels"
+    LOCATIONS = "locations"
+    NEEDLES = "needles"
+
+
 class Sensors(object):
     TYPE_EEG = 'EEG'
     TYPE_MEG = "MEG"

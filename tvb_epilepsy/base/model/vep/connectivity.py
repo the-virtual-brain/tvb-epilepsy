@@ -6,6 +6,15 @@ from tvb_epilepsy.base.utils.math_utils import normalize_weights
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 
+class ConnectivityH5Field():
+    WEIGHTS = "weights"
+    TRACTS = "tract_lengths"
+    CENTERS = "centres"
+    REGION_LABELS = "region_labels"
+    ORIENTATIONS = "orientations"
+    HEMISPHERES = "hemispheres"
+
+
 class Connectivity(object):
     file_path = None
     weights = None
