@@ -4,6 +4,7 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_RES, FOLDER_LOGS, 
 from tvb_epilepsy.base.h5_model import read_h5_model
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.io.h5.writer_custom import CustomH5Writer
 from tvb_epilepsy.tests.base import get_temporary_files_path, remove_temporary_test_files
 
 
@@ -23,6 +24,8 @@ class TestHypothesis():
         assert x0_values == hyp.x0_values
 
     def test_h5_conversion(self):
+        writer = CustomH5Writer()
+
         nr_of_regions = 76
         x0_indices = [20]
         x0_values = [0.9]
@@ -31,7 +34,7 @@ class TestHypothesis():
                                            lsa_propagation_indices=[0], lsa_propagation_strenghts=[18])
         folder = get_temporary_files_path()
         file_name = "hypo.h5"
-        lsa_hypothesis.write_to_h5(folder, file_name)
+        writer.write_hypothesis(lsa_hypothesis, os.path.join(folder, file_name))
         lsa_hypothesis1 = read_h5_model(os.path.join(folder, file_name)).convert_from_h5_model(
             obj=deepcopy(lsa_hypothesis))
         assert_equal_objects(lsa_hypothesis, lsa_hypothesis1)
