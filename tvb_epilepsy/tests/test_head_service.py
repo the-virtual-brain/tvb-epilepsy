@@ -6,7 +6,7 @@ from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
 from tvb_epilepsy.custom.readers_custom import CustomReader
 from tvb_epilepsy.service.head_service import HeadService
-from tvb_epilepsy.tests.base import get_temporary_folder, remove_temporary_test_files
+from tvb_epilepsy.tests.base import remove_temporary_test_files
 
 head_dir = "head2"
 
@@ -28,19 +28,6 @@ class TestHeadService():
         head = Head(connectivity, cort_surface, sensorsSEEG=seeg_sensors)
 
         return head
-
-    def test_write_head_folder(self):
-        head = self._prepare_dummy_head()
-
-        head_folder = os.path.join(get_temporary_folder(), "Head_dummy")
-
-        assert not os.path.exists(head_folder)
-
-        self.head_service.write_head_folder(head, head_folder)
-
-        assert os.path.exists(head_folder)
-        assert os.listdir(head_folder) is not []
-        assert len(os.listdir(head_folder)) == 2
 
     def test_plot_head(self):
         head = self._prepare_dummy_head()
