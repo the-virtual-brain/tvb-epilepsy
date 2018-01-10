@@ -6,7 +6,6 @@ from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
 from tvb_epilepsy.custom.readers_custom import CustomReader
 from tvb_epilepsy.service.head_service import HeadService
-from tvb_epilepsy.tests.base import remove_temporary_test_files
 
 head_dir = "head2"
 
@@ -69,7 +68,6 @@ class TestHeadService():
 
     @classmethod
     def teardown_class(cls):
-        remove_temporary_test_files()
         for direc in (FOLDER_LOGS, FOLDER_RES, FOLDER_FIGURES):
             for dir_file in os.listdir(direc):
                 os.remove(os.path.join(os.path.abspath(direc), dir_file))
