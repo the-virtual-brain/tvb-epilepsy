@@ -98,3 +98,16 @@ class CustomH5Writer(ABCH5Writer):
                                    os.path.join(path, "Sensors%s_%s.h5" % (sensors.s_type, sensors.number_of_sensors)))
 
         self.logger.info("Successfully wrote Head folder at: %s" % path)
+
+    def write_hypothesis(self, hypothesis, path):
+        """
+        :param hypothesis: DiseaseHypothesis object to write in H5
+        :param path: H5 path to be written
+        """
+        h5_file = h5py.File(path, 'a', libver='latest')
+
+        # TODO: change HypothesisModel to GenericModel here and inside Epi
+        h5_file.create_dataset(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_file.create_dataset("Number_of_nodes", hypothesis.number_of_regions)
+
+        h5_file.close()

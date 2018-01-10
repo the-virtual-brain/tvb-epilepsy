@@ -169,7 +169,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
         logger.info("\n\nRunning LSA...")
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
         lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
-        lsa_hypothesis.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")
+        writer.write_hypothesis(lsa_hypothesis, os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5"))
         lsa_service.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")
         if test_write_read:
             hypothesis_template = DiseaseHypothesis(hyp.number_of_regions)

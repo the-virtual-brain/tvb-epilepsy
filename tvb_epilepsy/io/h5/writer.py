@@ -18,3 +18,7 @@ class ABCH5Writer(object):
     @abstractmethod
     def write_head(self, head, path):
         pass
+
+    @abstractmethod
+    def write_hypothesis(self, hypothesis, path):
+        pass
