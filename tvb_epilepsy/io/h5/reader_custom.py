@@ -1,10 +1,10 @@
 import os
 import numpy
 import h5py
-from tvb_epilepsy.base.model.vep.connectivity import Connectivity
+from tvb_epilepsy.base.model.vep.connectivity import Connectivity, ConnectivityH5Field
 from tvb_epilepsy.base.model.vep.head import Head
-from tvb_epilepsy.base.model.vep.sensors import Sensors
-from tvb_epilepsy.base.model.vep.surface import Surface
+from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorsH5Field
+from tvb_epilepsy.base.model.vep.surface import Surface, SurfaceH5Field
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5.reader import ABCH5Reader
 
@@ -28,12 +28,12 @@ class CustomH5Reader(ABCH5Reader):
         self.logger.info("Starting to read a Connectivity from: %s" % path)
         h5_file = h5py.File(path, 'r', libver='latest')
 
-        weights = h5_file['/weights'][()]
-        tract_lengths = h5_file['/tract_lengths'][()]
-        region_centres = h5_file['/centres'][()]
-        region_labels = h5_file['/region_labels'][()]
-        orientations = h5_file['/orientations'][()]
-        hemispheres = h5_file['/hemispheres'][()]
+        weights = h5_file['/' + ConnectivityH5Field.WEIGHTS][()]
+        tract_lengths = h5_file['/' + ConnectivityH5Field.TRACTS][()]
+        region_centres = h5_file['/' + ConnectivityH5Field.CENTERS][()]
+        region_labels = h5_file['/' + ConnectivityH5Field.REGION_LABELS][()]
+        orientations = h5_file['/' + ConnectivityH5Field.ORIENTATIONS][()]
+        hemispheres = h5_file['/' + ConnectivityH5Field.HEMISPHERES][()]
 
         h5_file.close()
 
@@ -54,9 +54,9 @@ class CustomH5Reader(ABCH5Reader):
         self.logger.info("Starting to read Surface from: %s" % path)
         h5_file = h5py.File(path, 'r', libver='latest')
 
-        vertices = h5_file['/vertices'][()]
-        triangles = h5_file['/triangles'][()]
-        vertex_normals = h5_file['/vertex_normals'][()]
+        vertices = h5_file['/' + SurfaceH5Field.VERTICES][()]
+        triangles = h5_file['/' + SurfaceH5Field.TRIANGLES][()]
+        vertex_normals = h5_file['/' + SurfaceH5Field.VERTEX_NORMALS][()]
 
         h5_file.close()
 
@@ -108,15 +108,15 @@ class CustomH5Reader(ABCH5Reader):
         self.logger.info("Starting to read sensors of type %s from: %s" % (type, sensors_file))
         h5_file = h5py.File(sensors_file, 'r', libver='latest')
 
-        labels = h5_file['/labels'][()]
-        locations = h5_file['/locations'][()]
+        labels = h5_file['/' + SensorsH5Field.LABELS][()]
+        locations = h5_file['/' + SensorsH5Field.LOCATIONS][()]
 
         if '/orientations' in h5_file:
             orientations = h5_file['/orientations'][()]
         else:
             orientations = None
-        if '/gain_matrix' in h5_file:
-            gain_matrix = h5_file['/gain_matrix'][()]
+        if '/' + SensorsH5Field.GAIN_MATRIX in h5_file:
+            gain_matrix = h5_file['/' + SensorsH5Field.GAIN_MATRIX][()]
         else:
             gain_matrix = None
 
