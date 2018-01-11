@@ -11,7 +11,7 @@ class CustomH5Writer(ABCH5Writer):
     logger = initialize_logger(__name__)
 
     CUSTOM_TYPE_ATTRIBUTE = "EPI_Type"
-    CUSTOM_SUBTYPE_ATTRIBUTE = ""
+    CUSTOM_SUBTYPE_ATTRIBUTE = "EPI_Subtype"
 
     # TODO: write variants.
     def write_connectivity(self, connectivity, path):
@@ -106,8 +106,30 @@ class CustomH5Writer(ABCH5Writer):
         """
         h5_file = h5py.File(path, 'a', libver='latest')
 
+        h5_file.create_dataset("x0_values", hypothesis.x0_values)
+        h5_file.create_dataset("e_values", hypothesis.e_values)
+        h5_file.create_dataset("w_values", hypothesis.w_values)
+        h5_file.create_dataset("lsa_propagation_strengths", hypothesis.lsa_propagation_strengths)
+
         # TODO: change HypothesisModel to GenericModel here and inside Epi
+        h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, "DiseaseHypothesis")
+        h5_file.attrs.create("Number_of_nodes", hypothesis.number_of_regions)
+        h5_file.attrs.create("type", hypothesis.type)
+        h5_file.attrs.create("x0_indices", hypothesis.x0_indices)
+        h5_file.attrs.create("e_indices", hypothesis.e_indices)
+        h5_file.attrs.create("w_indices", hypothesis.w_indices)
+        h5_file.attrs.create("lsa_propagation_indices", hypothesis.lsa_propagation_indices)
+
+        h5_file.close()
+
+    def write_model_configuration(self, model_configuration, path):
+        """
+        :param model_configuration: ModelConfiguration object to write in H5
+        :param path: H5 path to be written
+        """
+        h5_file = h5py.File(path, 'a', libver='latest')
         h5_file.create_dataset(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.create_dataset("Number_of_nodes", hypothesis.number_of_regions)
+        h5_file.create_dataset("Number_of_nodes", len(model_configuration.x0_values))
 
         h5_file.close()

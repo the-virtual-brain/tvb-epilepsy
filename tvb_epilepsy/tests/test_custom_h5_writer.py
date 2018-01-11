@@ -1,5 +1,7 @@
 import os
 import numpy
+
+from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
@@ -24,12 +26,16 @@ class TestCustomH5writer(object):
     def test_write_connectivity(self):
         test_file = os.path.join(get_temporary_folder(), "TestConnectivity.h5")
 
+        assert not os.path.exists(test_file)
+
         self.writer.write_connectivity(self.dummy_connectivity, test_file)
 
         assert os.path.exists(test_file)
 
     def test_write_connectivity_with_normalized_weigths(self):
         test_file = os.path.join(get_temporary_folder(), "TestConnectivityNorm.h5")
+
+        assert not os.path.exists(test_file)
 
         connectivity = self.dummy_connectivity
         connectivity.normalized_weights = numpy.array([1, 2, 3])
@@ -40,12 +46,16 @@ class TestCustomH5writer(object):
     def test_write_surface(self):
         test_file = os.path.join(get_temporary_folder(), "TestSurface.h5")
 
+        assert not os.path.exists(test_file)
+
         self.writer.write_surface(self.dummy_surface, test_file)
 
         assert os.path.exists(test_file)
 
     def test_write_sensors(self):
         test_file = os.path.join(get_temporary_folder(), "TestSensors.h5")
+
+        assert not os.path.exists(test_file)
 
         self.writer.write_sensors(self.dummy_sensors, test_file)
 
@@ -54,11 +64,24 @@ class TestCustomH5writer(object):
     def test_write_head(self):
         test_folder = os.path.join(get_temporary_folder(), "test_head")
 
+        assert not os.path.exists(test_folder)
+
         head = self._prepare_dummy_head()
         self.writer.write_head(head, test_folder)
 
         assert os.path.exists(test_folder)
         assert len(os.listdir(test_folder)) >= 3
+
+    def test_write_hypothesis(self):
+        test_file = os.path.join(get_temporary_folder(), "TestHypothesis.h5")
+        dummy_hypothesis = DiseaseHypothesis(3, excitability_hypothesis={tuple([0]): numpy.array([0.6])},
+                                             epileptogenicity_hypothesis={})
+
+        assert not os.path.exists(test_file)
+
+        self.writer.write_hypothesis(dummy_hypothesis, test_file)
+
+        assert os.path.exists(test_file)
 
     @classmethod
     def teardown_class(cls):

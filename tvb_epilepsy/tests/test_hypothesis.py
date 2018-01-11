@@ -1,11 +1,6 @@
 import os
-from copy import deepcopy
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, FOLDER_LOGS, FOLDER_FIGURES
-from tvb_epilepsy.base.h5_model import read_h5_model
-from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.io.h5.writer_custom import CustomH5Writer
-from tvb_epilepsy.tests.base import get_temporary_files_path, remove_temporary_test_files
 
 
 class TestHypothesis():
@@ -23,27 +18,8 @@ class TestHypothesis():
         assert x0_indices == hyp.x0_indices
         assert x0_values == hyp.x0_values
 
-    def test_h5_conversion(self):
-        writer = CustomH5Writer()
-
-        nr_of_regions = 76
-        x0_indices = [20]
-        x0_values = [0.9]
-        lsa_hypothesis = DiseaseHypothesis(nr_of_regions, excitability_hypothesis={tuple(x0_indices): x0_values},
-                                           epileptogenicity_hypothesis={}, connectivity_hypothesis={},
-                                           lsa_propagation_indices=[0], lsa_propagation_strenghts=[18])
-        folder = get_temporary_files_path()
-        file_name = "hypo.h5"
-        writer.write_hypothesis(lsa_hypothesis, os.path.join(folder, file_name))
-        lsa_hypothesis1 = read_h5_model(os.path.join(folder, file_name)).convert_from_h5_model(
-            obj=deepcopy(lsa_hypothesis))
-        assert_equal_objects(lsa_hypothesis, lsa_hypothesis1)
-        lsa_hypothesis2 = read_h5_model(os.path.join(folder, file_name)).convert_from_h5_model()
-        assert_equal_objects(lsa_hypothesis, lsa_hypothesis2)
-
     @classmethod
     def teardown_class(cls):
-        remove_temporary_test_files()
         for direc in (FOLDER_LOGS, FOLDER_RES, FOLDER_FIGURES):
             for dir_file in os.listdir(direc):
                 os.remove(os.path.join(os.path.abspath(direc), dir_file))
