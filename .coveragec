@@ -2,8 +2,8 @@
 
 [run]
 omit =
-        *__init__*
-        tests/*
+        *__init__.py
+        tvb_epilepsy/tests/*
 
 [report]
 precision = 0
