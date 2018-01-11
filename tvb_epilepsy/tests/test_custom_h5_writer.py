@@ -8,6 +8,7 @@ from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
 from tvb_epilepsy.io.h5.writer_custom import CustomH5Writer
+from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.tests.base import remove_temporary_test_files, get_temporary_folder
 
@@ -104,6 +105,16 @@ class TestCustomH5writer(object):
         assert not os.path.exists(test_file)
 
         self.writer.write_model_configuration(dummy_mc_service, test_file)
+
+        assert os.path.exists(test_file)
+
+    def test_write_lsa_service(self):
+        test_file = os.path.join(get_temporary_folder(), "TestLSAService.h5")
+        dummy_lsa_service = LSAService()
+
+        assert not os.path.exists(test_file)
+
+        self.writer.write_model_configuration(dummy_lsa_service, test_file)
 
         assert os.path.exists(test_file)
 

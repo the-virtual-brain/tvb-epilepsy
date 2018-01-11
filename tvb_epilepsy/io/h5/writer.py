@@ -30,3 +30,7 @@ class ABCH5Writer(object):
     @abstractmethod
     def write_model_configuration_service(self, model_configuration_service, path):
         pass
+
+    @abstractmethod
+    def write_lsa_service(self, lsa_service, path):
+        pass

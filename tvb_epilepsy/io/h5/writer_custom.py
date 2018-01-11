@@ -149,7 +149,7 @@ class CustomH5Writer(ABCH5Writer):
         :param model_configuration_service: ModelConfigurationService object to write in H5
         :param path: H5 path to be written
         """
-        h5_file = h5py.File(path, 'w', libver='latest')
+        h5_file = h5py.File(path, 'a', libver='latest')
 
         datasets_dict, metadata_dict = self._determine_datasets_and_attributes(model_configuration_service)
 
@@ -158,6 +158,26 @@ class CustomH5Writer(ABCH5Writer):
 
         h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
         h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, "ModelConfigurationService")
+
+        for key, value in metadata_dict.iteritems():
+            h5_file.attrs.create(key, value)
+
+        h5_file.close()
+
+    def write_lsa_service(self, lsa_service, path):
+        """
+        :param lsa_service: LSAService object to write in H5
+        :param path: H5 path to be written
+        """
+        h5_file = h5py.File(path, 'a', libver='latest')
+
+        datasets_dict, metadata_dict = self._determine_datasets_and_attributes(lsa_service)
+
+        for key, value in datasets_dict.iteritems():
+            h5_file.create_dataset(key, data=value)
+
+        h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, "LSAService")
 
         for key, value in metadata_dict.iteritems():
             h5_file.attrs.create(key, value)
