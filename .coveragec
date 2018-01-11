@@ -1,9 +1,7 @@
 # .coveragerc to control coverage.py
 
-[run]
+[report]
+precision = 0
 omit =
         *__init__.py
         tvb_epilepsy/tests/*
-
-[report]
-precision = 0
