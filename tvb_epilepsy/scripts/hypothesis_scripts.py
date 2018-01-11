@@ -107,8 +107,10 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
     else:
         model_configuration = model_configuration_service. \
             configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
+    writer = CustomH5Writer
+
     if save_flag:
-        model_configuration.write_to_h5(results_dir, hyp.name + "_ModelConfig.h5")
+        writer.write_model_configuration(model_configuration, os.path.join(results_dir, hyp.name + "_ModelConfig.h5"))
     # Plot nullclines and equilibria of model configuration
     if plot_flag:
         model_configuration_service.plot_state_space(model_configuration, head.connectivity.region_labels,
@@ -120,7 +122,6 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
                              weighted_eigenvector_sum=weighted_eigenvector_sum)
     lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
     if save_flag:
-        writer = CustomH5Writer
         writer.write_hypothesis(lsa_hypothesis, os.path.join(results_dir, lsa_hypothesis.name + "_LSA.h5"))
         # lsa_service.write_to_h5(results_dir, lsa_hypothesis.name + "_LSAConfig.h5")
     if plot_flag:

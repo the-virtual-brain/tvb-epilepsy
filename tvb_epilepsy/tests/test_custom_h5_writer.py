@@ -2,6 +2,7 @@ import os
 import numpy
 
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
@@ -80,6 +81,18 @@ class TestCustomH5writer(object):
         assert not os.path.exists(test_file)
 
         self.writer.write_hypothesis(dummy_hypothesis, test_file)
+
+        assert os.path.exists(test_file)
+
+    def test_write_model_configuration(self):
+        test_file = os.path.join(get_temporary_folder(), "TestModelConfiguration.h5")
+        dummy_mc = ModelConfiguration(x1EQ=numpy.array([2.0, 3.0, 1.0]), zmode=None,
+                                      zEQ=numpy.array([3.0, 2.0, 1.0]), Ceq=numpy.array([1.0, 2.0, 3.0]),
+                                      model_connectivity=self.dummy_connectivity.normalized_weights)
+
+        assert not os.path.exists(test_file)
+
+        self.writer.write_model_configuration(dummy_mc, test_file)
 
         assert os.path.exists(test_file)
 

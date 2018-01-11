@@ -1,5 +1,6 @@
 import os
 import h5py
+import numpy
 from tvb_epilepsy.base.model.vep.connectivity import ConnectivityH5Field
 from tvb_epilepsy.base.model.vep.sensors import SensorsH5Field
 from tvb_epilepsy.base.model.vep.surface import SurfaceH5Field
@@ -106,10 +107,10 @@ class CustomH5Writer(ABCH5Writer):
         """
         h5_file = h5py.File(path, 'a', libver='latest')
 
-        h5_file.create_dataset("x0_values", hypothesis.x0_values)
-        h5_file.create_dataset("e_values", hypothesis.e_values)
-        h5_file.create_dataset("w_values", hypothesis.w_values)
-        h5_file.create_dataset("lsa_propagation_strengths", hypothesis.lsa_propagation_strengths)
+        h5_file.create_dataset("x0_values", data=hypothesis.x0_values)
+        h5_file.create_dataset("e_values", data=hypothesis.e_values)
+        h5_file.create_dataset("w_values", data=hypothesis.w_values)
+        h5_file.create_dataset("lsa_propagation_strengths", data=hypothesis.lsa_propagation_strengths)
 
         # TODO: change HypothesisModel to GenericModel here and inside Epi
         h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
@@ -129,7 +130,29 @@ class CustomH5Writer(ABCH5Writer):
         :param path: H5 path to be written
         """
         h5_file = h5py.File(path, 'a', libver='latest')
-        h5_file.create_dataset(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.create_dataset("Number_of_nodes", len(model_configuration.x0_values))
+
+        datasets_dict, metadata_dict = self._determine_datasets_and_attributes(model_configuration)
+
+        for key, value in datasets_dict.iteritems():
+            h5_file.create_dataset(key, data=value)
+
+        h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, "ModelConfiguration")
+
+        for key, value in metadata_dict.iteritems():
+            h5_file.attrs.create(key, value)
 
         h5_file.close()
+
+    def _determine_datasets_and_attributes(self, object):
+        datasets_dict = {}
+        metadata_dict = {}
+
+        for key, value in vars(object).iteritems():
+            if (isinstance(value, numpy.ndarray)) and value.size > 0:
+                datasets_dict.update({key: value})
+            else:
+                if isinstance(value, (float, int, long, complex, str)):
+                    metadata_dict.update({key: value})
+
+        return datasets_dict, metadata_dict

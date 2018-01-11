@@ -22,3 +22,7 @@ class ABCH5Writer(object):
     @abstractmethod
     def write_hypothesis(self, hypothesis, path):
         pass
+
+    @abstractmethod
+    def write_model_configuration(self, model_configuration, path):
+        pass

@@ -5,13 +5,10 @@ This will be used to populate a Model instance needed in order to launch a simul
 """
 
 import numpy as np
-
-from tvb_epilepsy.base.constants.model_constants import X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, I_EXT2_DEF, A_DEF, \
-                                                                            B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF
+from tvb_epilepsy.base.constants.model_constants import X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, I_EXT2_DEF, A_DEF, B_DEF, \
+    D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF
 from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, dicts_of_lists_to_lists_of_dicts, \
-                                                                                                    construct_import_path
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, dicts_of_lists_to_lists_of_dicts
 from tvb_epilepsy.base.utils.plot_utils import plot_in_columns
 
 
@@ -32,8 +29,10 @@ class ModelConfiguration(object):
         self.s = s
         self.slope = slope
         self.gamma = gamma
+        
         # These parameters are used only for EpileptorDP2D Model
         self.zmode = zmode
+
         # These parameters are not used for Epileptor Model, but are important to keep (h5 or plotting)
         self.x1EQ = x1EQ
         self.zEQ = zEQ
@@ -44,8 +43,6 @@ class ModelConfiguration(object):
             self.n_regions = model_connectivity.shape[0]
         else:
             self.n_regions = 0
-        self.context_str = "from " + construct_import_path(__file__) + " import ModelConfiguration"
-        self.create_str = "ModelConfiguration(n_regions=" + str(self.n_regions) + ")"
 
     def __repr__(self):
         d = {
@@ -73,18 +70,6 @@ class ModelConfiguration(object):
 
     def __str__(self):
         return self.__repr__()
-
-    def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model(self)
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
-        h5_model.add_or_update_metadata_attribute("Number_of_nodes", len(self.x0_values))
-        return h5_model
-
-    def write_to_h5(self, folder, filename=""):
-        if filename == "":
-            filename = self.name + ".h5"
-        h5_model = self._prepare_for_h5()
-        h5_model.write_to_h5(folder, filename)
 
     def prepare_for_plot(self, x0_indices=[], e_indices=[], disease_indices=[]):
         names = ["Pathological Excitabilities x0_values", "Model Epileptogenicities e_values", "x1 Equilibria",
