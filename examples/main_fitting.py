@@ -10,6 +10,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.plot_utils import plot_raster, plot_timeseries
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.io.h5.writer_custom import CustomH5Writer
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.model_inversion.sde_model_inversion_service import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
@@ -193,7 +194,10 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                   name='fit' + str(id_est) + "_" + hyp.name)
             model_configuration_fit = fit_model_configuration_service.configure_model_from_hypothesis(hyp_fit,
                                                                                                       this_est["MC"])
-            model_configuration_fit.write_to_h5(results_dir, hyp_fit.name + "_ModelConfig.h5")
+            writer = CustomH5Writer()
+            writer.write_model_configuration(model_configuration_fit,
+                                             os.path.join(results_dir, hyp_fit.name + "_ModelConfig.h5"))
+
             # Plot nullclines and equilibria of model configuration
             model_configuration_service.plot_state_space(model_configuration_fit,
                                                          model_configuration_service.region_labels,
