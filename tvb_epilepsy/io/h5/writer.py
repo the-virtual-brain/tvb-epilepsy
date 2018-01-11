@@ -26,3 +26,7 @@ class ABCH5Writer(object):
     @abstractmethod
     def write_model_configuration(self, model_configuration, path):
         pass
+
+    @abstractmethod
+    def write_model_configuration_service(self, model_configuration_service, path):
+        pass

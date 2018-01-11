@@ -142,7 +142,8 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
         # hyp.write_to_h5(FOLDER_RES, hyp.name + ".h5")
         logger.info("\n\nCreating model configuration...")
         model_configuration_service = ModelConfigurationService(hyp.number_of_regions)
-        model_configuration_service.write_to_h5(FOLDER_RES, hyp.name + "_model_config_service.h5")
+        writer.write_model_configuration_service(model_configuration_service,
+                                                 os.path.join(FOLDER_RES, hyp.name + "_model_config_service.h5"))
         if test_write_read:
             logger.info("Written and read model configuration services are identical?: " +
                         str(assert_equal_objects(model_configuration_service,
@@ -155,7 +156,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
         else:
             model_configuration = model_configuration_service. \
                 configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
-        model_configuration.write_to_h5(FOLDER_RES, hyp.name + "_ModelConfig.h5")
+        writer.write_model_configuration(model_configuration, os.path.join(FOLDER_RES, hyp.name + "_ModelConfig.h5"))
         if test_write_read:
             logger.info("Written and read model configuration are identical?: " +
                         str(assert_equal_objects(model_configuration,
