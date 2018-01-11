@@ -138,7 +138,9 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                         time_units="ms", title=hyp.name + 'Target Signals ',
                         labels=labels[model_inversion.signals_inds],
                         save_flag=True, show_flag=False, figure_dir=figure_dir)
-        model_inversion.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_ModelInversionService.h5")
+        writer = CustomH5Writer()
+        writer.write_model_inversion_service(model_inversion, os.path.join(FOLDER_RES,
+                                                                           lsa_hypothesis.name + "_ModelInversionService.h5"))
         statistical_model.write_to_h5(results_dir, lsa_hypothesis.name + "_StatsModel.h5")
         # try:
         #     model_data = stan_service.load_model_data_from_file()
@@ -194,7 +196,6 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                   name='fit' + str(id_est) + "_" + hyp.name)
             model_configuration_fit = fit_model_configuration_service.configure_model_from_hypothesis(hyp_fit,
                                                                                                       this_est["MC"])
-            writer = CustomH5Writer()
             writer.write_model_configuration(model_configuration_fit,
                                              os.path.join(results_dir, hyp_fit.name + "_ModelConfig.h5"))
 

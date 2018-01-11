@@ -34,3 +34,7 @@ class ABCH5Writer(object):
     @abstractmethod
     def write_lsa_service(self, lsa_service, path):
         pass
+
+    @abstractmethod
+    def write_model_inversion_service(self, model_inversion_service, path):
+        pass

@@ -1,13 +1,9 @@
-
 import time
 from copy import deepcopy
-
 import numpy as np
-
 from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import copy_object_attributes, construct_import_path
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.utils.data_structures_utils import copy_object_attributes
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
@@ -19,15 +15,12 @@ from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defa
 from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_TAU1, \
     EPILEPTOR_MODEL_TAU0
 
-
 LOG = initialize_logger(__name__)
 
-
-STATISTICAL_MODEL_TYPES=["vep_sde", "vep_dWt", "vep_ode", "vep_lsa"]
+STATISTICAL_MODEL_TYPES = ["vep_sde", "vep_dWt", "vep_ode", "vep_lsa"]
 
 
 class ModelInversionService(object):
-
     X1EQ_MIN = -2.0
     X1_REST = X1_DEF
     X1_EQ_CR = X1_EQ_CR_DEF
@@ -50,7 +43,7 @@ class ModelInversionService(object):
         self.observation_shape = ()
         for constant, default in zip(["X1EQ_MIN", "X1_REST", "X1_EQ_CR", "TAU1_DEF", "TAU1_MIN", "TAU1_MAX", "TAU0_DEF",
                                       "TAU0_MIN", "TAU0_MAX", "K_MIN", "K_MAX", "MC_MIN"],
-                                     [ -2.0, X1_DEF, X1_EQ_CR_DEF, 0.5, 0.1, 1.0, 30.0, 3.0, 3000.0, 0.0, 3.0, 0.0]):
+                                     [-2.0, X1_DEF, X1_EQ_CR_DEF, 0.5, 0.1, 1.0, 30.0, 3.0, 3000.0, 0.0, 3.0, 0.0]):
             setattr(self, constant, kwargs.get(constant, default))
         if isinstance(model_configuration, ModelConfiguration):
             self.logger.info("Input model configuration set...")
@@ -67,7 +60,7 @@ class ModelInversionService(object):
         self.hypothesis_type = kwargs.pop("hypothesis_type", None)
         if isinstance(hypothesis, DiseaseHypothesis):
             self._copy_attributes(hypothesis, ["lsa_propagation_strengths", "type"],
-                                  ["lsa_propagation_strengths", "hypothesis_type"],  deep_copy=True, check_none=True)
+                                  ["lsa_propagation_strengths", "hypothesis_type"], deep_copy=True, check_none=True)
             self.logger.info("Input hypothesis set...")
         self.gain_matrix = kwargs.pop("gain_matrix", None)
         self.sensors_locations = kwargs.pop("sensors_locations", None)
@@ -79,14 +72,16 @@ class ModelInversionService(object):
         connectivity = kwargs.pop("connectivity", None)
         if isinstance(head, Head):
             connectivity = head.connectivity
-            if not(isinstance(sensors, list)):
+            if not (isinstance(sensors, list)):
                 sensors = head.get_sensors_id(sensor_ids=kwargs.pop("seeg_sensor_id", 0), s_type=Sensors.TYPE_SEEG)
         if isinstance(connectivity, Connectivity):
             self._copy_attributes(connectivity, ["region_labels", "centres", "orientations"],
-                                  ["region_labels", "region_centers", "region_orientations"], deep_copy=True, check_none=True)
+                                  ["region_labels", "region_centers", "region_orientations"], deep_copy=True,
+                                  check_none=True)
         if isinstance(sensors, Sensors):
             self._copy_attributes(sensors, ["labels", "locations", "gain_matrix"],
-                                  ["sensors_labels", "sensors_locations", "gain_matrix"], deep_copy=True, check_none=True)
+                                  ["sensors_labels", "sensors_locations", "gain_matrix"], deep_copy=True,
+                                  check_none=True)
         self.tau1 = self.TAU1_DEF
         self.tau0 = self.TAU0_DEF
         if np.in1d(dynamical_model, AVAILABLE_DYNAMICAL_MODELS_NAMES):
@@ -96,20 +91,6 @@ class ModelInversionService(object):
         self.default_parameters = {}
         self.__set_default_parameters(**kwargs)
         self.logger.info("Model Inversion Service instance created!")
-        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
-        self.context_str += "; from tvb_epilepsy.base.model.model_configuration import ModelConfiguration"
-        self.create_str = "ModelInversionService(ModelConfiguration())"
-
-    def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model(self)
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "ModelInversionService")
-        return h5_model
-
-    def write_to_h5(self, folder, filename=""):
-        if filename == "":
-            filename = self.name + ".h5"
-        h5_model = self._prepare_for_h5()
-        h5_model.write_to_h5(folder, filename)
 
     def _copy_attributes(self, obj, attributes_obj, attributes_self=None, deep_copy=False, check_none=False):
         copy_object_attributes(obj, self, attributes_obj, attributes_self, deep_copy, check_none)
@@ -148,18 +129,18 @@ class ModelInversionService(object):
         self.default_parameters.update(set_parameter_defaults("x1eq", "normal", (self.n_regions,),
                                                               self.X1EQ_MIN, X1_EQ_CR_DEF,
                                                               pdf_params={"mean": np.maximum(self.x1EQ, self.X1_REST),
-                                                                          "sigma": (self.X1_CR - self.X1_REST) / 10}))
+                                                                          "sigma": (self.X1_EQ_CR - self.X1_REST) / 10}))
         self.default_parameters.update(set_parameter_defaults("K", "lognormal", (),
-                                                              self.K_MIN,  self.K_MAX,
+                                                              self.K_MIN, self.K_MAX,
                                                               np.maximum(np.mean(self.K), 0.001), lambda m: m,
                                                               **kwargs))
-        self.default_parameters.update(set_parameter_defaults("tau1", "lognormal", (),               # name, pdf, shape
-                                                              self.TAU1_MIN, self.TAU1_MAX,          # min, max
-                                                              self.tau1, self.tau1/3,                # mean, (std)
+        self.default_parameters.update(set_parameter_defaults("tau1", "lognormal", (),  # name, pdf, shape
+                                                              self.TAU1_MIN, self.TAU1_MAX,  # min, max
+                                                              self.tau1, self.tau1 / 3,  # mean, (std)
                                                               pdf_params={"std": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("tau0", "lognormal", (),
                                                               self.TAU0_MIN, self.TAU0_MAX,
-                                                              self.tau0, self.tau0/3, **kwargs))
+                                                              self.tau0, self.tau0 / 3, **kwargs))
         # Coupling:
         mean = np.minimum(np.maximum(self.model_connectivity, 0.001), np.percentile(self.model_connectivity, 95))
         self.default_parameters.update(set_parameter_defaults("MC", "lognormal", (self.n_regions, self.n_regions),
@@ -168,7 +149,7 @@ class ModelInversionService(object):
                                                               pdf_params={"std": 1.0, "skew": 0.0}, **kwargs))
         # Integration:
         self.default_parameters.update(set_parameter_defaults("sig_eq", "lognormal", (),
-                                                              0.0, 3*self.sig_eq,
+                                                              0.0, 3 * self.sig_eq,
                                                               self.sig_eq, self.sig_eq / 3.0, **kwargs))
         # Observation model
         self.default_parameters.update(set_parameter_defaults("eps", "lognormal", (),
@@ -185,5 +166,3 @@ class ModelInversionService(object):
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model
-
-

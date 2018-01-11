@@ -1,9 +1,6 @@
 import time
 from copy import deepcopy
-
 import numpy as np
-import pylab as pl
-
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, assert_arrays, \
     extract_dict_stringkeys, construct_import_path
@@ -42,9 +39,6 @@ class ODEModelInversionService(ModelInversionService):
         self.signals_inds = range(self.n_signals)
         self.sig_init = self.set_default_sig_init(**kwargs)
         self._set_default_parameters(**kwargs)
-        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
-        self.context_str += "; from tvb_epilepsy.base.model.model_configuration import ModelConfiguration"
-        self.create_str = "ODEModelInversionService(ModelConfiguration())"
 
     def set_default_sig_init(self, **kwargs):
         return kwargs.pop("sig_init", self.sig_eq)
