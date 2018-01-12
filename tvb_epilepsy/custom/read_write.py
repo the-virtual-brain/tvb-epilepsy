@@ -14,7 +14,6 @@ from tvb_epilepsy.base.utils.file_utils import change_filename_or_overwrite, pri
 from tvb_epilepsy.base.simulators import SimulationSettings
 from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 
-
 PATIENT_VIRTUAL_HEAD = "/WORK/episense/episense-root/trunk/demo-data/Head_TREC"
 
 logger = initialize_logger("log_" + ntpath.split(PATIENT_VIRTUAL_HEAD)[1])
@@ -32,16 +31,16 @@ KEY_STEPS = "Number_of_steps"
 KEY_SAMPLING = "Sampling_period"
 KEY_START = "Start_time"
 
-
 # Attributes to be read or written for hypothesis object and files:
-hyp_attributes_dict = {"Hypothesis name": "name", "Model Epileptogenicity": "e_values", "Pathological Excitability": "x0_values",
+hyp_attributes_dict = {"Hypothesis name": "name", "Model Epileptogenicity": "e_values",
+                       "Pathological Excitability": "x0_values",
                        "LSA Propagation Strength": "lsa_ps", "x1 Equilibria": "x1EQ",
                        "z Equilibria": "zEQ", "Afferent coupling at equilibrium": "Ceq",
                        "Connectivity": "weights", "Permittivity Coupling": "K", "Iext1": "Iext1",
-                       "yc": "yc", "Critical x0_values": "x0cr", "x0_values scaling": "rx0", "EZ hypothesis": "seizure_indices",
+                       "yc": "yc", "Critical x0_values": "x0cr", "x0_values scaling": "rx0",
+                       "EZ hypothesis": "seizure_indices",
                        "x1EQcr": "x1EQcr", "x1LIN": "x1LIN", "x1SQ": "x1SQ",
                        "lsa_eigvals": "lsa_eigvals", "lsa_eigvects": "lsa_eigvects", "lsa_ps_tot": "lsa_ps_tot"}
-
 
 # Attributes to be read or written for Epileptor models object and files:
 epileptor_attributes_dict = {"model.name": "_ui_name", "model.a": "a", "model.b": "b", "model.c": "c", "model.d": "d",
@@ -49,29 +48,26 @@ epileptor_attributes_dict = {"model.name": "_ui_name", "model.a": "a", "model.b"
                              "model.slope": "slope", "model.Iext2": "Iext2", "model.tau": "tau", "model.aa": "aa",
                              "model.Kvf": "Kvf", "model.Kf": "Kf", "model.Ks": "Ks", "model.tt": "tt"}
 
-
-epileptorDP_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0_values": "x0_values", "model.Iext1": "Iext1",
+epileptorDP_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0_values": "x0_values",
+                               "model.Iext1": "Iext1",
                                "model.slope": "slope", "model.Iext2": "Iext2",
                                "model.tau2": "tau2", "model.Kvf": "Kvf", "model.Kf": "Kf", "model.K": "K",
                                "model.tau1": "tau1", "model.zmode": "zmode"}
-
 
 epileptorDPrealistic_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0_values": "x0_values",
                                         "model.Iext1": "Iext1", "model.slope": "slope", "model.Iext2": "Iext2",
                                         "model.tau2": "tau2", "model.Kvf": "Kvf", "model.Kf": "Kf", "model.K": "K",
                                         "model.tau1": "tau1", "model.zmode": "zmode", "model.pmode": "pmode"}
 
-
-epileptorDP2D_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0_values": "x0_values", "model.x0cr": "x0cr",
+epileptorDP2D_attributes_dict = {"model.name": "_ui_name", "model.yc": "yc", "model.x0_values": "x0_values",
+                                 "model.x0cr": "x0cr",
                                  "model.r": "r", "model.Iext1": "Iext1", "model.slope": "slope", "model.Kvf": "Kvf",
                                  "model.K": "K", "model.tau1": "tau1", "model.zmode": "zmode"}
-
 
 epileptor_model_attributes_dict = {"Epileptor": epileptor_attributes_dict, "CustomEpileptor": epileptor_attributes_dict,
                                    "EpileptorDP": epileptorDP_attributes_dict,
                                    "EpileptorDPrealistic": epileptorDPrealistic_attributes_dict,
                                    "EpileptorDP2D": epileptorDP2D_attributes_dict}
-
 
 # Attributes to be read or written for noise object and files:
 simulation_settings_attributes_dict = {"Simulated length (ms)": "simulated_period",
@@ -85,58 +81,6 @@ simulation_settings_attributes_dict = {"Simulated length (ms)": "simulated_perio
                                        "Initial conditions": "initial_conditions"}
 
 
-def generate_connectivity_variant(uq_name, new_weights, new_tracts, description, new_w=None,
-                                  folder=os.path.join(PATIENT_VIRTUAL_HEAD), filename="Connectivity.h5",
-                                  logger=logger):
-    """
-    In existing Connectivity H5 define Weights and Tracts variants
-    """
-    path = os.path.join(folder, filename)
-    logger.info("Writing a Connectivity Variant at:\n" + path)
-    h5_file = h5py.File(path, 'a', libver='latest')
-    try:
-        group = h5_file.create_group('/' + uq_name)
-        # Array doesn't seem to work in Python 3
-        # group.attrs["Operations"] = [description]
-        group.attrs["Operations"] = description
-        h5_file.create_dataset("/" + uq_name + "/weights", data=new_weights)
-        if new_w is not None:
-            h5_file.create_dataset("/" + uq_name + "/w", data=new_w)
-        h5_file.create_dataset("/" + uq_name + "/tract_lengths", data=new_tracts)
-        h5_file.close()
-    except Exception, e:
-        raise_value_error(e + "\nYou should specify a unique group name " + uq_name, logger)
-
-
-def import_sensors(src_txt_file):
-    labels = numpy.loadtxt(src_txt_file, dtype=numpy.str, usecols=[0])
-    locations = numpy.loadtxt(src_txt_file, dtype=numpy.float32, usecols=[1, 2, 3])
-    write_sensors(labels, locations)
-
-
-def write_sensors(labels, locations, orientations=[], gain_matrix=[],
-                  folder=os.path.dirname(PATIENT_VIRTUAL_HEAD), file_name=None, logger=logger):
-    """
-    Store Sensors in a file to be shared by multiple patient virtualizations (heads)
-    """
-    if file_name is None:
-        file_name = "SensorsSEEG_" + str(len(labels)) + ".h5"
-    path, overwrite = change_filename_or_overwrite(folder, file_name)
-    if overwrite:
-        try:
-            os.remove(path)
-        except:
-            warning("\nFile to overwrite not found!")
-    logger.info("Writing Sensors at:\n" + path)
-    h5_file = h5py.File(path, 'a', libver='latest')
-    write_metadata({KEY_TYPE: "SeegSensors", KEY_SENSORS: len(labels)}, h5_file, KEY_DATE, KEY_VERSION)
-    h5_file.create_dataset("/labels", data=labels)
-    h5_file.create_dataset("/locations", data=locations)
-    h5_file.create_dataset("/orientations", data=orientations)
-    h5_file.create_dataset("/gain_matrix", data=gain_matrix)
-    h5_file.close()
-
-
 # TODO: use new hypothesis
 def read_simulation_settings(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "sim_ep.h5"), output="object",
                              hypothesis=None, logger=logger):
@@ -147,7 +91,7 @@ def read_simulation_settings(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "sim_
     logger.info("Reading simulation settings from:\n" + path)
     h5_file = h5py.File(path, 'r', libver='latest')
     print_metadata(h5_file, logger)
-    if output == "dict": #or not (isinstance(hypothesis, Hypothesis)):
+    if output == "dict":  # or not (isinstance(hypothesis, Hypothesis)):
         model = dict()
         if hypothesis is not None:
             warning("hypothesis is not a Hypothesis object. Returning a dictionary for model.")
@@ -175,34 +119,6 @@ def read_simulation_settings(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "sim_
                              add_overwrite_fields_dict=overwrite_fields_dict)
     h5_file.close()
     return model, sim_settings
-
-
-def read_ts(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5"), data=None, logger=logger):
-    """
-    :param path: Path towards a valid TimeSeries H5 file
-    :return: Timeseries in a numpy array
-    """
-    logger.info("Reading TimeSeries from:\n" + path)
-    h5_file = h5py.File(path, 'r', libver='latest')
-    print_metadata(h5_file, logger)
-    logger.info("Structures:\n" + str(h5_file["/"].keys()))
-    if isinstance(data, dict):
-        for key in data:
-            logger.info("Values expected shape: " + str(h5_file['/' + key].shape))
-            data[key] = h5_file['/' + key][()]
-            logger.info("Actual Data shape: " + str(data[key].shape))
-            logger.info("First Channel sv sum: " + str(numpy.sum(data[key][:, 0])))
-    else:
-        logger.info("Values expected shape: " + str(h5_file['/data'].shape))
-        data = h5_file['/data'][()]
-        logger.info("Actual Data shape: " + str(data.shape))
-        logger.info("First Channel sv sum: " + str(numpy.sum(data[:, 0])))
-    total_time = int(h5_file["/"].attrs["Simulated_period"][0])
-    nr_of_steps = int(h5_file["/data"].attrs["Number_of_steps"][0])
-    start_time = float(h5_file["/data"].attrs["Start_time"][0])
-    time = numpy.linspace(start_time, total_time, nr_of_steps)
-    h5_file.close()
-    return time, data
 
 
 def write_ts(raw_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD, "ep"), filename="ts_from_python.h5",
@@ -244,25 +160,6 @@ def write_ts(raw_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD
     h5_file.close()
 
 
-def read_ts_epi(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ts.h5"),
-                logger=logger):
-    """
-    :param path: Path towards a valid TimeSeries H5 file
-    :return: Timeseries in a numpy array
-    """
-    logger.info("Reading TimeSeries from:\n" + path)
-    h5_file = h5py.File(path, 'r', libver='latest')
-    print_metadata(h5_file, logger)
-    logger.info("Structures:\n" + str(h5_file["/"].keys()))
-    logger.info("Values expected shape: " + str(h5_file['/data'].shape))
-    h5_file['/data']
-    data = h5_file['/data'][()]
-    logger.info("Actual Data shape: " + str(data.shape))
-    logger.info("First Channel sv sum: " +  str(numpy.sum(data[:, 0, :], axis=1)))
-    h5_file.close()
-    return data
-
-
 def write_ts_epi(raw_data, sampling_period, lfp_data=None, folder=os.path.join(PATIENT_VIRTUAL_HEAD, "ep"),
                  filename="ts_from_python.h5", logger=logger):
     path, overwrite = change_filename_or_overwrite(folder, filename)
@@ -302,13 +199,13 @@ def write_ts_epi(raw_data, sampling_period, lfp_data=None, folder=os.path.join(P
 
 
 def write_ts_seeg_epi(seeg_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD, "ep"),
-                 filename="ts_from_python.h5", logger=logger):
+                      filename="ts_from_python.h5", logger=logger):
     path = os.path.join(folder, filename)
     if not os.path.exists(path):
         raise_error("TS file %s does not exist. First define the raw data!" + path, logger)
         return
     sensors_name = "SeegSensors-" + str(seeg_data.shape[1])
-    logger.info("Writing a TS at:\n" + path  + ", "+ sensors_name)
+    logger.info("Writing a TS at:\n" + path + ", " + sensors_name)
     try:
         h5_file = h5py.File(path, 'a', libver='latest')
         h5_file.create_dataset("/" + sensors_name, data=seeg_data)

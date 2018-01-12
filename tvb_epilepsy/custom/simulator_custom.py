@@ -2,25 +2,22 @@
 Python Demo for configuring Custom Simulations from Python.
 
 Classes Settings, EpileptorParams and FullConfiguration are synchronized with the Java code, and should not be changed!
+
+TODO: It is imperative to allow for modification of the connectivity.normalized_weights of the Connecitivity.h5 according to the model_configuration.connectivity
 """
 
 import json
 import os
 import subprocess
 from copy import copy
-
 import numpy
-
 from tvb_epilepsy.base.constants.module_constants import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
 from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import obj_to_dict, assert_arrays, construct_import_path
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val_to_model_x0
-
-
-# TODO: It is imperative to allow for modification of the connectivity.normalized_weights of the Connecitivity.h5
-# according to the model_configuration.connectivity
+from tvb_epilepsy.io.h5.reader_custom import CustomH5Reader
 
 
 class SimulationSettings(object):
@@ -61,7 +58,6 @@ class EpileptorParams(object):
 
 
 class EpileptorModel(object):
-
     _ui_name = "CustomEpileptor"
     _nvar = 2
     a = 1.0
@@ -131,7 +127,7 @@ class SimulatorCustom(ABCSimulator):
     From a VEP Hypothesis, write a custom JSON simulation configuration.
     To run a simulation, we can also open a GUI and import the resulted JSON file.
     """
-
+    reader = CustomH5Reader()
     json_custom_config_file = "SimulationConfiguration.json"
 
     def __init__(self, connectivity, model_configuration, model, simulation_settings):
@@ -151,7 +147,8 @@ class SimulatorCustom(ABCSimulator):
 
     def config_simulation(self):
         ep_settings = SimulationSettings(self.simulation_settings.integration_step, self.simulation_settings.noise_seed,
-                                         self.simulation_settings.noise_intensity, self.simulation_settings.simulated_period,
+                                         self.simulation_settings.noise_intensity,
+                                         self.simulation_settings.simulated_period,
                                          self.simulation_settings.monitor_sampling_period)
         json_model = self.prepare_epileptor_model_for_json(self.connectivity.number_of_regions)
         # TODO: history length has to be computed given the time delays (i.e., the tract lengts...)
@@ -175,8 +172,7 @@ class SimulatorCustom(ABCSimulator):
         except:
             status = False
             warning("Something went wrong with this simulation...")
-        from tvb_epilepsy.custom.read_write import read_ts
-        time, data = read_ts(os.path.join(self.head_path, "full-configuration", "ts.h5"), data="data")
+        time, data = self.reader.read_timeseries(os.path.join(self.head_path, "full-configuration", "ts.h5"))
         return time, data, status
 
     def prepare_epileptor_model_for_json(self, no_regions=88):
@@ -216,7 +212,7 @@ class SimulatorCustom(ABCSimulator):
 # Some helper functions for model and simulator construction
 def custom_model_builder(model_configuration, a=1.0, b=3.0, d=5.0):
     x0 = calc_x0_val_to_model_x0(model_configuration.x0_values, model_configuration.yc,
-                                  model_configuration.Iext1, a, b - d)
+                                 model_configuration.Iext1, a, b - d)
     model = EpileptorModel(a=a, b=b, d=d, x0=x0, iext=model_configuration.Iext1,
                            ks=model_configuration.K,
                            c=model_configuration.yc)

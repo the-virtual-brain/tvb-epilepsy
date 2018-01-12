@@ -3,9 +3,7 @@ Mechanism for parameter search exploration for LSA and simulations (it will have
 """
 
 from copy import deepcopy
-
 import numpy as np
-
 from tvb_epilepsy.base.constants.module_constants import EIGENVECTORS_NUMBER_SELECTION
 from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, \
@@ -19,9 +17,8 @@ from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
-from tvb_epilepsy.custom.read_write import read_ts
 from tvb_epilepsy.custom.simulator_custom import custom_model_builder
-
+from tvb_epilepsy.io.h5.reader_custom import CustomH5Reader
 
 logger = initialize_logger(__name__)
 
@@ -101,7 +98,8 @@ def update_hypothesis(hypothesis_input, model_connectivity, params_paths, params
 
 def lsa_out_fun(hypothesis, model_configuration=None, **kwargs):
     if isinstance(model_configuration, ModelConfiguration):
-        return {"lsa_propagation_strengths": hypothesis.lsa_propagation_strengths, "x0_values": model_configuration.x0_values,
+        return {"lsa_propagation_strengths": hypothesis.lsa_propagation_strengths,
+                "x0_values": model_configuration.x0_values,
                 "e_values": model_configuration.e_values, "x1EQ": model_configuration.x1EQ,
                 "zEQ": model_configuration.zEQ, "Ceq": model_configuration.Ceq}
     else:
@@ -139,7 +137,7 @@ def lsa_run_fun(hypothesis_input, model_connectivity, params_paths, params_value
 
 def sim_out_fun(simulator, time, data, **kwargs):
     if data is None:
-        time, data = read_ts(simulator.results_path, data="data")
+        time, data = CustomH5Reader().read_timeseries(simulator.results_path, data="data")
     return {"time": time, "data": data}
 
 
