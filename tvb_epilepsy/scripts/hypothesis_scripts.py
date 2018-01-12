@@ -37,7 +37,7 @@ def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=os.path.jo
                             plot_head=False, figure_dir=FOLDER_FIGURES, sensors_filename="SensorsInternal.h5",
                             logger=LOG):
     if data_mode is TVB:
-        from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
+        from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
     else:
         from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
     # -------------------------------Reading model_data-----------------------------------

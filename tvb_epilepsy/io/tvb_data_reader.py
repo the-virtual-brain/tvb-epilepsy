@@ -1,10 +1,8 @@
 """
-Read VEP related entities from TVB format and data-structures
+Read VEP related entities from TVB format (tvb_data module) and data-structures
 """
 import os
-
 import numpy as np
-
 from tvb.basic.profile import TvbProfile
 
 TvbProfile.set_profile(TvbProfile.LIBRARY_PROFILE)

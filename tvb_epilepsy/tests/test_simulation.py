@@ -1,11 +1,10 @@
 import os
 import numpy as np
-
 from tvb_epilepsy.base.constants.configurations import DATA_TEST
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration, set_time_scales
-from tvb_epilepsy.tvb_api.readers_tvb import TVBReader
+from tvb_epilepsy.io.tvb_data_reader import TVBReader
 
 head_dir = "head2"
 

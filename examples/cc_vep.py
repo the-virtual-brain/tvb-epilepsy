@@ -18,7 +18,7 @@ from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.scripts.simulation_scripts import from_model_configuration_to_simulation
 
 if DATA_MODE is TVB:
-    from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
+    from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
 else:
     from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
 
@@ -121,14 +121,15 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
         # hyp.write_to_h5(FOLDER_RES, hyp.name + ".h5")
         logger.info("\n\nCreating model configuration...")
         model_configuration_service = ModelConfigurationService(hyp.number_of_regions)
-        model_configuration_service.write_to_h5(folder_res, "model_config_service.h5")
+        writer.write_model_configuration_service(model_configuration_service,
+                                                 os.path.join(folder_res, "model_config_service.h5"))
         if hyp.type == "Epileptogenicity":
             model_configuration = model_configuration_service. \
                 configure_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
         else:
             model_configuration = model_configuration_service. \
                 configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
-        model_configuration.write_to_h5(folder_res, "ModelConfiguration.h5")
+        writer.write_model_configuration(model_configuration, os.path.join(folder_res, "ModelConfiguration.h5"))
         # Plot nullclines and equilibria of model configuration
         model_configuration_service.plot_state_space(model_configuration, head.connectivity.region_labels,
                                                      special_idx=disease_indices, model="2d", zmode="lin",
@@ -137,7 +138,7 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
         lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
         writer.write_hypothesis(lsa_hypothesis, os.path.join(folder_res, lsa_hypothesis.name + ".h5"))
-        lsa_service.write_to_h5(folder_res, "lsa_config_service.h5")
+        writer.write_lsa_service(lsa_service, os.path.join(folder_res, "lsa_config_service.h5"))
         lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, None,
                              figure_dir=folder_figs)
         if pse_flag:

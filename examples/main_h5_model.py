@@ -12,7 +12,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 
 if DATA_MODE is TVB:
-    from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
+    from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
 else:
     from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
 

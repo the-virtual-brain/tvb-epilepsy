@@ -25,7 +25,7 @@ from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 
 if DATA_MODE is TVB:
-    from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
+    from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
 else:
     from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
 
