@@ -27,7 +27,7 @@ from tvb_epilepsy.service.model_configuration_service import ModelConfigurationS
 if DATA_MODE is TVB:
     from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
 else:
-    from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
+    from tvb_epilepsy.io.h5.reader_custom import CustomH5Reader as Reader
 
 if SIMULATION_MODE is TVB:
     from tvb_epilepsy.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration \
@@ -48,7 +48,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     reader = Reader()
     writer = CustomH5Writer()
     logger.info("Reading from: " + data_folder)
-    head = reader.read_head(data_folder, seeg_sensors_files=[("SensorsSEEG_116.h5",)])
+    head = reader.read_head(data_folder)
     head_service = HeadService()
     head_service.plot_head(head)
     if test_write_read:
@@ -65,10 +65,10 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     # ...or reading a custom file:
     ep_name = "ep_l_frontal_complex"
     # FOLDER_RES = os.path.join(data_folder, ep_name)
-    from tvb_epilepsy.custom.readers_custom import CustomReader
-    if not isinstance(reader, CustomReader):
-        reader = CustomReader()
-    disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
+    if not isinstance(reader, CustomH5Writer):
+        disease_values = CustomH5Writer().read_epileptogenicity(data_folder, name=ep_name)
+    else:
+        disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
     disease_indices, = np.where(disease_values > np.min([X0_DEF, E_DEF]))
     disease_values = disease_values[disease_indices]
     if disease_values.size > 1:

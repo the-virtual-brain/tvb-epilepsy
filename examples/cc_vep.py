@@ -2,13 +2,10 @@
 Entry point for working with VEP
 """
 import os
-
 import numpy as np
-
 from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE
 from tvb_epilepsy.base.constants.configurations import FOLDER_VEP, FOLDER_RES
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
-from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.io.h5.writer_custom import CustomH5Writer
@@ -20,7 +17,7 @@ from tvb_epilepsy.scripts.simulation_scripts import from_model_configuration_to_
 if DATA_MODE is TVB:
     from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
 else:
-    from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
+    from tvb_epilepsy.io.h5.reader_custom import CustomH5Reader as Reader
 
 PSE_FLAG = False
 SIM_FLAG = True
@@ -64,9 +61,6 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
     # disease_values = x0_values + e_values
     # disease_indices = x0_indices + e_indices
     # ...or reading a custom file:
-    from tvb_epilepsy.custom.readers_custom import CustomReader
-    if not isinstance(reader, CustomReader):
-        reader = CustomReader()
     disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
     disease_indices, = np.where(disease_values > np.min([X0_DEF, E_DEF]))
     disease_values = disease_values[disease_indices]

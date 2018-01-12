@@ -4,7 +4,7 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_LOGS, FOLDER_RES, 
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
-from tvb_epilepsy.custom.readers_custom import CustomReader
+from tvb_epilepsy.io.h5.reader_custom import CustomH5Reader
 from tvb_epilepsy.service.head_service import HeadService
 
 head_dir = "head2"
@@ -20,7 +20,7 @@ class TestHeadService():
                 os.makedirs(direc)
 
     def _prepare_dummy_head(self):
-        reader = CustomReader()
+        reader = CustomH5Reader()
         connectivity = reader.read_connectivity(os.path.join(DATA_TEST, head_dir, "Connectivity.h5"))
         cort_surface = Surface([], [])
         seeg_sensors = Sensors(numpy.array(["sens1", "sens2"]), numpy.array([[0, 0, 0], [0, 1, 0]]))

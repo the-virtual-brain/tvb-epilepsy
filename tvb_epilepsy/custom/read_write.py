@@ -108,45 +108,6 @@ def generate_connectivity_variant(uq_name, new_weights, new_tracts, description,
         raise_value_error(e + "\nYou should specify a unique group name " + uq_name, logger)
 
 
-def read_epileptogenicity(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "ep.h5"), logger=logger):
-    """
-    :param path: Path towards an epileptogenicity H5 file
-    :return: epileptogenicity in a numpy array
-    """
-    logger.info("Reading Epileptogenicity from:\n" + path)
-    h5_file = h5py.File(path, 'r', libver='latest')
-    print_metadata(h5_file, logger)
-    logger.info("Structures:\n" + str(h5_file["/"].keys()))
-    logger.info("Values expected shape: " + str(h5_file['/values'].shape))
-    values = h5_file['/values'][()]
-    logger.info("Actual values shape: " + str(values.shape))
-    h5_file.close()
-    return values
-
-
-def write_epileptogenicity_hypothesis(ep_vector, folder_path=PATIENT_VIRTUAL_HEAD, folder_name=None, file_name=None,
-                                      logger=logger):
-    """
-    Store X0 values to be used when launching simulations
-    """
-    if file_name is None:
-        file_name = "ep"
-    if folder_name is None:
-        folder_name = file_name
-    path, overwrite = change_filename_or_overwrite(os.path.join(folder_path, folder_name), file_name + ".h5")
-    if overwrite:
-        try:
-            os.remove(path)
-        except:
-            warning("\nFile to overwrite not found!")
-    os.makedirs(os.path.dirname(path))
-    logger.info("Writing an Epileptogenicity at:\n" + path)
-    h5_file = h5py.File(path, 'a', libver='latest')
-    write_metadata({KEY_TYPE: "EpileptogenicityModel", KEY_NODES: ep_vector.shape[0]}, h5_file, KEY_DATE, KEY_VERSION)
-    h5_file.create_dataset("/values", data=ep_vector)
-    h5_file.close()
-
-
 def import_sensors(src_txt_file):
     labels = numpy.loadtxt(src_txt_file, dtype=numpy.str, usecols=[0])
     locations = numpy.loadtxt(src_txt_file, dtype=numpy.float32, usecols=[1, 2, 3])
@@ -358,24 +319,3 @@ def write_ts_seeg_epi(seeg_data, sampling_period, folder=os.path.join(PATIENT_VI
         h5_file.close()
     except Exception, e:
         raise_error(e + "\nSeeg dataset already written as " + sensors_name, logger)
-
-
-if __name__ == "__main__":
-    read_epileptogenicity()
-    read_ts()
-    # Simulating edit of a Connectivity.
-    # It need to have the same number as the original connectivity, only weights and tracts changed.
-    random_weights = numpy.random.random((88, 88))
-    random_tracts = numpy.random.random((88, 88))
-    generate_connectivity_variant('random3', random_weights, random_tracts, "Description of connectivity")
-    # Define the X0 vector, that can be later used as input in a simulation from GUI
-    random_x0 = numpy.random.random((88,))
-    write_epileptogenicity_hypothesis("ep-random", random_x0)
-    # Write TS
-    random_ts = numpy.random.random((2000, 88, 3)).astype(numpy.float32)
-    write_ts(random_ts, sampling_period=0.5)
-    random_seeg = numpy.random.random((1000, 50)).astype(numpy.float32)
-    write_ts_seeg_epi(random_seeg, 2.0)
-    # Import Sensors from TXT file
-    src_sensors_file = "/Users/lia.domide/Downloads/Denis/sEEG_position.txt"
-    import_sensors(src_sensors_file)

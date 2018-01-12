@@ -1,7 +1,5 @@
 import os
-
 import numpy as np
-
 from tvb_epilepsy.base.constants.configurations import DATA_CUSTOM, FOLDER_RES, FOLDER_FIGURES
 from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE, EIGENVECTORS_NUMBER_SELECTION, \
     WEIGHTED_EIGENVECTOR_SUM
@@ -39,11 +37,11 @@ def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=os.path.jo
     if data_mode is TVB:
         from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
     else:
-        from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
+        from tvb_epilepsy.io.h5.reader_custom import CustomH5Reader as Reader
     # -------------------------------Reading model_data-----------------------------------
     reader = Reader()
     logger.info("Reading from: " + data_folder)
-    head = reader.read_head(data_folder, seeg_sensors_files=[(sensors_filename, "")])
+    head = reader.read_head(data_folder)
     if plot_head:
         head_service = HeadService()
         head_service.plot_head(head, figure_dir=figure_dir)

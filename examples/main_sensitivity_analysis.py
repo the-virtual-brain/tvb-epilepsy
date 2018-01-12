@@ -1,8 +1,6 @@
 import os
 import warnings
-
 import numpy as np
-
 from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.constants.configurations import DATA_CUSTOM, FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
@@ -10,8 +8,7 @@ from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.sensitivity_analysis_service import METHODS
 from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_hypothesis
-from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
-
+from tvb_epilepsy.io.h5.reader_custom import CustomH5Reader as Reader
 
 logger = initialize_logger(__name__)
 
@@ -49,7 +46,7 @@ if __name__ == "__main__":
                                                          head.connectivity.region_labels,
                                                          n_samples, method=m, param_range=0.1,
                                                          global_coupling=[{"indices": all_regions_indices,
-                                                                           "low": 0.0, "high":2*K_DEF}],
+                                                                           "low": 0.0, "high": 2 * K_DEF}],
                                                          healthy_regions_parameters=[
                                                              {"name": "x0_values", "indices": healthy_indices}],
                                                          logger=logger, save_services=True)
