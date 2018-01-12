@@ -105,7 +105,7 @@ class TestCustomH5writer(object):
 
         assert not os.path.exists(test_file)
 
-        self.writer.write_model_configuration(dummy_mc_service, test_file)
+        self.writer.write_model_configuration_service(dummy_mc_service, test_file)
 
         assert os.path.exists(test_file)
 
@@ -115,7 +115,7 @@ class TestCustomH5writer(object):
 
         assert not os.path.exists(test_file)
 
-        self.writer.write_model_configuration(dummy_lsa_service, test_file)
+        self.writer.write_lsa_service(dummy_lsa_service, test_file)
 
         assert os.path.exists(test_file)
 
@@ -127,7 +127,19 @@ class TestCustomH5writer(object):
 
         assert not os.path.exists(test_file)
 
-        self.writer.write_model_configuration(dummy_model_inversion_service, test_file)
+        self.writer.write_model_inversion_service(dummy_model_inversion_service, test_file)
+
+        assert os.path.exists(test_file)
+
+    def test_write_dictionary(self):
+        test_file = os.path.join(get_temporary_folder(), "TestDict.h5")
+        dummy_dict = dict(
+            {"n_loops": 96, "params_indices": numpy.array([0, 1, 2]), "params_names": numpy.array(["x0", "z", "x0"]),
+             "params_samples": numpy.array([[0.0, 0.1, 0.2], [0.3, 0.0, 0.1], [0.2, 0.3, 0.0]]), "task": "LSA"})
+
+        assert not os.path.exists(test_file)
+
+        self.writer.write_dictionary(dummy_dict, test_file)
 
         assert os.path.exists(test_file)
 

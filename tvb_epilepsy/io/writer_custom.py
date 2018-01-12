@@ -1,6 +1,7 @@
 import os
 import h5py
 import numpy
+from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.vep.connectivity import ConnectivityH5Field
 from tvb_epilepsy.base.model.vep.sensors import SensorsH5Field
 from tvb_epilepsy.base.model.vep.surface import SurfaceH5Field
@@ -113,7 +114,7 @@ class CustomH5Writer(object):
 
         # TODO: change HypothesisModel to GenericModel here and inside Epi
         h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, "DiseaseHypothesis")
+        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, hypothesis.__class__.__name__)
         h5_file.attrs.create("number_of_regions", hypothesis.number_of_regions)
         h5_file.attrs.create("type", hypothesis.type)
         h5_file.attrs.create("x0_indices", hypothesis.x0_indices)
@@ -136,7 +137,7 @@ class CustomH5Writer(object):
             h5_file.create_dataset(key, data=value)
 
         h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, "ModelConfiguration")
+        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, model_configuration.__class__.__name__)
 
         for key, value in metadata_dict.iteritems():
             h5_file.attrs.create(key, value)
@@ -156,7 +157,7 @@ class CustomH5Writer(object):
             h5_file.create_dataset(key, data=value)
 
         h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, "ModelConfigurationService")
+        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, model_configuration_service.__class__.__name__)
 
         for key, value in metadata_dict.iteritems():
             h5_file.attrs.create(key, value)
@@ -176,7 +177,7 @@ class CustomH5Writer(object):
             h5_file.create_dataset(key, data=value)
 
         h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, "LSAService")
+        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, lsa_service.__class__.__name__)
 
         for key, value in metadata_dict.iteritems():
             h5_file.attrs.create(key, value)
@@ -196,10 +197,28 @@ class CustomH5Writer(object):
             h5_file.create_dataset(key, data=value)
 
         h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, "ModelInversionService")
+        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, model_inversion_service.__class__.__name__)
 
         for key, value in metadata_dict.iteritems():
             h5_file.attrs.create(key, value)
+
+        h5_file.close()
+
+    def write_dictionary(self, dictionary, path):
+        """
+        :param dictionary: dictionary to write in H5
+        :param path: H5 path to be written
+        """
+        h5_file = h5py.File(path, 'a', libver='latest')
+
+        for key, value in dictionary.iteritems():
+            if isinstance(value, numpy.ndarray) and value.size > 0:
+                h5_file.create_dataset(key, data=value)
+            else:
+                h5_file.attrs.create(key, value)
+
+        h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, dictionary.__class__.__name__)
 
         h5_file.close()
 
