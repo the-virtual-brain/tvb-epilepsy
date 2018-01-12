@@ -1,6 +1,8 @@
 import os
 import numpy
 import h5py
+from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity, ConnectivityH5Field
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorsH5Field
@@ -239,3 +241,48 @@ class CustomH5Reader(ABCH5Reader):
         h5_file.close()
 
         return time, data
+
+    def read_hypothesis(self, path):
+        """
+        :param path: Path towards a Hypothesis H5 file
+        :return: DiseaseHypothesis object
+        """
+        self.logger.info("Starting to read Hypothesis from: %s" % path)
+        h5_file = h5py.File(path, 'r', libver='latest')
+
+        if h5_file.attrs["EPI_Subtype"] != "DiseaseHypothesis":
+            self.logger.warning("This file does not seem to holds a DiseaseHypothesis!")
+
+        hypothesis = DiseaseHypothesis()
+        for dataset in h5_file.keys():
+            hypothesis.set_attribute(dataset, h5_file["/" + dataset][()])
+
+        for attr in h5_file.attrs.keys():
+            if attr in ["x0_indices", "e_indices", "w_indices"]:
+                hypothesis.set_attribute(attr, h5_file.attrs[attr].tolist())
+            else:
+                hypothesis.set_attribute(attr, h5_file.attrs[attr])
+
+        h5_file.close()
+        return hypothesis
+
+    def read_model_configuration(self, path):
+        """
+        :param path: Path towards a ModelConfiguration H5 file
+        :return: ModelConfiguration object
+        """
+        self.logger.info("Starting to read ModelConfiguration from: %s" % path)
+        h5_file = h5py.File(path, 'r', libver='latest')
+
+        if h5_file.attrs["EPI_Subtype"] != "ModelConfiguration":
+            self.logger.warning("This file does not seem to hold a ModelConfiguration")
+
+        model_configuration = ModelConfiguration()
+        for dataset in h5_file.keys():
+            model_configuration.set_attribute(dataset, h5_file["/" + dataset][()])
+
+        for attr in h5_file.attrs.keys():
+            model_configuration.set_attribute(attr, h5_file.attrs[attr])
+
+        h5_file.close()
+        return model_configuration

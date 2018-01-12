@@ -15,7 +15,7 @@ from tvb_epilepsy.base.utils.plot_utils import plot_in_columns
 class ModelConfiguration(object):
     def __init__(self, yc=YC_DEF, Iext1=I_EXT1_DEF, Iext2=I_EXT2_DEF, K=K_DEF, a=A_DEF, b=B_DEF, d=D_DEF,
                  slope=SLOPE_DEF, s=S_DEF, gamma=GAMMA_DEF, x1EQ=None, zEQ=None, Ceq=None, x0=None,
-                 x0_values=X0_DEF, e_values=None, zmode=np.array("lin"), model_connectivity=None, n_regions=None):
+                 x0_values=X0_DEF, e_values=None, zmode=np.array("lin"), model_connectivity=None, n_regions=0):
         # These parameters are used for every Epileptor Model...
         self.x0_values = x0_values
         self.x0 = x0
@@ -29,7 +29,7 @@ class ModelConfiguration(object):
         self.s = s
         self.slope = slope
         self.gamma = gamma
-        
+
         # These parameters are used only for EpileptorDP2D Model
         self.zmode = zmode
 
@@ -39,10 +39,8 @@ class ModelConfiguration(object):
         self.Ceq = Ceq
         self.e_values = e_values
         self.model_connectivity = model_connectivity
-        if n_regions is None:
+        if n_regions == 0 and model_connectivity is not None:
             self.n_regions = model_connectivity.shape[0]
-        else:
-            self.n_regions = 0
 
     def __repr__(self):
         d = {
@@ -70,6 +68,9 @@ class ModelConfiguration(object):
 
     def __str__(self):
         return self.__repr__()
+
+    def set_attribute(self, attr_name, data):
+        setattr(self, attr_name, data)
 
     def prepare_for_plot(self, x0_indices=[], e_indices=[], disease_indices=[]):
         names = ["Pathological Excitabilities x0_values", "Model Epileptogenicities e_values", "x1 Equilibria",

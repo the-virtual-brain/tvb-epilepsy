@@ -61,6 +61,9 @@ class DiseaseHypothesis(object):
     def __str__(self):
         return self.__repr__()
 
+    def set_attribute(self, attr_name, data):
+        setattr(self, attr_name, data)
+
     def prepare_for_plot(self, connectivity_matrix=None):
         width_ratios = []
         if len(self.lsa_propagation_indices) > 0:
