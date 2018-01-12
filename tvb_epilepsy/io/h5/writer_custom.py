@@ -115,7 +115,7 @@ class CustomH5Writer(ABCH5Writer):
         # TODO: change HypothesisModel to GenericModel here and inside Epi
         h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
         h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, "DiseaseHypothesis")
-        h5_file.attrs.create("Number_of_nodes", hypothesis.number_of_regions)
+        h5_file.attrs.create("number_of_regions", hypothesis.number_of_regions)
         h5_file.attrs.create("type", hypothesis.type)
         h5_file.attrs.create("x0_indices", hypothesis.x0_indices)
         h5_file.attrs.create("e_indices", hypothesis.e_indices)
