@@ -14,7 +14,7 @@ from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.plot_utils import plot_sim_results
-from tvb_epilepsy.io.h5.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.writer_custom import CustomH5Writer
 from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
 from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
@@ -27,7 +27,7 @@ from tvb_epilepsy.service.model_configuration_service import ModelConfigurationS
 if DATA_MODE is TVB:
     from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
 else:
-    from tvb_epilepsy.io.h5.reader_custom import CustomH5Reader as Reader
+    from tvb_epilepsy.io.reader_custom import CustomH5Reader as Reader
 
 if SIMULATION_MODE is TVB:
     from tvb_epilepsy.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration \

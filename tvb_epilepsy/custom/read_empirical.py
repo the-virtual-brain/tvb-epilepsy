@@ -9,8 +9,8 @@ from scipy.io import loadmat
 
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.custom.read_write import write_ts, write_ts_seeg_epi, PATIENT_VIRTUAL_HEAD
-from tvb_epilepsy.io.h5.reader_custom import CustomH5Reader
-from tvb_epilepsy.io.h5.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.reader_custom import CustomH5Reader
+from tvb_epilepsy.io.writer_custom import CustomH5Writer
 
 
 def correlate_sensors(empirical_file="/Users/lia.domide/Downloads/TRECempirical/110223B-EEX_0004.EEG.mat",

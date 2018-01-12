@@ -6,7 +6,7 @@ from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE, EIGENVE
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.io.h5.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.writer_custom import CustomH5Writer
 from tvb_epilepsy.service.head_service import HeadService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.lsa_service import LSAService
@@ -37,7 +37,7 @@ def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=os.path.jo
     if data_mode is TVB:
         from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
     else:
-        from tvb_epilepsy.io.h5.reader_custom import CustomH5Reader as Reader
+        from tvb_epilepsy.io.reader_custom import CustomH5Reader as Reader
     # -------------------------------Reading model_data-----------------------------------
     reader = Reader()
     logger.info("Reading from: " + data_folder)

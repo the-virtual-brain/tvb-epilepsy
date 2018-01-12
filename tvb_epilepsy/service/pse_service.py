@@ -18,7 +18,7 @@ from tvb_epilepsy.service.model_configuration_service import ModelConfigurationS
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
 from tvb_epilepsy.custom.simulator_custom import custom_model_builder
-from tvb_epilepsy.io.h5.reader_custom import CustomH5Reader
+from tvb_epilepsy.io.reader_custom import CustomH5Reader
 
 logger = initialize_logger(__name__)
 

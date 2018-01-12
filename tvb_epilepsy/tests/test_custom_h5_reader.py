@@ -4,8 +4,8 @@ from tvb_epilepsy.base.constants.configurations import DATA_TEST
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.vep.sensors import Sensors
-from tvb_epilepsy.io.h5.reader_custom import CustomH5Reader
-from tvb_epilepsy.io.h5.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.reader_custom import CustomH5Reader
+from tvb_epilepsy.io.writer_custom import CustomH5Writer
 from tvb_epilepsy.tests.base import get_temporary_folder, remove_temporary_test_files
 
 head_dir = "head2"

@@ -7,8 +7,8 @@ from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE
 from tvb_epilepsy.base.constants.configurations import FOLDER_VEP, FOLDER_RES
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
-from tvb_epilepsy.io.h5.writer_custom import CustomH5Writer
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.io.writer_custom import CustomH5Writer
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
@@ -17,7 +17,7 @@ from tvb_epilepsy.scripts.simulation_scripts import from_model_configuration_to_
 if DATA_MODE is TVB:
     from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
 else:
-    from tvb_epilepsy.io.h5.reader_custom import CustomH5Reader as Reader
+    from tvb_epilepsy.io.reader_custom import CustomH5Reader as Reader
 
 PSE_FLAG = False
 SIM_FLAG = True

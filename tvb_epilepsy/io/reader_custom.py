@@ -8,10 +8,9 @@ from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorsH5Field
 from tvb_epilepsy.base.model.vep.surface import Surface, SurfaceH5Field
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.io.h5.reader import ABCH5Reader
 
 
-class CustomH5Reader(ABCH5Reader):
+class CustomH5Reader(object):
     logger = initialize_logger(__name__)
 
     connectivity_filename = "Connectivity.h5"

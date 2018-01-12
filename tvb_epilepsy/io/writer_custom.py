@@ -5,10 +5,9 @@ from tvb_epilepsy.base.model.vep.connectivity import ConnectivityH5Field
 from tvb_epilepsy.base.model.vep.sensors import SensorsH5Field
 from tvb_epilepsy.base.model.vep.surface import SurfaceH5Field
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.io.h5.writer import ABCH5Writer
 
 
-class CustomH5Writer(ABCH5Writer):
+class CustomH5Writer(object):
     logger = initialize_logger(__name__)
 
     CUSTOM_TYPE_ATTRIBUTE = "EPI_Type"

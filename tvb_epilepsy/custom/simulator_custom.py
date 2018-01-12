@@ -17,7 +17,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import obj_to_dict, assert_ar
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val_to_model_x0
-from tvb_epilepsy.io.h5.reader_custom import CustomH5Reader
+from tvb_epilepsy.io.reader_custom import CustomH5Reader
 
 
 class SimulationSettings(object):

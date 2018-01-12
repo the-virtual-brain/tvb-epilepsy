@@ -4,7 +4,7 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_LOGS, FOLDER_RES, 
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
-from tvb_epilepsy.io.h5.reader_custom import CustomH5Reader
+from tvb_epilepsy.io.reader_custom import CustomH5Reader
 from tvb_epilepsy.service.head_service import HeadService
 
 head_dir = "head2"

@@ -14,7 +14,7 @@ from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 if DATA_MODE is TVB:
     from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
 else:
-    from tvb_epilepsy.io.h5.reader_custom import CustomH5Reader as Reader
+    from tvb_epilepsy.io.reader_custom import CustomH5Reader as Reader
 
 logger = initialize_logger(__name__)
 
