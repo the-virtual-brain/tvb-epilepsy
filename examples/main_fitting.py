@@ -58,7 +58,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         # -------------------------- Get model_data and observation signals: -------------------------------------------
         model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
                                                    logger=logger)
-        statistical_model = model_inversion.generate_statistical_model(observation_expression="lfp")
+        statistical_model = model_inversion.generate_statistical_model() # observation_expression="lfp"
         statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
                                                                   active_regions_th=0.1, reset=True)
         decimate = 4
@@ -109,7 +109,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                                        noise_intensity=10 ** -3)
             manual_selection = []
             n_electrodes = 8
-            sensors_per_electrode = 1
+            sensors_per_electrode = 2
             sensors_lbls = model_inversion.sensors_labels
         # -------------------------- Select and set observation signals -----------------------------------
         signals, time, statistical_model, vois_ts_dict = \
@@ -229,7 +229,7 @@ if __name__ == "__main__":
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
     # ep_name = "clinical_hypothesis_preseeg_right"
-    EMPIRICAL = True
+    EMPIRICAL = False
     stats_model_name = "vep_sde"
     # stats_model_name = "vep-fe-rev-05"
     fitmethod = "sample"

@@ -1,14 +1,8 @@
-
-import numpy as np
-
-from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, X1_DEF
+from tvb_epilepsy.base.constants.model_inversion_constants import SIG_EQ_DEF
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, construct_import_path
 from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
-
-
-SIG_EQ_DEF = (X1_EQ_CR_DEF-X1_DEF)/10
 
 
 class StatisticalModel(object):
@@ -50,5 +44,5 @@ class StatisticalModel(object):
         h5_model.write_to_h5(folder, filename)
 
     def _generate_parameters(self, **defaults):
-        for p in ["x1eq", "K", "tau1", "tau0", "MC", "sig_eq", "eps"]:
+        for p in ["x1eq", "K", "tau1", "tau0", "MCsplit",  "MC",  "eps"]: # "sig_eq",
             self.parameters.update({p: set_parameter(p, **defaults)})

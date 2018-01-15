@@ -1,18 +1,12 @@
 import numpy as np
 
+from tvb_epilepsy.base.constants.model_inversion_constants import SIG_EQ_DEF, OBSERVATION_MODELS, OBSERVATION_MODEL_DEF, \
+    SIG_INIT_DEF
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error  # warning,
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list, construct_import_path
-from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel, SIG_EQ_DEF
+from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
 
-
-# OBSERVATION_MODEL_EXPRESSIONS=["lfp", "x1_offset", "x1z_offset"]
-# OBSERVATION_EXPRESSION_DEF = "lfp"
-OBSERVATION_MODELS=[ "seeg_logpower", "seeg_power", "lfp_power"]
-OBSERVATION_MODEL_DEF = "seeg_logpower"
-# EULER_METHODS = ["backward", "midpoint", "forward"]
-
-SIG_INIT_DEF = SIG_EQ_DEF
 
 class ODEStatisticalModel(StatisticalModel):
 
