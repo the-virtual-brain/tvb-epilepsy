@@ -8,8 +8,7 @@ from tvb_epilepsy.base.constants.module_constants import EIGENVECTORS_NUMBER_SEL
 from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, \
     raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, construct_import_path
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.simulators import ABCSimulator
@@ -181,7 +180,7 @@ def sim_run_fun(simulator_input, model_connectivity, params_paths, params_values
     except:
         return False, None
 
-
+#TODO: this is deprecated. We are waiting for Denis to verify the service/pse.
 class PSEService(object):
 
     def __init__(self, task, hypothesis=[], simulator=[], params_pse=None, run_fun=None, out_fun=None):
@@ -190,8 +189,6 @@ class PSEService(object):
                     "\nSelect one of 'LSA', or 'SIMULATION' to perform parameter search exploration of " +
                     "\n hypothesis Linear Stability Analysis, or simulation, " + "respectively")
         self.task = task
-        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
-        self.create_str = self.__class__.__name__ + "('" + self.task + "')"
         self.params_names = []
         self.params_paths = []
         self.n_params_vals = []
@@ -267,22 +264,6 @@ class PSEService(object):
 
     def __str__(self):
         return self.__repr__()
-
-    def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model({"task": self.task, "n_loops": self.n_loops,
-                                        "params_names": self.params_names,
-                                        "params_paths": self.params_paths,
-                                        "params_indices": np.array([str(inds) for inds in self.params_indices],
-                                                                   dtype="S"),
-                                        "params_samples": self.pse_params.T})
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
-        return h5_model
-
-    def write_to_h5(self, folder, filename=""):
-        if filename == "":
-            filename = self.name + ".h5"
-        h5_model = self._prepare_for_h5()
-        h5_model.write_to_h5(folder, filename)
 
     def run_pse(self, model_connectivity, grid_mode=False, **kwargs):
         results = []

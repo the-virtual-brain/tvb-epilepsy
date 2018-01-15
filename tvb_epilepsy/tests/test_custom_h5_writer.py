@@ -1,6 +1,5 @@
 import os
 import numpy
-
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
@@ -11,6 +10,7 @@ from tvb_epilepsy.io.writer_custom import CustomH5Writer
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
+from tvb_epilepsy.service.pse.lsa_pse_service import LSAPSEService
 from tvb_epilepsy.tests.base import remove_temporary_test_files, get_temporary_folder
 
 
@@ -128,6 +128,19 @@ class TestCustomH5writer(object):
         assert not os.path.exists(test_file)
 
         self.writer.write_model_inversion_service(dummy_model_inversion_service, test_file)
+
+        assert os.path.exists(test_file)
+
+    def test_write_pse_service(self):
+        test_file = os.path.join(get_temporary_folder(), "TestPSEService.h5")
+        dummy_pse_service = LSAPSEService(
+            hypothesis=DiseaseHypothesis(3, excitability_hypothesis={tuple([0]): numpy.array([0.6])},
+                                         epileptogenicity_hypothesis={}),
+            params_pse={"path": [], "indices": [], "name": [], "bounds": []})
+
+        assert not os.path.exists(test_file)
+
+        self.writer.write_pse_service(dummy_pse_service, test_file)
 
         assert os.path.exists(test_file)
 

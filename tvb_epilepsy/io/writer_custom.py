@@ -187,7 +187,7 @@ class CustomH5Writer(object):
     def write_model_inversion_service(self, model_inversion_service, path):
         """
         :param model_inversion_service: ModelInversionService object to write in H5
-        :param path:  H5 path to be written
+        :param path: H5 path to be written
         """
         h5_file = h5py.File(path, 'a', libver='latest')
 
@@ -203,6 +203,19 @@ class CustomH5Writer(object):
             h5_file.attrs.create(key, value)
 
         h5_file.close()
+
+    def write_pse_service(self, pse_service, path):
+        """
+        :param pse_service: PSEService object to write in H5
+        :param path: H5 path to be written
+        """
+        pse_dict = {"task": pse_service.task,
+                    "params_names": pse_service.params_names,
+                    "params_paths": pse_service.params_paths,
+                    "params_indices": numpy.array([str(inds) for inds in pse_service.params_indices], dtype="S"),
+                    "params_samples": pse_service.params_vals}
+
+        self.write_dictionary(pse_dict, path)
 
     def write_dictionary(self, dictionary, path):
         """

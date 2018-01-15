@@ -1,10 +1,6 @@
-from abc import abstractmethod, ABCMeta
-
 import numpy as np
-
+from abc import abstractmethod, ABCMeta
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
 
 
 class ABCPSEService(object):
@@ -18,8 +14,6 @@ class ABCPSEService(object):
     params_names = []
     n_params_vals = []
     n_params = 0
-    context_str = "from " + construct_import_path(__file__) + " import ABCPSEService"
-    create_str = "ABCPSEService()"
 
     def run_pse(self, conn_matrix, grid_mode, *kwargs):
         results = []
@@ -87,22 +81,6 @@ class ABCPSEService(object):
             print "leading to " + str(self.n_loops) + " total execution loops"
         else:
             warning("\nparams_pse is not a list of tuples!")
-
-    def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model({"task": "LSA", "n_loops": self.n_loops,
-                                        "params_names": self.params_names,
-                                        "params_paths": self.params_paths,
-                                        "params_indices": np.array([str(inds) for inds in self.params_indices],
-                                                                      dtype="S"),
-                                        "params_samples": self.params_vals.T})
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
-        return h5_model
-
-    def write_to_h5(self, folder, filename=""):
-        if filename == "":
-            filename = "LSA_PSEService.h5"
-        h5_model = self._prepare_for_h5()
-        h5_model.write_to_h5(folder, filename)
 
     def set_object_attribute_recursively(self, obj, values):
         path = self.params_paths.split(".")
