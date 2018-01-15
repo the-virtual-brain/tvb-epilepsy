@@ -144,7 +144,7 @@ class EpileptorDP(Model):
 
     s = arrays.FloatArray(
        label="s",
-       default=numpy.array([4]),
+       default=numpy.array([6]),
        doc="Linear coefficient in the third state variable",
        order=-1)
 
@@ -499,7 +499,7 @@ class EpileptorDPrealistic(Model):
 
     s = arrays.FloatArray(
        label="s",
-       default=numpy.array([4]),
+       default=numpy.array([6]),
        doc="Linear coefficient in the third state variable",
        order=-1)
 
@@ -880,7 +880,7 @@ class EpileptorDP2D(Model):
 
     # s = arrays.FloatArray(
     #    label="s",
-    #    default=numpy.array([4]),
+    #    default=numpy.array([6]),
     #    doc="Linear coefficient in the third state variable",
     #    order=-1)
 
