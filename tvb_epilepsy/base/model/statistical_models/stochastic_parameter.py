@@ -4,12 +4,13 @@ from abc import ABCMeta
 import numpy as np
 
 from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE, MIN_SINGLE_VALUE
+from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, construct_import_path, make_float, \
                                                                                             extract_dict_stringkeys
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
     ProbabilityDistribution
-from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_params
+from tvb_epilepsy.service.probability_distribution_factory import generate_distribution, compute_pdf_params
 from tvb_epilepsy.service.stochastic_parameter_factory import get_val_key_for_first_keymatch_in_dict
 
 
@@ -69,6 +70,20 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
         self.scale = make_float(params.pop("scale", self.scale))
         self.update_params(self.loc, self.scale, use=use, **params)
 
+    def _confirm_support(self):
+        p_star = (self.low - self.loc) / self.scale
+        p_star_cdf = self.scipy().cdf(p_star)
+        if p_star_cdf <= 0.0:
+            raise_value_error("Lower limit of " + self.name + " base distribution outside support!: " +
+                              "\n(self.low-self.loc)/self.scale) = " + str(p_star) +
+                              "\ncdf(self.low-self.loc)/self.scale) = " + str(p_star_cdf))
+        p_star = (self.high - self.loc) / self.scale
+        p_star_cdf = self.scipy().cdf(p_star)
+        if p_star_cdf >= 1.0:
+            warning("Upper limit of base " + self.name + "  distribution outside support!: " +
+                    "\n(self.high-self.loc)/self.scale) = " + str(p_star) +
+                    "\ncdf(self.high-self.loc)/self.scale) = " + str(p_star_cdf))
+
     def _update_loc_scale(self, use="scipy", **target_stats):
         param_m = self._calc_mean(use=use)
         target_m = self._calc_mean(use=use)
@@ -95,6 +110,7 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
             self.scale = target_s / param_s
             temp_m = m_fun(scale=self.scale)
             self.loc = target_m - temp_m
+            self._confirm_support()
             self._update_params(use=use)
 
 
@@ -111,7 +127,12 @@ def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=
         def __init__(self, name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, loc=0.0, scale=1.0,
                      p_shape=(), use="scipy", **pdf_params):
             StochasticParameterBase.__init__(self, name, low, high, loc, scale, p_shape)
-            thisProbabilityDistribution.__init__(self, **pdf_params)
+            try:
+                thisProbabilityDistribution.__init__(self, **pdf_params)
+            except:
+                if optimize_pdf:
+                    pdf_params = compute_pdf_params(probability_distribution.lower(), pdf_params, loc, scale, use)
+                    thisProbabilityDistribution.__init__(self, **pdf_params)
             self._update_params(use=use)
             self.context_str = "from " + construct_import_path(__file__) + " import generate_stochastic_parameter"
             self.create_str = "generate_stochastic_parameter('" + str(self.name) + \
