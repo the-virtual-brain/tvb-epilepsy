@@ -4,8 +4,9 @@ from matplotlib import pyplot
 from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMAT, LARGE_SIZE, VERY_LARGE_SIZE, \
     SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
+from tvb_epilepsy.base.constants.model_inversion_constants import SIG_DEF, OBSERVATION_MODEL_DEF # , X1_MIN, X1_MAX, Z_MIN, Z_MAX
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, sort_dict
+from tvb_epilepsy.base.utils.data_structures_utils import sort_dict # isequal_string,
 from tvb_epilepsy.base.utils.plot_utils import plot_raster, plot_regions2regions, plot_trajectories, save_figure, \
     check_show
 from tvb_epilepsy.base.model.statistical_models.sde_statistical_model import SDEStatisticalModel
@@ -17,17 +18,9 @@ LOG = initialize_logger(__name__)
 
 
 class SDEModelInversionService(ODEModelInversionService):
-    SIG_DEF = 10 ** -3
-    X1_MIN = -2.0
-    X1_MAX = 1.0
-    Z_MIN = 0.0
-    Z_MAX = 6.0
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name=None, 
                  logger=LOG, **kwargs):
-        for constant, default in zip(["SIG_DEF", "X1_MIN", "X1_MAX", "Z_MIN", "Z_MAX"], [10**-3, -2.0, 1.0, 0.0, 6.0]):
-            setattr(self, constant, kwargs.get(constant, default))
-        self.sig = self.set_default_sig(dynamical_model, **kwargs)
         super(SDEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
                                                        model_name, logger, **kwargs)
         self.set_default_parameters(**kwargs)
@@ -41,7 +34,7 @@ class SDEModelInversionService(ODEModelInversionService):
                 elif EPILEPTOR_MODEL_NVARS[self.dynamical_model] > 2:
                     return model_noise_intensity_dict[self.dynamical_model][2]
         else:
-            return self.SIG_DEF
+            return SIG_DEF
 
     def set_default_parameters(self, **kwargs):
         sig = self.get_default_sig(**kwargs)
@@ -49,24 +42,23 @@ class SDEModelInversionService(ODEModelInversionService):
         # Integration:
         # self.default_parameters.update(set_parameter_defaults("x1_dWt", "normal", (),  # name, pdf, shape
         #                                                       -10.0*sig, 10.0*sig,     # min, max
-        #                                                       pdf_params={"mean": 0.0, "sigma": sig}))
+        #                                                       pdf_params={"mu": 0.0, "sigma": sig}))
         self.default_parameters.update(set_parameter_defaults("z_dWt", "normal", (),  # name, pdf, shape
-                                                              -10.0*sig, 10.0*sig,              # min, max
-                                                              pdf_params={"mean": 0.0, "sigma": sig}))
+                                                              pdf_params={"mu": 0.0, "sigma": sig}))
         self.default_parameters.update(set_parameter_defaults("sig", "gamma", (),  # name, pdf, shape
                                                               0.0, 10.0*sig,  # min, max
-                                                              sig, lambda m: m / kwargs.get("sig_scale_ratio", 3))
+                                                              sig, sig / kwargs.get("sig_scale_ratio", 3)),
+                                                              pdf_params={"mean": 1.0, "skew": 0.0},
                                                               **kwargs)
 
-    def generate_statistical_model(self, model_name=None, **kwargs):
-        if model_name is None:
-            model_name = self.model_name
+    def generate_statistical_model(self, model_name="vep_sde", **kwargs):
         tic = time.time()
         self.logger.info("Generating model...")
         active_regions = kwargs.pop("active_regions", [])
         self.default_parameters.update(kwargs)
         model = SDEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
                                     self.get_default_sig_eq(**kwargs), self.get_default_sig_init(**kwargs),
+                                    observation_model=kwargs.get("observation_model", OBSERVATION_MODEL_DEF),
                                     **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')

@@ -1,7 +1,6 @@
 import numpy as np
-from tvb_epilepsy.base.model.statistical_models.statistical_model import SIG_EQ_DEF
-from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel, SIG_INIT_DEF, \
-                                                                                                OBSERVATION_MODEL_DEF
+from tvb_epilepsy.base.constants.model_inversion_constants import SIG_EQ_DEF, OBSERVATION_MODEL_DEF, SIG_INIT_DEF
+from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
 
 
