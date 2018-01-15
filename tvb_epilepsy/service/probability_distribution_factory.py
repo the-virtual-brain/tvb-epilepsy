@@ -14,22 +14,35 @@ AVAILABLE_DISTRIBUTIONS = ["uniform", "normal", "gamma", "lognormal", "exponenti
 CONSTRAINT_ABS_TOL = 0.001
 
 
-def generate_distribution(distrib_type, target_shape=None, loc=0.0, scale=1.0, use="manual", **target):
+def generate_distribution(distrib_type, loc=0.0, scale=1.0, use="manual", target_shape=None, **pdf_params):
     if np.in1d(distrib_type.lower(), AVAILABLE_DISTRIBUTIONS):
         exec("from tvb_epilepsy.base.model.statistical_models.probability_distributions."
              + distrib_type.lower() + "_distribution import " + distrib_type.title() + "Distribution")
         distribution = eval(distrib_type.title() + "Distribution()")
-        if len(target) > 0:
+        if len(pdf_params) > 0:
             try:
-                distribution.update_params(loc, scale, use, **target)
+                distribution.update_params(loc, scale, use, **pdf_params)
             except:
-                target = compute_pdf_params(distribution.type, target, loc, scale, use)
-                distribution.update_params(loc, scale, use, **target)
+                raise_value_error("Cannot generate probability distribution of type " + distrib_type +
+                                  " with parameters " + str(**pdf_params) + " !")
         if isinstance(target_shape, tuple):
             distribution.__shape_parameters__(target_shape, loc, scale, use)
         return distribution
     else:
         raise_value_error(distrib_type + " is not one of the available distributions!: " + str(AVAILABLE_DISTRIBUTIONS))
+
+
+def optimize_distribution(distrib_type, loc=0.0, scale=1.0, use="manual", target_shape=None, **target):
+    distribution = generate_distribution(distrib_type, loc, scale, use, target_shape= None,  **target)
+    if len(target) > 0:
+        try:
+            distribution.update_params(loc, scale, use, **target)
+        except:
+            target = compute_pdf_params(distribution.type, target, loc, scale, use)
+            distribution.update_params(loc, scale, use, **target)
+    if isinstance(target_shape, tuple):
+        distribution.__shape_parameters__(target_shape, loc, scale, use)
+    return distribution
 
 
 # This function converts the parameters' vector to the parameters' dictionary
@@ -54,7 +67,13 @@ def fobj(p, pdf, target_stats, loc=0.0, scale=1.0, use="manual"):
     norm = 0.0
     for ts_key, ts_val in target_stats.iteritems():
         # norm += ts_val ** 2
-        f += (getattr(pdf, "_calc_" + ts_key)(loc, scale, use) - ts_val) ** 2
+        try:
+            f += (getattr(pdf, "_calc_" + ts_key)(loc, scale, use) - ts_val) ** 2
+        except:
+            try:
+                f += (getattr(pdf, ts_key) - ts_val) ** 2
+            except:
+                raise_value_error("Failed to calculate and/or return target statistic or parameter " + ts_key + " !")
     # if np.isnan(f) or np.isinf(f):
     #     print("WTF?")
     # if norm > 0.0:
@@ -130,7 +149,7 @@ def prepare_intial_condition(distribution, low_limit=-10.0, high_limit=10):
 
 
 def compute_pdf_params(distrib_type, target_stats, loc=0.0, scale=1.0, use="manual"):
-    distribution = generate_distribution(distrib_type, (), loc, scale, use)
+    distribution = generate_distribution(distrib_type)
     # Check if the number of target stats is exactly the same as the number of distribution parameters to optimize:
     if len(target_stats) != distribution.n_params:
         raise_value_error("Target parameters are " + str(len(target_stats)) +
@@ -164,5 +183,5 @@ def compute_pdf_params(distrib_type, target_stats, loc=0.0, scale=1.0, use="manu
         except:
             print("WTF?")
     sol_params= dict(zip(distribution.pdf_params().keys(),
-                    [np.reshape(sol_params[:, ii], target_shape) for ii in range(distribution.n_params)]))
+                         [np.reshape(sol_params[:, ii], target_shape) for ii in range(distribution.n_params)]))
     return sol_params
