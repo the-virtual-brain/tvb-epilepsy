@@ -5,7 +5,6 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
     dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.io.writer_custom import CustomH5Writer
 from tvb_epilepsy.scripts.hypothesis_scripts import start_lsa_run
 from tvb_epilepsy.service.pse_service import PSEService
@@ -124,11 +123,8 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
             filename = "LSA_PSA"
         writer = CustomH5Writer()
         writer.write_pse_service(pse, os.path.join(folder_res, filename + "_pse_service.h5"))
+        writer.write_dictionary(pse_results, os.path.join(folder_res, filename + ".h5"))
 
-        h5_model = convert_to_h5_model(pse_results)
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
-        h5_model.add_or_update_metadata_attribute("Number_of_nodes", lsa_hypothesis.number_of_regions)
-        h5_model.write_to_h5(folder_res, filename + ".h5")
     return pse_results, pse_params_list
 
 
