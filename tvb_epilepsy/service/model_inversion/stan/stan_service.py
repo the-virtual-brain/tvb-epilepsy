@@ -1,19 +1,13 @@
 import os
 import pickle
 from abc import ABCMeta, abstractmethod
-
-# import vep_stan.lib
-
-from matplotlib import tight_layout, pyplot
-
 from scipy.io import savemat, loadmat
 from scipy.stats import describe
 import numpy as np
-
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path, isequal_string, ensure_list, sort_dict
-from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict
+from tvb_epilepsy.base.h5_model import read_h5_model
 from tvb_epilepsy.io.rdump import rdump, rload
 from tvb_epilepsy.io.csv import parse_csv
 from tvb_epilepsy.io.writer_custom import CustomH5Writer
@@ -41,19 +35,6 @@ class StanService(object):
         if model_data_path == "":
             self.model_data_path = os.path.join(model_dir, "ModelData.h5")
         self.compilation_time = 0.0
-        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
-        self.create_str = self.__class__.__name__ + "()"
-
-    def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model(self)
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "ProbabilityDistributionModel")
-        return h5_model
-
-    def write_to_h5(self, folder, filename=""):
-        if filename == "":
-            filename = self.type + ".h5"
-        h5_model = self._prepare_for_h5()
-        h5_model.write_to_h5(folder, filename)
 
     @abstractmethod
     def compile_stan_model(self, store_model=True, **kwargs):

@@ -1,15 +1,11 @@
-
-import subprocess
 import time
 from shutil import copyfile
-
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, CMDSTAN_PATH
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
 from tvb_epilepsy.base.utils.command_line_utils import execute_command
 from tvb_epilepsy.service.model_inversion.stan.stan_service import StanService
 from tvb_epilepsy.service.model_inversion.stan.stan_factory import *
-
 
 LOG = initialize_logger(__name__)
 
@@ -66,7 +62,7 @@ class CmdStanService(StanService):
 
     def set_model_from_file(self, **kwargs):
         self.model_path = kwargs.pop("model_path", self.model_path)
-        if not(os.path.exists(self.model_path)):
+        if not (os.path.exists(self.model_path)):
             raise_value_error("Failed to load the model from file: " + str(self.model_path) + " !")
 
     def compile_stan_model(self, store_model=True, **kwargs):
@@ -93,7 +89,7 @@ class CmdStanService(StanService):
                 copyfile(self.model_code_path.split(".stan", 1)[0], self.model_path)
 
     def fit(self, output_filepath=os.path.join(FOLDER_RES, STAN_OUTPUT_OPTIONS["file"]), diagnostic_filepath="",
-           debug=0, simulate=0,  read_output=True, **kwargs):
+            debug=0, simulate=0, read_output=True, **kwargs):
         self.model_path = kwargs.pop("model_path", self.model_path)
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
         self.fitmethod = kwargs.pop("method", self.fitmethod)

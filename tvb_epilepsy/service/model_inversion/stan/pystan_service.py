@@ -1,16 +1,13 @@
 import os
 import pickle
 import time
-
 import numpy as np
 import pystan as ps
-
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path, sort_dict
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error, raise_value_error
 from tvb_epilepsy.service.model_inversion.stan.stan_service import StanService
 from tvb_epilepsy.service.model_inversion.stan.stan_factory import STAN_OUTPUT_OPTIONS
-
 
 LOG = initialize_logger(__name__)
 
@@ -18,12 +15,13 @@ LOG = initialize_logger(__name__)
 class PyStanService(StanService):
 
     def __init__(self, model_name=None, model=None, model_dir=FOLDER_RES, model_code=None, model_code_path="",
-                 model_data_path="", fitmethod="sampling",  random_seed=12345, init="random", logger=LOG, **options):
+                 model_data_path="", fitmethod="sampling", random_seed=12345, init="random", logger=LOG, **options):
         super(PyStanService, self).__init__(model_name, model, model_dir, model_code, model_code_path, model_data_path,
                                             fitmethod, logger)
         self.assert_fitmethod()
         self.options = {"init": init, "seed": random_seed, "verbose": True}
         self.options.update(options)
+        # TODO: check if this is used for pickle
         self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
         self.create_str = self.__class__.__name__ + "()"
 
@@ -51,20 +49,20 @@ class PyStanService(StanService):
     def write_model_to_file(self, **kwargs):
         self.model_path = kwargs.get("model_path", self.model_path)
         with open(self.model_path, 'wb') as f:
-                pickle.dump(self.model, f)
+            pickle.dump(self.model, f)
 
     def set_model_from_file(self, **kwargs):
         self.model_path = kwargs.get("model_path", self.model_path)
         self.model = pickle.load(open(self.model_path, 'rb'))
 
     def fit(self, output_filepath=os.path.join(FOLDER_RES, STAN_OUTPUT_OPTIONS["file"]), diagnostic_filepath="",
-            debug=0, simulate=0,  read_output=True, **kwargs):
+            debug=0, simulate=0, read_output=True, **kwargs):
         if diagnostic_filepath == "":
             diagnostic_filepath = os.path.join(os.path.dirname(output_filepath), STAN_OUTPUT_OPTIONS["diagnostic_file"])
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
         self.fitmethod = kwargs.pop("method", self.fitmethod)
         model_data = kwargs.pop("model_data", None)
-        if not(isinstance(model_data, dict)):
+        if not (isinstance(model_data, dict)):
             model_data = self.load_model_data_from_file()
         # -1 for no debugging at all
         # 0 for printing only scalar parameters

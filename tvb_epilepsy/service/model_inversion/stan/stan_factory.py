@@ -1,13 +1,9 @@
-
 import os
 from collections import OrderedDict
-
 import numpy as np
-
 from tvb_epilepsy.base.utils.data_structures_utils import sort_dict, isequal_string
 
-
-STAN_STATIC_OPTIONS = sort_dict({"int_time": 2*np.pi})  # int_time > 0
+STAN_STATIC_OPTIONS = sort_dict({"int_time": 2 * np.pi})  # int_time > 0
 
 STAN_NUTS_OPTIONS = sort_dict({"max_depth": 10})  # int > 0
 
@@ -140,7 +136,7 @@ def generate_cmdstan_fit_command(fitmethod, options, model_path, model_data_path
             adapt_options = STAN_VARIATIONAL_ADAPT_OPTIONS
         for option in adapt_options.keys():
             command += "\t\t\t\t" + option + "=" + str(options[option]) + ' \\' + "\n"
-    command += "\t\tdata file="+ model_data_path + ' \\' + "\n"
+    command += "\t\tdata file=" + model_data_path + ' \\' + "\n"
     command += "\t\tinit=" + str(options["init"]) + ' \\' + "\n"
     command += "\t\trandom seed=" + str(options["random_seed"]) + ' \\' + "\n"
     if diagnostic_filepath == "":
