@@ -11,6 +11,8 @@ if __name__ == "__main__":
 
     K = set_parameter("K", optimize_pdf=True, use="manual", K_lo=0.0, K_hi=10, K_pdf="lognormal",
                       K_pdf_params={"skew": 0.0, "mean": 1.0}, K_mean=1.0, K_std=0.1)
+    K.plot()
+    K.plot(K.loc, K.scale)
 
     print("Done")
     # stats_model_name = "vep-fe-rev-05"
