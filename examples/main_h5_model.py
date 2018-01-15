@@ -5,11 +5,12 @@ import numpy as np
 
 from tvb_epilepsy.base.constants.module_constants import DATA_MODE, TVB
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM
-from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
+from tvb_epilepsy.base.h5_model import read_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.io.writer_custom import CustomH5Writer
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
@@ -28,6 +29,7 @@ if __name__ == "__main__":
     data_folder = os.path.join(DATA_CUSTOM, 'Head')
 
     reader = Reader()
+    writer = CustomH5Writer()
 
     logger.info("Reading from: " + data_folder)
     head = reader.read_head(data_folder)
@@ -51,9 +53,7 @@ if __name__ == "__main__":
     logger.info("\n\nOriginal object:\n" + str(obj))
 
     logger.info("\n\nWriting object to h5 file...")
-    h5_model = convert_to_h5_model(obj)
-
-    h5_model.write_to_h5(FOLDER_RES, "test_h5_model.h5")
+    writer.write_generic(obj, FOLDER_RES, "test_h5_model.h5")
 
     h5_model1 = read_h5_model(FOLDER_RES + "/test_h5_model.h5")
     obj1 = h5_model1.convert_from_h5_model(deepcopy(obj))

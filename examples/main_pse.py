@@ -4,8 +4,8 @@ import numpy as np
 
 from tvb_epilepsy.base.constants.configurations import DATA_CUSTOM, FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.io.writer_custom import CustomH5Writer
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
 from tvb_epilepsy.scripts.pse_scripts import pse_from_hypothesis
 from tvb_epilepsy.io.reader_custom import CustomH5Reader as Reader
@@ -18,6 +18,7 @@ if __name__ == "__main__":
     data_folder = os.path.join(DATA_CUSTOM, 'Head')
 
     reader = Reader()
+    writer = CustomH5Writer()
 
     head = reader.read_head(data_folder)
 
@@ -66,4 +67,4 @@ if __name__ == "__main__":
     lsa_service.plot_lsa(lsa_hypothesis, model_configuration, region_labels=head.connectivity.region_labels,
                          pse_results=pse_results)
 
-    convert_to_h5_model(pse_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")
+    writer.write_dictionary(pse_results, os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5"))

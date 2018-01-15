@@ -16,6 +16,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path,
 from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.io.rdump import rdump, rload
 from tvb_epilepsy.io.csv import parse_csv
+from tvb_epilepsy.io.writer_custom import CustomH5Writer
 
 LOG = initialize_logger(__name__)
 
@@ -81,8 +82,8 @@ class StanService(object):
         elif isequal_string(extension, "R"):
             rdump(model_data_path, model_data)
         else:
-            convert_to_h5_model(model_data).write_to_h5(os.path.dirname(model_data_path),
-                                                        os.path.basename(model_data_path))
+            CustomH5Writer().write_dictionary(model_data, os.path.join(os.path.dirname(model_data_path),
+                                                                       os.path.basename(model_data_path)))
 
     def load_model_data_from_file(self, reset_path=False, **kwargs):
         model_data_path = kwargs.get("model_data_path", self.model_data_path)

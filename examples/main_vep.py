@@ -9,7 +9,7 @@ import numpy as np
 from tvb_epilepsy.base.constants.module_constants import SIMULATION_MODE, TVB, DATA_MODE
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM
-from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
+from tvb_epilepsy.base.h5_model import read_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
@@ -27,7 +27,7 @@ from tvb_epilepsy.service.model_configuration_service import ModelConfigurationS
 if DATA_MODE is TVB:
     from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
 else:
-    from tvb_epilepsy.io.reader_custom import CustomH5Reader as Reader
+    from tvb_epilepsy.io.reader_custom import CustomH5Reader as Reader, CustomH5Reader
 
 if SIMULATION_MODE is TVB:
     from tvb_epilepsy.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration \
@@ -66,7 +66,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     ep_name = "ep_l_frontal_complex"
     # FOLDER_RES = os.path.join(data_folder, ep_name)
     if not isinstance(reader, CustomH5Writer):
-        disease_values = CustomH5Writer().read_epileptogenicity(data_folder, name=ep_name)
+        disease_values = CustomH5Reader().read_epileptogenicity(data_folder, name=ep_name)
     else:
         disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
     disease_indices, = np.where(disease_values > np.min([X0_DEF, E_DEF]))
@@ -209,7 +209,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                   lsa_service=lsa_service, logger=logger)[0]
             lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, pse_results)
             # , show_flag=True, save_flag=False
-            convert_to_h5_model(pse_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5")
+            writer.write_dictionary(pse_results, os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5"))
             if test_write_read:
                 logger.info("Written and read sensitivity analysis parameter search results are identical?: " +
                             str(assert_equal_objects(pse_results,
@@ -235,8 +235,9 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
             lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, pse_sa_results,
                                  title="SA PSE Hypothesis Overview")
             # , show_flag=True, save_flag=False
-            convert_to_h5_model(pse_sa_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")
-            convert_to_h5_model(sa_results).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_SA_LSA_results.h5")
+            writer.write_dictionary(pse_sa_results,
+                                    os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5"))
+            writer.write_dictionary(sa_results, os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_LSA_results.h5"))
             if test_write_read:
                 logger.info("Written and read sensitivity analysis results are identical?: " +
                             str(assert_equal_objects(sa_results,
@@ -259,11 +260,11 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
             # Integrator and initial conditions initialization.
             # By default initial condition is set right on the equilibrium point.
             sim.config_simulation(initial_conditions=None)
-            convert_to_h5_model(sim.model).write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5")
+            writer.write_generic(sim.model, FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5")
             logger.info("\n\nSimulating...")
             ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
-            convert_to_h5_model(sim.simulation_settings).write_to_h5(FOLDER_RES,
-                                                                     lsa_hypothesis.name + "_sim_settings.h5")
+            writer.write_generic(sim.simulation_settings, FOLDER_RES,
+                                 lsa_hypothesis.name + "_sim_settings.h5")
             if test_write_read:
                 # TODO: find out why it cannot set monitor expressions
                 logger.info("Written and read simulation settings are identical?: " +

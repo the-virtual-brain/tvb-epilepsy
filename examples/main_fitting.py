@@ -146,7 +146,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         #     model_data = stan_service.load_model_data_from_file()
         # except:
         model_data = model_inversion.generate_model_data(statistical_model, signals)
-        convert_to_h5_model(model_data).write_to_h5(results_dir, "dpModelData.h5")
+        writer.write_dictionary(model_data, os.path.join(results_dir, "dpModelData.h5"))
 
         if stats_model_name == "vep-fe-rev-05":
             def convert_to_vep_stan(model_data, statistical_model):
@@ -178,7 +178,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         est, fit = stan_service.fit(model_data=model_data, debug=1, simulate=0,
                                     merge_outputs=False, chains=1, refresh=1, **kwargs)
-        convert_to_h5_model(est).write_to_h5(results_dir, lsa_hypothesis.name + "_fit_est.h5")
+        writer.write_generic(est, results_dir, lsa_hypothesis.name + "_fit_est.h5")
         est = ensure_list(est)
         for id_est, this_est in enumerate(est):
             model_inversion.plot_fit_results(this_est, statistical_model, signals, time=None,

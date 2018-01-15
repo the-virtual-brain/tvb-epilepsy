@@ -222,6 +222,13 @@ class CustomH5Writer(object):
 
         h5_file.close()
 
+    def write_generic(self, object, folder, path):
+        """
+        :param object:
+        :param path:H5 path to be written
+        """
+        convert_to_h5_model(object).write_to_h5(folder, path)
+
     def _determine_datasets_and_attributes(self, object):
         datasets_dict = {}
         metadata_dict = {}
