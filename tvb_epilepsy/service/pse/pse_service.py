@@ -15,7 +15,7 @@ class ABCPSEService(object):
     n_params_vals = []
     n_params = 0
 
-    def run_pse(self, conn_matrix, grid_mode, *kwargs):
+    def run_pse(self, conn_matrix, grid_mode, **kwargs):
         results = []
         execution_status = []
         loop_tenth = 1

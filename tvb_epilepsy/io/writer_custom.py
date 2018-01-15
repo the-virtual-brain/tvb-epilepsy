@@ -209,11 +209,16 @@ class CustomH5Writer(object):
         :param pse_service: PSEService object to write in H5
         :param path: H5 path to be written
         """
+        if "params_vals" not in vars(pse_service):
+            params_samples = pse_service.pse_params.T
+        else:
+            params_samples = pse_service.params_vals
+
         pse_dict = {"task": pse_service.task,
                     "params_names": pse_service.params_names,
                     "params_paths": pse_service.params_paths,
                     "params_indices": numpy.array([str(inds) for inds in pse_service.params_indices], dtype="S"),
-                    "params_samples": pse_service.params_vals}
+                    "params_samples": params_samples}
 
         self.write_dictionary(pse_dict, path)
 
