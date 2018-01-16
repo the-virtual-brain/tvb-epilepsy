@@ -6,6 +6,7 @@ from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
+from tvb_epilepsy.base.simulators import SimulationSettings
 from tvb_epilepsy.io.writer_custom import CustomH5Writer
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
@@ -166,6 +167,16 @@ class TestCustomH5writer(object):
         assert not os.path.exists(test_file)
 
         self.writer.write_dictionary(dummy_dict, test_file)
+
+        assert os.path.exists(test_file)
+
+    def test_write_simulation_settings(self):
+        test_file = os.path.join(get_temporary_folder(), "TestSimSettings.h5")
+        dummy_sim_settings = SimulationSettings()
+
+        assert not os.path.exists(test_file)
+
+        self.writer.write_simulation_settings(dummy_sim_settings, test_file)
 
         assert os.path.exists(test_file)
 
