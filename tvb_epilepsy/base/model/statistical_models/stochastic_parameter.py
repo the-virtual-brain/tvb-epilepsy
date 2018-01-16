@@ -1,11 +1,8 @@
 import importlib
 from abc import ABCMeta
-
 import numpy as np
-
 from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE, MIN_SINGLE_VALUE
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, construct_import_path, make_float, \
-                                                                                            extract_dict_stringkeys
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, make_float
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
     ProbabilityDistribution
@@ -20,9 +17,6 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
         Parameter.__init__(self, name, low, high, p_shape)
         self.loc = loc
         self.scale = scale
-        self.context_str = "from " + construct_import_path(__file__) + " import StochasticParameterBase"
-        self.create_str = "StochasticParameterBase('" + self.name + "')"
-        self.update_str = "obj.update_params()"
 
     def __repr__(self):
         d = {"01. name": self.name,
@@ -34,12 +28,7 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
     def __str__(self):
         return self.__repr__()
 
-    def _prepare_for_h5(self):
-        return Parameter._prepare_for_h5(self)
-
-    def write_to_h5(self, folder, filename=""):
-        Parameter.write_to_h5(self, folder, filename)
-
+    #TODO: this should be cleaned
     def _string_generator(self):
         exec_str = "from tvb_epilepsy.base.model.statistical_models.stochastic_parameter " + \
                    "import generate_stochastic_parameter"
@@ -98,11 +87,11 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
             self._update_params(use=use)
 
 
-def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE,  loc=0.0, scale=1.0,
+def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, loc=0.0, scale=1.0,
                                   p_shape=(), probability_distribution="uniform", optimize_pdf=False, use="scipy",
                                   **pdf_params):
     pdf_module = importlib.import_module("tvb_epilepsy.base.model.statistical_models.probability_distributions." +
-                                  probability_distribution.lower() + "_distribution")
+                                         probability_distribution.lower() + "_distribution")
     thisProbabilityDistribution = eval("pdf_module." + probability_distribution.title() + "Distribution")
     if optimize_pdf:
         pdf_params = compute_pdf_params(probability_distribution.lower(), pdf_params, loc, scale, use)
@@ -113,10 +102,6 @@ def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=
             StochasticParameterBase.__init__(self, name, low, high, loc, scale, p_shape)
             thisProbabilityDistribution.__init__(self, **pdf_params)
             self._update_params(use=use)
-            self.context_str = "from " + construct_import_path(__file__) + " import generate_stochastic_parameter"
-            self.create_str = "generate_stochastic_parameter('" + str(self.name) + \
-                              "', probability_distribution='" + str(self.type) + "', optimize_pdf=False)"
-            self.update_str = "obj.update_params()"
 
         def __str__(self):
             return StochasticParameterBase.__str__(self) + "\n" \
@@ -128,7 +113,7 @@ def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=
         def _numpy(self, size=(1,)):
             return self.numpy(self.loc, self.scale, size)
 
-    return StochasticParameter(name, low, high,  loc, scale, p_shape, **pdf_params)
+    return StochasticParameter(name, low, high, loc, scale, p_shape, **pdf_params)
 
 
 if __name__ == "__main__":
