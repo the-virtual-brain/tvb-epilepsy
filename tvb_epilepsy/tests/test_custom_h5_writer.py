@@ -11,6 +11,7 @@ from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
 from tvb_epilepsy.service.pse.lsa_pse_service import LSAPSEService
+from tvb_epilepsy.service.sensitivity_analysis_service import SensitivityAnalysisService
 from tvb_epilepsy.tests.base import remove_temporary_test_files, get_temporary_folder
 
 
@@ -141,6 +142,18 @@ class TestCustomH5writer(object):
         assert not os.path.exists(test_file)
 
         self.writer.write_pse_service(dummy_pse_service, test_file)
+
+        assert os.path.exists(test_file)
+
+    def test_write_sensitivity_analysis_service(self):
+        test_file = os.path.join(get_temporary_folder(), "TestSensitivityAnalysisService.h5")
+        dummy_sa_service = SensitivityAnalysisService(
+            [{"name": "test1", "samples": [1, 2], "bounds": []}],
+            [{"names": ["LSA Propagation Strength"], "values": numpy.array([1, 2])}])
+
+        assert not os.path.exists(test_file)
+
+        self.writer.write_sensitivity_analysis_service(dummy_sa_service, test_file)
 
         assert os.path.exists(test_file)
 

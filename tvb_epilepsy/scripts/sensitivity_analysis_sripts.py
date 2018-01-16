@@ -117,7 +117,8 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
         writer = CustomH5Writer()
         writer.write_pse_service(pse, os.path.join(FOLDER_RES, method + "_test_pse_service.h5"))
         logger.info(sensitivity_analysis_service.__repr__())
-        sensitivity_analysis_service.write_to_h5(FOLDER_RES, method + "_test_sa_service.h5")
+        writer.write_sensitivity_analysis_service(sensitivity_analysis_service,
+                                                  os.path.join(FOLDER_RES, method + "_test_sa_service.h5"))
     return results, pse_results
 
 

@@ -1,15 +1,12 @@
-
 import numpy as np
-from SALib.analyze import sobol, delta, fast, morris, dgsm,  ff
-
+from SALib.analyze import sobol, delta, fast, morris, dgsm, ff
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, list_of_dicts_to_dicts_of_ndarrays, \
-                                                                                                construct_import_path
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, list_of_dicts_to_dicts_of_ndarrays
 
 METHODS = ["sobol", "latin", "delta", "dgsm", "fast", "fast_sampler", "morris", "ff", "fractional_factorial"]
 
 logger = initialize_logger(__name__)
+
 
 # TODO: make sensitivity_analysis_from_hypothesis() helper function
 
@@ -30,11 +27,8 @@ class SensitivityAnalysisService(object):
         self.input_bounds = []
         self.input_samples = []
         self.n_inputs = len(inputs)
-        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
-        self.create_str = self.__class__.__name__ + "({}, {})"
 
         for input in inputs:
-
             self.input_names.append(input["name"])
 
             samples = np.array(input["samples"]).flatten()
@@ -68,8 +62,8 @@ class SensitivityAnalysisService(object):
                     self.output_values.append(output["values"].T)
                     n_outputs = output["values"].shape[0]
                 else:
-                    raise_value_error("Non of the dimensions of output samples: " + str(output["values"].shape) +
-                                     " matches n_samples = " + str(self.n_samples) + " !")
+                    raise_value_error("None of the dimensions of output samples: " + str(output["values"].shape) +
+                                      " matches n_samples = " + str(self.n_samples) + " !")
             self.n_outputs += n_outputs
 
             if n_outputs > 1 and len(output["names"]) == 1:
@@ -101,24 +95,6 @@ class SensitivityAnalysisService(object):
 
     def __str__(self):
         return self.__repr__()
-
-    def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model({"method": self.method, "calc_second_order": self.calc_second_order,
-                                   "conf_level": self.conf_level, "n_inputs": self.n_inputs,
-                                   "n_outputs": self.n_outputs, "input_names": self.input_names,
-                                   "output_names": self.output_names,
-                                   "input_bounds": self.input_bounds,
-                                   "problem": self.problem,
-                                   "other_parameters": self.other_parameters
-                                        })
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
-        return h5_model
-
-    def write_to_h5(self, folder, filename=""):
-        if filename == "":
-            filename = self.name + ".h5"
-        h5_model = self._prepare_for_h5()
-        h5_model.write_to_h5(folder, filename)
 
     def _set_method(self, method):
         method = method.lower()
@@ -152,7 +128,6 @@ class SensitivityAnalysisService(object):
         if conf_level is not None:
             self._set_conf_level(conf_level)
 
-
     def run(self, input_ids=None, output_ids=None, method=None, calc_second_order=None, conf_level=None, **kwargs):
 
         self._update_parameters(method, calc_second_order, conf_level)
@@ -185,7 +160,8 @@ class SensitivityAnalysisService(object):
                                                          num_resamples=self.other_parameters.get("num_resamples", 1000),
                                                          parallel=self.other_parameters.get("parallel", False),
                                                          n_processors=self.other_parameters.get("n_processors", None),
-                                                  print_to_console=self.other_parameters.get("print_to_console", False))
+                                                         print_to_console=self.other_parameters.get("print_to_console",
+                                                                                                    False))
 
         elif np.in1d(self.method.lower(), ["latin", "delta"]):
             warning("'latin' sampling scheme is recommended for 'delta' method!")
@@ -261,7 +237,7 @@ class SensitivityAnalysisService(object):
             output_names.append(self.output_names[io])
             results.append(self.analyzer(self.output_values[:, io]))
 
-         # TODO: Adjust list_of_dicts_to_dicts_of_ndarrays to handle ndarray concatenation
+        # TODO: Adjust list_of_dicts_to_dicts_of_ndarrays to handle ndarray concatenation
         results = list_of_dicts_to_dicts_of_ndarrays(results)
 
         results.update({"output_names": output_names})

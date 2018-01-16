@@ -222,6 +222,23 @@ class CustomH5Writer(object):
 
         self.write_dictionary(pse_dict, path)
 
+    def write_sensitivity_analysis_service(self, sensitivity_service, path):
+        """
+        :param sensitivity_service: SensitivityAnalysisService object to write in H5
+        :param path: H5 path to be written
+        """
+        sensitivity_service_dict = {"method": sensitivity_service.method,
+                                    "calc_second_order": sensitivity_service.calc_second_order,
+                                    "conf_level": sensitivity_service.conf_level,
+                                    "n_inputs": sensitivity_service.n_inputs,
+                                    "n_outputs": sensitivity_service.n_outputs,
+                                    "input_names": sensitivity_service.input_names,
+                                    "output_names": sensitivity_service.output_names,
+                                    "input_bounds": sensitivity_service.input_bounds,
+                                    }
+
+        self.write_dictionary(sensitivity_service_dict, path)
+
     def write_dictionary(self, dictionary, path):
         """
         :param dictionary: dictionary to write in H5
@@ -233,7 +250,10 @@ class CustomH5Writer(object):
             if isinstance(value, numpy.ndarray) and value.size > 0:
                 h5_file.create_dataset(key, data=value)
             else:
-                h5_file.attrs.create(key, value)
+                if isinstance(value, list) and len(value) > 0:
+                    h5_file.create_dataset(key, data=value)
+                else:
+                    h5_file.attrs.create(key, value)
 
         h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
         h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, dictionary.__class__.__name__)
