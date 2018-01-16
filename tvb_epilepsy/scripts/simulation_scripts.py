@@ -252,7 +252,9 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     # By default initial condition is set right on the equilibrium point.
     sim.config_simulation(initial_conditions=None)
     dynamical_model = sim.model
-    convert_to_h5_model(sim.model).write_to_h5(results_dir, dynamical_model._ui_name + "_model.h5")
+    writer = CustomH5Writer()
+    writer.write_generic(sim.model, results_dir, dynamical_model._ui_name + "_model.h5",
+                         subtype=sim.model.__class__.__name__)
 
     vois_ts_dict = {}
     if ts_file is not None and os.path.isfile(ts_file):
@@ -280,7 +282,6 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
                                                              hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
                                                              sensors_list=head.sensorsSEEG, save_flag=True)
             if isinstance(ts_file, basestring):
-                writer = CustomH5Writer()
                 writer.write_dictionary(vois_ts_dict, os.path.join(os.path.dirname(ts_file), os.path.basename(ts_file)))
     if plot_flag and len(vois_ts_dict) > 0:
         # Plot results
