@@ -150,12 +150,13 @@ class ModelInversionService(object):
         return kwargs.get("sig_eq", SIG_EQ_DEF)
 
     def __set_default_parameters(self, **kwargs):
+        sig_eq_def = self.get_default_sig_eq(**kwargs)
         # Generative model:
         # Epileptor:
         self.default_parameters.update(set_parameter_defaults("x1eq", "normal", (self.n_regions,),
                                                               X1EQ_MIN, X1_EQ_CR_DEF,
                                                               pdf_params={"mu": np.maximum(self.x1EQ, X1_REST),
-                                                                          "sigma": self.get_default_sig_eq(**kwargs)}))
+                                                                          "sigma": sig_eq_def}))
         K_mean = self.get_default_K()
         K_std = np.min([K_mean-K_MIN, K_MAX-K_mean]) / kwargs.get("K_scale_range", 6.0)
         self.default_parameters.update(set_parameter_defaults("K", "lognormal", (),
@@ -191,11 +192,10 @@ class ModelInversionService(object):
                                                                                    kwargs.get("MC_scale_range", 6.0)},
                                                               **kwargs))
         # Autoregression:
-        # sig_eq_def = self.get_default_sig_eq(**kwargs)
-        # self.default_parameters.update(set_parameter_defaults("sig_eq", "lognormal", (),
-        #                                                       0.0, 3 * sig_eq_def,
-        #                                                       sig_eq_def, sig_eq_def / 3.0,
-        #                                                       pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
+        self.default_parameters.update(set_parameter_defaults("sig_eq", "lognormal", (),
+                                                              0.0, 3 * sig_eq_def,
+                                                              sig_eq_def, sig_eq_def / 3.0,
+                                                              pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
         # Observation model
         self.default_parameters.update(set_parameter_defaults("eps", "lognormal", (),
                                                               0.0, 0.5,

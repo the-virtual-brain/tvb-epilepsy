@@ -251,15 +251,15 @@ class ODEModelInversionService(ModelInversionService):
         self.default_parameters.update(set_parameter_defaults("x1init", "normal", (self.n_regions,),  # name, pdf, shape
                                                               X1INIT_MIN, X1INIT_MAX,       # min, max
                                                               pdf_params={"mu": self.x1EQ,
-                                                                          "sigma": self.get_default_sig_init()}))
+                                                                          "sigma": sig_init}))
         self.default_parameters.update(set_parameter_defaults("zinit", "normal", (self.n_regions,),  # name, pdf, shape
                                                               ZINIT_MIN, ZINIT_MAX,  # min, max
                                                               pdf_params={"mu": self.zEQ,
                                                                           "sigma": self.get_default_sig_init()}))
-        # self.default_parameters.update(set_parameter_defaults("sig_init", "lognormal", (),
-        #                                                       0.0, 3.0*sig_init,
-        #                                                       sig_init, sig_init / 3.0,
-        #                                                       pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
+        self.default_parameters.update(set_parameter_defaults("sig_init", "lognormal", (),
+                                                              0.0, 3.0*sig_init,
+                                                              sig_init, sig_init / 3.0,
+                                                              pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("scale_signal", "lognormal", (),
                                                               0.8, 3.0,
                                                               2.0, 0.2,

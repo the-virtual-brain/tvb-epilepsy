@@ -73,9 +73,5 @@ class ODEStatisticalModel(StatisticalModel):
         return form_repr + "\n" + formal_repr(self, sort_dict(d))
 
     def __add_parameters(self, **defaults):
-        for p in ["x1init", "zinit", "scale_signal", "offset_signal"]: # "sig_init",
+        for p in ["x1init", "zinit", "sig_init", "scale_signal", "offset_signal"]:
             self.parameters.update({p: set_parameter(p, **defaults)})
-
-    def plot(self, **kwargs):
-        for p in self.parameters:
-            p.plot(**kwargs)

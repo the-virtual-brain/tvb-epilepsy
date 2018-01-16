@@ -2,11 +2,14 @@ import importlib
 from abc import ABCMeta
 
 import numpy as np
+import matplotlib.pyplot as pl
 
+from tvb_epilepsy.base.constants.configurations import SAVE_FLAG, SHOW_FLAG, FOLDER_FIGURES, FIG_FORMAT
 from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE, MIN_SINGLE_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, construct_import_path, make_float, \
                                                                                             extract_dict_stringkeys
+from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
     ProbabilityDistribution
@@ -73,13 +76,13 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
     def _confirm_support(self):
         p_star = (self.low - self.loc) / self.scale
         p_star_cdf = self.scipy().cdf(p_star)
-        if p_star_cdf <= 0.0:
+        if p_star_cdf + np.finfo(np.float).eps <= 0.0:
             raise_value_error("Lower limit of " + self.name + " base distribution outside support!: " +
                               "\n(self.low-self.loc)/self.scale) = " + str(p_star) +
                               "\ncdf(self.low-self.loc)/self.scale) = " + str(p_star_cdf))
         p_star = (self.high - self.loc) / self.scale
         p_star_cdf = self.scipy().cdf(p_star)
-        if p_star_cdf >= 1.0:
+        if p_star_cdf - np.finfo(np.float).eps >= 1.0:
             warning("Upper limit of base " + self.name + "  distribution outside support!: " +
                     "\n(self.high-self.loc)/self.scale) = " + str(p_star) +
                     "\ncdf(self.high-self.loc)/self.scale) = " + str(p_star_cdf))
@@ -113,6 +116,24 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
             self._confirm_support()
             self._update_params(use=use)
 
+    def plot(self, x=np.array([]), ax=None, lgnd=True):
+        if ax is None:
+            _, ax = pl.subplots(1, 2)
+        if len(x) < 1:
+            x = np.linspace(self.low, self.high, 100)
+        ax[0] = self._plot(self.loc, self.scale, x, ax[0], "-", lgnd)
+        ax[0].set_title(self.name + ": " + self.type + " distribution")
+        x = (x-self.loc) / self.scale
+        ax[1] = self._plot(0.0, 1.0, x, ax[1], "--", lgnd)
+        ax[1].set_title(self.name + "_star: " + self.type + " distribution")
+        return ax
+
+    def plot_stochastic_parameter(self, x=np.array([]), ax=None, lgnd=True, figure_name="", figure_dir=FOLDER_FIGURES,
+             save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_format=FIG_FORMAT):
+        ax = self.plot(x, ax, lgnd)
+        save_figure(save_flag, pl.gcf(), figure_name, figure_dir, figure_format)
+        check_show(show_flag)
+        return ax, pl.gcf()
 
 def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE,  loc=0.0, scale=1.0,
                                   p_shape=(), probability_distribution="uniform", optimize_pdf=False, use="scipy",
