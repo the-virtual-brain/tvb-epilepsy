@@ -1,6 +1,10 @@
+
+import matplotlib.pyplot as pl
+from tvb_epilepsy.base.constants.configurations import SAVE_FLAG, SHOW_FLAG, FOLDER_FIGURES, FIG_FORMAT, VERY_LARGE_SIZE
 from tvb_epilepsy.base.constants.model_inversion_constants import SIG_EQ_DEF
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
+from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
 
 
@@ -30,5 +34,15 @@ class StatisticalModel(object):
         return formal_repr(self, sort_dict(d))
 
     def _generate_parameters(self, **defaults):
-        for p in ["x1eq", "K", "tau1", "tau0", "MCsplit",  "MC",  "eps"]: # "sig_eq",
+        for p in ["x1eq", "K", "tau1", "tau0", "MCsplit",  "MC", "sig_eq", "eps"]:
             self.parameters.update({p: set_parameter(p, **defaults)})
+
+    def plot(self, figure_name="", figure_dir=FOLDER_FIGURES,
+             save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_format=FIG_FORMAT):
+        _, ax = pl.subplots(len(self.parameters), 2, figsize=VERY_LARGE_SIZE)
+        for ip, p in enumerate(self.parameters.values()):
+            ax[ip] = p.plot(ax=ax[ip], lgnd=False)
+        save_figure(save_flag, pl.gcf(), figure_name, figure_dir, figure_format)
+        check_show(show_flag)
+        return ax, pl.gcf()
+

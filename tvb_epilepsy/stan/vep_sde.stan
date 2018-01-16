@@ -203,9 +203,19 @@ data {
     /* Integration */
     real dt;
     /* Equilibrium point variability */
-    real<lower=0.0> sig_eq;
+    real<lower=0.0> sig_eq_lo;
+    real<lower=0.0> sig_eq_hi;
+    real sig_eq_loc;
+    real<lower=0.0> sig_eq_scale;
+    real sig_eq_p[2];
+    int<lower=0> sig_eq_pdf;
     /* Initial condition variability */
-    real<lower=0.0> sig_init;
+    real<lower=0.0> sig_init_lo;
+    real<lower=0.0> sig_init_hi;
+    real sig_init_loc;
+    real<lower=0.0> sig_init_scale;
+    real sig_init_p[2];
+    int<lower=0> sig_init_pdf;
     /* Dynamic noise strength parameter (default: gamma distribution) */
     real<lower=0.0> sig_lo;
     real<lower=0.0> sig_hi;
@@ -255,6 +265,10 @@ transformed data {
     real tau0_star_hi = (tau0_hi - tau0_loc) / tau0_scale;
     real K_star_lo = (K_lo - K_loc) / K_scale;
     real K_star_hi = (K_hi - K_loc) / K_scale;
+    real sig_eq_star_lo = (sig_eq_lo - sig_eq_loc) / sig_eq_scale;
+    real sig_eq_star_hi = (sig_eq_hi - sig_eq_loc) / sig_eq_scale;
+    real sig_init_star_lo = (sig_init_lo - sig_init_loc) / sig_init_scale;
+    real sig_init_star_hi = (sig_init_hi - sig_init_loc) / sig_init_scale;
     real sig_star_lo = (sig_lo - sig_loc) / sig_scale;
     real sig_star_hi = (sig_hi - sig_loc) / sig_scale;
     real eps_star_lo = (eps_lo - eps_loc) / eps_scale;
@@ -272,8 +286,10 @@ parameters {
     /* Generative model */
     /* Epileptor */
     row_vector<lower=x1eq_lo, upper=x1eq_hi>[n_regions] x1eq; // x1 equilibrium point coordinate
+    real<lower=sig_eq_star_lo, upper=sig_eq_star_hi> sig_eq_star; // variance of equilibrium
     row_vector<lower=x1init_lo, upper=x1init_hi>[n_regions] x1init; // x1 initial condition coordinate
     row_vector<lower=zinit_lo, upper=zinit_hi>[n_regions] zinit; // x1 initial condition coordinate
+    real<lower=sig_init_star_lo, upper=sig_init_star_hi> sig_init_star; // variance of initial condition
     // row_vector[n_active_regions] x1_dWt[n_times-1]; // x1 dWt
     row_vector[n_active_regions] z_dWt[n_times]; // z dWt
     real<lower=tau1_star_lo, upper=tau1_star_hi> tau1_star; // time scale [n_active_regions]
@@ -309,10 +325,12 @@ transformed parameters {
     row_vector[n_regions] x0; // x0, excitability parameter
     real<lower=0.0> tau1 = tau1_star * tau1_scale + tau1_loc; // time scale
     real<lower=0.0> tau0 = tau0_star * tau0_scale + tau0_loc; // time scale separation
+    real<lower=0.0> sig_eq = sig_eq_star * sig_eq_scale + sig_eq_loc; // variance of equilibrium
     /* zeq, z equilibrium point coordinate */
     row_vector[n_regions] zeq = EpileptorDP2D_fun_x1(n_regions, x1eq, zeros, yc, Iext1, a, db, d, slope, 1.0);
 
     /* Integration of auto-regressive generative model  */
+    real<lower=0.0> sig_init = sig_init_star * sig_init_scale + sig_init_loc; // variance of initial condition
     real<lower=0.0> sig = sig_star * sig_scale + sig_loc; // variance of phase flow, i.e., dynamic noise
 
     /* Coupling */
@@ -386,7 +404,9 @@ model {
     MC_loc = SC .* (1-MCsplit);
     MC_star[:, 2] ~ normal(MC_loc, fabs(MC_loc) * MC_scale); // lower triangular MC
 
-    /* Sampling of noise strength */
+    /* Sampling of equilibrium and initial condition variances as well as dynamical noise strength */
+    sig_eq_star ~ sample(sig_eq_pdf, sig_eq_p);
+    sig_init_star ~ sample(sig_init_pdf, sig_init_p);
     sig_star ~ sample(sig_pdf, sig_p);
     /* Sampling of x1 equilibrium point coordinate and initial condition */
     x1eq ~ normal(x1eq_loc, sig_eq);

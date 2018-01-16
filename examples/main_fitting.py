@@ -5,6 +5,7 @@ import numpy as np
 from scipy.io import loadmat, savemat
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES, FOLDER_VEP_ONLINE
 from tvb_epilepsy.base.constants.module_constants import TVB, CUSTOM
+from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.plot_utils import plot_raster, plot_timeseries
@@ -51,7 +52,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         # --------------------------Model configuration and LSA-----------------------------------
         model_configuration, lsa_hypothesis, model_configuration_service, lsa_service = \
             from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
-                                                plot_flag=True, figure_dir=figure_dir, logger=logger, K=1.0)
+                                                plot_flag=False, figure_dir=figure_dir, logger=logger, K=K_DEF)
 
         dynamical_model = "EpileptorDP2D"
 
@@ -61,6 +62,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         statistical_model = model_inversion.generate_statistical_model() # observation_expression="lfp"
         statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
                                                                   active_regions_th=0.1, reset=True)
+        statistical_model.plot("Statistical Model")
         decimate = 4
         cut_signals_tails = (6, 6)
         if os.path.isfile(EMPIRICAL):
@@ -234,7 +236,7 @@ if __name__ == "__main__":
     stats_model_name = "vep_sde"
     # stats_model_name = "vep-fe-rev-05"
     fitmethod = "sample"
-    model_code_dir = "/Users/dionperd/VEPtools/git/tvb-epilepsy/tvb_epilepsy/stan"
+    model_code_dir = "/Users/dionperd/VEPtools/software/git/tvb-epilepsy/tvb_epilepsy/stan"
     if EMPIRICAL:
         main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                             sensors_filename=sensors_filename, stats_model_name=stats_model_name,

@@ -25,6 +25,3 @@ class SDEStatisticalModel(ODEStatisticalModel):
     def _add_parameters(self, **defaults):
         for p in ["z_dWt", "sig"]: #"x1_dWt",
             self.parameters.update({p: set_parameter(p, **defaults)})
-
-    # def plot(self):
-    #     figure_dir = os.path.join(FOLDER_FIGURES, "_ASM_" + self.name)
