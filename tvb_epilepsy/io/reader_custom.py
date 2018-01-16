@@ -1,14 +1,13 @@
 import os
 import numpy
 import h5py
-
-from tvb_epilepsy.base.h5_model import read_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity, ConnectivityH5Field
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorsH5Field
 from tvb_epilepsy.base.model.vep.surface import Surface, SurfaceH5Field
+from tvb_epilepsy.base.simulators import SimulationSettings
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
@@ -351,11 +350,15 @@ class CustomH5Reader(object):
         :param path: Path towards a SimulationSettings H5 file
         :return: SimulationSettings
         """
-        pass
+        self.logger.info("Starting to read SimulationSettings from: %s" % path)
+        h5_file = h5py.File(path, 'r', libver='latest')
 
-    def read_generic(self, path):
-        """
-        :param path: Path towards a H5 file
-        :return: object of type EPI_Subtype
-        """
-        return read_h5_model(path).convert_from_h5_model()
+        sim_settings = SimulationSettings()
+        for dataset in h5_file.keys():
+            sim_settings.set_attribute(dataset, h5_file["/" + dataset][()])
+
+        for attr in h5_file.attrs.keys():
+            sim_settings.set_attribute(attr, h5_file.attrs[attr])
+
+        h5_file.close()
+        return sim_settings

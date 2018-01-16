@@ -260,6 +260,27 @@ class CustomH5Writer(object):
 
         h5_file.close()
 
+    #TODO: can this be visualized? should we keep groups?
+    def write_simulation_settings(self, simulation_settings, path):
+        """
+        :param simulation_settings: SimulationSettings object to write in H5
+        :param path: H5 path to be written
+        """
+        h5_file = h5py.File(path, 'a', libver='latest')
+
+        datasets_dict, metadata_dict = self._determine_datasets_and_attributes(simulation_settings)
+
+        for key, value in datasets_dict.iteritems():
+            h5_file.create_dataset(key, data=value)
+
+        h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, simulation_settings.__class__.__name__)
+
+        for key, value in metadata_dict.iteritems():
+            h5_file.attrs.create(key, value)
+
+        h5_file.close()
+
     def write_generic(self, object, folder, path):
         """
         :param object:
@@ -267,7 +288,7 @@ class CustomH5Writer(object):
         """
         h5_model = convert_to_h5_model(object)
 
-        h5_model.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_model.add_or_update_metadata_attribute(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
         h5_model.add_or_update_metadata_attribute(self.CUSTOM_SUBTYPE_ATTRIBUTE, object.__class__.__name__)
 
         h5_model.write_to_h5(folder, path)

@@ -241,15 +241,13 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
             writer.write_generic(sim.model, FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5")
             logger.info("\n\nSimulating...")
             ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
-            writer.write_generic(sim.simulation_settings, FOLDER_RES,
-                                 lsa_hypothesis.name + "_sim_settings.h5")
+            writer.write_simulation_settings(sim.simulation_settings,
+                                             os.path.join(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5"))
             if test_write_read:
                 # TODO: find out why it cannot set monitor expressions
-                logger.info("Written and read simulation settings are identical?: " +
-                            str(assert_equal_objects(sim.simulation_settings,
-                                                     read_h5_model(os.path.join(FOLDER_RES,
-                                                                                lsa_hypothesis.name + "_sim_settings.h5")).
-                                                     convert_from_h5_model(), logger=logger)))
+                logger.info("Written and read simulation settings are identical?: " + str(
+                    assert_equal_objects(sim.simulation_settings, reader.read_simulation_settings(
+                        os.path.join(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")), logger=logger)))
             if not status:
                 warning("\nSimulation failed!")
             else:

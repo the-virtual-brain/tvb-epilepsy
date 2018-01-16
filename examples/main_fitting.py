@@ -69,13 +69,11 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             target_data_type = "empirical"
             ts_file = os.path.join(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts_empirical.mat")
             try:
-                # vois_ts_dict = read_h5_model(ts_file).convert_from_h5_model()
                 vois_ts_dict = loadmat(ts_file)
                 time = vois_ts_dict["time"].flatten()
                 sensors_inds = np.array(vois_ts_dict["sensors_inds"]).flatten().tolist()
                 sensors_lbls = np.array(vois_ts_dict["sensors_lbls"]).flatten().tolist()
                 vois_ts_dict.update({"time": time, "sensors_inds": sensors_inds, "sensors_lbls": sensors_lbls})
-                # convert_to_h5_model(vois_ts_dict).write_to_h5(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts_empirical.h5")
                 savemat(ts_file, vois_ts_dict)
             except:
                 signals, time, fs = prepare_seeg_observable(EMPIRICAL, times_on_off, sensors_lbls, plot_flag=True,
@@ -91,7 +89,6 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                 del all_signals
                 vois_ts_dict = {"time": time.flatten(), "signals": signals,
                                 "sensors_inds": sensors_inds, "sensors_lbls": sensors_lbls}
-                # convert_to_h5_model(vois_ts_dict).write_to_h5(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts_empirical.h5")
                 savemat(ts_file, vois_ts_dict)
             model_inversion.sensors_labels[vois_ts_dict["sensors_inds"]] = sensors_lbls
             manual_selection = sensors_inds
@@ -141,8 +138,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         writer = CustomH5Writer()
         writer.write_model_inversion_service(model_inversion, os.path.join(FOLDER_RES,
                                                                            lsa_hypothesis.name + "_ModelInversionService.h5"))
-        writer.write_generic(statistical_model, results_dir, lsa_hypothesis.name + "_StatsModel.h5",
-                             subtype=statistical_model.__class__.__name__)
+        writer.write_generic(statistical_model, results_dir, lsa_hypothesis.name + "_StatsModel.h5")
         # try:
         #     model_data = stan_service.load_model_data_from_file()
         # except:
