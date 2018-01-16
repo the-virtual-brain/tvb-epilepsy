@@ -5,7 +5,6 @@ import numpy as np
 from scipy.io import loadmat, savemat
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES, FOLDER_VEP_ONLINE
 from tvb_epilepsy.base.constants.module_constants import TVB, CUSTOM
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.plot_utils import plot_raster, plot_timeseries
