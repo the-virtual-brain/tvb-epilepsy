@@ -1,17 +1,12 @@
-
 from abc import ABCMeta, abstractmethod
-
 import numpy as np
-
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_size, \
-    squeeze_array_to_scalar, construct_import_path
+    squeeze_array_to_scalar
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
 from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_params
 
 
 class ProbabilityDistribution(object):
-
     __metaclass__ = ABCMeta
 
     type = ""
@@ -28,9 +23,6 @@ class ProbabilityDistribution(object):
     kurt = None
     scipy_name = ""
     numpy_name = ""
-    context_str = "from " + construct_import_path(__file__) + " import ProbabilityDistribution"
-    create_str = "ProbabilityDistribution('" + type + "')"
-    update_str = "obj.update_params()"
 
     @abstractmethod
     def __init__(self):
@@ -59,17 +51,6 @@ class ProbabilityDistribution(object):
     def __str__(self):
         return self._repr()
 
-    def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model(self)
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "ProbabilityDistributionModel")
-        return h5_model
-
-    def write_to_h5(self, folder, filename=""):
-        if filename == "":
-            filename = self.type + ".h5"
-        h5_model = self._prepare_for_h5()
-        h5_model.write_to_h5(folder, filename)
-
     def __update_params__(self, loc=0.0, scale=1.0, use="scipy", check_constraint=True, **params):
         if len(params) == 0:
             params = self.pdf_params()
@@ -79,7 +60,7 @@ class ProbabilityDistribution(object):
         self.p_shape = self.__calc_shape__(loc, scale)
         self.p_size = shape_to_size(self.p_shape)
         self.n_params = len(self.pdf_params())
-        if check_constraint and not(self.__check_constraint__()):
+        if check_constraint and not (self.__check_constraint__()):
             raise_value_error("Constraint for " + self.type + " distribution " + self.constraint_string +
                               "\nwith parameters " + str(self.pdf_params()) + " is not satisfied!")
         self.mean = self._calc_mean(loc, scale, use)
@@ -98,7 +79,7 @@ class ProbabilityDistribution(object):
         return np.all(self.constraint() > 0)
 
     def __calc_shape__(self, loc=0.0, scale=1.0, params=None):
-        if not(isinstance(params, dict)):
+        if not (isinstance(params, dict)):
             params = self.pdf_params()
             p_shape = self.p_shape
         else:

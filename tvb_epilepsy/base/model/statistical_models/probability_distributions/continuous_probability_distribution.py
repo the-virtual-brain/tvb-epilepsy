@@ -1,14 +1,10 @@
-
 from abc import ABCMeta
-
 import numpy as np
-
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution \
-                                                                                          import ProbabilityDistribution
+    import ProbabilityDistribution
 
 
 class ContinuousProbabilityDistribution(ProbabilityDistribution):
-
     __metaclass__ = ABCMeta
 
     def scipy_pdf(self, x=None, q=[0.01, 0.99], loc=0.0, scale=1.0):

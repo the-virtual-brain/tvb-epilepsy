@@ -1,15 +1,11 @@
-
 from collections import OrderedDict
-
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-
 from tvb_epilepsy.base.utils.log_error_utils import warning
-from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string, construct_import_path
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
-                                                                                import ContinuousProbabilityDistribution
-
+from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution \
+    import ContinuousProbabilityDistribution
 
 DEFAULT_LOW_VALUE = 0.0
 DEFAULT_HIGH_VALUE = 1.0
@@ -24,13 +20,11 @@ class UniformDistribution(ContinuousProbabilityDistribution):
         self.constraint_string = "a < b"
         self.a = make_float(params.get("a", params.get("low", params.get("loc", DEFAULT_LOW_VALUE))))
         self.b = make_float(params.get("b", params.get("high",
-                                                     params.get("scale", 2.0*DEFAULT_HIGH_VALUE) - DEFAULT_HIGH_VALUE)))
+                                                       params.get("scale",
+                                                                  2.0 * DEFAULT_HIGH_VALUE) - DEFAULT_HIGH_VALUE)))
         self.__update_params__(a=self.a, b=self.b)
         self.low = self.a
         self.high = self.b
-        self.context_str = "from " + construct_import_path(__file__) + " import UniformDistribution"
-        self.create_str = "UniformDistribution('" + self.type + "')"
-        self.update_str = "obj.update_params()"
 
     def pdf_params(self, parametrization="a-b"):
         p = OrderedDict()
@@ -61,7 +55,7 @@ class UniformDistribution(ContinuousProbabilityDistribution):
 
     def scipy(self, loc=0.0, scale=1.0):
         a, b = self.scale_params(loc, scale)
-        return getattr(ss, self.scipy_name)(loc=a, scale=b-a)
+        return getattr(ss, self.scipy_name)(loc=a, scale=b - a)
 
     def numpy(self, loc=0.0, scale=1.0, size=(1,)):
         a, b = self.scale_params(loc, scale)

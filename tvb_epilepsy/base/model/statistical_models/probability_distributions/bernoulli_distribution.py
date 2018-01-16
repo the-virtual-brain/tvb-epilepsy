@@ -1,11 +1,9 @@
-
 import numpy as np
 import scipy.stats as ss
-
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int, construct_import_path
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.discrete_probability_distribution  \
-                                                                                  import DiscreteProbabilityDistribution
+from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.discrete_probability_distribution \
+    import DiscreteProbabilityDistribution
 
 
 class BernoulliDistribution(DiscreteProbabilityDistribution):
@@ -17,9 +15,6 @@ class BernoulliDistribution(DiscreteProbabilityDistribution):
         self.constraint_string = "0 < p < 1"
         self.p = make_float(params.get("p", 0.5))
         self.__update_params__(p=self.p)
-        self.context_str = "from " + construct_import_path(__file__) + " import BernoulliDistribution"
-        self.create_str = "BernoulliDistribution('" + self.type + "')"
-        self.update_str = "obj.update_params()"
 
     def pdf_params(self):
         return {"p": self.p}
@@ -34,7 +29,7 @@ class BernoulliDistribution(DiscreteProbabilityDistribution):
     def constraint(self):
         # By default expr >= 0
         p = np.array(self.p).flatten()
-        return np.hstack([p - np.finfo(np.float64).eps,  1.0 - p + np.finfo(np.float64).eps])
+        return np.hstack([p - np.finfo(np.float64).eps, 1.0 - p + np.finfo(np.float64).eps])
 
     def scipy(self, loc=0.0, scale=1.0):
         return ss.bernoulli(p=self.p, loc=loc)
