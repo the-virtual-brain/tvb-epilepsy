@@ -94,6 +94,9 @@ class ModelConfigurationService(object):
     def __str__(self):
         return self.__repr__()
 
+    def set_attribute(self, attr_name, data):
+        setattr(self, attr_name, data)
+
     def _compute_model_x0(self, x0_values):
         return calc_x0_val_to_model_x0(x0_values, self.yc, self.Iext1, self.a, self.b, self.d, self.zmode)
 

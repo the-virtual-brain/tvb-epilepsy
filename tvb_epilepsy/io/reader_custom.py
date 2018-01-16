@@ -1,6 +1,8 @@
 import os
 import numpy
 import h5py
+
+from tvb_epilepsy.base.h5_model import read_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity, ConnectivityH5Field
@@ -8,6 +10,8 @@ from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorsH5Field
 from tvb_epilepsy.base.model.vep.surface import Surface, SurfaceH5Field
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.service.lsa_service import LSAService
+from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 
 
 class CustomH5Reader(object):
@@ -285,3 +289,73 @@ class CustomH5Reader(object):
 
         h5_file.close()
         return model_configuration
+
+    def read_lsa_service(self, path):
+        """
+        :param path: Path towards a LSAService H5 file
+        :return: LSAService object
+        """
+        self.logger.info("Starting to read LSAService from: %s" % path)
+        h5_file = h5py.File(path, 'r', libver='latest')
+
+        lsa_service = LSAService()
+
+        for dataset in h5_file.keys():
+            lsa_service.set_attribute(dataset, h5_file["/" + dataset][()])
+
+        for attr in h5_file.attrs.keys():
+            lsa_service.set_attribute(attr, h5_file.attrs[attr])
+
+        h5_file.close()
+        return lsa_service
+
+    def read_model_configuration_service(self, path):
+        """
+        :param path: Path towards a ModelConfigurationService H5 file
+        :return: ModelConfigurationService object
+        """
+        self.logger.info("Starting to read ModelConfigurationService from: %s" % path)
+        h5_file = h5py.File(path, 'r', libver='latest')
+
+        mc_service = ModelConfigurationService()
+
+        for dataset in h5_file.keys():
+            mc_service.set_attribute(dataset, h5_file["/" + dataset][()])
+
+        for attr in h5_file.attrs.keys():
+            mc_service.set_attribute(attr, h5_file.attrs[attr])
+
+        h5_file.close()
+        return mc_service
+
+    def read_dictionary(self, path):
+        """
+        :param path: Path towards a dictionary H5 file
+        :return: dict
+        """
+        self.logger.info("Starting to read a dictionary from: %s" % path)
+        h5_file = h5py.File(path, 'r', libver='latest')
+
+        dictionary = dict()
+        for dataset in h5_file.keys():
+            dictionary.update({dataset: h5_file["/" + dataset][()]})
+
+        for attr in h5_file.attrs.keys():
+            dictionary.update({attr: h5_file.attrs[attr]})
+
+        h5_file.close()
+        return dictionary
+
+    def read_simulation_settings(self, path):
+        """
+        :param path: Path towards a SimulationSettings H5 file
+        :return: SimulationSettings
+        """
+        pass
+
+    def read_generic(self, path):
+        """
+        :param path: Path towards a H5 file
+        :return: object of type EPI_Subtype
+        """
+        return read_h5_model(path).convert_from_h5_model()

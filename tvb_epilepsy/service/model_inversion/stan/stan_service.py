@@ -7,9 +7,9 @@ import numpy as np
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict
-from tvb_epilepsy.base.h5_model import read_h5_model
 from tvb_epilepsy.io.rdump import rdump, rload
 from tvb_epilepsy.io.csv import parse_csv
+from tvb_epilepsy.io.reader_custom import CustomH5Reader
 from tvb_epilepsy.io.writer_custom import CustomH5Writer
 
 LOG = initialize_logger(__name__)
@@ -81,7 +81,7 @@ class StanService(object):
             with open(self.model_data_path, 'wb') as f:
                 return pickle.load(f)
         elif isequal_string(extension, "h5"):
-            return read_h5_model(self.model_data_path).convert_from_h5_model()
+            return CustomH5Reader().read_dictionary(self.model_data_path)
         else:
             raise_not_implemented_error("model_data file (" + model_data_path +
                                         ") that are not one of (.R, .npy, .mat, .pkl) cannot be read!")

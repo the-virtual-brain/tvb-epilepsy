@@ -24,7 +24,7 @@ if __name__ == "__main__":
         print("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
     writer = CustomH5Writer()
-    writer.write_generic(sampler, FOLDER_RES, "test_Stochastic_Sampler.h5", subtype=sampler.__class__.__name__)
+    writer.write_generic(sampler, FOLDER_RES, "test_Stochastic_Sampler.h5")
 
     logger.info("\nStochastic uniform sampling with numpy:")
     sampler = StochasticSamplingService(n_samples=n_samples, sampling_module="numpy")
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         print("\n" + key + ": " + str(value))
 
     logger.info(sampler.__repr__())
-    writer.write_generic(sampler, FOLDER_RES, "test1_Stochastic_Sampler.h5", subtype=sampler.__class__.__name__)
+    writer.write_generic(sampler, FOLDER_RES, "test1_Stochastic_Sampler.h5")
 
     logger.info("\nStochastic truncated normal sampling with scipy:")
     sampler = StochasticSamplingService(n_samples=n_samples)
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     for key, value in stats.iteritems():
         print("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
-    writer.write_generic(sampler, FOLDER_RES, "test2_Stochastic_Sampler.h5", subtype=sampler.__class__.__name__)
+    writer.write_generic(sampler, FOLDER_RES, "test2_Stochastic_Sampler.h5")
 
     logger.info("\nSensitivity analysis sampling:")
     sampler = SalibSamplingService(n_samples=n_samples, sampler="latin")
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     for key, value in stats.iteritems():
         print("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
-    writer.write_generic(sampler, FOLDER_RES, "test3_Stochastic_Sampler.h5", subtype=sampler.__class__.__name__)
+    writer.write_generic(sampler, FOLDER_RES, "test3_Stochastic_Sampler.h5")
 
     logger.info("\nTesting distribution class and conversions...")
     sampler = StochasticSamplingService(n_samples=n_samples)

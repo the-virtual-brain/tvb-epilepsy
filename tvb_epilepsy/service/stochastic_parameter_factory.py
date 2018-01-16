@@ -1,13 +1,7 @@
-
-import os
-
 import numpy as np
-
 from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE, MIN_SINGLE_VALUE
-from tvb_epilepsy.base.h5_model import read_h5_model
 from tvb_epilepsy.base.model.parameter import Parameter
-from tvb_epilepsy.base.utils.log_error_utils import warning
-from tvb_epilepsy.base.utils.data_structures_utils import extract_dict_stringkeys, isequal_string
+from tvb_epilepsy.base.utils.data_structures_utils import extract_dict_stringkeys
 
 
 def get_val_key_for_first_keymatch_in_dict(name, pkeys, **kwargs):
@@ -56,7 +50,7 @@ def set_parameter_defaults(name, _pdf="normal", _shape=(), _lo=MIN_SINGLE_VALUE,
             pkey = "var"
         elif pkey in ["std", "sig", "sigma", "s"]:
             pkey = "std"
-        if callable(_std) and _mean is not None: # std can be a function of mean
+        if callable(_std) and _mean is not None:  # std can be a function of mean
             _std = np.abs(_std(_mean))
         defaults.update({out_name(pkey): _std})
     for this_pval, pkey, pkeys in zip([_lo, _hi],
@@ -74,14 +68,7 @@ def set_parameter_defaults(name, _pdf="normal", _shape=(), _lo=MIN_SINGLE_VALUE,
 def set_parameter(name, use="manual", **kwargs):
     parameter = kwargs.pop(name, None)
     # load parameter if it is a file
-    if isinstance(parameter, basestring):
-        if os.path.isfile(parameter):
-            try:
-                parameter = read_h5_model(parameter).convert_from_h5_model()
-            except:
-                warning("Failed to read parameter " + name + " from file path " + parameter + "!\n" +
-                        "Proceeding with generating it!")
-    if not(isinstance(parameter, Parameter)):
+    if not (isinstance(parameter, Parameter)):
         from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
         defaults = {}
         # Get all keyword arguments that correspond to that parameter name
@@ -101,10 +88,10 @@ def set_parameter(name, use="manual", **kwargs):
             optimize_pdf = False
         # Generate the parameter with or without optimization of its shape:
         parameter = generate_stochastic_parameter(name, probability_distribution=defaults.pop("pdf"),
-                                                        p_shape=defaults.pop("shape"),
-                                                        low=defaults.pop("lo"),
-                                                        high=defaults.pop("hi"),
-                                                        optimize_pdf=optimize_pdf, use=use, **pdf_params)
+                                                  p_shape=defaults.pop("shape"),
+                                                  low=defaults.pop("lo"),
+                                                  high=defaults.pop("hi"),
+                                                  optimize_pdf=optimize_pdf, use=use, **pdf_params)
         # Update parameter's loc and scale if necessary by moving and/or scaling it accordingly
         if len(defaults) > 0:
             parameter._update_loc_scale(use=use, **defaults)

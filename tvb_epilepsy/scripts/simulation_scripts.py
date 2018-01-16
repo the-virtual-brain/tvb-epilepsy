@@ -1,18 +1,16 @@
 import os
-
 import numpy as np
-
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, FOLDER_FIGURES
 from tvb_epilepsy.base.constants.module_constants import TVB, SIMULATION_MODE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
-from tvb_epilepsy.base.h5_model import read_h5_model, convert_to_h5_model
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.utils.plot_utils import plot_sim_results
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
+from tvb_epilepsy.io.reader_custom import CustomH5Reader
 from tvb_epilepsy.io.writer_custom import CustomH5Writer
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
 
@@ -253,13 +251,12 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     sim.config_simulation(initial_conditions=None)
     dynamical_model = sim.model
     writer = CustomH5Writer()
-    writer.write_generic(sim.model, results_dir, dynamical_model._ui_name + "_model.h5",
-                         subtype=sim.model.__class__.__name__)
+    writer.write_generic(sim.model, results_dir, dynamical_model._ui_name + "_model.h5")
 
     vois_ts_dict = {}
     if ts_file is not None and os.path.isfile(ts_file):
         logger.info("\n\nLoading previously simulated time series...")
-        vois_ts_dict = read_h5_model(ts_file).convert_from_h5_model()
+        vois_ts_dict = CustomH5Reader().read_dictionary(ts_file)
     else:
         logger.info("\n\nSimulating...")
         ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)

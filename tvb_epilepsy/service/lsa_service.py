@@ -42,6 +42,9 @@ class LSAService(object):
     def __str__(self):
         return self.__repr__()
 
+    def set_attribute(self, attr_name, data):
+        setattr(self, attr_name, data)
+
     def get_curve_elbow_point(self, values_array):
         return curve_elbow_point(values_array)
 

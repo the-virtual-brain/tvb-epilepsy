@@ -260,15 +260,15 @@ class CustomH5Writer(object):
 
         h5_file.close()
 
-    def write_generic(self, object, folder, path, subtype=None):
+    def write_generic(self, object, folder, path):
         """
         :param object:
         :param path:H5 path to be written
         """
         h5_model = convert_to_h5_model(object)
 
-        if subtype is not None:
-            h5_model.add_or_update_metadata_attribute(self.CUSTOM_SUBTYPE_ATTRIBUTE, subtype)
+        h5_model.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_model.add_or_update_metadata_attribute(self.CUSTOM_SUBTYPE_ATTRIBUTE, object.__class__.__name__)
 
         h5_model.write_to_h5(folder, path)
 
