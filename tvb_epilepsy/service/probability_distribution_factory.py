@@ -9,7 +9,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, dicts_
 
 
 AVAILABLE_DISTRIBUTIONS = ["uniform", "normal", "gamma", "lognormal", "exponential", "beta", "chisquare",
-                           "binomial"]
+                           "binomial", "poisson", "bernoulli"]
 
 CONSTRAINT_ABS_TOL = 0.001
 
