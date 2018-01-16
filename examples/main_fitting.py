@@ -9,7 +9,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.plot_utils import plot_raster, plot_timeseries
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.io.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.model_inversion.sde_model_inversion_service import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
@@ -134,7 +134,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                         time_units="ms", title=hyp.name + 'Target Signals ',
                         labels=labels[model_inversion.signals_inds],
                         save_flag=True, show_flag=False, figure_dir=figure_dir)
-        writer = CustomH5Writer()
+        writer = H5Writer()
         writer.write_model_inversion_service(model_inversion, os.path.join(FOLDER_RES,
                                                                            lsa_hypothesis.name + "_ModelInversionService.h5"))
         writer.write_generic(statistical_model, results_dir, lsa_hypothesis.name + "_StatsModel.h5")

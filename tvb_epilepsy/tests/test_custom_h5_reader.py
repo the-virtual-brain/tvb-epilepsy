@@ -5,8 +5,8 @@ from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.simulators import SimulationSettings
-from tvb_epilepsy.io.reader_custom import CustomH5Reader
-from tvb_epilepsy.io.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.h5_reader import H5Reader
+from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.tests.base import get_temporary_folder, remove_temporary_test_files
@@ -15,8 +15,8 @@ head_dir = "head2"
 
 
 class TestCustomH5Reader():
-    reader = CustomH5Reader()
-    writer = CustomH5Writer()
+    reader = H5Reader()
+    writer = H5Writer()
     not_existent_file = "NotExistent.h5"
 
     def test_read_connectivity(self):

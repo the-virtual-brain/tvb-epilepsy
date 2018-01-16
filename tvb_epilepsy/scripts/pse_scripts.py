@@ -5,7 +5,7 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
     dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.io.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.scripts.hypothesis_scripts import start_lsa_run
 from tvb_epilepsy.service.pse_service import PSEService
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
@@ -121,7 +121,7 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
         logger.info(pse.__repr__())
         if not (isinstance(filename, basestring)):
             filename = "LSA_PSA"
-        writer = CustomH5Writer()
+        writer = H5Writer()
         writer.write_pse_service(pse, os.path.join(folder_res, filename + "_pse_service.h5"))
         writer.write_dictionary(pse_results, os.path.join(folder_res, filename + ".h5"))
 

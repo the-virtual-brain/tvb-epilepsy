@@ -16,7 +16,7 @@ from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import obj_to_dict, assert_arrays, construct_import_path
 from tvb_epilepsy.base.simulators import ABCSimulator, SimulationSettings
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val_to_model_x0
-from tvb_epilepsy.io.reader_custom import CustomH5Reader
+from tvb_epilepsy.io.h5_reader import H5Reader
 
 
 class SimulationSettings(object):
@@ -116,7 +116,7 @@ class SimulatorCustom(ABCSimulator):
     From a VEP Hypothesis, write a custom JSON simulation configuration.
     To run a simulation, we can also open a GUI and import the resulted JSON file.
     """
-    reader = CustomH5Reader()
+    reader = H5Reader()
     json_custom_config_file = "SimulationConfiguration.json"
 
     def __init__(self, connectivity, model_configuration, model, simulation_settings):

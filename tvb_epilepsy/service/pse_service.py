@@ -17,7 +17,7 @@ from tvb_epilepsy.service.model_configuration_service import ModelConfigurationS
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
 from tvb_epilepsy.custom.simulator_custom import custom_model_builder
-from tvb_epilepsy.io.reader_custom import CustomH5Reader
+from tvb_epilepsy.io.h5_reader import H5Reader
 
 logger = initialize_logger(__name__)
 
@@ -136,7 +136,7 @@ def lsa_run_fun(hypothesis_input, model_connectivity, params_paths, params_value
 
 def sim_out_fun(simulator, time, data, **kwargs):
     if data is None:
-        time, data = CustomH5Reader().read_timeseries(simulator.results_path, data="data")
+        time, data = H5Reader().read_timeseries(simulator.results_path, data="data")
     return {"time": time, "data": data}
 
 

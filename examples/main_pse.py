@@ -5,10 +5,10 @@ import numpy as np
 from tvb_epilepsy.base.constants.configurations import DATA_CUSTOM, FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.io.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
 from tvb_epilepsy.scripts.pse_scripts import pse_from_hypothesis
-from tvb_epilepsy.io.reader_custom import CustomH5Reader as Reader
+from tvb_epilepsy.io.h5_reader import H5Reader as Reader
 
 logger = initialize_logger(__name__)
 
@@ -18,7 +18,7 @@ if __name__ == "__main__":
     data_folder = os.path.join(DATA_CUSTOM, 'Head')
 
     reader = Reader()
-    writer = CustomH5Writer()
+    writer = H5Writer()
 
     head = reader.read_head(data_folder)
 

@@ -9,15 +9,15 @@ from scipy.io import loadmat
 
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.custom.read_write import write_ts, write_ts_seeg_epi, PATIENT_VIRTUAL_HEAD
-from tvb_epilepsy.io.reader_custom import CustomH5Reader
-from tvb_epilepsy.io.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.h5_reader import H5Reader
+from tvb_epilepsy.io.h5_writer import H5Writer
 
 
 def correlate_sensors(empirical_file="/Users/lia.domide/Downloads/TRECempirical/110223B-EEX_0004.EEG.mat",
                       existing_ep_file="/WORK/episense/episense-root/trunk/demo-data/SensorsSEEG_125.h5"):
     data = loadmat(empirical_file)
     desired_labels = [str(i).strip().lower() for i in data["channel_names"]]
-    reader = CustomH5Reader()
+    reader = H5Reader()
     labels, locations = reader.read_sensors_of_type(existing_ep_file, "SEEG")
     new_labels = []
     new_locations = []
@@ -30,8 +30,8 @@ def correlate_sensors(empirical_file="/Users/lia.domide/Downloads/TRECempirical/
         idx = numpy.where(labels == label)
         new_labels.append(label)
         new_locations.append(locations[idx])
-    CustomH5Writer().write_sensors(Sensors(new_labels, new_locations),
-                                   os.path.join(os.path.dirname(PATIENT_VIRTUAL_HEAD),
+    H5Writer().write_sensors(Sensors(new_labels, new_locations),
+                             os.path.join(os.path.dirname(PATIENT_VIRTUAL_HEAD),
                                                 "SensorsSEEG_" + str(len(labels)) + ".h5"))
     return ignored_indices
 

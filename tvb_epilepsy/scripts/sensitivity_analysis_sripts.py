@@ -5,7 +5,7 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
     dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
-from tvb_epilepsy.io.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.pse_service import PSEService
 from tvb_epilepsy.service.sampling.salib_sampling_service import SalibSamplingService
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
@@ -114,7 +114,7 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
     results = sensitivity_analysis_service.run(**kwargs)
     if save_services:
         logger.info(pse.__repr__())
-        writer = CustomH5Writer()
+        writer = H5Writer()
         writer.write_pse_service(pse, os.path.join(FOLDER_RES, method + "_test_pse_service.h5"))
         logger.info(sensitivity_analysis_service.__repr__())
         writer.write_sensitivity_analysis_service(sensitivity_analysis_service,

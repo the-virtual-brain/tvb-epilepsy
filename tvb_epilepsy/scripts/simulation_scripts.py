@@ -10,8 +10,8 @@ from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
-from tvb_epilepsy.io.reader_custom import CustomH5Reader
-from tvb_epilepsy.io.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.h5_reader import H5Reader
+from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
 
 LOG = initialize_logger(__name__)
@@ -250,13 +250,13 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     # By default initial condition is set right on the equilibrium point.
     sim.config_simulation(initial_conditions=None)
     dynamical_model = sim.model
-    writer = CustomH5Writer()
+    writer = H5Writer()
     writer.write_generic(sim.model, results_dir, dynamical_model._ui_name + "_model.h5")
 
     vois_ts_dict = {}
     if ts_file is not None and os.path.isfile(ts_file):
         logger.info("\n\nLoading previously simulated time series...")
-        vois_ts_dict = CustomH5Reader().read_dictionary(ts_file)
+        vois_ts_dict = H5Reader().read_dictionary(ts_file)
     else:
         logger.info("\n\nSimulating...")
         ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)

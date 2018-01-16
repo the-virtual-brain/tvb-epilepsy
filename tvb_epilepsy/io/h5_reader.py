@@ -13,7 +13,7 @@ from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 
 
-class CustomH5Reader(object):
+class H5Reader(object):
     logger = initialize_logger(__name__)
 
     connectivity_filename = "Connectivity.h5"

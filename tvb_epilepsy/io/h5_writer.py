@@ -8,7 +8,7 @@ from tvb_epilepsy.base.model.vep.surface import SurfaceH5Field
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 
 
-class CustomH5Writer(object):
+class H5Writer(object):
     logger = initialize_logger(__name__)
 
     CUSTOM_TYPE_ATTRIBUTE = "EPI_Type"

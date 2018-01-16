@@ -6,12 +6,11 @@ import numpy as np
 from tvb_epilepsy.base.constants.module_constants import SIMULATION_MODE, TVB, DATA_MODE
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM
-from tvb_epilepsy.base.h5_model import read_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.plot_utils import plot_sim_results
-from tvb_epilepsy.io.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
 from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
@@ -24,7 +23,7 @@ from tvb_epilepsy.service.model_configuration_service import ModelConfigurationS
 if DATA_MODE is TVB:
     from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
 else:
-    from tvb_epilepsy.io.reader_custom import CustomH5Reader as Reader, CustomH5Reader
+    from tvb_epilepsy.io.h5_reader import H5Reader as Reader, H5Reader
 
 if SIMULATION_MODE is TVB:
     from tvb_epilepsy.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration \
@@ -43,7 +42,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     # -------------------------------Reading data-----------------------------------
     data_folder = os.path.join(DATA_CUSTOM, 'Head')
     reader = Reader()
-    writer = CustomH5Writer()
+    writer = H5Writer()
     logger.info("Reading from: " + data_folder)
     head = reader.read_head(data_folder)
     head_service = HeadService()
@@ -62,8 +61,8 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     # ...or reading a custom file:
     ep_name = "ep_l_frontal_complex"
     # FOLDER_RES = os.path.join(data_folder, ep_name)
-    if not isinstance(reader, CustomH5Writer):
-        disease_values = CustomH5Reader().read_epileptogenicity(data_folder, name=ep_name)
+    if not isinstance(reader, H5Writer):
+        disease_values = H5Reader().read_epileptogenicity(data_folder, name=ep_name)
     else:
         disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
     disease_indices, = np.where(disease_values > np.min([X0_DEF, E_DEF]))

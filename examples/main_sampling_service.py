@@ -6,7 +6,7 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
-from tvb_epilepsy.io.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DISTRIBUTIONS
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter, set_parameter_defaults
 from tvb_epilepsy.service.sampling.deterministic_sampling_service import DeterministicSamplingService
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     for key, value in stats.iteritems():
         print("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
-    writer = CustomH5Writer()
+    writer = H5Writer()
     writer.write_generic(sampler, FOLDER_RES, "test_Stochastic_Sampler.h5")
 
     logger.info("\nStochastic uniform sampling with numpy:")

@@ -6,7 +6,7 @@ from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE, EIGENVE
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.io.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.head_service import HeadService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.lsa_service import LSAService
@@ -37,7 +37,7 @@ def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=os.path.jo
     if data_mode is TVB:
         from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
     else:
-        from tvb_epilepsy.io.reader_custom import CustomH5Reader as Reader
+        from tvb_epilepsy.io.h5_reader import H5Reader as Reader
     # -------------------------------Reading model_data-----------------------------------
     reader = Reader()
     logger.info("Reading from: " + data_folder)
@@ -93,19 +93,15 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
                                         plot_flag=True, save_flag=True, results_dir=FOLDER_RES,
                                         figure_dir=FOLDER_FIGURES, logger=LOG, **kwargs):
     logger.info("\n\nRunning hypothesis: " + hyp.name)
-    # if save_flag:
-    #     hyp.write_to_h5(results_dir, hyp.name + ".h5")
     logger.info("\n\nCreating model configuration...")
     model_configuration_service = ModelConfigurationService(hyp.number_of_regions, **kwargs)
-    # if save_flag:
-    #     model_configuration_service.write_to_h5(results_dir, hyp.name + "_model_config_service.h5")
     if hyp.type == "Epileptogenicity":
         model_configuration = model_configuration_service. \
             configure_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
     else:
         model_configuration = model_configuration_service. \
             configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
-    writer = CustomH5Writer
+    writer = H5Writer
 
     if save_flag:
         writer.write_model_configuration(model_configuration, os.path.join(results_dir, hyp.name + "_ModelConfig.h5"))
@@ -121,7 +117,6 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
     lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
     if save_flag:
         writer.write_hypothesis(lsa_hypothesis, os.path.join(results_dir, lsa_hypothesis.name + "_LSA.h5"))
-        # lsa_service.write_to_h5(results_dir, lsa_hypothesis.name + "_LSAConfig.h5")
     if plot_flag:
         lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, None)
     return model_configuration, lsa_hypothesis, model_configuration_service, lsa_service

@@ -9,8 +9,8 @@ from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict
 from tvb_epilepsy.io.rdump import rdump, rload
 from tvb_epilepsy.io.csv import parse_csv
-from tvb_epilepsy.io.reader_custom import CustomH5Reader
-from tvb_epilepsy.io.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.h5_reader import H5Reader
+from tvb_epilepsy.io.h5_writer import H5Writer
 
 LOG = initialize_logger(__name__)
 
@@ -63,8 +63,8 @@ class StanService(object):
         elif isequal_string(extension, "R"):
             rdump(model_data_path, model_data)
         else:
-            CustomH5Writer().write_dictionary(model_data, os.path.join(os.path.dirname(model_data_path),
-                                                                       os.path.basename(model_data_path)))
+            H5Writer().write_dictionary(model_data, os.path.join(os.path.dirname(model_data_path),
+                                                                 os.path.basename(model_data_path)))
 
     def load_model_data_from_file(self, reset_path=False, **kwargs):
         model_data_path = kwargs.get("model_data_path", self.model_data_path)
@@ -81,7 +81,7 @@ class StanService(object):
             with open(self.model_data_path, 'wb') as f:
                 return pickle.load(f)
         elif isequal_string(extension, "h5"):
-            return CustomH5Reader().read_dictionary(self.model_data_path)
+            return H5Reader().read_dictionary(self.model_data_path)
         else:
             raise_not_implemented_error("model_data file (" + model_data_path +
                                         ") that are not one of (.R, .npy, .mat, .pkl) cannot be read!")

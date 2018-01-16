@@ -10,12 +10,12 @@ from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.io.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.h5_writer import H5Writer
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
 else:
-    from tvb_epilepsy.io.reader_custom import CustomH5Reader as Reader
+    from tvb_epilepsy.io.h5_reader import H5Reader as Reader
 
 logger = initialize_logger(__name__)
 
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     data_folder = os.path.join(DATA_CUSTOM, 'Head')
 
     reader = Reader()
-    writer = CustomH5Writer()
+    writer = H5Writer()
 
     logger.info("Reading from: " + data_folder)
     head = reader.read_head(data_folder)

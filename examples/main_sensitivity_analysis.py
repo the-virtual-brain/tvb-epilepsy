@@ -5,10 +5,10 @@ from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.constants.configurations import DATA_CUSTOM, FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.io.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.sensitivity_analysis_service import METHODS
 from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_hypothesis
-from tvb_epilepsy.io.reader_custom import CustomH5Reader as Reader
+from tvb_epilepsy.io.h5_reader import H5Reader as Reader
 
 logger = initialize_logger(__name__)
 
@@ -16,7 +16,7 @@ if __name__ == "__main__":
     # -------------------------------Reading data-----------------------------------
     data_folder = os.path.join(DATA_CUSTOM, 'Head_TVB25')
     reader = Reader()
-    writer = CustomH5Writer()
+    writer = H5Writer()
     head = reader.read_head(data_folder)
     # --------------------------Hypothesis definition-----------------------------------
     n_samples = 100

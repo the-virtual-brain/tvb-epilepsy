@@ -7,7 +7,7 @@ from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
 from tvb_epilepsy.base.simulators import SimulationSettings
-from tvb_epilepsy.io.writer_custom import CustomH5Writer
+from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
@@ -17,7 +17,7 @@ from tvb_epilepsy.tests.base import remove_temporary_test_files, get_temporary_f
 
 
 class TestCustomH5writer(object):
-    writer = CustomH5Writer()
+    writer = H5Writer()
 
     dummy_connectivity = Connectivity("", numpy.array([[1.0, 2.0, 3.0], [2.0, 3.0, 1.0], [3.0, 2.0, 1.0]]),
                                       numpy.array([[4, 5, 6], [5, 6, 4], [6, 4, 5]]), labels=["a", "b", "c"],
