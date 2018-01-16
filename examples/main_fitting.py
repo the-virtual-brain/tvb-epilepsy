@@ -141,7 +141,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         writer = CustomH5Writer()
         writer.write_model_inversion_service(model_inversion, os.path.join(FOLDER_RES,
                                                                            lsa_hypothesis.name + "_ModelInversionService.h5"))
-        statistical_model.write_to_h5(results_dir, lsa_hypothesis.name + "_StatsModel.h5")
+        writer.write_generic(statistical_model, results_dir, lsa_hypothesis.name + "_StatsModel.h5",
+                             subtype=statistical_model.__class__.__name__)
         # try:
         #     model_data = stan_service.load_model_data_from_file()
         # except:
