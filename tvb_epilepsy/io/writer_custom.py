@@ -209,7 +209,7 @@ class CustomH5Writer(object):
         :param pse_service: PSEService object to write in H5
         :param path: H5 path to be written
         """
-        if "params_vals" not in vars(pse_service):
+        if "params_vals" not in dir(pse_service):
             params_samples = pse_service.pse_params.T
         else:
             params_samples = pse_service.params_vals
