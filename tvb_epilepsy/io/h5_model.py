@@ -28,6 +28,10 @@ bool_inf_nan_none_empty.update({"()": tuple()})
 bool_inf_nan_none_empty.update({"{}": OrderedDict()})
 
 
+#TODO: the generic read/write methods should be adjusted to the new models
+#TODO: also, the purpose of writting in h5 is inspection, so we should write only in the format that can be visualized
+#TODO: the h5_model should not be necessary after the changes
+#Observation: we should solve these TODOs after the next refactoring tasks are over, and the models are simpler
 class H5Model(object):
 
     def __init__(self, datasets_dict, metadata_dict):

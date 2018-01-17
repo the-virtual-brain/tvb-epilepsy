@@ -1,13 +1,10 @@
-
 from collections import OrderedDict
-
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-
-from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int, construct_import_path
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.discrete_probability_distribution  \
-                                                                                  import DiscreteProbabilityDistribution
+from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.discrete_probability_distribution \
+    import DiscreteProbabilityDistribution
 
 
 class BinomialDistribution(DiscreteProbabilityDistribution):
@@ -20,9 +17,6 @@ class BinomialDistribution(DiscreteProbabilityDistribution):
         self.n = make_int(params.get("n", 1))
         self.p = make_float(params.get("p", 0.5))
         self.__update_params__(n=self.n, p=self.p)
-        self.context_str = "from " + construct_import_path(__file__) + " import BinomialDistribution"
-        self.create_str = "BinomialDistribution('" + self.type + "')"
-        self.update_str = "obj.update_params()"
 
     def pdf_params(self):
         p = OrderedDict()
@@ -66,4 +60,4 @@ class BinomialDistribution(DiscreteProbabilityDistribution):
         return (1.0 - 2.0 * self.p) / self.calc_std_manual()
 
     def calc_kurt_manual(self, loc=0.0, scale=1.0):
-        return (1.0 - 6.0 * self.p * (1.0-self.p)) / self.calc_var_manual()
+        return (1.0 - 6.0 * self.p * (1.0 - self.p)) / self.calc_var_manual()

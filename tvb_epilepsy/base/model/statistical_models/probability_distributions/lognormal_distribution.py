@@ -1,13 +1,10 @@
-
 from collections import OrderedDict
-
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-
-from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string, construct_import_path
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
-                                                                                import ContinuousProbabilityDistribution
+from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution \
+    import ContinuousProbabilityDistribution
 
 
 class LognormalDistribution(ContinuousProbabilityDistribution):
@@ -21,9 +18,6 @@ class LognormalDistribution(ContinuousProbabilityDistribution):
         self.sigma = make_float(params.get("sigma", params.get("shape", 1.0)))
         self.__update_params__(mu=self.mu, sigma=self.sigma)
         self.shape = self.sigma
-        self.context_str = "from " + construct_import_path(__file__) + " import LognormalDistribution"
-        self.create_str = "LognormalDistribution('" + self.type + "')"
-        self.update_str = "obj.update_params()"
 
     def pdf_params(self, parametrization="mu-sigma"):
         p = OrderedDict()
@@ -50,7 +44,7 @@ class LognormalDistribution(ContinuousProbabilityDistribution):
         return np.array(self.sigma).flatten() - np.finfo(np.float64).eps
 
     def scipy(self, loc=0.0, scale=1.0):
-        return getattr(ss, self.scipy_name)(s=self.sigma, loc=loc, scale=np.exp(self.mu)*scale)
+        return getattr(ss, self.scipy_name)(s=self.sigma, loc=loc, scale=np.exp(self.mu) * scale)
 
     def numpy(self, loc=0.0, scale=1.0, size=(1,)):
         mu = self.scale_params(loc, scale)[0]
@@ -58,7 +52,7 @@ class LognormalDistribution(ContinuousProbabilityDistribution):
 
     def calc_mean_manual(self, loc=0.0, scale=1.0):
         mu = self.scale_params(loc, scale)[0]
-        return np.exp(mu + self.sigma**2 / 2.0) + loc
+        return np.exp(mu + self.sigma ** 2 / 2.0) + loc
 
     def calc_median_manual(self, loc=0.0, scale=1.0):
         mu = self.scale_params(loc, scale)[0]
@@ -66,7 +60,7 @@ class LognormalDistribution(ContinuousProbabilityDistribution):
 
     def calc_mode_manual(self, loc=0.0, scale=1.0):
         mu = self.scale_params(loc, scale)[0]
-        return np.exp(mu - self.sigma**2) + loc
+        return np.exp(mu - self.sigma ** 2) + loc
 
     def calc_var_manual(self, loc=0.0, scale=1.0):
         mu = self.scale_params(loc, scale)[0]
@@ -77,7 +71,7 @@ class LognormalDistribution(ContinuousProbabilityDistribution):
         return np.sqrt(self.calc_var_manual(loc, scale))
 
     def calc_skew_manual(self, loc=0.0, scale=1.0):
-        sigma2exp = np.exp(self.sigma**2)
+        sigma2exp = np.exp(self.sigma ** 2)
         return (sigma2exp + 2.0) * np.sqrt(sigma2exp - 1.0)
 
     def calc_kurt_manual(self, loc=0.0, scale=1.0):

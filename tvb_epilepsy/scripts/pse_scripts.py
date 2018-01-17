@@ -1,11 +1,11 @@
+import os
 import numpy as np
-
 from tvb_epilepsy.base.constants.module_constants import MAX_DISEASE_VALUE
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
     dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.scripts.hypothesis_scripts import start_lsa_run
 from tvb_epilepsy.service.pse_service import PSEService
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
@@ -87,7 +87,7 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
 
         # Now generate samples susing a truncated normal distribution
         pse_params["samples"].append(
-            sampler.generate_samples(parameter=(1.0,   # loc
+            sampler.generate_samples(parameter=(1.0,  # loc
                                                 100),  # scale
                                      probability_distribution="uniform", low=1.0, shape=(1,)))
         # pse_params["samples"].append(
@@ -119,13 +119,12 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
         pse_results[key + "_std"] = np.std(pse_results[key], axis=0)
     if save_flag:
         logger.info(pse.__repr__())
-        if not(isinstance(filename, basestring)):
+        if not (isinstance(filename, basestring)):
             filename = "LSA_PSA"
-        pse.write_to_h5(folder_res, filename + "_pse_service.h5")
-        h5_model = convert_to_h5_model(pse_results)
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
-        h5_model.add_or_update_metadata_attribute("Number_of_nodes", lsa_hypothesis.number_of_regions)
-        h5_model.write_to_h5(folder_res, filename + ".h5")
+        writer = H5Writer()
+        writer.write_pse_service(pse, os.path.join(folder_res, filename + "_pse_service.h5"))
+        writer.write_dictionary(pse_results, os.path.join(folder_res, filename + ".h5"))
+
     return pse_results, pse_params_list
 
 

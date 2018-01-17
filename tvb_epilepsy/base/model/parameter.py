@@ -1,9 +1,6 @@
-
 from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE, MIN_SINGLE_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, construct_import_path
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
-
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
 
 class Parameter(object):
 
@@ -22,8 +19,6 @@ class Parameter(object):
         else:
             raise_value_error("Parameter's " + str(self.name) + " p_shape="
                               + str(p_shape) + " is not a shape tuple!")
-        self.context_str = "from " + construct_import_path(__file__) + " import Parameter"
-        self.create_str = "Parameter('" + str(self.name) + "')"
 
     def __repr__(self):
         d = {"1. name": self.name,
@@ -34,14 +29,3 @@ class Parameter(object):
 
     def __str__(self):
         return self.__repr__()
-
-    def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model(self)
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "ParameterModel")
-        return h5_model
-
-    def write_to_h5(self, folder, filename=""):
-        if filename == "":
-            filename = self.name + ".h5"
-        h5_model = self._prepare_for_h5()
-        h5_model.write_to_h5(folder, filename)

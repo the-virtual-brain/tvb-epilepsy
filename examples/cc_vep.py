@@ -2,25 +2,22 @@
 Entry point for working with VEP
 """
 import os
-
 import numpy as np
-
 from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE
 from tvb_epilepsy.base.constants.configurations import FOLDER_VEP, FOLDER_RES
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
-from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.scripts.simulation_scripts import from_model_configuration_to_simulation
 
 if DATA_MODE is TVB:
-    from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
+    from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
 else:
-    from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
-
+    from tvb_epilepsy.io.h5_reader import H5Reader as Reader
 
 PSE_FLAG = False
 SIM_FLAG = True
@@ -51,6 +48,7 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
     # -------------------------------Reading data-----------------------------------
     data_folder = os.path.join(subject_folder, HEAD)
     reader = Reader()
+    writer = H5Writer()
     logger.info("Reading from: " + data_folder)
     head = reader.read_head(data_folder)
     # head.plot(figure_dir=FOLDER_FIGS)
@@ -63,9 +61,6 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
     # disease_values = x0_values + e_values
     # disease_indices = x0_indices + e_indices
     # ...or reading a custom file:
-    from tvb_epilepsy.custom.readers_custom import CustomReader
-    if not isinstance(reader, CustomReader):
-        reader = CustomReader()
     disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
     disease_indices, = np.where(disease_values > np.min([X0_DEF, E_DEF]))
     disease_values = disease_values[disease_indices]
@@ -117,17 +112,17 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
             if not (os.path.isdir(folder)):
                 os.mkdir(folder)
         logger.info("\n\nRunning hypothesis: " + hyp.name)
-        # hyp.write_to_h5(FOLDER_RES, hyp.name + ".h5")
         logger.info("\n\nCreating model configuration...")
         model_configuration_service = ModelConfigurationService(hyp.number_of_regions)
-        model_configuration_service.write_to_h5(folder_res, "model_config_service.h5")
+        writer.write_model_configuration_service(model_configuration_service,
+                                                 os.path.join(folder_res, "model_config_service.h5"))
         if hyp.type == "Epileptogenicity":
-            model_configuration = model_configuration_service.\
-                                            configure_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
+            model_configuration = model_configuration_service. \
+                configure_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
         else:
-            model_configuration = model_configuration_service.\
-                                              configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
-        model_configuration.write_to_h5(folder_res, "ModelConfiguration.h5")
+            model_configuration = model_configuration_service. \
+                configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
+        writer.write_model_configuration(model_configuration, os.path.join(folder_res, "ModelConfiguration.h5"))
         # Plot nullclines and equilibria of model configuration
         model_configuration_service.plot_state_space(model_configuration, head.connectivity.region_labels,
                                                      special_idx=disease_indices, model="2d", zmode="lin",
@@ -135,13 +130,13 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
         logger.info("\n\nRunning LSA...")
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
         lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
-        lsa_hypothesis.write_to_h5(folder_res, lsa_hypothesis.name + ".h5")
-        lsa_service.write_to_h5(folder_res, "lsa_config_service.h5")
-        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels,  None,
+        writer.write_hypothesis(lsa_hypothesis, os.path.join(folder_res, lsa_hypothesis.name + ".h5"))
+        writer.write_lsa_service(lsa_service, os.path.join(folder_res, "lsa_config_service.h5"))
+        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, None,
                              figure_dir=folder_figs)
         if pse_flag:
             n_samples = 100
-            #--------------Parameter Search Exploration (PSE)-------------------------------
+            # --------------Parameter Search Exploration (PSE)-------------------------------
             logger.info("\n\nRunning PSE LSA...")
             pse_results = pse_from_lsa_hypothesis(lsa_hypothesis,
                                                   head.connectivity.normalized_weights,

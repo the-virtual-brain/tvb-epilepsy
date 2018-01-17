@@ -1,25 +1,27 @@
 # coding=utf-8
 """
 Service to do X0/e_values Hypothesis configuration.
+
+NOTES:
+In the future all the related to model configuration parameters might be part of the disease hypothesis:
+yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF
+For now, we assume default values, or externally set
 """
 import numpy as np
 from matplotlib import pyplot
 
 from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, \
-                    I_EXT2_DEF, A_DEF, B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, X1_DEF, X0_CR_DEF, TAU0_DEF, TAU1_DEF
+    I_EXT2_DEF, A_DEF, B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, X1_DEF, X0_CR_DEF, TAU0_DEF, TAU1_DEF
 from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG, \
     MOUSEHOOVER
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list, isequal_string, \
-                                                                                                construct_import_path
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list, isequal_string
 from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r, calc_coupling, calc_x0, calc_fx1, \
-                                        calc_fx1_2d_taylor, calc_fz, calc_x0_val_to_model_x0, calc_model_x0_to_x0_val
+    calc_fx1_2d_taylor, calc_fz, calc_x0_val_to_model_x0, calc_model_x0_to_x0_val
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z, eq_x1_hypo_x0_linTaylor, calc_eq_x2, \
-                                                                        eq_x1_hypo_x0_optimize, def_x1lin, calc_eq_y1
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
+    eq_x1_hypo_x0_optimize, def_x1lin, calc_eq_y1
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
-
 
 try:
     # https://github.com/joferkington/mpldatacursor
@@ -31,11 +33,6 @@ try:
 except:
     warning("\nNo mpldatacursor module found! MOUSEHOOVER will not be available.")
     MOUSEHOOVER = False
-
-# NOTES:
-# In the future all the related to model configuration parameters might be part of the disease hypothesis:
-# yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF
-# For now, we assume default values, or externally set
 
 logger = initialize_logger(__name__)
 
@@ -72,8 +69,6 @@ class ModelConfigurationService(object):
         self.x0cr = 0.0
         self.rx0 = 0.0
         self._compute_critical_x0_scaling()
-        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
-        self.create_str = self.__class__.__name__ + "()"
 
     def __repr__(self):
         d = {"01. Number of regions": self.number_of_regions,
@@ -99,16 +94,8 @@ class ModelConfigurationService(object):
     def __str__(self):
         return self.__repr__()
 
-    def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model(self)
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
-        return h5_model
-
-    def write_to_h5(self, folder, filename=""):
-        if filename == "":
-            filename = self.name + ".h5"
-        h5_model = self._prepare_for_h5()
-        h5_model.write_to_h5(folder, filename)
+    def set_attribute(self, attr_name, data):
+        setattr(self, attr_name, data)
 
     def _compute_model_x0(self, x0_values):
         return calc_x0_val_to_model_x0(x0_values, self.yc, self.Iext1, self.a, self.b, self.d, self.zmode)
@@ -178,8 +165,8 @@ class ModelConfigurationService(object):
         # x1EQ, zEQ = self._ensure_equilibrum(x1EQ, zEQ) # We don't this by default anymore
         x0, Ceq, x0_values, e_values = self._compute_params_after_equilibration(x1EQ, zEQ, model_connectivity)
         return ModelConfiguration(self.yc, self.Iext1, self.Iext2, self.K, self.a, self.b, self.d,
-                                                 self.slope, self.s, self.gamma, x1EQ, zEQ, Ceq, x0, x0_values,
-                                                 e_values, self.zmode, model_connectivity)
+                                  self.slope, self.s, self.gamma, x1EQ, zEQ, Ceq, x0, x0_values,
+                                  e_values, self.zmode, model_connectivity)
 
     def configure_model_from_E_hypothesis(self, disease_hypothesis, model_connectivity):
         # Always normalize K first
@@ -245,8 +232,8 @@ class ModelConfigurationService(object):
         x1eq = model_config.x1EQ
         zeq = model_config.zEQ
         x0 = a = b = d = yc = slope = Iext1 = Iext2 = s = 0.0
-        for p in ["x0", "a",  "b", "d", "yc", "slope", "Iext1", "Iext2", "s"]:
-            exec(p + " = np.mean(model_config." + p + ")")
+        for p in ["x0", "a", "b", "d", "yc", "slope", "Iext1", "Iext2", "s"]:
+            exec (p + " = np.mean(model_config." + p + ")")
         # x0 = np.mean(model_config.x0)
         # a = np.mean(model_config.a)
         # b = np.mean(model_config.b)
@@ -336,13 +323,13 @@ class ModelConfigurationService(object):
             x2 = 0.0
         else:
             y1 = calc_eq_y1(X1, yc, d=d)
-            x2 = 0.0 # as a simplification for faster computation without important consequences
+            x2 = 0.0  # as a simplification for faster computation without important consequences
             # x2 = calc_eq_x2(Iext2, y2eq=None, zeq=X1, x1eq=Z, s=s)[0]
         fx1 = calc_fx1(X1, Z, y1=y1, Iext1=Iext1, slope=slope, a=a, b=b, d=d, tau1=tau1, x1_neg=None, model=model,
                        x2=x2)
         fz = calc_fz(X1, Z, x0=x0, tau1=tau1, tau0=tau0, zmode=zmode)
         C = np.abs(fx1) + np.abs(fz)
-        pyplot.quiver(X1, Z, fx1, fz, C,  edgecolor='k', alpha=.5, linewidth=.5)
+        pyplot.quiver(X1, Z, fx1, fz, C, edgecolor='k', alpha=.5, linewidth=.5)
         pyplot.contour(X1, Z, fx1, 0, colors='b', linestyles="dashed")
 
         ax.set_title("Epileptor states pace at the x1-z phase plane of the" + add_name)

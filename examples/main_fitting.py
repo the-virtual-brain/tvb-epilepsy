@@ -5,11 +5,11 @@ import numpy as np
 from scipy.io import loadmat, savemat
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES, FOLDER_VEP_ONLINE
 from tvb_epilepsy.base.constants.module_constants import TVB, CUSTOM
-from tvb_epilepsy.base.h5_model import convert_to_h5_model, read_h5_model
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.plot_utils import plot_raster, plot_timeseries
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.model_inversion.sde_model_inversion_service import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
@@ -68,13 +68,11 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             target_data_type = "empirical"
             ts_file = os.path.join(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts_empirical.mat")
             try:
-                # vois_ts_dict = read_h5_model(ts_file).convert_from_h5_model()
                 vois_ts_dict = loadmat(ts_file)
                 time = vois_ts_dict["time"].flatten()
                 sensors_inds = np.array(vois_ts_dict["sensors_inds"]).flatten().tolist()
                 sensors_lbls = np.array(vois_ts_dict["sensors_lbls"]).flatten().tolist()
                 vois_ts_dict.update({"time": time, "sensors_inds": sensors_inds, "sensors_lbls": sensors_lbls})
-                # convert_to_h5_model(vois_ts_dict).write_to_h5(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts_empirical.h5")
                 savemat(ts_file, vois_ts_dict)
             except:
                 signals, time, fs = prepare_seeg_observable(EMPIRICAL, times_on_off, sensors_lbls, plot_flag=True,
@@ -90,7 +88,6 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                 del all_signals
                 vois_ts_dict = {"time": time.flatten(), "signals": signals,
                                 "sensors_inds": sensors_inds, "sensors_lbls": sensors_lbls}
-                # convert_to_h5_model(vois_ts_dict).write_to_h5(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts_empirical.h5")
                 savemat(ts_file, vois_ts_dict)
             model_inversion.sensors_labels[vois_ts_dict["sensors_inds"]] = sensors_lbls
             manual_selection = sensors_inds
@@ -137,13 +134,15 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                         time_units="ms", title=hyp.name + 'Target Signals ',
                         labels=labels[model_inversion.signals_inds],
                         save_flag=True, show_flag=False, figure_dir=figure_dir)
-        model_inversion.write_to_h5(FOLDER_RES, lsa_hypothesis.name + "_ModelInversionService.h5")
-        statistical_model.write_to_h5(results_dir, lsa_hypothesis.name + "_StatsModel.h5")
+        writer = H5Writer()
+        writer.write_model_inversion_service(model_inversion, os.path.join(FOLDER_RES,
+                                                                           lsa_hypothesis.name + "_ModelInversionService.h5"))
+        writer.write_generic(statistical_model, results_dir, lsa_hypothesis.name + "_StatsModel.h5")
         # try:
         #     model_data = stan_service.load_model_data_from_file()
         # except:
         model_data = model_inversion.generate_model_data(statistical_model, signals)
-        convert_to_h5_model(model_data).write_to_h5(results_dir, "dpModelData.h5")
+        writer.write_dictionary(model_data, os.path.join(results_dir, "dpModelData.h5"))
 
         if stats_model_name == "vep-fe-rev-05":
             def convert_to_vep_stan(model_data, statistical_model):
@@ -175,7 +174,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         est, fit = stan_service.fit(model_data=model_data, debug=1, simulate=0,
                                     merge_outputs=False, chains=1, refresh=1, **kwargs)
-        convert_to_h5_model(est).write_to_h5(results_dir, lsa_hypothesis.name + "_fit_est.h5")
+        writer.write_generic(est, results_dir, lsa_hypothesis.name + "_fit_est.h5")
         est = ensure_list(est)
         for id_est, this_est in enumerate(est):
             model_inversion.plot_fit_results(this_est, statistical_model, signals, time=None,
@@ -193,7 +192,9 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                   name='fit' + str(id_est) + "_" + hyp.name)
             model_configuration_fit = fit_model_configuration_service.configure_model_from_hypothesis(hyp_fit,
                                                                                                       this_est["MC"])
-            model_configuration_fit.write_to_h5(results_dir, hyp_fit.name + "_ModelConfig.h5")
+            writer.write_model_configuration(model_configuration_fit,
+                                             os.path.join(results_dir, hyp_fit.name + "_ModelConfig.h5"))
+
             # Plot nullclines and equilibria of model configuration
             model_configuration_service.plot_state_space(model_configuration_fit,
                                                          model_configuration_service.region_labels,

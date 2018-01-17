@@ -1,13 +1,10 @@
-
 from collections import OrderedDict
-
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-
-from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string, construct_import_path
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
-                                                                                import ContinuousProbabilityDistribution
+from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution \
+    import ContinuousProbabilityDistribution
 
 
 class NormalDistribution(ContinuousProbabilityDistribution):
@@ -20,9 +17,6 @@ class NormalDistribution(ContinuousProbabilityDistribution):
         self.sigma = make_float(make_float(params.get("sigma", params.get("scale", 1.0))))
         self.constraint_string = "sigma > 0"
         self.__update_params__(mean=self.mean, sigma=self.sigma)
-        self.context_str = "from " + construct_import_path(__file__) + " import NormalDistribution"
-        self.create_str = "NormalDistribution('" + self.type + "')"
-        self.update_str = "obj.update_params()"
 
     def pdf_params(self, parametrization="mean-sigma"):
         p = OrderedDict()
@@ -46,7 +40,7 @@ class NormalDistribution(ContinuousProbabilityDistribution):
         return np.array(self.sigma).flatten() - np.finfo(np.float64).eps
 
     def scipy(self, loc=0.0, scale=1.0):
-        return getattr(ss, self.scipy_name)(loc=self.mean+loc, scale=self.sigma*scale)
+        return getattr(ss, self.scipy_name)(loc=self.mean + loc, scale=self.sigma * scale)
 
     def numpy(self, loc=0.0, scale=1.0, size=(1,)):
         return lambda: nr.normal(self.mean + loc, self.sigma * scale, size=size)
@@ -61,7 +55,7 @@ class NormalDistribution(ContinuousProbabilityDistribution):
         return self.mean + loc
 
     def calc_var_manual(self, loc=0.0, scale=1.0):
-        return self.sigma**2 * scale**2
+        return self.sigma ** 2 * scale ** 2
 
     def calc_std_manual(self, loc=0.0, scale=1.0):
         return self.sigma * scale

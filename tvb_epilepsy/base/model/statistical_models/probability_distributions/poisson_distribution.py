@@ -1,15 +1,13 @@
-
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-
 from tvb_epilepsy.base.utils.log_error_utils import warning
-from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int, isequal_string, construct_import_path
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.discrete_probability_distribution  \
-                                                                                  import DiscreteProbabilityDistribution
+from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int, isequal_string
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.discrete_probability_distribution \
+    import DiscreteProbabilityDistribution
 
 
-class PoissoniDistribution(DiscreteProbabilityDistribution):
+class PoissonDistribution(DiscreteProbabilityDistribution):
 
     def __init__(self, **params):
         self.type = "poisson"
@@ -19,9 +17,6 @@ class PoissoniDistribution(DiscreteProbabilityDistribution):
         self.constraint_string = "0 < lamda < 1"
         self.__update_params__(lamda=self.lamda)
         self.mu = self.lamda
-        self.context_str = "from " + construct_import_path(__file__) + " import PoissoniDistribution"
-        self.create_str = "PoissoniDistribution('" + self.type + "')"
-        self.update_str = "obj.update_params()"
 
     def pdf_params(self, parametrization="lamda"):
         if isequal_string(parametrization, "scipy"):
@@ -55,10 +50,10 @@ class PoissoniDistribution(DiscreteProbabilityDistribution):
 
     def calc_median_manual(self, loc=0.0, scale=1.0):
         warning("Approximate calculation for median of poisson distribution!")
-        return np.int(np.round(self.lamda + 1.0/3 - 0.02 / self.lamda + loc))
+        return np.int(np.round(self.lamda + 1.0 / 3 - 0.02 / self.lamda + loc))
 
     def calc_mode_manual(self, loc=0.0, scale=1.0):
-        return [make_int(np.round(self.lamda + loc))-1, make_int(np.round(self.lamda + loc))]
+        return [make_int(np.round(self.lamda + loc)) - 1, make_int(np.round(self.lamda + loc))]
 
     def calc_var_manual(self):
         return self.lamda

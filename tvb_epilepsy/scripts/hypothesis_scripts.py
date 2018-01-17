@@ -1,23 +1,20 @@
-
 import os
-
 import numpy as np
-
 from tvb_epilepsy.base.constants.configurations import DATA_CUSTOM, FOLDER_RES, FOLDER_FIGURES
 from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE, EIGENVECTORS_NUMBER_SELECTION, \
-                                                                                                WEIGHTED_EIGENVECTOR_SUM
+    WEIGHTED_EIGENVECTOR_SUM
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_epilepsy.service.head_service import HeadService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.lsa_service import LSAService
-
 
 LOG = initialize_logger(__name__)
 
 
 def start_lsa_run(hypothesis, model_connectivity, logger=None):
-
     if logger is None:
         logger = initialize_logger(__name__)
 
@@ -38,15 +35,17 @@ def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=os.path.jo
                             plot_head=False, figure_dir=FOLDER_FIGURES, sensors_filename="SensorsInternal.h5",
                             logger=LOG):
     if data_mode is TVB:
-        from tvb_epilepsy.tvb_api.readers_tvb import TVBReader as Reader
+        from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
     else:
-        from tvb_epilepsy.custom.readers_custom import CustomReader as Reader
+        from tvb_epilepsy.io.h5_reader import H5Reader as Reader
     # -------------------------------Reading model_data-----------------------------------
     reader = Reader()
     logger.info("Reading from: " + data_folder)
-    head = reader.read_head(data_folder, seeg_sensors_files=[(sensors_filename, "")])
+    head = reader.read_head(data_folder)
     if plot_head:
-        head.plot(figure_dir=figure_dir)
+        head_service = HeadService()
+        head_service.plot_head(head, figure_dir=figure_dir)
+        # head.plot(figure_dir=figure_dir)
     # --------------------------Hypothesis definition-----------------------------------
     # # Manual definition of hypothesis...:
     # x0_indices = [20]
@@ -80,11 +79,12 @@ def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=os.path.jo
                                epileptogenicity_hypothesis={}, connectivity_hypothesis={})
     # This is an example of Mixed Hypothesis:
     hyp_x0_E = DiseaseHypothesis(head.connectivity.number_of_regions,
-                               excitability_hypothesis={tuple(x0_indices): x0_values},
-                               epileptogenicity_hypothesis={tuple(e_indices): e_values}, connectivity_hypothesis={})
+                                 excitability_hypothesis={tuple(x0_indices): x0_values},
+                                 epileptogenicity_hypothesis={tuple(e_indices): e_values}, connectivity_hypothesis={})
     hyp_E = DiseaseHypothesis(head.connectivity.number_of_regions,
-                               excitability_hypothesis={},
-                               epileptogenicity_hypothesis={tuple(disease_indices): disease_values}, connectivity_hypothesis={})
+                              excitability_hypothesis={},
+                              epileptogenicity_hypothesis={tuple(disease_indices): disease_values},
+                              connectivity_hypothesis={})
     hypos = (hyp_x0, hyp_E, hyp_x0_E)
     return head, hypos
 
@@ -93,20 +93,18 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
                                         plot_flag=True, save_flag=True, results_dir=FOLDER_RES,
                                         figure_dir=FOLDER_FIGURES, logger=LOG, **kwargs):
     logger.info("\n\nRunning hypothesis: " + hyp.name)
-    # if save_flag:
-    #     hyp.write_to_h5(results_dir, hyp.name + ".h5")
     logger.info("\n\nCreating model configuration...")
     model_configuration_service = ModelConfigurationService(hyp.number_of_regions, **kwargs)
-    # if save_flag:
-    #     model_configuration_service.write_to_h5(results_dir, hyp.name + "_model_config_service.h5")
     if hyp.type == "Epileptogenicity":
         model_configuration = model_configuration_service. \
             configure_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
     else:
         model_configuration = model_configuration_service. \
             configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
+    writer = H5Writer
+
     if save_flag:
-        model_configuration.write_to_h5(results_dir, hyp.name + "_ModelConfig.h5")
+        writer.write_model_configuration(model_configuration, os.path.join(results_dir, hyp.name + "_ModelConfig.h5"))
     # Plot nullclines and equilibria of model configuration
     if plot_flag:
         model_configuration_service.plot_state_space(model_configuration, head.connectivity.region_labels,
@@ -118,8 +116,7 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
                              weighted_eigenvector_sum=weighted_eigenvector_sum)
     lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
     if save_flag:
-        lsa_hypothesis.write_to_h5(results_dir, lsa_hypothesis.name + "_LSA.h5")
-        # lsa_service.write_to_h5(results_dir, lsa_hypothesis.name + "_LSAConfig.h5")
+        writer.write_hypothesis(lsa_hypothesis, os.path.join(results_dir, lsa_hypothesis.name + "_LSA.h5"))
     if plot_flag:
         lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, None)
     return model_configuration, lsa_hypothesis, model_configuration_service, lsa_service

@@ -1,4 +1,3 @@
-
 from copy import deepcopy
 
 import numpy as np
@@ -7,6 +6,7 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
+from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DISTRIBUTIONS
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter, set_parameter_defaults
 from tvb_epilepsy.service.sampling.deterministic_sampling_service import DeterministicSamplingService
@@ -15,27 +15,27 @@ from tvb_epilepsy.service.sampling.stochastic_sampling_service import Stochastic
 
 logger = initialize_logger(__name__)
 
-
 if __name__ == "__main__":
     n_samples = 100
     logger.info("\nDeterministic numpy.linspace sampling:")
     sampler = DeterministicSamplingService(n_samples=n_samples, grid_mode=True)
-    samples, stats = sampler.generate_samples(low=1.0, high=2.0, shape= (2,), stats=True)
+    samples, stats = sampler.generate_samples(low=1.0, high=2.0, shape=(2,), stats=True)
     for key, value in stats.iteritems():
         print("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
-    sampler.write_to_h5(FOLDER_RES, "test_Stochastic_Sampler.h5")
+    writer = H5Writer()
+    writer.write_generic(sampler, FOLDER_RES, "test_Stochastic_Sampler.h5")
 
     logger.info("\nStochastic uniform sampling with numpy:")
     sampler = StochasticSamplingService(n_samples=n_samples, sampling_module="numpy")
     #                                      a (low), b (high)
     samples, stats = sampler.generate_samples(parameter=(1.0, 2.0), probability_distribution="uniform", shape=(2,),
-                                              stats= True)
+                                              stats=True)
     for key, value in stats.iteritems():
         print("\n" + key + ": " + str(value))
 
     logger.info(sampler.__repr__())
-    sampler.write_to_h5(FOLDER_RES, "test1_Stochastic_Sampler.h5")
+    writer.write_generic(sampler, FOLDER_RES, "test1_Stochastic_Sampler.h5")
 
     logger.info("\nStochastic truncated normal sampling with scipy:")
     sampler = StochasticSamplingService(n_samples=n_samples)
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     for key, value in stats.iteritems():
         print("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
-    sampler.write_to_h5(FOLDER_RES, "test2_Stochastic_Sampler.h5")
+    writer.write_generic(sampler, FOLDER_RES, "test2_Stochastic_Sampler.h5")
 
     logger.info("\nSensitivity analysis sampling:")
     sampler = SalibSamplingService(n_samples=n_samples, sampler="latin")
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     for key, value in stats.iteritems():
         print("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
-    sampler.write_to_h5(FOLDER_RES, "test3_Stochastic_Sampler.h5")
+    writer.write_generic(sampler, FOLDER_RES, "test3_Stochastic_Sampler.h5")
 
     logger.info("\nTesting distribution class and conversions...")
     sampler = StochasticSamplingService(n_samples=n_samples)
@@ -76,10 +76,11 @@ if __name__ == "__main__":
             else:
                 target_stats = {"mean": 1.0, "std": 2.0}
                 stats_m = "mean"
-        parameter1 = generate_stochastic_parameter(name="test1_" + distrib_name, low=0.0, high=2.0, p_shape=(2,2),
-                              probability_distribution=distrib_name, optimize_pdf=True, use="manual", **target_stats)
+        parameter1 = generate_stochastic_parameter(name="test1_" + distrib_name, low=0.0, high=2.0, p_shape=(2, 2),
+                                                   probability_distribution=distrib_name, optimize_pdf=True,
+                                                   use="manual", **target_stats)
         name2 = "test2_" + distrib_name
-        defaults = set_parameter_defaults(name2, _pdf=distrib_name, _shape=(2,2), _lo=0.0, _hi=2.0,
+        defaults = set_parameter_defaults(name2, _pdf=distrib_name, _shape=(2, 2), _lo=0.0, _hi=2.0,
                                           **(deepcopy(target_stats)))
         parameter2 = set_parameter(name=name2, use="manual", **defaults)
         for parameter in (parameter1, parameter2):
@@ -89,6 +90,5 @@ if __name__ == "__main__":
                 print("\n" + key + ": " + str(value))
             diff = target_stats[stats_m] - stats[stats_m]
             if np.any(np.abs(diff.flatten()) > 0.001):
-                warning("Large difference between target and resulting samples' "+ stats_m + "!: " + str(diff))
-            del(parameter)
-
+                warning("Large difference between target and resulting samples' " + stats_m + "!: " + str(diff))
+            del (parameter)

@@ -1,15 +1,10 @@
-
 from collections import OrderedDict
-
 import numpy as np
 import scipy as scp
 import scipy.stats as ss
-
 from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
-from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, shape_to_size, construct_import_path
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
-
+from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, shape_to_size
 
 logger = initialize_logger(__name__)
 
@@ -22,8 +17,6 @@ class SamplingService(object):
         self.n_samples = n_samples
         self.shape = (1, n_samples)
         self.stats = {}
-        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
-        self.create_str = self.__class__.__name__ + "()"
 
     def __repr__(self):
         d = {"01. Sampling module": self.sampling_module,
@@ -32,17 +25,6 @@ class SamplingService(object):
              "04. Samples' shape": self.shape,
              }
         return formal_repr(self, d) + "\n05. Resulting statistics: " + dict_str(self.stats)
-
-    def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model(self)
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
-        return h5_model
-
-    def write_to_h5(self, folder, filename=""):
-        if filename == "":
-            filename = self.name + ".h5"
-        h5_model = self._prepare_for_h5()
-        h5_model.write_to_h5(folder, filename)
 
     def adjust_shape(self, parameter_shape):
         shape = []

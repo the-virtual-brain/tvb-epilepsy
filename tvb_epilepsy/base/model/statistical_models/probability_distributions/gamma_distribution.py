@@ -1,14 +1,11 @@
-
 from collections import OrderedDict
-
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-
 from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string, construct_import_path
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
-                                                                                import ContinuousProbabilityDistribution
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution \
+    import ContinuousProbabilityDistribution
 
 
 class GammaDistribution(ContinuousProbabilityDistribution):
@@ -20,13 +17,10 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         self.constraint_string = "alpha > 0 and beta > 0"
         self.alpha = make_float(params.get("alpha", params.get("k", params.get("shape", 2.0))))
         self.beta = make_float(params.get("beta", params.get("rate",
-                                                                  1.0 / params.get("theta", params.get("scale", 0.5)))))
+                                                             1.0 / params.get("theta", params.get("scale", 0.5)))))
         self.k = self.alpha
         self.theta = 1.0 / self.beta
         self.__update_params__(alpha=self.alpha, theta=self.theta)
-        self.context_str = "from " + construct_import_path(__file__) + " import GammaDistribution"
-        self.create_str = "GammaDistribution('" + self.type + "')"
-        self.update_str = "obj.update_params()"
 
     def __str__(self):
         this_str = super(GammaDistribution, self).__str__()
@@ -62,7 +56,9 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         self.__update_params__(loc, scale, use,
                                alpha=make_float(params.get("alpha", params.get("k", params.get("shape", self.alpha)))),
                                beta=make_float(params.get("beta", 1.0 / params.get("theta",
-                                                              params.get("scale", params.get("rate", 1.0/self.beta))))))
+                                                                                   params.get("scale",
+                                                                                              params.get("rate",
+                                                                                                         1.0 / self.beta))))))
         self.k = self.alpha
         self.theta = 1.0 / self.beta
 
@@ -72,10 +68,10 @@ class GammaDistribution(ContinuousProbabilityDistribution):
                           np.array(self.theta).flatten() - np.finfo(np.float64).eps])
 
     def scipy(self, loc=0.0, scale=1.0):
-        return getattr(ss, self.scipy_name)(a=self.alpha, loc=loc, scale=self.theta*scale)
+        return getattr(ss, self.scipy_name)(a=self.alpha, loc=loc, scale=self.theta * scale)
 
     def numpy(self, loc=0.0, scale=1.0, size=(1,)):
-        return lambda: nr.gamma(shape=self.alpha, scale=self.theta*scale, size=size) + loc
+        return lambda: nr.gamma(shape=self.alpha, scale=self.theta * scale, size=size) + loc
 
     def calc_mean_manual(self, loc=0.0, scale=1.0):
         return self.alpha * self.theta * scale + loc
@@ -90,7 +86,7 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         shape = self.alpha * i1
         np_scale = scale * self.theta * i1
         id = shape >= 1.0
-        if not(np.all(id)):
+        if not (np.all(id)):
             warning("Mode cannot be calculated for gamma distribution when the shape parameter is smaller than 1.0! "
                     "Returning nan!")
             mode = np.nan * np.ones((shape + np_scale).shape)
@@ -104,7 +100,7 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         return self.alpha * (self.theta * scale) ** 2
 
     def calc_std_manual(self, loc=0.0, scale=1.0):
-       return np.sqrt(self.alpha) * (self.theta * scale)
+        return np.sqrt(self.alpha) * (self.theta * scale)
 
     def calc_skew_manual(self, loc=0.0, scale=1.0):
         return 2.0 / np.sqrt(self.alpha)

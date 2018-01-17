@@ -1,20 +1,16 @@
 # coding=utf-8
 """
 Class for defining and storing the state of a hypothesis.
+
+NOTES:
+For the moment a hypothesis concerns the excitability and/or epileptogenicity of each brain region, and/or scalings of specific connectivity weights.
+TODO: if needed in the future: Generate a richer disease hypothesis as a combination of hypotheses on other parameters.
 """
 from copy import deepcopy
-
 import numpy as np
-
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, dicts_of_lists_to_lists_of_dicts, ensure_list, \
-    linear_index_to_coordinate_tuples, construct_import_path
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
-
-# NOTES:
-#  For the moment a hypothesis concerns the excitability and/or epileptogenicity of each brain region,
-#  and/or scalings of specific connectivity weights.
-# TODO if needed in the future: Generate a richer disease hypothesis as a combination of hypotheses on other parameters.
+    linear_index_to_coordinate_tuples
 
 logger = initialize_logger(__name__)
 
@@ -40,9 +36,6 @@ class DiseaseHypothesis(object):
             self.name = name
         self.lsa_propagation_indices = np.array(lsa_propagation_indices)
         self.lsa_propagation_strengths = np.array(lsa_propagation_strenghts)
-        self.context_str = "from " + construct_import_path(__file__) + " import DiseaseHypothesis, shorten_values"
-        self.create_str = "DiseaseHypothesis(" + str(self.number_of_regions) + ", name='" + self.name+ "')"
-        self.transform_str = "shorten_values(obj)"
 
     def __repr__(self):
         d = {"01. Name": self.name,
@@ -58,7 +51,8 @@ class DiseaseHypothesis(object):
              "10. Propagation indices": self.lsa_propagation_indices,
              }
         if len(self.lsa_propagation_indices):
-            d.update({"11. Propagation strengths of indices": self.lsa_propagation_strengths[self.lsa_propagation_indices]})
+            d.update(
+                {"11. Propagation strengths of indices": self.lsa_propagation_strengths[self.lsa_propagation_indices]})
         else:
             d.update({"11. Propagation strengths of indices": self.lsa_propagation_strengths})
         # d.update({"11. Connectivity": str(self.connectivity)})
@@ -67,17 +61,8 @@ class DiseaseHypothesis(object):
     def __str__(self):
         return self.__repr__()
 
-    def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model(lengthen_values(self))
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
-        h5_model.add_or_update_metadata_attribute("Number_of_nodes", self.number_of_regions)
-        return h5_model
-
-    def write_to_h5(self, folder, filename=""):
-        if filename == "":
-            filename = self.name + ".h5"
-        h5_model = self._prepare_for_h5()
-        h5_model.write_to_h5(folder, filename)
+    def set_attribute(self, attr_name, data):
+        setattr(self, attr_name, data)
 
     def prepare_for_plot(self, connectivity_matrix=None):
         width_ratios = []
@@ -194,8 +179,8 @@ def shorten_values(hyp):
 def lengthen_values(hyp):
     out_hyp = deepcopy(hyp)
     for val_name, shape in zip(["e", "x0", "w"],
-                             [(hyp.number_of_regions,), (hyp.number_of_regions,),
-                              (hyp.number_of_regions, hyp.number_of_regions)]):
+                               [(hyp.number_of_regions,), (hyp.number_of_regions,),
+                                (hyp.number_of_regions, hyp.number_of_regions)]):
         if val_name == "w":
             values = hyp.get_connectivity_disease()
         else:

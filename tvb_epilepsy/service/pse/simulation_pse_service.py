@@ -1,10 +1,7 @@
-
-from copy import deepcopy
-
 import numpy
-
+from copy import deepcopy
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, construct_import_path
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
 from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.service.pse.pse_service import ABCPSEService
 from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
@@ -12,17 +9,16 @@ from tvb_epilepsy.custom.simulator_custom import custom_model_builder
 
 
 class SimulationPSEService(ABCPSEService):
+    task = "SIMULATION"
     simulator = None
 
     def __init__(self, simulator, params_pse=None):
         self.simulator = simulator
         self.params_pse = params_pse
         self.prepare_params(params_pse)
-        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
-        self.create_str = self.__class__.__name__ + "()"
 
     def __repr__(self):
-        d = {"01. Task": "Simulation",
+        d = {"01. Task": self.task,
              "02. Main PSE object": self.simulator,
              "03. Number of computation loops": self.n_loops,
              "04. Parameters": numpy.array(["%s" % l for l in self.params_names]),

@@ -4,16 +4,12 @@ Mechanism for launching TVB simulations.
 
 import sys
 import time
-
 import numpy
 from tvb.datatypes import connectivity
 from tvb.simulator import coupling, integrators, monitors, noise, simulator
-
 from tvb_epilepsy.base.constants.module_constants import TIME_DELAYS_FLAG
 from tvb_epilepsy.base.utils.log_error_utils import warning
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.simulators import ABCSimulator
-from tvb_epilepsy.custom.read_write import epileptor_model_attributes_dict
 from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 
 
@@ -29,7 +25,7 @@ class SimulatorTVB(ABCSimulator):
         if model_connectivity is None:
             model_connectivity = vep_conn.normalized_weights
         return connectivity.Connectivity(use_storage=False, weights=model_connectivity,
-                                         tract_lengths=TIME_DELAYS_FLAG*vep_conn.tract_lengths,
+                                         tract_lengths=TIME_DELAYS_FLAG * vep_conn.tract_lengths,
                                          region_labels=vep_conn.region_labels,
                                          centres=vep_conn.centres, hemispheres=vep_conn.hemispheres,
                                          orientations=vep_conn.orientations, areas=vep_conn.areas)
@@ -132,29 +128,6 @@ class SimulatorTVB(ABCSimulator):
                 return None, None, status
 
             return numpy.array(tavg_time), numpy.array(tavg_data), status
-
-    def _prepare_for_h5(self):
-
-        attributes_dict = epileptor_model_attributes_dict[self.model._ui_name]
-        for attr in attributes_dict:
-            p = self.model.x0.shape
-            field = getattr(self.model, attributes_dict[attr])
-            if isinstance(field, (float, int, long, complex)) \
-                    or (isinstance(field, (numpy.ndarray))
-                        and numpy.all(str(field.dtype)[1] != numpy.array(["O", "S"])) and field.size == 1):
-                setattr(self.model, attributes_dict[attr], field * numpy.ones(p))
-
-        settings_h5_model = convert_to_h5_model(self.simulation_settings)
-        epileptor_model_h5_model = convert_to_h5_model(self.model)
-
-        epileptor_model_h5_model.append(settings_h5_model)
-        epileptor_model_h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
-        epileptor_model_h5_model.add_or_update_metadata_attribute("Monitor expressions",
-                                                                  self.simulation_settings.monitor_expressions)
-        epileptor_model_h5_model.add_or_update_metadata_attribute("Variables names",
-                                                                  self.simulation_settings.variables_names)
-
-        return epileptor_model_h5_model
 
     def configure_model(self, **kwargs):
         self.model = model_build_dict[self.model._ui_name](self.model_configuration, **kwargs)

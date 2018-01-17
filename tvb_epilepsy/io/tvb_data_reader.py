@@ -1,10 +1,8 @@
 """
-Read VEP related entities from TVB format and data-structures
+Read VEP related entities from TVB format (tvb_data module) and data-structures
 """
 import os
-
 import numpy as np
-
 from tvb.basic.profile import TvbProfile
 
 TvbProfile.set_profile(TvbProfile.LIBRARY_PROFILE)
@@ -15,12 +13,11 @@ from tvb_epilepsy.base.model.vep.surface import Surface
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
-from tvb_epilepsy.base.readers import ABCReader
 
 from tvb.datatypes import connectivity, surfaces, region_mapping, sensors, structural, projections
 
 
-class TVBReader(ABCReader):
+class TVBReader(object):
     def read_connectivity(self, path):
         tvb_conn = connectivity.Connectivity.from_file(path)
         return Connectivity(path, tvb_conn.weights, tvb_conn.tract_lengths,

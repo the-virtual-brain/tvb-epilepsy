@@ -1,13 +1,11 @@
 import numpy as np
-
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list, construct_import_path
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
 from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
 
-
-OBSERVATION_MODEL_EXPRESSIONS=["x1z_offset", "x1_offset", "lfp"]
-OBSERVATION_MODELS=[ "seeg_logpower", "seeg_power", "lfp_power"]
+OBSERVATION_MODEL_EXPRESSIONS = ["x1z_offset", "x1_offset", "lfp"]
+OBSERVATION_MODELS = ["seeg_logpower", "seeg_power", "lfp_power"]
 EULER_METHODS = ["backward", "midpoint", "forward"]
 
 
@@ -17,8 +15,6 @@ class ODEStatisticalModel(StatisticalModel):
                  euler_method="forward", observation_model="seeg_logpower", observation_expression="x1z_offset",
                  **defaults):
         super(ODEStatisticalModel, self).__init__(name, n_regions, **defaults)
-        self.context_str = "from " + construct_import_path(__file__) + " import ODEStatisticalModel"
-        self.create_str = "ODEStatisticalModel('" + self.name + "')"
         if np.all(np.in1d(active_regions, range(self.n_regions))):
             self.active_regions = np.unique(active_regions).tolist()
             self.n_active_regions = len(self.active_regions)
@@ -34,8 +30,9 @@ class ODEStatisticalModel(StatisticalModel):
                 warning("Midpoint Euler method is not implemented yet! Switching to default forward one!")
             self.euler_method = euler_method.lower()
         else:
-            raise_value_error("Statistical model's euler_method " + str(euler_method) + " is not one of the valid ones: "
-                              + str(["backward", "forward"]) + "!")
+            raise_value_error(
+                "Statistical model's euler_method " + str(euler_method) + " is not one of the valid ones: "
+                + str(["backward", "forward"]) + "!")
         if np.in1d(observation_expression.lower(), OBSERVATION_MODEL_EXPRESSIONS):
             self.observation_expression = observation_expression.lower()
         else:

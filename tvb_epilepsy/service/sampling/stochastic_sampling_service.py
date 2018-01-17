@@ -1,15 +1,10 @@
-
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-
 from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
-from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, isequal_string, construct_import_path
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, isequal_string
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import StochasticParameterBase
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution \
-                                                                                          import ProbabilityDistribution
 from tvb_epilepsy.service.sampling.sampling_service import SamplingService
 
 
@@ -22,8 +17,6 @@ class StochasticSamplingService(SamplingService):
         super(StochasticSamplingService, self).__init__(n_samples)
         self.random_seed = random_seed
         self.sampling_module = sampling_module.lower()
-        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
-        self.create_str = self.__class__.__name__ + "()"
 
     def __repr__(self):
 
@@ -37,13 +30,6 @@ class StochasticSamplingService(SamplingService):
 
     def __str__(self):
         return self.__repr__()
-
-    def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model({"sampling_module": self.sampling_module, "sampler": self.sampler,
-                                        "n_samples": self.n_samples, "p_shape": self.shape,
-                                        "random_seed": self.random_seed, "stats": self.stats})
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
-        return h5_model
 
     def _truncated_distribution_sampling(self, trunc_limits, size):
         # Following: https://stackoverflow.com/questions/25141250/

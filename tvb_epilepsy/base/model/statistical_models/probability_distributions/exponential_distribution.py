@@ -1,11 +1,9 @@
-
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-
 from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string, construct_import_path
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
-                                                                                import ContinuousProbabilityDistribution
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution \
+    import ContinuousProbabilityDistribution
 
 
 class ExponentialDistribution(ContinuousProbabilityDistribution):
@@ -18,9 +16,6 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
         self.lamda = make_float(params.get("lamda", params.get("rate", 1.0 / params.get("scale", 1.0))))
         self.rate = self.lamda
         self.__update_params__(lamda=self.lamda)
-        self.context_str = "from " + construct_import_path(__file__) + " import ExponentialDistribution"
-        self.create_str = "ExponentialDistribution('" + self.type + "')"
-        self.update_str = "obj.update_params()"
 
     def __str__(self):
         this_str = super(ExponentialDistribution, self).__str__()
@@ -42,7 +37,7 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
     def update_params(self, loc=0.0, scale=1.0, use="scipy", **params):
         self.__update_params__(loc, scale, use,
                                lamda=make_float(params.get("lamda", params.get("rate", 1.0 / params.get("scale",
-                                                                                                  1.0 / self.lamda)))))
+                                                                                                        1.0 / self.lamda)))))
         self.rate = self.lamda
 
     def constraint(self):
@@ -50,10 +45,10 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
         return np.array(1.0 / self.lamda).flatten() - np.finfo(np.float64).eps
 
     def scipy(self, loc=0.0, scale=1.0):
-        return ss.expon(loc=loc, scale=scale/self.lamda)
+        return ss.expon(loc=loc, scale=scale / self.lamda)
 
     def numpy(self, loc=0.0, scale=1.0, size=(1,)):
-        return lambda: nr.exponential(scale=scale/self.lamda, size=size) + loc
+        return lambda: nr.exponential(scale=scale / self.lamda, size=size) + loc
 
     def calc_mean_manual(self, loc=0.0, scale=1.0):
         return scale / self.lamda + loc
@@ -65,7 +60,7 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
         return 0.0 + loc
 
     def calc_var_manual(self, loc=0.0, scale=1.0):
-        return scale**2 / self.lamda**2
+        return scale ** 2 / self.lamda ** 2
 
     def calc_std_manual(self, loc=0.0, scale=1.0):
         return scale / self.lamda

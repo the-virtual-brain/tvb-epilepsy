@@ -3,15 +3,12 @@ Mechanism for parameter search exploration for LSA and simulations (it will have
 """
 
 from copy import deepcopy
-
 import numpy as np
-
 from tvb_epilepsy.base.constants.module_constants import EIGENVECTORS_NUMBER_SELECTION
 from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, \
     raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, construct_import_path
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.simulators import ABCSimulator
@@ -19,9 +16,8 @@ from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
-from tvb_epilepsy.custom.read_write import read_ts
 from tvb_epilepsy.custom.simulator_custom import custom_model_builder
-
+from tvb_epilepsy.io.h5_reader import H5Reader
 
 logger = initialize_logger(__name__)
 
@@ -101,7 +97,8 @@ def update_hypothesis(hypothesis_input, model_connectivity, params_paths, params
 
 def lsa_out_fun(hypothesis, model_configuration=None, **kwargs):
     if isinstance(model_configuration, ModelConfiguration):
-        return {"lsa_propagation_strengths": hypothesis.lsa_propagation_strengths, "x0_values": model_configuration.x0_values,
+        return {"lsa_propagation_strengths": hypothesis.lsa_propagation_strengths,
+                "x0_values": model_configuration.x0_values,
                 "e_values": model_configuration.e_values, "x1EQ": model_configuration.x1EQ,
                 "zEQ": model_configuration.zEQ, "Ceq": model_configuration.Ceq}
     else:
@@ -139,7 +136,7 @@ def lsa_run_fun(hypothesis_input, model_connectivity, params_paths, params_value
 
 def sim_out_fun(simulator, time, data, **kwargs):
     if data is None:
-        time, data = read_ts(simulator.results_path, data="data")
+        time, data = H5Reader().read_timeseries(simulator.results_path, data="data")
     return {"time": time, "data": data}
 
 
@@ -183,7 +180,7 @@ def sim_run_fun(simulator_input, model_connectivity, params_paths, params_values
     except:
         return False, None
 
-
+#TODO: this is deprecated. We are waiting for Denis to verify the service/pse.
 class PSEService(object):
 
     def __init__(self, task, hypothesis=[], simulator=[], params_pse=None, run_fun=None, out_fun=None):
@@ -192,8 +189,6 @@ class PSEService(object):
                     "\nSelect one of 'LSA', or 'SIMULATION' to perform parameter search exploration of " +
                     "\n hypothesis Linear Stability Analysis, or simulation, " + "respectively")
         self.task = task
-        self.context_str = "from " + construct_import_path(__file__) + " import " + self.__class__.__name__
-        self.create_str = self.__class__.__name__ + "('" + self.task + "')"
         self.params_names = []
         self.params_paths = []
         self.n_params_vals = []
@@ -269,22 +264,6 @@ class PSEService(object):
 
     def __str__(self):
         return self.__repr__()
-
-    def _prepare_for_h5(self):
-        h5_model = convert_to_h5_model({"task": self.task, "n_loops": self.n_loops,
-                                        "params_names": self.params_names,
-                                        "params_paths": self.params_paths,
-                                        "params_indices": np.array([str(inds) for inds in self.params_indices],
-                                                                   dtype="S"),
-                                        "params_samples": self.pse_params.T})
-        h5_model.add_or_update_metadata_attribute("EPI_Type", "HypothesisModel")
-        return h5_model
-
-    def write_to_h5(self, folder, filename=""):
-        if filename == "":
-            filename = self.name + ".h5"
-        h5_model = self._prepare_for_h5()
-        h5_model.write_to_h5(folder, filename)
 
     def run_pse(self, model_connectivity, grid_mode=False, **kwargs):
         results = []
