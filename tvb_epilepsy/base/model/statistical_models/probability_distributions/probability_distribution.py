@@ -2,10 +2,10 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import matplotlib.pyplot as pl
 from tvb_epilepsy.base.constants.configurations import SAVE_FLAG, SHOW_FLAG, FOLDER_FIGURES, FIG_FORMAT
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_size, \
-    squeeze_array_to_scalar
-from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_size, \
+    squeeze_array_to_scalar, linspace_broadcast
+from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
 from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_params
 
 
@@ -220,21 +220,22 @@ class ProbabilityDistribution(object):
 
     def _plot(self, loc=0.0, scale=1.0, x=np.array([]), ax=None, linestyle="-", lgnd=True):
         if len(x) < 1:
-            x = np.linspace(self.scipy(loc, scale).ppf(0.01), self.scipy(loc, scale).ppf(0.99), 100)
-        pdf = None
-        while pdf is None:
-            try:
-                pdf = self.scipy(loc, scale).pdf(x)
-            except:
-                x = x[:, np.newaxis]
-        x = np.tile(x, self.p_shape)
-        if ax is None:
-            _, ax = pl.subplots(1,1)
-        for ip, (xx, pp) in enumerate(zip(x.T, pdf.T)):
-            ax.plot(xx.T, pp.T, linestyle=linestyle, linewidth=1, label=str(ip))
-        if lgnd:
-            pl.legend()
-        return ax
+            x = linspace_broadcast(self.scipy(self.loc, self.scale).ppf(0.01),
+                                   self.scipy(self.loc, self.scale).ppf(0.99), 100)
+        if x is not None:
+            pdf = self.scipy(loc, scale).pdf(x)
+            if ax is None:
+                _, ax = pl.subplots(1,1)
+            for ip, (xx, pp) in enumerate(zip(x.T, pdf.T)):
+                if xx.shape != pp.shape:
+                    print("WTF?")
+                ax.plot(xx.T, pp.T, linestyle=linestyle, linewidth=1, label=str(ip), alpha=0.5)
+            if lgnd:
+                pl.legend()
+            return ax
+        else:
+            raise_value_error("Distribution parameters do not broadcast!")
+
 
     def plot_distribution(self, loc=0.0, scale=1.0, x=np.array([]), ax=None, linestyle="-", lgnd=True,
                           figure_name="", figure_dir=FOLDER_FIGURES, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,

@@ -120,35 +120,31 @@ class ODEModelInversionService(ModelInversionService):
         self.signals_inds = range(self.n_regions)
         self.data_type = "lfp"
         if statistical_model.observation_model.find("seeg") >= 0:
-            project = True
-        # if statistical_model.observation_expression == "x1z_offset":
-        #     signals = ((target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T +
-        #                (target_data["z"].T - np.expand_dims(self.zEQ, 1)).T) / 2.75
-        #     # TODO: a better normalization
-        # elif statistical_model.observation_expression == "x1_offset":
-        #     # TODO: a better normalization
-        #     signals = (target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T / 2.0
-        # else: # statistical_models.observation_expression == "lfp"
-        if project:
-            # try for SEEG
+            self.data_type = "seeg"
             signals = extract_dict_stringkeys(sort_dict(target_data), "SEEG",
                                               modefun="find", break_after=1)
             if len(signals) > 0:
                 signals = signals.values()[0]
-                project = False
-                self.data_type = "seeg"
                 self.signals_inds = range(self.gain_matrix.shape[0])
             else:
                 signals = target_data.get("lfp", target_data["x1"])
+                signals = (np.dot(self.gain_matrix[:, self.signals_inds], signals.T)).T
+        else:
+            # if statistical_model.observation_expression == "x1z_offset":
+            #     signals = ((target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T +
+            #                (target_data["z"].T - np.expand_dims(self.zEQ, 1)).T) / 2.75
+            #     # TODO: a better normalization
+            # elif statistical_model.observation_expression == "x1_offset":
+            #     # TODO: a better normalization
+            #     signals = (target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T / 2.0
+            # else: # statistical_models.observation_expression == "lfp"
+            signals = target_data.get("lfp", target_data["x1"])
         target_data["signals"] = signals
         manual_selection = kwargs.get("manual_selection", [])
         if len(manual_selection) > 0:
             self.signals_inds = manual_selection
             if len(self.signals_inds) < signals.shape[1]:
                 signals = signals[:, self.signals_inds]
-        if project is True:
-            signals = (np.dot(self.gain_matrix[:, self.signals_inds], signals.T)).T
-            self.data_type = "seeg"
         self.observation_shape = signals.shape
         (self.n_times, self.n_signals) = self.observation_shape
         return signals, target_data
@@ -312,7 +308,7 @@ class ODEModelInversionService(ModelInversionService):
             model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high,
                                p.name + "_loc": p.loc, p.name + "_scale": p.scale,
                                p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.type))[0][0],
-                               p.name + "_p": np.array(p.pdf_params().values()).T * np.ones((2,))})
+                               p.name + "_p": (np.array(p.pdf_params().values()).T * np.ones((2,))).flatten()})
         model_data["x1eq_loc"] = statistical_model.parameters["x1eq"].mean
         model_data["MC_scale"] = np.mean(statistical_model.parameters["MC"].std /
                                          np.abs(statistical_model.parameters["MC"].mean))

@@ -59,7 +59,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         # -------------------------- Get model_data and observation signals: -------------------------------------------
         model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
                                                    logger=logger)
-        statistical_model = model_inversion.generate_statistical_model() # observation_expression="lfp"
+        statistical_model = model_inversion.generate_statistical_model(observation_model="lfp_power") # observation_expression="lfp"
         statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
                                                                   active_regions_th=0.1, reset=True)
         statistical_model.plot("Statistical Model")
@@ -113,11 +113,13 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         # -------------------------- Select and set observation signals -----------------------------------
         signals, time, statistical_model, vois_ts_dict = \
             model_inversion.set_target_data_and_time(target_data_type, vois_ts_dict, statistical_model,
+                                                     decimate=decimate, cut_signals_tails=cut_signals_tails,
                                                      select_signals=True, manual_selection=manual_selection,
-                                                     # auto_selection=False,
-                                                     n_electrodes=n_electrodes, auto_selection="correlation-power",
-                                                     sensors_per_electrode=sensors_per_electrode, group_electrodes=True,
-                                                     decimate=decimate, cut_signals_tails=cut_signals_tails)
+                                                     auto_selection=False, # auto_selection="correlation-power",
+                                                     # n_electrodes=n_electrodes,
+                                                     # sensors_per_electrode=sensors_per_electrode,
+                                                     # group_electrodes=True,
+                                                     )
         # if len(model_inversion.signals_inds) < head.get_sensors_id().number_of_sensors:
         #     statistical_model = \
         #             model_inversion.update_active_regions_seeg(statistical_model)
@@ -130,7 +132,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             vois_ts_dict["signals"] /= vois_ts_dict["signals"].max()
             plot_raster(vois_ts_dict["time"].flatten(), {'Target Signals': vois_ts_dict["signals"]},
                         time_units="ms", title=hyp.name + ' Target Signals raster',
-                        special_idx=model_inversion.signals_inds, offset=0.1, labels=labels,
+                        special_idx=model_inversion.signals_inds, offset=1, labels=labels,
                         save_flag=True, show_flag=False, figure_dir=figure_dir)
         plot_timeseries(time, {'Target Signals': signals},
                         time_units="ms", title=hyp.name + 'Target Signals ',
@@ -144,7 +146,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         #     model_data = stan_service.load_model_data_from_file()
         # except:
         model_data = model_inversion.generate_model_data(statistical_model, signals)
-        writer.write_dictionary(model_data, os.path.join(results_dir, "dpModelData.h5"))
+        writer.write_dictionary(model_data, os.path.join(results_dir, "ModelData.h5"))
 
         if stats_model_name == "vep-fe-rev-05":
             def convert_to_vep_stan(model_data, statistical_model):
@@ -171,7 +173,6 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                 return vep_data
 
             model_data = convert_to_vep_stan(model_data, statistical_model)
-        stan_service.write_model_data_to_file(model_data)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         est, fit = stan_service.fit(model_data=model_data, debug=1, simulate=0,

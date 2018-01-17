@@ -1,6 +1,7 @@
 
 import matplotlib.pyplot as pl
-from tvb_epilepsy.base.constants.configurations import SAVE_FLAG, SHOW_FLAG, FOLDER_FIGURES, FIG_FORMAT, VERY_LARGE_SIZE
+from tvb_epilepsy.base.constants.configurations import SAVE_FLAG, SHOW_FLAG, FOLDER_FIGURES, FIG_FORMAT, \
+                                                                                                    VERY_LARGE_PROTRAIT
 from tvb_epilepsy.base.constants.model_inversion_constants import SIG_EQ_DEF
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
@@ -39,9 +40,11 @@ class StatisticalModel(object):
 
     def plot(self, figure_name="", figure_dir=FOLDER_FIGURES,
              save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_format=FIG_FORMAT):
-        _, ax = pl.subplots(len(self.parameters), 2, figsize=VERY_LARGE_SIZE)
+        _, ax = pl.subplots(len(self.parameters), 2, figsize=VERY_LARGE_PROTRAIT)
+        # ax = []
         for ip, p in enumerate(self.parameters.values()):
             ax[ip] = p.plot(ax=ax[ip], lgnd=False)
+            # ax.append(p.plot_stochastic_parameter(lgnd=False))
         save_figure(save_flag, pl.gcf(), figure_name, figure_dir, figure_format)
         check_show(show_flag)
         return ax, pl.gcf()

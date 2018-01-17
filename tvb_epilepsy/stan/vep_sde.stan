@@ -276,7 +276,8 @@ transformed data {
     real scale_signal_star_lo = (scale_signal_lo - scale_signal_loc) / scale_signal_scale;
     real scale_signal_star_hi = (scale_signal_hi - scale_signal_loc) / scale_signal_scale;
     print("tau1_star_lo=", tau1_star_lo, " tau0_star_lo=", tau0_star_lo, " K_star_lo=", K_star_lo,
-          " sig_star_lo=", sig_star_lo, " eps_star_lo=", eps_star_lo, " scale_signal_star_lo=", scale_signal_star_lo);
+          " sig_eq_star_lo=", sig_eq_star_lo, " sig_init_star_lo=", sig_init_star_lo, " sig_star_lo=", sig_star_lo,
+          " eps_star_lo=", eps_star_lo, " scale_signal_star_lo=", scale_signal_star_lo);
 
 }
 

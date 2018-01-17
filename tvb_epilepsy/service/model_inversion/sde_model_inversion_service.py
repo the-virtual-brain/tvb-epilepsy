@@ -45,11 +45,12 @@ class SDEModelInversionService(ODEModelInversionService):
         #                                                       pdf_params={"mu": 0.0, "sigma": sig}))
         self.default_parameters.update(set_parameter_defaults("z_dWt", "normal", (),  # name, pdf, shape
                                                               pdf_params={"mu": 0.0, "sigma": sig}))
+        sig_std = sig / kwargs.get("sig_scale_ratio", 3)
         self.default_parameters.update(set_parameter_defaults("sig", "gamma", (),  # name, pdf, shape
                                                               0.0, 10.0*sig,  # min, max
-                                                              sig, sig / kwargs.get("sig_scale_ratio", 3)),
-                                                              pdf_params={"mean": 1.0, "skew": 0.0},
-                                                              **kwargs)
+                                                              sig, sig_std,
+                                                              pdf_params={"mean": sig/sig_std, "skew": -1.0},
+                                                              **kwargs))
 
     def generate_statistical_model(self, model_name="vep_sde", **kwargs):
         tic = time.time()
@@ -58,7 +59,6 @@ class SDEModelInversionService(ODEModelInversionService):
         self.default_parameters.update(kwargs)
         model = SDEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
                                     self.get_default_sig_eq(**kwargs), self.get_default_sig_init(**kwargs),
-                                    observation_model=kwargs.get("observation_model", OBSERVATION_MODEL_DEF),
                                     **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')

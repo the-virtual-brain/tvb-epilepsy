@@ -35,6 +35,13 @@ if __name__ == "__main__":
                          tau0_pdf_params={"skew": 0.0, "mean": tau0_mean / tau0_std}, tau0_mean=tau0_mean, tau0_std=tau0_std)
     tau0.plot_stochastic_parameter(figure_name="tau0 parameter")
 
+    tau0_std = np.min([tau0_mean - TAU0_MIN, TAU0_MAX - tau0_mean]) / 6.0
+    tau0 = set_parameter("tau0", optimize_pdf=True, use="manual", tau0_lo=TAU0_MIN, tau0_hi=TAU0_MAX,
+                         tau0_pdf="lognormal",
+                         tau0_pdf_params={"skew": 0.0, "mean": tau0_mean / tau0_std}, tau0_mean=tau0_mean,
+                         tau0_std=tau0_std)
+    tau0.plot_stochastic_parameter(figure_name="tau0 parameter")
+
     print("Done")
     # stats_model_name = "vep-fe-rev-05"
     # model_code_path = os.path.join(FOLDER_VEP_HOME, stats_model_name + ".stan")

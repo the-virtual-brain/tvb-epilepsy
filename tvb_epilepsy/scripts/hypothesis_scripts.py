@@ -101,8 +101,7 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
     else:
         model_configuration = model_configuration_service. \
             configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
-    writer = H5Writer
-
+    writer = H5Writer()
     if save_flag:
         writer.write_model_configuration(model_configuration, os.path.join(results_dir, hyp.name + "_ModelConfig.h5"))
     # Plot nullclines and equilibria of model configuration

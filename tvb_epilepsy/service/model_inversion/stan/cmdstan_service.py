@@ -42,7 +42,9 @@ class CmdStanService(StanService):
 
     def assert_model_data_path(self, debug=0, simulate=0, **kwargs):
         model_data_path = kwargs.get("model_data_path", self.model_data_path)
-        model_data = self.load_model_data_from_file(self.model_data_path)
+        model_data = kwargs.pop("model_data", None)
+        if not(isinstance(model_data, dict)):
+            model_data = self.load_model_data_from_file(self.model_data_path)
         # -1 for no debugging at all
         # 0 for printing only scalar parameters
         # 1 for printing scalar and vector parameters
