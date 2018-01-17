@@ -6,7 +6,7 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMA
 from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
 from tvb_epilepsy.base.constants.model_inversion_constants import SIG_DEF, OBSERVATION_MODEL_DEF # , X1_MIN, X1_MAX, Z_MIN, Z_MAX
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.utils.data_structures_utils import sort_dict # isequal_string,
+from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path, sort_dict # isequal_string,
 from tvb_epilepsy.base.utils.plot_utils import plot_raster, plot_regions2regions, plot_trajectories, save_figure, \
     check_show
 from tvb_epilepsy.base.model.statistical_models.sde_statistical_model import SDEStatisticalModel

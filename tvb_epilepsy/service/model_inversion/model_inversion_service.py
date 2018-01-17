@@ -24,21 +24,6 @@ STATISTICAL_MODEL_TYPES=["vep_sde"] #, "vep_ode", "vep_lsa"]
 
 
 class ModelInversionService(object):
-    X1EQ_MIN = -2.0
-    X1_REST = X1_DEF
-    X1_EQ_CR = X1_EQ_CR_DEF
-    TAU1_DEF = 0.5
-    TAU1_MIN = 0.1
-    TAU1_MAX = 1.0
-    TAU0_DEF = 30.0
-    TAU0_MIN = 3.0
-    TAU0_MAX = 3000.0
-    K_MIN = 0.0
-    K_MAX = 3.0
-    MC_MIN = 0.0
-    MC_MAX = 1.0
-    MAX_MIN_RATIO = 1000.0
-
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="",
                  logger=LOG, **kwargs):
