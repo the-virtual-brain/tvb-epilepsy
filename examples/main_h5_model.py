@@ -5,7 +5,7 @@ import numpy as np
 
 from tvb_epilepsy.base.constants.module_constants import DATA_MODE, TVB
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM
-from tvb_epilepsy.base.h5_model import read_h5_model
+from tvb_epilepsy.io.h5_model import read_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects

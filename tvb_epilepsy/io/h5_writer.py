@@ -1,7 +1,7 @@
 import os
 import h5py
 import numpy
-from tvb_epilepsy.base.h5_model import convert_to_h5_model
+from tvb_epilepsy.io.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.vep.connectivity import ConnectivityH5Field
 from tvb_epilepsy.base.model.vep.sensors import SensorsH5Field
 from tvb_epilepsy.base.model.vep.surface import SurfaceH5Field
