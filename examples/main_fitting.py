@@ -176,7 +176,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             model_data = convert_to_vep_stan(model_data, statistical_model)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        est, fit = stan_service.fit(model_data=model_data, debug=1, simulate=0,
+        est, fit = stan_service.fit(debug=1, simulate=0, model_data=model_data,
                                     merge_outputs=False, chains=1, refresh=1, **kwargs)
         writer.write_generic(est, results_dir, lsa_hypothesis.name + "_fit_est.h5")
         est = ensure_list(est)
@@ -239,7 +239,8 @@ if __name__ == "__main__":
     stats_model_name = "vep_sde"
     # stats_model_name = "vep-fe-rev-05"
     fitmethod = "sample"
-    model_code_dir = "/Users/dionperd/VEPtools/software/git/tvb-epilepsy/tvb_epilepsy/stan"
+    # model_code_dir = "/Users/dionperd/VEPtools/software/git/tvb-epilepsy/tvb_epilepsy/stan"
+    model_code_dir = "/Users/dionperd/VEPtools/git/tvb-epilepsy/tvb_epilepsy/stan"
     if EMPIRICAL:
         main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                             sensors_filename=sensors_filename, stats_model_name=stats_model_name,

@@ -305,17 +305,18 @@ class ODEModelInversionService(ModelInversionService):
         for key, val in self.epileptor_parameters.iteritems():
             model_data.update({key: val})
         for p in statistical_model.parameters.values():
-            model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high,
-                               p.name + "_loc": p.loc, p.name + "_scale": p.scale,
-                               p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.type))[0][0],
-                               p.name + "_p": (np.array(p.pdf_params().values()).T * np.ones((2,))).flatten()})
+            model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high})
+            if not(isequal_string(p.type, "normal")):
+                model_data.update({p.name + "_loc": p.loc, p.name + "_scale": p.scale,
+                                   p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.type))[0][0],
+                                   p.name + "_p": (np.array(p.pdf_params().values()).T * np.ones((2,))).flatten()})
         model_data["x1eq_loc"] = statistical_model.parameters["x1eq"].mean
         model_data["MC_scale"] = np.mean(statistical_model.parameters["MC"].std /
                                          np.abs(statistical_model.parameters["MC"].mean))
         MCsplit_shape = np.ones(statistical_model.parameters["MCsplit"].p_shape)
-        model_data["MCsplit_loc"] \
-            *= MCsplit_shape
-        model_data["MCsplit_scale"] *= MCsplit_shape
+        model_data["MCsplit_loc"] = statistical_model.parameters["MCsplit"].mean * MCsplit_shape
+        model_data["MCsplit_scale"] = statistical_model.parameters["MCsplit"].std * MCsplit_shape
+        model_data["offset_signal_p"] = np.array(statistical_model.parameters["offset_signal"].pdf_params().values())
         return sort_dict(model_data)
 
     # def violin_x0(self, csv, skip=0, x0c=-1.8, x0lim=(-6, 0), per_chain=False):
