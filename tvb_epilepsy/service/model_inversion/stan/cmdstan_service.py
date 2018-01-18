@@ -40,20 +40,9 @@ class CmdStanService(StanService):
             raise_value_error(self.fitmethod + " does not correspond to one of the input methods:\n" +
                               "sample, variational, optimize, diagnose")
 
-    def assert_model_data_path(self, debug=0, simulate=0, **kwargs):
-        model_data_path = kwargs.get("model_data_path", self.model_data_path)
-        model_data = kwargs.pop("model_data", None)
-        if not(isinstance(model_data, dict)):
-            model_data = self.load_model_data_from_file(self.model_data_path)
-        # -1 for no debugging at all
-        # 0 for printing only scalar parameters
-        # 1 for printing scalar and vector parameters
-        # 2 for printing all (scalar, vector and matrix) parameters
-        model_data["DEBUG"] = debug
-        # > 0 for simulating without using the input observation data:
-        model_data["SIMULATE"] = simulate
-        model_data = sort_dict(model_data)
-        model_data_path = model_data_path.split(".", -1)[0] + ".R"
+    def set_model_data(self, debug=0, simulate=0, **kwargs):
+        model_data = super(CmdStanService, self).set_model_data(debug, simulate, **kwargs)
+        model_data_path = self.model_data_path.split(".", -1)[0] + ".R"
         self.write_model_data_to_file(model_data, model_data_path=model_data_path)
         return model_data_path
 
@@ -98,7 +87,7 @@ class CmdStanService(StanService):
         self.set_options(**kwargs)
         self.command, output_filepath, diagnostic_filepath = \
             generate_cmdstan_fit_command(self.fitmethod, self.options, self.model_path,
-                                         self.assert_model_data_path(debug, simulate, **kwargs),
+                                         self.set_model_data(debug, simulate, **kwargs),
                                          output_filepath, diagnostic_filepath)
         self.logger.info("Model fitting with " + self.fitmethod +
                          " method of model: " + self.model_path + "...")

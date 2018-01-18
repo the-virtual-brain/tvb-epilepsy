@@ -72,19 +72,38 @@ class StanService(object):
             self.model_data_path = model_data_path
         extension = self.model_data_path.split(".", -1)[-1]
         if isequal_string(extension, "R"):
-            return rload(self.model_data_path)
+            model_data = rload(self.model_data_path)
         elif isequal_string(extension, "npy"):
-            return np.load(self.model_data_path).item()
+            model_data = np.load(self.model_data_path).item()
         elif isequal_string(extension, "mat"):
-            return loadmat(self.model_data_path)
+            model_data = loadmat(self.model_data_path)
         elif isequal_string(extension, "pkl"):
             with open(self.model_data_path, 'wb') as f:
-                return pickle.load(f)
+                model_data = pickle.load(f)
         elif isequal_string(extension, "h5"):
-            return H5Reader().read_dictionary(self.model_data_path)
+            model_data = H5Reader().read_dictionary(self.model_data_path)
         else:
             raise_not_implemented_error("model_data file (" + model_data_path +
                                         ") that are not one of (.R, .npy, .mat, .pkl) cannot be read!")
+        for key in model_data.keys():
+            if key[:3] == "EPI":
+                del model_data[key]
+        return model_data
+
+    def set_model_data(self, debug=0, simulate=0, **kwargs):
+        self.model_data_path = kwargs.get("model_data_path", self.model_data_path)
+        model_data = kwargs.pop("model_data", None)
+        if not(isinstance(model_data, dict)):
+            model_data = self.load_model_data_from_file(self.model_data_path)
+        # -1 for no debugging at all
+        # 0 for printing only scalar parameters
+        # 1 for printing scalar and vector parameters
+        # 2 for printing all (scalar, vector and matrix) parameters
+        model_data["DEBUG"] = debug
+        # > 0 for simulating without using the input observation data:
+        model_data["SIMULATE"] = simulate
+        model_data = sort_dict(model_data)
+        return model_data
 
     def set_or_compile_model(self, **kwargs):
         try:
