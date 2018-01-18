@@ -11,20 +11,35 @@ from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, dicts_
 AVAILABLE_DISTRIBUTIONS = ["uniform", "normal", "gamma", "lognormal", "exponential", "beta", "chisquare",
                            "binomial", "poisson", "bernoulli"]
 
-CONSTRAINT_ABS_TOL = 0.001
+CONSTRAINT_ABS_TOL = 0.01
 
 
-def generate_distribution(distrib_type, loc=0.0, scale=1.0, use="manual", target_shape=None, **pdf_params):
+def generate_distribution(distrib_type, loc=0.0, scale=1.0, use="manual", target_shape=None, optimize_pdf=True,
+                          **pdf_params):
     if np.in1d(distrib_type.lower(), AVAILABLE_DISTRIBUTIONS):
         exec("from tvb_epilepsy.base.model.statistical_models.probability_distributions."
              + distrib_type.lower() + "_distribution import " + distrib_type.title() + "Distribution")
-        distribution = eval(distrib_type.title() + "Distribution()")
+        distribution = eval(distrib_type.title() + "Distribution()") # generate an agnostic distribution
+        success = True
         if len(pdf_params) > 0:
-            try:
-                distribution.update_params(loc, scale, use, **pdf_params)
-            except:
-                raise_value_error("Cannot generate probability distribution of type " + distrib_type +
-                                  " with parameters " + str(**pdf_params) + " !")
+            distribution.update_params(loc, scale, use, **pdf_params) # update with desired parameters
+            # test whether the distribution is correctly set:
+            for p_key, p_val in pdf_params.iteritems():
+                if np.any(p_val != getattr(distribution, p_key)):
+                    success = False
+        if success is False:
+            # if the distribution is not correct, try to optimize it
+            if optimize_pdf:
+                distribution = optimize_distribution(distrib_type, loc, scale, use, target_shape=None,
+                                                     **pdf_params)
+                success = True
+                for p_key, p_val in pdf_params.iteritems():
+                    if np.any(np.abs(p_val - getattr(distribution, p_key)) > 0.1):
+                        success = False
+            # if still we don't get the desired distribution raise an error
+        if success is False:
+            raise_value_error("Cannot generate probability distribution of type " + distrib_type +
+                              " with parameters " + str(pdf_params) + " !")
         if isinstance(target_shape, tuple):
             distribution.__shape_parameters__(target_shape, loc, scale, use)
         return distribution
@@ -62,7 +77,7 @@ def construct_pdf_params_dict(p, pdf):
 # Scalar objective  function
 def fobj(p, pdf, target_stats, loc=0.0, scale=1.0, use="manual"):
     params = construct_pdf_params_dict(p, pdf)
-    pdf.__update_params__(loc, scale, use, check_constraint=False, **params)
+    pdf.update_params(loc, scale, use, **params)
     f = 0.0
     norm = 0.0
     for ts_key, ts_val in target_stats.iteritems():
@@ -104,7 +119,7 @@ def fconstr_beta_mode_median(p, pdf):
 
 
 def prepare_constraints(distribution, target_stats, loc=0.0, scale=1.0, use="manual"):
-    # Preparing contraints:
+    # Preparing constraints:
     constraints = [{"type": "ineq", "fun": lambda p: fconstr(p, distribution, loc, scale, use)}]
     if isequal_string(distribution.type, "gamma") and np.any(np.in1d("mode", target_stats.keys())):
         constraints.append({"type": "ineq", "fun": lambda p: fconstr_gamma_mode(p, distribution)})
@@ -138,13 +153,18 @@ def prepare_target_stats(distribution, target_stats, loc=0.0, scale=1.0):
     return target_stats_unique, target_stats_array, target_shape, target_size
 
 
-def prepare_intial_condition(distribution, low_limit=-10.0, high_limit=10):
+def prepare_intial_condition(pdf, target_stats): # , low_limit=-10.0, high_limit=10
     # TODO: find a better to initialize this...
     # Preparing initial conditions' parameters' vector:
-    p0 = np.stack(distribution.pdf_params().values())
-    # Bounding initial condition:
-    p0[np.where(p0 > high_limit)[0]] = high_limit
-    p0[np.where(p0 < low_limit)[0]] = low_limit
+    p0 = dict(pdf.pdf_params())
+    for ts_key, ts_val in target_stats.iteritems():
+        # norm += ts_val ** 2
+        if p0.get(ts_key, None) is not None:
+            p0[ts_key] = ts_val
+    p0 = np.stack(p0.values())
+    # # Bounding initial condition:
+    # p0[np.where(p0 > high_limit)[0]] = high_limit
+    # p0[np.where(p0 < low_limit)[0]] = low_limit
     return p0
 
 
@@ -158,7 +178,7 @@ def compute_pdf_params(distrib_type, target_stats, loc=0.0, scale=1.0, use="manu
     target_stats_unique, target_stats_array, target_shape, target_size = \
         prepare_target_stats(distribution, target_stats, loc, scale)
     constraints = prepare_constraints(distribution, target_stats, loc, scale, use)
-    p0 = prepare_intial_condition(distribution, low_limit=-10.0, high_limit=10)
+    p0 = prepare_intial_condition(distribution, target_stats)
     # p0 = [2.0, 2.0]
     # Run optimization
     sol_params = np.ones((target_size, distribution.n_params)) * p0
@@ -166,22 +186,19 @@ def compute_pdf_params(distrib_type, target_stats, loc=0.0, scale=1.0, use="manu
     for ii, ts in enumerate(target_stats_unique):
         if ii > 0:
             p0 = sol_params_sum / ii
-        try:
-            # For: "COBYLA"  options={tol": 10 ** -3, "catol": CONSTRAINT_ABS_TOL, 'rhobeg': CONSTRAINT_ABS_TOL}
-            sol = minimize(fobj, p0, args=(distribution, ts), method="SLSQP", constraints=constraints, tol=None,
-                           options={"ftol": 10 ** -12})
-            if sol.success:
-                if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
-                    raise_value_error("nan or inf values in solution x\n" + sol.message)
-                if sol.fun > 10 ** -3:
-                    warning("Not accurate solution! sol.fun = " + str(sol.fun))
-                inds = np.where([np.all(target_stats_array[ii] == np.array(ts.values())) for ii in range(target_size)])[0]
-                sol_params[inds] = sol.x
-                sol_params_sum += sol.x
-            else:
-                raise_value_error(sol.message)
-        except:
-            print("WTF?")
-    sol_params= dict(zip(distribution.pdf_params().keys(),
+        # For: "COBYLA"  options={tol": 10 ** -3, "catol": CONSTRAINT_ABS_TOL, 'rhobeg': CONSTRAINT_ABS_TOL}
+        sol = minimize(fobj, p0, args=(distribution, ts), method="SLSQP", constraints=constraints, tol=None,
+                       options={"ftol": 10 ** -6, "eps": CONSTRAINT_ABS_TOL}) #p0.min() / 100
+        if sol.success:
+            if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
+                raise_value_error("nan or inf values in solution x\n" + sol.message)
+            if sol.fun > 10 ** -3:
+                warning("Not accurate solution! sol.fun = " + str(sol.fun))
+            inds = np.where([np.all(target_stats_array[ii] == np.array(ts.values())) for ii in range(target_size)])[0]
+            sol_params[inds] = sol.x
+            sol_params_sum += sol.x
+        else:
+            raise_value_error(sol.message)
+    sol_params = dict(zip(distribution.pdf_params().keys(),
                          [np.reshape(sol_params[:, ii], target_shape) for ii in range(distribution.n_params)]))
     return sol_params
