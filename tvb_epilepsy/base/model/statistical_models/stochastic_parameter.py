@@ -104,24 +104,32 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
 
 def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, loc=0.0, scale=1.0,
                                   p_shape=(), probability_distribution="uniform", optimize_pdf=False, use="scipy",
-                                  **pdf_params):
+                                  **target_params):
     pdf_module = importlib.import_module("tvb_epilepsy.base.model.statistical_models.probability_distributions." +
                                          probability_distribution.lower() + "_distribution")
     thisProbabilityDistribution = eval("pdf_module." + probability_distribution.title() + "Distribution")
-    if optimize_pdf:
-        pdf_params = compute_pdf_params(probability_distribution.lower(), pdf_params, loc, scale, use)
 
     class StochasticParameter(StochasticParameterBase, thisProbabilityDistribution):
         def __init__(self, name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, loc=0.0, scale=1.0,
-                     p_shape=(), use="scipy", **pdf_params):
+                     p_shape=(), use="scipy", **target_params):
             StochasticParameterBase.__init__(self, name, low, high, loc, scale, p_shape)
-            try:
-                thisProbabilityDistribution.__init__(self, **pdf_params)
-            except:
+            thisProbabilityDistribution.__init__(self, **target_params)
+            success = True
+            for p_key, p_val in target_params.iteritems():
+                if np.any(p_val != getattr(self, p_key)):
+                    success = False
+            if success is False:
                 if optimize_pdf:
-                    pdf_params = compute_pdf_params(probability_distribution.lower(), pdf_params, loc, scale, use)
+                    pdf_params = compute_pdf_params(probability_distribution.lower(), target_params, loc, scale, use)
                     thisProbabilityDistribution.__init__(self, **pdf_params)
-            self._update_params(use=use)
+                    success = True
+                    for p_key, p_val in target_params.iteritems():
+                        if np.any(np.abs(p_val - getattr(self, p_key)) > 0.1):
+                            success = False
+            if success is False:
+                raise_value_error("Cannot generate probability distribution of type " + probability_distribution +
+                                  " with parameters " + str(target_params) + " !")
+                self._update_params(use=use)
 
         def __str__(self):
             return StochasticParameterBase.__str__(self) + "\n" \
@@ -133,7 +141,7 @@ def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=
         def _numpy(self, size=(1,)):
             return self.numpy(self.loc, self.scale, size)
 
-    return StochasticParameter(name, low, high, loc, scale, p_shape, **pdf_params)
+    return StochasticParameter(name, low, high, loc, scale, p_shape, **target_params)
 
 
 if __name__ == "__main__":
