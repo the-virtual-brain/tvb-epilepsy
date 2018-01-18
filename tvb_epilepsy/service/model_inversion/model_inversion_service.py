@@ -112,6 +112,7 @@ class ModelInversionService(object):
         MC_def[inds] = MC_def[inds] * self.MC_direction_split
         inds = np.tril_indices(self.n_regions, 1)
         MC_def[inds] = MC_def[inds] * (1.0 - self.MC_direction_split)
+        MC_def[MC_def < 0.001] = 0.001
         return MC_def
 
     def get_SC(self):
