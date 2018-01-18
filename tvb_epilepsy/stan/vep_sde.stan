@@ -243,12 +243,9 @@ data {
     real scale_signal_p[2];
     int<lower=0> scale_signal_pdf;
     /* Observation signal offset parameter (only normal distribution) */
-    real offset_signal_lo;
+    // real offset_signal_lo;
     // real offset_signal_hi;
-    // real offset_signal_loc;
-    real<lower=0.0> offset_signal_scale;
     real offset_signal_p[2];
-    // int<lower=0> offset_signal_pdf;
 }
 
 
