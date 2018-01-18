@@ -1,13 +1,15 @@
 import time
 from copy import deepcopy
 import numpy as np
+# import pylab as pl
+from tvb_epilepsy.base.constants.model_constants import X1_DEF
+from tvb_epilepsy.base.constants.model_inversion_constants import X1INIT_MIN, X1INIT_MAX, ZINIT_MIN, ZINIT_MAX, \
+                                                                            MC_MIN,  SIG_INIT_DEF, OBSERVATION_MODELS
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, assert_arrays, \
-    extract_dict_stringkeys, construct_import_path
+    extract_dict_stringkeys
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.model.vep.sensors import Sensors
-from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import \
-    EULER_METHODS, OBSERVATION_MODEL_EXPRESSIONS, OBSERVATION_MODELS
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
 from tvb_epilepsy.service.head_service import HeadService
 from tvb_epilepsy.service.signal_processor import decimate_signals, cut_signals_tails
@@ -20,28 +22,21 @@ LOG = initialize_logger(__name__)
 
 
 class ODEModelInversionService(ModelInversionService):
-    X1INIT_MIN = -2.0
-    X1INIT_MAX = 0.0
-    ZINIT_MIN = 1.0
-    ZINIT_MAX = 5.0
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="vep_ode",
                  logger=LOG, **kwargs):
         super(ODEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
                                                        model_name, logger, **kwargs)
-        for constant, default in zip(["X1INIT_MIN", "X1INIT_MAX", "ZINIT_MIN", "ZINIT_MAX"], [-2.0, 0.0, 1.0, 5.0]):
-            setattr(self, constant, kwargs.get(constant, default))
         self.time = None
         self.dt = 0.0
         self.n_times = 0
         self.n_signals = self.n_regions
         self.data_type = "lfp"
         self.signals_inds = range(self.n_signals)
-        self.sig_init = self.set_default_sig_init(**kwargs)
         self._set_default_parameters(**kwargs)
 
-    def set_default_sig_init(self, **kwargs):
-        return kwargs.pop("sig_init", self.sig_eq)
+    def get_default_sig_init(self, **kwargs):
+        return kwargs.get("sig_init", SIG_INIT_DEF)
 
     def set_time(self, time=None):
         if time is not None:
@@ -82,8 +77,7 @@ class ODEModelInversionService(ModelInversionService):
             correlation = kwargs.get("correlation", np.corrcoef(signals.T))
             current_selection = head_service.select_sensors_corr(sensors, correlation, self.signals_inds, power=power,
                                                             n_electrodes=kwargs.get("n_electrodes"),
-                                                            sensors_per_electrode=kwargs.get("sensors_per_electrode",
-                                                                                             1),
+                                                            sensors_per_electrode=kwargs.get("sensors_per_electrode", 1),
                                                             group_electrodes=kwargs.get("group_electrodes", True))
             inds = np.where([s in current_selection for s in self.signals_inds])[0]
             self.signals_inds = np.array(self.signals_inds)[inds].tolist()
@@ -91,6 +85,7 @@ class ODEModelInversionService(ModelInversionService):
             power = kwargs.get("power", np.sum(signals ** 2, axis=0) / signals.shape[0])
             inds = select_greater_values_array_inds(power, kwargs.get("power_th", None))
             self.signals_inds = (np.array(self.signals_inds)[inds]).tolist()
+        self.n_signals = len(self.signals_inds)
         return signals[:, inds]
 
     def select_signals_lfp(self, signals, rois, auto_selection, **kwargs):
@@ -104,6 +99,7 @@ class ODEModelInversionService(ModelInversionService):
             inds = select_greater_values_array_inds(power, kwargs.get("power_th", None))
             signals = signals[:, inds]
             self.signals_inds = (np.array(self.signals_inds)[inds]).tolist()
+        self.n_signals = len(self.signals_inds)
         return signals
 
     def set_empirical_target_data(self, target_data, **kwargs):
@@ -114,7 +110,7 @@ class ODEModelInversionService(ModelInversionService):
             self.signals_inds = manual_selection
         if isinstance(target_data, dict):
             signals = target_data.get("signals", target_data.get("target_data", None))
-        if len(self.signals_inds) != signals.shape[1]:
+        if len(self.signals_inds) < signals.shape[1]:
             signals = signals[:, self.signals_inds]
         self.observation_shape = signals.shape
         (self.n_times, self.n_signals) = self.observation_shape
@@ -124,36 +120,31 @@ class ODEModelInversionService(ModelInversionService):
         self.signals_inds = range(self.n_regions)
         self.data_type = "lfp"
         if statistical_model.observation_model.find("seeg") >= 0:
-            project = True
-        if statistical_model.observation_expression == "x1z_offset":
-            signals = ((target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T +
-                       (target_data["z"].T - np.expand_dims(self.zEQ, 1)).T) / 2.75
-            # TODO: a better normalization
-        elif statistical_model.observation_expression == "x1_offset":
-            # TODO: a better normalization
-            signals = (target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T / 2.0
-        else:  # statistical_models.observation_expression == "lfp"
-            if project:
-                # try for SEEG
-                signals = extract_dict_stringkeys(sort_dict(target_data), "SEEG",
-                                                  modefun="find", break_after=1)
-                if len(signals) > 0:
-                    signals = signals.values()[0]
-                    project = False
-                    self.data_type = "seeg"
-                    self.signals_inds = range(self.gain_matrix.shape[0])
-                else:
-                    signals = target_data.get("lfp", target_data["x1"])
+            self.data_type = "seeg"
+            signals = extract_dict_stringkeys(sort_dict(target_data), "SEEG",
+                                              modefun="find", break_after=1)
+            if len(signals) > 0:
+                signals = signals.values()[0]
+                self.signals_inds = range(self.gain_matrix.shape[0])
+            else:
+                signals = target_data.get("lfp", target_data["x1"])
+                signals = (np.dot(self.gain_matrix[:, self.signals_inds], signals.T)).T
+        else:
+            # if statistical_model.observation_expression == "x1z_offset":
+            #     signals = ((target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T +
+            #                (target_data["z"].T - np.expand_dims(self.zEQ, 1)).T) / 2.75
+            #     # TODO: a better normalization
+            # elif statistical_model.observation_expression == "x1_offset":
+            #     # TODO: a better normalization
+            #     signals = (target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T / 2.0
+            # else: # statistical_models.observation_expression == "lfp"
+            signals = target_data.get("lfp", target_data["x1"])
         target_data["signals"] = signals
         manual_selection = kwargs.get("manual_selection", [])
         if len(manual_selection) > 0:
             self.signals_inds = manual_selection
-        if len(self.signals_inds) != signals.shape[1]:
-            signals = signals[:, self.signals_inds]
-        if project is True:
-            signals = (np.dot(self.gain_matrix[:, self.signals_inds], signals.T)).T
-            self.data_type = "seeg"
-            self.signals_inds = range(self.gain_matrix.shape[0])
+            if len(self.signals_inds) < signals.shape[1]:
+                signals = signals[:, self.signals_inds]
         self.observation_shape = signals.shape
         (self.n_times, self.n_signals) = self.observation_shape
         return signals, target_data
@@ -190,16 +181,14 @@ class ODEModelInversionService(ModelInversionService):
         if reset:
             statistical_model.update_active_regions([])
         statistical_model.update_active_regions(statistical_model.active_regions +
-                                                select_greater_values_array_inds(self.e_values,
-                                                                                 active_regions_th).tolist())
+                                            select_greater_values_array_inds(self.e_values, active_regions_th).tolist())
         return statistical_model
 
     def update_active_regions_x0_values(self, statistical_model, active_regions_th=0.1, reset=False):
         if reset:
             statistical_model.update_active_regions([])
         statistical_model.update_active_regions(statistical_model.active_regions +
-                                                select_greater_values_array_inds(self.x0_values,
-                                                                                 active_regions_th).tolist())
+                                           select_greater_values_array_inds(self.x0_values, active_regions_th).tolist())
         return statistical_model
 
     def update_active_regions_lsa(self, statistical_model, active_regions_th=None, reset=False):
@@ -208,8 +197,7 @@ class ODEModelInversionService(ModelInversionService):
         if len(self.lsa_propagation_strengths) > 0:
             ps_strengths = self.lsa_propagation_strengths / np.max(self.lsa_propagation_strengths)
             statistical_model.update_active_regions(statistical_model.active_regions +
-                                                    select_greater_values_array_inds(ps_strengths,
-                                                                                     active_regions_th).tolist())
+                                             select_greater_values_array_inds(ps_strengths, active_regions_th).tolist())
         else:
             warning("No LSA results found (empty propagations_strengths vector)!" +
                     "\nSkipping of setting active_regios according to LSA!")
@@ -250,32 +238,35 @@ class ODEModelInversionService(ModelInversionService):
         return statistical_model
 
     def _set_default_parameters(self, **kwargs):
+        sig_init = self.get_default_sig_init(**kwargs)
         # Generative model:
         # Integration:
         self.default_parameters.update(set_parameter_defaults("x1init", "normal", (self.n_regions,),  # name, pdf, shape
-                                                              self.X1INIT_MIN, self.X1INIT_MAX,  # min, max
-                                                              self.x1EQ, 0.03, **kwargs))
+                                                              X1INIT_MIN, X1INIT_MAX,       # min, max
+                                                              pdf_params={"mu": self.x1EQ,
+                                                                          "sigma": sig_init}))
         self.default_parameters.update(set_parameter_defaults("zinit", "normal", (self.n_regions,),  # name, pdf, shape
-                                                              self.ZINIT_MIN, self.ZINIT_MAX,  # min, max
-                                                              self.zEQ, 0.03, **kwargs))
+                                                              ZINIT_MIN, ZINIT_MAX,  # min, max
+                                                              pdf_params={"mu": self.zEQ,
+                                                                          "sigma": self.get_default_sig_init()}))
         self.default_parameters.update(set_parameter_defaults("sig_init", "lognormal", (),
-                                                              0.0, 3.0 * self.sig_init,
-                                                              self.sig_init, self.sig_init / 3.0, **kwargs))
+                                                              0.0, 3.0*sig_init,
+                                                              sig_init, sig_init / 3.0,
+                                                              pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("scale_signal", "lognormal", (),
-                                                              0.5, 1.5,
-                                                              1.0, 0.1, **kwargs))
+                                                              0.8, 3.0,
+                                                              2.0, 0.2,
+                                                              pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("offset_signal", "normal", (),
-                                                              -0.5, 0.5,
-                                                              0.0, 0.1, **kwargs))
+                                                              pdf_params={"mu": -X1_DEF, "sigma": 0.1}, **kwargs))
 
-    def generate_statistical_model(self, model_name=None, **kwargs):
-        if model_name is None:
-            model_name = self.model_name
+    def generate_statistical_model(self, model_name="vep_ode", **kwargs):
         tic = time.time()
         self.logger.info("Generating model...")
         active_regions = kwargs.pop("active_regions", [])
         self.default_parameters.update(kwargs)
-        model = ODEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
+        model = ODEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times,
+                                    self.dt, self.get_default_sig_eq(**kwargs), self.get_default_sig_init(**kwargs),
                                     **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
@@ -289,43 +280,42 @@ class ODEModelInversionService(ModelInversionService):
         mixing = deepcopy(gain_matrix)
         if mixing.shape[0] > len(self.signals_inds):
             mixing = mixing[self.signals_inds]
-        if mixing.shape[1] > statistical_model.n_active_regions:
-            mixing = mixing[:, statistical_model.active_regions]
+        SC = self.get_SC()
         model_data = {"n_regions": statistical_model.n_regions,
                       "n_times": statistical_model.n_times,
                       "n_signals": statistical_model.n_signals,
                       "n_active_regions": statistical_model.n_active_regions,
                       "n_nonactive_regions": statistical_model.n_nonactive_regions,
+                      "n_connections": statistical_model.n_regions*(statistical_model.n_regions-1)/2,
                       "active_regions_flag": np.array(active_regions_flag),
                       "active_regions": np.array(statistical_model.active_regions) + 1,  # cmdstan cannot take lists!
                       "nonactive_regions": np.where(1 - active_regions_flag)[0] + 1,  # indexing starts from 1!
+                      "SC": SC[np.triu_indices(SC.shape[0], 1)],
+                      "MC_minloc": MC_MIN,
+                      "sig_eq": statistical_model.sig_eq,
+                      "sig_init": statistical_model.sig_init,
                       "dt": statistical_model.dt,
-                      "euler_method": np.where(np.in1d(EULER_METHODS, statistical_model.euler_method))[0][0] - 1,
+                      #"euler_method": np.where(np.in1d(EULER_METHODS, statistical_model.euler_method))[0][0] - 1,
                       "observation_model": np.where(np.in1d(OBSERVATION_MODELS,
                                                             statistical_model.observation_model))[0][0],
-                      "observation_expression": np.where(np.in1d(OBSERVATION_MODEL_EXPRESSIONS,
-                                                                 statistical_model.observation_expression))[0][0],
+                      # "observation_expression": np.where(np.in1d(OBSERVATION_MODEL_EXPRESSIONS,
+                      #                                            statistical_model.observation_expression))[0][0],
                       "signals": signals,
-                      "mixing": mixing,
-                      "x1eq0": statistical_model.parameters["x1eq"].mean}
+                      "mixing": mixing}
         for key, val in self.epileptor_parameters.iteritems():
             model_data.update({key: val})
         for p in statistical_model.parameters.values():
-            if isequal_string(p.name, x1var) or isequal_string(p.name, zvar):
-                # TODO: find better solution with these boundaries
-                model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high})
-                pass
-            elif isequal_string(p.name, "x1eq") or isequal_string(p.name, "x1init") or isequal_string(p.name, "zinit"):
-                model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high})
-                self.logger.info("For the moment only normal distribution is allowed for parameters " + p.name +
-                                 "!\nIgnoring the selected probability distribution!")
-            else:
-                # TODO: find better solution with these boundaries
-                model_data.update({p.name + "_lo": np.maximum(np.max(p.low / p.scale - p.loc), 0.0),
-                                   p.name + "_hi": np.min(p.high / p.scale - p.loc)})
-                model_data.update({p.name + "_loc": p.loc, p.name + "_scale": p.scale})
-                model_data.update({p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.type))[0][0]})
-                model_data.update({p.name + "_p": np.array(p.pdf_params().values()) + np.ones((2,))})
+            model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high,
+                               p.name + "_loc": p.loc, p.name + "_scale": p.scale,
+                               p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.type))[0][0],
+                               p.name + "_p": (np.array(p.pdf_params().values()).T * np.ones((2,))).flatten()})
+        model_data["x1eq_loc"] = statistical_model.parameters["x1eq"].mean
+        model_data["MC_scale"] = np.mean(statistical_model.parameters["MC"].std /
+                                         np.abs(statistical_model.parameters["MC"].mean))
+        MCsplit_shape = np.ones(statistical_model.parameters["MCsplit"].p_shape)
+        model_data["MCsplit_loc"] \
+            *= MCsplit_shape
+        model_data["MCsplit_scale"] *= MCsplit_shape
         return sort_dict(model_data)
 
     # def violin_x0(self, csv, skip=0, x0c=-1.8, x0lim=(-6, 0), per_chain=False):

@@ -36,14 +36,14 @@ class PyStanService(StanService):
             raise_value_error(self.fitmethod + " does not correspond to one of the input methods:\n" +
                               "sampling, vb, optimizing")
 
-    def compile_stan_model(self, store_model=True, **kwargs):
+    def compile_stan_model(self, save_model=True, **kwargs):
         self.model_code_path = kwargs.get("model_code_path", self.model_code_path)
         tic = time.time()
         self.logger.info("Compiling model...")
         self.model = ps.StanModel(file=self.model_code_path, model_name=self.model_name)
         self.compilation_time = time.time() - tic
         self.logger.info(str(self.compilation_time) + ' sec required to compile')
-        if store_model:
+        if save_model:
             self.write_model_to_file(**kwargs)
 
     def write_model_to_file(self, **kwargs):

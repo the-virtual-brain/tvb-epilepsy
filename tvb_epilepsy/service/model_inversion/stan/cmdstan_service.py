@@ -42,7 +42,9 @@ class CmdStanService(StanService):
 
     def assert_model_data_path(self, debug=0, simulate=0, **kwargs):
         model_data_path = kwargs.get("model_data_path", self.model_data_path)
-        model_data = self.load_model_data_from_file(self.model_data_path)
+        model_data = kwargs.pop("model_data", None)
+        if not(isinstance(model_data, dict)):
+            model_data = self.load_model_data_from_file(self.model_data_path)
         # -1 for no debugging at all
         # 0 for printing only scalar parameters
         # 1 for printing scalar and vector parameters
@@ -65,7 +67,7 @@ class CmdStanService(StanService):
         if not (os.path.exists(self.model_path)):
             raise_value_error("Failed to load the model from file: " + str(self.model_path) + " !")
 
-    def compile_stan_model(self, store_model=True, **kwargs):
+    def compile_stan_model(self, save_model=True, **kwargs):
         self.model_code_path = kwargs.pop("model_code_path", self.model_code_path)
         self.logger.info("Compiling model...")
         tic = time.time()
@@ -83,7 +85,7 @@ class CmdStanService(StanService):
         #     print(stderr)
         # self.compilation_time = time.time() - tic
         self.logger.info(str(self.compilation_time) + ' sec required to compile')
-        if store_model:
+        if save_model:
             self.model_path = kwargs.pop("model_path", self.model_path)
             if self.model_path != self.model_code_path.split(".stan", 1)[0]:
                 copyfile(self.model_code_path.split(".stan", 1)[0], self.model_path)

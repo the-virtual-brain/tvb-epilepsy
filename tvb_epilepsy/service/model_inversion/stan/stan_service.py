@@ -37,7 +37,7 @@ class StanService(object):
         self.compilation_time = 0.0
 
     @abstractmethod
-    def compile_stan_model(self, store_model=True, **kwargs):
+    def compile_stan_model(self, save_model=True, **kwargs):
         pass
 
     @abstractmethod
@@ -91,7 +91,7 @@ class StanService(object):
             self.set_model_from_file(**kwargs)
         except:
             self.logger.info("Trying to compile model from file: " + str(self.model_code_path) + str("!"))
-            self.compile_stan_model(store_model=kwargs.get("store_model", True), **kwargs)
+            self.compile_stan_model(save_model=kwargs.get("save_model", True), **kwargs)
 
     def read_output_csv(self, output_filepath, **kwargs):
         csvs = parse_csv(output_filepath.replace(".csv", "*"), merge=kwargs.pop("merge_outputs", False))

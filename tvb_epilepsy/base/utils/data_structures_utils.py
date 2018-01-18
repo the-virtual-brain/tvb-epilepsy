@@ -357,6 +357,18 @@ def shape_to_ndim(shape, squeeze=False):
     return len(shape)
 
 
+def linspace_broadcast(start, stop, num_steps, maxdims=3):
+    x_star = np.linspace(0, 1, num_steps)
+    dims = 0
+    x = None
+    while x is None and dims < maxdims:
+        try:
+            x = (x_star[:, None] * (stop - start) + start)
+        except:
+            x_star = x_star[:, np.newaxis]
+            dims = dims + 1
+    return x
+
 def squeeze_array_to_scalar(arr):
     arr = np.array(arr)
     if arr.size == 1:

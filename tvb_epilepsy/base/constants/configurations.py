@@ -43,6 +43,7 @@ else:
     STATS_MODELS_PATH = os.path.join(VEP_SOFTWARE_PATH, "tvb-epilepsy", "tvb_epilepsy", "stan")
 CMDSTAN_PATH = os.path.join(USER_HOME, "ScientificSoftware/git/cmdstan")
 VERY_LARGE_SIZE = (40, 20)
+VERY_LARGE_PROTRAIT = (20, 40)
 LARGE_SIZE = (20, 15)
 SMALL_SIZE = (15, 10)
 FIG_SIZE = SMALL_SIZE
