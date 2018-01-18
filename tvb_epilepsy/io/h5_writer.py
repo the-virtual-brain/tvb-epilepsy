@@ -1,6 +1,7 @@
 import os
 import h5py
 import numpy
+from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.file_utils import change_filename_or_overwrite
 from tvb_epilepsy.io.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.vep.connectivity import ConnectivityH5Field
@@ -248,13 +249,16 @@ class H5Writer(object):
         h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
         for key, value in dictionary.iteritems():
-            if isinstance(value, numpy.ndarray) and value.size > 0:
-                h5_file.create_dataset(key, data=value)
-            else:
-                if isinstance(value, list) and len(value) > 0:
+            try:
+                if isinstance(value, numpy.ndarray) and value.size > 0:
                     h5_file.create_dataset(key, data=value)
                 else:
-                    h5_file.attrs.create(key, value)
+                    if isinstance(value, list) and len(value) > 0:
+                        h5_file.create_dataset(key, data=value)
+                    else:
+                        h5_file.attrs.create(key, value)
+            except:
+                warning("Did not manage to write " + key + " to h5 file " + path + " !")
 
         h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
         h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, dictionary.__class__.__name__)
