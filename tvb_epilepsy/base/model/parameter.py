@@ -20,6 +20,10 @@ class Parameter(object):
             raise_value_error("Parameter's " + str(self.name) + " p_shape="
                               + str(p_shape) + " is not a shape tuple!")
 
+    @property
+    def p_shape(self):
+        return self.__p_shape
+
     def __repr__(self):
         d = {"1. name": self.name,
              "2. low": self.low,

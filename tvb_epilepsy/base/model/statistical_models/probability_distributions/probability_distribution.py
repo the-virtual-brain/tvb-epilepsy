@@ -92,7 +92,7 @@ class ProbabilityDistribution(object):
             params = self.pdf_params()
         self.__set_params__(**params)
         # params = self.__squeeze_parameters__(update=False, loc=loc, scale=scale, use=use)
-        self.__set_params__(**params)
+        # self.__set_params__(**params)
         self.__p_shape = self.__update_shape__(loc, scale)
         self.__p_size = shape_to_size(self.p_shape)
         self.n_params = len(self.pdf_params())
@@ -116,7 +116,7 @@ class ProbabilityDistribution(object):
 
     def __update_shape__(self, loc=0.0, scale=1.0):
         try:
-            shape = loc * scale
+            shape = loc * scale * np.ones(self.p_shape)
             for p in self.pdf_params().values():
                 shape *= p
             return self.p_shape
