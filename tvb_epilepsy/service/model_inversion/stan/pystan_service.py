@@ -61,17 +61,7 @@ class PyStanService(StanService):
             diagnostic_filepath = os.path.join(os.path.dirname(output_filepath), STAN_OUTPUT_OPTIONS["diagnostic_file"])
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
         self.fitmethod = kwargs.pop("method", self.fitmethod)
-        model_data = kwargs.pop("model_data", None)
-        if not (isinstance(model_data, dict)):
-            model_data = self.load_model_data_from_file()
-        # -1 for no debugging at all
-        # 0 for printing only scalar parameters
-        # 1 for printing scalar and vector parameters
-        # 2 for printing all (scalar, vector and matrix) parameters
-        model_data["DEBUG"] = debug
-        # > 0 for simulating without using the input observation data:
-        model_data["SIMULATE"] = simulate
-        model_data = sort_dict(model_data)
+        model_data = self.set_model_data(debug, simulate, **kwargs)
         self.assert_fitmethod()
         self.options.update(kwargs)
         self.logger.info("Model fitting with " + self.fitmethod + "...")
