@@ -1,6 +1,7 @@
 import os
 import h5py
 import numpy
+from tvb_epilepsy.base.utils.file_utils import change_filename_or_overwrite
 from tvb_epilepsy.io.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.vep.connectivity import ConnectivityH5Field
 from tvb_epilepsy.base.model.vep.sensors import SensorsH5Field
@@ -20,7 +21,7 @@ class H5Writer(object):
         :param connectivity: Connectivity object to be written in H5
         :param path: H5 path to be written
         """
-        h5_file = h5py.File(path, 'a', libver='latest')
+        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
         h5_file.create_dataset(ConnectivityH5Field.WEIGHTS, data=connectivity.weights)
         h5_file.create_dataset(ConnectivityH5Field.TRACTS, data=connectivity.tract_lengths)
@@ -45,7 +46,7 @@ class H5Writer(object):
         :param sensors: Sensors object to write in H5
         :param path: H5 path to be written
         """
-        h5_file = h5py.File(path, 'a', libver='latest')
+        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
         h5_file.create_dataset(SensorsH5Field.LABELS, data=sensors.labels)
         h5_file.create_dataset(SensorsH5Field.LOCATIONS, data=sensors.locations)
@@ -67,7 +68,7 @@ class H5Writer(object):
         :param surface: Surface object to write in H5
         :param path: H5 path to be written
         """
-        h5_file = h5py.File(path, 'a', libver='latest')
+        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
         h5_file.create_dataset(SurfaceH5Field.VERTICES, data=surface.vertices)
         h5_file.create_dataset(SurfaceH5Field.TRIANGLES, data=surface.triangles)
@@ -105,7 +106,7 @@ class H5Writer(object):
         :param hypothesis: DiseaseHypothesis object to write in H5
         :param path: H5 path to be written
         """
-        h5_file = h5py.File(path, 'a', libver='latest')
+        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
         h5_file.create_dataset("x0_values", data=hypothesis.x0_values)
         h5_file.create_dataset("e_values", data=hypothesis.e_values)
@@ -129,7 +130,7 @@ class H5Writer(object):
         :param model_configuration: ModelConfiguration object to write in H5
         :param path: H5 path to be written
         """
-        h5_file = h5py.File(path, 'a', libver='latest')
+        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
         datasets_dict, metadata_dict = self._determine_datasets_and_attributes(model_configuration)
 
@@ -149,7 +150,7 @@ class H5Writer(object):
         :param model_configuration_service: ModelConfigurationService object to write in H5
         :param path: H5 path to be written
         """
-        h5_file = h5py.File(path, 'a', libver='latest')
+        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
         datasets_dict, metadata_dict = self._determine_datasets_and_attributes(model_configuration_service)
 
@@ -169,7 +170,7 @@ class H5Writer(object):
         :param lsa_service: LSAService object to write in H5
         :param path: H5 path to be written
         """
-        h5_file = h5py.File(path, 'a', libver='latest')
+        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
         datasets_dict, metadata_dict = self._determine_datasets_and_attributes(lsa_service)
 
@@ -189,7 +190,7 @@ class H5Writer(object):
         :param model_inversion_service: ModelInversionService object to write in H5
         :param path: H5 path to be written
         """
-        h5_file = h5py.File(path, 'a', libver='latest')
+        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
         datasets_dict, metadata_dict = self._determine_datasets_and_attributes(model_inversion_service)
 
@@ -244,7 +245,7 @@ class H5Writer(object):
         :param dictionary: dictionary to write in H5
         :param path: H5 path to be written
         """
-        h5_file = h5py.File(path, 'a', libver='latest')
+        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
         for key, value in dictionary.iteritems():
             if isinstance(value, numpy.ndarray) and value.size > 0:
@@ -260,13 +261,13 @@ class H5Writer(object):
 
         h5_file.close()
 
-    #TODO: can this be visualized? should we keep groups?
+    # TODO: can this be visualized? should we keep groups?
     def write_simulation_settings(self, simulation_settings, path):
         """
         :param simulation_settings: SimulationSettings object to write in H5
         :param path: H5 path to be written
         """
-        h5_file = h5py.File(path, 'a', libver='latest')
+        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
         datasets_dict, metadata_dict = self._determine_datasets_and_attributes(simulation_settings)
 

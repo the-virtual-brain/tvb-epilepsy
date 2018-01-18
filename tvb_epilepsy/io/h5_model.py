@@ -1,4 +1,3 @@
-
 import os
 from collections import OrderedDict
 # from copy import deepcopy
@@ -54,13 +53,8 @@ class H5Model(object):
         """
         Store H5Model object to a hdf5 file
         """
-        final_path, overwrite = change_filename_or_overwrite(folder_name, file_name)
+        final_path = change_filename_or_overwrite(os.path.join(folder_name, file_name))
         # final_path = ensure_unique_file(folder_name, file_name)
-        if overwrite:
-            try:
-                os.remove(final_path)
-            except:
-                warning("\nFile to overwrite not found!")
         logger.info("Writing %s at: %s" % (self, final_path))
         h5_file = h5py.File(final_path, 'a', libver='latest')
         for attribute, field in self.datasets_dict.iteritems():
@@ -373,5 +367,3 @@ def read_h5_model(path):
     datasets_dict = sort_dict(datasets_dict)
     metadata_dict = sort_dict(metadata_dict)
     return H5Model(datasets_dict, metadata_dict)
-
-

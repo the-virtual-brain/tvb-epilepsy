@@ -1,10 +1,8 @@
 # File writing/reading and manipulations
 import os
 from datetime import datetime
-
 import h5py
 import numpy as np
-
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 
 
@@ -16,17 +14,26 @@ def ensure_unique_file(parent_folder, filename):
     return final_path
 
 
-def change_filename_or_overwrite(parent_folder, original_filename):
-    final_path = os.path.join(parent_folder, original_filename)
-    overwrite = False
-    while os.path.exists(final_path) and not(overwrite):
+def change_filename_or_overwrite(path, overwrite=False):
+    if overwrite:
+        if os.path.exists(path):
+            os.remove(path)
+        return path
+
+    parent_folder = os.path.dirname(path)
+    while os.path.exists(path):
         filename = raw_input("\n\nFile %s already exists. Enter a different name or press enter to overwrite file: "
-                             % final_path)
+                             % path)
         if filename == "":
             overwrite = True
-            filename = original_filename
-        final_path = os.path.join(parent_folder, filename)
-    return final_path, overwrite
+            break
+
+        path = os.path.join(parent_folder, filename)
+
+    if overwrite:
+        os.remove(path)
+
+    return path
 
 
 def print_metadata(h5_file, logger):

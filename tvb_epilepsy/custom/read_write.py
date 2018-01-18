@@ -123,16 +123,11 @@ def read_simulation_settings(path=os.path.join(PATIENT_VIRTUAL_HEAD, "ep", "sim_
 
 def write_ts(raw_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD, "ep"), filename="ts_from_python.h5",
              logger=logger):
-    path, overwrite = change_filename_or_overwrite(os.path.join(folder, filename))
+    path = change_filename_or_overwrite(os.path.join(folder, filename))
     # if os.path.exists(path):
     #     print "TS file %s already exists. Use a different name!" % path
     #     return
     logger.info("Writing a TS at:\n" + path)
-    if overwrite:
-        try:
-            os.remove(path)
-        except:
-            warning("\nFile to overwrite not found!")
     h5_file = h5py.File(path, 'a', libver='latest')
     write_metadata({KEY_TYPE: "TimeSeries"}, h5_file, KEY_DATE, KEY_VERSION)
     if isinstance(raw_data, dict):
@@ -162,7 +157,7 @@ def write_ts(raw_data, sampling_period, folder=os.path.join(PATIENT_VIRTUAL_HEAD
 
 def write_ts_epi(raw_data, sampling_period, lfp_data=None, folder=os.path.join(PATIENT_VIRTUAL_HEAD, "ep"),
                  filename="ts_from_python.h5", logger=logger):
-    path, overwrite = change_filename_or_overwrite(folder, filename)
+    path = change_filename_or_overwrite(os.path.join(folder, filename))
     # if os.path.exists(path):
     #     print "TS file %s already exists. Use a different name!" % path
     #     return
@@ -178,11 +173,6 @@ def write_ts_epi(raw_data, sampling_period, lfp_data=None, folder=os.path.join(P
         lfp_data = lfp_data.reshape((lfp_data.shape[0], lfp_data.shape[1], 1))
     else:
         raise_value_error("Invalid lfp_data 3D (time, regions, sv) expected", logger)
-    if overwrite:
-        try:
-            os.remove(path)
-        except:
-            warning("\nFile to overwrite not found!")
     h5_file = h5py.File(path, 'a', libver='latest')
     h5_file.create_dataset("/data", data=raw_data)
     h5_file.create_dataset("/lfpdata", data=lfp_data)
