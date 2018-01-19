@@ -9,8 +9,8 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
-from tvb_epilepsy.base.utils.plot_utils import plot_sim_results
 from tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
 from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
@@ -265,7 +265,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                                  hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
                                                                  sensors_list=head.sensorsSEEG)
                 # Plot results
-                plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, vois_ts_dict,
+                Plotter().plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, vois_ts_dict,
                                  head.sensorsSEEG, hpf_flag=True, trajectories_plot=trajectories_plot,
                                  spectral_raster_plot=spectral_raster_plot, log_scale=True)
                 # Optionally save results in mat files

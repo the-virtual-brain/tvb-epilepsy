@@ -14,7 +14,7 @@ from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.math_utils import weighted_vector_sum, curve_elbow_point
-from tvb_epilepsy.base.utils.plot_utils import plot_in_columns
+from tvb_epilepsy.plot.plotter import Plotter
 
 logger = initialize_logger(__name__)
 
@@ -174,7 +174,7 @@ class LSAService(object):
                 description += "first " + str(self.eigen_vectors_number) + " "
             description += "eigenvectors has been used"
 
-        return plot_in_columns(plot_dict_list, region_labels, width_ratios=[],
+        return Plotter().plot_in_columns(plot_dict_list, region_labels, width_ratios=[],
                                left_ax_focus_indices=disease_hypothesis.get_all_disease_indices(),
                                right_ax_focus_indices=disease_hypothesis.lsa_propagation_indices,
                                description=description, title=title, figure_name=fig_name,

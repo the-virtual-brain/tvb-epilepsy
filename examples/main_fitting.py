@@ -8,9 +8,9 @@ from tvb_epilepsy.base.constants.module_constants import TVB, CUSTOM
 from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.utils.plot_utils import plot_raster, plot_timeseries
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.model_inversion.sde_model_inversion_service import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
@@ -127,14 +127,15 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             labels = model_inversion.region_labels
         else:
             labels = model_inversion.sensors_labels
+        plotter = Plotter()
         if vois_ts_dict.get("signals", None) is not None:
             vois_ts_dict["signals"] -= vois_ts_dict["signals"].min()
             vois_ts_dict["signals"] /= vois_ts_dict["signals"].max()
-            plot_raster(vois_ts_dict["time"].flatten(), {'Target Signals': vois_ts_dict["signals"]},
+            plotter.plot_raster(vois_ts_dict["time"].flatten(), {'Target Signals': vois_ts_dict["signals"]},
                         time_units="ms", title=hyp.name + ' Target Signals raster',
                         special_idx=model_inversion.signals_inds, offset=1, labels=labels,
                         save_flag=True, show_flag=False, figure_dir=figure_dir)
-        plot_timeseries(time, {'Target Signals': signals},
+        plotter.plot_timeseries(time, {'Target Signals': signals},
                         time_units="ms", title=hyp.name + 'Target Signals ',
                         labels=labels[model_inversion.signals_inds],
                         save_flag=True, show_flag=False, figure_dir=figure_dir)

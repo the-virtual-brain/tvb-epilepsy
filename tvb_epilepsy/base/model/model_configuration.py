@@ -9,7 +9,7 @@ from tvb_epilepsy.base.constants.model_constants import X0_DEF, K_DEF, YC_DEF, I
     D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF
 from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, VERY_LARGE_SIZE, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, dicts_of_lists_to_lists_of_dicts
-from tvb_epilepsy.base.utils.plot_utils import plot_in_columns
+from tvb_epilepsy.plot.plotter import Plotter
 
 
 class ModelConfiguration(object):
@@ -91,7 +91,7 @@ class ModelConfiguration(object):
             regions_labels = np.array([str(ii) for ii in range(n_regions)])
         disease_indices = np.unique(np.concatenate((x0_indices, e_indices, disease_indices), axis=0)).tolist()
         plot_dict_list = self.prepare_for_plot(x0_indices, e_indices, disease_indices)
-        return plot_in_columns(plot_dict_list, regions_labels, width_ratios=[], left_ax_focus_indices=disease_indices,
+        return Plotter().plot_in_columns(plot_dict_list, regions_labels, width_ratios=[], left_ax_focus_indices=disease_indices,
                                right_ax_focus_indices=disease_indices, title=title, figure_name=figure_name,
                                show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,
                                figure_format=figure_format, figsize=figsize)

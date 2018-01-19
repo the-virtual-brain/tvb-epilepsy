@@ -9,10 +9,12 @@ from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds, compute_in_degree
-from tvb_epilepsy.base.utils.plot_utils import plot_regions2regions, save_figure, check_show, plot_vector
+from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
+from tvb_epilepsy.plot.plotter import Plotter
 
 
 class HeadService(object):
+    plotter = Plotter()
 
     def compute_nearest_regions_to_sensors(self, head, sensors=None, target_contacts=None, s_type=Sensors.TYPE_SEEG,
                                            sensors_id=0, n_regions=None, gain_matrix_th=None):
@@ -67,8 +69,8 @@ class HeadService(object):
         # plot connectivity
         pyplot.figure(figure_name + str(connectivity.number_of_regions), figsize)
         # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
-        plot_regions2regions(connectivity.normalized_weights, connectivity.region_labels, 121, "normalised weights")
-        plot_regions2regions(connectivity.tract_lengths, connectivity.region_labels, 122, "tract lengths")
+        self.plotter.plot_regions2regions(connectivity.normalized_weights, connectivity.region_labels, 121, "normalised weights")
+        self.plotter.plot_regions2regions(connectivity.tract_lengths, connectivity.region_labels, 122, "tract lengths")
         if save_flag:
             save_figure(figure_dir=figure_dir, figure_format=figure_format,
                         figure_name=figure_name.replace(" ", "_").replace("\t", "_"))
@@ -80,12 +82,12 @@ class HeadService(object):
                                  figsize=VERY_LARGE_SIZE, figure_name='HeadStats '):
         pyplot.figure("Head stats " + str(connectivity.number_of_regions), figsize=figsize)
         areas_flag = len(connectivity.areas) == len(connectivity.region_labels)
-        ax = plot_vector(compute_in_degree(connectivity.normalized_weights), connectivity.region_labels,
-                         111 + 10 * areas_flag,
-                         "w in-degree")
+        ax = self.plotter.plot_vector(compute_in_degree(connectivity.normalized_weights), connectivity.region_labels,
+                                      111 + 10 * areas_flag,
+                                      "w in-degree")
         ax.invert_yaxis()
         if len(connectivity.areas) == len(connectivity.region_labels):
-            ax = plot_vector(connectivity.areas, connectivity.region_labels, 122, "region areas")
+            ax = self.plotter.plot_vector(connectivity.areas, connectivity.region_labels, 122, "region areas")
             ax.invert_yaxis()
         if save_flag:
             save_figure(figure_dir=figure_dir, figure_format=figure_format,

@@ -4,12 +4,12 @@ from matplotlib import pyplot
 from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMAT, LARGE_SIZE, VERY_LARGE_SIZE, \
     SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
-from tvb_epilepsy.base.constants.model_inversion_constants import SIG_DEF, OBSERVATION_MODEL_DEF # , X1_MIN, X1_MAX, Z_MIN, Z_MAX
+from tvb_epilepsy.base.constants.model_inversion_constants import SIG_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path, sort_dict # isequal_string,
-from tvb_epilepsy.base.utils.plot_utils import plot_raster, plot_regions2regions, plot_trajectories, save_figure, \
-    check_show
+from tvb_epilepsy.base.utils.data_structures_utils import sort_dict  # isequal_string,
+from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
 from tvb_epilepsy.base.model.statistical_models.sde_statistical_model import SDEStatisticalModel
+from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
 from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_NVARS
 from tvb_epilepsy.service.model_inversion.ode_model_inversion_service import ODEModelInversionService
@@ -19,7 +19,7 @@ LOG = initialize_logger(__name__)
 
 class SDEModelInversionService(ODEModelInversionService):
 
-    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name=None, 
+    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name=None,
                  logger=LOG, **kwargs):
         super(SDEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
                                                        model_name, logger, **kwargs)
@@ -78,7 +78,8 @@ class SDEModelInversionService(ODEModelInversionService):
         time = time.flatten()
         sig_prior = statistical_model.parameters["sig"].mean / statistical_model.sig
         eps_prior = statistical_model.parameters["eps"].mean
-        plot_raster(time, sort_dict({'observation signals': signals,
+        plotter = Plotter()
+        plotter.plot_raster(time, sort_dict({'observation signals': signals,
                                      'observation signals fit': est[signals_str]}),
                     special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                     title=name + ": Observation signals vs fit rasterplot",
@@ -87,7 +88,7 @@ class SDEModelInversionService(ODEModelInversionService):
                                'observation signals fit'], offset=0.1,
                     labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                     figure_format=figure_format, figsize=VERY_LARGE_SIZE)
-        plot_raster(time, sort_dict({'x1': est[x1_str], 'z': est["z"]}),
+        plotter.plot_raster(time, sort_dict({'x1': est[x1_str], 'z': est["z"]}),
                     special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                     title=name + ": Hidden states fit rasterplot",
                     subtitles=['hidden state x1' '\ndynamic noise sig_prior = ' + str(sig_prior) +
@@ -102,7 +103,7 @@ class SDEModelInversionService(ODEModelInversionService):
             if len(x0) > statistical_model.n_active_regions:
                 x0 = x0[statistical_model.active_regions]
             title += "\n x0 fit: " + str(x0)
-            plot_trajectories({'x1': est[x1_str], 'z(t)': est['z']}, special_idx=seizure_indices,
+            plotter.plot_trajectories({'x1': est[x1_str], 'z(t)': est['z']}, special_idx=seizure_indices,
                               title=title, labels=self.region_labels, show_flag=show_flag, save_flag=save_flag,
                               figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
         # plot connectivity
@@ -111,9 +112,9 @@ class SDEModelInversionService(ODEModelInversionService):
         # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
         MC_prior = statistical_model.parameters["MC"].mean
         K_prior = statistical_model.parameters["K"].mean
-        plot_regions2regions(MC_prior, self.region_labels[statistical_model.active_regions], 121,
-                             "Prior Model Connectivity" + "\nglobal scaling prior: K = " + str(K_prior))
-        plot_regions2regions(est[mc_str], self.region_labels[statistical_model.active_regions], 122,
-                             "Posterior Model  Connectivity" + "\nglobal scaling fit: K = " + str(est["K"]))
+        plotter.plot_regions2regions(MC_prior, self.region_labels[statistical_model.active_regions], 121,
+                                     "Prior Model Connectivity" + "\nglobal scaling prior: K = " + str(K_prior))
+        plotter.plot_regions2regions(est[mc_str], self.region_labels[statistical_model.active_regions], 122,
+                                     "Posterior Model  Connectivity" + "\nglobal scaling fit: K = " + str(est["K"]))
         save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
         check_show(show_flag=show_flag)
