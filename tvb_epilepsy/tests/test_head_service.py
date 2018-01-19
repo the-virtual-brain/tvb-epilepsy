@@ -1,19 +1,17 @@
 import os
 import numpy
-from tvb_epilepsy.base.constants.configurations import FOLDER_LOGS, FOLDER_RES, FOLDER_FIGURES, DATA_TEST
+from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
-from tvb_epilepsy.io.h5_reader import H5Reader
-from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.head_service import HeadService
+from tvb_epilepsy.base.constants.configurations import FOLDER_LOGS, FOLDER_RES, FOLDER_FIGURES, DATA_TEST
 
 head_dir = "head2"
 
 
 class TestHeadService():
     head_service = HeadService()
-    plotter = Plotter()
 
     @classmethod
     def setup_class(cls):
@@ -29,23 +27,6 @@ class TestHeadService():
         head = Head(connectivity, cort_surface, sensorsSEEG=seeg_sensors)
 
         return head
-
-    def test_plot_head(self):
-        head = self._prepare_dummy_head()
-        # TODO: this filenames may change because they are composed inside the plotting functions
-        filename1 = "Connectivity_.png"
-        filename2 = "HeadStats.png"
-        filename3 = "1_-_SEEG_-_Projection.png"
-
-        assert not os.path.exists(os.path.join(FOLDER_FIGURES, filename1))
-        assert not os.path.exists(os.path.join(FOLDER_FIGURES, filename2))
-        assert not os.path.exists(os.path.join(FOLDER_FIGURES, filename3))
-
-        self.plotter.plot_head(head, save_flag=True, show_flag=False, figure_dir=FOLDER_FIGURES)
-
-        assert os.path.exists(os.path.join(FOLDER_FIGURES, filename1))
-        assert os.path.exists(os.path.join(FOLDER_FIGURES, filename2))
-        assert os.path.exists(os.path.join(FOLDER_FIGURES, filename3))
 
     def test_select_sensors_power(self):
         head = self._prepare_dummy_head()
