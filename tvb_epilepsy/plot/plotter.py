@@ -708,10 +708,10 @@ class Plotter(BasePlotter):
                           figure_format=FIG_FORMAT):
 
         if len(x) < 1:
-            x = linspace_broadcast(self.scipy(self.loc, self.scale).ppf(0.01),
-                                       self.scipy(self.loc, self.scale).ppf(0.99), 100)
+            x = linspace_broadcast(distribution.scipy(distribution.loc, distribution.scale).ppf(0.01),
+                                   distribution.scipy(distribution.loc, distribution.scale).ppf(0.99), 100)
         if x is not None:
-            pdf = self.scipy(loc, scale).pdf(x)
+            pdf = distribution.scipy(loc, scale).pdf(x)
             if ax is None:
                 _, ax = pyplot.subplots(1, 1)
             for ip, (xx, pp) in enumerate(zip(x.T, pdf.T)):
