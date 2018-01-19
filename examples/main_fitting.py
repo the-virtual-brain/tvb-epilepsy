@@ -63,7 +63,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
                                                                   active_regions_th=0.1, reset=True)
         statistical_model.plot("Statistical Model")
-        decimate = 4
+        decimate = 1
         cut_signals_tails = (6, 6)
         if os.path.isfile(EMPIRICAL):
             # ---------------------------------------Get empirical data----------------------------------------------
@@ -175,7 +175,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             model_data = convert_to_vep_stan(model_data, statistical_model)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        est, fit = stan_service.fit(debug=1, simulate=0, model_data=model_data,
+        est, fit = stan_service.fit(debug=2, simulate=0, model_data=model_data,
                                     merge_outputs=False, chains=1, refresh=1, **kwargs)
         writer.write_generic(est, results_dir, lsa_hypothesis.name + "_fit_est.h5")
         est = ensure_list(est)
