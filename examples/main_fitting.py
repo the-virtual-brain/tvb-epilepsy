@@ -62,7 +62,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         statistical_model = model_inversion.generate_statistical_model(observation_model="lfp_power") # observation_expression="lfp"
         statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
                                                                   active_regions_th=0.1, reset=True)
-        statistical_model.plot("Statistical Model")
+        plotter = Plotter()
+        plotter.plot_statistical_model(statistical_model, "Statistical Model")
         decimate = 4
         cut_signals_tails = (6, 6)
         if os.path.isfile(EMPIRICAL):
@@ -127,7 +128,6 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             labels = model_inversion.region_labels
         else:
             labels = model_inversion.sensors_labels
-        plotter = Plotter()
         if vois_ts_dict.get("signals", None) is not None:
             vois_ts_dict["signals"] -= vois_ts_dict["signals"].min()
             vois_ts_dict["signals"] /= vois_ts_dict["signals"].max()

@@ -15,7 +15,7 @@ from tvb_epilepsy.base.computations.calculations_utils import calc_fz, calc_fx1,
     calc_x0_val_to_model_x0
 from tvb_epilepsy.base.constants.model_constants import TAU0_DEF, TAU1_DEF, X1_EQ_CR_DEF, X1_DEF, X0_CR_DEF, X0_DEF
 from tvb_epilepsy.base.constants.configurations import SHOW_FLAG, FOLDER_FIGURES, FIG_FORMAT, LARGE_SIZE, MOUSEHOOVER, \
-    VERY_LARGE_SIZE, SAVE_FLAG, FIG_SIZE
+    VERY_LARGE_SIZE, SAVE_FLAG, FIG_SIZE, VERY_LARGE_PROTRAIT
 
 
 class Plotter(BasePlotter):
@@ -113,6 +113,17 @@ class Plotter(BasePlotter):
                     for s in sensors_list:
                         count = self._plot_sensors(s, head.connectivity.region_labels, count, show_flag,
                                                    save_flag, figure_dir, figure_format)
+
+    def plot_statistical_model(self, statistical_model, figure_name="", figure_dir=FOLDER_FIGURES, save_flag=SAVE_FLAG,
+                               show_flag=SHOW_FLAG,
+                               figure_format=FIG_FORMAT):
+        _, ax = pyplot.subplots(len(statistical_model.parameters), 2, figsize=VERY_LARGE_PROTRAIT)
+        for ip, p in enumerate(statistical_model.parameters.values()):
+            ax[ip] = p.plot(ax=ax[ip], lgnd=False)
+            # ax.append(p.plot_stochastic_parameter(lgnd=False))
+        self._save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
+        self._check_show(show_flag)
+        return ax, pyplot.gcf()
 
     def plot_timeseries(self, time, data_dict, time_units="ms", special_idx=None, title='Time Series', figure_name=None,
                         labels=None, show_flag=SHOW_FLAG, save_flag=False, figure_dir=FOLDER_FIGURES,
