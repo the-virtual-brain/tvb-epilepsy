@@ -703,10 +703,8 @@ class Plotter(BasePlotter):
         self._save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
         self._check_show(show_flag=show_flag)
 
-    def plot_distribution(self, distribution, loc=0.0, scale=1.0, x=numpy.array([]), ax=None, linestyle="-", lgnd=True,
-                          figure_name="", figure_dir=FOLDER_FIGURES, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
-                          figure_format=FIG_FORMAT):
-
+    def _prepare_distribution_axes(self, distribution, loc=0.0, scale=1.0, x=numpy.array([]), ax=None, linestyle="-",
+                                   lgnd=True):
         if len(x) < 1:
             x = linspace_broadcast(distribution.scipy(distribution.loc, distribution.scale).ppf(0.01),
                                    distribution.scipy(distribution.loc, distribution.scale).ppf(0.99), 100)
@@ -716,7 +714,6 @@ class Plotter(BasePlotter):
                 _, ax = pyplot.subplots(1, 1)
             for ip, (xx, pp) in enumerate(zip(x.T, pdf.T)):
                 if xx.shape != pp.shape:
-                    # TODO: Have helpful messages
                     print("WTF?")
                 ax.plot(xx.T, pp.T, linestyle=linestyle, linewidth=1, label=str(ip), alpha=0.5)
             if lgnd:
@@ -725,7 +722,39 @@ class Plotter(BasePlotter):
         else:
             raise_value_error("Distribution parameters do not broadcast!")
 
+    def plot_distribution(self, distribution, loc=0.0, scale=1.0, x=numpy.array([]), ax=None, linestyle="-", lgnd=True,
+                          figure_name="", figure_dir=FOLDER_FIGURES, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
+                          figure_format=FIG_FORMAT):
+        ax = self._prepare_distribution_axes(loc, scale, x, ax, linestyle, lgnd)
         ax.set_title(distribution.type + " distribution")
+        self._save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
+        self._check_show(show_flag)
+        return ax, pyplot.gcf()
+
+    def _prepare_parameter_axes(self, parameter, x=numpy.array([]), ax=None, lgnd=True):
+        if ax is None:
+            _, ax = pyplot.subplots(1, 2)
+        if len(x) < 1:
+            x = linspace_broadcast(
+                numpy.maximum(parameter.low, parameter.scipy(parameter.loc, parameter.scale).ppf(0.01)),
+                numpy.minimum(parameter.high, parameter.scipy(parameter.loc, parameter.scale).ppf(0.99)), 100)
+        if x is not None:
+            plotter = Plotter()
+            ax[0] = plotter._prepare_distribution_axes(parameter, parameter.loc, parameter.scale, x, ax[0], "-", lgnd)
+            ax[0].set_title(parameter.name + ": " + parameter.type + " distribution")
+            ax[1] = plotter._prepare_distribution_axes(parameter, 0.0, 1.0, (x - parameter.loc) / parameter.scale,
+                                                       ax[1], "--", lgnd)
+            ax[1].set_title(parameter.name + "_star: " + parameter.type + " distribution")
+            return ax
+        else:
+            raise_value_error("Stochastic parameter's parameters do not broadcast!")
+
+    def plot_stochastic_parameter(self, parameter, x=numpy.array([]), ax=None, lgnd=True, figure_name="",
+                                  figure_dir=FOLDER_FIGURES,
+                                  save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_format=FIG_FORMAT):
+        ax = self._prepare_parameter_axes(parameter, x, ax, lgnd)
+        if len(figure_name) < 1:
+            figure_name = "parameter_" + parameter.name
         self._save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
         self._check_show(show_flag)
         return ax, pyplot.gcf()
