@@ -34,9 +34,8 @@ class Plotter(BasePlotter):
         self._check_show(show_flag=show_flag)
 
     def _plot_connectivity_stats(self, connectivity, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
-                                 figure_dir=FOLDER_FIGURES,
-                                 figure_format=FIG_FORMAT,
-                                 figsize=VERY_LARGE_SIZE, figure_name='HeadStats '):
+                                 figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE,
+                                 figure_name='HeadStats '):
         pyplot.figure("Head stats " + str(connectivity.number_of_regions), figsize=figsize)
         areas_flag = len(connectivity.areas) == len(connectivity.region_labels)
         ax = self.plot_vector(compute_in_degree(connectivity.normalized_weights), connectivity.region_labels,
@@ -114,9 +113,42 @@ class Plotter(BasePlotter):
                         count = self._plot_sensors(s, head.connectivity.region_labels, count, show_flag,
                                                    save_flag, figure_dir, figure_format)
 
+    def plot_model_configuration(self, model_configuration, n_regions=None, regions_labels=[], x0_indices=[],
+                                 e_indices=[], disease_indices=[], title="Model Configuration Overview", figure_name='',
+                                 show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
+                                 figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE):
+        if n_regions == None:
+            n_regions = len(model_configuration.x0_values)
+        if regions_labels == []:
+            regions_labels = numpy.array([str(ii) for ii in range(n_regions)])
+        disease_indices = numpy.unique(numpy.concatenate((x0_indices, e_indices, disease_indices), axis=0)).tolist()
+        plot_dict_list = model_configuration.prepare_for_plot(x0_indices, e_indices, disease_indices)
+        return self.plot_in_columns(plot_dict_list, regions_labels, width_ratios=[],
+                                    left_ax_focus_indices=disease_indices, right_ax_focus_indices=disease_indices,
+                                    title=title, figure_name=figure_name, show_flag=show_flag, save_flag=save_flag,
+                                    figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
+
+    def pair_plots(self, csv, keys, skip=0):
+        import pylab as pl
+        n = len(keys)
+        if isinstance(csv, dict):
+            csv = [csv]  # following assumes list of chains' results
+        for i, key_i in enumerate(keys):
+            for j, key_j in enumerate(keys):
+                pl.subplot(n, n, i * n + j + 1)
+                for csvi in csv:
+                    if i == j:
+                        pl.hist(csvi[key_i][skip:], 20, log=True)
+                    else:
+                        pl.plot(csvi[key_j][skip:], csvi[key_i][skip:], '.')
+                if i == 0:
+                    pl.title(key_j)
+                if j == 0:
+                    pl.ylabel(key_i)
+        pl.tight_layout()
+
     def plot_statistical_model(self, statistical_model, figure_name="", figure_dir=FOLDER_FIGURES, save_flag=SAVE_FLAG,
-                               show_flag=SHOW_FLAG,
-                               figure_format=FIG_FORMAT):
+                               show_flag=SHOW_FLAG, figure_format=FIG_FORMAT):
         _, ax = pyplot.subplots(len(statistical_model.parameters), 2, figsize=VERY_LARGE_PROTRAIT)
         for ip, p in enumerate(statistical_model.parameters.values()):
             ax[ip] = p.plot(ax=ax[ip], lgnd=False)
@@ -179,9 +211,8 @@ class Plotter(BasePlotter):
         self._check_show(show_flag)
 
     def plot_raster(self, time, data_dict, time_units="ms", special_idx=None, title='Time Series', subtitles=[],
-                    offset=1.0,
-                    figure_name=None, labels=None, show_flag=SHOW_FLAG, save_flag=False, figure_dir=FOLDER_FIGURES,
-                    figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE):
+                    offset=1.0, figure_name=None, labels=None, show_flag=SHOW_FLAG, save_flag=False,
+                    figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE):
         pyplot.figure(title, figsize=figsize)
         no_rows = len(data_dict)
         lines = []
@@ -296,10 +327,9 @@ class Plotter(BasePlotter):
         self._check_show(show_flag)
 
     def plot_spectral_analysis_raster(self, time, data, time_units="ms", freq=None, special_idx=None,
-                                      title='Spectral Analysis',
-                                      figure_name=None, labels=None, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
-                                      figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE,
-                                      **kwargs):
+                                      title='Spectral Analysis', figure_name=None, labels=None, show_flag=SHOW_FLAG,
+                                      save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
+                                      figsize=VERY_LARGE_SIZE, **kwargs):
         if time_units in ("ms", "msec"):
             fs = 1000.0
         else:
@@ -372,10 +402,9 @@ class Plotter(BasePlotter):
         self._check_show(show_flag)
         return fig, ax, img, line, time, freq, stf, psd
 
-    def plot_sim_results(self, model, seizure_indices, res, sensorsSEEG=None, hpf_flag=False,
-                         trajectories_plot=False, spectral_raster_plot=False, region_labels=None,
-                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
-                         **kwargs):
+    def plot_sim_results(self, model, seizure_indices, res, sensorsSEEG=None, hpf_flag=False, trajectories_plot=False,
+                         spectral_raster_plot=False, region_labels=None, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
+                         figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, **kwargs):
         if isinstance(model, EpileptorDP2D):
             self.plot_timeseries(res['time'], {'x1': res['x1'], 'z(t)': res['z']},
                                  time_units=res.get('time_units', "ms"),
@@ -624,12 +653,9 @@ class Plotter(BasePlotter):
         self._check_show(show_flag)
 
     def plot_fit_results(self, est, statistical_model, signals, region_labels, x0_values, time=None,
-                         seizure_indices=None,
-                         trajectories_plot=False,
-                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
-                         x1_str="x1", x0_str="x0", mc_str="MC",
-                         signals_str="fit_signals", sig_str="sig", eps_str="eps",
-                         **kwargs):
+                         seizure_indices=None, trajectories_plot=False, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
+                         figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, x1_str="x1", x0_str="x0", mc_str="MC",
+                         signals_str="fit_signals", sig_str="sig", eps_str="eps", **kwargs):
         name = statistical_model.name + kwargs.get("_id_est", "")
         if time is None:
             time = numpy.array(range(signals.shape[0]))

@@ -81,17 +81,3 @@ class ModelConfiguration(object):
         plot_types = ["vector", "vector", "vector", "vector", "regions2regions"]
         return dicts_of_lists_to_lists_of_dicts({"name": names, "data": data, "focus_indices": indices,
                                                  "plot_type": plot_types})
-
-    def plot(self, n_regions=None, regions_labels=[], x0_indices=[], e_indices=[], disease_indices=[],
-             title="Model Configuration Overview", figure_name='', show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
-             figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE):
-        if n_regions == None:
-            n_regions = len(self.x0_values)
-        if regions_labels == []:
-            regions_labels = np.array([str(ii) for ii in range(n_regions)])
-        disease_indices = np.unique(np.concatenate((x0_indices, e_indices, disease_indices), axis=0)).tolist()
-        plot_dict_list = self.prepare_for_plot(x0_indices, e_indices, disease_indices)
-        return Plotter().plot_in_columns(plot_dict_list, regions_labels, width_ratios=[], left_ax_focus_indices=disease_indices,
-                               right_ax_focus_indices=disease_indices, title=title, figure_name=figure_name,
-                               show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,
-                               figure_format=figure_format, figsize=figsize)
