@@ -9,10 +9,10 @@ from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.utils.math_utils import compute_in_degree
 from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D, EpileptorDPrealistic
-from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string, sort_dict
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string, sort_dict, linspace_broadcast
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_y1, def_x1lin
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz, calc_fx1, calc_fx1_2d_taylor, \
-    calc_x0_val_to_model_x0
+    calc_x0_val_to_model_x0, raise_value_error
 from tvb_epilepsy.base.constants.model_constants import TAU0_DEF, TAU1_DEF, X1_EQ_CR_DEF, X1_DEF, X0_CR_DEF, X0_DEF
 from tvb_epilepsy.base.constants.configurations import SHOW_FLAG, FOLDER_FIGURES, FIG_FORMAT, LARGE_SIZE, MOUSEHOOVER, \
     VERY_LARGE_SIZE, SAVE_FLAG, FIG_SIZE, VERY_LARGE_PROTRAIT
@@ -702,3 +702,30 @@ class Plotter(BasePlotter):
                                   "Posterior Model  Connectivity" + "\nglobal scaling fit: K = " + str(est["K"]))
         self._save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
         self._check_show(show_flag=show_flag)
+
+    def plot_distribution(self, distribution, loc=0.0, scale=1.0, x=numpy.array([]), ax=None, linestyle="-", lgnd=True,
+                          figure_name="", figure_dir=FOLDER_FIGURES, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
+                          figure_format=FIG_FORMAT):
+
+        if len(x) < 1:
+            x = linspace_broadcast(self.scipy(self.loc, self.scale).ppf(0.01),
+                                       self.scipy(self.loc, self.scale).ppf(0.99), 100)
+        if x is not None:
+            pdf = self.scipy(loc, scale).pdf(x)
+            if ax is None:
+                _, ax = pyplot.subplots(1, 1)
+            for ip, (xx, pp) in enumerate(zip(x.T, pdf.T)):
+                if xx.shape != pp.shape:
+                    # TODO: Have helpful messages
+                    print("WTF?")
+                ax.plot(xx.T, pp.T, linestyle=linestyle, linewidth=1, label=str(ip), alpha=0.5)
+            if lgnd:
+                pyplot.legend()
+            return ax
+        else:
+            raise_value_error("Distribution parameters do not broadcast!")
+
+        ax.set_title(distribution.type + " distribution")
+        self._save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
+        self._check_show(show_flag)
+        return ax, pyplot.gcf()
