@@ -5,6 +5,7 @@ from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
 from tvb_epilepsy.io.h5_reader import H5Reader
+from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.head_service import HeadService
 
 head_dir = "head2"
@@ -12,6 +13,7 @@ head_dir = "head2"
 
 class TestHeadService():
     head_service = HeadService()
+    plotter = Plotter()
 
     @classmethod
     def setup_class(cls):
@@ -39,7 +41,7 @@ class TestHeadService():
         assert not os.path.exists(os.path.join(FOLDER_FIGURES, filename2))
         assert not os.path.exists(os.path.join(FOLDER_FIGURES, filename3))
 
-        self.head_service.plot_head(head, save_flag=True, show_flag=False, figure_dir=FOLDER_FIGURES)
+        self.plotter.plot_head(head, save_flag=True, show_flag=False, figure_dir=FOLDER_FIGURES)
 
         assert os.path.exists(os.path.join(FOLDER_FIGURES, filename1))
         assert os.path.exists(os.path.join(FOLDER_FIGURES, filename2))

@@ -16,7 +16,6 @@ from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysi
 from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
     compute_seeg_and_write_ts_h5_file
 from tvb_epilepsy.base.constants.model_constants import VOIS
-from tvb_epilepsy.service.head_service import HeadService
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 
@@ -45,8 +44,8 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     writer = H5Writer()
     logger.info("Reading from: " + data_folder)
     head = reader.read_head(data_folder)
-    head_service = HeadService()
-    head_service.plot_head(head)
+    plotter = Plotter()
+    plotter.plot_head(head)
     if test_write_read:
         writer.write_head(head, os.path.join(FOLDER_RES, "Head"))
     # --------------------------Hypothesis definition-----------------------------------
@@ -159,7 +158,6 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                      os.path.join(FOLDER_RES, hyp.name + "_ModelConfig.h5")),
                                                  logger=logger)))
         # Plot nullclines and equilibria of model configuration
-        plotter = Plotter()
         plotter.plot_state_space(model_configuration, head.connectivity.region_labels,
                                  special_idx=disease_indices, model="6d", zmode="lin",
                                  figure_name=hyp.name + "_StateSpace")
