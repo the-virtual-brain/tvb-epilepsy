@@ -181,9 +181,10 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         writer.write_generic(est, results_dir, lsa_hypothesis.name + "_fit_est.h5")
         est = ensure_list(est)
         for id_est, this_est in enumerate(est):
-            model_inversion.plot_fit_results(this_est, statistical_model, signals, time=None,
-                                             seizure_indices=lsa_hypothesis.get_regions_disease(),
-                                             trajectories_plot=True, id_est=str(id_est))
+            plotter.plot_fit_results(this_est, statistical_model, signals, model_inversion.region_labels,
+                                     model_inversion.x0_values, time=None,
+                                     seizure_indices=lsa_hypothesis.get_regions_disease(), trajectories_plot=True,
+                                     id_est=str(id_est))
             # -------------------------- Reconfigure model after fitting:---------------------------------------------------
             fit_model_configuration_service = \
                 ModelConfigurationService(hyp.number_of_regions, K=this_est['K'] * hyp.number_of_regions)
@@ -200,11 +201,11 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                              os.path.join(results_dir, hyp_fit.name + "_ModelConfig.h5"))
 
             # Plot nullclines and equilibria of model configuration
-            model_configuration_service.plot_state_space(model_configuration_fit,
-                                                         model_configuration_service.region_labels,
-                                                         special_idx=statistical_model.active_regions,
-                                                         model="6d", zmode="lin",
-                                                         figure_name=hyp_fit.name + "_Nullclines and equilibria")
+            plotter.plot_state_space(model_configuration_fit,
+                                     model_configuration_service.region_labels,
+                                     special_idx=statistical_model.active_regions,
+                                     model="6d", zmode="lin",
+                                     figure_name=hyp_fit.name + "_Nullclines and equilibria")
         print("Done!")
 
 
