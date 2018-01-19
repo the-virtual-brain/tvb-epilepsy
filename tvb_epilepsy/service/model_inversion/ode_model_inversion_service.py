@@ -276,8 +276,11 @@ class ODEModelInversionService(ModelInversionService):
         active_regions_flag = np.zeros((statistical_model.n_regions,), dtype="i")
         active_regions_flag[statistical_model.active_regions] = 1
         if gain_matrix is None:
-            gain_matrix = self.gain_matrix
-        mixing = deepcopy(gain_matrix)
+            if statistical_model.observation_model.find("seeg") >= 0:
+                gain_matrix = self.gain_matrix
+                mixing = deepcopy(gain_matrix)
+            else:
+                mixing = np.ones((statistical_model.n_regions, statistical_model.n_regions))
         if mixing.shape[0] > len(self.signals_inds):
             mixing = mixing[self.signals_inds]
         SC = self.get_SC()
