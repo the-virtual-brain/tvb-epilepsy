@@ -109,7 +109,7 @@ class ODEModelInversionService(ModelInversionService):
         if len(manual_selection) > 0:
             self.signals_inds = manual_selection
         if isinstance(target_data, dict):
-            signals = target_data.get("signals", target_data.get("target_data", None))
+            signals = np.array(target_data.get("signals", target_data.get("target_data", None)))
         if len(self.signals_inds) < signals.shape[1]:
             signals = signals[:, self.signals_inds]
         self.observation_shape = signals.shape
@@ -121,13 +121,13 @@ class ODEModelInversionService(ModelInversionService):
         self.data_type = "lfp"
         if statistical_model.observation_model.find("seeg") >= 0:
             self.data_type = "seeg"
-            signals = extract_dict_stringkeys(sort_dict(target_data), "SEEG",
-                                              modefun="find", break_after=1)
+            signals = np.array(extract_dict_stringkeys(sort_dict(target_data), "SEEG",
+                                              modefun="find", break_after=1))
             if len(signals) > 0:
                 signals = signals.values()[0]
                 self.signals_inds = range(self.gain_matrix.shape[0])
             else:
-                signals = target_data.get("lfp", target_data["x1"])
+                signals = np.array(target_data.get("lfp", target_data["x1"]))
                 signals = (np.dot(self.gain_matrix[:, self.signals_inds], signals.T)).T
         else:
             # if statistical_model.observation_expression == "x1z_offset":
@@ -138,8 +138,8 @@ class ODEModelInversionService(ModelInversionService):
             #     # TODO: a better normalization
             #     signals = (target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T / 2.0
             # else: # statistical_models.observation_expression == "lfp"
-            signals = target_data.get("lfp", target_data["x1"])
-        target_data["signals"] = signals
+            signals = np.array(target_data.get("lfp", target_data["x1"]))
+        target_data["signals"] = np.array(signals)
         manual_selection = kwargs.get("manual_selection", [])
         if len(manual_selection) > 0:
             self.signals_inds = manual_selection
