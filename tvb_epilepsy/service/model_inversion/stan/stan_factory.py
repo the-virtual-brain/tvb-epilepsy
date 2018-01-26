@@ -1,16 +1,17 @@
 import os
 from collections import OrderedDict
 import numpy as np
+from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import sort_dict, isequal_string
 
 STAN_STATIC_OPTIONS = sort_dict({"int_time": 2 * np.pi})  # int_time > 0
 
 STAN_NUTS_OPTIONS = sort_dict({"max_depth": 10})  # int > 0
 
-STAN_HMC_OPTIONS = sort_dict({"engine": "nuts",
-                              "metric": "diag_e",     # others: "unit_e", "dense_e"
+STAN_HMC_OPTIONS = sort_dict({"metric": "diag_e",     # others: "unit_e", "dense_e"
                               "stepsize": 1,          # stepsize > 0
                               "stepsize_jitter": 0})  # 0 <= stepsize_jitter <= 1
+STAN_HMC_OPTIONS.update({"engine": "nuts"}) # "static"and
 
 STAN_SAMPLE_ADAPT_OPTIONS = sort_dict({"engaged": 1,       # 0, 1
                                        "gamma": 0.05,      # gamma > 0
@@ -24,8 +25,8 @@ STAN_SAMPLE_ADAPT_OPTIONS = sort_dict({"engaged": 1,       # 0, 1
 STAN_SAMPLE_OPTIONS = sort_dict({"num_samples": 1000,  # num_samples >= 0
                                  "num_warmup": 1000,   # warmup >= 0
                                  "save_warmup": 0,     # 0, 1
-                                 "thin": 1,            # thin > 0
-                                 "algorithm": "hmc"})  # "hmc", "fixed_param"
+                                 "thin": 1})   # thin > 0
+STAN_SAMPLE_OPTIONS.update({"algorithm": "hmc"})   # "hmc", "fixed_param"
 
 STAN_BFGS_OPTIONS = sort_dict({"init_alpha": 0.001,      # init_alpha >= 0
                                "tol_obj": 10 ** -12,     # tol_obj >= 0
@@ -35,9 +36,9 @@ STAN_BFGS_OPTIONS = sort_dict({"init_alpha": 0.001,      # init_alpha >= 0
                                "tol_param": 10 ** -8,    # tol_param >= 0
                                "history_size": 5})       # int > 0
 
-STAN_OPTIMIZE_OPTIONS = sort_dict({"algorithm": "lbfgs",   # others: "bfgs", "newton"
-                                   "iter": 2000,           # int > 0
+STAN_OPTIMIZE_OPTIONS = sort_dict({"iter": 2000,           # int > 0
                                    "save_iterations": 0})  # 0, 1
+STAN_OPTIMIZE_OPTIONS.update({"algorithm": "lbfgs"})   # others: "bfgs", "newton"
 
 STAN_VARIATIONAL_ADAPT_OPTIONS = sort_dict({"engaged": 1,             # 0, 1
                                             "iter": 50,               # int > 0
@@ -45,11 +46,11 @@ STAN_VARIATIONAL_ADAPT_OPTIONS = sort_dict({"engaged": 1,             # 0, 1
                                             "eval_elbo": 100,         # int > 0
                                             "output_samples": 1000})  # int > 0
 
-STAN_VARIATIONAL_OPTIONS = sort_dict({"algorithm": "meanfield",  # or "fullrank"
-                                      "iter": 10000,             # int > 0
+STAN_VARIATIONAL_OPTIONS = sort_dict({"iter": 10000,             # int > 0
                                       "grad_samples": 1,         # int > 0
                                       "elbo_samples": 100,       # int > 0
                                       "eta": 1.0})               # eta > 0
+STAN_VARIATIONAL_OPTIONS.update({"algorithm": "meanfield"})    # or "fullrank"
 
 STAN_DIAGNOSE_TEST_GRADIENT_OPTIONS = sort_dict({"epsilon": 10 ** -6,  # epsilon > 0
                                                  "error": 10 ** -6})   # error > 0
@@ -101,17 +102,15 @@ def generate_cmdstan_fit_command(fitmethod, options, model_path, model_data_path
     command = model_path
     if isequal_string(fitmethod, "sample"):
         command += " method=sample"' \\' + "\n"
-        command += "\t\talgorithm=" + options["algorithm"] + ' \\' + "\n"
+        for option in STAN_SAMPLE_OPTIONS.keys():
+            command += "\t\t" + option + "=" + str(options[option]) + ' \\' + "\n"
         if isequal_string(options["algorithm"], "hmc"):
-            command += "\t\t\t\tengine=" + options["engine"] + ' \\' + "\n"
+            for option in STAN_HMC_OPTIONS.keys():
+                command += "\t\t\t\t" + option + "=" + str(options[option]) + ' \\' + "\n"
             if isequal_string(options["engine"], "nuts"):
                 command += "\t\t\t\t\t\tmax_depth=" + str(options["max_depth"]) + ' \\' + "\n"
             elif isequal_string(options["engine"], "static"):
                 command += "\t\t\t\t\t\tint_time=" + str(options["int_time"]) + ' \\' + "\n"
-            hmc_options = dict(STAN_HMC_OPTIONS)
-            del hmc_options["engine"]
-            for option in STAN_HMC_OPTIONS.keys():
-                command += "\t\t\t\t" + option + "=" + str(options[option]) + ' \\' + "\n"
     elif isequal_string(fitmethod, "variational"):
         command += " method=variational"' \\' + "\n"
         for option in STAN_VARIATIONAL_OPTIONS.keys():
@@ -119,7 +118,8 @@ def generate_cmdstan_fit_command(fitmethod, options, model_path, model_data_path
             command += "\t\t\t\t" + option + "=" + str(options[option]) + ' \\' + "\n"
     elif isequal_string(fitmethod, "optimize"):
         command += " method=optimize"' \\' + "\n"
-        command += "\t\talgorithm=" + options["algorithm"] + ' \\' + "\n"
+        for option in STAN_OPTIMIZE_OPTIONS.keys():
+            command += "\t\t" + option + "=" + str(options[option]) + ' \\' + "\n"
         if (options["algorithm"].find("bfgs") >= 0):
             for option in STAN_BFGS_OPTIONS.keys():
                 command += "\t\t\t\t" + option + "=" + str(options[option]) + ' \\' + "\n"
