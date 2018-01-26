@@ -112,67 +112,29 @@ class StanService(object):
             self.logger.info("Trying to compile model from file: " + str(self.model_code_path) + str("!"))
             self.compile_stan_model(save_model=kwargs.get("save_model", True), **kwargs)
 
-    def read_output_csv(self, output_filepath, **kwargs):
-        csvs = parse_csv(output_filepath.replace(".csv", "*"), merge=kwargs.pop("merge_outputs", False))
+    def read_output_samples(self, output_filepath, **kwargs):
+        samples = ensure_list(parse_csv(output_filepath.replace(".csv", "*"), merge=kwargs.pop("merge_outputs", False)))
+        if len(samples) == 1:
+            return samples[0]
+        return samples
+
+    def compute_estimates_from_samples(self, samples):
         ests = []
-        for csv in ensure_list(csvs):
+        for chain_samples in ensure_list(samples):
             est = {}
-            for pkey, pval in csv.iteritems():
+            for pkey, pval in chain_samples.iteritems():
                 try:
-                    est[pkey + "_s"] = csv[pkey]
-                    est[pkey + "_low"], est[pkey], est[pkey + "_std"] = describe(csv[pkey])[1:4]
+                    est[pkey + "_low"], est[pkey], est[pkey + "_std"] = describe(chain_samples[pkey])[1:4]
                     est[pkey + "_high"] = est[pkey + "_low"][1]
                     est[pkey + "_low"] = est[pkey + "_low"][0]
                     est[pkey + "_std"] = np.sqrt(est[pkey + "_std"])
                     for skey in [pkey, pkey + "_low", pkey + "_high", pkey + "_std"]:
                         est[skey] = np.squeeze(est[skey])
                 except:
-                    est[pkey] = csv[pkey]
+                    est[pkey] = chain_samples[pkey]
             ests.append(sort_dict(est))
         if len(ests) == 1:
-            return ests[0], csv[0]
+            return ests[0]
         else:
-            return ests, csv
+            return ests
 
-    def trace_nuts(self, csv, extras='', skip=0):
-        from pylab import subplot, plot, gca, title, grid, xticks
-        if isinstance(extras, str):
-            extras = extras.split()
-            for csvi in csv:
-                i = 1
-                for key in csvi.keys():
-                    if key[-2:] == '__' or key in extras:
-                        subplot(4, 4, i)
-                        plot(csvi[key][skip:], alpha=0.5)
-                        if key in ('stepsize__',):
-                            gca().set_yscale('log')
-                        title(key)
-                        grid(1)
-                        if ((i - 1) / 4) < 4:
-                            xticks(xticks()[0], [])
-                        i += 1
-
-    # def plot_HMC(self, csv, extras, output_file_path, figure_name):
-    #     outout_folder = os.path.dirname(output_file_path)
-    #     self.trace_nuts(csv)
-    #     # tight_layout()
-    #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_stats.png"))
-    #     pyplot.ion()
-    #     pyplot.show()
-    #     pyplot.figure(figsize=(10, 10))
-    #     self.pair_plots(csv, extras, skip=0)
-    #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_pairplots.png"))
-    #     pyplot.ion()
-    #     pyplot.show()
-    #     for i, csvi in enumerate(csv):
-    #         pyplot.figure()
-    #         self.phase_space(csvi)
-    #         pyplot.suptitle("Chain {" + str(i) + "}")
-    #         # tight_layout()
-    #         pyplot.savefig(os.path.join(outout_folder, figure_name + "_state_space_" + str(i) + ".png"))
-    #     self.ppc_seeg(csv[1], skip=200)
-    #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_seeg.png"))
-    #     vep_stan.lib.violin_x0(csv)
-    #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_x0.png"))
-    #     pyplot.imshow(csv[0]['FC'].mean(axis=0))
-    #     pyplot.colorbar()

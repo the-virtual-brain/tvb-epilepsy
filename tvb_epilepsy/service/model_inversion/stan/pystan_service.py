@@ -76,56 +76,57 @@ class PyStanService(StanService):
             if read_output:
                 self.logger.info("Extracting estimates...")
                 if self.fitmethod is "sampling":
-                    est = fit.extract(permuted=True)
+                    samples = fit.extract(permuted=True)
                 elif self.fitmethod is "vb":
-                    est = self.read_vb_results(fit)
-                return est, fit
+                    samples, _ = self.read_vb_results(fit)
+                est = self.compute_estimates_from_samples(samples)
+                return est, samples, fit
             else:
                 return fit,
 
     def read_vb_results(self, fit):
         est = {}
+        samples = {}
         for ip, p in enumerate(fit['sampler_param_names']):
             p_split = p.split('.')
             p_name = p_split.pop(0)
-            p_name_samples = p_name + "_s"
             if est.get(p_name) is None:
-                est.update({p_name_samples: []})
+                samples.update({p_name: []})
                 est.update({p_name: []})
             if len(p_split) == 0:
                 # scalar parameters
-                est[p_name_samples] = fit["sampler_params"][ip]
+                samples[p_name] = fit["sampler_params"][ip]
                 est[p_name] = fit["mean_pars"][ip]
             else:
                 if len(p_split) == 1:
                     # vector parameters
-                    est[p_name_samples].append(fit["sampler_params"][ip])
+                    samples[p_name].append(fit["sampler_params"][ip])
                     est[p_name].append(fit["mean_pars"][ip])
                 else:
                     ii = int(p_split.pop(0)) - 1
                     if len(p_split) == 0:
                         # 2D matrix parameters
                         if len(est[p_name]) < ii + 1:
-                            est[p_name_samples].append([fit["sampler_params"][ip]])
+                            samples[p_name].append([fit["sampler_params"][ip]])
                             est[p_name].append([fit["mean_pars"][ip]])
                         else:
-                            est[p_name_samples][ii].append(fit["sampler_params"][ip])
+                            samples[p_name][ii].append(fit["sampler_params"][ip])
                             est[p_name][ii].append(fit["mean_pars"][ip])
                     else:
                         if len(est[p_name]) < ii + 1:
-                            est[p_name_samples].append([])
+                            samples[p_name].append([])
                             est[p_name].append([])
                         jj = int(p_split.pop(0)) - 1
                         if len(p_split) == 0:
                             # 3D matrix parameters
                             if len(est[p_name][ii]) < jj + 1:
-                                est[p_name_samples][ii].append([fit["sampler_params"][ip]])
+                                samples[p_name][ii].append([fit["sampler_params"][ip]])
                                 est[p_name][ii].append([fit["mean_pars"][ip]])
                             else:
                                 if len(est[p_name][ii]) < jj + 1:
-                                    est[p_name_samples][ii].append([])
+                                    samples[p_name][ii].append([])
                                     est[p_name][ii].append([])
-                                est[p_name_samples][ii][jj].append(fit["sampler_params"][ip])
+                                    samples[p_name][ii][jj].append(fit["sampler_params"][ip])
                                 est[p_name][ii][jj].append(fit["mean_pars"][ip])
                         else:
                             raise_not_implemented_error("Extracting of parameters of more than 3 dimensions is not " +
@@ -133,4 +134,6 @@ class PyStanService(StanService):
         for key in est.keys():
             if isinstance(est[key], list):
                 est[key] = np.squeeze(np.array(est[key]))
-        return est
+            if isinstance(samples[key], list):
+                samples[key] = np.squeeze(np.array(samples[key]))
+        return samples, est
