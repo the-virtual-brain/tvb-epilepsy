@@ -200,7 +200,7 @@ def dicts_of_lists_to_lists_of_dicts(dictionary):
 def ensure_list(arg):
     if not (isinstance(arg, list)):
         try: #if iterable
-            if isinstance(arg, basestring):
+            if isinstance(arg, (basestring, dict)):
                 arg = [arg]
             else:
                 arg = list(arg)
