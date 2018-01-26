@@ -48,7 +48,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                           plot_head=False, figure_dir=figure_dir, sensors_filename=sensors_filename,
                                           logger=logger)
 
-    for hyp in hypos:
+    for hyp in hypos[:1]:
         # --------------------------Model configuration and LSA-----------------------------------
         model_configuration, lsa_hypothesis, model_configuration_service, lsa_service = \
             from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
@@ -130,12 +130,11 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         if vois_ts_dict.get("signals", None) is not None:
             vois_ts_dict["signals"] -= vois_ts_dict["signals"].min()
             vois_ts_dict["signals"] /= vois_ts_dict["signals"].max()
-            plot_raster(vois_ts_dict["time"].flatten(), {'Target Signals': vois_ts_dict["signals"]},
+            plot_raster({'Target Signals': vois_ts_dict["signals"]}, vois_ts_dict["time"].flatten(),
                         time_units="ms", title=hyp.name + ' Target Signals raster',
                         special_idx=model_inversion.signals_inds, offset=1, labels=labels,
                         save_flag=True, show_flag=False, figure_dir=figure_dir)
-        plot_timeseries(time, {'Target Signals': signals},
-                        time_units="ms", title=hyp.name + 'Target Signals ',
+        plot_timeseries({'Target Signals': signals}, time, time_units="ms", title=hyp.name + 'Target Signals ',
                         labels=labels[model_inversion.signals_inds],
                         save_flag=True, show_flag=False, figure_dir=figure_dir)
         writer = H5Writer()
@@ -175,15 +174,14 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             model_data = convert_to_vep_stan(model_data, statistical_model)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        est, fit = stan_service.fit(debug=2, simulate=0, model_data=model_data,
-                                    merge_outputs=False, chains=1, refresh=1, **kwargs)
+        est, samples = stan_service.fit(debug=1, simulate=1, model_data=model_data,
+                                    merge_outputs=False, chains=1, refresh=1, num_warmup=50, num_samples=50, **kwargs)
         writer.write_generic(est, results_dir, lsa_hypothesis.name + "_fit_est.h5")
         est = ensure_list(est)
-        for id_est, this_est in enumerate(est):
-            model_inversion.plot_fit_results(this_est, statistical_model, signals, time=None,
-                                             seizure_indices=lsa_hypothesis.get_regions_disease(),
-                                             trajectories_plot=True, id_est=str(id_est))
-            # -------------------------- Reconfigure model after fitting:---------------------------------------------------
+        model_inversion.plot_fit_results(est, samples, statistical_model, signals, time=None,
+                                         seizure_indices=lsa_hypothesis.get_regions_disease_indices())
+        # -------------------------- Reconfigure model after fitting:---------------------------------------------------
+        for id_est, this_est in enumerate(ensure_list(est)):
             fit_model_configuration_service = \
                 ModelConfigurationService(hyp.number_of_regions, K=this_est['K'] * hyp.number_of_regions)
             x0_values_fit = \
@@ -200,7 +198,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
 
             # Plot nullclines and equilibria of model configuration
             model_configuration_service.plot_state_space(model_configuration_fit,
-                                                         model_configuration_service.region_labels,
+                                                         model_inversion.region_labels,
                                                          special_idx=statistical_model.active_regions,
                                                          model="6d", zmode="lin",
                                                          figure_name=hyp_fit.name + "_Nullclines and equilibria")
