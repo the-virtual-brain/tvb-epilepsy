@@ -218,6 +218,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     # msecs, the final output nominal time length of the simulation
     (dt, fsAVG, sim_length, monitor_period, n_report_blocks) = \
         set_time_scales(fs=fs, time_length=time_length, scale_fsavg=1, report_every_n_monitor_steps=100.0)
+    dt = 0.25 * dt
     # Choose model
     # Available models beyond the TVB Epileptor (they all encompass optional variations from the different papers):
     # EpileptorDP: similar to the TVB Epileptor + optional variations,
