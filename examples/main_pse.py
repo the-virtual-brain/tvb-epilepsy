@@ -7,7 +7,6 @@ from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
-from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
 from tvb_epilepsy.scripts.pse_scripts import pse_from_hypothesis
 from tvb_epilepsy.io.h5_reader import H5Reader as Reader
 
@@ -26,10 +25,6 @@ if __name__ == "__main__":
     # --------------------------Hypothesis definition-----------------------------------
 
     n_samples = 100
-
-    # Sampling of the global coupling parameter
-    stoch_sampler = StochasticSamplingService(n_samples=n_samples, random_seed=1000, )
-    K_samples, K_sample_stats = stoch_sampler.generate_samples(parameter=(10.0, 3.0), shape=(1,), low=0.0, stats=True)
 
     #
     # Manual definition of hypothesis...:
