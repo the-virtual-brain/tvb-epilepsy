@@ -4,6 +4,7 @@ import matplotlib
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.base.constants.configurations import SAVE_FLAG, FIG_FORMAT, FOLDER_FIGURES, SHOW_FLAG, VERY_LARGE_SIZE
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 
 
 class BasePlotter(object):
@@ -219,3 +220,43 @@ class BasePlotter(object):
         self._save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
         self._check_show(show_flag)
         return fig
+
+    def plots(self, data_dict, shape=None, skip=0, xlabels={}, xscales={}, yscales={}, title='Plots', figure_name=None,
+              figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT, show_flag=SHOW_FLAG,
+              save_flag=SAVE_FLAG):
+        pyplot.figure(title, figsize=figsize)
+        if shape is None:
+            shape = (1, len(data_dict))
+        for i, key in enumerate(data_dict.keys()):
+            pyplot.subplot(shape[0], shape[1], i + 1)
+            pyplot.plot(data_dict[key][skip:])
+            ax = pyplot.gca()
+            ax.set_xscale(xscales.get(key, "linear"))
+            ax.set_yscale(xscales.get(key, "linear"))
+            pyplot.xlabel(xlabels.get(key, ""))
+            pyplot.ylabel(key)
+        pyplot.tight_layout()
+        self._save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
+        self._check_show(show_flag)
+
+    def pair_plots(self, data, keys, skip=0, title='Pair plots', figure_name=None, figure_dir=FOLDER_FIGURES,
+                   figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG):
+        pyplot.figure(title, figsize=figsize)
+        n = len(keys)
+        data = ensure_list(data)
+        for i, key_i in enumerate(keys):
+            for j, key_j in enumerate(keys):
+                pyplot.subplot(n, n, i * n + j + 1, )
+                for datai in data:
+                    if i == j:
+                        pyplot.hist(datai[key_i][skip:], int(numpy.round(numpy.sqrt(len(datai[key_i][skip:])))),
+                                    log=True)
+                    else:
+                        pyplot.plot(datai[key_j][skip:], datai[key_i][skip:], '.')
+                if i == 0:
+                    pyplot.title(key_j)
+                if j == 0:
+                    pyplot.ylabel(key_i)
+        pyplot.tight_layout()
+        self._save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
+        self._check_show(show_flag)
