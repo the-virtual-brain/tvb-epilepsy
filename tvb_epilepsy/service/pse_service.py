@@ -162,10 +162,10 @@ def sim_run_fun(simulator_input, model_connectivity, params_paths, params_values
                 model = model_build_dict[model._ui_name](model_configuration, zmode=model.zmode)
             else:
                 model = custom_model_builder(model_configuration)
+            simulator.model = model
         # Now (further) update model if needed:
         model, params_paths, params_values, params_indices = \
             update_object(model, "model", params_paths, params_values, params_indices)
-        simulator.model = model
         # Now, update other possible remaining parameters, i.e., concerning the integrator, noise etc...
         for ip in range(len(params_paths)):
             set_object_attribute_recursively(simulator, params_paths[ip], params_values[ip], params_indices[ip])

@@ -1,6 +1,9 @@
+from copy import deepcopy
 import numpy as np
 from abc import abstractmethod, ABCMeta
+from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
+from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 
 
 class ABCPSEService(object):
@@ -29,7 +32,7 @@ class ABCPSEService(object):
             status = False
             output = None
             try:
-                status, output = self.run(conn_matrix, params, *kwargs)
+                status, output = self.run(conn_matrix, **kwargs)
             except:
                 pass
             if not status:
@@ -81,6 +84,28 @@ class ABCPSEService(object):
             print "leading to " + str(self.n_loops) + " total execution loops"
         else:
             warning("\nparams_pse is not a list of tuples!")
+
+    def update_hypothesis(self, conn_matrix, model_config_service_input=None,
+                           yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",):
+        # Copy and update hypothesis
+        hypo_copy = deepcopy(self.hypothesis)
+        hypo_copy.update_for_pse(self.params_vals, self.params_paths, self.params_indices)
+        # Create a ModelConfigService and update it
+        if isinstance(model_config_service_input, ModelConfigurationService):
+            model_configuration_service = deepcopy(model_config_service_input)
+        else:
+            model_configuration_service = ModelConfigurationService(hypo_copy.number_of_regions,
+                                                                    yc=yc, Iext1=Iext1, K=K, a=a, b=b,
+                                                                    x1eq_mode=x1eq_mode)
+        model_configuration_service.update_for_pse(self.params_vals, self.params_paths, self.params_indices)
+        # Obtain Modelconfiguration
+        if hypo_copy.type == "Epileptogenicity":
+            model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hypo_copy,
+                                                                                                conn_matrix)
+        else:
+            model_configuration = model_configuration_service.configure_model_from_hypothesis(hypo_copy,
+                                                                                              conn_matrix)
+        return hypo_copy, model_configuration
 
     def set_object_attribute_recursively(self, obj, values):
         path = self.params_paths.split(".")
