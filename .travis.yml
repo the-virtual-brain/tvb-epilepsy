@@ -24,7 +24,6 @@ install:
   - pip install pytest-cov coveralls h5py mpldatacursor gdist SALib
   - conda install llvmlite
   - conda install pyqt
-  - conda install pyside
   - pushd extern/tvb-library && python setup.py install && popd
 before_script: # configure a headless display to test plot generation
   - export DISPLAY=:99.0
