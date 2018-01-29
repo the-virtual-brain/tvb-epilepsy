@@ -131,11 +131,11 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         if vois_ts_dict.get("signals", None) is not None:
             vois_ts_dict["signals"] -= vois_ts_dict["signals"].min()
             vois_ts_dict["signals"] /= vois_ts_dict["signals"].max()
-            plotter.plot_raster(vois_ts_dict["time"].flatten(), {'Target Signals': vois_ts_dict["signals"]},
+            plotter.plot_raster({'Target Signals': vois_ts_dict["signals"]}, vois_ts_dict["time"].flatten(),
                         time_units="ms", title=hyp.name + ' Target Signals raster',
                         special_idx=model_inversion.signals_inds, offset=1, labels=labels,
                         save_flag=True, show_flag=False, figure_dir=figure_dir)
-        plotter.plot_timeseries(time, {'Target Signals': signals},
+        plotter.plot_timeseries({'Target Signals': signals}, time,
                         time_units="ms", title=hyp.name + 'Target Signals ',
                         labels=labels[model_inversion.signals_inds],
                         save_flag=True, show_flag=False, figure_dir=figure_dir)
@@ -181,7 +181,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         writer.write_generic(est, results_dir, lsa_hypothesis.name + "_fit_est.h5")
         est = ensure_list(est)
         for id_est, this_est in enumerate(est):
-            plotter.plot_fit_results(this_est, statistical_model, signals, model_inversion.region_labels,
+            plotter.plot_fit_results(model_inversion, this_est, statistical_model, signals, model_inversion.region_labels,
                                      model_inversion.x0_values, time=None,
                                      seizure_indices=lsa_hypothesis.get_regions_disease(), trajectories_plot=True,
                                      id_est=str(id_est))

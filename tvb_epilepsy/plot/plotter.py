@@ -1,15 +1,19 @@
 import numpy
 from scipy.stats import zscore
+import matplotlib
+matplotlib.use('Qt4Agg')
 from matplotlib import pyplot, gridspec
 from matplotlib.colors import Normalize
 from mpldatacursor import HighlightingDataCursor
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.plot.base_plotter import BasePlotter
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.utils.math_utils import compute_in_degree
 from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D, EpileptorDPrealistic
-from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string, sort_dict, linspace_broadcast
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string, sort_dict, linspace_broadcast, \
+    list_of_dicts_to_dicts_of_ndarrays, extract_dict_stringkeys
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_y1, def_x1lin
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz, calc_fx1, calc_fx1_2d_taylor, \
     calc_x0_val_to_model_x0, raise_value_error
@@ -128,25 +132,6 @@ class Plotter(BasePlotter):
                                     title=title, figure_name=figure_name, show_flag=show_flag, save_flag=save_flag,
                                     figure_dir=figure_dir, figure_format=figure_format, figsize=figsize)
 
-    def pair_plots(self, csv, keys, skip=0):
-        import pylab as pl
-        n = len(keys)
-        if isinstance(csv, dict):
-            csv = [csv]  # following assumes list of chains' results
-        for i, key_i in enumerate(keys):
-            for j, key_j in enumerate(keys):
-                pl.subplot(n, n, i * n + j + 1)
-                for csvi in csv:
-                    if i == j:
-                        pl.hist(csvi[key_i][skip:], 20, log=True)
-                    else:
-                        pl.plot(csvi[key_j][skip:], csvi[key_i][skip:], '.')
-                if i == 0:
-                    pl.title(key_j)
-                if j == 0:
-                    pl.ylabel(key_i)
-        pl.tight_layout()
-
     def plot_statistical_model(self, statistical_model, figure_name="", figure_dir=FOLDER_FIGURES, save_flag=SAVE_FLAG,
                                show_flag=SHOW_FLAG, figure_format=FIG_FORMAT):
         _, ax = pyplot.subplots(len(statistical_model.parameters), 2, figsize=VERY_LARGE_PROTRAIT)
@@ -157,174 +142,234 @@ class Plotter(BasePlotter):
         self._check_show(show_flag)
         return ax, pyplot.gcf()
 
-    def plot_timeseries(self, time, data_dict, time_units="ms", special_idx=None, title='Time Series', figure_name=None,
-                        labels=None, show_flag=SHOW_FLAG, save_flag=False, figure_dir=FOLDER_FIGURES,
-                        figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
-        pyplot.figure(title, figsize=figsize)
-        if not (isinstance(figure_name, basestring)):
-            figure_name = title.replace(".", "").replace(' ', "")
-        no_rows = len(data_dict)
-        lines = []
+    def _timeseries_plot(self, time, n_vars, nTS, n_times, time_units, subplots, offset=0.0, data_lims=[]):
+        def_time = range(n_times)
+        if not (isinstance(time, numpy.ndarray) and (len(time) == n_times)):
+            time = def_time
+            warning("Input time doesn't match data! Setting a default time step vector!")
+        data_fun = lambda data, time, icol: (data[icol], time, icol)
 
-        def plot_line(color, alpha):
+        def plot_ts(x, iTS, colors, alphas, labels):
+            x, time, ivar = x
             try:
-                return pyplot.plot(time, data[:, iTS], color, alpha=alpha, label=labels[iTS])
+                return pyplot.plot(time, x[:, iTS], colors[iTS], label=labels[iTS], alpha=alphas[iTS])
             except:
-                return pyplot.plot(time, data[:, iTS], color, alpha=alpha, label=str(iTS))
+                warning("Cannot convert labels' strings for line labels!")
+                return pyplot.plot(time, x[:, iTS], colors[iTS], label=str(iTS), alpha=alphas[iTS])
 
-        for i, subtitle in enumerate(data_dict):
-            ax = pyplot.subplot(no_rows, 1, i + 1)
-            pyplot.hold(True)
-            if i == 0:
-                pyplot.title(title)
-            data = data_dict[subtitle]
-            nTS = data.shape[1]
-            if labels is None:
-                labels = numpy.array(range(nTS)).astype(str)
-            lines.append([])
-            if special_idx is None:
-                for iTS in range(nTS):
-                    # line, = pyplot.plot(time, data[:, iTS], 'k', alpha=0.3, label=labels[iTS])
-                    line, = plot_line('k', 0.3)
-                    lines[i].append(line)
-            else:
-                mask = numpy.array(range(nTS))
-                mask = numpy.delete(mask, special_idx)
-                for iTS in special_idx:
-                    # line, = pyplot.plot(time, data[:, iTS], 'r', alpha=0.7, label=labels[iTS])
-                    line, = plot_line('r', 0.7)
-                    lines[i].append(line)
-                for iTS in mask:
-                    # line, = pyplot.plot(time, data[:, iTS], 'k', alpha=0.3, label=labels[iTS])
-                    line, = plot_line('k', 0.3)
-                    lines[i].append(line)
-            pyplot.ylabel(subtitle)
-            ax.set_autoscalex_on(False)
-            ax.set_xlim([time[0], time[-1]])
-            if MOUSEHOOVER:
-                # datacursor( lines[i], formatter='{label}'.format, bbox=dict(fc='white'),
-                #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
-                HighlightingDataCursor(lines[i], formatter='{label}'.format, bbox=dict(fc='white'),
-                                       arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5))
-        pyplot.xlabel("Time (" + time_units + ")")
-        self._save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
-        self._check_show(show_flag)
-
-    def plot_raster(self, time, data_dict, time_units="ms", special_idx=None, title='Time Series', subtitles=[],
-                    offset=1.0, figure_name=None, labels=None, show_flag=SHOW_FLAG, save_flag=False,
-                    figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE):
-        pyplot.figure(title, figsize=figsize)
-        no_rows = len(data_dict)
-        lines = []
-
-        def plot_line(color):
+        def plot_ts_raster(x, iTS, colors, alphas, labels, offset):
+            x, time, ivar = x
             try:
-                return pyplot.plot(time, -data[:, iTS] + offset * iTS, color, label=labels[iTS])
+                return pyplot.plot(time, -x[:, iTS] + offset[ivar] * iTS, colors[iTS], label=labels[iTS],
+                                   alpha=alphas[iTS])
             except:
-                return pyplot.plot(time, -data[:, iTS] + offset * iTS, color, label=str(iTS))
+                warning("Cannot convert labels' strings for line labels!")
+                return pyplot.plot(time, -x[:, iTS] + offset[ivar] * iTS, colors[iTS], label=str(iTS),
+                                   alpha=alphas[iTS])
 
-        for i, var in enumerate(data_dict):
-            ax = pyplot.subplot(1, no_rows, i + 1)
-            pyplot.hold(True)
-            if len(subtitles) > i:
-                pyplot.title(subtitles[i])
-            data = data_dict[var]
-            data = zscore(data, axis=None)
-            nTS = data.shape[1]
-            ticks = (offset * numpy.array([range(nTS)])).tolist()
-            if labels is None:
-                labels = numpy.array(range(nTS)).astype(str)
-            lines.append([])
-            if special_idx is None:
-                for iTS in range(nTS):
-                    # line, = pyplot.plot(time, -data[:,iTS]+offset*iTS, 'k', label=labels[iTS])
-                    line, = plot_line("k")
-                    lines[i].append(line)
+        def axlabels_ts(labels, n_rows, irow, iTS):
+            if irow == n_rows:
+                pyplot.gca().set_xlabel("Time (" + time_units + ")")
+            if n_rows > 1:
+                try:
+                    pyplot.gca().set_ylabel(str(iTS) + "." + labels[iTS])
+                except:
+                    warning("Cannot convert labels' strings for y axis labels!")
+                    pyplot.gca().set_ylabel(str(iTS))
+
+        def axlimits_ts(data_lims, time, icol):
+            pyplot.gca().set_xlim([time[0], time[-1]])
+            if n_rows > 1:
+                pyplot.gca().set_ylim([data_lims[icol][0], data_lims[icol][1]])
             else:
-                mask = numpy.array(range(nTS))
-                mask = numpy.delete(mask, special_idx)
-                for iTS in special_idx:
-                    # line, = pyplot.plot(time, -data[:, iTS]+offset*iTS, 'r', label=labels[iTS])
-                    line, = plot_line('r')
-                    lines[i].append(line)
-                for iTS in mask:
-                    # line, = pyplot.plot(time, -data[:, iTS]+offset*iTS, 'k', label=labels[iTS])
-                    line, = plot_line('k')
-                    lines[i].append(line)
-            pyplot.ylabel(var)
-            ax.set_autoscalex_on(False)
-            ax.set_xlim([time[0], time[-1]])
-            # ax.set_yticks(ticks)
-            # ax.set_yticklabels(labels)
-            ax.invert_yaxis()
-            if MOUSEHOOVER:
-                # datacursor( lines[i], formatter='{label}'.format, bbox=dict(fc='white'),
-                #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
-                HighlightingDataCursor(lines[i], formatter='{label}'.format, bbox=dict(fc='white'),
-                                       arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5))
-        pyplot.xlabel("Time (" + time_units + ")")
-        self._save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
-        self._check_show(show_flag)
+                pyplot.autoscale(enable=True, axis='y', tight=True)
 
-    def plot_trajectories(self, data_dict, special_idx=None, title='State space trajectories', figure_name=None,
-                          labels=None, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
-                          figure_format=FIG_FORMAT, figsize=LARGE_SIZE):
-        pyplot.figure(title, figsize=figsize)
-        ax = pyplot.subplot(111)
-        pyplot.hold(True)
-        no_dims = len(data_dict)
-        if no_dims > 2:
-            ax = pyplot.subplot(111, projection='3d')
+        def axYticks(labels, offset, nTS):
+            pyplot.gca().set_yticks((offset * numpy.array([range(nTS)])).tolist())
+            # try:
+            #     pyplot.gca().set_yticklabels(labels)
+            # except:
+            #     warning("Cannot convert region labels' strings for y axis ticks!")
+
+        if offset > 0.0:
+            offsets = offset * numpy.array([numpy.diff(ylim) for ylim in data_lims]).flatten()
+            plot_lines = lambda x, iTS, colors, alphas, labels: plot_ts_raster(x, iTS, colors, alphas, labels, offsets)
         else:
-            ax = pyplot.subplot(111)
-        lines = []
-        ax_labels = []
-        data = []
-        for i, var in enumerate(data_dict):
-            if i == 0:
-                pyplot.title(title)
-            ax_labels.append(var)
-            data.append(data_dict[var])
-        nTS = data[0].shape[1]
+            plot_lines = lambda x, iTS, colors, alphas, labels: plot_ts(x, iTS, colors, alphas, labels)
+        if subplots:
+            n_rows = nTS
+            def_alpha = 1.0
+        else:
+            n_rows = 1
+            def_alpha = 0.5
+        subtitle_col = lambda subtitle: pyplot.gca().set_title(subtitle)
+        subtitle = lambda iTS, labels: None
+        projection = None
+        axlabels = lambda labels, vars, n_vars, n_rows, irow, iTS: axlabels_ts(labels, n_rows, irow, iTS)
+        axlimits = lambda data_lims, time, n_vars, icol: axlimits_ts(data_lims, time, icol)
+        loopfun = lambda nTS, n_rows, icol: range(nTS)
+        return data_fun, time, plot_lines, projection, n_rows, n_vars, def_alpha, loopfun, \
+               subtitle, subtitle_col, axlabels, axlimits, axYticks
+
+    def _trajectories_plot(self, n_dims, nTS, nSamples, subplots):
+        data_fun = lambda data, time, icol: data
+
+        def plot_traj_2D(x, iTS, colors, alphas, labels):
+            x, y = x
+            try:
+                return pyplot.plot(x[:, iTS], y[:, iTS], colors[iTS], label=labels[iTS], alpha=alphas[iTS])
+            except:
+                warning("Cannot convert labels' strings for line labels!")
+                return pyplot.plot(x[:, iTS], y[:, iTS], colors[iTS], label=str(iTS), alpha=alphas[iTS])
+
+        def plot_traj_3D(x, iTS, colors, alphas, labels):
+            x, y, z = x
+            try:
+                return pyplot.plot(x[:, iTS], y[:, iTS], z[:, iTS], colors[iTS], label=labels[iTS], alpha=alphas[iTS])
+            except:
+                warning("Cannot convert labels' strings for line labels!")
+                return pyplot.plot(x[:, iTS], y[:, iTS], z[:, iTS], colors[iTS], label=str(iTS), alpha=alphas[iTS])
+
+        def subtitle_traj(labels, iTS):
+            try:
+                pyplot.gca().set_title(str(iTS) + "." + labels[iTS])
+            except:
+                warning("Cannot convert labels' strings for subplot titles!")
+                pyplot.gca().set_title(str(iTS))
+
+        def axlabels_traj(vars, n_vars):
+            pyplot.gca().set_xlabel(vars[0])
+            pyplot.gca().set_ylabel(vars[1])
+            if n_vars > 2:
+                pyplot.gca().set_zlabel(vars[2])
+
+        def axlimits_traj(data_lims, n_vars):
+            pyplot.gca().set_xlim([data_lims[0][0], data_lims[0][1]])
+            pyplot.gca().set_ylim([data_lims[1][0], data_lims[1][1]])
+            if n_vars > 2:
+                pyplot.gca().set_zlim([data_lims[2][0], data_lims[2][1]])
+
+        if n_dims == 2:
+            plot_lines = lambda x, iTS, colors, labels, alphas: plot_traj_2D(x, iTS, colors, labels, alphas)
+            projection = None
+        elif n_dims == 3:
+            plot_lines = lambda x, iTS, colors, labels, alphas: plot_traj_3D(x, iTS, colors, labels, alphas)
+            projection = '3d'
+        else:
+            raise_value_error("Data dimensions are neigher 2D nor 3D!, but " + str(n_dims) + "D!")
+        n_rows = 1
+        n_cols = 1
+        if subplots is None:
+            if nSamples > 1:
+                n_rows = int(numpy.floor(numpy.sqrt(nTS)))
+                n_cols = int(numpy.ceil((1.0 * nTS) / n_rows))
+        elif isinstance(subplots, (list, tuple)):
+            n_rows = subplots[0]
+            n_cols = subplots[1]
+            if n_rows * n_cols < nTS:
+                raise_value_error("Not enough subplots for all time series:"
+                                  "\nn_rows * n_cols = product(subplots) = product(" + str(subplots) + " = "
+                                  + str(n_rows * n_cols) + "!")
+        if n_rows * n_cols > 1:
+            def_alpha = 0.5
+            subtitle = lambda labels, iTS: subtitle_traj(labels, iTS)
+            subtitle_col = lambda subtitles, icol: None
+        else:
+            def_alpha = 1
+            subtitle = lambda: None
+            subtitle_col = lambda subtitles, icol: pyplot.gca().set_title(pyplot.gcf().title)
+        axlabels = lambda labels, vars, n_vars, n_rows, irow, iTS: axlabels_traj(vars, n_vars)
+        axlimits = lambda data_lims, time, n_vars, icol: axlimits_traj(data_lims, n_vars)
+        loopfun = lambda nTS, n_rows, icol: range(icol, nTS, n_rows)
+        return data_fun, plot_lines, projection, n_rows, n_cols, def_alpha, loopfun, \
+               subtitle, subtitle_col, axlabels, axlimits
+
+    def plot_timeseries(self, data_dict, time=None, mode="ts", subplots=None, special_idx=None, subtitles=[],
+                        offset=1.0, time_units="ms", title='Time series', figure_name=None, labels=None,
+                        figure_dir=FOLDER_FIGURES, figsize=LARGE_SIZE, figure_format=FIG_FORMAT,
+                        show_flag=SHOW_FLAG, save_flag=SAVE_FLAG):
+        n_vars = len(data_dict)
+        vars = data_dict.keys()
+        data = data_dict.values()
+        data_lims = []
+        for id, d in enumerate(data):
+            data_lims.append([d.min(), d.max()])
+            if isequal_string(mode, "raster"):
+                data[id] = zscore(d, axis=None)
+        data_shape = data[0].shape
+        n_times, nTS = data_shape[:2]
+        if len(data_shape) > 2:
+            nSamples = data_shape[2]
+        else:
+            nSamples = 1
+        if len(subtitles) == 0:
+            subtitles = vars
         if labels is None:
             labels = numpy.array(range(nTS)).astype(str)
-        lines.append([])
-        if special_idx is None:
-            for iTS in range(nTS):
-                if no_dims > 2:
-                    line, = pyplot.plot(data[0][:, iTS], data[1][:, iTS], data[2][:, iTS], 'k', alpha=0.3,
-                                        label=labels[iTS])
-                else:
-                    line, = pyplot.plot(data[0][:, iTS], data[1][:, iTS], 'k', alpha=0.3, label=labels[iTS])
-                lines.append(line)
+        if isequal_string(mode, "traj"):
+            data_fun, plot_lines, projection, n_rows, n_cols, def_alpha, loopfun, \
+            subtitle, subtitle_col, axlabels, axlimits = self._trajectories_plot(n_vars, nTS, nSamples, subplots)
         else:
-            mask = numpy.array(range(nTS))
-            mask = numpy.delete(mask, special_idx)
-            for iTS in special_idx:
-                if no_dims > 2:
-                    line, = pyplot.plot(data[0][:, iTS], data[1][:, iTS], data[2][:, iTS], 'r', alpha=0.7,
-                                        label=labels[iTS])
-                else:
-                    line, = pyplot.plot(data[0][:, iTS], data[1][:, iTS], 'r', alpha=0.7, label=labels[iTS])
-                lines.append(line)
-            for iTS in mask:
-                if no_dims > 2:
-                    line, = pyplot.plot(data[0][:, iTS], data[1][:, iTS], data[2][:, iTS], 'k', alpha=0.3,
-                                        label=labels[iTS])
-                else:
-                    line, = pyplot.plot(data[0][:, iTS], data[1][:, iTS], 'k', alpha=0.3, label=labels[iTS])
-                lines.append(line)
-        pyplot.xlabel(ax_labels[0])
-        pyplot.ylabel(ax_labels[1])
-        if no_dims > 2:
-            pyplot.ylabel(ax_labels[2])
+            if isequal_string(mode, "raster"):
+                data_fun, time, plot_lines, projection, n_rows, n_cols, def_alpha, loopfun, \
+                subtitle, subtitle_col, axlabels, axlimits, axYticks = \
+                    self._timeseries_plot(time, n_vars, nTS, n_times, time_units, 0, offset, data_lims)
+
+            else:
+                data_fun, time, plot_lines, projection, n_rows, n_cols, def_alpha, loopfun, \
+                subtitle, subtitle_col, axlabels, axlimits, axYticks = \
+                    self._timeseries_plot(time, n_vars, nTS, n_times, time_units, ensure_list(subplots)[0])
+        alpha_ratio = 1.0 / nSamples
+        colors = numpy.array(['k'] * nTS)
+        alphas = numpy.maximum(numpy.array([def_alpha] * nTS) * alpha_ratio, 0.1)
+        if special_idx is not None:
+            colors[special_idx] = 'r'
+            alphas[special_idx] = numpy.maximum(alpha_ratio, 0.1)
+        lines = []
+        pyplot.figure(title, figsize=figsize)
+        pyplot.hold(True)
+        axes = []
+        for icol in range(n_cols):
+            if n_rows == 1:
+                # If there are no more rows, create axis, and set its limits, labels and possible subtitle
+                axes += ensure_list(pyplot.subplot(n_rows, n_cols, icol + 1, projection=projection))
+                axlimits(data_lims, time, n_vars, icol)
+                axlabels(labels, vars, n_vars, n_rows, 1, 0)
+                pyplot.gca().set_title(subtitles[icol])
+            for iTS in loopfun(nTS, n_rows, icol):
+                if n_rows > 1:
+                    # If there are more rows, create axes, and set their limits, labels and possible subtitles
+                    axes += ensure_list(pyplot.subplot(n_rows, n_cols, iTS + 1, projection=projection))
+                    subtitle(labels, iTS)
+                    axlimits(data_lims, time, n_vars, icol)
+                    axlabels(labels, vars, n_vars, n_rows, (iTS % n_rows) + 1, iTS)
+                lines += ensure_list(plot_lines(data_fun(data, time, icol), iTS, colors, alphas, labels))
+            if isequal_string(mode, "raster"):  # set yticks as labels if this is a raster plot
+                # axYticks(labels, offset, nTS)
+                pyplot.gca().invert_yaxis()
         if MOUSEHOOVER:
-            # datacursor( lines[0], formatter='{label}'.format, bbox=dict(fc='white'),
-            #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
-            HighlightingDataCursor(lines[0], formatter='{label}'.format, bbox=dict(fc='white'),
-                                   arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5))
+            for line in lines:
+                # datacursor( lines[0], formatter='{label}'.format, bbox=dict(fc='white'),
+                #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
+                HighlightingDataCursor(line, formatter='{label}'.format, bbox=dict(fc='white'),
+                                       arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5))
         self._save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
         self._check_show(show_flag)
+        return pyplot.gcf(), axes, lines
+
+    def plot_raster(self, data_dict, time, time_units="ms", special_idx=None, title='Raster plot', subtitles=[],
+                    offset=1.0, figure_name=None, labels=None, figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE,
+                    figure_format=FIG_FORMAT, show_flag=SHOW_FLAG, save_flag=False):
+        return self.plot_timeseries(data_dict, time, "raster", None, special_idx, subtitles, offset, time_units, title,
+                                    figure_name, labels, figure_dir, figsize, figure_format, show_flag, save_flag)
+
+    def plot_trajectories(self, data_dict, subtitles=None, special_idx=None, title='State space trajectories',
+                          figure_name=None, labels=None, figure_dir=FOLDER_FIGURES, figsize=LARGE_SIZE,
+                          figure_format=FIG_FORMAT,
+                          show_flag=SHOW_FLAG, save_flag=SAVE_FLAG):
+        return self.plot_timeseries(data_dict, [], "traj", subtitles, special_idx, title=title, figure_name=figure_name,
+                                    labels=labels, figure_dir=figure_dir, figsize=figsize, figure_format=figure_format,
+                                    show_flag=show_flag, save_flag=save_flag)
 
     def plot_spectral_analysis_raster(self, time, data, time_units="ms", freq=None, special_idx=None,
                                       title='Spectral Analysis', figure_name=None, labels=None, show_flag=SHOW_FLAG,
@@ -406,60 +451,60 @@ class Plotter(BasePlotter):
                          spectral_raster_plot=False, region_labels=None, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
                          figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, **kwargs):
         if isinstance(model, EpileptorDP2D):
-            self.plot_timeseries(res['time'], {'x1': res['x1'], 'z(t)': res['z']},
+            self.plot_timeseries({'x1(t)': res['x1'], 'z(t)': res['z']}, res['time'],
                                  time_units=res.get('time_units', "ms"),
                                  special_idx=seizure_indices, title=model._ui_name + ": Simulated TAVG",
                                  save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                                  figure_format=figure_format,
                                  labels=region_labels, figsize=VERY_LARGE_SIZE)
-            self.plot_raster(res['time'], {'x1': res['x1']},
-                             time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
+            self.plot_raster({'x1(t)': res['x1']}, res['time'], time_units=res.get('time_units', "ms"),
+                             special_idx=seizure_indices,
                              title=model._ui_name + ": Simulated x1 rasterplot", offset=5.0, labels=region_labels,
                              save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                              figure_format=figure_format,
                              figsize=VERY_LARGE_SIZE)
         else:
-            self.plot_timeseries(res['time'], {'LFP(t)': res['lfp'], 'z(t)': res['z']},
+            self.plot_timeseries({'LFP(t)': res['lfp'], 'z(t)': res['z']}, res['time'],
                                  time_units=res.get('time_units', "ms"),
                                  special_idx=seizure_indices, title=model._ui_name + ": Simulated LFP-z",
                                  save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                                  figure_format=figure_format,
                                  labels=region_labels, figsize=VERY_LARGE_SIZE)
-            self.plot_timeseries(res['time'], {'x1(t)': res['x1'], 'y1(t)': res['y1']},
+            self.plot_timeseries({'x1(t)': res['x1'], 'y1(t)': res['y1']}, res['time'],
                                  time_units=res.get('time_units', "ms"),
                                  special_idx=seizure_indices, title=model._ui_name + ": Simulated pop1",
                                  save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                                  figure_format=figure_format,
                                  labels=region_labels, figsize=VERY_LARGE_SIZE)
-            self.plot_timeseries(res['time'], {'x2(t)': res['x2'], 'y2(t)': res['y2'], 'g(t)': res['g']},
+            self.plot_timeseries({'x2(t)': res['x2'], 'y2(t)': res['y2'], 'g(t)': res['g']}, res['time'],
                                  time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
                                  title=model._ui_name + ": Simulated pop2-g",
                                  save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                                  figure_format=figure_format,
                                  labels=region_labels, figsize=VERY_LARGE_SIZE)
             start_plot = int(numpy.round(0.01 * res['lfp'].shape[0]))
-            self.plot_raster(res['time'][start_plot:], {'lfp': res['lfp'][start_plot:, :]},
+            self.plot_raster({'lfp': res['lfp'][start_plot:, :]}, res['time'][start_plot:],
                              time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
                              title=model._ui_name + ": Simulated LFP rasterplot", offset=10.0, labels=region_labels,
                              save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                              figure_format=figure_format,
                              figsize=VERY_LARGE_SIZE)
         if isinstance(model, EpileptorDPrealistic):
-            self.plot_timeseries(res['time'], {'1/(1+exp(-10(z-3.03))': 1 / (1 + numpy.exp(-10 * (res['z'] - 3.03))),
-                                               'slope': res['slope_t'], 'Iext2': res['Iext2_t']},
+            self.plot_timeseries({'1/(1+exp(-10(z-3.03))': 1 / (1 + numpy.exp(-10 * (res['z'] - 3.03))),
+                                  'slope': res['slope_t'], 'Iext2': res['Iext2_t']}, res['time'],
                                  time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
                                  title=model._ui_name + ": Simulated controlled parameters", labels=region_labels,
                                  save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                                  figure_format=figure_format,
                                  figsize=VERY_LARGE_SIZE)
-            self.plot_timeseries(res['time'], {'x0_values': res['x0_t'], 'Iext1': res['Iext1_t'], 'K': res['K_t']},
+            self.plot_timeseries({'x0_values': res['x0_t'], 'Iext1': res['Iext1_t'], 'K': res['K_t']}, res['time'],
                                  time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
                                  title=model._ui_name + ": Simulated parameters", labels=region_labels,
                                  save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                                  figure_format=figure_format,
                                  figsize=VERY_LARGE_SIZE)
         if trajectories_plot:
-            self.plot_trajectories({'x1': res['x1'], 'z(t)': res['z']}, special_idx=seizure_indices,
+            self.plot_trajectories({'x1': res['x1'], 'z': res['z']}, special_idx=seizure_indices,
                                    title=model._ui_name + ': State space trajectories', labels=region_labels,
                                    show_flag=show_flag, save_flag=save_flag, figure_dir=FOLDER_FIGURES,
                                    figure_format=FIG_FORMAT,
@@ -480,7 +525,7 @@ class Plotter(BasePlotter):
                 else:
                     title = model._ui_name + ": Simulated SEEG" + str(i) + " raster plot"
                     start_plot = 0
-                self.plot_raster(res['time'][start_plot:], {'SEEG': res['SEEG' + str(i)][start_plot:, :]},
+                self.plot_raster({'SEEG': res['SEEG' + str(i)][start_plot:, :]}, res['time'][start_plot:],
                                  time_units=res.get('time_units', "ms"), title=title,
                                  offset=0.0, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
                                  figure_format=figure_format, labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
@@ -652,56 +697,81 @@ class Plotter(BasePlotter):
         self._save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
         self._check_show(show_flag)
 
-    def plot_fit_results(self, est, statistical_model, signals, region_labels, x0_values, time=None,
-                         seizure_indices=None, trajectories_plot=False, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
-                         figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, x1_str="x1", x0_str="x0", mc_str="MC",
-                         signals_str="fit_signals", sig_str="sig", eps_str="eps", **kwargs):
-        name = statistical_model.name + kwargs.get("_id_est", "")
+    def plot_fit_results(self, model_inversion_service, ests, samples, statistical_model, signals, time=None,
+                         seizure_indices=None, x1_str="x1",
+                         x0_str="x0", mc_str="MC", signals_str="fit_signals", sig_str="sig", eps_str="eps",
+                         trajectories_plot=True, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
+                         figure_format=FIG_FORMAT, **kwargs):
+        # plot scalar parameters in pair plots
+        # TODO: move these 2 plots here
+        model_inversion_service.parameters_pair_plots(samples,
+                                                      kwargs.get("pair_plot_params",
+                                                                 ["tau1", "tau0", "K", "sig_eq", "sig_init", "sig",
+                                                                  "eps", "scale_signal",
+                                                                  "offset_signal"]),
+                                                      kwargs.get("skip_samples", 0),
+                                                      title=statistical_model.name + " parameters samples")
+        # plot region-wise parameters
+        model_inversion_service.region_parameters_violin_plots(samples,
+                                                               kwargs.get("params", ["x0", "x1eq", "x1init", "zinit"]),
+                                                               skip_samples=kwargs.get("skip_samples", 0),
+                                                               per_chain=kwargs.get("violin_plot_per_chain", False),
+                                                               figure_name=statistical_model.name + " regions parameters samples")
         if time is None:
             time = numpy.array(range(signals.shape[0]))
         time = time.flatten()
-        sig_prior = statistical_model.parameters["sig"].mean / statistical_model.sig
+        sig_prior = statistical_model.parameters["sig"].mean
         eps_prior = statistical_model.parameters["eps"].mean
-        self.plot_raster(time, sort_dict({'observation signals': signals,
-                                          'observation signals fit': est[signals_str]}),
-                         special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
-                         title=name + ": Observation signals vs fit rasterplot",
-                         subtitles=['observation signals ' +
-                                    '\nobservation noise eps_prior =  ' + str(eps_prior) + " eps_post =" + str(
-                             est[eps_str]),
-                                    'observation signals fit'], offset=0.1,
-                         labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
-                         figure_format=figure_format, figsize=VERY_LARGE_SIZE)
-        self.plot_raster(time, sort_dict({'x1': est[x1_str], 'z': est["z"]}),
-                         special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
-                         title=name + ": Hidden states fit rasterplot",
-                         subtitles=['hidden state x1' '\ndynamic noise sig_prior = ' + str(sig_prior) +
-                                    " sig_post = " + str(est[sig_str]),
-                                    'hidden state z'], offset=3.0,
-                         labels=None, save_flag=save_flag, show_flag=show_flag, figure_dir=figure_dir,
-                         figure_format=figure_format, figsize=VERY_LARGE_SIZE)
-        if trajectories_plot:
-            title = name + ': Fit hidden state space trajectories'
-            title += "\n prior x0: " + str(x0_values[statistical_model.active_regions])
-            x0 = est[x0_str]
-            if len(x0) > statistical_model.n_active_regions:
-                x0 = x0[statistical_model.active_regions]
-            title += "\n x0 fit: " + str(x0)
-            self.plot_trajectories({'x1': est[x1_str], 'z(t)': est['z']}, special_idx=seizure_indices,
-                                   title=title, labels=region_labels, show_flag=show_flag, save_flag=save_flag,
-                                   figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
-        # plot connectivity
-        conn_figure_name = name + "Model Connectivity"
-        pyplot.figure(conn_figure_name, VERY_LARGE_SIZE)
-        # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
+        x0_prior = str(model_inversion_service.x0[statistical_model.active_regions])
         MC_prior = statistical_model.parameters["MC"].mean
         K_prior = statistical_model.parameters["K"].mean
-        self.plot_regions2regions(MC_prior, region_labels[statistical_model.active_regions], 121,
-                                  "Prior Model Connectivity" + "\nglobal scaling prior: K = " + str(K_prior))
-        self.plot_regions2regions(est[mc_str], region_labels[statistical_model.active_regions], 122,
-                                  "Posterior Model  Connectivity" + "\nglobal scaling fit: K = " + str(est["K"]))
-        self._save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
-        self._check_show(show_flag=show_flag)
+        region_labels = kwargs.get("regions_labels", model_inversion_service.region_labels)
+        if statistical_model.observation_model.find("seeg") >= 0:
+            sensor_labels = kwargs.get("signals_labels", None)[model_inversion_service.signals_inds]
+        else:
+            sensor_labels = region_labels[model_inversion_service.signals_inds]
+        for id_est, est in enumerate(ensure_list(ests)):
+            name = statistical_model.name + kwargs.get("_id_est", "")
+            self.plot_raster(sort_dict({'observation signals': signals,
+                                        'observation signals fit': samples[signals_str].T}), time,
+                             special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
+                             title=name + ": Observation signals vs fit rasterplot",
+                             subtitles=['observation signals ' +
+                                        '\nobservation noise eps_prior =  ' + str(eps_prior) + " eps_post =" + str(
+                                 est[eps_str]),
+                                        'observation signals fit'], offset=1.0,
+                             labels=sensor_labels, save_flag=save_flag, show_flag=show_flag,
+                             figure_dir=figure_dir, figure_format=figure_format, figsize=VERY_LARGE_SIZE)
+            self.plot_raster(sort_dict({'x1': samples[x1_str].T, 'z': samples["z"].T}), time,
+                             special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
+                             title=name + ": Hidden states fit rasterplot",
+                             subtitles=['hidden state x1',
+                                        'hidden state z' + '\ndynamic noise sig_prior = ' + str(sig_prior) +
+                                        " sig_post = " + str(est[sig_str])], offset=1.0,
+                             labels=region_labels, save_flag=save_flag,
+                             show_flag=show_flag, figure_dir=figure_dir,
+                             figure_format=figure_format, figsize=VERY_LARGE_SIZE)
+            if trajectories_plot:
+                title = name + ': Fit hidden state space trajectories'
+                title += "\n prior x0: " + x0_prior
+                x0 = est[x0_str]
+                if len(x0) > statistical_model.n_active_regions:
+                    x0 = x0[statistical_model.active_regions]
+                title += "\n x0 fit: " + str(x0)
+                self.plot_trajectories({'x1': samples[x1_str].T, 'z': samples['z'].T}, special_idx=seizure_indices,
+                                       title=title, labels=model_inversion_service.region_labels, show_flag=show_flag,
+                                       save_flag=save_flag,
+                                       figure_dir=figure_dir, figure_format=figure_format, figsize=VERY_LARGE_SIZE)
+            # plot connectivity
+            conn_figure_name = name + "Model Connectivity"
+            pyplot.figure(conn_figure_name, VERY_LARGE_SIZE)
+            # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
+            self.plot_regions2regions(MC_prior, region_labels, 121,
+                                      "Prior Model Connectivity" + "\nglobal scaling prior: K = " + str(K_prior))
+            self.plot_regions2regions(est[mc_str], region_labels, 122,
+                                      "Posterior Model  Connectivity" + "\nglobal scaling fit: K = " + str(est["K"]))
+            self._save_figure(save_flag, pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
+            self._check_show(show_flag=show_flag)
 
     def _prepare_distribution_axes(self, distribution, loc=0.0, scale=1.0, x=numpy.array([]), ax=None, linestyle="-",
                                    lgnd=True):
@@ -758,3 +828,15 @@ class Plotter(BasePlotter):
         self._save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
         self._check_show(show_flag)
         return ax, pyplot.gcf()
+
+    def plot_HMC(self, samples, skip_samples=0, title='HMC NUTS trace', figure_name=None, figure_dir=FOLDER_FIGURES,
+                 figsize=LARGE_SIZE, figure_format=FIG_FORMAT, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG):
+        samples = ensure_list(samples)
+        if len(samples) > 1:
+            samples = list_of_dicts_to_dicts_of_ndarrays(samples)
+        else:
+            samples = samples[0]
+        nuts = extract_dict_stringkeys(samples, '__', modefun="find")
+        self.plots(nuts, shape=(2, 4), skip=skip_samples, xlabels={}, xscales={}, yscales={"stepsize__": "log"},
+                   title=title, figure_name=figure_name, figure_dir=figure_dir, figure_format=figure_format,
+                   figsize=figsize, show_flag=show_flag, save_flag=save_flag)

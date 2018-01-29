@@ -65,7 +65,7 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
     times = times[t_onset:t_offset]
     observation = observation[t_onset:t_offset]
     if plot_flag:
-        plotter.plot_raster(times, {"observation": observation}, time_units="sec", special_idx=None, title='Time Series',
+        plotter.plot_raster({"observation": observation}, times, time_units="sec", special_idx=None, title='Time Series',
                     offset=1.0, figure_name='TimeSeries', labels=bipolar_channels, save_flag=True)
     # n_times = times.shape[0]
     # observation = resample_poly(observation, 2048, n_times)
@@ -74,6 +74,6 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
     observation -= observation.min()
     observation /= observation.max()
     if plot_flag:
-        plotter.plot_timeseries(times, {"observation": observation}, time_units="sec", special_idx=None, title='Time Series',
+        plotter.plot_timeseries({"observation": observation}, times, time_units="sec", special_idx=None, title='Time Series',
                     figure_name='TimeSeriesDecimated', labels=bipolar_channels, show_flag=True, save_flag=True) #
     return observation, times, fs/2
