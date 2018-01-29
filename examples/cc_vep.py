@@ -9,6 +9,7 @@ from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
@@ -22,13 +23,11 @@ else:
 PSE_FLAG = False
 SIM_FLAG = True
 
-
-HEAD="Head"
+HEAD = "Head"
 
 
 def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folder_res=FOLDER_RES,
              pse_flag=PSE_FLAG, sim_flag=SIM_FLAG):
-
     subject_folder = os.path.join(FOLDER_VEP, subject)
     folder_res = os.path.basename(folder_res)
     FOLDER_RES = os.path.join(subject_folder, HEAD, ep_name)
@@ -124,16 +123,18 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
                 configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
         writer.write_model_configuration(model_configuration, os.path.join(folder_res, "ModelConfiguration.h5"))
         # Plot nullclines and equilibria of model configuration
-        model_configuration_service.plot_state_space(model_configuration, head.connectivity.region_labels,
-                                                     special_idx=disease_indices, model="2d", zmode="lin",
-                                                     figure_name=hyp.name + "_StateSpace", figure_dir=folder_figs)
+        plotter = Plotter()
+        plotter.plot_state_space(model_configuration, head.connectivity.region_labels,
+                                 special_idx=disease_indices, model="2d", zmode="lin",
+                                 figure_name=hyp.name + "_StateSpace", figure_dir=folder_figs)
         logger.info("\n\nRunning LSA...")
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
         lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
         writer.write_hypothesis(lsa_hypothesis, os.path.join(folder_res, lsa_hypothesis.name + ".h5"))
         writer.write_lsa_service(lsa_service, os.path.join(folder_res, "lsa_config_service.h5"))
-        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, None,
-                             figure_dir=folder_figs)
+        plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
+                         lsa_service.eigen_vectors_number, head.connectivity.region_labels, None,
+                         figure_dir=folder_figs)
         if pse_flag:
             n_samples = 100
             # --------------Parameter Search Exploration (PSE)-------------------------------
@@ -148,8 +149,9 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
                                                   model_configuration_service=model_configuration_service,
                                                   lsa_service=lsa_service, save_flag=True, folder_res=folder_res,
                                                   filename="PSE_LSA", logger=logger)[0]
-            lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, pse_results,
-                                 title="Hypothesis PSE LSA Overview", figure_dir=folder_figs)
+            plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
+                             lsa_service.eigen_vectors_number, head.connectivity.region_labels, pse_results,
+                             title="Hypothesis PSE LSA Overview", figure_dir=folder_figs)
         if sim_flag:
             sim_folder_res = os.path.join(folder_res, "simulations")
             sim_folder_figs = os.path.join(folder_figs, "simulations")

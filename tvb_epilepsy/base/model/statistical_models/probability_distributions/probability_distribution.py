@@ -1,11 +1,8 @@
 from abc import ABCMeta, abstractmethod
 import numpy as np
-import matplotlib.pyplot as pl
-from tvb_epilepsy.base.constants.configurations import SAVE_FLAG, SHOW_FLAG, FOLDER_FIGURES, FIG_FORMAT
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_size, \
-    squeeze_array_to_scalar, linspace_broadcast
-from tvb_epilepsy.base.utils.plot_utils import save_figure, check_show
+    squeeze_array_to_scalar
 from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_params
 
 
@@ -217,32 +214,3 @@ class ProbabilityDistribution(object):
 
     def compute_and_update_pdf_params(self, loc=0.0, scale=1.0, use="scipy", **target_stats):
         self.update_params(loc, scale, use, **(compute_pdf_params(self.type, target_stats, loc, scale, use)))
-
-    def _plot(self, loc=0.0, scale=1.0, x=np.array([]), ax=None, linestyle="-", lgnd=True):
-        if len(x) < 1:
-            x = linspace_broadcast(self.scipy(self.loc, self.scale).ppf(0.01),
-                                   self.scipy(self.loc, self.scale).ppf(0.99), 100)
-        if x is not None:
-            pdf = self.scipy(loc, scale).pdf(x)
-            if ax is None:
-                _, ax = pl.subplots(1,1)
-            for ip, (xx, pp) in enumerate(zip(x.T, pdf.T)):
-                if xx.shape != pp.shape:
-                    print("WTF?")
-                ax.plot(xx.T, pp.T, linestyle=linestyle, linewidth=1, label=str(ip), alpha=0.5)
-            if lgnd:
-                pl.legend()
-            return ax
-        else:
-            raise_value_error("Distribution parameters do not broadcast!")
-
-
-    def plot_distribution(self, loc=0.0, scale=1.0, x=np.array([]), ax=None, linestyle="-", lgnd=True,
-                          figure_name="", figure_dir=FOLDER_FIGURES, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
-                          figure_format=FIG_FORMAT):
-        ax = self._plot(loc, scale, x, ax, linestyle, lgnd)
-        ax.set_title(self.type + " distribution")
-        save_figure(save_flag, pl.gcf(), figure_name, figure_dir, figure_format)
-        check_show(show_flag)
-        return ax, pl.gcf()
-

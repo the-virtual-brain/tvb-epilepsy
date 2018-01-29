@@ -1,15 +1,9 @@
-import os
 import numpy as np
-from matplotlib import pyplot
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from sklearn.cluster import AgglomerativeClustering
-
-from tvb_epilepsy.base.constants.configurations import SHOW_FLAG, SAVE_FLAG, FOLDER_FIGURES, FIG_FORMAT, VERY_LARGE_SIZE
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
-from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds, compute_in_degree
-from tvb_epilepsy.base.utils.plot_utils import plot_regions2regions, save_figure, check_show, plot_vector
+from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 
 
 class HeadService(object):
@@ -45,99 +39,6 @@ class HeadService(object):
             inds = inds[:n_regions]
             nearest_regions.append((inds, head.connectivity.region_labels[inds], projs[inds]))
         return nearest_regions
-
-    def plot_head(self, head, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
-                  figure_format=FIG_FORMAT):
-        # plot connectivity
-        self._plot_connectivity(head.connectivity, show_flag, save_flag, figure_dir, figure_format)
-        self._plot_connectivity_stats(head.connectivity, show_flag, save_flag, figure_dir, figure_format)
-        # plot sensor gain_matrixs
-        count = 1
-        for s_type in Sensors.SENSORS_TYPES:
-            sensors = getattr(head, "sensors" + s_type)
-            if isinstance(sensors, (list, Sensors)):
-                sensors_list = ensure_list(sensors)
-                if len(sensors_list) > 0:
-                    for s in sensors_list:
-                        count = self._plot_sensors(s, head.connectivity.region_labels, count, show_flag,
-                                                   save_flag, figure_dir, figure_format)
-
-    def _plot_connectivity(self, connectivity, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG, figure_dir=FOLDER_FIGURES,
-                           figure_format=FIG_FORMAT, figure_name='Connectivity ', figsize=VERY_LARGE_SIZE):
-        # plot connectivity
-        pyplot.figure(figure_name + str(connectivity.number_of_regions), figsize)
-        # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
-        plot_regions2regions(connectivity.normalized_weights, connectivity.region_labels, 121, "normalised weights")
-        plot_regions2regions(connectivity.tract_lengths, connectivity.region_labels, 122, "tract lengths")
-        if save_flag:
-            save_figure(figure_dir=figure_dir, figure_format=figure_format,
-                        figure_name=figure_name.replace(" ", "_").replace("\t", "_"))
-        check_show(show_flag=show_flag)
-
-    def _plot_connectivity_stats(self, connectivity, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
-                                 figure_dir=FOLDER_FIGURES,
-                                 figure_format=FIG_FORMAT,
-                                 figsize=VERY_LARGE_SIZE, figure_name='HeadStats '):
-        pyplot.figure("Head stats " + str(connectivity.number_of_regions), figsize=figsize)
-        areas_flag = len(connectivity.areas) == len(connectivity.region_labels)
-        ax = plot_vector(compute_in_degree(connectivity.normalized_weights), connectivity.region_labels,
-                         111 + 10 * areas_flag,
-                         "w in-degree")
-        ax.invert_yaxis()
-        if len(connectivity.areas) == len(connectivity.region_labels):
-            ax = plot_vector(connectivity.areas, connectivity.region_labels, 122, "region areas")
-            ax.invert_yaxis()
-        if save_flag:
-            save_figure(figure_dir=figure_dir, figure_format=figure_format,
-                        figure_name=figure_name.replace(" ", "").replace("\t", ""))
-        check_show(show_flag=show_flag)
-
-    def _plot_sensors(self, sensors, region_labels, count=1, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
-                      figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
-        # plot sensors:
-        if sensors.gain_matrix is None:
-            return count
-        self._plot_gain_matrix(sensors, region_labels, title=str(count) + " - " + sensors.s_type + " - Projection",
-                               show_flag=show_flag, save_flag=save_flag, figure_dir=figure_dir,
-                               figure_format=figure_format)
-        count += 1
-        return count
-
-    def _plot_gain_matrix(self, sensors, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1,
-                          x_ticks=np.array([]), y_ticks=np.array([]), show_flag=SHOW_FLAG, save_flag=SAVE_FLAG,
-                          figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, figure_name=''):
-        if not (isinstance(figure, pyplot.Figure)):
-            figure = pyplot.figure(title, figsize=figsize)
-        n_sensors = sensors.number_of_sensors
-        n_regions = len(region_labels)
-        if len(x_ticks) == 0:
-            x_ticks = np.array(range(n_sensors), dtype=np.int32)
-        if len(y_ticks) == 0:
-            y_ticks = np.array(range(n_regions), dtype=np.int32)
-        cmap = pyplot.set_cmap('autumn_r')
-        img = pyplot.imshow(sensors.gain_matrix[x_ticks][:, y_ticks].T, cmap=cmap, interpolation='none')
-        pyplot.grid(True, color='black')
-        if y_labels > 0:
-            region_labels = np.array(["%d. %s" % l for l in zip(range(n_regions), region_labels)])
-            pyplot.yticks(y_ticks, region_labels[y_ticks])
-        else:
-            pyplot.yticks(y_ticks)
-        if x_labels > 0:
-            sensor_labels = np.array(["%d. %s" % l for l in zip(range(n_sensors), sensors.labels)])
-            pyplot.xticks(x_ticks, sensor_labels[x_ticks], rotation=90)
-        else:
-            pyplot.xticks(x_ticks)
-        ax = figure.get_axes()[0]
-        ax.autoscale(tight=True)
-        pyplot.title(title)
-        divider = make_axes_locatable(ax)
-        cax1 = divider.append_axes("right", size="5%", pad=0.05)
-        pyplot.colorbar(img, cax=cax1)  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
-        if figure_name == "":
-            figure_name = title
-        save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=title)
-        check_show(show_flag)
-        return figure
 
     def select_sensors_power(self, sensors, power, selection=[], power_th=0.5):
         if len(selection) == 0:

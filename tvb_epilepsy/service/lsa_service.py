@@ -7,14 +7,12 @@ TODO: it might be useful to store eigenvalues and eigenvectors, as well as the p
 import numpy
 from tvb_epilepsy.base.constants.module_constants import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM
 from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF
-from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMAT, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.math_utils import weighted_vector_sum, curve_elbow_point
-from tvb_epilepsy.base.utils.plot_utils import plot_in_columns
 
 logger = initialize_logger(__name__)
 
@@ -142,45 +140,6 @@ class LSAService(object):
                                  {tuple(disease_hypothesis.e_indices): disease_hypothesis.e_values},
                                  {tuple(disease_hypothesis.w_indices): disease_hypothesis.w_values},
                                  propagation_indices, lsa_propagation_strength, "LSA_" + disease_hypothesis.name)
-
-    def plot_lsa(self, disease_hypothesis, model_configuration, region_labels=[],
-                 pse_results=None, title="Hypothesis Overview",
-                 figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
-                 show_flag=SHOW_FLAG, save_flag=SAVE_FLAG):
-
-        hyp_dict_list = disease_hypothesis.prepare_for_plot(model_configuration.model_connectivity)
-        model_config_dict_list = model_configuration.prepare_for_plot()[:2]
-
-        model_config_dict_list += hyp_dict_list
-        plot_dict_list = model_config_dict_list
-
-        if pse_results is not None and isinstance(pse_results, dict):
-            fig_name = disease_hypothesis.name + " PSE " + title
-            ind_ps = len(plot_dict_list) - 2
-            for ii, value in enumerate(["lsa_propagation_strengths", "e_values", "x0_values"]):
-                ind = ind_ps - ii
-                if ind >= 0:
-                    if pse_results.get(value, False).any():
-                        plot_dict_list[ind]["data_samples"] = pse_results.get(value)
-                        plot_dict_list[ind]["plot_type"] = "vector_violin"
-
-        else:
-            fig_name = disease_hypothesis.name + " " + title
-
-        description = ""
-        if self.weighted_eigenvector_sum:
-            description = "LSA PS: absolut eigenvalue-weighted sum of "
-            if self.eigen_vectors_number is not None:
-                description += "first " + str(self.eigen_vectors_number) + " "
-            description += "eigenvectors has been used"
-
-        return plot_in_columns(plot_dict_list, region_labels, width_ratios=[],
-                               left_ax_focus_indices=disease_hypothesis.get_all_disease_indices(),
-                               right_ax_focus_indices=disease_hypothesis.lsa_propagation_indices,
-                               description=description, title=title, figure_name=fig_name,
-                               figure_dir=figure_dir,
-                               figure_format=figure_format,
-                               show_flag=show_flag, save_flag=save_flag)
 
     def update_for_pse(self, values, paths, indices):
         for i, val in enumerate(paths):

@@ -8,9 +8,9 @@ from tvb_epilepsy.base.constants.module_constants import TVB, CUSTOM
 from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.utils.plot_utils import plot_raster, plot_timeseries
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.model_inversion.sde_model_inversion_service import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
@@ -62,7 +62,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         statistical_model = model_inversion.generate_statistical_model(observation_model="lfp_power") # observation_expression="lfp"
         statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
                                                                   active_regions_th=0.1, reset=True)
-        statistical_model.plot("Statistical Model")
+        plotter = Plotter()
+        plotter.plot_statistical_model(statistical_model, "Statistical Model")
         decimate = 4
         cut_signals_tails = (6, 6)
         if os.path.isfile(EMPIRICAL):
@@ -130,11 +131,11 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         if vois_ts_dict.get("signals", None) is not None:
             vois_ts_dict["signals"] -= vois_ts_dict["signals"].min()
             vois_ts_dict["signals"] /= vois_ts_dict["signals"].max()
-            plot_raster(vois_ts_dict["time"].flatten(), {'Target Signals': vois_ts_dict["signals"]},
+            plotter.plot_raster({'Target Signals': vois_ts_dict["signals"]}, vois_ts_dict["time"].flatten(),
                         time_units="ms", title=hyp.name + ' Target Signals raster',
                         special_idx=model_inversion.signals_inds, offset=1, labels=labels,
                         save_flag=True, show_flag=False, figure_dir=figure_dir)
-        plot_timeseries(time, {'Target Signals': signals},
+        plotter.plot_timeseries({'Target Signals': signals}, time,
                         time_units="ms", title=hyp.name + 'Target Signals ',
                         labels=labels[model_inversion.signals_inds],
                         save_flag=True, show_flag=False, figure_dir=figure_dir)
@@ -180,9 +181,10 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         writer.write_generic(est, results_dir, lsa_hypothesis.name + "_fit_est.h5")
         est = ensure_list(est)
         for id_est, this_est in enumerate(est):
-            model_inversion.plot_fit_results(this_est, statistical_model, signals, time=None,
-                                             seizure_indices=lsa_hypothesis.get_regions_disease(),
-                                             trajectories_plot=True, id_est=str(id_est))
+            plotter.plot_fit_results(model_inversion, this_est, statistical_model, signals, model_inversion.region_labels,
+                                     model_inversion.x0_values, time=None,
+                                     seizure_indices=lsa_hypothesis.get_regions_disease(), trajectories_plot=True,
+                                     id_est=str(id_est))
             # -------------------------- Reconfigure model after fitting:---------------------------------------------------
             fit_model_configuration_service = \
                 ModelConfigurationService(hyp.number_of_regions, K=this_est['K'] * hyp.number_of_regions)
@@ -199,11 +201,11 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                              os.path.join(results_dir, hyp_fit.name + "_ModelConfig.h5"))
 
             # Plot nullclines and equilibria of model configuration
-            model_configuration_service.plot_state_space(model_configuration_fit,
-                                                         model_configuration_service.region_labels,
-                                                         special_idx=statistical_model.active_regions,
-                                                         model="6d", zmode="lin",
-                                                         figure_name=hyp_fit.name + "_Nullclines and equilibria")
+            plotter.plot_state_space(model_configuration_fit,
+                                     model_configuration_service.region_labels,
+                                     special_idx=statistical_model.active_regions,
+                                     model="6d", zmode="lin",
+                                     figure_name=hyp_fit.name + "_Nullclines and equilibria")
         print("Done!")
 
 
