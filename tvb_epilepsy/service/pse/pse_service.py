@@ -18,7 +18,7 @@ class ABCPSEService(object):
     n_params_vals = []
     n_params = 0
 
-    def run_pse(self, conn_matrix, grid_mode, **kwargs):
+    def run_pse(self, conn_matrix, grid_mode=False, **kwargs):
         results = []
         execution_status = []
         loop_tenth = 1
@@ -32,7 +32,7 @@ class ABCPSEService(object):
             status = False
             output = None
             try:
-                status, output = self.run(conn_matrix, **kwargs)
+                status, output = self.run(params, conn_matrix, **kwargs)
             except:
                 pass
             if not status:
@@ -85,11 +85,11 @@ class ABCPSEService(object):
         else:
             warning("\nparams_pse is not a list of tuples!")
 
-    def update_hypothesis(self, conn_matrix, model_config_service_input=None,
+    def update_hypo_model_config(self, hypothesis, params, conn_matrix, model_config_service_input=None,
                            yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",):
         # Copy and update hypothesis
-        hypo_copy = deepcopy(self.hypothesis)
-        hypo_copy.update_for_pse(self.params_vals, self.params_paths, self.params_indices)
+        hypo_copy = deepcopy(hypothesis)
+        hypo_copy.update_for_pse(params, self.params_paths, self.params_indices)
         # Create a ModelConfigService and update it
         if isinstance(model_config_service_input, ModelConfigurationService):
             model_configuration_service = deepcopy(model_config_service_input)
@@ -97,7 +97,7 @@ class ABCPSEService(object):
             model_configuration_service = ModelConfigurationService(hypo_copy.number_of_regions,
                                                                     yc=yc, Iext1=Iext1, K=K, a=a, b=b,
                                                                     x1eq_mode=x1eq_mode)
-        model_configuration_service.update_for_pse(self.params_vals, self.params_paths, self.params_indices)
+        model_configuration_service.update_for_pse(params, self.params_paths, self.params_indices)
         # Obtain Modelconfiguration
         if hypo_copy.type == "Epileptogenicity":
             model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hypo_copy,
@@ -107,16 +107,24 @@ class ABCPSEService(object):
                                                                                               conn_matrix)
         return hypo_copy, model_configuration
 
-    def set_object_attribute_recursively(self, obj, values):
-        path = self.params_paths.split(".")
-        # If there is more than one levels, call function recursively
+    def set_object_attribute_recursively(self, object, values, path, indices):
+        # If there is more than one levels...
         if len(path) > 1:
-            self.set_object_attribute_recursively(getattr(obj, path[0]), ".".join(path[1:]), values)
-
+            # ...call the function recursively
+            self.set_object_attribute_recursively(getattr(object, path[0]), values, path[1:], indices)
         else:
-            temp = getattr(obj, path[0])
-            if len(self.params_indices) > 0:
-                temp[self.params_indices] = values
+            # ...else, set the parameter values for the specified indices
+            temp = getattr(object, path[0])
+            if len(indices) > 0:
+                temp[indices] = values  # index has to be linear... i.e., 1D...
             else:
                 temp = values
-            setattr(obj, path[0], temp)
+            setattr(object, path[0], temp)
+
+    def update_object(self, object, params, object_type=None):
+        if not(isinstance(object_type, basestring)):
+            object_type = object.__class__.__name__
+        for i, path in enumerate(self.params_paths):
+            path = path.split(".")
+            if path[0] == object_type:
+                self.set_object_attribute_recursively(object, params[i], path[1:], self.params_indices[i])

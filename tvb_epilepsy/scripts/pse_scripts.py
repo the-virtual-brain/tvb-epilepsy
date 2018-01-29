@@ -7,7 +7,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.scripts.hypothesis_scripts import start_lsa_run
-from tvb_epilepsy.service.pse_service import PSEService
+# from tvb_epilepsy.service.pse_service import PSEService
 from tvb_epilepsy.service.pse.lsa_pse_service import LSAPSEService
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
 
@@ -112,7 +112,7 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
     # pse_results, execution_status = pse_old.run_pse(model_connectivity, grid_mode=False, lsa_service_input=lsa_service,
     #                                             model_configuration_service_input=model_configuration_service)
     pse = LSAPSEService(hypothesis=lsa_hypothesis, params_pse=pse_params_list)
-    pse_results, execution_status = pse.run_pse(model_connectivity,
+    pse_results, execution_status = pse.run_pse(model_connectivity, grid_mode=False,
                                                 model_config_service_input=model_configuration_service,
                                                 lsa_service_input=lsa_service)
     # Call to new PSEService:
