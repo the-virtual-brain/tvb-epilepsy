@@ -9,7 +9,8 @@ from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1_R
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import copy_object_attributes, ensure_list, \
                                                             extract_dict_stringkeys, list_of_dicts_to_dicts_of_ndarrays
-from tvb_epilepsy.base.utils.plot_utils import pair_plots, save_figure, check_show
+#TODO: move new plotting methods inside Plotter
+from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
@@ -210,7 +211,7 @@ class ModelInversionService(object):
         else:
             samples = samples[0]
         samples = extract_dict_stringkeys(samples, params, modefun="equal")
-        pair_plots(samples, samples.keys(), skip_samples, title, figure_name, figure_dir,
+        Plotter().pair_plots(samples, samples.keys(), skip_samples, title, figure_name, figure_dir,
                    figsize, figure_format,  show_flag, save_flag)
 
     def region_parameters_violin_plots(self, samples, params=["x0", "x1eq"], skip_samples=0, per_chain=False,
@@ -232,5 +233,5 @@ class ModelInversionService(object):
                 pl.ylabel(param)
                 if ip==len(chain_sample)-1:
                     pl.xlabel('Regions')
-            save_figure(save_flag, pl.gcf(), chain_figure_name, figure_dir, figure_format)
-            check_show(show_flag)
+            Plotter()._save_figure(save_flag, pl.gcf(), chain_figure_name, figure_dir, figure_format)
+            Plotter()._check_show(show_flag)
