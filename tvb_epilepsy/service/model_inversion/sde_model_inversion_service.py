@@ -1,6 +1,5 @@
 import time
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMAT, VERY_LARGE_SIZE, SAVE_FLAG, SHOW_FLAG
 from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
 from tvb_epilepsy.base.constants.model_inversion_constants import SIG_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
@@ -60,11 +59,3 @@ class SDEModelInversionService(ODEModelInversionService):
 
     def generate_model_data(self, statistical_model, signals, gain_matrix=None):
         return super(SDEModelInversionService, self).generate_model_data(statistical_model, signals, gain_matrix)
-
-    def parameters_pair_plots(self, samples,
-                   params=["tau1", "tau0", "K", "sig_eq", "sig_init", "sig", "eps", "scale_signal", "offset_signal"],
-                   skip_samples=0, title='Parameters fit', figure_name=None, figure_dir=FOLDER_FIGURES,
-                   figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG):
-        super(SDEModelInversionService, self).parameters_pair_plots(samples, params, skip_samples, title, figure_name,
-                                                                    figure_dir, figsize, figure_format, show_flag,
-                                                                    save_flag)

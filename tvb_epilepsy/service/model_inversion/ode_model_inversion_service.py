@@ -1,7 +1,6 @@
 import time
 from copy import deepcopy
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, VERY_LARGE_SIZE, FIG_FORMAT, SHOW_FLAG, SAVE_FLAG
 from tvb_epilepsy.base.constants.model_constants import X1_DEF
 from tvb_epilepsy.base.constants.model_inversion_constants import X1INIT_MIN, X1INIT_MAX, ZINIT_MIN, ZINIT_MAX, \
                                                                             MC_MIN,  SIG_INIT_DEF, OBSERVATION_MODELS
@@ -321,19 +320,3 @@ class ODEModelInversionService(ModelInversionService):
         model_data["MCsplit_scale"] = statistical_model.parameters["MCsplit"].std * MCsplit_shape
         model_data["offset_signal_p"] = np.array(statistical_model.parameters["offset_signal"].pdf_params().values())
         return sort_dict(model_data)
-
-    def parameters_pair_plots(self, samples,
-                             params=["tau1", "tau0", "K", "sig_eq", "sig_init", "eps", "scale_signal", "offset_signal"],
-                             skip_samples=0, title='Parameters fit', figure_name=None, figure_dir=FOLDER_FIGURES,
-                           figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG):
-        super(ODEModelInversionService, self).parameters_pair_plots(samples, params, skip_samples, title, figure_name,
-                                                                    figure_dir, figsize, figure_format, show_flag,
-                                                                    save_flag)
-
-    def region_parameters_violin_plots(self, samples, params=["x0", "x1eq", "x1init", "zinit"], skip_samples=0,
-                                       per_chain=False, figure_name="Regions parameters samples",
-                                       figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT,
-                                       show_flag=SHOW_FLAG,  save_flag=SAVE_FLAG):
-        super(ODEModelInversionService, self).region_parameters_violin_plots(samples, params, skip_samples, per_chain,
-                                                                             figure_name, figure_dir, figsize,
-                                                                             figure_format, show_flag, save_flag)

@@ -1,16 +1,11 @@
 import time
 from copy import deepcopy
 import numpy as np
-import matplotlib.pyplot as pl
-from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, VERY_LARGE_SIZE, FIG_FORMAT, SHOW_FLAG, SAVE_FLAG
 from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
 from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1_REST, TAU1_DEF, TAU1_MIN, \
-                     TAU1_MAX, TAU0_DEF, TAU0_MIN, TAU0_MAX, K_MIN, K_MAX, MC_MAX, MC_MAX_MIN_RATIO, SIG_EQ_DEF
+    TAU1_MAX, TAU0_DEF, TAU0_MIN, TAU0_MAX, K_MIN, K_MAX, MC_MAX, MC_MAX_MIN_RATIO, SIG_EQ_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import copy_object_attributes, ensure_list, \
-                                                            extract_dict_stringkeys, list_of_dicts_to_dicts_of_ndarrays
-#TODO: move new plotting methods inside Plotter
-from tvb_epilepsy.plot.plotter import Plotter
+from tvb_epilepsy.base.utils.data_structures_utils import copy_object_attributes
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
@@ -201,37 +196,3 @@ class ModelInversionService(object):
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model
-
-    def parameters_pair_plots(self, samples, params=["tau1", "tau0", "K", "sig_eq", "eps"], skip_samples=0,
-                   title='Parameters samples', figure_name=None, figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE,
-                   figure_format=FIG_FORMAT, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG):
-        samples = ensure_list(samples)
-        if len(samples) > 1:
-            samples = list_of_dicts_to_dicts_of_ndarrays(samples)
-        else:
-            samples = samples[0]
-        samples = extract_dict_stringkeys(samples, params, modefun="equal")
-        Plotter().pair_plots(samples, samples.keys(), skip_samples, title, figure_name, figure_dir,
-                   figsize, figure_format,  show_flag, save_flag)
-
-    def region_parameters_violin_plots(self, samples, params=["x0", "x1eq"], skip_samples=0, per_chain=False,
-                                       figure_name="Regions parameters samples", figure_dir=FOLDER_FIGURES,
-                                       figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT, show_flag=SHOW_FLAG,
-                                       save_flag=SAVE_FLAG):
-        samples = ensure_list(samples)
-        if not per_chain:
-            samples = ensure_list(list_of_dicts_to_dicts_of_ndarrays(samples))
-        for ichain, chain_sample in enumerate(samples):
-            if per_chain:
-                chain_figure_name = figure_name + ": chain " + str(ichain+1)
-            else:
-                chain_figure_name=figure_name
-            pl.figure(chain_figure_name, figsize=figsize)
-            for ip, param in enumerate(params):
-                pl.subplot(len(params), 1, ip+1)
-                pl.violinplot(chain_sample[param])
-                pl.ylabel(param)
-                if ip==len(chain_sample)-1:
-                    pl.xlabel('Regions')
-            Plotter()._save_figure(save_flag, pl.gcf(), chain_figure_name, figure_dir, figure_format)
-            Plotter()._check_show(show_flag)

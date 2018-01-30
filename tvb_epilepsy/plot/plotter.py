@@ -697,26 +697,55 @@ class Plotter(BasePlotter):
         self._save_figure(save_flag, figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
         self._check_show(show_flag)
 
+    def parameters_pair_plots(self, samples, params=["tau1", "tau0", "K", "sig_eq", "eps"], skip_samples=0,
+                              title='Parameters samples', figure_name=None, figure_dir=FOLDER_FIGURES,
+                              figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT, show_flag=SHOW_FLAG,
+                              save_flag=SAVE_FLAG):
+        samples = ensure_list(samples)
+        if len(samples) > 1:
+            samples = list_of_dicts_to_dicts_of_ndarrays(samples)
+        else:
+            samples = samples[0]
+        samples = extract_dict_stringkeys(samples, params, modefun="equal")
+        self.pair_plots(samples, samples.keys(), skip_samples, title, figure_name, figure_dir, figsize, figure_format,
+                        show_flag, save_flag)
+
+    def region_parameters_violin_plots(self, samples, params=["x0", "x1eq"], skip_samples=0, per_chain=False,
+                                       figure_name="Regions parameters samples", figure_dir=FOLDER_FIGURES,
+                                       figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT, show_flag=SHOW_FLAG,
+                                       save_flag=SAVE_FLAG):
+        samples = ensure_list(samples)
+        if not per_chain:
+            samples = ensure_list(list_of_dicts_to_dicts_of_ndarrays(samples))
+        for ichain, chain_sample in enumerate(samples):
+            if per_chain:
+                chain_figure_name = figure_name + ": chain " + str(ichain + 1)
+            else:
+                chain_figure_name = figure_name
+            pyplot.figure(chain_figure_name, figsize=figsize)
+            for ip, param in enumerate(params):
+                pyplot.subplot(len(params), 1, ip + 1)
+                pyplot.violinplot(chain_sample[param])
+                pyplot.ylabel(param)
+                if ip == len(chain_sample) - 1:
+                    pyplot.xlabel('Regions')
+            self._save_figure(save_flag, pyplot.gcf(), chain_figure_name, figure_dir, figure_format)
+            self._check_show(show_flag)
+
     def plot_fit_results(self, model_inversion_service, ests, samples, statistical_model, signals, time=None,
-                         seizure_indices=None, x1_str="x1",
-                         x0_str="x0", mc_str="MC", signals_str="fit_signals", sig_str="sig", eps_str="eps",
-                         trajectories_plot=True, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
-                         figure_format=FIG_FORMAT, **kwargs):
+                         seizure_indices=None, x1_str="x1", x0_str="x0", mc_str="MC", signals_str="fit_signals",
+                         sig_str="sig", eps_str="eps", trajectories_plot=True, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG,
+                         figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, **kwargs):
         # plot scalar parameters in pair plots
-        # TODO: move these 2 plots here
-        model_inversion_service.parameters_pair_plots(samples,
-                                                      kwargs.get("pair_plot_params",
-                                                                 ["tau1", "tau0", "K", "sig_eq", "sig_init", "sig",
-                                                                  "eps", "scale_signal",
-                                                                  "offset_signal"]),
-                                                      kwargs.get("skip_samples", 0),
-                                                      title=statistical_model.name + " parameters samples")
+        self.parameters_pair_plots(samples, kwargs.get("pair_plot_params",
+                                                       ["tau1", "tau0", "K", "sig_eq", "sig_init", "sig", "eps",
+                                                        "scale_signal", "offset_signal"]),
+                                   kwargs.get("skip_samples", 0), title=statistical_model.name + " parameters samples")
         # plot region-wise parameters
-        model_inversion_service.region_parameters_violin_plots(samples,
-                                                               kwargs.get("params", ["x0", "x1eq", "x1init", "zinit"]),
-                                                               skip_samples=kwargs.get("skip_samples", 0),
-                                                               per_chain=kwargs.get("violin_plot_per_chain", False),
-                                                               figure_name=statistical_model.name + " regions parameters samples")
+        self.region_parameters_violin_plots(samples, kwargs.get("params", ["x0", "x1eq", "x1init", "zinit"]),
+                                            skip_samples=kwargs.get("skip_samples", 0),
+                                            per_chain=kwargs.get("violin_plot_per_chain", False),
+                                            figure_name=statistical_model.name + " regions parameters samples")
         if time is None:
             time = numpy.array(range(signals.shape[0]))
         time = time.flatten()
