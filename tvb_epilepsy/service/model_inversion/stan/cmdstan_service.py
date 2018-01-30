@@ -91,24 +91,12 @@ class CmdStanService(StanService):
                                          output_filepath, diagnostic_filepath)
         self.logger.info("Model fitting with " + self.fitmethod +
                          " method of model: " + self.model_path + "...")
-        # self.fitting_time = execute_command(self.command.replace("\t", ""), shell=True)[1]
-        tic = time.time()
-        # print(self.command.replace("\t", ""))
-        # proc = subprocess.Popen(self.command.replace("\t", ""), shell=True,
-        #                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # # tail -n 1 vep-fe-rev-05.sample.*.out
-        # stdout = proc.stdout.read().decode('ascii').strip()
-        # if stdout:
-        #     print(stdout)
-        # stderr = proc.stderr.read().decode('ascii').strip()
-        # if stderr:
-        #     print(stderr)
-        # self.fitting_time = time.time() - tic
-        # self.logger.info(str(self.fitting_time) + ' sec required to ' + self.fitmethod + "!")
+        self.fitting_time = execute_command(self.command.replace("\t", ""), shell=True)[1]
+        self.logger.info(str(self.fitting_time) + ' sec required to ' + self.fitmethod + "!")
         if read_output:
             samples = self.read_output_samples(output_filepath, **kwargs)
             est = self.compute_estimates_from_samples(samples)
-            if self.fitmethod.find("sampl") > 0:
+            if self.fitmethod.find("sampl") >= 0:
                 if isequal_string(self.options.get("algorithm", "None"), "HMC"):
                     self.plot_HMC(samples, kwargs.pop("skip_samples", 0))
             return est, samples
