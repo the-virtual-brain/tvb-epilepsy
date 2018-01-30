@@ -1,9 +1,9 @@
 import numpy
 from scipy.stats import zscore
 import matplotlib
-
 matplotlib.use('Qt4Agg')
 from matplotlib import pyplot, gridspec
+# pyplot.ion()
 from matplotlib.colors import Normalize
 from mpldatacursor import HighlightingDataCursor
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -137,8 +137,7 @@ class Plotter(BasePlotter):
                                show_flag=SHOW_FLAG, figure_format=FIG_FORMAT):
         _, ax = pyplot.subplots(len(statistical_model.parameters), 2, figsize=VERY_LARGE_PROTRAIT)
         for ip, p in enumerate(statistical_model.parameters.values()):
-            ax[ip] = p.plot(ax=ax[ip], lgnd=False)
-            # ax.append(p.plot_stochastic_parameter(lgnd=False))
+            self._prepare_parameter_axes(p, x=numpy.array([]), ax=ax[ip], lgnd=False)
         self._save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
         self._check_show(show_flag)
         return ax, pyplot.gcf()
@@ -829,8 +828,6 @@ class Plotter(BasePlotter):
             if ax is None:
                 _, ax = pyplot.subplots(1, 1)
             for ip, (xx, pp) in enumerate(zip(x.T, pdf.T)):
-                if xx.shape != pp.shape:
-                    print("WTF?")
                 ax.plot(xx.T, pp.T, linestyle=linestyle, linewidth=1, label=str(ip), alpha=0.5)
             if lgnd:
                 pyplot.legend()

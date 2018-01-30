@@ -64,16 +64,6 @@ class CmdStanService(StanService):
         command = "make " + self.model_code_path.split(".stan", 1)[0] + " && " + \
                   "chmod +x " + self.model_code_path.split(".stan", 1)[0]
         self.compilation_time = execute_command(command, cwd=self.path, shell=True)[1]
-        # proc = subprocess.Popen(command, cwd=self.path, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # # use this to track the ongoing process:
-        # # tail -n 1 vep-fe-rev-05.sample.*.out
-        # stdout = proc.stdout.read().decode('ascii').strip()
-        # if stdout:
-        #     print(stdout)
-        # stderr = proc.stderr.read().decode('ascii').strip()
-        # if stderr:
-        #     print(stderr)
-        # self.compilation_time = time.time() - tic
         self.logger.info(str(self.compilation_time) + ' sec required to compile')
         if save_model:
             self.model_path = kwargs.pop("model_path", self.model_path)
@@ -92,8 +82,8 @@ class CmdStanService(StanService):
                                          output_filepath, diagnostic_filepath)
         self.logger.info("Model fitting with " + self.fitmethod +
                          " method of model: " + self.model_path + "...")
-        self.fitting_time = execute_command(self.command.replace("\t", ""), shell=True)[1]
-        self.logger.info(str(self.fitting_time) + ' sec required to ' + self.fitmethod + "!")
+        # self.fitting_time = execute_command(self.command.replace("\t", ""), shell=True)[1]
+        # self.logger.info(str(self.fitting_time) + ' sec required to ' + self.fitmethod + "!")
         if read_output:
             samples = self.read_output_samples(output_filepath, **kwargs)
             est = self.compute_estimates_from_samples(samples)
