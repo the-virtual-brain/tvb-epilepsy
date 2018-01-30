@@ -65,6 +65,7 @@ class DiseaseHypothesis(object):
         setattr(self, attr_name, data)
 
     def prepare_for_plot(self, connectivity_matrix=None):
+        plot_dict_list = []
         width_ratios = []
         if len(self.lsa_propagation_indices) > 0:
             if connectivity_matrix is None:

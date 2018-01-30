@@ -116,7 +116,7 @@ functions {
 data {
 
     int SIMULATE;
-    // int DEBUG;
+    int DEBUG;
 
     int n_regions;
     int n_times;
@@ -243,12 +243,9 @@ data {
     real scale_signal_p[2];
     int<lower=0> scale_signal_pdf;
     /* Observation signal offset parameter (only normal distribution) */
-    real offset_signal_lo;
+    // real offset_signal_lo;
     // real offset_signal_hi;
-    // real offset_signal_loc;
-    real<lower=0.0> offset_signal_scale;
     real offset_signal_p[2];
-    // int<lower=0> offset_signal_pdf;
 }
 
 
@@ -275,7 +272,8 @@ transformed data {
     real eps_star_hi = (eps_hi - eps_loc) / eps_scale;
     real scale_signal_star_lo = (scale_signal_lo - scale_signal_loc) / scale_signal_scale;
     real scale_signal_star_hi = (scale_signal_hi - scale_signal_loc) / scale_signal_scale;
-    print("tau1_star_lo=", tau1_star_lo, " tau0_star_lo=", tau0_star_lo, " K_star_lo=", K_star_lo,
+    if (DEBUG > 0)
+        print("tau1_star_lo=", tau1_star_lo, " tau0_star_lo=", tau0_star_lo, " K_star_lo=", K_star_lo,
           " sig_eq_star_lo=", sig_eq_star_lo, " sig_init_star_lo=", sig_init_star_lo, " sig_star_lo=", sig_star_lo,
           " eps_star_lo=", eps_star_lo, " scale_signal_star_lo=", scale_signal_star_lo);
 
@@ -354,6 +352,10 @@ transformed parameters {
     }
     coupling_eq = calc_coupling(n_regions, n_regions, x1eq, x1eq, MC);
 
+    if (DEBUG > 0)
+        print("tau1=", tau1, " tau0=", tau0, " K=", K, " sig_eq=", sig_eq, " sig_init=", sig_init, " sig=", sig,
+              " eps=", eps, " scale_signal=", scale_signal);
+
     /* x0, excitability parameter */
     x0 = EpileptorDP2D_fun_z_lin(n_regions, x1eq, zeq, zeros, K * coupling_eq, 1.0, 1.0) / 4.0;
 
@@ -361,6 +363,20 @@ transformed parameters {
     x1[1] = x1init;
     z[1] = zinit;
     coupling[1] = calc_coupling(n_regions, n_regions, x1[1], x1[1], MC);
+    if  (observation_model == 0) {
+    // seeg log power: observation with some log mixing, scaling and offset_signal
+        fit_signals[1] = (scale_signal * log(mixing * exp(x1[1]')) + offset_signal)';
+    } else if (observation_model == 1){
+    // observation with some linear mixing, scaling and offset_signal
+        fit_signals[1] = (scale_signal * mixing * x1[1]' + offset_signal)';
+    } else {
+        // observation with some scaling and offset_signal, without mixing
+        fit_signals[1] = scale_signal * x1[1] + offset_signal;
+    }
+
+    if (DEBUG > 1)
+        print("x1init=", x1init, " zinit=", zinit, " fit_signals[1]=", fit_signals[1], " x0=", x0,
+              " coupling_eq=", coupling_eq, " coupling[1]=", coupling[1]);
 
     /* Integration of auto-regressive generative model  */
     {   row_vector[n_regions] df;
@@ -368,21 +384,25 @@ transformed parameters {
 
         for (tt in 2:n_times) {
             df = EpileptorDP2D_fun_x1(n_regions, x1[tt-1], z[tt-1], yc, Iext1, a, db, d, slope, tau1);
+            if (DEBUG > 2)
+                print("tt=", tt, "dfx=", df);
             x1[tt] = ode_step(n_regions, x1[tt-1], df, dt);
             coupling[tt] = calc_coupling(n_regions, n_regions, x1[tt], x1[tt], MC);
             df = EpileptorDP2D_fun_z_lin(n_regions, x1[tt-1], z[tt-1], x0, K*coupling[tt-1], tau0, tau1);
+            if (DEBUG > 2)
+                print("tt=", tt, "dfz=", df);
             z[tt] = ode_step(n_regions, z[tt-1], df, dt);
             z[tt, active_regions] = z[tt, active_regions] + z_dWt[tt-1] * sqrtdt;
 
             if  (observation_model == 0) {
                 // seeg log power: observation with some log mixing, scaling and offset_signal
-                fit_signals[tt] = (scale_signal * log(mixing * exp(x1[tt]')) + offset_signal)';
+                fit_signals[tt] = scale_signal * (log(mixing * exp(x1[tt]')) + offset_signal)';
             } else if (observation_model == 1){
                 // observation with some linear mixing, scaling and offset_signal
-                fit_signals[tt] = (scale_signal * mixing * x1[tt]' + offset_signal)';
+                fit_signals[tt] = scale_signal * (mixing * x1[tt]' + offset_signal)';
             } else {
                 // observation with some scaling and offset_signal, without mixing
-                fit_signals[tt] = scale_signal * x1[tt] + offset_signal;
+                fit_signals[tt] = scale_signal * (x1[tt] + offset_signal);
             }
         }
     }
@@ -395,7 +415,7 @@ model {
 
     /* Sampling of time scales */
     tau1_star ~ sample(tau1_pdf, tau1_p);
-    tau0_star ~ sample(tau1_pdf, tau0_p);
+    tau0_star ~ sample(tau0_pdf, tau0_p);
     /* Sampling of global coupling scaling */
     K_star ~ sample(K_pdf, K_p);
     /* Sampling of model connectivity and its split parameter */
@@ -418,6 +438,8 @@ model {
     eps_star ~ sample(eps_pdf, eps_p);
     scale_signal_star ~ sample(scale_signal_pdf, scale_signal_p);
     offset_signal ~ normal(offset_signal_p[1], offset_signal_p[2]);
+    if (DEBUG > 0)
+        print("offset_signal=", offset_signal);
     /* Integrate & predict  */
     for (tt in 1:n_times) {
         /* Auto-regressive generative model  */

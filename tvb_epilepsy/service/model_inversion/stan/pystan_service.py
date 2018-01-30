@@ -61,17 +61,7 @@ class PyStanService(StanService):
             diagnostic_filepath = os.path.join(os.path.dirname(output_filepath), STAN_OUTPUT_OPTIONS["diagnostic_file"])
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
         self.fitmethod = kwargs.pop("method", self.fitmethod)
-        model_data = kwargs.pop("model_data", None)
-        if not (isinstance(model_data, dict)):
-            model_data = self.load_model_data_from_file()
-        # -1 for no debugging at all
-        # 0 for printing only scalar parameters
-        # 1 for printing scalar and vector parameters
-        # 2 for printing all (scalar, vector and matrix) parameters
-        model_data["DEBUG"] = debug
-        # > 0 for simulating without using the input observation data:
-        model_data["SIMULATE"] = simulate
-        model_data = sort_dict(model_data)
+        model_data = self.set_model_data(debug, simulate, **kwargs)
         self.assert_fitmethod()
         self.options.update(kwargs)
         self.logger.info("Model fitting with " + self.fitmethod + "...")
@@ -86,56 +76,57 @@ class PyStanService(StanService):
             if read_output:
                 self.logger.info("Extracting estimates...")
                 if self.fitmethod is "sampling":
-                    est = fit.extract(permuted=True)
+                    samples = fit.extract(permuted=True)
                 elif self.fitmethod is "vb":
-                    est = self.read_vb_results(fit)
-                return est, fit
+                    samples, _ = self.read_vb_results(fit)
+                est = self.compute_estimates_from_samples(samples)
+                return est, samples, fit
             else:
                 return fit,
 
     def read_vb_results(self, fit):
         est = {}
+        samples = {}
         for ip, p in enumerate(fit['sampler_param_names']):
             p_split = p.split('.')
             p_name = p_split.pop(0)
-            p_name_samples = p_name + "_s"
             if est.get(p_name) is None:
-                est.update({p_name_samples: []})
+                samples.update({p_name: []})
                 est.update({p_name: []})
             if len(p_split) == 0:
                 # scalar parameters
-                est[p_name_samples] = fit["sampler_params"][ip]
+                samples[p_name] = fit["sampler_params"][ip]
                 est[p_name] = fit["mean_pars"][ip]
             else:
                 if len(p_split) == 1:
                     # vector parameters
-                    est[p_name_samples].append(fit["sampler_params"][ip])
+                    samples[p_name].append(fit["sampler_params"][ip])
                     est[p_name].append(fit["mean_pars"][ip])
                 else:
                     ii = int(p_split.pop(0)) - 1
                     if len(p_split) == 0:
                         # 2D matrix parameters
                         if len(est[p_name]) < ii + 1:
-                            est[p_name_samples].append([fit["sampler_params"][ip]])
+                            samples[p_name].append([fit["sampler_params"][ip]])
                             est[p_name].append([fit["mean_pars"][ip]])
                         else:
-                            est[p_name_samples][ii].append(fit["sampler_params"][ip])
+                            samples[p_name][ii].append(fit["sampler_params"][ip])
                             est[p_name][ii].append(fit["mean_pars"][ip])
                     else:
                         if len(est[p_name]) < ii + 1:
-                            est[p_name_samples].append([])
+                            samples[p_name].append([])
                             est[p_name].append([])
                         jj = int(p_split.pop(0)) - 1
                         if len(p_split) == 0:
                             # 3D matrix parameters
                             if len(est[p_name][ii]) < jj + 1:
-                                est[p_name_samples][ii].append([fit["sampler_params"][ip]])
+                                samples[p_name][ii].append([fit["sampler_params"][ip]])
                                 est[p_name][ii].append([fit["mean_pars"][ip]])
                             else:
                                 if len(est[p_name][ii]) < jj + 1:
-                                    est[p_name_samples][ii].append([])
+                                    samples[p_name][ii].append([])
                                     est[p_name][ii].append([])
-                                est[p_name_samples][ii][jj].append(fit["sampler_params"][ip])
+                                    samples[p_name][ii][jj].append(fit["sampler_params"][ip])
                                 est[p_name][ii][jj].append(fit["mean_pars"][ip])
                         else:
                             raise_not_implemented_error("Extracting of parameters of more than 3 dimensions is not " +
@@ -143,4 +134,6 @@ class PyStanService(StanService):
         for key in est.keys():
             if isinstance(est[key], list):
                 est[key] = np.squeeze(np.array(est[key]))
-        return est
+            if isinstance(samples[key], list):
+                samples[key] = np.squeeze(np.array(samples[key]))
+        return samples, est

@@ -3,7 +3,7 @@ from copy import deepcopy
 import numpy as np
 from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
 from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1_REST, TAU1_DEF, TAU1_MIN, \
-                     TAU1_MAX, TAU0_DEF, TAU0_MIN, TAU0_MAX, K_MIN, K_MAX, MC_MAX, MC_MAX_MIN_RATIO, SIG_EQ_DEF
+    TAU1_MAX, TAU0_DEF, TAU0_MIN, TAU0_MAX, K_MIN, K_MAX, MC_MAX, MC_MAX_MIN_RATIO, SIG_EQ_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import copy_object_attributes
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
@@ -36,7 +36,7 @@ class ModelInversionService(object):
             self.logger.info("Input model configuration set...")
             self.n_regions = model_configuration.n_regions
             self._copy_attributes(model_configuration,
-                                  ["K", "x1EQ", "zEQ", "e_values", "x0_values"], deep_copy=True)
+                                  ["K", "x1EQ", "zEQ", "e_values", "x0_values", "x0"], deep_copy=True)
             self.model_connectivity = deepcopy(kwargs.pop("model_connectivity", model_configuration.model_connectivity))
             self.epileptor_parameters = self.get_epileptor_parameters(model_configuration)
         else:
@@ -112,6 +112,7 @@ class ModelInversionService(object):
         MC_def[inds] = MC_def[inds] * self.MC_direction_split
         inds = np.tril_indices(self.n_regions, 1)
         MC_def[inds] = MC_def[inds] * (1.0 - self.MC_direction_split)
+        MC_def[MC_def < 0.001] = 0.001
         return MC_def
 
     def get_SC(self):

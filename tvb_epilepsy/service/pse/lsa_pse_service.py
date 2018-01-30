@@ -1,8 +1,11 @@
 import numpy
 from copy import deepcopy
+from tvb_epilepsy.base.constants.module_constants import EIGENVECTORS_NUMBER_SELECTION
+from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
 from tvb_epilepsy.service.pse.pse_service import ABCPSEService
+from tvb_epilepsy.service.lsa_service import LSAService
 
 
 class LSAPSEService(ABCPSEService):
@@ -27,23 +30,21 @@ class LSAPSEService(ABCPSEService):
     def run_pse_parallel(self):
         raise_not_implemented_error("PSE parallel not implemented!", self.logger)
 
-    def run(self, conn_matrix, params, lsa_service, model_config_service):
+    def run(self, params, conn_matrix, model_config_service_input=None,
+            yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",
+            lsa_service_input=None, n_eigenvectors=EIGENVECTORS_NUMBER_SELECTION, weighted_eigenvector_sum=True):
         try:
             # Copy and update hypothesis
-            hypo_copy = deepcopy(self.hypothesis)
-            hypo_copy.update_for_pse(params, self.params_paths, self.params_indices)
-            # Create a ModelConfigService and update it
-            model_configuration_service = deepcopy(model_config_service)
-            model_configuration_service.update_for_pse(params, self.params_paths, self.params_indices)
-            # Obtain Modelconfiguration
-            if hypo_copy.type == "Epileptogenicity":
-                model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hypo_copy,
-                                                                                                    conn_matrix)
-            else:
-                model_configuration = model_configuration_service.configure_model_from_hypothesis(hypo_copy,
-                                                                                                  conn_matrix)
+            hypo_copy, model_configuration = \
+                self.update_hypo_model_config(self.hypothesis, params, conn_matrix,
+                                              model_config_service_input, yc, Iext1, K, a, b, x1eq_mode)
             # Copy a LSAService and update it
-            lsa_service = deepcopy(lsa_service)
+            # ...create/update lsa service:
+            if isinstance(lsa_service_input, LSAService):
+                lsa_service = deepcopy(lsa_service_input)
+            else:
+                lsa_service = LSAService(n_eigenvectors=n_eigenvectors,
+                                         weighted_eigenvector_sum=weighted_eigenvector_sum)
             lsa_service.update_for_pse(params, self.params_paths, self.params_indices)
             lsa_hypothesis = lsa_service.run_lsa(hypo_copy, model_configuration)
             output = self.prepare_run_results(lsa_hypothesis, model_configuration)

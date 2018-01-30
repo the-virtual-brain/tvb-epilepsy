@@ -1,7 +1,6 @@
 import time
 from copy import deepcopy
 import numpy as np
-# import pylab as pl
 from tvb_epilepsy.base.constants.model_constants import X1_DEF
 from tvb_epilepsy.base.constants.model_inversion_constants import X1INIT_MIN, X1INIT_MAX, ZINIT_MIN, ZINIT_MAX, \
                                                                             MC_MIN,  SIG_INIT_DEF, OBSERVATION_MODELS
@@ -109,7 +108,7 @@ class ODEModelInversionService(ModelInversionService):
         if len(manual_selection) > 0:
             self.signals_inds = manual_selection
         if isinstance(target_data, dict):
-            signals = target_data.get("signals", target_data.get("target_data", None))
+            signals = np.array(target_data.get("signals", target_data.get("target_data", None)))
         if len(self.signals_inds) < signals.shape[1]:
             signals = signals[:, self.signals_inds]
         self.observation_shape = signals.shape
@@ -121,13 +120,13 @@ class ODEModelInversionService(ModelInversionService):
         self.data_type = "lfp"
         if statistical_model.observation_model.find("seeg") >= 0:
             self.data_type = "seeg"
-            signals = extract_dict_stringkeys(sort_dict(target_data), "SEEG",
-                                              modefun="find", break_after=1)
+            signals = np.array(extract_dict_stringkeys(sort_dict(target_data), "SEEG",
+                                              modefun="find", break_after=1))
             if len(signals) > 0:
                 signals = signals.values()[0]
                 self.signals_inds = range(self.gain_matrix.shape[0])
             else:
-                signals = target_data.get("lfp", target_data["x1"])
+                signals = np.array(target_data.get("lfp", target_data["x1"]))
                 signals = (np.dot(self.gain_matrix[:, self.signals_inds], signals.T)).T
         else:
             # if statistical_model.observation_expression == "x1z_offset":
@@ -138,8 +137,8 @@ class ODEModelInversionService(ModelInversionService):
             #     # TODO: a better normalization
             #     signals = (target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T / 2.0
             # else: # statistical_models.observation_expression == "lfp"
-            signals = target_data.get("lfp", target_data["x1"])
-        target_data["signals"] = signals
+            signals = np.array(target_data.get("lfp", target_data["x1"]))
+        target_data["signals"] = np.array(signals)
         manual_selection = kwargs.get("manual_selection", [])
         if len(manual_selection) > 0:
             self.signals_inds = manual_selection
@@ -254,8 +253,8 @@ class ODEModelInversionService(ModelInversionService):
                                                               sig_init, sig_init / 3.0,
                                                               pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("scale_signal", "lognormal", (),
-                                                              0.8, 3.0,
-                                                              2.0, 0.2,
+                                                              0.1, 2.0,
+                                                              0.4, 0.1,
                                                               pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("offset_signal", "normal", (),
                                                               pdf_params={"mu": -X1_DEF, "sigma": 0.1}, **kwargs))
@@ -276,8 +275,11 @@ class ODEModelInversionService(ModelInversionService):
         active_regions_flag = np.zeros((statistical_model.n_regions,), dtype="i")
         active_regions_flag[statistical_model.active_regions] = 1
         if gain_matrix is None:
-            gain_matrix = self.gain_matrix
-        mixing = deepcopy(gain_matrix)
+            if statistical_model.observation_model.find("seeg") >= 0:
+                gain_matrix = self.gain_matrix
+                mixing = deepcopy(gain_matrix)
+            else:
+                mixing = np.eye(statistical_model.n_regions)
         if mixing.shape[0] > len(self.signals_inds):
             mixing = mixing[self.signals_inds]
         SC = self.get_SC()
@@ -305,27 +307,16 @@ class ODEModelInversionService(ModelInversionService):
         for key, val in self.epileptor_parameters.iteritems():
             model_data.update({key: val})
         for p in statistical_model.parameters.values():
-            model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high,
-                               p.name + "_loc": p.loc, p.name + "_scale": p.scale,
-                               p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.type))[0][0],
-                               p.name + "_p": (np.array(p.pdf_params().values()).T * np.ones((2,))).flatten()})
+            model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high})
+            if not(isequal_string(p.type, "normal")):
+                model_data.update({p.name + "_loc": p.loc, p.name + "_scale": p.scale,
+                                   p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.type))[0][0],
+                                   p.name + "_p": (np.array(p.pdf_params().values()).T * np.ones((2,))).flatten()})
         model_data["x1eq_loc"] = statistical_model.parameters["x1eq"].mean
         model_data["MC_scale"] = np.mean(statistical_model.parameters["MC"].std /
                                          np.abs(statistical_model.parameters["MC"].mean))
         MCsplit_shape = np.ones(statistical_model.parameters["MCsplit"].p_shape)
-        model_data["MCsplit_loc"] \
-            *= MCsplit_shape
-        model_data["MCsplit_scale"] *= MCsplit_shape
+        model_data["MCsplit_loc"] = statistical_model.parameters["MCsplit"].mean * MCsplit_shape
+        model_data["MCsplit_scale"] = statistical_model.parameters["MCsplit"].std * MCsplit_shape
+        model_data["offset_signal_p"] = np.array(statistical_model.parameters["offset_signal"].pdf_params().values())
         return sort_dict(model_data)
-
-    # def violin_x0(self, csv, skip=0, x0c=-1.8, x0lim=(-6, 0), per_chain=False):
-    #     from pylab import subplot, axhline, violinplot, ylim, legend, xlabel, title
-    #     if not per_chain:
-    #         from ..io.stan import merge_csv_data
-    #         csv = [merge_csv_data(*csv, skip=skip)]
-    #     for i, csvi in enumerate(csv):
-    #         subplot(1, len(csv), i + 1)
-    #         axhline(x0c, color='r');
-    #         violinplot(csvi['x0'])
-    #         ylim(x0lim)
-    #         legend((f'x0 < {x0c} healthy', 'p(x0)',)), xlabel('Region'), title(f'Chain {i+1}')

@@ -11,18 +11,54 @@ class ProbabilityDistribution(object):
 
     type = ""
     n_params = 0.0
-    p_shape = ()
-    p_size = 0
+    __p_shape = ()
+    __p_size = 0
     constraint_string = ""
-    mean = None
-    median = None
-    mode = None
-    var = None
-    std = None
-    skew = None
-    kurt = None
+    __mean = None
+    __median = None
+    __mode = None
+    __var = None
+    __std = None
+    __skew = None
+    __kurt = None
     scipy_name = ""
     numpy_name = ""
+
+    @property
+    def mean(self):
+        return self.__mean
+
+    @property
+    def median(self):
+        return self.__median
+
+    @property
+    def mode(self):
+        return self.__mode
+
+    @property
+    def var(self):
+        return self.__var
+
+    @property
+    def std(self):
+        return self.__std
+
+    @property
+    def skew(self):
+        return self.__skew
+
+    @property
+    def kurt(self):
+        return self.__kurt
+
+    @property
+    def p_shape(self):
+        return self.__p_shape
+
+    @property
+    def p_size(self):
+        return self.__p_size
 
     @abstractmethod
     def __init__(self):
@@ -36,14 +72,14 @@ class ProbabilityDistribution(object):
              "02. pdf_params": self.pdf_params(),
              "03. n_params": self.n_params,
              "04. constraint": self.constraint_string,
-             "05. shape": self.p_shape,
-             "05. mean": self.mean,
-             "06. median": self.median,
-             "07. mode": self.mode,
-             "08. var": self.var,
-             "09. std": self.std,
-             "10. skew": self.skew,
-             "11. kurt": self.kurt,
+             "05. shape": self.__p_shape,
+             "05. mean": self.__mean,
+             "06. median": self.__median,
+             "07. mode": self.__mode,
+             "08. var": self.__var,
+             "09. std": self.__std,
+             "10. skew": self.__skew,
+             "11. kurt": self.__kurt,
              "12. scipy_name": self.scipy_name,
              "13. numpy_name": self.numpy_name}
         return formal_repr(self, sort_dict(d))
@@ -56,20 +92,20 @@ class ProbabilityDistribution(object):
             params = self.pdf_params()
         self.__set_params__(**params)
         # params = self.__squeeze_parameters__(update=False, loc=loc, scale=scale, use=use)
-        self.__set_params__(**params)
-        self.p_shape = self.__update_shape__(loc, scale)
-        self.p_size = shape_to_size(self.p_shape)
+        # self.__set_params__(**params)
+        self.__p_shape = self.__update_shape__(loc, scale)
+        self.__p_size = shape_to_size(self.p_shape)
         self.n_params = len(self.pdf_params())
         if check_constraint and not (self.__check_constraint__()):
             raise_value_error("Constraint for " + self.type + " distribution " + self.constraint_string +
                               "\nwith parameters " + str(self.pdf_params()) + " is not satisfied!")
-        self.mean = self._calc_mean(loc, scale, use)
-        self.median = self._calc_median(loc, scale, use)
-        self.mode = self._calc_mode(loc, scale)
-        self.var = self._calc_var(loc, scale, use)
-        self.std = self._calc_std(loc, scale, use)
-        self.skew = self._calc_skew()
-        self.kurt = self._calc_kurt()
+        self.__mean = self._calc_mean(loc, scale, use)
+        self.__median = self._calc_median(loc, scale, use)
+        self.__mode = self._calc_mode(loc, scale)
+        self.__var = self._calc_var(loc, scale, use)
+        self.__std = self._calc_std(loc, scale, use)
+        self.__skew = self._calc_skew()
+        self.__kurt = self._calc_kurt()
 
     def __set_params__(self, **params):
         for p_key, p_val in params.iteritems():
@@ -80,7 +116,7 @@ class ProbabilityDistribution(object):
 
     def __update_shape__(self, loc=0.0, scale=1.0):
         try:
-            shape = loc * scale
+            shape = loc * scale * np.ones(self.p_shape)
             for p in self.pdf_params().values():
                 shape *= p
             return self.p_shape
@@ -100,7 +136,7 @@ class ProbabilityDistribution(object):
 
     def __shape_parameters__(self, shape=None, loc=0.0, scale=1.0, use="scipy"):
         if isinstance(shape, tuple):
-            self.p_shape = shape
+            self.__p_shape = shape
         i1 = np.ones((np.ones(self.p_shape) * loc * scale).shape)
         for p_key in self.pdf_params().keys():
             try:

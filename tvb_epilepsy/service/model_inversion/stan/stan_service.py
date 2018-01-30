@@ -72,19 +72,38 @@ class StanService(object):
             self.model_data_path = model_data_path
         extension = self.model_data_path.split(".", -1)[-1]
         if isequal_string(extension, "R"):
-            return rload(self.model_data_path)
+            model_data = rload(self.model_data_path)
         elif isequal_string(extension, "npy"):
-            return np.load(self.model_data_path).item()
+            model_data = np.load(self.model_data_path).item()
         elif isequal_string(extension, "mat"):
-            return loadmat(self.model_data_path)
+            model_data = loadmat(self.model_data_path)
         elif isequal_string(extension, "pkl"):
             with open(self.model_data_path, 'wb') as f:
-                return pickle.load(f)
+                model_data = pickle.load(f)
         elif isequal_string(extension, "h5"):
-            return H5Reader().read_dictionary(self.model_data_path)
+            model_data = H5Reader().read_dictionary(self.model_data_path)
         else:
             raise_not_implemented_error("model_data file (" + model_data_path +
                                         ") that are not one of (.R, .npy, .mat, .pkl) cannot be read!")
+        for key in model_data.keys():
+            if key[:3] == "EPI":
+                del model_data[key]
+        return model_data
+
+    def set_model_data(self, debug=0, simulate=0, **kwargs):
+        self.model_data_path = kwargs.get("model_data_path", self.model_data_path)
+        model_data = kwargs.pop("model_data", None)
+        if not(isinstance(model_data, dict)):
+            model_data = self.load_model_data_from_file(self.model_data_path)
+        # -1 for no debugging at all
+        # 0 for printing only scalar parameters
+        # 1 for printing scalar and vector parameters
+        # 2 for printing all (scalar, vector and matrix) parameters
+        model_data["DEBUG"] = debug
+        # > 0 for simulating without using the input observation data:
+        model_data["SIMULATE"] = simulate
+        model_data = sort_dict(model_data)
+        return model_data
 
     def set_or_compile_model(self, **kwargs):
         try:
@@ -93,67 +112,29 @@ class StanService(object):
             self.logger.info("Trying to compile model from file: " + str(self.model_code_path) + str("!"))
             self.compile_stan_model(save_model=kwargs.get("save_model", True), **kwargs)
 
-    def read_output_csv(self, output_filepath, **kwargs):
-        csvs = parse_csv(output_filepath.replace(".csv", "*"), merge=kwargs.pop("merge_outputs", False))
+    def read_output_samples(self, output_filepath, **kwargs):
+        samples = ensure_list(parse_csv(output_filepath.replace(".csv", "*"), merge=kwargs.pop("merge_outputs", False)))
+        if len(samples) == 1:
+            return samples[0]
+        return samples
+
+    def compute_estimates_from_samples(self, samples):
         ests = []
-        for csv in ensure_list(csvs):
+        for chain_samples in ensure_list(samples):
             est = {}
-            for pkey, pval in csv.iteritems():
+            for pkey, pval in chain_samples.iteritems():
                 try:
-                    est[pkey + "_s"] = csv[pkey]
-                    est[pkey + "_low"], est[pkey], est[pkey + "_std"] = describe(csv[pkey])[1:4]
+                    est[pkey + "_low"], est[pkey], est[pkey + "_std"] = describe(chain_samples[pkey])[1:4]
                     est[pkey + "_high"] = est[pkey + "_low"][1]
                     est[pkey + "_low"] = est[pkey + "_low"][0]
                     est[pkey + "_std"] = np.sqrt(est[pkey + "_std"])
                     for skey in [pkey, pkey + "_low", pkey + "_high", pkey + "_std"]:
                         est[skey] = np.squeeze(est[skey])
                 except:
-                    est[pkey] = csv[pkey]
+                    est[pkey] = chain_samples[pkey]
             ests.append(sort_dict(est))
         if len(ests) == 1:
-            return ests[0], csv[0]
+            return ests[0]
         else:
-            return ests, csv
+            return ests
 
-    def trace_nuts(self, csv, extras='', skip=0):
-        from pylab import subplot, plot, gca, title, grid, xticks
-        if isinstance(extras, str):
-            extras = extras.split()
-            for csvi in csv:
-                i = 1
-                for key in csvi.keys():
-                    if key[-2:] == '__' or key in extras:
-                        subplot(4, 4, i)
-                        plot(csvi[key][skip:], alpha=0.5)
-                        if key in ('stepsize__',):
-                            gca().set_yscale('log')
-                        title(key)
-                        grid(1)
-                        if ((i - 1) / 4) < 4:
-                            xticks(xticks()[0], [])
-                        i += 1
-
-    # def plot_HMC(self, csv, extras, output_file_path, figure_name):
-    #     outout_folder = os.path.dirname(output_file_path)
-    #     self.trace_nuts(csv)
-    #     # tight_layout()
-    #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_stats.png"))
-    #     pyplot.ion()
-    #     pyplot.show()
-    #     pyplot.figure(figsize=(10, 10))
-    #     self.pair_plots(csv, extras, skip=0)
-    #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_pairplots.png"))
-    #     pyplot.ion()
-    #     pyplot.show()
-    #     for i, csvi in enumerate(csv):
-    #         pyplot.figure()
-    #         self.phase_space(csvi)
-    #         pyplot.suptitle("Chain {" + str(i) + "}")
-    #         # tight_layout()
-    #         pyplot.savefig(os.path.join(outout_folder, figure_name + "_state_space_" + str(i) + ".png"))
-    #     self.ppc_seeg(csv[1], skip=200)
-    #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_seeg.png"))
-    #     vep_stan.lib.violin_x0(csv)
-    #     pyplot.savefig(os.path.join(outout_folder, figure_name + "_x0.png"))
-    #     pyplot.imshow(csv[0]['FC'].mean(axis=0))
-    #     pyplot.colorbar()

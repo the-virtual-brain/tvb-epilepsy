@@ -48,7 +48,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                           plot_head=False, figure_dir=figure_dir, sensors_filename=sensors_filename,
                                           logger=logger)
 
-    for hyp in hypos:
+    for hyp in hypos[:1]:
         # --------------------------Model configuration and LSA-----------------------------------
         model_configuration, lsa_hypothesis, model_configuration_service, lsa_service = \
             from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
@@ -64,7 +64,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                                                   active_regions_th=0.1, reset=True)
         plotter = Plotter()
         plotter.plot_statistical_model(statistical_model, "Statistical Model")
-        decimate = 4
+        decimate = 1
         cut_signals_tails = (6, 6)
         if os.path.isfile(EMPIRICAL):
             # ---------------------------------------Get empirical data----------------------------------------------
@@ -107,7 +107,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                                        save_flag=True, results_dir=results_dir,
                                                        figure_dir=figure_dir, logger=logger, tau1=0.5, tau0=30.0,
                                                        noise_intensity=10 ** -3)
-            manual_selection = []
+            manual_selection = statistical_model.active_regions
             n_electrodes = 8
             sensors_per_electrode = 2
             sensors_lbls = model_inversion.sensors_labels
@@ -135,8 +135,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                         time_units="ms", title=hyp.name + ' Target Signals raster',
                         special_idx=model_inversion.signals_inds, offset=1, labels=labels,
                         save_flag=True, show_flag=False, figure_dir=figure_dir)
-        plotter.plot_timeseries({'Target Signals': signals}, time,
-                        time_units="ms", title=hyp.name + 'Target Signals ',
+        plotter.plot_timeseries({'Target Signals': signals}, time, time_units="ms", title=hyp.name + 'Target Signals ',
                         labels=labels[model_inversion.signals_inds],
                         save_flag=True, show_flag=False, figure_dir=figure_dir)
         writer = H5Writer()
@@ -149,18 +148,20 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         model_data = model_inversion.generate_model_data(statistical_model, signals)
         writer.write_dictionary(model_data, os.path.join(results_dir, "ModelData.h5"))
 
-        if stats_model_name == "vep-fe-rev-05":
-            def convert_to_vep_stan(model_data, statistical_model):
+        # Stupid code to interface with INS stan model
+        if stats_model_name in ["vep-fe-rev-05", "vep-fe-rev-08", "vep-fe-rev-08a", "vep-fe-rev-08b"]:
+            def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_matrix=None):
+                from copy import deepcopy
                 active_regions = model_data["active_regions"]
                 SC = statistical_model.parameters["MC"].mode[active_regions][:, active_regions]
                 vep_data = {"nn": model_data["n_active_regions"],
                             "nt": model_data["n_times"],
                             "ns": model_data["n_signals"],
-                            "dt": 0.75,  # model_data["dt"],
+                            "dt": model_data["dt"],  # model_data["dt"],
                             "I1": model_data["Iext1"],
                             "x0_lo": -3.0,
                             "x0_hi": -1.0,
-                            "tau0": 3.0,  # statistical_model.parameters["tau0"].mean,
+                            "tau0": 30.0,  # statistical_model.parameters["tau0"].mean,
                             "K_lo": statistical_model.parameters["K"].low,
                             "K_u": statistical_model.parameters["K"].mode,
                             "K_v": statistical_model.parameters["K"].var,
@@ -168,41 +169,75 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                             "SC_var": 5.0,  # 1/36 = 0.02777777,
                             "Ic": np.sum(SC, axis=1),
                             "sig_hi": 0.025,  # model_data["sig_hi"],
-                            "gain": model_data["mixing"][:, statistical_model.active_regions],
-                            "seeg_log_power": 9.0 * model_data["signals"] - 4.0,  # scale from (0, 1) to (-4, 5)
+                            "amplitude_mu": statistical_model.parameters["scale_signal"].mean,
+                            "amplitude_std": statistical_model.parameters["scale_signal"].std,
+                            "offset_mu": statistical_model.parameters["offset_signal"].mean,
+                            "offset_std": statistical_model.parameters["offset_signal"].std,
+                            "seeg_log_power": model_data["signals"] #9.0 * model_data["signals"] - 4.0,  # scale from (0, 1) to (-4, 5)
                             }
+                if gain_matrix is None:
+                    if statistical_model.observation_model.find("seeg") >= 0:
+                        gain_matrix = model_inversion.gain_matrix
+                        mixing = deepcopy(gain_matrix)[:, statistical_model.active_regions]
+                    else:
+                        mixing = np.eye(vep_data["nn"])
+                    if mixing.shape[0] > vep_data["ns"]:
+                        mixing = mixing[model_inversion.signals_inds]
+                    vep_data["gain"] = mixing
                 return vep_data
 
-            model_data = convert_to_vep_stan(model_data, statistical_model)
-
+            model_data = convert_to_vep_stan(model_data, statistical_model, model_inversion)
+            x1_str = "x"
+            signals_str = "mu_seeg_log_power"
+            sig_str = "sigma"
+            eps_str = "epsilon"
+            k_str = "k"
+            pair_plot_params=["time_scale", "k", "sigma", "epsilon", "amplitude", "offset"]
+            region_violin_params = ["x0", "x_init", "z_init"]
+            connectivity_plot = False
+            estMC = lambda: model_configuration.model_connectivity
+            region_mode = "active"
+        else:
+            x1_str = "x1"
+            signals_str = "fit_signals"
+            sig_str = "sig"
+            eps_str = "eps"
+            k_str = "K"
+            pair_plot_params = ["tau1", "tau0", "K", "sig_eq", "sig_init", "sig", "eps", "scale_signal", "offset_signal"]
+            region_violin_params = ["x0", "x1eq", "x1init", "zinit"]
+            connectivity_plot = True
+            estMC = lambda est: est["MC"]
+            region_mode = "all"
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        est, fit = stan_service.fit(model_data=model_data, debug=1, simulate=0,
-                                    merge_outputs=False, chains=1, refresh=1, **kwargs)
-        writer.write_generic(est, results_dir, lsa_hypothesis.name + "_fit_est.h5")
-        est = ensure_list(est)
-        for id_est, this_est in enumerate(est):
-            plotter.plot_fit_results(model_inversion, this_est, statistical_model, signals, model_inversion.region_labels,
-                                     model_inversion.x0_values, time=None,
-                                     seizure_indices=lsa_hypothesis.get_regions_disease(), trajectories_plot=True,
-                                     id_est=str(id_est))
-            # -------------------------- Reconfigure model after fitting:---------------------------------------------------
+        ests, samples = stan_service.fit(debug=1, simulate=0, model_data=model_data, merge_outputs=False,
+                                         chains=1, refresh=1, num_warmup=100, num_samples=100, **kwargs)
+        writer.write_generic(ests, results_dir, lsa_hypothesis.name + "_fit_est.h5")
+        writer.write_generic(samples, results_dir, lsa_hypothesis.name + "_fit_samples.h5")
+        ests = ensure_list(ests)
+        plotter.plot_fit_results(model_inversion, ests, samples, statistical_model, signals, time, region_mode,
+                                         seizure_indices=lsa_hypothesis.get_regions_disease_indices(),
+                                         x1_str=x1_str, signals_str=signals_str, sig_str=sig_str, eps_str=eps_str,
+                                         trajectories_plot=True, connectivity_plot=connectivity_plot,
+                                         pair_plot_params=pair_plot_params, region_violin_params=region_violin_params)
+        # -------------------------- Reconfigure model after fitting:---------------------------------------------------
+        for id_est, est in enumerate(ensure_list(ests)):
             fit_model_configuration_service = \
-                ModelConfigurationService(hyp.number_of_regions, K=this_est['K'] * hyp.number_of_regions)
+                ModelConfigurationService(hyp.number_of_regions, K=est[k_str] * hyp.number_of_regions)
             x0_values_fit = \
-                fit_model_configuration_service._compute_x0_values_from_x0_model(this_est['x0'])
+                fit_model_configuration_service._compute_x0_values_from_x0_model(est['x0'])
             hyp_fit = \
                 DiseaseHypothesis(head.connectivity.number_of_regions,
                                   excitability_hypothesis={tuple(range(model_configuration.n_regions)): x0_values_fit},
                                   epileptogenicity_hypothesis={}, connectivity_hypothesis={},
                                   name='fit' + str(id_est) + "_" + hyp.name)
-            model_configuration_fit = fit_model_configuration_service.configure_model_from_hypothesis(hyp_fit,
-                                                                                                      this_est["MC"])
+            model_configuration_fit = fit_model_configuration_service.configure_model_from_hypothesis(hyp_fit, #est["MC"]
+                                                                                                      estMC(est))
             writer.write_model_configuration(model_configuration_fit,
                                              os.path.join(results_dir, hyp_fit.name + "_ModelConfig.h5"))
 
             # Plot nullclines and equilibria of model configuration
             plotter.plot_state_space(model_configuration_fit,
-                                     model_configuration_service.region_labels,
+                                     model_inversion.region_labels,
                                      special_idx=statistical_model.active_regions,
                                      model="6d", zmode="lin",
                                      figure_name=hyp_fit.name + "_Nullclines and equilibria")
@@ -236,10 +271,11 @@ if __name__ == "__main__":
     # times_on_off = [20.0, 100.0]
     # ep_name = "clinical_hypothesis_preseeg_right"
     EMPIRICAL = False
-    stats_model_name = "vep_sde"
-    # stats_model_name = "vep-fe-rev-05"
+    # stats_model_name = "vep_sde"
+    stats_model_name = "vep-fe-rev-08a"
     fitmethod = "sample"
-    model_code_dir = "/Users/dionperd/VEPtools/software/git/tvb-epilepsy/tvb_epilepsy/stan"
+    # model_code_dir = "/Users/dionperd/VEPtools/software/git/tvb-epilepsy/tvb_epilepsy/stan"
+    model_code_dir = "/Users/dionperd/VEPtools/git/tvb-epilepsy/tvb_epilepsy/stan"
     if EMPIRICAL:
         main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                             sensors_filename=sensors_filename, stats_model_name=stats_model_name,

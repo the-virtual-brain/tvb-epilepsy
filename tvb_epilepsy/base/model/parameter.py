@@ -15,10 +15,14 @@ class Parameter(object):
         else:
             raise_value_error("low (" + str(low) + ") is not smaller than high(" + str(high) + ")!")
         if isinstance(p_shape, tuple):
-            self.p_shape = p_shape
+            self.__p_shape = p_shape
         else:
             raise_value_error("Parameter's " + str(self.name) + " p_shape="
                               + str(p_shape) + " is not a shape tuple!")
+
+    @property
+    def p_shape(self):
+        return self.__p_shape
 
     def __repr__(self):
         d = {"1. name": self.name,
