@@ -1,7 +1,6 @@
 import time
 from copy import deepcopy
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, VERY_LARGE_SIZE, FIG_FORMAT, SHOW_FLAG, SAVE_FLAG
 from tvb_epilepsy.base.constants.model_constants import X1_DEF
 from tvb_epilepsy.base.constants.model_inversion_constants import X1INIT_MIN, X1INIT_MAX, ZINIT_MIN, ZINIT_MAX, \
                                                                             MC_MIN,  SIG_INIT_DEF, OBSERVATION_MODELS
@@ -254,8 +253,8 @@ class ODEModelInversionService(ModelInversionService):
                                                               sig_init, sig_init / 3.0,
                                                               pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("scale_signal", "lognormal", (),
-                                                              0.8, 3.0,
-                                                              2.0, 0.2,
+                                                              0.1, 2.0,
+                                                              0.4, 0.1,
                                                               pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("offset_signal", "normal", (),
                                                               pdf_params={"mu": -X1_DEF, "sigma": 0.1}, **kwargs))
@@ -280,7 +279,7 @@ class ODEModelInversionService(ModelInversionService):
                 gain_matrix = self.gain_matrix
                 mixing = deepcopy(gain_matrix)
             else:
-                mixing = np.ones((statistical_model.n_regions, statistical_model.n_regions))
+                mixing = np.eye(statistical_model.n_regions)
         if mixing.shape[0] > len(self.signals_inds):
             mixing = mixing[self.signals_inds]
         SC = self.get_SC()
@@ -321,19 +320,3 @@ class ODEModelInversionService(ModelInversionService):
         model_data["MCsplit_scale"] = statistical_model.parameters["MCsplit"].std * MCsplit_shape
         model_data["offset_signal_p"] = np.array(statistical_model.parameters["offset_signal"].pdf_params().values())
         return sort_dict(model_data)
-
-    def parameters_pair_plots(self, samples,
-                             params=["tau1", "tau0", "K", "sig_eq", "sig_init", "eps", "scale_signal", "offset_signal"],
-                             skip_samples=0, title='Parameters fit', figure_name=None, figure_dir=FOLDER_FIGURES,
-                           figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG):
-        super(ODEModelInversionService, self).parameters_pair_plots(samples, params, skip_samples, title, figure_name,
-                                                                    figure_dir, figsize, figure_format, show_flag,
-                                                                    save_flag)
-
-    def region_parameters_violin_plots(self, samples, params=["x0", "x1eq", "x1init", "zinit"], skip_samples=0,
-                                       per_chain=False, figure_name="Regions parameters samples",
-                                       figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT,
-                                       show_flag=SHOW_FLAG,  save_flag=SAVE_FLAG):
-        super(ODEModelInversionService, self).region_parameters_violin_plots(samples, params, skip_samples, per_chain,
-                                                                             figure_name, figure_dir, figsize,
-                                                                             figure_format, show_flag, save_flag)

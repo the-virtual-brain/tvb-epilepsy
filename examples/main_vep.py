@@ -9,14 +9,13 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
-from tvb_epilepsy.base.utils.plot_utils import plot_sim_results
 from tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
 from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
     compute_seeg_and_write_ts_h5_file
 from tvb_epilepsy.base.constants.model_constants import VOIS
-from tvb_epilepsy.service.head_service import HeadService
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 
@@ -45,8 +44,8 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     writer = H5Writer()
     logger.info("Reading from: " + data_folder)
     head = reader.read_head(data_folder)
-    head_service = HeadService()
-    head_service.plot_head(head)
+    plotter = Plotter()
+    plotter.plot_head(head)
     if test_write_read:
         writer.write_head(head, os.path.join(FOLDER_RES, "Head"))
     # --------------------------Hypothesis definition-----------------------------------
@@ -159,9 +158,9 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                      os.path.join(FOLDER_RES, hyp.name + "_ModelConfig.h5")),
                                                  logger=logger)))
         # Plot nullclines and equilibria of model configuration
-        model_configuration_service.plot_state_space(model_configuration, head.connectivity.region_labels,
-                                                     special_idx=disease_indices, model="6d", zmode="lin",
-                                                     figure_name=hyp.name + "_StateSpace")
+        plotter.plot_state_space(model_configuration, head.connectivity.region_labels,
+                                 special_idx=disease_indices, model="6d", zmode="lin",
+                                 figure_name=hyp.name + "_StateSpace")
 
         logger.info("\n\nRunning LSA...")
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
@@ -177,7 +176,8 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                 assert_equal_objects(lsa_hypothesis,
                                      reader.read_hypothesis(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")),
                                      logger=logger)))
-        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, None)
+        plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
+                         lsa_service.eigen_vectors_number, head.connectivity.region_labels, None)
         if pse_flag:
             # --------------Parameter Search Exploration (PSE)-------------------------------
             logger.info("\n\nRunning PSE LSA...")
@@ -190,7 +190,8 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                       {"name": "x0_values", "indices": healthy_indices}],
                                                   model_configuration_service=model_configuration_service,
                                                   lsa_service=lsa_service, logger=logger, save_flag=True)[0]
-            lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, pse_results)
+            plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
+                             lsa_service.eigen_vectors_number, head.connectivity.region_labels, pse_results)
             # , show_flag=True, save_flag=False
             writer.write_dictionary(pse_results, os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5"))
             if test_write_read:
@@ -213,8 +214,9 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                                  {"name": "x0_values", "indices": healthy_indices}],
                                                              model_configuration_service=model_configuration_service,
                                                              lsa_service=lsa_service, logger=logger)
-            lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, pse_sa_results,
-                                 title="SA PSE Hypothesis Overview")
+            plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
+                             lsa_service.eigen_vectors_number, head.connectivity.region_labels, pse_sa_results,
+                             title="SA PSE Hypothesis Overview")
             # , show_flag=True, save_flag=False
             writer.write_dictionary(pse_sa_results,
                                     os.path.join(FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5"))
@@ -265,9 +267,9 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                                  hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
                                                                  sensors_list=head.sensorsSEEG)
                 # Plot results
-                plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, vois_ts_dict,
-                                 head.sensorsSEEG, hpf_flag=True, trajectories_plot=trajectories_plot,
-                                 spectral_raster_plot=spectral_raster_plot, log_scale=True)
+                plotter.plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, vois_ts_dict,
+                                         head.sensorsSEEG, hpf_flag=True, trajectories_plot=trajectories_plot,
+                                         spectral_raster_plot=spectral_raster_plot, log_scale=True)
                 # Optionally save results in mat files
                 # from scipy.io import savemat
                 # savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), vois_ts_dict)

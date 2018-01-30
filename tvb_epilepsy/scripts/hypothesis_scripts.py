@@ -7,7 +7,7 @@ from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.io.h5_writer import H5Writer
-from tvb_epilepsy.service.head_service import HeadService
+from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.lsa_service import LSAService
 
@@ -43,8 +43,8 @@ def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=os.path.jo
     logger.info("Reading from: " + data_folder)
     head = reader.read_head(data_folder)
     if plot_head:
-        head_service = HeadService()
-        head_service.plot_head(head, figure_dir=figure_dir)
+        plotter = Plotter()
+        plotter.plot_head(head, figure_dir=figure_dir)
         # head.plot(figure_dir=figure_dir)
     # --------------------------Hypothesis definition-----------------------------------
     # # Manual definition of hypothesis...:
@@ -105,10 +105,11 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
     if save_flag:
         writer.write_model_configuration(model_configuration, os.path.join(results_dir, hyp.name + "_ModelConfig.h5"))
     # Plot nullclines and equilibria of model configuration
+    plotter = Plotter()
     if plot_flag:
-        model_configuration_service.plot_state_space(model_configuration, head.connectivity.region_labels,
-                                                     special_idx=hyp.get_regions_disease(), model="6d", zmode="lin",
-                                                     figure_name=hyp.name + "_StateSpace", figure_dir=figure_dir)
+        plotter.plot_state_space(model_configuration, head.connectivity.region_labels,
+                                 special_idx=hyp.get_regions_disease(), model="6d", zmode="lin",
+                                 figure_name=hyp.name + "_StateSpace", figure_dir=figure_dir)
 
     logger.info("\n\nRunning LSA...")
     lsa_service = LSAService(eigen_vectors_number=eigen_vectors_number,
@@ -117,5 +118,6 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
     if save_flag:
         writer.write_hypothesis(lsa_hypothesis, os.path.join(results_dir, lsa_hypothesis.name + "_LSA.h5"))
     if plot_flag:
-        lsa_service.plot_lsa(lsa_hypothesis, model_configuration, head.connectivity.region_labels, None)
+        plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
+                         lsa_service.eigen_vectors_number, head.connectivity.region_labels, None)
     return model_configuration, lsa_hypothesis, model_configuration_service, lsa_service

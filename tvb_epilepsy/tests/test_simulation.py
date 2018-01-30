@@ -11,7 +11,7 @@ head_dir = "head2"
 
 class TestSimulationRun():
     fs = 2 * 4096.0
-    time_length = 30000.0
+    time_length = 30.0
     report_every_n_monitor_steps = 10.0
     (dt, fsAVG, sim_length, monitor_period, n_report_blocks) \
         = set_time_scales(fs=fs, time_length=time_length, scale_fsavg=None,

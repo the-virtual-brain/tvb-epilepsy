@@ -8,31 +8,40 @@ import numpy as np
 
 from tvb_epilepsy.base.constants.model_constants import *
 from tvb_epilepsy.base.constants.model_inversion_constants import *
+from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
 
 if __name__ == "__main__":
-    # K_mean = 10*K_DEF/87
+    plotter = Plotter()
+
+    # K_mean = 10 * K_DEF / 87
     # K_std = np.min([K_mean - K_MIN, K_MAX - K_mean]) / 6.0
     # K = set_parameter("K", optimize_pdf=True, use="manual", K_lo=K_MIN, K_hi=K_MAX, K_pdf="lognormal",
-    #                   K_pdf_params={"skew": 0.0, "mean": K_mean/K_std}, K_mean=K_mean, K_std=K_std) # K_mean=K_mean,
+    #                   K_pdf_params={"skew": 0.0, "mean": K_mean / K_std}, K_mean=K_mean, K_std=K_std)  # K_mean=K_mean,
+    # plotter.plot_stochastic_parameter(K, figure_name="K parameter")
     #
     # tau1_mean = 0.5
     # tau1_std = np.min([tau1_mean - TAU1_MIN, TAU1_MAX - tau1_mean]) / 6.0
-    # tau1 = set_parameter("tau1", optimize_pdf=True, use="manual", tau1_lo=TAU1_MIN, tau1_hi=TAU1_MAX, tau1_pdf="lognormal",
-    #                      tau1_pdf_params={"skew": 0.0, "mean": tau1_mean / tau1_std}, tau1_mean=tau1_mean, tau1_std=tau1_std)
-    # tau1.plot_stochastic_parameter(figure_name="tau1 parameter")
+    # tau1 = set_parameter("tau1", optimize_pdf=True, use="manual", tau1_lo=TAU1_MIN, tau1_hi=TAU1_MAX,
+    #                      tau1_pdf="lognormal",
+    #                      tau1_pdf_params={"skew": 0.0, "mean": tau1_mean / tau1_std}, tau1_mean=tau1_mean,
+    #                      tau1_std=tau1_std)
+    # plotter.plot_stochastic_parameter(tau1, figure_name="tau1 parameter")
     #
     # tau0_mean = 10.0
     # tau0_std = np.min([tau0_mean - TAU0_MIN, TAU0_MAX - tau0_mean]) / 6.0
-    # tau0 = set_parameter("tau0", optimize_pdf=True, use="manual", tau0_lo=TAU0_MIN, tau0_hi=TAU0_MAX, tau0_pdf="lognormal",
-    #                      tau0_pdf_params={"skew": 0.0, "mean": tau0_mean / tau0_std}, tau0_mean=tau0_mean, tau0_std=tau0_std)
-    # tau0.plot_stochastic_parameter(figure_name="tau0 parameter")
+    # tau0 = set_parameter("tau0", optimize_pdf=True, use="manual", tau0_lo=TAU0_MIN, tau0_hi=TAU0_MAX,
+    #                      tau0_pdf="lognormal",
+    #                      tau0_pdf_params={"skew": 0.0, "mean": tau0_mean / tau0_std}, tau0_mean=tau0_mean,
+    #                      tau0_std=tau0_std)
+    # plotter.plot_stochastic_parameter(tau0, figure_name="tau0 parameter")
 
     sig_std = SIG_DEF / 6.0
     sig = set_parameter("sig", optimize_pdf=True, use="manual", sig_lo=0.1*SIG_DEF, sig_hi=10*SIG_DEF,
                          sig_pdf="gamma",
                          sig_pdf_params={"skew": 0.0, "mean": SIG_DEF/sig_std}, sig_mean=SIG_DEF, sig_std=sig_std) #
-    sig.plot_stochastic_parameter(figure_name="sig parameter")
+    plotter.plot_stochastic_parameter(sig, figure_name="sig parameter")
+
     print("Done")
     # stats_model_name = "vep-fe-rev-05"
     # model_code_path = os.path.join(FOLDER_VEP_HOME, stats_model_name + ".stan")

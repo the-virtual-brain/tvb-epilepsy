@@ -4,6 +4,7 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_RES, CMDSTAN_PATH
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
 from tvb_epilepsy.base.utils.command_line_utils import execute_command
+from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.model_inversion.stan.stan_service import StanService
 from tvb_epilepsy.service.model_inversion.stan.stan_factory import *
 
@@ -98,7 +99,7 @@ class CmdStanService(StanService):
             est = self.compute_estimates_from_samples(samples)
             if self.fitmethod.find("sampl") >= 0:
                 if isequal_string(self.options.get("algorithm", "None"), "HMC"):
-                    self.plot_HMC(samples, kwargs.pop("skip_samples", 0))
+                    Plotter().plot_HMC(samples, kwargs.pop("skip_samples", 0))
             return est, samples
         else:
             return None, None

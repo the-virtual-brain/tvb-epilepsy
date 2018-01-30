@@ -5,13 +5,13 @@ from tvb_epilepsy.base.constants.module_constants import TVB, SIMULATION_MODE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
-from tvb_epilepsy.base.utils.plot_utils import plot_sim_results
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
 
 LOG = initialize_logger(__name__)
@@ -283,7 +283,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
                 writer.write_dictionary(vois_ts_dict, os.path.join(os.path.dirname(ts_file), os.path.basename(ts_file)))
     if plot_flag and len(vois_ts_dict) > 0:
         # Plot results
-        plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, vois_ts_dict,
+        Plotter().plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, vois_ts_dict,
                          sensorsSEEG=head.sensorsSEEG, hpf_flag=False,
                          trajectories_plot=trajectories_plot,
                          spectral_raster_plot=spectral_raster_plot, log_scale=True,

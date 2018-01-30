@@ -4,12 +4,9 @@ from abc import ABCMeta, abstractmethod
 from scipy.io import savemat, loadmat
 from scipy.stats import describe
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, FOLDER_FIGURES, LARGE_SIZE, FIG_FORMAT, SHOW_FLAG, \
-                                                                                                              SAVE_FLAG
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, \
-                                                            list_of_dicts_to_dicts_of_ndarrays, extract_dict_stringkeys
-from tvb_epilepsy.base.utils.plot_utils import plots
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict
 from tvb_epilepsy.io.rdump import rdump, rload
 from tvb_epilepsy.io.csv import parse_csv
 from tvb_epilepsy.io.h5_reader import H5Reader
@@ -140,17 +137,4 @@ class StanService(object):
             return ests[0]
         else:
             return ests
-
-    def plot_HMC(self, samples, skip_samples=0, title='HMC NUTS trace', figure_name=None, figure_dir=FOLDER_FIGURES,
-                 figsize=LARGE_SIZE, figure_format=FIG_FORMAT, show_flag=SHOW_FLAG, save_flag=SAVE_FLAG):
-        samples = ensure_list(samples)
-        if len(samples) > 1:
-            samples = list_of_dicts_to_dicts_of_ndarrays(samples)
-        else:
-            samples = samples[0]
-        nuts = extract_dict_stringkeys(samples, '__', modefun="find")
-        plots(nuts, shape=(2, 4), skip=skip_samples, xlabels={}, xscales={}, yscales={"stepsize__": "log"}, title=title,
-              figure_name=figure_name, figure_dir=figure_dir, figure_format=figure_format, figsize=figsize,
-              show_flag=show_flag, save_flag=save_flag)
-
 
