@@ -295,7 +295,8 @@ class Plotter(BasePlotter):
         for id, d in enumerate(data):
             data_lims.append([d.min(), d.max()])
             if isequal_string(mode, "raster"):
-                data[id] = zscore(d, axis=None)
+                drange = numpy.percentile(d.flatten(), 99) - numpy.percentile(d.flatten(), 1)
+                data[id] = d/drange - 0.5 # zscore(d, axis=None)
         data_shape = data[0].shape
         n_times, nTS = data_shape[:2]
         if len(data_shape) > 2:
