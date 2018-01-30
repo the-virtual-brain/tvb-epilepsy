@@ -42,7 +42,7 @@ class TestPlotter():
         assert not os.path.exists(os.path.join(FOLDER_FIGURES, filename2))
         assert not os.path.exists(os.path.join(FOLDER_FIGURES, filename3))
 
-        self.plotter.plot_head(head, save_flag=True, show_flag=False, figure_dir=FOLDER_FIGURES)
+        self.plotter.plot_head(head, save_flag=True, figure_dir=FOLDER_FIGURES)
 
         assert os.path.exists(os.path.join(FOLDER_FIGURES, filename1))
         assert os.path.exists(os.path.join(FOLDER_FIGURES, filename2))

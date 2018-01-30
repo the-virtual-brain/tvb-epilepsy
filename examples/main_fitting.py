@@ -134,10 +134,10 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             plotter.plot_raster({'Target Signals': vois_ts_dict["signals"]}, vois_ts_dict["time"].flatten(),
                         time_units="ms", title=hyp.name + ' Target Signals raster',
                         special_idx=model_inversion.signals_inds, offset=1, labels=labels,
-                        save_flag=True, show_flag=False, figure_dir=figure_dir)
+                        save_flag=True, figure_dir=figure_dir)
         plotter.plot_timeseries({'Target Signals': signals}, time, time_units="ms", title=hyp.name + 'Target Signals ',
                         labels=labels[model_inversion.signals_inds],
-                        save_flag=True, show_flag=False, figure_dir=figure_dir)
+                        save_flag=True, figure_dir=figure_dir)
         writer = H5Writer()
         writer.write_model_inversion_service(model_inversion, os.path.join(FOLDER_RES,
                                                                            lsa_hypothesis.name + "_ModelInversionService.h5"))

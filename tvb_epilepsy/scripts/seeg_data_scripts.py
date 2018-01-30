@@ -38,7 +38,7 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
         plotter.plot_spectral_analysis_raster(times, data_bipolar, time_units="sec", freq=np.array(range(1, 51, 1)),
                                   title='Spectral Analysis',
                                   figure_name='Spectral Analysis Bipolar', labels=bipolar_channels,
-                                  show_flag=True, save_flag=True, log_scale=True)
+                                  save_flag=True, log_scale=True)
         plotter.plot_spectral_analysis_raster(times, data_filtered, time_units="sec", freq=np.array(range(1, 51, 1)),
                                   title='Spectral Analysis_bipolar', figure_name='Spectral Analysis Filtered', labels=bipolar_channels,
                                       log_scale=True, save_flag=True)
@@ -75,5 +75,5 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
     observation /= observation.max()
     if plot_flag:
         plotter.plot_timeseries({"observation": observation}, times, time_units="sec", special_idx=None, title='Time Series',
-                    figure_name='TimeSeriesDecimated', labels=bipolar_channels, show_flag=True, save_flag=True) #
+                    figure_name='TimeSeriesDecimated', labels=bipolar_channels, save_flag=True) #
     return observation, times, fs/2
