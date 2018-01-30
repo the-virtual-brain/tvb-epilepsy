@@ -42,6 +42,7 @@ class SDEModelInversionService(ODEModelInversionService):
         sig_std = sig / kwargs.get("sig_scale_ratio", 3)
         self.default_parameters.update(set_parameter_defaults("sig", "gamma", (),  # name, pdf, shape
                                                               0.1*sig, 10.0*sig,  # min, max
+                                                              sig, sig_std,
                                                               pdf_params={"mean": sig/sig_std, "skew": 0.0},
                                                               **kwargs))
 
