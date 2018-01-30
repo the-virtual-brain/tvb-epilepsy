@@ -253,8 +253,8 @@ class ODEModelInversionService(ModelInversionService):
                                                               sig_init, sig_init / 3.0,
                                                               pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("scale_signal", "lognormal", (),
-                                                              0.8, 3.0,
-                                                              2.0, 0.2,
+                                                              0.1, 2.0,
+                                                              0.4, 0.1,
                                                               pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("offset_signal", "normal", (),
                                                               pdf_params={"mu": -X1_DEF, "sigma": 0.1}, **kwargs))
@@ -279,7 +279,7 @@ class ODEModelInversionService(ModelInversionService):
                 gain_matrix = self.gain_matrix
                 mixing = deepcopy(gain_matrix)
             else:
-                mixing = np.ones((statistical_model.n_regions, statistical_model.n_regions))
+                mixing = np.eye(statistical_model.n_regions)
         if mixing.shape[0] > len(self.signals_inds):
             mixing = mixing[self.signals_inds]
         SC = self.get_SC()

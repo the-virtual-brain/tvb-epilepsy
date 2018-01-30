@@ -396,13 +396,13 @@ transformed parameters {
 
             if  (observation_model == 0) {
                 // seeg log power: observation with some log mixing, scaling and offset_signal
-                fit_signals[tt] = (scale_signal * log(mixing * exp(x1[tt]')) + offset_signal)';
+                fit_signals[tt] = scale_signal * (log(mixing * exp(x1[tt]')) + offset_signal)';
             } else if (observation_model == 1){
                 // observation with some linear mixing, scaling and offset_signal
-                fit_signals[tt] = (scale_signal * mixing * x1[tt]' + offset_signal)';
+                fit_signals[tt] = scale_signal * (mixing * x1[tt]' + offset_signal)';
             } else {
                 // observation with some scaling and offset_signal, without mixing
-                fit_signals[tt] = scale_signal * x1[tt] + offset_signal;
+                fit_signals[tt] = scale_signal * (x1[tt] + offset_signal);
             }
         }
     }
