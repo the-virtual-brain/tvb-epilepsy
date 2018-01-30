@@ -24,6 +24,58 @@ logger = initialize_logger(__name__)
 FOLDER_VEP_HOME = os.path.join(FOLDER_VEP_ONLINE, "tests")
 
 
+def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_matrix=None):
+    from copy import deepcopy
+    active_regions = model_data["active_regions"]
+    SC = statistical_model.parameters["MC"].mode[active_regions][:, active_regions]
+    vep_data = {"nn": model_data["n_active_regions"],
+                "nt": model_data["n_times"],
+                "ns": model_data["n_signals"],
+                "dt": model_data["dt"],  # model_data["dt"],
+                "I1": model_data["Iext1"],
+                "x0_mu": model_inversion.x0[statistical_model.active_regions],
+                "x0_std": 0.3,
+                "x_init_mu": statistical_model.parameters["x1init"].mean[statistical_model.active_regions],
+                "z_init_mu": statistical_model.parameters["zinit"].mean[statistical_model.active_regions],
+                "init_std": np.mean(statistical_model.parameters["x1init"].std),
+                "x0_std": 0.3,
+                "x0_lo": -3.0,
+                "x0_hi": -1.0,
+                "tau0": statistical_model.parameters["tau0"].mean,
+                # "K_lo": statistical_model.parameters["K"].low,
+                # "K_u": statistical_model.parameters["K"].mode,
+                # "K_v": statistical_model.parameters["K"].var,
+                "time_scale_mu": statistical_model.parameters["tau1"].mean,
+                "time_scale_std": statistical_model.parameters["tau1"].std,
+                "k_mu": statistical_model.parameters["K"].mean,
+                "k_std": statistical_model.parameters["K"].std,
+                "SC": SC,
+                "SC_var": 5.0,  # 1/36 = 0.02777777,
+                "Ic": np.sum(SC, axis=1),
+                "sigma_mu": statistical_model.parameters["sig"].mean,
+                "sigma_std": statistical_model.parameters["sig"].std,
+                "epsilon_mu": statistical_model.parameters["eps"].mean,
+                "epsilon_std": statistical_model.parameters["eps"].std,
+                "sig_hi": 0.025,  # model_data["sig_hi"],
+                "amplitude_mu": statistical_model.parameters["scale_signal"].mean,
+                "amplitude_std": statistical_model.parameters["scale_signal"].std,
+                "offset_mu": statistical_model.parameters["offset_signal"].mean,
+                "offset_std": statistical_model.parameters["offset_signal"].std,
+                "seeg_log_power": model_data["signals"]
+                # 9.0 * model_data["signals"] - 4.0,  # scale from (0, 1) to (-4, 5)
+                }
+    if gain_matrix is None:
+        if statistical_model.observation_model.find("seeg") >= 0:
+            gain_matrix = model_inversion.gain_matrix
+            mixing = deepcopy(gain_matrix)[:, statistical_model.active_regions]
+        else:
+            mixing = np.eye(vep_data["nn"])
+        if mixing.shape[0] > vep_data["ns"]:
+            mixing = mixing[model_inversion.signals_inds]
+        vep_data["gain"] = mixing
+    return vep_data
+
+
 def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                         sensors_filename="SensorsSEEG_116.h5", stats_model_name="vep_sde",
                         model_code_dir="/Users/dionperd/VEPtools/git/tvb-epilepsy/tvb_epilepsy/stan", EMPIRICAL="",
@@ -58,7 +110,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
 
         # -------------------------- Get model_data and observation signals: -------------------------------------------
         model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
-                                                   logger=logger)
+                                                   logger=logger, sig=0.001)
         statistical_model = model_inversion.generate_statistical_model(observation_model="lfp_power") # observation_expression="lfp"
         statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
                                                                   active_regions_th=0.1, reset=True)
@@ -150,41 +202,6 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
 
         # Stupid code to interface with INS stan model
         if stats_model_name in ["vep-fe-rev-05", "vep-fe-rev-08", "vep-fe-rev-08a", "vep-fe-rev-08b"]:
-            def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_matrix=None):
-                from copy import deepcopy
-                active_regions = model_data["active_regions"]
-                SC = statistical_model.parameters["MC"].mode[active_regions][:, active_regions]
-                vep_data = {"nn": model_data["n_active_regions"],
-                            "nt": model_data["n_times"],
-                            "ns": model_data["n_signals"],
-                            "dt": model_data["dt"],  # model_data["dt"],
-                            "I1": model_data["Iext1"],
-                            "x0_lo": -3.0,
-                            "x0_hi": -1.0,
-                            "tau0": 30.0,  # statistical_model.parameters["tau0"].mean,
-                            "K_lo": statistical_model.parameters["K"].low,
-                            "K_u": statistical_model.parameters["K"].mode,
-                            "K_v": statistical_model.parameters["K"].var,
-                            "SC": SC,
-                            "SC_var": 5.0,  # 1/36 = 0.02777777,
-                            "Ic": np.sum(SC, axis=1),
-                            "sig_hi": 0.025,  # model_data["sig_hi"],
-                            "amplitude_mu": statistical_model.parameters["scale_signal"].mean,
-                            "amplitude_std": statistical_model.parameters["scale_signal"].std,
-                            "offset_mu": statistical_model.parameters["offset_signal"].mean,
-                            "offset_std": statistical_model.parameters["offset_signal"].std,
-                            "seeg_log_power": model_data["signals"] #9.0 * model_data["signals"] - 4.0,  # scale from (0, 1) to (-4, 5)
-                            }
-                if gain_matrix is None:
-                    if statistical_model.observation_model.find("seeg") >= 0:
-                        gain_matrix = model_inversion.gain_matrix
-                        mixing = deepcopy(gain_matrix)[:, statistical_model.active_regions]
-                    else:
-                        mixing = np.eye(vep_data["nn"])
-                    if mixing.shape[0] > vep_data["ns"]:
-                        mixing = mixing[model_inversion.signals_inds]
-                    vep_data["gain"] = mixing
-                return vep_data
 
             model_data = convert_to_vep_stan(model_data, statistical_model, model_inversion)
             x1_str = "x"
