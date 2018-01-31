@@ -7,6 +7,7 @@ import h5py
 
 import numpy as np
 
+from tvb_epilepsy.base.types import OrderedDictDot
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import sort_dict, iterable_to_dict, dict_to_list_or_tuple, \
     set_list_item_by_reference_safely, get_list_or_tuple_item_safely, isequal_string
@@ -101,7 +102,10 @@ class H5Model(object):
                             "\nReturning array of shape " + str(obj.shape) + "!")
         else:
             obj = update_object(obj, "/", self.metadata_dict, getORpop="pop")[0]
-        return obj
+        if isinstance(obj, dict) and output_type.lower().find("dict") < 0:
+            return OrderedDictDot(obj)
+        else:
+            return obj
 
 
 def dict_to_h5_model(h5_model, obj, path, container_path):

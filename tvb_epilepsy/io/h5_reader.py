@@ -1,6 +1,7 @@
 import os
 import numpy
 import h5py
+from tvb_epilepsy.base.types import OrderedDictDot, DictDot
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity, ConnectivityH5Field
@@ -9,8 +10,10 @@ from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorsH5Field
 from tvb_epilepsy.base.model.vep.surface import Surface, SurfaceH5Field
 from tvb_epilepsy.base.simulators import SimulationSettings
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.io.h5_model import read_h5_model
 
 
 class H5Reader(object):
@@ -327,7 +330,7 @@ class H5Reader(object):
         h5_file.close()
         return mc_service
 
-    def read_dictionary(self, path):
+    def read_dictionary(self, path, type="dict"):
         """
         :param path: Path towards a dictionary H5 file
         :return: dict
@@ -343,7 +346,12 @@ class H5Reader(object):
             dictionary.update({attr: h5_file.attrs[attr]})
 
         h5_file.close()
-        return dictionary
+        if isequal_string(type, "DictDot"):
+            return DictDot(dictionary)
+        elif isequal_string(type, "OrderedDictDot"):
+            return OrderedDictDot(dictionary)
+        else:
+            return dictionary
 
     def read_simulation_settings(self, path):
         """
@@ -362,3 +370,6 @@ class H5Reader(object):
 
         h5_file.close()
         return sim_settings
+
+    def read_generic(self, path, obj=None, output_shape=None):
+        return read_h5_model(path).convert_from_h5_model(obj, output_shape)
