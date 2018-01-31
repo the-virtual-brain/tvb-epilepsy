@@ -139,7 +139,7 @@ class LSAService(object):
                                  {tuple(disease_hypothesis.x0_indices): disease_hypothesis.x0_values},
                                  {tuple(disease_hypothesis.e_indices): disease_hypothesis.e_values},
                                  {tuple(disease_hypothesis.w_indices): disease_hypothesis.w_values},
-                                 propagation_indices, lsa_propagation_strength, "LSA_" + disease_hypothesis.name)
+                                 propagation_indices, lsa_propagation_strength, disease_hypothesis.name + "_LSA")
 
     def update_for_pse(self, values, paths, indices):
         for i, val in enumerate(paths):
