@@ -7,7 +7,6 @@ from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.constants.model_constants import VOIS
-from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
 from tvb_epilepsy.custom.simulator_custom import EpileptorModel
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
@@ -166,11 +165,13 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
                 vois_ts_dict[sensor_name] /= np.max(vois_ts_dict[sensor_name])
 
     if save_flag:
-        write_ts_epi(raw_data, dt, vois_ts_dict["lfp"], folder, filename)
+        h5_writer = H5Writer()
+        h5_writer.write_ts_epi(raw_data, dt, vois_ts_dict["lfp"], os.path.join(folder, filename))
         # Write files:
         if idx_proj > -1:
             for i_sensor, sensor in enumerate(sensors_list):
-                write_ts_seeg_epi(vois_ts_dict[sensor.s_type + '%d' % i_sensor], dt, folder, filename)
+                h5_writer.write_ts_seeg_epi(vois_ts_dict[sensor.s_type + '%d' % i_sensor], dt,
+                                             os.path.join(folder, filename))
     return vois_ts_dict
 
 
