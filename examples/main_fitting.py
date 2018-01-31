@@ -10,6 +10,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.model_inversion.sde_model_inversion_service import SDEModelInversionService
@@ -20,6 +21,11 @@ from tvb_epilepsy.scripts.simulation_scripts import from_model_configuration_to_
 from tvb_epilepsy.scripts.seeg_data_scripts import prepare_seeg_observable
 
 logger = initialize_logger(__name__)
+
+reader = H5Reader()
+writer = H5Writer()
+
+plotter = Plotter()
 
 FOLDER_VEP_HOME = os.path.join(FOLDER_VEP_ONLINE, "tests")
 
@@ -61,8 +67,9 @@ def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_mat
                 "amplitude_std": statistical_model.parameters["scale_signal"].std,
                 "offset_mu": statistical_model.parameters["offset_signal"].mean,
                 "offset_std": statistical_model.parameters["offset_signal"].std,
-                "seeg_log_power": model_data["signals"]
+                "seeg_log_power": model_data["signals"],
                 # 9.0 * model_data["signals"] - 4.0,  # scale from (0, 1) to (-4, 5)
+                "time": model_data["time"]
                 }
     if gain_matrix is None:
         if statistical_model.observation_model.find("seeg") >= 0:
@@ -101,110 +108,128 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                           logger=logger)
 
     for hyp in hypos[:1]:
+
         # --------------------------Model configuration and LSA-----------------------------------
-        model_configuration, lsa_hypothesis, model_configuration_service, lsa_service = \
-            from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
-                                                plot_flag=False, figure_dir=figure_dir, logger=logger, K=K_DEF)
+        model_config_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_ModelConfig.h5")
+        hyp_file =os.path.join(FOLDER_VEP_HOME, hyp.name + "_LSA.h5")
+        if os.path.isfile(hyp_file) and \
+           os.path.isfile(model_config_file):
+            model_configuration = reader.read_model_configuration(model_config_file)
+            lsa_hypothesis = reader.read_hypothesis(hyp_file)
+        else:
+            model_configuration, lsa_hypothesis, model_configuration_service, lsa_service = \
+               from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
+                                                   plot_flag=False, figure_dir=figure_dir, logger=logger, K=K_DEF)
 
         dynamical_model = "EpileptorDP2D"
 
         # -------------------------- Get model_data and observation signals: -------------------------------------------
-        model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
-                                                   logger=logger, sig=0.001)
-        statistical_model = model_inversion.generate_statistical_model(observation_model="lfp_power") # observation_expression="lfp"
-        statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
-                                                                  active_regions_th=0.1, reset=True)
-        plotter = Plotter()
-        plotter.plot_statistical_model(statistical_model, "Statistical Model")
-        decimate = 1
-        cut_signals_tails = (6, 6)
-        if os.path.isfile(EMPIRICAL):
-            # ---------------------------------------Get empirical data----------------------------------------------
-            target_data_type = "empirical"
-            ts_file = os.path.join(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts_empirical.mat")
-            try:
-                vois_ts_dict = loadmat(ts_file)
-                time = vois_ts_dict["time"].flatten()
-                sensors_inds = np.array(vois_ts_dict["sensors_inds"]).flatten().tolist()
-                sensors_lbls = np.array(vois_ts_dict["sensors_lbls"]).flatten().tolist()
-                vois_ts_dict.update({"time": time, "sensors_inds": sensors_inds, "sensors_lbls": sensors_lbls})
-                savemat(ts_file, vois_ts_dict)
-            except:
-                signals, time, fs = prepare_seeg_observable(EMPIRICAL, times_on_off, sensors_lbls, plot_flag=True,
-                                                            log_flag=True)
-                if len(sensors_inds) > 1:  # get_bipolar_channels(sensors_inds, sensors_lbls)
-                    sensors_inds, sensors_lbls = head.get_sensors_id().get_bipolar_sensors(sensors_inds=sensors_inds)
-                inds = np.argsort(sensors_inds)
-                sensors_inds = np.array(sensors_inds)[inds].flatten().tolist()
-                sensors_lbls = np.array(sensors_lbls)[inds].flatten().tolist()
-                all_signals = np.zeros((signals.shape[0], len(model_inversion.sensors_labels)))
-                all_signals[:, sensors_inds] = signals[:, inds]
-                signals = all_signals
-                del all_signals
-                vois_ts_dict = {"time": time.flatten(), "signals": signals,
-                                "sensors_inds": sensors_inds, "sensors_lbls": sensors_lbls}
-                savemat(ts_file, vois_ts_dict)
-            model_inversion.sensors_labels[vois_ts_dict["sensors_inds"]] = sensors_lbls
-            manual_selection = sensors_inds
-            n_electrodes = 4
-            sensors_per_electrode = 2
+        model_inversion_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_ModelInversionService.h5")
+        stats_model_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_StatsModel.h5")
+        model_data_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_ModelData.h5")
+        if os.path.isfile(model_inversion_file) and \
+           os.path.isfile(stats_model_file) and \
+           os.path.isfile(model_data_file):
+            model_inversion = reader.read_dictionary(model_inversion_file, "OrderedDictDot")
+            statistical_model = reader.read_generic(stats_model_file)
+            model_data = reader.read_dictionary(model_data_file)
         else:
-            # -------------------------- Get simulated data (simulate if necessary) -----------------------------------
-            target_data_type = "simulated"
-            ts_file = os.path.join(FOLDER_VEP_HOME, lsa_hypothesis.name + "_ts.h5")
-            vois_ts_dict = \
-                from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis, simulation_mode=TVB,
-                                                       sim_type="fitting", dynamical_model=dynamical_model,
-                                                       ts_file=ts_file, plot_flag=True,
-                                                       save_flag=True, results_dir=results_dir,
-                                                       figure_dir=figure_dir, logger=logger, tau1=0.5, tau0=30.0,
-                                                       noise_intensity=10 ** -3)
-            manual_selection = statistical_model.active_regions
-            n_electrodes = 8
-            sensors_per_electrode = 2
-            sensors_lbls = model_inversion.sensors_labels
-        # -------------------------- Select and set observation signals -----------------------------------
-        signals, time, statistical_model, vois_ts_dict = \
-            model_inversion.set_target_data_and_time(target_data_type, vois_ts_dict, statistical_model,
-                                                     decimate=decimate, cut_signals_tails=cut_signals_tails,
-                                                     select_signals=True, manual_selection=manual_selection,
-                                                     auto_selection=False, # auto_selection="correlation-power",
-                                                     # n_electrodes=n_electrodes,
-                                                     # sensors_per_electrode=sensors_per_electrode,
-                                                     # group_electrodes=True,
-                                                     )
-        # if len(model_inversion.signals_inds) < head.get_sensors_id().number_of_sensors:
-        #     statistical_model = \
-        #             model_inversion.update_active_regions_seeg(statistical_model)
-        if model_inversion.data_type == "lfp":
-            labels = model_inversion.region_labels
-        else:
-            labels = model_inversion.sensors_labels
-        if vois_ts_dict.get("signals", None) is not None:
-            vois_ts_dict["signals"] -= vois_ts_dict["signals"].min()
-            vois_ts_dict["signals"] /= vois_ts_dict["signals"].max()
-            plotter.plot_raster({'Target Signals': vois_ts_dict["signals"]}, vois_ts_dict["time"].flatten(),
-                        time_units="ms", title=hyp.name + ' Target Signals raster',
-                        special_idx=model_inversion.signals_inds, offset=1, labels=labels,
-                        save_flag=True, show_flag=False, figure_dir=figure_dir)
-        plotter.plot_timeseries({'Target Signals': signals}, time, time_units="ms", title=hyp.name + 'Target Signals ',
-                        labels=labels[model_inversion.signals_inds],
-                        save_flag=True, show_flag=False, figure_dir=figure_dir)
-        writer = H5Writer()
-        writer.write_model_inversion_service(model_inversion, os.path.join(FOLDER_RES,
-                                                                           lsa_hypothesis.name + "_ModelInversionService.h5"))
-        writer.write_generic(statistical_model, results_dir, lsa_hypothesis.name + "_StatsModel.h5")
-        # try:
-        #     model_data = stan_service.load_model_data_from_file()
-        # except:
-        model_data = model_inversion.generate_model_data(statistical_model, signals)
-        writer.write_dictionary(model_data, os.path.join(results_dir, "ModelData.h5"))
+            model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
+                                                       logger=logger, sig=0.001)
+
+            statistical_model = model_inversion.generate_statistical_model(observation_model="lfp_power") # observation_expression="lfp"
+            statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
+                                                                      active_regions_th=0.1, reset=True)
+            plotter.plot_statistical_model(statistical_model, "Statistical Model")
+            decimate = 1
+            cut_signals_tails = (6, 6)
+            if os.path.isfile(EMPIRICAL):
+                # ---------------------------------------Get empirical data----------------------------------------------
+                target_data_type = "empirical"
+                ts_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_ts_empirical.mat")
+                try:
+                    vois_ts_dict = loadmat(ts_file)
+                    time = vois_ts_dict["time"].flatten()
+                    sensors_inds = np.array(vois_ts_dict["sensors_inds"]).flatten().tolist()
+                    sensors_lbls = np.array(vois_ts_dict["sensors_lbls"]).flatten().tolist()
+                    vois_ts_dict.update({"time": time, "sensors_inds": sensors_inds, "sensors_lbls": sensors_lbls})
+                    savemat(ts_file, vois_ts_dict)
+                except:
+                    signals, time, fs = prepare_seeg_observable(EMPIRICAL, times_on_off, sensors_lbls, plot_flag=True,
+                                                                log_flag=True)
+                    if len(sensors_inds) > 1:  # get_bipolar_channels(sensors_inds, sensors_lbls)
+                        sensors_inds, sensors_lbls = head.get_sensors_id().get_bipolar_sensors(sensors_inds=sensors_inds)
+                    inds = np.argsort(sensors_inds)
+                    sensors_inds = np.array(sensors_inds)[inds].flatten().tolist()
+                    sensors_lbls = np.array(sensors_lbls)[inds].flatten().tolist()
+                    all_signals = np.zeros((signals.shape[0], len(model_inversion.sensors_labels)))
+                    all_signals[:, sensors_inds] = signals[:, inds]
+                    signals = all_signals
+                    del all_signals
+                    vois_ts_dict = {"time": time.flatten(), "signals": signals,
+                                    "sensors_inds": sensors_inds, "sensors_lbls": sensors_lbls}
+                    savemat(ts_file, vois_ts_dict)
+                model_inversion.sensors_labels[vois_ts_dict["sensors_inds"]] = sensors_lbls
+                manual_selection = sensors_inds
+                n_electrodes = 4
+                sensors_per_electrode = 2
+            else:
+                # -------------------------- Get simulated data (simulate if necessary) -----------------------------------
+                target_data_type = "simulated"
+                ts_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_ts.h5")
+                vois_ts_dict = \
+                    from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis, simulation_mode=TVB,
+                                                           sim_type="fitting", dynamical_model=dynamical_model,
+                                                           ts_file=ts_file, plot_flag=True,
+                                                           save_flag=True, results_dir=results_dir,
+                                                           figure_dir=figure_dir, logger=logger, tau1=0.5, tau0=30.0,
+                                                           noise_intensity=10 ** -3)
+                manual_selection = statistical_model.active_regions
+                n_electrodes = 8
+                sensors_per_electrode = 2
+                sensors_lbls = model_inversion.sensors_labels
+            # -------------------------- Select and set observation signals -----------------------------------
+            signals, time, statistical_model, vois_ts_dict = \
+                model_inversion.set_target_data_and_time(target_data_type, vois_ts_dict, statistical_model,
+                                                         decimate=decimate, cut_signals_tails=cut_signals_tails,
+                                                         select_signals=True, manual_selection=manual_selection,
+                                                         auto_selection=False, # auto_selection="correlation-power",
+                                                         # n_electrodes=n_electrodes,
+                                                         # sensors_per_electrode=sensors_per_electrode,
+                                                         # group_electrodes=True,
+                                                         )
+            # if len(model_inversion.signals_inds) < head.get_sensors_id().number_of_sensors:
+            #     statistical_model = \
+            #             model_inversion.update_active_regions_seeg(statistical_model)
+            # if model_inversion.data_type == "lfp":
+            #     labels = model_inversion.region_labels
+            # else:
+            #     labels = model_inversion.sensors_labels
+            # if vois_ts_dict.get("signals", None) is not None:
+            #     vois_ts_dict["signals"] -= vois_ts_dict["signals"].min()
+            #     vois_ts_dict["signals"] /= vois_ts_dict["signals"].max()
+            #     plotter.plot_raster({'Target Signals': vois_ts_dict["signals"]}, vois_ts_dict["time"].flatten(),
+            #                 time_units="ms", title=hyp.name + ' Target Signals raster',
+            #                 special_idx=model_inversion.signals_inds, offset=1, labels=labels,
+            #                 save_flag=True, show_flag=False, figure_dir=figure_dir)
+            # plotter.plot_timeseries({'Target Signals': signals}, time, time_units="ms", title=hyp.name + 'Target Signals ',
+            #                 labels=labels[model_inversion.signals_inds],
+            #                 save_flag=True, show_flag=False, figure_dir=figure_dir)
+            writer.write_model_inversion_service(model_inversion, os.path.join(FOLDER_RES,
+                                                                               hyp.name + "_ModelInversionService.h5"))
+            writer.write_generic(statistical_model, results_dir, hyp.name + "_StatsModel.h5")
+            # try:
+            #     model_data = stan_service.load_model_data_from_file()
+            # except:
+            model_data = model_inversion.generate_model_data(statistical_model, signals)
+            writer.write_dictionary(model_data, os.path.join(results_dir, hyp.name + "_ModelData.h5"))
 
         # Stupid code to interface with INS stan model
         if stats_model_name in ["vep-fe-rev-05", "vep-fe-rev-08", "vep-fe-rev-08a", "vep-fe-rev-08b"]:
 
             model_data = convert_to_vep_stan(model_data, statistical_model, model_inversion)
             x1_str = "x"
+            input_signals_str = "seeg_log_power"
             signals_str = "mu_seeg_log_power"
             sig_str = "sigma"
             eps_str = "epsilon"
@@ -216,6 +241,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             region_mode = "active"
         else:
             x1_str = "x1"
+            input_signals_str = "signals"
             signals_str = "fit_signals"
             sig_str = "sig"
             eps_str = "eps"
@@ -226,16 +252,17 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             estMC = lambda est: est["MC"]
             region_mode = "all"
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        ests, samples = stan_service.fit(debug=1, simulate=0, model_data=model_data, merge_outputs=False,
-                                         chains=1, refresh=1, num_warmup=100, num_samples=100, **kwargs)
-        writer.write_generic(ests, results_dir, lsa_hypothesis.name + "_fit_est.h5")
-        writer.write_generic(samples, results_dir, lsa_hypothesis.name + "_fit_samples.h5")
+        ests, samples = stan_service.fit(debug=1, simulate=1, model_data=model_data, merge_outputs=False,
+                                         chains=1, refresh=1, num_warmup=10, num_samples=10, **kwargs)
+        writer.write_generic(ests, results_dir, hyp.name + "_fit_est.h5")
+        writer.write_generic(samples, results_dir, hyp.name + "_fit_samples.h5")
         ests = ensure_list(ests)
-        plotter.plot_fit_results(model_inversion, ests, samples, statistical_model, signals, time, region_mode,
-                                         seizure_indices=lsa_hypothesis.get_regions_disease_indices(),
-                                         x1_str=x1_str, signals_str=signals_str, sig_str=sig_str, eps_str=eps_str,
-                                         trajectories_plot=True, connectivity_plot=connectivity_plot,
-                                         pair_plot_params=pair_plot_params, region_violin_params=region_violin_params)
+        plotter.plot_fit_results(model_inversion, ests, samples, statistical_model, model_data[input_signals_str],
+                                 model_data["time"], region_mode,
+                                 seizure_indices=lsa_hypothesis.get_regions_disease_indices(),
+                                 x1_str=x1_str, signals_str=signals_str, sig_str=sig_str, eps_str=eps_str,
+                                 trajectories_plot=True, connectivity_plot=connectivity_plot,
+                                 pair_plot_params=pair_plot_params, region_violin_params=region_violin_params)
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
         for id_est, est in enumerate(ensure_list(ests)):
             fit_model_configuration_service = \
