@@ -1,13 +1,26 @@
 import os
 import h5py
 import numpy
-from tvb_epilepsy.base.utils.log_error_utils import warning
-from tvb_epilepsy.base.utils.file_utils import change_filename_or_overwrite
+from tvb_epilepsy.base.utils.log_error_utils import warning, raise_error, raise_value_error
+from tvb_epilepsy.base.utils.file_utils import change_filename_or_overwrite, write_metadata
 from tvb_epilepsy.io.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.vep.connectivity import ConnectivityH5Field
 from tvb_epilepsy.base.model.vep.sensors import SensorsH5Field
 from tvb_epilepsy.base.model.vep.surface import SurfaceH5Field
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+
+KEY_TYPE = "EPI_Type"
+KEY_VERSION = "EPI_Version"
+KEY_DATE = "EPI_Last_update"
+KEY_NODES = "Number_of_nodes"
+KEY_SENSORS = "Number_of_sensors"
+KEY_MAX = "Max_value"
+KEY_MIN = "Min_value"
+KEY_CHANNELS = "Number_of_channels"
+KEY_SV = "Number_of_state_variables"
+KEY_STEPS = "Number_of_steps"
+KEY_SAMPLING = "Sampling_period"
+KEY_START = "Start_time"
 
 
 class H5Writer(object):
@@ -284,6 +297,78 @@ class H5Writer(object):
         for key, value in metadata_dict.iteritems():
             h5_file.attrs.create(key, value)
 
+        h5_file.close()
+
+    def write_ts_seeg_epi(self, seeg_data, sampling_period, path):
+        if not os.path.exists(path):
+            raise_error("TS file %s does not exist. First define the raw data!" + path, self.logger)
+            return
+        sensors_name = "SeegSensors-" + str(seeg_data.shape[1])
+
+        self.logger.info("Writing a TS at:\n" + path + ", " + sensors_name)
+        try:
+            h5_file = h5py.File(path, 'a', libver='latest')
+            h5_file.create_dataset("/" + sensors_name, data=seeg_data)
+            write_metadata({KEY_MAX: seeg_data.max(), KEY_MIN: seeg_data.min(), KEY_STEPS: seeg_data.shape[0],
+                            KEY_CHANNELS: seeg_data.shape[1], KEY_SV: 1, KEY_SAMPLING: sampling_period, KEY_START: 0.0},
+                           h5_file, KEY_DATE, KEY_VERSION, "/" + sensors_name)
+            h5_file.close()
+        except Exception, e:
+            raise_error(e + "\nSeeg dataset already written as " + sensors_name, self.logger)
+
+    def write_ts_epi(self, raw_data, sampling_period, path, lfp_data=None):
+        path = change_filename_or_overwrite(os.path.join(path))
+
+        if raw_data is None or len(raw_data.shape) != 3:
+            raise_value_error("Invalid TS data 3D (time, regions, sv) expected", self.logger)
+        self.logger.info("Writing a TS at:\n" + path)
+        if type(lfp_data) == int:
+            lfp_data = raw_data[:, :, lfp_data[1]]
+            raw_data[:, :, lfp_data[1]] = []
+        elif isinstance(lfp_data, list):
+            lfp_data = raw_data[:, :, lfp_data[1]] - raw_data[:, :, lfp_data[0]]
+        elif isinstance(lfp_data, numpy.ndarray):
+            lfp_data = lfp_data.reshape((lfp_data.shape[0], lfp_data.shape[1], 1))
+        else:
+            raise_value_error("Invalid lfp_data 3D (time, regions, sv) expected", self.logger)
+        h5_file = h5py.File(path, 'a', libver='latest')
+        h5_file.create_dataset("/data", data=raw_data)
+        h5_file.create_dataset("/lfpdata", data=lfp_data)
+        write_metadata({KEY_TYPE: "TimeSeries"}, h5_file, KEY_DATE, KEY_VERSION)
+        write_metadata({KEY_MAX: raw_data.max(), KEY_MIN: raw_data.min(), KEY_STEPS: raw_data.shape[0],
+                        KEY_CHANNELS: raw_data.shape[1], KEY_SV: raw_data.shape[2], KEY_SAMPLING: sampling_period,
+                        KEY_START: 0.0}, h5_file, KEY_DATE, KEY_VERSION, "/data")
+        write_metadata({KEY_MAX: lfp_data.max(), KEY_MIN: lfp_data.min(), KEY_STEPS: lfp_data.shape[0],
+                        KEY_CHANNELS: lfp_data.shape[1], KEY_SV: 1, KEY_SAMPLING: sampling_period, KEY_START: 0.0},
+                       h5_file, KEY_DATE, KEY_VERSION, "/lfpdata")
+        h5_file.close()
+
+    def write_ts(self, raw_data, sampling_period, path):
+        path = change_filename_or_overwrite(path)
+
+        self.logger.info("Writing a TS at:\n" + path)
+        h5_file = h5py.File(path, 'a', libver='latest')
+        write_metadata({KEY_TYPE: "TimeSeries"}, h5_file, KEY_DATE, KEY_VERSION)
+        if isinstance(raw_data, dict):
+            for data in raw_data:
+                if len(raw_data[data].shape) == 2 and str(raw_data[data].dtype)[0] == "f":
+                    h5_file.create_dataset("/" + data, data=raw_data[data])
+                    write_metadata({KEY_MAX: raw_data[data].max(), KEY_MIN: raw_data[data].min(),
+                                    KEY_STEPS: raw_data[data].shape[0], KEY_CHANNELS: raw_data[data].shape[1],
+                                    KEY_SV: 1, KEY_SAMPLING: sampling_period, KEY_START: 0.0}, h5_file, KEY_DATE,
+                                   KEY_VERSION, "/" + data)
+                else:
+                    raise_value_error("Invalid TS data. 2D (time, nodes) numpy.ndarray of floats expected")
+        elif isinstance(raw_data, numpy.ndarray):
+            if len(raw_data.shape) != 2 and str(raw_data.dtype)[0] != "f":
+                h5_file.create_dataset("/data", data=raw_data)
+                write_metadata({KEY_MAX: raw_data.max(), KEY_MIN: raw_data.min(), KEY_STEPS: raw_data.shape[0],
+                                KEY_CHANNELS: raw_data.shape[1], KEY_SV: 1, KEY_SAMPLING: sampling_period,
+                                KEY_START: 0.0}, h5_file, KEY_DATE, KEY_VERSION, "/data")
+            else:
+                raise_value_error("Invalid TS data. 2D (time, nodes) numpy.ndarray of floats expected")
+        else:
+            raise_value_error("Invalid TS data. Dictionary or 2D (time, nodes) numpy.ndarray of floats expected")
         h5_file.close()
 
     def write_generic(self, object, folder, path):

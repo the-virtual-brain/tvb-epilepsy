@@ -3,15 +3,13 @@
 """
 
 import os
-
 import numpy
 from scipy.io import loadmat
-
 from tvb_epilepsy.base.model.vep.sensors import Sensors
-from tvb_epilepsy.custom.read_write import write_ts, write_ts_seeg_epi, PATIENT_VIRTUAL_HEAD
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
 
+PATIENT_VIRTUAL_HEAD = "/WORK/episense/episense-root/trunk/demo-data/Head_TREC"
 
 def correlate_sensors(empirical_file="/Users/lia.domide/Downloads/TRECempirical/110223B-EEX_0004.EEG.mat",
                       existing_ep_file="/WORK/episense/episense-root/trunk/demo-data/SensorsSEEG_125.h5"):
@@ -46,9 +44,9 @@ def import_seeg(empirical_file="/Users/lia.domide/Downloads/TRECempirical/110223
     seeg_data = seeg_data.transpose()
     print seeg_data.min(), seeg_data.max()
     raw_data = numpy.zeros((1000, 88, 3))
-    write_ts(raw_data, sampling_period, ts_path)
-    (folder_path, filename) = os.path.split(ts_path)
-    write_ts_seeg_epi(seeg_data, sampling_period, folder=folder_path, filename=filename)
+    h5_writer = H5Writer()
+    h5_writer.write_ts(raw_data, sampling_period, ts_path)
+    h5_writer.write_ts_seeg_epi(seeg_data, sampling_period, path=ts_path)
 
 
 if __name__ == "__main__":
