@@ -162,19 +162,19 @@ class ODEModelInversionService(ModelInversionService):
             else:
                 signals = self.select_signals_seeg(signals, statistical_model.active_regions,
                                                    kwargs.pop("auto_selection", "rois-correlation-power"), **kwargs)
-        time = self.set_time(target_data.get("time", None))
+        self.time = self.set_time(target_data.get("time", None))
         if kwargs.get("decimate", 1) > 1:
-            signals, time, self.dt, self.n_times = decimate_signals(signals, time, kwargs.get("decimate"))
+            signals, time, self.dt, self.n_times = decimate_signals(signals, self.time, kwargs.get("decimate"))
             self.observation_shape = (self.n_times, self.n_signals)
         if np.sum(kwargs.get("cut_signals_tails", (0, 0))) > 0:
-            signals, time, self.n_times = cut_signals_tails(signals, time, kwargs.get("cut_signals_tails"))
+            signals, self.time, self.n_times = cut_signals_tails(signals, self.time, kwargs.get("cut_signals_tails"))
             self.observation_shape = (self.n_times, self.n_signals)
         signals -= signals.min()
         signals /= signals.max()
         statistical_model.n_signals = self.n_signals
         statistical_model.n_times = self.n_times
         statistical_model.dt = self.dt
-        return signals, time, statistical_model, target_data
+        return signals, self.time, statistical_model, target_data
 
     def update_active_regions_e_values(self, statistical_model, active_regions_th=0.1, reset=False):
         if reset:
@@ -257,7 +257,7 @@ class ODEModelInversionService(ModelInversionService):
                                                               0.4, 0.1,
                                                               pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("offset_signal", "normal", (),
-                                                              pdf_params={"mu": -X1_DEF, "sigma": 0.1}, **kwargs))
+                                                              pdf_params={"mu": -X1INIT_MIN, "sigma": 0.1}, **kwargs))
 
     def generate_statistical_model(self, model_name="vep_ode", **kwargs):
         tic = time.time()
@@ -303,6 +303,7 @@ class ODEModelInversionService(ModelInversionService):
                       # "observation_expression": np.where(np.in1d(OBSERVATION_MODEL_EXPRESSIONS,
                       #                                            statistical_model.observation_expression))[0][0],
                       "signals": signals,
+                      "time": self.time,
                       "mixing": mixing}
         for key, val in self.epileptor_parameters.iteritems():
             model_data.update({key: val})
