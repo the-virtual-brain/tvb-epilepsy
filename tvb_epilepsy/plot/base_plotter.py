@@ -9,10 +9,15 @@ from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 
 class BasePlotter(object):
 
-    def __init__(self, figure_dir=FOLDER_FIGURES, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG):
-        self.figure_dir = figure_dir
+    def __init__(self, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG):
         self.save_flag = save_flag
         self.show_flag = show_flag
+
+    def set_save_flag(self, value):
+        self.save_flag = value
+
+    def set_show_flag(self, value):
+        self.show_flag = value
 
     def _check_show(self):
         if self.show_flag:
@@ -32,8 +37,7 @@ class BasePlotter(object):
         figure_name = figure_name.replace(": ", "_").replace(" ", "_").replace("\t", "_")
         return figure_name
 
-    def _save_figure(self, fig=None, figure_name=None, figure_dir=FOLDER_FIGURES,
-                     figure_format=FIG_FORMAT):
+    def _save_figure(self, fig=None, figure_name=None, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
         if self.save_flag:
             figure_name = self._figure_filename(fig, figure_name)
             figure_name = figure_name[:numpy.min([100, len(figure_name)])] + '.' + figure_format
