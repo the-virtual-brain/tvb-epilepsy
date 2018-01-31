@@ -773,7 +773,7 @@ class Plotter(BasePlotter):
             seizure_indices = None
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), ensure_list(samples))):
             name = statistical_model.name + "_chain" + str(id_est)
-            self.plot_raster(sort_dict({'observation signals': signals,
+            self.plot_timeseries(sort_dict({'observation signals': signals,
                                         'observation signals fit': sample[signals_str].T}), time,
                              special_idx=None, time_units=est.get('time_units', "ms"),
                              title=name + ": Observation signals vs fit rasterplot",
@@ -783,7 +783,7 @@ class Plotter(BasePlotter):
                                         'observation signals fit'], offset=1.0,
                              labels=sensor_labels, save_flag=save_flag, show_flag=show_flag,
                              figure_dir=figure_dir, figure_format=figure_format, figsize=VERY_LARGE_SIZE)
-            self.plot_raster(sort_dict({x1_str: sample[x1_str].T, 'z': sample["z"].T}), time,
+            self.plot_timeseries(sort_dict({x1_str: sample[x1_str].T, 'z': sample["z"].T}), time,
                              special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                              title=name + ": Hidden states fit rasterplot",
                              subtitles=['hidden state ' + x1_str,
