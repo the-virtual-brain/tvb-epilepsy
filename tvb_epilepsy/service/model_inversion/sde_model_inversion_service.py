@@ -8,13 +8,11 @@ from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defa
 from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_NVARS
 from tvb_epilepsy.service.model_inversion.ode_model_inversion_service import ODEModelInversionService
 
-LOG = initialize_logger(__name__)
-
 
 class SDEModelInversionService(ODEModelInversionService):
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name=None,
-                 logger=LOG, **kwargs):
+                 logger=None, **kwargs):
         super(SDEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
                                                        model_name, logger, **kwargs)
         self.set_default_parameters(**kwargs)
@@ -34,9 +32,8 @@ class SDEModelInversionService(ODEModelInversionService):
         sig = self.get_default_sig(**kwargs)
         # Generative model:
         # Integration:
-        # self.default_parameters.update(set_parameter_defaults("dX1t", "normal", (),  # name, pdf, shape
-        #                                                       -10.0*sig, 10.0*sig,     # min, max
-        #                                                       pdf_params={"mu": 0.0, "sigma": sig}))
+        self.default_parameters.update(set_parameter_defaults("dX1t", "normal", (),  # name, pdf, shape
+                                                              pdf_params={"mu": 0.0, "sigma": sig}))
         self.default_parameters.update(set_parameter_defaults("dZt", "normal", (),  # name, pdf, shape
                                                               pdf_params={"mu": 0.0, "sigma": sig}))
         sig_std = sig / kwargs.get("sig_scale_ratio", 3)

@@ -289,7 +289,7 @@ parameters {
     row_vector<lower=x1init_lo, upper=x1init_hi>[n_regions] x1init; // x1 initial condition coordinate
     row_vector<lower=zinit_lo, upper=zinit_hi>[n_regions] zinit; // x1 initial condition coordinate
     real<lower=sig_init_star_lo, upper=sig_init_star_hi> sig_init_star; // variance of initial condition
-    // row_vector[n_active_regions] dX1t[n_times-1]; // x1 dWt
+    row_vector[n_active_regions] dX1t[n_times-1]; // x1 dWt
     row_vector[n_active_regions] dZt[n_times-1]; // z dWt
     real<lower=tau1_star_lo, upper=tau1_star_hi> tau1_star; // time scale [n_active_regions]
     real<lower=tau0_star_lo, upper=tau0_star_hi> tau0_star; // time scale separation [n_active_regions]
@@ -387,6 +387,7 @@ transformed parameters {
             if (DEBUG > 2)
                 print("tt=", tt, "dfx=", df);
             x1[tt] = ode_step(n_regions, x1[tt-1], df, dt);
+            x1[tt, active_regions] = x1[tt, active_regions] + dX1t[tt-1] * sqrtdt;
             coupling[tt] = calc_coupling(n_regions, n_regions, x1[tt], x1[tt], MC);
             df = EpileptorDP2D_fun_z_lin(n_regions, x1[tt-1], z[tt-1], x0, K*coupling[tt-1], tau0, tau1);
             if (DEBUG > 2)

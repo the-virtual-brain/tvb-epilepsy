@@ -1,4 +1,4 @@
-import numpy as np
+
 from tvb_epilepsy.base.constants.model_inversion_constants import SIG_EQ_DEF, OBSERVATION_MODEL_DEF, SIG_INIT_DEF
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
@@ -23,5 +23,5 @@ class SDEStatisticalModel(ODEStatisticalModel):
         return super(SDEStatisticalModel, self).__repr__()
 
     def _add_parameters(self, **defaults):
-        for p in ["z_dWt", "sig"]: #"x1_dWt",
+        for p in ["dX1t", "dZt", "sig"]:
             self.parameters.update({p: set_parameter(p, **defaults)})

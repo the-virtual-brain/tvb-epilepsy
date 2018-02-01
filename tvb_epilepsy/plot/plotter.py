@@ -786,10 +786,10 @@ class Plotter(BasePlotter):
                              labels=region_labels[region_inds], save_flag=save_flag,
                              show_flag=show_flag, figure_dir=figure_dir,
                              figure_format=figure_format, figsize=VERY_LARGE_SIZE)
-            self.plot_raster(sort_dict({dZt_str: sample[dZt_str].T}), time[:-1], # dX1t_str: sample[dX1t_str].T,
+            self.plot_raster(sort_dict({dX1t_str: sample[dX1t_str].T, dZt_str: sample[dZt_str].T}), time[:-1], #
                              special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                              title=name + ": Hidden states random walk rasterplot",
-                             subtitles=[#x1_str,
+                             subtitles=[dX1t_str,
                                         dZt_str +
                                         '\ndynamic noise sig_prior = ' + str(sig_prior) +
                                         ", sig_post = " + str(est[sig_str])], offset=1.0,
