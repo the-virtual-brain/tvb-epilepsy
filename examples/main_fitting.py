@@ -3,7 +3,8 @@
 import os
 import numpy as np
 from scipy.io import loadmat, savemat
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES, FOLDER_VEP_ONLINE
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES, FOLDER_VEP_ONLINE, \
+                                                                                                    TVB_EPILEPSY_PATH
 from tvb_epilepsy.base.constants.module_constants import TVB, CUSTOM
 from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
@@ -85,7 +86,7 @@ def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_mat
 
 def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                         sensors_filename="SensorsSEEG_116.h5", stats_model_name="vep_sde",
-                        model_code_dir="/Users/dionperd/VEPtools/git/tvb-epilepsy/tvb_epilepsy/stan", EMPIRICAL="",
+                        model_code_dir=os.path.join(TVB_EPILEPSY_PATH, "stan"), EMPIRICAL="",
                         times_on_off=[], sensors_lbls=[], sensors_inds=[], fitmethod="optimizing",
                         stan_service="CmdStan", results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES, **kwargs):
     # ------------------------------Stan model and service--------------------------------------
@@ -256,8 +257,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             estMC = lambda est: est["MC"]
             region_mode = "all"
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        ests, samples = stan_service.fit(debug=1, simulate=1, model_data=model_data, merge_outputs=False,
-                                         chains=1, refresh=1, num_warmup=50, num_samples=50, **kwargs)
+        ests, samples = stan_service.fit(debug=1, simulate=0, model_data=model_data, merge_outputs=False,
+                                         chains=2, refresh=1, num_warmup=100, num_samples=100, **kwargs)
         writer.write_generic(ests, results_dir, hyp.name + "_fit_est.h5")
         writer.write_generic(samples, results_dir, hyp.name + "_fit_samples.h5")
         ests = ensure_list(ests)
@@ -322,12 +323,10 @@ if __name__ == "__main__":
     # stats_model_name = "vep_sde"
     stats_model_name = "vep-fe-rev-08a"
     fitmethod = "sample"
-    # model_code_dir = "/Users/dionperd/VEPtools/software/git/tvb-epilepsy/tvb_epilepsy/stan"
-    model_code_dir = "/Users/dionperd/VEPtools/git/tvb-epilepsy/tvb_epilepsy/stan"
     if EMPIRICAL:
         main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                             sensors_filename=sensors_filename, stats_model_name=stats_model_name,
-                            model_code_dir=model_code_dir, EMPIRICAL=os.path.join(SEEG_data, seizure),
+                            EMPIRICAL=os.path.join(SEEG_data, seizure),
                             times_on_off=[15.0, 35.0], sensors_lbls=sensors_lbls, sensors_inds=sensors_inds,
                             fitmethod=fitmethod, stan_service="CmdStan", results_dir=FOLDER_RES,
                             figure_dir=FOLDER_FIGURES, save_warmup=1, num_warmup=200, num_samples=200, delta=0.8,
@@ -335,5 +334,5 @@ if __name__ == "__main__":
     else:
         main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                             sensors_filename=sensors_filename, stats_model_name=stats_model_name,
-                            model_code_dir=model_code_dir, fitmethod=fitmethod, stan_service="CmdStan",
+                            fitmethod=fitmethod, stan_service="CmdStan",
                             results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES)  # , stan_service="PyStan"
