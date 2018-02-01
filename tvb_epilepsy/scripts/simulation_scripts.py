@@ -22,7 +22,7 @@ LOG = initialize_logger(__name__)
 def setup_custom_simulation_from_model_configuration(model_configuration, connectivity, dt, sim_length, monitor_period,
                                                      model_name, noise_intensity=None, **kwargs):
     from tvb_epilepsy.custom.simulator_custom import EpileptorModel, custom_model_builder, SimulatorCustom
-    from tvb_epilepsy.base.simulators import SimulationSettings
+    from tvb_epilepsy.base.simulation_settings import SimulationSettings
 
     if model_name != EpileptorModel._ui_name:
         print("You can use only " + EpileptorModel._ui_name + "for custom simulations!")
@@ -49,7 +49,7 @@ def setup_TVB_simulation_from_model_configuration(model_configuration, connectiv
                                                   pmode=np.array("z"), noise_instance=None, noise_intensity=None,
                                                   monitor_expressions=None, monitors_instance=None):
     from tvb_epilepsy.base.constants.module_constants import ADDITIVE_NOISE, NOISE_SEED
-    from tvb_epilepsy.base.simulators import SimulationSettings
+    from tvb_epilepsy.base.simulation_settings import SimulationSettings
     from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
     from tvb_epilepsy.base.constants.model_constants import model_noise_type_dict
     from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
