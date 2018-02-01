@@ -16,7 +16,7 @@ from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.simulator.simulator_tvb import SimulatorTVB
-from tvb_epilepsy.service.simulator.custom_simulator import custom_model_builder
+from tvb_epilepsy.service.simulator.simulator_custom import custom_model_builder
 from tvb_epilepsy.io.h5_reader import H5Reader
 
 logger = initialize_logger(__name__)
