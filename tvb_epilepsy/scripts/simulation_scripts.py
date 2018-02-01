@@ -7,7 +7,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.constants.model_constants import VOIS
-from tvb_epilepsy.custom.simulator_custom import EpileptorModel
+from tvb_epilepsy.service.simulator.custom_simulator import EpileptorModel
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
@@ -21,7 +21,7 @@ LOG = initialize_logger(__name__)
 ###
 def setup_custom_simulation_from_model_configuration(model_configuration, connectivity, dt, sim_length, monitor_period,
                                                      model_name, noise_intensity=None, **kwargs):
-    from tvb_epilepsy.custom.simulator_custom import EpileptorModel, custom_model_builder, SimulatorCustom
+    from tvb_epilepsy.service.simulator.custom_simulator import custom_model_builder, SimulatorCustom
     from tvb_epilepsy.base.simulation_settings import SimulationSettings
 
     if model_name != EpileptorModel._ui_name:
