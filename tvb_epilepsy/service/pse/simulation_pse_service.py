@@ -7,7 +7,7 @@ from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.service.pse.pse_service import ABCPSEService
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
-from tvb_epilepsy.custom.simulator_custom import custom_model_builder
+from tvb_epilepsy.service.simulator.custom_simulator import custom_model_builder
 
 
 class SimulationPSEService(ABCPSEService):

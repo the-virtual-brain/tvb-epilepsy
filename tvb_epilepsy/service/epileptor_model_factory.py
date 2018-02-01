@@ -10,7 +10,7 @@ Also, dictionaries to keep noise intensity and type for each model type.
 import numpy
 from tvb.simulator.models import Epileptor
 
-from tvb_epilepsy.custom.simulator_custom import EpileptorModel
+from tvb_epilepsy.service.simulator.custom_simulator import EpileptorModel
 from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D, EpileptorDP, EpileptorDPrealistic
 
 AVAILABLE_DYNAMICAL_MODELS = (Epileptor, EpileptorModel, EpileptorDP2D, EpileptorDP, EpileptorDPrealistic)
