@@ -65,7 +65,7 @@ def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_mat
                 "epsilon_std": statistical_model.parameters["eps"].std,
                 "sig_hi": 0.025,  # model_data["sig_hi"],
                 "amplitude_mu": statistical_model.parameters["scale_signal"].mean,
-                "amplitude_std": statistical_model.parameters["scale_signal"].std/3,
+                "amplitude_std": statistical_model.parameters["scale_signal"].std/6,
                 "offset_mu": statistical_model.parameters["offset_signal"].mean,
                 "offset_std": statistical_model.parameters["offset_signal"].std,
                 "seeg_log_power": model_data["signals"],
@@ -265,7 +265,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         plotter.plot_fit_results(model_inversion, ests, samples, statistical_model, model_data[input_signals_str],
                                  model_data["time"], region_mode,
                                  seizure_indices=lsa_hypothesis.get_regions_disease_indices(),
-                                 x1_str=x1_str, signals_str=signals_str, sig_str=sig_str, eps_str=eps_str, #dX1t_str="dX1t",
+                                 x1_str=x1_str, signals_str=signals_str, sig_str=sig_str, eps_str=eps_str, dX1t_str=dX1t_str,
                                  dZt_str=dZt_str,  trajectories_plot=True, connectivity_plot=connectivity_plot,
                                  pair_plot_params=pair_plot_params, region_violin_params=region_violin_params)
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
