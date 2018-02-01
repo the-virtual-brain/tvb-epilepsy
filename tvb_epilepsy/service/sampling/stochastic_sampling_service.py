@@ -2,13 +2,10 @@ import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
 from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, isequal_string
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import StochasticParameterBase
 from tvb_epilepsy.service.sampling.sampling_service import SamplingService
-
-
-logger = initialize_logger(__name__)
 
 
 class StochasticSamplingService(SamplingService):

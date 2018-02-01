@@ -14,9 +14,6 @@ from tvb_epilepsy.base.utils.data_structures_utils import sort_dict, iterable_to
 from tvb_epilepsy.base.utils.file_utils import change_filename_or_overwrite
 
 
-logger = initialize_logger(__name__)
-
-
 bool_inf_nan_none_empty = OrderedDict()
 bool_inf_nan_none_empty.update({"True": True})
 bool_inf_nan_none_empty.update({"False": False})
@@ -34,7 +31,11 @@ bool_inf_nan_none_empty.update({"{}": OrderedDict()})
 #Observation: we should solve these TODOs after the next refactoring tasks are over, and the models are simpler
 class H5Model(object):
 
-    def __init__(self, datasets_dict, metadata_dict):
+    def __init__(self, datasets_dict, metadata_dict, logger=None):
+        if logger is None:
+            self.logger = initialize_logger(__name__)
+        else:
+            self.logger = logger
         self.datasets_dict = datasets_dict
         self.metadata_dict = metadata_dict
 
@@ -56,7 +57,7 @@ class H5Model(object):
         """
         final_path = change_filename_or_overwrite(os.path.join(folder_name, file_name))
         # final_path = ensure_unique_file(folder_name, file_name)
-        logger.info("Writing %s at: %s" % (self, final_path))
+        self.logger.info("Writing %s at: %s" % (self, final_path))
         h5_file = h5py.File(final_path, 'a', libver='latest')
         for attribute, field in self.datasets_dict.iteritems():
             h5_file.create_dataset(attribute, data=field)
@@ -282,7 +283,7 @@ def assert_obj(obj, obj_name, obj_type):
         return OrderedDict()
     # If still not created, make an  OrderedDict() by default:
     if obj is None:
-        logger.warning("\n Child object " + str(obj_name) + " still not created!" +
+        warning("\n Child object " + str(obj_name) + " still not created!" +
                        "\nCreating an OrderedDict() by default!")
         return OrderedDict()
     return obj

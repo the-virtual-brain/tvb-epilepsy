@@ -4,7 +4,7 @@ import numpy as np
 from tvb_epilepsy.base.constants.model_constants import X1_DEF
 from tvb_epilepsy.base.constants.model_inversion_constants import X1INIT_MIN, X1INIT_MAX, ZINIT_MIN, ZINIT_MAX, \
                                                                             MC_MIN,  SIG_INIT_DEF, OBSERVATION_MODELS
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, assert_arrays, \
     extract_dict_stringkeys
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
@@ -17,13 +17,11 @@ from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DIST
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
 from tvb_epilepsy.tvb_api.epileptor_models import *
 
-LOG = initialize_logger(__name__)
-
 
 class ODEModelInversionService(ModelInversionService):
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="vep_ode",
-                 logger=LOG, **kwargs):
+                 logger=None, **kwargs):
         super(ODEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
                                                        model_name, logger, **kwargs)
         self.time = None
