@@ -8,7 +8,7 @@ from tvb_epilepsy.base.model.vep.connectivity import Connectivity, ConnectivityH
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorsH5Field
 from tvb_epilepsy.base.model.vep.surface import Surface, SurfaceH5Field
-from tvb_epilepsy.base.simulators import SimulationSettings
+from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.service.lsa_service import LSAService

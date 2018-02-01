@@ -9,7 +9,7 @@ from tvb.datatypes import connectivity
 from tvb.simulator import coupling, integrators, monitors, noise, simulator
 from tvb_epilepsy.base.constants.module_constants import TIME_DELAYS_FLAG
 from tvb_epilepsy.base.utils.log_error_utils import warning
-from tvb_epilepsy.base.simulators import ABCSimulator
+from tvb_epilepsy.service.simulator.simulator import ABCSimulator
 from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 
 
