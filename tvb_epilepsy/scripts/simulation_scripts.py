@@ -53,7 +53,7 @@ def setup_TVB_simulation_from_model_configuration(model_configuration, connectiv
     from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
     from tvb_epilepsy.base.constants.model_constants import model_noise_type_dict
     from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
-    from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
+    from tvb_epilepsy.service.simulator.simulator_tvb import SimulatorTVB
     from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic, EpileptorDP2D
     from tvb.datatypes import equations
     from tvb.simulator import monitors, noise
