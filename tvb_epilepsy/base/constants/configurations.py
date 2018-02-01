@@ -21,11 +21,13 @@ else:
         # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR', 'svn', 'episense', 'demo-data')
         DATA_TVB = os.path.join(USER_HOME, 'CBR', 'svn', 'tvb', 'tvb-data', 'tvb-data')
         DATA_CUSTOM = os.path.join(FOLDER_VEP, 'TVB3')
+        TVB_EPILEPSY_PATH =  "/Users/dionperd/VEPtools/git/tvb-epilepsy/tvb_epilepsy"
     else:
         FOLDER_VEP_TESTS = os.path.join(FOLDER_VEP_ONLINE, 'tests')
         # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR_software', 'svn-episense', 'demo-data')
         DATA_TVB = os.path.join(USER_HOME, 'CBR_software', 'svn-tvb', 'tvb-data', 'tvb-data')
         DATA_CUSTOM = os.path.join(FOLDER_VEP, 'TVB3')
+        TVB_EPILEPSY_PATH = "/Users/dionperd/VEPtools/software/git/tvb-epilepsy/tvb_epilepsy"
     if not (os.path.isdir(FOLDER_VEP_TESTS)):
         os.mkdir(FOLDER_VEP_TESTS)
     # Folder where input data will be
