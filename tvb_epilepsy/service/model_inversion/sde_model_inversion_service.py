@@ -34,10 +34,10 @@ class SDEModelInversionService(ODEModelInversionService):
         sig = self.get_default_sig(**kwargs)
         # Generative model:
         # Integration:
-        # self.default_parameters.update(set_parameter_defaults("x1_dWt", "normal", (),  # name, pdf, shape
+        # self.default_parameters.update(set_parameter_defaults("dX1t", "normal", (),  # name, pdf, shape
         #                                                       -10.0*sig, 10.0*sig,     # min, max
         #                                                       pdf_params={"mu": 0.0, "sigma": sig}))
-        self.default_parameters.update(set_parameter_defaults("z_dWt", "normal", (),  # name, pdf, shape
+        self.default_parameters.update(set_parameter_defaults("dZt", "normal", (),  # name, pdf, shape
                                                               pdf_params={"mu": 0.0, "sigma": sig}))
         sig_std = sig / kwargs.get("sig_scale_ratio", 3)
         self.default_parameters.update(set_parameter_defaults("sig", "gamma", (),  # name, pdf, shape

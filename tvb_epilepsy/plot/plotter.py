@@ -716,34 +716,30 @@ class Plotter(BasePlotter):
                                        figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT, show_flag=SHOW_FLAG,
                                        save_flag=SAVE_FLAG):
         samples = ensure_list(samples)
+        n_chains = len(samples)
         if not per_chain and len(samples) > 1:
             samples = ensure_list(list_of_dicts_to_dicts_of_ndarrays(samples))
-            pyplot.figure(figure_name, figsize=figsize)
+            plot_samples = lambda s: numpy.concatenate(numpy.split(s.T, n_chains, axis=2), axis=1).squeeze().T
+            plot_figure_name = lambda ichain: figure_name
+        else:
+            plot_samples = lambda s: s
+            plot_figure_name = lambda ichain: figure_name + ": chain " + str(ichain + 1)
+        for ichain, chain_sample in enumerate(samples):
+            pyplot.figure(plot_figure_name(ichain), figsize=figsize)
             for ip, param in enumerate(params):
                 pyplot.subplot(len(params), 1, ip + 1)
-                pyplot.violinplot(numpy.concatenate(numpy.split(samples[0][param].T, 2, axis=2), axis=1).squeeze().T)
+                pyplot.violinplot(plot_samples(chain_sample[param]))
                 pyplot.ylabel(param)
                 if ip == len(params) - 1:
                     pyplot.xlabel('Regions')
             self._save_figure(save_flag, pyplot.gcf(), None, figure_dir, figure_format)
             self._check_show(show_flag)
-        else:
-            for ichain, chain_sample in enumerate(samples):
-                pyplot.figure(figure_name + ": chain " + str(ichain + 1), figsize=figsize)
-                for ip, param in enumerate(params):
-                    pyplot.subplot(len(params), 1, ip + 1)
-                    pyplot.violinplot(chain_sample[param])
-                    pyplot.ylabel(param)
-                    if ip == len(params) - 1:
-                        pyplot.xlabel('Regions')
-                self._save_figure(save_flag, pyplot.gcf(), None, figure_dir, figure_format)
-                self._check_show(show_flag)
 
     def plot_fit_results(self, model_inversion_service, ests, samples, statistical_model, signals, time=None,
                          region_mode="all", seizure_indices=None, x1_str="x1", mc_str="MC", signals_str="fit_signals",
-                         sig_str="sig", eps_str="eps", trajectories_plot=True, connectivity_plot=True,
-                         save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
-                         **kwargs):
+                         sig_str="sig", eps_str="eps", dX1t_str="dX1t", dZt_str="dZt", trajectories_plot=True,
+                         connectivity_plot=True, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG, figure_dir=FOLDER_FIGURES,
+                         figure_format=FIG_FORMAT, **kwargs):
         # plot scalar parameters in pair plots
         self.parameters_pair_plots(samples,
                                    kwargs.get("pair_plot_params",
@@ -776,19 +772,27 @@ class Plotter(BasePlotter):
             self.plot_timeseries(sort_dict({'observation signals': signals,
                                         'observation signals fit': sample[signals_str].T}), time,
                              special_idx=None, time_units=est.get('time_units', "ms"),
-                             title=name + ": Observation signals vs fit rasterplot",
-                             subtitles=['observation signals ' +
+                             title=name + ": Observation signals vs fit time series",
+                             subtitles=['observation signals ',
+                                        'observation signals fit' +
                                         '\nobservation noise eps_prior =  ' + str(eps_prior) +
-                                        " eps_post =" + str(est[eps_str]),
-                                        'observation signals fit'], offset=1.0,
+                                        ", eps_post =" + str(est[eps_str])], offset=1.0,
                              labels=sensor_labels, save_flag=save_flag, show_flag=show_flag,
                              figure_dir=figure_dir, figure_format=figure_format, figsize=VERY_LARGE_SIZE)
-            self.plot_timeseries(sort_dict({x1_str: sample[x1_str].T, 'z': sample["z"].T}), time,
+            self.plot_raster(sort_dict({x1_str: sample[x1_str].T, 'z': sample["z"].T}), time,
                              special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                              title=name + ": Hidden states fit rasterplot",
-                             subtitles=['hidden state ' + x1_str,
-                                        'hidden state z' + '\ndynamic noise sig_prior = ' + str(sig_prior) +
-                                        " sig_post = " + str(est[sig_str])], offset=1.0,
+                             subtitles=['hidden state ' + x1_str, 'hidden state z'], offset=1.0,
+                             labels=region_labels[region_inds], save_flag=save_flag,
+                             show_flag=show_flag, figure_dir=figure_dir,
+                             figure_format=figure_format, figsize=VERY_LARGE_SIZE)
+            self.plot_raster(sort_dict({dZt_str: sample[dZt_str].T}), time[:-1], # dX1t_str: sample[dX1t_str].T,
+                             special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
+                             title=name + ": Hidden states random walk rasterplot",
+                             subtitles=[#x1_str,
+                                        dZt_str +
+                                        '\ndynamic noise sig_prior = ' + str(sig_prior) +
+                                        ", sig_post = " + str(est[sig_str])], offset=1.0,
                              labels=region_labels[region_inds], save_flag=save_flag,
                              show_flag=show_flag, figure_dir=figure_dir,
                              figure_format=figure_format, figsize=VERY_LARGE_SIZE)

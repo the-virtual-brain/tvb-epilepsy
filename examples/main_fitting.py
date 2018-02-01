@@ -231,6 +231,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             x1_str = "x"
             input_signals_str = "seeg_log_power"
             signals_str = "mu_seeg_log_power"
+            dX1t_str = "x_eta"
+            dZt_str = "z_eta"
             sig_str = "sigma"
             eps_str = "epsilon"
             k_str = "k"
@@ -243,6 +245,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             x1_str = "x1"
             input_signals_str = "signals"
             signals_str = "fit_signals"
+            dX1t_str = "dX1t"  # "x1_dWt"
+            dZt_str = "dZt" # "z_dWt"
             sig_str = "sig"
             eps_str = "eps"
             k_str = "K"
@@ -252,16 +256,16 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             estMC = lambda est: est["MC"]
             region_mode = "all"
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        ests, samples = stan_service.fit(debug=1, simulate=1, model_data=model_data, merge_outputs=False,
-                                         chains=1, refresh=1, num_warmup=10, num_samples=10, **kwargs)
+        ests, samples = stan_service.fit(debug=1, simulate=0, model_data=model_data, merge_outputs=False,
+                                         chains=4, refresh=1, num_warmup=200, num_samples=200, **kwargs)
         writer.write_generic(ests, results_dir, hyp.name + "_fit_est.h5")
         writer.write_generic(samples, results_dir, hyp.name + "_fit_samples.h5")
         ests = ensure_list(ests)
         plotter.plot_fit_results(model_inversion, ests, samples, statistical_model, model_data[input_signals_str],
                                  model_data["time"], region_mode,
                                  seizure_indices=lsa_hypothesis.get_regions_disease_indices(),
-                                 x1_str=x1_str, signals_str=signals_str, sig_str=sig_str, eps_str=eps_str,
-                                 trajectories_plot=True, connectivity_plot=connectivity_plot,
+                                 x1_str=x1_str, signals_str=signals_str, sig_str=sig_str, eps_str=eps_str, #dX1t_str="dX1t",
+                                 dZt_str=dZt_str,  trajectories_plot=True, connectivity_plot=connectivity_plot,
                                  pair_plot_params=pair_plot_params, region_violin_params=region_violin_params)
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
         for id_est, est in enumerate(ensure_list(ests)):
