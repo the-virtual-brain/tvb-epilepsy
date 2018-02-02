@@ -3,6 +3,7 @@ import numpy as np
 from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_size, \
     squeeze_array_to_scalar
+#TODO: avoid service imported in model
 from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_params
 
 
