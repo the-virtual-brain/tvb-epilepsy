@@ -35,19 +35,20 @@ def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_mat
     from copy import deepcopy
     active_regions = model_data["active_regions"]
     SC = statistical_model.parameters["MC"].mode[active_regions][:, active_regions]
+    act_reg_ones = np.ones((model_data["n_active_regions"],))
     vep_data = {"nn": model_data["n_active_regions"],
                 "nt": model_data["n_times"],
                 "ns": model_data["n_signals"],
                 "dt": model_data["dt"],  # model_data["dt"],
                 "I1": model_data["Iext1"],
-                "x0_mu": model_inversion.x0[statistical_model.active_regions],
-                "x0_std": 0.3,
-                "x_init_mu": statistical_model.parameters["x1init"].mean[statistical_model.active_regions],
-                "z_init_mu": statistical_model.parameters["zinit"].mean[statistical_model.active_regions],
-                "init_std": np.mean(statistical_model.parameters["x1init"].std),
+                "x0_mu": model_inversion.x0[active_regions].mean() * act_reg_ones,
+                # model_inversion.x0[statistical_model.active_regions],
                 "x0_std": 0.03,
                 "x0_lo": -3.0,
                 "x0_hi": -2.0,
+                "x_init_mu": statistical_model.parameters["x1init"].mean[active_regions].mean()*act_reg_ones,
+                "z_init_mu": statistical_model.parameters["zinit"].mean[active_regions].mean()*act_reg_ones,
+                "init_std": np.mean(statistical_model.parameters["x1init"].std),
                 "tau0": 30.0,#statistical_model.parameters["tau0"].mean,
                 # "K_lo": statistical_model.parameters["K"].low,
                 # "K_u": statistical_model.parameters["K"].mode,
