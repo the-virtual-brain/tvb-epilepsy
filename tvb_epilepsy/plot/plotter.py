@@ -12,7 +12,7 @@ from tvb_epilepsy.plot.base_plotter import BasePlotter
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.utils.math_utils import compute_in_degree
 from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
-from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D, EpileptorDPrealistic
+from tvb_epilepsy.base.epileptor_models import EpileptorDP2D, EpileptorDPrealistic
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string, sort_dict, linspace_broadcast, \
     list_of_dicts_to_dicts_of_ndarrays, extract_dict_stringkeys
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_y1, def_x1lin
