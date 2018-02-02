@@ -15,7 +15,7 @@ from tvb_epilepsy.service.signal_processor import decimate_signals, cut_signals_
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
 from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DISTRIBUTIONS
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
-from tvb_epilepsy.tvb_api.epileptor_models import *
+from tvb_epilepsy.base.epileptor_models import *
 
 
 class ODEModelInversionService(ModelInversionService):
