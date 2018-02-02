@@ -45,10 +45,10 @@ def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_mat
                 "x_init_mu": statistical_model.parameters["x1init"].mean[statistical_model.active_regions],
                 "z_init_mu": statistical_model.parameters["zinit"].mean[statistical_model.active_regions],
                 "init_std": np.mean(statistical_model.parameters["x1init"].std),
-                "x0_std": 0.3,
+                "x0_std": 0.03,
                 "x0_lo": -3.0,
-                "x0_hi": -1.0,
-                "tau0": 10.0,#statistical_model.parameters["tau0"].mean,
+                "x0_hi": -2.0,
+                "tau0": 30.0,#statistical_model.parameters["tau0"].mean,
                 # "K_lo": statistical_model.parameters["K"].low,
                 # "K_u": statistical_model.parameters["K"].mode,
                 # "K_v": statistical_model.parameters["K"].var,
@@ -66,6 +66,7 @@ def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_mat
                 "sig_hi": 0.025,  # model_data["sig_hi"],
                 "amplitude_mu": statistical_model.parameters["scale_signal"].mean,
                 "amplitude_std": statistical_model.parameters["scale_signal"].std/6,
+                "amplitude_lo": 0.3,
                 "offset_mu": statistical_model.parameters["offset_signal"].mean,
                 "offset_std": statistical_model.parameters["offset_signal"].std,
                 "seeg_log_power": model_data["signals"],
@@ -257,8 +258,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             estMC = lambda est: est["MC"]
             region_mode = "all"
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        ests, samples = stan_service.fit(debug=1, simulate=0, model_data=model_data, merge_outputs=False,
-                                         chains=2, refresh=1, num_warmup=100, num_samples=100, **kwargs)
+        ests, samples = stan_service.fit(debug=1, simulate=1, model_data=model_data, merge_outputs=False,
+                                         chains=4, refresh=1, num_warmup=200, num_samples=200, **kwargs)
         writer.write_generic(ests, results_dir, hyp.name + "_fit_est.h5")
         writer.write_generic(samples, results_dir, hyp.name + "_fit_samples.h5")
         ests = ensure_list(ests)

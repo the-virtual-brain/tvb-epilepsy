@@ -40,6 +40,8 @@ data {
     real dt;
     row_vector [nn] x0_mu;
     real x0_std;
+    real x0_lo;
+    real x0_hi;
     row_vector [nn] x_init_mu;
     row_vector [nn] z_init_mu;
     real init_std;
@@ -55,6 +57,7 @@ data {
     real offset_std;
     real amplitude_mu;
     real amplitude_std;
+    real amplitude_lo;
     matrix[ns, nn] gain;
     row_vector[ns] seeg_log_power[nt];
     vector[nn] Ic;
@@ -72,9 +75,9 @@ transformed data {
 
 parameters {
     // integrate and predict
-    row_vector[nn] x0;
+    row_vector<lower=x0_lo, upper=x0_hi>[nn] x0;
     real epsilon_star;
-    real<lower=0.0> amplitude;
+    real<lower=amplitude_lo> amplitude;
     real offset;
     real time_scale_star;
 
