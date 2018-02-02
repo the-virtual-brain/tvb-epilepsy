@@ -25,7 +25,7 @@ def initialize_logger(name, target_folder=FOLDER_LOGS):
 
 
 def warning(msg, logger=None, print_warning=True):
-    msg = "\n\n" + msg  + "\n"
+    msg = "\n\n" + msg + "\n"
     if logger is not None:
         logger.warning(msg)
     if print_warning:
