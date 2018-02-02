@@ -7,6 +7,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
     ProbabilityDistribution
+#TODO: avoid service imported in model
 from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_params
 from tvb_epilepsy.service.stochastic_parameter_factory import get_val_key_for_first_keymatch_in_dict
 
@@ -102,6 +103,7 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
             self._confirm_support()
             self._update_params(use=use)
 
+#TODO
 def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, loc=0.0, scale=1.0,
                                   p_shape=(), probability_distribution="uniform", optimize_pdf=False, use="scipy",
                                   **target_params):
