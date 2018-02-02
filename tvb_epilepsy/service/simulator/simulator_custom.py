@@ -94,6 +94,7 @@ class EpileptorModel(object):
         self.tt = tt
 
 
+# ! The attributes names should not be changed because they are synchronized with simulator config model.
 class FullConfiguration(object):
 
     def __init__(self, name="full-configuration", connectivity_path="Connectivity.h5", epileptor_params=[],
@@ -102,14 +103,14 @@ class FullConfiguration(object):
         self.connectivityPath = connectivity_path
         self.settings = settings
         self.variantName = None
-        self.epileptorParams = epileptor_params
+        self.epileptorParamses = epileptor_params
         if initial_states is not None and initial_states_shape is not None:
             self.initialStates = initial_states
             self.initialStatesShape = initial_states_shape
 
     def set(self, at_indices, ep_param):
         for i in at_indices:
-            self.epileptorParams[i] = copy(ep_param)
+            self.epileptorParamses[i] = copy(ep_param)
 
 
 class SimulatorCustom(ABCSimulator):
@@ -140,12 +141,15 @@ class SimulatorCustom(ABCSimulator):
                                          self.simulation_settings.monitor_sampling_period)
         json_model = self.prepare_epileptor_model_for_json(self.connectivity.number_of_regions)
         # TODO: history length has to be computed given the time delays (i.e., the tract lengts...)
-        # history_length = ...
-        initial_conditions = self.prepare_initial_conditions(history_length=1)
+        # TODO: when dfun is implemented for CustomEpileptor, we can use the following commented lines with initial_conditions
+        # initial_conditions = self.prepare_initial_conditions(history_length=1)
+        # self.custom_config = FullConfiguration(connectivity_path=os.path.abspath(self.connectivity.file_path),
+        #                                        epileptor_params=json_model, settings=ep_settings,
+        #                                        initial_states=initial_conditions.flatten(),
+        #                                        initial_states_shape=numpy.array(initial_conditions.shape))
         self.custom_config = FullConfiguration(connectivity_path=os.path.abspath(self.connectivity.file_path),
-                                               epileptor_paramses=json_model, settings=ep_settings,
-                                               initial_states=initial_conditions.flatten(),
-                                               initial_states_shape=numpy.array(initial_conditions.shape))
+                                               epileptor_params=json_model, settings=ep_settings,
+                                               initial_states=None, initial_states_shape=None)
         self.head_path = os.path.dirname(self.connectivity.file_path)
         self.json_config_path = os.path.join(self.head_path, self.json_custom_config_file)
         self._save_serialized(self.custom_config, self.json_config_path)

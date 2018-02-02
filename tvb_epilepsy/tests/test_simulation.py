@@ -1,9 +1,9 @@
-import os
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import DATA_TEST
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
-from tvb_epilepsy.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration, set_time_scales
+from tvb_epilepsy.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration, set_time_scales, \
+    setup_custom_simulation_from_model_configuration
+from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
 
 head_dir = "head2"
@@ -43,26 +43,26 @@ class TestSimulationRun():
         ttavg, tavg_data, status = simulator.launch_simulation(self.n_report_blocks)
         assert status == True
 
-        # This can be ran only locally for the moment
+    # This can be ran only locally for the moment
 
-        # def test_custom_simulation(self):
-        #     reader = CustomReader()
-        #     connectivity = reader.read_connectivity(os.path.join(DATA_TEST, head_dir, "Connectivity.h5"))
-        #     model_configuration = self._prepare_model_for_simulation(connectivity)
-        #
-        #     simulator = setup_custom_simulation_from_model_configuration(model_configuration, connectivity, self.dt,
-        #                                                                  self.sim_length,
-        #                                                                  self.monitor_period, "CustomEpileptor",
-        #                                                                  self.noise_intensity)
-        #
-        #     simulator.config_simulation()
-        #     ttavg, tavg_data, status = simulator.launch_simulation(self.n_report_blocks)
-        #
-        #     assert status == 0
+    # def test_custom_simulation(self):
+    #     reader = H5Reader()
+    #     connectivity = reader.read_connectivity(os.path.join(DATA_TEST, head_dir, "Connectivity.h5"))
+    #     model_configuration = self._prepare_model_for_simulation(connectivity)
+    #
+    #     simulator = setup_custom_simulation_from_model_configuration(model_configuration, connectivity, self.dt,
+    #                                                                  self.sim_length,
+    #                                                                  self.monitor_period, "CustomEpileptor",
+    #                                                                  self.noise_intensity)
+    #
+    #     simulator.config_simulation()
+    #     ttavg, tavg_data, status = simulator.launch_simulation(self.n_report_blocks)
+    #
+    #     assert status == 0
 
-        # @classmethod
-        # def teardown_class(cls):
-        #     os.remove(os.path.join(os.path.abspath(data_dir), "SimulationConfiguration.json"))
-        #     os.remove(os.path.join(os.path.abspath(data_dir), "full-configuration", "full-configuration.h5"))
-        #     os.remove(os.path.join(os.path.abspath(data_dir), "full-configuration", "ts.h5"))
-        #     os.removedirs(os.path.join(os.path.abspath(data_dir), "full-configuration"))
+    # @classmethod
+    # def teardown_class(cls):
+    #     os.remove(os.path.join(os.path.abspath(data_dir), "SimulationConfiguration.json"))
+    #     os.remove(os.path.join(os.path.abspath(data_dir), "full-configuration", "full-configuration.h5"))
+    #     os.remove(os.path.join(os.path.abspath(data_dir), "full-configuration", "ts.h5"))
+    #     os.removedirs(os.path.join(os.path.abspath(data_dir), "full-configuration"))
