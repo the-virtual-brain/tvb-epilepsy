@@ -11,7 +11,7 @@ from tvb_epilepsy.service.simulator.simulator_custom import EpileptorModel
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
-from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
+from tvb_epilepsy.base.epileptor_models import EpileptorDP2D
 
 LOG = initialize_logger(__name__)
 
@@ -54,7 +54,7 @@ def setup_TVB_simulation_from_model_configuration(model_configuration, connectiv
     from tvb_epilepsy.base.constants.model_constants import model_noise_type_dict
     from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
     from tvb_epilepsy.service.simulator.simulator_tvb import SimulatorTVB
-    from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic, EpileptorDP2D
+    from tvb_epilepsy.base.epileptor_models import EpileptorDPrealistic
     from tvb.datatypes import equations
     from tvb.simulator import monitors, noise
     from tvb.simulator.models import Epileptor

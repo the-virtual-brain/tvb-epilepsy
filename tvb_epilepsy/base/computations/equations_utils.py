@@ -1,7 +1,7 @@
 import numpy as np
 
 from tvb_epilepsy.base.constants.model_constants import A_DEF, B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, \
-                                                                    I_EXT1_DEF, I_EXT2_DEF, TAU0_DEF, TAU1_DEF, TAU2_DEF
+    I_EXT2_DEF, TAU0_DEF, TAU1_DEF, TAU2_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import assert_arrays
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 
@@ -269,7 +269,7 @@ def eqtn_fK(K_var, K, tau1, tau0):
 def eqtn_fparams_vars(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope, Iext1, Iext2, K, tau1, tau0,
                       pmode="const", z=None, g=None):
     fx0 = eqtn_fx0(x0_var, x0, tau1)
-    from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic
+    from tvb_epilepsy.base.epileptor_models import EpileptorDPrealistic
     slope_eq, Iext2_eq = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, slope, Iext2)
     fslope = eqtn_fslope(slope_var, slope_eq, tau1)
     fIext1 = eqtn_fIext1(Iext1_var, Iext1, tau1, tau0)

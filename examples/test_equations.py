@@ -58,7 +58,7 @@ if __name__ == "__main__":
     else:
         if model == "EpileptorDPrealistic":
             # the 11D "realistic" simulations model
-            from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic
+            from tvb_epilepsy.base.epileptor_models import EpileptorDPrealistic
             eq, slope_eq, Iext2_eq = calc_eq_11d(x0, K, w, yc, Iext1, Iext2, slope,
                                                  EpileptorDPrealistic.fun_slope_Iext2, x1, a=a, b=b, d=d,
                                                  zmode=zmode, pmode=pmode)
