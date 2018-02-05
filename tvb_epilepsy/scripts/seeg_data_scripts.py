@@ -29,7 +29,7 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
                 (int(re.findall(r'\d+', channels[iS])[0]) == int(re.findall(r'\d+', channels[iS+1])[0])-1):
             data_bipolar.append(data[:, iS] - data[:, iS+1])
             bipolar_channels.append(channels[iS] + "-" + channels[iS+1])
-            data_filtered.append(filter_data(data_bipolar[-1], fs, "bandpass", low_freq, 60.0,  order=3))
+            data_filtered.append(filter_data(data_bipolar[-1], fs, low_freq, 60.0,  "bandpass", order=3))
             bipolar_ch_inds.append(iS)
     data_bipolar = np.array(data_bipolar).T
     data_filtered = np.array(data_filtered).T

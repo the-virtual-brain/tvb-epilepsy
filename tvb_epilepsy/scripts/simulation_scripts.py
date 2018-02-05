@@ -160,8 +160,8 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
                 vois_ts_dict[sensor_name] = vois_ts_dict['lfp'].dot(sensor.gain_matrix.T)
                 if hpf_flag:
                     for i in range(vois_ts_dict[sensor_name].shape[1]):
-                        vois_ts_dict[sensor_name][:, i] = filter_data(
-                            vois_ts_dict[sensor_name][:, i], hpf_low, hpf_high, fsAVG)
+                        vois_ts_dict[sensor_name][:, i] = \
+                            filter_data(vois_ts_dict[sensor_name][:, i], fsAVG, hpf_low, hpf_high)
                 vois_ts_dict[sensor_name] -= np.min(vois_ts_dict[sensor_name])
                 vois_ts_dict[sensor_name] /= np.max(vois_ts_dict[sensor_name])
 
