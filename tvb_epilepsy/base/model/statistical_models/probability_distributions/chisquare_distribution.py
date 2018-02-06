@@ -1,7 +1,6 @@
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import make_int
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution \
     import ContinuousProbabilityDistribution
@@ -47,7 +46,7 @@ class ChisquareDistribution(ContinuousProbabilityDistribution):
         return self.df + make_int(np.around(loc))
 
     def calc_median_manual(self, loc=0.0, scale=1.0):
-        warning("Approximate calculation for median of chisquare distribution!")
+        self.logger.warning("Approximate calculation for median of chisquare distribution!")
         return self.df * (1 - 2.0 / (9 * self.df)) ** 3 + loc
 
     def calc_mode_manual(self, loc=0.0, scale=1.0):

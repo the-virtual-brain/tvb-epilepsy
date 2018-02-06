@@ -4,7 +4,7 @@ from collections import OrderedDict
 import numpy as np
 from scipy.optimize import minimize
 
-from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, dicts_of_lists_to_lists_of_dicts
 
 
@@ -13,6 +13,8 @@ AVAILABLE_DISTRIBUTIONS = ["uniform", "normal", "gamma", "lognormal", "exponenti
 
 CONSTRAINT_ABS_TOL = 0.01
 
+
+logger = initialize_logger(__name__)
 
 def generate_distribution(distrib_type, loc=0.0, scale=1.0, use="manual", target_shape=None, optimize_pdf=True,
                           **pdf_params):
@@ -193,7 +195,7 @@ def compute_pdf_params(distrib_type, target_stats, loc=0.0, scale=1.0, use="manu
             if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
                 raise_value_error("nan or inf values in solution x\n" + sol.message)
             if sol.fun > 10 ** -3:
-                warning("Not accurate solution! sol.fun = " + str(sol.fun))
+                logger.warning("Not accurate solution! sol.fun = " + str(sol.fun))
             inds = np.where([np.all(target_stats_array[ii] == np.array(ts.values())) for ii in range(target_size)])[0]
             sol_params[inds] = sol.x
             sol_params_sum += sol.x

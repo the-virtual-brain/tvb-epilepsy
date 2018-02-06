@@ -3,11 +3,12 @@ import numpy as np
 import scipy as scp
 import scipy.stats as ss
 from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE
-from tvb_epilepsy.base.utils.log_error_utils import warning #, initialize_logger
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, shape_to_size
 
 
 class SamplingService(object):
+    logger = initialize_logger(__name__)
 
     def __init__(self, n_samples=10):
         self.sampler = None
@@ -36,11 +37,11 @@ class SamplingService(object):
         high = np.array(high)
         id = (low == -np.inf)
         if np.any(id):
-            warning("Sampling is not possible with infinite bounds! Setting lowest system value for low!")
+            self.logger.warning("Sampling is not possible with infinite bounds! Setting lowest system value for low!")
             low[id] = -MAX_SINGLE_VALUE
         id = (high == np.inf)
         if np.any(id):
-            warning(
+            self.logger.warning(
                 "Sampling is not possible with infinite bounds! Setting highest system value for high!")
             high[id] = MAX_SINGLE_VALUE
         return low, high
@@ -49,12 +50,12 @@ class SamplingService(object):
         n_params = shape_to_size((low + high).shape)
         shape_size = shape_to_size(parameter_shape)
         if shape_size > n_params:
-            warning("Input parameters' size (" + str(n_params) +
+            self.logger.warning("Input parameters' size (" + str(n_params) +
                     ") larger than the one implied by input parameters's shape (" + str(shape_size) + ")!" +
                     "\nModifying input parameters' size accordingly!")
             n_params = shape_size
         elif n_params > shape_size:
-            warning("Input parameters' size (" + str(n_params) +
+            self.logger.warning("Input parameters' size (" + str(n_params) +
                     ") smaller than the one implied by input parameters's shape (" + str(shape_size) + ")!" +
                     "\nModifying input parameters' shape accordingly!: " + str((n_params,)))
             parameter_shape = (n_params,)

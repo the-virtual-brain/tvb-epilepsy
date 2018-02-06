@@ -6,8 +6,9 @@ import numpy as np
 from matplotlib import pyplot
 
 from tvb_epilepsy.base.constants.module_constants import WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
-from tvb_epilepsy.base.utils.log_error_utils import warning, initialize_logger
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 
+logger = initialize_logger(__name__)
 
 def weighted_vector_sum(weights, vectors, normalize=True):
     if isinstance(vectors, np.ndarray):
@@ -69,13 +70,12 @@ def select_greater_values_array_inds(values, threshold=None, verbose=False):
         return np.where(values > threshold)[0]
     else:
         if verbose:
-            warning("Switching to curve elbow point method since threshold=" + str(threshold))
+            logger.warning("Switching to curve elbow point method since threshold=" + str(threshold))
         elbow_point = curve_elbow_point(values)
         return get_greater_values_array_inds(values, elbow_point + 1)
 
 
 def curve_elbow_point(vals, interactive=INTERACTIVE_ELBOW_POINT):
-    logger = initialize_logger(__name__)
     vals = np.array(vals).flatten()
     if np.any(vals[0:-1] - vals[1:] < 0):
         vals = np.sort(vals)

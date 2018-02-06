@@ -22,13 +22,10 @@ STATISTICAL_MODEL_TYPES=["vep_sde"] #, "vep_ode", "vep_lsa"]
 
 
 class ModelInversionService(object):
+    logger = initialize_logger(__name__)
 
-    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="",
-                 logger=None, **kwargs):
-        if logger is None:
-            self.logger = initialize_logger(__name__)
-        else:
-            self.logger = logger
+    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="", **kwargs):
+
         self.model_name = model_name
         self.model_generation_time = 0.0
         self.target_data_type = ""

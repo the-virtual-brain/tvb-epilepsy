@@ -1,7 +1,7 @@
 import os
 import h5py
 import numpy
-from tvb_epilepsy.base.utils.log_error_utils import warning, raise_error, raise_value_error
+from tvb_epilepsy.base.utils.log_error_utils import raise_error, raise_value_error
 from tvb_epilepsy.base.utils.file_utils import change_filename_or_overwrite, write_metadata
 from tvb_epilepsy.io.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.vep.connectivity import ConnectivityH5Field
@@ -24,15 +24,10 @@ KEY_START = "Start_time"
 
 
 class H5Writer(object):
+    logger = initialize_logger(__name__)
 
     CUSTOM_TYPE_ATTRIBUTE = "EPI_Type"
     CUSTOM_SUBTYPE_ATTRIBUTE = "EPI_Subtype"
-
-    def __init__(self, logger=None):
-        if logger is None:
-            self.logger = initialize_logger(__name__)
-        else:
-            self.logger = logger
 
     # TODO: write variants.
     def write_connectivity(self, connectivity, path):
@@ -276,7 +271,7 @@ class H5Writer(object):
                     else:
                         h5_file.attrs.create(key, value)
             except:
-                warning("Did not manage to write " + key + " to h5 file " + path + " !")
+                self.logger.warning("Did not manage to write " + key + " to h5 file " + path + " !")
 
         h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
         h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, dictionary.__class__.__name__)

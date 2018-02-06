@@ -6,9 +6,11 @@ import re
 
 import numpy as np
 
-from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error, raise_import_error
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, raise_import_error, initialize_logger
 from tvb_epilepsy.base.constants.module_constants import MAX_INT_VALUE
 
+
+logger = initialize_logger(__name__)
 
 def vector2scalar(x):
     if not (isinstance(x, np.ndarray)):
@@ -43,7 +45,7 @@ def isequal_string(a, b, case_sensitive=False):
         try:
             return a.lower() == b.lower()
         except AttributeError:
-            warning("Case sensitive comparison!")
+            logger.warning("Case sensitive comparison!")
             return a == b
 
 
@@ -272,7 +274,7 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
     def print_not_equal_message(attr, field1, field2, logger):
         # logger.error("\n\nValueError: Original and read object field "+ attr + " not equal!")
         # raise_value_error("\n\nOriginal and read object field " + attr + " not equal!")
-        warning("Original and read object field " + attr + " not equal!" +
+        logger.warning("Original and read object field " + attr + " not equal!" +
                 "\nOriginal field:\n" + str(field1) +
                 "\nRead object field:\n" + str(field2), logger)
 
@@ -330,7 +332,7 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
                 equal = assert_equal_objects(field1, field2, logger=logger)
         except:
             try:
-                warning("Comparing str(objects) for field "
+                logger.warning("Comparing str(objects) for field "
                         + attributes_dict[attribute] + " because there was an error!", logger)
                 if np.any(str(field1) != str(field2)):
                     print_not_equal_message(attributes_dict[attribute], field1, field2, logger)

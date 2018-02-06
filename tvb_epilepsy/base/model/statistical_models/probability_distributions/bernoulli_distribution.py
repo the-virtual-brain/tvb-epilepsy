@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.stats as ss
-from tvb_epilepsy.base.utils.log_error_utils import warning, raise_not_implemented_error
+from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.discrete_probability_distribution \
     import DiscreteProbabilityDistribution
@@ -54,7 +54,7 @@ class BernoulliDistribution(DiscreteProbabilityDistribution):
         mode[np.where(p < 0.5)[0]] = 1 + loc
         p05 = p == 0.5
         if np.any(p05):
-            warning("The mode of bernoulli distribution for p=0.5 consists of two values (0.0 + loc and 1.0 + loc)!")
+            self.logger.warning("The mode of bernoulli distribution for p=0.5 consists of two values (0.0 + loc and 1.0 + loc)!")
             mode = mode.astype('O')
             mode[np.where(p05)[0]] = [[0.0 + loc, 1.0 + loc]]
         return mode

@@ -12,7 +12,7 @@ import subprocess
 from copy import copy
 import numpy
 from tvb_epilepsy.base.constants.module_constants import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
-from tvb_epilepsy.base.utils.log_error_utils import warning
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import obj_to_dict, assert_arrays
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val_to_model_x0
@@ -118,6 +118,7 @@ class SimulatorCustom(ABCSimulator):
     From a VEP Hypothesis, write a custom JSON simulation configuration.
     To run a simulation, we can also open a GUI and import the resulted JSON file.
     """
+    logger = initialize_logger(__name__)
     reader = H5Reader()
     json_custom_config_file = "SimulationConfiguration.json"
 
@@ -163,13 +164,13 @@ class SimulatorCustom(ABCSimulator):
             print(status)
         except:
             status = False
-            warning("Something went wrong with this simulation...")
+            self.logger.warning("Something went wrong with this simulation...")
         time, data = self.reader.read_timeseries(os.path.join(self.head_path, "full-configuration", "ts.h5"))
         return time, data, status
 
     def prepare_epileptor_model_for_json(self, no_regions=88):
         epileptor_params_list = []
-        warning("No of regions is " + str(no_regions))
+        self.logger.warning("No of regions is " + str(no_regions))
         for idx in xrange(no_regions):
             epileptor_params_list.append(
                 EpileptorParams(self.model.a[idx], self.model.b[idx], self.model.c[idx], self.model.d[idx],

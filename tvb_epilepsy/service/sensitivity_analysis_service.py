@@ -1,6 +1,6 @@
 import numpy as np
 from SALib.analyze import sobol, delta, fast, morris, dgsm, ff
-from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error #, initialize_logger
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, list_of_dicts_to_dicts_of_ndarrays
 
 METHODS = ["sobol", "latin", "delta", "dgsm", "fast", "fast_sampler", "morris", "ff", "fractional_factorial"]
@@ -14,6 +14,7 @@ METHODS = ["sobol", "latin", "delta", "dgsm", "fast", "fast_sampler", "morris", 
 
 
 class SensitivityAnalysisService(object):
+    logger = initialize_logger(__name__)
 
     def __init__(self, inputs, outputs, method="delta", calc_second_order=True, conf_level=0.95):
 
@@ -145,7 +146,7 @@ class SensitivityAnalysisService(object):
         n_outputs = len(output_ids)
 
         if self.method.lower() == "sobol":
-            warning("'sobol' method requires 'saltelli' sampling scheme!")
+            self.logger.warning("'sobol' method requires 'saltelli' sampling scheme!")
             # Additional keyword parameters and their defaults:
             # calc_second_order (bool): Calculate second-order sensitivities (default True)
             # num_resamples (int): The number of resamples used to compute the confidence intervals (default 1000)
@@ -162,7 +163,7 @@ class SensitivityAnalysisService(object):
                                                                                                     False))
 
         elif np.in1d(self.method.lower(), ["latin", "delta"]):
-            warning("'latin' sampling scheme is recommended for 'delta' method!")
+            self.logger.warning("'latin' sampling scheme is recommended for 'delta' method!")
             # Additional keyword parameters and their defaults:
             # num_resamples (int): The number of resamples used to compute the confidence intervals (default 1000)
             # conf_level (float): The confidence interval level (default 0.95)
@@ -174,7 +175,7 @@ class SensitivityAnalysisService(object):
                                                                                                     False))
 
         elif np.in1d(self.method.lower(), ["fast", "fast_sampler"]):
-            warning("'fast' method requires 'fast_sampler' sampling scheme!")
+            self.logger.warning("'fast' method requires 'fast_sampler' sampling scheme!")
             # Additional keyword parameters and their defaults:
             # M (int): The interference parameter,
             #           i.e., the number of harmonics to sum in the Fourier series decomposition (default 4)
@@ -187,7 +188,7 @@ class SensitivityAnalysisService(object):
             # Additional keyword parameters and their defaults:
             # second_order (bool, default=False): Include interaction effects
             # print_to_console (bool, default=False): Print results directly to console
-            warning("'fractional_factorial' method requires 'fractional_factorial' sampling scheme!")
+            self.logger.warning("'fractional_factorial' method requires 'fractional_factorial' sampling scheme!")
             self.analyzer = lambda output: ff.analyze(self.problem, self.input_samples[:, input_ids], output,
                                                       calc_second_order=self.calc_second_order,
                                                       conf_level=self.conf_level,
@@ -197,7 +198,7 @@ class SensitivityAnalysisService(object):
 
 
         elif self.method.lower().lower() == "morris":
-            warning("'morris' method requires 'morris' sampling scheme!")
+            self.logger.warning("'morris' method requires 'morris' sampling scheme!")
             # Additional keyword parameters and their defaults:
             # num_resamples (int): The number of resamples used to compute the confidence intervals (default 1000)
             # conf_level (float): The confidence interval level (default 0.95)

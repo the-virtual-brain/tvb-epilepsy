@@ -4,7 +4,7 @@ import numpy as np
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DISTRIBUTIONS
@@ -90,5 +90,5 @@ if __name__ == "__main__":
                 print("\n" + key + ": " + str(value))
             diff = target_stats[stats_m] - stats[stats_m]
             if np.any(np.abs(diff.flatten()) > 0.001):
-                warning("Large difference between target and resulting samples' " + stats_m + "!: " + str(diff))
+                logger.warning("Large difference between target and resulting samples' " + stats_m + "!: " + str(diff))
             del (parameter)

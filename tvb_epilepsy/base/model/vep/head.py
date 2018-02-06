@@ -1,5 +1,5 @@
 import numpy as np
-from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 
@@ -8,6 +8,7 @@ class Head(object):
     """
     One patient virtualization. Fully configured for defining hypothesis on it.
     """
+    logger = initialize_logger(__name__)
 
     def __init__(self, connectivity, cortical_surface, rm={}, vm={}, t1={}, name='', **kwargs):
         self.connectivity = connectivity
@@ -62,10 +63,10 @@ class Head(object):
         for s in ensure_list(input_sensors):
             if isinstance(s, Sensors) and (s.s_type == s_type):
                 if s.gain_matrix is None or s.gain_matrix.shape != (s.number_of_sensors, self.number_of_regions):
-                    warning("No correctly sized gain matrix found in sensors! Computing and adding gain matrix!")
+                    self.logger.warning("No correctly sized gain matrix found in sensors! Computing and adding gain matrix!")
                     s.gain_matrix = s.compute_gain_matrix(self.connectivity)
                 # if s.orientations == None or s.orientations.shape != (s.number_of_sensors, 3):
-                #     warning("No orientations found in sensors!")
+                #     self.logger.warning("No orientations found in sensors!")
                 sensors.append(s)
             else:
                 if s is not None:

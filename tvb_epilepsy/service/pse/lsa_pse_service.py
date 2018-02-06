@@ -12,8 +12,8 @@ class LSAPSEService(ABCPSEService):
     task = "LSA"
     hypothesis = None
 
-    def __init__(self, hypothesis=None, params_pse=None, logger=None):
-        super(LSAPSEService, self).__init__(logger)
+    def __init__(self, hypothesis=None, params_pse=None):
+        super(LSAPSEService, self).__init__()
         self.hypothesis = hypothesis
         self.params_pse = params_pse
         self.prepare_params(params_pse)

@@ -9,7 +9,7 @@ For now, we assume default values, or externally set
 """
 import numpy as np
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
-from tvb_epilepsy.base.utils.log_error_utils import warning # initialize_logger
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r, calc_coupling, calc_x0, \
     calc_x0_val_to_model_x0, calc_model_x0_to_x0_val
@@ -20,6 +20,8 @@ from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, E_DEF, X0_
 
 
 class ModelConfigurationService(object):
+    logger = initialize_logger(__name__)
+
     x1EQcr = X1_EQ_CR_DEF
 
     def __init__(self, number_of_regions=1, x0_values=X0_DEF, e_values=E_DEF, yc=YC_DEF, Iext1=I_EXT1_DEF,
@@ -43,7 +45,7 @@ class ModelConfigurationService(object):
         elif len(ensure_list(K)) == self.number_of_regions:
             self.K_unscaled = np.array(K)
         else:
-            warning("The length of input global coupling K is neither 1 nor equal to the number of regions!" +
+            self.logger.warning("The length of input global coupling K is neither 1 nor equal to the number of regions!" +
                     "\nSetting model_configuration_service.K_unscaled = K_DEF for all regions")
         self.K = None
         self._normalize_global_coupling()

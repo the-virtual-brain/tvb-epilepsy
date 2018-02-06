@@ -4,7 +4,6 @@ import numpy as np
 from tvb_epilepsy.base.constants.model_constants import X1_DEF
 from tvb_epilepsy.base.constants.model_inversion_constants import X1INIT_MIN, X1INIT_MAX, ZINIT_MIN, ZINIT_MAX, \
                                                                             MC_MIN,  SIG_INIT_DEF, OBSERVATION_MODELS
-from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, assert_arrays, \
     extract_dict_stringkeys
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
@@ -21,9 +20,9 @@ from tvb_epilepsy.base.epileptor_models import *
 class ODEModelInversionService(ModelInversionService):
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="vep_ode",
-                 logger=None, **kwargs):
+                 **kwargs):
         super(ODEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
-                                                       model_name, logger, **kwargs)
+                                                       model_name, **kwargs)
         self.time = None
         self.dt = 0.0
         self.n_times = 0
@@ -196,7 +195,7 @@ class ODEModelInversionService(ModelInversionService):
             statistical_model.update_active_regions(statistical_model.active_regions +
                                              select_greater_values_array_inds(ps_strengths, active_regions_th).tolist())
         else:
-            warning("No LSA results found (empty propagations_strengths vector)!" +
+            self.logger.warning("No LSA results found (empty propagations_strengths vector)!" +
                     "\nSkipping of setting active_regios according to LSA!")
         return statistical_model
 
@@ -215,7 +214,7 @@ class ODEModelInversionService(ModelInversionService):
                 active_regions += select_greater_values_array_inds(proj, active_regions_th).tolist()
             statistical_model.update_active_regions(active_regions)
         else:
-            warning("Projection is not found!" + "\nSkipping of setting active_regios according to SEEG power!")
+            self.logger.warning("Projection is not found!" + "\nSkipping of setting active_regios according to SEEG power!")
         return statistical_model
 
     def update_active_regions(self, statistical_model, methods=["e_values", "LSA"], reset=False, **kwargs):

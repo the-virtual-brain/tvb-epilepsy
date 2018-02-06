@@ -7,7 +7,7 @@ from tvb.basic.profile import TvbProfile
 
 TvbProfile.set_profile(TvbProfile.LIBRARY_PROFILE)
 
-from tvb_epilepsy.base.utils.log_error_utils import warning
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.model.vep.surface import Surface
 from tvb_epilepsy.base.model.vep.sensors import Sensors
@@ -18,6 +18,8 @@ from tvb.datatypes import connectivity, surfaces, region_mapping, sensors, struc
 
 
 class TVBReader(object):
+    logger = initialize_logger(__name__)
+
     def read_connectivity(self, path):
         tvb_conn = connectivity.Connectivity.from_file(path)
         return Connectivity(path, tvb_conn.weights, tvb_conn.tract_lengths,
@@ -30,7 +32,7 @@ class TVBReader(object):
             return Surface(tvb_srf.vertices, tvb_srf.triangles,
                            tvb_srf.vertex_normals, tvb_srf.triangle_normals)
         else:
-            warning("\nNo Cortical Surface file found at path " + path + "!")
+            self.logger.warning("\nNo Cortical Surface file found at path " + path + "!")
             return []
 
     def read_region_mapping(self, path):
@@ -38,7 +40,7 @@ class TVBReader(object):
             tvb_rm = region_mapping.RegionMapping.from_file(path)
             return tvb_rm.array_data
         else:
-            warning("\nNo Region Mapping file found at path " + path + "!")
+            self.logger.warning("\nNo Region Mapping file found at path " + path + "!")
             return []
 
     def read_volume_mapping(self, path):
@@ -46,7 +48,7 @@ class TVBReader(object):
             tvb_vm = region_mapping.RegionVolumeMapping.from_file(path)
             return tvb_vm.array_data
         else:
-            warning("\nNo Volume Mapping file found at path " + path + "!")
+            self.logger.warning("\nNo Volume Mapping file found at path " + path + "!")
             return []
 
     def read_t1(self, path):
@@ -54,7 +56,7 @@ class TVBReader(object):
             tvb_t1 = structural.StructuralMRI.from_file(path)
             return tvb_t1.array_data
         else:
-            warning("\nNo Structural MRI file found at path " + path + "!")
+            self.logger.warning("\nNo Structural MRI file found at path " + path + "!")
             return []
 
     def read_sensors(self, filename, root_folder, s_type):
@@ -74,7 +76,7 @@ class TVBReader(object):
             return Sensors(tvb_sensors.labels, tvb_sensors.locations,
                            orientations=tvb_sensors.orientations, gain_matrix=gain_matrix, s_type=s_type)
         else:
-            warning("\nNo Sensor file found at path " + path + "!")
+            self.logger.warning("\nNo Sensor file found at path " + path + "!")
             return None
 
     def read_gain_matrix(self, path, s_type):
@@ -87,7 +89,7 @@ class TVBReader(object):
                 tvb_prj = projections.ProjectionSurfaceSEEG.from_file(path)
             return tvb_prj.gain_matrix_data
         else:
-            warning("\nNo Projection Matrix file found at path " + path + "!")
+            self.logger.warning("\nNo Projection Matrix file found at path " + path + "!")
             return None
 
     def read_head(self, root_folder, name='',

@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 import numpy as np
-from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_size, \
     squeeze_array_to_scalar
 #TODO: avoid service imported in model
@@ -9,6 +9,8 @@ from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_pa
 
 class ProbabilityDistribution(object):
     __metaclass__ = ABCMeta
+
+    logger = initialize_logger(__name__)
 
     type = ""
     n_params = 0.0
@@ -222,7 +224,7 @@ class ProbabilityDistribution(object):
 
     def _calc_mode(self, loc=0.0, scale=1.0, use="scipy"):
         if isequal_string(use, "scipy"):
-            warning("No scipy calculation for mode! Switching to manual -following wikipedia- calculation!")
+            self.logger.warning("No scipy calculation for mode! Switching to manual -following wikipedia- calculation!")
         return self.calc_mode_manual(loc, scale)
 
     def _calc_var(self, loc=0.0, scale=1.0, use="scipy"):

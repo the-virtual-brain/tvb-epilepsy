@@ -8,7 +8,7 @@ from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
@@ -250,7 +250,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                     assert_equal_objects(sim.simulation_settings, reader.read_simulation_settings(
                         os.path.join(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")), logger=logger)))
             if not status:
-                warning("\nSimulation failed!")
+                logger.warning("\nSimulation failed!")
             else:
                 time = np.array(ttavg, dtype='float32')
                 output_sampling_time = np.mean(np.diff(time))

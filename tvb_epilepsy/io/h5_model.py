@@ -8,7 +8,7 @@ import h5py
 import numpy as np
 
 from tvb_epilepsy.base.types import OrderedDictDot
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import sort_dict, iterable_to_dict, dict_to_list_or_tuple, \
     set_list_item_by_reference_safely, get_list_or_tuple_item_safely, isequal_string
 from tvb_epilepsy.base.utils.file_utils import change_filename_or_overwrite
@@ -29,13 +29,11 @@ bool_inf_nan_none_empty.update({"{}": OrderedDict()})
 #TODO: also, the purpose of writting in h5 is inspection, so we should write only in the format that can be visualized
 #TODO: the h5_model should not be necessary after the changes
 #Observation: we should solve these TODOs after the next refactoring tasks are over, and the models are simpler
+logger = initialize_logger(__name__)
+
 class H5Model(object):
 
-    def __init__(self, datasets_dict, metadata_dict, logger=None):
-        if logger is None:
-            self.logger = initialize_logger(__name__)
-        else:
-            self.logger = logger
+    def __init__(self, datasets_dict, metadata_dict):
         self.datasets_dict = datasets_dict
         self.metadata_dict = metadata_dict
 
@@ -57,7 +55,7 @@ class H5Model(object):
         """
         final_path = change_filename_or_overwrite(os.path.join(folder_name, file_name))
         # final_path = ensure_unique_file(folder_name, file_name)
-        self.logger.info("Writing %s at: %s" % (self, final_path))
+        logger.info("Writing %s at: %s" % (self, final_path))
         h5_file = h5py.File(final_path, 'a', libver='latest')
         for attribute, field in self.datasets_dict.iteritems():
             h5_file.create_dataset(attribute, data=field)
@@ -99,7 +97,7 @@ class H5Model(object):
                 try:
                     obj = np.reshape(obj, output_shape)
                 except:
-                    warning("Failed to reshape read object to target shape " + str(output_shape) + "!" +
+                    logger.warning("Failed to reshape read object to target shape " + str(output_shape) + "!" +
                             "\nReturning array of shape " + str(obj.shape) + "!")
         else:
             obj = update_object(obj, "/", self.metadata_dict, getORpop="pop")[0]
@@ -211,7 +209,7 @@ def object_to_h5_model_recursively(h5_model, obj, path="/"):
         try:
             h5_model, obj_dict = object_to_h5_model(h5_model, obj, container_path)
         except:
-            warning("Object " + path[1:] + " cannot be assigned to h5_model because it has no __dict__ property!")
+            logger.warning("Object " + path[1:] + " cannot be assigned to h5_model because it has no __dict__ property!")
             return
     h5_model.add_or_update_metadata_attribute(os.path.join(container_path[1:], "type_str"), obj_type)
     for key, this_obj in obj_dict.iteritems():
@@ -283,7 +281,7 @@ def assert_obj(obj, obj_name, obj_type):
         return OrderedDict()
     # If still not created, make an  OrderedDict() by default:
     if obj is None:
-        warning("\n Child object " + str(obj_name) + " still not created!" +
+        logger.warning("\n Child object " + str(obj_name) + " still not created!" +
                        "\nCreating an OrderedDict() by default!")
         return OrderedDict()
     return obj
@@ -312,7 +310,7 @@ def recurse_object(parent, obj, child_name, parent_path, rel_path, abs_path, met
             # Remove any object strings left...
             getORpop_object_strings(child_path, metadata, getORpop="pop")
     except:
-        warning("Failed to set attribute " + str(abs_path) + " of object " + obj.__class__.__name__ + "!")
+        logger.warning("Failed to set attribute " + str(abs_path) + " of object " + obj.__class__.__name__ + "!")
 
 
 def set_object(parent, obj, child_name, abs_path, metadata, set_field):
@@ -332,7 +330,7 @@ def set_object(parent, obj, child_name, abs_path, metadata, set_field):
         set_field(parent, child_name, obj)
         return
     except:
-        warning("Failed to set attribute " + str(abs_path) + " of object " + obj.__class__.__name__ + "!")
+        logger.warning("Failed to set attribute " + str(abs_path) + " of object " + obj.__class__.__name__ + "!")
 
 
 def build_hierarchical_object_recursively(parent, rel_path, obj, parent_path, abs_path, metadata):

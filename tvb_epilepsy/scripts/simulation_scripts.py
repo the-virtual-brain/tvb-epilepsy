@@ -2,7 +2,7 @@ import os
 import numpy as np
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, FOLDER_FIGURES
 from tvb_epilepsy.base.constants.module_constants import TVB, SIMULATION_MODE
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.model.vep.sensors import Sensors
@@ -263,7 +263,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
         logger.info("\n\nSimulating...")
         ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
         if not status:
-            warning("\nSimulation failed!")
+            logger.warning("\nSimulation failed!")
         else:
             time = np.array(ttavg, dtype='float32').flatten()
             output_sampling_time = np.mean(np.diff(time))
