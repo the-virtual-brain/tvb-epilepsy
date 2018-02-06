@@ -166,8 +166,9 @@ class ODEModelInversionService(ModelInversionService):
         if np.sum(kwargs.get("cut_signals_tails", (0, 0))) > 0:
             signals, self.time, self.n_times = cut_signals_tails(signals, self.time, kwargs.get("cut_signals_tails"))
             self.observation_shape = (self.n_times, self.n_signals)
-        signals -= signals.min()
-        signals /= signals.max()
+        # TODO: decide about signals' normalization for the different (sensors', sources' cases)
+        # signals -= signals.min()
+        # signals /= signals.max()
         statistical_model.n_signals = self.n_signals
         statistical_model.n_times = self.n_times
         statistical_model.dt = self.dt
@@ -250,11 +251,11 @@ class ODEModelInversionService(ModelInversionService):
                                                               sig_init, sig_init / 3.0,
                                                               pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("scale_signal", "lognormal", (),
-                                                              0.1, 2.0,
-                                                              0.4, 0.1,
+                                                              0.5, self.n_signals*1.0,
+                                                              1.0, 1.0,
                                                               pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("offset_signal", "normal", (),
-                                                              pdf_params={"mu": -X1INIT_MIN, "sigma": 0.1}, **kwargs))
+                                                              pdf_params={"mu": 0.0, "sigma": 1.0}, **kwargs))
 
     def generate_statistical_model(self, model_name="vep_ode", **kwargs):
         tic = time.time()
