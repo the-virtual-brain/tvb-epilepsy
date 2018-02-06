@@ -61,7 +61,7 @@ class CmdStanService(StanService):
         tic = time.time()
         command = "make " + self.model_code_path.split(".stan", 1)[0] + " && " + \
                   "chmod +x " + self.model_code_path.split(".stan", 1)[0]
-        self.compilation_time = execute_command(command, cwd=self.path, shell=True, logger=self.logger)[1]
+        self.compilation_time = execute_command(command, cwd=self.path, shell=True)[1]
         self.logger.info(str(self.compilation_time) + ' sec required to compile')
         if save_model:
             self.model_path = kwargs.pop("model_path", self.model_path)
@@ -80,7 +80,7 @@ class CmdStanService(StanService):
                                          output_filepath, diagnostic_filepath)
         self.logger.info("Model fitting with " + self.fitmethod +
                          " method of model: " + self.model_path + "...")
-        self.fitting_time = execute_command(self.command.replace("\t", ""), shell=True, logger=self.logger)[1]
+        self.fitting_time = execute_command(self.command.replace("\t", ""), shell=True)[1]
         self.logger.info(str(self.fitting_time) + ' sec required to ' + self.fitmethod + "!")
         if read_output:
             samples = self.read_output_samples(output_filepath, **kwargs)

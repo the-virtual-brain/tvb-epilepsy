@@ -459,7 +459,8 @@ def assert_arrays(params, shape=None, transpose=False):
                 else:
                     params[ip] = np.reshape(params[ip], shape)
         except:
-            print("\n\nwhat the fuck??")
+            #TODO: maybe make this an explicit message
+            logger.info("\n\nwhat the fuck??")
 
     if len(params) == 1:
         return params[0]

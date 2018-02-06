@@ -292,7 +292,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                      special_idx=statistical_model.active_regions,
                                      model="6d", zmode="lin",
                                      figure_name=hyp_fit.name + "_Nullclines and equilibria")
-        print("Done!")
+        logger.info("Done!")
 
 
 if __name__ == "__main__":
