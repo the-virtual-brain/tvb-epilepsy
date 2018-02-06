@@ -24,7 +24,7 @@ def initialize_logger(name, target_folder=FOLDER_LOGS):
     ch.setFormatter(formatter)
     ch.setLevel(logging.DEBUG)
 
-    fh = TimedRotatingFileHandler(os.path.join(target_folder, 'logs.log'), when="h", interval=1, backupCount=3)
+    fh = TimedRotatingFileHandler(os.path.join(target_folder, 'logs.log'), when="d", interval=1, backupCount=2)
     fh.setFormatter(formatter)
     fh.setLevel(logging.DEBUG)
 
