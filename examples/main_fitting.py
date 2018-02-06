@@ -258,8 +258,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             estMC = lambda est: est["MC"]
             region_mode = "all"
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        ests, samples = stan_service.fit(debug=1, simulate=0, model_data=model_data, merge_outputs=False,
-                                         chains=4, refresh=1, num_warmup=200, num_samples=200, **kwargs)
+        ests, samples, summary = stan_service.fit(debug=1, simulate=0, model_data=model_data, merge_outputs=False,
+                                                  chains=4, refresh=1, num_warmup=200, num_samples=200, **kwargs)
         writer.write_generic(ests, results_dir, hyp.name + "_fit_est.h5")
         writer.write_generic(samples, results_dir, hyp.name + "_fit_samples.h5")
         ests = ensure_list(ests)

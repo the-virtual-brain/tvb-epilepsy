@@ -53,35 +53,6 @@ class PyStanService(StanService):
         self.model_path = kwargs.get("model_path", self.model_path)
         self.model = pickle.load(open(self.model_path, 'rb'))
 
-    def fit(self, output_filepath=os.path.join(FOLDER_RES, STAN_OUTPUT_OPTIONS["file"]), diagnostic_filepath="",
-            debug=0, simulate=0, read_output=True, **kwargs):
-        if diagnostic_filepath == "":
-            diagnostic_filepath = os.path.join(os.path.dirname(output_filepath), STAN_OUTPUT_OPTIONS["diagnostic_file"])
-        self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
-        self.fitmethod = kwargs.pop("method", self.fitmethod)
-        model_data = self.set_model_data(debug, simulate, **kwargs)
-        self.assert_fitmethod()
-        self.options.update(kwargs)
-        self.logger.info("Model fitting with " + self.fitmethod + "...")
-        tic = time.time()
-        fit = getattr(self.model, self.fitmethod)(data=model_data, sample_file=output_filepath,
-                                                  diagnostic_file=diagnostic_filepath, **self.options)
-        self.fitting_time = time.time() - tic
-        self.logger.info(str(self.fitting_time) + ' sec required to fit')
-        if self.fitmethod is "optimizing":
-            return fit,
-        else:
-            if read_output:
-                self.logger.info("Extracting estimates...")
-                if self.fitmethod is "sampling":
-                    samples = fit.extract(permuted=True)
-                elif self.fitmethod is "vb":
-                    samples, _ = self.read_vb_results(fit)
-                est = self.compute_estimates_from_samples(samples)
-                return est, samples, fit
-            else:
-                return fit,
-
     def read_vb_results(self, fit):
         est = {}
         samples = {}
@@ -135,3 +106,34 @@ class PyStanService(StanService):
             if isinstance(samples[key], list):
                 samples[key] = np.squeeze(np.array(samples[key]))
         return samples, est
+
+    def read_output(self, fit, **kwargs):
+        self.logger.info("Extracting estimates...")
+        if self.fitmethod is "sampling":
+            samples = fit.extract(permuted=True)
+        elif self.fitmethod is "vb":
+            samples, _ = self.read_vb_results(fit)
+        est = self.compute_estimates_from_samples(samples)
+        return samples, est
+
+    def fit(self, output_filepath=os.path.join(FOLDER_RES, STAN_OUTPUT_OPTIONS["file"]), diagnostic_filepath="",
+            debug=0, simulate=0, return_output=True, **kwargs):
+        if diagnostic_filepath == "":
+            diagnostic_filepath = os.path.join(os.path.dirname(output_filepath), STAN_OUTPUT_OPTIONS["diagnostic_file"])
+        self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
+        self.fitmethod = kwargs.pop("method", self.fitmethod)
+        model_data = self.set_model_data(debug, simulate, **kwargs)
+        self.assert_fitmethod()
+        self.options.update(kwargs)
+        self.logger.info("Model fitting with " + self.fitmethod + "...")
+        tic = time.time()
+        fit = getattr(self.model, self.fitmethod)(data=model_data, sample_file=output_filepath,
+                                                  diagnostic_file=diagnostic_filepath, **self.options)
+        self.fitting_time = time.time() - tic
+        self.logger.info(str(self.fitting_time) + ' sec required to fit')
+        if self.fitmethod is "optimizing" or not return_output:
+            return fit,
+        else:
+            self.logger.info("Extracting estimates...")
+            samples, est = self.read_output(fit)
+            return est, samples, fit
