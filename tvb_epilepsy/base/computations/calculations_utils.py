@@ -1,7 +1,7 @@
 
 from scipy.optimize import root
 
-from tvb_epilepsy.base.constants.model_constants import X0_CR_DEF, X1_EQ_CR_DEF, X0_DEF, X1_DEF
+from tvb_epilepsy.base.constants.model_constants import X0_CR_DEF, X1_EQ_CR_DEF, X0_DEF, X1_DEF, I_EXT1_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_import_error
 # from tvb_epilepsy.base.utils import assert_array_shape as sc2arr
 from tvb_epilepsy.base.computations.equations_utils import *
@@ -170,7 +170,7 @@ def calc_fslope(slope_var, slope, z=0.0, g=0.0, tau1=TAU1_DEF, pmode=np.array("c
     else:
         if pmode == "z" or pmode == "g" or pmode == "z*g":
             z, g = assert_arrays([z, g], slope.shape)
-            from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic
+            from tvb_epilepsy.base.epileptor_models import EpileptorDPrealistic
             slope = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, slope, 0.0)[0]
         return eqtn_fslope(slope_var, slope, tau1)
 
@@ -204,7 +204,7 @@ def calc_fIext2(Iext2_var, Iext2, z=0.0, g=0.0, tau1=TAU1_DEF, pmode=np.array("c
     else:
         if pmode == "z" or pmode == "g" or pmode == "z*g":
             z, g = assert_arrays([z, g], Iext2.shape)
-            from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic
+            from tvb_epilepsy.base.epileptor_models import EpileptorDPrealistic
             Iext2 = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, 0.0, Iext2)[1]
         return eqtn_fIext2(Iext2_var, Iext2, tau1)
 
@@ -307,7 +307,7 @@ def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2,
                         eqtn_fg(x1, g, gamma, tau1),
                         eqtn_fx0(x0_var, x0, tau1))
                 if pmode == "z" or pmode == "g" or pmode == "z*g":
-                    from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic
+                    from tvb_epilepsy.base.epileptor_models import EpileptorDPrealistic
                     slope, Iext2 = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, slope, Iext2)[1]
                 dfun += (eqtn_fslope(slope_var, slope, tau1),
                          eqtn_fIext1(Iext1_var, Iext1, tau1, tau0),

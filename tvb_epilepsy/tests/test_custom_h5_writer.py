@@ -6,7 +6,7 @@ from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
-from tvb_epilepsy.base.simulators import SimulationSettings
+from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService

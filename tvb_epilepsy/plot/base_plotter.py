@@ -9,8 +9,18 @@ from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 
 class BasePlotter(object):
 
-    def _check_show(self, show_flag=SHOW_FLAG):
-        if show_flag:
+    def __init__(self, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG):
+        self.save_flag = save_flag
+        self.show_flag = show_flag
+
+    def set_save_flag(self, value):
+        self.save_flag = value
+
+    def set_show_flag(self, value):
+        self.show_flag = value
+
+    def _check_show(self):
+        if self.show_flag:
             # mp.use('TkAgg')
             pyplot.ion()
             pyplot.show()
@@ -27,9 +37,8 @@ class BasePlotter(object):
         figure_name = figure_name.replace(": ", "_").replace(" ", "_").replace("\t", "_")
         return figure_name
 
-    def _save_figure(self, save_flag=SAVE_FLAG, fig=None, figure_name=None, figure_dir=FOLDER_FIGURES,
-                     figure_format=FIG_FORMAT):
-        if save_flag:
+    def _save_figure(self, fig=None, figure_name=None, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
+        if self.save_flag:
             figure_name = self._figure_filename(fig, figure_name)
             figure_name = figure_name[:numpy.min([100, len(figure_name)])] + '.' + figure_format
             if not (os.path.isdir(figure_dir)):
@@ -176,8 +185,7 @@ class BasePlotter(object):
         big_ax.set_axis_bgcolor('none')
 
     def plot_in_columns(self, data_dict_list, labels, width_ratios=[], left_ax_focus_indices=[],
-                        right_ax_focus_indices=[],
-                        description="", title="", figure_name=None, show_flag=False, save_flag=True,
+                        right_ax_focus_indices=[], description="", title="", figure_name=None,
                         figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, **kwargs):
         fig = pyplot.figure(title, frameon=False, figsize=figsize)
         fig.suptitle(description)
@@ -217,13 +225,12 @@ class BasePlotter(object):
             right_ax_focus_indices = focus_indices
         self._set_axis_labels(fig, 121, n_regions, labels, left_ax_focus_indices, 'r')
         self._set_axis_labels(fig, 122, n_regions, labels, right_ax_focus_indices, 'r', 'right')
-        self._save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
-        self._check_show(show_flag)
+        self._save_figure(pyplot.gcf(), figure_name, figure_dir, figure_format)
+        self._check_show()
         return fig
 
     def plots(self, data_dict, shape=None, transpose=False, skip=0, xlabels={}, xscales={}, yscales={}, title='Plots',
-              figure_name=None, figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT,
-              show_flag=SHOW_FLAG, save_flag=SAVE_FLAG):
+              figure_name=None, figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT):
         pyplot.figure(title, figsize=figsize)
         if shape is None:
             shape = (1, len(data_dict))
@@ -239,12 +246,11 @@ class BasePlotter(object):
             pyplot.xlabel(xlabels.get(key, ""))
             pyplot.ylabel(key)
         pyplot.tight_layout()
-        self._save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
-        self._check_show(show_flag)
+        self._save_figure(pyplot.gcf(), figure_name, figure_dir, figure_format)
+        self._check_show()
 
     def pair_plots(self, data, keys, transpose=False, skip=0, title='Pair plots', figure_name=None,
-                   figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT, show_flag=SHOW_FLAG,
-                   save_flag=SAVE_FLAG):
+                   figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT):
         pyplot.figure(title, figsize=figsize)
         n = len(keys)
         data = ensure_list(data)
@@ -269,5 +275,5 @@ class BasePlotter(object):
                 if j == 0:
                     pyplot.ylabel(key_i)
         pyplot.tight_layout()
-        self._save_figure(save_flag, pyplot.gcf(), figure_name, figure_dir, figure_format)
-        self._check_show(show_flag)
+        self._save_figure(pyplot.gcf(), figure_name, figure_dir, figure_format)
+        self._check_show()

@@ -3,6 +3,8 @@
 import logging
 import os
 import warnings
+from logging.handlers import TimedRotatingFileHandler
+import sys
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_LOGS
 
@@ -17,10 +19,20 @@ def initialize_logger(name, target_folder=FOLDER_LOGS):
         os.mkdir(target_folder)
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
-    fh = logging.FileHandler(os.path.join(target_folder, name + '.log'))
-    fh.setLevel(logging.INFO)
-    fh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setFormatter(formatter)
+    ch.setLevel(logging.DEBUG)
+
+    fh = TimedRotatingFileHandler(os.path.join(target_folder, 'logs.log'), when="h", interval=1, backupCount=3)
+    fh.setFormatter(formatter)
+    fh.setLevel(logging.DEBUG)
+
+    logger.addHandler(ch)
     logger.addHandler(fh)
+
     return logger
 
 

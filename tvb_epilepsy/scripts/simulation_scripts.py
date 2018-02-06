@@ -7,12 +7,11 @@ from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.constants.model_constants import VOIS
-from tvb_epilepsy.custom.read_write import write_ts_epi, write_ts_seeg_epi
-from tvb_epilepsy.custom.simulator_custom import EpileptorModel
+from tvb_epilepsy.service.simulator.simulator_custom import EpileptorModel
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
-from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDP2D
+from tvb_epilepsy.base.epileptor_models import EpileptorDP2D
 
 LOG = initialize_logger(__name__)
 
@@ -22,8 +21,8 @@ LOG = initialize_logger(__name__)
 ###
 def setup_custom_simulation_from_model_configuration(model_configuration, connectivity, dt, sim_length, monitor_period,
                                                      model_name, noise_intensity=None, **kwargs):
-    from tvb_epilepsy.custom.simulator_custom import EpileptorModel, custom_model_builder, SimulatorCustom
-    from tvb_epilepsy.base.simulators import SimulationSettings
+    from tvb_epilepsy.service.simulator.simulator_custom import custom_model_builder, SimulatorCustom
+    from tvb_epilepsy.base.simulation_settings import SimulationSettings
 
     if model_name != EpileptorModel._ui_name:
         print("You can use only " + EpileptorModel._ui_name + "for custom simulations!")
@@ -50,12 +49,12 @@ def setup_TVB_simulation_from_model_configuration(model_configuration, connectiv
                                                   pmode=np.array("z"), noise_instance=None, noise_intensity=None,
                                                   monitor_expressions=None, monitors_instance=None):
     from tvb_epilepsy.base.constants.module_constants import ADDITIVE_NOISE, NOISE_SEED
-    from tvb_epilepsy.base.simulators import SimulationSettings
+    from tvb_epilepsy.base.simulation_settings import SimulationSettings
     from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
     from tvb_epilepsy.base.constants.model_constants import model_noise_type_dict
     from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
-    from tvb_epilepsy.tvb_api.simulator_tvb import SimulatorTVB
-    from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic, EpileptorDP2D
+    from tvb_epilepsy.service.simulator.simulator_tvb import SimulatorTVB
+    from tvb_epilepsy.base.epileptor_models import EpileptorDPrealistic
     from tvb.datatypes import equations
     from tvb.simulator import monitors, noise
     from tvb.simulator.models import Epileptor
@@ -166,11 +165,13 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
                 vois_ts_dict[sensor_name] /= np.max(vois_ts_dict[sensor_name])
 
     if save_flag:
-        write_ts_epi(raw_data, dt, vois_ts_dict["lfp"], folder, filename)
+        h5_writer = H5Writer()
+        h5_writer.write_ts_epi(raw_data, dt, vois_ts_dict["lfp"], os.path.join(folder, filename))
         # Write files:
         if idx_proj > -1:
             for i_sensor, sensor in enumerate(sensors_list):
-                write_ts_seeg_epi(vois_ts_dict[sensor.s_type + '%d' % i_sensor], dt, folder, filename)
+                h5_writer.write_ts_seeg_epi(vois_ts_dict[sensor.s_type + '%d' % i_sensor], dt,
+                                             os.path.join(folder, filename))
     return vois_ts_dict
 
 

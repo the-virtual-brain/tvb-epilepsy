@@ -147,7 +147,7 @@ def symbol_eqtn_fx0(n, shape=None):
 
 def symbol_eqtn_fslope(n, pmode=array("const"), shape=None):
     slope_var, z, g, slope, tau1, vars_dict = symbol_vars(n, ["slope_var", "z", "g", "slope", "tau1"], shape=shape)
-    from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic
+    from tvb_epilepsy.base.epileptor_models import EpileptorDPrealistic
     slope_eq = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, slope, 0.0)[0]
     fslope = Array(eqtn_fslope(slope_var, slope_eq, tau1))
     vars_dict["pmode"] = pmode
@@ -170,7 +170,7 @@ def symbol_eqtn_fIext1(n, shape=None):
 
 def symbol_eqtn_fIext2(n, pmode=array("const"), shape=None):
     Iext2_var, z, g, Iext2, tau1, vars_dict = symbol_vars(n, ["Iext2_var", "z", "g", "Iext2", "tau1"], shape=shape)
-    from tvb_epilepsy.tvb_api.epileptor_models import EpileptorDPrealistic
+    from tvb_epilepsy.base.epileptor_models import EpileptorDPrealistic
     Iext2_eq = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, 0.0, Iext2)[1]
     fIext2 = Array(eqtn_fIext2(Iext2_var, Iext2_eq, tau1))
     vars_dict["pmode"] = pmode
