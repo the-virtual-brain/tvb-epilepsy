@@ -2,7 +2,7 @@ import os
 import numpy as np
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, FOLDER_FIGURES
 from tvb_epilepsy.base.constants.module_constants import TVB, SIMULATION_MODE
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.model.vep.sensors import Sensors
@@ -13,7 +13,7 @@ from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.base.epileptor_models import EpileptorDP2D
 
-LOG = initialize_logger(__name__)
+logger = initialize_logger(__name__)
 
 
 ###
@@ -25,7 +25,7 @@ def setup_custom_simulation_from_model_configuration(model_configuration, connec
     from tvb_epilepsy.base.simulation_settings import SimulationSettings
 
     if model_name != EpileptorModel._ui_name:
-        print("You can use only " + EpileptorModel._ui_name + "for custom simulations!")
+        logger.info("You can use only " + EpileptorModel._ui_name + "for custom simulations!")
 
     model = custom_model_builder(model_configuration)
 
@@ -171,7 +171,7 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
         if idx_proj > -1:
             for i_sensor, sensor in enumerate(sensors_list):
                 h5_writer.write_ts_seeg_epi(vois_ts_dict[sensor.s_type + '%d' % i_sensor], dt,
-                                             os.path.join(folder, filename))
+                                            os.path.join(folder, filename))
     return vois_ts_dict
 
 
@@ -190,7 +190,7 @@ def set_time_scales(fs=2048.0, time_length=100000.0, scale_fsavg=None, report_ev
 def from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis, simulation_mode=SIMULATION_MODE,
                                            sim_type="realistic", dynamical_model="EpileptorDP2D", ts_file=None,
                                            plot_flag=True, results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES,
-                                           logger=LOG, **kwargs):
+                                           logger=logger, **kwargs):
     if simulation_mode is TVB:
         from tvb_epilepsy.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration \
             as setup_simulation_from_model_configuration
@@ -263,7 +263,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
         logger.info("\n\nSimulating...")
         ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
         if not status:
-            warning("\nSimulation failed!")
+            logger.warning("\nSimulation failed!")
         else:
             time = np.array(ttavg, dtype='float32').flatten()
             output_sampling_time = np.mean(np.diff(time))
@@ -285,9 +285,9 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     if plot_flag and len(vois_ts_dict) > 0:
         # Plot results
         Plotter().plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, vois_ts_dict,
-                         sensorsSEEG=head.sensorsSEEG, hpf_flag=False,
-                         trajectories_plot=trajectories_plot,
-                         spectral_raster_plot=spectral_raster_plot, log_scale=True,
-                         region_labels=head.connectivity.region_labels,
-                         figure_dir=figure_dir)  # ,
+                                   sensorsSEEG=head.sensorsSEEG, hpf_flag=False,
+                                   trajectories_plot=trajectories_plot,
+                                   spectral_raster_plot=spectral_raster_plot, log_scale=True,
+                                   region_labels=head.connectivity.region_labels,
+                                   figure_dir=figure_dir)  # ,
     return vois_ts_dict

@@ -2,7 +2,7 @@
 from scipy.optimize import root
 
 from tvb_epilepsy.base.constants.model_constants import X0_CR_DEF, X1_EQ_CR_DEF, X0_DEF, X1_DEF, I_EXT1_DEF
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_import_error
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_import_error
 # from tvb_epilepsy.base.utils import assert_array_shape as sc2arr
 from tvb_epilepsy.base.computations.equations_utils import *
 # TODO: find out why I cannot import anything from utils here
@@ -15,7 +15,7 @@ try:
     SYMBOLIC_IMPORT=True
 
 except:
-    warning("Unable to load symbolic_equations module! Symbolic calculations are not possible!")
+    logger.warning("Unable to load symbolic_equations module! Symbolic calculations are not possible!")
     SYMBOLIC_IMPORT = False
 from tvb_epilepsy.base.utils.data_structures_utils import shape_to_size
 
@@ -29,7 +29,7 @@ def confirm_calc_mode(calc_mode):
         if SYMBOLIC_IMPORT:
             logger.info( "Executing symbolic calculations...")
         else:
-            warning("\nNot possible to execute symbolic calculations! Turning to non-symbolic ones!..")
+            logger.warning("\nNot possible to execute symbolic calculations! Turning to non-symbolic ones!..")
             calc_mode = "non_symbol"
     return calc_mode
 
@@ -124,7 +124,7 @@ def calc_fy2(x2, y2=0.0, s=S_DEF, tau1=TAU1_DEF, tau2=TAU2_DEF, x2_neg=None, sha
             x2_neg = x2 < -0.25
         except:
             x2_neg = False
-            warning("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
+            logger.warning("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
                     "\nSetting default x2_neg = False")
     if np.all(calc_mode == "symbol"):
         return np.array(symbol_eqtn_fy2(x2.size, x2_neg=x2_neg, shape=x2.shape)[0](x2, y2, s, tau1, tau2))
@@ -231,7 +231,7 @@ def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2,
                 x2_neg = x2 < -0.25
             except:
                 x2_neg = False
-                warning("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
+                logger.warning("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
                         "\nSetting default x2_neg = False")
     if output_mode == "array":
         return calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars, zmode, pmode, x1_neg, z_pos, x2_neg,
@@ -329,7 +329,7 @@ def calc_jac(x1, z, yc, Iext1, x0, K, w, model_vars=2,
                 x2_neg = x2 < -0.25
             except:
                 x2_neg = False
-                warning("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
+                logger.warning("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
                         "\nSetting default x2_neg = False")
     n_regions = max(shape_to_size(x1.shape), shape_to_size(z.shape))
     x1, z,  yc, Iext1, x0, K, slope, a, b, d, tau1, tau0 = \

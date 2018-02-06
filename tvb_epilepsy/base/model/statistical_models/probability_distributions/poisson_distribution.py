@@ -1,7 +1,6 @@
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int, isequal_string
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.discrete_probability_distribution \
     import DiscreteProbabilityDistribution
@@ -49,7 +48,7 @@ class PoissonDistribution(DiscreteProbabilityDistribution):
         return self.lamda + loc
 
     def calc_median_manual(self, loc=0.0, scale=1.0):
-        warning("Approximate calculation for median of poisson distribution!")
+        self.logger.warning("Approximate calculation for median of poisson distribution!")
         return np.int(np.round(self.lamda + 1.0 / 3 - 0.02 / self.lamda + loc))
 
     def calc_mode_manual(self, loc=0.0, scale=1.0):

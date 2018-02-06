@@ -2,7 +2,7 @@ import importlib
 from abc import ABCMeta
 import numpy as np
 from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE, MIN_SINGLE_VALUE
-from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, make_float
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
@@ -70,7 +70,7 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
         p_star = (self.high - self.loc) / self.scale
         p_star_cdf = self.scipy().cdf(p_star)
         if np.any(p_star_cdf - np.finfo(np.float).eps) >= 1.0:
-            warning("Upper limit of base " + self.name + "  distribution outside support!: " +
+            self.logger.warning("Upper limit of base " + self.name + "  distribution outside support!: " +
                     "\n(self.high-self.loc)/self.scale) = " + str(p_star) +
                     "\ncdf(self.high-self.loc)/self.scale) = " + str(p_star_cdf))
 
@@ -146,6 +146,7 @@ def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=
     return StochasticParameter(name, low, high, loc, scale, p_shape, **target_params)
 
 
+#TODO: this should move to examples
 if __name__ == "__main__":
     sp = generate_stochastic_parameter("test", probability_distribution="gamma", optimize=False, shape=1.0, scale=2.0)
-    print(sp)
+    initialize_logger(__name__).info(sp)

@@ -2,7 +2,6 @@ from collections import OrderedDict
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution \
     import ContinuousProbabilityDistribution
@@ -70,7 +69,7 @@ class UniformDistribution(ContinuousProbabilityDistribution):
         return 0.5 * (a + b)
 
     def calc_mode_manual(self, loc=0.0, scale=1.0):
-        warning("Uniform distribution does not have a definite mode! Returning nan!")
+        self.logger.warning("Uniform distribution does not have a definite mode! Returning nan!")
         return np.nan
 
     def calc_var_manual(self, loc=0.0, scale=1.0):

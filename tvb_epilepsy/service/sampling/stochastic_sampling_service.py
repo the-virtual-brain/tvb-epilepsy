@@ -2,13 +2,14 @@ import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
 from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE
-from tvb_epilepsy.base.utils.log_error_utils import warning
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, isequal_string
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import StochasticParameterBase
 from tvb_epilepsy.service.sampling.sampling_service import SamplingService
 
 
 class StochasticSamplingService(SamplingService):
+    logger = initialize_logger(__name__)
 
     def __init__(self, n_samples=10, sampling_module="scipy", random_seed=None):
         super(StochasticSamplingService, self).__init__(n_samples)
@@ -58,7 +59,7 @@ class StochasticSamplingService(SamplingService):
         out_shape = tuple([self.n_samples] + list(self.shape)[:-1])
         if np.any(low > -MAX_SINGLE_VALUE) or np.any(high < MAX_SINGLE_VALUE):
             if not(isequal_string(self.sampling_module, "scipy")):
-                warning("Switching to scipy for truncated distributions' sampling!")
+                self.logger.warning("Switching to scipy for truncated distributions' sampling!")
             self.sampling_module = "scipy"
             if isinstance(prob_distr, basestring):
                 self.sampler = getattr(ss, prob_distr)(*parameter, **kwargs)

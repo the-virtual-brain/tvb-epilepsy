@@ -7,17 +7,17 @@ TODO: it might be useful to store eigenvalues and eigenvectors, as well as the p
 import numpy
 from tvb_epilepsy.base.constants.module_constants import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM
 from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.math_utils import weighted_vector_sum, curve_elbow_point
 
-logger = initialize_logger(__name__)
-
 
 class LSAService(object):
+    logger = initialize_logger(__name__)
+
     def __init__(self, eigen_vectors_number_selection=EIGENVECTORS_NUMBER_SELECTION, eigen_vectors_number=None,
                  weighted_eigenvector_sum=WEIGHTED_EIGENVECTOR_SUM, normalize_propagation_strength=False):
         self.eigen_vectors_number_selection = eigen_vectors_number_selection
@@ -74,7 +74,7 @@ class LSAService(object):
         temp = model_configuration.x1EQ > X1_EQ_CR_DEF - 10 ** (-3)
         if temp.any():
             correction_value = X1_EQ_CR_DEF - 10 ** (-3)
-            warning("Equibria x1EQ[" + str(numpy.where(temp)[0]) + "]  = " + str(model_configuration.x1EQ[temp]) +
+            self.logger.warning("Equibria x1EQ[" + str(numpy.where(temp)[0]) + "]  = " + str(model_configuration.x1EQ[temp]) +
                     "\nwere corrected for LSA to value: X1_EQ_CR_DEF - 10 ** (-3) = " + str(correction_value)
                     + " to be sub-critical!")
             model_configuration.x1EQ[temp] = correction_value

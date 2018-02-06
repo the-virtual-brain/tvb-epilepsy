@@ -98,17 +98,16 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
     if isequal_string(stan_service, "CmdStan"):
         stan_service = CmdStanService(model_name=stats_model_name, model=None, model_code=None,
                                       model_dir=FOLDER_VEP_HOME, model_code_path=model_code_path,
-                                      fitmethod=fitmethod, random_seed=12345, init="random", logger=logger)
+                                      fitmethod=fitmethod, random_seed=12345, init="random")
     else:
         stan_service = PyStanService(model_name=stats_model_name, model=None, model_code=None,
                                      model_dir=FOLDER_VEP_HOME, model_code_path=model_code_path,
-                                     fitmethod=fitmethod, random_seed=12345, init="random", logger=logger)
+                                     fitmethod=fitmethod, random_seed=12345, init="random")
     stan_service.set_or_compile_model()
 
     # -------------------------------Reading model_data and hypotheses--------------------------------------------------
     head, hypos = from_head_to_hypotheses(ep_name, data_mode=CUSTOM, data_folder=data_folder,
-                                          plot_head=False, figure_dir=figure_dir, sensors_filename=sensors_filename,
-                                          logger=logger)
+                                          plot_head=False, figure_dir=figure_dir, sensors_filename=sensors_filename)
 
     for hyp in hypos[:1]:
 
@@ -122,7 +121,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         else:
             model_configuration, lsa_hypothesis, model_configuration_service, lsa_service = \
                from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
-                                                   plot_flag=False, figure_dir=figure_dir, logger=logger, K=K_DEF)
+                                                   plot_flag=False, figure_dir=figure_dir, K=K_DEF)
 
         dynamical_model = "EpileptorDP2D"
 
@@ -138,7 +137,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             model_data = reader.read_dictionary(model_data_file)
         else:
             model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
-                                                       logger=logger, sig=0.001)
+                                                       sig=0.001)
 
             statistical_model = model_inversion.generate_statistical_model(observation_model="lfp_power") # observation_expression="lfp"
             statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
@@ -185,7 +184,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                                            sim_type="fitting", dynamical_model=dynamical_model,
                                                            ts_file=ts_file, plot_flag=True,
                                                            save_flag=True, results_dir=results_dir,
-                                                           figure_dir=figure_dir, logger=logger, tau1=0.5, tau0=30.0,
+                                                           figure_dir=figure_dir, tau1=0.5, tau0=30.0,
                                                            noise_intensity=10 ** -3)
                 manual_selection = statistical_model.active_regions
                 n_electrodes = 8
@@ -292,7 +291,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                      special_idx=statistical_model.active_regions,
                                      model="6d", zmode="lin",
                                      figure_name=hyp_fit.name + "_Nullclines and equilibria")
-        print("Done!")
+        logger.info("Done!")
 
 
 if __name__ == "__main__":

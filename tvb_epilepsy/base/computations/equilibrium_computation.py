@@ -9,8 +9,7 @@ from tvb_epilepsy.base.constants.module_constants import SYMBOLIC_CALCULATIONS_F
 from tvb_epilepsy.base.constants.model_constants import X1_DEF, X1_EQ_CR_DEF, A_DEF, B_DEF, D_DEF, SLOPE_DEF, \
                                                                                                        S_DEF, GAMMA_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import assert_arrays
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, \
-    raise_not_implemented_error
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0, calc_fx1, calc_fx1z, calc_fy1, calc_fz, calc_fg,\
                                                   calc_coupling, calc_dfun, calc_fx1z_2d_x1neg_zpos_jac, calc_fx1z_diff
 
@@ -26,7 +25,7 @@ if SYMBOLIC_CALCULATIONS_FLAG :
                                                                   symbol_eqtn_fx1z_diff
 
     except:
-        warning("Unable to load sympy. Turning to scipy.optimization.")
+        logger.warning("Unable to load sympy. Turning to scipy.optimization.")
         SYMBOLIC_CALCULATIONS_FLAG = False
 
 
@@ -197,25 +196,25 @@ def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, s=S_DEF, x2_neg=
         x2_neg = numpy.tile(x2_neg, (n, ))
     for iv in range(n):
         if x2_neg[iv] == False and x2eq[iv] < -0.25:
-            warning("\nx2eq["+str(iv)+"] = " + str(x2eq[iv]) + " < -0.25, although x2_neg[" + str(iv)+"] = False!" +
+            logger.warning("\nx2eq["+str(iv)+"] = " + str(x2eq[iv]) + " < -0.25, although x2_neg[" + str(iv)+"] = False!" +
                     "\n" + "Rerunning with x2_neg[" + str(iv)+"] = True...")
             temp, _ = calc_eq_x2(Iext2[iv], zeq=zeq[iv], geq=geq[iv], s=s[iv], x2_neg=True)
             if temp < -0.25:
                 x2eq[iv] = temp
                 x2_neg[iv] = True
             else:
-                warning("\nThe value of x2eq returned after rerunning with x2_neg[" + str(iv)+"] = True, " +
+                logger.warning("\nThe value of x2eq returned after rerunning with x2_neg[" + str(iv)+"] = True, " +
                         "is " + str(temp) + ">= -0.25!" +
                         "\n" + "We will use the original x2eq!")
         if x2_neg[iv] == True and x2eq[iv] > -0.25:
-            warning("\nx2eq["+str(iv)+"] = " + str(x2eq[iv]) + " > -0.25, although x2_neg[" + str(iv)+"] = True!" +
+            logger.warning("\nx2eq["+str(iv)+"] = " + str(x2eq[iv]) + " > -0.25, although x2_neg[" + str(iv)+"] = True!" +
                     "\n" + "Rerunning with x2_neg[" + str(iv)+"] = False...")
             temp, _ = calc_eq_x2(Iext2[iv], zeq=zeq[iv], geq=geq[iv], s=s[iv], x2_neg=False)
             if temp > -0.25:
                 x2eq[iv] = temp
                 x2_neg[iv] = True
             else:
-                warning("\nThe value of x2eq returned after rerunning with x2_neg[" + str(iv)+"] = False, " +
+                logger.warning("\nThe value of x2eq returned after rerunning with x2_neg[" + str(iv)+"] = False, " +
                         "is " + str(temp) + "=< -0.25!" +
                         "\n" + "We will use the original x2eq!")
     x2eq = numpy.reshape(x2eq, shape)
@@ -412,7 +411,7 @@ def assert_equilibrium_point(epileptor_model, weights, equilibrium_point):
         dfun_max_cr = 10 ** -5 * numpy.ones(dfun_max.shape)
         max_dfun_diff = numpy.max(numpy.abs(dfun2.flatten() - dfun.flatten()))
         if numpy.any(max_dfun_diff > dfun_max_cr):
-            warning("\nmodel dfun and calc_dfun functions do not return the same results!\n"
+            logger.warning("\nmodel dfun and calc_dfun functions do not return the same results!\n"
                     + "maximum difference = " + str(max_dfun_diff))
                   # + "\n" + "model dfun = " + str(dfun) + "\n"
                   # + "calc_dfun = " + str(dfun2))
@@ -423,7 +422,7 @@ def assert_equilibrium_point(epileptor_model, weights, equilibrium_point):
         # raise_value_error("Equilibrium point for initial condition not accurate enough!\n" \
         #                  + "max(dfun) = " + str(dfun_max))
         ##                  + "\n" + "model dfun = " + str(dfun))
-        warning("\nEquilibrium point for initial condition not accurate enough!\n"
+        logger.warning("\nEquilibrium point for initial condition not accurate enough!\n"
                  + "max(dfun) = " + str(dfun_max))
         #        + "\n" + "model dfun = " + str(dfun))
 

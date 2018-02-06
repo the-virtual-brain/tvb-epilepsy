@@ -1,5 +1,7 @@
 from collections import OrderedDict
-from tvb_epilepsy.base.utils.log_error_utils import warning
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+
+logger = initialize_logger(__name__)
 
 class DictDot(object):
 
@@ -21,7 +23,7 @@ class DictDot(object):
                 try:
                     for key in self.dict.keys():
                         if isinstance(key, basestring) and key.find(item) >= 0:
-                            warning("Item with key " + item + " not found!" +
+                            logger.warning("Item with key " + item + " not found!" +
                                     "\nReturning item with key " + key + " instead!")
                             return self.dict[key]
                 except KeyError as e:
@@ -51,7 +53,7 @@ class OrderedDictDot(object):
                 try:
                     for key in self.dict.keys():
                         if isinstance(key, basestring) and key.find(item) >= 0:
-                            warning("Item with key " + item + " not found!" +
+                            logger.warning("Item with key " + item + " not found!" +
                                     "\nReturning item with key " + key + " instead!")
                             return self.dict[key]
                 except KeyError as e:

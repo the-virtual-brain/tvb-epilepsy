@@ -14,8 +14,8 @@ class SimulationPSEService(ABCPSEService):
     task = "SIMULATION"
     simulator = None
 
-    def __init__(self, simulator, params_pse=None, logger=None):
-        super(SimulationPSEService, self).__init__(logger)
+    def __init__(self, simulator, params_pse=None):
+        super(SimulationPSEService, self).__init__()
         self.simulator = simulator
         self.params_pse = params_pse
         self.prepare_params(params_pse)

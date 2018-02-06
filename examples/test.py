@@ -8,8 +8,12 @@ import numpy as np
 
 from tvb_epilepsy.base.constants.model_constants import *
 from tvb_epilepsy.base.constants.model_inversion_constants import *
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
+
+
+logger = initialize_logger(__name__)
 
 if __name__ == "__main__":
     plotter = Plotter()
@@ -42,7 +46,7 @@ if __name__ == "__main__":
                          sig_pdf_params={"skew": 0.0, "mean": SIG_DEF/sig_std}, sig_mean=SIG_DEF, sig_std=sig_std) #
     plotter.plot_stochastic_parameter(sig, figure_name="sig parameter")
 
-    print("Done")
+    logger.info("Done")
     # stats_model_name = "vep-fe-rev-05"
     # model_code_path = os.path.join(FOLDER_VEP_HOME, stats_model_name + ".stan")
     # FOLDER_RES = os.path.join(FOLDER_VEP_HOME, stats_model_name + "_res")

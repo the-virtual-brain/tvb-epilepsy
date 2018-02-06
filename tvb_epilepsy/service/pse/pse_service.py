@@ -2,12 +2,14 @@ from copy import deepcopy
 import numpy as np
 from abc import abstractmethod, ABCMeta
 from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 
 
 class ABCPSEService(object):
     __metaclass__ = ABCMeta
+
+    logger = initialize_logger(__name__)
 
     params_vals = []
     params_paths = []
@@ -15,12 +17,6 @@ class ABCPSEService(object):
     params_names = []
     n_params_vals = []
     n_params = 0
-
-    def __init__(self, logger=None):
-        if logger is None:
-            self.logger = initialize_logger(__name__)
-        else:
-            self.logger = logger
 
     def run_pse(self, conn_matrix, grid_mode=False, **kwargs):
         results = []
@@ -40,7 +36,7 @@ class ABCPSEService(object):
             except:
                 pass
             if not status:
-                warning("\nExecution of loop " + str(iloop) + " failed!")
+                self.logger.warning("\nExecution of loop " + str(iloop) + " failed!")
             results.append(output)
             execution_status.append(status)
         if grid_mode:
@@ -87,7 +83,7 @@ class ABCPSEService(object):
             print "with " + str(self.n_params) + " parameters of " + str(self.n_params_vals) + " values each,"
             print "leading to " + str(self.n_loops) + " total execution loops"
         else:
-            warning("\nparams_pse is not a list of tuples!")
+            self.logger.warning("\nparams_pse is not a list of tuples!")
 
     def update_hypo_model_config(self, hypothesis, params, conn_matrix, model_config_service_input=None,
                            yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",):

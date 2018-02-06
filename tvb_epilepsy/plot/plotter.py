@@ -7,7 +7,7 @@ from matplotlib import pyplot, gridspec
 from matplotlib.colors import Normalize
 from mpldatacursor import HighlightingDataCursor
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from tvb_epilepsy.base.utils.log_error_utils import warning
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.plot.base_plotter import BasePlotter
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.utils.math_utils import compute_in_degree
@@ -24,6 +24,7 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMA
 
 
 class Plotter(BasePlotter):
+    logger = initialize_logger(__name__)
 
     def _plot_connectivity(self, connectivity, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
                            figure_name='Connectivity ', figsize=VERY_LARGE_SIZE):
@@ -133,7 +134,7 @@ class Plotter(BasePlotter):
         def_time = range(n_times)
         if not (isinstance(time, numpy.ndarray) and (len(time) == n_times)):
             time = def_time
-            warning("Input time doesn't match data! Setting a default time step vector!")
+            self.logger.warning("Input time doesn't match data! Setting a default time step vector!")
         data_fun = lambda data, time, icol: (data[icol], time, icol)
 
         def plot_ts(x, iTS, colors, alphas, labels):
@@ -141,7 +142,7 @@ class Plotter(BasePlotter):
             try:
                 return pyplot.plot(time, x[:, iTS], colors[iTS], label=labels[iTS], alpha=alphas[iTS])
             except:
-                warning("Cannot convert labels' strings for line labels!")
+                self.logger.warning("Cannot convert labels' strings for line labels!")
                 return pyplot.plot(time, x[:, iTS], colors[iTS], label=str(iTS), alpha=alphas[iTS])
 
         def plot_ts_raster(x, iTS, colors, alphas, labels, offset):
@@ -150,7 +151,7 @@ class Plotter(BasePlotter):
                 return pyplot.plot(time, -x[:, iTS] + offset[ivar] * iTS, colors[iTS], label=labels[iTS],
                                    alpha=alphas[iTS])
             except:
-                warning("Cannot convert labels' strings for line labels!")
+                self.logger.warning("Cannot convert labels' strings for line labels!")
                 return pyplot.plot(time, -x[:, iTS] + offset[ivar] * iTS, colors[iTS], label=str(iTS),
                                    alpha=alphas[iTS])
 
@@ -161,7 +162,7 @@ class Plotter(BasePlotter):
                 try:
                     pyplot.gca().set_ylabel(str(iTS) + "." + labels[iTS])
                 except:
-                    warning("Cannot convert labels' strings for y axis labels!")
+                    self.logger.warning("Cannot convert labels' strings for y axis labels!")
                     pyplot.gca().set_ylabel(str(iTS))
 
         def axlimits_ts(data_lims, time, icol):
@@ -176,7 +177,7 @@ class Plotter(BasePlotter):
             # try:
             #     pyplot.gca().set_yticklabels(labels)
             # except:
-            #     warning("Cannot convert region labels' strings for y axis ticks!")
+            #     self.logger.warning("Cannot convert region labels' strings for y axis ticks!")
 
         if offset > 0.0:
             offsets = offset * numpy.array([numpy.diff(ylim) for ylim in data_lims]).flatten()
@@ -206,7 +207,7 @@ class Plotter(BasePlotter):
             try:
                 return pyplot.plot(x[:, iTS], y[:, iTS], colors[iTS], label=labels[iTS], alpha=alphas[iTS])
             except:
-                warning("Cannot convert labels' strings for line labels!")
+                self.logger.warning("Cannot convert labels' strings for line labels!")
                 return pyplot.plot(x[:, iTS], y[:, iTS], colors[iTS], label=str(iTS), alpha=alphas[iTS])
 
         def plot_traj_3D(x, iTS, colors, alphas, labels):
@@ -214,14 +215,14 @@ class Plotter(BasePlotter):
             try:
                 return pyplot.plot(x[:, iTS], y[:, iTS], z[:, iTS], colors[iTS], label=labels[iTS], alpha=alphas[iTS])
             except:
-                warning("Cannot convert labels' strings for line labels!")
+                self.logger.warning("Cannot convert labels' strings for line labels!")
                 return pyplot.plot(x[:, iTS], y[:, iTS], z[:, iTS], colors[iTS], label=str(iTS), alpha=alphas[iTS])
 
         def subtitle_traj(labels, iTS):
             try:
                 pyplot.gca().set_title(str(iTS) + "." + labels[iTS])
             except:
-                warning("Cannot convert labels' strings for subplot titles!")
+                self.logger.warning("Cannot convert labels' strings for subplot titles!")
                 pyplot.gca().set_title(str(iTS))
 
         def axlabels_traj(vars, n_vars):

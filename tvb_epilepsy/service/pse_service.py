@@ -6,8 +6,7 @@ from copy import deepcopy
 import numpy as np
 from tvb_epilepsy.base.constants.module_constants import EIGENVECTORS_NUMBER_SELECTION
 from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error, \
-    raise_not_implemented_error
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
@@ -185,7 +184,7 @@ class PSEService(object):
 
     def __init__(self, task, hypothesis=[], simulator=[], params_pse=None, run_fun=None, out_fun=None):
         if task not in ["LSA", "SIMULATION"]:
-            warning("\ntask = " + str(task) + " is not a valid pse task." +
+            logger.warning("\ntask = " + str(task) + " is not a valid pse task." +
                     "\nSelect one of 'LSA', or 'SIMULATION' to perform parameter search exploration of " +
                     "\n hypothesis Linear Stability Analysis, or simulation, " + "respectively")
         self.task = task
@@ -199,14 +198,14 @@ class PSEService(object):
             if isinstance(hypothesis, DiseaseHypothesis):
                 self.pse_object = hypothesis
             else:
-                warning("\ntask = " + str(task) + " but hypothesis is not a Hypothesis object!")
+                logger.warning("\ntask = " + str(task) + " but hypothesis is not a Hypothesis object!")
             def_run_fun = lsa_run_fun
             def_out_fun = lsa_out_fun
         elif task == "SIMULATION":
             if isinstance(simulator, ABCSimulator):
                 self.pse_object = simulator
             else:
-                warning("\ntask = " + str(task) + " but simulator is not an object of" +
+                logger.warning("\ntask = " + str(task) + " but simulator is not an object of" +
                         " one of the available simulator classes!")
             def_run_fun = sim_run_fun
             def_out_fun = sim_out_fun
@@ -215,12 +214,12 @@ class PSEService(object):
             def_run_fun = None
             def_out_fun = None
         if not (callable(run_fun)):
-            warning("\nUser defined run_fun is not callable. Using default one for task " + str(task) + "!")
+            logger.warning("\nUser defined run_fun is not callable. Using default one for task " + str(task) + "!")
             self.run_fun = def_run_fun
         else:
             self.run_fun = run_fun
         if not (callable(out_fun)):
-            warning("\nUser defined out_fun is not callable. Using default one for task " + str(task) + "!")
+            logger.warning("\nUser defined out_fun is not callable. Using default one for task " + str(task) + "!")
             self.out_fun = def_out_fun
         else:
             self.out_fun = out_fun
@@ -252,7 +251,7 @@ class PSEService(object):
             print "with " + str(self.n_params) + " parameters of " + str(self.n_params_vals) + " values each,"
             print "leading to " + str(self.n_loops) + " total execution loops"
         else:
-            warning("\nparams_pse is not a list of tuples!")
+            logger.warning("\nparams_pse is not a list of tuples!")
 
     def __repr__(self):
         d = {"01. Task": self.task,
@@ -286,7 +285,7 @@ class PSEService(object):
             except:
                 pass
             if not status:
-                warning("\nExecution of loop " + str(iloop) + " failed!")
+                logger.warning("\nExecution of loop " + str(iloop) + " failed!")
             results.append(output)
             execution_status.append(status)
         if grid_mode:

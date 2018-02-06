@@ -2,7 +2,6 @@ from collections import OrderedDict
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, make_float
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
                                                                                 import ContinuousProbabilityDistribution
@@ -63,13 +62,13 @@ class BetaDistribution(ContinuousProbabilityDistribution):
         beta = self.beta * i1
         id = np.logical_and(self.alpha > 1.0, self.beta > 1.0)
         if np.any(id == False):
-            warning("No closed form of median for beta distribution for alpha or beta <= 1.0!" + "\nReturning nan!")
+            self.logger.warning("No closed form of median for beta distribution for alpha or beta <= 1.0!" + "\nReturning nan!")
             median = np.nan((alpha+beta).shape)
             id = np.where(id)[0]
             median[id] = (alpha[id] - 1.0/3) / (alpha[id] + beta[id] - 2.0/3)
             return np.reshape(median, shape) + loc
         else:
-            warning("Approximate calculation for median of beta distribution!")
+            self.logger.warning("Approximate calculation for median of beta distribution!")
             return (self.alpha - 1.0/3) / (self.alpha + self.beta - 2.0/3) + loc
 
     def calc_mode_manual(self, loc=0.0, scale=1.0):
@@ -79,7 +78,7 @@ class BetaDistribution(ContinuousProbabilityDistribution):
         beta = self.beta * i1
         id = np.logical_and(self.alpha > 1.0, self.beta > 1.0)
         if np.any(id==False):
-            warning("No closed form of mode for beta distribution for alpha or beta <= 1.0!" + "\nReturning nan!")
+            self.logger.warning("No closed form of mode for beta distribution for alpha or beta <= 1.0!" + "\nReturning nan!")
             mode = np.nan * np.ones((alpha + beta).shape)
             id = np.where(id)[0]
             mode[id] = (alpha[id] - 1.0) / (alpha[id] + beta[id] - 2.0)

@@ -2,11 +2,12 @@ import numpy as np
 from sklearn.cluster import AgglomerativeClustering
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
-from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
 
 
 class HeadService(object):
+    logger = initialize_logger(__name__)
 
     def compute_nearest_regions_to_sensors(self, head, sensors=None, target_contacts=None, s_type=Sensors.TYPE_SEEG,
                                            sensors_id=0, n_regions=None, gain_matrix_th=None):
@@ -86,5 +87,5 @@ class HeadService(object):
                 selection.append(initial_selection[cluster_inds[inds_select]])
             return np.unique(np.hstack(selection)).tolist()
         else:
-            warning("Number of sensors' left < 6!\n" + "Skipping clustering and returning all of them!")
+            self.logger.warning("Number of sensors' left < 6!\n" + "Skipping clustering and returning all of them!")
             return initial_selection

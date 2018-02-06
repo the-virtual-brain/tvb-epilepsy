@@ -2,8 +2,7 @@ from collections import OrderedDict
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-from tvb_epilepsy.base.utils.log_error_utils import warning
-from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string, construct_import_path
+from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution \
     import ContinuousProbabilityDistribution
 
@@ -77,7 +76,7 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         return self.alpha * self.theta * scale + loc
 
     def calc_median_manual(self, loc=0.0, scale=1.0):
-        warning("Gamma distribution does not have a simple closed form median! Returning nan!")
+        self.logger.warning("Gamma distribution does not have a simple closed form median! Returning nan!")
         return np.nan
 
     def calc_mode_manual(self, loc=0.0, scale=1.0):
@@ -87,7 +86,7 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         np_scale = scale * self.theta * i1
         id = shape >= 1.0
         if not (np.all(id)):
-            warning("Mode cannot be calculated for gamma distribution when the shape parameter is smaller than 1.0! "
+            self.logger.warning("Mode cannot be calculated for gamma distribution when the shape parameter is smaller than 1.0! "
                     "Returning nan!")
             mode = np.nan * np.ones((shape + np_scale).shape)
             id = np.where(id)[0]

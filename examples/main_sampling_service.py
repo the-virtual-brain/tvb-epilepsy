@@ -4,7 +4,7 @@ import numpy as np
 
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DISTRIBUTIONS
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     sampler = DeterministicSamplingService(n_samples=n_samples, grid_mode=True)
     samples, stats = sampler.generate_samples(low=1.0, high=2.0, shape=(2,), stats=True)
     for key, value in stats.iteritems():
-        print("\n" + key + ": " + str(value))
+        logger.info("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
     writer = H5Writer()
     writer.write_generic(sampler, FOLDER_RES, "test_Stochastic_Sampler.h5")
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     samples, stats = sampler.generate_samples(parameter=(1.0, 2.0), probability_distribution="uniform", shape=(2,),
                                               stats=True)
     for key, value in stats.iteritems():
-        print("\n" + key + ": " + str(value))
+        logger.info("\n" + key + ": " + str(value))
 
     logger.info(sampler.__repr__())
     writer.write_generic(sampler, FOLDER_RES, "test1_Stochastic_Sampler.h5")
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     samples, stats = sampler.generate_samples(parameter=(1.5, 1.0), probability_distribution="norm", low=1, high=2,
                                               shape=(2,), stats=True)
     for key, value in stats.iteritems():
-        print("\n" + key + ": " + str(value))
+        logger.info("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
     writer.write_generic(sampler, FOLDER_RES, "test2_Stochastic_Sampler.h5")
 
@@ -51,14 +51,14 @@ if __name__ == "__main__":
     sampler = SalibSamplingService(n_samples=n_samples, sampler="latin")
     samples, stats = sampler.generate_samples(low=1, high=2, shape=(2,), stats=True)
     for key, value in stats.iteritems():
-        print("\n" + key + ": " + str(value))
+        logger.info("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
     writer.write_generic(sampler, FOLDER_RES, "test3_Stochastic_Sampler.h5")
 
     logger.info("\nTesting distribution class and conversions...")
     sampler = StochasticSamplingService(n_samples=n_samples)
     for distrib_name in AVAILABLE_DISTRIBUTIONS:
-        print("\n" + distrib_name)
+        logger.info("\n" + distrib_name)
         logger.info("\nmode/mean, std to distribution " + distrib_name + ":")
         if np.in1d(distrib_name, ["exponential", "chisquare"]):
             target_stats = {"mean": 1.0}
@@ -87,8 +87,8 @@ if __name__ == "__main__":
             logger.info(str(parameter))
             samples = sampler.generate_samples(parameter=parameter, stats=True)
             for key, value in stats.iteritems():
-                print("\n" + key + ": " + str(value))
+                logger.info("\n" + key + ": " + str(value))
             diff = target_stats[stats_m] - stats[stats_m]
             if np.any(np.abs(diff.flatten()) > 0.001):
-                warning("Large difference between target and resulting samples' " + stats_m + "!: " + str(diff))
+                logger.warning("Large difference between target and resulting samples' " + stats_m + "!: " + str(diff))
             del (parameter)

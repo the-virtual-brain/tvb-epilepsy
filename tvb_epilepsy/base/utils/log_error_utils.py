@@ -1,11 +1,9 @@
 # Logs and errors
 
-import logging
 import os
-import warnings
-from logging.handlers import TimedRotatingFileHandler
 import sys
-
+import logging
+from logging.handlers import TimedRotatingFileHandler
 from tvb_epilepsy.base.constants.configurations import FOLDER_LOGS
 
 
@@ -26,7 +24,7 @@ def initialize_logger(name, target_folder=FOLDER_LOGS):
     ch.setFormatter(formatter)
     ch.setLevel(logging.DEBUG)
 
-    fh = TimedRotatingFileHandler(os.path.join(target_folder, 'logs.log'), when="h", interval=1, backupCount=3)
+    fh = TimedRotatingFileHandler(os.path.join(target_folder, 'logs.log'), when="d", interval=1, backupCount=2)
     fh.setFormatter(formatter)
     fh.setLevel(logging.DEBUG)
 
@@ -34,14 +32,6 @@ def initialize_logger(name, target_folder=FOLDER_LOGS):
     logger.addHandler(fh)
 
     return logger
-
-
-def warning(msg, logger=None, print_warning=True):
-    msg = "\n\n" + msg + "\n"
-    if logger is not None:
-        logger.warning(msg)
-    if print_warning:
-        warnings.warn(msg)
 
 
 def raise_value_error(msg, logger=None):
