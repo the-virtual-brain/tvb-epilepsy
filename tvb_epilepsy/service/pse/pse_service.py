@@ -9,14 +9,18 @@ from tvb_epilepsy.service.model_configuration_service import ModelConfigurationS
 class ABCPSEService(object):
     __metaclass__ = ABCMeta
 
-    logger = initialize_logger(__name__)
-
     params_vals = []
     params_paths = []
     params_indices = []
     params_names = []
     n_params_vals = []
     n_params = 0
+
+    def __init__(self, logger=None):
+        if logger is None:
+            self.logger = initialize_logger(__name__)
+        else:
+            self.logger = logger
 
     def run_pse(self, conn_matrix, grid_mode=False, **kwargs):
         results = []

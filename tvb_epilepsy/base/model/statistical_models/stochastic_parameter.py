@@ -62,13 +62,13 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
     def _confirm_support(self):
         p_star = (self.low - self.loc) / self.scale
         p_star_cdf = self.scipy().cdf(p_star)
-        if p_star_cdf <= 0.0: #+ np.finfo(np.float).eps
+        if np.any(p_star_cdf + np.finfo(np.float).eps <= 0.0): #
             raise_value_error("Lower limit of " + self.name + " base distribution outside support!: " +
                               "\n(self.low-self.loc)/self.scale) = " + str(p_star) +
                               "\ncdf(self.low-self.loc)/self.scale) = " + str(p_star_cdf))
         p_star = (self.high - self.loc) / self.scale
         p_star_cdf = self.scipy().cdf(p_star)
-        if p_star_cdf - np.finfo(np.float).eps >= 1.0:
+        if np.any(p_star_cdf - np.finfo(np.float).eps) >= 1.0:
             warning("Upper limit of base " + self.name + "  distribution outside support!: " +
                     "\n(self.high-self.loc)/self.scale) = " + str(p_star) +
                     "\ncdf(self.high-self.loc)/self.scale) = " + str(p_star_cdf))

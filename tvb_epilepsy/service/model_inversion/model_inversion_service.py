@@ -17,8 +17,6 @@ from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defa
 from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_TAU1, \
     EPILEPTOR_MODEL_TAU0
 
-LOG = initialize_logger(__name__)
-
 
 STATISTICAL_MODEL_TYPES=["vep_sde"] #, "vep_ode", "vep_lsa"]
 
@@ -26,8 +24,11 @@ STATISTICAL_MODEL_TYPES=["vep_sde"] #, "vep_ode", "vep_lsa"]
 class ModelInversionService(object):
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="",
-                 logger=LOG, **kwargs):
-        self.logger = logger
+                 logger=None, **kwargs):
+        if logger is None:
+            self.logger = initialize_logger(__name__)
+        else:
+            self.logger = logger
         self.model_name = model_name
         self.model_generation_time = 0.0
         self.target_data_type = ""

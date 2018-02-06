@@ -4,18 +4,16 @@ import time
 import numpy as np
 import pystan as ps
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES
-from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path, sort_dict
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error, raise_value_error
+from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
+from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error, raise_value_error
 from tvb_epilepsy.service.model_inversion.stan.stan_service import StanService
 from tvb_epilepsy.service.model_inversion.stan.stan_factory import STAN_OUTPUT_OPTIONS
-
-LOG = initialize_logger(__name__)
 
 
 class PyStanService(StanService):
 
     def __init__(self, model_name=None, model=None, model_dir=FOLDER_RES, model_code=None, model_code_path="",
-                 model_data_path="", fitmethod="sampling", random_seed=12345, init="random", logger=LOG, **options):
+                 model_data_path="", fitmethod="sampling", random_seed=12345, init="random", logger=None, **options):
         super(PyStanService, self).__init__(model_name, model, model_dir, model_code, model_code_path, model_data_path,
                                             fitmethod, logger)
         self.assert_fitmethod()

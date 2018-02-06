@@ -11,10 +11,15 @@ from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 
 
 class H5Writer(object):
-    logger = initialize_logger(__name__)
 
     CUSTOM_TYPE_ATTRIBUTE = "EPI_Type"
     CUSTOM_SUBTYPE_ATTRIBUTE = "EPI_Subtype"
+
+    def __init__(self, logger=None):
+        if logger is None:
+            self.logger = initialize_logger(__name__)
+        else:
+            self.logger = logger
 
     # TODO: write variants.
     def write_connectivity(self, connectivity, path):

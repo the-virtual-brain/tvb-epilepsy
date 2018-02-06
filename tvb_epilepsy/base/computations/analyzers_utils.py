@@ -129,7 +129,7 @@ def _butterworth_bandpass(fs, mode, lowcut, highcut, order=3):
     return b, a
 
 
-def filter_data(data, fs, mode, lowcut=None, highcut=None, order=3):
+def filter_data(data, fs, lowcut=None, highcut=None, mode='bandpass', order=3):
     # get filter coefficients
     b, a = _butterworth_bandpass(fs, mode, lowcut, highcut, order)
     # filter data

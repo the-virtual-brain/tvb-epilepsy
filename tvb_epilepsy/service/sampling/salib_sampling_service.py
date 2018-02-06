@@ -2,11 +2,9 @@ import importlib
 import numpy as np
 from SALib.sample import saltelli, fast_sampler, morris, ff
 from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error
+from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
-
-logger = initialize_logger(__name__)
 
 
 class SalibSamplingService(StochasticSamplingService):

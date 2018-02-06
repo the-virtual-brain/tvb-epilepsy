@@ -1,11 +1,9 @@
 import numpy as np
 from SALib.analyze import sobol, delta, fast, morris, dgsm, ff
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
+from tvb_epilepsy.base.utils.log_error_utils import warning, raise_value_error #, initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, list_of_dicts_to_dicts_of_ndarrays
 
 METHODS = ["sobol", "latin", "delta", "dgsm", "fast", "fast_sampler", "morris", "ff", "fractional_factorial"]
-
-logger = initialize_logger(__name__)
 
 
 # TODO: make sensitivity_analysis_from_hypothesis() helper function
