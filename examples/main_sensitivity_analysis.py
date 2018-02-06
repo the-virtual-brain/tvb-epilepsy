@@ -1,5 +1,4 @@
 import os
-import warnings
 import numpy as np
 from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.constants.configurations import DATA_CUSTOM, FOLDER_RES
@@ -61,4 +60,4 @@ if __name__ == "__main__":
             writer.write_dictionary(sa_results,
                                     os.path.join(FOLDER_RES, m + "_SA_LSA_results_" + lsa_hypothesis.name + ".h5"))
         except:
-            warnings.warn("Method " + m + " failed!")
+            logger.warning("Method " + m + " failed!")
