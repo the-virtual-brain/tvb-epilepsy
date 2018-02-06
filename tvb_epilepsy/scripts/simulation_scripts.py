@@ -166,7 +166,7 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
 
     if save_flag:
         h5_writer = H5Writer()
-        h5_writer.write_ts_epi(raw_data, dt, vois_ts_dict["lfp"], os.path.join(folder, filename))
+        h5_writer.write_ts_epi(raw_data, dt, os.path.join(folder, filename), vois_ts_dict["lfp"])
         # Write files:
         if idx_proj > -1:
             for i_sensor, sensor in enumerate(sensors_list):
