@@ -749,7 +749,7 @@ class Plotter(BasePlotter):
                              special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                              title=name + ": Hidden states fit rasterplot",
                              subtitles=['hidden state ' + x1_str, 'hidden state z'], offset=1.0,
-                             labels=region_labels[region_inds], save_flag=save_flag,
+                             labels=region_labels[region_inds],
                              figure_dir=figure_dir,
                              figure_format=figure_format, figsize=VERY_LARGE_SIZE)
             self.plot_raster(sort_dict({dX1t_str: sample[dX1t_str].T, dZt_str: sample[dZt_str].T}), time[:-1], #
