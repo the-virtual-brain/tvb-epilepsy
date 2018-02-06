@@ -16,12 +16,10 @@ from tvb_epilepsy.io.h5_writer import H5Writer
 class StanService(object):
     __metaclass__ = ABCMeta
 
+    logger = initialize_logger(__name__)
+
     def __init__(self, model_name="", model=None, model_dir=FOLDER_RES, model_code=None, model_code_path="",
-                 model_data_path="", fitmethod="sampling", logger=None):
-        if logger is None:
-            self.logger = initialize_logger(__name__)
-        else:
-            self.logger = logger
+                 model_data_path="", fitmethod="sampling"):
         self.fitmethod = fitmethod
         self.model_name = model_name
         self.model = model

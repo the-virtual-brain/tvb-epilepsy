@@ -11,13 +11,10 @@ from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.lsa_service import LSAService
 
-LOG = initialize_logger(__name__)
+logger = initialize_logger(__name__)
 
 
-def start_lsa_run(hypothesis, model_connectivity, logger=None):
-    if logger is None:
-        logger = initialize_logger(__name__)
-
+def start_lsa_run(hypothesis, model_connectivity):
     logger.info("creating model configuration...")
     model_configuration_service = ModelConfigurationService(hypothesis.number_of_regions)
     model_configuration = model_configuration_service. \
@@ -32,8 +29,7 @@ def start_lsa_run(hypothesis, model_connectivity, logger=None):
 
 
 def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
-                            plot_head=False, figure_dir=FOLDER_FIGURES, sensors_filename="SensorsInternal.h5",
-                            logger=LOG):
+                            plot_head=False, figure_dir=FOLDER_FIGURES, sensors_filename="SensorsInternal.h5"):
     if data_mode is TVB:
         from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
     else:
@@ -91,7 +87,7 @@ def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=os.path.jo
 
 def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
                                         plot_flag=True, save_flag=True, results_dir=FOLDER_RES,
-                                        figure_dir=FOLDER_FIGURES, logger=LOG, **kwargs):
+                                        figure_dir=FOLDER_FIGURES, **kwargs):
     logger.info("\n\nRunning hypothesis: " + hyp.name)
     logger.info("\n\nCreating model configuration...")
     model_configuration_service = ModelConfigurationService(hyp.number_of_regions, **kwargs)

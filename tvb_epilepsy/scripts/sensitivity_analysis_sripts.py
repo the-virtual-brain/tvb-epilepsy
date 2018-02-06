@@ -130,7 +130,7 @@ def sensitivity_analysis_pse_from_hypothesis(hypothesis, connectivity_matrix, re
     # Compute lsa for this hypothesis before sensitivity analysis:
     logger.info("Running hypothesis: " + hypothesis.name)
     model_configuration_service, model_configuration, lsa_service, lsa_hypothesis = \
-        start_lsa_run(hypothesis, connectivity_matrix, logger)
+        start_lsa_run(hypothesis, connectivity_matrix)
     results, pse_results = sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix,
                                                                         region_labels,
                                                                         n_samples, method, half_range, global_coupling,

@@ -141,7 +141,7 @@ def pse_from_hypothesis(hypothesis, model_connectivity, region_labels, n_samples
     # Compute lsa for this hypothesis before the parameter search:
     logger.info("Running hypothesis: " + hypothesis.name)
     model_configuration_service, model_configuration, lsa_service, lsa_hypothesis = \
-        start_lsa_run(hypothesis, model_connectivity, logger)
+        start_lsa_run(hypothesis, model_connectivity)
     pse_results, pse_params_list = pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
                                                            n_samples, param_range, global_coupling,
                                                            healthy_regions_parameters,

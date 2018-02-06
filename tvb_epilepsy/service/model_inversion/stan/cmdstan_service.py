@@ -13,9 +13,9 @@ class CmdStanService(StanService):
 
     def __init__(self, model_name=None, model=None, model_dir=FOLDER_RES,
                  model_code=None, model_code_path="", model_data_path="", cmdstanpath=CMDSTAN_PATH,
-                 fitmethod="sample", random_seed=12345, init="random", logger=None, **options):
+                 fitmethod="sample", random_seed=12345, init="random", **options):
         super(CmdStanService, self).__init__(model_name, model, model_dir, model_code, model_code_path, model_data_path,
-                                             fitmethod, logger)
+                                             fitmethod)
         self.assert_fitmethod()
         if not os.path.isfile(os.path.join(cmdstanpath, 'runCmdStanTests.py')):
             raise_value_error('Please provide CmdStan path, e.g. lib.cmdstan_path("/path/to/")!')

@@ -166,8 +166,7 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
                     from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
                                                            sim_type=sim_type, dynamical_model=dynamical_model,
                                                            simulation_mode=TVB, ts_file=ts_file, plot_flag=True,
-                                                           results_dir=sim_folder_res, figure_dir=sim_folder_figs,
-                                                           logger=logger)
+                                                           results_dir=sim_folder_res, figure_dir=sim_folder_figs)
 
 
 if __name__ == "__main__":

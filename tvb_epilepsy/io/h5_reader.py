@@ -17,6 +17,7 @@ from tvb_epilepsy.io.h5_model import read_h5_model
 
 
 class H5Reader(object):
+    logger = initialize_logger(__name__)
 
     connectivity_filename = "Connectivity.h5"
     cortical_surface_filename = "CorticalSurface.h5"
@@ -25,12 +26,6 @@ class H5Reader(object):
     structural_mri_filename = "StructuralMRI.h5"
     sensors_filename_prefix = "Sensors"
     sensors_filename_separator = "_"
-
-    def __init__(self, logger=None):
-        if logger is None:
-            self.logger = initialize_logger(__name__)
-        else:
-            self.logger = logger
 
     def read_connectivity(self, path):
         """

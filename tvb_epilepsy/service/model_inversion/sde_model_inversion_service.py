@@ -2,7 +2,6 @@ import time
 import numpy as np
 from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
 from tvb_epilepsy.base.constants.model_inversion_constants import SIG_DEF
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.statistical_models.sde_statistical_model import SDEStatisticalModel
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
 from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_NVARS
@@ -12,9 +11,9 @@ from tvb_epilepsy.service.model_inversion.ode_model_inversion_service import ODE
 class SDEModelInversionService(ODEModelInversionService):
 
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name=None,
-                 logger=None, **kwargs):
+                 **kwargs):
         super(SDEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
-                                                       model_name, logger, **kwargs)
+                                                       model_name, **kwargs)
         self.set_default_parameters(**kwargs)
 
     def get_default_sig(self, **kwargs):
