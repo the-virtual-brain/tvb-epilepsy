@@ -81,7 +81,7 @@ class BasePlotter(object):
         ax = pyplot.subplot(subplot, sharey=sharey)
         # ax.hold(True)
         pyplot.title(title)
-        n_vector = labels.shape[0]
+        n_vector = len(labels)
         y_ticks = numpy.array(range(n_vector), dtype=numpy.int32)
         # the vector plot
         coldif = False
@@ -191,7 +191,7 @@ class BasePlotter(object):
         fig.suptitle(description)
         n_subplots = len(data_dict_list)
         if width_ratios == []:
-            width_rations = numpy.ones((n_subplots,)).tolist()
+            width_ratios = numpy.ones((n_subplots,)).tolist()
         matplotlib.gridspec.GridSpec(1, n_subplots, width_ratios)
         if n_subplots < 10 and n_subplots > 0:
             subplot_ind0 = 100 + 10 * n_subplots
@@ -231,49 +231,53 @@ class BasePlotter(object):
 
     def plots(self, data_dict, shape=None, transpose=False, skip=0, xlabels={}, xscales={}, yscales={}, title='Plots',
               figure_name=None, figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT):
-        pyplot.figure(title, figsize=figsize)
         if shape is None:
             shape = (1, len(data_dict))
+        fig, axes = pyplot.subplots(shape[0], shape[1], figsize=figsize)
+        fig.set_label(title)
         for i, key in enumerate(data_dict.keys()):
-            pyplot.subplot(shape[0], shape[1], i + 1)
+            ind = numpy.unravel_index(i, shape)
             if transpose:
-                pyplot.plot(data_dict[key].T[skip:])
+                axes[ind].plot(data_dict[key].T[skip:])
             else:
-                pyplot.plot(data_dict[key][skip:])
-            ax = pyplot.gca()
-            ax.set_xscale(xscales.get(key, "linear"))
-            ax.set_yscale(xscales.get(key, "linear"))
-            pyplot.xlabel(xlabels.get(key, ""))
-            pyplot.ylabel(key)
-        pyplot.tight_layout()
-        self._save_figure(pyplot.gcf(), figure_name, figure_dir, figure_format)
+                axes[ind].plot(data_dict[key][skip:])
+            axes[ind].set_xscale(xscales.get(key, "linear"))
+            axes[ind].set_yscale(xscales.get(key, "linear"))
+            axes[ind].set_xlabel(xlabels.get(key, ""))
+            axes[ind].set_ylabel(key)
+        fig.tight_layout()
+        self._save_figure(fig, figure_name, figure_dir, figure_format)
         self._check_show()
+        return fig, axes
 
-    def pair_plots(self, data, keys, transpose=False, skip=0, title='Pair plots', figure_name=None,
+    def pair_plots(self, data, keys, transpose=False, skip=0, title='Pair plots', subtitles=None, figure_name=None,
                    figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT):
-        pyplot.figure(title, figsize=figsize)
-        n = len(keys)
+        if subtitles is None:
+            subtitles = keys
         data = ensure_list(data)
+        n = len(keys)
+        fig, axes = pyplot.subplots(n, n, figsize=figsize)
+        fig.set_label(title)
         for i, key_i in enumerate(keys):
             for j, key_j in enumerate(keys):
-                pyplot.subplot(n, n, i * n + j + 1, )
                 for datai in data:
                     if transpose:
                         di = datai[key_i].T[skip:]
                     else:
                         di = datai[key_i][skip:]
                     if i == j:
-                        pyplot.hist(di, int(numpy.round(numpy.sqrt(len(di)))), log=True)
+                        axes[i, j].hist(di, int(numpy.round(numpy.sqrt(len(di)))), log=True)
                     else:
                         if transpose:
                             dj = datai[key_j].T[skip:]
                         else:
                             dj = datai[key_j][skip:]
-                        pyplot.plot(dj, di, '.')
+                        axes[i, j].plot(dj, di, '.')
                 if i == 0:
-                    pyplot.title(key_j)
+                    axes[i, j].set_title(subtitles[j])
                 if j == 0:
-                    pyplot.ylabel(key_i)
-        pyplot.tight_layout()
-        self._save_figure(pyplot.gcf(), figure_name, figure_dir, figure_format)
+                    axes[i, j].set_ylabel(key_i)
+        fig.tight_layout()
+        self._save_figure(fig, figure_name, figure_dir, figure_format)
         self._check_show()
+        return fig, axes

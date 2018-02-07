@@ -33,8 +33,8 @@ FOLDER_VEP_HOME = os.path.join(FOLDER_VEP_ONLINE, "tests")
 
 def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_matrix=None):
     from copy import deepcopy
-    active_regions = model_data["active_regions"]
-    SC = statistical_model.parameters["MC"].mode[active_regions][:, active_regions]
+    active_regions = model_data["active_regions"]-1
+    SC = statistical_model.parameters["MC"].mode
     act_reg_ones = np.ones((model_data["n_active_regions"],))
     vep_data = {"nn": model_data["n_active_regions"],
                 "nt": model_data["n_times"],
@@ -48,6 +48,7 @@ def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_mat
                 "x0_hi": -2.0,
                 "x_init_mu": statistical_model.parameters["x1init"].mean[active_regions].mean()*act_reg_ones,
                 "z_init_mu": statistical_model.parameters["zinit"].mean[active_regions].mean()*act_reg_ones,
+                "x_eq_def": statistical_model.parameters["x1eq"].mean[model_data["nonactive_regions"]-1].mean(),
                 "init_std": np.mean(statistical_model.parameters["x1init"].std),
                 "tau0": 30.0,#statistical_model.parameters["tau0"].mean,
                 # "K_lo": statistical_model.parameters["K"].low,
@@ -57,9 +58,9 @@ def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_mat
                 "time_scale_std": statistical_model.parameters["tau1"].std,
                 "k_mu": statistical_model.parameters["K"].mean,
                 "k_std": statistical_model.parameters["K"].std,
-                "SC": SC,
+                "SC": SC[active_regions][:, active_regions],
                 "SC_var": 5.0,  # 1/36 = 0.02777777,
-                "Ic": np.sum(SC, axis=1),
+                "Ic": np.sum(SC[model_data["nonactive_regions"]-1], axis=1),
                 "sigma_mu": statistical_model.parameters["sig"].mean*10,
                 "sigma_std": statistical_model.parameters["sig"].std*10,
                 "epsilon_mu": statistical_model.parameters["eps"].mean,
@@ -190,7 +191,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                 n_electrodes = 8
                 sensors_per_electrode = 2
                 sensors_lbls = model_inversion.sensors_labels
-            # -------------------------- Select and set observation signals -----------------------------------
+                # -------------------------- Select and set observation signals -----------------------------------
             signals, time, statistical_model, vois_ts_dict = \
                 model_inversion.set_target_data_and_time(target_data_type, vois_ts_dict, statistical_model,
                                                          decimate=decimate, cut_signals_tails=cut_signals_tails,
@@ -225,7 +226,11 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             # except:
             model_data = model_inversion.generate_model_data(statistical_model, signals)
             writer.write_dictionary(model_data, os.path.join(results_dir, hyp.name + "_ModelData.h5"))
-
+        if os.path.isfile(EMPIRICAL):
+            simulation_values = None
+        else:
+            simulation_values = {"x0": model_configuration.x0, "x1eq": model_configuration.x1EQ,
+                                 "x1init": model_configuration.x1EQ, "zinit": model_configuration.zEQ}
         # Stupid code to interface with INS stan model
         if stats_model_name in ["vep-fe-rev-05", "vep-fe-rev-08", "vep-fe-rev-08a", "vep-fe-rev-08b"]:
 
@@ -240,6 +245,10 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             k_str = "k"
             pair_plot_params=["time_scale", "k", "sigma", "epsilon", "amplitude", "offset"]
             region_violin_params = ["x0", "x_init", "z_init"]
+            if simulation_values is not None:
+                simulation_values.update({"x0": simulation_values["x0"][statistical_model.active_regions]})
+                simulation_values.update({"x_init": simulation_values["x1init"][statistical_model.active_regions]})
+                simulation_values.update({"z_init": simulation_values["zinit"][statistical_model.active_regions]})
             connectivity_plot = False
             estMC = lambda: model_configuration.model_connectivity
             region_mode = "active"
@@ -262,11 +271,17 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                                   chains=4, refresh=1, num_warmup=200, num_samples=200, **kwargs)
         writer.write_generic(ests, results_dir, hyp.name + "_fit_est.h5")
         writer.write_generic(samples, results_dir, hyp.name + "_fit_samples.h5")
+        if summary is not None:
+            writer.write_generic(summary, results_dir, hyp.name + "_fit_summary.h5")
+            if isinstance(summary, dict):
+                R_hat = summary.get("R_hat", None)
+                if R_hat is not None:
+                    R_hat = {"R_hat": R_hat}
         ests = ensure_list(ests)
         plotter.plot_fit_results(model_inversion, ests, samples, statistical_model, model_data[input_signals_str],
-                                 model_data["time"], region_mode,
-                                 seizure_indices=lsa_hypothesis.get_regions_disease_indices(),
-                                 x1_str=x1_str, signals_str=signals_str, sig_str=sig_str, eps_str=eps_str, dX1t_str=dX1t_str,
+                                 R_hat, model_data["time"], simulation_values, region_mode,
+                                 seizure_indices=lsa_hypothesis.get_regions_disease_indices(), x1_str=x1_str,
+                                 signals_str=signals_str, sig_str=sig_str, dX1t_str=dX1t_str,
                                  dZt_str=dZt_str,  trajectories_plot=True, connectivity_plot=connectivity_plot,
                                  pair_plot_params=pair_plot_params, region_violin_params=region_violin_params)
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
