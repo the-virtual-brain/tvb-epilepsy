@@ -1,7 +1,7 @@
 
 import os
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import DATA_CUSTOM, FOLDER_RES
+from tvb_epilepsy.base.constants.configurations import HEAD_FOLDER, FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.io.h5_writer import H5Writer
@@ -14,12 +14,10 @@ logger = initialize_logger(__name__)
 if __name__ == "__main__":
     # -------------------------------Reading data-----------------------------------
 
-    data_folder = os.path.join(DATA_CUSTOM, 'Head')
-
     reader = Reader()
     writer = H5Writer()
 
-    head = reader.read_head(data_folder)
+    head = reader.read_head(HEAD_FOLDER)
 
     # --------------------------Hypothesis definition-----------------------------------
 

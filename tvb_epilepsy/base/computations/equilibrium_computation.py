@@ -2,6 +2,7 @@
 Module to compute the resting equilibrium point of a Virtual Epileptic Patient module
 """
 
+import numpy
 from tvb_epilepsy.base.constants.module_constants import *
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_epilepsy.base.computations.calculations_utils import *

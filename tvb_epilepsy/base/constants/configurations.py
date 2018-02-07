@@ -16,6 +16,8 @@ if RUN_ENV == "test":
     FOLDER_LOGS = os.path.join(os.getcwd(), "logs")
     FOLDER_RES = os.path.join(os.getcwd(), "res")
     FOLDER_FIGURES = os.path.join(os.getcwd(), "figs")
+    HEAD_FOLDER = os.path.join(DATA_TEST, "head2")
+
 else:
     FOLDER_VEP_ONLINE = os.path.join(USER_HOME, 'Dropbox', 'Work', 'VBtech', 'VEP', 'results')
     FOLDER_VEP = os.path.join(FOLDER_VEP_ONLINE, "CC")
@@ -31,7 +33,9 @@ else:
         DATA_TVB = os.path.join(USER_HOME, 'CBR_software', 'svn-tvb', 'tvb-data', 'tvb-data')
         DATA_CUSTOM = os.path.join(FOLDER_VEP, 'TVB3')
     if not (os.path.isdir(FOLDER_VEP_TESTS)):
-        os.mkdir(FOLDER_VEP_TESTS)
+        os.makedirs(FOLDER_VEP_TESTS)
+
+    HEAD_FOLDER = os.path.join(DATA_CUSTOM, 'Head')
     # Folder where input data will be
     # FOLDER_DATA = os. path.join(FOLDER_VEP, 'data')
     # Folder where logs will be written
