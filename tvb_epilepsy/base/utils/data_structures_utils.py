@@ -1,33 +1,31 @@
-# Data structure manipulations and conversions:
+# Data structure manipulations and conversions
 
+import re
+import numpy as np
 from collections import OrderedDict
 from copy import deepcopy
-import re
-
-import numpy as np
-
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, raise_import_error, initialize_logger
 from tvb_epilepsy.base.constants.module_constants import MAX_INT_VALUE
 
-
 logger = initialize_logger(__name__)
+
 
 def vector2scalar(x):
     if not (isinstance(x, np.ndarray)):
         return x
     else:
-        y=np.squeeze(x)
-    if all(y.squeeze()==y[0]):
+        y = np.squeeze(x)
+    if all(y.squeeze() == y[0]):
         return y[0]
     else:
         return reg_dict(x)
 
 
 def list_of_strings_to_string(lstr, sep=","):
-    str = lstr[0]
+    result_str = lstr[0]
     for s in lstr[1:]:
-        str += sep+s
-    return str
+        result_str += sep + s
+    return result_str
 
 
 def dict_str(d):
@@ -93,7 +91,7 @@ def obj_to_dict(obj):
         return obj
     if isinstance(obj, (np.float32,)):
         return float(obj)
-    if isinstance(obj, (np.ndarray)):
+    if isinstance(obj, (np.ndarray,)):
         return obj.tolist()
     if isinstance(obj, list):
         ret = []
@@ -126,7 +124,7 @@ def reg_dict(x, lbl=None, sort=None):
         labels_no = len(lbl)
         total_no = min(labels_no, x_no)
         if x_no <= labels_no:
-            if sort=='ascend':
+            if sort == 'ascend':
                 ind = np.argsort(x).tolist()
             elif sort == 'descend':
                 ind = np.argsort(x)
@@ -139,11 +137,11 @@ def reg_dict(x, lbl=None, sort=None):
         for i in ind:
             d[str(i) + '.' + str(lbl[i])] = x[i]
         if labels_no > total_no:
-            ind_lbl = np.delete(np.array(range(labels_no)),ind).tolist()
+            ind_lbl = np.delete(np.array(range(labels_no)), ind).tolist()
             for i in ind_lbl:
                 d[str(i) + '.' + str(lbl[i])] = None
         if x_no > total_no:
-            ind_x = np.delete(np.array(range(x_no)),ind).tolist()
+            ind_x = np.delete(np.array(range(x_no)), ind).tolist()
             for i in ind_x:
                 d[str(i) + '.'] = x[i]
         return d
@@ -196,17 +194,17 @@ def arrays_of_dicts_to_dicts_of_ndarrays(arr):
 
 
 def dicts_of_lists_to_lists_of_dicts(dictionary):
-    return [dict(zip(dictionary,t)) for t in zip(*dictionary.values())]
+    return [dict(zip(dictionary, t)) for t in zip(*dictionary.values())]
 
 
 def ensure_list(arg):
     if not (isinstance(arg, list)):
-        try: #if iterable
+        try:  # if iterable
             if isinstance(arg, (basestring, dict)):
                 arg = [arg]
             else:
                 arg = list(arg)
-        except: #if not iterable
+        except:  # if not iterable
             arg = [arg]
     return arg
 
@@ -270,13 +268,12 @@ def labels_to_inds(labels, lbls):
 
 # This function is meant to confirm that two objects assumingly of the same type are equal, i.e., identical
 def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
-
     def print_not_equal_message(attr, field1, field2, logger):
         # logger.error("\n\nValueError: Original and read object field "+ attr + " not equal!")
         # raise_value_error("\n\nOriginal and read object field " + attr + " not equal!")
         logger.warning("Original and read object field " + attr + " not equal!" +
-                "\nOriginal field:\n" + str(field1) +
-                "\nRead object field:\n" + str(field2), logger)
+                       "\nOriginal field:\n" + str(field1) +
+                       "\nRead object field:\n" + str(field2), logger)
 
     if isinstance(obj1, dict):
         get_field1 = lambda obj, key: obj[key]
@@ -333,7 +330,7 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
         except:
             try:
                 logger.warning("Comparing str(objects) for field "
-                        + attributes_dict[attribute] + " because there was an error!", logger)
+                               + attributes_dict[attribute] + " because there was an error!", logger)
                 if np.any(str(field1) != str(field2)):
                     print_not_equal_message(attributes_dict[attribute], field1, field2, logger)
                     equal = False
@@ -355,7 +352,7 @@ def shape_to_size(shape):
 
 def shape_to_ndim(shape, squeeze=False):
     if squeeze:
-        shape = filter(lambda x: not(np.any(np.in1d(x, [0, 1]))), list(shape))
+        shape = filter(lambda x: not (np.any(np.in1d(x, [0, 1]))), list(shape))
     return len(shape)
 
 
@@ -371,6 +368,7 @@ def linspace_broadcast(start, stop, num_steps, maxdims=3):
             dims = dims + 1
     return x
 
+
 def squeeze_array_to_scalar(arr):
     arr = np.array(arr)
     if arr.size == 1:
@@ -384,12 +382,12 @@ def squeeze_array_to_scalar(arr):
 def assert_arrays(params, shape=None, transpose=False):
     # type: (object, object) -> object
     if shape is None or \
-        not(isinstance(shape, tuple)
-            and len(shape) in range(3) and np.all([isinstance(s, (int, np.int)) for s in shape])):
+            not (isinstance(shape, tuple)
+                 and len(shape) in range(3) and np.all([isinstance(s, (int, np.int)) for s in shape])):
         shape = None
-        shapes = [] # list of all unique shapes
-        n_shapes = []   # list of all unique shapes' frequencies
-        size = 0    # initial shape
+        shapes = []  # list of all unique shapes
+        n_shapes = []  # list of all unique shapes' frequencies
+        size = 0  # initial shape
     else:
         size = shape_to_size(shape)
 
@@ -411,7 +409,7 @@ def assert_arrays(params, shape=None, transpose=False):
                 params[ip] = np.array(params[ip])
             else:
                 raise_value_error("Input " + str(params[ip]) + " of type " + str(type(params[ip])) + " is not numeric, "
-                                                                                  "of type np.ndarray, nor Symbol")
+                                                                                                     "of type np.ndarray, nor Symbol")
         if shape is None:
             # Only one size > 1 is acceptable
             if params[ip].size != size:
@@ -423,7 +421,7 @@ def assert_arrays(params, shape=None, transpose=False):
             ind = np.array([(x == params[ip].shape) for x in shapes])
             if np.any(ind):
                 ind = np.where(ind)[0]
-                #TODO: handle this properly
+                # TODO: handle this properly
                 n_shapes[int(ind)] += 1
             else:
                 shapes.append(params[ip].shape)
@@ -443,7 +441,7 @@ def assert_arrays(params, shape=None, transpose=False):
 
     if transpose and len(shape) > 1:
         if (transpose is "horizontal" or "row" and shape[0] > shape[1]) or \
-           (transpose is "vertical" or "column" and shape[0] < shape[1]):
+                (transpose is "vertical" or "column" and shape[0] < shape[1]):
             shape = list(shape)
             temp = shape[1]
             shape[1] = shape[0]
@@ -459,7 +457,7 @@ def assert_arrays(params, shape=None, transpose=False):
                 else:
                     params[ip] = np.reshape(params[ip], shape)
         except:
-            #TODO: maybe make this an explicit message
+            # TODO: maybe make this an explicit message
             logger.info("\n\nwhat the fuck??")
 
     if len(params) == 1:
@@ -520,7 +518,3 @@ def copy_object_attributes(obj1, obj2, attr1, attr2=None, deep_copy=False, check
         for a1, a2 in zip(attr1, attr2):
             fcopy(a1, a2)
     return obj2
-
-
-
-

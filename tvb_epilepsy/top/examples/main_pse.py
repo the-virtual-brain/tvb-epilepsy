@@ -1,7 +1,6 @@
+
 import os
-
 import numpy as np
-
 from tvb_epilepsy.base.constants.configurations import DATA_CUSTOM, FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis

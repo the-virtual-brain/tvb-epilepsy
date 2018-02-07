@@ -1,8 +1,7 @@
+
 import os
-from copy import deepcopy
-
 import numpy as np
-
+from copy import deepcopy
 from tvb_epilepsy.base.constants.module_constants import DATA_MODE, TVB
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM
 from tvb_epilepsy.io.h5_model import read_h5_model

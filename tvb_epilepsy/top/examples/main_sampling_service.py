@@ -1,7 +1,7 @@
-from copy import deepcopy
+
 
 import numpy as np
-
+from copy import deepcopy
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
