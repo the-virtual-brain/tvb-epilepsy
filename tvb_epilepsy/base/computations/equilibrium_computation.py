@@ -2,21 +2,14 @@
 Module to compute the resting equilibrium point of a Virtual Epileptic Patient module
 """
 
-import numpy
-from scipy.optimize import root
-
-from tvb_epilepsy.base.constants.module_constants import SYMBOLIC_CALCULATIONS_FLAG
-from tvb_epilepsy.base.constants.model_constants import X1_DEF, X1_EQ_CR_DEF, A_DEF, B_DEF, D_DEF, SLOPE_DEF, \
-                                                                                                       S_DEF, GAMMA_DEF
-from tvb_epilepsy.base.utils.data_structures_utils import assert_arrays
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error
-from tvb_epilepsy.base.computations.calculations_utils import calc_x0, calc_fx1, calc_fx1z, calc_fy1, calc_fz, calc_fg,\
-                                                  calc_coupling, calc_dfun, calc_fx1z_2d_x1neg_zpos_jac, calc_fx1z_diff
+from tvb_epilepsy.base.constants.module_constants import *
+from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
+from tvb_epilepsy.base.computations.calculations_utils import *
 
 logger = initialize_logger(__name__)
 
 
-if SYMBOLIC_CALCULATIONS_FLAG :
+if SYMBOLIC_CALCULATIONS_FLAG:
 
     try:
         from sympy import solve, solve_poly_system, solveset, S, lambdify

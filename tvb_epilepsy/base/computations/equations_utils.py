@@ -1,7 +1,5 @@
-import numpy as np
 
-from tvb_epilepsy.base.constants.model_constants import A_DEF, B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF, \
-    I_EXT2_DEF, TAU0_DEF, TAU1_DEF, TAU2_DEF
+from tvb_epilepsy.base.constants.model_constants import *
 from tvb_epilepsy.base.utils.data_structures_utils import assert_arrays
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 
@@ -54,11 +52,13 @@ def eqtn_coupling_diff(K, w, ix, jx):
 
 
 def eqtn_x0cr_r(Iext1, yc, a, b, d, x1_rest, x1_cr, x0_rest, x0_cr, zmode=np.array("lin")):
-    # Correspondance with EpileptorDP2D
+    # Correspondence with EpileptorDP2D
     b = b - d
     if zmode == 'lin':
-        return 0.25*(x0_rest*(a*x1_cr**3 - a*x1_rest**3 - b*x1_cr**2 + b*x1_rest**2 + 4.0*x1_cr - 4.0*x1_rest) +
-                     (x0_cr - x0_rest)*(Iext1 - a*x1_rest**3 + b*x1_rest**2 - 4.0*x1_rest + yc))/(x0_cr - x0_rest), \
+        return 0.25 * (x0_rest * (a * x1_cr ** 3 - a * x1_rest ** 3 - b * x1_cr ** 2 +
+                                  b * x1_rest ** 2 + 4.0 * x1_cr - 4.0 * x1_rest) +
+                       (x0_cr - x0_rest) * (Iext1 - a * x1_rest ** 3 + b * x1_rest ** 2 -
+                                            4.0 * x1_rest + yc)) / (x0_cr - x0_rest), \
                0.25 * (a * x1_cr ** 3 - a * x1_rest ** 3 - b * x1_cr ** 2 + b * x1_rest ** 2 + 4.0 * x1_cr -
                        4.0 * x1_rest) / (x0_cr - x0_rest)
     elif zmode == 'sig':
@@ -78,11 +78,12 @@ def eqtn_x0cr_r(Iext1, yc, a, b, d, x1_rest, x1_cr, x0_rest, x0_cr, zmode=np.arr
                 Iext1 - a * x1_rest ** 3 + b * x1_rest ** 2 + yc - 3.0)) + (
                 3.2e+66 * 20000000000000.0 ** (10 * x1_rest) + 4.74922109128249e+68 * 54365636569181.0 ** (
                 10 * x1_rest)) * (3.2e+66 * 1.024e+133 ** x1_cr * (Iext1 - a * x1_cr ** 3 + b * x1_cr ** 2 + yc) +
-                                     4.74922109128249e+68 * 2.25551009738825e+137 ** x1_cr * (
-                                     Iext1 - a * x1_cr ** 3 + b * x1_cr ** 2 + yc - 3.0))) / \
-                 ((3.2e+66 * 20000000000000.0 ** (10.0 * x1_cr) + 4.74922109128249e+68 * 54365636569181.0 ** (
-                   10.0 * x1_cr)) * (3.2e+66 * 20000000000000.0 ** (10.0 * x1_rest) +
-                                   4.74922109128249e+68 * 54365636569181.0 ** (10.0 * x1_rest)) * (-x0_cr + x0_rest))
+                                  4.74922109128249e+68 * 2.25551009738825e+137 ** x1_cr * 
+                                  (Iext1 - a * x1_cr ** 3 + b * x1_cr ** 2 + yc - 3.0))) / \
+               ((3.2e+66 * 20000000000000.0 ** (10.0 * x1_cr) + 4.74922109128249e+68 * 54365636569181.0 ** (
+                       10.0 * x1_cr)) * (3.2e+66 * 20000000000000.0 ** (10.0 * x1_rest) +
+                                         4.74922109128249e+68 * 54365636569181.0 ** (10.0 * x1_rest)) *
+                (-x0_cr + x0_rest))
     else:
         raise_value_error('zmode is neither "lin" nor "sig"')
 
@@ -104,26 +105,26 @@ def eqtn_x0(x1, z, zmode=np.array("lin"), z_pos=True, K=None, w=None, coupl=None
 
 def eqtn_fx1(x1, z, y1, Iext1, slope, a, b, d, tau1, x1_neg=True, model="2d", x2=0.0):
     if model == "2d":
-        # Correspondance with EpileptorDP2D
+        # Correspondence with EpileptorDP2D
         b = b - d
         return np.multiply(y1 - z + Iext1 + np.multiply(x1, np.where(x1_neg, if_ydot0(x1, a, b),
-                                                                         else_ydot0_2d(x1, z, slope, d))), tau1)
+                                                                     else_ydot0_2d(x1, z, slope, d))), tau1)
     else:
         return np.multiply(y1 - z + Iext1 + np.multiply(x1, np.where(x1_neg, if_ydot0(x1, a, b),
                                                                      else_ydot0_6d(x2, z, slope))), tau1)
 
 
 def eqtn_fx1_2d_taylor_lin(x1, x_taylor, z, yc, Iext1, a, b, d, tau1):
-    # Correspondance with EpileptorDP2D
+    # Correspondence with EpileptorDP2D
     b = b - d
-    return np.multiply(Iext1+ 2 * np.multiply(np.power(x_taylor, 3), a)
-            - np.multiply(np.power(x_taylor, 2), b) + yc - z
-            + np.multiply(x1, (-3 * np.multiply(np.power(x_taylor, 2), a)
-            + 2 * np.multiply(x_taylor, b))), tau1)
+    return np.multiply(Iext1 + 2 * np.multiply(np.power(x_taylor, 3), a)
+                       - np.multiply(np.power(x_taylor, 2), b) + yc - z
+                       + np.multiply(x1, (-3 * np.multiply(np.power(x_taylor, 2), a)
+                                          + 2 * np.multiply(x_taylor, b))), tau1)
 
 
 def eqtn_jac_x1_2d(x1, z, slope, a, b, d, tau1, x1_neg=True):
-    # Correspondance with EpileptorDP2D
+    # Correspondence with EpileptorDP2D
     b = b - d
     jac_x1 = np.diag(
         np.multiply(np.where(x1_neg, np.multiply(-3.0 * np.multiply(a, x1) + 2.0 * np.multiply(b, 1.0), x1),
@@ -200,7 +201,7 @@ def eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode=np.array("lin"), z_pos=True, K=None,
 
 def eqtn_fx1z_2d_zpos_jac(x1, K, w, ix0, iE, a, b, d, tau1, tau0):
     x1, K, a, b, tau1, tau0 = assert_arrays([x1, K, a, b, d, tau1, tau0], (1, x1.size))
-    # Correspondance with EpileptorDP2D
+    # Correspondence with EpileptorDP2D
     b = b - d
     no_x0 = len(ix0)
     no_e = len(iE)
@@ -238,7 +239,7 @@ def eqtn_fy2(x2, y2, s, tau1, tau2, x2_neg=False):
 
 
 def eqtn_fg(x1, g, gamma, tau1):
-    return np.multiply(-g + np.multiply(gamma, x1),  tau1)
+    return np.multiply(-g + np.multiply(gamma, x1), tau1)
 
 
 def eqtn_fx0(x0_var, x0, tau1):
@@ -331,8 +332,8 @@ def eqtn_fz_square_taylor(zeq, yc, Iext1, K, w, tau1, tau0):
     # Diagonal elements: -1 + dfz_i * (4 + K_i * sum_j_not_i{wij})
     # Off diagonal elements: -K_i * wij_not_i * dfz_j_not_i
     i = np.ones((1, n_regions), dtype=np.float32)
-    fz_jac = np.diag((-1.0 + np.multiply(dfz, (4.0 + np.multiply(K, np.expand_dims(np.sum(w, axis=1), 1).T)))).T[:, 0]) \
-             - np.multiply(np.multiply(np.dot(K.T, i), np.dot(i.T, dfz)), w)
+    fz_jac = np.diag((-1.0 + np.multiply(dfz, (4.0 + np.multiply(K, np.expand_dims(np.sum(w, axis=1), 1).T)))).T[:,
+                     0]) - np.multiply(np.multiply(np.dot(K.T, i), np.dot(i.T, dfz)), w)
     try:
         if np.any([np.any(np.isnan(fz_jac.flatten())), np.any(np.isinf(fz_jac.flatten()))]):
             raise_value_error("nan or inf values in dfz")
