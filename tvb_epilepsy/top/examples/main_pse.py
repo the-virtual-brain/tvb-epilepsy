@@ -7,7 +7,7 @@ from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
-from tvb_epilepsy.scripts.pse_scripts import pse_from_hypothesis
+from tvb_epilepsy.top.scripts.pse_scripts import pse_from_hypothesis
 from tvb_epilepsy.io.h5_reader import H5Reader as Reader
 
 logger = initialize_logger(__name__)

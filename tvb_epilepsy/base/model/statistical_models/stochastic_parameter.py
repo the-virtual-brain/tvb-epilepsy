@@ -30,16 +30,6 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
     def __str__(self):
         return self.__repr__()
 
-    #TODO: this should be cleaned
-    def _string_generator(self):
-        exec_str = "from tvb_epilepsy.base.model.statistical_models.stochastic_parameter " + \
-                   "import generate_stochastic_parameter"
-        eval_str = "generate_stochastic_parameter(" + self.name + \
-                   ", probability_distribution=" + self.type + \
-                   ", optimize=False)"
-        d = {"exec": exec_str, "eval": eval_str}
-        return d
-
     def calc_mean(self, use="scipy"):
         return self._calc_mean(self.loc, self.scale, use)
 
@@ -103,7 +93,7 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
             self._confirm_support()
             self._update_params(use=use)
 
-#TODO
+#TODO Move this in a Factory
 def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, loc=0.0, scale=1.0,
                                   p_shape=(), probability_distribution="uniform", optimize_pdf=False, use="scipy",
                                   **target_params):

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from main_vep import main_vep
-from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 
 
 if __name__ == "__main__":

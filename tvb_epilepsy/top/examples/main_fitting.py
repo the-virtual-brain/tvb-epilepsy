@@ -3,8 +3,8 @@
 import os
 import numpy as np
 from scipy.io import loadmat, savemat
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES, FOLDER_VEP_ONLINE, \
-                                                                                                    TVB_EPILEPSY_PATH
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES
+from tvb_epilepsy.base.constants.configurations import FOLDER_VEP_ONLINE, STATS_MODELS_PATH
 from tvb_epilepsy.base.constants.module_constants import TVB, CUSTOM
 from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
@@ -17,9 +17,9 @@ from tvb_epilepsy.service.model_configuration_service import ModelConfigurationS
 from tvb_epilepsy.service.model_inversion.sde_model_inversion_service import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
 from tvb_epilepsy.service.model_inversion.stan.pystan_service import PyStanService
-from tvb_epilepsy.scripts.hypothesis_scripts import from_head_to_hypotheses, from_hypothesis_to_model_config_lsa
-from tvb_epilepsy.scripts.simulation_scripts import from_model_configuration_to_simulation
-from tvb_epilepsy.scripts.seeg_data_scripts import prepare_seeg_observable
+from tvb_epilepsy.top.scripts.hypothesis_scripts import from_head_to_hypotheses, from_hypothesis_to_model_config_lsa
+from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration_to_simulation
+from tvb_epilepsy.top.scripts.seeg_data_scripts import prepare_seeg_observable
 
 logger = initialize_logger(__name__)
 
@@ -30,7 +30,7 @@ plotter = Plotter()
 
 FOLDER_VEP_HOME = os.path.join(FOLDER_VEP_ONLINE, "tests")
 
-
+# TODO make this Builder/Factory
 def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_matrix=None):
     from copy import deepcopy
     active_regions = model_data["active_regions"]
@@ -88,7 +88,7 @@ def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_mat
 
 def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                         sensors_filename="SensorsSEEG_116.h5", stats_model_name="vep_sde",
-                        model_code_dir=os.path.join(TVB_EPILEPSY_PATH, "stan"), EMPIRICAL="",
+                        model_code_dir=STATS_MODELS_PATH, EMPIRICAL="",
                         times_on_off=[], sensors_lbls=[], sensors_inds=[], fitmethod="optimizing",
                         stan_service="CmdStan", results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES, **kwargs):
     # ------------------------------Stan model and service--------------------------------------

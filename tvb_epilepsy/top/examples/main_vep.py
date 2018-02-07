@@ -11,9 +11,9 @@ from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
-from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
-from tvb_epilepsy.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
-from tvb_epilepsy.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
+from tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
+from tvb_epilepsy.top.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
+from tvb_epilepsy.top.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
     compute_seeg_and_write_ts_h5_file
 from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.service.lsa_service import LSAService
@@ -25,10 +25,10 @@ else:
     from tvb_epilepsy.io.h5_reader import H5Reader as Reader, H5Reader
 
 if SIMULATION_MODE is TVB:
-    from tvb_epilepsy.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration \
+    from tvb_epilepsy.top.scripts import setup_TVB_simulation_from_model_configuration \
         as setup_simulation_from_model_configuration
 else:
-    from tvb_epilepsy.scripts.simulation_scripts import setup_custom_simulation_from_model_configuration \
+    from tvb_epilepsy.top.scripts import setup_custom_simulation_from_model_configuration \
         as setup_simulation_from_model_configuration
 
 PSE_FLAG = False
