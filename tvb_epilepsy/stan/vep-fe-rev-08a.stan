@@ -17,12 +17,14 @@ functions {
         return x_next;
     }
 
-    row_vector z_step(row_vector x, row_vector z, row_vector x0, matrix FC, vector Ic, real time_scale,
+    row_vector z_step(row_vector x, row_vector z, row_vector x0, matrix FC, vector Ic, real x_eq_def, real time_scale,
                       row_vector z_eta, real sigma, real tau0) {
         int nn = num_elements(z);
         row_vector[nn] z_next;
         matrix[nn, nn] D = vector_differencing(x);
-        row_vector[nn] gx = to_row_vector(rows_dot_product(FC, D) - Ic .* to_vector(1.8 + x));
+        // Ic = Ic_i = sum_{j in nonactive regions} [w_ij]
+        // gx(nonactive->active) = Ic * (x_j - x_i) = Ic * (x_eq_def - x)
+        row_vector[nn] gx = to_row_vector(rows_dot_product(FC, D) + Ic .* to_vector(x_eq_def - x));
         row_vector[nn] dz = inv(tau0) * (4 * (x - x0) - z - gx);
         z_next = z + (time_scale * dz) + z_eta * sigma;
         return z_next;
@@ -42,6 +44,7 @@ data {
     real x0_std;
     real x0_lo;
     real x0_hi;
+    real x_eq_def;
     row_vector [nn] x_init_mu;
     row_vector [nn] z_init_mu;
     real init_std;
@@ -103,7 +106,7 @@ transformed parameters {
     z[1] = z_init; // 2.0;
     for (t in 1:(nt-1)) {
         x[t+1] = x_step(x[t], z[t], I1, dt*time_scale, x_eta[t], sqrtdt*sigma);
-        z[t+1] = z_step(x[t], z[t], x0, k*SC, Ic, dt*time_scale, z_eta[t], sqrtdt*sigma, tau0);
+        z[t+1] = z_step(x[t], z[t], x0, k*SC, Ic, x_eq_def, dt*time_scale, z_eta[t], sqrtdt*sigma, tau0);
     }
     for (t in 1:nt)
         mu_seeg_log_power[t] = amplitude * (log(gain * exp(x[t]')) + offset)';
