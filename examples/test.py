@@ -10,9 +10,8 @@ logger = initialize_logger(__name__)
 
 if __name__ == "__main__":
     plotter = Plotter()
-    x = set_parameter("x", optimize_pdf=True, use="manual", x_lo=0.0, x_hi=2.0, x_pdf="lognormal",
-                      x_pdf_params={"skew": 0.0, "mean": 0.1 / 0.025}, x_mean=0.1, x_std=0.025)
+    x0 = set_parameter("x0", optimize_pdf=True, use="manual", x0_lo=0.0, x0_hi=2.0, x0_pdf="lognormal",
+                      x0_pdf_params={"skew": 0.0, "mean": 0.5 / 0.05}, x0_mean=0.5, x0_std=0.05)
 
-    axes, fig = plotter.plot_stochastic_parameter(x, np.arange(-0.01, 0.01, 0.001))
-
+    axes, fig = plotter.plot_stochastic_parameter(x0, np.arange(-0.01, 2.0, 0.01))
     logger.info("Done")

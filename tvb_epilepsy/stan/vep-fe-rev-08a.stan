@@ -40,9 +40,11 @@ data {
     real I1;
     real tau0;
     real dt;
-    row_vector [nn] x0_mu;
-    real x0_std;
-    real x0_lo;
+    row_vector [nn] x0_star_mu;
+    row_vector [nn] x0_star_std;
+    // row_vector [nn] x0_mu;
+    // real x0_std;
+    // real x0_lo;
     real x0_hi;
     real x_eq_def;
     row_vector [nn] x_init_mu;
@@ -69,16 +71,20 @@ data {
 
 transformed data {
     real sqrtdt = sqrt(dt);
+    real time_scale_zscore = time_scale_std/time_scale_mu;
+    real k_zscore = k_std/k_mu;
+    real epsilon_zscore = epsilon_std/epsilon_mu;
+    real sigma_zscore = sigma_std/sigma_mu;
+    row_vector[nn] x0_star_zscore = x0_star_std ./ x0_star_mu;
     //matrix[ns, nn] log_gain = log(gain);
     matrix [nn, nn] SC_ = SC;
     for (i in 1:nn) SC_[i, i] = 0;
     SC_ /= max(SC_) * rows(SC_);
-
 }
 
 parameters {
     // integrate and predict
-    row_vector<lower=x0_lo, upper=x0_hi>[nn] x0;
+    row_vector<lower=0.0>[nn] x0_star;
     real epsilon_star;
     real<lower=amplitude_lo> amplitude;
     real offset;
@@ -94,10 +100,11 @@ parameters {
 }
 
 transformed parameters {
-    real epsilon = epsilon_mu * exp((epsilon_std/epsilon_mu) * epsilon_star); //0.05
-    real sigma = sigma_mu * exp((sigma_std/sigma_mu) * sigma_star); //0.053 * exp(0.1 * sigma_star);
-    real time_scale = time_scale_mu * exp((time_scale_std/time_scale_mu) * time_scale_star); //0.15 * exp(0.4 * time_scale_star - 1.0);
-    real k = k_mu * exp((k_std/k_mu) * k_star); //1e-3 * exp(0.5 * k_star);
+    real epsilon = epsilon_mu * exp(epsilon_zscore * epsilon_star); //0.05
+    real sigma = sigma_mu * exp(sigma_zscore * sigma_star); //0.053 * exp(0.1 * sigma_star);
+    real time_scale = time_scale_mu * exp(time_scale_zscore * time_scale_star); //0.15 * exp(0.4 * time_scale_star - 1.0);
+    real k = k_mu * exp(k_zscore * k_star); //1e-3 * exp(0.5 * k_star);
+    row_vector[nn] x0 = x0_hi - (x0_star_mu .* exp(x0_star_zscore .* x0_star));
     row_vector[nn] x[nt];
     row_vector[nn] z[nt];
     row_vector[ns] mu_seeg_log_power[nt];
@@ -113,7 +120,8 @@ transformed parameters {
 }
 
 model {
-    x0 ~ normal(x0_mu, x0_std); //-3.0, 1.0
+    // x0 ~ normal(x0_mu, x0_std); //-3.0, 1.0
+    to_row_vector(x0_star) ~ normal(0, 1.0);
     x_init ~ normal(x_init_mu, init_std); // 0.0, 1.0
     z_init ~ normal(z_init_mu, init_std); // 0.0, 1.0
     sigma_star ~ normal(0, 1.0);

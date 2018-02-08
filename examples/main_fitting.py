@@ -34,21 +34,25 @@ FOLDER_VEP_HOME = os.path.join(FOLDER_VEP_ONLINE, "tests")
 def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_matrix=None):
     from copy import deepcopy
     active_regions = model_data["active_regions"]-1
+    nonactive_regions = model_data["nonactive_regions"] - 1
     SC = statistical_model.parameters["MC"].mode
     act_reg_ones = np.ones((model_data["n_active_regions"],))
+    x0_hi = -2.0
+    x0_star_mu = x0_hi - model_inversion.x0[active_regions].mean() * act_reg_ones
+    x0_star_std = np.minimum(0.05, x0_star_mu/3.0)
     vep_data = {"nn": model_data["n_active_regions"],
                 "nt": model_data["n_times"],
                 "ns": model_data["n_signals"],
                 "dt": model_data["dt"],  # model_data["dt"],
                 "I1": model_data["Iext1"],
-                "x0_mu": model_inversion.x0[active_regions].mean() * act_reg_ones,
+                "x0_star_mu": x0_star_mu,
                 # model_inversion.x0[statistical_model.active_regions],
-                "x0_std": 0.03,
+                "x0_star_std": x0_star_std,
                 "x0_lo": -3.0,
-                "x0_hi": -2.0,
+                "x0_hi": x0_hi,
                 "x_init_mu": statistical_model.parameters["x1init"].mean[active_regions].mean()*act_reg_ones,
                 "z_init_mu": statistical_model.parameters["zinit"].mean[active_regions].mean()*act_reg_ones,
-                "x_eq_def": statistical_model.parameters["x1eq"].mean[model_data["nonactive_regions"]-1].mean(),
+                "x_eq_def": model_inversion.x1EQ[nonactive_regions].mean(),
                 "init_std": np.mean(statistical_model.parameters["x1init"].std),
                 "tau0": 30.0,#statistical_model.parameters["tau0"].mean,
                 # "K_lo": statistical_model.parameters["K"].low,
@@ -60,7 +64,7 @@ def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_mat
                 "k_std": statistical_model.parameters["K"].std,
                 "SC": SC[active_regions][:, active_regions],
                 "SC_var": 5.0,  # 1/36 = 0.02777777,
-                "Ic": np.sum(SC[model_data["nonactive_regions"]-1], axis=1),
+                "Ic": np.sum(SC[active_regions][:, nonactive_regions], axis=1),
                 "sigma_mu": statistical_model.parameters["sig"].mean*10,
                 "sigma_std": statistical_model.parameters["sig"].std*10,
                 "epsilon_mu": statistical_model.parameters["eps"].mean,
@@ -233,7 +237,6 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                  "x1init": model_configuration.x1EQ, "zinit": model_configuration.zEQ}
         # Stupid code to interface with INS stan model
         if stats_model_name in ["vep-fe-rev-05", "vep-fe-rev-08", "vep-fe-rev-08a", "vep-fe-rev-08b"]:
-
             model_data = convert_to_vep_stan(model_data, statistical_model, model_inversion)
             x1_str = "x"
             input_signals_str = "seeg_log_power"
@@ -268,7 +271,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             region_mode = "all"
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         ests, samples, summary = stan_service.fit(debug=1, simulate=0, model_data=model_data, merge_outputs=False,
-                                                  chains=4, refresh=1, num_warmup=200, num_samples=200, **kwargs)
+                                                  chains=4, refresh=1, num_warmup=200, num_samples=300, **kwargs)
         writer.write_generic(ests, results_dir, hyp.name + "_fit_est.h5")
         writer.write_generic(samples, results_dir, hyp.name + "_fit_samples.h5")
         if summary is not None:
@@ -345,8 +348,7 @@ if __name__ == "__main__":
                             EMPIRICAL=os.path.join(SEEG_data, seizure),
                             times_on_off=[15.0, 35.0], sensors_lbls=sensors_lbls, sensors_inds=sensors_inds,
                             fitmethod=fitmethod, stan_service="CmdStan", results_dir=FOLDER_RES,
-                            figure_dir=FOLDER_FIGURES, save_warmup=1, num_warmup=200, num_samples=200, delta=0.8,
-                            max_depth=7)  # , stan_service="PyStan"
+                            figure_dir=FOLDER_FIGURES)  # , stan_service="PyStan"
     else:
         main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                             sensors_filename=sensors_filename, stats_model_name=stats_model_name,
