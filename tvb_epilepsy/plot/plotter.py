@@ -263,7 +263,7 @@ class Plotter(BasePlotter):
             subtitle = lambda labels, iTS: subtitle_traj(labels, iTS)
             subtitle_col = lambda subtitles, icol: None
         else:
-            def_alpha = 1
+            def_alpha = 1.0
             subtitle = lambda: None
             subtitle_col = lambda subtitles, icol: pyplot.gca().set_title(pyplot.gcf().title)
         axlabels = lambda labels, vars, n_vars, n_rows, irow, iTS: axlabels_traj(vars, n_vars)
@@ -682,8 +682,11 @@ class Plotter(BasePlotter):
             n_params = len(stats.values()[0][param])
             if len(subtitles) == 1 and n_params > 1:
                 subtitles = subtitles * n_params
+            elif len(subtitles) == 0:
+                subtitles = [""] * n_params
             for ip in range(n_params):
-                subtitles[ip] = subtitles[ip] + ": "
+                if len(subtitles[ip]) > 0:
+                    subtitles[ip] = subtitles[ip] + ": "
                 for skey, sval in stats.iteritems():
                     subtitles[ip] = subtitles[ip] + skey + "=" + str(sval[param][ip]) + ", "
                     subtitles[ip] = subtitles[ip][:-2]
@@ -703,7 +706,7 @@ class Plotter(BasePlotter):
                         figure_name, figure_dir, figsize, figure_format)
 
     def region_parameters_violin_plots(self, samples, values=None, params=["x0", "x1eq"], stats=None,
-                                       skip_samples=0, per_chain=False,  labels=None, seizure_indices=[],
+                                       skip_samples=0, per_chain=False,  labels=None, seizure_indices=None,
                                        figure_name="Regions parameters samples", figure_dir=FOLDER_FIGURES,
                                        figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT):
         if isinstance(values, dict):
@@ -722,8 +725,11 @@ class Plotter(BasePlotter):
         if labels is None:
             labels = numpy.array(range(samples[params[0]].shape[1])).astype(str)
         params_labels = {}
-        for p in params:
-            params_labels[p] = self._params_stats_labels(p, stats, labels)
+        for ip, p in enumerate(params):
+            if ip==0:
+                params_labels[p] = self._params_stats_labels(p, stats, labels)
+            else:
+                params_labels[p] = self._params_stats_labels(p, stats, "")
         n_params = len(params)
         if n_params > 9:
             raise_value_error("Number of subplots in column wise vector-violin-plots cannot be > 9 and it is "
@@ -781,14 +787,7 @@ class Plotter(BasePlotter):
         observation_dict = {'observation signals': signals}
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), ensure_list(samples))):
             name = statistical_model.name + "_chain" + str(id_est)
-            self.plot_timeseries(sort_dict({'observation signals': signals,
-                                        'observation signals fit': sample[signals_str].T}), time,
-                             special_idx=None, time_units=est.get('time_units', "ms"),
-                             title=name + ": Observation signals vs fit time series",
-                             subtitles=['observation signals ',
-                                        'observation signals fit' + stats_string[signals_str]], offset=1.0,
-                             labels=sensor_labels,
-                             figure_dir=figure_dir, figure_format=figure_format, figsize=VERY_LARGE_SIZE)
+            observation_dict.update({"observation signals' fit": sample[signals_str].T})
             self.plot_raster(sort_dict({x1_str: sample[x1_str].T, 'z': sample["z"].T}), time,
                              special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                              title=name + ": Hidden states fit rasterplot",
@@ -835,9 +834,9 @@ class Plotter(BasePlotter):
                 self.plot_regions2regions(est[mc_str], region_labels, 122, MC_title)
                 self._save_figure(pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
                 self._check_show()
-
-        self.plot_timeseries(observation_dict, time, special_idx=None, time_units=est.get('time_units', "ms"),
-                             title=name + ": Observation signals vs fit time series", offset=1.0, labels=sensor_labels,
+        self.plot_timeseries(observation_dict, time, special_idx=None, time_units=ests[0].get('time_units', "ms"),
+                             title="Observation signals vs fit time series: " + stats_string[signals_str],
+                             offset=1.0, labels=sensor_labels,
                              figure_dir=figure_dir, figure_format=figure_format, figsize=VERY_LARGE_SIZE)
 
     def _prepare_distribution_axes(self, distribution, loc=0.0, scale=1.0, x=numpy.array([]), ax=None, linestyle="-",

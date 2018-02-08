@@ -93,6 +93,8 @@ class BasePlotter(object):
                 coldif = True
             for ii in range(n_vector):
                 ax.plot(vector[ii], y_ticks[ii], '*', mfc=colors[ii], mec=colors[ii], ms=10)
+        if indices_red is None:
+            indices_red = []
         # the violin plot
         n_samples = dataset.shape[0]
         colormap = matplotlib.cm.ScalarMappable(cmap=pyplot.set_cmap(colormap))
@@ -109,7 +111,6 @@ class BasePlotter(object):
             violin_parts['bodies'][ii]._alpha = 0.75
             violin_parts['bodies'][ii]._edgecolors = numpy.reshape(colormap[ii], (1, 4))
             violin_parts['bodies'][ii]._facecolors = numpy.reshape(colormap[ii], (1, 4))
-        # ax.invert_yaxis()
         ax.grid(True, color='grey')
         ax.set_yticks(y_ticks)
         if show_y_labels:
@@ -122,6 +123,7 @@ class BasePlotter(object):
                 ax.yaxis.set_ticklabels(labels)
         else:
             ax.set_yticklabels([])
+        ax.invert_yaxis()
         ax.autoscale(tight=True)
         return ax
 
