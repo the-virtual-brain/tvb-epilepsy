@@ -4,7 +4,7 @@ from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initializ
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_size, \
     squeeze_array_to_scalar
 #TODO: avoid service imported in model
-from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_params
+# from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_params
 
 
 class ProbabilityDistribution(object):
@@ -251,5 +251,5 @@ class ProbabilityDistribution(object):
         else:
             return self.calc_kurt_manual(loc, scale)
 
-    def compute_and_update_pdf_params(self, loc=0.0, scale=1.0, use="scipy", **target_stats):
-        self.update_params(loc, scale, use, **(compute_pdf_params(self.type, target_stats, loc, scale, use)))
+    # def compute_and_update_pdf_params(self, loc=0.0, scale=1.0, use="scipy", **target_stats):
+    #     self.update_params(loc, scale, use, **(compute_pdf_params(self.type, target_stats, loc, scale, use)))

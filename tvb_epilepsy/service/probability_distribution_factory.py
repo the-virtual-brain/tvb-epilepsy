@@ -1,30 +1,73 @@
-
-from collections import OrderedDict
-
 import numpy as np
 from scipy.optimize import minimize
-
+from collections import OrderedDict
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.bernoulli_distribution import \
+    BernoulliDistribution
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.beta_distribution import BetaDistribution
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.binomial_distribution import \
+    BinomialDistribution
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.chisquare_distribution import \
+    ChisquareDistribution
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.exponential_distribution import \
+    ExponentialDistribution
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.gamma_distribution import GammaDistribution
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.lognormal_distribution import \
+    LognormalDistribution
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.normal_distribution import NormalDistribution
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.poisson_distribution import \
+    PoissonDistribution
+from tvb_epilepsy.base.model.statistical_models.probability_distributions.uniform_distribution import \
+    UniformDistribution
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, dicts_of_lists_to_lists_of_dicts
 
 
-AVAILABLE_DISTRIBUTIONS = ["uniform", "normal", "gamma", "lognormal", "exponential", "beta", "chisquare",
-                           "binomial", "poisson", "bernoulli"]
+# Used this as an enum-like structure
+class ProbabilityDistributionTypes():
+    UNIFORM = "uniform"
+    NORMAL = "normal"
+    GAMMA = "gamma"
+    LOGNORMAL = "lognormal"
+    EXPONENTIAL = "exponential"
+    BETA = "beta"
+    CHISQUARE = "chisquare"
+    BINOMIAL = "binomial"
+    POISSON = "poisson"
+    BERNOULLI = "bernoulli"
+
+    available_distributions = [UNIFORM, NORMAL, GAMMA, LOGNORMAL, EXPONENTIAL, BETA, CHISQUARE, BINOMIAL, POISSON,
+                               BERNOULLI]
+
+
+AVAILABLE_DISTRIBUTIONS = ProbabilityDistributionTypes.available_distributions
 
 CONSTRAINT_ABS_TOL = 0.01
 
-
 logger = initialize_logger(__name__)
 
+
+def probability_distribution_factory(distrib_type, get_instance=True):
+    if distrib_type == ProbabilityDistributionTypes.UNIFORM: return UniformDistribution() if get_instance else UniformDistribution
+    if distrib_type == ProbabilityDistributionTypes.NORMAL: return NormalDistribution() if get_instance else NormalDistribution
+    if distrib_type == ProbabilityDistributionTypes.GAMMA: return GammaDistribution() if get_instance else GammaDistribution
+    if distrib_type == ProbabilityDistributionTypes.LOGNORMAL: return LognormalDistribution() if get_instance else LognormalDistribution
+    if distrib_type == ProbabilityDistributionTypes.EXPONENTIAL: return ExponentialDistribution() if get_instance else ExponentialDistribution
+    if distrib_type == ProbabilityDistributionTypes.BETA: return BetaDistribution() if get_instance else BetaDistribution
+    if distrib_type == ProbabilityDistributionTypes.CHISQUARE: return ChisquareDistribution() if get_instance else ChisquareDistribution
+    if distrib_type == ProbabilityDistributionTypes.BINOMIAL: return BinomialDistribution() if get_instance else BinomialDistribution
+    if distrib_type == ProbabilityDistributionTypes.POISSON: return PoissonDistribution() if get_instance else PoissonDistribution
+    if distrib_type == ProbabilityDistributionTypes.BERNOULLI: return BernoulliDistribution() if get_instance else BernoulliDistribution
+
+    return None
+
+#TODO: this functionality should be reviewed. At first sight it looks like it does the same thing on both branches
 def generate_distribution(distrib_type, loc=0.0, scale=1.0, use="manual", target_shape=None, optimize_pdf=True,
                           **pdf_params):
     if np.in1d(distrib_type.lower(), AVAILABLE_DISTRIBUTIONS):
-        exec("from tvb_epilepsy.base.model.statistical_models.probability_distributions."
-             + distrib_type.lower() + "_distribution import " + distrib_type.title() + "Distribution")
-        distribution = eval(distrib_type.title() + "Distribution()") # generate an agnostic distribution
+        distribution = probability_distribution_factory(distrib_type.lower())  # generate an agnostic distribution
         success = True
         if len(pdf_params) > 0:
-            distribution.update_params(loc, scale, use, **pdf_params) # update with desired parameters
+            distribution.update_params(loc, scale, use, **pdf_params)  # update with desired parameters
             # test whether the distribution is correctly set:
             for p_key, p_val in pdf_params.iteritems():
                 if np.any(p_val != getattr(distribution, p_key)):
@@ -50,7 +93,7 @@ def generate_distribution(distrib_type, loc=0.0, scale=1.0, use="manual", target
 
 
 def optimize_distribution(distrib_type, loc=0.0, scale=1.0, use="manual", target_shape=None, **target):
-    distribution = generate_distribution(distrib_type, loc, scale, use, target_shape= None,  **target)
+    distribution = generate_distribution(distrib_type, loc, scale, use, target_shape=None, **target)
     if len(target) > 0:
         try:
             distribution.update_params(loc, scale, use, **target)
@@ -142,7 +185,7 @@ def prepare_target_stats(distribution, target_stats, loc=0.0, scale=1.0):
                           ") and distribution (" + str(distribution.p_shape) + ") shapes do not propagate!")
     for ts_key in target_stats.keys():
         target_stats[ts_key] *= target_shape
-        if  np.sum(target_stats[ts_key].shape) > 0:
+        if np.sum(target_stats[ts_key].shape) > 0:
             target_stats[ts_key] = target_stats[ts_key].flatten()
     target_size = target_shape.size
     target_shape = target_shape.shape
@@ -150,12 +193,13 @@ def prepare_target_stats(distribution, target_stats, loc=0.0, scale=1.0):
     target_stats_unique = np.unique(target_stats_array, axis=0)
     # target_stats_unique = np.vstack({tuple(row) for row in target_stats_array})
     target_stats_unique = dict(zip(target_stats.keys(),
-                                   [np.around(target_stats_unique[:, ii], decimals=3) for ii in range(distribution.n_params)]))
+                                   [np.around(target_stats_unique[:, ii], decimals=3) for ii in
+                                    range(distribution.n_params)]))
     target_stats_unique = dicts_of_lists_to_lists_of_dicts(target_stats_unique)
     return target_stats_unique, target_stats_array, target_shape, target_size
 
 
-def prepare_intial_condition(pdf, target_stats): # , low_limit=-10.0, high_limit=10
+def prepare_intial_condition(pdf, target_stats):  # , low_limit=-10.0, high_limit=10
     # TODO: find a better to initialize this...
     # Preparing initial conditions' parameters' vector:
     p0 = dict(pdf.pdf_params())
@@ -190,7 +234,7 @@ def compute_pdf_params(distrib_type, target_stats, loc=0.0, scale=1.0, use="manu
             p0 = sol_params_sum / ii
         # For: "COBYLA"  options={tol": 10 ** -3, "catol": CONSTRAINT_ABS_TOL, 'rhobeg': CONSTRAINT_ABS_TOL}
         sol = minimize(fobj, p0, args=(distribution, ts), method="SLSQP", constraints=constraints, tol=None,
-                       options={"ftol": 10 ** -6, "eps": CONSTRAINT_ABS_TOL}) #p0.min() / 100
+                       options={"ftol": 10 ** -6, "eps": CONSTRAINT_ABS_TOL})  # p0.min() / 100
         if sol.success:
             if np.any([np.any(np.isnan(sol.x)), np.any(np.isinf(sol.x))]):
                 raise_value_error("nan or inf values in solution x\n" + sol.message)
@@ -202,5 +246,5 @@ def compute_pdf_params(distrib_type, target_stats, loc=0.0, scale=1.0, use="manu
         else:
             raise_value_error(sol.message)
     sol_params = dict(zip(distribution.pdf_params().keys(),
-                         [np.reshape(sol_params[:, ii], target_shape) for ii in range(distribution.n_params)]))
+                          [np.reshape(sol_params[:, ii], target_shape) for ii in range(distribution.n_params)]))
     return sol_params

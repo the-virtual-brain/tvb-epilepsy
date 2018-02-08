@@ -1,16 +1,12 @@
 import numpy as np
 from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE, MIN_SINGLE_VALUE
 from tvb_epilepsy.base.model.parameter import Parameter
-from tvb_epilepsy.base.utils.data_structures_utils import extract_dict_stringkeys
-
-
-def get_val_key_for_first_keymatch_in_dict(name, pkeys, **kwargs):
-    pkeys += ["_".join([name, pkey]) for pkey in pkeys]
-    temp = extract_dict_stringkeys(kwargs, pkeys, modefun="equal", break_after=1)
-    if len(temp) > 0:
-        return temp.values()[0], temp.keys()[0].split("_")[-1]
-    else:
-        return None, None
+from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import StochasticParameterBase
+from tvb_epilepsy.base.utils.data_structures_utils import extract_dict_stringkeys, \
+    get_val_key_for_first_keymatch_in_dict
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
+from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_params, ProbabilityDistributionTypes, \
+    probability_distribution_factory
 
 
 # This function takes position or keyword arguments of the form "param" or "name_param" and sets the default parameters
@@ -69,7 +65,6 @@ def set_parameter(name, use="manual", **kwargs):
     parameter = kwargs.pop(name, None)
     # load parameter if it is a file
     if not (isinstance(parameter, Parameter)):
-        from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
         defaults = {}
         # Get all keyword arguments that correspond to that parameter name
         defaults.update(extract_dict_stringkeys(kwargs, name + "_"))
@@ -96,3 +91,43 @@ def set_parameter(name, use="manual", **kwargs):
         if len(defaults) > 0:
             parameter._update_loc_scale(use=use, **defaults)
     return parameter
+
+
+def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, loc=0.0, scale=1.0,
+                                  p_shape=(), probability_distribution=ProbabilityDistributionTypes.UNIFORM,
+                                  optimize_pdf=False, use="scipy", **target_params):
+    thisProbabilityDistribution = probability_distribution_factory(probability_distribution.lower(), get_instance=False)
+
+    class StochasticParameter(StochasticParameterBase, thisProbabilityDistribution):
+        def __init__(self, name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, loc=0.0, scale=1.0,
+                     p_shape=(), use="scipy", **target_params):
+            StochasticParameterBase.__init__(self, name, low, high, loc, scale, p_shape)
+            thisProbabilityDistribution.__init__(self, **target_params)
+            success = True
+            for p_key, p_val in target_params.iteritems():
+                if np.any(p_val != getattr(self, p_key)):
+                    success = False
+            if success is False:
+                if optimize_pdf:
+                    pdf_params = compute_pdf_params(probability_distribution.lower(), target_params, loc, scale, use)
+                    thisProbabilityDistribution.__init__(self, **pdf_params)
+                    success = True
+                    for p_key, p_val in target_params.iteritems():
+                        if np.any(np.abs(p_val - getattr(self, p_key)) > 0.1):
+                            success = False
+            if success is False:
+                raise_value_error("Cannot generate probability distribution of type " + probability_distribution +
+                                  " with parameters " + str(target_params) + " !")
+                self._update_params(use=use)
+
+        def __str__(self):
+            return StochasticParameterBase.__str__(self) + "\n" \
+                   + "\n".join(thisProbabilityDistribution.__str__(self).splitlines()[1:])
+
+        def _scipy(self):
+            return self.scipy(self.loc, self.scale)
+
+        def _numpy(self, size=(1,)):
+            return self.numpy(self.loc, self.scale, size)
+
+    return StochasticParameter(name, low, high, loc, scale, p_shape, **target_params)

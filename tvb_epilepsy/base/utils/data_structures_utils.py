@@ -257,6 +257,15 @@ def extract_dict_stringkeys(d, keys, modefun="find", break_after=MAX_INT_VALUE, 
     return out_dict
 
 
+def get_val_key_for_first_keymatch_in_dict(name, pkeys, **kwargs):
+    pkeys += ["_".join([name, pkey]) for pkey in pkeys]
+    temp = extract_dict_stringkeys(kwargs, pkeys, modefun="equal", break_after=1)
+    if len(temp) > 0:
+        return temp.values()[0], temp.keys()[0].split("_")[-1]
+    else:
+        return None, None
+
+
 def labels_to_inds(labels, lbls):
     idx = []
     lbls = ensure_list(lbls)
