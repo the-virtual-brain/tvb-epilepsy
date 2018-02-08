@@ -778,6 +778,7 @@ class Plotter(BasePlotter):
                     stats_string[p_str] \
                         = stats_string[p_str] + skey + "_mean=" + str(numpy.mean(stats[skey][p_str])) + ", "
                 stats_string[p_str] = stats_string[p_str][:-2]
+        observation_dict = {'observation signals': signals}
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), ensure_list(samples))):
             name = statistical_model.name + "_chain" + str(id_est)
             self.plot_timeseries(sort_dict({'observation signals': signals,
@@ -834,6 +835,10 @@ class Plotter(BasePlotter):
                 self.plot_regions2regions(est[mc_str], region_labels, 122, MC_title)
                 self._save_figure(pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
                 self._check_show()
+
+        self.plot_timeseries(observation_dict, time, special_idx=None, time_units=est.get('time_units', "ms"),
+                             title=name + ": Observation signals vs fit time series", offset=1.0, labels=sensor_labels,
+                             figure_dir=figure_dir, figure_format=figure_format, figsize=VERY_LARGE_SIZE)
 
     def _prepare_distribution_axes(self, distribution, loc=0.0, scale=1.0, x=numpy.array([]), ax=None, linestyle="-",
                                    lgnd=True):

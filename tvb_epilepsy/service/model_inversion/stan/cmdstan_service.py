@@ -97,8 +97,8 @@ class CmdStanService(StanService):
                                          output_filepath, diagnostic_filepath)
         self.logger.info("Model fitting with " + self.fitmethod +
                          " method of model: " + self.model_path + "...")
-        self.fitting_time = execute_command(self.command.replace("\t", ""), shell=True)[1]
-        self.logger.info(str(self.fitting_time) + ' sec required to ' + self.fitmethod + "!")
+        # self.fitting_time = execute_command(self.command.replace("\t", ""), shell=True)[1]
+        # self.logger.info(str(self.fitting_time) + ' sec required to ' + self.fitmethod + "!")
         self.logger.info("Computing stan summary...")
         summary_filepath = self.stan_summary(output_filepath, summary_filepath)
         if return_output:
