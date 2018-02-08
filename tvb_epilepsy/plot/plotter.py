@@ -717,16 +717,17 @@ class Plotter(BasePlotter):
         n_chains = len(samples)
         if not per_chain and len(samples) > 1:
             samples = ensure_list(list_of_dicts_to_dicts_of_ndarrays(samples))
-            plot_samples = lambda s: numpy.concatenate(numpy.split(s[:, skip_samples:].T, n_chains, axis=2), axis=1).squeeze().T
+            plot_samples = lambda s: numpy.concatenate(numpy.split(s[skip_samples:].T, n_chains, axis=2),
+                                                       axis=1).squeeze().T
             plot_figure_name = lambda ichain: figure_name
         else:
-            plot_samples = lambda s: s[:, skip_samples:].T
+            plot_samples = lambda s: s[skip_samples:]
             plot_figure_name = lambda ichain: figure_name + ": chain " + str(ichain + 1)
         if labels is None:
             labels = numpy.array(range(samples[params[0]].shape[1])).astype(str)
         params_labels = {}
         for ip, p in enumerate(params):
-            if ip==0:
+            if ip == 0:
                 params_labels[p] = self._params_stats_labels(p, stats, labels)
             else:
                 params_labels[p] = self._params_stats_labels(p, stats, "")
