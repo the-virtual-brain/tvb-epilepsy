@@ -2,6 +2,7 @@ from collections import OrderedDict
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
+from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
 from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.discrete_probability_distribution \
     import DiscreteProbabilityDistribution
@@ -10,9 +11,9 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.discre
 class BinomialDistribution(DiscreteProbabilityDistribution):
 
     def __init__(self, **params):
-        self.type = "binomial"
+        self.type = ProbabilityDistributionTypes.BINOMIAL
         self.scipy_name = "binom"
-        self.numpy_name = "binomial"
+        self.numpy_name = ProbabilityDistributionTypes.BINOMIAL
         self.constraint_string = "n > 0 and 0 < p < 1"
         self.n = make_int(params.get("n", 1))
         self.p = make_float(params.get("p", 0.5))

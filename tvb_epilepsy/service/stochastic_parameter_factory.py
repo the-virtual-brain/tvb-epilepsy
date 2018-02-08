@@ -5,8 +5,8 @@ from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import Stoc
 from tvb_epilepsy.base.utils.data_structures_utils import extract_dict_stringkeys, \
     get_val_key_for_first_keymatch_in_dict
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
-from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_params, ProbabilityDistributionTypes, \
-    probability_distribution_factory
+from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_params, probability_distribution_factory
+from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
 
 
 # This function takes position or keyword arguments of the form "param" or "name_param" and sets the default parameters

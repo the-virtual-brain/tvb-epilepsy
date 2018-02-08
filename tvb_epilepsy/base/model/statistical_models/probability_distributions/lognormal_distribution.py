@@ -2,6 +2,7 @@ from collections import OrderedDict
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
+from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
 from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution \
     import ContinuousProbabilityDistribution
@@ -10,9 +11,9 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.contin
 class LognormalDistribution(ContinuousProbabilityDistribution):
 
     def __init__(self, **params):
-        self.type = "lognormal"
+        self.type = ProbabilityDistributionTypes.LOGNORMAL
         self.scipy_name = "lognorm"
-        self.numpy_name = "lognormal"
+        self.numpy_name = ProbabilityDistributionTypes.LOGNORMAL
         self.constraint_string = "sigma > 0"
         self.mu = make_float(params.get("mu", np.log(params.get("scale", 1.0))))
         self.sigma = make_float(params.get("sigma", params.get("shape", 1.0)))

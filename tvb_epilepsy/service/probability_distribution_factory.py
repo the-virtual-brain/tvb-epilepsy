@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.optimize import minimize
 from collections import OrderedDict
+from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.bernoulli_distribution import \
     BernoulliDistribution
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.beta_distribution import BetaDistribution
@@ -21,32 +22,19 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.unifor
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, dicts_of_lists_to_lists_of_dicts
 
-
-# Used this as an enum-like structure
-class ProbabilityDistributionTypes():
-    UNIFORM = "uniform"
-    NORMAL = "normal"
-    GAMMA = "gamma"
-    LOGNORMAL = "lognormal"
-    EXPONENTIAL = "exponential"
-    BETA = "beta"
-    CHISQUARE = "chisquare"
-    BINOMIAL = "binomial"
-    POISSON = "poisson"
-    BERNOULLI = "bernoulli"
-
-    available_distributions = [UNIFORM, NORMAL, GAMMA, LOGNORMAL, EXPONENTIAL, BETA, CHISQUARE, BINOMIAL, POISSON,
-                               BERNOULLI]
-
-
-AVAILABLE_DISTRIBUTIONS = ProbabilityDistributionTypes.available_distributions
-
 CONSTRAINT_ABS_TOL = 0.01
 
 logger = initialize_logger(__name__)
 
 
 def probability_distribution_factory(distrib_type, get_instance=True):
+    """
+    Factory function that will return by default an instance for the distrib_type. If get_instance=False it will return
+    only the class name.
+    :param distrib_type: type of the wanted distribution.
+    :param get_instance: specifies if the return type is an object or a class name.
+    :return: ProbabilityDistribution derived object or class name
+    """
     if distrib_type == ProbabilityDistributionTypes.UNIFORM: return UniformDistribution() if get_instance else UniformDistribution
     if distrib_type == ProbabilityDistributionTypes.NORMAL: return NormalDistribution() if get_instance else NormalDistribution
     if distrib_type == ProbabilityDistributionTypes.GAMMA: return GammaDistribution() if get_instance else GammaDistribution
@@ -58,12 +46,14 @@ def probability_distribution_factory(distrib_type, get_instance=True):
     if distrib_type == ProbabilityDistributionTypes.POISSON: return PoissonDistribution() if get_instance else PoissonDistribution
     if distrib_type == ProbabilityDistributionTypes.BERNOULLI: return BernoulliDistribution() if get_instance else BernoulliDistribution
 
+    logger.warning("Distribution %s is not implemented or the name is wrong")
     return None
 
-#TODO: this functionality should be reviewed. At first sight it looks like it does the same thing on both branches
+
+# TODO: this functionality should be reviewed. At first sight it looks like it does the same thing on both branches
 def generate_distribution(distrib_type, loc=0.0, scale=1.0, use="manual", target_shape=None, optimize_pdf=True,
                           **pdf_params):
-    if np.in1d(distrib_type.lower(), AVAILABLE_DISTRIBUTIONS):
+    if np.in1d(distrib_type.lower(), ProbabilityDistributionTypes.available_distributions):
         distribution = probability_distribution_factory(distrib_type.lower())  # generate an agnostic distribution
         success = True
         if len(pdf_params) > 0:
@@ -89,7 +79,8 @@ def generate_distribution(distrib_type, loc=0.0, scale=1.0, use="manual", target
             distribution.__shape_parameters__(target_shape, loc, scale, use)
         return distribution
     else:
-        raise_value_error(distrib_type + " is not one of the available distributions!: " + str(AVAILABLE_DISTRIBUTIONS))
+        raise_value_error(distrib_type + " is not one of the available distributions!: " + str(
+            ProbabilityDistributionTypes.available_distributions))
 
 
 def optimize_distribution(distrib_type, loc=0.0, scale=1.0, use="manual", target_shape=None, **target):

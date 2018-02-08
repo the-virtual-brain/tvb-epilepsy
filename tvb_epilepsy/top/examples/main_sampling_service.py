@@ -6,7 +6,7 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
-from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DISTRIBUTIONS, ProbabilityDistributionTypes
+from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter, set_parameter_defaults, \
     generate_stochastic_parameter
 from tvb_epilepsy.service.sampling.deterministic_sampling_service import DeterministicSamplingService
@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
     logger.info("\nTesting distribution class and conversions...")
     sampler = StochasticSamplingService(n_samples=n_samples)
-    for distrib_name in AVAILABLE_DISTRIBUTIONS:
+    for distrib_name in ProbabilityDistributionTypes.available_distributions:
         logger.info("\n" + distrib_name)
         logger.info("\nmode/mean, std to distribution " + distrib_name + ":")
         if np.in1d(distrib_name, [ProbabilityDistributionTypes.EXPONENTIAL, ProbabilityDistributionTypes.CHISQUARE]):

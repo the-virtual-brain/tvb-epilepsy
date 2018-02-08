@@ -12,7 +12,7 @@ from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODE
 from tvb_epilepsy.service.head_service import HeadService
 from tvb_epilepsy.service.signal_processor import decimate_signals, cut_signals_tails
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
-from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DISTRIBUTIONS
+from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
 from tvb_epilepsy.base.epileptor_models import *
 
@@ -308,7 +308,7 @@ class ODEModelInversionService(ModelInversionService):
             model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high})
             if not(isequal_string(p.type, "normal")):
                 model_data.update({p.name + "_loc": p.loc, p.name + "_scale": p.scale,
-                                   p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.type))[0][0],
+                                   p.name + "_pdf": np.where(np.in1d(ProbabilityDistributionTypes.available_distributions, p.type))[0][0],
                                    p.name + "_p": (np.array(p.pdf_params().values()).T * np.ones((2,))).flatten()})
         model_data["x1eq_loc"] = statistical_model.parameters["x1eq"].mean
         model_data["MC_scale"] = np.mean(statistical_model.parameters["MC"].std /
