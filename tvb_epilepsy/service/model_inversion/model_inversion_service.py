@@ -134,10 +134,14 @@ class ModelInversionService(object):
         sig_eq_def = self.get_default_sig_eq(**kwargs)
         # Generative model:
         # Epileptor:
-        self.default_parameters.update(set_parameter_defaults("x1eq", "normal", (self.n_regions,),
-                                                              X1EQ_MIN, X1_EQ_CR_DEF,
-                                                              pdf_params={"mu": np.maximum(self.x1EQ, X1_REST),
-                                                                          "sigma": sig_eq_def}))
+        x1eq_max = kwargs.get("x1eq_max", X1_EQ_CR_DEF)
+        x1eq_star_max = x1eq_max - X1EQ_MIN
+        x1eq_star_mean = x1eq_max - self.x1EQ
+        x1eq_std = np.minimum(sig_eq_def, np.abs(self.x1EQ - x1eq_max)/3.0)
+        self.default_parameters.update(set_parameter_defaults("x1eq_star", "lognormal", (self.n_regions,),
+                                                              0.0, x1eq_star_max,
+                                                              pdf_params={"mean": x1eq_star_mean/x1eq_std,
+                                                                          "skew": 0.0}))
         K_mean = self.get_default_K()
         K_std = np.min([K_mean-K_MIN, K_MAX-K_mean]) / kwargs.get("K_scale_range", 6.0)
         self.default_parameters.update(set_parameter_defaults("K", "lognormal", (),

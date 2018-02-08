@@ -154,10 +154,14 @@ data {
     real rx0;
     // real x0_lo;
     // real x0_hi;
-    /* x1eq parameter (only normal distribution, ignoring _pdf) */
-    real x1eq_lo;
-    real x1eq_hi;
-    row_vector[n_regions] x1eq_loc;
+    /* x1eq_star parameter  */
+    real x1eq_max;
+    row_vector<lower=0.0>[n_regions] x1eq_star_lo;
+    real<lower=0.0> x1eq_star_hi;
+    row_vector<upper=0.0>[n_regions] x1eq_star_loc;
+    row_vector<lower=0.0>[n_regions] x1eq_star_scale;
+    row_vector[n_regions] x1eq_star_p[2];
+    int<lower=0> x1eq_star_pdf;
     //real zeq_lo;
     //real zeq_hi;
     /* x1init parameter (only normal distribution, ignoring _pdf) */
@@ -272,10 +276,15 @@ transformed data {
     real eps_star_hi = (eps_hi - eps_loc) / eps_scale;
     real scale_signal_star_lo = (scale_signal_lo - scale_signal_loc) / scale_signal_scale;
     real scale_signal_star_hi = (scale_signal_hi - scale_signal_loc) / scale_signal_scale;
+    row_vector x1_eq_star_lo = (x1_eq_hi - x1_eq_loc) ./ x1_eq_scale;
+    row_vector x1_eq_star_hi = (x1_eq_hi - x1_eq_loc) ./ x1_eq_scale;
+    row_vector x1_eq_hi = x1_eq_max - (x1_eq_star_lo * x1_eq_scale + x1_eq_loc);
+    row_vector x1_eq_hi = x1_eq_max - (x1_eq_star_lo * x1_eq_scale + x1_eq_loc);
     if (DEBUG > 0)
         print("tau1_star_lo=", tau1_star_lo, " tau0_star_lo=", tau0_star_lo, " K_star_lo=", K_star_lo,
           " sig_eq_star_lo=", sig_eq_star_lo, " sig_init_star_lo=", sig_init_star_lo, " sig_star_lo=", sig_star_lo,
           " eps_star_lo=", eps_star_lo, " scale_signal_star_lo=", scale_signal_star_lo);
+        print("x1_eq_star_lo=", x1_eq_star_lo, " x1_eq_star_hi=", x1_eq_star_hi)
 
 }
 
