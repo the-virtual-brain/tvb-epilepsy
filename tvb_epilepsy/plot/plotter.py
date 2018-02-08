@@ -807,15 +807,9 @@ class Plotter(BasePlotter):
                              figure_dir=figure_dir,
                              figure_format=figure_format, figsize=VERY_LARGE_SIZE)
             if trajectories_plot:
-                x0_prior = str(model_inversion.x0[statistical_model.active_regions])
-                x0 = est["x0"]
                 title = name + ': Fit hidden state space trajectories'
-                title += "\n prior x0: " + x0_prior
-                if len(x0) > statistical_model.n_active_regions:
-                    x0 = x0[statistical_model.active_regions]
-                title += "\n x0 fit: " + str(x0)
                 self.plot_trajectories({x1_str: sample[x1_str].T, 'z': sample['z'].T}, special_idx=seizure_indices,
-                                       title=title, labels=model_inversion.region_labels,
+                                       title=title, labels=region_labels[region_inds],
                                        figure_dir=figure_dir, figure_format=figure_format, figsize=SUPER_LARGE_SIZE)
             # plot connectivity
             if connectivity_plot:
