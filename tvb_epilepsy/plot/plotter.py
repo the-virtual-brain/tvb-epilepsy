@@ -733,7 +733,7 @@ class Plotter(BasePlotter):
             pyplot.figure(plot_figure_name(ichain), figsize=figsize)
             for ip, param in enumerate(params):
                 self.plot_vector_violin(vals_fun(param), plot_samples(chain_sample[param]), params_labels[param],
-                                        subplot_ind+ip+1, param, colormap="YlOrRd", show_y_labels=False,
+                                        subplot_ind+ip+1, param, colormap="YlOrRd", show_y_labels=True,
                                         indices_red=seizure_indices, sharey=None)
             self._save_figure(pyplot.gcf(), None, figure_dir, figure_format)
             self._check_show()
