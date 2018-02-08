@@ -754,6 +754,7 @@ class Plotter(BasePlotter):
             region_inds = range(statistical_model.n_regions)
         else:
             region_inds = statistical_model.active_regions
+        n_active_regions = len(region_inds)
         # plot scalar parameters in pair plots
         self.parameters_pair_plots(samples,
                                    kwargs.get("pair_plot_params",
@@ -776,13 +777,18 @@ class Plotter(BasePlotter):
         else:
             sensor_labels = region_labels[model_inversion.signals_inds]
             seizure_indices = None
-        stats_string = {signals_str: "", x1_str: "", "z": "", "MC": ""}
+        stats_string = {signals_str: "\n", x1_str: "\n", "z": "\n", "MC": ""}
+        stats_region_labels = list(region_labels[region_inds])
         if isinstance(stats, dict):
-            for p_str in [signals_str, x1_str, "z"]:
-                stats_string[p_str] = stats_string[p_str] + "\n"
-                for skey, sval in stats.iteritems():
+            for skey, sval in stats.iteritems():
+                for p_str in [signals_str, x1_str, "z"]:
                     stats_string[p_str] \
-                        = stats_string[p_str] + skey + "_mean=" + str(numpy.mean(stats[skey][p_str])) + ", "
+                        = stats_string[p_str] + skey + "_mean=" + str(numpy.mean(sval[p_str])) + ", "
+                stats_region_labels = [stats_region_labels[ip] + ", " +
+                                       skey + "_" + x1_str + "_mean=" + str(sval[x1_str][:, ip].mean()) + ", " +
+                                       skey + "_z_mean=" + str(sval["z"][:, ip].mean())
+                                       for ip in range(n_active_regions)]
+            for p_str in [signals_str, x1_str, "z"]:
                 stats_string[p_str] = stats_string[p_str][:-2]
         observation_dict = {'observation signals': signals}
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), ensure_list(samples))):
@@ -809,7 +815,7 @@ class Plotter(BasePlotter):
             if trajectories_plot:
                 title = name + ': Fit hidden state space trajectories'
                 self.plot_trajectories({x1_str: sample[x1_str].T, 'z': sample['z'].T}, special_idx=seizure_indices,
-                                       title=title, labels=region_labels[region_inds],
+                                       title=title, labels=stats_region_labels,
                                        figure_dir=figure_dir, figure_format=figure_format, figsize=SUPER_LARGE_SIZE)
             # plot connectivity
             if connectivity_plot:
