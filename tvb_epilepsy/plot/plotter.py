@@ -840,11 +840,13 @@ class Plotter(BasePlotter):
                              figure_dir=figure_dir, figure_format=figure_format, figsize=VERY_LARGE_SIZE)
 
     def _prepare_distribution_axes(self, distribution, loc=0.0, scale=1.0, x=numpy.array([]), ax=None, linestyle="-",
-                                   lgnd=True):
+                                   lgnd=False):
         if len(x) < 1:
             x = linspace_broadcast(distribution.scipy(distribution.loc, distribution.scale).ppf(0.01),
                                    distribution.scipy(distribution.loc, distribution.scale).ppf(0.99), 100)
         if x is not None:
+            if x.ndim == 1:
+                x = x[:, numpy.newaxis]
             pdf = distribution.scipy(loc, scale).pdf(x)
             if ax is None:
                 _, ax = pyplot.subplots(1, 1)
@@ -864,7 +866,7 @@ class Plotter(BasePlotter):
         self._check_show()
         return ax, pyplot.gcf()
 
-    def _prepare_parameter_axes(self, parameter, x=numpy.array([]), ax=None, lgnd=True):
+    def _prepare_parameter_axes(self, parameter, x=numpy.array([]), ax=None, lgnd=False):
         if ax is None:
             _, ax = pyplot.subplots(1, 2)
         if len(x) < 1:
