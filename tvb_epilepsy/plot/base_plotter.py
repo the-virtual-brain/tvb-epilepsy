@@ -92,7 +92,7 @@ class BasePlotter(object):
                 colors[indices_red] = 'r'
                 coldif = True
             for ii in range(n_vector):
-                ax.plot(vector[ii], y_ticks[ii], '*', mfc=colors[ii], mec=colors[ii], ms=5)
+                ax.plot(vector[ii], y_ticks[ii], '*', mfc=colors[ii], mec=colors[ii], ms=10)
         # the violin plot
         n_samples = dataset.shape[0]
         colormap = matplotlib.cm.ScalarMappable(cmap=pyplot.set_cmap(colormap))
