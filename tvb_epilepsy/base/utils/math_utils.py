@@ -1,14 +1,13 @@
 # Some math tools
 
-from itertools import product
-
 import numpy as np
 from matplotlib import pyplot
-
+from itertools import product
 from tvb_epilepsy.base.constants.module_constants import WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 
 logger = initialize_logger(__name__)
+
 
 def weighted_vector_sum(weights, vectors, normalize=True):
     if isinstance(vectors, np.ndarray):
@@ -97,15 +96,15 @@ def curve_elbow_point(vals, interactive=INTERACTIVE_ELBOW_POINT):
 
         class MyClickableLines(object):
 
-            def __init__(self, fig, ax, lines):
+            def __init__(self, figure_no, axe, lines_list):
                 self.x = None
-                #self.y = None
-                self.ax = ax
+                # self.y = None
+                self.ax = axe
                 title = "Mouse lef-click please to select the elbow point..." + \
                         "\n...or click ENTER to continue accepting our automatic choice in red..."
                 self.ax.set_title(title)
-                self.lines = lines
-                self.fig = fig
+                self.lines = lines_list
+                self.fig = figure_no
 
             def event_loop(self):
                 self.fig.canvas.mpl_connect('button_press_event', self.onclick)
@@ -120,8 +119,10 @@ def curve_elbow_point(vals, interactive=INTERACTIVE_ELBOW_POINT):
                 return
 
             def onclick(self, event):
-                if event.inaxes != self.lines[0].axes: return
-                dist = np.sqrt((self.lines[0].get_xdata() - event.xdata) ** 2.0)  # + (self.lines[0].get_ydata() - event.ydata) ** 2.)
+                if event.inaxes != self.lines[0].axes:
+                    return
+                dist = np.sqrt((self.lines[0].get_xdata() - event.xdata) ** 2.0)
+                # + (self.lines[0].get_ydata() - event.ydata) ** 2.)
                 self.x = np.argmin(dist)
                 self.fig.canvas.stop_event_loop()
                 return
@@ -136,5 +137,3 @@ def curve_elbow_point(vals, interactive=INTERACTIVE_ELBOW_POINT):
         return elbow
     else:
         return elbow
-
-

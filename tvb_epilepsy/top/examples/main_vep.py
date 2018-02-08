@@ -5,7 +5,7 @@ import os
 import numpy as np
 from tvb_epilepsy.base.constants.module_constants import SIMULATION_MODE, TVB, DATA_MODE
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, HEAD_FOLDER
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
@@ -13,23 +13,24 @@ from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.top.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
-from tvb_epilepsy.top.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict, \
-    compute_seeg_and_write_ts_h5_file
+from tvb_epilepsy.top.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict
+from tvb_epilepsy.top.scripts.simulation_scripts import compute_seeg_and_write_ts_h5_file
 from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.io.h5_reader import H5Reader
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
 else:
-    from tvb_epilepsy.io.h5_reader import H5Reader as Reader, H5Reader
+    from tvb_epilepsy.io.h5_reader import H5Reader as Reader
 
 if SIMULATION_MODE is TVB:
-    from tvb_epilepsy.top.scripts import setup_TVB_simulation_from_model_configuration \
-        as setup_simulation_from_model_configuration
+    from tvb_epilepsy.top.scripts.simulation_scripts import \
+        setup_TVB_simulation_from_model_configuration as setup_simulation_from_model_configuration
 else:
-    from tvb_epilepsy.top.scripts import setup_custom_simulation_from_model_configuration \
-        as setup_simulation_from_model_configuration
+    from tvb_epilepsy.top.scripts.simulation_scripts import \
+        setup_custom_simulation_from_model_configuration as setup_simulation_from_model_configuration
 
 PSE_FLAG = False
 SA_PSE_FLAG = False
@@ -39,11 +40,10 @@ SIM_FLAG = True
 def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG):
     logger = initialize_logger(__name__)
     # -------------------------------Reading data-----------------------------------
-    data_folder = os.path.join(DATA_CUSTOM, 'Head')
     reader = Reader()
     writer = H5Writer()
-    logger.info("Reading from: " + data_folder)
-    head = reader.read_head(data_folder)
+    logger.info("Reading from: " + HEAD_FOLDER)
+    head = reader.read_head(HEAD_FOLDER)
     plotter = Plotter()
     plotter.plot_head(head)
     if test_write_read:
@@ -60,10 +60,10 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     # ...or reading a custom file:
     ep_name = "ep_l_frontal_complex"
     # FOLDER_RES = os.path.join(data_folder, ep_name)
-    if not isinstance(reader, H5Writer):
-        disease_values = H5Reader().read_epileptogenicity(data_folder, name=ep_name)
+    if not hasattr(reader, "read_epileptogenicity"):
+        disease_values = H5Reader().read_epileptogenicity(HEAD_FOLDER, name=ep_name)
     else:
-        disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
+        disease_values = reader.read_epileptogenicity(HEAD_FOLDER, name=ep_name)
     disease_indices, = np.where(disease_values > np.min([X0_DEF, E_DEF]))
     disease_values = disease_values[disease_indices]
     if disease_values.size > 1:
