@@ -206,13 +206,6 @@ data {
 
     /* Integration */
     real dt;
-    /* Equilibrium point variability */
-    real<lower=0.0> sig_eq_lo;
-    real<lower=0.0> sig_eq_hi;
-    real sig_eq_loc;
-    real<lower=0.0> sig_eq_scale;
-    real sig_eq_p[2];
-    int<lower=0> sig_eq_pdf;
     /* Initial condition variability */
     real<lower=0.0> sig_init_lo;
     real<lower=0.0> sig_init_hi;
@@ -266,8 +259,6 @@ transformed data {
     real tau0_star_hi = (tau0_hi - tau0_loc) / tau0_scale;
     real K_star_lo = (K_lo - K_loc) / K_scale;
     real K_star_hi = (K_hi - K_loc) / K_scale;
-    real sig_eq_star_lo = (sig_eq_lo - sig_eq_loc) / sig_eq_scale;
-    real sig_eq_star_hi = (sig_eq_hi - sig_eq_loc) / sig_eq_scale;
     real sig_init_star_lo = (sig_init_lo - sig_init_loc) / sig_init_scale;
     real sig_init_star_hi = (sig_init_hi - sig_init_loc) / sig_init_scale;
     real sig_star_lo = (sig_lo - sig_loc) / sig_scale;
@@ -288,7 +279,6 @@ parameters {
     /* Generative model */
     /* Epileptor */
     row_vector<lower=0.0>[n_regions] x1eq_star; //star of x1 equilibrium point coordinate, <lower=x1eq_2star_lo, upper=x1eq_2star_hi>
-    real<lower=sig_eq_star_lo, upper=sig_eq_star_hi> sig_eq_star; // variance of equilibrium
     row_vector<lower=x1init_lo, upper=x1init_hi>[n_regions] x1init; // x1 initial condition coordinate
     row_vector<lower=zinit_lo, upper=zinit_hi>[n_regions] zinit; // x1 initial condition coordinate
     real<lower=sig_init_star_lo, upper=sig_init_star_hi> sig_init_star; // variance of initial condition
@@ -325,7 +315,6 @@ transformed parameters {
     row_vector[n_regions] x0; // x0, excitability parameter
     real<lower=0.0> tau1 = tau1_star * tau1_scale + tau1_loc; // time scale
     real<lower=0.0> tau0 = tau0_star * tau0_scale + tau0_loc; // time scale separation
-    real<lower=0.0> sig_eq = sig_eq_star * sig_eq_scale + sig_eq_loc; // variance of equilibrium
     /* x1eq, x1 equilibrium point coordinate */
     row_vector[n_regions] x1eq = x1eq_max - (x1eq_star .* x1eq_star_scale + x1eq_star_loc);
     /* zeq, z equilibrium point coordinate */
@@ -422,8 +411,7 @@ model {
     MC_loc = SC .* (1-MCsplit);
     MC_star[:, 2] ~ normal(MC_loc, fabs(MC_loc) * MC_scale); // lower triangular MC
 
-    /* Sampling of equilibrium and initial condition variances as well as dynamical noise strength */
-    sig_eq_star ~ sample(sig_eq_pdf, sig_eq_p);
+    /* Sampling of initial condition variance as well as dynamical noise strength */
     sig_init_star ~ sample(sig_init_pdf, sig_init_p);
     sig_star ~ sample(sig_pdf, sig_p);
     /* Sampling of x1 equilibrium point coordinate and initial condition */

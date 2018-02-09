@@ -17,15 +17,15 @@ class SDEModelInversionService(ODEModelInversionService):
         self.set_default_parameters(**kwargs)
 
     def get_default_sig(self, **kwargs):
-        if kwargs.get("sig", None):
-            return kwargs.pop("sig")
-        elif np.in1d(self.dynamical_model, AVAILABLE_DYNAMICAL_MODELS_NAMES):
-                if EPILEPTOR_MODEL_NVARS[self.dynamical_model] == 2:
-                    return model_noise_intensity_dict[self.dynamical_model][1]
-                elif EPILEPTOR_MODEL_NVARS[self.dynamical_model] > 2:
-                    return model_noise_intensity_dict[self.dynamical_model][2]
-        else:
-            return SIG_DEF
+        # if kwargs.get("sig", None):
+        #     return kwargs.pop("sig")
+        # elif np.in1d(self.dynamical_model, AVAILABLE_DYNAMICAL_MODELS_NAMES):
+        #         if EPILEPTOR_MODEL_NVARS[self.dynamical_model] == 2:
+        #             return model_noise_intensity_dict[self.dynamical_model][1]
+        #         elif EPILEPTOR_MODEL_NVARS[self.dynamical_model] > 2:
+        #             return model_noise_intensity_dict[self.dynamical_model][2]
+        # else:
+        return SIG_DEF
 
     def set_default_parameters(self, **kwargs):
         sig = self.get_default_sig(**kwargs)
@@ -48,9 +48,8 @@ class SDEModelInversionService(ODEModelInversionService):
         active_regions = kwargs.pop("active_regions", [])
         self.default_parameters.update(kwargs)
         model = SDEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
-                                    kwargs.get("x1eq_max", X1EQ_MAX), kwargs.get("sig_eq", SIG_EQ_DEF),
-                                    kwargs.get("sig_init", SIG_INIT_DEF), self.get_default_sig(**kwargs),
-                                    **self.default_parameters)
+                                    kwargs.get("x1eq_max", X1EQ_MAX), kwargs.get("sig_init", SIG_INIT_DEF),
+                                    self.get_default_sig(**kwargs), **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model

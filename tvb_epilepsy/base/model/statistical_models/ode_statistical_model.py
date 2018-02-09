@@ -1,6 +1,6 @@
 import numpy as np
-from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MAX, SIG_EQ_DEF,  SIG_INIT_DEF, \
-                                                                  OBSERVATION_MODELS, OBSERVATION_MODEL_DEF\
+from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MAX, SIG_INIT_DEF, \
+                                                                  OBSERVATION_MODELS, OBSERVATION_MODEL_DEF
 
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error  # warning,
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
@@ -12,10 +12,10 @@ from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
 class ODEStatisticalModel(StatisticalModel):
 
     def __init__(self, name='vep_ode', n_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
-                 x1eq_max=X1EQ_MAX, sig_eq=SIG_EQ_DEF, sig_init=SIG_INIT_DEF, observation_model=OBSERVATION_MODEL_DEF,
+                 x1eq_max=X1EQ_MAX, sig_init=SIG_INIT_DEF, observation_model=OBSERVATION_MODEL_DEF,
                  # observation_expression=OBSERVATION_EXPRESSION_DEF, euler_method="forward",
                  **defaults):
-        super(ODEStatisticalModel, self).__init__(name, n_regions, x1eq_max, sig_eq, **defaults)
+        super(ODEStatisticalModel, self).__init__(name, n_regions, x1eq_max, **defaults)
         self.sig_init = sig_init
         if np.all(np.in1d(active_regions, range(self.n_regions))):
             self.active_regions = np.unique(active_regions).tolist()

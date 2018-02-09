@@ -11,7 +11,7 @@ TAU1_MIN = 0.1
 TAU1_MAX = 1.0
 TAU0_DEF = 10.0
 TAU0_MIN = 3.0
-TAU0_MAX = 100.0
+TAU0_MAX = 30.0
 K_MIN = 0.0
 K_MAX = 3.0
 MC_MIN = 0.0
@@ -25,7 +25,7 @@ ZINIT_MIN = 1.0
 ZINIT_MAX = 5.0
 
 # SDE model inversion constants
-SIG_DEF = 10 ** -3
+SIG_DEF = 10 ** -2
 X1_MIN = -2.0
 X1_MAX = 1.0
 Z_MIN = 0.0

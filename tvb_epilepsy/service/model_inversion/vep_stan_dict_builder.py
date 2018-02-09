@@ -37,7 +37,6 @@ def build_stan_model_dict(statistical_model, signals, model_inversion, gain_matr
                   "x1eq_max": statistical_model.x1eq_max,
                   "SC": SC[np.triu_indices(SC.shape[0], 1)],
                   "MC_minloc": MC_MIN,
-                  "sig_eq": statistical_model.sig_eq,
                   "sig_init": statistical_model.sig_init,
                   "dt": statistical_model.dt,
                   # "euler_method": np.where(np.in1d(EULER_METHODS, statistical_model.euler_method))[0][0] - 1,
@@ -83,8 +82,8 @@ def build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_
     SC = statistical_model.parameters["MC"].mode
     act_reg_ones = np.ones((model_data["n_active_regions"],))
     x0_lo = -3.0
-    x0_hi = -2.0
-    x0_star_mu = x0_hi - model_inversion.x0[active_regions].mean() * act_reg_ones
+    x0_hi = -1.0
+    x0_star_mu = x0_hi - act_reg_ones * model_inversion.x0[active_regions].mean()
     x0_star_std = np.minimum((x0_hi - x0_lo) / 4.0, x0_star_mu / 3.0) * act_reg_ones
     vep_data = {"nn": model_data["n_active_regions"],
                 "nt": model_data["n_times"],
@@ -99,7 +98,7 @@ def build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_
                 "z_init_mu": statistical_model.parameters["zinit"].mean[active_regions].mean() * act_reg_ones,
                 "x_eq_def": model_inversion.x1EQ[nonactive_regions].mean(),
                 "init_std": np.mean(statistical_model.parameters["x1init"].std),
-                "tau0": 30.0,  # statistical_model.parameters["tau0"].mean,
+                "tau0": 10.0,  # statistical_model.parameters["tau0"].mean,
                 # "K_lo": statistical_model.parameters["K"].low,
                 # "K_u": statistical_model.parameters["K"].mode,
                 # "K_v": statistical_model.parameters["K"].var,
@@ -110,8 +109,8 @@ def build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_
                 "SC": SC[active_regions][:, active_regions],
                 "SC_var": 5.0,  # 1/36 = 0.02777777,
                 "Ic": np.sum(SC[active_regions][:, nonactive_regions], axis=1),
-                "sigma_mu": statistical_model.parameters["sig"].mean * 10,
-                "sigma_std": statistical_model.parameters["sig"].std * 10,
+                "sigma_mu": statistical_model.parameters["sig"].mean,
+                "sigma_std": statistical_model.parameters["sig"].std,
                 "epsilon_mu": statistical_model.parameters["eps"].mean,
                 "epsilon_std": statistical_model.parameters["eps"].std,
                 "sig_hi": 0.025,  # model_data["sig_hi"],

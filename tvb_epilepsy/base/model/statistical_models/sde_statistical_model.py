@@ -1,6 +1,5 @@
 
-from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MAX, SIG_EQ_DEF, SIG_INIT_DEF, SIG_DEF, \
-                                                                                                OBSERVATION_MODEL_DEF
+from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MAX, SIG_INIT_DEF, SIG_DEF, OBSERVATION_MODEL_DEF
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
 #TODO: avoid service imported in model
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
@@ -9,11 +8,11 @@ from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
 class SDEStatisticalModel(ODEStatisticalModel):
 
     def __init__(self, name="sde_vep", n_regions=0, active_regions=[], n_signals=0,
-                       n_times=0, dt=1.0, x1eq_max=X1EQ_MAX, sig_eq=SIG_EQ_DEF, sig_init=SIG_INIT_DEF, sig=SIG_DEF,
+                       n_times=0, dt=1.0, x1eq_max=X1EQ_MAX, sig_init=SIG_INIT_DEF, sig=SIG_DEF,
                         # observation_expression="lfp", euler_method="forward",
                        observation_model=OBSERVATION_MODEL_DEF,  **defaults):
         super(SDEStatisticalModel, self).__init__(name, n_regions, active_regions, n_signals, n_times, dt,
-                                                  x1eq_max, sig_eq, sig_init, observation_model,
+                                                  x1eq_max, sig_init, observation_model,
                                                   #  observation_expression, euler_method,
                                                   **defaults)
         self.sig = sig
