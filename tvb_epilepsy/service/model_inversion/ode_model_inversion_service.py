@@ -1,8 +1,7 @@
 import time
-from copy import deepcopy
 import numpy as np
 from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MAX, X1INIT_MIN, X1INIT_MAX, ZINIT_MIN, \
-                                                    ZINIT_MAX, MC_MIN,  SIG_EQ_DEF, SIG_INIT_DEF, OBSERVATION_MODELS
+    ZINIT_MAX, SIG_EQ_DEF, SIG_INIT_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, assert_arrays, \
     extract_dict_stringkeys
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
@@ -11,7 +10,6 @@ from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODE
 from tvb_epilepsy.service.head_service import HeadService
 from tvb_epilepsy.service.signal_processor import decimate_signals, cut_signals_tails
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
-from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DISTRIBUTIONS
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
 from tvb_epilepsy.base.epileptor_models import *
 
@@ -59,8 +57,8 @@ class ODEModelInversionService(ModelInversionService):
         if auto_selection.find("rois") >= 0:
             if sensors.gain_matrix is not None:
                 current_selection = head_service.select_sensors_rois(sensors, kwargs.get("rois", rois),
-                                                                    self.signals_inds,
-                                                                    kwargs.get("gain_matrix_th", None))
+                                                                     self.signals_inds,
+                                                                     kwargs.get("gain_matrix_th", None))
                 inds = np.where([s in current_selection for s in self.signals_inds])[0]
                 self.signals_inds = np.array(self.signals_inds)[inds].tolist()
                 signals = signals[:, inds]
@@ -68,9 +66,10 @@ class ODEModelInversionService(ModelInversionService):
             power = kwargs.get("power", np.sum((signals - np.mean(signals, axis=0)) ** 2, axis=0) / signals.shape[0])
             correlation = kwargs.get("correlation", np.corrcoef(signals.T))
             current_selection = head_service.select_sensors_corr(sensors, correlation, self.signals_inds, power=power,
-                                                            n_electrodes=kwargs.get("n_electrodes"),
-                                                            sensors_per_electrode=kwargs.get("sensors_per_electrode", 1),
-                                                            group_electrodes=kwargs.get("group_electrodes", True))
+                                                                 n_electrodes=kwargs.get("n_electrodes"),
+                                                                 sensors_per_electrode=kwargs.get(
+                                                                     "sensors_per_electrode", 1),
+                                                                 group_electrodes=kwargs.get("group_electrodes", True))
             inds = np.where([s in current_selection for s in self.signals_inds])[0]
             self.signals_inds = np.array(self.signals_inds)[inds].tolist()
         elif auto_selection.find("power"):
@@ -114,7 +113,7 @@ class ODEModelInversionService(ModelInversionService):
         if statistical_model.observation_model.find("seeg") >= 0:
             self.data_type = "seeg"
             signals = np.array(extract_dict_stringkeys(sort_dict(target_data), "SEEG",
-                                              modefun="find", break_after=1))
+                                                       modefun="find", break_after=1))
             if len(signals) > 0:
                 signals = signals.values()[0]
                 self.signals_inds = range(self.gain_matrix.shape[0])
@@ -174,14 +173,16 @@ class ODEModelInversionService(ModelInversionService):
         if reset:
             statistical_model.update_active_regions([])
         statistical_model.update_active_regions(statistical_model.active_regions +
-                                            select_greater_values_array_inds(self.e_values, active_regions_th).tolist())
+                                                select_greater_values_array_inds(self.e_values,
+                                                                                 active_regions_th).tolist())
         return statistical_model
 
     def update_active_regions_x0_values(self, statistical_model, active_regions_th=0.1, reset=False):
         if reset:
             statistical_model.update_active_regions([])
         statistical_model.update_active_regions(statistical_model.active_regions +
-                                           select_greater_values_array_inds(self.x0_values, active_regions_th).tolist())
+                                                select_greater_values_array_inds(self.x0_values,
+                                                                                 active_regions_th).tolist())
         return statistical_model
 
     def update_active_regions_lsa(self, statistical_model, active_regions_th=None, reset=False):
@@ -190,10 +191,11 @@ class ODEModelInversionService(ModelInversionService):
         if len(self.lsa_propagation_strengths) > 0:
             ps_strengths = self.lsa_propagation_strengths / np.max(self.lsa_propagation_strengths)
             statistical_model.update_active_regions(statistical_model.active_regions +
-                                             select_greater_values_array_inds(ps_strengths, active_regions_th).tolist())
+                                                    select_greater_values_array_inds(ps_strengths,
+                                                                                     active_regions_th).tolist())
         else:
             self.logger.warning("No LSA results found (empty propagations_strengths vector)!" +
-                    "\nSkipping of setting active_regios according to LSA!")
+                                "\nSkipping of setting active_regios according to LSA!")
         return statistical_model
 
     def update_active_regions_seeg(self, statistical_model, active_regions_th=None, seeg_inds=[], reset=False):
@@ -211,7 +213,8 @@ class ODEModelInversionService(ModelInversionService):
                 active_regions += select_greater_values_array_inds(proj, active_regions_th).tolist()
             statistical_model.update_active_regions(active_regions)
         else:
-            self.logger.warning("Projection is not found!" + "\nSkipping of setting active_regios according to SEEG power!")
+            self.logger.warning(
+                "Projection is not found!" + "\nSkipping of setting active_regios according to SEEG power!")
         return statistical_model
 
     def update_active_regions(self, statistical_model, methods=["e_values", "LSA"], reset=False, **kwargs):
@@ -235,14 +238,14 @@ class ODEModelInversionService(ModelInversionService):
         # Generative model:
         # Integration:
         self.default_parameters.update(set_parameter_defaults("x1init", "normal", (self.n_regions,),  # name, pdf, shape
-                                                              X1INIT_MIN, X1INIT_MAX,       # min, max
+                                                              X1INIT_MIN, X1INIT_MAX,  # min, max
                                                               pdf_params={"mu": self.x1EQ,
                                                                           "sigma": sig_init}))
         self.default_parameters.update(set_parameter_defaults("zinit", "normal", (self.n_regions,),  # name, pdf, shape
                                                               ZINIT_MIN, ZINIT_MAX,  # min, max
                                                               pdf_params={"mu": self.zEQ, "sigma": sig_init}))
         self.default_parameters.update(set_parameter_defaults("sig_init", "lognormal", (),
-                                                              0.0, 3.0*sig_init,
+                                                              0.0, 3.0 * sig_init,
                                                               sig_init, sig_init / 3.0,
                                                               pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("scale_signal", "lognormal", (),
@@ -263,55 +266,3 @@ class ODEModelInversionService(ModelInversionService):
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model
-
-    def generate_model_data(self, statistical_model, signals, gain_matrix=None, x1var="", zvar=""):
-        active_regions_flag = np.zeros((statistical_model.n_regions,), dtype="i")
-        active_regions_flag[statistical_model.active_regions] = 1
-        if gain_matrix is None:
-            if statistical_model.observation_model.find("seeg") >= 0:
-                gain_matrix = self.gain_matrix
-                mixing = deepcopy(gain_matrix)
-            else:
-                mixing = np.eye(statistical_model.n_regions)
-        if mixing.shape[0] > len(self.signals_inds):
-            mixing = mixing[self.signals_inds]
-        SC = self.get_SC()
-        model_data = {"n_regions": statistical_model.n_regions,
-                      "n_times": statistical_model.n_times,
-                      "n_signals": statistical_model.n_signals,
-                      "n_active_regions": statistical_model.n_active_regions,
-                      "n_nonactive_regions": statistical_model.n_nonactive_regions,
-                      "n_connections": statistical_model.n_regions*(statistical_model.n_regions-1)/2,
-                      "active_regions_flag": np.array(active_regions_flag),
-                      "active_regions": np.array(statistical_model.active_regions) + 1,  # cmdstan cannot take lists!
-                      "nonactive_regions": np.where(1 - active_regions_flag)[0] + 1,  # indexing starts from 1!
-                      "x1eq_max": statistical_model.x1eq_max,
-                      "SC": SC[np.triu_indices(SC.shape[0], 1)],
-                      "MC_minloc": MC_MIN,
-                      "sig_eq": statistical_model.sig_eq,
-                      "sig_init": statistical_model.sig_init,
-                      "dt": statistical_model.dt,
-                      #"euler_method": np.where(np.in1d(EULER_METHODS, statistical_model.euler_method))[0][0] - 1,
-                      "observation_model": np.where(np.in1d(OBSERVATION_MODELS,
-                                                            statistical_model.observation_model))[0][0],
-                      # "observation_expression": np.where(np.in1d(OBSERVATION_MODEL_EXPRESSIONS,
-                      #                                            statistical_model.observation_expression))[0][0],
-                      "signals": signals,
-                      "time": self.time,
-                      "mixing": mixing}
-        for key, val in self.epileptor_parameters.iteritems():
-            model_data.update({key: val})
-        for p in statistical_model.parameters.values():
-            model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high})
-            if not(isequal_string(p.type, "normal")):
-                model_data.update({p.name + "_loc": p.loc, p.name + "_scale": p.scale,
-                                   p.name + "_pdf": np.where(np.in1d(AVAILABLE_DISTRIBUTIONS, p.type))[0][0],
-                                   p.name + "_p": (np.array(p.pdf_params().values()).T * np.ones((2,))).squeeze()})
-        # model_data["x1eq_loc"] = statistical_model.parameters["x1eq"].mean
-        model_data["MC_scale"] = np.mean(statistical_model.parameters["MC"].std /
-                                         np.abs(statistical_model.parameters["MC"].mean))
-        MCsplit_shape = np.ones(statistical_model.parameters["MCsplit"].p_shape)
-        model_data["MCsplit_loc"] = statistical_model.parameters["MCsplit"].mean * MCsplit_shape
-        model_data["MCsplit_scale"] = statistical_model.parameters["MCsplit"].std * MCsplit_shape
-        model_data["offset_signal_p"] = np.array(statistical_model.parameters["offset_signal"].pdf_params().values())
-        return sort_dict(model_data)

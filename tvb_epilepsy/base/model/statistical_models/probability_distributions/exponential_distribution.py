@@ -1,7 +1,8 @@
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string, construct_import_path
+from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
+from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution \
     import ContinuousProbabilityDistribution
 
@@ -9,9 +10,9 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.contin
 class ExponentialDistribution(ContinuousProbabilityDistribution):
 
     def __init__(self, **params):
-        self.type = "exponential"
+        self.type = ProbabilityDistributionTypes.EXPONENTIAL
         self.scipy_name = "expon"
-        self.numpy_name = "exponential"
+        self.numpy_name = ProbabilityDistributionTypes.EXPONENTIAL
         self.constraint_string = "scale > 0"
         self.lamda = make_float(params.get("lamda", params.get("rate", 1.0 / params.get("scale", 1.0))))
         self.rate = self.lamda

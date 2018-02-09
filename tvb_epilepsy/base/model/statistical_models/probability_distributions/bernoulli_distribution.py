@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.stats as ss
+from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.discrete_probability_distribution \
@@ -9,8 +10,8 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.discre
 class BernoulliDistribution(DiscreteProbabilityDistribution):
 
     def __init__(self, **params):
-        self.type = "bernoulli"
-        self.scipy_name = "bernoulli"
+        self.type = ProbabilityDistributionTypes.BERNOULLI
+        self.scipy_name = ProbabilityDistributionTypes.BERNOULLI
         self.numpy_name = ""
         self.constraint_string = "0 < p < 1"
         self.p = make_float(params.get("p", 0.5))

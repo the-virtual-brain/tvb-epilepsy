@@ -186,16 +186,16 @@ def set_time_scales(fs=2048.0, time_length=100000.0, scale_fsavg=None, report_ev
     n_report_blocks = max(report_every_n_monitor_steps * np.round(time_length_avg / 100), 1.0)
     return dt, fsAVG, sim_length, monitor_period, n_report_blocks
 
-
+# TODO: this could be a builder
 def from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis, simulation_mode=SIMULATION_MODE,
                                            sim_type="realistic", dynamical_model="EpileptorDP2D", ts_file=None,
                                            plot_flag=True, results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES,
                                            logger=logger, **kwargs):
     if simulation_mode is TVB:
-        from tvb_epilepsy.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration \
+        from tvb_epilepsy.top.scripts import setup_TVB_simulation_from_model_configuration \
             as setup_simulation_from_model_configuration
     else:
-        from tvb_epilepsy.scripts.simulation_scripts import setup_custom_simulation_from_model_configuration \
+        from tvb_epilepsy.top.scripts import setup_custom_simulation_from_model_configuration \
             as setup_simulation_from_model_configuration
     # --------------------------Simulation preparations------------------------------------------------------------------
     # TODO: maybe use a custom Monitor class

@@ -1,7 +1,8 @@
-from collections import OrderedDict
 import numpy as np
-import numpy.random as nr
 import scipy.stats as ss
+import numpy.random as nr
+from collections import OrderedDict
+from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
 from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution \
     import ContinuousProbabilityDistribution
@@ -13,9 +14,9 @@ DEFAULT_HIGH_VALUE = 1.0
 class UniformDistribution(ContinuousProbabilityDistribution):
 
     def __init__(self, **params):
-        self.type = "uniform"
-        self.scipy_name = "uniform"
-        self.numpy_name = "uniform"
+        self.type = ProbabilityDistributionTypes.UNIFORM
+        self.scipy_name = ProbabilityDistributionTypes.UNIFORM
+        self.numpy_name = ProbabilityDistributionTypes.UNIFORM
         self.constraint_string = "a < b"
         self.a = make_float(params.get("a", params.get("low", params.get("loc", DEFAULT_LOW_VALUE))))
         self.b = make_float(params.get("b", params.get("high",

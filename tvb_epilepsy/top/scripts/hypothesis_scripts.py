@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import DATA_CUSTOM, FOLDER_RES, FOLDER_FIGURES
+from tvb_epilepsy.base.constants.configurations import HEAD_FOLDER, FOLDER_RES, FOLDER_FIGURES
 from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE, EIGENVECTORS_NUMBER_SELECTION, \
     WEIGHTED_EIGENVECTOR_SUM
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
@@ -28,7 +28,7 @@ def start_lsa_run(hypothesis, model_connectivity):
     return model_configuration_service, model_configuration, lsa_service, lsa_hypothesis
 
 
-def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
+def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=HEAD_FOLDER,
                             plot_head=False, figure_dir=FOLDER_FIGURES, sensors_filename="SensorsInternal.h5"):
     if data_mode is TVB:
         from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader

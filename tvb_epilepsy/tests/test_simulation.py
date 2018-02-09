@@ -1,15 +1,13 @@
 import numpy as np
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
-from tvb_epilepsy.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration, set_time_scales, \
-    setup_custom_simulation_from_model_configuration
-from tvb_epilepsy.io.h5_reader import H5Reader
+from tvb_epilepsy.top.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration, set_time_scales
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
 
 head_dir = "head2"
 
 
-class TestSimulationRun():
+class TestSimulationRun(object):
     fs = 2 * 4096.0
     time_length = 30.0
     report_every_n_monitor_steps = 10.0

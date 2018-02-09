@@ -1,14 +1,14 @@
-from copy import deepcopy
+
 
 import numpy as np
-
+from copy import deepcopy
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import generate_stochastic_parameter
 from tvb_epilepsy.io.h5_writer import H5Writer
-from tvb_epilepsy.service.probability_distribution_factory import AVAILABLE_DISTRIBUTIONS
-from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter, set_parameter_defaults
+from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
+from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter, set_parameter_defaults, \
+    generate_stochastic_parameter
 from tvb_epilepsy.service.sampling.deterministic_sampling_service import DeterministicSamplingService
 from tvb_epilepsy.service.sampling.salib_sampling_service import SalibSamplingService
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
@@ -29,7 +29,8 @@ if __name__ == "__main__":
     logger.info("\nStochastic uniform sampling with numpy:")
     sampler = StochasticSamplingService(n_samples=n_samples, sampling_module="numpy")
     #                                      a (low), b (high)
-    samples, stats = sampler.generate_samples(parameter=(1.0, 2.0), probability_distribution="uniform", shape=(2,),
+    samples, stats = sampler.generate_samples(parameter=(1.0, 2.0),
+                                              probability_distribution=ProbabilityDistributionTypes.UNIFORM, shape=(2,),
                                               stats=True)
     for key, value in stats.iteritems():
         logger.info("\n" + key + ": " + str(value))
@@ -57,20 +58,20 @@ if __name__ == "__main__":
 
     logger.info("\nTesting distribution class and conversions...")
     sampler = StochasticSamplingService(n_samples=n_samples)
-    for distrib_name in AVAILABLE_DISTRIBUTIONS:
+    for distrib_name in ProbabilityDistributionTypes.available_distributions:
         logger.info("\n" + distrib_name)
         logger.info("\nmode/mean, std to distribution " + distrib_name + ":")
-        if np.in1d(distrib_name, ["exponential", "chisquare"]):
+        if np.in1d(distrib_name, [ProbabilityDistributionTypes.EXPONENTIAL, ProbabilityDistributionTypes.CHISQUARE]):
             target_stats = {"mean": 1.0}
             stats_m = "mean"
-        elif np.in1d(distrib_name, ["bernoulli", "poisson"]):
+        elif np.in1d(distrib_name, [ProbabilityDistributionTypes.BERNOULLI, ProbabilityDistributionTypes.POISSON]):
             target_stats = {"mean": np.ones((2,))}
             stats_m = "mean"
-        elif isequal_string(distrib_name, "binomial"):
+        elif isequal_string(distrib_name, ProbabilityDistributionTypes.BINOMIAL):
             target_stats = {"mean": 1.0, "std": 2.0}
             stats_m = "mean"
         else:
-            if isequal_string(distrib_name, "uniform"):
+            if isequal_string(distrib_name, ProbabilityDistributionTypes.UNIFORM):
                 target_stats = {"mean": 1.0, "std": 2.0}
                 stats_m = "mean"
             else:

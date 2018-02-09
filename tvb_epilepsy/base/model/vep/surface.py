@@ -1,8 +1,10 @@
+# coding=utf-8
+
 import numpy as np
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
 
 
-class SurfaceH5Field():
+class SurfaceH5Field(object):
     VERTICES = "vertices"
     TRIANGLES = "triangles"
     VERTEX_NORMALS = "vertex_normals"

@@ -12,8 +12,8 @@ from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
-from tvb_epilepsy.scripts.pse_scripts import pse_from_lsa_hypothesis
-from tvb_epilepsy.scripts.simulation_scripts import from_model_configuration_to_simulation
+from tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
+from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration_to_simulation
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader

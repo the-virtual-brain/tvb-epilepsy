@@ -1,12 +1,11 @@
 # coding=utf-8
+
 """
 Class to keep the model configuration values.
 This will be used to populate a Model instance needed in order to launch a simulation.
 """
 
-import numpy as np
-from tvb_epilepsy.base.constants.model_constants import X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, I_EXT2_DEF, A_DEF, B_DEF, \
-    D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF
+from tvb_epilepsy.base.constants.model_constants import *
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, dicts_of_lists_to_lists_of_dicts
 
 

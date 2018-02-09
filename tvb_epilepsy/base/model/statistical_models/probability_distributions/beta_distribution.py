@@ -2,6 +2,7 @@ from collections import OrderedDict
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
+from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, make_float
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution  \
                                                                                 import ContinuousProbabilityDistribution
@@ -10,9 +11,9 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.contin
 class BetaDistribution(ContinuousProbabilityDistribution):
 
     def __init__(self, **params):
-        self.type = "beta"
-        self.scipy_name = "beta"
-        self.numpy_name = "beta"
+        self.type = ProbabilityDistributionTypes.BETA
+        self.scipy_name = ProbabilityDistributionTypes.BETA
+        self.numpy_name = ProbabilityDistributionTypes.BETA
         self.constraint_string = "alpha > 0 and beta > 0"
         self.alpha = make_float(params.get("alpha", params.get("a", 2.0)))
         self.beta = make_float(params.get("beta", params.get("b", 2.0)))

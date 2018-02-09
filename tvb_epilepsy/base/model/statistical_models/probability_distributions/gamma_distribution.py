@@ -2,6 +2,7 @@ from collections import OrderedDict
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
+from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
 from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution \
     import ContinuousProbabilityDistribution
@@ -10,9 +11,9 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.contin
 class GammaDistribution(ContinuousProbabilityDistribution):
 
     def __init__(self, **params):
-        self.type = "gamma"
-        self.scipy_name = "gamma"
-        self.numpy_name = "gamma"
+        self.type = ProbabilityDistributionTypes.GAMMA
+        self.scipy_name = ProbabilityDistributionTypes.GAMMA
+        self.numpy_name = ProbabilityDistributionTypes.GAMMA
         self.constraint_string = "alpha > 0 and beta > 0"
         self.alpha = make_float(params.get("alpha", params.get("k", params.get("shape", 2.0))))
         self.beta = make_float(params.get("beta", params.get("rate",
