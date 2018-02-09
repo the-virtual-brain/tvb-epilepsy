@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
+from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
 from tvb_epilepsy.base.utils.data_structures_utils import make_int
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution \
     import ContinuousProbabilityDistribution
@@ -9,9 +10,9 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.contin
 class ChisquareDistribution(ContinuousProbabilityDistribution):
 
     def __init__(self, **params):
-        self.type = "chisquare"
+        self.type = ProbabilityDistributionTypes.CHISQUARE
         self.scipy_name = "chi"
-        self.numpy_name = "chisquare"
+        self.numpy_name = ProbabilityDistributionTypes.CHISQUARE
         self.constraint_string = "int(df) > 0"
         self.df = make_int(params.get("df", 1))
         self.__update_params__(df=self.df)

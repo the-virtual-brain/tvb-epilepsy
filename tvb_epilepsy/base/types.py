@@ -3,6 +3,7 @@ from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 
 logger = initialize_logger(__name__)
 
+# TODO: on medium term, we should remove this module.
 class DictDot(object):
 
     def __init__(self, d):

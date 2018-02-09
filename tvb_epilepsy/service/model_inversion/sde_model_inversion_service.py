@@ -54,6 +54,3 @@ class SDEModelInversionService(ODEModelInversionService):
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model
-
-    def generate_model_data(self, statistical_model, signals, gain_matrix=None):
-        return super(SDEModelInversionService, self).generate_model_data(statistical_model, signals, gain_matrix)

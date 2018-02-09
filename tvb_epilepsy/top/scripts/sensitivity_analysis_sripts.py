@@ -10,7 +10,7 @@ from tvb_epilepsy.service.pse_service import PSEService
 from tvb_epilepsy.service.sampling.salib_sampling_service import SalibSamplingService
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
 from tvb_epilepsy.service.sensitivity_analysis_service import SensitivityAnalysisService, METHODS
-from tvb_epilepsy.scripts.hypothesis_scripts import start_lsa_run
+from tvb_epilepsy.top.scripts.hypothesis_scripts import start_lsa_run
 
 
 # These functions are helper functions to run sensitivity analysis parameter search exploration (pse)

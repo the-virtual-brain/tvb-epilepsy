@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
+from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
 from tvb_epilepsy.base.utils.data_structures_utils import make_float, make_int, isequal_string
 from tvb_epilepsy.base.model.statistical_models.probability_distributions.discrete_probability_distribution \
     import DiscreteProbabilityDistribution
@@ -9,9 +10,9 @@ from tvb_epilepsy.base.model.statistical_models.probability_distributions.discre
 class PoissonDistribution(DiscreteProbabilityDistribution):
 
     def __init__(self, **params):
-        self.type = "poisson"
-        self.scipy_name = "poisson"
-        self.numpy_name = "poisson"
+        self.type = ProbabilityDistributionTypes.POISSON
+        self.scipy_name = ProbabilityDistributionTypes.POISSON
+        self.numpy_name = ProbabilityDistributionTypes.POISSON
         self.lamda = make_float(params.get("lamda", params.get("lam", params.get("mu", 0.5))))
         self.constraint_string = "0 < lamda < 1"
         self.__update_params__(lamda=self.lamda)
