@@ -214,7 +214,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             region_mode = "all"
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         ests, samples, summary = stan_service.fit(debug=1, simulate=0, model_data=model_data, merge_outputs=False,
-                                                  chains=4, refresh=1, num_warmup=200, num_samples=300, **kwargs)
+                                                  chains=4, refresh=1, num_warmup=400, num_samples=600,
+                                                  max_depth=15, delta=0.9, **kwargs)
         writer.write_generic(ests, results_dir, hyp.name + "_fit_est.h5")
         writer.write_generic(samples, results_dir, hyp.name + "_fit_samples.h5")
         if summary is not None:

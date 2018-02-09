@@ -82,18 +82,18 @@ def build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_
     nonactive_regions = model_data["nonactive_regions"] - 1
     SC = statistical_model.parameters["MC"].mode
     act_reg_ones = np.ones((model_data["n_active_regions"],))
+    x0_lo = -3.0
     x0_hi = -2.0
     x0_star_mu = x0_hi - model_inversion.x0[active_regions].mean() * act_reg_ones
-    x0_star_std = np.minimum(0.05, x0_star_mu / 3.0)
+    x0_star_std = np.minimum((x0_hi - x0_lo), x0_star_mu / 3.0) * act_reg_ones
     vep_data = {"nn": model_data["n_active_regions"],
                 "nt": model_data["n_times"],
                 "ns": model_data["n_signals"],
-                "dt": model_data["dt"],  # model_data["dt"],
+                "dt": model_data["dt"],
                 "I1": model_data["Iext1"],
-                "x0_star_mu": x0_star_mu,
-                # model_inversion.x0[statistical_model.active_regions],
+                "x0_star_mu": x0_star_mu, # model_inversion.x0[statistical_model.active_regions],
                 "x0_star_std": x0_star_std,
-                "x0_lo": -3.0,
+                "x0_lo": x0_lo,
                 "x0_hi": x0_hi,
                 "x_init_mu": statistical_model.parameters["x1init"].mean[active_regions].mean() * act_reg_ones,
                 "z_init_mu": statistical_model.parameters["zinit"].mean[active_regions].mean() * act_reg_ones,
