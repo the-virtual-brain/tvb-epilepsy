@@ -63,15 +63,15 @@ functions {
 
     matrix vector_differencing(int ni, int nj, row_vector xi, row_vector xj) {
         matrix[nj, ni] Dji;
-        for (j in 1:nj) {
-            Dji[j] = xi - xj[j];
+        for (i in 1:ni) {
+            Dji[i] = xj - xi[i];
         }
-        return Dji';
+        return Dji;
     }
 
-    row_vector calc_coupling(int ni, int nj, row_vector xi, row_vector xj, matrix MC) {
-        matrix[ni, nj] Dij = vector_differencing(ni, nj, xi, xj);
-        row_vector[ni] coupling = to_row_vector(rows_dot_product(MC, Dij));
+    row_vector calc_coupling(int ni, int nj, row_vector xi, row_vector xj, matrix MCij) {
+        matrix[ni, nj] Dji = vector_differencing(ni, nj, xi, xj);
+        row_vector[ni] coupling = to_row_vector(rows_dot_product(MCij, Dji));
         return coupling;
     }
 

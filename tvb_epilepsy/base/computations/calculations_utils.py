@@ -1,18 +1,14 @@
 
 from scipy.optimize import root
-
-from tvb_epilepsy.base.constants.model_constants import X0_CR_DEF, X1_EQ_CR_DEF, X0_DEF, X1_DEF, I_EXT1_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_import_error
-# from tvb_epilepsy.base.utils import assert_array_shape as sc2arr
 from tvb_epilepsy.base.computations.equations_utils import *
-# TODO: find out why I cannot import anything from utils here
-
 
 logger = initialize_logger(__name__)
 
 try:
     from tvb_epilepsy.base.computations.symbolic_utils import *
-    SYMBOLIC_IMPORT=True
+
+    SYMBOLIC_IMPORT = True
 
 except:
     logger.warning("Unable to load symbolic_equations module! Symbolic calculations are not possible!")

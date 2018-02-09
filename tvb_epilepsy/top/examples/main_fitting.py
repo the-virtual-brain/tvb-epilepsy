@@ -3,8 +3,8 @@
 import os
 import numpy as np
 from scipy.io import loadmat, savemat
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES, FOLDER_VEP_ONLINE, \
-                                                                                                    TVB_EPILEPSY_PATH
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES
+from tvb_epilepsy.base.constants.configurations import FOLDER_VEP_ONLINE, STATS_MODELS_PATH
 from tvb_epilepsy.base.constants.module_constants import TVB, CUSTOM
 from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
@@ -17,9 +17,11 @@ from tvb_epilepsy.service.model_configuration_service import ModelConfigurationS
 from tvb_epilepsy.service.model_inversion.sde_model_inversion_service import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
 from tvb_epilepsy.service.model_inversion.stan.pystan_service import PyStanService
-from tvb_epilepsy.scripts.hypothesis_scripts import from_head_to_hypotheses, from_hypothesis_to_model_config_lsa
-from tvb_epilepsy.scripts.simulation_scripts import from_model_configuration_to_simulation
-from tvb_epilepsy.scripts.seeg_data_scripts import prepare_seeg_observable
+from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import build_stan_model_dict, \
+    build_stan_model_dict_to_interface_ins
+from tvb_epilepsy.top.scripts.hypothesis_scripts import from_head_to_hypotheses, from_hypothesis_to_model_config_lsa
+from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration_to_simulation
+from tvb_epilepsy.top.scripts.seeg_data_scripts import prepare_seeg_observable
 
 logger = initialize_logger(__name__)
 
@@ -31,69 +33,9 @@ plotter = Plotter()
 FOLDER_VEP_HOME = os.path.join(FOLDER_VEP_ONLINE, "tests")
 
 
-def convert_to_vep_stan(model_data, statistical_model, model_inversion, gain_matrix=None):
-    from copy import deepcopy
-    active_regions = model_data["active_regions"]-1
-    nonactive_regions = model_data["nonactive_regions"] - 1
-    SC = statistical_model.parameters["MC"].mode
-    act_reg_ones = np.ones((model_data["n_active_regions"],))
-    x0_hi = -2.0
-    x0_star_mu = x0_hi - model_inversion.x0[active_regions].mean() * act_reg_ones
-    x0_star_std = np.minimum(0.05, x0_star_mu/3.0)
-    vep_data = {"nn": model_data["n_active_regions"],
-                "nt": model_data["n_times"],
-                "ns": model_data["n_signals"],
-                "dt": model_data["dt"],  # model_data["dt"],
-                "I1": model_data["Iext1"],
-                "x0_star_mu": x0_star_mu,
-                # model_inversion.x0[statistical_model.active_regions],
-                "x0_star_std": x0_star_std,
-                "x0_lo": -3.0,
-                "x0_hi": x0_hi,
-                "x_init_mu": statistical_model.parameters["x1init"].mean[active_regions].mean()*act_reg_ones,
-                "z_init_mu": statistical_model.parameters["zinit"].mean[active_regions].mean()*act_reg_ones,
-                "x_eq_def": model_inversion.x1EQ[nonactive_regions].mean(),
-                "init_std": np.mean(statistical_model.parameters["x1init"].std),
-                "tau0": 30.0,#statistical_model.parameters["tau0"].mean,
-                # "K_lo": statistical_model.parameters["K"].low,
-                # "K_u": statistical_model.parameters["K"].mode,
-                # "K_v": statistical_model.parameters["K"].var,
-                "time_scale_mu": statistical_model.parameters["tau1"].mean,
-                "time_scale_std": statistical_model.parameters["tau1"].std,
-                "k_mu": statistical_model.parameters["K"].mean,
-                "k_std": statistical_model.parameters["K"].std,
-                "SC": SC[active_regions][:, active_regions],
-                "SC_var": 5.0,  # 1/36 = 0.02777777,
-                "Ic": np.sum(SC[active_regions][:, nonactive_regions], axis=1),
-                "sigma_mu": statistical_model.parameters["sig"].mean*10,
-                "sigma_std": statistical_model.parameters["sig"].std*10,
-                "epsilon_mu": statistical_model.parameters["eps"].mean,
-                "epsilon_std": statistical_model.parameters["eps"].std,
-                "sig_hi": 0.025,  # model_data["sig_hi"],
-                "amplitude_mu": statistical_model.parameters["scale_signal"].mean,
-                "amplitude_std": statistical_model.parameters["scale_signal"].std/6,
-                "amplitude_lo": 0.3,
-                "offset_mu": statistical_model.parameters["offset_signal"].mean,
-                "offset_std": statistical_model.parameters["offset_signal"].std,
-                "seeg_log_power": model_data["signals"],
-                # 9.0 * model_data["signals"] - 4.0,  # scale from (0, 1) to (-4, 5)
-                "time": model_data["time"]
-                }
-    if gain_matrix is None:
-        if statistical_model.observation_model.find("seeg") >= 0:
-            gain_matrix = model_inversion.gain_matrix
-            mixing = deepcopy(gain_matrix)[:, statistical_model.active_regions]
-        else:
-            mixing = np.eye(vep_data["nn"])
-        if mixing.shape[0] > vep_data["ns"]:
-            mixing = mixing[model_inversion.signals_inds]
-        vep_data["gain"] = mixing
-    return vep_data
-
-
 def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join(DATA_CUSTOM, 'Head'),
                         sensors_filename="SensorsSEEG_116.h5", stats_model_name="vep_sde",
-                        model_code_dir=os.path.join(TVB_EPILEPSY_PATH, "stan"), EMPIRICAL="",
+                        model_code_dir=STATS_MODELS_PATH, EMPIRICAL="",
                         times_on_off=[], sensors_lbls=[], sensors_inds=[], fitmethod="optimizing",
                         stan_service="CmdStan", results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES, **kwargs):
     # ------------------------------Stan model and service--------------------------------------
@@ -228,7 +170,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             # try:
             #     model_data = stan_service.load_model_data_from_file()
             # except:
-            model_data = model_inversion.generate_model_data(statistical_model, signals)
+            model_data = build_stan_model_dict(statistical_model, signals, model_inversion)
             writer.write_dictionary(model_data, os.path.join(results_dir, hyp.name + "_ModelData.h5"))
         if os.path.isfile(EMPIRICAL):
             simulation_values = None
@@ -237,7 +179,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                  "x1init": model_configuration.x1EQ, "zinit": model_configuration.zEQ}
         # Stupid code to interface with INS stan model
         if stats_model_name in ["vep-fe-rev-05", "vep-fe-rev-08", "vep-fe-rev-08a", "vep-fe-rev-08b"]:
-            model_data = convert_to_vep_stan(model_data, statistical_model, model_inversion)
+
+            model_data = build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_inversion)
             x1_str = "x"
             input_signals_str = "seeg_log_power"
             signals_str = "mu_seeg_log_power"
@@ -271,7 +214,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             region_mode = "all"
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         ests, samples, summary = stan_service.fit(debug=1, simulate=0, model_data=model_data, merge_outputs=False,
-                                                  chains=4, refresh=1, num_warmup=200, num_samples=300, **kwargs)
+                                                  chains=4, refresh=1, num_warmup=400, num_samples=600,
+                                                  max_depth=15, delta=0.9, **kwargs)
         writer.write_generic(ests, results_dir, hyp.name + "_fit_est.h5")
         writer.write_generic(samples, results_dir, hyp.name + "_fit_samples.h5")
         if summary is not None:

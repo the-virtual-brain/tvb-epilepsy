@@ -1,11 +1,13 @@
+# coding=utf-8
+
 import re
 import numpy as np
-from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, labels_to_inds, \
-    split_string_text_numbers
+from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, labels_to_inds
+from tvb_epilepsy.base.utils.data_structures_utils import split_string_text_numbers
 from tvb_epilepsy.base.utils.math_utils import compute_gain_matrix
 
 
-class SensorsH5Field():
+class SensorsH5Field(object):
     GAIN_MATRIX = "gain_matrix"
     LABELS = "labels"
     LOCATIONS = "locations"
@@ -60,7 +62,7 @@ class Sensors(object):
     def __str__(self):
         return self.__repr__()
 
-    #TODO: verify this try and change message
+    # TODO: verify this try and change message
     def sensor_label_to_index(self, labels):
         indexes = []
         for label in labels:

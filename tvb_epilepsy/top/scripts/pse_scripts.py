@@ -6,7 +6,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts
     dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
-from tvb_epilepsy.scripts.hypothesis_scripts import start_lsa_run
+from tvb_epilepsy.top.scripts.hypothesis_scripts import start_lsa_run
 # from tvb_epilepsy.service.pse_service import PSEService
 from tvb_epilepsy.service.pse.lsa_pse_service import LSAPSEService
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
