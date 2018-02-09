@@ -84,7 +84,7 @@ transformed data {
 
 parameters {
     // integrate and predict
-    row_vector<lower=0.0>[nn] x0_star;
+    row_vector[nn] x0_star;
     real epsilon_star;
     real<lower=amplitude_lo> amplitude;
     real offset;
