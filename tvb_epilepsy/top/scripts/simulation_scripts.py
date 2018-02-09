@@ -192,10 +192,10 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
                                            plot_flag=True, results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES,
                                            logger=logger, **kwargs):
     if simulation_mode is TVB:
-        from tvb_epilepsy.top.scripts import setup_TVB_simulation_from_model_configuration \
+        from tvb_epilepsy.top.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration \
             as setup_simulation_from_model_configuration
     else:
-        from tvb_epilepsy.top.scripts import setup_custom_simulation_from_model_configuration \
+        from tvb_epilepsy.top.scripts.simulation_scripts import setup_custom_simulation_from_model_configuration \
             as setup_simulation_from_model_configuration
     # --------------------------Simulation preparations------------------------------------------------------------------
     # TODO: maybe use a custom Monitor class
@@ -206,7 +206,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
         time_length = kwargs.get("time_length", 12000.0 / tau1)
     elif sim_type == "fitting":
         tau1 = 0.5
-        tau0 = 30.0
+        tau0 = 10.0
         "fast"
         time_length = kwargs.get("time_length", 50.0 / tau1)
     else:
