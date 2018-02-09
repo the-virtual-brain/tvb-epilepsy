@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import HEAD_FOLDER, FOLDER_RES, FOLDER_FIGURES
+from tvb_epilepsy.base.constants.configurations import IN_HEAD, FOLDER_RES, FOLDER_FIGURES
 from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE, EIGENVECTORS_NUMBER_SELECTION, \
     WEIGHTED_EIGENVECTOR_SUM
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
@@ -17,8 +17,7 @@ logger = initialize_logger(__name__)
 def start_lsa_run(hypothesis, model_connectivity):
     logger.info("creating model configuration...")
     model_configuration_service = ModelConfigurationService(hypothesis.number_of_regions)
-    model_configuration = model_configuration_service. \
-        configure_model_from_hypothesis(hypothesis, model_connectivity)
+    model_configuration = model_configuration_service.configure_model_from_hypothesis(hypothesis, model_connectivity)
 
     logger.info("running LSA...")
     lsa_service = LSAService(eigen_vectors_number_selection=EIGENVECTORS_NUMBER_SELECTION, eigen_vectors_number=None,
@@ -28,8 +27,8 @@ def start_lsa_run(hypothesis, model_connectivity):
     return model_configuration_service, model_configuration, lsa_service, lsa_hypothesis
 
 
-def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=HEAD_FOLDER,
-                            plot_head=False, figure_dir=FOLDER_FIGURES, sensors_filename="SensorsInternal.h5"):
+def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=IN_HEAD,
+                            plot_head=False, figure_dir=FOLDER_FIGURES):
     if data_mode is TVB:
         from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
     else:

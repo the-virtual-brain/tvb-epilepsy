@@ -19,8 +19,8 @@ from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_y1, d
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz, calc_fx1, calc_fx1_2d_taylor, \
     calc_x0_val_to_model_x0, raise_value_error
 from tvb_epilepsy.base.constants.model_constants import TAU0_DEF, TAU1_DEF, X1_EQ_CR_DEF, X1_DEF, X0_CR_DEF, X0_DEF
-from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMAT, LARGE_SIZE, MOUSEHOOVER, \
-    VERY_LARGE_SIZE, FIG_SIZE, VERY_LARGE_PROTRAIT, SUPER_LARGE_SIZE
+from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMAT, LARGE_SIZE, MOUSE_HOOVER, \
+    VERY_LARGE_SIZE, FIG_SIZE, VERY_LARGE_PORTRAIT, SUPER_LARGE_SIZE
 
 
 class Plotter(BasePlotter):
@@ -123,7 +123,7 @@ class Plotter(BasePlotter):
 
     def plot_statistical_model(self, statistical_model, figure_name="", figure_dir=FOLDER_FIGURES,
                                figure_format=FIG_FORMAT):
-        _, ax = pyplot.subplots(len(statistical_model.parameters), 2, figsize=VERY_LARGE_PROTRAIT)
+        _, ax = pyplot.subplots(len(statistical_model.parameters), 2, figsize=VERY_LARGE_PORTRAIT)
         for ip, p in enumerate(statistical_model.parameters.values()):
             self._prepare_parameter_axes(p, x=numpy.array([]), ax=ax[ip], lgnd=False)
         self._save_figure(pyplot.gcf(), figure_name, figure_dir, figure_format)
@@ -335,7 +335,7 @@ class Plotter(BasePlotter):
             if isequal_string(mode, "raster"):  # set yticks as labels if this is a raster plot
                 # axYticks(labels, offset, nTS)
                 pyplot.gca().invert_yaxis()
-        if MOUSEHOOVER:
+        if MOUSE_HOOVER:
             for line in lines:
                 # datacursor( lines[0], formatter='{label}'.format, bbox=dict(fc='white'),
                 #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
@@ -652,7 +652,7 @@ class Plotter(BasePlotter):
         ax.axes.set_ylim([0.0, 6.0])
         ax.axes.set_xlabel('x1')
         ax.axes.set_ylabel('z')
-        if MOUSEHOOVER:
+        if MOUSE_HOOVER:
             # datacursor( lines[0], formatter='{label}'.format, bbox=dict(fc='white'),
             #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
 

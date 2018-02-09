@@ -2,7 +2,7 @@
 import numpy as np
 from copy import deepcopy
 from tvb_epilepsy.base.constants.module_constants import DATA_MODE, TVB
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, HEAD_FOLDER
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, IN_HEAD
 from tvb_epilepsy.io.h5_model import read_h5_model
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
@@ -27,8 +27,8 @@ if __name__ == "__main__":
     reader = Reader()
     writer = H5Writer()
 
-    logger.info("Reading from: " + HEAD_FOLDER)
-    head = reader.read_head(HEAD_FOLDER)
+    logger.info("Reading from: " + IN_HEAD)
+    head = reader.read_head(IN_HEAD)
 
     # # Manual definition of hypothesis...:
     x0_indices = [20]

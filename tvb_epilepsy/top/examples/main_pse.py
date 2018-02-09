@@ -1,7 +1,7 @@
 
 import os
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import HEAD_FOLDER, FOLDER_RES
+from tvb_epilepsy.base.constants.configurations import IN_HEAD, FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.io.h5_writer import H5Writer
@@ -17,7 +17,7 @@ if __name__ == "__main__":
     reader = Reader()
     writer = H5Writer()
 
-    head = reader.read_head(HEAD_FOLDER)
+    head = reader.read_head(IN_HEAD)
 
     # --------------------------Hypothesis definition-----------------------------------
 

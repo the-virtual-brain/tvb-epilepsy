@@ -5,7 +5,7 @@ import os
 import numpy as np
 from tvb_epilepsy.base.constants.module_constants import SIMULATION_MODE, TVB, DATA_MODE
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, HEAD_FOLDER
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, IN_HEAD
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
@@ -42,8 +42,8 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     # -------------------------------Reading data-----------------------------------
     reader = Reader()
     writer = H5Writer()
-    logger.info("Reading from: " + HEAD_FOLDER)
-    head = reader.read_head(HEAD_FOLDER)
+    logger.info("Reading from: " + IN_HEAD)
+    head = reader.read_head(IN_HEAD)
     plotter = Plotter()
     plotter.plot_head(head)
     if test_write_read:
@@ -61,9 +61,9 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     ep_name = "ep_l_frontal_complex"
     # FOLDER_RES = os.path.join(data_folder, ep_name)
     if not hasattr(reader, "read_epileptogenicity"):
-        disease_values = H5Reader().read_epileptogenicity(HEAD_FOLDER, name=ep_name)
+        disease_values = H5Reader().read_epileptogenicity(IN_HEAD, name=ep_name)
     else:
-        disease_values = reader.read_epileptogenicity(HEAD_FOLDER, name=ep_name)
+        disease_values = reader.read_epileptogenicity(IN_HEAD, name=ep_name)
     disease_indices, = np.where(disease_values > np.min([X0_DEF, E_DEF]))
     disease_values = disease_values[disease_indices]
     if disease_values.size > 1:

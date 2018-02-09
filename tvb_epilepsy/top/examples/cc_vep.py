@@ -4,7 +4,7 @@ Entry point for working with VEP
 import os
 import numpy as np
 from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE
-from tvb_epilepsy.base.constants.configurations import FOLDER_VEP, FOLDER_RES
+from tvb_epilepsy.base.constants.configurations import IN_HEAD, FOLDER_RES
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
@@ -28,7 +28,7 @@ HEAD = "Head"
 
 def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folder_res=FOLDER_RES,
              pse_flag=PSE_FLAG, sim_flag=SIM_FLAG):
-    subject_folder = os.path.join(FOLDER_VEP, subject)
+    subject_folder = os.path.join(os.path.dirname(os.path.dirname(IN_HEAD)), subject)
     folder_res = os.path.basename(folder_res)
     FOLDER_RES = os.path.join(subject_folder, HEAD, ep_name)
     if not (os.path.isdir(FOLDER_RES)):

@@ -3,8 +3,8 @@
 import os
 import numpy as np
 from scipy.io import loadmat, savemat
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES
-from tvb_epilepsy.base.constants.configurations import FOLDER_VEP_ONLINE, STATS_MODELS_PATH
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, IN_HEAD, FOLDER_FIGURES
+from tvb_epilepsy.base.constants.configurations import WORK_FOLDER, STATS_MODELS_PATH
 from tvb_epilepsy.base.constants.module_constants import TVB, CUSTOM
 from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
@@ -30,10 +30,10 @@ writer = H5Writer()
 
 plotter = Plotter()
 
-FOLDER_VEP_HOME = os.path.join(FOLDER_VEP_ONLINE, "tests")
+FOLDER_VEP_HOME = os.path.join(WORK_FOLDER, 'tests')
 
 
-def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join(DATA_CUSTOM, 'Head'),
+def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=IN_HEAD,
                         sensors_filename="SensorsSEEG_116.h5", stats_model_name="vep_sde",
                         model_code_dir=STATS_MODELS_PATH, EMPIRICAL="",
                         times_on_off=[], sensors_lbls=[], sensors_inds=[], fitmethod="optimizing",
@@ -259,7 +259,7 @@ if __name__ == "__main__":
     SUBJECT = "TVB3"
     VEP_HOME = os.path.join("/Users/dionperd/Dropbox/Work/VBtech/VEP/results/CC")
     VEP_FOLDER = os.path.join(VEP_HOME, SUBJECT)
-    DATA_CUSTOM = "/Users/dionperd/Dropbox/Work/VBtech/VEP/results/CC/" + SUBJECT
+    IN_HEAD = "/Users/dionperd/Dropbox/Work/VBtech/VEP/results/CC/" + SUBJECT + "/Head"
     SEEG_data = os.path.join("/Users/dionperd/Dropbox/Work/VBtech/VEP/data/CC", SUBJECT, "raw/seeg/ts_seizure")
     # TVB3 preselection:
     # sensors_lbls = [u"G'1", u"G'2", u"G'3", u"G'8", u"G'9", u"G'10", u"G'11", u"G'12", u"M'6", u"M'7", u"M'8", u"L'4",
@@ -286,14 +286,14 @@ if __name__ == "__main__":
     stats_model_name = "vep-fe-rev-08a"
     fitmethod = "sample"
     if EMPIRICAL:
-        main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
+        main_fit_sim_hyplsa(ep_name=ep_name, data_folder=IN_HEAD,
                             sensors_filename=sensors_filename, stats_model_name=stats_model_name,
                             EMPIRICAL=os.path.join(SEEG_data, seizure),
                             times_on_off=[15.0, 35.0], sensors_lbls=sensors_lbls, sensors_inds=sensors_inds,
                             fitmethod=fitmethod, stan_service="CmdStan", results_dir=FOLDER_RES,
                             figure_dir=FOLDER_FIGURES)  # , stan_service="PyStan"
     else:
-        main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
+        main_fit_sim_hyplsa(ep_name=ep_name, data_folder=IN_HEAD,
                             sensors_filename=sensors_filename, stats_model_name=stats_model_name,
                             fitmethod=fitmethod, stan_service="CmdStan",
                             results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES)  # , stan_service="PyStan"

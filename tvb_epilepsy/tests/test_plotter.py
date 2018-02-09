@@ -7,7 +7,7 @@ from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
-from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, DATA_TEST, FOLDER_LOGS, FOLDER_RES
+from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, IN_TEST_DATA, FOLDER_LOGS, FOLDER_RES
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
 
 head_dir = "head2"
@@ -24,7 +24,7 @@ class TestPlotter():
 
     def _prepare_dummy_head(self):
         reader = H5Reader()
-        connectivity = reader.read_connectivity(os.path.join(DATA_TEST, head_dir, "Connectivity.h5"))
+        connectivity = reader.read_connectivity(os.path.join(IN_TEST_DATA, head_dir, "Connectivity.h5"))
         cort_surface = Surface([], [])
         seeg_sensors = Sensors(numpy.array(["sens1", "sens2"]), numpy.array([[0, 0, 0], [0, 1, 0]]))
         head = Head(connectivity, cort_surface, sensorsSEEG=seeg_sensors)
