@@ -2,7 +2,7 @@ import time
 from copy import deepcopy
 import numpy as np
 from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
-from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1_REST, TAU1_DEF, TAU1_MIN, \
+from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1EQ_MAX, X1_REST, TAU1_DEF, TAU1_MIN, \
     TAU1_MAX, TAU0_DEF, TAU0_MIN, TAU0_MAX, K_MIN, K_MAX, MC_MAX, MC_MAX_MIN_RATIO, SIG_EQ_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import copy_object_attributes
@@ -127,17 +127,19 @@ class ModelInversionService(object):
         SC[diag_ind, diag_ind] = 0.0
         return SC
 
-    def get_default_sig_eq(self, **kwargs):
-        return kwargs.get("sig_eq", SIG_EQ_DEF)
-
     def __set_default_parameters(self, **kwargs):
-        sig_eq_def = self.get_default_sig_eq(**kwargs)
+        sig_eq_def = kwargs.get("sig_eq", SIG_EQ_DEF)
         # Generative model:
         # Epileptor:
-        self.default_parameters.update(set_parameter_defaults("x1eq", "normal", (self.n_regions,),
-                                                              X1EQ_MIN, X1_EQ_CR_DEF,
-                                                              pdf_params={"mu": np.maximum(self.x1EQ, X1_REST),
-                                                                          "sigma": sig_eq_def}))
+        x1eq_max = kwargs.get("x1eq_max", X1EQ_MAX)
+        x1eq_star_max = x1eq_max - X1EQ_MIN
+        x1eq_star_mean = x1eq_max - self.x1EQ
+        x1eq_std = np.minimum(sig_eq_def, np.abs(x1eq_star_mean)/3.0)
+        self.default_parameters.update(set_parameter_defaults("x1eq_star", "lognormal", (self.n_regions,),
+                                                              0.0, x1eq_star_max,
+                                                              x1eq_star_mean, x1eq_std,
+                                                              pdf_params={"mean": x1eq_star_mean/x1eq_std,
+                                                                          "skew": 0.0}, **kwargs))
         K_mean = self.get_default_K()
         K_std = np.min([K_mean-K_MIN, K_MAX-K_mean]) / kwargs.get("K_scale_range", 6.0)
         self.default_parameters.update(set_parameter_defaults("K", "lognormal", (),
@@ -189,8 +191,8 @@ class ModelInversionService(object):
         tic = time.time()
         self.logger.info("Generating model...")
         self.default_parameters.update(kwargs)
-        model = StatisticalModel(model_name, self.n_regions, self.get_default_sig_eq(**kwargs),
-                                 **self.default_parameters)
+        model = StatisticalModel(model_name, self.n_regions, kwargs.get("x1eq_max", X1EQ_MAX),
+                                 kwargs.get("sig_eq", SIG_EQ_DEF), **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model

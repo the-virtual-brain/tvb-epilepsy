@@ -4,6 +4,7 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_RES, CMDSTAN_PATH
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
 from tvb_epilepsy.base.utils.command_line_utils import execute_command
+from tvb_epilepsy.io.csv import parse_csv_in_cols
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.model_inversion.stan.stan_service import StanService
 from tvb_epilepsy.service.model_inversion.stan.stan_factory import *
@@ -58,7 +59,6 @@ class CmdStanService(StanService):
     def compile_stan_model(self, save_model=True, **kwargs):
         self.model_code_path = kwargs.pop("model_code_path", self.model_code_path)
         self.logger.info("Compiling model...")
-        tic = time.time()
         command = "make " + self.model_code_path.split(".stan", 1)[0] + " && " + \
                   "chmod +x " + self.model_code_path.split(".stan", 1)[0]
         self.compilation_time = execute_command(command, cwd=self.path, shell=True)[1]
@@ -68,8 +68,25 @@ class CmdStanService(StanService):
             if self.model_path != self.model_code_path.split(".stan", 1)[0]:
                 copyfile(self.model_code_path.split(".stan", 1)[0], self.model_path)
 
+    def read_output(self, output_filepath=os.path.join(FOLDER_RES, STAN_OUTPUT_OPTIONS["file"]), **kwargs):
+        samples = self.read_output_samples(output_filepath, **kwargs)
+        est = self.compute_estimates_from_samples(samples)
+        summary_filepath = kwargs.pop("summary_filepath", os.path.join(FOLDER_RES, "stan_summary.csv"))
+        if os.path.isfile(summary_filepath):
+            summary = parse_csv_in_cols(summary_filepath)
+        else:
+            summary = None
+        return est, samples, summary
+
+    def stan_summary(self, output_filepath=os.path.join(FOLDER_RES, STAN_OUTPUT_OPTIONS["file"]),
+                           summary_filepath=os.path.join(FOLDER_RES, "stan_summary.csv")):
+        command = "bin/stansummary " + output_filepath[:-4] + "*.csv" + " --csv_file=" + summary_filepath
+        execute_command(command, cwd=self.path, shell=True)
+        return summary_filepath
+
     def fit(self, output_filepath=os.path.join(FOLDER_RES, STAN_OUTPUT_OPTIONS["file"]), diagnostic_filepath="",
-            debug=0, simulate=0, read_output=True, **kwargs):
+            summary_filepath=os.path.join(FOLDER_RES, "stan_summary.csv"), debug=0, simulate=0, return_output=True,
+            plot_HMC=True, **kwargs):
         self.model_path = kwargs.pop("model_path", self.model_path)
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
         self.fitmethod = kwargs.pop("method", self.fitmethod)
@@ -82,12 +99,13 @@ class CmdStanService(StanService):
                          " method of model: " + self.model_path + "...")
         self.fitting_time = execute_command(self.command.replace("\t", ""), shell=True)[1]
         self.logger.info(str(self.fitting_time) + ' sec required to ' + self.fitmethod + "!")
-        if read_output:
-            samples = self.read_output_samples(output_filepath, **kwargs)
-            est = self.compute_estimates_from_samples(samples)
-            if self.fitmethod.find("sampl") >= 0:
-                if isequal_string(self.options.get("algorithm", "None"), "HMC"):
-                    Plotter().plot_HMC(samples, kwargs.pop("skip_samples", 0))
-            return est, samples
+        self.logger.info("Computing stan summary...")
+        summary_filepath = self.stan_summary(output_filepath, summary_filepath)
+        if return_output:
+            est, samples, summary = self.read_output(output_filepath, summary_filepath=summary_filepath, **kwargs)
+            if plot_HMC and self.fitmethod.find("sampl") >= 0 and \
+                isequal_string(self.options.get("algorithm", "None"), "HMC"):
+                Plotter().plot_HMC(samples, kwargs.pop("skip_samples", 0))
+            return est, samples, summary
         else:
-            return None, None
+            return None, None, None

@@ -263,7 +263,7 @@ class Plotter(BasePlotter):
             subtitle = lambda labels, iTS: subtitle_traj(labels, iTS)
             subtitle_col = lambda subtitles, icol: None
         else:
-            def_alpha = 1
+            def_alpha = 1.0
             subtitle = lambda: None
             subtitle_col = lambda subtitles, icol: pyplot.gca().set_title(pyplot.gcf().title)
         axlabels = lambda labels, vars, n_vars, n_rows, irow, iTS: axlabels_traj(vars, n_vars)
@@ -666,90 +666,141 @@ class Plotter(BasePlotter):
         self._save_figure(figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
         self._check_show()
 
-    def parameters_pair_plots(self, samples, params=["tau1", "tau0", "K", "sig_eq", "eps"], skip_samples=0,
+    def _params_stats_subtitles(self, params, stats):
+        subtitles = list(params)
+        if isinstance(stats, dict):
+            for ip, param in enumerate(params):
+                subtitles[ip] = subtitles[ip] + ": "
+                for skey, sval in stats.iteritems():
+                    subtitles[ip] = subtitles[ip] + skey + "=" + str(sval[param]) + ", "
+                subtitles[ip] = subtitles[ip][:-2]
+        return subtitles
+
+    def _params_stats_labels(self, param, stats, labels):
+        subtitles = list(labels)
+        if isinstance(stats, dict):
+            n_params = len(stats.values()[0][param])
+            if len(subtitles) == 1 and n_params > 1:
+                subtitles = subtitles * n_params
+            elif len(subtitles) == 0:
+                subtitles = [""] * n_params
+            for ip in range(n_params):
+                if len(subtitles[ip]) > 0:
+                    subtitles[ip] = subtitles[ip] + ": "
+                for skey, sval in stats.iteritems():
+                    subtitles[ip] = subtitles[ip] + skey + "=" + str(sval[param][ip]) + ", "
+                    subtitles[ip] = subtitles[ip][:-2]
+        return subtitles
+
+    def parameters_pair_plots(self, samples, params=["tau1", "tau0", "K", "sig_eq", "eps"], stats=None, skip_samples=0,
                               title='Parameters samples', figure_name=None, figure_dir=FOLDER_FIGURES,
                               figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT):
+        subtitles = self._params_stats_subtitles(params, stats)
         samples = ensure_list(samples)
         if len(samples) > 1:
             samples = list_of_dicts_to_dicts_of_ndarrays(samples)
         else:
             samples = samples[0]
         samples = extract_dict_stringkeys(samples, params, modefun="equal")
-        self.pair_plots(samples, samples.keys(), True, skip_samples, title, figure_name, figure_dir, figsize,
-                        figure_format)
+        self.pair_plots(samples, samples.keys(), True, skip_samples, title, subtitles,
+                        figure_name, figure_dir, figsize, figure_format)
 
-    def region_parameters_violin_plots(self, samples, params=["x0", "x1eq"], skip_samples=0, per_chain=False,
+    def region_parameters_violin_plots(self, samples, values=None, params=["x0", "x1eq"], stats=None,
+                                       skip_samples=0, per_chain=False,  labels=None, seizure_indices=None,
                                        figure_name="Regions parameters samples", figure_dir=FOLDER_FIGURES,
                                        figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT):
+        if isinstance(values, dict):
+            vals_fun = lambda param: values.get(param, numpy.array([]))
+        else:
+            vals_fun = lambda param: []
         samples = ensure_list(samples)
         n_chains = len(samples)
         if not per_chain and len(samples) > 1:
             samples = ensure_list(list_of_dicts_to_dicts_of_ndarrays(samples))
-            plot_samples = lambda s: numpy.concatenate(numpy.split(s.T, n_chains, axis=2), axis=1).squeeze().T
+            plot_samples = lambda s: numpy.concatenate(numpy.split(s[skip_samples:].T, n_chains, axis=2),
+                                                       axis=1).squeeze().T
             plot_figure_name = lambda ichain: figure_name
         else:
-            plot_samples = lambda s: s
+            plot_samples = lambda s: s[skip_samples:]
             plot_figure_name = lambda ichain: figure_name + ": chain " + str(ichain + 1)
+        if labels is None:
+            labels = numpy.array(range(samples[params[0]].shape[1])).astype(str)
+        params_labels = {}
+        for ip, p in enumerate(params):
+            if ip == 0:
+                params_labels[p] = self._params_stats_labels(p, stats, labels)
+            else:
+                params_labels[p] = self._params_stats_labels(p, stats, "")
+        n_params = len(params)
+        if n_params > 9:
+            raise_value_error("Number of subplots in column wise vector-violin-plots cannot be > 9 and it is "
+                              + str(n_params) + "!")
+        subplot_ind = 100 + n_params * 10
         for ichain, chain_sample in enumerate(samples):
             pyplot.figure(plot_figure_name(ichain), figsize=figsize)
             for ip, param in enumerate(params):
-                pyplot.subplot(len(params), 1, ip + 1)
-                pyplot.violinplot(plot_samples(chain_sample[param]))
-                pyplot.ylabel(param)
-                if ip == len(params) - 1:
-                    pyplot.xlabel('Regions')
+                self.plot_vector_violin(vals_fun(param), plot_samples(chain_sample[param]), params_labels[param],
+                                        subplot_ind+ip+1, param, colormap="YlOrRd", show_y_labels=True,
+                                        indices_red=seizure_indices, sharey=None)
             self._save_figure(pyplot.gcf(), None, figure_dir, figure_format)
             self._check_show()
 
-    def plot_fit_results(self, model_inversion_service, ests, samples, statistical_model, signals, time=None,
-                         region_mode="all", seizure_indices=None, x1_str="x1", mc_str="MC", signals_str="fit_signals",
-                         sig_str="sig", eps_str="eps", dX1t_str="dX1t", dZt_str="dZt", trajectories_plot=True,
-                         connectivity_plot=True, figure_dir=FOLDER_FIGURES,
+    def plot_fit_results(self, model_inversion, ests, samples, statistical_model, signals, stats=None, time=None,
+                         simulation_values=None, region_mode="all", seizure_indices=[], x1_str="x1", mc_str="MC",
+                         signals_str="fit_signals", sig_str="sig", dX1t_str="dX1t", dZt_str="dZt",
+                         trajectories_plot=True, connectivity_plot=True, figure_dir=FOLDER_FIGURES,
                          figure_format=FIG_FORMAT, **kwargs):
+        region_labels = kwargs.get("regions_labels", model_inversion.region_labels)
+        if isequal_string(region_mode, "all"):
+            region_inds = range(statistical_model.n_regions)
+        else:
+            region_inds = statistical_model.active_regions
+        n_active_regions = len(region_inds)
         # plot scalar parameters in pair plots
         self.parameters_pair_plots(samples,
                                    kwargs.get("pair_plot_params",
                                               ["tau1", "tau0", "K", "sig_eq", "sig_init", "sig", "eps", "scale_signal",
-                                               "offset_signal"]),
+                                               "offset_signal"]), stats,
                                    kwargs.get("skip_samples", 0), title=statistical_model.name + " parameters samples")
         # plot region-wise parameters
-        self.region_parameters_violin_plots(samples,
+        self.region_parameters_violin_plots(samples, simulation_values,
                                             kwargs.get("region_violin_params", ["x0", "x1eq", "x1init", "zinit"]),
-                                            skip_samples=kwargs.get("skip_samples", 0),
+                                            stats, skip_samples=kwargs.get("skip_samples", 0),
                                             per_chain=kwargs.get("violin_plot_per_chain", False),
+                                            labels=region_labels[region_inds], # seizure_indices=seizure_indices,
                                             figure_name=statistical_model.name + " regions parameters samples")
         if time is None:
             time = numpy.array(range(signals.shape[0]))
         time = time.flatten()
         sig_prior = statistical_model.parameters["sig"].mean
-        eps_prior = statistical_model.parameters["eps"].mean
-        region_labels = kwargs.get("regions_labels", model_inversion_service.region_labels)
-        if isequal_string(region_mode, "all"):
-            region_inds = range(statistical_model.n_regions)
-        else:
-            region_inds = statistical_model.active_regions
         if statistical_model.observation_model.find("seeg") >= 0:
-            sensor_labels = kwargs.get("signals_labels", None)[model_inversion_service.signals_inds]
+            sensor_labels = kwargs.get("signals_labels", None)[model_inversion.signals_inds]
         else:
-            sensor_labels = region_labels[model_inversion_service.signals_inds]
+            sensor_labels = region_labels[model_inversion.signals_inds]
             seizure_indices = None
+        stats_string = {signals_str: "\n", x1_str: "\n", "z": "\n", "MC": ""}
+        stats_region_labels = list(region_labels[region_inds])
+        if isinstance(stats, dict):
+            for skey, sval in stats.iteritems():
+                for p_str in [signals_str, x1_str, "z"]:
+                    stats_string[p_str] \
+                        = stats_string[p_str] + skey + "_mean=" + str(numpy.mean(sval[p_str])) + ", "
+                stats_region_labels = [stats_region_labels[ip] + ", " +
+                                       skey + "_" + x1_str + "_mean=" + str(sval[x1_str][:, ip].mean()) + ", " +
+                                       skey + "_z_mean=" + str(sval["z"][:, ip].mean())
+                                       for ip in range(n_active_regions)]
+            for p_str in [signals_str, x1_str, "z"]:
+                stats_string[p_str] = stats_string[p_str][:-2]
+        observation_dict = {'observation signals': signals}
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), ensure_list(samples))):
             name = statistical_model.name + "_chain" + str(id_est)
-            self.plot_timeseries(sort_dict({'observation signals': signals,
-                                        'observation signals fit': sample[signals_str].T}), time,
-                             special_idx=None, time_units=est.get('time_units', "ms"),
-                             title=name + ": Observation signals vs fit time series",
-                             subtitles=['observation signals ',
-                                        'observation signals fit' +
-                                        '\nobservation noise eps_prior =  ' + str(eps_prior) +
-                                        ", eps_post =" + str(est[eps_str])], offset=1.0,
-                             labels=sensor_labels,
-                             figure_dir=figure_dir, figure_format=figure_format, figsize=VERY_LARGE_SIZE)
+            observation_dict.update({"observation signals' fit": sample[signals_str].T})
             self.plot_raster(sort_dict({x1_str: sample[x1_str].T, 'z': sample["z"].T}), time,
                              special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                              title=name + ": Hidden states fit rasterplot",
-                             subtitles=['hidden state ' + x1_str, 'hidden state z'], offset=1.0,
-                             labels=region_labels[region_inds], save_flag=save_flag,
+                             subtitles=['hidden state ' + x1_str + stats_string[x1_str],
+                                        'hidden state z' + stats_string["z"]], offset=1.0,
+                             labels=region_labels[region_inds],
                              figure_dir=figure_dir,
                              figure_format=figure_format, figsize=VERY_LARGE_SIZE)
             self.plot_raster(sort_dict({dX1t_str: sample[dX1t_str].T, dZt_str: sample[dZt_str].T}), time[:-1], #
@@ -763,37 +814,40 @@ class Plotter(BasePlotter):
                              figure_dir=figure_dir,
                              figure_format=figure_format, figsize=VERY_LARGE_SIZE)
             if trajectories_plot:
-                x0_prior = str(model_inversion_service.x0[statistical_model.active_regions])
-                x0 = est["x0"]
                 title = name + ': Fit hidden state space trajectories'
-                title += "\n prior x0: " + x0_prior
-                if len(x0) > statistical_model.n_active_regions:
-                    x0 = x0[statistical_model.active_regions]
-                title += "\n x0 fit: " + str(x0)
                 self.plot_trajectories({x1_str: sample[x1_str].T, 'z': sample['z'].T}, special_idx=seizure_indices,
-                                       title=title, labels=model_inversion_service.region_labels,
+                                       title=title, labels=stats_region_labels,
                                        figure_dir=figure_dir, figure_format=figure_format, figsize=SUPER_LARGE_SIZE)
             # plot connectivity
             if connectivity_plot:
                 MC_prior = statistical_model.parameters["MC"].mean
-                K_prior = statistical_model.parameters["K"].mean
                 conn_figure_name = name + "Model Connectivity"
                 pyplot.figure(conn_figure_name, VERY_LARGE_SIZE)
                 # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
                 self.plot_regions2regions(MC_prior, region_labels, 121,
-                                          "Prior Model Connectivity" + "\nglobal scaling prior: K = " + str(K_prior))
-                self.plot_regions2regions(est[mc_str], region_labels, 122,
-                                          "Posterior Model  Connectivity" + "\nglobal scaling fit: K = " + str(
-                                              est["K"]))
+                                          "Prior Model Connectivity")
+                MC_title = "Posterior Model  Connectivity"
+                if isinstance(stats, dict):
+                    MC_title = MC_title + ": "
+                    for skey, sval in stats.iteritems():
+                        MC_title = MC_title + skey + "_mean=" + sval["MC"].mean() + ", "
+                    MC_title = MC_title[:-2]
+                self.plot_regions2regions(est[mc_str], region_labels, 122, MC_title)
                 self._save_figure(pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
                 self._check_show()
+        self.plot_timeseries(observation_dict, time, special_idx=None, time_units=ests[0].get('time_units', "ms"),
+                             title="Observation signals vs fit time series: " + stats_string[signals_str],
+                             offset=1.0, labels=sensor_labels,
+                             figure_dir=figure_dir, figure_format=figure_format, figsize=VERY_LARGE_SIZE)
 
     def _prepare_distribution_axes(self, distribution, loc=0.0, scale=1.0, x=numpy.array([]), ax=None, linestyle="-",
-                                   lgnd=True):
+                                   lgnd=False):
         if len(x) < 1:
             x = linspace_broadcast(distribution.scipy(distribution.loc, distribution.scale).ppf(0.01),
                                    distribution.scipy(distribution.loc, distribution.scale).ppf(0.99), 100)
         if x is not None:
+            if x.ndim == 1:
+                x = x[:, numpy.newaxis]
             pdf = distribution.scipy(loc, scale).pdf(x)
             if ax is None:
                 _, ax = pyplot.subplots(1, 1)
@@ -813,7 +867,7 @@ class Plotter(BasePlotter):
         self._check_show()
         return ax, pyplot.gcf()
 
-    def _prepare_parameter_axes(self, parameter, x=numpy.array([]), ax=None, lgnd=True):
+    def _prepare_parameter_axes(self, parameter, x=numpy.array([]), ax=None, lgnd=False):
         if ax is None:
             _, ax = pyplot.subplots(1, 2)
         if len(x) < 1:

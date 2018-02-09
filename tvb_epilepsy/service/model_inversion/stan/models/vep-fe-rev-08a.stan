@@ -17,12 +17,14 @@ functions {
         return x_next;
     }
 
-    row_vector z_step(row_vector x, row_vector z, row_vector x0, matrix FC, vector Ic, real time_scale,
+    row_vector z_step(row_vector x, row_vector z, row_vector x0, matrix FC, vector Ic, real x_eq_def, real time_scale,
                       row_vector z_eta, real sigma, real tau0) {
         int nn = num_elements(z);
         row_vector[nn] z_next;
         matrix[nn, nn] D = vector_differencing(x);
-        row_vector[nn] gx = to_row_vector(rows_dot_product(FC, D) - Ic .* to_vector(1.8 + x));
+        // Ic = Ic_i = sum_{j in nonactive regions} [w_ij]
+        // gx(nonactive->active) = Ic * (x_j - x_i) = Ic * (x_eq_def - x)
+        row_vector[nn] gx = to_row_vector(rows_dot_product(FC, D) + Ic .* to_vector(x_eq_def - x));
         row_vector[nn] dz = inv(tau0) * (4 * (x - x0) - z - gx);
         z_next = z + (time_scale * dz) + z_eta * sigma;
         return z_next;
@@ -38,10 +40,13 @@ data {
     real I1;
     real tau0;
     real dt;
-    row_vector [nn] x0_mu;
-    real x0_std;
-    real x0_lo;
+    row_vector [nn] x0_star_mu;
+    row_vector [nn] x0_star_std;
+    // row_vector [nn] x0_mu;
+    // real x0_std;
+    // real x0_lo;
     real x0_hi;
+    real x_eq_def;
     row_vector [nn] x_init_mu;
     row_vector [nn] z_init_mu;
     real init_std;
@@ -66,16 +71,20 @@ data {
 
 transformed data {
     real sqrtdt = sqrt(dt);
+    real time_scale_zscore = time_scale_std/time_scale_mu;
+    real k_zscore = k_std/k_mu;
+    real epsilon_zscore = epsilon_std/epsilon_mu;
+    real sigma_zscore = sigma_std/sigma_mu;
+    row_vector[nn] x0_star_zscore = x0_star_std ./ x0_star_mu;
     //matrix[ns, nn] log_gain = log(gain);
     matrix [nn, nn] SC_ = SC;
     for (i in 1:nn) SC_[i, i] = 0;
     SC_ /= max(SC_) * rows(SC_);
-
 }
 
 parameters {
     // integrate and predict
-    row_vector<lower=x0_lo, upper=x0_hi>[nn] x0;
+    row_vector<lower=0.0>[nn] x0_star;
     real epsilon_star;
     real<lower=amplitude_lo> amplitude;
     real offset;
@@ -91,10 +100,11 @@ parameters {
 }
 
 transformed parameters {
-    real epsilon = epsilon_mu * exp((epsilon_std/epsilon_mu) * epsilon_star); //0.05
-    real sigma = sigma_mu * exp((sigma_std/sigma_mu) * sigma_star); //0.053 * exp(0.1 * sigma_star);
-    real time_scale = time_scale_mu * exp((time_scale_std/time_scale_mu) * time_scale_star); //0.15 * exp(0.4 * time_scale_star - 1.0);
-    real k = k_mu * exp((k_std/k_mu) * k_star); //1e-3 * exp(0.5 * k_star);
+    real epsilon = epsilon_mu * exp(epsilon_zscore * epsilon_star); //0.05
+    real sigma = sigma_mu * exp(sigma_zscore * sigma_star); //0.053 * exp(0.1 * sigma_star);
+    real time_scale = time_scale_mu * exp(time_scale_zscore * time_scale_star); //0.15 * exp(0.4 * time_scale_star - 1.0);
+    real k = k_mu * exp(k_zscore * k_star); //1e-3 * exp(0.5 * k_star);
+    row_vector[nn] x0 = x0_hi - (x0_star_mu .* exp(x0_star_zscore .* x0_star));
     row_vector[nn] x[nt];
     row_vector[nn] z[nt];
     row_vector[ns] mu_seeg_log_power[nt];
@@ -103,14 +113,15 @@ transformed parameters {
     z[1] = z_init; // 2.0;
     for (t in 1:(nt-1)) {
         x[t+1] = x_step(x[t], z[t], I1, dt*time_scale, x_eta[t], sqrtdt*sigma);
-        z[t+1] = z_step(x[t], z[t], x0, k*SC, Ic, dt*time_scale, z_eta[t], sqrtdt*sigma, tau0);
+        z[t+1] = z_step(x[t], z[t], x0, k*SC, Ic, x_eq_def, dt*time_scale, z_eta[t], sqrtdt*sigma, tau0);
     }
     for (t in 1:nt)
         mu_seeg_log_power[t] = amplitude * (log(gain * exp(x[t]')) + offset)';
 }
 
 model {
-    x0 ~ normal(x0_mu, x0_std); //-3.0, 1.0
+    // x0 ~ normal(x0_mu, x0_std); //-3.0, 1.0
+    to_row_vector(x0_star) ~ normal(0, 1.0);
     x_init ~ normal(x_init_mu, init_std); // 0.0, 1.0
     z_init ~ normal(z_init_mu, init_std); // 0.0, 1.0
     sigma_star ~ normal(0, 1.0);

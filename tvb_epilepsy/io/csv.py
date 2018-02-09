@@ -60,6 +60,39 @@ def parse_csv(fname, merge=True):
     return data_
 
 
+def parse_csv_in_cols(fname):
+    names = []
+    sdims = {}
+    with open(fname, 'r') as fd:
+        scols = fd.readline().strip().split(',')[1:]
+        output = {key: {} for key in scols}
+        for line in fd.readlines():
+            if '"' not in line:
+                continue
+            if line.startswith('#'):
+                break
+            _, key, vals = line.split('"')
+            vals = [np.float(v) for v in vals.split(',')[1:]]
+            if '[' in key:
+                name, dim = key.replace('[', ']').split(']')[:-1]
+                if name not in names:
+                    names.append(name)
+                    for icol, scol in enumerate(scols):
+                        output[scol][name] = []
+                sdims[name] = tuple(int(i) for i in dim.split(','))
+                for icol, scol in enumerate(scols):
+                    output[scol][name].append(vals[icol])
+            else:
+                for icol, scol in enumerate(scols):
+                    output[scol][key] = vals[icol]
+
+    for key in names:
+        for icol, scol in enumerate(scols):
+            output[scol][key] = np.array(output[scol][key]).reshape(sdims[key])
+
+    return output
+
+
 def csv2mode(csv_fname, mode=None):
     csv = parse_csv(csv_fname)
     data = {}

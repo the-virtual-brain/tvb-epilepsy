@@ -3,6 +3,7 @@ from tvb_epilepsy.base.constants.model_constants import X1_DEF, X1_EQ_CR_DEF
 
 # Model inversion constants
 X1EQ_MIN = -2.0
+X1EQ_MAX = X1_EQ_CR_DEF
 X1_REST = X1_DEF
 X1_EQ_CR = X1_EQ_CR_DEF
 TAU1_DEF = 0.5

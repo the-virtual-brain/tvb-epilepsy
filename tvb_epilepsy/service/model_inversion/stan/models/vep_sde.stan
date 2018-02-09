@@ -154,10 +154,14 @@ data {
     real rx0;
     // real x0_lo;
     // real x0_hi;
-    /* x1eq parameter (only normal distribution, ignoring _pdf) */
-    real x1eq_lo;
-    real x1eq_hi;
-    row_vector[n_regions] x1eq_loc;
+    /* x1eq_star parameter  */
+    real x1eq_max;
+    real<lower=0.0> x1eq_star_lo;
+    real<lower=0.0> x1eq_star_hi;
+    row_vector<upper=0.0>[n_regions] x1eq_star_loc;
+    row_vector<lower=0.0>[n_regions] x1eq_star_scale;
+    real x1eq_star_p[n_regions, 2];
+    int<lower=0> x1eq_star_pdf;
     //real zeq_lo;
     //real zeq_hi;
     /* x1init parameter (only normal distribution, ignoring _pdf) */
@@ -272,10 +276,13 @@ transformed data {
     real eps_star_hi = (eps_hi - eps_loc) / eps_scale;
     real scale_signal_star_lo = (scale_signal_lo - scale_signal_loc) / scale_signal_scale;
     real scale_signal_star_hi = (scale_signal_hi - scale_signal_loc) / scale_signal_scale;
+    // row_vector[n_regions] x1eq_2star_lo = (x1eq_star_lo - x1eq_star_loc) ./ x1eq_star_scale;
+    // row_vector[n_regions] x1eq_2star_hi = (x1eq_star_hi - x1eq_star_loc) ./ x1eq_star_scale;
     if (DEBUG > 0)
         print("tau1_star_lo=", tau1_star_lo, " tau0_star_lo=", tau0_star_lo, " K_star_lo=", K_star_lo,
           " sig_eq_star_lo=", sig_eq_star_lo, " sig_init_star_lo=", sig_init_star_lo, " sig_star_lo=", sig_star_lo,
           " eps_star_lo=", eps_star_lo, " scale_signal_star_lo=", scale_signal_star_lo);
+        // print("x1eq_2star_lo=", x1eq_2star_lo, " x1eq_2star_hi=", x1eq_2star_hi)
 
 }
 
@@ -284,7 +291,7 @@ parameters {
 
     /* Generative model */
     /* Epileptor */
-    row_vector<lower=x1eq_lo, upper=x1eq_hi>[n_regions] x1eq; // x1 equilibrium point coordinate
+    row_vector<lower=0.0>[n_regions] x1eq_star; //star of x1 equilibrium point coordinate, <lower=x1eq_2star_lo, upper=x1eq_2star_hi>
     real<lower=sig_eq_star_lo, upper=sig_eq_star_hi> sig_eq_star; // variance of equilibrium
     row_vector<lower=x1init_lo, upper=x1init_hi>[n_regions] x1init; // x1 initial condition coordinate
     row_vector<lower=zinit_lo, upper=zinit_hi>[n_regions] zinit; // x1 initial condition coordinate
@@ -325,6 +332,8 @@ transformed parameters {
     real<lower=0.0> tau1 = tau1_star * tau1_scale + tau1_loc; // time scale
     real<lower=0.0> tau0 = tau0_star * tau0_scale + tau0_loc; // time scale separation
     real<lower=0.0> sig_eq = sig_eq_star * sig_eq_scale + sig_eq_loc; // variance of equilibrium
+    /* x1eq, x1 equilibrium point coordinate */
+    row_vector[n_regions] x1eq = x1eq_max - (x1eq_star .* x1eq_star_scale + x1eq_star_loc);
     /* zeq, z equilibrium point coordinate */
     row_vector[n_regions] zeq = EpileptorDP2D_fun_x1(n_regions, x1eq, zeros, yc, Iext1, a, db, d, slope, 1.0);
 
@@ -431,7 +440,10 @@ model {
     sig_init_star ~ sample(sig_init_pdf, sig_init_p);
     sig_star ~ sample(sig_pdf, sig_p);
     /* Sampling of x1 equilibrium point coordinate and initial condition */
-    x1eq ~ normal(x1eq_loc, sig_eq);
+    // x1eq ~ normal(x1eq_loc, sig_eq);
+    for (ii in 1:n_regions) {
+        x1eq_star[ii] ~ sample(x1eq_star_pdf, x1eq_star_p[ii]);
+    }
     x1init ~ normal(x1eq, sig_init);
     zinit ~ normal(zeq, sig_init/2);
 
@@ -442,9 +454,9 @@ model {
     if (DEBUG > 0)
         print("offset_signal=", offset_signal);
     /* Integrate & predict  */
-    for (tt in 1:n_times) {
+    for (tt in 1:(n_times-1)) {
         /* Auto-regressive generative model  */
-        // to_vector(dX1t[tt]) ~ normal(0, 1);
+        to_vector(dX1t[tt]) ~ normal(0, 1);
         to_vector(dZt[tt]) ~ normal(0, 1);
     }
     /* Observation model  */
