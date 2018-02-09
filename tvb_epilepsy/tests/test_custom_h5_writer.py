@@ -1,5 +1,6 @@
 import os
 import numpy
+from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
@@ -124,7 +125,7 @@ class TestCustomH5writer(object):
     def test_write_model_inversion_service(self):
         test_file = os.path.join(get_temporary_folder(), "TestModelInversionService.h5")
         dummy_model_inversion_service = ModelInversionService(
-            ModelConfiguration(model_connectivity=self.dummy_connectivity.normalized_weights),
+            ModelConfiguration(model_connectivity=self.dummy_connectivity.normalized_weights, x1EQ=X1_EQ_CR_DEF),
             dynamical_model="Epileptor", sig_eq=(-4.0 / 3.0 - -5.0 / 3.0) / 10.0)
 
         assert not os.path.exists(test_file)
