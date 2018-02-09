@@ -1,5 +1,5 @@
+from collections import OrderedDict
 import numpy
-from scipy.stats import zscore
 import matplotlib
 matplotlib.use('Qt4Agg')
 from matplotlib import pyplot, gridspec
@@ -791,10 +791,10 @@ class Plotter(BasePlotter):
                                        for ip in range(n_active_regions)]
             for p_str in [signals_str, x1_str, "z"]:
                 stats_string[p_str] = stats_string[p_str][:-2]
-        observation_dict = {'observation signals': signals}
+        observation_dict = OrderedDict({'observation signals': signals})
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), ensure_list(samples))):
-            name = statistical_model.name + "_chain" + str(id_est)
-            observation_dict.update({"observation signals' fit": sample[signals_str].T})
+            name = statistical_model.name + "_chain" + str(id_est+1)
+            observation_dict.update({"fit chain " + str(id_est+1): sample[signals_str].T})
             self.plot_raster(sort_dict({x1_str: sample[x1_str].T, 'z': sample["z"].T}), time,
                              special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                              title=name + ": Hidden states fit rasterplot",
