@@ -201,7 +201,7 @@ data {
     row_vector<lower=0.0, upper=1.0>[n_connections] MCsplit_loc;
     row_vector<lower=0.0>[n_connections] MCsplit_scale;
     /* MC_scale (model connectivity scale factor (multiplying standard deviation) */
-    real<lower=0.0> MC_minloc;
+    // real<lower=0.0> MC_minloc;
     real<lower=0.0> MC_scale;
 
     /* Integration */
@@ -239,7 +239,7 @@ data {
     real<lower=0.0> eps_scale;
     real eps_p[2];
     int<lower=0> eps_pdf;
-    /* Observation signal scaling parameter (defaul: normal distribution) */
+    /* Observation signal scaling parameter (defaul: lognormal distribution) */
     real<lower=0.0> scale_signal_lo;
     real<lower=0.0> scale_signal_hi;
     real scale_signal_loc;
@@ -276,14 +276,10 @@ transformed data {
     real eps_star_hi = (eps_hi - eps_loc) / eps_scale;
     real scale_signal_star_lo = (scale_signal_lo - scale_signal_loc) / scale_signal_scale;
     real scale_signal_star_hi = (scale_signal_hi - scale_signal_loc) / scale_signal_scale;
-    // row_vector[n_regions] x1eq_2star_lo = (x1eq_star_lo - x1eq_star_loc) ./ x1eq_star_scale;
-    // row_vector[n_regions] x1eq_2star_hi = (x1eq_star_hi - x1eq_star_loc) ./ x1eq_star_scale;
     if (DEBUG > 0)
         print("tau1_star_lo=", tau1_star_lo, " tau0_star_lo=", tau0_star_lo, " K_star_lo=", K_star_lo,
           " sig_eq_star_lo=", sig_eq_star_lo, " sig_init_star_lo=", sig_init_star_lo, " sig_star_lo=", sig_star_lo,
           " eps_star_lo=", eps_star_lo, " scale_signal_star_lo=", scale_signal_star_lo);
-        // print("x1eq_2star_lo=", x1eq_2star_lo, " x1eq_2star_hi=", x1eq_2star_hi)
-
 }
 
 
@@ -296,18 +292,16 @@ parameters {
     row_vector<lower=x1init_lo, upper=x1init_hi>[n_regions] x1init; // x1 initial condition coordinate
     row_vector<lower=zinit_lo, upper=zinit_hi>[n_regions] zinit; // x1 initial condition coordinate
     real<lower=sig_init_star_lo, upper=sig_init_star_hi> sig_init_star; // variance of initial condition
-    row_vector[n_active_regions] dX1t[n_times-1]; // x1 dWt
-    row_vector[n_active_regions] dZt[n_times-1]; // z dWt
+    row_vector[n_active_regions] dX1t[n_times-1]; // x1 dWt only for active nodes
+    row_vector[n_active_regions] dZt[n_times-1]; // z dWt     >>   >>    >>
     real<lower=tau1_star_lo, upper=tau1_star_hi> tau1_star; // time scale [n_active_regions]
     real<lower=tau0_star_lo, upper=tau0_star_hi> tau0_star; // time scale separation [n_active_regions]
     /* Coupling */
     real<lower=K_star_lo, upper=K_star_hi> K_star; // global coupling scaling
-    row_vector[n_connections] MCsplit; // Model connectivity direction split
+    row_vector<lower=MCsplit_lo, upper=MCsplit_hi>[n_connections] MCsplit; // Model connectivity direction split
     matrix<lower=0.0>[n_connections, 2] MC_star; // Non-symmetric model connectivity
-
-    /* Integration */
+    /* SDE Integration */
     real<lower=sig_star_lo, upper=sig_star_hi> sig_star; // variance of phase flow, i.e., dynamic noise
-
     /* Observation model */
     real<lower=eps_star_lo, upper=eps_star_hi> eps_star; // variance of observation noise
     real<lower=scale_signal_star_lo, upper=scale_signal_star_hi> scale_signal_star; // observation signal scaling
@@ -337,7 +331,7 @@ transformed parameters {
     /* zeq, z equilibrium point coordinate */
     row_vector[n_regions] zeq = EpileptorDP2D_fun_x1(n_regions, x1eq, zeros, yc, Iext1, a, db, d, slope, 1.0);
 
-    /* Integration of auto-regressive generative model  */
+    /* SDE Integration of auto-regressive generative model  */
     real<lower=0.0> sig_init = sig_init_star * sig_init_scale + sig_init_loc; // variance of initial condition
     real<lower=0.0> sig = sig_star * sig_scale + sig_loc; // variance of phase flow, i.e., dynamic noise
 
@@ -372,16 +366,6 @@ transformed parameters {
     x1[1] = x1init;
     z[1] = zinit;
     coupling[1] = calc_coupling(n_regions, n_regions, x1[1], x1[1], MC);
-    if  (observation_model == 0) {
-    // seeg log power: observation with some log mixing, scaling and offset_signal
-        fit_signals[1] = (scale_signal * log(mixing * exp(x1[1]')) + offset_signal)';
-    } else if (observation_model == 1){
-    // observation with some linear mixing, scaling and offset_signal
-        fit_signals[1] = (scale_signal * mixing * x1[1]' + offset_signal)';
-    } else {
-        // observation with some scaling and offset_signal, without mixing
-        fit_signals[1] = scale_signal * x1[1] + offset_signal;
-    }
 
     if (DEBUG > 1)
         print("x1init=", x1init, " zinit=", zinit, " fit_signals[1]=", fit_signals[1], " x0=", x0,
@@ -404,16 +388,19 @@ transformed parameters {
             z[tt] = ode_step(n_regions, z[tt-1], df, dt);
             z[tt, active_regions] = z[tt, active_regions] + dZt[tt-1] * sqrtdt;
 
-            if  (observation_model == 0) {
-                // seeg log power: observation with some log mixing, scaling and offset_signal
-                fit_signals[tt] = scale_signal * (log(mixing * exp(x1[tt]')) + offset_signal)';
-            } else if (observation_model == 1){
-                // observation with some linear mixing, scaling and offset_signal
-                fit_signals[tt] = scale_signal * (mixing * x1[tt]' + offset_signal)';
-            } else {
-                // observation with some scaling and offset_signal, without mixing
-                fit_signals[tt] = scale_signal * (x1[tt] + offset_signal);
-            }
+        }
+    }
+
+    for (tt in 1:n_times) {
+        if  (observation_model == 0) {
+            // seeg log power: observation with some log mixing, scaling and offset_signal
+            fit_signals[tt] = scale_signal * (log(mixing * exp(x1[tt]')) + offset_signal)';
+        } else if (observation_model == 1){
+            // observation with some linear mixing, scaling and offset_signal
+            fit_signals[tt] = scale_signal * (mixing * x1[tt]' + offset_signal)';
+        } else {
+            // observation with some scaling and offset_signal, without mixing
+            fit_signals[tt] = scale_signal * (x1[tt] + offset_signal);
         }
     }
 }
@@ -456,11 +443,12 @@ model {
     /* Integrate & predict  */
     for (tt in 1:(n_times-1)) {
         /* Auto-regressive generative model  */
-        to_vector(dX1t[tt]) ~ normal(0, 1);
-        to_vector(dZt[tt]) ~ normal(0, 1);
+        to_vector(dX1t[tt]) ~ normal(0, sig);
+        to_vector(dZt[tt]) ~ normal(0, sig);
     }
     /* Observation model  */
     if (SIMULATE <= 0){
+        // signals ~ normal(fit_signals, eps);
         for (tt in 1:n_times)
             signals[tt] ~ normal(fit_signals[tt], eps);
     }
