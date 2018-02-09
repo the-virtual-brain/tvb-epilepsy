@@ -5,7 +5,7 @@ functions {
         for (i in 1:num_elements(x)) {
             D[i] = x - x[i];
         }
-        return D';
+        return D;
     }
 
     row_vector x_step(row_vector x, row_vector z, real I1, real time_scale, row_vector x_eta, real sigma) {
