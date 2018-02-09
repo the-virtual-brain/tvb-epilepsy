@@ -165,8 +165,7 @@ class ModelInversionService(object):
         self.default_parameters.update(set_parameter_defaults("MCsplit", "normal", # or "beta"...
                                                               (self.n_regions * (self.n_regions-1)/2,),
                                                               0.0, 1.0,
-                                                              self.MC_direction_split,
-                                                              MCsplit_std, **kwargs))
+                                                              self.MC_direction_split, MCsplit_std, **kwargs))
         MC_def = self.get_default_MC()
         self.default_parameters.update(set_parameter_defaults("MC", "normal", (self.n_regions, self.n_regions),
                                                               0.0, MC_MAX,

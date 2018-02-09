@@ -84,7 +84,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             model_data = reader.read_dictionary(model_data_file)
         else:
             model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
-                                                       sig=0.001)
+                                                       sig=0.001, MCsplit_scale_zscore=10, MC_scale_range=10)
 
             statistical_model = model_inversion.generate_statistical_model(observation_model="lfp_power") # observation_expression="lfp"
             statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
@@ -213,8 +213,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             estMC = lambda est: est["MC"]
             region_mode = "all"
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        ests, samples, summary = stan_service.fit(debug=1, simulate=0, model_data=model_data, merge_outputs=False,
-                                                  chains=4, refresh=1, num_warmup=400, num_samples=600,
+        ests, samples, summary = stan_service.fit(debug=1, simulate=1, model_data=model_data, merge_outputs=False,
+                                                  chains=1, refresh=1, num_warmup=10, num_samples=10,
                                                   max_depth=15, delta=0.9, **kwargs)
         writer.write_generic(ests, results_dir, hyp.name + "_fit_est.h5")
         writer.write_generic(samples, results_dir, hyp.name + "_fit_samples.h5")
@@ -283,8 +283,8 @@ if __name__ == "__main__":
     # times_on_off = [20.0, 100.0]
     # ep_name = "clinical_hypothesis_preseeg_right"
     EMPIRICAL = False
-    # stats_model_name = "vep_sde"
-    stats_model_name = "vep-fe-rev-08a"
+    stats_model_name = "vep_sde"
+    # stats_model_name = "vep-fe-rev-08a"
     fitmethod = "sample"
     if EMPIRICAL:
         main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
