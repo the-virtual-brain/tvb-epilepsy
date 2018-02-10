@@ -695,13 +695,14 @@ class Plotter(BasePlotter):
     def parameters_pair_plots(self, samples, params=["tau1", "tau0", "K", "sig_eq", "eps"], stats=None, skip_samples=0,
                               title='Parameters samples', figure_name=None, figure_dir=FOLDER_FIGURES,
                               figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT):
-        subtitles = self._params_stats_subtitles(params, stats)
+        subtitles = list(self._params_stats_subtitles(params, stats))
+        subtitles.sort()
         samples = ensure_list(samples)
         if len(samples) > 1:
             samples = list_of_dicts_to_dicts_of_ndarrays(samples)
         else:
             samples = samples[0]
-        samples = extract_dict_stringkeys(samples, params, modefun="equal")
+        samples = sort_dict(extract_dict_stringkeys(samples, params, modefun="equal"))
         self.pair_plots(samples, samples.keys(), True, skip_samples, title, subtitles,
                         figure_name, figure_dir, figsize, figure_format)
 
