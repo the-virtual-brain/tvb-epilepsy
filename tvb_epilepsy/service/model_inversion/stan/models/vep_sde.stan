@@ -158,7 +158,7 @@ data {
     // real x0_hi;
     /* x1eq_star parameter  */
     real x1eq_max;
-    real<lower=0.0> x1eq_min;
+    real<upper=0.0> x1eq_min;
     real<lower=0.0> x1eq_star_lo;
     real<lower=0.0> x1eq_star_hi;
     row_vector<upper=0.0>[n_regions] x1eq_star_loc;
