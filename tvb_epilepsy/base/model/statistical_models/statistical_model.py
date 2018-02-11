@@ -13,6 +13,7 @@ class StatisticalModel(object):
             self.name = name
         else:
             raise_value_error("Statistical model's type " + str(name) + " is not a string!")
+        self.x1eq_min = x1eq_min
         self.x1eq_max = x1eq_max
         # Parameter setting:
         self.parameters = {}
