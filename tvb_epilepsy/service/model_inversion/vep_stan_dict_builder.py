@@ -34,10 +34,9 @@ def build_stan_model_dict(statistical_model, signals, model_inversion, gain_matr
                   "active_regions_flag": np.array(active_regions_flag),
                   "active_regions": np.array(statistical_model.active_regions) + 1,  # cmdstan cannot take lists!
                   "nonactive_regions": np.where(1 - active_regions_flag)[0] + 1,  # indexing starts from 1!
+                  "x1eq_min": statistical_model.x1eq_min,
                   "x1eq_max": statistical_model.x1eq_max,
                   "SC": SC[np.triu_indices(SC.shape[0], 1)],
-                  "MC_minloc": MC_MIN,
-                  "sig_init": statistical_model.sig_init,
                   "dt": statistical_model.dt,
                   # "euler_method": np.where(np.in1d(EULER_METHODS, statistical_model.euler_method))[0][0] - 1,
                   "observation_model": np.where(np.in1d(OBSERVATION_MODELS,

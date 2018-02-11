@@ -81,7 +81,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
            os.path.isfile(model_data_file):
             model_inversion = reader.read_dictionary(model_inversion_file, "OrderedDictDot")
             statistical_model = reader.read_generic(stats_model_file)
-            model_data = reader.read_dictionary(model_data_file)
+            model_data = stan_service.load_model_data_from_file(model_data_path=model_data_file)
         else:
             model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
                                                        MCsplit_scale_zscore=10.0, MC_scale_range=10.0)
@@ -133,7 +133,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                                            save_flag=True, results_dir=results_dir,
                                                            figure_dir=figure_dir, tau1=0.5, tau0=30.0,
                                                            noise_intensity=10 ** -3)
-                manual_selection = statistical_model.active_regions
+                manual_selection = [] # statistical_model.active_regions
                 n_electrodes = 8
                 sensors_per_electrode = 2
                 sensors_lbls = model_inversion.sensors_labels
@@ -211,9 +211,9 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             estMC = lambda est: est["MC"]
             region_mode = "all"
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        ests, samples, summary = stan_service.fit(debug=1, simulate=0, model_data=model_data, merge_outputs=False,
-                                                  chains=4, refresh=1, num_warmup=200, num_samples=300,
-                                                  max_depth=12, delta=0.85, **kwargs)
+        ests, samples, summary = stan_service.fit(debug=3, simulate=1, model_data=model_data, merge_outputs=False,
+                                                  chains=1, refresh=1, num_warmup=10, num_samples=10,
+                                                  max_depth=10, delta=0.8, **kwargs)
         writer.write_generic(ests, results_dir, hyp.name + "_fit_est.h5")
         writer.write_generic(samples, results_dir, hyp.name + "_fit_samples.h5")
         if summary is not None:
@@ -281,8 +281,8 @@ if __name__ == "__main__":
     # times_on_off = [20.0, 100.0]
     # ep_name = "clinical_hypothesis_preseeg_right"
     EMPIRICAL = False
-    # stats_model_name = "vep_sde"
-    stats_model_name = "vep-fe-rev-08a"
+    stats_model_name = "vep_sde"
+    # stats_model_name = "vep-fe-rev-08a"
     fitmethod = "sample"
     if EMPIRICAL:
         main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),

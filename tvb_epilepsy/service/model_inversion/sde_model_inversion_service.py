@@ -1,10 +1,10 @@
 import time
-import numpy as np
-from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
-from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MAX, SIG_EQ_DEF, SIG_INIT_DEF, SIG_DEF
+# import numpy as np
+# from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
+from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MAX, X1EQ_MIN, SIG_INIT_DEF, SIG_DEF
 from tvb_epilepsy.base.model.statistical_models.sde_statistical_model import SDEStatisticalModel
 from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
-from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_NVARS
+# from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_NVARS
 from tvb_epilepsy.service.model_inversion.ode_model_inversion_service import ODEModelInversionService
 
 
@@ -48,8 +48,9 @@ class SDEModelInversionService(ODEModelInversionService):
         active_regions = kwargs.pop("active_regions", [])
         self.default_parameters.update(kwargs)
         model = SDEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
-                                    kwargs.get("x1eq_max", X1EQ_MAX), kwargs.get("sig_init", SIG_INIT_DEF),
-                                    self.get_default_sig(**kwargs), **self.default_parameters)
+                                    kwargs.get("x1eq_min", X1EQ_MIN), kwargs.get("x1eq_max", X1EQ_MAX),
+                                    kwargs.get("sig_init", SIG_INIT_DEF), self.get_default_sig(**kwargs),
+                                    **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model

@@ -184,8 +184,8 @@ class ModelInversionService(object):
         tic = time.time()
         self.logger.info("Generating model...")
         self.default_parameters.update(kwargs)
-        model = StatisticalModel(model_name, self.n_regions, kwargs.get("x1eq_max", X1EQ_MAX),
-                                 **self.default_parameters)
+        model = StatisticalModel(model_name, self.n_regions, kwargs.get("x1eq_min", X1EQ_MIN),
+                                 kwargs.get("x1eq_max", X1EQ_MAX), **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model
