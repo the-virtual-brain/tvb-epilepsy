@@ -1,11 +1,10 @@
-
 import os
 import numpy as np
 from tvb_epilepsy.base.constants.configurations import HEAD_FOLDER, FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
+from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.top.scripts.pse_scripts import pse_from_hypothesis
 from tvb_epilepsy.io.h5_reader import H5Reader as Reader
 
@@ -38,10 +37,8 @@ if __name__ == "__main__":
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
     n_healthy = len(healthy_indices)
     # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
-    hyp_x0_E = DiseaseHypothesis(head.connectivity.number_of_regions,
-                                 excitability_hypothesis={tuple(x0_indices): x0_values},
-                                 epileptogenicity_hypothesis={tuple(e_indices): e_values},
-                                 connectivity_hypothesis={})
+    hyp_x0_E = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).build_mixed_hypothesis(
+        e_values, e_indices, x0_values, x0_indices)
 
     # Now running the parameter search analysis:
     logger.info("running PSE LSA...")
@@ -58,7 +55,7 @@ if __name__ == "__main__":
                                                                                         save_services=True)[:4]
 
     Plotter().plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
-                         lsa_service.eigen_vectors_number, region_labels=head.connectivity.region_labels,
-                         pse_results=pse_results)
+                       lsa_service.eigen_vectors_number, region_labels=head.connectivity.region_labels,
+                       pse_results=pse_results)
 
-    writer.write_dictionary(pse_results, os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5"))
+writer.write_dictionary(pse_results, os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5"))
