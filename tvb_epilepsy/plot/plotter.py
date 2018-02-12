@@ -754,8 +754,10 @@ class Plotter(BasePlotter):
         region_labels = kwargs.get("regions_labels", model_inversion.region_labels)
         if isequal_string(region_mode, "all"):
             region_inds = range(statistical_model.n_regions)
+            seizure_indices = statistical_model.active_regions
         else:
             region_inds = statistical_model.active_regions
+            seizure_indices = None
         n_active_regions = len(region_inds)
         # plot scalar parameters in pair plots
         self.parameters_pair_plots(samples,
@@ -768,7 +770,7 @@ class Plotter(BasePlotter):
                                             kwargs.get("region_violin_params", ["x0", "x1eq", "x1init", "zinit"]),
                                             stats, skip_samples=kwargs.get("skip_samples", 0),
                                             per_chain=kwargs.get("violin_plot_per_chain", False),
-                                            labels=region_labels[region_inds], # seizure_indices=seizure_indices,
+                                            labels=region_labels[region_inds], seizure_indices=seizure_indices,
                                             figure_name=statistical_model.name + " regions parameters samples")
         if time is None:
             time = numpy.array(range(signals.shape[0]))
@@ -778,7 +780,6 @@ class Plotter(BasePlotter):
             sensor_labels = kwargs.get("signals_labels", None)[model_inversion.signals_inds]
         else:
             sensor_labels = region_labels[model_inversion.signals_inds]
-            seizure_indices = None
         stats_string = {signals_str: "\n", x1_str: "\n", "z": "\n", "MC": ""}
         stats_region_labels = list(region_labels[region_inds])
         if isinstance(stats, dict):
@@ -805,7 +806,7 @@ class Plotter(BasePlotter):
                              figure_dir=figure_dir,
                              figure_format=figure_format, figsize=VERY_LARGE_SIZE)
             self.plot_raster(sort_dict({dX1t_str: sample[dX1t_str].T, dZt_str: sample[dZt_str].T}), time[:-1], #
-                             special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
+                             time_units=est.get('time_units', "ms"), # special_idx=seizure_indices,
                              title=name + ": Hidden states random walk rasterplot",
                              subtitles=[dX1t_str,
                                         dZt_str +
@@ -831,7 +832,7 @@ class Plotter(BasePlotter):
                 if isinstance(stats, dict):
                     MC_title = MC_title + ": "
                     for skey, sval in stats.iteritems():
-                        MC_title = MC_title + skey + "_mean=" + sval["MC"].mean() + ", "
+                        MC_title = MC_title + skey + "_mean=" + str(sval["MC"].mean()) + ", "
                     MC_title = MC_title[:-2]
                 self.plot_regions2regions(est[mc_str], region_labels, 122, MC_title)
                 self._save_figure(pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
