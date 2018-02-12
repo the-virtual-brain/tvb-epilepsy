@@ -1,7 +1,6 @@
 import os
 import numpy
 from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
@@ -9,6 +8,7 @@ from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
@@ -81,8 +81,8 @@ class TestCustomH5writer(object):
 
     def test_write_hypothesis(self):
         test_file = os.path.join(get_temporary_folder(), "TestHypothesis.h5")
-        dummy_hypothesis = DiseaseHypothesis(3, excitability_hypothesis={tuple([0]): numpy.array([0.6])},
-                                             epileptogenicity_hypothesis={})
+        dummy_hypothesis = HypothesisBuilder().set_nr_of_regions(3).build_excitability_hypothesis(numpy.array([0.6]),
+                                                                                                  [0])
 
         assert not os.path.exists(test_file)
 
@@ -137,8 +137,7 @@ class TestCustomH5writer(object):
     def test_write_pse_service(self):
         test_file = os.path.join(get_temporary_folder(), "TestPSEService.h5")
         dummy_pse_service = LSAPSEService(
-            hypothesis=DiseaseHypothesis(3, excitability_hypothesis={tuple([0]): numpy.array([0.6])},
-                                         epileptogenicity_hypothesis={}),
+            hypothesis=HypothesisBuilder().set_nr_of_regions(3).build_excitability_hypothesis(numpy.array([0.6]), [0]),
             params_pse={"path": [], "indices": [], "name": [], "bounds": []})
 
         assert not os.path.exists(test_file)

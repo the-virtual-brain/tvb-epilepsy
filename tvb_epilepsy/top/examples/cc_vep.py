@@ -6,10 +6,10 @@ import numpy as np
 from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE
 from tvb_epilepsy.base.constants.configurations import IN_HEAD, FOLDER_RES
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
+from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
 from tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
@@ -61,27 +61,21 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
     # disease_indices = x0_indices + e_indices
     # ...or reading a custom file:
     disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
-    disease_indices, = np.where(disease_values > np.min([X0_DEF, E_DEF]))
-    disease_values = disease_values[disease_indices]
-    # TODO: something smarter to normalize better disease values
-    disease_values += (0.95 - np.max(disease_values))
-    disease_indices = list(disease_indices)
+
+    hypo_builder = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).set_normalize(True)
+    threshold = np.min(X0_DEF, E_DEF)
     n_x0 = len(x0_indices)
-    # n_e = len(e_indices)
-    n_disease = len(disease_indices)
     all_regions_indices = np.array(range(head.number_of_regions))
-    healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
-    n_healthy = len(healthy_indices)
+
     # This is an example of Epileptogenicity Hypothesis:
-    hyp_E = DiseaseHypothesis(head.connectivity.number_of_regions,
-                              excitability_hypothesis={},
-                              epileptogenicity_hypothesis={tuple(disease_indices): disease_values},
-                              connectivity_hypothesis={})
+    hyp_E = hypo_builder.build_epileptogenicity_hypothesis_based_on_threshold(disease_values, threshold)
     hypotheses = (hyp_E,)
+
     # # This is an example of Excitability Hypothesis:
-    hyp_x0 = DiseaseHypothesis(head.connectivity.number_of_regions,
-                               excitability_hypothesis={tuple(disease_indices): disease_values},
-                               epileptogenicity_hypothesis={}, connectivity_hypothesis={})
+    hyp_x0 = hypo_builder.build_excitability_hypothesis_based_on_threshold(disease_values, threshold)
+
+    disease_indices = hyp_E.e_indices + hyp_x0.x0_indices
+    healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
 
     if n_x0 > 0:
         # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
@@ -94,10 +88,7 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
         e_indices = disease_indices
         e_values = np.array(disease_values)
         x0_values = np.array(x0_values)
-        hyp_x0_E = DiseaseHypothesis(head.connectivity.number_of_regions,
-                                     excitability_hypothesis={tuple(x0_indices): x0_values},
-                                     epileptogenicity_hypothesis={tuple(e_indices): e_values},
-                                     connectivity_hypothesis={})
+        hyp_x0_E = hypo_builder.build_mixed_hypothesis(e_values, e_indices, x0_values, x0_indices)
         hypotheses = (hyp_E, hyp_x0, hyp_x0_E)
 
     else:
@@ -176,7 +167,7 @@ if __name__ == "__main__":
     SUBJECT = "TVB"
 
     subj_ids = [1, 2, 3, 4, 4]
-    ep_names = 3 * ["clinical_hypothesis_preseeg"]\
+    ep_names = 3 * ["clinical_hypothesis_preseeg"] \
                + ["clinical_hypothesis_preseeg_right"] + ["clinical_hypothesis_preseeg_bilateral"]
     for subj_id in range(4, len(subj_ids)):
         subject = SUBJECT + str(subj_ids[subj_id])
