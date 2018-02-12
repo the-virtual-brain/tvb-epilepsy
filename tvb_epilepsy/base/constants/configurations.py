@@ -34,12 +34,12 @@ if 'dionperd' in platform.node():
 
 # OUT folders for Logs, Results or Figures
 ##################################################
-separare_results_by_run = False # Set TRUE, when you want logs/results/figures to be in different files / each run
+separate_results_by_run = False     # Set TRUE, when you want logs/results/figures to be in different files / each run
 FOLDER_LOGS = os.path.join(WORK_FOLDER, "vep_out", "logs")
 FOLDER_RES = os.path.join(WORK_FOLDER, "vep_out", "res")
 FOLDER_FIGURES = os.path.join(WORK_FOLDER, "vep_out", "figs")
 
-if separare_results_by_run:
+if separate_results_by_run:
     FOLDER_LOGS = FOLDER_LOGS + datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M')
     FOLDER_RES = FOLDER_RES + datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M')
     FOLDER_FIGURES = FOLDER_FIGURES + datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M')
