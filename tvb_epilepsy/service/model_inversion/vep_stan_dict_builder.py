@@ -56,7 +56,8 @@ def build_stan_model_dict(statistical_model, signals, model_inversion, gain_matr
                                    np.where(np.in1d(ProbabilityDistributionTypes.available_distributions, p.type))[0][
                                        0],
                                p.name + "_p": (np.array(p.pdf_params().values()).T * np.ones((2,))).squeeze()})
-    # model_data["x1eq_loc"] = statistical_model.parameters["x1eq"].mean
+    model_data["x1eq_star_loc"] = statistical_model.parameters["x1eq_star"].mean
+    model_data["x1eq_star_scale"] = statistical_model.parameters["x1eq_star"].std
     model_data["MC_scale"] = statistical_model.MC_scale
     MCsplit_shape = np.ones(statistical_model.parameters["MCsplit"].p_shape)
     model_data["MCsplit_loc"] = statistical_model.parameters["MCsplit"].mean * MCsplit_shape

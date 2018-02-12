@@ -161,10 +161,10 @@ data {
     real<upper=0.0> x1eq_min;
     real<lower=0.0> x1eq_star_lo;
     real<lower=0.0> x1eq_star_hi;
-    row_vector<upper=0.0>[n_regions] x1eq_star_loc;
+    row_vector<lower=0.0>[n_regions] x1eq_star_loc;
     row_vector<lower=0.0>[n_regions] x1eq_star_scale;
-    real x1eq_star_p[n_regions, 2];
-    int<lower=0> x1eq_star_pdf;
+    // real x1eq_star_p[n_regions, 2];
+    // int<lower=0> x1eq_star_pdf;
     //real zeq_lo;
     //real zeq_hi;
     /* x1init parameter (only normal distribution, ignoring _pdf) */
@@ -255,6 +255,7 @@ transformed data {
     real db = d - b;
     real sqrtdt = sqrt(dt);
     row_vector[n_regions] zeros = rep_row_vector(0.0, n_regions);
+    row_vector[n_regions] x1eq_star_zscore = x1eq_star_scale ./ x1eq_star_loc;
     /* Transformation of low and high bounds for star parameters
      * following (x-loc) / scale transformation of pdf support */
     real tau1_star_lo = (tau1_lo - tau1_loc) / tau1_scale;
@@ -282,7 +283,7 @@ parameters {
 
     /* Generative model */
     /* Epileptor */
-    row_vector<lower=0.0, upper=-x1eq_max-x1eq_min>[n_regions] x1eq_star; //star of x1 equilibrium point coordinate, <lower=x1eq_2star_lo, upper=x1eq_2star_hi>
+    row_vector<lower=-6.0, upper=6.0>[n_regions] x1eq_star; //star of x1 equilibrium point coordinate, <lower=x1eq_2star_lo, upper=x1eq_2star_hi>
     row_vector<lower=x1init_lo, upper=x1init_hi>[n_regions] x1init; // x1 initial condition coordinate
     row_vector<lower=zinit_lo, upper=zinit_hi>[n_regions] zinit; // x1 initial condition coordinate
     real<lower=sig_init_star_lo, upper=sig_init_star_hi> sig_init_star; // variance of initial condition
@@ -293,7 +294,7 @@ parameters {
     /* Coupling */
     real<lower=K_star_lo, upper=K_star_hi> K_star; // global coupling scaling
     row_vector<lower=MCsplit_lo, upper=MCsplit_hi>[n_connections] MCsplit; // Model connectivity direction split
-    matrix<lower=MC_lo, upper=MC_hi>[n_connections, 2] MC_star; // Non-symmetric model connectivity
+    matrix<lower=-6.0, upper=6.0>[n_connections, 2] MC_star; // Non-symmetric model connectivity
     /* SDE Integration */
     real<lower=sig_star_lo, upper=sig_star_hi> sig_star; // variance of phase flow, i.e., dynamic noise
     /* Observation model */
@@ -320,7 +321,8 @@ transformed parameters {
     real<lower=0.0> tau1 = tau1_star * tau1_scale + tau1_loc; // time scale
     real<lower=0.0> tau0 = tau0_star * tau0_scale + tau0_loc; // time scale separation
     /* x1eq, x1 equilibrium point coordinate */
-    row_vector[n_regions] x1eq = x1eq_max - (x1eq_star .* x1eq_star_scale + x1eq_star_loc);
+    // row_vector[n_regions] x1eq = x1eq_max - (x1eq_star .* x1eq_star_scale + x1eq_star_loc);
+    row_vector[n_regions] x1eq = x1eq_max - x1eq_star_loc .* exp(x1eq_star .* x1eq_star_zscore);
     /* zeq, z equilibrium point coordinate */
     row_vector[n_regions] zeq = EpileptorDP2D_fun_x1(n_regions, x1eq, zeros, yc, Iext1, a, db, d, slope, 1.0);
 
@@ -332,16 +334,19 @@ transformed parameters {
     real<lower=0.0> K = K_star * K_scale + K_loc; // global coupling scaling
     row_vector[n_regions] coupling[n_times]; // actual effective coupling per time point
     row_vector[n_regions] coupling_eq; // coupling at equilibrium
-    matrix[n_regions, n_regions] MC;
+    matrix<lower=MC_lo, upper=MC_hi>[n_regions, n_regions] MC;
     {   int icon = 0;
+        real MC_mu;
         for (jj in 1:n_regions) {
             for (ii in 1:jj) {
                 if (ii == jj)
                     MC[ii, jj] = 0.0; // diagonal (self-) MC
                 else {
                     icon += 1;
-                    MC[ii, jj] = MC_star[icon, 1]; // upper triangular MC
-                    MC[jj, ii] = MC_star[icon, 2]; // lower triangular MC
+                    MC_mu = SC[icon] * MCsplit[icon];
+                    MC[ii, jj] = MC_mu * exp(MC_star[icon, 1] / MC_scale); // upper triangular MC
+                    MC_mu = SC[icon] * (1.0 - MCsplit[icon]);
+                    MC[jj, ii] = MC_mu * exp(MC_star[icon, 2] / MC_scale); // lower triangular MC
                 }
             }
         }
@@ -361,6 +366,9 @@ transformed parameters {
     if (DEBUG > 1) {
         print("x0=", x0);
         print("x1eq=", x1eq);
+        print("x1eq_star=", x1eq_star);
+        print("x1eq_star_loc .* exp(x1eq_star .* x1eq_star_scale ./ x1eq_star_loc=",
+               x1eq_star_loc .* exp(x1eq_star .* x1eq_star_zscore));
         print("zeq=", zeq);
         print("coupling_eq=", coupling_eq);
     }
@@ -414,32 +422,18 @@ transformed parameters {
 
 model {
 
-    real MC_mu;
-    real MC_std;
-    real MC_lim;
-
     /* Sampling of time scales */
     tau1_star ~ sample(tau1_pdf, tau1_p);
     tau0_star ~ sample(tau0_pdf, tau0_p);
     /* Sampling of global coupling scaling */
     K_star ~ sample(K_pdf, K_p);
-    /* Sampling of model connectivity and its split parameter */
+    /* Sampling of model connectivity's split and star parameters */
     MCsplit ~ normal(MCsplit_loc, MCsplit_scale);
-    if (DEBUG > 1)
+    if (DEBUG > 2)
         print("MCsplit=", MCsplit);
-    for (ii in 1:n_connections) {
-        // upper triangular MC:
-        MC_mu = SC[ii] * MCsplit[ii];
-        MC_std = MC_mu / MC_scale;
-        MC_lim = MC_std / 6.0;
-        MC_star[ii, 1] ~ normal(MC_mu, MC_std) T[fmax(MC_lo, MC_mu-MC_lim), fmin(MC_mu+MC_lim, MC_hi)];
-        // lower triangular MC:
-        MC_mu = SC[ii] * (1 - MCsplit[ii]);
-        MC_std = MC_mu / MC_scale;
-        MC_lim = MC_std / 6.0;
-        MC_star[ii, 2] ~ normal(MC_mu, MC_std) T[fmax(MC_lo, MC_mu-MC_lim), fmin(MC_mu+MC_lim, MC_hi)];
-    }
-    if (DEBUG > 1)
+    for (ii in 1:2)
+        to_vector(MC_star[:, ii]) ~ normal(0.0, 1.0);
+    if (DEBUG > 2)
         print("MC_star=", MC_star);
 
     /* Sampling of initial condition variance as well as dynamical noise strength */
@@ -447,11 +441,14 @@ model {
     sig_star ~ sample(sig_pdf, sig_p);
     /* Sampling of x1 equilibrium point coordinate and initial condition */
     // x1eq ~ normal(x1eq_loc, sig_eq);
+    to_row_vector(x1eq_star) ~ normal(0.0, 1.0);
+    /*
     for (ii in 1:n_regions) {
         x1eq_star[ii] ~ sample(x1eq_star_pdf, x1eq_star_p[ii]);
     }
+    */
     x1init ~ normal(x1eq, sig_init);
-    zinit ~ normal(zeq, sig_init/2);
+    zinit ~ normal(zeq, sig_init);
 
     /* Sampling of observation scaling and offset */
     eps_star ~ sample(eps_pdf, eps_p);
