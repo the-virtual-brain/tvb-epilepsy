@@ -11,6 +11,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
+from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.top.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
 from tvb_epilepsy.top.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict
@@ -64,42 +65,22 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
         disease_values = H5Reader().read_epileptogenicity(HEAD_FOLDER, name=ep_name)
     else:
         disease_values = reader.read_epileptogenicity(HEAD_FOLDER, name=ep_name)
-    disease_indices, = np.where(disease_values > np.min([X0_DEF, E_DEF]))
-    disease_values = disease_values[disease_indices]
-    if disease_values.size > 1:
-        inds_split = np.ceil(disease_values.size * 1.0 / 2).astype("int")
-        x0_indices = disease_indices[:inds_split].tolist()
-        e_indices = disease_indices[inds_split:].tolist()
-        x0_values = disease_values[:inds_split].tolist()
-        e_values = disease_values[inds_split:].tolist()
-    else:
-        x0_indices = disease_indices.tolist()
-        x0_values = disease_values.tolist()
-        e_indices = []
-        e_values = []
-    disease_indices = list(disease_indices)
-    n_x0 = len(x0_indices)
-    n_e = len(e_indices)
-    n_disease = len(disease_indices)
-    all_regions_indices = np.array(range(head.number_of_regions))
-    healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
-    n_healthy = len(healthy_indices)
-    # This is an example of Excitability Hypothesis:
-    hyp_x0 = DiseaseHypothesis(head.connectivity.number_of_regions,
-                               excitability_hypothesis={tuple(disease_indices): disease_values},
-                               epileptogenicity_hypothesis={}, connectivity_hypothesis={})
+
+    threshold = np.min([X0_DEF, E_DEF])
+    hypo_builder = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions)
 
     # This is an example of Epileptogenicity Hypothesis:
-    hyp_E = DiseaseHypothesis(head.connectivity.number_of_regions,
-                              excitability_hypothesis={},
-                              epileptogenicity_hypothesis={tuple(disease_indices): disease_values},
-                              connectivity_hypothesis={})
-    if len(e_indices) > 0:
+    hyp_E = hypo_builder.build_epileptogenicity_hypothesis_based_on_threshold(disease_values, threshold)
+
+    # This is an example of Excitability Hypothesis:
+    hyp_x0 = hypo_builder.build_excitability_hypothesis_based_on_threshold(disease_values, threshold)
+
+    all_regions_indices = np.array(range(head.number_of_regions))
+    healthy_indices = np.delete(all_regions_indices, hyp_x0.x0_indices + hyp_E.e_indices).tolist()
+
+    if len(hyp_E.e_indices) > 0:
         # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
-        hyp_x0_E = DiseaseHypothesis(head.connectivity.number_of_regions,
-                                     excitability_hypothesis={tuple(x0_indices): x0_values},
-                                     epileptogenicity_hypothesis={tuple(e_indices): e_values},
-                                     connectivity_hypothesis={})
+        hyp_x0_E = hypo_builder.build_mixed_hypothesis_based_on_threshold(disease_values, threshold)
         hypotheses = (hyp_x0, hyp_E, hyp_x0_E)
     else:
         hypotheses = (hyp_x0, hyp_E)
@@ -159,7 +140,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                  logger=logger)))
         # Plot nullclines and equilibria of model configuration
         plotter.plot_state_space(model_configuration, head.connectivity.region_labels,
-                                 special_idx=disease_indices, model="6d", zmode="lin",
+                                 special_idx=hyp_x0.x0_indices + hyp_E.e_indices, model="6d", zmode="lin",
                                  figure_name=hyp.name + "_StateSpace")
 
         logger.info("\n\nRunning LSA...")
