@@ -19,7 +19,7 @@ from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, E_DEF, X0_
     I_EXT2_DEF, A_DEF, B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF
 
 
-class ModelConfigurationService(object):
+class ModelConfigurationBuilder(object):
     logger = initialize_logger(__name__)
 
     x1EQcr = X1_EQ_CR_DEF

@@ -8,7 +8,7 @@ from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.service.model_configuration_service import ModelConfigurationBuilder
 from tvb_epilepsy.service.lsa_service import LSAService
 
 logger = initialize_logger(__name__)
@@ -16,7 +16,7 @@ logger = initialize_logger(__name__)
 
 def start_lsa_run(hypothesis, model_connectivity):
     logger.info("creating model configuration...")
-    model_configuration_service = ModelConfigurationService(hypothesis.number_of_regions)
+    model_configuration_service = ModelConfigurationBuilder(hypothesis.number_of_regions)
     model_configuration = model_configuration_service. \
         build_model_from_hypothesis(hypothesis, model_connectivity)
 
@@ -76,7 +76,7 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
                                         figure_dir=FOLDER_FIGURES, **kwargs):
     logger.info("\n\nRunning hypothesis: " + hyp.name)
     logger.info("\n\nCreating model configuration...")
-    model_configuration_service = ModelConfigurationService(hyp.number_of_regions, **kwargs)
+    model_configuration_service = ModelConfigurationBuilder(hyp.number_of_regions, **kwargs)
     if hyp.type == "Epileptogenicity":
         model_configuration = model_configuration_service. \
             build_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)

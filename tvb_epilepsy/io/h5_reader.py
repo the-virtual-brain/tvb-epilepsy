@@ -12,7 +12,7 @@ from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.service.lsa_service import LSAService
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.service.model_configuration_service import ModelConfigurationBuilder
 from tvb_epilepsy.io.h5_model import read_h5_model
 
 
@@ -319,7 +319,7 @@ class H5Reader(object):
         self.logger.info("Starting to read ModelConfigurationService from: %s" % path)
         h5_file = h5py.File(path, 'r', libver='latest')
 
-        mc_service = ModelConfigurationService()
+        mc_service = ModelConfigurationBuilder()
 
         for dataset in h5_file.keys():
             mc_service.set_attribute(dataset, h5_file["/" + dataset][()])

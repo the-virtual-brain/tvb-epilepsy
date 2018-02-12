@@ -1,6 +1,6 @@
 import numpy as np
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.service.model_configuration_service import ModelConfigurationBuilder
 from tvb_epilepsy.top.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration, set_time_scales
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
 
@@ -21,7 +21,7 @@ class TestSimulationRun(object):
     def _prepare_model_for_simulation(self, connectivity):
         hypothesis = HypothesisBuilder().set_nr_of_regions(
             connectivity.number_of_regions).build_excitability_hypothesis([1, 1], [0, 10])
-        model_configuration_service = ModelConfigurationService(connectivity.number_of_regions)
+        model_configuration_service = ModelConfigurationBuilder(connectivity.number_of_regions)
         model_configuration = \
             model_configuration_service.build_model_from_hypothesis(hypothesis, connectivity.normalized_weights)
         return model_configuration

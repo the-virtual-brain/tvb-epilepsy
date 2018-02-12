@@ -17,7 +17,7 @@ from tvb_epilepsy.top.scripts.simulation_scripts import set_time_scales, prepare
 from tvb_epilepsy.top.scripts.simulation_scripts import compute_seeg_and_write_ts_h5_file
 from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.service.lsa_service import LSAService
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.service.model_configuration_service import ModelConfigurationBuilder
 from tvb_epilepsy.io.h5_reader import H5Reader
 
 if DATA_MODE is TVB:
@@ -115,7 +115,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     for hyp in hypotheses:
         logger.info("\n\nRunning hypothesis: " + hyp.name)
         logger.info("\n\nCreating model configuration...")
-        model_configuration_service = ModelConfigurationService(hyp.number_of_regions)
+        model_configuration_service = ModelConfigurationBuilder(hyp.number_of_regions)
         writer.write_model_configuration_service(model_configuration_service,
                                                  os.path.join(FOLDER_RES, hyp.name + "_model_config_service.h5"))
         if test_write_read:
