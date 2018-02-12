@@ -84,7 +84,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             model_data = stan_service.load_model_data_from_file(model_data_path=model_data_file)
         else:
             model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
-                                                       MCsplit_scale_zscore=10.0, MC_scale_range=10.0)
+                                                       x1eq_max=-1.0)
 
             statistical_model = model_inversion.generate_statistical_model(observation_model="lfp_power") # observation_expression="lfp"
             statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
@@ -205,14 +205,14 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             dZt_str = "dZt" # "z_dWt"
             sig_str = "sig"
             k_str = "K"
-            pair_plot_params = ["tau1", "tau0", "K", "sig_eq", "sig_init", "sig", "eps", "scale_signal", "offset_signal"]
+            pair_plot_params = ["tau1", "tau0", "K", "sig_init", "sig", "eps", "scale_signal", "offset_signal"]
             region_violin_params = ["x0", "x1eq", "x1init", "zinit"]
             connectivity_plot = True
             estMC = lambda est: est["MC"]
             region_mode = "all"
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        ests, samples, summary = stan_service.fit(debug=3, simulate=1, model_data=model_data, merge_outputs=False,
-                                                  chains=1, refresh=1, num_warmup=10, num_samples=10,
+        ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
+                                                  chains=2, refresh=1, num_warmup=200, num_samples=200,
                                                   max_depth=10, delta=0.8, **kwargs)
         writer.write_generic(ests, results_dir, hyp.name + "_fit_est.h5")
         writer.write_generic(samples, results_dir, hyp.name + "_fit_samples.h5")

@@ -160,7 +160,7 @@ class ModelInversionService(object):
                                                               **kwargs))
         # Coupling:
         MCsplit_std = np.min([self.MC_direction_split, 1.0 - self.MC_direction_split]) \
-                       / kwargs.get("MCsplit_scale", 10.0)
+                       / kwargs.get("MCsplit_scale", 6.0)
         self.default_parameters.update(set_parameter_defaults("MCsplit", "normal", # or "beta"...
                                                               (self.n_regions * (self.n_regions-1)/2,),
                                                               0.0, 1.0,

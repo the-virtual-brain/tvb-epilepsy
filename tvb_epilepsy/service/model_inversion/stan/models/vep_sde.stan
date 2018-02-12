@@ -283,7 +283,7 @@ parameters {
 
     /* Generative model */
     /* Epileptor */
-    row_vector<lower=-6.0, upper=6.0>[n_regions] x1eq_star; //star of x1 equilibrium point coordinate, <lower=x1eq_2star_lo, upper=x1eq_2star_hi>
+    row_vector<lower=-3.0, upper=3.0>[n_regions] x1eq_star; //star of x1 equilibrium point coordinate, <lower=x1eq_2star_lo, upper=x1eq_2star_hi>
     row_vector<lower=x1init_lo, upper=x1init_hi>[n_regions] x1init; // x1 initial condition coordinate
     row_vector<lower=zinit_lo, upper=zinit_hi>[n_regions] zinit; // x1 initial condition coordinate
     real<lower=sig_init_star_lo, upper=sig_init_star_hi> sig_init_star; // variance of initial condition
@@ -294,7 +294,7 @@ parameters {
     /* Coupling */
     real<lower=K_star_lo, upper=K_star_hi> K_star; // global coupling scaling
     row_vector<lower=MCsplit_lo, upper=MCsplit_hi>[n_connections] MCsplit; // Model connectivity direction split
-    matrix<lower=-6.0, upper=6.0>[n_connections, 2] MC_star; // Non-symmetric model connectivity
+    matrix<lower=-3.0, upper=3.0>[n_connections, 2] MC_star; // Non-symmetric model connectivity
     /* SDE Integration */
     real<lower=sig_star_lo, upper=sig_star_hi> sig_star; // variance of phase flow, i.e., dynamic noise
     /* Observation model */
@@ -355,8 +355,10 @@ transformed parameters {
     if (DEBUG > 0)
         print("tau1=", tau1, " tau0=", tau0, " K=", K,  " sig_init=", sig_init, " sig=", sig,
               " eps=", eps, " scale_signal=", scale_signal);
-    if (DEBUG > 2)
-        print("MC", MC);
+    if (DEBUG > 2) {
+        for (ii in 1:n_regions)
+            print("ii, ",ii, ", MC[ii, :]=", MC[ii, :]);
+    }
 
     coupling_eq = calc_coupling(n_regions, n_regions, x1eq, x1eq, MC);
 
@@ -389,8 +391,10 @@ transformed parameters {
 
         for (tt in 2:n_times) {
             df = EpileptorDP2D_fun_x1(n_regions, x1[tt-1], z[tt-1], yc, Iext1, a, db, d, slope, tau1);
-            if (DEBUG > 2)
-                print("tt=", tt, "dfx=", df);
+            if (DEBUG > 2) {
+                print("tt=", tt);
+                print("dfx=", df);
+            }
             x1[tt] = ode_step(n_regions, x1[tt-1], df, dt);
             x1[tt, active_regions] = x1[tt, active_regions] + dX1t[tt-1] * sqrtdt;
             if (DEBUG > 2)
