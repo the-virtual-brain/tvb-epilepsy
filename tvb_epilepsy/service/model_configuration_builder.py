@@ -46,7 +46,7 @@ class ModelConfigurationBuilder(object):
             self.K_unscaled = np.array(K)
         else:
             self.logger.warning("The length of input global coupling K is neither 1 nor equal to the number of regions!" +
-                    "\nSetting model_configuration_service.K_unscaled = K_DEF for all regions")
+                    "\nSetting model_configuration_builder.K_unscaled = K_DEF for all regions")
         self.K = None
         self._normalize_global_coupling()
         self.e_values = e_values * np.ones((self.number_of_regions,), dtype=np.float32)
@@ -203,5 +203,5 @@ class ModelConfigurationBuilder(object):
     def update_for_pse(self, values, paths, indices):
         for i, val in enumerate(paths):
             vals = val.split(".")
-            if vals[0] == "model_configuration_service":
+            if vals[0] == "model_configuration_builder":
                 getattr(self, vals[1])[indices[i]] = values[i]

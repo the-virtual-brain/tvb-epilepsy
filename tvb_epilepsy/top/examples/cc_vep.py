@@ -103,14 +103,14 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
                 os.mkdir(folder)
         logger.info("\n\nRunning hypothesis: " + hyp.name)
         logger.info("\n\nCreating model configuration...")
-        model_configuration_service = ModelConfigurationBuilder(hyp.number_of_regions)
-        writer.write_model_configuration_service(model_configuration_service,
+        model_configuration_builder = ModelConfigurationBuilder(hyp.number_of_regions)
+        writer.write_model_configuration_builder(model_configuration_builder,
                                                  os.path.join(folder_res, "model_config_service.h5"))
         if hyp.type == "Epileptogenicity":
-            model_configuration = model_configuration_service. \
+            model_configuration = model_configuration_builder. \
                 build_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
         else:
-            model_configuration = model_configuration_service. \
+            model_configuration = model_configuration_builder. \
                 build_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
         writer.write_model_configuration(model_configuration, os.path.join(folder_res, "ModelConfiguration.h5"))
         # Plot nullclines and equilibria of model configuration
@@ -137,7 +137,7 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
                                                   global_coupling=[{"indices": all_regions_indices}],
                                                   healthy_regions_parameters=[{"name": "x0_values",
                                                                                "indices": healthy_indices}],
-                                                  model_configuration_service=model_configuration_service,
+                                                  model_configuration_builder=model_configuration_builder,
                                                   lsa_service=lsa_service, save_flag=True, folder_res=folder_res,
                                                   filename="PSE_LSA", logger=logger)[0]
             plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,

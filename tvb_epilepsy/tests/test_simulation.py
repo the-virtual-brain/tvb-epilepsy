@@ -21,9 +21,9 @@ class TestSimulationRun(object):
     def _prepare_model_for_simulation(self, connectivity):
         hypothesis = HypothesisBuilder().set_nr_of_regions(
             connectivity.number_of_regions).build_excitability_hypothesis([1, 1], [0, 10])
-        model_configuration_service = ModelConfigurationBuilder(connectivity.number_of_regions)
+        model_configuration_builder = ModelConfigurationBuilder(connectivity.number_of_regions)
         model_configuration = \
-            model_configuration_service.build_model_from_hypothesis(hypothesis, connectivity.normalized_weights)
+            model_configuration_builder.build_model_from_hypothesis(hypothesis, connectivity.normalized_weights)
         return model_configuration
 
     def test_tvb_simulation(self):

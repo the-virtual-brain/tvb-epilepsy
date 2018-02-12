@@ -102,13 +102,13 @@ class TestCustomH5writer(object):
 
         assert os.path.exists(test_file)
 
-    def test_write_model_configuration_service(self):
+    def test_write_model_configuration_builder(self):
         test_file = os.path.join(get_temporary_folder(), "TestModelConfigurationService.h5")
         dummy_mc_service = ModelConfigurationBuilder(3)
 
         assert not os.path.exists(test_file)
 
-        self.writer.write_model_configuration_service(dummy_mc_service, test_file)
+        self.writer.write_model_configuration_builder(dummy_mc_service, test_file)
 
         assert os.path.exists(test_file)
 

@@ -18,7 +18,7 @@ from tvb_epilepsy.service.sampling.stochastic_sampling_service import Stochastic
 def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
                             n_samples, param_range=0.1, global_coupling=[],
                             healthy_regions_parameters=[],
-                            model_configuration_service=None, lsa_service=None,
+                            model_configuration_builder=None, lsa_service=None,
                             save_flag=False, folder_res=FOLDER_RES, filename=None, logger=None, **kwargs):
     if logger is None:
         logger = initialize_logger(__name__)
@@ -76,9 +76,9 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
             sampler.generate_samples(parameter=(lsa_hypothesis.w_values[ii],  # loc
                                                 param_range * lsa_hypothesis.w_values[ii]),  # scale
                                      probability_distribution="norm", low=0.0, shape=(1,)))
-    kloc = model_configuration_service.K_unscaled[0]
+    kloc = model_configuration_builder.K_unscaled[0]
     for val in global_coupling:
-        pse_params["path"].append("model_configuration_service.K_unscaled")
+        pse_params["path"].append("model_configuration_builder.K_unscaled")
         inds = val.get("indices", all_regions_indices)
         if np.all(inds == all_regions_indices):
             pse_params["name"].append("Global coupling")
@@ -105,19 +105,19 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
                                                       param_range / 10),  # scale
                                            probability_distribution="norm", shape=(n_params,))
         for ii in range(n_params):
-            pse_params_list.append({"path": "model_configuration_service." + name, "samples": samples[ii],
+            pse_params_list.append({"path": "model_configuration_builder." + name, "samples": samples[ii],
                                     "indices": [inds[ii]], "name": name})
     # Now run pse service to generate output samples:
     # pse_old = PSEService("LSA", hypothesis=lsa_hypothesis, params_pse=pse_params_list)
     # pse_results, execution_status = pse_old.run_pse(model_connectivity, grid_mode=False, lsa_service_input=lsa_service,
-    #                                             model_configuration_service_input=model_configuration_service)
+    #                                             model_configuration_builder_input=model_configuration_builder)
     pse = LSAPSEService(hypothesis=lsa_hypothesis, params_pse=pse_params_list)
     pse_results, execution_status = pse.run_pse(model_connectivity, grid_mode=False,
-                                                model_config_service_input=model_configuration_service,
+                                                model_config_service_input=model_configuration_builder,
                                                 lsa_service_input=lsa_service)
     # Call to new PSEService:
     # pse = LSAPSEService(lsa_hypothesis, pse_params_list)
-    # pse_results, execution_status = pse.run_pse(model_connectivity, False, lsa_service, model_configuration_service)
+    # pse_results, execution_status = pse.run_pse(model_connectivity, False, lsa_service, model_configuration_builder)
     pse_results = list_of_dicts_to_dicts_of_ndarrays(pse_results)
     for key in pse_results.keys():
         pse_results[key + "_mean"] = np.mean(pse_results[key], axis=0)
@@ -140,12 +140,12 @@ def pse_from_hypothesis(hypothesis, model_connectivity, region_labels, n_samples
         logger = initialize_logger(__name__)
     # Compute lsa for this hypothesis before the parameter search:
     logger.info("Running hypothesis: " + hypothesis.name)
-    model_configuration_service, model_configuration, lsa_service, lsa_hypothesis = \
+    model_configuration_builder, model_configuration, lsa_service, lsa_hypothesis = \
         start_lsa_run(hypothesis, model_connectivity)
     pse_results, pse_params_list = pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
                                                            n_samples, param_range, global_coupling,
                                                            healthy_regions_parameters,
-                                                           model_configuration_service, lsa_service,
+                                                           model_configuration_builder, lsa_service,
                                                            save_flag, folder_res=folder_res, filename=filename,
                                                            logger=logger, **kwargs)
     return model_configuration, lsa_service, lsa_hypothesis, pse_results, pse_params_list

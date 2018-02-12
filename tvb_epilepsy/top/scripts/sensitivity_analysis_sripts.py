@@ -18,7 +18,7 @@ from tvb_epilepsy.top.scripts.hypothesis_scripts import start_lsa_run
 def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels, n_samples,
                                                  method="sobol", half_range=0.1, global_coupling=[],
                                                  healthy_regions_parameters=[],
-                                                 model_configuration_service=None, lsa_service=None,
+                                                 model_configuration_builder=None, lsa_service=None,
                                                  save_services=False, logger=None, **kwargs):
     if logger is None:
         logger = initialize_logger(__name__)
@@ -97,12 +97,12 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
                                                       kwargs.get("scale", 2 * half_range)),  # scale
                                            probability_distribution="uniform", low=0.0, shape=(n_params,))
         for ii in range(n_params):
-            pse_params_list.append({"path": "model_configuration_service." + name, "samples": samples[ii],
+            pse_params_list.append({"path": "model_configuration_builder." + name, "samples": samples[ii],
                                     "indices": [inds[ii]], "name": name})
     # Now run pse service to generate output samples:
     pse = PSEService("LSA", hypothesis=lsa_hypothesis, params_pse=pse_params_list)
     pse_results, execution_status = pse.run_pse(connectivity_matrix, grid_mode=False, lsa_service_input=lsa_service,
-                                                model_configuration_service_input=model_configuration_service)
+                                                model_configuration_builder_input=model_configuration_builder)
     pse_results = list_of_dicts_to_dicts_of_ndarrays(pse_results)
     # Now prepare inputs and outputs and run the sensitivity analysis:
     # NOTE!: Without the jittered healthy regions which we don' want to include into the sensitivity analysis!
@@ -129,12 +129,12 @@ def sensitivity_analysis_pse_from_hypothesis(hypothesis, connectivity_matrix, re
         logger = initialize_logger(__name__)
     # Compute lsa for this hypothesis before sensitivity analysis:
     logger.info("Running hypothesis: " + hypothesis.name)
-    model_configuration_service, model_configuration, lsa_service, lsa_hypothesis = \
+    model_configuration_builder, model_configuration, lsa_service, lsa_hypothesis = \
         start_lsa_run(hypothesis, connectivity_matrix)
     results, pse_results = sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix,
                                                                         region_labels,
                                                                         n_samples, method, half_range, global_coupling,
                                                                         healthy_regions_parameters,
-                                                                        model_configuration_service, lsa_service,
+                                                                        model_configuration_builder, lsa_service,
                                                                         save_services, logger, **kwargs)
-    return model_configuration_service, model_configuration, lsa_service, lsa_hypothesis, results, pse_results
+    return model_configuration_builder, model_configuration, lsa_service, lsa_hypothesis, results, pse_results

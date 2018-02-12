@@ -311,7 +311,7 @@ class H5Reader(object):
         h5_file.close()
         return lsa_service
 
-    def read_model_configuration_service(self, path):
+    def read_model_configuration_builder(self, path):
         """
         :param path: Path towards a ModelConfigurationService H5 file
         :return: ModelConfigurationService object
