@@ -6,7 +6,6 @@ import numpy as np
 from tvb_epilepsy.base.constants.module_constants import SIMULATION_MODE, TVB, DATA_MODE
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, HEAD_FOLDER
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
@@ -149,7 +148,6 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
         writer.write_hypothesis(lsa_hypothesis, os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSA.h5"))
         writer.write_lsa_service(lsa_service, os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5"))
         if test_write_read:
-            hypothesis_template = DiseaseHypothesis(hyp.number_of_regions)
             logger.info("Written and read LSA services are identical?: " +
                         str(assert_equal_objects(lsa_service, reader.read_lsa_service(
                             os.path.join(FOLDER_RES, lsa_hypothesis.name + "_LSAConfig.h5")), logger=logger)))
