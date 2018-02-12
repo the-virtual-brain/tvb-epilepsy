@@ -199,6 +199,8 @@ data {
     /* SC symmetric connectivity data */
     row_vector<lower=0.0>[n_connections] SC;
     /* MCsplit (model connectivity direction split) parameter (only normal distribution) */
+    real<lower=0.0> MC_lo;
+    real<lower=0.0> MC_hi;
     real<lower=0.0> MCsplit_lo;
     real<lower=0.0> MCsplit_hi;
     row_vector<lower=0.0, upper=1.0>[n_connections] MCsplit_loc;
@@ -291,7 +293,7 @@ parameters {
     /* Coupling */
     real<lower=K_star_lo, upper=K_star_hi> K_star; // global coupling scaling
     row_vector<lower=MCsplit_lo, upper=MCsplit_hi>[n_connections] MCsplit; // Model connectivity direction split
-    matrix<lower=0.0, upper=1.0>[n_connections, 2] MC_star; // Non-symmetric model connectivity
+    matrix<lower=MC_lo, upper=MC_hi>[n_connections, 2] MC_star; // Non-symmetric model connectivity
     /* SDE Integration */
     real<lower=sig_star_lo, upper=sig_star_hi> sig_star; // variance of phase flow, i.e., dynamic noise
     /* Observation model */
@@ -412,7 +414,9 @@ transformed parameters {
 
 model {
 
-    row_vector[n_connections] MC_loc;
+    real MC_mu;
+    real MC_std;
+    real MC_lim;
 
     /* Sampling of time scales */
     tau1_star ~ sample(tau1_pdf, tau1_p);
@@ -421,10 +425,22 @@ model {
     K_star ~ sample(K_pdf, K_p);
     /* Sampling of model connectivity and its split parameter */
     MCsplit ~ normal(MCsplit_loc, MCsplit_scale);
-    MC_loc = SC .* MCsplit;
-    MC_star[:, 1] ~ normal(MC_loc, fabs(MC_loc) * MC_scale); // upper triangular MC
-    MC_loc = SC .* (1-MCsplit);
-    MC_star[:, 2] ~ normal(MC_loc, fabs(MC_loc) * MC_scale); // lower triangular MC
+    if (DEBUG > 1)
+        print("MCsplit=", MCsplit);
+    for (ii in 1:n_connections) {
+        // upper triangular MC:
+        MC_mu = SC[ii] * MCsplit[ii];
+        MC_std = MC_mu / MC_scale;
+        MC_lim = MC_std / 6.0;
+        MC_star[ii, 1] ~ normal(MC_mu, MC_std) T[fmax(MC_lo, MC_mu-MC_lim), fmin(MC_mu+MC_lim, MC_hi)];
+        // lower triangular MC:
+        MC_mu = SC[ii] * (1 - MCsplit[ii]);
+        MC_std = MC_mu / MC_scale;
+        MC_lim = MC_std / 6.0;
+        MC_star[ii, 2] ~ normal(MC_mu, MC_std) T[fmax(MC_lo, MC_mu-MC_lim), fmin(MC_mu+MC_lim, MC_hi)];
+    }
+    if (DEBUG > 1)
+        print("MC_star=", MC_star);
 
     /* Sampling of initial condition variance as well as dynamical noise strength */
     sig_init_star ~ sample(sig_init_pdf, sig_init_p);

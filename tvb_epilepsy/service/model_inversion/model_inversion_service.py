@@ -2,8 +2,8 @@ import time
 from copy import deepcopy
 import numpy as np
 from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
-from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1EQ_MAX, X1_REST, TAU1_DEF, TAU1_MIN, \
-    TAU1_MAX, TAU0_DEF, TAU0_MIN, TAU0_MAX, K_MIN, K_MAX, MC_MAX, MC_MAX_MIN_RATIO, SIG_EQ_DEF
+from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1EQ_MAX, MC_SCALE, \
+                     TAU1_DEF, TAU1_MIN, TAU1_MAX, TAU0_DEF, TAU0_MIN, TAU0_MAX, K_MIN, K_MAX, MC_MAX, MC_MAX_MIN_RATIO
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import copy_object_attributes
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
@@ -140,19 +140,19 @@ class ModelInversionService(object):
                                                               pdf_params={"mean": x1eq_star_mean/x1eq_std,
                                                                           "skew": 0.0}, **kwargs))
         K_mean = self.get_default_K()
-        K_std = np.min([K_mean-K_MIN, K_MAX-K_mean]) / kwargs.get("K_scale_range", 6.0)
+        K_std = np.min([K_mean-K_MIN, K_MAX-K_mean]) / kwargs.get("K_scale", 6.0)
         self.default_parameters.update(set_parameter_defaults("K", "lognormal", (),
                                                               K_MIN,  K_MAX,
                                                               K_mean, K_std,
                                                               pdf_params={"mean": K_mean/K_std, "skew": 0.0}, **kwargs))
         tau1_mean, tau0_mean = self.get_default_taus()
-        tau1_std = np.min([tau1_mean - TAU1_MIN, TAU1_MAX - tau1_mean]) / kwargs.get("tau1_scale_range", 6.0)
+        tau1_std = np.min([tau1_mean - TAU1_MIN, TAU1_MAX - tau1_mean]) / kwargs.get("tau1_scale", 6.0)
         self.default_parameters.update(set_parameter_defaults("tau1", "lognormal", (),               # name, pdf, shape
                                                               TAU1_MIN, TAU1_MAX,          # min, max
                                                               tau1_mean, tau1_std,
                                                               pdf_params={"mean": tau1_mean/tau1_std, "skew": 0.0},
                                                               **kwargs))
-        tau0_std = np.min([tau0_mean - TAU0_MIN, TAU0_MAX - tau0_mean]) / kwargs.get("tau0_scale_range", 6.0)
+        tau0_std = np.min([tau0_mean - TAU0_MIN, TAU0_MAX - tau0_mean]) / kwargs.get("tau0_scale", 6.0)
         self.default_parameters.update(set_parameter_defaults("tau0", "lognormal", (),
                                                               TAU0_MIN, TAU0_MAX,
                                                               tau0_mean, tau0_std,
@@ -160,22 +160,23 @@ class ModelInversionService(object):
                                                               **kwargs))
         # Coupling:
         MCsplit_std = np.min([self.MC_direction_split, 1.0 - self.MC_direction_split]) \
-                       / kwargs.get("MCsplit_scale_zscore", 6.0)
+                       / kwargs.get("MCsplit_scale", 6.0)
         self.default_parameters.update(set_parameter_defaults("MCsplit", "normal", # or "beta"...
                                                               (self.n_regions * (self.n_regions-1)/2,),
                                                               0.0, 1.0,
-                                                              self.MC_direction_split, MCsplit_std, **kwargs))
+                                                              pdf_params={"mu": self.MC_direction_split,
+                                                                          "sigma": MCsplit_std}, **kwargs))
         MC_def = self.get_default_MC()
         self.default_parameters.update(set_parameter_defaults("MC", "normal", (self.n_regions, self.n_regions),
                                                               0.0, MC_MAX,
-                                                              pdf_params={"mu": MC_def,
-                                                                          "sigma": np.min([MC_def, MC_MAX - MC_def]) /
-                                                                                   kwargs.get("MC_scale_range", 6.0)},
-                                                              **kwargs))
+                                                              pdf_params=
+                                                              {"mu": MC_def,
+                                                               "sigma": np.minimum(MC_def, MC_MAX - MC_def) /
+                                                                        kwargs.get("MC_scale", 6.0)}, **kwargs))
         # Observation model
         self.default_parameters.update(set_parameter_defaults("eps", "lognormal", (),
                                                               0.0, 0.5,
-                                                              0.1, 0.1 / kwargs.get("eps_scale_zscore", 3.0),
+                                                              0.1, 0.1 / kwargs.get("eps_scale", 3.0),
                                                               pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
 
     def generate_statistical_model(self, model_name=None, **kwargs):
@@ -185,7 +186,8 @@ class ModelInversionService(object):
         self.logger.info("Generating model...")
         self.default_parameters.update(kwargs)
         model = StatisticalModel(model_name, self.n_regions, kwargs.get("x1eq_min", X1EQ_MIN),
-                                 kwargs.get("x1eq_max", X1EQ_MAX), **self.default_parameters)
+                                 kwargs.get("x1eq_max", X1EQ_MAX), kwargs.get("MC_scale", MC_SCALE),
+                                 **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model

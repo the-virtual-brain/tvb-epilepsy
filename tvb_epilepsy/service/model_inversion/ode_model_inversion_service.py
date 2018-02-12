@@ -1,7 +1,7 @@
 import time
 import numpy as np
 from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1EQ_MAX, X1INIT_MIN, X1INIT_MAX, \
-                                                                                    ZINIT_MIN, ZINIT_MAX, SIG_INIT_DEF
+                                                                         ZINIT_MIN, ZINIT_MAX, MC_SCALE, SIG_INIT_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, assert_arrays, \
     extract_dict_stringkeys
 from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
@@ -262,7 +262,8 @@ class ODEModelInversionService(ModelInversionService):
         self.default_parameters.update(kwargs)
         model = ODEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
                                     kwargs.get("x1eq_min", X1EQ_MIN), kwargs.get("x1eq_max", X1EQ_MAX),
-                                    kwargs.get("sig_init", SIG_INIT_DEF), **self.default_parameters)
+                                    kwargs.get("MC_scale", MC_SCALE), kwargs.get("sig_init", SIG_INIT_DEF),
+                                    **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model

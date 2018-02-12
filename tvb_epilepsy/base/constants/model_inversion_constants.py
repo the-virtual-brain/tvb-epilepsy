@@ -17,11 +17,12 @@ K_MAX = 3.0
 MC_MIN = 0.0
 MC_MAX = 1.0
 MC_MAX_MIN_RATIO = 1000.0
+MC_SCALE = 6.0
 
 # ODE model inversion constants
 X1INIT_MIN = -2.0
 X1INIT_MAX = 0.0
-ZINIT_MIN = 1.0
+ZINIT_MIN = 2.0
 ZINIT_MAX = 5.0
 
 # SDE model inversion constants

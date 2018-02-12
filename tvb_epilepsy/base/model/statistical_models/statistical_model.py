@@ -1,4 +1,4 @@
-from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1EQ_MAX
+from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1EQ_MAX, MC_SCALE
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
 #TODO: avoid service imported in model
@@ -7,7 +7,7 @@ from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
 
 class StatisticalModel(object):
 
-    def __init__(self, name='vep', n_regions=0, x1eq_min=X1EQ_MIN, x1eq_max=X1EQ_MAX, **defaults):
+    def __init__(self, name='vep', n_regions=0, x1eq_min=X1EQ_MIN, x1eq_max=X1EQ_MAX, MC_scale=MC_SCALE, **defaults):
         self.n_regions = n_regions
         if isinstance(name, basestring):
             self.name = name
@@ -15,6 +15,7 @@ class StatisticalModel(object):
             raise_value_error("Statistical model's type " + str(name) + " is not a string!")
         self.x1eq_min = x1eq_min
         self.x1eq_max = x1eq_max
+        self.MC_scale = MC_scale
         # Parameter setting:
         self.parameters = {}
         self._generate_parameters(**defaults)
