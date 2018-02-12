@@ -124,7 +124,7 @@ class HypothesisBuilder(object):
 
         return DiseaseHypothesis(number_of_regions=self.nr_of_regions,
                                  epileptogenicity_hypothesis={tuple(ep_indices): ep_values},
-                                 excitability_hypothesis={tuple(exc_indices): exc_values})
+                                 excitability_hypothesis={tuple(exc_indices): exc_values}, name=self.name)
 
     def _normalize_disease_values(self, values):
         # TODO: something smarter to normalize better disease values
