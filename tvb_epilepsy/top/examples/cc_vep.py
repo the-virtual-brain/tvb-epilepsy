@@ -6,7 +6,6 @@ import numpy as np
 from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE
 from tvb_epilepsy.base.constants.configurations import FOLDER_VEP, FOLDER_RES
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
@@ -89,10 +88,7 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
         e_indices = disease_indices
         e_values = np.array(disease_values)
         x0_values = np.array(x0_values)
-        hyp_x0_E = DiseaseHypothesis(head.connectivity.number_of_regions,
-                                     excitability_hypothesis={tuple(x0_indices): x0_values},
-                                     epileptogenicity_hypothesis={tuple(e_indices): e_values},
-                                     connectivity_hypothesis={})
+        hyp_x0_E = hypo_builder.build_mixed_hypothesis(e_values, e_indices, x0_values, x0_indices)
         hypotheses = (hyp_E, hyp_x0, hyp_x0_E)
 
     else:
