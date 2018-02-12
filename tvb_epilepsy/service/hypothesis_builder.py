@@ -21,13 +21,20 @@ class HypothesisBuilder(object):
     w_values = []
     lsa_propagation_indices = []
     lsa_propagation_strengths = []
+    normalize = False
+    sort_disease_values = False
 
     def set_nr_of_regions(self, nr_of_regions):
         self.nr_of_regions = nr_of_regions
         return self
 
-    def set(self, name):
-        self.name = name
+    def set_normalize(self, value):
+        self.normalize = value
+        return self
+
+    def set_sort_disease_values(self, value):
+        self.sort_disease_values = value
+        return self
 
     def build_epileptogenicity_hypothesis(self, values, indices):
         return DiseaseHypothesis(number_of_regions=self.nr_of_regions,
@@ -47,21 +54,28 @@ class HypothesisBuilder(object):
 
         return values
 
-    def build_epileptogenicity_hypothesis_based_on_threshold(self, values, threshold, normalize=False):
+    def _ensure_normalization_or_sorting(self, disease_values, disease_indices):
+        if self.normalize:
+            disease_values = self._normalize_disease_values(disease_values)
+
+        if self.sort_disease_values:
+            inds = numpy.argsort(disease_values)
+            disease_values = disease_values[inds]
+            disease_indices = disease_indices[inds]
+
+        return disease_values, disease_indices
+
+    def build_epileptogenicity_hypothesis_based_on_threshold(self, values, threshold):
         disease_indices, = numpy.where(values > threshold)
         disease_values = values[disease_indices]
-
-        if normalize:
-            disease_values = self._normalize_disease_values(disease_values)
+        disease_values, disease_indices = self._ensure_normalization_or_sorting(disease_values, disease_indices)
 
         return self.build_epileptogenicity_hypothesis(disease_values, list(disease_indices))
 
-    def build_excitability_hypothesis_based_on_threshold(self, values, threshold, normalize=False):
+    def build_excitability_hypothesis_based_on_threshold(self, values, threshold):
         disease_indices, = numpy.where(values > threshold)
         disease_values = values[disease_indices]
-
-        if normalize:
-            disease_values = self._normalize_disease_values(disease_values)
+        disease_values, disease_indices = self._ensure_normalization_or_sorting(disease_values, disease_indices)
 
         return self.build_excitability_hypothesis(disease_values, list(disease_indices))
 
