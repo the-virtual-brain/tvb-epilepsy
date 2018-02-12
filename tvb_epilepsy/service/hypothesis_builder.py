@@ -41,15 +41,29 @@ class HypothesisBuilder(object):
                                  epileptogenicity_hypothesis={tuple(ep_indices): ep_values},
                                  excitability_hypothesis={tuple(exc_indices): exc_values})
 
-    def build_epileptogenicity_hypothesis_based_on_threshold(self, values, threshold):
-        disease_indices, = numpy.where(values > threshold)
-        disease_values = values[disease_indices]
-        return self.build_epileptogenicity_hypothesis(disease_values, disease_indices)
+    def _normalize_disease_values(self, values):
+        # TODO: something smarter to normalize better disease values
+        values += (0.95 - numpy.max(values))
 
-    def build_excitability_hypothesis_based_on_threshold(self, values, threshold):
+        return values
+
+    def build_epileptogenicity_hypothesis_based_on_threshold(self, values, threshold, normalize=False):
         disease_indices, = numpy.where(values > threshold)
         disease_values = values[disease_indices]
-        return self.build_excitability_hypothesis(disease_values, disease_indices)
+
+        if normalize:
+            disease_values = self._normalize_disease_values(disease_values)
+
+        return self.build_epileptogenicity_hypothesis(disease_values, list(disease_indices))
+
+    def build_excitability_hypothesis_based_on_threshold(self, values, threshold, normalize=False):
+        disease_indices, = numpy.where(values > threshold)
+        disease_values = values[disease_indices]
+
+        if normalize:
+            disease_values = self._normalize_disease_values(disease_values)
+
+        return self.build_excitability_hypothesis(disease_values, list(disease_indices))
 
     def _compute_e_x0_values_based_on_threshold(self, values, threshold):
         disease_indices, = numpy.where(values > threshold)
