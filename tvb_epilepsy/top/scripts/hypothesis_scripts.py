@@ -18,7 +18,7 @@ def start_lsa_run(hypothesis, model_connectivity):
     logger.info("creating model configuration...")
     model_configuration_service = ModelConfigurationService(hypothesis.number_of_regions)
     model_configuration = model_configuration_service. \
-        configure_model_from_hypothesis(hypothesis, model_connectivity)
+        build_model_from_hypothesis(hypothesis, model_connectivity)
 
     logger.info("running LSA...")
     lsa_service = LSAService(eigen_vectors_number_selection=EIGENVECTORS_NUMBER_SELECTION, eigen_vectors_number=None,
@@ -79,10 +79,10 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
     model_configuration_service = ModelConfigurationService(hyp.number_of_regions, **kwargs)
     if hyp.type == "Epileptogenicity":
         model_configuration = model_configuration_service. \
-            configure_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
+            build_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
     else:
         model_configuration = model_configuration_service. \
-            configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
+            build_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
     writer = H5Writer()
     if save_flag:
         writer.write_model_configuration(model_configuration, os.path.join(results_dir, hyp.name + "_ModelConfig.h5"))

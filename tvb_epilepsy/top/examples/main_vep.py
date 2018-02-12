@@ -126,10 +126,10 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                  logger=logger)))
         if hyp.type == "Epileptogenicity":
             model_configuration = model_configuration_service. \
-                configure_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
+                build_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
         else:
             model_configuration = model_configuration_service. \
-                configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
+                build_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
         writer.write_model_configuration(model_configuration, os.path.join(FOLDER_RES, hyp.name + "_ModelConfig.h5"))
         if test_write_read:
             logger.info("Written and read model configuration are identical?: " +

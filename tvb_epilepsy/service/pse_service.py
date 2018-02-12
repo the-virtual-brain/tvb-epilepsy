@@ -86,11 +86,11 @@ def update_hypothesis(hypothesis_input, model_connectivity, params_paths, params
                       params_indices)[:4]
     # ...and compute a new model_configuration:
     if hypothesis.type == "Epileptogenicity":
-        model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hypothesis,
-                                                                                            model_connectivity)
+        model_configuration = model_configuration_service.build_model_from_E_hypothesis(hypothesis,
+                                                                                        model_connectivity)
     else:
-        model_configuration = model_configuration_service.configure_model_from_hypothesis(hypothesis,
-                                                                                          model_connectivity)
+        model_configuration = model_configuration_service.build_model_from_hypothesis(hypothesis,
+                                                                                      model_connectivity)
     return hypothesis, model_configuration, params_paths, params_values, params_indices
 
 

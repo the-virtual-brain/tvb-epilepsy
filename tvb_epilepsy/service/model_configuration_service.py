@@ -145,14 +145,14 @@ class ModelConfigurationService(object):
     def _normalize_global_coupling(self):
         self.K = 10.0 * self.K_unscaled / self.number_of_regions
 
-    def configure_model_from_equilibrium(self, x1EQ, zEQ, model_connectivity):
+    def _configure_model_from_equilibrium(self, x1EQ, zEQ, model_connectivity):
         # x1EQ, zEQ = self._ensure_equilibrum(x1EQ, zEQ) # We don't this by default anymore
         x0, Ceq, x0_values, e_values = self._compute_params_after_equilibration(x1EQ, zEQ, model_connectivity)
         return ModelConfiguration(self.yc, self.Iext1, self.Iext2, self.K, self.a, self.b, self.d,
                                   self.slope, self.s, self.gamma, x1EQ, zEQ, Ceq, x0, x0_values,
                                   e_values, self.zmode, model_connectivity)
 
-    def configure_model_from_E_hypothesis(self, disease_hypothesis, model_connectivity):
+    def build_model_from_E_hypothesis(self, disease_hypothesis, model_connectivity):
         # Always normalize K first
         self._normalize_global_coupling()
 
@@ -167,9 +167,9 @@ class ModelConfigurationService(object):
         # Compute equilibrium from epileptogenicity:
         x1EQ, zEQ = self._compute_x1_and_z_equilibrium_from_E(e_values)
 
-        return self.configure_model_from_equilibrium(x1EQ, zEQ, model_connectivity)
+        return self._configure_model_from_equilibrium(x1EQ, zEQ, model_connectivity)
 
-    def configure_model_from_hypothesis(self, disease_hypothesis, model_connectivity):
+    def build_model_from_hypothesis(self, disease_hypothesis, model_connectivity):
         # Always normalize K first
         self._normalize_global_coupling()
 
@@ -198,7 +198,7 @@ class ModelConfigurationService(object):
                                             model_connectivity)
         zEQ = self._compute_z_equilibrium(x1EQ)
 
-        return self.configure_model_from_equilibrium(x1EQ, zEQ, model_connectivity)
+        return self._configure_model_from_equilibrium(x1EQ, zEQ, model_connectivity)
 
     def update_for_pse(self, values, paths, indices):
         for i, val in enumerate(paths):

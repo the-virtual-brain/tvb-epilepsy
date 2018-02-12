@@ -108,10 +108,10 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
                                                  os.path.join(folder_res, "model_config_service.h5"))
         if hyp.type == "Epileptogenicity":
             model_configuration = model_configuration_service. \
-                configure_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
+                build_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
         else:
             model_configuration = model_configuration_service. \
-                configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
+                build_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
         writer.write_model_configuration(model_configuration, os.path.join(folder_res, "ModelConfiguration.h5"))
         # Plot nullclines and equilibria of model configuration
         plotter = Plotter()
