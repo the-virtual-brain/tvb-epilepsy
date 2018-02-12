@@ -1,6 +1,6 @@
 import numpy as np
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationBuilder
+from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.top.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration, set_time_scales
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
 

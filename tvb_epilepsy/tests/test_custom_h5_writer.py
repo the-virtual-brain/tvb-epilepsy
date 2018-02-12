@@ -10,7 +10,7 @@ from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.lsa_service import LSAService
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationBuilder
+from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
 from tvb_epilepsy.service.pse.lsa_pse_service import LSAPSEService
 from tvb_epilepsy.service.sensitivity_analysis_service import SensitivityAnalysisService

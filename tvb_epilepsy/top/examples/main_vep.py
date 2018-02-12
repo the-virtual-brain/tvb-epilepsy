@@ -17,7 +17,7 @@ from tvb_epilepsy.top.scripts.simulation_scripts import set_time_scales, prepare
 from tvb_epilepsy.top.scripts.simulation_scripts import compute_seeg_and_write_ts_h5_file
 from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.service.lsa_service import LSAService
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationBuilder
+from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.io.h5_reader import H5Reader
 
 if DATA_MODE is TVB:
