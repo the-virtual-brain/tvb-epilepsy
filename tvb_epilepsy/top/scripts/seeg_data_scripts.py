@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.signal import decimate
+from scipy.stats import zscore
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 
@@ -64,16 +65,17 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
     # t_offset = np.where(times > (on_off_set[1] + win_len))[0][0]
     times = times[t_onset:t_offset]
     observation = observation[t_onset:t_offset]
+    observation = zscore(observation) / 3.0
+    # observation -= observation.min()
+    # observation /= observation.max()
     if plot_flag:
         plotter.plot_raster({"observation": observation}, times, time_units="sec", special_idx=None, title='Time Series',
-                    offset=1.0, figure_name='TimeSeries', labels=bipolar_channels)
+                            offset=1.0, figure_name='TimeSeries', labels=bipolar_channels)
     # n_times = times.shape[0]
     # observation = resample_poly(observation, 2048, n_times)
     observation = decimate(observation, 2, axis=0, zero_phase=True)
     times = decimate(times, 2, zero_phase=True)
-    observation -= observation.min()
-    observation /= observation.max()
     if plot_flag:
-        plotter.plot_timeseries({"observation": observation}, times, time_units="sec", special_idx=None, title='Time Series',
-                    figure_name='TimeSeriesDecimated', labels=bipolar_channels) #
+        plotter.plot_timeseries({"observation": observation}, times, time_units="sec", special_idx=None,
+                                title='Time Series', figure_name='TimeSeriesDecimated', labels=bipolar_channels) #
     return observation, times, fs/2
