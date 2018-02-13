@@ -106,8 +106,9 @@ class ModelInversionService(object):
         MC_def = self.get_SC()
         inds = np.triu_indices(self.n_regions, 1)
         MC_def[inds] = MC_def[inds] * self.MC_direction_split
-        inds = np.tril_indices(self.n_regions, 1)
+        MC_def = MC_def.T
         MC_def[inds] = MC_def[inds] * (1.0 - self.MC_direction_split)
+        MC_def = MC_def.T
         MC_def[MC_def < 0.001] = 0.001
         return MC_def
 
@@ -131,7 +132,7 @@ class ModelInversionService(object):
         x1eq_max = kwargs.get("x1eq_max", X1EQ_MAX)
         x1eq_star_max = x1eq_max - X1EQ_MIN
         x1eq_star_mean = x1eq_max - self.x1EQ
-        x1eq_std = np.minimum(kwargs.get("sig_eq", x1eq_star_max / 4.0), np.abs(x1eq_star_mean)/3.0)
+        x1eq_std = np.minimum(kwargs.get("sig_eq", np.abs(x1eq_star_max-x1eq_star_mean)), np.abs(x1eq_star_mean))/3.0
         self.default_parameters.update(set_parameter_defaults("x1eq_star", "lognormal", (self.n_regions,),
                                                               0.0, x1eq_star_max,
                                                               x1eq_star_mean, x1eq_std,
