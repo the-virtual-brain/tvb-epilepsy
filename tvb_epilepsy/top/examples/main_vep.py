@@ -29,7 +29,7 @@ if SIMULATION_MODE is TVB:
         setup_TVB_simulation_from_model_configuration as setup_simulation_from_model_configuration
 else:
     from tvb_epilepsy.top.scripts.simulation_scripts import \
-        setup_custom_simulation_from_model_configuration as setup_simulation_from_model_configuration
+        setup_java_simulation_from_model_configuration as setup_simulation_from_model_configuration
 
 PSE_FLAG = False
 SA_PSE_FLAG = False

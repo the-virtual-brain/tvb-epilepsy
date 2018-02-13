@@ -48,9 +48,9 @@ class TestSimulationRun(object):
     #     connectivity = reader.read_connectivity(os.path.join(IN_HEAD, "Connectivity.h5"))
     #     model_configuration = self._prepare_model_for_simulation(connectivity)
     #
-    #     simulator = setup_custom_simulation_from_model_configuration(model_configuration, connectivity, self.dt,
+    #     simulator = setup_java_simulation_from_model_configuration(model_configuration, connectivity, self.dt,
     #                                                                  self.sim_length,
-    #                                                                  self.monitor_period, "CustomEpileptor",
+    #                                                                  self.monitor_period, "JavaEpileptor",
     #                                                                  self.noise_intensity)
     #
     #     simulator.config_simulation()

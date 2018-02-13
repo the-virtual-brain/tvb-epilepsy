@@ -1,5 +1,5 @@
 """
-Mechanism for launching and configuring generic Simulations (it will have TVB or custom implementations)
+Mechanism for launching and configuring generic Simulations (it will have TVB or Java implementations)
 """
 
 import numpy

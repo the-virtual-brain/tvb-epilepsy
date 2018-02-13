@@ -3,14 +3,13 @@
 import os
 import shutil
 
-here = os.path.dirname(os.path.abspath(__file__))
-temporary_folder = 'temp'
+from tvb_epilepsy.base.constants.configurations import FOLDER_TEMP
 
 
 def get_temporary_folder():
-    if not os.path.exists(temporary_folder):
-        os.makedirs(temporary_folder)
-    return temporary_folder
+    if not os.path.exists(FOLDER_TEMP):
+        os.makedirs(FOLDER_TEMP)
+    return FOLDER_TEMP
 
 
 def get_temporary_files_path(*args):
@@ -19,4 +18,4 @@ def get_temporary_files_path(*args):
 
 
 def remove_temporary_test_files():
-    shutil.rmtree(temporary_folder)
+    shutil.rmtree(FOLDER_TEMP)

@@ -4,7 +4,7 @@ import os
 import numpy as np
 from scipy.io import loadmat, savemat
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, IN_HEAD, FOLDER_FIGURES
-from tvb_epilepsy.base.constants.configurations import WORK_FOLDER, STATS_MODELS_PATH, TVB, CUSTOM
+from tvb_epilepsy.base.constants.configurations import WORK_FOLDER, STATS_MODELS_PATH, TVB, JAVA
 from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
@@ -52,7 +52,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=IN_HEAD,
     stan_service.set_or_compile_model()
 
     # -------------------------------Reading model_data and hypotheses--------------------------------------------------
-    head, hypos = from_head_to_hypotheses(ep_name, data_mode=CUSTOM, data_folder=data_folder,
+    head, hypos = from_head_to_hypotheses(ep_name, data_mode=JAVA, data_folder=data_folder,
                                           plot_head=False, figure_dir=figure_dir, sensors_filename=sensors_filename)
 
     for hyp in hypos[:1]:

@@ -1,13 +1,12 @@
 import os
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, FOLDER_FIGURES
-from tvb_epilepsy.base.constants.module_constants import TVB, SIMULATION_MODE
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, FOLDER_FIGURES, TVB, SIMULATION_MODE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.constants.model_constants import VOIS
-from tvb_epilepsy.service.simulator.simulator_custom import EpileptorModel
+from tvb_epilepsy.service.simulator.simulator_java import EpileptorModel
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
@@ -17,17 +16,17 @@ logger = initialize_logger(__name__)
 
 
 ###
-# A helper function to make good choices for simulation settings for a custom simulator
+# A helper function to make good choices for simulation settings for the Java simulator
 ###
-def setup_custom_simulation_from_model_configuration(model_configuration, connectivity, dt, sim_length, monitor_period,
-                                                     model_name, noise_intensity=None, **kwargs):
-    from tvb_epilepsy.service.simulator.simulator_custom import custom_model_builder, SimulatorCustom
+def setup_java_simulation_from_model_configuration(model_configuration, connectivity, dt, sim_length, monitor_period,
+                                                   model_name, noise_intensity=None, **kwargs):
+    from tvb_epilepsy.service.simulator.simulator_java import java_model_builder, SimulatorJava
     from tvb_epilepsy.base.simulation_settings import SimulationSettings
 
     if model_name != EpileptorModel._ui_name:
-        logger.info("You can use only " + EpileptorModel._ui_name + "for custom simulations!")
+        logger.info("You can use only " + EpileptorModel._ui_name + "for Java simulations!")
 
-    model = custom_model_builder(model_configuration)
+    model = java_model_builder(model_configuration)
 
     if noise_intensity is None:
         noise_intensity = 0  # numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.])
@@ -36,7 +35,7 @@ def setup_custom_simulation_from_model_configuration(model_configuration, connec
                                   noise_intensity=noise_intensity,
                                   monitor_sampling_period=monitor_period)
 
-    simulator_instance = SimulatorCustom(connectivity, model_configuration, model, settings)
+    simulator_instance = SimulatorJava(connectivity, model_configuration, model, settings)
 
     return simulator_instance
 
@@ -48,7 +47,7 @@ def setup_TVB_simulation_from_model_configuration(model_configuration, connectiv
                                                   sim_type="realistic", model_name="EpileptorDP", zmode=np.array("lin"),
                                                   pmode=np.array("z"), noise_instance=None, noise_intensity=None,
                                                   monitor_expressions=None, monitors_instance=None):
-    from tvb_epilepsy.base.constants.module_constants import ADDITIVE_NOISE, NOISE_SEED
+    from tvb_epilepsy.base.constants.model_constants import ADDITIVE_NOISE, NOISE_SEED
     from tvb_epilepsy.base.simulation_settings import SimulationSettings
     from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
     from tvb_epilepsy.base.constants.model_constants import model_noise_type_dict
@@ -186,18 +185,17 @@ def set_time_scales(fs=2048.0, time_length=100000.0, scale_fsavg=None, report_ev
     n_report_blocks = max(report_every_n_monitor_steps * np.round(time_length_avg / 100), 1.0)
     return dt, fsAVG, sim_length, monitor_period, n_report_blocks
 
+
 # TODO: this could be a builder
 def from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis, simulation_mode=SIMULATION_MODE,
                                            sim_type="realistic", dynamical_model="EpileptorDP2D", ts_file=None,
                                            plot_flag=True, results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES,
                                            logger=logger, **kwargs):
     if simulation_mode is TVB:
-        from tvb_epilepsy.top.scripts import setup_TVB_simulation_from_model_configuration \
-            as setup_simulation_from_model_configuration
+        setup_simulation_from_model_configuration = setup_TVB_simulation_from_model_configuration
     else:
-        from tvb_epilepsy.top.scripts import setup_custom_simulation_from_model_configuration \
-            as setup_simulation_from_model_configuration
-    # --------------------------Simulation preparations------------------------------------------------------------------
+        setup_simulation_from_model_configuration = setup_java_simulation_from_model_configuration
+    # --------------------------Simulation preparations-----------------------------------------------------------------
     # TODO: maybe use a custom Monitor class
     # this is the simulation sampling rate that is necessary for the simulation to be stable:
     if sim_type == "realistic":
@@ -229,10 +227,10 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     #      -Iext2 and slope are coupled to z, g, or z*g in order for spikes to appear before seizure,
     #      -multiplicative correlated noise is also used
     # Optional variations:
-    zmode = kwargs.get("zmode",
-                       "lin")  # by default, or "sig" for the sigmoidal expression for the slow z variable in Proix et al. 2014
-    pmode = kwargs.get("pmode",
-                       "z")  # by default, "g" or "z*g" for the feedback coupling to Iext2 and slope for EpileptorDPrealistic
+    zmode = kwargs.get("zmode", "lin")
+    # by default, or "sig" for the sigmoidal expression for the slow z variable in Proix et al. 2014
+    pmode = kwargs.get("pmode", "z")
+    # by default, "g" or "z*g" for the feedback coupling to Iext2 and slope for EpileptorDPrealistic
     if dynamical_model is "EpileptorDP2D":
         spectral_raster_plot = False
         trajectories_plot = True

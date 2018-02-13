@@ -22,11 +22,11 @@ LIB_PATH = "/Applications/Episense.app/Contents/Java"
 JAR_PATH = "/Applications/Episense.app/Contents/Java/episense-fx-app.jar"
 JAVA_MAIN_SIM = "de.codebox.episense.fx.StartSimulation"
 
-# Simulation and data read folder amd flags:
-CUSTOM = 'custom'
+# Identify and choose the Simulator to use data folder from where to read.
+JAVA = 'java'
 TVB = 'tvb'
+DATA_MODE = JAVA
 SIMULATION_MODE = TVB
-DATA_MODE = CUSTOM
 
 
 # IN data
@@ -51,6 +51,7 @@ separate_results_by_run = False  # Set TRUE, when you want logs/results/figures 
 FOLDER_LOGS = os.path.join(WORK_FOLDER, "vep_out", "logs")
 FOLDER_RES = os.path.join(WORK_FOLDER, "vep_out", "res")
 FOLDER_FIGURES = os.path.join(WORK_FOLDER, "vep_out", "figs")
+FOLDER_TEMP = os.path.join(WORK_FOLDER, "vep_out", "temp")
 
 if separate_results_by_run:
     FOLDER_LOGS = FOLDER_LOGS + datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M')
