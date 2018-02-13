@@ -272,10 +272,28 @@ transformed data {
     real eps_star_hi = (eps_hi - eps_loc) / eps_scale;
     real scale_signal_star_lo = (scale_signal_lo - scale_signal_loc) / scale_signal_scale;
     real scale_signal_star_hi = (scale_signal_hi - scale_signal_loc) / scale_signal_scale;
-    if (DEBUG > 0)
-        print("tau1_star_lo=", tau1_star_lo, " tau0_star_lo=", tau0_star_lo, " K_star_lo=", K_star_lo,
-              " sig_init_star_lo=", sig_init_star_lo, " sig_star_lo=", sig_star_lo,
-              " eps_star_lo=", eps_star_lo, " scale_signal_star_lo=", scale_signal_star_lo);
+    // Tranfer whatever follows to transformed parameters for MC to be a parameter
+    matrix<lower=MC_lo, upper=MC_hi>[n_regions, n_regions] MC;
+    {   int icon = 0;
+        // real MC_mu;
+        for (ii in 1:n_regions) {
+            for (jj in ii:n_regions) {
+                if (ii == jj)
+                    MC[ii, jj] = 0.0; // diagonal (self-) MC
+                else {
+                    icon += 1;
+                    MC[ii, jj] = SC[icon];
+                    MC[jj, ii] = SC[icon];
+                    /*
+                    MC_mu = SC[icon] * MCsplit[icon];
+                    MC[ii, jj] = MC_mu * exp(MC_star[1][icon] / MC_scale); // upper triangular MC
+                    MC_mu = SC[icon] * (1.0 - MCsplit[icon]);
+                    MC[jj, ii] = MC_mu * exp(MC_star[2][icon] / MC_scale); // lower triangular MC
+                    */
+                }
+            }
+        }
+    }
 }
 
 
@@ -283,7 +301,7 @@ parameters {
 
     /* Generative model */
     /* Epileptor */
-    row_vector<lower=-3.0, upper=3.0>[n_regions] x1eq_star; //star of x1 equilibrium point coordinate, <lower=x1eq_2star_lo, upper=x1eq_2star_hi>
+    row_vector<upper=1.0>[n_regions] x1eq_star; //star of x1 equilibrium point coordinate, <lower=x1eq_2star_lo, upper=x1eq_2star_hi>
     row_vector<lower=x1init_lo, upper=x1init_hi>[n_regions] x1init; // x1 initial condition coordinate
     row_vector<lower=zinit_lo, upper=zinit_hi>[n_regions] zinit; // x1 initial condition coordinate
     real<lower=sig_init_star_lo, upper=sig_init_star_hi> sig_init_star; // variance of initial condition
@@ -293,8 +311,8 @@ parameters {
     real<lower=tau0_star_lo, upper=tau0_star_hi> tau0_star; // time scale separation [n_active_regions]
     /* Coupling */
     real<lower=K_star_lo, upper=K_star_hi> K_star; // global coupling scaling
-    row_vector<lower=MCsplit_lo, upper=MCsplit_hi>[n_connections] MCsplit; // Model connectivity direction split
-    matrix<lower=-3.0, upper=3.0>[n_connections, 2] MC_star; // Non-symmetric model connectivity
+    // row_vector<lower=MCsplit_lo, upper=MCsplit_hi>[n_connections] MCsplit; // Model connectivity direction split
+    // row_vector<lower=-3.0, upper=3.0>[n_connections] MC_star[2]; // Non-symmetric model connectivity
     /* SDE Integration */
     real<lower=sig_star_lo, upper=sig_star_hi> sig_star; // variance of phase flow, i.e., dynamic noise
     /* Observation model */
@@ -309,8 +327,7 @@ transformed parameters {
     /* Observation model */
     row_vector[n_signals] fit_signals[n_times]; // expected output signal
     real<lower=0.0> eps = eps_star * eps_scale + eps_loc; // variance of observation noise
-    // observation signal scaling:
-    real<lower=0.0> scale_signal = scale_signal_star * scale_signal_scale + scale_signal_loc;
+    real<lower=0.0> scale_signal = scale_signal_star * scale_signal_scale + scale_signal_loc; // observation signal scaling:
 
     /* Generative model */
 
@@ -333,38 +350,49 @@ transformed parameters {
     /* Coupling */
     real<lower=0.0> K = K_star * K_scale + K_loc; // global coupling scaling
     row_vector[n_regions] coupling[n_times]; // actual effective coupling per time point
-    row_vector[n_regions] coupling_eq; // coupling at equilibrium
-    matrix<lower=MC_lo, upper=MC_hi>[n_regions, n_regions] MC;
-    {   int icon = 0;
-        real MC_mu;
-        for (jj in 1:n_regions) {
-            for (ii in 1:jj) {
-                if (ii == jj)
-                    MC[ii, jj] = 0.0; // diagonal (self-) MC
-                else {
-                    icon += 1;
-                    MC_mu = SC[icon] * MCsplit[icon];
-                    MC[ii, jj] = MC_mu * exp(MC_star[icon, 1] / MC_scale); // upper triangular MC
-                    MC_mu = SC[icon] * (1.0 - MCsplit[icon]);
-                    MC[jj, ii] = MC_mu * exp(MC_star[icon, 2] / MC_scale); // lower triangular MC
-                }
-            }
-        }
-    }
-
-    if (DEBUG > 0)
-        print("tau1=", tau1, " tau0=", tau0, " K=", K,  " sig_init=", sig_init, " sig=", sig,
-              " eps=", eps, " scale_signal=", scale_signal);
-    if (DEBUG > 2) {
-        for (ii in 1:n_regions)
-            print("ii, ",ii, ", MC[ii, :]=", MC[ii, :]);
-    }
-
-    coupling_eq = calc_coupling(n_regions, n_regions, x1eq, x1eq, MC);
+    row_vector[n_regions] coupling_eq = calc_coupling(n_regions, n_regions, x1eq, x1eq, MC); // coupling at equilibrium
 
     /* x0, excitability parameter */
     x0 = EpileptorDP2D_fun_z_lin(n_regions, x1eq, zeq, zeros, K * coupling_eq, 1.0, 1.0) / 4.0;
 
+    /* Initial condition */
+    x1[1] = x1init;
+    z[1] = zinit;
+    coupling[1] = calc_coupling(n_regions, n_regions, x1[1], x1[1], MC);
+
+    /* Integration of auto-regressive generative model  */
+    {   row_vector[n_regions] df;
+        row_vector[n_regions] observation;
+        for (tt in 2:n_times) {
+            df = EpileptorDP2D_fun_x1(n_regions, x1[tt-1], z[tt-1], yc, Iext1, a, db, d, slope, tau1);
+            if (DEBUG > 3) {
+                print("tt=", tt);
+                print("dfx=", df);
+            }
+            x1[tt] = ode_step(n_regions, x1[tt-1], df, dt);
+            x1[tt, active_regions] = x1[tt, active_regions] + dX1t[tt-1] * sqrtdt;
+            if (DEBUG > 3)
+                print("x1[tt]=", x1[tt]);
+            coupling[tt] = calc_coupling(n_regions, n_regions, x1[tt], x1[tt], MC);
+            df = EpileptorDP2D_fun_z_lin(n_regions, x1[tt-1], z[tt-1], x0, K*coupling[tt-1], tau0, tau1);
+            if (DEBUG > 3)
+                print("dfz=", df);
+            z[tt] = ode_step(n_regions, z[tt-1], df, dt);
+            z[tt, active_regions] = z[tt, active_regions] + dZt[tt-1] * sqrtdt;
+            if (DEBUG > 3)
+                print("z[tt]=", z[tt]);
+            if (DEBUG > 0)
+                print("tt=", tt, ", min(x1[tt])=", min(x1[tt]), ", max(x1[tt])=", max(x1[tt]),
+                                 ", min(z[tt])=", min(z[tt]), ", max(z[tt])=", max(z[tt]));
+        }
+    }
+
+    if (DEBUG > 2) {
+        for (ii in 1:n_regions)
+            print("ii, ",ii, ", MC[ii, :]=", MC[ii, :]);
+        // print("MCsplit=", MCsplit);
+        // print("MC_star=", MC_star);
+    }
     if (DEBUG > 1) {
         print("x0=", x0);
         print("x1eq=", x1eq);
@@ -373,40 +401,16 @@ transformed parameters {
                x1eq_star_loc .* exp(x1eq_star .* x1eq_star_zscore));
         print("zeq=", zeq);
         print("coupling_eq=", coupling_eq);
-    }
-
-    /* Initial condition */
-    x1[1] = x1init;
-    z[1] = zinit;
-    coupling[1] = calc_coupling(n_regions, n_regions, x1[1], x1[1], MC);
-    if (DEBUG > 1) {
         print("x1init=", x1init);
         print("zinit=", zinit);
         print("coupling_init=", coupling[1]);
     }
-
-    /* Integration of auto-regressive generative model  */
-    {   row_vector[n_regions] df;
-        row_vector[n_regions] observation;
-
-        for (tt in 2:n_times) {
-            df = EpileptorDP2D_fun_x1(n_regions, x1[tt-1], z[tt-1], yc, Iext1, a, db, d, slope, tau1);
-            if (DEBUG > 2) {
-                print("tt=", tt);
-                print("dfx=", df);
-            }
-            x1[tt] = ode_step(n_regions, x1[tt-1], df, dt);
-            x1[tt, active_regions] = x1[tt, active_regions] + dX1t[tt-1] * sqrtdt;
-            if (DEBUG > 2)
-                print("x1[tt]", x1[tt]);
-            coupling[tt] = calc_coupling(n_regions, n_regions, x1[tt], x1[tt], MC);
-            df = EpileptorDP2D_fun_z_lin(n_regions, x1[tt-1], z[tt-1], x0, K*coupling[tt-1], tau0, tau1);
-            if (DEBUG > 2)
-                print("dfz=", df);
-            z[tt] = ode_step(n_regions, z[tt-1], df, dt);
-            z[tt, active_regions] = z[tt, active_regions] + dZt[tt-1] * sqrtdt;
-
-        }
+    if (DEBUG > 0) {
+        print("tau1=", tau1, " tau0=", tau0, " K=", K,  " sig_init=", sig_init, " sig=", sig,
+              " eps=", eps, " scale_signal=", scale_signal, " offset_signal=", offset_signal);
+        print("tau1_star_lo=", tau1_star_lo, " tau0_star_lo=", tau0_star_lo, " K_star_lo=", K_star_lo,
+              " sig_init_star_lo=", sig_init_star_lo, " sig_star_lo=", sig_star_lo,
+              " eps_star_lo=", eps_star_lo, " scale_signal_star_lo=", scale_signal_star_lo);
     }
 
     for (tt in 1:n_times) {
@@ -421,6 +425,8 @@ transformed parameters {
             fit_signals[tt] = scale_signal * (x1[tt] + offset_signal);
         }
     }
+
+
 }
 
 
@@ -431,14 +437,11 @@ model {
     tau0_star ~ sample(tau0_pdf, tau0_p);
     /* Sampling of global coupling scaling */
     K_star ~ sample(K_pdf, K_p);
-    /* Sampling of model connectivity's split and star parameters */
-    MCsplit ~ normal(MCsplit_loc, MCsplit_scale);
-    if (DEBUG > 2)
-        print("MCsplit=", MCsplit);
-    for (ii in 1:2)
-        to_vector(MC_star[:, ii]) ~ normal(0.0, 1.0);
-    if (DEBUG > 2)
-        print("MC_star=", MC_star);
+    /* Sampling of model connectivity's split and star parameters
+        MCsplit ~ normal(MCsplit_loc, MCsplit_scale);
+        for (ii in 1:2)
+            to_row_vector(MC_star[ii]) ~ normal(0.0, 1.0);
+     */
 
     /* Sampling of initial condition variance as well as dynamical noise strength */
     sig_init_star ~ sample(sig_init_pdf, sig_init_p);
@@ -447,9 +450,9 @@ model {
     // x1eq ~ normal(x1eq_loc, sig_eq);
     to_row_vector(x1eq_star) ~ normal(0.0, 1.0);
     /*
-    for (ii in 1:n_regions) {
-        x1eq_star[ii] ~ sample(x1eq_star_pdf, x1eq_star_p[ii]);
-    }
+        for (ii in 1:n_regions) {
+            x1eq_star[ii] ~ sample(x1eq_star_pdf, x1eq_star_p[ii]);
+        }
     */
     x1init ~ normal(x1eq, sig_init);
     zinit ~ normal(zeq, sig_init);
@@ -458,8 +461,7 @@ model {
     eps_star ~ sample(eps_pdf, eps_p);
     scale_signal_star ~ sample(scale_signal_pdf, scale_signal_p);
     offset_signal ~ normal(offset_signal_p[1], offset_signal_p[2]);
-    if (DEBUG > 0)
-        print("offset_signal=", offset_signal);
+
     /* Integrate & predict  */
     for (tt in 1:(n_times-1)) {
         /* Auto-regressive generative model  */
