@@ -1,5 +1,6 @@
 import time
 import numpy as np
+from scipy.stats import zscore
 from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1EQ_MAX, X1INIT_MIN, X1INIT_MAX, \
                                                                          ZINIT_MIN, ZINIT_MAX, MC_SCALE, SIG_INIT_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, assert_arrays, \
@@ -16,10 +17,8 @@ from tvb_epilepsy.base.epileptor_models import *
 
 class ODEModelInversionService(ModelInversionService):
 
-    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="vep_ode",
-                 **kwargs):
-        super(ODEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
-                                                       model_name, **kwargs)
+    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, **kwargs):
+        super(ODEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model, **kwargs)
         self.time = None
         self.dt = 0.0
         self.n_times = 0
@@ -112,8 +111,8 @@ class ODEModelInversionService(ModelInversionService):
         self.data_type = "lfp"
         if statistical_model.observation_model.find("seeg") >= 0:
             self.data_type = "seeg"
-            signals = np.array(extract_dict_stringkeys(sort_dict(target_data), "SEEG",
-                                                       modefun="find", break_after=1))
+            signals = extract_dict_stringkeys(sort_dict(target_data), kwargs.get("seeg_dataset", "SEEG0"),
+                                              modefun="find", two_way_search=True, break_after=1)
             if len(signals) > 0:
                 signals = signals.values()[0]
                 self.signals_inds = range(self.gain_matrix.shape[0])
@@ -162,6 +161,7 @@ class ODEModelInversionService(ModelInversionService):
             signals, self.time, self.n_times = cut_signals_tails(signals, self.time, kwargs.get("cut_signals_tails"))
             self.observation_shape = (self.n_times, self.n_signals)
         # TODO: decide about signals' normalization for the different (sensors', sources' cases)
+        signals = zscore(signals) / 3.0
         # signals -= signals.min()
         # signals /= signals.max()
         statistical_model.n_signals = self.n_signals
@@ -261,8 +261,6 @@ class ODEModelInversionService(ModelInversionService):
         active_regions = kwargs.pop("active_regions", [])
         self.default_parameters.update(kwargs)
         model = ODEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
-                                    kwargs.get("x1eq_min", X1EQ_MIN), kwargs.get("x1eq_max", X1EQ_MAX),
-                                    kwargs.get("MC_scale", MC_SCALE), kwargs.get("sig_init", SIG_INIT_DEF),
                                     **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')

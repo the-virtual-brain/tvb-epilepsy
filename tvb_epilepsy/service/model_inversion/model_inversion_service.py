@@ -24,9 +24,7 @@ STATISTICAL_MODEL_TYPES=["vep_sde"] #, "vep_ode", "vep_lsa"]
 class ModelInversionService(object):
     logger = initialize_logger(__name__)
 
-    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="", **kwargs):
-
-        self.model_name = model_name
+    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, **kwargs):
         self.model_generation_time = 0.0
         self.target_data_type = ""
         self.observation_shape = ()
@@ -179,15 +177,11 @@ class ModelInversionService(object):
                                                               0.1, 0.1 / kwargs.get("eps_scale", 3.0),
                                                               pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
 
-    def generate_statistical_model(self, model_name=None, **kwargs):
-        if model_name is None:
-            model_name = self.model_name
+    def generate_statistical_model(self, model_name="vep", **kwargs):
         tic = time.time()
         self.logger.info("Generating model...")
         self.default_parameters.update(kwargs)
-        model = StatisticalModel(model_name, self.n_regions, kwargs.get("x1eq_min", X1EQ_MIN),
-                                 kwargs.get("x1eq_max", X1EQ_MAX), kwargs.get("MC_scale", MC_SCALE),
-                                 **self.default_parameters)
+        model = StatisticalModel(model_name, self.n_regions, **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model

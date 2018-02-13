@@ -10,10 +10,8 @@ from tvb_epilepsy.service.model_inversion.ode_model_inversion_service import ODE
 
 class SDEModelInversionService(ODEModelInversionService):
 
-    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name=None,
-                 **kwargs):
-        super(SDEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
-                                                       model_name, **kwargs)
+    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, **kwargs):
+        super(SDEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model, **kwargs)
         self.set_default_parameters(**kwargs)
 
     def get_default_sig(self, **kwargs):
@@ -48,9 +46,7 @@ class SDEModelInversionService(ODEModelInversionService):
         active_regions = kwargs.pop("active_regions", [])
         self.default_parameters.update(kwargs)
         model = SDEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
-                                    kwargs.get("x1eq_min", X1EQ_MIN), kwargs.get("x1eq_max", X1EQ_MAX),
-                                    kwargs.get("MC_scale", MC_SCALE), kwargs.get("sig_init", SIG_INIT_DEF),
-                                    self.get_default_sig(**kwargs), **self.default_parameters)
+                                    **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model
