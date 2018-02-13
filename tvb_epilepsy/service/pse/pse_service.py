@@ -97,7 +97,7 @@ class ABCPSEService(object):
             model_configuration_builder = ModelConfigurationBuilder(hypo_copy.number_of_regions,
                                                                     yc=yc, Iext1=Iext1, K=K, a=a, b=b,
                                                                     x1eq_mode=x1eq_mode)
-        model_configuration_builder.update_for_pse(params, self.params_paths, self.params_indices)
+        model_configuration_builder.set_attributes_from_pse(params, self.params_paths, self.params_indices)
         # Obtain Modelconfiguration
         if hypo_copy.type == "Epileptogenicity":
             model_configuration = model_configuration_builder.build_model_from_E_hypothesis(hypo_copy,
