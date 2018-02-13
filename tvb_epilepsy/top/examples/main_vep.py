@@ -17,7 +17,7 @@ from tvb_epilepsy.top.scripts.simulation_scripts import set_time_scales, prepare
 from tvb_epilepsy.top.scripts.simulation_scripts import compute_seeg_and_write_ts_h5_file
 from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.service.lsa_service import LSAService
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.io.h5_reader import H5Reader
 
 if DATA_MODE is TVB:
@@ -115,21 +115,21 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     for hyp in hypotheses:
         logger.info("\n\nRunning hypothesis: " + hyp.name)
         logger.info("\n\nCreating model configuration...")
-        model_configuration_service = ModelConfigurationService(hyp.number_of_regions)
-        writer.write_model_configuration_service(model_configuration_service,
+        model_configuration_builder = ModelConfigurationBuilder(hyp.number_of_regions)
+        writer.write_model_configuration_builder(model_configuration_builder,
                                                  os.path.join(FOLDER_RES, hyp.name + "_model_config_service.h5"))
         if test_write_read:
             logger.info("Written and read model configuration services are identical?: " +
-                        str(assert_equal_objects(model_configuration_service,
-                                                 reader.read_model_configuration_service(
+                        str(assert_equal_objects(model_configuration_builder,
+                                                 reader.read_model_configuration_builder(
                                                      os.path.join(FOLDER_RES, hyp.name + "_model_config_service.h5")),
                                                  logger=logger)))
         if hyp.type == "Epileptogenicity":
-            model_configuration = model_configuration_service. \
-                configure_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
+            model_configuration = model_configuration_builder. \
+                build_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
         else:
-            model_configuration = model_configuration_service. \
-                configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
+            model_configuration = model_configuration_builder. \
+                build_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
         writer.write_model_configuration(model_configuration, os.path.join(FOLDER_RES, hyp.name + "_ModelConfig.h5"))
         if test_write_read:
             logger.info("Written and read model configuration are identical?: " +
@@ -167,7 +167,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                   global_coupling=[{"indices": all_regions_indices}],
                                                   healthy_regions_parameters=[
                                                       {"name": "x0_values", "indices": healthy_indices}],
-                                                  model_configuration_service=model_configuration_service,
+                                                  model_configuration_builder=model_configuration_builder,
                                                   lsa_service=lsa_service, logger=logger, save_flag=True)[0]
             plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
                              lsa_service.eigen_vectors_number, head.connectivity.region_labels, pse_results)
@@ -187,11 +187,11 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                                                              n_samples, method="sobol", param_range=0.1,
                                                              global_coupling=[{"indices": all_regions_indices,
                                                                                "bounds": [0.0, 2 *
-                                                                                          model_configuration_service.K_unscaled[
+                                                                                          model_configuration_builder.K_unscaled[
                                                                                               0]]}],
                                                              healthy_regions_parameters=[
                                                                  {"name": "x0_values", "indices": healthy_indices}],
-                                                             model_configuration_service=model_configuration_service,
+                                                             model_configuration_builder=model_configuration_builder,
                                                              lsa_service=lsa_service, logger=logger)
             plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
                              lsa_service.eigen_vectors_number, head.connectivity.region_labels, pse_sa_results,

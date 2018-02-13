@@ -13,7 +13,7 @@ from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.model_inversion.sde_model_inversion_service import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
 from tvb_epilepsy.service.model_inversion.stan.pystan_service import PyStanService
@@ -66,7 +66,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=IN_HEAD,
             model_configuration = reader.read_model_configuration(model_config_file)
             lsa_hypothesis = reader.read_hypothesis(hyp_file)
         else:
-            model_configuration, lsa_hypothesis, model_configuration_service, lsa_service = \
+            model_configuration, lsa_hypothesis, model_configuration_builder, lsa_service = \
                from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
                                                    plot_flag=False, figure_dir=figure_dir, K=K_DEF)
 
@@ -232,15 +232,15 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=IN_HEAD,
                                  pair_plot_params=pair_plot_params, region_violin_params=region_violin_params)
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
         for id_est, est in enumerate(ensure_list(ests)):
-            fit_model_configuration_service = \
-                ModelConfigurationService(hyp.number_of_regions, K=est[k_str] * hyp.number_of_regions)
+            fit_model_configuration_builder = \
+                ModelConfigurationBuilder(hyp.number_of_regions, K=est[k_str] * hyp.number_of_regions)
             x0_values_fit = \
-                fit_model_configuration_service._compute_x0_values_from_x0_model(est['x0'])
+                fit_model_configuration_builder._compute_x0_values_from_x0_model(est['x0'])
             hyp_fit = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).set_name(
                 'fit' + str(id_est) + "_" + hyp.name).build_excitability_hypothesis(x0_values_fit, range(
                 model_configuration.n_regions))
-            model_configuration_fit = fit_model_configuration_service.configure_model_from_hypothesis(hyp_fit, #est["MC"]
-                                                                                                      estMC(est))
+            model_configuration_fit = fit_model_configuration_builder.build_model_from_hypothesis(hyp_fit,  #est["MC"]
+                                                                                                  estMC(est))
             writer.write_model_configuration(model_configuration_fit,
                                              os.path.join(results_dir, hyp_fit.name + "_ModelConfig.h5"))
 

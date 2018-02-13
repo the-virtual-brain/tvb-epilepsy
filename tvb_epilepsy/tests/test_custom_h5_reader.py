@@ -8,7 +8,7 @@ from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.lsa_service import LSAService
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.tests.base import get_temporary_folder, remove_temporary_test_files
 
 head_dir = "head2"
@@ -128,12 +128,12 @@ class TestCustomH5Reader():
         assert dummy_lsa_service.weighted_eigenvector_sum == lsa_service.weighted_eigenvector_sum
         assert dummy_lsa_service.normalize_propagation_strength == lsa_service.normalize_propagation_strength
 
-    def test_read_model_configuration_service(self):
+    def test_read_model_configuration_builder(self):
         test_file = os.path.join(get_temporary_folder(), "TestModelConfigService.h5")
-        dummy_mc_service = ModelConfigurationService(3)
-        self.writer.write_model_configuration_service(dummy_mc_service, test_file)
+        dummy_mc_service = ModelConfigurationBuilder(3)
+        self.writer.write_model_configuration_builder(dummy_mc_service, test_file)
 
-        mc_service = self.reader.read_model_configuration_service(test_file)
+        mc_service = self.reader.read_model_configuration_builder(test_file)
 
         assert dummy_mc_service.number_of_regions == mc_service.number_of_regions
         assert numpy.array_equal(dummy_mc_service.x0_values, mc_service.x0_values)

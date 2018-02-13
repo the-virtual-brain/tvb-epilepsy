@@ -12,7 +12,7 @@ from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.service.simulator.simulator import ABCSimulator
 from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.simulator.simulator_tvb import SimulatorTVB
 from tvb_epilepsy.service.simulator.simulator_custom import custom_model_builder
@@ -67,7 +67,7 @@ def update_object(object, object_type, params_paths, params_values, params_indic
 
 
 def update_hypothesis(hypothesis_input, model_connectivity, params_paths, params_values, params_indices,
-                      model_configuration_service_input=None,
+                      model_configuration_builder_input=None,
                       yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize"):
     # Assign possible hypothesis parameters on a new hypothesis object:
     hypothesis = deepcopy(hypothesis_input)
@@ -75,22 +75,22 @@ def update_hypothesis(hypothesis_input, model_connectivity, params_paths, params
         update_object(hypothesis, "hypothesis", params_paths, params_values, params_indices)[:4]
     hypothesis.update(name=hypothesis.name)
     # ...create/update a model configuration service:
-    if isinstance(model_configuration_service_input, ModelConfigurationService):
-        model_configuration_service = deepcopy(model_configuration_service_input)
+    if isinstance(model_configuration_builder_input, ModelConfigurationBuilder):
+        model_configuration_builder = deepcopy(model_configuration_builder_input)
     else:
-        model_configuration_service = ModelConfigurationService(hypothesis_input.number_of_regions,
+        model_configuration_builder = ModelConfigurationBuilder(hypothesis_input.number_of_regions,
                                                                 yc=yc, Iext1=Iext1, K=K, a=a, b=b, x1eq_mode=x1eq_mode)
     # ...modify possible related parameters:
-    model_configuration_service, params_paths, params_values, params_indices = \
-        update_object(model_configuration_service, "model_configuration_service", params_paths, params_values,
+    model_configuration_builder, params_paths, params_values, params_indices = \
+        update_object(model_configuration_builder, "model_configuration_builder", params_paths, params_values,
                       params_indices)[:4]
     # ...and compute a new model_configuration:
     if hypothesis.type == "Epileptogenicity":
-        model_configuration = model_configuration_service.configure_model_from_E_hypothesis(hypothesis,
-                                                                                            model_connectivity)
+        model_configuration = model_configuration_builder.build_model_from_E_hypothesis(hypothesis,
+                                                                                        model_connectivity)
     else:
-        model_configuration = model_configuration_service.configure_model_from_hypothesis(hypothesis,
-                                                                                          model_connectivity)
+        model_configuration = model_configuration_builder.build_model_from_hypothesis(hypothesis,
+                                                                                      model_connectivity)
     return hypothesis, model_configuration, params_paths, params_values, params_indices
 
 
@@ -105,7 +105,7 @@ def lsa_out_fun(hypothesis, model_configuration=None, **kwargs):
 
 
 def lsa_run_fun(hypothesis_input, model_connectivity, params_paths, params_values, params_indices, out_fun=lsa_out_fun,
-                model_configuration_service_input=None,
+                model_configuration_builder_input=None,
                 yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",
                 lsa_service_input=None,
                 n_eigenvectors=EIGENVECTORS_NUMBER_SELECTION, weighted_eigenvector_sum=True):
@@ -113,7 +113,7 @@ def lsa_run_fun(hypothesis_input, model_connectivity, params_paths, params_value
         # Update hypothesis and create a new model_configuration:
         hypothesis, model_configuration, params_paths, params_values, params_indices \
             = update_hypothesis(hypothesis_input, model_connectivity, params_paths, params_values, params_indices,
-                                model_configuration_service_input, yc, Iext1, K, a, b, x1eq_mode)
+                                model_configuration_builder_input, yc, Iext1, K, a, b, x1eq_mode)
         # ...create/update lsa service:
         if isinstance(lsa_service_input, LSAService):
             lsa_service = deepcopy(lsa_service_input)
@@ -141,7 +141,7 @@ def sim_out_fun(simulator, time, data, **kwargs):
 
 def sim_run_fun(simulator_input, model_connectivity, params_paths, params_values, params_indices, out_fun=sim_out_fun,
                 hypothesis_input=None,
-                model_configuration_service_input=None,
+                model_configuration_builder_input=None,
                 yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",
                 update_initial_conditions=True):
     # Create new objects from the input simulator
@@ -153,7 +153,7 @@ def sim_run_fun(simulator_input, model_connectivity, params_paths, params_values
         if isinstance(hypothesis_input, DiseaseHypothesis):
             hypothesis, model_configuration, params_paths, params_values, params_indices = \
                 update_hypothesis(hypothesis_input, model_connectivity, params_paths, params_values, params_indices,
-                                  model_configuration_service_input, yc, Iext1, K, a, b, x1eq_mode)
+                                  model_configuration_builder_input, yc, Iext1, K, a, b, x1eq_mode)
             # Update model configuration:
             simulator.model_configuration = model_configuration
             # ...in which case a model has to be regenerated:

@@ -159,20 +159,20 @@ class H5Writer(object):
 
         h5_file.close()
 
-    def write_model_configuration_service(self, model_configuration_service, path):
+    def write_model_configuration_builder(self, model_configuration_builder, path):
         """
-        :param model_configuration_service: ModelConfigurationService object to write in H5
+        :param model_configuration_builder: ModelConfigurationService object to write in H5
         :param path: H5 path to be written
         """
         h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
-        datasets_dict, metadata_dict = self._determine_datasets_and_attributes(model_configuration_service)
+        datasets_dict, metadata_dict = self._determine_datasets_and_attributes(model_configuration_builder)
 
         for key, value in datasets_dict.iteritems():
             h5_file.create_dataset(key, data=value)
 
         h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, model_configuration_service.__class__.__name__)
+        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, model_configuration_builder.__class__.__name__)
 
         for key, value in metadata_dict.iteritems():
             h5_file.attrs.create(key, value)

@@ -38,7 +38,7 @@ if __name__ == "__main__":
     logger.info("running sensitivity analysis PSE LSA...")
     for m in METHODS:
         try:
-            model_configuration_service, model_configuration, lsa_service, lsa_hypothesis, sa_results, pse_results = \
+            model_configuration_builder, model_configuration, lsa_service, lsa_hypothesis, sa_results, pse_results = \
                 sensitivity_analysis_pse_from_hypothesis(hyp_x0_E,
                                                          head.connectivity.normalized_weights,
                                                          head.connectivity.region_labels,
