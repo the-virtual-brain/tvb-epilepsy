@@ -65,7 +65,7 @@ def prepare_seeg_observable(seeg_path, on_off_set, channels, win_len=5.0, low_fr
     # t_offset = np.where(times > (on_off_set[1] + win_len))[0][0]
     times = times[t_onset:t_offset]
     observation = observation[t_onset:t_offset]
-    observation = zscore(observation) / 3.0
+    observation = zscore(observation, axis=None) / 3.0
     # observation -= observation.min()
     # observation /= observation.max()
     if plot_flag:

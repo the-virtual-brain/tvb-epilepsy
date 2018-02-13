@@ -161,7 +161,7 @@ class ODEModelInversionService(ModelInversionService):
             signals, self.time, self.n_times = cut_signals_tails(signals, self.time, kwargs.get("cut_signals_tails"))
             self.observation_shape = (self.n_times, self.n_signals)
         # TODO: decide about signals' normalization for the different (sensors', sources' cases)
-        signals = zscore(signals) / 3.0
+        signals = zscore(signals, axis=None) / 3.0
         # signals -= signals.min()
         # signals /= signals.max()
         statistical_model.n_signals = self.n_signals
