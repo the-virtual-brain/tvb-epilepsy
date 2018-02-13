@@ -19,7 +19,7 @@ CMDSTAN_PATH = os.path.join(user_home, "ScientificSoftware/git/cmdstan")
 # IN data
 ##################################################
 IN_TEST_DATA = os.path.join(WORK_FOLDER, "data")
-IN_HEAD = os.path.join(IN_TEST_DATA, "head2")
+IN_HEAD = os.path.join(IN_TEST_DATA, "head")
 try:
     import tvb_data
     IN_TVB_DATA = os.path.dirname(tvb_data.__file__)
