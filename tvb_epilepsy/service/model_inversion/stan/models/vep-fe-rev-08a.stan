@@ -73,6 +73,7 @@ transformed data {
     real sqrtdt = sqrt(dt);
     real time_scale_zscore = time_scale_std/time_scale_mu;
     real k_zscore = k_std/k_mu;
+    real amplitude_zscore = amplitude_std/amplitude_mu;
     real epsilon_zscore = epsilon_std/epsilon_mu;
     real sigma_zscore = sigma_std/sigma_mu;
     row_vector[nn] x0_star_zscore = x0_star_std ./ x0_star_mu;
@@ -84,11 +85,11 @@ transformed data {
 
 parameters {
     // integrate and predict
-    row_vector[nn] x0_star;
+    row_vector<lower=-3.0, upper=3.0> [nn] x0_star;
     real epsilon_star;
-    real<lower=amplitude_lo> amplitude;
+    real<lower=-3.0, upper=3.0> amplitude_star;
     real offset;
-    real time_scale_star;
+    real<lower=-3.0, upper=3.0> time_scale_star;
 
     // time-series state non-centering:
     row_vector[nn] x_init;
@@ -100,6 +101,7 @@ parameters {
 }
 
 transformed parameters {
+    real amplitude = amplitude_mu * exp(amplitude_zscore * amplitude_star);
     real epsilon = epsilon_mu * exp(epsilon_zscore * epsilon_star); //0.05
     real sigma = sigma_mu * exp(sigma_zscore * sigma_star); //0.053 * exp(0.1 * sigma_star);
     real time_scale = time_scale_mu * exp(time_scale_zscore * time_scale_star); //0.15 * exp(0.4 * time_scale_star - 1.0);
@@ -120,14 +122,14 @@ transformed parameters {
 }
 
 model {
-    // x0 ~ normal(x0_mu, x0_std); //-3.0, 1.0
     to_row_vector(x0_star) ~ normal(0, 1.0);
+    k_star ~ normal(0, 1);
     x_init ~ normal(x_init_mu, init_std); // 0.0, 1.0
     z_init ~ normal(z_init_mu, init_std); // 0.0, 1.0
     sigma_star ~ normal(0, 1.0);
     time_scale_star ~ normal(0, 1.0);
 
-    amplitude ~ normal(amplitude_mu, amplitude_std);
+    amplitude_star ~ normal(0.0, 1.0);
     offset ~ normal(offset_mu, offset_std);
     epsilon_star ~ normal(0, 1.0);
 
@@ -135,8 +137,6 @@ model {
         to_vector(x_eta[t]) ~ normal(0, 1);
         to_vector(z_eta[t]) ~ normal(0, 1);
     }
-
-    k_star ~ normal(0, 1);
 
     if (SIMULATE<1)
         for (t in 1:nt)
