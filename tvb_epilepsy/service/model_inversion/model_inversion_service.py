@@ -5,7 +5,7 @@ from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, X1_DEF, X0
 from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1EQ_MAX, MC_SCALE, \
                      TAU1_DEF, TAU1_MIN, TAU1_MAX, TAU0_DEF, TAU0_MIN, TAU0_MAX, K_MIN, K_MAX, MC_MAX, MC_MAX_MIN_RATIO
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import copy_object_attributes
+from tvb_epilepsy.base.utils.data_structures_utils import copy_object_attributes, isequal_string
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
@@ -129,9 +129,13 @@ class ModelInversionService(object):
     def __set_default_parameters(self, **kwargs):
         # Generative model:
         # Epileptor:
+        if isequal_string(kwargs.get("priors_mode", "hypothesis"), "uninformative"):
+            x1eq_prior = X1_DEF * np.ones((self.n_regions,))
+        else:
+            x1eq_prior = self.x1EQ
         x1eq_max = kwargs.get("x1eq_max", X1EQ_MAX)
         x1eq_star_max = x1eq_max - X1EQ_MIN
-        x1eq_star_mean = x1eq_max - self.x1EQ
+        x1eq_star_mean = x1eq_max - x1eq_prior
         x1eq_std = np.minimum(kwargs.get("sig_eq", np.abs(x1eq_star_max-x1eq_star_mean)), np.abs(x1eq_star_mean))/3.0
         self.default_parameters.update(set_parameter_defaults("x1eq_star", "lognormal", (self.n_regions,),
                                                               0.0, x1eq_star_max,
