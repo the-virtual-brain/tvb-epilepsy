@@ -2,7 +2,6 @@ import numpy
 from tvb.datatypes import equations
 from tvb.simulator import monitors, noise
 from tvb.simulator.models import Epileptor
-
 from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict, VOIS, model_noise_type_dict
 from tvb_epilepsy.base.constants.module_constants import NOISE_SEED, ADDITIVE_NOISE
 from tvb_epilepsy.base.epileptor_models import EpileptorDPrealistic
@@ -22,6 +21,7 @@ class SimulatorBuilder(object):
     fs = 10 * 2048.0 * tau1
     scale_fsavg = int(numpy.round(fs / 512.0))
     report_every_n_monitor_steps = 100.0
+    n_report_blocks = 0
 
     zmode = "lin"
     pmode = "z"
@@ -39,6 +39,9 @@ class SimulatorBuilder(object):
 
     def set_model_name(self, model_name):
         self.model_name = model_name
+        self.set_monitor_expressions(VOIS[model_name])
+        self.set_noise_intensity(model_noise_intensity_dict[model_name])
+        self.set_noise_type(model_noise_type_dict[model_name])
         return self
 
     def set_tau0(self, tau0):
@@ -85,7 +88,7 @@ class SimulatorBuilder(object):
         self.noise_instance = noise_instance
         return self
 
-    def set_noise_intensiti(self, noise_intensity):
+    def set_noise_intensity(self, noise_intensity):
         self.noise_intensity = noise_intensity
         return self
 
@@ -99,9 +102,9 @@ class SimulatorBuilder(object):
         monitor_period = self.scale_fsavg * dt
         sim_length = self.time_length
         time_length_avg = numpy.round(sim_length / monitor_period)
-        n_report_blocks = max(self.report_every_n_monitor_steps * numpy.round(time_length_avg / 100), 1.0)
+        self.n_report_blocks = max(self.report_every_n_monitor_steps * numpy.round(time_length_avg / 100), 1.0)
 
-        return dt, fsAVG, sim_length, monitor_period, n_report_blocks
+        return dt, fsAVG, sim_length, monitor_period
 
     def build_simulator_tvb_from_model_configuration(self, model_configuration, connectivity):
         """
@@ -109,14 +112,14 @@ class SimulatorBuilder(object):
         :return:
         """
 
-        (dt, fsAVG, sim_length, monitor_period, n_report_blocks) = self._compute_time_scales()
-        dt = 0.25 * dt
+        (dt, fsAVG, sim_length, monitor_period) = self._compute_time_scales()
+        # dt = 0.25 * dt
 
-        model = model_build_dict[self.model_name](model_configuration, zmode=self.zmode)
+        model = model_build_dict[self.model_name](model_configuration, zmode=numpy.array(self.zmode))
 
         if isinstance(model, EpileptorDPrealistic):
             model.slope = 0.25
-            model.pmode = self.pmode
+            model.pmode = numpy.array(self.pmode)
 
         if self.sim_type == "realistic":
             if isinstance(model, Epileptor):
@@ -165,8 +168,8 @@ class SimulatorBuilder(object):
 
         simulator_instance = SimulatorTVB(connectivity, model_configuration, model, settings)
 
-        simulator_instance.model.tau1 = self.tau1
-        simulator_instance.model.tau0 = self.tau0
+        # simulator_instance.model.tau1 = self.tau1
+        # simulator_instance.model.tau0 = self.tau0
 
         simulator_instance.config_simulation(initial_conditions=None)
 
