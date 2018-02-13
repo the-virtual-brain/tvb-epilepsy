@@ -5,7 +5,7 @@ import numpy as np
 from collections import OrderedDict
 from copy import deepcopy
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, raise_import_error, initialize_logger
-from tvb_epilepsy.base.constants.module_constants import MAX_INT_VALUE
+from tvb_epilepsy.base.constants.configurations import MAX_INT_VALUE
 
 logger = initialize_logger(__name__)
 

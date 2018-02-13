@@ -16,9 +16,6 @@ except ImportError:
     SYMBOLIC_IMPORT = False
 
 
-# if SYMBOLIC_CALCULATIONS_FLAG:
-# Symbolic calculations are only used for testing and demonstration of equations
-
 def confirm_calc_mode(calc_mode):
     if np.all(calc_mode == "symbol"):
         if SYMBOLIC_IMPORT:

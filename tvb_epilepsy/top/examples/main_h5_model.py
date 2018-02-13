@@ -1,7 +1,6 @@
 import numpy as np
 from copy import deepcopy
-from tvb_epilepsy.base.constants.module_constants import DATA_MODE, TVB
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, IN_HEAD
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, IN_HEAD, DATA_MODE, TVB
 from tvb_epilepsy.io.h5_model import read_h5_model
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger

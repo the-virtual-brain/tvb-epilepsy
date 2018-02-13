@@ -1,8 +1,5 @@
-import os
-import numpy as np
-from tvb_epilepsy.base.constants.configurations import IN_HEAD, FOLDER_RES, FOLDER_FIGURES
-from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE, EIGENVECTORS_NUMBER_SELECTION, \
-    WEIGHTED_EIGENVECTOR_SUM
+
+from tvb_epilepsy.base.constants.configurations import *
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer

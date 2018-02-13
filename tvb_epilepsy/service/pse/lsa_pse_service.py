@@ -1,6 +1,6 @@
 import numpy
 from copy import deepcopy
-from tvb_epilepsy.base.constants.module_constants import EIGENVECTORS_NUMBER_SELECTION
+from tvb_epilepsy.base.constants.configurations import EIGENVECTORS_NUMBER_SELECTION
 from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr

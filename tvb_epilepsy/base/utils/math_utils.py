@@ -3,7 +3,7 @@
 import numpy as np
 from matplotlib import pyplot
 from itertools import product
-from tvb_epilepsy.base.constants.module_constants import WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
+from tvb_epilepsy.base.constants.configurations import WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 
 logger = initialize_logger(__name__)

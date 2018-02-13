@@ -1,5 +1,5 @@
 import numpy as np
-from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE
+from tvb_epilepsy.base.constants.configurations import MAX_SINGLE_VALUE
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.service.sampling.sampling_service import SamplingService
 

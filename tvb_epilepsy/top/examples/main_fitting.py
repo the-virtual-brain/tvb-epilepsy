@@ -4,8 +4,7 @@ import os
 import numpy as np
 from scipy.io import loadmat, savemat
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, IN_HEAD, FOLDER_FIGURES
-from tvb_epilepsy.base.constants.configurations import WORK_FOLDER, STATS_MODELS_PATH
-from tvb_epilepsy.base.constants.module_constants import TVB, CUSTOM
+from tvb_epilepsy.base.constants.configurations import WORK_FOLDER, STATS_MODELS_PATH, TVB, CUSTOM
 from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger

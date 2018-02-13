@@ -2,6 +2,7 @@
 
 import os
 import platform
+import numpy as np
 import tvb_epilepsy
 from datetime import datetime
 
@@ -14,6 +15,18 @@ module_path = os.path.dirname(tvb_epilepsy.__file__)
 
 STATS_MODELS_PATH = os.path.join(module_path, "service", "model_inversion", "stan", "models")
 CMDSTAN_PATH = os.path.join(user_home, "ScientificSoftware/git/cmdstan")
+
+# Information needed for the Java simulation
+HDF5_LIB = "libjhdf5.dylib"
+LIB_PATH = "/Applications/Episense.app/Contents/Java"
+JAR_PATH = "/Applications/Episense.app/Contents/Java/episense-fx-app.jar"
+JAVA_MAIN_SIM = "de.codebox.episense.fx.StartSimulation"
+
+# Simulation and data read folder amd flags:
+CUSTOM = 'custom'
+TVB = 'tvb'
+SIMULATION_MODE = TVB
+DATA_MODE = CUSTOM
 
 
 # IN data
@@ -34,7 +47,7 @@ if 'dionperd' in platform.node():
 
 # OUT folders for Logs, Results or Figures
 ##################################################
-separate_results_by_run = False     # Set TRUE, when you want logs/results/figures to be in different files / each run
+separate_results_by_run = False  # Set TRUE, when you want logs/results/figures to be in different files / each run
 FOLDER_LOGS = os.path.join(WORK_FOLDER, "vep_out", "logs")
 FOLDER_RES = os.path.join(WORK_FOLDER, "vep_out", "res")
 FOLDER_FIGURES = os.path.join(WORK_FOLDER, "vep_out", "figs")
@@ -64,3 +77,22 @@ FIG_FORMAT = 'png'
 SAVE_FLAG = True
 SHOW_FLAG = False
 MOUSE_HOOVER = False
+
+
+# Calculus Related settings
+##################################################
+SYMBOLIC_CALCULATIONS_FLAG = False
+
+# Normalization configuration
+WEIGHTS_NORM_PERCENT = 95
+
+# Options: "auto_eigenvals",  "auto_disease", "auto_epileptogenicity", "auto_excitability",
+# or "user_defined", in which case we expect a number equal to from 1 to hypothesis.n_regions
+EIGENVECTORS_NUMBER_SELECTION = "auto_eigenvals"
+WEIGHTED_EIGENVECTOR_SUM = True
+INTERACTIVE_ELBOW_POINT = False
+
+MIN_SINGLE_VALUE = np.finfo("single").min
+MAX_SINGLE_VALUE = np.finfo("single").max
+MAX_INT_VALUE = np.iinfo(np.int64).max
+MIN_INT_VALUE = np.iinfo(np.int64).max

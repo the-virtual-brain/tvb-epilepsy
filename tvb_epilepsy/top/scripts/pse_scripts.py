@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from tvb_epilepsy.base.constants.module_constants import MAX_DISEASE_VALUE
+from tvb_epilepsy.base.constants.model_constants import MAX_DISEASE_VALUE
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
     dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
