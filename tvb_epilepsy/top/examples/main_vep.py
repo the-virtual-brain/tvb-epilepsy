@@ -35,6 +35,7 @@ else:
 PSE_FLAG = False
 SA_PSE_FLAG = False
 SIM_FLAG = True
+EP_NAME = "ep_l_frontal_complex"
 
 
 def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG):
@@ -58,12 +59,10 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     # disease_values = x0_values + e_values
     # disease_indices = x0_indices + e_indices
     # ...or reading a custom file:
-    ep_name = "ep_l_frontal_complex"
-    # FOLDER_RES = os.path.join(data_folder, ep_name)
     if not hasattr(reader, "read_epileptogenicity"):
-        disease_values = H5Reader().read_epileptogenicity(IN_HEAD, name=ep_name)
+        disease_values = H5Reader().read_epileptogenicity(IN_HEAD, name=EP_NAME)
     else:
-        disease_values = reader.read_epileptogenicity(IN_HEAD, name=ep_name)
+        disease_values = reader.read_epileptogenicity(IN_HEAD, name=EP_NAME)
 
     threshold = np.min([X0_DEF, E_DEF])
     hypo_builder = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions)
