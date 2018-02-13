@@ -777,7 +777,7 @@ class Plotter(BasePlotter):
         time = time.flatten()
         sig_prior = statistical_model.parameters["sig"].mean
         if statistical_model.observation_model.find("seeg") >= 0:
-            sensor_labels = kwargs.get("signals_labels", None)[model_inversion.signals_inds]
+            sensor_labels = kwargs.get("signals_labels", model_inversion.sensors_labels)[model_inversion.signals_inds]
         else:
             sensor_labels = region_labels[model_inversion.signals_inds]
         stats_string = {signals_str: "\n", x1_str: "\n", "z": "\n", "MC": ""}
