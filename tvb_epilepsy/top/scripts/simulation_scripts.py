@@ -42,83 +42,6 @@ def setup_custom_simulation_from_model_configuration(model_configuration, connec
     return simulator_instance
 
 
-###
-# A helper function to make good choices for simulation settings, noise and monitors for a TVB simulator
-###
-def setup_TVB_simulation_from_model_configuration(model_configuration, connectivity, dt, sim_length, monitor_period,
-                                                  sim_type="realistic", model_name="EpileptorDP", zmode=np.array("lin"),
-                                                  pmode=np.array("z"), noise_instance=None, noise_intensity=None,
-                                                  monitor_expressions=None, monitors_instance=None):
-    from tvb_epilepsy.base.constants.module_constants import ADDITIVE_NOISE, NOISE_SEED
-    from tvb_epilepsy.base.simulation_settings import SimulationSettings
-    from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
-    from tvb_epilepsy.base.constants.model_constants import model_noise_type_dict
-    from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict
-    from tvb_epilepsy.service.simulator.simulator_tvb import SimulatorTVB
-    from tvb_epilepsy.base.epileptor_models import EpileptorDPrealistic
-    from tvb.datatypes import equations
-    from tvb.simulator import monitors, noise
-    from tvb.simulator.models import Epileptor
-
-    model = model_build_dict[model_name](model_configuration, zmode=zmode)
-
-    if isinstance(model, EpileptorDPrealistic):
-        model.slope = 0.25
-        model.pmode = pmode
-
-    if sim_type == "realistic":
-        if sim_type == "realistic":
-            if isinstance(model, Epileptor):
-                model.tt = 0.2  # necessary to get spikes in a realistic frequency range
-                model.r = 0.000025  # realistic seizures require a larger time scale separation
-            else:
-                model.tau1 = 0.2
-                model.tau0 = 40000.0
-
-    if monitor_expressions is None:
-        monitor_expressions = VOIS[model._ui_name]
-        monitor_expressions = [me.replace('lfp', 'x2 - x1') for me in monitor_expressions]
-    if monitor_expressions is not None:
-        model.variables_of_interest = monitor_expressions
-    if monitors_instance is None:
-        monitors_instance = monitors.TemporalAverage()
-    if monitor_period is not None:
-        monitors_instance.period = monitor_period
-
-    default_noise_intensity = model_noise_intensity_dict[model_name]
-    default_noise_type = model_noise_type_dict[model_name]
-    if noise_intensity is None:
-        noise_intensity = default_noise_intensity
-
-    if model._ui_name == "EpileptorDP2D":
-        if sim_type == "fast":
-            noise_intensity *= 10
-        elif sim_type == "fitting":
-            noise_intensity = [0.0, 10 ** -3]
-
-    if noise_instance is not None:
-        noise_instance.nsig = noise_intensity
-    else:
-        if default_noise_type is ADDITIVE_NOISE:
-            noise_instance = noise.Additive(nsig=noise_intensity, random_stream=np.random.RandomState(seed=NOISE_SEED))
-            noise_instance.configure_white(dt=dt)
-        else:
-            eq = equations.Linear(parameters={"a": 1.0, "b": 0.0})
-            noise_instance = noise.Multiplicative(ntau=10, nsig=noise_intensity, b=eq,
-                                                  random_stream=np.random.RandomState(seed=NOISE_SEED))
-            noise_shape = noise_instance.nsig.shape
-            noise_instance.configure_coloured(dt=dt, shape=noise_shape)
-
-    settings = SimulationSettings(simulated_period=sim_length, integration_step=dt,
-                                  noise_preconfig=noise_instance, noise_type=default_noise_type,
-                                  noise_intensity=noise_intensity, noise_ntau=noise_instance.ntau,
-                                  monitors_preconfig=monitors_instance, monitor_type=monitors_instance._ui_name,
-                                  monitor_sampling_period=monitor_period, monitor_expressions=monitor_expressions,
-                                  variables_names=model.variables_of_interest)
-    simulator_instance = SimulatorTVB(connectivity, model_configuration, model, settings)
-    return simulator_instance
-
-
 def prepare_vois_ts_dict(vois, data):
     # Pack results into a dictionary:
     vois_ts_dict = dict()
@@ -176,18 +99,6 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
     return vois_ts_dict
 
 
-def set_time_scales(fs=2048.0, time_length=100000.0, scale_fsavg=None, report_every_n_monitor_steps=100):
-    dt = 1000.0 / fs
-    if scale_fsavg is None:
-        scale_fsavg = int(np.round(fs / 512.0))
-    fsAVG = fs / scale_fsavg
-    monitor_period = scale_fsavg * dt
-    sim_length = time_length
-    time_length_avg = np.round(sim_length / monitor_period)
-    n_report_blocks = max(report_every_n_monitor_steps * np.round(time_length_avg / 100), 1.0)
-    return dt, fsAVG, sim_length, monitor_period, n_report_blocks
-
-
 # TODO: this could be a builder
 def from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis, simulation_mode=SIMULATION_MODE,
                                            sim_type="realistic", dynamical_model="EpileptorDP2D", ts_file=None,
@@ -197,7 +108,8 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     # TODO: maybe use a custom Monitor class
     # this is the simulation sampling rate that is necessary for the simulation to be stable:
 
-    sim_builder = SimulatorBuilder().set_scale_fsavg(1).set_report_every_n_monitor_steps(100.0).set_model_name(dynamical_model).set_sim_type(sim_type)
+    sim_builder = SimulatorBuilder().set_scale_fsavg(1).set_report_every_n_monitor_steps(100.0).set_model_name(
+        dynamical_model).set_sim_type(sim_type)
 
     # Choose model
     # Available models beyond the TVB Epileptor (they all encompass optional variations from the different papers):
@@ -218,9 +130,11 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     # ------------------------------Simulation--------------------------------------
     logger.info("\n\nConfiguring simulation...")
     if sim_type == "realistic":
-        sim = sim_builder.build_simulator_TVB_realistic(model_configuration, head.connectivity)
+        sim = sim_builder.set_fs(4096).set_time_length(60000).build_simulator_TVB_realistic(model_configuration,
+                                                                                            head.connectivity)
     else:
-        sim = sim_builder.build_simulator_TVB_fitting(model_configuration, head.connectivity)
+        sim = sim_builder.set_fs(10240).set_time_length(100).build_simulator_TVB_fitting(model_configuration,
+                                                                                         head.connectivity)
     dynamical_model = sim.model
     writer = H5Writer()
     writer.write_generic(sim.model, results_dir, dynamical_model._ui_name + "_model.h5")
@@ -247,7 +161,8 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
             vois_ts_dict['time_units'] = 'msec'
             vois_ts_dict = compute_seeg_and_write_ts_h5_file(results_dir, dynamical_model._ui_name + "_ts.h5",
                                                              sim.model,
-                                                             vois_ts_dict, output_sampling_time, sim_builder.time_length,
+                                                             vois_ts_dict, output_sampling_time,
+                                                             sim_builder.time_length,
                                                              hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
                                                              sensors_list=head.sensorsSEEG, save_flag=True)
             if isinstance(ts_file, basestring):

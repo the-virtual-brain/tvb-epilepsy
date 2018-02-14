@@ -2,7 +2,6 @@ import numpy as np
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.simulator_builder import SimulatorBuilder
-from tvb_epilepsy.top.scripts.simulation_scripts import set_time_scales
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
 
 head_dir = "head2"
@@ -12,9 +11,7 @@ class TestSimulationRun(object):
     fs = 2 * 4096.0
     time_length = 30.0
     report_every_n_monitor_steps = 10.0
-    (dt, fsAVG, sim_length, monitor_period, n_report_blocks) \
-        = set_time_scales(fs=fs, time_length=time_length, scale_fsavg=None,
-                          report_every_n_monitor_steps=report_every_n_monitor_steps)
+
     zmode = np.array("lin")
     epileptor_model = "EpileptorDP2D"
     noise_intensity = 10 ** -8
@@ -32,9 +29,11 @@ class TestSimulationRun(object):
         connectivity = reader.read_connectivity("connectivity_76.zip")
         model_configuration = self._prepare_model_for_simulation(connectivity)
 
-        simulator = SimulatorBuilder().build_simulator_tvb_from_model_configuration(model_configuration, connectivity)
+        simulator_builder = SimulatorBuilder().set_time_length(self.time_length)
+        simulator = simulator_builder.build_simulator_TVB_fitting(
+            model_configuration, connectivity)
         simulator.config_simulation(initial_conditions=None)
-        ttavg, tavg_data, status = simulator.launch_simulation(self.n_report_blocks)
+        ttavg, tavg_data, status = simulator.launch_simulation(simulator_builder.n_report_blocks)
         assert status == True
 
     # This can be ran only locally for the moment

@@ -134,8 +134,6 @@ class SimulatorBuilder(object):
 
         tau0 = 30.0
         tau1 = 0.5
-        self.set_time_length(50.0 / tau1)
-        self.set_fs(10 * 2048.0 * tau1)
 
         (dt, fsAVG, sim_length, monitor_period) = self._compute_time_scales()
         dt = 0.25 * dt
@@ -154,8 +152,6 @@ class SimulatorBuilder(object):
 
         tau1 = 0.2
         tau0 = 40000
-        self.set_time_length(12000.0 / tau1)
-        self.set_fs(10 * 2048.0 * tau1)
 
         (dt, fsAVG, sim_length, monitor_period) = self._compute_time_scales()
         dt = 0.25 * dt
