@@ -43,19 +43,17 @@ class TestSimulationRun(object):
     #     connectivity = reader.read_connectivity(os.path.join(DATA_TEST, head_dir, "Connectivity.h5"))
     #     model_configuration = self._prepare_model_for_simulation(connectivity)
     #
-    #     simulator = setup_custom_simulation_from_model_configuration(model_configuration, connectivity, self.dt,
-    #                                                                  self.sim_length,
-    #                                                                  self.monitor_period, "CustomEpileptor",
-    #                                                                  self.noise_intensity)
+    #     simulator_builder = SimulatorBuilder().set_time_length(self.time_length)
+    #     simulator = simulator_builder.build_simulator_java_from_model_configuration(model_configuration, connectivity)
     #
     #     simulator.config_simulation()
-    #     ttavg, tavg_data, status = simulator.launch_simulation(self.n_report_blocks)
+    #     ttavg, tavg_data, status = simulator.launch_simulation(simulator_builder.n_report_blocks)
     #
     #     assert status == 0
-
+    #
     # @classmethod
     # def teardown_class(cls):
-    #     os.remove(os.path.join(os.path.abspath(data_dir), "SimulationConfiguration.json"))
-    #     os.remove(os.path.join(os.path.abspath(data_dir), "full-configuration", "full-configuration.h5"))
-    #     os.remove(os.path.join(os.path.abspath(data_dir), "full-configuration", "ts.h5"))
-    #     os.removedirs(os.path.join(os.path.abspath(data_dir), "full-configuration"))
+    #     os.remove(os.path.join(DATA_TEST, head_dir, "SimulationConfiguration.json"))
+    #     os.remove(os.path.join(DATA_TEST, head_dir, "full-configuration", "full-configuration.h5"))
+    #     os.remove(os.path.join(DATA_TEST, head_dir, "full-configuration", "ts.h5"))
+    #     os.removedirs(os.path.join(DATA_TEST, head_dir, "full-configuration"))

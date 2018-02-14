@@ -17,31 +17,6 @@ from tvb_epilepsy.service.simulator_builder import SimulatorBuilder
 logger = initialize_logger(__name__)
 
 
-###
-# A helper function to make good choices for simulation settings for a custom simulator
-###
-def setup_custom_simulation_from_model_configuration(model_configuration, connectivity, dt, sim_length, monitor_period,
-                                                     model_name, noise_intensity=None, **kwargs):
-    from tvb_epilepsy.service.simulator.simulator_custom import custom_model_builder, SimulatorCustom
-    from tvb_epilepsy.base.simulation_settings import SimulationSettings
-
-    if model_name != EpileptorModel._ui_name:
-        logger.info("You can use only " + EpileptorModel._ui_name + "for custom simulations!")
-
-    model = custom_model_builder(model_configuration)
-
-    if noise_intensity is None:
-        noise_intensity = 0  # numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.])
-
-    settings = SimulationSettings(simulated_period=sim_length, integration_step=dt,
-                                  noise_intensity=noise_intensity,
-                                  monitor_sampling_period=monitor_period)
-
-    simulator_instance = SimulatorCustom(connectivity, model_configuration, model, settings)
-
-    return simulator_instance
-
-
 def prepare_vois_ts_dict(vois, data):
     # Pack results into a dictionary:
     vois_ts_dict = dict()
