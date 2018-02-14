@@ -134,12 +134,12 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
 
 
 def pse_from_hypothesis(hypothesis, model_connectivity, region_labels, n_samples, param_range=0.1, global_coupling=[],
-                        healthy_regions_parameters=[], save_flag=False, folder_res=FOLDER_RES, filename=None,
-                        logger=None, **kwargs):
-    if logger is None:
-        logger = initialize_logger(__name__)
-    # Compute lsa for this hypothesis before the parameter search:
+                        healthy_regions_parameters=[], save_flag=False, folder_res=FOLDER_RES, filename=None, **kwargs):
+
+    logger = initialize_logger(__name__)
     logger.info("Running hypothesis: " + hypothesis.name)
+
+    # Compute lsa for this hypothesis before the parameter search:
     model_configuration_builder, model_configuration, lsa_service, lsa_hypothesis = \
         start_lsa_run(hypothesis, model_connectivity)
     pse_results, pse_params_list = pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
