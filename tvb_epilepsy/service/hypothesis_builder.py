@@ -97,7 +97,7 @@ class HypothesisBuilder(object):
         if values is None or indices is None:
             hypo = self._build_hypothesis_with_all_attributes()
             self.logger.warning(
-                "Since values or indices are None, the DiseaseHypothesis will be build with default values: " + hypo)
+                "Since values or indices are None, the DiseaseHypothesis will be build with default values: %s", hypo)
 
             return hypo
 
@@ -108,7 +108,7 @@ class HypothesisBuilder(object):
         if values is None or indices is None:
             hypo = self._build_hypothesis_with_all_attributes()
             self.logger.warning(
-                "Since values or indices are None, the DiseaseHypothesis will be build with default values: " + hypo)
+                "Since values or indices are None, the DiseaseHypothesis will be build with default values: %s", hypo)
 
             return hypo
 
@@ -118,7 +118,7 @@ class HypothesisBuilder(object):
         if ep_values is None or exc_indices is None or ep_values is None or exc_indices is None:
             hypo = self._build_hypothesis_with_all_attributes()
             self.logger.warning(
-                "Since values or indices are None, the DiseaseHypothesis will be build with default values: " + hypo)
+                "Since values or indices are None, the DiseaseHypothesis will be build with default values: %s", hypo)
 
             return hypo
 
