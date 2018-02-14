@@ -11,9 +11,10 @@ from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
+from tvb_epilepsy.service.simulator_builder import SimulatorBuilder
 from tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.top.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
-from tvb_epilepsy.top.scripts.simulation_scripts import set_time_scales, prepare_vois_ts_dict
+from tvb_epilepsy.top.scripts.simulation_scripts import prepare_vois_ts_dict
 from tvb_epilepsy.top.scripts.simulation_scripts import compute_seeg_and_write_ts_h5_file
 from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.service.lsa_service import LSAService
@@ -24,13 +25,6 @@ if DATA_MODE is TVB:
     from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
 else:
     from tvb_epilepsy.io.h5_reader import H5Reader as Reader
-
-if SIMULATION_MODE is TVB:
-    from tvb_epilepsy.top.scripts.simulation_scripts import \
-        setup_TVB_simulation_from_model_configuration as setup_simulation_from_model_configuration
-else:
-    from tvb_epilepsy.top.scripts.simulation_scripts import \
-        setup_custom_simulation_from_model_configuration as setup_simulation_from_model_configuration
 
 PSE_FLAG = False
 SA_PSE_FLAG = False
@@ -84,13 +78,8 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     else:
         hypotheses = (hyp_x0, hyp_E)
     # --------------------------Simulation preparations-----------------------------------
-    # TODO: maybe use a custom Monitor class
-    fs = 2048.0  # this is the simulation sampling rate that is necessary for the simulation to be stable
-    time_length = 10000.0  # =100 secs, the final output nominal time length of the simulation
-    report_every_n_monitor_steps = 100.0
-    (dt, fsAVG, sim_length, monitor_period, n_report_blocks) = \
-        set_time_scales(fs=fs, time_length=time_length, scale_fsavg=None,
-                        report_every_n_monitor_steps=report_every_n_monitor_steps)
+    sim_builder = SimulatorBuilder().set_fs(2048.0).set_time_length(10000.0).set_report_every_n_monitor_steps(
+        100.0).set_model_name("EpileptorDPrealistic").set_sim_type("realistic")
     # Choose model
     # Available models beyond the TVB Epileptor (they all encompass optional variations from the different papers):
     # EpileptorDP: similar to the TVB Epileptor + optional variations,
@@ -100,8 +89,6 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     #      -Iext2 and slope are coupled to z, g, or z*g in order for spikes to appear before seizure,
     #      -multiplicative correlated noise is also used
     # Optional variations:
-    zmode = "lin"  # by default, or "sig" for the sigmoidal expression for the slow z variable in Proix et al. 2014
-    pmode = "z"  # by default, "g" or "z*g" for the feedback coupling to Iext2 and slope for EpileptorDPrealistic
     model_name = "EpileptorDPrealistic"
     if model_name is "EpileptorDP2D":
         spectral_raster_plot = False
@@ -210,17 +197,13 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
         if sim_flag:
             # ------------------------------Simulation--------------------------------------
             logger.info("\n\nConfiguring simulation...")
-            sim = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt,
-                                                            sim_length, monitor_period, sim_type="realistic",
-                                                            model_name=model_name, zmode=np.array(zmode),
-                                                            pmode=np.array(pmode), noise_instance=None,
-                                                            noise_intensity=None, monitor_expressions=None)
+            sim = sim_builder.build_simulator_tvb_from_model_configuration(model_configuration, head.connectivity)
+
             # Integrator and initial conditions initialization.
             # By default initial condition is set right on the equilibrium point.
-            sim.config_simulation(initial_conditions=None)
             writer.write_generic(sim.model, FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5")
             logger.info("\n\nSimulating...")
-            ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
+            ttavg, tavg_data, status = sim.launch_simulation(sim_builder.n_report_blocks)
             writer.write_simulation_settings(sim.simulation_settings,
                                              os.path.join(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5"))
             if test_write_read:
@@ -242,7 +225,7 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                 vois_ts_dict['time'] = time
                 vois_ts_dict['time_units'] = 'msec'
                 vois_ts_dict = compute_seeg_and_write_ts_h5_file(FOLDER_RES, lsa_hypothesis.name + "_ts.h5", sim.model,
-                                                                 vois_ts_dict, output_sampling_time, time_length,
+                                                                 vois_ts_dict, output_sampling_time, sim_builder.time_length,
                                                                  hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
                                                                  sensors_list=head.sensorsSEEG)
                 # Plot results
