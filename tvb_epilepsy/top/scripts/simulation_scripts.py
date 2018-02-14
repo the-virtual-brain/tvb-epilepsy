@@ -12,6 +12,7 @@ from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.base.epileptor_models import EpileptorDP2D
+from tvb_epilepsy.service.simulator_builder import SimulatorBuilder
 
 logger = initialize_logger(__name__)
 
@@ -186,40 +187,18 @@ def set_time_scales(fs=2048.0, time_length=100000.0, scale_fsavg=None, report_ev
     n_report_blocks = max(report_every_n_monitor_steps * np.round(time_length_avg / 100), 1.0)
     return dt, fsAVG, sim_length, monitor_period, n_report_blocks
 
+
 # TODO: this could be a builder
 def from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis, simulation_mode=SIMULATION_MODE,
                                            sim_type="realistic", dynamical_model="EpileptorDP2D", ts_file=None,
                                            plot_flag=True, results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES,
                                            logger=logger, **kwargs):
-    if simulation_mode is TVB:
-        from tvb_epilepsy.top.scripts import setup_TVB_simulation_from_model_configuration \
-            as setup_simulation_from_model_configuration
-    else:
-        from tvb_epilepsy.top.scripts import setup_custom_simulation_from_model_configuration \
-            as setup_simulation_from_model_configuration
     # --------------------------Simulation preparations------------------------------------------------------------------
     # TODO: maybe use a custom Monitor class
     # this is the simulation sampling rate that is necessary for the simulation to be stable:
-    if sim_type == "realistic":
-        tau1 = 0.2
-        tau0 = 40000
-        time_length = kwargs.get("time_length", 12000.0 / tau1)
-    elif sim_type == "fitting":
-        tau1 = 0.5
-        tau0 = 30.0
-        "fast"
-        time_length = kwargs.get("time_length", 50.0 / tau1)
-    else:
-        tau1 = 0.5
-        tau0 = 3000
-        time_length = kwargs.get("time_length", 1500.0 / tau1)
-    fs = kwargs.get("fs", 10 * 2048.0 * tau1)
-    tau1 = kwargs.get("tau1", tau1)
-    tau0 = kwargs.get("tau0", tau0)
-    # msecs, the final output nominal time length of the simulation
-    (dt, fsAVG, sim_length, monitor_period, n_report_blocks) = \
-        set_time_scales(fs=fs, time_length=time_length, scale_fsavg=1, report_every_n_monitor_steps=100.0)
-    dt = 0.25 * dt
+
+    sim_builder = SimulatorBuilder().set_scale_fsavg(1).set_report_every_n_monitor_steps(100.0).set_model_name(dynamical_model).set_sim_type(sim_type)
+
     # Choose model
     # Available models beyond the TVB Epileptor (they all encompass optional variations from the different papers):
     # EpileptorDP: similar to the TVB Epileptor + optional variations,
@@ -229,10 +208,6 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     #      -Iext2 and slope are coupled to z, g, or z*g in order for spikes to appear before seizure,
     #      -multiplicative correlated noise is also used
     # Optional variations:
-    zmode = kwargs.get("zmode",
-                       "lin")  # by default, or "sig" for the sigmoidal expression for the slow z variable in Proix et al. 2014
-    pmode = kwargs.get("pmode",
-                       "z")  # by default, "g" or "z*g" for the feedback coupling to Iext2 and slope for EpileptorDPrealistic
     if dynamical_model is "EpileptorDP2D":
         spectral_raster_plot = False
         trajectories_plot = True
@@ -242,15 +217,10 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
 
     # ------------------------------Simulation--------------------------------------
     logger.info("\n\nConfiguring simulation...")
-    sim = setup_simulation_from_model_configuration(model_configuration, head.connectivity, dt, sim_length,
-                                                    monitor_period, sim_type, dynamical_model,
-                                                    zmode=np.array(zmode), pmode=np.array(pmode),
-                                                    noise_instance=None, monitor_expressions=None)
-    sim.model.tau1 = tau1
-    sim.model.tau0 = tau0
-    # Integrator and initial conditions initialization.
-    # By default initial condition is set right on the equilibrium point.
-    sim.config_simulation(initial_conditions=None)
+    if sim_type == "realistic":
+        sim = sim_builder.build_simulator_TVB_realistic(model_configuration, head.connectivity)
+    else:
+        sim = sim_builder.build_simulator_TVB_fitting(model_configuration, head.connectivity)
     dynamical_model = sim.model
     writer = H5Writer()
     writer.write_generic(sim.model, results_dir, dynamical_model._ui_name + "_model.h5")
@@ -261,7 +231,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
         vois_ts_dict = H5Reader().read_dictionary(ts_file)
     else:
         logger.info("\n\nSimulating...")
-        ttavg, tavg_data, status = sim.launch_simulation(n_report_blocks)
+        ttavg, tavg_data, status = sim.launch_simulation(sim_builder.n_report_blocks)
         if not status:
             logger.warning("\nSimulation failed!")
         else:
@@ -277,7 +247,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
             vois_ts_dict['time_units'] = 'msec'
             vois_ts_dict = compute_seeg_and_write_ts_h5_file(results_dir, dynamical_model._ui_name + "_ts.h5",
                                                              sim.model,
-                                                             vois_ts_dict, output_sampling_time, time_length,
+                                                             vois_ts_dict, output_sampling_time, sim_builder.time_length,
                                                              hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
                                                              sensors_list=head.sensorsSEEG, save_flag=True)
             if isinstance(ts_file, basestring):

@@ -66,14 +66,7 @@ class SimulatorBuilder(object):
 
         return dt, fsAVG, sim_length, monitor_period
 
-    def build_simulator_tvb_from_model_configuration(self, model_configuration, connectivity):
-        """
-        Needs: connectivity, model_configuration, model, settings
-        :return:
-        """
-
-        (dt, fsAVG, sim_length, monitor_period) = self._compute_time_scales()
-
+    def _build_simulator_TVB_settings_and_model(self, model_configuration, dt, sim_length, monitor_period):
         model = model_build_dict[self.model_name](model_configuration, zmode=numpy.array(self.zmode))
 
         if isinstance(model, EpileptorDPrealistic):
@@ -123,8 +116,56 @@ class SimulatorBuilder(object):
                                       monitor_sampling_period=monitor_period,
                                       monitor_expressions=monitor_expressions,
                                       variables_names=model.variables_of_interest)
+        return settings, model
+
+    def build_simulator_tvb_from_model_configuration(self, model_configuration, connectivity):
+
+        (dt, fsAVG, sim_length, monitor_period) = self._compute_time_scales()
+
+        sim_settings, model = self._build_simulator_TVB_settings_and_model(model_configuration, dt, sim_length,
+                                                                           monitor_period)
+
+        simulator_instance = SimulatorTVB(connectivity, model_configuration, model, sim_settings)
+        simulator_instance.config_simulation(initial_conditions=None)
+
+        return simulator_instance
+
+    def build_simulator_TVB_fitting(self, model_configuration, connectivity):
+
+        tau0 = 30.0
+        tau1 = 0.5
+        self.set_time_length(50.0 / tau1)
+        self.set_fs(10 * 2048.0 * tau1)
+
+        (dt, fsAVG, sim_length, monitor_period) = self._compute_time_scales()
+        dt = 0.25 * dt
+
+        settings, model = self._build_simulator_TVB_settings_and_model(model_configuration, dt, sim_length,
+                                                                       monitor_period)
 
         simulator_instance = SimulatorTVB(connectivity, model_configuration, model, settings)
+        simulator_instance.model.tau0 = tau0
+        simulator_instance.model.tau1 = tau1
+        simulator_instance.config_simulation(initial_conditions=None)
+
+        return simulator_instance
+
+    def build_simulator_TVB_realistic(self, model_configuration, connectivity):
+
+        tau1 = 0.2
+        tau0 = 40000
+        self.set_time_length(12000.0 / tau1)
+        self.set_fs(10 * 2048.0 * tau1)
+
+        (dt, fsAVG, sim_length, monitor_period) = self._compute_time_scales()
+        dt = 0.25 * dt
+
+        settings, model = self._build_simulator_TVB_settings_and_model(model_configuration, dt, sim_length,
+                                                                       monitor_period)
+
+        simulator_instance = SimulatorTVB(connectivity, model_configuration, model, settings)
+        simulator_instance.model.tau0 = tau0
+        simulator_instance.model.tau1 = tau1
         simulator_instance.config_simulation(initial_conditions=None)
 
         return simulator_instance
