@@ -9,12 +9,9 @@ from datetime import datetime
 
 # Generic configurations
 ##################################################
-user_home = os.path.expanduser("~")
-WORK_FOLDER = os.getcwd()
 module_path = os.path.dirname(tvb_epilepsy.__file__)
-
 STATS_MODELS_PATH = os.path.join(module_path, "service", "model_inversion", "stan", "models")
-CMDSTAN_PATH = os.path.join(user_home, "ScientificSoftware/git/cmdstan")
+CMDSTAN_PATH = os.path.join(os.path.expanduser("~"), "ScientificSoftware/git/cmdstan")
 
 # Information needed for the Java simulation
 HDF5_LIB = "libjhdf5.dylib"
@@ -31,8 +28,8 @@ SIMULATION_MODE = TVB
 
 # IN data
 ##################################################
-IN_TEST_DATA = os.path.join(WORK_FOLDER, "data")
-IN_HEAD = os.path.join(IN_TEST_DATA, "head")
+WORK_FOLDER = os.getcwd()
+IN_HEAD = os.path.join(WORK_FOLDER, "data", "head")
 try:
     import tvb_data
     IN_TVB_DATA = os.path.dirname(tvb_data.__file__)
@@ -41,7 +38,7 @@ except ImportError:
 
 # Overwrite for Dionysios's env
 if 'dionperd' in platform.node():
-    WORK_FOLDER = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', 'results')
+    WORK_FOLDER = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', 'results')
     IN_HEAD = os.path.join(WORK_FOLDER, "CC", 'TVB3', 'Head')
 
 
