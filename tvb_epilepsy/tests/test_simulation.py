@@ -1,7 +1,8 @@
 import numpy as np
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
-from tvb_epilepsy.top.scripts.simulation_scripts import setup_TVB_simulation_from_model_configuration, set_time_scales
+from tvb_epilepsy.service.simulator_builder import SimulatorBuilder
+from tvb_epilepsy.top.scripts.simulation_scripts import set_time_scales
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
 
 head_dir = "head2"
@@ -31,12 +32,7 @@ class TestSimulationRun(object):
         connectivity = reader.read_connectivity("connectivity_76.zip")
         model_configuration = self._prepare_model_for_simulation(connectivity)
 
-        simulator = setup_TVB_simulation_from_model_configuration(model_configuration, connectivity, self.dt,
-                                                                  self.sim_length, self.monitor_period,
-                                                                  self.epileptor_model, zmode=self.zmode,
-                                                                  noise_instance=None,
-                                                                  noise_intensity=self.noise_intensity,
-                                                                  monitor_expressions=None)
+        simulator = SimulatorBuilder().build_simulator_tvb_from_model_configuration(model_configuration, connectivity)
         simulator.config_simulation(initial_conditions=None)
         ttavg, tavg_data, status = simulator.launch_simulation(self.n_report_blocks)
         assert status == True
