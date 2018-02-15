@@ -3,8 +3,8 @@
 import os
 import numpy as np
 from scipy.io import loadmat, savemat
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES
-from tvb_epilepsy.base.constants.configurations import FOLDER_VEP_ONLINE, STATS_MODELS_PATH
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES, FOLDER_VEP, \
+                                                                                FOLDER_VEP_ONLINE, STATS_MODELS_PATH
 from tvb_epilepsy.base.constants.module_constants import TVB, CUSTOM
 from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
@@ -263,10 +263,9 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
 
 if __name__ == "__main__":
     SUBJECT = "TVB3"
-    VEP_HOME = os.path.join("/Users/dionperd/Dropbox/Work/VBtech/VEP/results/CC")
-    VEP_FOLDER = os.path.join(VEP_HOME, SUBJECT)
-    DATA_CUSTOM = "/Users/dionperd/Dropbox/Work/VBtech/VEP/results/CC/" + SUBJECT
-    SEEG_data = os.path.join("/Users/dionperd/Dropbox/Work/VBtech/VEP/data/CC", SUBJECT, "raw/seeg/ts_seizure")
+    VEP_FOLDER = os.path.join(FOLDER_VEP, SUBJECT)
+    DATA_CUSTOM = os.path.join(FOLDER_VEP, SUBJECT)
+    SEEG_data = os.path.join(FOLDER_VEP_ONLINE, "data/CC", SUBJECT, "raw/seeg/ts_seizure")
     # TVB3 larger preselection:Polyamorous
     sensors_lbls = \
         [u"B'1", u"B'2", u"B'3", u"B'4",

@@ -20,9 +20,9 @@ if RUN_ENV == "test":
     HEAD_FOLDER = os.path.join(DATA_TEST, "head2")
 
 else:
-    FOLDER_VEP_ONLINE = os.path.join(USER_HOME, 'Dropbox', 'Work', 'VBtech', 'VEP', 'results')
+    FOLDER_VEP_ONLINE = os.path.join(USER_HOME, 'Dropbox', 'Work', 'VBtech', 'VEP')
     VEP_SOFTWARE_PATH = os.path.join(USER_HOME, 'VEPtools', 'git')
-    FOLDER_VEP = os.path.join(FOLDER_VEP_ONLINE, "CC")
+    FOLDER_VEP = os.path.join(FOLDER_VEP_ONLINE, "results/CC")
     if platform.node() == 'dionperdMBP':
         # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR', 'svn', 'episense', 'demo-data')
         DATA_TVB = os.path.join(USER_HOME, 'CBR', 'svn', 'tvb', 'tvb-data', 'tvb-data')
@@ -33,7 +33,7 @@ else:
         # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR_software', 'svn-episense', 'demo-data')
         DATA_TVB = os.path.join(USER_HOME, 'CBR_software', 'svn-tvb', 'tvb-data', 'tvb-data')
     DATA_CUSTOM = os.path.join(FOLDER_VEP, 'TVB3')
-    FOLDER_VEP_TESTS = os.path.join(FOLDER_VEP_ONLINE, 'tests')
+    FOLDER_VEP_TESTS = os.path.join(FOLDER_VEP_ONLINE, 'results/tests')
     if not (os.path.isdir(FOLDER_VEP_TESTS)):
         os.makedirs(FOLDER_VEP_TESTS)
     HEAD_FOLDER = os.path.join(DATA_CUSTOM, 'Head')
