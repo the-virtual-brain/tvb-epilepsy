@@ -2,7 +2,7 @@
 
 import numpy as np
 from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, labels_to_inds
-from tvb_epilepsy.base.utils.math_utils import normalize_weights
+from tvb_epilepsy.base.computations.math_utils import normalize_weights
 
 
 class ConnectivityH5Field(object):

@@ -4,7 +4,7 @@ from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MAX, X1IN
     ZINIT_MAX, SIG_EQ_DEF, SIG_INIT_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, assert_arrays, \
     extract_dict_stringkeys
-from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
+from tvb_epilepsy.base.computations.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
 from tvb_epilepsy.service.head_service import HeadService
