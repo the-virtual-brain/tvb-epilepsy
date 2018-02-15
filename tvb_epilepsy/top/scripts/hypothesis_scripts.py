@@ -5,10 +5,10 @@ from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE, EIGENVE
     WEIGHTED_EIGENVECTOR_SUM
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
+from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.lsa_service import LSAService
 
 logger = initialize_logger(__name__)
@@ -16,16 +16,16 @@ logger = initialize_logger(__name__)
 
 def start_lsa_run(hypothesis, model_connectivity):
     logger.info("creating model configuration...")
-    model_configuration_service = ModelConfigurationService(hypothesis.number_of_regions)
-    model_configuration = model_configuration_service. \
-        configure_model_from_hypothesis(hypothesis, model_connectivity)
+    model_configuration_builder = ModelConfigurationBuilder(hypothesis.number_of_regions)
+    model_configuration = model_configuration_builder. \
+        build_model_from_hypothesis(hypothesis, model_connectivity)
 
     logger.info("running LSA...")
     lsa_service = LSAService(eigen_vectors_number_selection=EIGENVECTORS_NUMBER_SELECTION, eigen_vectors_number=None,
                              weighted_eigenvector_sum=WEIGHTED_EIGENVECTOR_SUM, normalize_propagation_strength=False)
     lsa_hypothesis = lsa_service.run_lsa(hypothesis, model_configuration)
 
-    return model_configuration_service, model_configuration, lsa_service, lsa_hypothesis
+    return model_configuration_builder, model_configuration, lsa_service, lsa_hypothesis
 
 
 def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=HEAD_FOLDER,
@@ -53,34 +53,20 @@ def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=HEAD_FOLDE
     # ...or reading a custom file:
     # FOLDER_RES = os.path.join(data_folder, ep_name)
     disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
-    disease_indices, = np.where(disease_values > np.min([X0_DEF, E_DEF]))
-    disease_values = disease_values[disease_indices]
-    inds = np.argsort(disease_values)
-    disease_values = disease_values[inds]
-    disease_indices = disease_indices[inds]
-    x0_indices = [disease_indices[-1]]
-    x0_values = [disease_values[-1]]
-    e_indices = disease_indices[0:-1].tolist()
-    e_values = disease_values[0:-1].tolist()
-    disease_indices = list(disease_indices)
-    n_x0 = len(x0_indices)
-    n_e = len(e_indices)
-    n_disease = len(disease_indices)
-    all_regions_indices = np.array(range(head.number_of_regions))
-    healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
-    n_healthy = len(healthy_indices)
+
+    hypo_builder = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).set_sort_disease_values(
+        True)
+    threshold = np.min([X0_DEF, E_DEF])
+
     # This is an example of Excitability Hypothesis:
-    hyp_x0 = DiseaseHypothesis(head.connectivity.number_of_regions,
-                               excitability_hypothesis={tuple(disease_indices): disease_values},
-                               epileptogenicity_hypothesis={}, connectivity_hypothesis={})
+    hyp_x0 = hypo_builder.build_excitability_hypothesis_based_on_threshold(disease_values, threshold)
+
     # This is an example of Mixed Hypothesis:
-    hyp_x0_E = DiseaseHypothesis(head.connectivity.number_of_regions,
-                                 excitability_hypothesis={tuple(x0_indices): x0_values},
-                                 epileptogenicity_hypothesis={tuple(e_indices): e_values}, connectivity_hypothesis={})
-    hyp_E = DiseaseHypothesis(head.connectivity.number_of_regions,
-                              excitability_hypothesis={},
-                              epileptogenicity_hypothesis={tuple(disease_indices): disease_values},
-                              connectivity_hypothesis={})
+    hyp_x0_E = hypo_builder.build_mixed_hypothesis_with_x0_having_max_values(disease_values, threshold)
+
+    # This is an example of Epileptogenicity Hypothesis:
+    hyp_E = hypo_builder.build_epileptogenicity_hypothesis_based_on_threshold(disease_values, threshold)
+
     hypos = (hyp_x0, hyp_E, hyp_x0_E)
     return head, hypos
 
@@ -90,13 +76,13 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
                                         figure_dir=FOLDER_FIGURES, **kwargs):
     logger.info("\n\nRunning hypothesis: " + hyp.name)
     logger.info("\n\nCreating model configuration...")
-    model_configuration_service = ModelConfigurationService(hyp.number_of_regions, **kwargs)
+    model_configuration_builder = ModelConfigurationBuilder(hyp.number_of_regions, **kwargs)
     if hyp.type == "Epileptogenicity":
-        model_configuration = model_configuration_service. \
-            configure_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
+        model_configuration = model_configuration_builder. \
+            build_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
     else:
-        model_configuration = model_configuration_service. \
-            configure_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
+        model_configuration = model_configuration_builder. \
+            build_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
     writer = H5Writer()
     if save_flag:
         writer.write_model_configuration(model_configuration, os.path.join(results_dir, hyp.name + "_ModelConfig.h5"))
@@ -116,4 +102,4 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
     if plot_flag:
         plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
                          lsa_service.eigen_vectors_number, head.connectivity.region_labels, None)
-    return model_configuration, lsa_hypothesis, model_configuration_service, lsa_service
+    return model_configuration, lsa_hypothesis, model_configuration_builder, lsa_service

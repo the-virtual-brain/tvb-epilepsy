@@ -8,6 +8,7 @@ from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_params, probability_distribution_factory
 from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
 
+#TODO: This could be turned into a builder once it is stable
 
 # This function takes position or keyword arguments of the form "param" or "name_param" and sets the default parameters
 # of a stochastic parameter in the form "name_param" if name_flag = True, or "param" otherwise,

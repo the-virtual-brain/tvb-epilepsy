@@ -1,14 +1,12 @@
-
 import numpy as np
 from copy import deepcopy
 from tvb_epilepsy.base.constants.module_constants import DATA_MODE, TVB
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, HEAD_FOLDER
 from tvb_epilepsy.io.h5_model import read_h5_model
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
@@ -21,8 +19,7 @@ if __name__ == "__main__":
 
     # -------------------------------Reading data-----------------------------------
 
-    empty_connectivity = Connectivity("", np.array([]), np.array([]))
-    empty_hypothesis = DiseaseHypothesis(empty_connectivity)
+    empty_hypothesis = HypothesisBuilder.build_mixed_hypothesis()
 
     reader = Reader()
     writer = H5Writer()
@@ -39,9 +36,8 @@ if __name__ == "__main__":
     disease_indices = x0_indices + e_indices
 
     # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
-    hyp_x0_E = DiseaseHypothesis(head.connectivity, excitability_hypothesis={tuple(x0_indices): x0_values},
-                                 epileptogenicity_hypothesis={tuple(e_indices): e_values},
-                                 connectivity_hypothesis={})
+    hyp_x0_E = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).build_mixed_hypothesis(
+        e_values, e_indices, x0_values, x0_indices)
 
     obj = {"hyp_x0_E": hyp_x0_E,
            "test_dict":

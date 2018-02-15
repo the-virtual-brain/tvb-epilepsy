@@ -1,7 +1,6 @@
 import os
 import numpy
 from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.head import Head
@@ -9,8 +8,9 @@ from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.lsa_service import LSAService
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
 from tvb_epilepsy.service.pse.lsa_pse_service import LSAPSEService
 from tvb_epilepsy.service.sensitivity_analysis_service import SensitivityAnalysisService
@@ -81,8 +81,8 @@ class TestCustomH5writer(object):
 
     def test_write_hypothesis(self):
         test_file = os.path.join(get_temporary_folder(), "TestHypothesis.h5")
-        dummy_hypothesis = DiseaseHypothesis(3, excitability_hypothesis={tuple([0]): numpy.array([0.6])},
-                                             epileptogenicity_hypothesis={})
+        dummy_hypothesis = HypothesisBuilder().set_nr_of_regions(3).build_excitability_hypothesis(numpy.array([0.6]),
+                                                                                                  [0])
 
         assert not os.path.exists(test_file)
 
@@ -102,13 +102,13 @@ class TestCustomH5writer(object):
 
         assert os.path.exists(test_file)
 
-    def test_write_model_configuration_service(self):
+    def test_write_model_configuration_builder(self):
         test_file = os.path.join(get_temporary_folder(), "TestModelConfigurationService.h5")
-        dummy_mc_service = ModelConfigurationService(3)
+        dummy_mc_service = ModelConfigurationBuilder(3)
 
         assert not os.path.exists(test_file)
 
-        self.writer.write_model_configuration_service(dummy_mc_service, test_file)
+        self.writer.write_model_configuration_builder(dummy_mc_service, test_file)
 
         assert os.path.exists(test_file)
 
@@ -137,8 +137,7 @@ class TestCustomH5writer(object):
     def test_write_pse_service(self):
         test_file = os.path.join(get_temporary_folder(), "TestPSEService.h5")
         dummy_pse_service = LSAPSEService(
-            hypothesis=DiseaseHypothesis(3, excitability_hypothesis={tuple([0]): numpy.array([0.6])},
-                                         epileptogenicity_hypothesis={}),
+            hypothesis=HypothesisBuilder().set_nr_of_regions(3).build_excitability_hypothesis(numpy.array([0.6]), [0]),
             params_pse={"path": [], "indices": [], "name": [], "bounds": []})
 
         assert not os.path.exists(test_file)

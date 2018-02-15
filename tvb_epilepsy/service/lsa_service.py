@@ -11,8 +11,8 @@ from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_val
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.base.utils.math_utils import weighted_vector_sum, curve_elbow_point
+from tvb_epilepsy.base.computations.math_utils import weighted_vector_sum, curve_elbow_point
+from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 
 
 class LSAService(object):
@@ -135,11 +135,11 @@ class LSAService(object):
         propagation_strength_elbow = self.get_curve_elbow_point(lsa_propagation_strength)
         propagation_indices = lsa_propagation_strength.argsort()[-propagation_strength_elbow:]
 
-        return DiseaseHypothesis(disease_hypothesis.number_of_regions,
-                                 {tuple(disease_hypothesis.x0_indices): disease_hypothesis.x0_values},
-                                 {tuple(disease_hypothesis.e_indices): disease_hypothesis.e_values},
-                                 {tuple(disease_hypothesis.w_indices): disease_hypothesis.w_values},
-                                 propagation_indices, lsa_propagation_strength, disease_hypothesis.name + "_LSA")
+        hypothesis_builder = HypothesisBuilder().set_attributes_based_on_hypothesis(
+            disease_hypothesis).set_lsa_propagation_indices(propagation_indices).set_lsa_propagation_strengths(
+            lsa_propagation_strength)
+
+        return hypothesis_builder.build_lsa_hypothesis()
 
     def update_for_pse(self, values, paths, indices):
         for i, val in enumerate(paths):

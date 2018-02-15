@@ -19,7 +19,7 @@ from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, E_DEF, X0_
     I_EXT2_DEF, A_DEF, B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF
 
 
-class ModelConfigurationService(object):
+class ModelConfigurationBuilder(object):
     logger = initialize_logger(__name__)
 
     x1EQcr = X1_EQ_CR_DEF
@@ -45,8 +45,9 @@ class ModelConfigurationService(object):
         elif len(ensure_list(K)) == self.number_of_regions:
             self.K_unscaled = np.array(K)
         else:
-            self.logger.warning("The length of input global coupling K is neither 1 nor equal to the number of regions!" +
-                    "\nSetting model_configuration_service.K_unscaled = K_DEF for all regions")
+            self.logger.warning(
+                "The length of input global coupling K is neither 1 nor equal to the number of regions!" +
+                "\nSetting model_configuration_builder.K_unscaled = K_DEF for all regions")
         self.K = None
         self._normalize_global_coupling()
         self.e_values = e_values * np.ones((self.number_of_regions,), dtype=np.float32)
@@ -145,14 +146,14 @@ class ModelConfigurationService(object):
     def _normalize_global_coupling(self):
         self.K = 10.0 * self.K_unscaled / self.number_of_regions
 
-    def configure_model_from_equilibrium(self, x1EQ, zEQ, model_connectivity):
+    def _configure_model_from_equilibrium(self, x1EQ, zEQ, model_connectivity):
         # x1EQ, zEQ = self._ensure_equilibrum(x1EQ, zEQ) # We don't this by default anymore
         x0, Ceq, x0_values, e_values = self._compute_params_after_equilibration(x1EQ, zEQ, model_connectivity)
         return ModelConfiguration(self.yc, self.Iext1, self.Iext2, self.K, self.a, self.b, self.d,
                                   self.slope, self.s, self.gamma, x1EQ, zEQ, Ceq, x0, x0_values,
                                   e_values, self.zmode, model_connectivity)
 
-    def configure_model_from_E_hypothesis(self, disease_hypothesis, model_connectivity):
+    def build_model_from_E_hypothesis(self, disease_hypothesis, model_connectivity):
         # Always normalize K first
         self._normalize_global_coupling()
 
@@ -167,9 +168,9 @@ class ModelConfigurationService(object):
         # Compute equilibrium from epileptogenicity:
         x1EQ, zEQ = self._compute_x1_and_z_equilibrium_from_E(e_values)
 
-        return self.configure_model_from_equilibrium(x1EQ, zEQ, model_connectivity)
+        return self._configure_model_from_equilibrium(x1EQ, zEQ, model_connectivity)
 
-    def configure_model_from_hypothesis(self, disease_hypothesis, model_connectivity):
+    def build_model_from_hypothesis(self, disease_hypothesis, model_connectivity):
         # Always normalize K first
         self._normalize_global_coupling()
 
@@ -198,10 +199,11 @@ class ModelConfigurationService(object):
                                             model_connectivity)
         zEQ = self._compute_z_equilibrium(x1EQ)
 
-        return self.configure_model_from_equilibrium(x1EQ, zEQ, model_connectivity)
+        return self._configure_model_from_equilibrium(x1EQ, zEQ, model_connectivity)
 
-    def update_for_pse(self, values, paths, indices):
+    # TODO: This is used from PSE for varying an attribute's value. We should find a better way, not hardcoded strings.
+    def set_attributes_from_pse(self, values, paths, indices):
         for i, val in enumerate(paths):
             vals = val.split(".")
-            if vals[0] == "model_configuration_service":
+            if vals[0] == "model_configuration_builder":
                 getattr(self, vals[1])[indices[i]] = values[i]

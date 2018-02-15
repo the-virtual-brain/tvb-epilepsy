@@ -1,13 +1,13 @@
-"""
-Mechanism for launching and configuring generic Simulations (it will have TVB or custom implementations)
-"""
-
 import numpy
 from tvb_epilepsy.base.constants.module_constants import NOISE_SEED
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
 
 
 class SimulationSettings(object):
+    """
+    This class defines a convention of settings needed in order to create a generic Simulator (TVB or Java).
+    """
+
     def __init__(self, integration_step=0.01220703125, simulated_period=5000, scale_time=1, integrator_type="",
                  noise_preconfig=None, noise_ntau=0.0, noise_type="", noise_seed=NOISE_SEED,
                  noise_intensity=10 ** -6,
