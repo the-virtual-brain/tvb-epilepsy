@@ -5,12 +5,12 @@ from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1EQ
                                                                          ZINIT_MIN, ZINIT_MAX, MC_SCALE, SIG_INIT_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, assert_arrays, \
     extract_dict_stringkeys
-from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
+from tvb_epilepsy.base.computations.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
 from tvb_epilepsy.service.head_service import HeadService
 from tvb_epilepsy.service.signal_processor import decimate_signals, cut_signals_tails
-from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
+from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter_defaults
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
 from tvb_epilepsy.base.epileptor_models import *
 

@@ -3,7 +3,7 @@ from sklearn.cluster import AgglomerativeClustering
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
-from tvb_epilepsy.base.utils.math_utils import select_greater_values_array_inds
+from tvb_epilepsy.base.computations.math_utils import select_greater_values_array_inds
 
 
 class HeadService(object):

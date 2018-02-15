@@ -1,14 +1,14 @@
 import os
 import numpy
 from tvb_epilepsy.base.constants.configurations import DATA_TEST
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.lsa_service import LSAService
-from tvb_epilepsy.service.model_configuration_service import ModelConfigurationService
+from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.tests.base import get_temporary_folder, remove_temporary_test_files
 
 head_dir = "head2"
@@ -84,8 +84,8 @@ class TestCustomH5Reader():
 
     def test_read_hypothesis(self):
         test_file = os.path.join(get_temporary_folder(), "TestHypothesis.h5")
-        dummy_hypothesis = DiseaseHypothesis(3, excitability_hypothesis={tuple([0]): numpy.array([0.6])},
-                                             epileptogenicity_hypothesis={})
+        hypothesis_builder = HypothesisBuilder().set_nr_of_regions(3)
+        dummy_hypothesis = hypothesis_builder.build_excitability_hypothesis(numpy.array([0.6]), [0])
 
         self.writer.write_hypothesis(dummy_hypothesis, test_file)
         hypothesis = self.reader.read_hypothesis(test_file)
@@ -128,12 +128,12 @@ class TestCustomH5Reader():
         assert dummy_lsa_service.weighted_eigenvector_sum == lsa_service.weighted_eigenvector_sum
         assert dummy_lsa_service.normalize_propagation_strength == lsa_service.normalize_propagation_strength
 
-    def test_read_model_configuration_service(self):
+    def test_read_model_configuration_builder(self):
         test_file = os.path.join(get_temporary_folder(), "TestModelConfigService.h5")
-        dummy_mc_service = ModelConfigurationService(3)
-        self.writer.write_model_configuration_service(dummy_mc_service, test_file)
+        dummy_mc_service = ModelConfigurationBuilder(3)
+        self.writer.write_model_configuration_builder(dummy_mc_service, test_file)
 
-        mc_service = self.reader.read_model_configuration_service(test_file)
+        mc_service = self.reader.read_model_configuration_builder(test_file)
 
         assert dummy_mc_service.number_of_regions == mc_service.number_of_regions
         assert numpy.array_equal(dummy_mc_service.x0_values, mc_service.x0_values)

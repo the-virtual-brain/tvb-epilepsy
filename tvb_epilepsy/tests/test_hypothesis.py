@@ -1,6 +1,6 @@
 import os
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, FOLDER_LOGS, FOLDER_FIGURES
-from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
+from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 
 
 class TestHypothesis():
@@ -13,8 +13,7 @@ class TestHypothesis():
     def test_create(self):
         x0_indices = [20]
         x0_values = [0.9]
-        hyp = DiseaseHypothesis(76, excitability_hypothesis={tuple(x0_indices): x0_values},
-                                epileptogenicity_hypothesis={}, connectivity_hypothesis={})
+        hyp = HypothesisBuilder().set_nr_of_regions(76).build_excitability_hypothesis(x0_values, x0_indices)
         assert x0_indices == hyp.x0_indices
         assert x0_values == hyp.x0_values
 

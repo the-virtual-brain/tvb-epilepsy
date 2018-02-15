@@ -3,7 +3,7 @@ from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1EQ
                                                                                                 OBSERVATION_MODEL_DEF
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
 #TODO: avoid service imported in model
-from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
+from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter
 
 
 class SDEStatisticalModel(ODEStatisticalModel):

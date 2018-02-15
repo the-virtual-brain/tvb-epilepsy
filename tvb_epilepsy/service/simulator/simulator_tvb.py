@@ -14,7 +14,12 @@ from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 
 
 class SimulatorTVB(ABCSimulator):
+    """
+    This class is used as a Wrapper over the TVB Simulator.
+    It keeps attributes needed in order to create and configure a TVB Simulator object.
+    """
     logger = initialize_logger(__name__)
+
     def __init__(self, connectivity, model_configuration, model, simulation_settings):
         self.model = model
         self.simulation_settings = simulation_settings
@@ -69,6 +74,10 @@ class SimulatorTVB(ABCSimulator):
                 if isinstance(monitor, monitors.Monitor):
                     what_to_watch.append(monitor)
                 what_to_watch = tuple(what_to_watch)
+        else:
+            monitor = monitors.TemporalAverage()
+            monitor.period = self.simulation_settings.monitor_sampling_period
+            what_to_watch = (monitor,)
 
         self.simTVB = simulator.Simulator(model=self.model, connectivity=tvb_connectivity, coupling=tvb_coupling,
                                           integrator=integrator, monitors=what_to_watch,

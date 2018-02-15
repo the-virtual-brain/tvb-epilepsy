@@ -6,7 +6,7 @@ from tvb_epilepsy.base.utils.log_error_utils import raise_value_error  # warning
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
 from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
 #TODO: avoid service imported in model
-from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
+from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter
 
 
 class ODEStatisticalModel(StatisticalModel):

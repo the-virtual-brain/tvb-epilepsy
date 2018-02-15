@@ -4,7 +4,7 @@ import re
 import numpy as np
 from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, labels_to_inds
 from tvb_epilepsy.base.utils.data_structures_utils import split_string_text_numbers
-from tvb_epilepsy.base.utils.math_utils import compute_gain_matrix
+from tvb_epilepsy.base.computations.math_utils import compute_gain_matrix
 
 
 class SensorsH5Field(object):

@@ -13,7 +13,7 @@ from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
-from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
+from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter_defaults
 from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_TAU1, \
     EPILEPTOR_MODEL_TAU0
 
