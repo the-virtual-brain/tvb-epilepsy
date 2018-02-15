@@ -204,6 +204,9 @@ class H5Writer(object):
         :param model_inversion_service: ModelInversionService object to write in H5
         :param path: H5 path to be written
         """
+        if getattr(model_inversion_service, "signals_inds", None) is not None:
+            model_inversion_service.signals_inds = numpy.array(model_inversion_service.signals_inds)
+
         h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
         datasets_dict, metadata_dict = self._determine_datasets_and_attributes(model_inversion_service)

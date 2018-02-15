@@ -230,11 +230,14 @@ def linear_index_to_coordinate_tuples(linear_index, shape):
         return []
 
 
-def extract_dict_stringkeys(d, keys, modefun="find", break_after=MAX_INT_VALUE, remove=False):
+def extract_dict_stringkeys(d, keys, modefun="find", two_way_search=False, break_after=MAX_INT_VALUE, remove=False):
     if isequal_string(modefun, "equal"):
         modefun = lambda x, y: isequal_string(x, y)
     else:
-        modefun = lambda x, y: x.find(y) >= 0
+        if two_way_search:
+            modefun = lambda x, y: (x.find(y) >= 0) or (y.find(x) >= 0)
+        else:
+            modefun = lambda x, y: x.find(y) >= 0
     if remove:
         out_dict = deepcopy(d)
     else:

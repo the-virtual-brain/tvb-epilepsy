@@ -7,6 +7,7 @@ import tvb_epilepsy
 USER_HOME = os.path.expanduser("~")
 TVB_EPILEPSY_PATH = os.path.dirname(tvb_epilepsy.__file__)
 STATS_MODELS_PATH = os.path.join(TVB_EPILEPSY_PATH, "service", "model_inversion", "stan", "models")
+CMDSTAN_PATH = os.path.join(USER_HOME, "ScientificSoftware/git/cmdstan")
 
 RUN_ENV = "local"
 if "RUN_ENV" in os.environ:
@@ -20,20 +21,24 @@ if RUN_ENV == "test":
 
 else:
     FOLDER_VEP_ONLINE = os.path.join(USER_HOME, 'Dropbox', 'Work', 'VBtech', 'VEP', 'results')
-    FOLDER_VEP = os.path.join(FOLDER_VEP_ONLINE, "CC")
     VEP_SOFTWARE_PATH = os.path.join(USER_HOME, 'VEPtools', 'git')
+    FOLDER_VEP = os.path.join(FOLDER_VEP_ONLINE, "CC")
     if platform.node() == 'dionperdMBP':
-        FOLDER_VEP_TESTS = os.path.join(FOLDER_VEP_ONLINE, 'tests')
         # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR', 'svn', 'episense', 'demo-data')
         DATA_TVB = os.path.join(USER_HOME, 'CBR', 'svn', 'tvb', 'tvb-data', 'tvb-data')
-        DATA_CUSTOM = os.path.join(FOLDER_VEP, 'TVB3')
+    elif platform.node() == 'jupyter.cluster.thevirtualbrain.org':
+        VEP_SOFTWARE_PATH = os.path.join(USER_HOME, 'VBtech/software/git')
+        FOLDER_VEP_ONLINE = os.path.join(USER_HOME, 'VBtech/', 'results')
+        FOLDER_VEP = os.path.join(FOLDER_VEP_ONLINE, 'CC')
+        CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
     else:
-        FOLDER_VEP_TESTS = os.path.join(FOLDER_VEP_ONLINE, 'tests')
         # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR_software', 'svn-episense', 'demo-data')
         DATA_TVB = os.path.join(USER_HOME, 'CBR_software', 'svn-tvb', 'tvb-data', 'tvb-data')
-        DATA_CUSTOM = os.path.join(FOLDER_VEP, 'TVB3')
+    DATA_CUSTOM = os.path.join(FOLDER_VEP, 'TVB3')
+    FOLDER_VEP_TESTS = os.path.join(FOLDER_VEP_ONLINE, 'tests')
     if not (os.path.isdir(FOLDER_VEP_TESTS)):
         os.makedirs(FOLDER_VEP_TESTS)
+
 
     HEAD_FOLDER = os.path.join(DATA_CUSTOM, 'Head')
     # Folder where input data will be
@@ -49,7 +54,6 @@ else:
     if not (os.path.isdir(FOLDER_FIGURES)):
         os.mkdir(FOLDER_FIGURES)
 
-CMDSTAN_PATH = os.path.join(USER_HOME, "ScientificSoftware/git/cmdstan")
 VERY_LARGE_SIZE = (40, 20)
 VERY_LARGE_PROTRAIT = (30, 50)
 SUPER_LARGE_SIZE = (80, 40)
