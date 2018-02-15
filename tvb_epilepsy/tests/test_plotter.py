@@ -6,6 +6,8 @@ from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
 from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, DATA_TEST, FOLDER_LOGS, FOLDER_RES
+from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
+from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter
 
 head_dir = "head2"
@@ -59,6 +61,19 @@ class TestPlotter():
         self.plotter.plot_stochastic_parameter(K, figure_name=figure_name)
 
         assert os.path.exists(figure_file)
+
+    def test_plot_lsa(self):
+
+        figure_name = "LSAPlot"
+        lsa_hypothesis = HypothesisBuilder().set_name(figure_name).build_lsa_hypothesis()
+        mc = ModelConfigurationBuilder().build_model_from_E_hypothesis(lsa_hypothesis, numpy.array([1]))
+
+        figure_file = os.path.join(FOLDER_FIGURES, figure_name + ".png")
+        assert not os.path.exists(figure_file)
+
+        self.plotter.plot_lsa(lsa_hypothesis, mc, True, None, region_labels=numpy.array(["a"]), title="")
+
+        assert not os.path.exists(figure_file)
 
     @classmethod
     def teardown_class(cls):
