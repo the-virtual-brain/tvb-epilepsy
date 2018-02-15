@@ -58,4 +58,4 @@ if __name__ == "__main__":
                        lsa_service.eigen_vectors_number, region_labels=head.connectivity.region_labels,
                        pse_results=pse_results)
 
-writer.write_dictionary(pse_results, os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5"))
+    writer.write_dictionary(pse_results, os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5"))
