@@ -28,8 +28,6 @@ else:
         DATA_TVB = os.path.join(USER_HOME, 'CBR', 'svn', 'tvb', 'tvb-data', 'tvb-data')
     elif platform.node() == 'jupyter.cluster.thevirtualbrain.org':
         VEP_SOFTWARE_PATH = os.path.join(USER_HOME, 'VBtech/software/git')
-        FOLDER_VEP_ONLINE = os.path.join(USER_HOME, 'VBtech/', 'results')
-        FOLDER_VEP = os.path.join(FOLDER_VEP_ONLINE, 'CC')
         CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
     else:
         # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR_software', 'svn-episense', 'demo-data')
@@ -38,8 +36,6 @@ else:
     FOLDER_VEP_TESTS = os.path.join(FOLDER_VEP_ONLINE, 'tests')
     if not (os.path.isdir(FOLDER_VEP_TESTS)):
         os.makedirs(FOLDER_VEP_TESTS)
-
-
     HEAD_FOLDER = os.path.join(DATA_CUSTOM, 'Head')
     # Folder where input data will be
     # FOLDER_DATA = os. path.join(FOLDER_VEP, 'data')
