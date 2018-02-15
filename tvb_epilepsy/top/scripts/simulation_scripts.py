@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, FOLDER_FIGURES, TVB, SIMULATION_MODE
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, FOLDER_FIGURES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
@@ -74,7 +74,7 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
 
 
 # TODO: this could be a builder
-def from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis, simulation_mode=SIMULATION_MODE,
+def from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
                                            sim_type="realistic", dynamical_model="EpileptorDP2D", ts_file=None,
                                            plot_flag=True, results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES,
                                            logger=logger, **kwargs):

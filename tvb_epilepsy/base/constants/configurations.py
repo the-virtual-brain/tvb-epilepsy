@@ -23,7 +23,6 @@ JAVA_MAIN_SIM = "de.codebox.episense.fx.StartSimulation"
 JAVA = 'java'
 TVB = 'tvb'
 DATA_MODE = JAVA
-SIMULATION_MODE = TVB
 
 
 # IN data

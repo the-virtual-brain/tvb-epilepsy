@@ -4,7 +4,7 @@ Entry point for working with VEP
 import os
 import numpy as np
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, IN_HEAD, SIMULATION_MODE, TVB, DATA_MODE
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, IN_HEAD, TVB, DATA_MODE
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
