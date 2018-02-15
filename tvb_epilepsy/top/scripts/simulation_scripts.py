@@ -74,13 +74,11 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
     return vois_ts_dict
 
 
-# TODO: this could be a builder
 def from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis, simulation_mode=SIMULATION_MODE,
                                            sim_type="realistic", dynamical_model="EpileptorDP2D", ts_file=None,
                                            plot_flag=True, results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES,
                                            logger=logger, **kwargs):
     # --------------------------Simulation preparations------------------------------------------------------------------
-    # TODO: maybe use a custom Monitor class
     # this is the simulation sampling rate that is necessary for the simulation to be stable:
 
     sim_builder = SimulatorBuilder().set_scale_fsavg(1).set_report_every_n_monitor_steps(100.0).set_model_name(
