@@ -63,9 +63,9 @@ class TestPlotter():
         assert os.path.exists(figure_file)
 
     def test_plot_lsa(self):
-
         figure_name = "LSAPlot"
-        lsa_hypothesis = HypothesisBuilder().set_name(figure_name).build_lsa_hypothesis()
+        hypo_builder = HypothesisBuilder().set_name(figure_name)
+        lsa_hypothesis = hypo_builder.build_lsa_hypothesis()
         mc = ModelConfigurationBuilder().build_model_from_E_hypothesis(lsa_hypothesis, numpy.array([1]))
 
         figure_file = os.path.join(FOLDER_FIGURES, figure_name + ".png")
@@ -74,6 +74,22 @@ class TestPlotter():
         self.plotter.plot_lsa(lsa_hypothesis, mc, True, None, region_labels=numpy.array(["a"]), title="")
 
         assert not os.path.exists(figure_file)
+
+    def test_plot_state_space(self):
+        lsa_hypothesis = HypothesisBuilder().build_lsa_hypothesis()
+        mc = ModelConfigurationBuilder().build_model_from_E_hypothesis(lsa_hypothesis, numpy.array([1]))
+
+        model = "6d"
+        zmode = "lin"
+        # TODO: this figure_name is constructed inside plot method, so it can change
+        figure_name = "_" + "Epileptor_" + model + "_z-" + str(zmode)
+        file_name = os.path.join(FOLDER_FIGURES, figure_name + ".png")
+        assert not os.path.exists(file_name)
+
+        self.plotter.plot_state_space(mc, region_labels=numpy.array(["a"]), special_idx=[0], model=model, zmode=zmode,
+                                      figure_name="")
+
+        assert os.path.exists(file_name)
 
     @classmethod
     def teardown_class(cls):
