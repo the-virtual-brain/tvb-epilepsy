@@ -7,7 +7,6 @@ from matplotlib import pyplot, gridspec
 from matplotlib.colors import Normalize
 from mpldatacursor import HighlightingDataCursor
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.plot.base_plotter import BasePlotter
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.computations.math_utils import compute_in_degree
@@ -24,7 +23,6 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMA
 
 
 class Plotter(BasePlotter):
-    logger = initialize_logger(__name__)
 
     def _plot_connectivity(self, connectivity, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
                            figure_name='Connectivity ', figsize=VERY_LARGE_SIZE):

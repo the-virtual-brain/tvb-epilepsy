@@ -5,9 +5,11 @@ from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.base.constants.configurations import SAVE_FLAG, FIG_FORMAT, FOLDER_FIGURES, SHOW_FLAG, VERY_LARGE_SIZE
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 
 
 class BasePlotter(object):
+    logger = initialize_logger(__name__)
 
     def __init__(self, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG):
         self.save_flag = save_flag
