@@ -1,6 +1,6 @@
 import numpy
 from tvb.datatypes import equations
-from tvb.simulator import monitors, noise
+from tvb.simulator import noise
 from tvb.simulator.models import Epileptor
 from tvb_epilepsy.base.constants.model_constants import model_noise_intensity_dict, VOIS, model_noise_type_dict
 from tvb_epilepsy.base.constants.model_constants import NOISE_SEED, ADDITIVE_NOISE
@@ -89,9 +89,6 @@ class SimulatorBuilder(object):
         monitor_expressions = [me.replace('lfp', 'x2 - x1') for me in monitor_expressions]
         model.variables_of_interest = monitor_expressions
 
-        monitor_instance = monitors.TemporalAverage()
-        monitor_instance.period = monitor_period
-
         noise_intensity = model_noise_intensity_dict[self.model_name]
         noise_type = model_noise_type_dict[self.model_name]
 
@@ -115,8 +112,6 @@ class SimulatorBuilder(object):
         settings = SimulationSettings(simulated_period=sim_length, integration_step=dt,
                                       noise_preconfig=noise_instance, noise_type=noise_type,
                                       noise_intensity=noise_intensity, noise_ntau=noise_instance.ntau,
-                                      monitors_preconfig=monitor_instance,
-                                      monitor_type=monitor_instance._ui_name,
                                       monitor_sampling_period=monitor_period,
                                       monitor_expressions=monitor_expressions,
                                       variables_names=model.variables_of_interest)

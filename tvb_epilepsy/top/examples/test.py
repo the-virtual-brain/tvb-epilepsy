@@ -4,7 +4,7 @@ import numpy as np
 
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.plot.plotter import Plotter
-from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
+from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter
 
 logger = initialize_logger(__name__)
 

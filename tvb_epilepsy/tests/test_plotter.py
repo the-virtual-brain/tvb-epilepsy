@@ -6,7 +6,7 @@ from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
 from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, IN_HEAD, FOLDER_LOGS, FOLDER_RES
-from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter
+from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter
 
 
 class TestPlotter(object):
@@ -44,9 +44,6 @@ class TestPlotter(object):
         assert os.path.exists(os.path.join(FOLDER_FIGURES, filename1))
         assert os.path.exists(os.path.join(FOLDER_FIGURES, filename2))
         assert os.path.exists(os.path.join(FOLDER_FIGURES, filename3))
-
-    # def test_plot_vector(self):
-    #     pass
 
     def test_plot_stochastic_parameter(self):
         K_mean = 10 * 2.5 / 87

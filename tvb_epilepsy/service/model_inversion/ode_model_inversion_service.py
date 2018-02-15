@@ -9,7 +9,7 @@ from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.statistical_models.ode_statistical_model import ODEStatisticalModel
 from tvb_epilepsy.service.head_service import HeadService
 from tvb_epilepsy.service.signal_processor import decimate_signals, cut_signals_tails
-from tvb_epilepsy.service.stochastic_parameter_factory import set_parameter_defaults
+from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter_defaults
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
 from tvb_epilepsy.base.epileptor_models import *
 
