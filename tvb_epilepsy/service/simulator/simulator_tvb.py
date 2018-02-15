@@ -14,6 +14,10 @@ from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 
 
 class SimulatorTVB(ABCSimulator):
+    """
+    This class is used as a Wrapper over the TVB Simulator.
+    It keeps attributes needed in order to create and configure a TVB Simulator object.
+    """
     logger = initialize_logger(__name__)
 
     def __init__(self, connectivity, model_configuration, model, simulation_settings):
