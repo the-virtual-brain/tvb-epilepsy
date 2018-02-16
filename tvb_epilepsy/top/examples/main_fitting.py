@@ -53,7 +53,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=IN_HEAD,
 
     # -------------------------------Reading model_data and hypotheses--------------------------------------------------
     head, hypos = from_head_to_hypotheses(ep_name, data_mode=JAVA, data_folder=data_folder,
-                                          plot_head=False, figure_dir=figure_dir, sensors_filename=sensors_filename)
+                                          plot_head=False, figure_dir=figure_dir)
 
     for hyp in hypos[:1]:
 
