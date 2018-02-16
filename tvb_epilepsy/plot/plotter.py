@@ -1,9 +1,12 @@
 from collections import OrderedDict
 import numpy
+
 import matplotlib
-matplotlib.use('Qt4Agg')
+from tvb_epilepsy.base.constants.configurations import MATPLOTLIB_BACKEND
+matplotlib.use(MATPLOTLIB_BACKEND)
 from matplotlib import pyplot, gridspec
 # pyplot.ion()
+
 from matplotlib.colors import Normalize
 from mpldatacursor import HighlightingDataCursor
 from mpl_toolkits.axes_grid1 import make_axes_locatable

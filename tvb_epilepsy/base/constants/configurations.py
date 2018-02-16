@@ -8,6 +8,7 @@ USER_HOME = os.path.expanduser("~")
 TVB_EPILEPSY_PATH = os.path.dirname(tvb_epilepsy.__file__)
 STATS_MODELS_PATH = os.path.join(TVB_EPILEPSY_PATH, "service", "model_inversion", "stan", "models")
 CMDSTAN_PATH = os.path.join(USER_HOME, "ScientificSoftware/git/cmdstan")
+MATPLOTLIB_BACKEND = "Qt4Agg"
 
 RUN_ENV = "local"
 if "RUN_ENV" in os.environ:
@@ -29,6 +30,7 @@ else:
     elif platform.node() == 'jupyter.cluster.thevirtualbrain.org':
         VEP_SOFTWARE_PATH = os.path.join(USER_HOME, 'VBtech/software/git')
         CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
+        MATPLOTLIB_BACKEND = "Agg"
     else:
         # DATA_CUSTOM = os.path.join(USER_HOME, 'CBR_software', 'svn-episense', 'demo-data')
         DATA_TVB = os.path.join(USER_HOME, 'CBR_software', 'svn-tvb', 'tvb-data', 'tvb-data')
