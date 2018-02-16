@@ -1,6 +1,8 @@
+# coding=utf-8
+
 import os
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import HEAD_FOLDER, FOLDER_RES
+from tvb_epilepsy.base.constants.configurations import IN_HEAD, FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
@@ -8,22 +10,15 @@ from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.top.scripts.pse_scripts import pse_from_hypothesis
 from tvb_epilepsy.io.h5_reader import H5Reader as Reader
 
-logger = initialize_logger(__name__)
-
 if __name__ == "__main__":
     # -------------------------------Reading data-----------------------------------
-
     reader = Reader()
     writer = H5Writer()
+    head = reader.read_head(IN_HEAD)
+    logger = initialize_logger(__name__)
 
-    head = reader.read_head(HEAD_FOLDER)
-
-    # --------------------------Hypothesis definition-----------------------------------
-
+    # --------------------------Manual Hypothesis definition-----------------------------------
     n_samples = 100
-
-    #
-    # Manual definition of hypothesis...:
     x0_indices = [20]
     x0_values = [0.9]
     e_indices = [70]
@@ -37,25 +32,27 @@ if __name__ == "__main__":
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
     n_healthy = len(healthy_indices)
     # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
-    hyp_x0_E = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).build_mixed_hypothesis(
-        e_values, e_indices, x0_values, x0_indices)
+    hyp_x0_E = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions
+                                                     ).build_mixed_hypothesis(e_values, e_indices,
+                                                                              x0_values, x0_indices)
 
     # Now running the parameter search analysis:
     logger.info("running PSE LSA...")
-    model_configuration, lsa_service, lsa_hypothesis, pse_results = pse_from_hypothesis(hyp_x0_E,
-                                                                                        head.connectivity.normalized_weights,
-                                                                                        head.connectivity.region_labels,
-                                                                                        n_samples, param_range=0.1,
-                                                                                        global_coupling=[{
-                                                                                            "indices": all_regions_indices}],
-                                                                                        healthy_regions_parameters=[
-                                                                                            {"name": "x0_values",
-                                                                                             "indices": healthy_indices}],
-                                                                                        logger=logger,
-                                                                                        save_services=True)[:4]
+    model_config, lsa_service, lsa_hypothesis, pse_res = pse_from_hypothesis(hyp_x0_E,
+                                                                             head.connectivity.normalized_weights,
+                                                                             head.connectivity.region_labels,
+                                                                             n_samples, param_range=0.1,
+                                                                             global_coupling=[{
+                                                                                 "indices": all_regions_indices}],
+                                                                             healthy_regions_parameters=[
+                                                                                 {"name": "x0_values",
+                                                                                  "indices": healthy_indices}],
+                                                                             save_services=True)[:4]
 
-    Plotter().plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
+    logger.info("Plotting LSA...")
+    Plotter().plot_lsa(lsa_hypothesis, model_config, lsa_service.weighted_eigenvector_sum,
                        lsa_service.eigen_vectors_number, region_labels=head.connectivity.region_labels,
-                       pse_results=pse_results)
+                       pse_results=pse_res)
 
-    writer.write_dictionary(pse_results, os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5"))
+    logger.info("Saving LSA results ...")
+    writer.write_dictionary(pse_res, os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5"))

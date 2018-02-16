@@ -6,17 +6,15 @@ from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
-from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, DATA_TEST, FOLDER_LOGS, FOLDER_RES
+from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, IN_HEAD, FOLDER_LOGS, FOLDER_RES
 from tvb_epilepsy.service.epileptor_model_factory import build_ep_2sv_model
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter
 from tvb_epilepsy.top.scripts.simulation_scripts import prepare_vois_ts_dict
 
-head_dir = "head2"
 
-
-class TestPlotter():
+class TestPlotter(object):
     plotter = Plotter()
 
     @classmethod
@@ -25,9 +23,10 @@ class TestPlotter():
             if not os.path.exists(direc):
                 os.makedirs(direc)
 
-    def _prepare_dummy_head(self):
+    @staticmethod
+    def _prepare_dummy_head():
         reader = H5Reader()
-        connectivity = reader.read_connectivity(os.path.join(DATA_TEST, head_dir, "Connectivity.h5"))
+        connectivity = reader.read_connectivity(os.path.join(IN_HEAD, "Connectivity.h5"))
         cort_surface = Surface([], [])
         seeg_sensors = Sensors(numpy.array(["sens1", "sens2"]), numpy.array([[0, 0, 0], [0, 1, 0]]))
         head = Head(connectivity, cort_surface, sensorsSEEG=seeg_sensors)
@@ -45,7 +44,7 @@ class TestPlotter():
         assert not os.path.exists(os.path.join(FOLDER_FIGURES, filename2))
         assert not os.path.exists(os.path.join(FOLDER_FIGURES, filename3))
 
-        self.plotter.plot_head(head, figure_dir=FOLDER_FIGURES)
+        self.plotter.plot_head(head)
 
         assert os.path.exists(os.path.join(FOLDER_FIGURES, filename1))
         assert os.path.exists(os.path.join(FOLDER_FIGURES, filename2))

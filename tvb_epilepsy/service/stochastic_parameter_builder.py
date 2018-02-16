@@ -1,5 +1,5 @@
 import numpy as np
-from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE, MIN_SINGLE_VALUE
+from tvb_epilepsy.base.constants.configurations import MAX_SINGLE_VALUE, MIN_SINGLE_VALUE
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import StochasticParameterBase
 from tvb_epilepsy.base.utils.data_structures_utils import extract_dict_stringkeys, \

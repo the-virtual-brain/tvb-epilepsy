@@ -92,4 +92,4 @@ if __name__ == "__main__":
             diff = target_stats[stats_m] - stats[stats_m]
             if np.any(np.abs(diff.flatten()) > 0.001):
                 logger.warning("Large difference between target and resulting samples' " + stats_m + "!: " + str(diff))
-            del (parameter)
+            del parameter

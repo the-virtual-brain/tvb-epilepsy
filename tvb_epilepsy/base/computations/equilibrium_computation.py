@@ -3,7 +3,7 @@ Module to compute the resting equilibrium point of a Virtual Epileptic Patient m
 """
 
 import numpy
-from tvb_epilepsy.base.constants.module_constants import *
+from tvb_epilepsy.base.constants.configurations import SYMBOLIC_CALCULATIONS_FLAG
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_epilepsy.base.computations.calculations_utils import *
 
@@ -383,7 +383,7 @@ def assert_equilibrium_point(epileptor_model, weights, equilibrium_point):
                           tau1=epileptor_model.tau1, tau0=epileptor_model.tau0, tau2=epileptor_model.tau2,
                           output_mode="array")
     else:
-        # all 6D models (tvb, custom)
+        # all 6D models (tvb, java)
         # dfun_max_cr[2] = 10 ** -3
         # We use the opposite sign for K with respect to all epileptor models
         K = -epileptor_model.Ks
@@ -470,14 +470,14 @@ def calc_equilibrium_point(epileptor_model, model_configuration, weights):
                                             epileptor_model.gamma, zmode=epileptor_model.zmode,
                                             pmode=epileptor_model.pmode)[0]
     else:
-        # all 6D models (tvb, custom)
+        # all 6D models (tvb, java)
         equilibrium_point = calc_eq_6d(epileptor_model.x0, epileptor_model.Ks, weights,
                                        epileptor_model.c, epileptor_model.Iext, epileptor_model.Iext2,
                                        model_configuration.x1EQ, epileptor_model.a, epileptor_model.b,
                                        epileptor_model.d, epileptor_model.aa, gamma=GAMMA_DEF, zmode=numpy.array("lin"))
-    if (epileptor_model._ui_name != "CustomEpileptor"):
+    if (epileptor_model._ui_name != "JavaEpileptor"):
         assert_equilibrium_point(epileptor_model, weights, equilibrium_point)
     else:
-        #TODO: Implement dfun for custom simulator
-        raise_not_implemented_error("The dfun for custom simulator is not implemented yet!")
+        #TODO: Implement dfun for the Java simulator
+        raise_not_implemented_error("The dfun for Java simulator is not implemented yet!")
     return equilibrium_point

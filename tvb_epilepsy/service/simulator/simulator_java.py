@@ -1,9 +1,10 @@
 """
-Python Demo for configuring Custom Simulations from Python.
+Python Demo for configuring Java Simulations from Python.
 
 Classes Settings, EpileptorParams and FullConfiguration are synchronized with the Java code, and should not be changed!
 
-TODO: It is imperative to allow for modification of the connectivity.normalized_weights of the Connecitivity.h5 according to the model_configuration.connectivity
+TODO: It is imperative to allow for modification of the connectivity.normalized_weights of the Connecitivity.h5,
+ according to the model_configuration.connectivity
 """
 
 import json
@@ -11,7 +12,7 @@ import os
 import subprocess
 from copy import copy
 import numpy
-from tvb_epilepsy.base.constants.module_constants import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
+from tvb_epilepsy.base.constants.configurations import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import obj_to_dict, assert_arrays
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
@@ -54,7 +55,7 @@ class EpileptorParams(object):
 
 
 class EpileptorModel(object):
-    _ui_name = "CustomEpileptor"
+    _ui_name = "JavaEpileptor"
     _nvar = 2
     a = 1.0
     b = 3.0
@@ -113,7 +114,7 @@ class FullConfiguration(object):
             self.epileptorParamses[i] = copy(ep_param)
 
 
-class SimulatorCustom(ABCSimulator):
+class SimulatorJava(ABCSimulator):
     """
     From a VEP Hypothesis, write a custom JSON simulation configuration.
     To run a simulation, we can also open a GUI and import the resulted JSON file.
@@ -142,7 +143,7 @@ class SimulatorCustom(ABCSimulator):
                                          self.simulation_settings.monitor_sampling_period)
         json_model = self.prepare_epileptor_model_for_json(self.connectivity.number_of_regions)
         # TODO: history length has to be computed given the time delays (i.e., the tract lengts...)
-        # TODO: when dfun is implemented for CustomEpileptor, we can use the following commented lines with initial_conditions
+        # TODO: when dfun is implemented for JavaEpileptor, we can use the following commented lines with initial_conditions
         # initial_conditions = self.prepare_initial_conditions(history_length=1)
         # self.custom_config = FullConfiguration(connectivity_path=os.path.abspath(self.connectivity.file_path),
         #                                        epileptor_params=json_model, settings=ep_settings,
@@ -181,7 +182,7 @@ class SimulatorCustom(ABCSimulator):
         return epileptor_params_list
 
     def configure_model(self, **kwargs):
-        self.model = custom_model_builder(self.model_configuration, **kwargs)
+        self.model = java_model_builder(self.model_configuration, **kwargs)
 
     def configure_initial_conditions(self, initial_conditions=None):
         if isinstance(initial_conditions, numpy.ndarray):
@@ -192,7 +193,7 @@ class SimulatorCustom(ABCSimulator):
 
 
 # Some helper functions for model and simulator construction
-def custom_model_builder(model_configuration, a=1.0, b=3.0, d=5.0):
+def java_model_builder(model_configuration, a=1.0, b=3.0, d=5.0):
     x0 = calc_x0_val_to_model_x0(model_configuration.x0_values, model_configuration.yc,
                                  model_configuration.Iext1, a, b - d)
     model = EpileptorModel(a=a, b=b, d=d, x0=x0, iext=model_configuration.Iext1,

@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from tvb_epilepsy.base.constants.model_constants import K_DEF
-from tvb_epilepsy.base.constants.configurations import DATA_CUSTOM, FOLDER_RES
+from tvb_epilepsy.base.constants.configurations import IN_HEAD, FOLDER_RES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
@@ -14,10 +14,9 @@ logger = initialize_logger(__name__)
 
 if __name__ == "__main__":
     # -------------------------------Reading data-----------------------------------
-    data_folder = os.path.join(DATA_CUSTOM, 'Head_TVB25')
     reader = Reader()
     writer = H5Writer()
-    head = reader.read_head(data_folder)
+    head = reader.read_head(IN_HEAD)
     # --------------------------Hypothesis definition-----------------------------------
     n_samples = 100
     # Manual definition of hypothesis...:

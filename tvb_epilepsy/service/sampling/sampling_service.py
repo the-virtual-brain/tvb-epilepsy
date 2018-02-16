@@ -2,7 +2,7 @@ from collections import OrderedDict
 import numpy as np
 import scipy as scp
 import scipy.stats as ss
-from tvb_epilepsy.base.constants.module_constants import MAX_SINGLE_VALUE
+from tvb_epilepsy.base.constants.configurations import MAX_SINGLE_VALUE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, shape_to_size
 

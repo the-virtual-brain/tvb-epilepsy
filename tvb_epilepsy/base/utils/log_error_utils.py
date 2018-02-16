@@ -14,7 +14,8 @@ def initialize_logger(name, target_folder=FOLDER_LOGS):
     :param target_folder: Folder where log files will be written
     """
     if not (os.path.isdir(target_folder)):
-        os.mkdir(target_folder)
+        os.makedirs(target_folder)
+
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
 
@@ -28,8 +29,14 @@ def initialize_logger(name, target_folder=FOLDER_LOGS):
     fh.setFormatter(formatter)
     fh.setLevel(logging.DEBUG)
 
+    # Log errors separately, to have them easy to inspect
+    fhe = TimedRotatingFileHandler(os.path.join(target_folder, 'log_errors.log'), when="d", interval=1, backupCount=2)
+    fhe.setFormatter(formatter)
+    fhe.setLevel(logging.ERROR)
+
     logger.addHandler(ch)
     logger.addHandler(fh)
+    logger.addHandler(fhe)
 
     return logger
 

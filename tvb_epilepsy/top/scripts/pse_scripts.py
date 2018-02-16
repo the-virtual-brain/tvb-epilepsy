@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from tvb_epilepsy.base.constants.module_constants import MAX_DISEASE_VALUE
+from tvb_epilepsy.base.constants.model_constants import MAX_DISEASE_VALUE
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
     dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
@@ -134,12 +134,12 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
 
 
 def pse_from_hypothesis(hypothesis, model_connectivity, region_labels, n_samples, param_range=0.1, global_coupling=[],
-                        healthy_regions_parameters=[], save_flag=False, folder_res=FOLDER_RES, filename=None,
-                        logger=None, **kwargs):
-    if logger is None:
-        logger = initialize_logger(__name__)
-    # Compute lsa for this hypothesis before the parameter search:
+                        healthy_regions_parameters=[], save_flag=False, folder_res=FOLDER_RES, filename=None, **kwargs):
+
+    logger = initialize_logger(__name__)
     logger.info("Running hypothesis: " + hypothesis.name)
+
+    # Compute lsa for this hypothesis before the parameter search:
     model_configuration_builder, model_configuration, lsa_service, lsa_hypothesis = \
         start_lsa_run(hypothesis, model_connectivity)
     pse_results, pse_params_list = pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,

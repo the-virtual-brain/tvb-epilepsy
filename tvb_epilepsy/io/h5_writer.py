@@ -26,8 +26,8 @@ KEY_START = "Start_time"
 class H5Writer(object):
     logger = initialize_logger(__name__)
 
-    CUSTOM_TYPE_ATTRIBUTE = "EPI_Type"
-    CUSTOM_SUBTYPE_ATTRIBUTE = "EPI_Subtype"
+    H5_TYPE_ATTRIBUTE = "EPI_Type"
+    H5_SUBTYPE_ATTRIBUTE = "EPI_Subtype"
 
     # TODO: write variants.
     def write_connectivity(self, connectivity, path):
@@ -44,7 +44,7 @@ class H5Writer(object):
         h5_file.create_dataset(ConnectivityH5Field.ORIENTATIONS, data=connectivity.orientations)
         h5_file.create_dataset(ConnectivityH5Field.HEMISPHERES, data=connectivity.hemispheres)
 
-        h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "Connectivity")
+        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "Connectivity")
         h5_file.attrs.create("Number_of_regions", str(connectivity.number_of_regions))
 
         if connectivity.normalized_weights.size > 0:
@@ -70,7 +70,7 @@ class H5Writer(object):
         gain_dataset.attrs.create("Max", str(sensors.gain_matrix.max()))
         gain_dataset.attrs.create("Min", str(sensors.gain_matrix.min()))
 
-        h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "Sensors")
+        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "Sensors")
         h5_file.attrs.create("Number_of_sensors", str(sensors.number_of_sensors))
         h5_file.attrs.create("Sensors_subtype", sensors.s_type)
 
@@ -88,7 +88,7 @@ class H5Writer(object):
         h5_file.create_dataset(SurfaceH5Field.TRIANGLES, data=surface.triangles)
         h5_file.create_dataset(SurfaceH5Field.VERTEX_NORMALS, data=surface.vertex_normals)
 
-        h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "Surface")
+        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "Surface")
         h5_file.attrs.create("Surface_subtype", surface.surface_subtype)
         h5_file.attrs.create("Number_of_triangles", surface.triangles.shape[0])
         h5_file.attrs.create("Number_of_vertices", surface.vertices.shape[0])
@@ -128,8 +128,8 @@ class H5Writer(object):
         h5_file.create_dataset("lsa_propagation_strengths", data=hypothesis.lsa_propagation_strengths)
 
         # TODO: change HypothesisModel to GenericModel here and inside Epi
-        h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, hypothesis.__class__.__name__)
+        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, hypothesis.__class__.__name__)
         h5_file.attrs.create("number_of_regions", hypothesis.number_of_regions)
         h5_file.attrs.create("type", hypothesis.type)
         h5_file.attrs.create("x0_indices", hypothesis.x0_indices)
@@ -151,8 +151,8 @@ class H5Writer(object):
         for key, value in datasets_dict.iteritems():
             h5_file.create_dataset(key, data=value)
 
-        h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, model_configuration.__class__.__name__)
+        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, model_configuration.__class__.__name__)
 
         for key, value in metadata_dict.iteritems():
             h5_file.attrs.create(key, value)
@@ -171,8 +171,8 @@ class H5Writer(object):
         for key, value in datasets_dict.iteritems():
             h5_file.create_dataset(key, data=value)
 
-        h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, model_configuration_builder.__class__.__name__)
+        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, model_configuration_builder.__class__.__name__)
 
         for key, value in metadata_dict.iteritems():
             h5_file.attrs.create(key, value)
@@ -191,8 +191,8 @@ class H5Writer(object):
         for key, value in datasets_dict.iteritems():
             h5_file.create_dataset(key, data=value)
 
-        h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, lsa_service.__class__.__name__)
+        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, lsa_service.__class__.__name__)
 
         for key, value in metadata_dict.iteritems():
             h5_file.attrs.create(key, value)
@@ -214,8 +214,8 @@ class H5Writer(object):
         for key, value in datasets_dict.iteritems():
             h5_file.create_dataset(key, data=value)
 
-        h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, model_inversion_service.__class__.__name__)
+        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, model_inversion_service.__class__.__name__)
 
         for key, value in metadata_dict.iteritems():
             h5_file.attrs.create(key, value)
@@ -276,8 +276,8 @@ class H5Writer(object):
             except:
                 self.logger.warning("Did not manage to write " + key + " to h5 file " + path + " !")
 
-        h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, dictionary.__class__.__name__)
+        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, dictionary.__class__.__name__)
 
         h5_file.close()
 
@@ -294,8 +294,8 @@ class H5Writer(object):
         for key, value in datasets_dict.iteritems():
             h5_file.create_dataset(key, data=value)
 
-        h5_file.attrs.create(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.CUSTOM_SUBTYPE_ATTRIBUTE, simulation_settings.__class__.__name__)
+        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, simulation_settings.__class__.__name__)
 
         for key, value in metadata_dict.iteritems():
             h5_file.attrs.create(key, value)
@@ -381,8 +381,8 @@ class H5Writer(object):
         """
         h5_model = convert_to_h5_model(object)
 
-        h5_model.add_or_update_metadata_attribute(self.CUSTOM_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_model.add_or_update_metadata_attribute(self.CUSTOM_SUBTYPE_ATTRIBUTE, object.__class__.__name__)
+        h5_model.add_or_update_metadata_attribute(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_model.add_or_update_metadata_attribute(self.H5_SUBTYPE_ATTRIBUTE, object.__class__.__name__)
 
         h5_model.write_to_h5(folder, path)
 

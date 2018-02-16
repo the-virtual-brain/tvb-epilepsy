@@ -1,10 +1,10 @@
 """
-Mechanism for parameter search exploration for LSA and simulations (it will have TVB or custom implementations)
+Mechanism for parameter search exploration for LSA and simulations (it will have TVB or Java implementations)
 """
 
 from copy import deepcopy
 import numpy as np
-from tvb_epilepsy.base.constants.module_constants import EIGENVECTORS_NUMBER_SELECTION
+from tvb_epilepsy.base.constants.configurations import EIGENVECTORS_NUMBER_SELECTION
 from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
@@ -15,7 +15,7 @@ from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.simulator.simulator_tvb import SimulatorTVB
-from tvb_epilepsy.service.simulator.simulator_custom import custom_model_builder
+from tvb_epilepsy.service.simulator.simulator_java import java_model_builder
 from tvb_epilepsy.io.h5_reader import H5Reader
 
 logger = initialize_logger(__name__)
@@ -160,7 +160,7 @@ def sim_run_fun(simulator_input, model_connectivity, params_paths, params_values
             if isinstance(simulator, SimulatorTVB):
                 model = model_build_dict[model._ui_name](model_configuration, zmode=model.zmode)
             else:
-                model = custom_model_builder(model_configuration)
+                model = java_model_builder(model_configuration)
             simulator.model = model
         # Now (further) update model if needed:
         model, params_paths, params_values, params_indices = \

@@ -7,7 +7,7 @@ from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.service.pse.pse_service import ABCPSEService
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.simulator.simulator_tvb import SimulatorTVB
-from tvb_epilepsy.service.simulator.simulator_custom import custom_model_builder
+from tvb_epilepsy.service.simulator.simulator_java import java_model_builder
 
 
 class SimulationPSEService(ABCPSEService):
@@ -52,7 +52,7 @@ class SimulationPSEService(ABCPSEService):
                 if isinstance(simulator_copy, SimulatorTVB):
                     model = model_build_dict[model_copy._ui_name](model_configuration, zmode=model_copy.zmode)
                 else:
-                    model = custom_model_builder(model_configuration)
+                    model = java_model_builder(model_configuration)
                 simulator_copy.model = model
             # Update model if needed
             # TODO: check if the name "model" is correct!

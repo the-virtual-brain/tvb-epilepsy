@@ -98,7 +98,7 @@ class H5Model(object):
                     obj = np.reshape(obj, output_shape)
                 except:
                     logger.warning("Failed to reshape read object to target shape " + str(output_shape) + "!" +
-                            "\nReturning array of shape " + str(obj.shape) + "!")
+                                   "\nReturning array of shape " + str(obj.shape) + "!")
         else:
             obj = update_object(obj, "/", self.metadata_dict, getORpop="pop")[0]
         if isinstance(obj, dict) and output_type.lower().find("dict") < 0:
