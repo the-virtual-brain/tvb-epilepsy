@@ -1,7 +1,6 @@
 # Some math tools
 
 import numpy as np
-from matplotlib import pyplot
 from itertools import product
 from tvb_epilepsy.base.constants.module_constants import WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
@@ -83,6 +82,10 @@ def curve_elbow_point(vals, interactive=INTERACTIVE_ELBOW_POINT):
     grad = np.gradient(np.gradient(np.gradient(cumsum_vals)))
     elbow = np.argmax(grad)
     if interactive:
+        from tvb_epilepsy.base.constants.configurations import MATPLOTLIB_BACKEND
+        import matplotlib
+        matplotlib.use(MATPLOTLIB_BACKEND)
+        from matplotlib import pyplot
         pyplot.ion()
         fig, ax = pyplot.subplots()
         xdata = range(len(vals))
