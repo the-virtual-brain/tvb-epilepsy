@@ -18,7 +18,7 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
                             n_samples, param_range=0.1, global_coupling=[],
                             healthy_regions_parameters=[],
                             model_configuration_builder=None, lsa_service=None,
-                            save_flag=False, folder_res=OutputConfig.FOLDER_RES, filename=None, logger=None, **kwargs):
+                            save_flag=False, folder_res=OutputConfig().FOLDER_RES, filename=None, logger=None, **kwargs):
     if logger is None:
         logger = initialize_logger(__name__)
     all_regions_indices = range(lsa_hypothesis.number_of_regions)
@@ -133,7 +133,7 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
 
 
 def pse_from_hypothesis(hypothesis, model_connectivity, region_labels, n_samples, param_range=0.1, global_coupling=[],
-                        healthy_regions_parameters=[], save_flag=False, folder_res=OutputConfig.FOLDER_RES,
+                        healthy_regions_parameters=[], save_flag=False, folder_res=OutputConfig().FOLDER_RES,
                         filename=None, **kwargs):
 
     logger = initialize_logger(__name__)
