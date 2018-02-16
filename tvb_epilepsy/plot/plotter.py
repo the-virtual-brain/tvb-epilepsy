@@ -1,15 +1,16 @@
 from collections import OrderedDict
 import numpy
 
+from tvb_epilepsy.base.constants.configurations import MATPLOTLIB_BACKEND,  MOUSEHOOVER, \
+                                                       FOLDER_FIGURES, FIG_FORMAT, LARGE_SIZE, \
+                                                       VERY_LARGE_SIZE, FIG_SIZE, VERY_LARGE_PROTRAIT, SUPER_LARGE_SIZE
 import matplotlib
-from tvb_epilepsy.base.constants.configurations import MATPLOTLIB_BACKEND
 matplotlib.use(MATPLOTLIB_BACKEND)
 from matplotlib import pyplot, gridspec
 # pyplot.ion()
-
 from matplotlib.colors import Normalize
-from mpldatacursor import HighlightingDataCursor
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from tvb_epilepsy.base.constants.model_constants import TAU0_DEF, TAU1_DEF, X1_EQ_CR_DEF, X1_DEF, X0_CR_DEF, X0_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.plot.base_plotter import BasePlotter
 from tvb_epilepsy.base.model.vep.sensors import Sensors
@@ -21,13 +22,23 @@ from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_s
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_y1, def_x1lin
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz, calc_fx1, calc_fx1_2d_taylor, \
     calc_x0_val_to_model_x0, raise_value_error
-from tvb_epilepsy.base.constants.model_constants import TAU0_DEF, TAU1_DEF, X1_EQ_CR_DEF, X1_DEF, X0_CR_DEF, X0_DEF
-from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMAT, LARGE_SIZE, MOUSEHOOVER, \
-    VERY_LARGE_SIZE, FIG_SIZE, VERY_LARGE_PROTRAIT, SUPER_LARGE_SIZE
 
 
 class Plotter(BasePlotter):
-    logger = initialize_logger(__name__)
+    def __init(self):
+        self.logger = initialize_logger(__name__)
+        self.HighlightingDataCursor = lambda *args, **kwargs: None
+        self.MOUSEHOOVER = MOUSEHOOVER
+        if matplotlib.get_backend() in matplotlib.rcsetup.interactive_bk and self.MOUSEHOOVER:
+            try:
+                from mpldatacursor import HighlightingDataCursor
+                self.HighlightingDataCursor = HighlightingDataCursor
+            except:
+                self.MOUSEHOOVER = False
+                self.logger.warning("Importing mpldatacursor failed! No highlighting functionality in plots!")
+        else:
+            self.logger.warning("Noninteractive matplotlib backend! No highlighting functionality in plots!")
+            self.MOUSEHOOVER = False
 
     def _plot_connectivity(self, connectivity, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
                            figure_name='Connectivity ', figsize=VERY_LARGE_SIZE):
@@ -338,11 +349,11 @@ class Plotter(BasePlotter):
             if isequal_string(mode, "raster"):  # set yticks as labels if this is a raster plot
                 # axYticks(labels, offset, nTS)
                 pyplot.gca().invert_yaxis()
-        if MOUSEHOOVER:
+        if self.MOUSEHOOVER:
             for line in lines:
                 # datacursor( lines[0], formatter='{label}'.format, bbox=dict(fc='white'),
                 #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
-                HighlightingDataCursor(line, formatter='{label}'.format, bbox=dict(fc='white'),
+                self.HighlightingDataCursor(line, formatter='{label}'.format, bbox=dict(fc='white'),
                                        arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5))
         self._save_figure(pyplot.gcf(), figure_name, figure_dir, figure_format)
         self._check_show()
@@ -655,11 +666,11 @@ class Plotter(BasePlotter):
         ax.axes.set_ylim([0.0, 6.0])
         ax.axes.set_xlabel('x1')
         ax.axes.set_ylabel('z')
-        if MOUSEHOOVER:
+        if self.MOUSEHOOVER:
             # datacursor( lines[0], formatter='{label}'.format, bbox=dict(fc='white'),
             #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
 
-            HighlightingDataCursor(points[0], formatter='{label}'.format, bbox=dict(fc='white'),
+            self.HighlightingDataCursor(points[0], formatter='{label}'.format, bbox=dict(fc='white'),
                                    arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5))
         if len(fig.get_label()) == 0:
             fig.set_label(figure_name)
