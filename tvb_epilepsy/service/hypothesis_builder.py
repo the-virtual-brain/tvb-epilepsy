@@ -1,6 +1,8 @@
 import numpy
+from tvb_epilepsy.base.constants.configurations import IN_HEAD
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.io.h5_reader import H5Reader
 
 
 class HypothesisBuilder(object):
@@ -192,3 +194,27 @@ class HypothesisBuilder(object):
 
     def build_lsa_hypothesis(self):
         return self._build_hypothesis_with_all_attributes()
+
+    def build_hypothesis_from_file(self, file, ep_indices=None):
+        ep_values = H5Reader().read_epileptogenicity(IN_HEAD, name=file)
+        disease_indices, = numpy.where(ep_values > 0)
+        disease_values = ep_values[disease_indices]
+        disease_values, disease_indices = self._ensure_normalization_or_sorting(disease_values, disease_indices)
+
+        if not ep_indices:
+            self.logger.info("An excitability hypothesis will be created with values: %s on indices: %s",
+                             disease_values, disease_indices)
+            return self.build_excitability_hypothesis(disease_values, disease_indices)
+
+        if numpy.equal(disease_indices, ep_indices):
+            self.logger.info("An epileptogenicity hypothesis will be created with values: %s on indices: %s",
+                             disease_values, disease_indices)
+            return self.build_epileptogenicity_hypothesis(disease_values, disease_indices)
+
+        ep_values = disease_values[ep_indices]
+        exc_indices = numpy.setdiff1d(disease_indices, ep_indices)
+        exc_values = disease_values[exc_indices]
+        self.logger.info(
+            "A mixed hypothesis will be created with x0 values: %s on x0 indices: %s and ep values: %s on ep indices: %s",
+            exc_values, exc_indices, ep_values, ep_indices)
+        return self.build_mixed_hypothesis(ep_values, ep_indices, exc_values, exc_indices)
