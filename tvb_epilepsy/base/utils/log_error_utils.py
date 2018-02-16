@@ -4,10 +4,10 @@ import os
 import sys
 import logging
 from logging.handlers import TimedRotatingFileHandler
-from tvb_epilepsy.base.constants.configurations import FOLDER_LOGS
+from tvb_epilepsy.base.constants.config import OutputConfig
 
 
-def initialize_logger(name, target_folder=FOLDER_LOGS):
+def initialize_logger(name, target_folder=OutputConfig().FOLDER_LOGS):
     """
     create logger for a given module
     :param name: Logger Base Name

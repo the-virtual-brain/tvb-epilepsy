@@ -3,14 +3,14 @@ Module to compute the resting equilibrium point of a Virtual Epileptic Patient m
 """
 
 import numpy
-from tvb_epilepsy.base.constants.configurations import SYMBOLIC_CALCULATIONS_FLAG
+from tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_epilepsy.base.computations.calculations_utils import *
 
 logger = initialize_logger(__name__)
 
 
-if SYMBOLIC_CALCULATIONS_FLAG:
+if CalculusConfig.SYMBOLIC_CALCULATIONS_FLAG:
 
     try:
         from sympy import solve, solve_poly_system, solveset, S, lambdify

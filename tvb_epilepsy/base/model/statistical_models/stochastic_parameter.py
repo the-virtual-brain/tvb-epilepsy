@@ -1,6 +1,6 @@
 from abc import ABCMeta
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import MAX_SINGLE_VALUE, MIN_SINGLE_VALUE
+from tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, make_float
 from tvb_epilepsy.base.utils.data_structures_utils import get_val_key_for_first_keymatch_in_dict
@@ -11,7 +11,8 @@ from tvb_epilepsy.base.computations.probability_distributions.probability_distri
 class StochasticParameterBase(Parameter, ProbabilityDistribution):
     __metaclass__ = ABCMeta
 
-    def __init__(self, name="Parameter", low=MIN_SINGLE_VALUE, high=MAX_SINGLE_VALUE, loc=0.0, scale=1.0, p_shape=()):
+    def __init__(self, name="Parameter", low=CalculusConfig.MIN_SINGLE_VALUE, high=CalculusConfig.MAX_SINGLE_VALUE,
+                 loc=0.0, scale=1.0, p_shape=()):
         Parameter.__init__(self, name, low, high, p_shape)
         self.loc = loc
         self.scale = scale
