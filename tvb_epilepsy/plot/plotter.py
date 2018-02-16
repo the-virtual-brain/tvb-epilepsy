@@ -1,5 +1,5 @@
+from collections import OrderedDict
 import numpy
-from scipy.stats import zscore
 import matplotlib
 matplotlib.use('Qt4Agg')
 from matplotlib import pyplot, gridspec
@@ -7,7 +7,6 @@ from matplotlib import pyplot, gridspec
 from matplotlib.colors import Normalize
 from mpldatacursor import HighlightingDataCursor
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.plot.base_plotter import BasePlotter
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.computations.math_utils import compute_in_degree
@@ -24,7 +23,6 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, FIG_FORMA
 
 
 class Plotter(BasePlotter):
-    logger = initialize_logger(__name__)
 
     def _plot_connectivity(self, connectivity, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
                            figure_name='Connectivity ', figsize=VERY_LARGE_SIZE):
@@ -695,13 +693,14 @@ class Plotter(BasePlotter):
     def parameters_pair_plots(self, samples, params=["tau1", "tau0", "K", "sig_eq", "eps"], stats=None, skip_samples=0,
                               title='Parameters samples', figure_name=None, figure_dir=FOLDER_FIGURES,
                               figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT):
-        subtitles = self._params_stats_subtitles(params, stats)
+        subtitles = list(self._params_stats_subtitles(params, stats))
+        subtitles.sort()
         samples = ensure_list(samples)
         if len(samples) > 1:
             samples = list_of_dicts_to_dicts_of_ndarrays(samples)
         else:
             samples = samples[0]
-        samples = extract_dict_stringkeys(samples, params, modefun="equal")
+        samples = sort_dict(extract_dict_stringkeys(samples, params, modefun="equal"))
         self.pair_plots(samples, samples.keys(), True, skip_samples, title, subtitles,
                         figure_name, figure_dir, figsize, figure_format)
 
@@ -753,8 +752,10 @@ class Plotter(BasePlotter):
         region_labels = kwargs.get("regions_labels", model_inversion.region_labels)
         if isequal_string(region_mode, "all"):
             region_inds = range(statistical_model.n_regions)
+            seizure_indices = statistical_model.active_regions
         else:
             region_inds = statistical_model.active_regions
+            seizure_indices = None
         n_active_regions = len(region_inds)
         # plot scalar parameters in pair plots
         self.parameters_pair_plots(samples,
@@ -767,17 +768,16 @@ class Plotter(BasePlotter):
                                             kwargs.get("region_violin_params", ["x0", "x1eq", "x1init", "zinit"]),
                                             stats, skip_samples=kwargs.get("skip_samples", 0),
                                             per_chain=kwargs.get("violin_plot_per_chain", False),
-                                            labels=region_labels[region_inds], # seizure_indices=seizure_indices,
+                                            labels=region_labels[region_inds], seizure_indices=seizure_indices,
                                             figure_name=statistical_model.name + " regions parameters samples")
         if time is None:
             time = numpy.array(range(signals.shape[0]))
         time = time.flatten()
         sig_prior = statistical_model.parameters["sig"].mean
         if statistical_model.observation_model.find("seeg") >= 0:
-            sensor_labels = kwargs.get("signals_labels", None)[model_inversion.signals_inds]
+            sensor_labels = kwargs.get("signals_labels", model_inversion.sensors_labels)[model_inversion.signals_inds]
         else:
             sensor_labels = region_labels[model_inversion.signals_inds]
-            seizure_indices = None
         stats_string = {signals_str: "\n", x1_str: "\n", "z": "\n", "MC": ""}
         stats_region_labels = list(region_labels[region_inds])
         if isinstance(stats, dict):
@@ -791,10 +791,10 @@ class Plotter(BasePlotter):
                                        for ip in range(n_active_regions)]
             for p_str in [signals_str, x1_str, "z"]:
                 stats_string[p_str] = stats_string[p_str][:-2]
-        observation_dict = {'observation signals': signals}
+        observation_dict = OrderedDict({'observation signals': signals})
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), ensure_list(samples))):
-            name = statistical_model.name + "_chain" + str(id_est)
-            observation_dict.update({"observation signals' fit": sample[signals_str].T})
+            name = statistical_model.name + "_chain" + str(id_est+1)
+            observation_dict.update({"fit chain " + str(id_est+1): sample[signals_str].T})
             self.plot_raster(sort_dict({x1_str: sample[x1_str].T, 'z': sample["z"].T}), time,
                              special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                              title=name + ": Hidden states fit rasterplot",
@@ -804,7 +804,7 @@ class Plotter(BasePlotter):
                              figure_dir=figure_dir,
                              figure_format=figure_format, figsize=VERY_LARGE_SIZE)
             self.plot_raster(sort_dict({dX1t_str: sample[dX1t_str].T, dZt_str: sample[dZt_str].T}), time[:-1], #
-                             special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
+                             time_units=est.get('time_units', "ms"), # special_idx=seizure_indices,
                              title=name + ": Hidden states random walk rasterplot",
                              subtitles=[dX1t_str,
                                         dZt_str +
@@ -830,7 +830,7 @@ class Plotter(BasePlotter):
                 if isinstance(stats, dict):
                     MC_title = MC_title + ": "
                     for skey, sval in stats.iteritems():
-                        MC_title = MC_title + skey + "_mean=" + sval["MC"].mean() + ", "
+                        MC_title = MC_title + skey + "_mean=" + str(sval["MC"].mean()) + ", "
                     MC_title = MC_title[:-2]
                 self.plot_regions2regions(est[mc_str], region_labels, 122, MC_title)
                 self._save_figure(pyplot.gcf(), conn_figure_name, figure_dir, figure_format)

@@ -69,18 +69,18 @@ class StanService(object):
         model_data_path = kwargs.get("model_data_path", self.model_data_path)
         if reset_path:
             self.model_data_path = model_data_path
-        extension = self.model_data_path.split(".", -1)[-1]
+        extension = model_data_path.split(".", -1)[-1]
         if isequal_string(extension, "R"):
-            model_data = rload(self.model_data_path)
+            model_data = rload(model_data_path)
         elif isequal_string(extension, "npy"):
-            model_data = np.load(self.model_data_path).item()
+            model_data = np.load(model_data_path).item()
         elif isequal_string(extension, "mat"):
-            model_data = loadmat(self.model_data_path)
+            model_data = loadmat(model_data_path)
         elif isequal_string(extension, "pkl"):
-            with open(self.model_data_path, 'wb') as f:
+            with open(model_data_path, 'wb') as f:
                 model_data = pickle.load(f)
         elif isequal_string(extension, "h5"):
-            model_data = H5Reader().read_dictionary(self.model_data_path)
+            model_data = H5Reader().read_dictionary(model_data_path)
         else:
             raise_not_implemented_error("model_data file (" + model_data_path +
                                         ") that are not one of (.R, .npy, .mat, .pkl) cannot be read!")

@@ -39,6 +39,10 @@ except ImportError:
 if 'dionperd' in platform.node():
     WORK_FOLDER = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', 'results')
     IN_HEAD = os.path.join(WORK_FOLDER, "CC", 'TVB3', 'Head')
+elif platform.node() == 'jupyter.cluster.thevirtualbrain.org':
+    CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
+    WORK_FOLDER = os.path.join(os.path.expanduser("~"), 'VBtech', 'results')
+    IN_HEAD = os.path.join(WORK_FOLDER, 'CC', 'TVB3', 'Head')
 
 
 # OUT folders for Logs, Results or Figures

@@ -1,7 +1,8 @@
 import time
 import numpy as np
-from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MAX, X1INIT_MIN, X1INIT_MAX, ZINIT_MIN, \
-    ZINIT_MAX, SIG_EQ_DEF, SIG_INIT_DEF
+from scipy.stats import zscore
+from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1EQ_MAX, X1INIT_MIN, X1INIT_MAX, \
+                                                                         ZINIT_MIN, ZINIT_MAX, MC_SCALE, SIG_INIT_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, assert_arrays, \
     extract_dict_stringkeys
 from tvb_epilepsy.base.computations.math_utils import select_greater_values_array_inds
@@ -16,10 +17,8 @@ from tvb_epilepsy.base.epileptor_models import *
 
 class ODEModelInversionService(ModelInversionService):
 
-    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, model_name="vep_ode",
-                 **kwargs):
-        super(ODEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model,
-                                                       model_name, **kwargs)
+    def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, **kwargs):
+        super(ODEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model, **kwargs)
         self.time = None
         self.dt = 0.0
         self.n_times = 0
@@ -110,16 +109,21 @@ class ODEModelInversionService(ModelInversionService):
     def set_simulated_target_data(self, target_data, statistical_model, **kwargs):
         self.signals_inds = range(self.n_regions)
         self.data_type = "lfp"
+        signals = np.array([])
         if statistical_model.observation_model.find("seeg") >= 0:
             self.data_type = "seeg"
-            signals = np.array(extract_dict_stringkeys(sort_dict(target_data), "SEEG",
-                                                       modefun="find", break_after=1))
-            if len(signals) > 0:
-                signals = signals.values()[0]
-                self.signals_inds = range(self.gain_matrix.shape[0])
-            else:
+            self.signals_inds = range(self.gain_matrix.shape[0])
+            if not(isequal_string(statistical_model.observation_model, "seeg_logpower")):
+                signals = extract_dict_stringkeys(sort_dict(target_data), kwargs.get("seeg_dataset", "SEEG0"),
+                                                  modefun="find", two_way_search=True, break_after=1)
+                if len(signals) > 0:
+                    signals = signals.values()[0]
+            if signals.size == 0:
                 signals = np.array(target_data.get("lfp", target_data["x1"]))
-                signals = (np.dot(self.gain_matrix[:, self.signals_inds], signals.T)).T
+                if isequal_string(statistical_model.observation_model, "seeg_logpower"):
+                    signals = np.log(np.dot(self.gain_matrix[self.signals_inds], np.exp(signals.T))).T
+                else:
+                    signals = (np.dot(self.gain_matrix[self.signals_inds], signals.T)).T
         else:
             # if statistical_model.observation_expression == "x1z_offset":
             #     signals = ((target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T +
@@ -139,6 +143,18 @@ class ODEModelInversionService(ModelInversionService):
         self.observation_shape = signals.shape
         (self.n_times, self.n_signals) = self.observation_shape
         return signals, target_data
+
+    def normalize_signals(self, signals, normalization=None):
+        if isinstance(normalization, basestring):
+            if isequal_string(normalization, "zscore"):
+                signals = zscore(signals, axis=None) / 3.0
+            elif isequal_string(normalization, "minmax"):
+                signals -= signals.min()
+                signals /= signals.max()
+            else:
+                self.logger.warn("Ignoring target signals' normalization " + normalization +
+                                 ",\nwhich is not one of the currently available 'zscore' and 'minmax'!")
+        return signals
 
     def set_target_data_and_time(self, target_data_type, target_data, statistical_model, **kwargs):
         if isequal_string(target_data_type, "simulated"):
@@ -162,8 +178,7 @@ class ODEModelInversionService(ModelInversionService):
             signals, self.time, self.n_times = cut_signals_tails(signals, self.time, kwargs.get("cut_signals_tails"))
             self.observation_shape = (self.n_times, self.n_signals)
         # TODO: decide about signals' normalization for the different (sensors', sources' cases)
-        # signals -= signals.min()
-        # signals /= signals.max()
+        signals = self.normalize_signals(signals, kwargs.get("normalization", None))
         statistical_model.n_signals = self.n_signals
         statistical_model.n_times = self.n_times
         statistical_model.dt = self.dt
@@ -249,7 +264,7 @@ class ODEModelInversionService(ModelInversionService):
                                                               sig_init, sig_init / 3.0,
                                                               pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("scale_signal", "lognormal", (),
-                                                              0.5, 10.0,
+                                                              0.1, 10.0,
                                                               1.0, 1.0,
                                                               pdf_params={"mean": 1.0, "skew": 0.0}, **kwargs))
         self.default_parameters.update(set_parameter_defaults("offset_signal", "normal", (),
@@ -260,9 +275,8 @@ class ODEModelInversionService(ModelInversionService):
         self.logger.info("Generating model...")
         active_regions = kwargs.pop("active_regions", [])
         self.default_parameters.update(kwargs)
-        model = ODEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times,
-                                    self.dt, kwargs.get("x1eq_max", X1EQ_MAX), kwargs.get("sig_eq", SIG_EQ_DEF),
-                                    kwargs.get("sig_init", SIG_INIT_DEF), **self.default_parameters)
+        model = ODEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
+                                    **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model

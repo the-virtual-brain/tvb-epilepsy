@@ -35,34 +35,34 @@ data {
     int DEBUG;
     int SIMULATE;
     int nn;
-    int nt;
+    int nt; // 1012
     int ns;
-    real I1;
-    real tau0;
-    real dt;
+    real I1; //=3.1
+    real tau0; //=10, [3, 30]
+    real dt; //~= 0.1 (used 0.0976562)
     row_vector [nn] x0_star_mu;
-    row_vector [nn] x0_star_std;
-    // row_vector [nn] x0_mu;
+    row_vector [nn] x0_star_std; // 1/3 of the smaller distance of mu to boundary (either max or min value) for each x0
+    // row_vector [nn] x0_mu;  // healthy: -2.5, sick ~=-2.0, max = [-3.0, -4.0], min = -1.0
     // real x0_std;
     // real x0_lo;
-    real x0_hi;
-    real x_eq_def;
-    row_vector [nn] x_init_mu;
-    row_vector [nn] z_init_mu;
-    real init_std;
-    real time_scale_mu;
-    real time_scale_std;
-    real k_mu;
-    real k_std;
-    real sigma_mu;
-    real sigma_std;
-    real epsilon_mu;
-    real epsilon_std;
-    real offset_mu;
-    real offset_std;
-    real amplitude_mu;
-    real amplitude_std;
-    real amplitude_lo;
+    real x0_hi; // [-3.0, -4.0]
+    real x_eq_def; // = -5.0/3 the value of all healhty non-active node
+    row_vector [nn] x_init_mu; // in [-2.0, -1.0], used -1.566
+    row_vector [nn] z_init_mu; // in [2.9, 4.5], used 3.060
+    real init_std; // 0.0333
+    real time_scale_mu; // 0.5
+    real time_scale_std; // 0.0667
+    real k_mu; // 0.575 = 50 / n_regions(=87)
+    real k_std; // 0.096 = k_mu/6
+    real sigma_mu; // =0.01
+    real sigma_std; // =0.01/3
+    real epsilon_mu; //=0.1
+    real epsilon_std; //=0.1/3
+    real offset_mu;  //=0.0
+    real offset_std; //=1.0
+    real amplitude_mu; //=1.0
+    real amplitude_std; //=1.0/6
+    real amplitude_lo; // =0.3
     matrix[ns, nn] gain;
     row_vector[ns] seeg_log_power[nt];
     vector[nn] Ic;
@@ -112,7 +112,7 @@ transformed parameters {
     row_vector[ns] mu_seeg_log_power[nt];
 
     x[1] = x_init; // - 1.5;
-    z[1] = z_init; // 2.0;
+    z[1] = z_init; // 3.0;
     for (t in 1:(nt-1)) {
         x[t+1] = x_step(x[t], z[t], I1, dt*time_scale, x_eta[t], sqrtdt*sigma);
         z[t+1] = z_step(x[t], z[t], x0, k*SC, Ic, x_eq_def, dt*time_scale, z_eta[t], sqrtdt*sigma, tau0);

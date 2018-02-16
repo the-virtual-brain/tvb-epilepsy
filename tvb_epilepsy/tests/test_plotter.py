@@ -1,14 +1,17 @@
 import os
 import numpy
+from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
 from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, IN_HEAD, FOLDER_LOGS, FOLDER_RES
+from tvb_epilepsy.service.epileptor_model_factory import build_ep_2sv_model
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter
+from tvb_epilepsy.top.scripts.simulation_scripts import prepare_vois_ts_dict
 
 
 class TestPlotter(object):
@@ -87,6 +90,23 @@ class TestPlotter(object):
 
         self.plotter.plot_state_space(mc, region_labels=numpy.array(["a"]), special_idx=[0], model=model, zmode=zmode,
                                       figure_name="")
+
+        assert os.path.exists(file_name)
+
+    def test_plot_sim_results(self):
+        lsa_hypothesis = HypothesisBuilder().build_lsa_hypothesis()
+        mc = ModelConfigurationBuilder().build_model_from_E_hypothesis(lsa_hypothesis, numpy.array([1]))
+        model = build_ep_2sv_model(mc)
+        res = prepare_vois_ts_dict(VOIS["EpileptorDP2D"], numpy.array([[[1, 2, 3], [1, 2, 3]], [[1, 2, 3], [1, 2, 3]]]))
+        res['time'] = numpy.array([1, 2, 3])
+        res['time_units'] = 'msec'
+
+        # TODO: this figure_name is constructed inside plot method, so it can change
+        figure_name = "EpileptorDP2D_Simulated_TAVG"
+        file_name = os.path.join(FOLDER_FIGURES, figure_name + ".png")
+        assert not os.path.exists(file_name)
+
+        self.plotter.plot_sim_results(model, [0], res)
 
         assert os.path.exists(file_name)
 

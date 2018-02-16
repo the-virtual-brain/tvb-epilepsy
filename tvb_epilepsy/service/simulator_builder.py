@@ -131,7 +131,7 @@ class SimulatorBuilder(object):
 
     def build_simulator_TVB_fitting(self, model_configuration, connectivity):
 
-        tau0 = 30.0
+        tau0 = 10.0
         tau1 = 0.5
 
         (dt, fsAVG, sim_length, monitor_period) = self._compute_time_scales()
