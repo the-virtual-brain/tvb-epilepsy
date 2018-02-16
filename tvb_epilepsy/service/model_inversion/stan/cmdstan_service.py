@@ -1,6 +1,6 @@
 import time
 from shutil import copyfile
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, CMDSTAN_PATH
+from tvb_epilepsy.base.constants.configurations import FOLDER_RES, CMDSTAN_PATH, C_COMPILER #, STAN_ACTIVATION
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
 from tvb_epilepsy.base.utils.command_line_utils import execute_command
@@ -17,10 +17,11 @@ class CmdStanService(StanService):
                  fitmethod="sample", random_seed=12345, init="random", **options):
         super(CmdStanService, self).__init__(model_name, model, model_dir, model_code, model_code_path, model_data_path,
                                              fitmethod)
-        self.assert_fitmethod()
         if not os.path.isfile(os.path.join(cmdstanpath, 'runCmdStanTests.py')):
             raise_value_error('Please provide CmdStan path, e.g. lib.cmdstan_path("/path/to/")!')
         self.path = cmdstanpath
+        #execute_command(STAN_ACTIVATION, cwd=self.path, shell=True)
+        self.assert_fitmethod()
         self.command = ""
         self.options = {"init": init, "random_seed": random_seed}
         self.options = self.set_options(**options)
@@ -59,7 +60,7 @@ class CmdStanService(StanService):
     def compile_stan_model(self, save_model=True, **kwargs):
         self.model_code_path = kwargs.pop("model_code_path", self.model_code_path)
         self.logger.info("Compiling model...")
-        command = "make " + self.model_code_path.split(".stan", 1)[0] + " && " + \
+        command = "make CC=" + C_COMPILER + " " + self.model_code_path.split(".stan", 1)[0] + " && " + \
                   "chmod +x " + self.model_code_path.split(".stan", 1)[0]
         self.compilation_time = execute_command(command, cwd=self.path, shell=True)[1]
         self.logger.info(str(self.compilation_time) + ' sec required to compile')
