@@ -1,15 +1,14 @@
 import os
 import numpy as np
 from tvb_epilepsy.base.constants.model_constants import MAX_DISEASE_VALUE
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES
-from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
-    dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
+from tvb_epilepsy.base.constants.config import OutputConfig
+from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays
+from tvb_epilepsy.base.utils.data_structures_utils import dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
-from tvb_epilepsy.top.scripts.hypothesis_scripts import start_lsa_run
-# from tvb_epilepsy.service.pse_service import PSEService
 from tvb_epilepsy.service.pse.lsa_pse_service import LSAPSEService
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
+from tvb_epilepsy.top.scripts.hypothesis_scripts import start_lsa_run
 
 
 ###
@@ -19,7 +18,7 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
                             n_samples, param_range=0.1, global_coupling=[],
                             healthy_regions_parameters=[],
                             model_configuration_builder=None, lsa_service=None,
-                            save_flag=False, folder_res=FOLDER_RES, filename=None, logger=None, **kwargs):
+                            save_flag=False, folder_res=OutputConfig().FOLDER_RES, filename=None, logger=None, **kwargs):
     if logger is None:
         logger = initialize_logger(__name__)
     all_regions_indices = range(lsa_hypothesis.number_of_regions)
@@ -134,7 +133,8 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
 
 
 def pse_from_hypothesis(hypothesis, model_connectivity, region_labels, n_samples, param_range=0.1, global_coupling=[],
-                        healthy_regions_parameters=[], save_flag=False, folder_res=FOLDER_RES, filename=None, **kwargs):
+                        healthy_regions_parameters=[], save_flag=False, folder_res=OutputConfig().FOLDER_RES,
+                        filename=None, **kwargs):
 
     logger = initialize_logger(__name__)
     logger.info("Running hypothesis: " + hypothesis.name)

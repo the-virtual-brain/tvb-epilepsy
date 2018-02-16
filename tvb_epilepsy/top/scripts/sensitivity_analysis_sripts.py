@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from tvb_epilepsy.base.constants.model_constants import MAX_DISEASE_VALUE
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES
+from tvb_epilepsy.base.constants.config import OutputConfig
 from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
     dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
@@ -115,10 +115,10 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
     if save_services:
         logger.info(pse.__repr__())
         writer = H5Writer()
-        writer.write_pse_service(pse, os.path.join(FOLDER_RES, method + "_test_pse_service.h5"))
+        writer.write_pse_service(pse, os.path.join(OutputConfig().FOLDER_RES, method + "_test_pse_service.h5"))
         logger.info(sensitivity_analysis_service.__repr__())
         writer.write_sensitivity_analysis_service(sensitivity_analysis_service,
-                                                  os.path.join(FOLDER_RES, method + "_test_sa_service.h5"))
+                                                  os.path.join(OutputConfig().FOLDER_RES, method + "_test_sa_service.h5"))
     return results, pse_results
 
 
