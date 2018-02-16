@@ -2,7 +2,7 @@ from collections import OrderedDict
 import numpy
 
 from tvb_epilepsy.base.constants.configurations import MATPLOTLIB_BACKEND,  MOUSEHOOVER, \
-                                                       FOLDER_FIGURES, FIG_FORMAT, LARGE_SIZE, \
+                                                       FOLDER_FIGURES, FIG_FORMAT, LARGE_SIZE, SAVE_FLAG, SHOW_FLAG, \
                                                        VERY_LARGE_SIZE, FIG_SIZE, VERY_LARGE_PROTRAIT, SUPER_LARGE_SIZE
 import matplotlib
 matplotlib.use(MATPLOTLIB_BACKEND)
@@ -25,7 +25,9 @@ from tvb_epilepsy.base.computations.calculations_utils import calc_fz, calc_fx1,
 
 
 class Plotter(BasePlotter):
-    def __init(self):
+
+    def __init__(self, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG):
+        super(Plotter, self).__init__(save_flag, show_flag)
         self.logger = initialize_logger(__name__)
         self.HighlightingDataCursor = lambda *args, **kwargs: None
         self.MOUSEHOOVER = MOUSEHOOVER
