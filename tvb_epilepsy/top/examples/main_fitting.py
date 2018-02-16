@@ -4,7 +4,7 @@ import os
 import numpy as np
 from scipy.io import loadmat, savemat
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES, FOLDER_VEP, \
-                                                                                FOLDER_VEP_ONLINE, STATS_MODELS_PATH
+                                                       FOLDER_VEP_ONLINE, FOLDER_VEP_TESTS, STATS_MODELS_PATH
 from tvb_epilepsy.base.constants.module_constants import TVB, CUSTOM
 from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
@@ -30,7 +30,7 @@ writer = H5Writer()
 
 plotter = Plotter()
 
-FOLDER_VEP_HOME = os.path.join(FOLDER_VEP_ONLINE, "tests")
+FOLDER_VEP_TESTS = os.path.join(FOLDER_VEP_ONLINE, "tests")
 
 
 def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join(DATA_CUSTOM, 'Head'),
@@ -44,11 +44,11 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
     model_code_path = os.path.join(model_code_dir, stats_model_name + ".stan")
     if isequal_string(stan_service, "CmdStan"):
         stan_service = CmdStanService(model_name=stats_model_name, model=None, model_code=None,
-                                      model_dir=FOLDER_VEP_HOME, model_code_path=model_code_path,
+                                      model_dir=FOLDER_VEP_TESTS, model_code_path=model_code_path,
                                       fitmethod=fitmethod, random_seed=12345, init="random")
     else:
         stan_service = PyStanService(model_name=stats_model_name, model=None, model_code=None,
-                                     model_dir=FOLDER_VEP_HOME, model_code_path=model_code_path,
+                                     model_dir=FOLDER_VEP_TESTS, model_code_path=model_code_path,
                                      fitmethod=fitmethod, random_seed=12345, init="random")
     stan_service.set_or_compile_model()
 
@@ -59,8 +59,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
     for hyp in hypos[:1]:
 
         # --------------------------Model configuration and LSA-----------------------------------
-        model_config_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_ModelConfig.h5")
-        hyp_file =os.path.join(FOLDER_VEP_HOME, hyp.name + "_LSA.h5")
+        model_config_file = os.path.join(FOLDER_VEP_TESTS, hyp.name + "_ModelConfig.h5")
+        hyp_file =os.path.join(FOLDER_VEP_TESTS, hyp.name + "_LSA.h5")
         if os.path.isfile(hyp_file) and \
            os.path.isfile(model_config_file):
             model_configuration = reader.read_model_configuration(model_config_file)
@@ -73,9 +73,9 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         dynamical_model = "EpileptorDP2D"
 
         # -------------------------- Get model_data and observation signals: -------------------------------------------
-        model_inversion_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_ModelInversionService.h5")
-        stats_model_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_StatsModel.h5")
-        model_data_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_ModelData.h5")
+        model_inversion_file = os.path.join(FOLDER_VEP_TESTS, hyp.name + "_ModelInversionService.h5")
+        stats_model_file = os.path.join(FOLDER_VEP_TESTS, hyp.name + "_StatsModel.h5")
+        model_data_file = os.path.join(FOLDER_VEP_TESTS, hyp.name + "_ModelData.h5")
         if os.path.isfile(model_inversion_file) and \
            os.path.isfile(stats_model_file) and \
            os.path.isfile(model_data_file):
@@ -98,7 +98,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                 target_data_type = "empirical"
                 statistical_model.observation_model = "seeg_logpower"
                 decimate = 2
-                ts_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_ts_empirical.mat")
+                ts_file = os.path.join(FOLDER_VEP_TESTS, hyp.name + "_ts_empirical.mat")
                 try:
                     vois_ts_dict = loadmat(ts_file)
                     time = vois_ts_dict["time"].flatten()
@@ -130,7 +130,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                 target_data_type = "simulated"
                 statistical_model.observation_model = "lfp_power" #"seeg_logpower" # "lfp_power"
                 decimate = 1
-                ts_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_ts.h5")
+                ts_file = os.path.join(FOLDER_VEP_TESTS, hyp.name + "_ts.h5")
                 vois_ts_dict = \
                     from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis, simulation_mode=TVB,
                                                            sim_type="fitting", dynamical_model=dynamical_model,
