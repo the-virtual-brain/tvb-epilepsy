@@ -20,7 +20,7 @@ if CalculusConfig.SYMBOLIC_CALCULATIONS_FLAG:
 
     except:
         logger.warning("Unable to load sympy. Turning to scipy.optimization.")
-        SYMBOLIC_CALCULATIONS_FLAG = False
+        CalculusConfig.SYMBOLIC_CALCULATIONS_FLAG = False
 
 
 def def_x1eq(X1_DEF, X1_EQ_CR_DEF, n_regions):
@@ -39,7 +39,7 @@ def calc_eq_x1(yc, Iext1, x0, K, w, a=A_DEF, b=B_DEF, d=D_DEF, zmode=numpy.array
     shape = x0.shape
     x0, K, yc, Iext1, a, b, d = assert_arrays([x0, K, yc, Iext1, a, b, d], (n,))
     w = assert_arrays([w], (n, n))
-    # if SYMBOLIC_CALCULATIONS_FLAG:
+    # if CalculusConfig.SYMBOLIC_CALCULATIONS_FLAG:
     #
     #     fx1z, v = symbol_eqtn_fx1z(n, model, zmode)[1:]  # , x1_neg=True, z_pos=True
     #     fx1z = fx1z.tolist()
@@ -96,7 +96,7 @@ def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, s=S_DEF, x2_neg=
     shape = zeq.shape
     n = zeq.size
     zeq, geq, Iext2, s = assert_arrays([zeq, geq, Iext2, s], (n,))
-    if SYMBOLIC_CALCULATIONS_FLAG:
+    if CalculusConfig.SYMBOLIC_CALCULATIONS_FLAG:
         fx2y2, v = symbol_eqtn_fx2y2(n, x2_neg)[1:]
         fx2y2 = fx2y2.tolist()
         x2eq = []

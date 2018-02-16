@@ -1,7 +1,7 @@
 import importlib
 import numpy as np
 from SALib.sample import saltelli, fast_sampler, morris, ff
-from tvb_epilepsy.base.constants.configurations import MAX_SINGLE_VALUE
+from tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
@@ -22,8 +22,8 @@ class SalibSamplingService(StochasticSamplingService):
             loc = getattr(parameter, "loc", loc)
             scale = getattr(parameter, "scale", scale)
         else:
-            low = np.array(kwargs.pop("low", -MAX_SINGLE_VALUE))
-            high = np.array(kwargs.pop("high", MAX_SINGLE_VALUE))
+            low = np.array(kwargs.pop("low", -CalculusConfig.MAX_SINGLE_VALUE))
+            high = np.array(kwargs.pop("high", CalculusConfig.MAX_SINGLE_VALUE))
             parameter_shape = kwargs.pop("shape", (1,))
         scale = (high - low) * scale
         low = low + loc

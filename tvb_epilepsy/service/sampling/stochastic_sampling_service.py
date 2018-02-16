@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-from tvb_epilepsy.base.constants.configurations import MAX_SINGLE_VALUE
+from tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, isequal_string
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import StochasticParameterBase
@@ -50,14 +50,14 @@ class StochasticSamplingService(SamplingService):
             scale = parameter.scale
         else:
             parameter_shape = kwargs.pop("shape", (1,))
-            low = kwargs.pop("low", -MAX_SINGLE_VALUE)
-            high = kwargs.pop("high", MAX_SINGLE_VALUE)
+            low = kwargs.pop("low", -CalculusConfig.MAX_SINGLE_VALUE)
+            high = kwargs.pop("high", CalculusConfig.MAX_SINGLE_VALUE)
             prob_distr = kwargs.pop("probability_distribution", "uniform")
         low, high = self.check_for_infinite_bounds(low, high)
         low, high, n_outputs, parameter_shape = self.check_size(low, high, parameter_shape)
         self.adjust_shape(parameter_shape)
         out_shape = tuple([self.n_samples] + list(self.shape)[:-1])
-        if np.any(low > -MAX_SINGLE_VALUE) or np.any(high < MAX_SINGLE_VALUE):
+        if np.any(low > -CalculusConfig.MAX_SINGLE_VALUE) or np.any(high < CalculusConfig.MAX_SINGLE_VALUE):
             if not(isequal_string(self.sampling_module, "scipy")):
                 self.logger.warning("Switching to scipy for truncated distributions' sampling!")
             self.sampling_module = "scipy"

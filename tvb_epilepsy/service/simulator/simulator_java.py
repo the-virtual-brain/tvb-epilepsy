@@ -12,7 +12,7 @@ import os
 import subprocess
 from copy import copy
 import numpy
-from tvb_epilepsy.base.constants.configurations import LIB_PATH, HDF5_LIB, JAR_PATH, JAVA_MAIN_SIM
+from tvb_epilepsy.base.constants.config import GenericConfig
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import obj_to_dict, assert_arrays
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
@@ -157,9 +157,10 @@ class SimulatorJava(ABCSimulator):
         self._save_serialized(self.custom_config, self.json_config_path)
 
     def launch_simulation(self, n_report_blocks=0):
-        opts = "java -Dncsa.hdf.hdf5lib.H5.hdf5lib=" + os.path.join(LIB_PATH, HDF5_LIB) + " " + \
-               "-Djava.library.path=" + LIB_PATH + " " + "-cp" + " " + JAR_PATH + " " + \
-               JAVA_MAIN_SIM + " " + os.path.abspath(self.json_config_path) + " " + os.path.abspath(self.head_path)
+        opts = "java -Dncsa.hdf.hdf5lib.H5.hdf5lib=" + os.path.join(GenericConfig.LIB_PATH, GenericConfig.HDF5_LIB) + \
+               " " + "-Djava.library.path=" + GenericConfig.LIB_PATH + " " + "-cp" + " " + GenericConfig.JAR_PATH + \
+               " " + GenericConfig.JAVA_MAIN_SIM + " " + os.path.abspath(self.json_config_path) + " " + \
+               os.path.abspath(self.head_path)
         try:
             status = subprocess.call(opts, shell=True)
             print(status)
