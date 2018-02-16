@@ -6,7 +6,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import extract_dict_stringkey
     get_val_key_for_first_keymatch_in_dict
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.service.probability_distribution_factory import compute_pdf_params, probability_distribution_factory
-from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
+from tvb_epilepsy.base.computations.probability_distributions import ProbabilityDistributionTypes
 
 #TODO: This could be turned into a builder once it is stable
 

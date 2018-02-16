@@ -6,7 +6,7 @@ from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
-from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
+from tvb_epilepsy.base.computations.probability_distributions import ProbabilityDistributionTypes
 from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter, set_parameter_defaults, \
     generate_stochastic_parameter
 from tvb_epilepsy.service.sampling.deterministic_sampling_service import DeterministicSamplingService

@@ -2,9 +2,9 @@ from collections import OrderedDict
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
-from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
+from tvb_epilepsy.base.computations.probability_distributions import ProbabilityDistributionTypes
 from tvb_epilepsy.base.utils.data_structures_utils import make_float, isequal_string
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.continuous_probability_distribution \
+from tvb_epilepsy.base.computations.probability_distributions.continuous_probability_distribution \
     import ContinuousProbabilityDistribution
 
 

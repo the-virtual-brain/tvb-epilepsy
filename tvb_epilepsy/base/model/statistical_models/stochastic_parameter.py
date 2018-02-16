@@ -5,8 +5,7 @@ from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, make_float
 from tvb_epilepsy.base.utils.data_structures_utils import get_val_key_for_first_keymatch_in_dict
 from tvb_epilepsy.base.model.parameter import Parameter
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.probability_distribution import \
-    ProbabilityDistribution
+from tvb_epilepsy.base.computations.probability_distributions.probability_distribution import ProbabilityDistribution
 
 
 class StochasticParameterBase(Parameter, ProbabilityDistribution):
