@@ -45,7 +45,7 @@ class H5Reader(object):
         h5_file.close()
 
         conn = Connectivity(path, weights, tract_lengths, region_labels, region_centres, hemispheres, orientations)
-        self.logger.info("Successfully read connectvity: %s" % conn)
+        self.logger.info("Successfully read connectvity!") #: %s" % conn)
 
         return conn
 
@@ -68,7 +68,7 @@ class H5Reader(object):
         h5_file.close()
 
         surface = Surface(vertices, triangles, vertex_normals)
-        self.logger.info("Successfully read surface: %s" % surface)
+        self.logger.info("Successfully read surface!") #: %s" % surface)
 
         return surface
 
@@ -130,7 +130,7 @@ class H5Reader(object):
         h5_file.close()
 
         sensors = Sensors(labels, locations, orientations=orientations, gain_matrix=gain_matrix, s_type=type)
-        self.logger.info("Successfully read sensors: %s" % sensors)
+        self.logger.info("Successfully read sensors!") #: %s" % sensors)
 
         return sensors
 
@@ -149,7 +149,7 @@ class H5Reader(object):
         data = h5_file['/data'][()]
 
         h5_file.close()
-        self.logger.info("Successfully read volume mapping: %s" % data)
+        self.logger.info("Successfully read volume mapping!") #: %s" % data)
 
         return data
 
@@ -168,7 +168,7 @@ class H5Reader(object):
         data = h5_file['/data'][()]
 
         h5_file.close()
-        self.logger.info("Successfully read region mapping: %s" % data)
+        self.logger.info("Successfully read region mapping!") #: %s" % data)
 
         return data
 
@@ -187,7 +187,7 @@ class H5Reader(object):
         data = h5_file['/data'][()]
 
         h5_file.close()
-        self.logger.info("Successfully read structural MRI: %s" % data)
+        self.logger.info("Successfully read structural MRI!") #: %s" % data)
 
         return data
 
@@ -205,7 +205,7 @@ class H5Reader(object):
         sensorsSEEG, sensorsEEG, sensorsMEG = self.read_sensors(path)
 
         head = Head(conn, srf, rm, vm, t1, path, sensorsSEEG=sensorsSEEG, sensorsEEG=sensorsEEG, sensorsMEG=sensorsMEG)
-        self.logger.info("Successfully read Head: %s" % head)
+        self.logger.info("Successfully read Head!") #: %s" % head)
 
         return head
 
@@ -223,7 +223,7 @@ class H5Reader(object):
         values = h5_file['/values'][()]
 
         h5_file.close()
-        self.logger.info("Successfully read epileptogenicity values: %s" % values)
+        self.logger.info("Successfully read epileptogenicity values!") #: %s" % values)
 
         return values
 
@@ -242,7 +242,7 @@ class H5Reader(object):
         time = numpy.linspace(start_time, total_time, nr_of_steps)
 
         self.logger.info("First Channel sv sum: " + str(numpy.sum(data[:, 0])))
-        self.logger.info("Successfully read Timeseries: %s" % data)
+        self.logger.info("Successfully read Timeseries!") #: %s" % data)
         h5_file.close()
 
         return time, data
