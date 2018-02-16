@@ -7,6 +7,8 @@ from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_epilepsy.io.tvb_data_reader import TVBReader
+from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.lsa_service import LSAService
@@ -14,21 +16,16 @@ from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationB
 from tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration_to_simulation
 
-if Config.generic.DATA_MODE is Config.generic.TVB:
-    from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
-else:
-    from tvb_epilepsy.io.h5_reader import H5Reader as Reader
-
 
 def main_vep(head_folder, ep_name="clinical_hypothesis", x0_indices=[], pse_flag=False, sim_flag=True):
     folder_results = os.path.join(head_folder, ep_name, "res")
     if not (os.path.isdir(folder_results)):
         os.mkdir(folder_results)
-    config = Config(head_folder, folder_results, True)
+    config = Config(head_folder, Config.generic.MODE_JAVA, folder_results, True)
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
 
     # -------------------------------Reading data-----------------------------------
-    reader = Reader()
+    reader = TVBReader() if config.input.IS_TVB_MODE else H5Reader()
     writer = H5Writer()
     logger.info("Reading from: %s", head_folder)
     head = reader.read_head(head_folder)

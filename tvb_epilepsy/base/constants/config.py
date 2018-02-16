@@ -17,10 +17,9 @@ class GenericConfig(object):
     JAR_PATH = "/Applications/Episense.app/Contents/Java/episense-fx-app.jar"
     JAVA_MAIN_SIM = "de.codebox.episense.fx.StartSimulation"
 
-    # Identify and choose the Simulator to use data folder from where to read.
-    JAVA = 'java'
-    TVB = 'tvb'
-    DATA_MODE = JAVA
+    # Identify and choose the Simulator, or data folder type to read.
+    MODE_JAVA = "java"
+    MODE_TVB = "tvb"
 
 
 class InputConfig(object):
@@ -30,19 +29,26 @@ class InputConfig(object):
     def HEAD(self):
         if self._head_folder is not None:
             return self._head_folder
-        # Expecting to run in the top of tvb_epilepsy GIT repo, with the dummy head
-        return os.path.join(self._base_input, "data", "head")
 
-    @property
-    def TVB_DATA(self):
+        if not self.IS_TVB_MODE:
+            # Expecting to run in the top of tvb_epilepsy GIT repo, with the dummy head
+            return os.path.join(self._base_input, "data", "head")
+
+        # or else, try to find tvb_data module
         try:
             import tvb_data
             return os.path.dirname(tvb_data.__file__)
         except ImportError:
             return self._base_input
 
-    def __init__(self, head_folder=None):
+    @property
+    def IS_TVB_MODE(self):
+        """Identify and choose the Input data type to use"""
+        return self._data_mode == GenericConfig.MODE_TVB
+
+    def __init__(self, head_folder=None, data_mode=GenericConfig.MODE_JAVA):
         self._head_folder = head_folder
+        self._data_mode = data_mode
 
 
 class OutputConfig(object):
@@ -122,6 +128,7 @@ class Config(object):
     figures = FiguresConfig()
     calcul = CalculusConfig()
 
-    def __init__(self, head_folder=None, output_base=None, separate_by_run=False):
-        self.input = InputConfig(head_folder)
+    def __init__(self, head_folder=None, data_mode=GenericConfig.MODE_JAVA,
+                 output_base=None, separate_by_run=False):
+        self.input = InputConfig(head_folder, data_mode)
         self.out = OutputConfig(output_base, separate_by_run)
