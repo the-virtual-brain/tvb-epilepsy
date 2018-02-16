@@ -86,7 +86,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
                                                        x1eq_max=-1.0, priors_mode="uninformative")
                                                                                         # observation_expression="lfp"
-            statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0, observation_model="lfp_power")
+            statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0, observation_model="seeg_logpower")
             statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
                                                                       active_regions_th=0.1, reset=True)
             plotter.plot_statistical_model(statistical_model, "Statistical Model")
@@ -128,7 +128,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             else:
                 # -------------------------- Get simulated data (simulate if necessary) -----------------------------------
                 target_data_type = "simulated"
-                statistical_model.observation_model = "lfp_power" #"seeg_logpower" # "lfp_power"
+                statistical_model.observation_model = "seeg_logpower" #"seeg_logpower" # "lfp_power"
                 decimate = 1
                 ts_file = os.path.join(FOLDER_VEP_TESTS, hyp.name + "_ts.h5")
                 vois_ts_dict = \
@@ -151,12 +151,11 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             signals, time, statistical_model, vois_ts_dict = \
                 model_inversion.set_target_data_and_time(target_data_type, vois_ts_dict, statistical_model,
                                                          decimate=decimate, cut_signals_tails=cut_signals_tails,
-                                                         auto_selection=False,
-                                                         # select_signals=True, manual_selection=manual_selection,
-                                                         # auto_selection="correlation-power", # auto_selection=False,
-                                                         # n_electrodes=n_electrodes,
-                                                         # sensors_per_electrode=sensors_per_electrode,
-                                                         # group_electrodes=True, # normalization="zscore",
+                                                         manual_selection=manual_selection,
+                                                         auto_selection="correlation-power", # auto_selection=False,
+                                                         n_electrodes=n_electrodes,
+                                                         sensors_per_electrode=sensors_per_electrode,
+                                                         group_electrodes=True, normalization="baseline-amplitude",
                                                         )
             # if len(model_inversion.signals_inds) < head.get_sensors_id().number_of_sensors:
             #     statistical_model = \
@@ -239,25 +238,27 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                  dZt_str=dZt_str,  trajectories_plot=True, connectivity_plot=connectivity_plot,
                                  pair_plot_params=pair_plot_params, region_violin_params=region_violin_params)
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
-        for id_est, est in enumerate(ensure_list(ests)):
-            fit_model_configuration_builder = \
-                ModelConfigurationBuilder(hyp.number_of_regions, K=est[k_str] * hyp.number_of_regions)
-            x0_values_fit = \
-                fit_model_configuration_builder._compute_x0_values_from_x0_model(est['x0'])
-            hyp_fit = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).set_name(
-                'fit' + str(id_est) + "_" + hyp.name).build_excitability_hypothesis(x0_values_fit, range(
-                model_configuration.n_regions))
-            model_configuration_fit = fit_model_configuration_builder.build_model_from_hypothesis(hyp_fit,  #est["MC"]
-                                                                                                  estMC(est))
-            writer.write_model_configuration(model_configuration_fit,
-                                             os.path.join(results_dir, hyp_fit.name + "_ModelConfig.h5"))
-
-            # Plot nullclines and equilibria of model configuration
-            plotter.plot_state_space(model_configuration_fit,
-                                     model_inversion.region_labels,
-                                     special_idx=statistical_model.active_regions,
-                                     model="6d", zmode="lin",
-                                     figure_name=hyp_fit.name + "_Nullclines and equilibria")
+        # for id_est, est in enumerate(ensure_list(ests)):
+        #     fit_model_configuration_builder = \
+        #         ModelConfigurationBuilder(hyp.number_of_regions, K=est[k_str] * hyp.number_of_regions)
+        #     x0_values_fit = \
+        #         fit_model_configuration_builder._compute_x0_values_from_x0_model(est['x0'])
+        #     hyp_fit = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).set_name(
+        #         'fit' + str(id_est) + "_" + hyp.name).build_excitability_hypothesis(x0_values_fit, range(
+        #         model_configuration.n_regions))
+        #     # model_configuration_fit = fit_model_configuration_builder.build_model_from_hypothesis(hyp_fit,  #est["MC"]
+        #     #                                                                                       estMC(est))
+        #     model_configuration_fit = fit_model_configuration_builder.\
+        #                                                 build_model_from_hypothesis(hyp_fit, model_inversion.get_SC())
+        #     writer.write_model_configuration(model_configuration_fit,
+        #                                      os.path.join(results_dir, hyp_fit.name + "_ModelConfig.h5"))
+        #
+        #     # Plot nullclines and equilibria of model configuration
+        #     plotter.plot_state_space(model_configuration_fit,
+        #                              model_inversion.region_labels,
+        #                              special_idx=statistical_model.active_regions,
+        #                              model="6d", zmode="lin",
+        #                              figure_name=hyp_fit.name + "_Nullclines and equilibria")
         logger.info("Done!")
 
 
@@ -307,8 +308,8 @@ if __name__ == "__main__":
     # times_on_off = [20.0, 100.0]
     # ep_name = "clinical_hypothesis_preseeg_right"
     EMPIRICAL = False
-    stats_model_name = "vep_sde"
-    # stats_model_name = "vep-fe-rev-08a"
+    # stats_model_name = "vep_sde"
+    stats_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
     if EMPIRICAL:
         main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
