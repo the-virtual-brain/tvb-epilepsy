@@ -44,11 +44,11 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
     model_code_path = os.path.join(model_code_dir, stats_model_name + ".stan")
     if isequal_string(stan_service, "CmdStan"):
         stan_service = CmdStanService(model_name=stats_model_name, model=None, model_code=None,
-                                      model_dir=FOLDER_VEP_TESTS, model_code_path=model_code_path,
+                                      model_dir=FOLDER_RES, model_code_path=model_code_path,
                                       fitmethod=fitmethod, random_seed=12345, init="random")
     else:
         stan_service = PyStanService(model_name=stats_model_name, model=None, model_code=None,
-                                     model_dir=FOLDER_VEP_TESTS, model_code_path=model_code_path,
+                                     model_dir=FOLDER_RES, model_code_path=model_code_path,
                                      fitmethod=fitmethod, random_seed=12345, init="random")
     stan_service.set_or_compile_model()
 
