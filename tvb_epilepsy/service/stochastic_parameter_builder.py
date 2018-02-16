@@ -1,5 +1,5 @@
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import MAX_SINGLE_VALUE, MIN_SINGLE_VALUE
+from tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import StochasticParameterBase
 from tvb_epilepsy.base.utils.data_structures_utils import extract_dict_stringkeys, \
@@ -16,7 +16,8 @@ from tvb_epilepsy.base.computations.probability_distributions import Probability
 # The argument pdf_params targets the distribution "side"of a stochastic parameter instance, whereas,
 # the rest of the parameters target the loc and scale of the stochastic parameter.
 # The values for std, lo and hi can be callables of mean.
-def set_parameter_defaults(name, _pdf="normal", _shape=(), _lo=MIN_SINGLE_VALUE, _hi=MAX_SINGLE_VALUE, _mean=None,
+def set_parameter_defaults(name, _pdf="normal", _shape=(), _lo=CalculusConfig.MIN_SINGLE_VALUE,
+                           _hi=CalculusConfig.MAX_SINGLE_VALUE, _mean=None,
                            _std=None, pdf_params={}, remove_name=False, **kwargs):
     if remove_name:
         out_name = lambda pkey: pkey
@@ -94,14 +95,15 @@ def set_parameter(name, use="manual", **kwargs):
     return parameter
 
 
-def generate_stochastic_parameter(name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, loc=0.0, scale=1.0,
+def generate_stochastic_parameter(name="Parameter", low=-CalculusConfig.MAX_SINGLE_VALUE, 
+                                  high=CalculusConfig.MAX_SINGLE_VALUE, loc=0.0, scale=1.0,
                                   p_shape=(), probability_distribution=ProbabilityDistributionTypes.UNIFORM,
                                   optimize_pdf=False, use="scipy", **target_params):
     thisProbabilityDistribution = probability_distribution_factory(probability_distribution.lower(), get_instance=False)
 
     class StochasticParameter(StochasticParameterBase, thisProbabilityDistribution):
-        def __init__(self, name="Parameter", low=-MAX_SINGLE_VALUE, high=MAX_SINGLE_VALUE, loc=0.0, scale=1.0,
-                     p_shape=(), use="scipy", **target_params):
+        def __init__(self, name="Parameter", low=-CalculusConfig.MAX_SINGLE_VALUE, high=CalculusConfig.MAX_SINGLE_VALUE,
+                     loc=0.0, scale=1.0, p_shape=(), use="scipy", **target_params):
             StochasticParameterBase.__init__(self, name, low, high, loc, scale, p_shape)
             thisProbabilityDistribution.__init__(self, **target_params)
             success = True

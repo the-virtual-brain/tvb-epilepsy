@@ -1,12 +1,14 @@
 import os
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, FOLDER_LOGS, FOLDER_FIGURES
+from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 
 
-class TestHypothesis():
+class TestHypothesis(object):
+    config = Config()
+
     @classmethod
     def setup_class(cls):
-        for direc in (FOLDER_LOGS, FOLDER_RES, FOLDER_FIGURES):
+        for direc in (cls.config.out.FOLDER_LOGS, cls.config.out.FOLDER_RES, cls.config.out.FOLDER_FIGURES):
             if not os.path.exists(direc):
                 os.makedirs(direc)
 
@@ -19,7 +21,7 @@ class TestHypothesis():
 
     @classmethod
     def teardown_class(cls):
-        for direc in (FOLDER_LOGS, FOLDER_RES, FOLDER_FIGURES):
+        for direc in (cls.config.out.FOLDER_LOGS, cls.config.out.FOLDER_RES, cls.config.out.FOLDER_FIGURES):
             for dir_file in os.listdir(direc):
                 os.remove(os.path.join(os.path.abspath(direc), dir_file))
             os.removedirs(direc)

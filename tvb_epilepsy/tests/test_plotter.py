@@ -6,7 +6,7 @@ from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
-from tvb_epilepsy.base.constants.configurations import FOLDER_FIGURES, IN_HEAD, FOLDER_LOGS, FOLDER_RES
+from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.service.epileptor_model_factory import build_ep_2sv_model
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
@@ -16,17 +16,17 @@ from tvb_epilepsy.top.scripts.simulation_scripts import prepare_vois_ts_dict
 
 class TestPlotter(object):
     plotter = Plotter()
+    config = Config()
 
     @classmethod
     def setup_class(cls):
-        for direc in (FOLDER_LOGS, FOLDER_RES, FOLDER_FIGURES):
+        for direc in (cls.config.out.FOLDER_LOGS, cls.config.out.FOLDER_RES, cls.config.out.FOLDER_FIGURES):
             if not os.path.exists(direc):
                 os.makedirs(direc)
 
-    @staticmethod
-    def _prepare_dummy_head():
+    def _prepare_dummy_head(self):
         reader = H5Reader()
-        connectivity = reader.read_connectivity(os.path.join(IN_HEAD, "Connectivity.h5"))
+        connectivity = reader.read_connectivity(os.path.join(self.config.input.HEAD, "Connectivity.h5"))
         cort_surface = Surface([], [])
         seeg_sensors = Sensors(numpy.array(["sens1", "sens2"]), numpy.array([[0, 0, 0], [0, 1, 0]]))
         head = Head(connectivity, cort_surface, sensorsSEEG=seeg_sensors)
@@ -40,15 +40,15 @@ class TestPlotter(object):
         filename2 = "HeadStats.png"
         filename3 = "1_-_SEEG_-_Projection.png"
 
-        assert not os.path.exists(os.path.join(FOLDER_FIGURES, filename1))
-        assert not os.path.exists(os.path.join(FOLDER_FIGURES, filename2))
-        assert not os.path.exists(os.path.join(FOLDER_FIGURES, filename3))
+        assert not os.path.exists(os.path.join(self.config.out.FOLDER_FIGURES, filename1))
+        assert not os.path.exists(os.path.join(self.config.out.FOLDER_FIGURES, filename2))
+        assert not os.path.exists(os.path.join(self.config.out.FOLDER_FIGURES, filename3))
 
         self.plotter.plot_head(head)
 
-        assert os.path.exists(os.path.join(FOLDER_FIGURES, filename1))
-        assert os.path.exists(os.path.join(FOLDER_FIGURES, filename2))
-        assert os.path.exists(os.path.join(FOLDER_FIGURES, filename3))
+        assert os.path.exists(os.path.join(self.config.out.FOLDER_FIGURES, filename1))
+        assert os.path.exists(os.path.join(self.config.out.FOLDER_FIGURES, filename2))
+        assert os.path.exists(os.path.join(self.config.out.FOLDER_FIGURES, filename3))
 
     def test_plot_stochastic_parameter(self):
         K_mean = 10 * 2.5 / 87
@@ -57,7 +57,7 @@ class TestPlotter(object):
                           K_pdf_params={"skew": 0.0, "mean": K_mean / K_std}, K_mean=K_mean,
                           K_std=K_std)
         figure_name = "K_parameter"
-        figure_file = os.path.join(FOLDER_FIGURES, figure_name + ".png")
+        figure_file = os.path.join(self.config.out.FOLDER_FIGURES, figure_name + ".png")
         assert not os.path.exists(figure_file)
 
         self.plotter.plot_stochastic_parameter(K, figure_name=figure_name)
@@ -70,7 +70,7 @@ class TestPlotter(object):
         lsa_hypothesis = hypo_builder.build_lsa_hypothesis()
         mc = ModelConfigurationBuilder().build_model_from_E_hypothesis(lsa_hypothesis, numpy.array([1]))
 
-        figure_file = os.path.join(FOLDER_FIGURES, figure_name + ".png")
+        figure_file = os.path.join(self.config.out.FOLDER_FIGURES, figure_name + ".png")
         assert not os.path.exists(figure_file)
 
         self.plotter.plot_lsa(lsa_hypothesis, mc, True, None, region_labels=numpy.array(["a"]), title="")
@@ -85,7 +85,7 @@ class TestPlotter(object):
         zmode = "lin"
         # TODO: this figure_name is constructed inside plot method, so it can change
         figure_name = "_" + "Epileptor_" + model + "_z-" + str(zmode)
-        file_name = os.path.join(FOLDER_FIGURES, figure_name + ".png")
+        file_name = os.path.join(self.config.out.FOLDER_FIGURES, figure_name + ".png")
         assert not os.path.exists(file_name)
 
         self.plotter.plot_state_space(mc, region_labels=numpy.array(["a"]), special_idx=[0], model=model, zmode=zmode,
@@ -103,7 +103,7 @@ class TestPlotter(object):
 
         # TODO: this figure_name is constructed inside plot method, so it can change
         figure_name = "EpileptorDP2D_Simulated_TAVG"
-        file_name = os.path.join(FOLDER_FIGURES, figure_name + ".png")
+        file_name = os.path.join(self.config.out.FOLDER_FIGURES, figure_name + ".png")
         assert not os.path.exists(file_name)
 
         self.plotter.plot_sim_results(model, [0], res)
@@ -112,7 +112,7 @@ class TestPlotter(object):
 
     @classmethod
     def teardown_class(cls):
-        for direc in (FOLDER_LOGS, FOLDER_RES, FOLDER_FIGURES):
+        for direc in (cls.config.out.FOLDER_LOGS, cls.config.out.FOLDER_RES, cls.config.out.FOLDER_FIGURES):
             for dir_file in os.listdir(direc):
                 os.remove(os.path.join(os.path.abspath(direc), dir_file))
             os.removedirs(direc)

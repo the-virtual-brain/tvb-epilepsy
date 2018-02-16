@@ -2,10 +2,11 @@
 """
 Service to do LSA computation.
 
-TODO: it might be useful to store eigenvalues and eigenvectors, as well as the parameters of the computation, such as eigen_vectors_number and LSAService in a h5 file
+TODO: it might be useful to store eigenvalues and eigenvectors, as well as the parameters of the computation,
+such as eigen_vectors_number and LSAService in a h5 file
 """
 import numpy
-from tvb_epilepsy.base.constants.configurations import EIGENVECTORS_NUMBER_SELECTION, WEIGHTED_EIGENVECTOR_SUM
+from tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
@@ -18,8 +19,9 @@ from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 class LSAService(object):
     logger = initialize_logger(__name__)
 
-    def __init__(self, eigen_vectors_number_selection=EIGENVECTORS_NUMBER_SELECTION, eigen_vectors_number=None,
-                 weighted_eigenvector_sum=WEIGHTED_EIGENVECTOR_SUM, normalize_propagation_strength=False):
+    def __init__(self, eigen_vectors_number_selection=CalculusConfig.EIGENVECTORS_NUMBER_SELECTION,
+                 eigen_vectors_number=None, weighted_eigenvector_sum=CalculusConfig.WEIGHTED_EIGENVECTOR_SUM,
+                 normalize_propagation_strength=False):
         self.eigen_vectors_number_selection = eigen_vectors_number_selection
         self.eigen_values = []
         self.eigen_vectors = []

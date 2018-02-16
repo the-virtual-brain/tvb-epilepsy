@@ -2,8 +2,9 @@
 
 import os
 import shutil
+from tvb_epilepsy.base.constants.config import OutputConfig
 
-from tvb_epilepsy.base.constants.configurations import FOLDER_TEMP
+FOLDER_TEMP = OutputConfig().FOLDER_TEMP
 
 
 def get_temporary_folder():
