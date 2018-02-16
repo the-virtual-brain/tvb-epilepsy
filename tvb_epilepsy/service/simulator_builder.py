@@ -135,7 +135,6 @@ class SimulatorBuilder(object):
         tau1 = 0.5
 
         (dt, fsAVG, sim_length, monitor_period) = self._compute_time_scales()
-        dt = 0.25 * dt
 
         settings, model = self._build_simulator_TVB_settings_and_model(model_configuration, dt, sim_length,
                                                                        monitor_period)
@@ -153,7 +152,6 @@ class SimulatorBuilder(object):
         tau0 = 40000
 
         (dt, fsAVG, sim_length, monitor_period) = self._compute_time_scales()
-        dt = 0.25 * dt
 
         settings, model = self._build_simulator_TVB_settings_and_model(model_configuration, dt, sim_length,
                                                                        monitor_period)
