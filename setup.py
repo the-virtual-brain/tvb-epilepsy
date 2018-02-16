@@ -9,5 +9,5 @@ setuptools.setup(name='tvb_epilepsy',
                  author_email='<insert here>',
                  license="GPL",
                  url='https://github.com/the-virtual-brain/tvb_epilepsy-epilepsy',
-                 packages=['tvb_epilepsy'], requires=["numpy", "sympy", "h5py", "tvb"]
+                 packages=['tvb_epilepsy'], requires=["numpy", "sympy", "h5py", "tvb", "mpldatacursor"]
                  )
