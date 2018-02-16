@@ -3,7 +3,7 @@ Entry point for working with VEP
 """
 import os
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import IN_HEAD, FOLDER_RES, TVB, DATA_MODE
+from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
@@ -14,52 +14,29 @@ from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationB
 from tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration_to_simulation
 
-if DATA_MODE is TVB:
+if Config.generic.DATA_MODE is Config.generic.TVB:
     from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
 else:
     from tvb_epilepsy.io.h5_reader import H5Reader as Reader
 
-PSE_FLAG = False
-SIM_FLAG = True
 
-HEAD = "Head"
-
-
-def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folder_res=FOLDER_RES,
-             pse_flag=PSE_FLAG, sim_flag=SIM_FLAG):
-    subject_folder = os.path.join(os.path.dirname(os.path.dirname(IN_HEAD)), subject)
-    folder_res = os.path.basename(folder_res)
-    FOLDER_RES = os.path.join(subject_folder, HEAD, ep_name)
-    if not (os.path.isdir(FOLDER_RES)):
-        os.mkdir(FOLDER_RES)
-    FOLDER_RES = os.path.join(FOLDER_RES, folder_res)
-    if not (os.path.isdir(FOLDER_RES)):
-        os.mkdir(FOLDER_RES)
-    FOLDER_FIGS = os.path.join(FOLDER_RES, "figs")
-    FOLDER_LOGS = os.path.join(FOLDER_RES, "logs")
-    for FOLDER in (FOLDER_RES, FOLDER_FIGS, FOLDER_LOGS):
-        if not (os.path.isdir(FOLDER)):
-            os.mkdir(FOLDER)
-
-    logger = initialize_logger(__name__, FOLDER_LOGS)
+def main_vep(head_folder, ep_name="clinical_hypothesis", x0_indices=[], pse_flag=False, sim_flag=True):
+    folder_results = os.path.join(head_folder, ep_name, "res")
+    if not (os.path.isdir(folder_results)):
+        os.mkdir(folder_results)
+    config = Config(head_folder, folder_results, True)
+    logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
 
     # -------------------------------Reading data-----------------------------------
-    data_folder = os.path.join(subject_folder, HEAD)
     reader = Reader()
     writer = H5Writer()
-    logger.info("Reading from: " + data_folder)
-    head = reader.read_head(data_folder)
-    # head.plot(figure_dir=FOLDER_FIGS)
+    logger.info("Reading from: %s", head_folder)
+    head = reader.read_head(head_folder)
+    plotter = Plotter(config)
+    plotter.plot_head(head)
+
     # --------------------------Hypothesis definition-----------------------------------
-    # # Manual definition of hypothesis...:
-    # x0_indices = [20]
-    # x0_values = [0.9]
-    # e_indices = [70]
-    # e_values = [0.9]
-    # disease_values = x0_values + e_values
-    # disease_indices = x0_indices + e_indices
-    # ...or reading a custom file:
-    disease_values = reader.read_epileptogenicity(data_folder, name=ep_name)
+    disease_values = reader.read_epileptogenicity(head_folder, name=ep_name)
 
     hypo_builder = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).set_normalize(True)
     threshold = np.min(X0_DEF, E_DEF)
@@ -68,9 +45,7 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
 
     # This is an example of Epileptogenicity Hypothesis:
     hyp_E = hypo_builder.build_epileptogenicity_hypothesis_based_on_threshold(disease_values, threshold)
-    hypotheses = (hyp_E,)
-
-    # # This is an example of Excitability Hypothesis:
+    # This is an example of Excitability Hypothesis:
     hyp_x0 = hypo_builder.build_excitability_hypothesis_based_on_threshold(disease_values, threshold)
 
     disease_indices = hyp_E.e_indices + hyp_x0.x0_indices
@@ -95,40 +70,32 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
 
     # --------------------------Hypothesis and LSA-----------------------------------
     for hyp in hypotheses:
-        folder_res = os.path.join(FOLDER_RES, hyp.name)
-        folder_figs = os.path.join(FOLDER_FIGS, hyp.name)
-        for folder in (folder_res, folder_figs):
-            if not (os.path.isdir(folder)):
-                os.mkdir(folder)
-        logger.info("\n\nRunning hypothesis: " + hyp.name)
-        logger.info("\n\nCreating model configuration...")
-        model_configuration_builder = ModelConfigurationBuilder(hyp.number_of_regions)
-        writer.write_model_configuration_builder(model_configuration_builder,
-                                                 os.path.join(folder_res, "model_config_service.h5"))
+        logger.info("Running hypothesis: %s", hyp.name)
+        logger.info("Creating model configuration...")
+        builder = ModelConfigurationBuilder(hyp.number_of_regions)
+        writer.write_model_configuration_builder(builder,
+                                                 os.path.join(config.out.FOLDER_RES, "model_config_service.h5"))
         if hyp.type == "Epileptogenicity":
-            model_configuration = model_configuration_builder. \
-                build_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
+            model_configuration = builder.build_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
         else:
-            model_configuration = model_configuration_builder. \
-                build_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
-        writer.write_model_configuration(model_configuration, os.path.join(folder_res, "ModelConfiguration.h5"))
+            model_configuration = builder.build_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
+        writer.write_model_configuration(model_configuration,
+                                         os.path.join(config.out.FOLDER_RES, "ModelConfiguration.h5"))
         # Plot nullclines and equilibria of model configuration
-        plotter = Plotter()
         plotter.plot_state_space(model_configuration, head.connectivity.region_labels,
                                  special_idx=disease_indices, model="2d", zmode="lin",
-                                 figure_name=hyp.name + "_StateSpace", figure_dir=folder_figs)
-        logger.info("\n\nRunning LSA...")
+                                 figure_name=hyp.name + "_StateSpace")
+        logger.info("Running LSA...")
         lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
         lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
-        writer.write_hypothesis(lsa_hypothesis, os.path.join(folder_res, lsa_hypothesis.name + ".h5"))
-        writer.write_lsa_service(lsa_service, os.path.join(folder_res, "lsa_config_service.h5"))
+        writer.write_hypothesis(lsa_hypothesis, os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + ".h5"))
+        writer.write_lsa_service(lsa_service, os.path.join(config.out.FOLDER_RES, "lsa_config_service.h5"))
         plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
-                         lsa_service.eigen_vectors_number, head.connectivity.region_labels, None,
-                         figure_dir=folder_figs)
+                         lsa_service.eigen_vectors_number, head.connectivity.region_labels, None)
         if pse_flag:
             n_samples = 100
             # --------------Parameter Search Exploration (PSE)-------------------------------
-            logger.info("\n\nRunning PSE LSA...")
+            logger.info("Running PSE LSA...")
             pse_results = pse_from_lsa_hypothesis(lsa_hypothesis,
                                                   head.connectivity.normalized_weights,
                                                   head.connectivity.region_labels,
@@ -136,15 +103,16 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
                                                   global_coupling=[{"indices": all_regions_indices}],
                                                   healthy_regions_parameters=[{"name": "x0_values",
                                                                                "indices": healthy_indices}],
-                                                  model_configuration_builder=model_configuration_builder,
-                                                  lsa_service=lsa_service, save_flag=True, folder_res=folder_res,
+                                                  model_configuration_builder=builder,
+                                                  lsa_service=lsa_service, save_flag=True,
+                                                  folder_res=config.out.FOLDER_RES,
                                                   filename="PSE_LSA", logger=logger)[0]
             plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
                              lsa_service.eigen_vectors_number, head.connectivity.region_labels, pse_results,
-                             title="Hypothesis PSE LSA Overview", figure_dir=folder_figs)
+                             title="Hypothesis PSE LSA Overview")
         if sim_flag:
-            sim_folder_res = os.path.join(folder_res, "simulations")
-            sim_folder_figs = os.path.join(folder_figs, "simulations")
+            sim_folder_res = os.path.join(config.out.FOLDER_RES, "simulations")
+            sim_folder_figs = os.path.join(config.out.FOLDER_FIGURES, "simulations")
             for folder in (sim_folder_res, sim_folder_figs):
                 if not (os.path.isdir(folder)):
                     os.mkdir(folder)
@@ -155,22 +123,23 @@ def main_vep(subject="TVB3", ep_name="clinical_hypothesis", x0_indices=[], folde
                 vois_ts_dict = \
                     from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
                                                            sim_type=sim_type, dynamical_model=dynamical_model,
-                                                           simulation_mode=TVB, ts_file=ts_file, plot_flag=True,
+                                                           simulation_mode=config.generic.TVB, ts_file=ts_file,
+                                                           plot_flag=True,
                                                            results_dir=sim_folder_res, figure_dir=sim_folder_figs)
 
 
 if __name__ == "__main__":
 
-    x0_indices = ([40, 42], [], [1, 26], [], [])
-
-    SUBJECT = "TVB"
-
+    subjects_top_folder = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', 'results', "CC")
+    subject_base_name = "TVB"
     subj_ids = [1, 2, 3, 4, 4]
-    ep_names = 3 * ["clinical_hypothesis_preseeg"] \
-               + ["clinical_hypothesis_preseeg_right"] + ["clinical_hypothesis_preseeg_bilateral"]
+
+    x0_indices = ([40, 42], [], [1, 26], [], [])
+    ep_names = (3 * ["clinical_hypothesis_preseeg"] + ["clinical_hypothesis_preseeg_right"]
+                + ["clinical_hypothesis_preseeg_bilateral"])
+
     for subj_id in range(4, len(subj_ids)):
-        subject = SUBJECT + str(subj_ids[subj_id])
-        ep_name = ep_names[subj_id]
+        subject_name = subject_base_name + str(subj_ids[subj_id])
+        head_path = os.path.join(subjects_top_folder, subject_name, "Head")
         x0_inds = x0_indices[subj_id]
-        main_vep(subject=subject, ep_name=ep_name, x0_indices=x0_inds, folder_res=FOLDER_RES,
-                 pse_flag=PSE_FLAG, sim_flag=SIM_FLAG)
+        main_vep(head_folder=head_path, ep_name=ep_names[subj_id], x0_indices=x0_inds)

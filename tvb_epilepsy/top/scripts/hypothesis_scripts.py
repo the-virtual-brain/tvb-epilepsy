@@ -1,4 +1,4 @@
-
+from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.constants.configurations import *
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
@@ -35,9 +35,9 @@ def from_head_to_hypotheses(ep_name, data_mode=DATA_MODE, data_folder=IN_HEAD,
     logger.info("Reading from: " + data_folder)
     head = reader.read_head(data_folder)
     if plot_head:
-        plotter = Plotter()
-        plotter.plot_head(head, figure_dir=figure_dir)
-        # head.plot(figure_dir=figure_dir)
+        config = Config(output_base=os.path.dirname(figure_dir))
+        plotter = Plotter(config)
+        plotter.plot_head(head)
     # --------------------------Hypothesis definition-----------------------------------
     # # Manual definition of hypothesis...:
     # x0_indices = [20]
@@ -83,7 +83,8 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
     if save_flag:
         writer.write_model_configuration(model_configuration, os.path.join(results_dir, hyp.name + "_ModelConfig.h5"))
     # Plot nullclines and equilibria of model configuration
-    plotter = Plotter()
+    config = Config(output_base=os.path.dirname(figure_dir))
+    plotter = Plotter(config)
     if plot_flag:
         plotter.plot_state_space(model_configuration, head.connectivity.region_labels,
                                  special_idx=hyp.get_regions_disease(), model="6d", zmode="lin",

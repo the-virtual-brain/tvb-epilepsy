@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, FOLDER_FIGURES
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
@@ -141,10 +142,10 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
                 writer.write_dictionary(vois_ts_dict, os.path.join(os.path.dirname(ts_file), os.path.basename(ts_file)))
     if plot_flag and len(vois_ts_dict) > 0:
         # Plot results
-        Plotter().plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, vois_ts_dict,
-                                   sensorsSEEG=head.sensorsSEEG, hpf_flag=False,
-                                   trajectories_plot=trajectories_plot,
-                                   spectral_raster_plot=spectral_raster_plot, log_scale=True,
-                                   region_labels=head.connectivity.region_labels,
-                                   figure_dir=figure_dir)  # ,
+        config = Config(output_base=os.path.dirname(figure_dir))
+        Plotter(config).plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, vois_ts_dict,
+                                         sensorsSEEG=head.sensorsSEEG, hpf_flag=False,
+                                         trajectories_plot=trajectories_plot,
+                                         spectral_raster_plot=spectral_raster_plot, log_scale=True,
+                                         region_labels=head.connectivity.region_labels)
     return vois_ts_dict

@@ -1,28 +1,23 @@
+# coding=utf-8
+
 import os
 import numpy
 import matplotlib
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from tvb_epilepsy.base.constants.configurations import SAVE_FLAG, FIG_FORMAT, FOLDER_FIGURES, SHOW_FLAG, VERY_LARGE_SIZE
+from tvb_epilepsy.base.constants.config import Config, FiguresConfig
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 
 
 class BasePlotter(object):
-    logger = initialize_logger(__name__)
 
-    def __init__(self, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG):
-        self.save_flag = save_flag
-        self.show_flag = show_flag
-
-    def set_save_flag(self, value):
-        self.save_flag = value
-
-    def set_show_flag(self, value):
-        self.show_flag = value
+    def __init__(self, config=None):
+        self.config = config or Config()
+        self.logger = initialize_logger(self.__class__.__name__, self.config.out.FOLDER_LOGS)
 
     def _check_show(self):
-        if self.show_flag:
+        if self.config.figures.SHOW_FLAG:
             # mp.use('TkAgg')
             pyplot.ion()
             pyplot.show()
@@ -31,7 +26,8 @@ class BasePlotter(object):
             pyplot.ioff()
             pyplot.close()
 
-    def _figure_filename(self, fig=None, figure_name=None):
+    @staticmethod
+    def _figure_filename(fig=None, figure_name=None):
         if fig is None:
             fig = pyplot.gcf()
         if figure_name is None:
@@ -39,15 +35,17 @@ class BasePlotter(object):
         figure_name = figure_name.replace(": ", "_").replace(" ", "_").replace("\t", "_")
         return figure_name
 
-    def _save_figure(self, fig=None, figure_name=None, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
-        if self.save_flag:
+    def _save_figure(self, fig, figure_name):
+        if self.config.figures.SAVE_FLAG:
             figure_name = self._figure_filename(fig, figure_name)
-            figure_name = figure_name[:numpy.min([100, len(figure_name)])] + '.' + figure_format
+            figure_name = figure_name[:numpy.min([100, len(figure_name)])] + '.' + FiguresConfig.FIG_FORMAT
+            figure_dir = self.config.out.FOLDER_FIGURES
             if not (os.path.isdir(figure_dir)):
                 os.mkdir(figure_dir)
             pyplot.savefig(os.path.join(figure_dir, figure_name))
 
-    def plot_vector(self, vector, labels, subplot, title, show_y_labels=True, indices_red=None, sharey=None):
+    @staticmethod
+    def plot_vector(vector, labels, subplot, title, show_y_labels=True, indices_red=None, sharey=None):
         ax = pyplot.subplot(subplot, sharey=sharey)
         pyplot.title(title)
         n_vector = labels.shape[0]
@@ -78,7 +76,8 @@ class BasePlotter(object):
         ax.autoscale(tight=True)
         return ax
 
-    def plot_vector_violin(self, vector, dataset, labels, subplot, title, colormap="YlOrRd", show_y_labels=True,
+    @staticmethod
+    def plot_vector_violin(vector, dataset, labels, subplot, title, colormap="YlOrRd", show_y_labels=True,
                            indices_red=None, sharey=None):
         ax = pyplot.subplot(subplot, sharey=sharey)
         # ax.hold(True)
@@ -98,7 +97,6 @@ class BasePlotter(object):
         if indices_red is None:
             indices_red = []
         # the violin plot
-        n_samples = dataset.shape[0]
         colormap = matplotlib.cm.ScalarMappable(cmap=pyplot.set_cmap(colormap))
         colormap = colormap.to_rgba(numpy.mean(dataset, axis=0), alpha=0.75)
         violin_parts = ax.violinplot(dataset, y_ticks, vert=False, widths=0.9,
@@ -129,7 +127,8 @@ class BasePlotter(object):
         ax.autoscale(tight=True)
         return ax
 
-    def plot_regions2regions(self, adj, labels, subplot, title, show_y_labels=True, show_x_labels=True,
+    @staticmethod
+    def plot_regions2regions(adj, labels, subplot, title, show_y_labels=True, show_x_labels=True,
                              indices_red_x=None, sharey=None):
         ax = pyplot.subplot(subplot, sharey=sharey)
         pyplot.title(title)
@@ -170,7 +169,8 @@ class BasePlotter(object):
         pyplot.colorbar(img, cax=cax1)  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
         return ax
 
-    def _set_axis_labels(self, fig, sub, n_regions, region_labels, indices2emphasize, color='k', position='left'):
+    @staticmethod
+    def _set_axis_labels(fig, sub, n_regions, region_labels, indices2emphasize, color='k', position='left'):
         y_ticks = range(n_regions)
         region_labels = numpy.array(["%d. %s" % l for l in zip(y_ticks, region_labels)])
         big_ax = fig.add_subplot(sub, frameon=False)
@@ -186,18 +186,18 @@ class BasePlotter(object):
             big_ax.yaxis.set_ticklabels(labels)
         big_ax.invert_yaxis()
         big_ax.axes.get_xaxis().set_visible(False)
-        big_ax.set_axis_bgcolor('none')
+        big_ax.set_facecolor('none')
 
     def plot_in_columns(self, data_dict_list, labels, width_ratios=[], left_ax_focus_indices=[],
                         right_ax_focus_indices=[], description="", title="", figure_name=None,
-                        figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, **kwargs):
+                        figsize=FiguresConfig.VERY_LARGE_SIZE, **kwargs):
         fig = pyplot.figure(title, frameon=False, figsize=figsize)
         fig.suptitle(description)
         n_subplots = len(data_dict_list)
-        if width_ratios == []:
+        if not width_ratios:
             width_ratios = numpy.ones((n_subplots,)).tolist()
         matplotlib.gridspec.GridSpec(1, n_subplots, width_ratios)
-        if n_subplots < 10 and n_subplots > 0:
+        if 10 > n_subplots > 0:
             subplot_ind0 = 100 + 10 * n_subplots
         else:
             raise ValueError("\nSubplots' number " + str(n_subplots) + "is not between 1 and 9!")
@@ -210,7 +210,7 @@ class BasePlotter(object):
             data = data_dict["data"]
             focus_indices = data_dict.get("focus_indices")
             if subplot_ind == 0:
-                if left_ax_focus_indices == []:
+                if not left_ax_focus_indices:
                     left_ax_focus_indices = focus_indices
             else:
                 ax0 = ax
@@ -225,16 +225,16 @@ class BasePlotter(object):
             else:
                 ax = self.plot_vector(data, labels, subplot_ind, data_dict["name"], show_y_labels=False,
                                       indices_red=focus_indices, sharey=ax0)
-        if right_ax_focus_indices == []:
+        if not right_ax_focus_indices:
             right_ax_focus_indices = focus_indices
         self._set_axis_labels(fig, 121, n_regions, labels, left_ax_focus_indices, 'r')
         self._set_axis_labels(fig, 122, n_regions, labels, right_ax_focus_indices, 'r', 'right')
-        self._save_figure(pyplot.gcf(), figure_name, figure_dir, figure_format)
+        self._save_figure(pyplot.gcf(), figure_name)
         self._check_show()
         return fig
 
     def plots(self, data_dict, shape=None, transpose=False, skip=0, xlabels={}, xscales={}, yscales={}, title='Plots',
-              figure_name=None, figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT):
+              figure_name=None, figsize=FiguresConfig.VERY_LARGE_SIZE):
         if shape is None:
             shape = (1, len(data_dict))
         fig, axes = pyplot.subplots(shape[0], shape[1], figsize=figsize)
@@ -246,16 +246,16 @@ class BasePlotter(object):
             else:
                 axes[ind].plot(data_dict[key][skip:])
             axes[ind].set_xscale(xscales.get(key, "linear"))
-            axes[ind].set_yscale(xscales.get(key, "linear"))
+            axes[ind].set_yscale(yscales.get(key, "linear"))
             axes[ind].set_xlabel(xlabels.get(key, ""))
             axes[ind].set_ylabel(key)
         fig.tight_layout()
-        self._save_figure(fig, figure_name, figure_dir, figure_format)
+        self._save_figure(fig, figure_name)
         self._check_show()
         return fig, axes
 
     def pair_plots(self, data, keys, transpose=False, skip=0, title='Pair plots', subtitles=None, figure_name=None,
-                   figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT):
+                   figsize=FiguresConfig.VERY_LARGE_SIZE):
         if subtitles is None:
             subtitles = keys
         data = ensure_list(data)
@@ -282,6 +282,6 @@ class BasePlotter(object):
                 if j == 0:
                     axes[i, j].set_ylabel(key_i)
         fig.tight_layout()
-        self._save_figure(fig, figure_name, figure_dir, figure_format)
+        self._save_figure(fig, figure_name)
         self._check_show()
         return fig, axes
