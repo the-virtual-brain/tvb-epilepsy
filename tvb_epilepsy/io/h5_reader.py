@@ -11,8 +11,6 @@ from tvb_epilepsy.base.model.vep.surface import Surface, SurfaceH5Field
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
-from tvb_epilepsy.service.lsa_service import LSAService
-from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.io.h5_model import read_h5_model
 
 
@@ -299,7 +297,7 @@ class H5Reader(object):
         """
         self.logger.info("Starting to read LSAService from: %s" % path)
         h5_file = h5py.File(path, 'r', libver='latest')
-
+        from tvb_epilepsy.service.lsa_service import LSAService
         lsa_service = LSAService()
 
         for dataset in h5_file.keys():
@@ -319,6 +317,7 @@ class H5Reader(object):
         self.logger.info("Starting to read ModelConfigurationService from: %s" % path)
         h5_file = h5py.File(path, 'r', libver='latest')
 
+        from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
         mc_service = ModelConfigurationBuilder()
 
         for dataset in h5_file.keys():
