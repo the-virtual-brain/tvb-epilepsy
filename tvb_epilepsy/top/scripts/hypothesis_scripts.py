@@ -45,8 +45,9 @@ def from_head_to_hypotheses(ep_name, config, plot_head=False):
     # ...or reading a custom file:
     # FOLDER_RES = os.path.join(data_folder, ep_name)
 
-    hypo_builder = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions
-                                                         ).set_sort_disease_values(True)
+    hypo_builder = HypothesisBuilder(config=config).\
+        set_nr_of_regions(head.connectivity.number_of_regions).\
+        set_sort_disease_values(True)
 
     # This is an example of Excitability Hypothesis:
     hyp_x0 = hypo_builder.build_hypothesis_from_file(ep_name)
@@ -59,7 +60,7 @@ def from_head_to_hypotheses(ep_name, config, plot_head=False):
     x0_values = [hyp_x0.x0_values[-1]]
     e_indices = hyp_x0.x0_indices[0:-1].tolist()
     e_values = hyp_x0.x0_values[0:-1].tolist()
-    hyp_x0_E = hypo_builder.build_mixed_hypothesis(e_values, e_indices, x0_values, x0_indices)
+    hyp_x0_E = hypo_builder._build_mixed_hypothesis(e_values, e_indices, x0_values, x0_indices)
 
     hypos = (hyp_x0, hyp_E, hyp_x0_E)
     return head, hypos

@@ -15,7 +15,7 @@ class TestHypothesis(object):
     def test_create(self):
         x0_indices = [20]
         x0_values = [0.9]
-        hyp = HypothesisBuilder().set_nr_of_regions(76).build_excitability_hypothesis(x0_values, x0_indices)
+        hyp = HypothesisBuilder().set_nr_of_regions(76)._build_excitability_hypothesis(x0_values, x0_indices)
         assert x0_indices == hyp.x0_indices
         assert x0_values == hyp.x0_values
 

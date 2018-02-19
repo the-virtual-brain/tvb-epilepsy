@@ -15,8 +15,8 @@ class HypothesisBuilder(object):
 
     Attributes that can be configured are listed below, as class attributes.
     """
-    config = Config()
-    logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
+    # config = Config()
+    # logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
 
     # Attributes specific to a DiseaseHypothesis
     nr_of_regions = 0
@@ -33,6 +33,10 @@ class HypothesisBuilder(object):
 
     normalize_value = 0.95
     sort_disease_values = False
+
+    def __init__(self, config=Config()):
+        self.config = config
+        self.logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
 
     def set_nr_of_regions(self, nr_of_regions):
         self.nr_of_regions = nr_of_regions
@@ -90,7 +94,7 @@ class HypothesisBuilder(object):
             disease_hypothesis.name + "LSA")
         return self
 
-    def build_hypothesis(self):
+    def _build_hypothesis(self):
 
         return DiseaseHypothesis(self.nr_of_regions, excitability_hypothesis={tuple(self.x0_indices): self.x0_values},
                                  epileptogenicity_hypothesis={tuple(self.e_indices): self.e_values},
@@ -98,9 +102,9 @@ class HypothesisBuilder(object):
                                  lsa_propagation_indices=self.lsa_propagation_indices,
                                  lsa_propagation_strenghts=self.lsa_propagation_strengths, name=self.name)
 
-    def build_epileptogenicity_hypothesis(self, values=None, indices=None):
+    def _build_epileptogenicity_hypothesis(self, values=None, indices=None):
         if values is None or indices is None:
-            hypo = self.build_hypothesis()
+            hypo = self._build_hypothesis()
             self.logger.warning(
                 "Since values or indices are None, the DiseaseHypothesis will be build with default values: %s", hypo)
 
@@ -109,9 +113,9 @@ class HypothesisBuilder(object):
         return DiseaseHypothesis(number_of_regions=self.nr_of_regions,
                                  epileptogenicity_hypothesis={tuple(indices): values}, name=self.name)
 
-    def build_excitability_hypothesis(self, values=None, indices=None):
+    def _build_excitability_hypothesis(self, values=None, indices=None):
         if values is None or indices is None:
-            hypo = self.build_hypothesis()
+            hypo = self._build_hypothesis()
             self.logger.warning(
                 "Since values or indices are None, the DiseaseHypothesis will be build with default values: %s", hypo)
 
@@ -120,16 +124,16 @@ class HypothesisBuilder(object):
         return DiseaseHypothesis(number_of_regions=self.nr_of_regions, excitability_hypothesis={tuple(indices): values},
                                  name=self.name)
 
-    def build_mixed_hypothesis(self, ep_values=None, ep_indices=None, exc_values=None, exc_indices=None):
-        if ep_values is None or exc_indices is None or ep_values is None or exc_indices is None:
-            hypo = self.build_hypothesis()
+    def _build_mixed_hypothesis(self, e_values=None, e_indices=None, exc_values=None, exc_indices=None):
+        if e_values is None or exc_indices is None or e_values is None or exc_indices is None:
+            hypo = self._build_hypothesis()
             self.logger.warning(
                 "Since values or indices are None, the DiseaseHypothesis will be build with default values: %s", hypo)
 
             return hypo
 
         return DiseaseHypothesis(number_of_regions=self.nr_of_regions,
-                                 epileptogenicity_hypothesis={tuple(ep_indices): ep_values},
+                                 epileptogenicity_hypothesis={tuple(e_indices): e_values},
                                  excitability_hypothesis={tuple(exc_indices): exc_values}, name=self.name)
 
     def _normalize_disease_values(self, values):
@@ -149,27 +153,48 @@ class HypothesisBuilder(object):
         return disease_values, disease_indices
 
     def build_lsa_hypothesis(self):
-        return self.build_hypothesis()
+        return self._build_hypothesis()
 
-    def build_hypothesis_from_file(self, hyp_file, ep_indices=None):
-        epi_values = H5Reader().read_epileptogenicity(self.config.input.HEAD, name=hyp_file)
+    def build_hypothesis(self, epi_values, e_indices=None):
         disease_indices, = numpy.where(epi_values > 0)
         disease_values = epi_values[disease_indices]
         disease_values, disease_indices = self._ensure_normalization_or_sorting(disease_values, disease_indices)
 
-        if not ep_indices:
+        if not e_indices:
             self.logger.info("An excitability hypothesis will be created with values: %s on indices: %s",
                              disease_values, disease_indices)
-            return self.build_excitability_hypothesis(disease_values, disease_indices)
+            return self._build_excitability_hypothesis(disease_values, disease_indices)
 
-        if set(disease_indices) == set(ep_indices):
+        if set(disease_indices) == set(e_indices):
             self.logger.info("An epileptogenicity hypothesis will be created with values: %s on indices: %s",
                              disease_values, disease_indices)
-            return self.build_epileptogenicity_hypothesis(disease_values, disease_indices)
+            return self._build_epileptogenicity_hypothesis(disease_values, disease_indices)
 
-        ep_values = epi_values[ep_indices]
-        exc_indices = numpy.setdiff1d(disease_indices, ep_indices)
+        e_values = epi_values[e_indices]
+        exc_indices = numpy.setdiff1d(disease_indices, e_indices)
         exc_values = epi_values[exc_indices]
         self.logger.info("A mixed hypothesis will be created with x0 values: %s on x0 indices: %s "
-                         "and ep values: %s on ep indices: %s", exc_values, exc_indices, ep_values, ep_indices)
-        return self.build_mixed_hypothesis(ep_values, ep_indices, exc_values, exc_indices)
+                         "and ep values: %s on ep indices: %s", exc_values, exc_indices, e_values, e_indices)
+        return self._build_mixed_hypothesis(e_values, e_indices, exc_values, exc_indices)
+
+    def build_hypothesis_from_manual_input(self, e_values=None, e_indices=None, exc_values=None, exc_indices=None):
+        epi_values = numpy.zeros((self.nr_of_regions,))
+        if e_indices is not None and e_values is not None:
+            e_indices = list(e_indices)
+            epi_values[e_indices] = e_values
+        else:
+            e_indices = []
+        if exc_indices is not None and exc_values is not None:
+            epi_values[exc_indices] = exc_values
+            common_indices = list(numpy.intersect1d(e_indices, exc_indices))
+            if len(common_indices) > 0:
+                e_indices = numpy.setdiff1d(e_indices, common_indices)
+                self.logger.warning("Overwriting e_indices that are common to exc_indices!: " + str(common_indices))
+        if len(e_indices) == 0:
+            e_indices = None
+        return self.build_hypothesis(epi_values, e_indices)
+
+    def build_hypothesis_from_file(self, hyp_file, e_indices=None):
+        epi_values = H5Reader().read_epileptogenicity(self.config.input.HEAD, name=hyp_file)
+        return self.build_hypothesis(epi_values, e_indices)
+
