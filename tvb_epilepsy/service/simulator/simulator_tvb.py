@@ -86,7 +86,12 @@ class SimulatorTVB(ABCSimulator):
 
         self.configure_initial_conditions(initial_conditions=initial_conditions)
 
-    def launch_simulation(self, n_report_blocks=1):
+    def launch_simulation(self, report_every_n_monitor_steps=None):
+        if report_every_n_monitor_steps >= 1:
+            time_length_avg = numpy.round(self.simTVB.simulation_settings.simulated_period / self.simTVB.monitor.period)
+            n_report_blocks = max(report_every_n_monitor_steps * numpy.round(time_length_avg / 100), 1.0)
+        else:
+            n_report_blocks = 1
 
         self.simTVB._configure_history(initial_conditions=self.simTVB.initial_conditions)
 

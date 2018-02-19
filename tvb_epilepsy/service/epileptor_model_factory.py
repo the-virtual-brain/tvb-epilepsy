@@ -21,7 +21,7 @@ for model in AVAILABLE_DYNAMICAL_MODELS:
     AVAILABLE_DYNAMICAL_MODELS_NAMES.append(model._ui_name)
 
 
-def build_tvb_model(model_configuration, zmode=numpy.array("lin")):
+def build_tvb_model(model_configuration, zmode=numpy.array("lin"), **kwargs):
     # We use the opposite sign for K with respect to all epileptor models
     K = -model_configuration.K
     model_instance = Epileptor(x0=model_configuration.x0, Iext=model_configuration.Iext1, Iext2=model_configuration.Iext2,
@@ -34,7 +34,7 @@ def build_tvb_model(model_configuration, zmode=numpy.array("lin")):
 ###
 # Build EpileptorDP2D
 ###
-def build_ep_2sv_model(model_configuration, zmode=numpy.array("lin")):
+def build_ep_2sv_model(model_configuration, zmode=numpy.array("lin"), **kwargs):
     # We use the opposite sign for K with respect to all epileptor models
     K = -model_configuration.K
     model = EpileptorDP2D(x0=model_configuration.x0, Iext1=model_configuration.Iext1, K=K,
@@ -46,7 +46,7 @@ def build_ep_2sv_model(model_configuration, zmode=numpy.array("lin")):
 ###
 # Build EpileptorDP
 ###
-def build_ep_6sv_model(model_configuration, zmode=numpy.array("lin")):
+def build_ep_6sv_model(model_configuration, zmode=numpy.array("lin"), **kwargs):
     # We use the opposite sign for K with respect to all epileptor models
     K = -model_configuration.K
     model = EpileptorDP(x0=model_configuration.x0, Iext1=model_configuration.Iext1, Iext2=model_configuration.Iext2,
@@ -59,7 +59,7 @@ def build_ep_6sv_model(model_configuration, zmode=numpy.array("lin")):
 ###
 # Build EpileptorDPrealistic
 ###
-def build_ep_11sv_model(model_configuration, zmode=numpy.array("lin"), pmode=numpy.array("z")):
+def build_ep_11sv_model(model_configuration, zmode=numpy.array("lin"), pmode=numpy.array("z"), **kwargs):
     # We use the opposite sign for K with respect to all epileptor models
     K = -model_configuration.K
     model = EpileptorDPrealistic(x0=model_configuration.x0, Iext1=model_configuration.Iext1,

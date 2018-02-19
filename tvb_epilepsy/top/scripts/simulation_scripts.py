@@ -102,13 +102,8 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
 
     # ------------------------------Simulation--------------------------------------
     logger.info("\n\nConfiguring simulation...")
-    if sim_type == "realistic":
-        sim = sim_builder.set_fs(4096).set_time_length(60000).build_simulator_TVB_realistic(model_configuration,
-                                                                                            head.connectivity)
-    else:
-        sim = sim_builder.set_fs(10240).set_time_length(100).build_simulator_TVB_fitting(model_configuration,
-                                                                                         head.connectivity)
-    dynamical_model = sim.model
+    sim, sim_settings, dynamical_model = sim_builder(sim_type).build_preconfig_simulator_TVB(model_configuration,
+                                                                                             head.connectivity, *kwargs)
     writer = H5Writer()
     writer.write_generic(sim.model, results_dir, dynamical_model._ui_name + "_model.h5")
 
@@ -118,7 +113,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
         vois_ts_dict = H5Reader().read_dictionary(ts_file)
     else:
         logger.info("\n\nSimulating...")
-        ttavg, tavg_data, status = sim.launch_simulation(sim_builder.n_report_blocks)
+        ttavg, tavg_data, status = sim.launch_simulation(report_every_n_monitor_steps=100)
         if not status:
             logger.warning("\nSimulation failed!")
         else:
@@ -135,7 +130,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
             vois_ts_dict = compute_seeg_and_write_ts_h5_file(results_dir, dynamical_model._ui_name + "_ts.h5",
                                                              sim.model,
                                                              vois_ts_dict, output_sampling_time,
-                                                             sim_builder.time_length,
+                                                             sim_settings.simulated_period,
                                                              hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
                                                              sensors_list=head.sensorsSEEG, save_flag=True)
             if isinstance(ts_file, basestring):

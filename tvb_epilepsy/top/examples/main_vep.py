@@ -3,7 +3,7 @@ Entry point for working with VEP
 """
 import os
 import numpy as np
-from tvb_epilepsy.base.constants.module_constants import SIMULATION_MODE, TVB, DATA_MODE
+from tvb_epilepsy.base.constants.module_constants import TVB, DATA_MODE
 from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, HEAD_FOLDER
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
@@ -78,8 +78,6 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     else:
         hypotheses = (hyp_x0, hyp_E)
     # --------------------------Simulation preparations-----------------------------------
-    sim_builder = SimulatorBuilder().set_fs(2048.0).set_time_length(10000.0).set_report_every_n_monitor_steps(
-        100.0).set_model_name("EpileptorDPrealistic").set_sim_type("realistic")
     # Choose model
     # Available models beyond the TVB Epileptor (they all encompass optional variations from the different papers):
     # EpileptorDP: similar to the TVB Epileptor + optional variations,
@@ -197,13 +195,14 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
         if sim_flag:
             # ------------------------------Simulation--------------------------------------
             logger.info("\n\nConfiguring simulation...")
-            sim = sim_builder.build_simulator_tvb_from_model_configuration(model_configuration, head.connectivity)
+            sim, sim_settings, model = SimulatorBuilder("realistic"). \
+                                        build_preconfig_simulator_TVB(model_configuration, head.connectivity)
 
             # Integrator and initial conditions initialization.
             # By default initial condition is set right on the equilibrium point.
             writer.write_generic(sim.model, FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5")
             logger.info("\n\nSimulating...")
-            ttavg, tavg_data, status = sim.launch_simulation(sim_builder.n_report_blocks)
+            ttavg, tavg_data, status = sim.launch_simulation(report_every_n_monitor_steps=100)
             writer.write_simulation_settings(sim.simulation_settings,
                                              os.path.join(FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5"))
             if test_write_read:
@@ -225,7 +224,8 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                 vois_ts_dict['time'] = time
                 vois_ts_dict['time_units'] = 'msec'
                 vois_ts_dict = compute_seeg_and_write_ts_h5_file(FOLDER_RES, lsa_hypothesis.name + "_ts.h5", sim.model,
-                                                                 vois_ts_dict, output_sampling_time, sim_builder.time_length,
+                                                                 vois_ts_dict, output_sampling_time,
+                                                                 sim_settings.simulated_period,
                                                                  hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
                                                                  sensors_list=head.sensorsSEEG)
                 # Plot results
