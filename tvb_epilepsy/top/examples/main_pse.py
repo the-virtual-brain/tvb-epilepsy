@@ -2,7 +2,7 @@
 
 import os
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import IN_HEAD, FOLDER_RES
+from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
@@ -14,8 +14,9 @@ if __name__ == "__main__":
     # -------------------------------Reading data-----------------------------------
     reader = Reader()
     writer = H5Writer()
-    head = reader.read_head(IN_HEAD)
-    logger = initialize_logger(__name__)
+    config = Config()
+    head = reader.read_head(config.input.HEAD)
+    logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
 
     # --------------------------Manual Hypothesis definition-----------------------------------
     n_samples = 100
@@ -50,9 +51,9 @@ if __name__ == "__main__":
                                                                              save_services=True)[:4]
 
     logger.info("Plotting LSA...")
-    Plotter().plot_lsa(lsa_hypothesis, model_config, lsa_service.weighted_eigenvector_sum,
-                       lsa_service.eigen_vectors_number, region_labels=head.connectivity.region_labels,
-                       pse_results=pse_res)
+    Plotter(config).plot_lsa(lsa_hypothesis, model_config, lsa_service.weighted_eigenvector_sum,
+                             lsa_service.eigen_vectors_number, region_labels=head.connectivity.region_labels,
+                             pse_results=pse_res)
 
     logger.info("Saving LSA results ...")
-    writer.write_dictionary(pse_res, os.path.join(FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5"))
+    writer.write_dictionary(pse_res, os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5"))

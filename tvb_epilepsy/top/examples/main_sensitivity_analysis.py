@@ -1,7 +1,9 @@
+# coding=utf-8
+
 import os
 import numpy as np
 from tvb_epilepsy.base.constants.model_constants import K_DEF
-from tvb_epilepsy.base.constants.configurations import IN_HEAD, FOLDER_RES
+from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
@@ -16,7 +18,8 @@ if __name__ == "__main__":
     # -------------------------------Reading data-----------------------------------
     reader = Reader()
     writer = H5Writer()
-    head = reader.read_head(IN_HEAD)
+    config = Config()
+    head = reader.read_head(config.input.HEAD)
     # --------------------------Hypothesis definition-----------------------------------
     n_samples = 100
     # Manual definition of hypothesis...:
@@ -48,13 +51,13 @@ if __name__ == "__main__":
                                                          healthy_regions_parameters=[
                                                              {"name": "x0_values", "indices": healthy_indices}],
                                                          logger=logger, save_services=True)
-            Plotter().plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
-                               lsa_service.eigen_vectors_number, region_labels=head.connectivity.region_labels,
-                               pse_results=pse_results, title=m + "_PSE_LSA_overview_" + lsa_hypothesis.name)
+            Plotter(config).plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
+                                     lsa_service.eigen_vectors_number, region_labels=head.connectivity.region_labels,
+                                     pse_results=pse_results, title=m + "_PSE_LSA_overview_" + lsa_hypothesis.name)
             # , show_flag=True, save_flag=False
-            writer.write_dictionary(pse_results,
-                                    os.path.join(FOLDER_RES, m + "_PSE_LSA_results_" + lsa_hypothesis.name + ".h5"))
-            writer.write_dictionary(sa_results,
-                                    os.path.join(FOLDER_RES, m + "_SA_LSA_results_" + lsa_hypothesis.name + ".h5"))
+            result_file = os.path.join(config.out.FOLDER_RES, m + "_PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
+            writer.write_dictionary(pse_results, result_file)
+            result_file = os.path.join(config.out.FOLDER_RES, m + "_SA_LSA_results_" + lsa_hypothesis.name + ".h5")
+            writer.write_dictionary(sa_results, result_file)
         except:
             logger.warning("Method " + m + " failed!")
