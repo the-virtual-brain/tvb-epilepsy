@@ -225,7 +225,7 @@ class BasePlotter(object):
             else:
                 ax = self.plot_vector(data, labels, subplot_ind, data_dict["name"], show_y_labels=False,
                                       indices_red=focus_indices, sharey=ax0)
-        if not right_ax_focus_indices:
+        if right_ax_focus_indices == []:
             right_ax_focus_indices = focus_indices
         self._set_axis_labels(fig, 121, n_regions, labels, left_ax_focus_indices, 'r')
         self._set_axis_labels(fig, 122, n_regions, labels, right_ax_focus_indices, 'r', 'right')

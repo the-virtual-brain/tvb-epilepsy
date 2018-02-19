@@ -3,7 +3,6 @@ import pickle
 import time
 import numpy as np
 import pystan as ps
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES
 from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error, raise_value_error
 from tvb_epilepsy.service.model_inversion.stan.stan_service import StanService
@@ -12,10 +11,10 @@ from tvb_epilepsy.service.model_inversion.stan.stan_factory import STAN_OUTPUT_O
 
 class PyStanService(StanService):
 
-    def __init__(self, model_name=None, model=None, model_dir=FOLDER_RES, model_code=None, model_code_path="",
-                 model_data_path="", fitmethod="sampling", random_seed=12345, init="random", **options):
-        super(PyStanService, self).__init__(model_name, model, model_dir, model_code, model_code_path, model_data_path,
-                                            fitmethod)
+    def __init__(self, model_name=None, model=None, model_code=None, model_code_path="", model_data_path="",
+                 fitmethod="sampling", random_seed=12345, init="random", config=None, **options):
+        super(PyStanService, self).__init__(model_name, model, model_code, model_code_path, model_data_path,
+                                            fitmethod, config)
         self.assert_fitmethod()
         self.options = {"init": init, "seed": random_seed, "verbose": True}
         self.options.update(options)
@@ -116,8 +115,9 @@ class PyStanService(StanService):
         est = self.compute_estimates_from_samples(samples)
         return samples, est
 
-    def fit(self, output_filepath=os.path.join(FOLDER_RES, STAN_OUTPUT_OPTIONS["file"]), diagnostic_filepath="",
-            debug=0, simulate=0, return_output=True, **kwargs):
+    def fit(self, output_filepath=None, diagnostic_filepath="", debug=0, simulate=0, return_output=True, **kwargs):
+        if output_filepath is None:
+            output_filepath = os.path.join(self.config.out.FOLDER_RES, STAN_OUTPUT_OPTIONS["file"])
         if diagnostic_filepath == "":
             diagnostic_filepath = os.path.join(os.path.dirname(output_filepath), STAN_OUTPUT_OPTIONS["diagnostic_file"])
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)

@@ -1,8 +1,8 @@
-
+# coding=utf-8
 
 import numpy as np
 from copy import deepcopy
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES
+from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
@@ -13,7 +13,8 @@ from tvb_epilepsy.service.sampling.deterministic_sampling_service import Determi
 from tvb_epilepsy.service.sampling.salib_sampling_service import SalibSamplingService
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
 
-logger = initialize_logger(__name__)
+config = Config()
+logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
 
 if __name__ == "__main__":
     n_samples = 100
@@ -24,7 +25,7 @@ if __name__ == "__main__":
         logger.info("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
     writer = H5Writer()
-    writer.write_generic(sampler, FOLDER_RES, "test_Stochastic_Sampler.h5")
+    writer.write_generic(sampler, config.out.FOLDER_RES, "test_Stochastic_Sampler.h5")
 
     logger.info("\nStochastic uniform sampling with numpy:")
     sampler = StochasticSamplingService(n_samples=n_samples, sampling_module="numpy")
@@ -36,7 +37,7 @@ if __name__ == "__main__":
         logger.info("\n" + key + ": " + str(value))
 
     logger.info(sampler.__repr__())
-    writer.write_generic(sampler, FOLDER_RES, "test1_Stochastic_Sampler.h5")
+    writer.write_generic(sampler, config.out.FOLDER_RES, "test1_Stochastic_Sampler.h5")
 
     logger.info("\nStochastic truncated normal sampling with scipy:")
     sampler = StochasticSamplingService(n_samples=n_samples)
@@ -46,7 +47,7 @@ if __name__ == "__main__":
     for key, value in stats.iteritems():
         logger.info("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
-    writer.write_generic(sampler, FOLDER_RES, "test2_Stochastic_Sampler.h5")
+    writer.write_generic(sampler, config.out.FOLDER_RES, "test2_Stochastic_Sampler.h5")
 
     logger.info("\nSensitivity analysis sampling:")
     sampler = SalibSamplingService(n_samples=n_samples, sampler="latin")
@@ -54,7 +55,7 @@ if __name__ == "__main__":
     for key, value in stats.iteritems():
         logger.info("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
-    writer.write_generic(sampler, FOLDER_RES, "test3_Stochastic_Sampler.h5")
+    writer.write_generic(sampler, config.out.FOLDER_RES, "test3_Stochastic_Sampler.h5")
 
     logger.info("\nTesting distribution class and conversions...")
     sampler = StochasticSamplingService(n_samples=n_samples)
