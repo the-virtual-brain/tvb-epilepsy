@@ -48,7 +48,9 @@ def main_vep(config=Config(), test_write_read=False, pse_flag=PSE_FLAG, sa_pse_f
     # disease_indices = x0_indices + e_indices
     # ...or reading a custom file:
 
-    hypo_builder = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions)
+    hypo_builder = HypothesisBuilder(config=config). \
+        set_nr_of_regions(head.connectivity.number_of_regions). \
+        set_sort_disease_values(True)
 
     # This is an example of Epileptogenicity Hypothesis: you give as ep all indices for values > 0
     hyp_E = hypo_builder.build_hypothesis_from_file(EP_NAME, [1, 3, 16, 25])
@@ -64,7 +66,7 @@ def main_vep(config=Config(), test_write_read=False, pse_flag=PSE_FLAG, sa_pse_f
     hypotheses = (hyp_x0, hyp_E, hyp_x0_E)
 
     # --------------------------Simulation preparations-----------------------------------
-    # Choose model
+    # If you choose model...
     # Available models beyond the TVB Epileptor (they all encompass optional variations from the different papers):
     # EpileptorDP: similar to the TVB Epileptor + optional variations,
     # EpileptorDP2D: reduced 2D model, following Proix et all 2014 +optional variations,
@@ -72,14 +74,6 @@ def main_vep(config=Config(), test_write_read=False, pse_flag=PSE_FLAG, sa_pse_f
     #      -x0, Iext1, Iext2, slope and K become noisy state variables,
     #      -Iext2 and slope are coupled to z, g, or z*g in order for spikes to appear before seizure,
     #      -multiplicative correlated noise is also used
-    # Optional variations:
-    model_name = "EpileptorDPrealistic"
-    if model_name is "EpileptorDP2D":
-        spectral_raster_plot = False
-        trajectories_plot = True
-    else:
-        spectral_raster_plot = "lfp"
-        trajectories_plot = False
     # We don't want any time delays for the moment
     # head.connectivity.tract_lengths *= TIME_DELAYS_FLAG
     # --------------------------Hypothesis and LSA-----------------------------------
@@ -181,8 +175,9 @@ def main_vep(config=Config(), test_write_read=False, pse_flag=PSE_FLAG, sa_pse_f
         if sim_flag:
             # ------------------------------Simulation--------------------------------------
             logger.info("\n\nConfiguring simulation...")
-            sim, sim_settings, model = SimulatorBuilder("realistic"). \
-                                        build_preconfig_simulator_TVB(model_configuration, head.connectivity)
+            kwargs = {"sim_type": "fitting"}
+            sim, sim_settings, model = SimulatorBuilder().build_simulator(model_configuration,
+                                                                          head.connectivity, **kwargs)
 
             # Integrator and initial conditions initialization.
             # By default initial condition is set right on the equilibrium point.
@@ -207,7 +202,7 @@ def main_vep(config=Config(), test_write_read=False, pse_flag=PSE_FLAG, sa_pse_f
                 logger.info("Time: %s - %s", time[0], time[-1])
                 logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
                 # Variables of interest in a dictionary:
-                vois_ts_dict = prepare_vois_ts_dict(VOIS[model_name], tavg_data)
+                vois_ts_dict = prepare_vois_ts_dict(VOIS[model._ui_name], tavg_data)
                 vois_ts_dict['time'] = time
                 vois_ts_dict['time_units'] = 'msec'
                 vois_ts_dict = compute_seeg_and_write_ts_h5_file(config.out.FOLDER_RES, lsa_hypothesis.name + "_ts.h5",
@@ -216,6 +211,12 @@ def main_vep(config=Config(), test_write_read=False, pse_flag=PSE_FLAG, sa_pse_f
                                                                  hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
                                                                  sensors_list=head.sensorsSEEG)
                 # Plot results
+                if model._ui_name is "EpileptorDP2D":
+                    spectral_raster_plot = False
+                    trajectories_plot = True
+                else:
+                    spectral_raster_plot = "lfp"
+                    trajectories_plot = False
                 plotter.plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, vois_ts_dict,
                                          head.sensorsSEEG, hpf_flag=True, trajectories_plot=trajectories_plot,
                                          spectral_raster_plot=spectral_raster_plot, log_scale=True)
@@ -225,4 +226,9 @@ def main_vep(config=Config(), test_write_read=False, pse_flag=PSE_FLAG, sa_pse_f
 
 
 if __name__ == "__main__":
+    # head_folder = os.path.join(os.path.expanduser("~"),
+    #                            'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
+    # output = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "tests")
+    # config = Config(head_folder=head_folder, output_base=output, separate_by_run=True)
+    # main_vep(config)
     main_vep()

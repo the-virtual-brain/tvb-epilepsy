@@ -235,7 +235,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", stats_model_name="vep_sd
         #     x0_values_fit = \
         #         fit_model_configuration_builder._compute_x0_values_from_x0_model(est['x0'])
         #     hyp_fit = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).set_name(
-        #         'fit' + str(id_est) + "_" + hyp.name).build_excitability_hypothesis(x0_values_fit, range(
+        #         'fit' + str(id_est) + "_" + hyp.name)._build_excitability_hypothesis(x0_values_fit, range(
         #         model_configuration.n_regions))
         #     model_configuration_fit = fit_model_configuration_builder.build_model_from_hypothesis(hyp_fit,  # est["MC"]
         #                                                                                           estMC(est))

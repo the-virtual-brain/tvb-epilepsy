@@ -6,7 +6,6 @@ from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.constants.model_constants import VOIS
-from tvb_epilepsy.service.simulator.simulator_java import EpileptorModel
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
@@ -42,10 +41,8 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
                 vois_ts_dict[sensor_name] -= np.min(vois_ts_dict[sensor_name])
                 vois_ts_dict[sensor_name] /= np.max(vois_ts_dict[sensor_name])
     else:
-        if isinstance(model, EpileptorModel):
-            vois_ts_dict["lfp"] = vois_ts_dict["x2"] - vois_ts_dict["x1"]
-        raw_data = np.dstack(
-            [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x2"]])
+        vois_ts_dict["lfp"] = vois_ts_dict["x2"] - vois_ts_dict["x1"]
+        raw_data = np.dstack([vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x2"]])
         if hpf_flag:
             hpf_low = max(hpf_low, 1000.0 / time_length)
             hpf_high = min(fsAVG / 2.0 - 10.0, hpf_high)
@@ -76,12 +73,6 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
 def from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
                                            sim_type="realistic", dynamical_model="EpileptorDP2D", ts_file=None,
                                            plot_flag=True, config=Config()):
-    # --------------------------Simulation preparations----------------------------------------------------------------
-    # this is the simulation sampling rate that is necessary for the simulation to be stable:
-
-    sim_builder = SimulatorBuilder().set_scale_fsavg(1).set_report_every_n_monitor_steps(100.0).set_model_name(
-        dynamical_model).set_sim_type(sim_type)
-
     # Choose model
     # Available models beyond the TVB Epileptor (they all encompass optional variations from the different papers):
     # EpileptorDP: similar to the TVB Epileptor + optional variations,
@@ -100,8 +91,9 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
 
     # ------------------------------Simulation--------------------------------------
     logger.info("\n\nConfiguring simulation...")
-    sim, sim_settings, dynamical_model = sim_builder(sim_type).build_preconfig_simulator_TVB(model_configuration,
-                                                                                             head.connectivity, *kwargs)
+    kwargs = {"sim_type": sim_type}
+    sim, sim_settings, dynamical_model = SimulatorBuilder().build_simulator(model_configuration,
+                                                                             head.connectivity, **kwargs)
     writer = H5Writer()
     writer.write_generic(sim.model, config.out.FOLDER_RES, dynamical_model._ui_name + "_model.h5")
 
