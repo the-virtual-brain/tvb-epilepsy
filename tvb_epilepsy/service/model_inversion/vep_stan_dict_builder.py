@@ -1,8 +1,8 @@
 import numpy as np
 from copy import deepcopy
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, sort_dict
-from tvb_epilepsy.base.constants.model_inversion_constants import MC_MIN, OBSERVATION_MODELS
-from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
+from tvb_epilepsy.base.constants.model_inversion_constants import OBSERVATION_MODELS
+from tvb_epilepsy.base.computations.probability_distributions import ProbabilityDistributionTypes
 
 
 def build_stan_model_dict(statistical_model, signals, model_inversion, gain_matrix=None):

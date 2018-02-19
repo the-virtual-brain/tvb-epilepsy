@@ -1,15 +1,13 @@
 import numpy
-
 from tvb.datatypes import equations
 from tvb.simulator import noise
 from tvb.simulator.noise import Noise, Additive, Multiplicative
-
-from tvb_epilepsy.base.constants.module_constants import NOISE_SEED, ADDITIVE_NOISE, MULTIPLICATIVE_NOISE
+from tvb_epilepsy.base.constants.model_constants import NOISE_SEED, ADDITIVE_NOISE, MULTIPLICATIVE_NOISE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
-from tvb_epilepsy.service.simulator.simulator_custom import EpileptorModel, custom_model_builder, SimulatorCustom
+from tvb_epilepsy.service.simulator.simulator_java import EpileptorModel, java_model_builder, SimulatorJava
 from tvb_epilepsy.service.simulator.simulator_tvb import SimulatorTVB
 
 
@@ -166,7 +164,7 @@ class SimulatorBuilder(object):
         if kwargs.get("model_name", EpileptorModel._ui_name) != EpileptorModel._ui_name:
             self.logger.info("You can use only " + EpileptorModel._ui_name + "for custom simulations!")
 
-        model = custom_model_builder(model_configuration)
+        model = java_model_builder(model_configuration)
 
         noise_intensity = 0  # numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.])
 
@@ -176,6 +174,6 @@ class SimulatorBuilder(object):
                                       noise_intensity=noise_intensity,
                                       monitor_sampling_period=monitor_period)
 
-        simulator_instance = SimulatorCustom(connectivity, model_configuration, model, settings)
+        simulator_instance = SimulatorJava(connectivity, model_configuration, model, settings)
 
         return simulator_instance, settings, model

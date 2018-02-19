@@ -19,7 +19,7 @@ install:
   # Useful for debugging any issues with conda
   - conda info -a
   # setup env
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy matplotlib scipy cython
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy matplotlib scipy cython sympy
   - source activate test-environment
   - pip install pytest-cov coveralls h5py mpldatacursor gdist SALib
   - conda install llvmlite

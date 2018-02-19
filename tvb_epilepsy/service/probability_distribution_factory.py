@@ -1,24 +1,17 @@
 import numpy as np
 from scipy.optimize import minimize
 from collections import OrderedDict
-from tvb_epilepsy.base.model.statistical_models.probability_distributions import ProbabilityDistributionTypes
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.bernoulli_distribution import \
-    BernoulliDistribution
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.beta_distribution import BetaDistribution
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.binomial_distribution import \
-    BinomialDistribution
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.chisquare_distribution import \
-    ChisquareDistribution
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.exponential_distribution import \
-    ExponentialDistribution
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.gamma_distribution import GammaDistribution
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.lognormal_distribution import \
-    LognormalDistribution
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.normal_distribution import NormalDistribution
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.poisson_distribution import \
-    PoissonDistribution
-from tvb_epilepsy.base.model.statistical_models.probability_distributions.uniform_distribution import \
-    UniformDistribution
+from tvb_epilepsy.base.computations.probability_distributions import ProbabilityDistributionTypes
+from tvb_epilepsy.base.computations.probability_distributions.bernoulli_distribution import BernoulliDistribution
+from tvb_epilepsy.base.computations.probability_distributions.beta_distribution import BetaDistribution
+from tvb_epilepsy.base.computations.probability_distributions.binomial_distribution import BinomialDistribution
+from tvb_epilepsy.base.computations.probability_distributions.chisquare_distribution import ChisquareDistribution
+from tvb_epilepsy.base.computations.probability_distributions.exponential_distribution import ExponentialDistribution
+from tvb_epilepsy.base.computations.probability_distributions.gamma_distribution import GammaDistribution
+from tvb_epilepsy.base.computations.probability_distributions.lognormal_distribution import LognormalDistribution
+from tvb_epilepsy.base.computations.probability_distributions.normal_distribution import NormalDistribution
+from tvb_epilepsy.base.computations.probability_distributions.poisson_distribution import PoissonDistribution
+from tvb_epilepsy.base.computations.probability_distributions.uniform_distribution import UniformDistribution
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, dicts_of_lists_to_lists_of_dicts
 

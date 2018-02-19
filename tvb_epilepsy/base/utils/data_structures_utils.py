@@ -5,7 +5,7 @@ import numpy as np
 from collections import OrderedDict
 from copy import deepcopy
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, raise_import_error, initialize_logger
-from tvb_epilepsy.base.constants.module_constants import MAX_INT_VALUE
+from tvb_epilepsy.base.constants.config import CalculusConfig
 
 logger = initialize_logger(__name__)
 
@@ -230,7 +230,8 @@ def linear_index_to_coordinate_tuples(linear_index, shape):
         return []
 
 
-def extract_dict_stringkeys(d, keys, modefun="find", two_way_search=False, break_after=MAX_INT_VALUE, remove=False):
+def extract_dict_stringkeys(d, keys, modefun="find", two_way_search=False,
+                            break_after=CalculusConfig.MAX_INT_VALUE, remove=False):
     if isequal_string(modefun, "equal"):
         modefun = lambda x, y: isequal_string(x, y)
     else:

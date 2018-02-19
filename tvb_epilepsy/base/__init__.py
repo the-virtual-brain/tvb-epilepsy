@@ -1,12 +1,12 @@
 """
 
 tvb_epilepsy.base.constants
-        A
+        ^
         |
         |
         |
 tvb_epilepsy.base.utils
-  A     A     A
+  ^     ^     ^
   |     |     |
   |     |     |
   |     |     |

@@ -1,59 +1,55 @@
-from collections import OrderedDict
-import numpy
+# coding=utf-8
 
-from tvb_epilepsy.base.constants.configurations import MATPLOTLIB_BACKEND,  MOUSEHOOVER, \
-                                                       FOLDER_FIGURES, FIG_FORMAT, LARGE_SIZE, SAVE_FLAG, SHOW_FLAG, \
-                                                       VERY_LARGE_SIZE, FIG_SIZE, VERY_LARGE_PROTRAIT, SUPER_LARGE_SIZE
+import numpy
 import matplotlib
-matplotlib.use(MATPLOTLIB_BACKEND)
+from collections import OrderedDict
+from tvb_epilepsy.base.constants.config import FiguresConfig
+
+matplotlib.use(FiguresConfig.MATPLOTLIB_BACKEND)
+
 from matplotlib import pyplot, gridspec
-# pyplot.ion()
 from matplotlib.colors import Normalize
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from tvb_epilepsy.base.constants.model_constants import TAU0_DEF, TAU1_DEF, X1_EQ_CR_DEF, X1_DEF, X0_CR_DEF, X0_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.plot.base_plotter import BasePlotter
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.computations.math_utils import compute_in_degree
 from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
 from tvb_epilepsy.base.epileptor_models import EpileptorDP2D, EpileptorDPrealistic
-from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string, sort_dict, linspace_broadcast, \
-    list_of_dicts_to_dicts_of_ndarrays, extract_dict_stringkeys
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string, sort_dict, linspace_broadcast
+from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, extract_dict_stringkeys
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_y1, def_x1lin
-from tvb_epilepsy.base.computations.calculations_utils import calc_fz, calc_fx1, calc_fx1_2d_taylor, \
-    calc_x0_val_to_model_x0, raise_value_error
+from tvb_epilepsy.base.computations.calculations_utils import calc_fz, calc_fx1, calc_fx1_2d_taylor
+from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val_to_model_x0, raise_value_error
+from tvb_epilepsy.base.constants.model_constants import TAU0_DEF, TAU1_DEF, X1_EQ_CR_DEF, X1_DEF, X0_CR_DEF, X0_DEF
+from tvb_epilepsy.base.constants.config import FiguresConfig
 
 
 class Plotter(BasePlotter):
 
-    def __init__(self, save_flag=SAVE_FLAG, show_flag=SHOW_FLAG):
-        super(Plotter, self).__init__(save_flag, show_flag)
-        self.logger = initialize_logger(__name__)
+    def __init__(self, config=None):
+        super(Plotter, self).__init__(config)
         self.HighlightingDataCursor = lambda *args, **kwargs: None
-        self.MOUSEHOOVER = MOUSEHOOVER
-        if matplotlib.get_backend() in matplotlib.rcsetup.interactive_bk and self.MOUSEHOOVER:
+        if matplotlib.get_backend() in matplotlib.rcsetup.interactive_bk and self.config.figures.MOUSE_HOOVER:
             try:
                 from mpldatacursor import HighlightingDataCursor
                 self.HighlightingDataCursor = HighlightingDataCursor
-            except:
-                self.MOUSEHOOVER = False
+            except ImportError:
+                self.config.figures.MOUSE_HOOVER = False
                 self.logger.warning("Importing mpldatacursor failed! No highlighting functionality in plots!")
         else:
             self.logger.warning("Noninteractive matplotlib backend! No highlighting functionality in plots!")
-            self.MOUSEHOOVER = False
+            self.config.figures.MOUSE_HOOVER = False
 
-    def _plot_connectivity(self, connectivity, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
-                           figure_name='Connectivity ', figsize=VERY_LARGE_SIZE):
-        pyplot.figure(figure_name + str(connectivity.number_of_regions), figsize)
+    def _plot_connectivity(self, connectivity, figure_name='Connectivity '):
+        pyplot.figure(figure_name + str(connectivity.number_of_regions), self.config.figures.VERY_LARGE_SIZE)
         self.plot_regions2regions(connectivity.normalized_weights, connectivity.region_labels, 121,
                                   "normalised weights")
         self.plot_regions2regions(connectivity.tract_lengths, connectivity.region_labels, 122, "tract lengths")
-        self._save_figure(figure_dir=figure_dir, figure_format=figure_format,
-                          figure_name=figure_name.replace(" ", "_").replace("\t", "_"))
+        self._save_figure(None, figure_name.replace(" ", "_").replace("\t", "_"))
         self._check_show()
 
-    def _plot_connectivity_stats(self, connectivity, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT,
-                                 figsize=VERY_LARGE_SIZE, figure_name='HeadStats '):
+    def _plot_connectivity_stats(self, connectivity, figsize=FiguresConfig.VERY_LARGE_SIZE, figure_name='HeadStats '):
         pyplot.figure("Head stats " + str(connectivity.number_of_regions), figsize=figsize)
         areas_flag = len(connectivity.areas) == len(connectivity.region_labels)
         ax = self.plot_vector(compute_in_degree(connectivity.normalized_weights), connectivity.region_labels,
@@ -63,21 +59,18 @@ class Plotter(BasePlotter):
         if len(connectivity.areas) == len(connectivity.region_labels):
             ax = self.plot_vector(connectivity.areas, connectivity.region_labels, 122, "region areas")
             ax.invert_yaxis()
-        self._save_figure(figure_dir=figure_dir, figure_format=figure_format,
-                          figure_name=figure_name.replace(" ", "").replace("\t", ""))
+        self._save_figure(None, figure_name.replace(" ", "").replace("\t", ""))
         self._check_show()
 
-    def _plot_sensors(self, sensors, region_labels, count=1, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
+    def _plot_sensors(self, sensors, region_labels, count=1):
         if sensors.gain_matrix is None:
             return count
-        self._plot_gain_matrix(sensors, region_labels, title=str(count) + " - " + sensors.s_type + " - Projection",
-                               figure_dir=figure_dir, figure_format=figure_format)
+        self._plot_gain_matrix(sensors, region_labels, title=str(count) + " - " + sensors.s_type + " - Projection")
         count += 1
         return count
 
     def _plot_gain_matrix(self, sensors, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1,
-                          x_ticks=numpy.array([]), y_ticks=numpy.array([]), figure_dir=FOLDER_FIGURES,
-                          figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE, figure_name=''):
+                          x_ticks=numpy.array([]), y_ticks=numpy.array([]), figsize=FiguresConfig.VERY_LARGE_SIZE):
         if not (isinstance(figure, pyplot.Figure)):
             figure = pyplot.figure(title, figsize=figsize)
         n_sensors = sensors.number_of_sensors
@@ -105,15 +98,13 @@ class Plotter(BasePlotter):
         divider = make_axes_locatable(ax)
         cax1 = divider.append_axes("right", size="5%", pad=0.05)
         pyplot.colorbar(img, cax=cax1)  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
-        if figure_name == "":
-            figure_name = title
-        self._save_figure(figure_dir=figure_dir, figure_format=figure_format, figure_name=title)
+        self._save_figure(None, title)
         self._check_show()
         return figure
 
-    def plot_head(self, head, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
-        self._plot_connectivity(head.connectivity, figure_dir, figure_format)
-        self._plot_connectivity_stats(head.connectivity, figure_dir, figure_format)
+    def plot_head(self, head):
+        self._plot_connectivity(head.connectivity)
+        self._plot_connectivity_stats(head.connectivity)
         count = 1
         for s_type in Sensors.SENSORS_TYPES:
             sensors = getattr(head, "sensors" + s_type)
@@ -121,28 +112,26 @@ class Plotter(BasePlotter):
                 sensors_list = ensure_list(sensors)
                 if len(sensors_list) > 0:
                     for s in sensors_list:
-                        count = self._plot_sensors(s, head.connectivity.region_labels, count, figure_dir, figure_format)
+                        count = self._plot_sensors(s, head.connectivity.region_labels, count)
 
     def plot_model_configuration(self, model_configuration, n_regions=None, regions_labels=[], x0_indices=[],
                                  e_indices=[], disease_indices=[], title="Model Configuration Overview", figure_name='',
-                                 figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE):
-        if n_regions == None:
+                                 figsize=FiguresConfig.VERY_LARGE_SIZE):
+        if n_regions is None:
             n_regions = len(model_configuration.x0_values)
-        if regions_labels == []:
+        if not regions_labels:
             regions_labels = numpy.array([str(ii) for ii in range(n_regions)])
         disease_indices = numpy.unique(numpy.concatenate((x0_indices, e_indices, disease_indices), axis=0)).tolist()
         plot_dict_list = model_configuration.prepare_for_plot(x0_indices, e_indices, disease_indices)
         return self.plot_in_columns(plot_dict_list, regions_labels, width_ratios=[],
                                     left_ax_focus_indices=disease_indices, right_ax_focus_indices=disease_indices,
-                                    title=title, figure_name=figure_name, figure_dir=figure_dir,
-                                    figure_format=figure_format, figsize=figsize)
+                                    title=title, figure_name=figure_name, figsize=figsize)
 
-    def plot_statistical_model(self, statistical_model, figure_name="", figure_dir=FOLDER_FIGURES,
-                               figure_format=FIG_FORMAT):
-        _, ax = pyplot.subplots(len(statistical_model.parameters), 2, figsize=VERY_LARGE_PROTRAIT)
+    def plot_statistical_model(self, statistical_model, figure_name=""):
+        _, ax = pyplot.subplots(len(statistical_model.parameters), 2, figsize=FiguresConfig.VERY_LARGE_PORTRAIT)
         for ip, p in enumerate(statistical_model.parameters.values()):
             self._prepare_parameter_axes(p, x=numpy.array([]), ax=ax[ip], lgnd=False)
-        self._save_figure(pyplot.gcf(), figure_name, figure_dir, figure_format)
+        self._save_figure(pyplot.gcf(), figure_name)
         self._check_show()
         return ax, pyplot.gcf()
 
@@ -290,7 +279,7 @@ class Plotter(BasePlotter):
 
     def plot_timeseries(self, data_dict, time=None, mode="ts", subplots=None, special_idx=None, subtitles=[],
                         offset=1.0, time_units="ms", title='Time series', figure_name=None, labels=None,
-                        figure_dir=FOLDER_FIGURES, figsize=LARGE_SIZE, figure_format=FIG_FORMAT):
+                        figsize=FiguresConfig.LARGE_SIZE):
         n_vars = len(data_dict)
         vars = data_dict.keys()
         data = data_dict.values()
@@ -299,7 +288,7 @@ class Plotter(BasePlotter):
             data_lims.append([d.min(), d.max()])
             if isequal_string(mode, "raster"):
                 drange = numpy.percentile(d.flatten(), 99) - numpy.percentile(d.flatten(), 1)
-                data[id] = d/drange - 0.5 # zscore(d, axis=None)
+                data[id] = d / drange - 0.5  # zscore(d, axis=None)
         data_shape = data[0].shape
         n_times, nTS = data_shape[:2]
         if len(data_shape) > 2:
@@ -351,32 +340,29 @@ class Plotter(BasePlotter):
             if isequal_string(mode, "raster"):  # set yticks as labels if this is a raster plot
                 # axYticks(labels, offset, nTS)
                 pyplot.gca().invert_yaxis()
-        if self.MOUSEHOOVER:
+
+        if self.config.figures.MOUSE_HOOVER:
             for line in lines:
-                # datacursor( lines[0], formatter='{label}'.format, bbox=dict(fc='white'),
-                #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
                 self.HighlightingDataCursor(line, formatter='{label}'.format, bbox=dict(fc='white'),
-                                       arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5))
-        self._save_figure(pyplot.gcf(), figure_name, figure_dir, figure_format)
+                                            arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5))
+
+        self._save_figure(pyplot.gcf(), figure_name)
         self._check_show()
         return pyplot.gcf(), axes, lines
 
     def plot_raster(self, data_dict, time, time_units="ms", special_idx=None, title='Raster plot', subtitles=[],
-                    offset=1.0, figure_name=None, labels=None, figure_dir=FOLDER_FIGURES, figsize=VERY_LARGE_SIZE,
-                    figure_format=FIG_FORMAT):
+                    offset=1.0, figure_name=None, labels=None, figsize=FiguresConfig.VERY_LARGE_SIZE):
         return self.plot_timeseries(data_dict, time, "raster", None, special_idx, subtitles, offset, time_units, title,
-                                    figure_name, labels, figure_dir, figsize, figure_format)
+                                    figure_name, labels, figsize)
 
     def plot_trajectories(self, data_dict, subtitles=None, special_idx=None, title='State space trajectories',
-                          figure_name=None, labels=None, figure_dir=FOLDER_FIGURES, figsize=LARGE_SIZE,
-                          figure_format=FIG_FORMAT):
+                          figure_name=None, labels=None, figsize=FiguresConfig.LARGE_SIZE):
         return self.plot_timeseries(data_dict, [], "traj", subtitles, special_idx, title=title, figure_name=figure_name,
-                                    labels=labels, figure_dir=figure_dir, figsize=figsize, figure_format=figure_format)
+                                    labels=labels, figsize=figsize)
 
     def plot_spectral_analysis_raster(self, time, data, time_units="ms", freq=None, special_idx=None,
                                       title='Spectral Analysis', figure_name=None, labels=None,
-                                      figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=VERY_LARGE_SIZE,
-                                      **kwargs):
+                                      figsize=FiguresConfig.VERY_LARGE_SIZE, **kwargs):
         if time_units in ("ms", "msec"):
             fs = 1000.0
         else:
@@ -407,7 +393,7 @@ class Plotter(BasePlotter):
         min_val = numpy.min(stf.flatten())
         max_val = numpy.max(stf.flatten())
         if nS > 2:
-            figsize = VERY_LARGE_SIZE
+            figsize = FiguresConfig.VERY_LARGE_SIZE
         fig = pyplot.figure(title, figsize=figsize)
         fig.suptitle(title)
         gs = gridspec.GridSpec(nS, 23)
@@ -445,65 +431,58 @@ class Plotter(BasePlotter):
         cax = pyplot.subplot(gs[:, 22])
         pyplot.colorbar(img[0], cax=pyplot.subplot(gs[:, 22]))  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
         cax.set_title(psd_label)
-        self._save_figure(pyplot.gcf(), figure_name, figure_dir, figure_format)
+        self._save_figure(pyplot.gcf(), figure_name)
         self._check_show()
         return fig, ax, img, line, time, freq, stf, psd
 
     def plot_sim_results(self, model, seizure_indices, res, sensorsSEEG=None, hpf_flag=False, trajectories_plot=False,
-                         spectral_raster_plot=False, region_labels=None, figure_dir=FOLDER_FIGURES,
-                         figure_format=FIG_FORMAT, **kwargs):
+                         spectral_raster_plot=False, region_labels=None, **kwargs):
         if isinstance(model, EpileptorDP2D):
             self.plot_timeseries({'x1(t)': res['x1'], 'z(t)': res['z']}, res['time'],
                                  time_units=res.get('time_units', "ms"),
                                  special_idx=seizure_indices, title=model._ui_name + ": Simulated TAVG",
-                                 figure_dir=figure_dir, figure_format=figure_format, labels=region_labels,
-                                 figsize=VERY_LARGE_SIZE)
+                                 labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
             self.plot_raster({'x1(t)': res['x1']}, res['time'], time_units=res.get('time_units', "ms"),
                              special_idx=seizure_indices,
                              title=model._ui_name + ": Simulated x1 rasterplot", offset=5.0, labels=region_labels,
-                             figure_dir=figure_dir, figure_format=figure_format, figsize=VERY_LARGE_SIZE)
+                             figsize=FiguresConfig.VERY_LARGE_SIZE)
         else:
             self.plot_timeseries({'LFP(t)': res['lfp'], 'z(t)': res['z']}, res['time'],
                                  time_units=res.get('time_units', "ms"),
                                  special_idx=seizure_indices, title=model._ui_name + ": Simulated LFP-z",
-                                 figure_dir=figure_dir,
-                                 figure_format=figure_format,
-                                 labels=region_labels, figsize=VERY_LARGE_SIZE)
+                                 labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
             self.plot_timeseries({'x1(t)': res['x1'], 'y1(t)': res['y1']}, res['time'],
                                  time_units=res.get('time_units', "ms"),
                                  special_idx=seizure_indices, title=model._ui_name + ": Simulated pop1",
-                                 figure_dir=figure_dir, figure_format=figure_format, labels=region_labels,
-                                 figsize=VERY_LARGE_SIZE)
+                                 labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
             self.plot_timeseries({'x2(t)': res['x2'], 'y2(t)': res['y2'], 'g(t)': res['g']}, res['time'],
                                  time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
                                  title=model._ui_name + ": Simulated pop2-g",
-                                 figure_dir=figure_dir, figure_format=figure_format, labels=region_labels,
-                                 figsize=VERY_LARGE_SIZE)
+                                 labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
             start_plot = int(numpy.round(0.01 * res['lfp'].shape[0]))
             self.plot_raster({'lfp': res['lfp'][start_plot:, :]}, res['time'][start_plot:],
                              time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
                              title=model._ui_name + ": Simulated LFP rasterplot", offset=10.0, labels=region_labels,
-                             figure_dir=figure_dir, figure_format=figure_format, figsize=VERY_LARGE_SIZE)
+                             figsize=FiguresConfig.VERY_LARGE_SIZE)
         if isinstance(model, EpileptorDPrealistic):
             self.plot_timeseries({'1/(1+exp(-10(z-3.03))': 1 / (1 + numpy.exp(-10 * (res['z'] - 3.03))),
                                   'slope': res['slope_t'], 'Iext2': res['Iext2_t']}, res['time'],
                                  time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
                                  title=model._ui_name + ": Simulated controlled parameters", labels=region_labels,
-                                 figure_dir=figure_dir, figure_format=figure_format, figsize=VERY_LARGE_SIZE)
+                                 figsize=FiguresConfig.VERY_LARGE_SIZE)
             self.plot_timeseries({'x0_values': res['x0_t'], 'Iext1': res['Iext1_t'], 'K': res['K_t']}, res['time'],
                                  time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
                                  title=model._ui_name + ": Simulated parameters", labels=region_labels,
-                                 figure_dir=figure_dir, figure_format=figure_format, figsize=VERY_LARGE_SIZE)
+                                 figsize=FiguresConfig.VERY_LARGE_SIZE)
         if trajectories_plot:
             self.plot_trajectories({'x1': res['x1'], 'z': res['z']}, special_idx=seizure_indices,
                                    title=model._ui_name + ': State space trajectories', labels=region_labels,
-                                   figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, figsize=LARGE_SIZE)
+                                   figsize=FiguresConfig.LARGE_SIZE)
         if spectral_raster_plot is "lfp":
             self.plot_spectral_analysis_raster(res["time"], res['lfp'], time_units=res.get('time_units', "ms"),
                                                freq=None, special_idx=seizure_indices,
                                                title=model._ui_name + ": Spectral Analysis", labels=region_labels,
-                                               figure_dir=figure_dir, figure_format=figure_format, figsize=LARGE_SIZE,
-                                               **kwargs)
+                                               figsize=FiguresConfig.LARGE_SIZE, **kwargs)
         if sensorsSEEG is not None:
             sensorsSEEG = ensure_list(sensorsSEEG)
             for i in range(len(sensorsSEEG)):
@@ -515,12 +494,10 @@ class Plotter(BasePlotter):
                     start_plot = 0
                 self.plot_raster({'SEEG': res['SEEG' + str(i)][start_plot:, :]}, res['time'][start_plot:],
                                  time_units=res.get('time_units', "ms"), title=title,
-                                 offset=0.0, figure_dir=figure_dir,
-                                 figure_format=figure_format, labels=sensorsSEEG[i].labels, figsize=VERY_LARGE_SIZE)
+                                 offset=0.0, labels=sensorsSEEG[i].labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
     def plot_lsa(self, disease_hypothesis, model_configuration, weighted_eigenvector_sum, eigen_vectors_number,
-                 region_labels=[], pse_results=None, title="Hypothesis Overview", figure_dir=FOLDER_FIGURES,
-                 figure_format=FIG_FORMAT):
+                 region_labels=[], pse_results=None, title="Hypothesis Overview"):
 
         hyp_dict_list = disease_hypothesis.prepare_for_plot(model_configuration.model_connectivity)
         model_config_dict_list = model_configuration.prepare_for_plot()[:2]
@@ -543,7 +520,7 @@ class Plotter(BasePlotter):
 
         description = ""
         if weighted_eigenvector_sum:
-            description = "LSA PS: absolut eigenvalue-weighted sum of "
+            description = "LSA PS: absolute eigenvalue-weighted sum of "
             if eigen_vectors_number is not None:
                 description += "first " + str(eigen_vectors_number) + " "
             description += "eigenvectors has been used"
@@ -551,11 +528,10 @@ class Plotter(BasePlotter):
         return self.plot_in_columns(plot_dict_list, region_labels, width_ratios=[],
                                     left_ax_focus_indices=disease_hypothesis.get_all_disease_indices(),
                                     right_ax_focus_indices=disease_hypothesis.lsa_propagation_indices,
-                                    description=description, title=title, figure_name=fig_name, figure_dir=figure_dir,
-                                    figure_format=figure_format)
+                                    description=description, title=title, figure_name=fig_name)
 
     def plot_state_space(self, model_config, region_labels, special_idx, model, zmode, figure_name,
-                         approximations=False, figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT, **kwargs):
+                         approximations=False, **kwargs):
         add_name = " " + "Epileptor " + model + " z-" + str(zmode)
         figure_name = figure_name + add_name
 
@@ -575,7 +551,7 @@ class Plotter(BasePlotter):
         # Iext2 = np.mean(model_config.Iext2)
         # s = np.mean(model_config.s)
 
-        fig = pyplot.figure(figure_name, figsize=FIG_SIZE)
+        fig = pyplot.figure(figure_name, figsize=FiguresConfig.SMALL_SIZE)
 
         # Lines:
         x1 = numpy.linspace(-2.0, 1.0, 100)
@@ -617,7 +593,8 @@ class Plotter(BasePlotter):
             # zlin0 = yc + Iext1 - x1lin0 ** 3 - 2.0 * x1lin0 ** 2
             # square:
             x1sq = numpy.linspace(-5.0 / 3, -1.0, 30)
-            # x1 nullcline after parabolic approximation: + 2.0 * x1sq ** 2 + 16.0 * x1sq / 3.0 + yc + Iext1 + 64.0 / 27.0
+            # x1 nullcline after parabolic approximation:
+            # + 2.0 * x1sq ** 2 + 16.0 * x1sq / 3.0 + yc + Iext1 + 64.0 / 27.0
             zX1sq = calc_fx1_2d_taylor(x1sq, x1sq0, z=0, y1=yc, Iext1=Iext1, slope=slope, a=a, b=b, d=d, tau1=1.0,
                                        x1_neg=None, order=3, shape=x1sq.shape)
             sq, = pyplot.plot(x1sq, zX1sq, 'm--', label='Parabolic local approximation', linewidth=2)
@@ -668,18 +645,17 @@ class Plotter(BasePlotter):
         ax.axes.set_ylim([0.0, 6.0])
         ax.axes.set_xlabel('x1')
         ax.axes.set_ylabel('z')
-        if self.MOUSEHOOVER:
-            # datacursor( lines[0], formatter='{label}'.format, bbox=dict(fc='white'),
-            #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
 
+        if self.config.figures.MOUSE_HOOVER:
             self.HighlightingDataCursor(points[0], formatter='{label}'.format, bbox=dict(fc='white'),
-                                   arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5))
+                                        arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5))
+
         if len(fig.get_label()) == 0:
             fig.set_label(figure_name)
         else:
             figure_name = fig.get_label().replace(": ", "_").replace(" ", "_").replace("\t", "_")
 
-        self._save_figure(figure_dir=figure_dir, figure_format=figure_format, figure_name=figure_name)
+        self._save_figure(None, figure_name)
         self._check_show()
 
     def _params_stats_subtitles(self, params, stats):
@@ -709,8 +685,7 @@ class Plotter(BasePlotter):
         return subtitles
 
     def parameters_pair_plots(self, samples, params=["tau1", "tau0", "K", "sig_eq", "eps"], stats=None, skip_samples=0,
-                              title='Parameters samples', figure_name=None, figure_dir=FOLDER_FIGURES,
-                              figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT):
+                              title='Parameters samples', figure_name=None, figsize=FiguresConfig.VERY_LARGE_SIZE):
         subtitles = list(self._params_stats_subtitles(params, stats))
         subtitles.sort()
         samples = ensure_list(samples)
@@ -720,12 +695,11 @@ class Plotter(BasePlotter):
             samples = samples[0]
         samples = sort_dict(extract_dict_stringkeys(samples, params, modefun="equal"))
         self.pair_plots(samples, samples.keys(), True, skip_samples, title, subtitles,
-                        figure_name, figure_dir, figsize, figure_format)
+                        figure_name, figsize)
 
     def region_parameters_violin_plots(self, samples, values=None, params=["x0", "x1eq"], stats=None,
-                                       skip_samples=0, per_chain=False,  labels=None, seizure_indices=None,
-                                       figure_name="Regions parameters samples", figure_dir=FOLDER_FIGURES,
-                                       figsize=VERY_LARGE_SIZE, figure_format=FIG_FORMAT):
+                                       skip_samples=0, per_chain=False, labels=None, seizure_indices=None,
+                                       figure_name="Regions parameters samples", figsize=FiguresConfig.VERY_LARGE_SIZE):
         if isinstance(values, dict):
             vals_fun = lambda param: values.get(param, numpy.array([]))
         else:
@@ -757,16 +731,15 @@ class Plotter(BasePlotter):
             pyplot.figure(plot_figure_name(ichain), figsize=figsize)
             for ip, param in enumerate(params):
                 self.plot_vector_violin(vals_fun(param), plot_samples(chain_sample[param]), params_labels[param],
-                                        subplot_ind+ip+1, param, colormap="YlOrRd", show_y_labels=True,
+                                        subplot_ind + ip + 1, param, colormap="YlOrRd", show_y_labels=True,
                                         indices_red=seizure_indices, sharey=None)
-            self._save_figure(pyplot.gcf(), None, figure_dir, figure_format)
+            self._save_figure(pyplot.gcf(), None)
             self._check_show()
 
     def plot_fit_results(self, model_inversion, ests, samples, statistical_model, signals, stats=None, time=None,
                          simulation_values=None, region_mode="all", seizure_indices=[], x1_str="x1", mc_str="MC",
                          signals_str="fit_signals", sig_str="sig", dX1t_str="dX1t", dZt_str="dZt",
-                         trajectories_plot=True, connectivity_plot=True, figure_dir=FOLDER_FIGURES,
-                         figure_format=FIG_FORMAT, **kwargs):
+                         trajectories_plot=True, connectivity_plot=True, **kwargs):
         region_labels = kwargs.get("regions_labels", model_inversion.region_labels)
         if isequal_string(region_mode, "all"):
             region_inds = range(statistical_model.n_regions)
@@ -819,9 +792,8 @@ class Plotter(BasePlotter):
                              subtitles=['hidden state ' + x1_str + stats_string[x1_str],
                                         'hidden state z' + stats_string["z"]], offset=1.0,
                              labels=region_labels[region_inds],
-                             figure_dir=figure_dir,
-                             figure_format=figure_format, figsize=VERY_LARGE_SIZE)
-            self.plot_raster(sort_dict({dX1t_str: sample[dX1t_str].T, dZt_str: sample[dZt_str].T}), time[:-1], #
+                             figsize=FiguresConfig.VERY_LARGE_SIZE)
+            self.plot_raster(sort_dict({dX1t_str: sample[dX1t_str].T, dZt_str: sample[dZt_str].T}), time[:-1],  #
                              time_units=est.get('time_units', "ms"), # special_idx=seizure_indices,
                              title=name + ": Hidden states random walk rasterplot",
                              subtitles=[dX1t_str,
@@ -829,18 +801,16 @@ class Plotter(BasePlotter):
                                         '\ndynamic noise sig_prior = ' + str(sig_prior) +
                                         ", sig_post = " + str(est[sig_str])], offset=1.0,
                              labels=region_labels[region_inds],
-                             figure_dir=figure_dir,
-                             figure_format=figure_format, figsize=VERY_LARGE_SIZE)
+                             figsize=FiguresConfig.VERY_LARGE_SIZE)
             if trajectories_plot:
                 title = name + ': Fit hidden state space trajectories'
                 self.plot_trajectories({x1_str: sample[x1_str].T, 'z': sample['z'].T}, special_idx=seizure_indices,
-                                       title=title, labels=stats_region_labels,
-                                       figure_dir=figure_dir, figure_format=figure_format, figsize=SUPER_LARGE_SIZE)
+                                       title=title, labels=stats_region_labels, figsize=FiguresConfig.SUPER_LARGE_SIZE)
             # plot connectivity
             if connectivity_plot:
                 MC_prior = statistical_model.parameters["MC"].mean
                 conn_figure_name = name + "Model Connectivity"
-                pyplot.figure(conn_figure_name, VERY_LARGE_SIZE)
+                pyplot.figure(conn_figure_name, FiguresConfig.VERY_LARGE_SIZE)
                 # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
                 self.plot_regions2regions(MC_prior, region_labels, 121,
                                           "Prior Model Connectivity")
@@ -851,12 +821,11 @@ class Plotter(BasePlotter):
                         MC_title = MC_title + skey + "_mean=" + str(sval["MC"].mean()) + ", "
                     MC_title = MC_title[:-2]
                 self.plot_regions2regions(est[mc_str], region_labels, 122, MC_title)
-                self._save_figure(pyplot.gcf(), conn_figure_name, figure_dir, figure_format)
+                self._save_figure(pyplot.gcf(), conn_figure_name)
                 self._check_show()
         self.plot_timeseries(observation_dict, time, special_idx=None, time_units=ests[0].get('time_units', "ms"),
                              title="Observation signals vs fit time series: " + stats_string[signals_str],
-                             offset=1.0, labels=sensor_labels,
-                             figure_dir=figure_dir, figure_format=figure_format, figsize=VERY_LARGE_SIZE)
+                             offset=1.0, labels=sensor_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
     def _prepare_distribution_axes(self, distribution, loc=0.0, scale=1.0, x=numpy.array([]), ax=None, linestyle="-",
                                    lgnd=False):
@@ -878,10 +847,10 @@ class Plotter(BasePlotter):
             raise_value_error("Distribution parameters do not broadcast!")
 
     def plot_distribution(self, distribution, loc=0.0, scale=1.0, x=numpy.array([]), ax=None, linestyle="-", lgnd=True,
-                          figure_name="", figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
+                          figure_name=""):
         ax = self._prepare_distribution_axes(loc, scale, x, ax, linestyle, lgnd)
         ax.set_title(distribution.type + " distribution")
-        self._save_figure(pyplot.gcf(), figure_name, figure_dir, figure_format)
+        self._save_figure(pyplot.gcf(), figure_name)
         self._check_show()
         return ax, pyplot.gcf()
 
@@ -893,27 +862,25 @@ class Plotter(BasePlotter):
                 numpy.maximum(parameter.low, parameter.scipy(parameter.loc, parameter.scale).ppf(0.01)),
                 numpy.minimum(parameter.high, parameter.scipy(parameter.loc, parameter.scale).ppf(0.99)), 100)
         if x is not None:
-            plotter = Plotter()
-            ax[0] = plotter._prepare_distribution_axes(parameter, parameter.loc, parameter.scale, x, ax[0], "-", lgnd)
+            ax[0] = self._prepare_distribution_axes(parameter, parameter.loc, parameter.scale, x, ax[0], "-", lgnd)
             ax[0].set_title(parameter.name + ": " + parameter.type + " distribution")
-            ax[1] = plotter._prepare_distribution_axes(parameter, 0.0, 1.0, (x - parameter.loc) / parameter.scale,
-                                                       ax[1], "--", lgnd)
+            ax[1] = self._prepare_distribution_axes(parameter, 0.0, 1.0, (x - parameter.loc) / parameter.scale,
+                                                    ax[1], "--", lgnd)
             ax[1].set_title(parameter.name + "_star: " + parameter.type + " distribution")
             return ax
         else:
             raise_value_error("Stochastic parameter's parameters do not broadcast!")
 
-    def plot_stochastic_parameter(self, parameter, x=numpy.array([]), ax=None, lgnd=True, figure_name="",
-                                  figure_dir=FOLDER_FIGURES, figure_format=FIG_FORMAT):
+    def plot_stochastic_parameter(self, parameter, x=numpy.array([]), ax=None, lgnd=True, figure_name=""):
         ax = self._prepare_parameter_axes(parameter, x, ax, lgnd)
         if len(figure_name) < 1:
             figure_name = "parameter_" + parameter.name
-        self._save_figure(pyplot.gcf(), figure_name, figure_dir, figure_format)
+        self._save_figure(pyplot.gcf(), figure_name)
         self._check_show()
         return ax, pyplot.gcf()
 
-    def plot_HMC(self, samples, skip_samples=0, title='HMC NUTS trace', figure_name=None, figure_dir=FOLDER_FIGURES,
-                 figsize=LARGE_SIZE, figure_format=FIG_FORMAT):
+    def plot_HMC(self, samples, skip_samples=0, title='HMC NUTS trace', figure_name=None,
+                 figsize=FiguresConfig.LARGE_SIZE):
         samples = ensure_list(samples)
         if len(samples) > 1:
             samples = list_of_dicts_to_dicts_of_ndarrays(samples)
@@ -921,5 +888,4 @@ class Plotter(BasePlotter):
             samples = samples[0]
         nuts = extract_dict_stringkeys(samples, '__', modefun="find")
         self.plots(nuts, shape=(2, 4), transpose=True, skip=skip_samples, xlabels={}, xscales={},
-                   yscales={"stepsize__": "log"}, title=title, figure_name=figure_name, figure_dir=figure_dir,
-                   figure_format=figure_format, figsize=figsize)
+                   yscales={"stepsize__": "log"}, title=title, figure_name=figure_name, figsize=figsize)

@@ -1,10 +1,10 @@
+# coding=utf-8
+
 import numpy as np
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.simulator_builder import SimulatorBuilder
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
-
-head_dir = "head2"
 
 
 class TestSimulationRun(object):
@@ -40,7 +40,7 @@ class TestSimulationRun(object):
 
     # def test_custom_simulation(self):
     #     reader = H5Reader()
-    #     connectivity = reader.read_connectivity(os.path.join(DATA_TEST, head_dir, "Connectivity.h5"))
+    #     connectivity = reader.read_connectivity(os.path.join(IN_HEAD, "Connectivity.h5"))
     #     model_configuration = self._prepare_model_for_simulation(connectivity)
     #
     #     simulator_builder = SimulatorBuilder().set_time_length(self.time_length)
