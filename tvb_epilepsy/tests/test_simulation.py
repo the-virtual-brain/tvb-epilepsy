@@ -30,7 +30,7 @@ class TestSimulationRun(object):
         model_configuration = self._prepare_model_for_simulation(connectivity)
 
         simulator_builder = SimulatorBuilder().set_time_length(self.time_length)
-        simulator = simulator_builder.build_simulator_TVB_fitting(
+        simulator = simulator_builder.build_simulator_tvb_fitting(
             model_configuration, connectivity)
         simulator.config_simulation(initial_conditions=None)
         ttavg, tavg_data, status = simulator.launch_simulation(simulator_builder.n_report_blocks)
