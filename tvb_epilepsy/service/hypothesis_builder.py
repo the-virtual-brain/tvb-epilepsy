@@ -20,7 +20,7 @@ class HypothesisBuilder(object):
 
     # Attributes specific to a DiseaseHypothesis
     nr_of_regions = 0
-    name = None
+    name = ""
     type = []
     x0_indices = []
     x0_values = []
@@ -91,8 +91,6 @@ class HypothesisBuilder(object):
         return self
 
     def build_hypothesis(self):
-        if self.name is None:
-            self.name = "Hypothesis"
 
         return DiseaseHypothesis(self.nr_of_regions, excitability_hypothesis={tuple(self.x0_indices): self.x0_values},
                                  epileptogenicity_hypothesis={tuple(self.e_indices): self.e_values},
@@ -101,9 +99,6 @@ class HypothesisBuilder(object):
                                  lsa_propagation_strenghts=self.lsa_propagation_strengths, name=self.name)
 
     def build_epileptogenicity_hypothesis(self, values=None, indices=None):
-        if self.name is None:
-            self.name = "EpileptogenicityHypothesis"
-
         if values is None or indices is None:
             hypo = self.build_hypothesis()
             self.logger.warning(
@@ -112,12 +107,9 @@ class HypothesisBuilder(object):
             return hypo
 
         return DiseaseHypothesis(number_of_regions=self.nr_of_regions,
-                                 epileptogenicity_hypothesis={tuple(indices): values})
+                                 epileptogenicity_hypothesis={tuple(indices): values}, name=self.name)
 
     def build_excitability_hypothesis(self, values=None, indices=None):
-        if self.name is None:
-            self.name = "ExcitabilityHypothesis"
-
         if values is None or indices is None:
             hypo = self.build_hypothesis()
             self.logger.warning(
@@ -125,12 +117,10 @@ class HypothesisBuilder(object):
 
             return hypo
 
-        return DiseaseHypothesis(number_of_regions=self.nr_of_regions, excitability_hypothesis={tuple(indices): values})
+        return DiseaseHypothesis(number_of_regions=self.nr_of_regions, excitability_hypothesis={tuple(indices): values},
+                                 name=self.name)
 
     def build_mixed_hypothesis(self, ep_values=None, ep_indices=None, exc_values=None, exc_indices=None):
-        if self.name is None:
-            self.name = "MixedHypothesis"
-
         if ep_values is None or exc_indices is None or ep_values is None or exc_indices is None:
             hypo = self.build_hypothesis()
             self.logger.warning(
@@ -211,9 +201,6 @@ class HypothesisBuilder(object):
         return self.build_mixed_hypothesis(e_values, e_indices, x0_values, x0_indices)
 
     def build_lsa_hypothesis(self):
-        if self.name is None:
-            self.name = "LSAHypothesis"
-
         return self.build_hypothesis()
 
     def build_hypothesis_from_file(self, hyp_file, ep_indices=None):
