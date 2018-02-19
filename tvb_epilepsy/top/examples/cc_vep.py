@@ -4,7 +4,6 @@ Entry point for working with VEP
 import os
 import numpy as np
 from tvb_epilepsy.base.constants.config import Config
-from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
@@ -33,23 +32,20 @@ def main_vep(head_folder, ep_name="clinical_hypothesis", x0_indices=[], pse_flag
     plotter.plot_head(head)
 
     # --------------------------Hypothesis definition-----------------------------------
-    disease_values = reader.read_epileptogenicity(head_folder, name=ep_name)
-
-    hypo_builder = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).set_normalize(True)
-    threshold = np.min(X0_DEF, E_DEF)
-    n_x0 = len(x0_indices)
+    hypo_builder = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions)
     all_regions_indices = np.array(range(head.number_of_regions))
 
     # This is an example of Epileptogenicity Hypothesis:
-    hyp_E = hypo_builder.build_epileptogenicity_hypothesis_based_on_threshold(disease_values, threshold)
+    hyp_E = hypo_builder.build_hypothesis_from_file(ep_name, x0_indices)
     # This is an example of Excitability Hypothesis:
-    hyp_x0 = hypo_builder.build_excitability_hypothesis_based_on_threshold(disease_values, threshold)
+    hyp_x0 = hypo_builder.build_hypothesis_from_file(ep_name)
 
     disease_indices = hyp_E.e_indices + hyp_x0.x0_indices
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
 
-    if n_x0 > 0:
+    if len(x0_indices) > 0:
         # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
+        disease_values = reader.read_epileptogenicity(head_folder, name=ep_name)
         disease_values = disease_values.tolist()
         x0_values = []
         for ix0 in x0_indices:
