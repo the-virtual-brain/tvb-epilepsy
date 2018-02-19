@@ -11,7 +11,6 @@ from tvb_epilepsy.base.model.vep.surface import Surface, SurfaceH5Field
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
-from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.io.h5_model import read_h5_model
 
@@ -45,7 +44,7 @@ class H5Reader(object):
         h5_file.close()
 
         conn = Connectivity(path, weights, tract_lengths, region_labels, region_centres, hemispheres, orientations)
-        self.logger.info("Successfully read connectvity: %s" % conn)
+        self.logger.info("Successfully read connectvity from: %s" % path)
 
         return conn
 
@@ -68,7 +67,7 @@ class H5Reader(object):
         h5_file.close()
 
         surface = Surface(vertices, triangles, vertex_normals)
-        self.logger.info("Successfully read surface: %s" % surface)
+        self.logger.info("Successfully read surface from: %s" % path)
 
         return surface
 
@@ -130,7 +129,7 @@ class H5Reader(object):
         h5_file.close()
 
         sensors = Sensors(labels, locations, orientations=orientations, gain_matrix=gain_matrix, s_type=type)
-        self.logger.info("Successfully read sensors: %s" % sensors)
+        self.logger.info("Successfully read sensors from: %s" % sensors_file)
 
         return sensors
 
@@ -187,7 +186,7 @@ class H5Reader(object):
         data = h5_file['/data'][()]
 
         h5_file.close()
-        self.logger.info("Successfully read structural MRI: %s" % data)
+        self.logger.info("Successfully read structural MRI from: %s" % path)
 
         return data
 
@@ -205,7 +204,7 @@ class H5Reader(object):
         sensorsSEEG, sensorsEEG, sensorsMEG = self.read_sensors(path)
 
         head = Head(conn, srf, rm, vm, t1, path, sensorsSEEG=sensorsSEEG, sensorsEEG=sensorsEEG, sensorsMEG=sensorsMEG)
-        self.logger.info("Successfully read Head: %s" % head)
+        self.logger.info("Successfully read Head from: %s" % path)
 
         return head
 
@@ -299,6 +298,7 @@ class H5Reader(object):
         """
         self.logger.info("Starting to read LSAService from: %s" % path)
         h5_file = h5py.File(path, 'r', libver='latest')
+        from tvb_epilepsy.service.lsa_service import LSAService
 
         lsa_service = LSAService()
 

@@ -3,7 +3,6 @@ Entry point for working with VEP
 """
 import os
 import numpy as np
-from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.constants.configurations import FOLDER_RES, IN_HEAD, TVB, DATA_MODE
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
@@ -18,7 +17,6 @@ from tvb_epilepsy.top.scripts.simulation_scripts import compute_seeg_and_write_t
 from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
-from tvb_epilepsy.io.h5_reader import H5Reader
 
 if DATA_MODE is TVB:
     from tvb_epilepsy.io.tvb_data_reader import TVBReader as Reader
@@ -52,29 +50,22 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
     # disease_values = x0_values + e_values
     # disease_indices = x0_indices + e_indices
     # ...or reading a custom file:
-    if not hasattr(reader, "read_epileptogenicity"):
-        disease_values = H5Reader().read_epileptogenicity(IN_HEAD, name=EP_NAME)
-    else:
-        disease_values = reader.read_epileptogenicity(IN_HEAD, name=EP_NAME)
 
-    threshold = np.min([X0_DEF, E_DEF])
     hypo_builder = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions)
 
-    # This is an example of Epileptogenicity Hypothesis:
-    hyp_E = hypo_builder.build_epileptogenicity_hypothesis_based_on_threshold(disease_values, threshold)
+    # This is an example of Epileptogenicity Hypothesis: you give as ep all indices for values > 0
+    hyp_E = hypo_builder.build_hypothesis_from_file(EP_NAME, [1, 3, 16, 25])
 
     # This is an example of Excitability Hypothesis:
-    hyp_x0 = hypo_builder.build_excitability_hypothesis_based_on_threshold(disease_values, threshold)
+    hyp_x0 = hypo_builder.build_hypothesis_from_file(EP_NAME)
 
     all_regions_indices = np.array(range(head.number_of_regions))
-    healthy_indices = np.delete(all_regions_indices, hyp_x0.x0_indices + hyp_E.e_indices).tolist()
+    healthy_indices = np.delete(all_regions_indices, hyp_E.x0_indices + hyp_E.e_indices).tolist()
 
-    if len(hyp_E.e_indices) > 0:
-        # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
-        hyp_x0_E = hypo_builder.build_mixed_hypothesis_based_on_threshold(disease_values, threshold)
-        hypotheses = (hyp_x0, hyp_E, hyp_x0_E)
-    else:
-        hypotheses = (hyp_x0, hyp_E)
+    # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
+    hyp_x0_E = hypo_builder.build_hypothesis_from_file(EP_NAME, [16, 25])
+    hypotheses = (hyp_x0, hyp_E, hyp_x0_E)
+
     # --------------------------Simulation preparations-----------------------------------
     sim_builder = SimulatorBuilder().set_fs(2048.0).set_time_length(10000.0).set_report_every_n_monitor_steps(
         100.0).set_model_name("EpileptorDPrealistic").set_sim_type("realistic")
@@ -223,7 +214,8 @@ def main_vep(test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, 
                 vois_ts_dict['time'] = time
                 vois_ts_dict['time_units'] = 'msec'
                 vois_ts_dict = compute_seeg_and_write_ts_h5_file(FOLDER_RES, lsa_hypothesis.name + "_ts.h5", sim.model,
-                                                                 vois_ts_dict, output_sampling_time, sim_builder.time_length,
+                                                                 vois_ts_dict, output_sampling_time,
+                                                                 sim_builder.time_length,
                                                                  hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
                                                                  sensors_list=head.sensorsSEEG)
                 # Plot results

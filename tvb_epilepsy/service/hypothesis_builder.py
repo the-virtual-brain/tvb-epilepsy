@@ -145,6 +145,7 @@ class HypothesisBuilder(object):
 
         return disease_values, disease_indices
 
+    # deprecated
     def build_epileptogenicity_hypothesis_based_on_threshold(self, values, threshold):
         disease_indices, = numpy.where(values > threshold)
         disease_values = values[disease_indices]
@@ -152,6 +153,7 @@ class HypothesisBuilder(object):
 
         return self.build_epileptogenicity_hypothesis(disease_values, list(disease_indices))
 
+    # deprecated
     def build_excitability_hypothesis_based_on_threshold(self, values, threshold):
         disease_indices, = numpy.where(values > threshold)
         disease_values = values[disease_indices]
@@ -159,6 +161,7 @@ class HypothesisBuilder(object):
 
         return self.build_excitability_hypothesis(disease_values, list(disease_indices))
 
+    # deprecated
     def _compute_e_x0_values_based_on_threshold(self, values, threshold):
         disease_indices, = numpy.where(values > threshold)
         disease_values = values[disease_indices]
@@ -176,10 +179,12 @@ class HypothesisBuilder(object):
 
         return e_indices, e_values, x0_indices, x0_values
 
+    # deprecated
     def build_mixed_hypothesis_based_on_threshold(self, values, threshold):
         e_indices, e_values, x0_indices, x0_values = self._compute_e_x0_values_based_on_threshold(values, threshold)
         return self.build_mixed_hypothesis(e_values, e_indices, x0_values, x0_indices)
 
+    # deprecated
     def build_mixed_hypothesis_with_x0_having_max_values(self, values, threshold):
         disease_indices, = numpy.where(values > threshold)
         disease_values = values[disease_indices]
@@ -196,9 +201,9 @@ class HypothesisBuilder(object):
         return self._build_hypothesis_with_all_attributes()
 
     def build_hypothesis_from_file(self, file, ep_indices=None):
-        ep_values = H5Reader().read_epileptogenicity(IN_HEAD, name=file)
-        disease_indices, = numpy.where(ep_values > 0)
-        disease_values = ep_values[disease_indices]
+        epi_values = H5Reader().read_epileptogenicity(IN_HEAD, name=file)
+        disease_indices, = numpy.where(epi_values > 0)
+        disease_values = epi_values[disease_indices]
         disease_values, disease_indices = self._ensure_normalization_or_sorting(disease_values, disease_indices)
 
         if not ep_indices:
@@ -206,14 +211,14 @@ class HypothesisBuilder(object):
                              disease_values, disease_indices)
             return self.build_excitability_hypothesis(disease_values, disease_indices)
 
-        if numpy.equal(disease_indices, ep_indices):
+        if set(disease_indices) == set(ep_indices):
             self.logger.info("An epileptogenicity hypothesis will be created with values: %s on indices: %s",
                              disease_values, disease_indices)
             return self.build_epileptogenicity_hypothesis(disease_values, disease_indices)
 
-        ep_values = disease_values[ep_indices]
+        ep_values = epi_values[ep_indices]
         exc_indices = numpy.setdiff1d(disease_indices, ep_indices)
-        exc_values = disease_values[exc_indices]
+        exc_values = epi_values[exc_indices]
         self.logger.info(
             "A mixed hypothesis will be created with x0 values: %s on x0 indices: %s and ep values: %s on ep indices: %s",
             exc_values, exc_indices, ep_values, ep_indices)
