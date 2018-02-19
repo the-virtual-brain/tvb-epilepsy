@@ -14,10 +14,10 @@ class CmdStanService(StanService):
                  fitmethod="sample", random_seed=12345, init="random", config=None, **options):
         super(CmdStanService, self).__init__(model_name, model, model_code, model_code_path, model_data_path,
                                              fitmethod, config)
-        self.assert_fitmethod()
         if not os.path.isfile(os.path.join(self.config.generic.CMDSTAN_PATH, 'runCmdStanTests.py')):
             raise_value_error('Please provide CmdStan path, e.g. lib.cmdstan_path("/path/to/")!')
         self.path = self.config.generic.CMDSTAN_PATH
+        self.assert_fitmethod()
         self.command = ""
         self.options = {"init": init, "random_seed": random_seed}
         self.options = self.set_options(**options)
@@ -56,8 +56,8 @@ class CmdStanService(StanService):
     def compile_stan_model(self, save_model=True, **kwargs):
         self.model_code_path = kwargs.pop("model_code_path", self.model_code_path)
         self.logger.info("Compiling model...")
-        command = "make " + self.model_code_path.split(".stan", 1)[0] + " && " + \
-                  "chmod +x " + self.model_code_path.split(".stan", 1)[0]
+        command = "make CC=" + self.config.generic.C_COMPILER + " " + self.model_code_path.split(".stan", 1)[0] + \
+                  " && " + "chmod +x " + self.model_code_path.split(".stan", 1)[0]
         self.compilation_time = execute_command(command, cwd=self.path, shell=True)[1]
         self.logger.info(str(self.compilation_time) + ' sec required to compile')
         if save_model:
@@ -114,7 +114,7 @@ class CmdStanService(StanService):
             est, samples, summary = self.read_output(output_filepath, summary_filepath=summary_filepath, **kwargs)
             if plot_HMC and self.fitmethod.find("sampl") >= 0 and \
                 isequal_string(self.options.get("algorithm", "None"), "HMC"):
-                Plotter().plot_HMC(samples, kwargs.pop("skip_samples", 0))
+                Plotter(self.config).plot_HMC(samples, kwargs.pop("skip_samples", 0))
             return est, samples, summary
         else:
             return None, None, None

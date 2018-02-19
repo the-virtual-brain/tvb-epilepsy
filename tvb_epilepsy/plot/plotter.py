@@ -3,12 +3,12 @@
 import numpy
 import matplotlib
 from collections import OrderedDict
+from tvb_epilepsy.base.constants.config import FiguresConfig
 
-matplotlib.use('Agg')
+matplotlib.use(FiguresConfig.MATPLOTLIB_BACKEND)
 
 from matplotlib import pyplot, gridspec
 from matplotlib.colors import Normalize
-from mpldatacursor import HighlightingDataCursor
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.plot.base_plotter import BasePlotter
 from tvb_epilepsy.base.model.vep.sensors import Sensors
@@ -28,6 +28,17 @@ class Plotter(BasePlotter):
 
     def __init__(self, config=None):
         super(Plotter, self).__init__(config)
+        self.HighlightingDataCursor = lambda *args, **kwargs: None
+        if matplotlib.get_backend() in matplotlib.rcsetup.interactive_bk and self.config.figures.MOUSE_HOOVER:
+            try:
+                from mpldatacursor import HighlightingDataCursor
+                self.HighlightingDataCursor = HighlightingDataCursor
+            except ImportError:
+                self.config.figures.MOUSE_HOOVER = False
+                self.logger.warning("Importing mpldatacursor failed! No highlighting functionality in plots!")
+        else:
+            self.logger.warning("Noninteractive matplotlib backend! No highlighting functionality in plots!")
+            self.config.figures.MOUSE_HOOVER = False
 
     def _plot_connectivity(self, connectivity, figure_name='Connectivity '):
         pyplot.figure(figure_name + str(connectivity.number_of_regions), self.config.figures.VERY_LARGE_SIZE)
@@ -328,12 +339,12 @@ class Plotter(BasePlotter):
             if isequal_string(mode, "raster"):  # set yticks as labels if this is a raster plot
                 # axYticks(labels, offset, nTS)
                 pyplot.gca().invert_yaxis()
-        if FiguresConfig.MOUSE_HOOVER:
+
+        if self.config.figures.MOUSE_HOOVER:
             for line in lines:
-                # datacursor( lines[0], formatter='{label}'.format, bbox=dict(fc='white'),
-                #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
-                HighlightingDataCursor(line, formatter='{label}'.format, bbox=dict(fc='white'),
-                                       arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5))
+                self.HighlightingDataCursor(line, formatter='{label}'.format, bbox=dict(fc='white'),
+                                            arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5))
+
         self._save_figure(pyplot.gcf(), figure_name)
         self._check_show()
         return pyplot.gcf(), axes, lines
@@ -633,12 +644,11 @@ class Plotter(BasePlotter):
         ax.axes.set_ylim([0.0, 6.0])
         ax.axes.set_xlabel('x1')
         ax.axes.set_ylabel('z')
-        if self.config.figures.MOUSE_HOOVER:
-            # datacursor( lines[0], formatter='{label}'.format, bbox=dict(fc='white'),
-            #           arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5) )    #hover=True
 
-            HighlightingDataCursor(points[0], formatter='{label}'.format, bbox=dict(fc='white'),
-                                   arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5))
+        if self.config.figures.MOUSE_HOOVER:
+            self.HighlightingDataCursor(points[0], formatter='{label}'.format, bbox=dict(fc='white'),
+                                        arrowprops=dict(arrowstyle='simple', fc='white', alpha=0.5))
+
         if len(fig.get_label()) == 0:
             fig.set_label(figure_name)
         else:
