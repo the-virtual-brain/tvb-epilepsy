@@ -108,9 +108,9 @@ def main_vep(head_folder, ep_name="clinical_hypothesis", x0_indices=[], pse_flag
                              lsa_service.eigen_vectors_number, head.connectivity.region_labels, pse_results,
                              title="Hypothesis PSE LSA Overview")
         if sim_flag:
-            sim_folder_res = os.path.join(config.out.FOLDER_RES, "simulations")
-            sim_folder_figs = os.path.join(config.out.FOLDER_FIGURES, "simulations")
-            for folder in (sim_folder_res, sim_folder_figs):
+            config.out.FOLDER_RES = os.path.join(config.out.FOLDER_RES, "simulations")
+            config.out.FOLDER_FIGURES = os.path.join(config.out.FOLDER_FIGURES, "simulations")
+            for folder in (config.out.FOLDER_RES, config.out.FOLDER_FIGURES):
                 if not (os.path.isdir(folder)):
                     os.mkdir(folder)
             dynamical_models = ["EpileptorDP2D", "EpileptorDPrealistic"]
@@ -120,9 +120,7 @@ def main_vep(head_folder, ep_name="clinical_hypothesis", x0_indices=[], pse_flag
                 vois_ts_dict = \
                     from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
                                                            sim_type=sim_type, dynamical_model=dynamical_model,
-                                                           simulation_mode=config.generic.TVB, ts_file=ts_file,
-                                                           plot_flag=True,
-                                                           results_dir=sim_folder_res, figure_dir=sim_folder_figs)
+                                                           ts_file=ts_file, plot_flag=True, config=config)
 
 
 if __name__ == "__main__":
