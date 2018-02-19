@@ -8,6 +8,5 @@ for ign in examples extern; do ignores="--ignore=$ign $ignores"; done
 cov=""
 if [[ $COV == "yes" ]]; then cov="--cov=tvb_epilepsy"; fi
 
-# run 'em
-export RUN_ENV="test"
+# run tests
 py.test --cov-config .coveragec $cov $ignores

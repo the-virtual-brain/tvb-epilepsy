@@ -3,9 +3,7 @@
 import os
 import numpy as np
 from scipy.io import loadmat, savemat
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, DATA_CUSTOM, FOLDER_FIGURES
-from tvb_epilepsy.base.constants.configurations import FOLDER_VEP_ONLINE, STATS_MODELS_PATH
-from tvb_epilepsy.base.constants.module_constants import TVB, CUSTOM
+from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
@@ -23,69 +21,64 @@ from tvb_epilepsy.top.scripts.hypothesis_scripts import from_head_to_hypotheses,
 from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration_to_simulation
 from tvb_epilepsy.top.scripts.seeg_data_scripts import prepare_seeg_observable
 
-logger = initialize_logger(__name__)
+output = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
+config = Config(output_base=output)
+logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
 
 reader = H5Reader()
 writer = H5Writer()
 
-plotter = Plotter()
-
-FOLDER_VEP_HOME = os.path.join(FOLDER_VEP_ONLINE, "tests")
+plotter = Plotter(config)
 
 
-def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join(DATA_CUSTOM, 'Head'),
-                        sensors_filename="SensorsSEEG_116.h5", stats_model_name="vep_sde",
-                        model_code_dir=STATS_MODELS_PATH, EMPIRICAL="",
+def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", stats_model_name="vep_sde", EMPIRICAL="",
                         times_on_off=[], sensors_lbls=[], sensors_inds=[], fitmethod="optimizing",
-                        stan_service="CmdStan", results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES, **kwargs):
+                        stan_service="CmdStan", config=Config(), **kwargs):
     # ------------------------------Stan model and service--------------------------------------
     # Compile or load model:
     # model_code_path = os.path.join(STATS_MODELS_PATH, stats_model_name + ".stan")
-    model_code_path = os.path.join(model_code_dir, stats_model_name + ".stan")
+    model_code_path = os.path.join(config.generic.STATS_MODELS_PATH, stats_model_name + ".stan")
     if isequal_string(stan_service, "CmdStan"):
         stan_service = CmdStanService(model_name=stats_model_name, model=None, model_code=None,
-                                      model_dir=FOLDER_VEP_HOME, model_code_path=model_code_path,
-                                      fitmethod=fitmethod, random_seed=12345, init="random")
+                                      model_code_path=model_code_path,
+                                      fitmethod=fitmethod, random_seed=12345, init="random", config=config)
     else:
         stan_service = PyStanService(model_name=stats_model_name, model=None, model_code=None,
-                                     model_dir=FOLDER_VEP_HOME, model_code_path=model_code_path,
-                                     fitmethod=fitmethod, random_seed=12345, init="random")
+                                     model_code_path=model_code_path,
+                                     fitmethod=fitmethod, random_seed=12345, init="random", config=config)
     stan_service.set_or_compile_model()
 
     # -------------------------------Reading model_data and hypotheses--------------------------------------------------
-    head, hypos = from_head_to_hypotheses(ep_name, data_mode=CUSTOM, data_folder=data_folder,
-                                          plot_head=False, figure_dir=figure_dir, sensors_filename=sensors_filename)
+    head, hypos = from_head_to_hypotheses(ep_name, config, plot_head=False)
 
     for hyp in hypos[:1]:
 
         # --------------------------Model configuration and LSA-----------------------------------
-        model_config_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_ModelConfig.h5")
-        hyp_file =os.path.join(FOLDER_VEP_HOME, hyp.name + "_LSA.h5")
-        if os.path.isfile(hyp_file) and \
-           os.path.isfile(model_config_file):
+        model_config_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelConfig.h5")
+        hyp_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_LSA.h5")
+        if os.path.isfile(hyp_file) and os.path.isfile(model_config_file):
             model_configuration = reader.read_model_configuration(model_config_file)
             lsa_hypothesis = reader.read_hypothesis(hyp_file)
         else:
             model_configuration, lsa_hypothesis, model_configuration_builder, lsa_service = \
-               from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
-                                                   plot_flag=False, figure_dir=figure_dir, K=K_DEF)
+                from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
+                                                    config=config, K=K_DEF)
 
         dynamical_model = "EpileptorDP2D"
 
         # -------------------------- Get model_data and observation signals: -------------------------------------------
-        model_inversion_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_ModelInversionService.h5")
-        stats_model_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_StatsModel.h5")
-        model_data_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_ModelData.h5")
-        if os.path.isfile(model_inversion_file) and \
-           os.path.isfile(stats_model_file) and \
-           os.path.isfile(model_data_file):
+        model_inversion_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelInversionService.h5")
+        stats_model_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_StatsModel.h5")
+        model_data_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5")
+        if os.path.isfile(model_inversion_file) and os.path.isfile(stats_model_file) \
+                and os.path.isfile(model_data_file):
             model_inversion = reader.read_model_inversions_service(model_inversion_file)
             statistical_model = reader.read_generic(stats_model_file)
             model_data = stan_service.load_model_data_from_file(model_data_path=model_data_file)
         else:
             model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
                                                        x1eq_max=-1.0, priors_mode="uninformative")
-                                                                                        # observation_expression="lfp"
+            # observation_expression="lfp"
             statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0, observation_model="lfp_power")
             statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
                                                                       active_regions_th=0.1, reset=True)
@@ -94,11 +87,11 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             n_electrodes = 8
             sensors_per_electrode = 2
             if os.path.isfile(EMPIRICAL):
-                # ---------------------------------------Get empirical data----------------------------------------------
+                # ---------------------------------------Get empirical data-------------------------------------------
                 target_data_type = "empirical"
                 statistical_model.observation_model = "seeg_logpower"
                 decimate = 2
-                ts_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_ts_empirical.mat")
+                ts_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ts_empirical.mat")
                 try:
                     vois_ts_dict = loadmat(ts_file)
                     time = vois_ts_dict["time"].flatten()
@@ -112,7 +105,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                     signals, time, fs = prepare_seeg_observable(EMPIRICAL, times_on_off, sensors_lbls, plot_flag=True,
                                                                 log_flag=True)
                     if len(sensors_inds) > 1:  # get_bipolar_channels(sensors_inds, sensors_lbls)
-                        sensors_inds, sensors_lbls = head.get_sensors_id().get_bipolar_sensors(sensors_inds=sensors_inds)
+                        sensors_inds, sensors_lbls = head.get_sensors_id().get_bipolar_sensors(
+                            sensors_inds=sensors_inds)
                     inds = np.argsort(sensors_inds)
                     sensors_inds = np.array(sensors_inds)[inds].flatten().tolist()
                     sensors_lbls = np.array(sensors_lbls)[inds].flatten().tolist()
@@ -126,18 +120,15 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                 model_inversion.sensors_labels[vois_ts_dict["sensors_inds"]] = sensors_lbls
                 manual_selection = sensors_inds
             else:
-                # -------------------------- Get simulated data (simulate if necessary) -----------------------------------
+                # -------------------------- Get simulated data (simulate if necessary) -------------------------------
                 target_data_type = "simulated"
-                statistical_model.observation_model = "lfp_power" #"seeg_logpower" # "lfp_power"
+                statistical_model.observation_model = "lfp_power"  # "seeg_logpower" # "lfp_power"
                 decimate = 1
-                ts_file = os.path.join(FOLDER_VEP_HOME, hyp.name + "_ts.h5")
+                ts_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ts.h5")
                 vois_ts_dict = \
-                    from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis, simulation_mode=TVB,
+                    from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
                                                            sim_type="fitting", dynamical_model=dynamical_model,
-                                                           ts_file=ts_file, plot_flag=True,
-                                                           save_flag=True, results_dir=results_dir,
-                                                           figure_dir=figure_dir, tau1=0.5, tau0=30.0,
-                                                           noise_intensity=10 ** -3)
+                                                           ts_file=ts_file, plot_flag=True, config=config)
                 # if len(sensors_inds) > 1:  # get_bipolar_channels(sensors_inds, sensors_lbls)
                 #     sensors_inds, sensors_lbls = head.get_sensors_id().get_bipolar_sensors(sensors_inds=sensors_inds)
                 if statistical_model.observation_model.find("seeg") >= 0:
@@ -157,7 +148,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                                          # n_electrodes=n_electrodes,
                                                          # sensors_per_electrode=sensors_per_electrode,
                                                          # group_electrodes=True, # normalization="zscore",
-                                                        )
+                                                         )
             # if len(model_inversion.signals_inds) < head.get_sensors_id().number_of_sensors:
             #     statistical_model = \
             #             model_inversion.update_active_regions_seeg(statistical_model)
@@ -169,19 +160,19 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                 vois_ts_dict["signals"] -= vois_ts_dict["signals"].min()
                 vois_ts_dict["signals"] /= vois_ts_dict["signals"].max()
                 plotter.plot_raster({'Target Signals': vois_ts_dict["signals"]}, vois_ts_dict["time"].flatten(),
-                            time_units="ms", title=hyp.name + ' Target Signals raster',
-                            special_idx=model_inversion.signals_inds, offset=0.1, labels=labels,
-                            figure_dir=figure_dir)
-            plotter.plot_timeseries({'Target Signals': signals}, time, time_units="ms", title=hyp.name+' Target Signals',
-                                    labels=labels[model_inversion.signals_inds], figure_dir=figure_dir)
-            writer.write_model_inversion_service(model_inversion, os.path.join(FOLDER_RES,
+                                    time_units="ms", title=hyp.name + ' Target Signals raster',
+                                    special_idx=model_inversion.signals_inds, offset=0.1, labels=labels)
+            plotter.plot_timeseries({'Target Signals': signals}, time, time_units="ms",
+                                    title=hyp.name + ' Target Signals',
+                                    labels=labels[model_inversion.signals_inds])
+            writer.write_model_inversion_service(model_inversion, os.path.join(config.out.FOLDER_RES,
                                                                                hyp.name + "_ModelInversionService.h5"))
-            writer.write_generic(statistical_model, results_dir, hyp.name + "_StatsModel.h5")
+            writer.write_generic(statistical_model, config.out.FOLDER_RES, hyp.name + "_StatsModel.h5")
             # try:
             #     model_data = stan_service.load_model_data_from_file()
             # except:
             model_data = build_stan_model_dict(statistical_model, signals, model_inversion)
-            writer.write_dictionary(model_data, os.path.join(results_dir, hyp.name + "_ModelData.h5"))
+            writer.write_dictionary(model_data, os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5"))
         if os.path.isfile(EMPIRICAL):
             simulation_values = None
         else:
@@ -197,7 +188,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             dZt_str = "z_eta"
             sig_str = "sigma"
             k_str = "k"
-            pair_plot_params=["time_scale", "k", "sigma", "epsilon", "amplitude", "offset"]
+            pair_plot_params = ["time_scale", "k", "sigma", "epsilon", "amplitude", "offset"]
             region_violin_params = ["x0", "x_init", "z_init"]
             if simulation_values is not None:
                 simulation_values.update({"x0": simulation_values["x0"][statistical_model.active_regions]})
@@ -211,7 +202,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             input_signals_str = "signals"
             signals_str = "fit_signals"
             dX1t_str = "dX1t"  # "x1_dWt"
-            dZt_str = "dZt" # "z_dWt"
+            dZt_str = "dZt"  # "z_dWt"
             sig_str = "sig"
             k_str = "K"
             pair_plot_params = ["tau1", "tau0", "K", "sig_init", "sig", "eps", "scale_signal", "offset_signal"]
@@ -223,10 +214,10 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
         ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
                                                   chains=4, refresh=1, num_warmup=200, num_samples=300,
                                                   max_depth=12, delta=0.85, **kwargs)
-        writer.write_generic(ests, results_dir, hyp.name + "_fit_est.h5")
-        writer.write_generic(samples, results_dir, hyp.name + "_fit_samples.h5")
+        writer.write_generic(ests, config.out.FOLDER_RES, hyp.name + "_fit_est.h5")
+        writer.write_generic(samples, config.out.FOLDER_RES, hyp.name + "_fit_samples.h5")
         if summary is not None:
-            writer.write_generic(summary, results_dir, hyp.name + "_fit_summary.h5")
+            writer.write_generic(summary, config.out.FOLDER_RES, hyp.name + "_fit_summary.h5")
             if isinstance(summary, dict):
                 R_hat = summary.get("R_hat", None)
                 if R_hat is not None:
@@ -236,7 +227,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
                                  R_hat, model_data["time"], simulation_values, region_mode,
                                  seizure_indices=lsa_hypothesis.get_regions_disease_indices(), x1_str=x1_str,
                                  signals_str=signals_str, sig_str=sig_str, dX1t_str=dX1t_str,
-                                 dZt_str=dZt_str,  trajectories_plot=True, connectivity_plot=connectivity_plot,
+                                 dZt_str=dZt_str, trajectories_plot=True, connectivity_plot=connectivity_plot,
                                  pair_plot_params=pair_plot_params, region_violin_params=region_violin_params)
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
         for id_est, est in enumerate(ensure_list(ests)):
@@ -247,10 +238,10 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", data_folder=os.path.join
             hyp_fit = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).set_name(
                 'fit' + str(id_est) + "_" + hyp.name).build_excitability_hypothesis(x0_values_fit, range(
                 model_configuration.n_regions))
-            model_configuration_fit = fit_model_configuration_builder.build_model_from_hypothesis(hyp_fit,  #est["MC"]
+            model_configuration_fit = fit_model_configuration_builder.build_model_from_hypothesis(hyp_fit,  # est["MC"]
                                                                                                   estMC(est))
             writer.write_model_configuration(model_configuration_fit,
-                                             os.path.join(results_dir, hyp_fit.name + "_ModelConfig.h5"))
+                                             os.path.join(config.out.FOLDER_RES, hyp_fit.name + "_ModelConfig.h5"))
 
             # Plot nullclines and equilibria of model configuration
             plotter.plot_state_space(model_configuration_fit,
@@ -265,7 +256,7 @@ if __name__ == "__main__":
     SUBJECT = "TVB3"
     VEP_HOME = os.path.join("/Users/dionperd/Dropbox/Work/VBtech/VEP/results/CC")
     VEP_FOLDER = os.path.join(VEP_HOME, SUBJECT)
-    DATA_CUSTOM = "/Users/dionperd/Dropbox/Work/VBtech/VEP/results/CC/" + SUBJECT
+    IN_HEAD = "/Users/dionperd/Dropbox/Work/VBtech/VEP/results/CC/" + SUBJECT + "/Head"
     SEEG_data = os.path.join("/Users/dionperd/Dropbox/Work/VBtech/VEP/data/CC", SUBJECT, "raw/seeg/ts_seizure")
     # TVB3 larger preselection:Polyamorous
     sensors_lbls = \
@@ -277,7 +268,7 @@ if __name__ == "__main__":
          u"O'1", u"O'2", u"O'3", u"O'6", u"O'7", u"O'8", u"O'9", u"O'10", u"O'11", u"O'12", u"O'13",
          u"P'1", u"P'2", u"P'3", u"P'8", u"P'10", u"P'11", u"P'12", u"P'13", u"P'14", u"P'15", u"P'16",
          u"R'1", u"R'2", u"R'3", u"R'4", u"R'7", u"R'8", u"R'9",
-        ]
+         ]
     sensors_inds = [0, 1, 2, 3,
                     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
                     28, 29, 30, 31, 36, 37, 38, 39, 40, 41, 42,
@@ -297,7 +288,7 @@ if __name__ == "__main__":
     seizure = 'SZ1_0001.edf'
     times_on_off = [15.0, 35.0]
     ep_name = "clinical_hypothesis_postseeg"
-    sensors_filename = "SensorsSEEG_116.h5"
+    # sensors_filename = "SensorsSEEG_116.h5"
     # # TVB4 preselection:
     # sensors_lbls = [u"D5", u"D6", u"D7",  u"D8", u"D9", u"D10", u"Z9", u"Z10", u"Z11", u"Z12", u"Z13", u"Z14",
     #                 u"S1", u"S2", u"S3", u"D'3", u"D'4", u"D'10", u"D'11", u"D'12", u"D'13", u"D'14"]
@@ -312,14 +303,10 @@ if __name__ == "__main__":
     # stats_model_name = "vep-fe-rev-08a"
     fitmethod = "sample"
     if EMPIRICAL:
-        main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
-                            sensors_filename=sensors_filename, stats_model_name=stats_model_name,
+        main_fit_sim_hyplsa(ep_name=ep_name, stats_model_name=stats_model_name,
                             EMPIRICAL=os.path.join(SEEG_data, seizure),
                             times_on_off=[15.0, 35.0], sensors_lbls=sensors_lbls, sensors_inds=sensors_inds,
-                            fitmethod=fitmethod, stan_service="CmdStan", results_dir=FOLDER_RES,
-                            figure_dir=FOLDER_FIGURES)  # , stan_service="PyStan"
+                            fitmethod=fitmethod, stan_service="CmdStan")
     else:
-        main_fit_sim_hyplsa(ep_name=ep_name, data_folder=os.path.join(DATA_CUSTOM, 'Head'),
-                            sensors_filename=sensors_filename, stats_model_name=stats_model_name,
-                            fitmethod=fitmethod, stan_service="CmdStan", sensors_inds=sensors_inds,
-                            results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES)  # , stan_service="PyStan"
+        main_fit_sim_hyplsa(ep_name=ep_name, stats_model_name=stats_model_name,
+                            fitmethod=fitmethod, stan_service="CmdStan", sensors_inds=sensors_inds)

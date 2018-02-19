@@ -3,14 +3,14 @@ Module to compute the resting equilibrium point of a Virtual Epileptic Patient m
 """
 
 import numpy
-from tvb_epilepsy.base.constants.module_constants import *
+from tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_epilepsy.base.computations.calculations_utils import *
 
 logger = initialize_logger(__name__)
 
 
-if SYMBOLIC_CALCULATIONS_FLAG:
+if CalculusConfig.SYMBOLIC_CALCULATIONS_FLAG:
 
     try:
         from sympy import solve, solve_poly_system, solveset, S, lambdify
@@ -20,7 +20,7 @@ if SYMBOLIC_CALCULATIONS_FLAG:
 
     except:
         logger.warning("Unable to load sympy. Turning to scipy.optimization.")
-        SYMBOLIC_CALCULATIONS_FLAG = False
+        CalculusConfig.SYMBOLIC_CALCULATIONS_FLAG = False
 
 
 def def_x1eq(X1_DEF, X1_EQ_CR_DEF, n_regions):
@@ -39,7 +39,7 @@ def calc_eq_x1(yc, Iext1, x0, K, w, a=A_DEF, b=B_DEF, d=D_DEF, zmode=numpy.array
     shape = x0.shape
     x0, K, yc, Iext1, a, b, d = assert_arrays([x0, K, yc, Iext1, a, b, d], (n,))
     w = assert_arrays([w], (n, n))
-    # if SYMBOLIC_CALCULATIONS_FLAG:
+    # if CalculusConfig.SYMBOLIC_CALCULATIONS_FLAG:
     #
     #     fx1z, v = symbol_eqtn_fx1z(n, model, zmode)[1:]  # , x1_neg=True, z_pos=True
     #     fx1z = fx1z.tolist()
@@ -96,7 +96,7 @@ def calc_eq_x2(Iext2, y2eq=None, zeq=None, geq=None, x1eq=None, s=S_DEF, x2_neg=
     shape = zeq.shape
     n = zeq.size
     zeq, geq, Iext2, s = assert_arrays([zeq, geq, Iext2, s], (n,))
-    if SYMBOLIC_CALCULATIONS_FLAG:
+    if CalculusConfig.SYMBOLIC_CALCULATIONS_FLAG:
         fx2y2, v = symbol_eqtn_fx2y2(n, x2_neg)[1:]
         fx2y2 = fx2y2.tolist()
         x2eq = []
@@ -383,7 +383,7 @@ def assert_equilibrium_point(epileptor_model, weights, equilibrium_point):
                           tau1=epileptor_model.tau1, tau0=epileptor_model.tau0, tau2=epileptor_model.tau2,
                           output_mode="array")
     else:
-        # all 6D models (tvb, custom)
+        # all 6D models (tvb, java)
         # dfun_max_cr[2] = 10 ** -3
         # We use the opposite sign for K with respect to all epileptor models
         K = -epileptor_model.Ks
@@ -470,14 +470,14 @@ def calc_equilibrium_point(epileptor_model, model_configuration, weights):
                                             epileptor_model.gamma, zmode=epileptor_model.zmode,
                                             pmode=epileptor_model.pmode)[0]
     else:
-        # all 6D models (tvb, custom)
+        # all 6D models (tvb, java)
         equilibrium_point = calc_eq_6d(epileptor_model.x0, epileptor_model.Ks, weights,
                                        epileptor_model.c, epileptor_model.Iext, epileptor_model.Iext2,
                                        model_configuration.x1EQ, epileptor_model.a, epileptor_model.b,
                                        epileptor_model.d, epileptor_model.aa, gamma=GAMMA_DEF, zmode=numpy.array("lin"))
-    if (epileptor_model._ui_name != "CustomEpileptor"):
+    if (epileptor_model._ui_name != "JavaEpileptor"):
         assert_equilibrium_point(epileptor_model, weights, equilibrium_point)
     else:
-        #TODO: Implement dfun for custom simulator
-        raise_not_implemented_error("The dfun for custom simulator is not implemented yet!")
+        #TODO: Implement dfun for the Java simulator
+        raise_not_implemented_error("The dfun for Java simulator is not implemented yet!")
     return equilibrium_point

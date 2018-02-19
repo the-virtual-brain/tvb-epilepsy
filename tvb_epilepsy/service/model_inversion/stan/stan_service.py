@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from scipy.io import savemat, loadmat
 from scipy.stats import describe
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES
+from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict
 from tvb_epilepsy.io.rdump import rdump, rload
@@ -18,11 +18,13 @@ class StanService(object):
 
     logger = initialize_logger(__name__)
 
-    def __init__(self, model_name="", model=None, model_dir=FOLDER_RES, model_code=None, model_code_path="",
-                 model_data_path="", fitmethod="sampling"):
+    def __init__(self, model_name="", model=None, model_code=None, model_code_path="",
+                 model_data_path="", fitmethod="sampling", config=None):
         self.fitmethod = fitmethod
         self.model_name = model_name
         self.model = model
+        self.config = config or Config()
+        model_dir = config.out.FOLDER_RES
         if not (os.path.isdir(model_dir)):
             os.mkdir(model_dir)
         self.model_path = os.path.join(model_dir, self.model_name)

@@ -1,5 +1,5 @@
-from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF
-from tvb_epilepsy.base.computations.calculations_utils import *
+# coding=utf-8
+
 from tvb_epilepsy.base.computations.equilibrium_computation import *
 
 
@@ -8,7 +8,7 @@ if __name__ == "__main__":
     n = 3
     x1 = numpy.array([-4.1/3, -4.9/3, -5.0/3], dtype="float32")
     x1eq = x1
-    w = numpy.array([[0,0.1,0.9], [0.1,0,0.0], [0.9,0.0, 0]])
+    w = numpy.array([[0, 0.1, 0.9], [0.1, 0, 0.0], [0.9, 0.0, 0]])
     n = x1.size
     # y1 = 10.25 * numpy.ones(x1.shape, dtype=x1.dtype)
     # x2 = -0.33 * numpy.ones(x1.shape, dtype=x1.dtype)
@@ -24,11 +24,11 @@ if __name__ == "__main__":
     d = D_DEF
     s = S_DEF
     gamma = GAMMA_DEF
-    tau1 =TAU1_DEF
+    tau1 = TAU1_DEF
     tau2 = TAU2_DEF
     tau0 = TAU0_DEF
     x1, K = assert_arrays([x1, K])
-    w = assert_arrays([w]) #, (x1.size, x1.size)
+    w = assert_arrays([w])  # , (x1.size, x1.size)
     zmode = numpy.array("lin")
     pmode = numpy.array("const")
     z = calc_eq_z(x1, yc, Iext1, "2d", x2=0.0, slope=slope, a=a, b=b, d=d, x1_neg=True)
@@ -88,8 +88,8 @@ if __name__ == "__main__":
     logger.info("\njac(eq) = " + str(jac))
     model = str(model_vars)+"d"
     sx1, sy1, sz, sx2, sy2, sg, sx0, sx0_val, sK, syc, sIext1, sIext2, sslope, sa, sb, sd, stau1, stau0, stau2, v = \
-    symbol_vars(n, ["x1", "y1", "z", "x2", "y2", "g", "x0", "x0_val", "K", "yc", "Iext1", "Iext2",
-                    "slope", "a", "b", "d", "tau1", "tau0", "tau2"], shape=(3, ))
+        symbol_vars(n, ["x1", "y1", "z", "x2", "y2", "g", "x0", "x0_val", "K", "yc", "Iext1", "Iext2",
+                        "slope", "a", "b", "d", "tau1", "tau0", "tau2"], shape=(3,))
     sw, vw = symbol_vars(n, ["w"], dims=2, output_flag="numpy_array")
     v.update(vw)
     del vw
@@ -116,17 +116,20 @@ if __name__ == "__main__":
             Iext1_var = eq[8].T
             Iext2_var = eq[9].T
             K_var = eq[10].T
-#----------------------------------------------------------------------------------------------------------------------
+
+    # -----------------------------------------------------------------------------------------------------------------
+
     logger.info("\n\nTest symbolic x0cr, r calculation...")
     x0cr2, r2 = calc_x0cr_r(syc, sIext1, zmode=zmode, x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
-                            x0cr_def=X0_CR_DEF) #test=True
+                            x0cr_def=X0_CR_DEF)  # test=True
     logger.info("\nx0cr2 = " + str(x0cr2))
     logger.info("\nx0cr2 shape = " + str(x0cr2.shape))
     logger.info("\nr2 = " + str(r2))
     logger.info("\nr2 shape = " + str(r2.shape))
     logger.info("\ncalc_x0cr_r = " + str(calc_x0cr_r(yc, Iext1, zmode=zmode, x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF,
                                                      x0def=X0_DEF, x0cr_def=X0_CR_DEF)))
-    lx0cr_r, sx0cr_r, v = symbol_eqtn_x0cr_r(n, zmode=zmode, shape=(n, ))  #symbol_calc_x0cr_r(n, zmode=zmode, shape=(3, ))
+    lx0cr_r, sx0cr_r, v = symbol_eqtn_x0cr_r(n, zmode=zmode,
+                                             shape=(n,))  # symbol_calc_x0cr_r(n, zmode=zmode, shape=(3, ))
     sx0cr_r = list(sx0cr_r)
     for ii in range(2):
         sx0cr_r[ii] = Matrix(sx0cr_r[ii])
@@ -136,9 +139,10 @@ if __name__ == "__main__":
                                                     (v["x1_cr"][iv], X1_EQ_CR_DEF), (v["x0_cr"][iv], X0_CR_DEF)])
             logger.info("\nsymbolic x0cr_r[" + str(ii) + "," + str(iv) + "] = " + str(sx0cr_r[ii][iv]))
         logger.info("\nx0cr_r[" + str(ii) + "] shape = " + str(sx0cr_r[ii].shape))
-        logger.info("\nlambda x0cr_r[" + str(ii) + "] = " + str(lx0cr_r[ii](yc, Iext1, a, b, d, X1_DEF*a, X1_EQ_CR_DEF*a,
-                                                                            X0_DEF*a, X0_CR_DEF*a)))
-# ----------------------------------------------------------------------------------------------------------------------
+        logger.info("\nlambda x0cr_r[" + str(ii) + "] = " + str(lx0cr_r[ii](yc, Iext1, a, b, d, X1_DEF * a,
+                                                                            X1_EQ_CR_DEF * a,
+                                                                            X0_DEF * a, X0_CR_DEF * a)))
+    # ------------------------------------------------------------------------------------------------------------------
     logger.info("\n\nTest coupling...")
     coupling = calc_coupling(sx1, sK, sw)
     scoupling = symbol_eqtn_coupling(n, shape=(n,))[:2]

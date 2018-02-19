@@ -3,7 +3,7 @@
 import numpy as np
 from matplotlib import pyplot
 from itertools import product
-from tvb_epilepsy.base.constants.module_constants import WEIGHTS_NORM_PERCENT, INTERACTIVE_ELBOW_POINT
+from tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 
 logger = initialize_logger(__name__)
@@ -20,7 +20,7 @@ def weighted_vector_sum(weights, vectors, normalize=True):
     return np.array(vector_sum)
 
 
-def normalize_weights(weights, percentile=WEIGHTS_NORM_PERCENT, remove_diagonal=True, ceil=1.0):  # , max_w=1.0
+def normalize_weights(weights, percentile=CalculusConfig.WEIGHTS_NORM_PERCENT, remove_diagonal=True, ceil=1.0):
     # Create the normalized connectivity weights:
     if len(weights) > 0:
         normalized_w = np.array(weights)
@@ -74,7 +74,7 @@ def select_greater_values_array_inds(values, threshold=None, verbose=False):
         return get_greater_values_array_inds(values, elbow_point + 1)
 
 
-def curve_elbow_point(vals, interactive=INTERACTIVE_ELBOW_POINT):
+def curve_elbow_point(vals, interactive=CalculusConfig.INTERACTIVE_ELBOW_POINT):
     vals = np.array(vals).flatten()
     if np.any(vals[0:-1] - vals[1:] < 0):
         vals = np.sort(vals)

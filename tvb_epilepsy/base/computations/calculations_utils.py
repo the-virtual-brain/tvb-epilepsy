@@ -1,29 +1,34 @@
+# coding=utf-8
 
 from scipy.optimize import root
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_import_error
 from tvb_epilepsy.base.computations.equations_utils import *
+from tvb_epilepsy.base.constants.model_constants import *
+from tvb_epilepsy.base.utils.data_structures_utils import shape_to_size
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_import_error, raise_value_error
 
 logger = initialize_logger(__name__)
 
 try:
-    from tvb_epilepsy.base.computations.symbolic_utils import *
+    from sympy import Matrix, lambdify, reshape
+    from tvb_epilepsy.base.computations.symbolic_utils import assert_arrays, symbol_eqtn_coupling, symbol_eqtn_x0, \
+    symbol_eqtn_fx1, symbol_eqtn_fy1, symbol_eqtn_fz, symbol_calc_fz_jac_square_taylor, symbol_calc_x0cr_r, \
+    symbol_calc_fx1y1_6d_diff_x1, symbol_calc_fx1z_2d_x1neg_zpos_jac, symbol_eqtn_fx1z_diff, symbol_eqtn_x0cr_r, \
+    symbol_eqtn_fx1z, symbol_calc_2d_taylor, symbol_calc_coupling_diff, symbol_eqtn_fx2, symbol_eqtn_fy2, \
+    symbol_eqtn_fg, symbol_eqtn_fx0, symbol_eqtn_fslope, symbol_eqtn_fIext1, symbol_eqtn_fK, symbol_eqnt_dfun, \
+    symbol_eqtn_fIext2, symbol_calc_jac, symbol_vars
 
     SYMBOLIC_IMPORT = True
 
-except:
+except ImportError:
+    logger.exception("Could not load...")
     logger.warning("Unable to load symbolic_equations module! Symbolic calculations are not possible!")
     SYMBOLIC_IMPORT = False
-from tvb_epilepsy.base.utils.data_structures_utils import shape_to_size
 
-
-#if SYMBOLIC_CALCULATIONS_FLAG:
-
-# Symbolic calculations are only used for testing and demonstration of equations
 
 def confirm_calc_mode(calc_mode):
     if np.all(calc_mode == "symbol"):
         if SYMBOLIC_IMPORT:
-            logger.info( "Executing symbolic calculations...")
+            logger.info("Executing symbolic calculations...")
         else:
             logger.warning("\nNot possible to execute symbolic calculations! Turning to non-symbolic ones!..")
             calc_mode = "non_symbol"
@@ -47,7 +52,7 @@ def calc_coupling(x1, K, w, ix=None, jx=None, shape=None, calc_mode="non_symbol"
 
 def calc_x0(x1, z, K=0.0, w=0.0, zmode=np.array("lin"), z_pos=True, shape=None, calc_mode="non_symbol"):
     calc_mode = confirm_calc_mode(calc_mode)
-    x1, z,  K = assert_arrays([x1, z,  K], shape)
+    x1, z, K = assert_arrays([x1, z, K], shape)
     w = assert_arrays([w], (z.size, z.size))
     if np.all(calc_mode == "symbol"):
         return np.array(symbol_eqtn_x0(z.size, zmode, z_pos, "K", z.shape)[0](x1, z, K, w))
@@ -64,11 +69,11 @@ def calc_fx1(x1=0.0, z=0.0, y1=0.0, Iext1=I_EXT1_DEF, slope=SLOPE_DEF, a=A_DEF, 
     if np.all(calc_mode == "symbol"):
         if np.all(model == "2d"):
             return np.array(symbol_eqtn_fx1(x1.size, model, x1_neg, slope="slope", Iext1="Iext1", shape=x1.shape)[0]
-                         (x1, z, y1, Iext1, slope, a, b, d, tau1))
+                            (x1, z, y1, Iext1, slope, a, b, d, tau1))
         else:
             x2 = assert_arrays([x2], x1.shape)
             return np.array(symbol_eqtn_fx1(x1.size, model, x1_neg, slope="slope", Iext1="Iext1", shape=x1.shape)[0]
-                         (x1, z, y1, x2, Iext1, slope, a, b, d, tau1))
+                            (x1, z, y1, x2, Iext1, slope, a, b, d, tau1))
     else:
         if x1_neg is None:
             x1_neg = x1 < 0.0
@@ -91,12 +96,12 @@ def calc_fy1(x1, yc, y1=0, d=D_DEF, tau1=TAU1_DEF, shape=None, calc_mode="non_sy
 def calc_fz(x1=0.0, z=0, x0=0.0, K=0.0, w=0.0, tau1=TAU1_DEF, tau0=TAU0_DEF, zmode=np.array("lin"), z_pos=True,
             shape=None, calc_mode="non_symbol"):
     calc_mode = confirm_calc_mode(calc_mode)
-    x1, z,  x0, K, tau1, tau0 = assert_arrays([x1, z,  x0, K, tau1, tau0], shape)
+    x1, z, x0, K, tau1, tau0 = assert_arrays([x1, z, x0, K, tau1, tau0], shape)
     w = assert_arrays([w], (z.size, z.size))
     if np.all(calc_mode == "symbol"):
         return np.array(symbol_eqtn_fz(z.size, zmode, z_pos, x0="x0_values", K="K", shape=z.shape)[0](x1, z, x0,
-                                                                                                       K, w, tau1,
-                                                                                                       tau0))
+                                                                                                      K, w, tau1,
+                                                                                                      tau0))
     else:
         if zmode == np.array("lin") and z_pos is None:
             z_pos = z > 0.0
@@ -121,7 +126,7 @@ def calc_fy2(x2, y2=0.0, s=S_DEF, tau1=TAU1_DEF, tau2=TAU2_DEF, x2_neg=None, sha
         except:
             x2_neg = False
             logger.warning("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
-                    "\nSetting default x2_neg = False")
+                           "\nSetting default x2_neg = False")
     if np.all(calc_mode == "symbol"):
         return np.array(symbol_eqtn_fy2(x2.size, x2_neg=x2_neg, shape=x2.shape)[0](x2, y2, s, tau1, tau2))
     else:
@@ -228,7 +233,7 @@ def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2,
             except:
                 x2_neg = False
                 logger.warning("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
-                        "\nSetting default x2_neg = False")
+                               "\nSetting default x2_neg = False")
     if output_mode == "array":
         return calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars, zmode, pmode, x1_neg, z_pos, x2_neg,
                                y1, x2, y2, g, x0_var, slope_var, Iext1_var, Iext2_var, K_var,
@@ -236,8 +241,8 @@ def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2,
     else:
         if np.all(calc_mode == "symbol"):
             dfun_sym = symbol_eqnt_dfun(x1.size, model_vars, zmode, x1_neg, z_pos, x2_neg, pmode, shape)[0]
-            x1, z,  yc, Iext1, x0, K, slope, a, b, tau1, tau0 = \
-                assert_arrays([x1, z,  yc, Iext1, x0, K, slope, a, b, tau1, tau0], shape)
+            x1, z, yc, Iext1, x0, K, slope, a, b, tau1, tau0 = \
+                assert_arrays([x1, z, yc, Iext1, x0, K, slope, a, b, tau1, tau0], shape)
             w = assert_arrays([w], (z.size, z.size))
             if model_vars == 6:
                 y1, x2, y2, g, Iext2, s, gamma, tau2 = \
@@ -281,8 +286,8 @@ def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2,
                 x1_neg = x1 < 0.0
             if zmode == np.array("lin") and z_pos is None:
                 z_pos = z > 0.0
-            x1, z,  yc, Iext1, x0, K, slope, a, b, d, tau1, tau0 = \
-                assert_arrays([x1, z,  yc, Iext1, x0, K, slope, a, b, d, tau1, tau0], shape)
+            x1, z, yc, Iext1, x0, K, slope, a, b, d, tau1, tau0 = \
+                assert_arrays([x1, z, yc, Iext1, x0, K, slope, a, b, d, tau1, tau0], shape)
             w = assert_arrays([w], (z.size, z.size))
             y1, x2, y2, g, Iext2, s, gamma, tau2 = assert_arrays([y1, x2, y2, g, Iext2, s, gamma, tau2], z.shape)
             if model_vars == 6:
@@ -326,14 +331,14 @@ def calc_jac(x1, z, yc, Iext1, x0, K, w, model_vars=2,
             except:
                 x2_neg = False
                 logger.warning("\nx2_neg is None and failed to compare x2_neg = x2 < -0.25!" +
-                        "\nSetting default x2_neg = False")
+                               "\nSetting default x2_neg = False")
     n_regions = max(shape_to_size(x1.shape), shape_to_size(z.shape))
-    x1, z,  yc, Iext1, x0, K, slope, a, b, d, tau1, tau0 = \
-        assert_arrays([x1, z,  yc, Iext1, x0, K, slope, a, b, d, tau1, tau0], z.shape)
+    x1, z, yc, Iext1, x0, K, slope, a, b, d, tau1, tau0 = \
+        assert_arrays([x1, z, yc, Iext1, x0, K, slope, a, b, d, tau1, tau0], z.shape)
     w = assert_arrays([w], (z.size, z.size))
     if np.all(calc_mode == "symbol"):
         n = model_vars * n_regions
-        jac = np.zeros((n,n), dtype=z.dtype)
+        jac = np.zeros((n, n), dtype=z.dtype)
         ind = lambda x: x * n_regions + np.array(range(n_regions))
         jac_lambda, jac_sym = symbol_calc_jac(n_regions, model_vars, zmode, x1_neg, z_pos, x2_neg, pmode)[:2]
         y1, x2, y2, g, Iext2, s, gamma, tau2 = \
@@ -412,7 +417,7 @@ def calc_jac(x1, z, yc, Iext1, x0, K, w, model_vars=2,
                                            sx0_var, sslope_var, sIext1_var, sIext2_var, sK_var,
                                            slope, a, b, d, s, Iext2, gamma, tau1, tau0, tau2)
                 x = Matrix([sx1, sy1, sz, sx2, sy2, sg, sx0_var, sslope_var, sIext1_var, sIext2_var, sK_var]) \
-                    .reshape(11 *  n_regions, 1)
+                    .reshape(11 * n_regions, 1)
                 jac_sym = Matrix(dfun_sym.flatten()).jacobian(x)
                 jac_lambda = lambdify([x], jac_sym, "numpy")
                 return np.array(jac_lambda([x1, y1, z, x2, y2, g, x0_var, slope_var, Iext1_var, Iext2_var, K_var])) \
@@ -441,7 +446,7 @@ def calc_fx1_2d_taylor(x1, x_taylor, z=0, y1=0.0, Iext1=I_EXT1_DEF, slope=SLOPE_
         assert_arrays([x1, x_taylor, z, y1, Iext1, slope, a, b, d, tau1], shape)
     if np.all(calc_mode == "symbol"):
         return np.array(symbol_calc_2d_taylor(x1.size, order=order, x1_neg=x1_neg, slope="slope", Iext1="Iext1",
-                                           shape=shape)[0](x1, x_taylor, z, y1, Iext1, slope, a, b, d, tau1))
+                                              shape=shape)[0](x1, x_taylor, z, y1, Iext1, slope, a, b, d, tau1))
     else:
         if x1_neg is None:
             x1_neg = x1 < 0.0
@@ -449,9 +454,9 @@ def calc_fx1_2d_taylor(x1, x_taylor, z=0, y1=0.0, Iext1=I_EXT1_DEF, slope=SLOPE_
             # Correspondance with EpileptorDP2D
             b = b - d
             fx1lin = np.multiply(Iext1 + 2 * np.multiply(np.power(x_taylor, 3), a)
-                    - np.multiply(np.power(x_taylor, 2), b) + y1 - z +
-                    np.multiply(x1, (-3 * np.multiply(np.power(x_taylor, 2), a)
-                    + 2 * np.multiply(x_taylor, b))), tau1)
+                                 - np.multiply(np.power(x_taylor, 2), b) + y1 - z +
+                                 np.multiply(x1, (-3 * np.multiply(np.power(x_taylor, 2), a)
+                                                  + 2 * np.multiply(x_taylor, b))), tau1)
         else:
             try:
                 from sympy import Symbol, series
@@ -480,7 +485,7 @@ def calc_fx1z(x1, x0, K, w, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, tau1=TAU1_DEF,
                                                                                  d, tau1, tau0))
         else:
             return np.array(symbol_eqtn_fx1z(x1.size, model, zmode, x1.shape)[0](x1, x0, K, w, yc, Iext1, a, b, d, tau1,
-                                                                              tau0))
+                                                                                 tau0))
     else:
         # TODO: for the extreme z_pos = False case where we have terms like 0.1 * z ** 7
         if np.all(model == "2d"):
@@ -489,11 +494,11 @@ def calc_fx1z(x1, x0, K, w, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, tau1=TAU1_DEF,
         else:
             y1 = calc_fy1(x1, yc, 0.0, d, tau1=TAU1_DEF, shape=x1.shape)
             z = calc_fx1(x1, 0.0, y1, Iext1, 0.0, a, b, tau1=TAU1_DEF, x2=0.0, model=model, x1_neg=True, shape=x1.shape)
-            return eqtn_fz(x1, z, x0, tau1, tau0, zmode, z_pos=True, K=K, w=w , coupl=None)
+            return eqtn_fz(x1, z, x0, tau1, tau0, zmode, z_pos=True, K=K, w=w, coupl=None)
 
 
 def calc_fx1z_diff(x1, K, w, a=A_DEF, b=B_DEF, d=D_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, model="6d", zmode=np.array("lin"),
-                   calc_mode="non_symbol"): # , yc=0.0, Iext1=I_EXT1_DEF, z_pos=True, slope=SLOPE_DEF, x2=0.0, x1_neg=True,
+                   calc_mode="non_symbol"):  # , yc=0.0, Iext1=I_EXT1_DEF, z_pos=True, slope=SLOPE_DEF, x2=0.0, x1_neg=True,
     # TODO: for the extreme x1_neg = False case where we have to solve for x2 as well
     calc_mode = confirm_calc_mode(calc_mode)
     x1, K, a, b, d, tau1, tau0 = assert_arrays([x1, K, a, b, d, tau1, tau0])
@@ -532,9 +537,9 @@ def calc_fx1z_2d_x1neg_zpos_jac(x1, z, x0, yc, Iext1, K, w, ix0, iE, a=A_DEF, b=
         jac_e_x1o = -np.dot(np.dot(i_e, np.multiply(tau[:, iE], K[:, iE])), w[iE][:, ix0])
         jac_x0_x0e = np.zeros((no_x0, no_e))
         jac_x0_x1o = (np.diag(np.multiply(tau[:, ix0],
-                                    (4 + 3 * np.multiply(a[:, ix0], np.power(x1[:, ix0], 2))
-                                     - 2 * np.multiply(b[:, ix0], x1[:, ix0]) +
-                                     np.multiply(K[:, ix0], np.sum(w[ix0], axis=1)))).flatten()) -
+                                          (4 + 3 * np.multiply(a[:, ix0], np.power(x1[:, ix0], 2))
+                                           - 2 * np.multiply(b[:, ix0], x1[:, ix0]) +
+                                           np.multiply(K[:, ix0], np.sum(w[ix0], axis=1)))).flatten()) -
                       np.multiply(np.dot(i_x0, np.multiply(tau[:, ix0], K[:, ix0])).T, w[ix0][:, ix0]))
         jac = np.empty((x1.size, x1.size), dtype=jac_x0_x1o.dtype)
         jac[np.ix_(iE, iE)] = jac_e_x0e
@@ -556,7 +561,8 @@ def calc_fx1y1_6d_diff_x1(x1, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, tau1=TAU1_DE
 
 
 def calc_x0cr_r(yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF,
-                x0def=X0_DEF, x0cr_def=X0_CR_DEF, test=False, shape=None, calc_mode="non_symbol"):  #epileptor_model="2d",
+                x0def=X0_DEF, x0cr_def=X0_CR_DEF, test=False, shape=None,
+                calc_mode="non_symbol"):  # epileptor_model="2d",
     calc_mode = confirm_calc_mode(calc_mode)
     yc, Iext1, a, b, d, x1_rest, x1_cr, x0def, x0cr_def \
         = assert_arrays([yc, Iext1, a, b, d, x1_rest, x1_cr, x0def, x0cr_def], shape)
@@ -602,9 +608,9 @@ def calc_x0cr_r(yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), x1_
             r = []
             for ii in range(Iext1.size):
                 # x0 -> r * x0 - x0cr
-                fz = lambda x: np.array([calc_fz(x1_rest[ii], z=zeq_rest[ii], x0=x[1]*x0def-x[0], K=0.0, w=0.0,
+                fz = lambda x: np.array([calc_fz(x1_rest[ii], z=zeq_rest[ii], x0=x[1] * x0def - x[0], K=0.0, w=0.0,
                                                  tau1=1.0, tau0=1.0, zmode=zmode, z_pos=True, shape=None),
-                                         calc_fz(x1_cr[ii], z=zeq_cr[ii], x0=x[1]*x0cr_def-x[0], K=0.0, w=0.0,
+                                         calc_fz(x1_cr[ii], z=zeq_cr[ii], x0=x[1] * x0cr_def - x[0], K=0.0, w=0.0,
                                                  tau1=1.0, tau0=1.0, zmode=zmode, z_pos=True, shape=None)])
                 sol = root(fz, xinit, method='lm', tol=10 ** (-12), callback=None, options=None)
                 if sol.success:
@@ -690,15 +696,15 @@ def calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars=2,
 
 
 def calc_x0_val_to_model_x0(x0_values, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), shape=None,
-                             calc_mode="non_symbol"):
+                            calc_mode="non_symbol"):
     hyp_x0, yc, Iext1, a, b, d = \
         assert_arrays([x0_values, yc, Iext1, a, b, d], shape)
-    x0cr, r = calc_x0cr_r(yc, Iext1, a, b, d, zmode=zmode, calc_mode=calc_mode) #epileptor_model="6d",
+    x0cr, r = calc_x0cr_r(yc, Iext1, a, b, d, zmode=zmode, calc_mode=calc_mode)  # epileptor_model="6d",
     return np.multiply(r, x0_values) - x0cr
 
 
 def calc_model_x0_to_x0_val(x0, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), shape=None,
                             calc_mode="non_symbol"):
     x0, yc, Iext1, a, b, d = assert_arrays([x0, yc, Iext1, a, b, d], shape)
-    x0cr, r = calc_x0cr_r(yc, Iext1, a, b, d, zmode=zmode, calc_mode=calc_mode) #epileptor_model="6d",
+    x0cr, r = calc_x0cr_r(yc, Iext1, a, b, d, zmode=zmode, calc_mode=calc_mode)  # epileptor_model="6d",
     return np.divide(x0 + x0cr, r)

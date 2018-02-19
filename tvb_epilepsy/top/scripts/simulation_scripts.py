@@ -1,13 +1,12 @@
 import os
 import numpy as np
-from tvb_epilepsy.base.constants.configurations import FOLDER_RES, FOLDER_FIGURES
-from tvb_epilepsy.base.constants.module_constants import TVB, SIMULATION_MODE
+from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.constants.model_constants import VOIS
-from tvb_epilepsy.service.simulator.simulator_custom import EpileptorModel
+from tvb_epilepsy.service.simulator.simulator_java import EpileptorModel
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
@@ -74,11 +73,10 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
     return vois_ts_dict
 
 
-def from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis, simulation_mode=SIMULATION_MODE,
+def from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
                                            sim_type="realistic", dynamical_model="EpileptorDP2D", ts_file=None,
-                                           plot_flag=True, results_dir=FOLDER_RES, figure_dir=FOLDER_FIGURES,
-                                           logger=logger, **kwargs):
-    # --------------------------Simulation preparations------------------------------------------------------------------
+                                           plot_flag=True, config=Config()):
+    # --------------------------Simulation preparations----------------------------------------------------------------
     # this is the simulation sampling rate that is necessary for the simulation to be stable:
 
     sim_builder = SimulatorBuilder().set_scale_fsavg(1).set_report_every_n_monitor_steps(100.0).set_model_name(
@@ -110,7 +108,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
                                                                                          head.connectivity)
     dynamical_model = sim.model
     writer = H5Writer()
-    writer.write_generic(sim.model, results_dir, dynamical_model._ui_name + "_model.h5")
+    writer.write_generic(sim.model, config.out.FOLDER_RES, dynamical_model._ui_name + "_model.h5")
 
     vois_ts_dict = {}
     if ts_file is not None and os.path.isfile(ts_file):
@@ -132,7 +130,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
             vois_ts_dict = prepare_vois_ts_dict(VOIS[dynamical_model._ui_name], tavg_data)
             vois_ts_dict['time'] = time
             vois_ts_dict['time_units'] = 'msec'
-            vois_ts_dict = compute_seeg_and_write_ts_h5_file(results_dir, dynamical_model._ui_name + "_ts.h5",
+            vois_ts_dict = compute_seeg_and_write_ts_h5_file(config.out.FOLDER_RES, dynamical_model._ui_name + "_ts.h5",
                                                              sim.model,
                                                              vois_ts_dict, output_sampling_time,
                                                              sim_builder.time_length,
@@ -142,10 +140,9 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
                 writer.write_dictionary(vois_ts_dict, os.path.join(os.path.dirname(ts_file), os.path.basename(ts_file)))
     if plot_flag and len(vois_ts_dict) > 0:
         # Plot results
-        Plotter().plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, vois_ts_dict,
-                                   sensorsSEEG=head.sensorsSEEG, hpf_flag=False,
-                                   trajectories_plot=trajectories_plot,
-                                   spectral_raster_plot=spectral_raster_plot, log_scale=True,
-                                   region_labels=head.connectivity.region_labels,
-                                   figure_dir=figure_dir)  # ,
+        Plotter(config).plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, vois_ts_dict,
+                                         sensorsSEEG=head.sensorsSEEG, hpf_flag=False,
+                                         trajectories_plot=trajectories_plot,
+                                         spectral_raster_plot=spectral_raster_plot, log_scale=True,
+                                         region_labels=head.connectivity.region_labels)
     return vois_ts_dict
