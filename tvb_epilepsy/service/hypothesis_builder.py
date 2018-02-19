@@ -148,58 +148,6 @@ class HypothesisBuilder(object):
 
         return disease_values, disease_indices
 
-    # deprecated
-    def build_epileptogenicity_hypothesis_based_on_threshold(self, values, threshold):
-        disease_indices, = numpy.where(values > threshold)
-        disease_values = values[disease_indices]
-        disease_values, disease_indices = self._ensure_normalization_or_sorting(disease_values, disease_indices)
-
-        return self.build_epileptogenicity_hypothesis(disease_values, list(disease_indices))
-
-    # deprecated
-    def build_excitability_hypothesis_based_on_threshold(self, values, threshold):
-        disease_indices, = numpy.where(values > threshold)
-        disease_values = values[disease_indices]
-        disease_values, disease_indices = self._ensure_normalization_or_sorting(disease_values, disease_indices)
-
-        return self.build_excitability_hypothesis(disease_values, list(disease_indices))
-
-    # deprecated
-    def _compute_e_x0_values_based_on_threshold(self, values, threshold):
-        disease_indices, = numpy.where(values > threshold)
-        disease_values = values[disease_indices]
-        if disease_values.size > 1:
-            inds_split = numpy.ceil(disease_values.size * 1.0 / 2).astype("int")
-            x0_indices = disease_indices[:inds_split].tolist()
-            e_indices = disease_indices[inds_split:].tolist()
-            x0_values = disease_values[:inds_split].tolist()
-            e_values = disease_values[inds_split:].tolist()
-        else:
-            x0_indices = disease_indices.tolist()
-            x0_values = disease_values.tolist()
-            e_indices = []
-            e_values = []
-
-        return e_indices, e_values, x0_indices, x0_values
-
-    # deprecated
-    def build_mixed_hypothesis_based_on_threshold(self, values, threshold):
-        e_indices, e_values, x0_indices, x0_values = self._compute_e_x0_values_based_on_threshold(values, threshold)
-        return self.build_mixed_hypothesis(e_values, e_indices, x0_values, x0_indices)
-
-    # deprecated
-    def build_mixed_hypothesis_with_x0_having_max_values(self, values, threshold):
-        disease_indices, = numpy.where(values > threshold)
-        disease_values = values[disease_indices]
-        disease_values, disease_indices = self._ensure_normalization_or_sorting(disease_values, disease_indices)
-
-        x0_indices = [disease_indices[-1]]
-        x0_values = [disease_values[-1]]
-        e_indices = disease_indices[0:-1].tolist()
-        e_values = disease_values[0:-1].tolist()
-
-        return self.build_mixed_hypothesis(e_values, e_indices, x0_values, x0_indices)
-
     def build_lsa_hypothesis(self):
         return self.build_hypothesis()
 

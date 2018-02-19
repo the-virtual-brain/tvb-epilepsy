@@ -1,7 +1,5 @@
 import os
-import numpy as np
 from tvb_epilepsy.base.constants.config import Config
-from tvb_epilepsy.base.constants.model_constants import X0_DEF, E_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
@@ -46,20 +44,22 @@ def from_head_to_hypotheses(ep_name, config, plot_head=False):
     # disease_indices = x0_indices + e_indices
     # ...or reading a custom file:
     # FOLDER_RES = os.path.join(data_folder, ep_name)
-    disease_values = reader.read_epileptogenicity(config.input.HEAD, name=ep_name)
 
     hypo_builder = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions
                                                          ).set_sort_disease_values(True)
-    threshold = np.min([X0_DEF, E_DEF])
 
     # This is an example of Excitability Hypothesis:
-    hyp_x0 = hypo_builder.build_excitability_hypothesis_based_on_threshold(disease_values, threshold)
-
-    # This is an example of Mixed Hypothesis:
-    hyp_x0_E = hypo_builder.build_mixed_hypothesis_with_x0_having_max_values(disease_values, threshold)
+    hyp_x0 = hypo_builder.build_hypothesis_from_file(ep_name)
 
     # This is an example of Epileptogenicity Hypothesis:
-    hyp_E = hypo_builder.build_epileptogenicity_hypothesis_based_on_threshold(disease_values, threshold)
+    hyp_E = hypo_builder.build_hypothesis_from_file(ep_name, hyp_x0.x0_indices)
+
+    # This is an example of Mixed Hypothesis:
+    x0_indices = [hyp_x0.x0_indices[-1]]
+    x0_values = [hyp_x0.x0_values[-1]]
+    e_indices = hyp_x0.x0_indices[0:-1].tolist()
+    e_values = hyp_x0.x0_values[0:-1].tolist()
+    hyp_x0_E = hypo_builder.build_mixed_hypothesis(e_values, e_indices, x0_values, x0_indices)
 
     hypos = (hyp_x0, hyp_E, hyp_x0_E)
     return head, hypos
