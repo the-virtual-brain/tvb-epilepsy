@@ -84,7 +84,7 @@ class TestCustomH5Reader(object):
     def test_read_hypothesis(self):
         test_file = os.path.join(get_temporary_folder(), "TestHypothesis.h5")
         hypothesis_builder = HypothesisBuilder().set_nr_of_regions(3)
-        dummy_hypothesis = hypothesis_builder.build_excitability_hypothesis(numpy.array([0.6]), [0])
+        dummy_hypothesis = hypothesis_builder._build_excitability_hypothesis(numpy.array([0.6]), [0])
 
         self.writer.write_hypothesis(dummy_hypothesis, test_file)
         hypothesis = self.reader.read_hypothesis(test_file)
