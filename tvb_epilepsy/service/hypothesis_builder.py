@@ -20,7 +20,7 @@ class HypothesisBuilder(object):
 
     # Attributes specific to a DiseaseHypothesis
     nr_of_regions = 0
-    name = ""
+    name = None
     type = []
     x0_indices = []
     x0_values = []
@@ -31,8 +31,7 @@ class HypothesisBuilder(object):
     lsa_propagation_indices = []
     lsa_propagation_strengths = []
 
-    # Flags specific to the process of choosing values for a DiseaseHypothesis
-    normalize = False
+    normalize_value = 0.95
     sort_disease_values = False
 
     def set_nr_of_regions(self, nr_of_regions):
@@ -76,7 +75,7 @@ class HypothesisBuilder(object):
         return self
 
     def set_normalize(self, value):
-        self.normalize = value
+        self.normalize_value = value
         return self
 
     def set_sort_disease_values(self, value):
@@ -91,7 +90,10 @@ class HypothesisBuilder(object):
             disease_hypothesis.name + "LSA")
         return self
 
-    def _build_hypothesis_with_all_attributes(self):
+    def build_hypothesis(self):
+        if self.name is None:
+            self.name = "Hypothesis"
+
         return DiseaseHypothesis(self.nr_of_regions, excitability_hypothesis={tuple(self.x0_indices): self.x0_values},
                                  epileptogenicity_hypothesis={tuple(self.e_indices): self.e_values},
                                  connectivity_hypothesis={tuple(self.w_indices): self.w_values},
@@ -99,8 +101,11 @@ class HypothesisBuilder(object):
                                  lsa_propagation_strenghts=self.lsa_propagation_strengths, name=self.name)
 
     def build_epileptogenicity_hypothesis(self, values=None, indices=None):
+        if self.name is None:
+            self.name = "EpileptogenicityHypothesis"
+
         if values is None or indices is None:
-            hypo = self._build_hypothesis_with_all_attributes()
+            hypo = self.build_hypothesis()
             self.logger.warning(
                 "Since values or indices are None, the DiseaseHypothesis will be build with default values: %s", hypo)
 
@@ -110,8 +115,11 @@ class HypothesisBuilder(object):
                                  epileptogenicity_hypothesis={tuple(indices): values})
 
     def build_excitability_hypothesis(self, values=None, indices=None):
+        if self.name is None:
+            self.name = "ExcitabilityHypothesis"
+
         if values is None or indices is None:
-            hypo = self._build_hypothesis_with_all_attributes()
+            hypo = self.build_hypothesis()
             self.logger.warning(
                 "Since values or indices are None, the DiseaseHypothesis will be build with default values: %s", hypo)
 
@@ -120,8 +128,11 @@ class HypothesisBuilder(object):
         return DiseaseHypothesis(number_of_regions=self.nr_of_regions, excitability_hypothesis={tuple(indices): values})
 
     def build_mixed_hypothesis(self, ep_values=None, ep_indices=None, exc_values=None, exc_indices=None):
+        if self.name is None:
+            self.name = "MixedHypothesis"
+
         if ep_values is None or exc_indices is None or ep_values is None or exc_indices is None:
-            hypo = self._build_hypothesis_with_all_attributes()
+            hypo = self.build_hypothesis()
             self.logger.warning(
                 "Since values or indices are None, the DiseaseHypothesis will be build with default values: %s", hypo)
 
@@ -133,13 +144,12 @@ class HypothesisBuilder(object):
 
     def _normalize_disease_values(self, values):
         # TODO: something smarter to normalize better disease values
-        values += (0.95 - numpy.max(values))
+        values += (self.normalize_value - numpy.max(values))
 
         return values
 
     def _ensure_normalization_or_sorting(self, disease_values, disease_indices):
-        if self.normalize:
-            disease_values = self._normalize_disease_values(disease_values)
+        disease_values = self._normalize_disease_values(disease_values)
 
         if self.sort_disease_values:
             inds = numpy.argsort(disease_values)
@@ -201,7 +211,10 @@ class HypothesisBuilder(object):
         return self.build_mixed_hypothesis(e_values, e_indices, x0_values, x0_indices)
 
     def build_lsa_hypothesis(self):
-        return self._build_hypothesis_with_all_attributes()
+        if self.name is None:
+            self.name = "LSAHypothesis"
+
+        return self.build_hypothesis()
 
     def build_hypothesis_from_file(self, hyp_file, ep_indices=None):
         epi_values = H5Reader().read_epileptogenicity(self.config.input.HEAD, name=hyp_file)
