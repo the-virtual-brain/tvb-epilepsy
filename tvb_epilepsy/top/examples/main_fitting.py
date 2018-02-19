@@ -142,11 +142,11 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", stats_model_name="vep_sd
             signals, time, statistical_model, vois_ts_dict = \
                 model_inversion.set_target_data_and_time(target_data_type, vois_ts_dict, statistical_model,
                                                          decimate=decimate, cut_signals_tails=cut_signals_tails,
-                                                          manual_selection=manual_selection,
-                                                          auto_selection="correlation-power", # auto_selection=False,
-                                                          n_electrodes=n_electrodes,
-                                                          sensors_per_electrode=sensors_per_electrode,
-                                                          group_electrodes=True, normalization="baseline-amplitude",
+                                                         manual_selection=manual_selection,
+                                                         auto_selection="correlation-power", # auto_selection=False,
+                                                         n_electrodes=n_electrodes,
+                                                         sensors_per_electrode=sensors_per_electrode,
+                                                         group_electrodes=True, normalization="baseline-amplitude",
                                                          )
             # if len(model_inversion.signals_inds) < head.get_sensors_id().number_of_sensors:
             #     statistical_model = \
@@ -253,9 +253,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", stats_model_name="vep_sd
 
 if __name__ == "__main__":
     SUBJECT = "TVB3"
-    VEP_FOLDER = os.path.join(FOLDER_VEP, SUBJECT)
-    DATA_CUSTOM = os.path.join(FOLDER_VEP, SUBJECT)
-    SEEG_data = os.path.join(FOLDER_VEP_ONLINE, "data/CC", SUBJECT, "raw/seeg/ts_seizure")
+    SEEG_data = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "data/CC", SUBJECT,
+                             "raw/seeg/ts_seizure")
     # TVB3 larger preselection:Polyamorous
     sensors_lbls = \
         [u"B'1", u"B'2", u"B'3", u"B'4",

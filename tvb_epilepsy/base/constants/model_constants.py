@@ -44,10 +44,10 @@ MAX_DISEASE_VALUE = 1.0 - 10 ** -3
 #     "EpileptorDPrealistic": MULTIPLICATIVE_NOISE,
 #     "EpileptorDP2D": ADDITIVE_NOISE
 # }
-# VOIS = {
-#     "EpileptorModel": ['x1', 'z', 'x2'],
-#     "Epileptor": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp'],
-#     "EpileptorDP": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp'],
-#     "EpileptorDPrealistic": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp', 'x0_t', 'slope_t', 'Iext1_t', 'Iext2_t', 'K_t'],
-#     "EpileptorDP2D": ['x1', 'z']
-#}
+VOIS = {
+    "EpileptorModel": ['x1', 'z', 'x2'],
+    "Epileptor": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp'],
+    "EpileptorDP": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp'],
+    "EpileptorDPrealistic": ['x1', 'y1', 'z', 'x2', 'y2', 'g', 'lfp', 'x0_t', 'slope_t', 'Iext1_t', 'Iext2_t', 'K_t'],
+    "EpileptorDP2D": ['x1', 'z']
+}
