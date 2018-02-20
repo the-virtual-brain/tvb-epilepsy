@@ -120,6 +120,7 @@ class SimulatorBuilder(object):
 
     def set_monitor(self, model, sim_settings, monitors=None):
         model.variables_of_interest = [me.replace('lfp', 'x2 - x1') for me in sim_settings.monitor_expressions]
+        # Check if the user provides a preconfigured set of monitor instances to override
         if isinstance(monitors, Monitor):
             monitors = (monitors,)
             sim_settings.monitor_sampling_period = monitors.period
