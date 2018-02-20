@@ -19,8 +19,8 @@ AVAILABLE_DYNAMICAL_MODELS_NAMES = []
 for model in AVAILABLE_DYNAMICAL_MODELS:
     AVAILABLE_DYNAMICAL_MODELS_NAMES.append(model._ui_name)
 
-
-def build_tvb_model(model_configuration, zmode=numpy.array("lin")):
+#TODO: Ensure that function signatures are the same. An Epileptor is build using model_configuration attributes. Take zmode it from model_configuration. Keep also pmode there or other values that can be received by kwargs.
+def build_tvb_model(model_configuration, zmode=numpy.array("lin"), **kwargs):
     # We use the opposite sign for K with respect to all epileptor models
     K = -model_configuration.K
     model_instance = Epileptor(x0=model_configuration.x0, Iext=model_configuration.Iext1, Iext2=model_configuration.Iext2,
@@ -33,7 +33,7 @@ def build_tvb_model(model_configuration, zmode=numpy.array("lin")):
 ###
 # Build EpileptorDP2D
 ###
-def build_ep_2sv_model(model_configuration, zmode=numpy.array("lin")):
+def build_ep_2sv_model(model_configuration, zmode=numpy.array("lin"), **kwargs):
     # We use the opposite sign for K with respect to all epileptor models
     K = -model_configuration.K
     model = EpileptorDP2D(x0=model_configuration.x0, Iext1=model_configuration.Iext1, K=K,
@@ -45,7 +45,7 @@ def build_ep_2sv_model(model_configuration, zmode=numpy.array("lin")):
 ###
 # Build EpileptorDP
 ###
-def build_ep_6sv_model(model_configuration, zmode=numpy.array("lin")):
+def build_ep_6sv_model(model_configuration, zmode=numpy.array("lin"), **kwargs):
     # We use the opposite sign for K with respect to all epileptor models
     K = -model_configuration.K
     model = EpileptorDP(x0=model_configuration.x0, Iext1=model_configuration.Iext1, Iext2=model_configuration.Iext2,
@@ -58,7 +58,7 @@ def build_ep_6sv_model(model_configuration, zmode=numpy.array("lin")):
 ###
 # Build EpileptorDPrealistic
 ###
-def build_ep_11sv_model(model_configuration, zmode=numpy.array("lin"), pmode=numpy.array("z")):
+def build_ep_11sv_model(model_configuration, zmode=numpy.array("lin"), pmode=numpy.array("z"), **kwargs):
     # We use the opposite sign for K with respect to all epileptor models
     K = -model_configuration.K
     model = EpileptorDPrealistic(x0=model_configuration.x0, Iext1=model_configuration.Iext1,
@@ -104,3 +104,18 @@ EPILEPTOR_MODEL_TAU0 = {
 }
 
 
+model_noise_intensity_dict = {
+    "Epileptor": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
+    "EpileptorModel":  1e-6,
+    "EpileptorDP": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
+    "EpileptorDPrealistic": numpy.array([0., 0., 1e-8, 0.0, 1e-8, 0., 1e-9, 1e-4, 1e-9, 1e-4, 1e-9]),
+    "EpileptorDP2D": numpy.array([0., 1e-7])
+}
+
+VOIS = {
+    "EpileptorModel": ['x1', 'z', 'x2'],
+    "Epileptor": EpileptorDP().variables_of_interest.tolist(),
+    "EpileptorDP": EpileptorDP().variables_of_interest.tolist(),
+    "EpileptorDPrealistic": EpileptorDPrealistic().variables_of_interest.tolist(),
+    "EpileptorDP2D": EpileptorDP2D().variables_of_interest.tolist()
+}

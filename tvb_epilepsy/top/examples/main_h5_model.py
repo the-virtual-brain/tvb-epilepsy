@@ -23,7 +23,7 @@ if __name__ == "__main__":
     head = reader.read_head(config.input.HEAD)
 
     # # Manual definition of hypothesis...:
-    empty_hypothesis = HypothesisBuilder().build_mixed_hypothesis()
+    empty_hypothesis = HypothesisBuilder()._build_mixed_hypothesis()
     x0_indices = [20]
     x0_values = [0.9]
     e_indices = [70]
@@ -33,8 +33,8 @@ if __name__ == "__main__":
 
     # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
     hyp_x0_E = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions
-                                                     ).build_mixed_hypothesis(e_values, e_indices,
-                                                                              x0_values, x0_indices)
+                                                     )._build_mixed_hypothesis(e_values, e_indices,
+                                                                               x0_values, x0_indices)
 
     obj = {"hyp_x0_E": hyp_x0_E,
            "test_dict": {"list0": ["l00", 1,

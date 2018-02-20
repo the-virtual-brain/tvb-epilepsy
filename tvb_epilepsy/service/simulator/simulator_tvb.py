@@ -6,7 +6,7 @@ import sys
 import time
 import numpy
 from tvb.datatypes import connectivity
-from tvb.simulator import coupling, integrators, monitors, noise, simulator
+from tvb.simulator import coupling, integrators, simulator
 from tvb_epilepsy.base.constants.model_constants import TIME_DELAYS_FLAG
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.service.simulator.simulator import ABCSimulator
@@ -36,7 +36,7 @@ class SimulatorTVB(ABCSimulator):
                                          centres=vep_conn.centres, hemispheres=vep_conn.hemispheres,
                                          orientations=vep_conn.orientations, areas=vep_conn.areas)
 
-    def config_simulation(self, initial_conditions=None):
+    def config_simulation(self, noise, monitors, initial_conditions=None, **kwargs):
 
         if isinstance(self.model_configuration.model_connectivity, numpy.ndarray):
             tvb_connectivity = self._vep2tvb_connectivity(self.connectivity,
@@ -45,48 +45,22 @@ class SimulatorTVB(ABCSimulator):
             tvb_connectivity = self._vep2tvb_connectivity(self.connectivity)
         tvb_coupling = coupling.Difference(a=1.)
 
-        # Set noise:
-        if isinstance(self.simulation_settings.noise_preconfig, noise.Noise):
-            integrator = integrators.HeunStochastic(dt=self.simulation_settings.integration_step,
-                                                    noise=self.simulation_settings.noise_preconfig)
-        else:
-            self.simulation_settings.noise_intensity = numpy.array(self.simulation_settings.noise_intensity)
-            if self.simulation_settings.noise_intensity.size == 1:
-                self.simulation_settings.noise_intensity = numpy.repeat(
-                    numpy.squeeze(self.simulation_settings.noise_intensity), self.model.nvar)
-            if numpy.min(self.simulation_settings.noise_intensity) > 0:
-                thisNoise = noise.Additive(nsig=self.simulation_settings.noise_intensity,
-                                           random_stream=numpy.random.RandomState(
-                                               seed=self.simulation_settings.noise_seed))
-                self.simulation_settings.noise_type = "Additive"
-                integrator = integrators.HeunStochastic(dt=self.simulation_settings.integration_step, noise=thisNoise)
-            else:
-                integrator = integrators.HeunDeterministic(dt=self.simulation_settings.integration_step)
-                self.simulation_settings.noise_type = "None"
-
-        # Set monitors:
-        what_to_watch = []
-        if isinstance(self.simulation_settings.monitors_preconfig, monitors.Monitor):
-            what_to_watch = (self.simulation_settings.monitors_preconfig,)
-        elif isinstance(self.simulation_settings.monitors_preconfig, tuple) or isinstance(
-                self.simulation_settings.monitors_preconfig, list):
-            for monitor in self.simulation_settings.monitors_preconfig:
-                if isinstance(monitor, monitors.Monitor):
-                    what_to_watch.append(monitor)
-                what_to_watch = tuple(what_to_watch)
-        else:
-            monitor = monitors.TemporalAverage()
-            monitor.period = self.simulation_settings.monitor_sampling_period
-            what_to_watch = (monitor,)
+        integrator = kwargs.get("integrator",
+                                integrators.HeunStochastic(dt=self.simulation_settings.integration_step, noise=noise))
 
         self.simTVB = simulator.Simulator(model=self.model, connectivity=tvb_connectivity, coupling=tvb_coupling,
-                                          integrator=integrator, monitors=what_to_watch,
+                                          integrator=integrator, monitors=monitors,
                                           simulation_length=self.simulation_settings.simulated_period)
         self.simTVB.configure()
 
         self.configure_initial_conditions(initial_conditions=initial_conditions)
 
-    def launch_simulation(self, n_report_blocks=1):
+    def launch_simulation(self, report_every_n_monitor_steps=None):
+        if report_every_n_monitor_steps >= 1:
+            time_length_avg = numpy.round(self.simulation_settings.simulated_period / self.simTVB.monitors[0].period)
+            n_report_blocks = max(report_every_n_monitor_steps * numpy.round(time_length_avg / 100), 1.0)
+        else:
+            n_report_blocks = 1
 
         self.simTVB._configure_history(initial_conditions=self.simTVB.initial_conditions)
 

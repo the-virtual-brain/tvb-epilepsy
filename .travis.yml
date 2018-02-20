@@ -22,7 +22,7 @@ install:
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy matplotlib scipy cython sympy
   - source activate test-environment
   - pip install pytest-cov coveralls h5py mpldatacursor gdist SALib
-  - conda install llvmlite
+  - conda install llvmlite numba
   - conda install pyqt
   - pushd extern/tvb-library && python setup.py install && popd
 before_script: # configure a headless display to test plot generation

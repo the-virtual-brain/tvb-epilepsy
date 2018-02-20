@@ -55,7 +55,7 @@ def main_vep(head_folder, ep_name="clinical_hypothesis", x0_indices=[], pse_flag
         e_indices = disease_indices
         e_values = np.array(disease_values)
         x0_values = np.array(x0_values)
-        hyp_x0_E = hypo_builder.build_mixed_hypothesis(e_values, e_indices, x0_values, x0_indices)
+        hyp_x0_E = hypo_builder._build_mixed_hypothesis(e_values, e_indices, x0_values, x0_indices)
         hypotheses = (hyp_E, hyp_x0, hyp_x0_E)
 
     else:
