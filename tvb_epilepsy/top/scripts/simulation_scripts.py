@@ -2,15 +2,15 @@ import os
 import numpy as np
 from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.model.vep.sensors import Sensors
-from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.base.epileptor_models import EpileptorDP2D
-from tvb_epilepsy.service.simulator_builder import SimulatorBuilder
+from tvb_epilepsy.service.simulator_builder import build_simulator_TVB_realistic, \
+                                   build_simulator_TVB_fitting, build_simulator_TVB_default, build_simulator_TVB_paper
 
 logger = initialize_logger(__name__)
 
@@ -91,9 +91,15 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
 
     # ------------------------------Simulation--------------------------------------
     logger.info("\n\nConfiguring simulation...")
-    kwargs = {"sim_type": sim_type}
-    sim, sim_settings, dynamical_model = SimulatorBuilder().build_simulator(model_configuration,
-                                                                             head.connectivity, **kwargs)
+    if isequal_string(sim_type, "realistic"):
+        sim, sim_settings, dynamical_model = build_simulator_TVB_realistic(model_configuration, head.connectivity)
+    elif isequal_string(sim_type, "fitting"):
+        sim, sim_settings, dynamical_model = build_simulator_TVB_fitting(model_configuration, head.connectivity)
+    elif isequal_string(sim_type, "paper"):
+        sim, sim_settings, dynamical_model = build_simulator_TVB_paper(model_configuration, head.connectivity)
+    else:
+        sim, sim_settings, dynamical_model = build_simulator_TVB_default(model_configuration, head.connectivity)
+
     writer = H5Writer()
     writer.write_generic(sim.model, config.out.FOLDER_RES, dynamical_model._ui_name + "_model.h5")
 
@@ -114,7 +120,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
             logger.info("Time: %s - %s", time[0], time[-1])
             logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
             # Variables of interest in a dictionary:
-            vois_ts_dict = prepare_vois_ts_dict(VOIS[dynamical_model._ui_name], tavg_data)
+            vois_ts_dict = prepare_vois_ts_dict(dynamical_model.variables_of_interest, tavg_data)
             vois_ts_dict['time'] = time
             vois_ts_dict['time_units'] = 'msec'
             vois_ts_dict = compute_seeg_and_write_ts_h5_file(config.out.FOLDER_RES, dynamical_model._ui_name + "_ts.h5",

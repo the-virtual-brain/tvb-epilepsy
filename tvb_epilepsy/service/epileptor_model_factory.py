@@ -104,3 +104,18 @@ EPILEPTOR_MODEL_TAU0 = {
 }
 
 
+model_noise_intensity_dict = {
+    "Epileptor": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
+    "EpileptorModel":  1e-6,
+    "EpileptorDP": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
+    "EpileptorDPrealistic": numpy.array([0., 0., 1e-8, 0.0, 1e-8, 0., 1e-9, 1e-4, 1e-9, 1e-4, 1e-9]),
+    "EpileptorDP2D": numpy.array([0., 1e-7])
+}
+
+VOIS = {
+    "EpileptorModel": ['x1', 'z', 'x2'],
+    "Epileptor": EpileptorDP().variables_of_interest.tolist(),
+    "EpileptorDP": EpileptorDP().variables_of_interest.tolist(),
+    "EpileptorDPrealistic": EpileptorDPrealistic().variables_of_interest.tolist(),
+    "EpileptorDP2D": EpileptorDP2D().variables_of_interest.tolist()
+}
