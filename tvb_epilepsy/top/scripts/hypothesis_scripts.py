@@ -60,7 +60,7 @@ def from_head_to_hypotheses(ep_name, config, plot_head=False):
     x0_values = [hyp_x0.x0_values[-1]]
     e_indices = hyp_x0.x0_indices[0:-1].tolist()
     e_values = hyp_x0.x0_values[0:-1].tolist()
-    hyp_x0_E = hypo_builder._build_mixed_hypothesis(e_values, e_indices, x0_values, x0_indices)
+    hyp_x0_E = hypo_builder.build_hypothesis_from_manual_input(e_values, e_indices, x0_values, x0_indices)
 
     hypos = (hyp_x0, hyp_E, hyp_x0_E)
     return head, hypos
