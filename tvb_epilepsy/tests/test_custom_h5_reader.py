@@ -162,18 +162,14 @@ class TestCustomH5Reader(object):
 
         assert dummy_sim_settings.integration_step == sim_settings.integration_step
         assert dummy_sim_settings.simulated_period == sim_settings.simulated_period
-        assert dummy_sim_settings.scale_time == sim_settings.scale_time
         assert dummy_sim_settings.integrator_type == sim_settings.integrator_type
-        assert dummy_sim_settings.noise_preconfig == sim_settings.noise_preconfig
         assert dummy_sim_settings.noise_type == sim_settings.noise_type
         assert dummy_sim_settings.noise_ntau == sim_settings.noise_ntau
         assert dummy_sim_settings.noise_intensity == sim_settings.noise_intensity
         assert dummy_sim_settings.noise_seed == sim_settings.noise_seed
-        assert dummy_sim_settings.monitors_preconfig == sim_settings.monitors_preconfig
         assert dummy_sim_settings.monitor_type == sim_settings.monitor_type
         assert dummy_sim_settings.monitor_sampling_period == sim_settings.monitor_sampling_period
         assert dummy_sim_settings.monitor_expressions == sim_settings.monitor_expressions
-        assert dummy_sim_settings.variables_names == sim_settings.variables_names
         assert numpy.array_equal(dummy_sim_settings.initial_conditions, sim_settings.initial_conditions)
 
     @classmethod
