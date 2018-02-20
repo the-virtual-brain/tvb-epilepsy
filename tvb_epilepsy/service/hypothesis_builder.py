@@ -15,8 +15,6 @@ class HypothesisBuilder(object):
 
     Attributes that can be configured are listed below, as class attributes.
     """
-    # config = Config()
-    # logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
 
     # Attributes specific to a DiseaseHypothesis
     nr_of_regions = 0
