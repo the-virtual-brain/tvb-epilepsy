@@ -19,7 +19,7 @@ AVAILABLE_DYNAMICAL_MODELS_NAMES = []
 for model in AVAILABLE_DYNAMICAL_MODELS:
     AVAILABLE_DYNAMICAL_MODELS_NAMES.append(model._ui_name)
 
-
+#TODO: Ensure that function signatures are the same. An Epileptor is build using model_configuration attributes. Take zmode it from model_configuration. Keep also pmode there or other values that can be received by kwargs.
 def build_tvb_model(model_configuration, zmode=numpy.array("lin"), **kwargs):
     # We use the opposite sign for K with respect to all epileptor models
     K = -model_configuration.K
