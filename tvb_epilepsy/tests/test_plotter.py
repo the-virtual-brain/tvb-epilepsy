@@ -1,13 +1,12 @@
 import os
 import numpy
-from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
 from tvb_epilepsy.base.constants.config import Config
-from tvb_epilepsy.service.epileptor_model_factory import build_ep_2sv_model
+from tvb_epilepsy.service.epileptor_model_factory import build_ep_2sv_model, VOIS
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter
