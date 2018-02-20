@@ -438,6 +438,7 @@ class Plotter(BasePlotter):
     def plot_sim_results(self, model, seizure_indices, res, sensorsSEEG=None, hpf_flag=False, trajectories_plot=False,
                          spectral_raster_plot=False, region_labels=None, **kwargs):
         if isinstance(model, EpileptorDP2D):
+            # We assume that at least x1 and z are available in res
             self.plot_timeseries({'x1(t)': res['x1'], 'z(t)': res['z']}, res['time'],
                                  time_units=res.get('time_units', "ms"),
                                  special_idx=seizure_indices, title=model._ui_name + ": Simulated TAVG",
@@ -447,37 +448,45 @@ class Plotter(BasePlotter):
                              title=model._ui_name + ": Simulated x1 rasterplot", offset=5.0, labels=region_labels,
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
         else:
+            # We assume that at least lfp and z are available in res
             self.plot_timeseries({'LFP(t)': res['lfp'], 'z(t)': res['z']}, res['time'],
                                  time_units=res.get('time_units', "ms"),
                                  special_idx=seizure_indices, title=model._ui_name + ": Simulated LFP-z",
                                  labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
-            self.plot_timeseries({'x1(t)': res['x1'], 'y1(t)': res['y1']}, res['time'],
-                                 time_units=res.get('time_units', "ms"),
-                                 special_idx=seizure_indices, title=model._ui_name + ": Simulated pop1",
-                                 labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
-            self.plot_timeseries({'x2(t)': res['x2'], 'y2(t)': res['y2'], 'g(t)': res['g']}, res['time'],
-                                 time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
-                                 title=model._ui_name + ": Simulated pop2-g",
-                                 labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
+            if isinstance(res.get("x1"), numpy.ndarray) and isinstance(res.get("y1"), numpy.ndarray):
+                self.plot_timeseries({'x1(t)': res['x1'], 'y1(t)': res['y1']}, res['time'],
+                                     time_units=res.get('time_units', "ms"),
+                                     special_idx=seizure_indices, title=model._ui_name + ": Simulated pop1",
+                                     labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
+            if isinstance(res.get("x2"), numpy.ndarray) and isinstance(res.get("y3"), numpy.ndarray) \
+                and isinstance(res.get("g"), numpy.ndarray):
+                self.plot_timeseries({'x2(t)': res['x2'], 'y2(t)': res['y2'], 'g(t)': res['g']}, res['time'],
+                                     time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
+                                     title=model._ui_name + ": Simulated pop2-g",
+                                     labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
             start_plot = int(numpy.round(0.01 * res['lfp'].shape[0]))
             self.plot_raster({'lfp': res['lfp'][start_plot:, :]}, res['time'][start_plot:],
                              time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
                              title=model._ui_name + ": Simulated LFP rasterplot", offset=10.0, labels=region_labels,
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
         if isinstance(model, EpileptorDPrealistic):
-            self.plot_timeseries({'1/(1+exp(-10(z-3.03))': 1 / (1 + numpy.exp(-10 * (res['z'] - 3.03))),
-                                  'slope': res['slope_t'], 'Iext2': res['Iext2_t']}, res['time'],
-                                 time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
-                                 title=model._ui_name + ": Simulated controlled parameters", labels=region_labels,
-                                 figsize=FiguresConfig.VERY_LARGE_SIZE)
-            self.plot_timeseries({'x0_values': res['x0_t'], 'Iext1': res['Iext1_t'], 'K': res['K_t']}, res['time'],
-                                 time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
-                                 title=model._ui_name + ": Simulated parameters", labels=region_labels,
-                                 figsize=FiguresConfig.VERY_LARGE_SIZE)
+            if isinstance(res.get("slope_t"), numpy.ndarray) and isinstance(res.get("Iext2"), numpy.ndarray):
+                self.plot_timeseries({'1/(1+exp(-10(z-3.03))': 1 / (1 + numpy.exp(-10 * (res['z'] - 3.03))),
+                                      'slope': res['slope_t'], 'Iext2': res['Iext2_t']}, res['time'],
+                                      time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
+                                      title=model._ui_name + ": Simulated controlled parameters", labels=region_labels,
+                                      figsize=FiguresConfig.VERY_LARGE_SIZE)
+            if isinstance(res.get("x0_t"), numpy.ndarray) and isinstance(res.get("Iext1_t"), numpy.ndarray) \
+                and isinstance(res.get("K_t"), numpy.ndarray):
+                self.plot_timeseries({'x0_values': res['x0_t'], 'Iext1': res['Iext1_t'], 'K': res['K_t']}, res['time'],
+                                    time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
+                                    title=model._ui_name + ": Simulated parameters", labels=region_labels,
+                                    figsize=FiguresConfig.VERY_LARGE_SIZE)
         if trajectories_plot:
-            self.plot_trajectories({'x1': res['x1'], 'z': res['z']}, special_idx=seizure_indices,
-                                   title=model._ui_name + ': State space trajectories', labels=region_labels,
-                                   figsize=FiguresConfig.LARGE_SIZE)
+            if isinstance(res.get("x1"), numpy.ndarray):
+                self.plot_trajectories({'x1': res['x1'], 'z': res['z']}, special_idx=seizure_indices,
+                                       title=model._ui_name + ': State space trajectories', labels=region_labels,
+                                       figsize=FiguresConfig.LARGE_SIZE)
         if spectral_raster_plot is "lfp":
             self.plot_spectral_analysis_raster(res["time"], res['lfp'], time_units=res.get('time_units', "ms"),
                                                freq=None, special_idx=seizure_indices,
