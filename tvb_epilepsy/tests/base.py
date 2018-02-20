@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
 
 import os
-import shutil
-from tvb_epilepsy.base.constants.config import OutputConfig
-
-FOLDER_TEMP = OutputConfig().FOLDER_TEMP
+from tvb_epilepsy.base.constants.config import Config
 
 
-def get_temporary_folder():
-    if not os.path.exists(FOLDER_TEMP):
-        os.makedirs(FOLDER_TEMP)
-    return FOLDER_TEMP
+class BaseTest(object):
+    config = Config()
 
+    @classmethod
+    def setup_class(cls):
+        for direc in (cls.config.out.FOLDER_LOGS, cls.config.out.FOLDER_RES, cls.config.out.FOLDER_FIGURES,
+                      cls.config.out.FOLDER_TEMP):
+            if not os.path.exists(direc):
+                os.makedirs(direc)
 
-def get_temporary_files_path(*args):
-    file_path = os.path.join(get_temporary_folder(), *args)
-    return file_path
-
-
-def remove_temporary_test_files():
-    shutil.rmtree(FOLDER_TEMP)
+    @classmethod
+    def teardown_class(cls):
+        for direc in (cls.config.out.FOLDER_LOGS, cls.config.out.FOLDER_RES, cls.config.out.FOLDER_FIGURES,
+                      cls.config.out.FOLDER_TEMP):
+            for dir_file in os.listdir(direc):
+                os.remove(os.path.join(os.path.abspath(direc), dir_file))
+            os.removedirs(direc)

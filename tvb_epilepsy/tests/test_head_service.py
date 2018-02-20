@@ -6,17 +6,12 @@ from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.model.vep.surface import Surface
 from tvb_epilepsy.service.head_service import HeadService
 from tvb_epilepsy.base.constants.config import Config
+from tvb_epilepsy.tests.base import BaseTest
 
 
-class TestHeadService(object):
+class TestHeadService(BaseTest):
     head_service = HeadService()
     config = Config()
-
-    @classmethod
-    def setup_class(cls):
-        for direc in (cls.config.out.FOLDER_LOGS, cls.config.out.FOLDER_RES, cls.config.out.FOLDER_FIGURES):
-            if not os.path.exists(direc):
-                os.makedirs(direc)
 
     def _prepare_dummy_head(self):
         reader = H5Reader()
@@ -47,10 +42,3 @@ class TestHeadService(object):
 
         # TODO: better checks
         assert isinstance(selected, list)
-
-    @classmethod
-    def teardown_class(cls):
-        for direc in (cls.config.out.FOLDER_LOGS, cls.config.out.FOLDER_RES, cls.config.out.FOLDER_FIGURES):
-            for dir_file in os.listdir(direc):
-                os.remove(os.path.join(os.path.abspath(direc), dir_file))
-            os.removedirs(direc)

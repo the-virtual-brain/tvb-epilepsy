@@ -5,9 +5,10 @@ from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.simulator_builder import SimulatorBuilder
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
+from tvb_epilepsy.tests.base import BaseTest
 
 
-class TestSimulationRun(object):
+class TestSimulationRun(BaseTest):
     fs = 2 * 4096.0
     time_length = 30.0
     report_every_n_monitor_steps = 10.0

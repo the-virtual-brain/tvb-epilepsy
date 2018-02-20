@@ -12,17 +12,12 @@ from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter
 from tvb_epilepsy.top.scripts.simulation_scripts import prepare_vois_ts_dict
+from tvb_epilepsy.tests.base import BaseTest
 
 
-class TestPlotter(object):
+class TestPlotter(BaseTest):
     plotter = Plotter()
     config = Config()
-
-    @classmethod
-    def setup_class(cls):
-        for direc in (cls.config.out.FOLDER_LOGS, cls.config.out.FOLDER_RES, cls.config.out.FOLDER_FIGURES):
-            if not os.path.exists(direc):
-                os.makedirs(direc)
 
     def _prepare_dummy_head(self):
         reader = H5Reader()
@@ -109,10 +104,3 @@ class TestPlotter(object):
         self.plotter.plot_sim_results(model, [0], res)
 
         assert os.path.exists(file_name)
-
-    @classmethod
-    def teardown_class(cls):
-        for direc in (cls.config.out.FOLDER_LOGS, cls.config.out.FOLDER_RES, cls.config.out.FOLDER_FIGURES):
-            for dir_file in os.listdir(direc):
-                os.remove(os.path.join(os.path.abspath(direc), dir_file))
-            os.removedirs(direc)
