@@ -4,7 +4,8 @@ Entry point for working with VEP
 import os
 import numpy as np
 from tvb_epilepsy.base.constants.config import Config
-from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects
+from tvb_epilepsy.base.constants.model_constants import COLORED_NOISE
+from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects, isequal_string
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
@@ -14,7 +15,6 @@ from tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.top.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
 from tvb_epilepsy.top.scripts.simulation_scripts import prepare_vois_ts_dict
 from tvb_epilepsy.top.scripts.simulation_scripts import compute_seeg_and_write_ts_h5_file
-from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.io.h5_reader import H5Reader
@@ -26,7 +26,8 @@ SIM_FLAG = True
 EP_NAME = "ep_l_frontal_complex"
 
 
-def main_vep(config=Config(), test_write_read=False, pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG):
+def main_vep(config=Config(), sim_type="default", test_write_read=False,
+             pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG):
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
     # -------------------------------Reading data-----------------------------------
     reader = TVBReader() if config.input.IS_TVB_MODE else H5Reader()
@@ -58,11 +59,18 @@ def main_vep(config=Config(), test_write_read=False, pse_flag=PSE_FLAG, sa_pse_f
     # This is an example of Excitability Hypothesis:
     hyp_x0 = hypo_builder.build_hypothesis_from_file(EP_NAME)
 
+    # # This is an example of Mixed Hypothesis set manually by the user:
+    # x0_indices = [hyp_x0.x0_indices[-1]]
+    # x0_values = [hyp_x0.x0_values[-1]]
+    # e_indices = hyp_x0.x0_indices[0:-1].tolist()
+    # e_values = hyp_x0.x0_values[0:-1].tolist()
+    # hyp_x0_E = hypo_builder.build_hypothesis_from_manual_input(e_values, e_indices, x0_values, x0_indices)
+
+    # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis set from file:
     all_regions_indices = np.array(range(head.number_of_regions))
     healthy_indices = np.delete(all_regions_indices, hyp_E.x0_indices + hyp_E.e_indices).tolist()
-
-    # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
     hyp_x0_E = hypo_builder.build_hypothesis_from_file(EP_NAME, [16, 25])
+
     hypotheses = (hyp_x0, hyp_E, hyp_x0_E)
 
     # --------------------------Simulation preparations-----------------------------------
@@ -76,6 +84,21 @@ def main_vep(config=Config(), test_write_read=False, pse_flag=PSE_FLAG, sa_pse_f
     #      -multiplicative correlated noise is also used
     # We don't want any time delays for the moment
     # head.connectivity.tract_lengths *= TIME_DELAYS_FLAG
+    sim_builder = SimulatorBuilder(config.generic.MODE_TVB)
+    if isequal_string(sim_type, "realistic"):
+        sim_settings = sim_builder.set_model_name("EpileptorDPrealistic").set_simulated_period(50000).set_sim_settings()
+        sim_settings.noise_type = COLORED_NOISE
+        sim_settings.noise_ntau = 10
+    elif isequal_string(sim_type, "fitting"):
+        sim_builder.set_model_name("EpileptorDP2D").set_sim_settings()
+        sim_settings = sim_builder
+        sim_settings.noise_intensity = 1e-3
+    elif isequal_string(sim_type, "paper"):
+        sim_builder.set_model_name("Epileptor")
+        sim_settings = sim_builder.set_sim_settings()
+    else:
+        sim_settings = sim_builder.set_sim_settings()
+
     # --------------------------Hypothesis and LSA-----------------------------------
     for hyp in hypotheses:
         logger.info("\n\nRunning hypothesis: " + hyp.name)
@@ -174,10 +197,17 @@ def main_vep(config=Config(), test_write_read=False, pse_flag=PSE_FLAG, sa_pse_f
 
         if sim_flag:
             # ------------------------------Simulation--------------------------------------
-            logger.info("\n\nConfiguring simulation...")
-            kwargs = {"sim_type": "fitting"}
-            sim, sim_settings, model = SimulatorBuilder().build_simulator(model_configuration,
-                                                                          head.connectivity, **kwargs)
+            logger.info("\n\nConfiguring simulation from model_configuration...")
+            model = sim_builder.generate_model(model_configuration)
+            if isequal_string(sim_type, "realistic"):
+                model.tau0 = 30000.0
+                model.tau1 = 0.2
+                model.slope = 0.25
+            elif isequal_string(sim_type, "fitting"):
+                model.tau0 = 10.0
+                model.tau1 = 0.5
+            sim, sim_settings, model = sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration,
+                                                                                 head.connectivity, model, sim_settings)
 
             # Integrator and initial conditions initialization.
             # By default initial condition is set right on the equilibrium point.
@@ -202,7 +232,7 @@ def main_vep(config=Config(), test_write_read=False, pse_flag=PSE_FLAG, sa_pse_f
                 logger.info("Time: %s - %s", time[0], time[-1])
                 logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
                 # Variables of interest in a dictionary:
-                vois_ts_dict = prepare_vois_ts_dict(VOIS[model._ui_name], tavg_data)
+                vois_ts_dict = prepare_vois_ts_dict(sim_settings.monitor_expressions, tavg_data)
                 vois_ts_dict['time'] = time
                 vois_ts_dict['time_units'] = 'msec'
                 vois_ts_dict = compute_seeg_and_write_ts_h5_file(config.out.FOLDER_RES, lsa_hypothesis.name + "_ts.h5",
@@ -226,9 +256,9 @@ def main_vep(config=Config(), test_write_read=False, pse_flag=PSE_FLAG, sa_pse_f
 
 
 if __name__ == "__main__":
-    # head_folder = os.path.join(os.path.expanduser("~"),
-    #                            'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
-    # output = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "tests")
-    # config = Config(head_folder=head_folder, output_base=output, separate_by_run=True)
-    # main_vep(config)
+    head_folder = os.path.join(os.path.expanduser("~"),
+                               'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
+    output = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "tests")
+    config = Config(head_folder=head_folder, output_base=output, separate_by_run=True)
+    main_vep(config)
     main_vep()
