@@ -1,9 +1,8 @@
 # Some math tools
 
 import numpy as np
-from matplotlib import pyplot
 from itertools import product
-from tvb_epilepsy.base.constants.config import CalculusConfig
+from tvb_epilepsy.base.constants.config import CalculusConfig, FiguresConfig
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 
 logger = initialize_logger(__name__)
@@ -83,10 +82,13 @@ def curve_elbow_point(vals, interactive=CalculusConfig.INTERACTIVE_ELBOW_POINT):
     grad = np.gradient(np.gradient(np.gradient(cumsum_vals)))
     elbow = np.argmax(grad)
     if interactive:
+        import matplotlib
+        matplotlib.use(FiguresConfig.MATPLOTLIB_BACKEND)
+        from matplotlib import pyplot
         pyplot.ion()
         fig, ax = pyplot.subplots()
         xdata = range(len(vals))
-        lines=[]
+        lines = []
         lines.append(ax.plot(xdata, cumsum_vals, 'g*', picker=None, label="values' cumulative sum")[0])
         lines.append(ax.plot(xdata, vals, 'bo', picker=None, label="values in descending order")[0])
         lines.append(ax.plot(elbow, vals[elbow], "rd",

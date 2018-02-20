@@ -9,7 +9,7 @@ class TestHypothesisBuilder(BaseTest):
 
     def test_build_empty_hypothesis(self):
         hypo_builder = HypothesisBuilder()
-        hypo = hypo_builder.build_hypothesis()
+        hypo = hypo_builder._build_hypothesis()
 
         assert hypo.name == "_Hypothesis"
         assert hypo.number_of_regions == 0
@@ -25,7 +25,7 @@ class TestHypothesisBuilder(BaseTest):
     def test_build_hypothesis_by_user_preferences(self):
         hypo_builder = HypothesisBuilder().set_nr_of_regions(76).set_x0_indices([1, 2, 3]).set_x0_values(
             [1, 1, 1]).set_e_indices([10, 11]).set_e_values([1, 1]).set_normalize(0.90)
-        hypo = hypo_builder.build_hypothesis()
+        hypo = hypo_builder._build_hypothesis()
 
         assert hypo.name == "Excitability_Epileptogenicity_Hypothesis"
         assert hypo.number_of_regions == 76
@@ -40,10 +40,10 @@ class TestHypothesisBuilder(BaseTest):
 
     def test_build_lsa_hypothesis(self):
         hypo_builder = HypothesisBuilder().set_nr_of_regions(76).set_x0_indices([1, 2]).set_x0_values([1, 1])
-        hypo = hypo_builder.build_hypothesis()
+        hypo = hypo_builder._build_hypothesis()
 
         lsa_hypo = hypo_builder.set_attributes_based_on_hypothesis(hypo).set_lsa_propagation_indices(
-            [3, 4]).set_lsa_propagation_strengths([0.5, 1]).build_hypothesis()
+            [3, 4]).set_lsa_propagation_strengths([0.5, 1])._build_hypothesis()
 
         assert lsa_hypo.name == "Excitability_HypothesisLSA"
         assert lsa_hypo.number_of_regions == 76

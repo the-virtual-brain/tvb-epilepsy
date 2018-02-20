@@ -19,7 +19,7 @@ class TestSimulationRun(BaseTest):
 
     def _prepare_model_for_simulation(self, connectivity):
         hypothesis = HypothesisBuilder().set_nr_of_regions(
-            connectivity.number_of_regions).build_excitability_hypothesis([1, 1], [0, 10])
+            connectivity.number_of_regions)._build_excitability_hypothesis([1, 1], [0, 10])
         model_configuration_builder = ModelConfigurationBuilder(connectivity.number_of_regions)
         model_configuration = \
             model_configuration_builder.build_model_from_hypothesis(hypothesis, connectivity.normalized_weights)
@@ -30,11 +30,9 @@ class TestSimulationRun(BaseTest):
         connectivity = reader.read_connectivity("connectivity_76.zip")
         model_configuration = self._prepare_model_for_simulation(connectivity)
 
-        simulator_builder = SimulatorBuilder().set_time_length(self.time_length)
-        simulator = simulator_builder.build_simulator_TVB_fitting(
-            model_configuration, connectivity)
-        simulator.config_simulation(initial_conditions=None)
-        ttavg, tavg_data, status = simulator.launch_simulation(simulator_builder.n_report_blocks)
+        simulator_builder = SimulatorBuilder()
+        simulator,_,_ = simulator_builder.build_simulator(model_configuration, connectivity)
+        ttavg, tavg_data, status = simulator.launch_simulation(100)
         assert status == True
 
     # This can be ran only locally for the moment

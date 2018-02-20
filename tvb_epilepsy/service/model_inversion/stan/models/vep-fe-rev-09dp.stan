@@ -117,8 +117,9 @@ transformed parameters {
         x[t+1] = x_step(x[t], z[t], I1, dt*time_scale, x_eta[t], sqrtdt*sigma);
         z[t+1] = z_step(x[t], z[t], x0, k*SC, Ic, x_eq_def, dt*time_scale, z_eta[t], sqrtdt*sigma, tau0);
     }
+
     for (t in 1:nt)
-        mu_seeg_log_power[t] = amplitude * (log(gain * exp(x[t]')) + offset)';
+        mu_seeg_log_power[t] = amplitude * (log(gain * exp(x[t]'-x_eq_def)) + offset)';
 }
 
 model {

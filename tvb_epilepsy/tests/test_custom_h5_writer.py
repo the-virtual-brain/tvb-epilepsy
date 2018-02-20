@@ -66,8 +66,8 @@ class TestCustomH5writer(BaseTest):
 
     def test_write_hypothesis(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestHypothesis.h5")
-        dummy_hypothesis = HypothesisBuilder().set_nr_of_regions(3).build_excitability_hypothesis(numpy.array([0.6]),
-                                                                                                  [0])
+        dummy_hypothesis = HypothesisBuilder().set_nr_of_regions(3)._build_excitability_hypothesis(numpy.array([0.6]),
+                                                                                                   [0])
 
         assert not os.path.exists(test_file)
 
@@ -122,7 +122,7 @@ class TestCustomH5writer(BaseTest):
     def test_write_pse_service(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestPSEService.h5")
         dummy_pse_service = LSAPSEService(
-            hypothesis=HypothesisBuilder().set_nr_of_regions(3).build_excitability_hypothesis(numpy.array([0.6]), [0]),
+            hypothesis=HypothesisBuilder().set_nr_of_regions(3)._build_excitability_hypothesis(numpy.array([0.6]), [0]),
             params_pse={"path": [], "indices": [], "name": [], "bounds": []})
 
         assert not os.path.exists(test_file)

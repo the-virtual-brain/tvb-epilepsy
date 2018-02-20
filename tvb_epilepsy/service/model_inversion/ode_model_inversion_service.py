@@ -151,6 +151,9 @@ class ODEModelInversionService(ModelInversionService):
             elif isequal_string(normalization, "minmax"):
                 signals -= signals.min()
                 signals /= signals.max()
+            elif isequal_string(normalization, "baseline-amplitude"):
+                signals -= np.percentile(signals, 5, 0)
+                signals /= np.percentile(signals, 95)
             else:
                 self.logger.warn("Ignoring target signals' normalization " + normalization +
                                  ",\nwhich is not one of the currently available 'zscore' and 'minmax'!")

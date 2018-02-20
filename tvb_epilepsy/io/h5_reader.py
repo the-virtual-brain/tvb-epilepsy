@@ -147,7 +147,7 @@ class H5Reader(object):
         data = h5_file['/data'][()]
 
         h5_file.close()
-        self.logger.info("Successfully read volume mapping: %s" % data)
+        self.logger.info("Successfully read volume mapping!") #: %s" % data)
 
         return data
 
@@ -166,7 +166,7 @@ class H5Reader(object):
         data = h5_file['/data'][()]
 
         h5_file.close()
-        self.logger.info("Successfully read region mapping: %s" % data)
+        self.logger.info("Successfully read region mapping!") #: %s" % data)
 
         return data
 
@@ -221,7 +221,7 @@ class H5Reader(object):
         values = h5_file['/values'][()]
 
         h5_file.close()
-        self.logger.info("Successfully read epileptogenicity values: %s" % values)
+        self.logger.info("Successfully read epileptogenicity values!") #: %s" % values)
 
         return values
 
@@ -240,7 +240,7 @@ class H5Reader(object):
         time = numpy.linspace(start_time, total_time, nr_of_steps)
 
         self.logger.info("First Channel sv sum: " + str(numpy.sum(data[:, 0])))
-        self.logger.info("Successfully read Timeseries: %s" % data)
+        self.logger.info("Successfully read Timeseries!") #: %s" % data)
         h5_file.close()
 
         return time, data

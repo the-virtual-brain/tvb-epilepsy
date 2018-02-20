@@ -2,16 +2,15 @@ import os
 import numpy as np
 from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.model.vep.sensors import Sensors
-from tvb_epilepsy.base.constants.model_constants import VOIS
-from tvb_epilepsy.service.simulator.simulator_java import EpileptorModel
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.base.epileptor_models import EpileptorDP2D
-from tvb_epilepsy.service.simulator_builder import SimulatorBuilder
+from tvb_epilepsy.service.simulator_builder import build_simulator_TVB_realistic, \
+                                   build_simulator_TVB_fitting, build_simulator_TVB_default, build_simulator_TVB_paper
 
 logger = initialize_logger(__name__)
 
@@ -42,10 +41,8 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
                 vois_ts_dict[sensor_name] -= np.min(vois_ts_dict[sensor_name])
                 vois_ts_dict[sensor_name] /= np.max(vois_ts_dict[sensor_name])
     else:
-        if isinstance(model, EpileptorModel):
-            vois_ts_dict["lfp"] = vois_ts_dict["x2"] - vois_ts_dict["x1"]
-        raw_data = np.dstack(
-            [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x2"]])
+        vois_ts_dict["lfp"] = vois_ts_dict["x2"] - vois_ts_dict["x1"]
+        raw_data = np.dstack([vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x2"]])
         if hpf_flag:
             hpf_low = max(hpf_low, 1000.0 / time_length)
             hpf_high = min(fsAVG / 2.0 - 10.0, hpf_high)
@@ -76,12 +73,6 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
 def from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
                                            sim_type="realistic", dynamical_model="EpileptorDP2D", ts_file=None,
                                            plot_flag=True, config=Config()):
-    # --------------------------Simulation preparations----------------------------------------------------------------
-    # this is the simulation sampling rate that is necessary for the simulation to be stable:
-
-    sim_builder = SimulatorBuilder().set_scale_fsavg(1).set_report_every_n_monitor_steps(100.0).set_model_name(
-        dynamical_model).set_sim_type(sim_type)
-
     # Choose model
     # Available models beyond the TVB Epileptor (they all encompass optional variations from the different papers):
     # EpileptorDP: similar to the TVB Epileptor + optional variations,
@@ -100,13 +91,15 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
 
     # ------------------------------Simulation--------------------------------------
     logger.info("\n\nConfiguring simulation...")
-    if sim_type == "realistic":
-        sim = sim_builder.set_fs(4096).set_time_length(60000).build_simulator_TVB_realistic(model_configuration,
-                                                                                            head.connectivity)
+    if isequal_string(sim_type, "realistic"):
+        sim, sim_settings, dynamical_model = build_simulator_TVB_realistic(model_configuration, head.connectivity)
+    elif isequal_string(sim_type, "fitting"):
+        sim, sim_settings, dynamical_model = build_simulator_TVB_fitting(model_configuration, head.connectivity)
+    elif isequal_string(sim_type, "paper"):
+        sim, sim_settings, dynamical_model = build_simulator_TVB_paper(model_configuration, head.connectivity)
     else:
-        sim = sim_builder.set_fs(10240).set_time_length(100).build_simulator_TVB_fitting(model_configuration,
-                                                                                         head.connectivity)
-    dynamical_model = sim.model
+        sim, sim_settings, dynamical_model = build_simulator_TVB_default(model_configuration, head.connectivity)
+
     writer = H5Writer()
     writer.write_generic(sim.model, config.out.FOLDER_RES, dynamical_model._ui_name + "_model.h5")
 
@@ -116,7 +109,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
         vois_ts_dict = H5Reader().read_dictionary(ts_file)
     else:
         logger.info("\n\nSimulating...")
-        ttavg, tavg_data, status = sim.launch_simulation(sim_builder.n_report_blocks)
+        ttavg, tavg_data, status = sim.launch_simulation(report_every_n_monitor_steps=100)
         if not status:
             logger.warning("\nSimulation failed!")
         else:
@@ -127,13 +120,13 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
             logger.info("Time: %s - %s", time[0], time[-1])
             logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
             # Variables of interest in a dictionary:
-            vois_ts_dict = prepare_vois_ts_dict(VOIS[dynamical_model._ui_name], tavg_data)
+            vois_ts_dict = prepare_vois_ts_dict(dynamical_model.variables_of_interest, tavg_data)
             vois_ts_dict['time'] = time
             vois_ts_dict['time_units'] = 'msec'
             vois_ts_dict = compute_seeg_and_write_ts_h5_file(config.out.FOLDER_RES, dynamical_model._ui_name + "_ts.h5",
                                                              sim.model,
                                                              vois_ts_dict, output_sampling_time,
-                                                             sim_builder.time_length,
+                                                             sim_settings.simulated_period,
                                                              hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
                                                              sensors_list=head.sensorsSEEG, save_flag=True)
             if isinstance(ts_file, basestring):
