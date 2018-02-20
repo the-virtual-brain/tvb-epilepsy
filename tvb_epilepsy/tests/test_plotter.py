@@ -2,10 +2,6 @@ import os
 import numpy
 from tvb_epilepsy.base.constants.model_constants import VOIS
 from tvb_epilepsy.plot.plotter import Plotter
-from tvb_epilepsy.io.h5_reader import H5Reader
-from tvb_epilepsy.base.model.vep.head import Head
-from tvb_epilepsy.base.model.vep.sensors import Sensors
-from tvb_epilepsy.base.model.vep.surface import Surface
 from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.service.epileptor_model_factory import build_ep_2sv_model
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
@@ -18,15 +14,6 @@ from tvb_epilepsy.tests.base import BaseTest
 class TestPlotter(BaseTest):
     plotter = Plotter()
     config = Config()
-
-    def _prepare_dummy_head(self):
-        reader = H5Reader()
-        connectivity = reader.read_connectivity(os.path.join(self.config.input.HEAD, "Connectivity.h5"))
-        cort_surface = Surface([], [])
-        seeg_sensors = Sensors(numpy.array(["sens1", "sens2"]), numpy.array([[0, 0, 0], [0, 1, 0]]))
-        head = Head(connectivity, cort_surface, sensorsSEEG=seeg_sensors)
-
-        return head
 
     def test_plot_head(self):
         head = self._prepare_dummy_head()

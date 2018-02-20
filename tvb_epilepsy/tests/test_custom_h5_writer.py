@@ -2,10 +2,6 @@ import os
 import numpy
 from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
-from tvb_epilepsy.base.model.vep.connectivity import Connectivity
-from tvb_epilepsy.base.model.vep.head import Head
-from tvb_epilepsy.base.model.vep.sensors import Sensors
-from tvb_epilepsy.base.model.vep.surface import Surface
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
@@ -19,17 +15,6 @@ from tvb_epilepsy.tests.base import BaseTest
 
 class TestCustomH5writer(BaseTest):
     writer = H5Writer()
-
-    dummy_connectivity = Connectivity("", numpy.array([[1.0, 2.0, 3.0], [2.0, 3.0, 1.0], [3.0, 2.0, 1.0]]),
-                                      numpy.array([[4, 5, 6], [5, 6, 4], [6, 4, 5]]), labels=["a", "b", "c"],
-                                      centres=numpy.array([1.0, 2.0, 3.0]), normalized_weights=numpy.array(
-            [[1.0, 2.0, 3.0], [2.0, 3.0, 1.0], [3.0, 2.0, 1.0]]))
-    dummy_surface = Surface(numpy.array([[1, 2, 3], [2, 3, 1], [3, 1, 2]]), numpy.array([[0, 1, 2]]))
-    dummy_sensors = Sensors(numpy.array(["sens1", "sens2"]), numpy.array([[0, 0, 0], [0, 1, 0]]),
-                            gain_matrix=numpy.array([[1, 2, 3], [2, 3, 4]]))
-
-    def _prepare_dummy_head(self):
-        return Head(self.dummy_connectivity, self.dummy_surface, sensorsSEEG=[self.dummy_sensors])
 
     def test_write_connectivity(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestConnectivity.h5")
@@ -73,7 +58,7 @@ class TestCustomH5writer(BaseTest):
 
         assert not os.path.exists(test_folder)
 
-        head = self._prepare_dummy_head()
+        head = self._prepare_dummy_head_from_dummy_attrs()
         self.writer.write_head(head, test_folder)
 
         assert os.path.exists(test_folder)
