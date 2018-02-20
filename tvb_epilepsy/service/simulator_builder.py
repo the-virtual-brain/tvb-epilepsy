@@ -53,11 +53,9 @@ class SimulatorBuilder(object):
         return dt, monitor_period
 
     def generate_model(self, model_configuration, **kwargs):
-        if isequal_string(self.model_name, EpileptorModel._ui_name) \
-            and not isequal_string(self.simulator, "java"):
+        if isequal_string(self.model_name, EpileptorModel._ui_name) and not isequal_string(self.simulator, "java"):
             raise_value_error("Custom EpileptorModel can be used only with java simulator!")
-        elif not isequal_string(self.model_name, EpileptorModel._ui_name) \
-            and isequal_string(self.simulator, "java"):
+        elif not isequal_string(self.model_name, EpileptorModel._ui_name) and isequal_string(self.simulator, "java"):
             raise_value_error("Only java EpileptorModel can be used with java simulator!")
         return model_build_dict[self.model_name](model_configuration, **kwargs)
 
@@ -83,13 +81,13 @@ class SimulatorBuilder(object):
         noise_instance.configure_coloured(dt=1.0/self.fs, shape=noise_shape)
         return noise_instance
 
-    def set_sim_settings(self):
+    def build_sim_settings(self):
         dt, monitor_period = self.set_time_scales()
         return SimulationSettings(simulated_period=self.simulated_period, integration_step=dt,
-                                          noise_type=WHITE_NOISE, noise_ntau=0.0, noise_seed=NOISE_SEED,
-                                          noise_intensity=model_noise_intensity_dict[self.model_name],
-                                          monitor_sampling_period=monitor_period,
-                                          monitor_expressions=VOIS[self.model_name])
+                                  noise_type=WHITE_NOISE, noise_ntau=0.0, noise_seed=NOISE_SEED,
+                                  noise_intensity=model_noise_intensity_dict[self.model_name],
+                                  monitor_sampling_period=monitor_period,
+                                  monitor_expressions=VOIS[self.model_name])
 
     def set_noise(self, sim_settings, **kwargs):
         # Check if the user provides a preconfigured noise instance to override
@@ -153,7 +151,7 @@ class SimulatorBuilder(object):
 
         model = self.generate_model(model_configuration)
 
-        sim_settings = self.set_sim_settings()
+        sim_settings = self.build_sim_settings()
 
         return self.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity,
                                                                 model, sim_settings, **kwargs)
@@ -164,7 +162,7 @@ class SimulatorBuilder(object):
 
         noise_intensity = 1e-6  # numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.])
 
-        sim_settings = self.set_sim_settings()
+        sim_settings = self.build_sim_settings()
 
         simulator_instance = SimulatorJava(connectivity, model_configuration, model, sim_settings)
 
@@ -191,7 +189,7 @@ def build_simulator_TVB_fitting(self, model_configuration, connectivity, **kwarg
     model = sim_builder.generate_model(model_configuration, **kwargs)
     model.tau0 = 10.0
     model.tau1 = 0.5
-    sim_settings = self.set_sim_settings()
+    sim_settings = self.build_sim_settings()
     sim_settings.noise_intensity = 1e-3
     return sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity,
                                                                    model, sim_settings, **kwargs)
@@ -204,7 +202,7 @@ def build_simulator_TVB_realistic(self, model_configuration, connectivity, **kwa
     model.tau0 = 30000.0
     model.tau1 = 0.2
     model.slope = 0.25
-    sim_settings = self.set_sim_settings()
+    sim_settings = self.build_sim_settings()
     sim_settings.noise_type = COLORED_NOISE
     sim_settings.noise_ntau = 10
     return sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity,

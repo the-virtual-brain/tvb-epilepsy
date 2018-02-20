@@ -86,18 +86,18 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
     # head.connectivity.tract_lengths *= TIME_DELAYS_FLAG
     sim_builder = SimulatorBuilder(config.generic.MODE_TVB)
     if isequal_string(sim_type, "realistic"):
-        sim_settings = sim_builder.set_model_name("EpileptorDPrealistic").set_simulated_period(50000).set_sim_settings()
+        sim_settings = sim_builder.set_model_name("EpileptorDPrealistic").set_simulated_period(50000).build_sim_settings()
         sim_settings.noise_type = COLORED_NOISE
         sim_settings.noise_ntau = 10
     elif isequal_string(sim_type, "fitting"):
-        sim_builder.set_model_name("EpileptorDP2D").set_sim_settings()
+        sim_builder.set_model_name("EpileptorDP2D").build_sim_settings()
         sim_settings = sim_builder
         sim_settings.noise_intensity = 1e-3
     elif isequal_string(sim_type, "paper"):
         sim_builder.set_model_name("Epileptor")
-        sim_settings = sim_builder.set_sim_settings()
+        sim_settings = sim_builder.build_sim_settings()
     else:
-        sim_settings = sim_builder.set_sim_settings()
+        sim_settings = sim_builder.build_sim_settings()
 
     # --------------------------Hypothesis and LSA-----------------------------------
     for hyp in hypotheses:
