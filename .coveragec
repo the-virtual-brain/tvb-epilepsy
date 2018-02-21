@@ -5,4 +5,6 @@ precision = 0
 omit =
         *__init__.py
         tvb_epilepsy/tests/*
-        tvb_epilepsy/stan/*
+        tvb_epilepsy/top/examples/*
+        tvb_epilepsy/top/notebooks/*
+        tvb_epilepsy/service/model_inversion/stan/models/*
