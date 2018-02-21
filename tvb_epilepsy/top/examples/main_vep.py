@@ -49,12 +49,10 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
     # disease_indices = x0_indices + e_indices
     # ...or reading a custom file:
 
-    hypo_builder = HypothesisBuilder(config=config). \
-        set_nr_of_regions(head.connectivity.number_of_regions). \
-        set_sort_disease_values(True)
+    hypo_builder = HypothesisBuilder(head.connectivity.number_of_regions, config=config).set_normalize(0.95)
 
     # This is an example of Epileptogenicity Hypothesis: you give as ep all indices for values > 0
-    hyp_E = hypo_builder.build_hypothesis_from_file(EP_NAME, [1, 3, 16, 25])
+    hyp_E = hypo_builder.build_hypothesis_from_file(EP_NAME, e_indices=[1, 3, 16, 25])
 
     # This is an example of Excitability Hypothesis:
     hyp_x0 = hypo_builder.build_hypothesis_from_file(EP_NAME)
@@ -64,12 +62,13 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
     # x0_values = [hyp_x0.x0_values[-1]]
     # e_indices = hyp_x0.x0_indices[0:-1].tolist()
     # e_values = hyp_x0.x0_values[0:-1].tolist()
-    # hyp_x0_E = hypo_builder.build_hypothesis_from_manual_input(e_values, e_indices, x0_values, x0_indices)
+    # hyp_x0_E = hypo_builder.set_x0_hypothesis(x0_indices, x0_values). \
+    #                             set_e_hypothesis(e_indices, e_values)..build_hypothesis()
 
     # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis set from file:
     all_regions_indices = np.array(range(head.number_of_regions))
     healthy_indices = np.delete(all_regions_indices, hyp_E.x0_indices + hyp_E.e_indices).tolist()
-    hyp_x0_E = hypo_builder.build_hypothesis_from_file(EP_NAME, [16, 25])
+    hyp_x0_E = hypo_builder.build_hypothesis_from_file(EP_NAME, e_indices=[16, 25])
 
     hypotheses = (hyp_x0, hyp_E, hyp_x0_E)
 
