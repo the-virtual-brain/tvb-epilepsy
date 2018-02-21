@@ -5,4 +5,4 @@ precision = 0
 omit =
         *__init__.py
         tvb_epilepsy/tests/*
-        tvb_epilepsy/top/examples
+        tvb_epilepsy/top/examples/*
