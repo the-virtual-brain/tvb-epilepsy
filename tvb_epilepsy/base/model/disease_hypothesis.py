@@ -16,22 +16,27 @@ logger = initialize_logger(__name__)
 
 
 class DiseaseHypothesis(object):
+
     def __init__(self, number_of_regions=0, excitability_hypothesis={}, epileptogenicity_hypothesis={},
                  connectivity_hypothesis={}, lsa_propagation_indices=[], lsa_propagation_strenghts=[], name=""):
         self.number_of_regions = number_of_regions
         self.type = []
-        self.x0_indices, self.x0_values = self.sort_disease_indices_values(excitability_hypothesis)
+        default_name = "Hypothesis"
+        self.x0_indices, self.x0_values = self._sort_disease_indices_values(excitability_hypothesis)
         if len(self.x0_indices) > 0:
             self.type.append("Excitability")
-        self.e_indices, self.e_values = self.sort_disease_indices_values(epileptogenicity_hypothesis)
+            default_name = "x0_" + default_name
+        self.e_indices, self.e_values = self._sort_disease_indices_values(epileptogenicity_hypothesis)
         if len(self.e_indices) > 0:
             self.type.append("Epileptogenicity")
-        self.w_indices, self.w_values = self.sort_disease_indices_values(connectivity_hypothesis)
+            default_name = "e_" + default_name
+        self.w_indices, self.w_values = self._sort_disease_indices_values(connectivity_hypothesis)
         if len(self.w_indices) > 0:
             self.type.append("Connectivity")
+            default_name = "w_" + default_name
         self.type = '_'.join(self.type)
         if name == "":
-            self.name = self.type + "_Hypothesis"
+            self.name = default_name
         else:
             self.name = name
         self.lsa_propagation_indices = np.array(lsa_propagation_indices)
@@ -64,29 +69,7 @@ class DiseaseHypothesis(object):
     def set_attribute(self, attr_name, data):
         setattr(self, attr_name, data)
 
-    def prepare_for_plot(self, connectivity_matrix=None):
-        plot_dict_list = []
-        width_ratios = []
-        if len(self.lsa_propagation_indices) > 0:
-            if connectivity_matrix is None:
-                width_ratios += [1]
-                name = "LSA Propagation Strength"
-                names = [name]
-                data = [self.lsa_propagation_strengths]
-                indices = [self.lsa_propagation_indices]
-                plot_types = ["vector"]
-            else:
-                width_ratios += [1, 2]
-                name = "LSA Propagation Strength"
-                names = [name, "Afferent connectivity \n from seizuring regions"]
-                data = [self.lsa_propagation_strengths, connectivity_matrix]
-                indices = [self.lsa_propagation_indices, self.lsa_propagation_indices]
-                plot_types = ["vector", "regions2regions"]
-            plot_dict_list = dicts_of_lists_to_lists_of_dicts({"name": names, "data": data, "focus_indices": indices,
-                                                               "plot_type": plot_types})
-        return plot_dict_list
-
-    def sort_disease_indices_values(self, disease_dict):
+    def _sort_disease_indices_values(self, disease_dict):
         indices = []
         values = []
         for key, value in disease_dict.iteritems():
@@ -104,23 +87,6 @@ class DiseaseHypothesis(object):
         arg_sort = np.argsort(indices)
         return np.array(indices)[arg_sort].tolist(), np.array(values)[arg_sort]
 
-    def update(self, name=""):
-        self.type = []
-        self.x0_indices, self.x0_values = self.sort_disease_indices_values({tuple(self.x0_indices): self.x0_values})
-        if len(self.x0_indices) > 0:
-            self.type.append("Excitability")
-        self.e_indices, self.e_values = self.sort_disease_indices_values({tuple(self.e_indices): self.e_values})
-        if len(self.e_indices) > 0:
-            self.type.append("Epileptogenicity")
-        self.w_indices, self.w_values = self.sort_disease_indices_values({tuple(self.w_indices): self.w_values})
-        if len(self.w_indices) > 0:
-            self.type.append("Connectivity")
-        self.type = '_'.join(self.type)
-        if name == "":
-            self.name = self.type + "_Hypothesis"
-        else:
-            self.name = name
-
     def get_regions_disease_indices(self):
         return np.unique(self.x0_indices + self.e_indices).astype("i").tolist()
 
@@ -129,7 +95,7 @@ class DiseaseHypothesis(object):
 
     def get_connectivity_regions_disease_indices(self):
         indexes = np.unravel_index(self.get_connectivity_disease_indices(),
-                                   (self.get_number_of_regions(), self.number_of_regions))
+                                   (self.number_of_regions, self.number_of_regions))
         indexes = np.unique(np.concatenate(indexes)).astype("i")
         return indexes.tolist()
 
@@ -162,11 +128,54 @@ class DiseaseHypothesis(object):
     def get_x0_values_for_all_regions(self):
         return self.get_regions_disease()[self.x0_indices]
 
+    def update(self, name=""):
+        self.type = []
+        default_name = "Hypothesis"
+        self.x0_indices, self.x0_values = self._sort_disease_indices_values({tuple(self.x0_indices): self.x0_values})
+        if len(self.x0_indices) > 0:
+            self.type.append("Excitability")
+            default_name = "x0_" + default_name
+        self.e_indices, self.e_values = self._sort_disease_indices_values({tuple(self.e_indices): self.e_values})
+        if len(self.e_indices) > 0:
+            self.type.append("Epileptogenicity")
+            default_name = "e_" + default_name
+        self.w_indices, self.w_values = self._sort_disease_indices_values({tuple(self.w_indices): self.w_values})
+        if len(self.w_indices) > 0:
+            self.type.append("Connectivity")
+            default_name = "w_" + default_name
+        self.type = '_'.join(self.type)
+        if name == "":
+            self.name = default_name
+        else:
+            self.name = name
+
     def update_for_pse(self, values, paths, indices):
         for i, val in enumerate(paths):
             vals = val.split(".")
             if vals[0] == "hypothesis":
                 getattr(self, vals[1])[indices[i]] = values[i]
+
+    def prepare_for_plot(self, connectivity_matrix=None):
+        plot_dict_list = []
+        width_ratios = []
+        if len(self.lsa_propagation_indices) > 0:
+            if connectivity_matrix is None:
+                width_ratios += [1]
+                name = "LSA Propagation Strength"
+                names = [name]
+                data = [self.lsa_propagation_strengths]
+                indices = [self.lsa_propagation_indices]
+                plot_types = ["vector"]
+            else:
+                width_ratios += [1, 2]
+                name = "LSA Propagation Strength"
+                names = [name, "Afferent connectivity \n from seizuring regions"]
+                data = [self.lsa_propagation_strengths, connectivity_matrix]
+                indices = [self.lsa_propagation_indices, self.lsa_propagation_indices]
+                plot_types = ["vector", "regions2regions"]
+            plot_dict_list = dicts_of_lists_to_lists_of_dicts({"name": names, "data": data, "focus_indices": indices,
+                                                               "plot_type": plot_types})
+        return plot_dict_list
 
 
 def shorten_values(hyp):
