@@ -101,8 +101,7 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
                                     "indices": [inds[ii]], "name": name})
     # Now run pse service to generate output samples:
     pse = LSAPSEService(hypothesis=lsa_hypothesis, params_pse=pse_params_list)
-    pse_results, execution_status = pse.run_pse(connectivity_matrix, grid_mode=False, lsa_service_input=lsa_service,
-                                                model_configuration_builder_input=model_configuration_builder)
+    pse_results, execution_status = pse.run_pse(connectivity_matrix, False, model_configuration_builder, lsa_service)
     pse_results = list_of_dicts_to_dicts_of_ndarrays(pse_results)
     # Now prepare inputs and outputs and run the sensitivity analysis:
     # NOTE!: Without the jittered healthy regions which we don' want to include into the sensitivity analysis!

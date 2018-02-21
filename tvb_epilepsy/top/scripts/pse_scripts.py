@@ -111,9 +111,7 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
     # pse_results, execution_status = pse_old.run_pse(model_connectivity, grid_mode=False, lsa_service_input=lsa_service,
     #                                             model_configuration_builder_input=model_configuration_builder)
     pse = LSAPSEService(hypothesis=lsa_hypothesis, params_pse=pse_params_list)
-    pse_results, execution_status = pse.run_pse(model_connectivity, grid_mode=False,
-                                                model_config_service_input=model_configuration_builder,
-                                                lsa_service_input=lsa_service)
+    pse_results, execution_status = pse.run_pse(model_connectivity, False, model_configuration_builder, lsa_service)
     # Call to new PSEService:
     # pse = LSAPSEService(lsa_hypothesis, pse_params_list)
     # pse_results, execution_status = pse.run_pse(model_connectivity, False, lsa_service, model_configuration_builder)
@@ -135,7 +133,6 @@ def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
 def pse_from_hypothesis(hypothesis, model_connectivity, region_labels, n_samples, param_range=0.1, global_coupling=[],
                         healthy_regions_parameters=[], save_flag=False, folder_res=OutputConfig().FOLDER_RES,
                         filename=None, **kwargs):
-
     logger = initialize_logger(__name__)
     logger.info("Running hypothesis: " + hypothesis.name)
 
