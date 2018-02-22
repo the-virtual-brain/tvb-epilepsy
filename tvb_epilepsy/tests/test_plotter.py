@@ -1,7 +1,6 @@
 import os
 import numpy
 from tvb_epilepsy.plot.plotter import Plotter
-from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.service.epileptor_model_factory import build_ep_2sv_model, VOIS
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
@@ -11,8 +10,7 @@ from tvb_epilepsy.tests.base import BaseTest
 
 
 class TestPlotter(BaseTest):
-    plotter = Plotter()
-    config = Config()
+    plotter = Plotter(BaseTest.config)
 
     def test_plot_head(self):
         head = self._prepare_dummy_head()
@@ -47,7 +45,7 @@ class TestPlotter(BaseTest):
 
     def test_plot_lsa(self):
         figure_name = "LSAPlot"
-        hypo_builder = HypothesisBuilder().set_name(figure_name)
+        hypo_builder = HypothesisBuilder(self.config).set_name(figure_name)
         lsa_hypothesis = hypo_builder.build_lsa_hypothesis()
         mc = ModelConfigurationBuilder().build_model_from_E_hypothesis(lsa_hypothesis, numpy.array([1]))
 
@@ -59,7 +57,7 @@ class TestPlotter(BaseTest):
         assert not os.path.exists(figure_file)
 
     def test_plot_state_space(self):
-        lsa_hypothesis = HypothesisBuilder().build_lsa_hypothesis()
+        lsa_hypothesis = HypothesisBuilder(self.config).build_lsa_hypothesis()
         mc = ModelConfigurationBuilder().build_model_from_E_hypothesis(lsa_hypothesis, numpy.array([1]))
 
         model = "6d"
@@ -75,7 +73,7 @@ class TestPlotter(BaseTest):
         assert os.path.exists(file_name)
 
     def test_plot_sim_results(self):
-        lsa_hypothesis = HypothesisBuilder().build_lsa_hypothesis()
+        lsa_hypothesis = HypothesisBuilder(self.config).build_lsa_hypothesis()
         mc = ModelConfigurationBuilder().build_model_from_E_hypothesis(lsa_hypothesis, numpy.array([1]))
         model = build_ep_2sv_model(mc)
         res = prepare_vois_ts_dict(VOIS["EpileptorDP2D"], numpy.array([[[1, 2, 3], [1, 2, 3]], [[1, 2, 3], [1, 2, 3]]]))

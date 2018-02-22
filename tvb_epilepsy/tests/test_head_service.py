@@ -1,11 +1,9 @@
 from tvb_epilepsy.service.head_service import HeadService
-from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.tests.base import BaseTest
 
 
 class TestHeadService(BaseTest):
     head_service = HeadService()
-    config = Config()
 
     def test_select_sensors_power(self):
         head = self._prepare_dummy_head()

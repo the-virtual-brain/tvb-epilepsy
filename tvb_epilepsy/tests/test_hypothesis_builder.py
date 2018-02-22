@@ -1,14 +1,12 @@
-from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.tests.base import BaseTest
 
 
 class TestHypothesisBuilder(BaseTest):
-    config = Config()
     ep = "ep_l_frontal_complex"
 
     def test_build_empty_hypothesis(self):
-        hypo_builder = HypothesisBuilder()
+        hypo_builder = HypothesisBuilder(self.config)
         hypo = hypo_builder._build_hypothesis()
 
         assert hypo.name == "_Hypothesis"
@@ -23,7 +21,7 @@ class TestHypothesisBuilder(BaseTest):
         assert len(hypo.lsa_propagation_strengths) == 0
 
     def test_build_hypothesis_by_user_preferences(self):
-        hypo_builder = HypothesisBuilder().set_nr_of_regions(76).set_x0_indices([1, 2, 3]).set_x0_values(
+        hypo_builder = HypothesisBuilder(self.config).set_nr_of_regions(76).set_x0_indices([1, 2, 3]).set_x0_values(
             [1, 1, 1]).set_e_indices([10, 11]).set_e_values([1, 1]).set_normalize(0.90)
         hypo = hypo_builder._build_hypothesis()
 
@@ -39,7 +37,7 @@ class TestHypothesisBuilder(BaseTest):
         assert len(hypo.lsa_propagation_strengths) == 0
 
     def test_build_lsa_hypothesis(self):
-        hypo_builder = HypothesisBuilder().set_nr_of_regions(76).set_x0_indices([1, 2]).set_x0_values([1, 1])
+        hypo_builder = HypothesisBuilder(self.config).set_nr_of_regions(76).set_x0_indices([1, 2]).set_x0_values([1, 1])
         hypo = hypo_builder._build_hypothesis()
 
         lsa_hypo = hypo_builder.set_attributes_based_on_hypothesis(hypo).set_lsa_propagation_indices(
@@ -57,7 +55,7 @@ class TestHypothesisBuilder(BaseTest):
         assert len(lsa_hypo.lsa_propagation_strengths) == 2
 
     def test_build_hypothesis_from_file_excitability(self):
-        hypo_builder = HypothesisBuilder().set_nr_of_regions(76)
+        hypo_builder = HypothesisBuilder(self.config).set_nr_of_regions(76)
         hypo = hypo_builder.build_hypothesis_from_file(self.ep)
 
         assert hypo.name == "Excitability_Hypothesis"
@@ -71,7 +69,7 @@ class TestHypothesisBuilder(BaseTest):
         assert len(hypo.lsa_propagation_strengths) == 0
 
     def test_build_hypothesis_from_file_epileptogenicity(self):
-        hypo_builder = HypothesisBuilder().set_nr_of_regions(76)
+        hypo_builder = HypothesisBuilder(self.config).set_nr_of_regions(76)
         hypo = hypo_builder.build_hypothesis_from_file(self.ep, [55, 56, 57, 58, 59, 60, 61])
 
         assert hypo.name == "Epileptogenicity_Hypothesis"
@@ -85,7 +83,7 @@ class TestHypothesisBuilder(BaseTest):
         assert len(hypo.lsa_propagation_strengths) == 0
 
     def test_build_hypothesis_from_file_mixed(self):
-        hypo_builder = HypothesisBuilder().set_nr_of_regions(76)
+        hypo_builder = HypothesisBuilder(self.config).set_nr_of_regions(76)
         hypo = hypo_builder.build_hypothesis_from_file(self.ep, [55, 56])
 
         assert hypo.name == "Excitability_Epileptogenicity_Hypothesis"
