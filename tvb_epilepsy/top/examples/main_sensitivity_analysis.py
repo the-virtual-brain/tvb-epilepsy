@@ -50,7 +50,7 @@ if __name__ == "__main__":
                                                                            "low": 0.0, "high": 2 * K_DEF}],
                                                          healthy_regions_parameters=[
                                                              {"name": "x0_values", "indices": healthy_indices}],
-                                                         logger=logger, save_services=True)
+                                                         config=config, save_services=True)
             Plotter(config).plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
                                      lsa_service.eigen_vectors_number, region_labels=head.connectivity.region_labels,
                                      pse_results=pse_results, title=m + "_PSE_LSA_overview_" + lsa_hypothesis.name)

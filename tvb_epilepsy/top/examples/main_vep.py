@@ -179,7 +179,7 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
                                                              healthy_regions_parameters=[
                                                                  {"name": "x0_values", "indices": healthy_indices}],
                                                              model_configuration_builder=builder,
-                                                             lsa_service=lsa_service, logger=logger)
+                                                             lsa_service=lsa_service, config=config)
             plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
                              lsa_service.eigen_vectors_number, head.connectivity.region_labels, pse_sa_results,
                              title="SA PSE Hypothesis Overview")

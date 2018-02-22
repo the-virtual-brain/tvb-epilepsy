@@ -1,7 +1,6 @@
 import os
 import numpy
 from tvb_epilepsy.base.constants.model_constants import K_DEF
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
@@ -13,8 +12,6 @@ from tvb_epilepsy.top.scripts.sensitivity_analysis_sripts import sensitivity_ana
 class TestSAFlow(BaseTest):
 
     def test_sa_pse(self):
-        logger = initialize_logger(__name__, self.config.out.FOLDER_LOGS)
-
         reader = H5Reader()
         head = reader.read_head(self.config.input.HEAD)
 
@@ -41,7 +38,7 @@ class TestSAFlow(BaseTest):
                                                           "high": 2 * K_DEF}],
                                                      healthy_regions_parameters=[
                                                          {"name": "x0_values", "indices": healthy_indices}],
-                                                     save_services=True, logger=logger)
+                                                     save_services=True, config=self.config)
 
         Plotter(self.config).plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
                                       lsa_service.eigen_vectors_number,
@@ -50,11 +47,11 @@ class TestSAFlow(BaseTest):
                                       title=m + "_PSE_LSA_overview_" + lsa_hypothesis.name)
 
         pse_result_file = os.path.join(self.config.out.FOLDER_RES,
-                                   m + "_PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
+                                       m + "_PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
 
         writer = H5Writer()
         writer.write_dictionary(pse_results, pse_result_file)
 
         sa_result_file = os.path.join(self.config.out.FOLDER_RES,
-                                   m + "_SA_LSA_results_" + lsa_hypothesis.name + ".h5")
+                                      m + "_SA_LSA_results_" + lsa_hypothesis.name + ".h5")
         writer.write_dictionary(sa_results, sa_result_file)
