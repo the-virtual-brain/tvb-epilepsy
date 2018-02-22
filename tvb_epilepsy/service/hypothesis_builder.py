@@ -161,7 +161,7 @@ class HypothesisBuilder(object):
         x0_indices = numpy.setdiff1d(disease_indices, self.e_indices)
         return DiseaseHypothesis(self.nr_of_regions,
                                  excitability_hypothesis={tuple(x0_indices):
-                                                                        self.diseased_regions_values[exc_indices]},
+                                                                        self.diseased_regions_values[x0_indices]},
                                  epileptogenicity_hypothesis={tuple(self.e_indices):
                                                                         self.diseased_regions_values[self.e_indices]},
                                  connectivity_hypothesis={tuple(self.w_indices): self.w_values},
