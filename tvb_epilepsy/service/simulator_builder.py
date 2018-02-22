@@ -52,12 +52,12 @@ class SimulatorBuilder(object):
         monitor_period = scale_fsavg * dt
         return dt, monitor_period
 
-    def generate_model(self, model_configuration, **kwargs):
+    def generate_model(self, model_configuration):
         if isequal_string(self.model_name, EpileptorModel._ui_name) and not isequal_string(self.simulator, "java"):
             raise_value_error("Custom EpileptorModel can be used only with java simulator!")
         elif not isequal_string(self.model_name, EpileptorModel._ui_name) and isequal_string(self.simulator, "java"):
             raise_value_error("Only java EpileptorModel can be used with java simulator!")
-        return model_build_dict[self.model_name](model_configuration, **kwargs)
+        return model_build_dict[self.model_name](model_configuration)
 
     def generate_white_noise(self, noise_intensity):
         nn = len(noise_intensity)
@@ -157,13 +157,13 @@ class SimulatorBuilder(object):
         return self.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity,
                                                                 model, sim_settings, **kwargs)
 
-    def build_simulator_java_from_model_configuration(self, model_configuration, connectivity):
+    def build_simulator_java_from_model_configuration(self, model_configuration, connectivity, **kwargs):
 
+        self.set_model_name("EpileptorModel")
         model = java_model_builder(model_configuration)
 
-        noise_intensity = 1e-6  # numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.])
-
         sim_settings = self.build_sim_settings()
+        sim_settings.noise_intensity = kwargs.get("noise_intensity", 1e-6)
 
         simulator_instance = SimulatorJava(connectivity, model_configuration, model, sim_settings)
 
@@ -171,10 +171,15 @@ class SimulatorBuilder(object):
 
     def build_simulator(self, model_configuration, connectivity, **kwargs):
         if isequal_string(self.simulator, "java"):
-            return self.build_simulator_java_from_model_configuration(model_configuration, connectivity)
+            return self.build_simulator_java_from_model_configuration(model_configuration, connectivity, **kwargs)
         else:
             return self.build_simulator_TVB(model_configuration, connectivity, **kwargs)
 
+
+
+def build_simulator_java(model_configuration, connectivity, **kwargs):
+    return SimulatorBuilder("java").\
+                        build_simulator_java_from_model_configuration(model_configuration, connectivity, **kwargs)
 
 
 def build_simulator_TVB_default(model_configuration, connectivity, **kwargs):
@@ -187,7 +192,7 @@ def build_simulator_TVB_paper(model_configuration, connectivity, **kwargs):
 
 def build_simulator_TVB_fitting(self, model_configuration, connectivity, **kwargs):
     sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D")
-    model = sim_builder.generate_model(model_configuration, **kwargs)
+    model = sim_builder.generate_model(model_configuration)
     model.tau0 = 10.0
     model.tau1 = 0.5
     sim_settings = self.build_sim_settings()
@@ -199,7 +204,7 @@ def build_simulator_TVB_fitting(self, model_configuration, connectivity, **kwarg
 def build_simulator_TVB_realistic(self, model_configuration, connectivity, **kwargs):
     sim_builder = \
         SimulatorBuilder().set_model_name("EpileptorDP2Drealistic").set_fs(4096.0).set_simulated_period(50000.0)
-    model = sim_builder.generate_model(model_configuration, **kwargs)
+    model = sim_builder.generate_model(model_configuration)
     model.tau0 = 30000.0
     model.tau1 = 0.2
     model.slope = 0.25

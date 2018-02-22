@@ -20,7 +20,7 @@ for model in AVAILABLE_DYNAMICAL_MODELS:
     AVAILABLE_DYNAMICAL_MODELS_NAMES.append(model._ui_name)
 
 #TODO: Ensure that function signatures are the same. An Epileptor is build using model_configuration attributes. Take zmode it from model_configuration. Keep also pmode there or other values that can be received by kwargs.
-def build_tvb_model(model_configuration, zmode=numpy.array("lin"), **kwargs):
+def build_tvb_model(model_configuration):
     # We use the opposite sign for K with respect to all epileptor models
     K = -model_configuration.K
     model_instance = Epileptor(x0=model_configuration.x0, Iext=model_configuration.Iext1, Iext2=model_configuration.Iext2,
@@ -33,47 +33,48 @@ def build_tvb_model(model_configuration, zmode=numpy.array("lin"), **kwargs):
 ###
 # Build EpileptorDP2D
 ###
-def build_ep_2sv_model(model_configuration, zmode=numpy.array("lin"), **kwargs):
+def build_EpileptorDP2D(model_configuration):
     # We use the opposite sign for K with respect to all epileptor models
     K = -model_configuration.K
     model = EpileptorDP2D(x0=model_configuration.x0, Iext1=model_configuration.Iext1, K=K,
                           yc=model_configuration.yc, a=model_configuration.a, b=model_configuration.b,
-                          d=model_configuration.d, zmode=zmode)
+                          d=model_configuration.d, zmode=model_configuration.zmode)
     return model
 
 
 ###
 # Build EpileptorDP
 ###
-def build_ep_6sv_model(model_configuration, zmode=numpy.array("lin"), **kwargs):
+def build_EpileptorDP(model_configuration):
     # We use the opposite sign for K with respect to all epileptor models
     K = -model_configuration.K
     model = EpileptorDP(x0=model_configuration.x0, Iext1=model_configuration.Iext1, Iext2=model_configuration.Iext2,
                         K=K, yc=model_configuration.yc, a=model_configuration.a,
                         b=model_configuration.b, d=model_configuration.d, s=model_configuration.s,
-                        gamma=model_configuration.gamma, zmode=zmode)
+                        gamma=model_configuration.gamma, zmode=model_configuration.zmode)
     return model
 
 
 ###
 # Build EpileptorDPrealistic
 ###
-def build_ep_11sv_model(model_configuration, zmode=numpy.array("lin"), pmode=numpy.array("z"), **kwargs):
+def build_EpileptorDPrealistic(model_configuration):
     # We use the opposite sign for K with respect to all epileptor models
     K = -model_configuration.K
     model = EpileptorDPrealistic(x0=model_configuration.x0, Iext1=model_configuration.Iext1,
                                  Iext2=model_configuration.Iext2, K=K, yc=model_configuration.yc,
                                  a=model_configuration.a, b=model_configuration.b, d=model_configuration.d,
-                                 s=model_configuration.s, gamma=model_configuration.gamma, zmode=zmode, pmode=pmode)
+                                 s=model_configuration.s, gamma=model_configuration.gamma,
+                                 zmode=model_configuration.zmode)
     return model
 
 
 # Model creator functions dictionary (factory)
 model_build_dict = {
     "Epileptor": build_tvb_model,
-    "EpileptorDP": build_ep_6sv_model,
-    "EpileptorDPrealistic": build_ep_11sv_model,
-    "EpileptorDP2D": build_ep_2sv_model
+    "EpileptorDP": build_EpileptorDP,
+    "EpileptorDPrealistic": build_EpileptorDPrealistic,
+    "EpileptorDP2D": build_EpileptorDP2D
 }
 
 
