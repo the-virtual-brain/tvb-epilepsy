@@ -19,8 +19,8 @@ class HypothesisBuilder(object):
     """
 
     # Attributes specific to a DiseaseHypothesis
-    nr_of_regions = 0
-    diseased_regions_values = numpy.zeros((nr_of_regions, ))
+    number_of_regions = 0
+    diseased_regions_values = numpy.zeros((number_of_regions,))
     name = ""
     type = []
     e_indices = []
@@ -34,18 +34,18 @@ class HypothesisBuilder(object):
     def __init__(self, number_of_regions, config=Config()):
         self.config = config
         self.logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
-        self.nr_of_regions = number_of_regions
-        self.diseased_regions_values = numpy.zeros((self.nr_of_regions, ))
+        self.number_of_regions = number_of_regions
+        self.diseased_regions_values = numpy.zeros((self.number_of_regions,))
 
     def set_nr_of_regions(self, nr_of_regions):
-        self.nr_of_regions = nr_of_regions
+        self.number_of_regions = nr_of_regions
         return self
 
     def set_diseased_regions_values(self, disease_values):
         n = len(disease_values)
-        if n != self.nr_of_regions:
+        if n != self.number_of_regions:
             raise_value_error("Diseased region values size (" + str(n) +
-                              ") doesn't match the number of regions (" + str(self.nr_of_regions) + ")!")
+                              ") doesn't match the number of regions (" + str(self.number_of_regions) + ")!")
         self.diseased_regions_values = disease_values
         return self
 
@@ -53,18 +53,12 @@ class HypothesisBuilder(object):
         self.name = name
         return self
 
-    def _check_inds_range(self, indices, max_ind, type):
-        if numpy.any(numpy.array(indices) < 0) or numpy.any(numpy.array(indices) >= max_ind):
-            raise_value_error(type + "_indices out of range! " +
-                              "\nThe maximum indice is " + str(max_ind)
-                                + " for number of brain regions " + str(max_ind) + " but"
-                              "\n" + type + "_indices = " + str(indices))
-
     def _check_regions_inds_range(self, indices, type):
-        self._check_inds_range(indices, self.nr_of_regions, type)
-
-    def _check_connectivity_inds_range(self, indices):
-        self._check_inds_range(indices, self.nr_of_regions ** 2, "w")
+        if numpy.any(numpy.array(indices) < 0) or numpy.any(numpy.array(indices) >= self.number_of_regions):
+            raise_value_error(type + "_indices out of range! " +
+                              "\nThe maximum indice is " + str(self.number_of_regions)
+                              + " for number of brain regions " + str(self.number_of_regions) + " but"
+                              "\n" + type + "_indices = " + str(indices))
 
     def _check_indices_vals_sizes(self, indices, values, type):
         n_inds = len(indices)
@@ -115,8 +109,10 @@ class HypothesisBuilder(object):
 
     def set_w_hypothesis(self, w_indices, w_values):
         w_indices = list(w_indices)
+        for ind, w_ind in enumerate(w_indices):
+            w_indices[ind] = tuple(w_ind)
         w_values = list(w_values)
-        self._check_connectivity_inds_range(w_indices)
+        self._check_regions_inds_range(w_indices, "w")
         self.w_values = self._check_indices_vals_sizes(w_indices, w_values, "w")
         self.w_indices = w_indices
         return self
@@ -133,8 +129,11 @@ class HypothesisBuilder(object):
         self.normalize_value = value
         return self
 
-    def set_sort_disease_values(self, value):
-        self.sort_disease_values = value
+    def _normalize_disease_values(self):
+        disease_values = self.diseased_regions_values[self.diseased_regions_values > 0.0]
+        if len(disease_values) > 0:
+            disease_values += (self.normalize_value - numpy.max(disease_values))
+            self.diseased_regions_values[self.diseased_regions_values > 0.0] = disease_values
         return self
 
     def set_attributes_based_on_hypothesis(self, disease_hypothesis):
@@ -145,12 +144,6 @@ class HypothesisBuilder(object):
                             set_name(disease_hypothesis.name + "LSA")
         return self
 
-    def _normalize_disease_values(self):
-        disease_values = self.diseased_regions_values[self.diseased_regions_values > 0.0]
-        disease_values += (self.normalize_value - numpy.max(disease_values))
-        self.diseased_regions_values[self.diseased_regions_values > 0.0] = disease_values
-        return self
-
     def build_lsa_hypothesis(self):
         return self.build_hypothesis()
 
@@ -159,7 +152,7 @@ class HypothesisBuilder(object):
             self._normalize_disease_values()
         disease_indices, = numpy.where(self.diseased_regions_values > 0.0)
         x0_indices = numpy.setdiff1d(disease_indices, self.e_indices)
-        return DiseaseHypothesis(self.nr_of_regions,
+        return DiseaseHypothesis(self.number_of_regions,
                                  excitability_hypothesis={tuple(x0_indices):
                                                                         self.diseased_regions_values[x0_indices]},
                                  epileptogenicity_hypothesis={tuple(self.e_indices):

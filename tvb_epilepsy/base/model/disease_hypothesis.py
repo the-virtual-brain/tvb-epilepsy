@@ -50,8 +50,7 @@ class DiseaseHypothesis(object):
              "05. X0 disease values": self.x0_values,
              "06. e_values disease indices": self.e_indices,
              "07. e_values disease indices": self.e_values,
-             "08. Connectivity disease indices":
-                 linear_index_to_coordinate_tuples(self.w_indices, (self.number_of_regions, self.number_of_regions)),
+             "08. Connectivity disease indices": self.w_indices,
              "09. Connectivity disease values": self.w_values,
              "10. Propagation indices": self.lsa_propagation_indices,
              }
@@ -73,35 +72,43 @@ class DiseaseHypothesis(object):
         indices = []
         values = []
         for key, value in disease_dict.iteritems():
-            key = ensure_list(key)
             value = ensure_list(value)
+            key = ensure_list(key)
             n = len(key)
-            indices += key
-            if len(value) == n:
-                values += value
-            elif len(value) == 1 and n > 1:
-                values += value * n
+            if n > 0:
+                indices += key
+                if len(value) == n:
+                    values += value
+                elif len(value) == 1 and n > 1:
+                    values += value * n
+                else:
+                    raise_value_error("Length of disease indices " + str(n) + " and values " + str(len(value)) +
+                                      " do not match!")
+        if len(indices) > 0:
+            if isinstance(indices[0], tuple):
+                arg_sort = np.ravel_multi_index(indices, (self.number_of_regions, self.number_of_regions)).argsort()
             else:
-                raise_value_error("Length of disease indices " + str(len(key)) + " and values " + str(len(value)) +
-                                  " do not match!")
-        arg_sort = np.argsort(indices)
-        return np.array(indices)[arg_sort].tolist(), np.array(values)[arg_sort]
+                arg_sort = np.argsort(indices)
+            return np.array(indices)[arg_sort].tolist(), np.array(values)[arg_sort]
+        else:
+            return [], []
 
     def get_regions_disease_indices(self):
         return np.unique(self.x0_indices + self.e_indices).astype("i").tolist()
 
+    def get_regions_disease_values(self):
+        return self.get_regions_disease()[self.get_regions_disease_indices()]
+
     def get_connectivity_disease_indices(self):
         return self.w_indices
 
-    def get_connectivity_regions_disease_indices(self):
-        indexes = np.unravel_index(self.get_connectivity_disease_indices(),
-                                   (self.number_of_regions, self.number_of_regions))
-        indexes = np.unique(np.concatenate(indexes)).astype("i")
-        return indexes.tolist()
+    def get_connectivity_disease_values(self):
+        return self.w_values
 
     def get_all_disease_indices(self):
-        return np.unique(np.concatenate((self.get_regions_disease_indices(),
-                                         self.get_connectivity_disease_indices()))).astype("i").tolist()
+        return np.unique(
+            np.concatenate([self.get_regions_disease_indices(),
+                            np.array(self.get_connectivity_disease_indices()).flatten()])).astype("i").tolist()
 
     def get_regions_disease(self):
         # In case we need values for all regions, we can use this and have zeros where values are not defined
@@ -111,14 +118,11 @@ class DiseaseHypothesis(object):
         return regions_disease
 
     def get_connectivity_disease(self):
-        # In case we need values for all regions, we can use this and have zeros where values are not defined
+        # In case we need values for all regions, we can use this and have ones where values are not defined
         connectivity_shape = (self.number_of_regions, self.number_of_regions)
         connectivity_disease = np.ones(connectivity_shape)
-        indices = self.get_connectivity_disease_indices()
-        if len(indices) > 0:
-            indices = np.unravel_index(indices, connectivity_shape)
-            connectivity_disease[indices[0], indices[1]] = self.w_values
-            connectivity_disease[indices[1], indices[0]] = self.w_values
+        indices = self.w_indices
+        connectivity_disease[indices] = self.w_values
         return connectivity_disease
 
     # Do we really need those two?:
