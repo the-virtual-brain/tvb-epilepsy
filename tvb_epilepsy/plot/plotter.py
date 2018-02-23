@@ -555,15 +555,6 @@ class Plotter(BasePlotter):
         x0 = a = b = d = yc = slope = Iext1 = Iext2 = s = 0.0
         for p in ["x0", "a", "b", "d", "yc", "slope", "Iext1", "Iext2", "s"]:
             exec (p + " = numpy.mean(model_config." + p + ")")
-        # x0 = np.mean(model_config.x0)
-        # a = np.mean(model_config.a)
-        # b = np.mean(model_config.b)
-        # d = np.mean(model_config.d)
-        # yc = np.mean(model_config.yc)
-        # slope = np.mean(model_config.slope)
-        # Iext1 = np.mean(model_config.Iext1)
-        # Iext2 = np.mean(model_config.Iext2)
-        # s = np.mean(model_config.s)
 
         fig = pyplot.figure(figure_name, figsize=FiguresConfig.SMALL_SIZE)
 
