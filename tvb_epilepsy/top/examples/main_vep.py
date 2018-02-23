@@ -245,9 +245,10 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
                 else:
                     spectral_raster_plot = "lfp"
                     trajectories_plot = False
+                #TODO: plotting fails when spectral_raster_plot="lfp". Denis will fix this
                 plotter.plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, res_ts,
                                          head.sensorsSEEG, hpf_flag=True, trajectories_plot=trajectories_plot,
-                                         spectral_raster_plot=spectral_raster_plot, log_scale=True)
+                                         spectral_raster_plot=False, log_scale=True)
                 # Optionally save results in mat files
                 # from scipy.io import savemat
                 # savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), res_ts)
