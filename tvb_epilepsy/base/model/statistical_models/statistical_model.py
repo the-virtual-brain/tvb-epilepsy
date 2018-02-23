@@ -7,8 +7,8 @@ from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter
 
 class StatisticalModel(object):
 
-    def __init__(self, name='vep', n_regions=0, x1eq_min=X1EQ_MIN, x1eq_max=X1EQ_MAX, MC_scale=MC_SCALE, **defaults):
-        self.n_regions = n_regions
+    def __init__(self, name='vep', number_of_regions=0, x1eq_min=X1EQ_MIN, x1eq_max=X1EQ_MAX, MC_scale=MC_SCALE, **defaults):
+        self.number_of_regions = number_of_regions
         if isinstance(name, basestring):
             self.name = name
         else:
@@ -26,7 +26,7 @@ class StatisticalModel(object):
 
     def __repr__(self):
         d = {"1. type": self.name,
-             "2. number of regions": self.n_regions,
+             "2. number of regions": self.number_of_regions,
              "3. number of parameters": self.n_parameters,
              "4. parameters": self.parameters}
         return formal_repr(self, sort_dict(d))
