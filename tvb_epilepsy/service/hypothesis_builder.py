@@ -9,6 +9,7 @@ from tvb_epilepsy.io.h5_reader import H5Reader
 # TODO: In the future we should allow for various not 0 healthy values.
 # In this case x0 could take any value, and only knowing e_indices would make some difference
 
+
 class HypothesisBuilder(object):
     """
     Builder that will create instances of DiseaseHypothesis type in different ways.
@@ -31,7 +32,7 @@ class HypothesisBuilder(object):
 
     normalize_value = 0.99
 
-    def __init__(self, number_of_regions, config=Config()):
+    def __init__(self, number_of_regions=0, config=Config()):
         self.config = config
         self.logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
         self.number_of_regions = number_of_regions
@@ -39,6 +40,7 @@ class HypothesisBuilder(object):
 
     def set_nr_of_regions(self, nr_of_regions):
         self.number_of_regions = nr_of_regions
+        self.diseased_regions_values = numpy.zeros((self.number_of_regions,))
         return self
 
     def set_diseased_regions_values(self, disease_values):
@@ -88,13 +90,14 @@ class HypothesisBuilder(object):
                                     " hypothesis to a current " + current_hyp + " one!")
 
     def set_x0_hypothesis(self, x0_indices, x0_values):
-        x0_indices = self._check_regions_inds_range(list(x0_indices), "x0")
-        self.diseased_regions_values[x0_indices] = self._check_indices_vals_sizes(x0_indices, list(x0_values), "x0")
+        idx = self._check_regions_inds_range(list(x0_indices), "x0")
+        self.diseased_regions_values[idx] = self._check_indices_vals_sizes(idx, list(x0_values), "x0")
         return self
 
     def set_e_hypothesis(self, e_indices, e_values):
         self.e_indices = self._check_regions_inds_range(list(e_indices), "e")
-        self.diseased_regions_values[e_indices] = self._check_indices_vals_sizes(self.e_indices,  list(e_values), "e")
+        self.diseased_regions_values[self.e_indices] = self._check_indices_vals_sizes(self.e_indices,
+                                                                                      list(e_values), "e")
         return self
 
     def set_e_indices(self, e_indices):
@@ -146,18 +149,15 @@ class HypothesisBuilder(object):
         x0_indices = numpy.setdiff1d(disease_indices, self.e_indices)
         return DiseaseHypothesis(self.number_of_regions,
                                  excitability_hypothesis={tuple(x0_indices):
-                                                                        self.diseased_regions_values[x0_indices]},
+                                                              self.diseased_regions_values[x0_indices]},
                                  epileptogenicity_hypothesis={tuple(self.e_indices):
-                                                                        self.diseased_regions_values[self.e_indices]},
+                                                                  self.diseased_regions_values[self.e_indices]},
                                  connectivity_hypothesis={tuple(self.w_indices): self.w_values},
                                  lsa_propagation_indices=self.lsa_propagation_indices,
                                  lsa_propagation_strenghts=self.lsa_propagation_strengths, name=self.name)
 
-
     def build_hypothesis_from_file(self, hyp_file, e_indices=None):
-        self.set_diseased_regions_values(H5Reader().read_epileptogenicity(self.config.hypothesis.head_folder,
-                                                                          name=hyp_file))
+        self.set_diseased_regions_values(H5Reader().read_epileptogenicity(self.config.input.HEAD, name=hyp_file))
         if e_indices:
             self.set_e_indices(e_indices)
         return self.build_hypothesis()
-
