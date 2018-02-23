@@ -13,8 +13,7 @@ from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.simulator_builder import SimulatorBuilder
 from tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.top.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
-from tvb_epilepsy.top.scripts.simulation_scripts import prepare_vois_ts_dict
-from tvb_epilepsy.top.scripts.simulation_scripts import compute_seeg_and_write_ts_h5_file
+from tvb_epilepsy.top.scripts.simulation_scripts import prepare_vois_ts_dict, compute_seeg_and_write_ts_h5_file
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.io.h5_reader import H5Reader
@@ -49,12 +48,11 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
     # disease_indices = x0_indices + e_indices
     # ...or reading a custom file:
 
-    hypo_builder = HypothesisBuilder(config=config). \
-        set_nr_of_regions(head.connectivity.number_of_regions). \
-        set_sort_disease_values(True)
+    hypo_builder = HypothesisBuilder(head.connectivity.number_of_regions, config=config).set_normalize(0.95)
 
     # This is an example of Epileptogenicity Hypothesis: you give as ep all indices for values > 0
-    hyp_E = hypo_builder.build_hypothesis_from_file(EP_NAME, [1, 3, 16, 25])
+    hyp_E = hypo_builder.build_hypothesis_from_file(EP_NAME, e_indices=[1, 3, 16, 25])
+    # print(hyp_E.string_regions_disease(head.connectivity.region_labels))
 
     # This is an example of Excitability Hypothesis:
     hyp_x0 = hypo_builder.build_hypothesis_from_file(EP_NAME)
@@ -64,14 +62,15 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
     # x0_values = [hyp_x0.x0_values[-1]]
     # e_indices = hyp_x0.x0_indices[0:-1].tolist()
     # e_values = hyp_x0.x0_values[0:-1].tolist()
-    # hyp_x0_E = hypo_builder.build_hypothesis_from_manual_input(e_values, e_indices, x0_values, x0_indices)
+    # hyp_x0_E = hypo_builder.set_x0_hypothesis(x0_indices, x0_values). \
+    #                             set_e_hypothesis(e_indices, e_values).build_hypothesis()
 
     # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis set from file:
     all_regions_indices = np.array(range(head.number_of_regions))
     healthy_indices = np.delete(all_regions_indices, hyp_E.x0_indices + hyp_E.e_indices).tolist()
-    hyp_x0_E = hypo_builder.build_hypothesis_from_file(EP_NAME, [16, 25])
+    hyp_x0_E = hypo_builder.build_hypothesis_from_file(EP_NAME, e_indices=[16, 25])
 
-    hypotheses = (hyp_x0, hyp_E, hyp_x0_E)
+    hypotheses = (hyp_x0_E, hyp_x0, hyp_E)
 
     # --------------------------Simulation preparations-----------------------------------
     # If you choose model...
@@ -83,15 +82,14 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
     #      -Iext2 and slope are coupled to z, g, or z*g in order for spikes to appear before seizure,
     #      -multiplicative correlated noise is also used
     # We don't want any time delays for the moment
-    # head.connectivity.tract_lengths *= TIME_DELAYS_FLAG
-    sim_builder = SimulatorBuilder(config.generic.MODE_TVB)
+    head.connectivity.tract_lengths *= config.simulator.USE_TIME_DELAYS_FLAG
+    sim_builder = SimulatorBuilder(config.simulator.MODE)
     if isequal_string(sim_type, "realistic"):
         sim_settings = sim_builder.set_model_name("EpileptorDPrealistic").set_simulated_period(50000).build_sim_settings()
         sim_settings.noise_type = COLORED_NOISE
         sim_settings.noise_ntau = 10
     elif isequal_string(sim_type, "fitting"):
-        sim_builder.set_model_name("EpileptorDP2D").build_sim_settings()
-        sim_settings = sim_builder
+        sim_settings = sim_builder.set_model_name("EpileptorDP2D").build_sim_settings()
         sim_settings.noise_intensity = 1e-3
     elif isequal_string(sim_type, "paper"):
         sim_builder.set_model_name("Epileptor")
@@ -123,8 +121,8 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
                         str(assert_equal_objects(model_configuration, reader.read_model_configuration(mc_path),
                                                  logger=logger)))
         # Plot nullclines and equilibria of model configuration
-        plotter.plot_state_space(model_configuration, head.connectivity.region_labels,
-                                 special_idx=hyp_x0.x0_indices + hyp_E.e_indices, model="6d", zmode="lin",
+        plotter.plot_state_space(model_configuration, "6d", head.connectivity.region_labels,
+                                 special_idx=hyp_x0.x0_indices + hyp_E.e_indices, zmode="lin",
                                  figure_name=hyp.name + "_StateSpace")
 
         logger.info("\n\nRunning LSA...")
@@ -232,11 +230,11 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
                 logger.info("Time: %s - %s", time[0], time[-1])
                 logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
                 # Variables of interest in a dictionary:
-                vois_ts_dict = prepare_vois_ts_dict(sim_settings.monitor_expressions, tavg_data)
-                vois_ts_dict['time'] = time
-                vois_ts_dict['time_units'] = 'msec'
-                vois_ts_dict = compute_seeg_and_write_ts_h5_file(config.out.FOLDER_RES, lsa_hypothesis.name + "_ts.h5",
-                                                                 sim.model, vois_ts_dict, output_sampling_time,
+                res_ts = prepare_vois_ts_dict(sim_settings.monitor_expressions, tavg_data)
+                res_ts['time'] = time
+                res_ts['time_units'] = 'msec'
+                res_ts = compute_seeg_and_write_ts_h5_file(config.out.FOLDER_RES, lsa_hypothesis.name + "_ts.h5",
+                                                                 sim.model, res_ts, output_sampling_time,
                                                                  sim_settings.simulated_period,
                                                                  hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
                                                                  sensors_list=head.sensorsSEEG)
@@ -247,12 +245,12 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
                 else:
                     spectral_raster_plot = "lfp"
                     trajectories_plot = False
-                plotter.plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, vois_ts_dict,
+                plotter.plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, res_ts,
                                          head.sensorsSEEG, hpf_flag=True, trajectories_plot=trajectories_plot,
                                          spectral_raster_plot=spectral_raster_plot, log_scale=True)
                 # Optionally save results in mat files
                 # from scipy.io import savemat
-                # savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), vois_ts_dict)
+                # savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), res_ts)
 
 
 if __name__ == "__main__":

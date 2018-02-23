@@ -14,23 +14,23 @@ def build_stan_model_dict(statistical_model, signals, model_inversion, gain_matr
     :param gain_matrix: array
     :return: dictionary with stan data
     """
-    active_regions_flag = np.zeros((statistical_model.n_regions,), dtype="i")
+    active_regions_flag = np.zeros((statistical_model.number_of_regions,), dtype="i")
     active_regions_flag[statistical_model.active_regions] = 1
     if gain_matrix is None:
         if statistical_model.observation_model.find("seeg") >= 0:
             gain_matrix = model_inversion.gain_matrix
             mixing = deepcopy(gain_matrix)
         else:
-            mixing = np.eye(statistical_model.n_regions)
+            mixing = np.eye(statistical_model.number_of_regions)
     if mixing.shape[0] > len(model_inversion.signals_inds):
         mixing = mixing[model_inversion.signals_inds]
     SC = model_inversion.get_SC()
-    model_data = {"n_regions": statistical_model.n_regions,
+    model_data = {"number_of_regions": statistical_model.number_of_regions,
                   "n_times": statistical_model.n_times,
                   "n_signals": statistical_model.n_signals,
                   "n_active_regions": statistical_model.n_active_regions,
                   "n_nonactive_regions": statistical_model.n_nonactive_regions,
-                  "n_connections": statistical_model.n_regions * (statistical_model.n_regions - 1) / 2,
+                  "n_connections": statistical_model.number_of_regions * (statistical_model.number_of_regions - 1) / 2,
                   "active_regions_flag": np.array(active_regions_flag),
                   "active_regions": np.array(statistical_model.active_regions) + 1,  # cmdstan cannot take lists!
                   "nonactive_regions": np.where(1 - active_regions_flag)[0] + 1,  # indexing starts from 1!

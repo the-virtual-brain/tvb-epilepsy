@@ -22,7 +22,7 @@ class ODEModelInversionService(ModelInversionService):
         self.time = None
         self.dt = 0.0
         self.n_times = 0
-        self.n_signals = self.n_regions
+        self.n_signals = self.number_of_regions
         self.data_type = "lfp"
         self.signals_inds = range(self.n_signals)
         self._set_default_parameters(**kwargs)
@@ -107,7 +107,7 @@ class ODEModelInversionService(ModelInversionService):
         return signals
 
     def set_simulated_target_data(self, target_data, statistical_model, **kwargs):
-        self.signals_inds = range(self.n_regions)
+        self.signals_inds = range(self.number_of_regions)
         self.data_type = "lfp"
         signals = np.array([])
         if statistical_model.observation_model.find("seeg") >= 0:
@@ -255,11 +255,11 @@ class ODEModelInversionService(ModelInversionService):
         sig_init = kwargs.get("sig_init", SIG_INIT_DEF)
         # Generative model:
         # Integration:
-        self.default_parameters.update(set_parameter_defaults("x1init", "normal", (self.n_regions,),  # name, pdf, shape
+        self.default_parameters.update(set_parameter_defaults("x1init", "normal", (self.number_of_regions,),  # name, pdf, shape
                                                               X1INIT_MIN, X1INIT_MAX,  # min, max
                                                               pdf_params={"mu": self.x1EQ,
                                                                           "sigma": sig_init}))
-        self.default_parameters.update(set_parameter_defaults("zinit", "normal", (self.n_regions,),  # name, pdf, shape
+        self.default_parameters.update(set_parameter_defaults("zinit", "normal", (self.number_of_regions,),  # name, pdf, shape
                                                               ZINIT_MIN, ZINIT_MAX,  # min, max
                                                               pdf_params={"mu": self.zEQ, "sigma": sig_init}))
         self.default_parameters.update(set_parameter_defaults("sig_init", "lognormal", (),
@@ -278,7 +278,7 @@ class ODEModelInversionService(ModelInversionService):
         self.logger.info("Generating model...")
         active_regions = kwargs.pop("active_regions", [])
         self.default_parameters.update(kwargs)
-        model = ODEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
+        model = ODEStatisticalModel(model_name, self.number_of_regions, active_regions, self.n_signals, self.n_times, self.dt,
                                     **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
