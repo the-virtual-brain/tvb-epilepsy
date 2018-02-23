@@ -1,7 +1,6 @@
 import os
 from tvb_epilepsy.tests.base import BaseTest
 from tvb_epilepsy.top.examples.cc_vep import main_cc_vep
-from tvb_epilepsy.top.examples.main_fitting import main_fit_sim_hyplsa
 from tvb_epilepsy.top.examples.main_vep import main_vep
 from tvb_epilepsy.top.examples.main_sensitivity_analysis import main_sensitivity_analysis
 from tvb_epilepsy.top.examples.main_pse import main_pse
