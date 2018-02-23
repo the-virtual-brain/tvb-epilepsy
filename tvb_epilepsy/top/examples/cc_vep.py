@@ -3,7 +3,7 @@ Entry point for working with VEP
 """
 import os
 import numpy as np
-from tvb_epilepsy.base.constants.config import Config
+from tvb_epilepsy.base.constants.config import Config, OutputConfig
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
@@ -16,11 +16,9 @@ from tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration_to_simulation
 
 
-def main_vep(head_folder, ep_name="clinical_hypothesis", x0_indices=[], pse_flag=False, sim_flag=True):
-    folder_results = os.path.join(head_folder, ep_name, "res")
-    if not (os.path.isdir(folder_results)):
-        os.mkdir(folder_results)
-    config = Config(head_folder, Config.generic.MODE_JAVA, folder_results, True)
+def main_cc_vep(config, head_folder, ep_name="clinical_hypothesis", x0_indices=[], pse_flag=False, sim_flag=True):
+    if not (os.path.isdir(config.out.FOLDER_RES)):
+        os.mkdir(config.out.FOLDER_RES)
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
 
     # -------------------------------Reading data-----------------------------------
@@ -104,8 +102,7 @@ def main_vep(head_folder, ep_name="clinical_hypothesis", x0_indices=[], pse_flag
                              lsa_service.eigen_vectors_number, head.connectivity.region_labels, pse_results,
                              title="Hypothesis PSE LSA Overview")
         if sim_flag:
-            config.out.FOLDER_RES = os.path.join(config.out.FOLDER_RES, "simulations")
-            config.out.FOLDER_FIGURES = os.path.join(config.out.FOLDER_FIGURES, "simulations")
+            config.out.subfolder = "simulations"
             for folder in (config.out.FOLDER_RES, config.out.FOLDER_FIGURES):
                 if not (os.path.isdir(folder)):
                     os.mkdir(folder)
@@ -133,4 +130,8 @@ if __name__ == "__main__":
         subject_name = subject_base_name + str(subj_ids[subj_id])
         head_path = os.path.join(subjects_top_folder, subject_name, "Head")
         x0_inds = x0_indices[subj_id]
-        main_vep(head_folder=head_path, ep_name=ep_names[subj_id], x0_indices=x0_inds)
+        folder_results = os.path.join(head_path, ep_names[subj_id], "res")
+
+        config = Config(head_path, Config.generic.MODE_JAVA, folder_results, True)
+
+        main_cc_vep(config, head_folder=head_path, ep_name=ep_names[subj_id], x0_indices=x0_inds)

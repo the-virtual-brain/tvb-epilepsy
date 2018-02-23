@@ -36,7 +36,7 @@ class SimulatorBuilder(object):
 
     def set_simulated_period(self, simulated_period):
         self.simulated_period = simulated_period
-        return simulated_period
+        return self
 
     def set_fs(self, fs):
         self.fs = fs
@@ -185,25 +185,24 @@ def build_simulator_TVB_paper(model_configuration, connectivity, **kwargs):
     return SimulatorBuilder().set_model_name("Epileptor").build_simulator(model_configuration, connectivity, **kwargs)
 
 
-def build_simulator_TVB_fitting(self, model_configuration, connectivity, **kwargs):
+def build_simulator_TVB_fitting(model_configuration, connectivity, **kwargs):
     sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D")
     model = sim_builder.generate_model(model_configuration, **kwargs)
     model.tau0 = 10.0
     model.tau1 = 0.5
-    sim_settings = self.build_sim_settings()
-    sim_settings.noise_intensity = 1e-3
+    sim_settings = sim_builder.build_sim_settings()
+    sim_settings.noise_intensity = [1e-3]
     return sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity,
                                                                    model, sim_settings, **kwargs)
 
 
-def build_simulator_TVB_realistic(self, model_configuration, connectivity, **kwargs):
-    sim_builder = \
-        SimulatorBuilder().set_model_name("EpileptorDP2Drealistic").set_fs(4096.0).set_simulated_period(50000.0)
+def build_simulator_TVB_realistic(model_configuration, connectivity, **kwargs):
+    sim_builder = SimulatorBuilder().set_model_name("EpileptorDPrealistic").set_fs(4096.0).set_simulated_period(50000.0)
     model = sim_builder.generate_model(model_configuration, **kwargs)
     model.tau0 = 30000.0
     model.tau1 = 0.2
     model.slope = 0.25
-    sim_settings = self.build_sim_settings()
+    sim_settings = sim_builder.build_sim_settings()
     sim_settings.noise_type = COLORED_NOISE
     sim_settings.noise_ntau = 10
     return sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity,
