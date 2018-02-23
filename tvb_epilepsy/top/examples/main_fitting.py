@@ -244,7 +244,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", stats_model_name="vep_sd
         #
         #     # Plot nullclines and equilibria of model configuration
         #     plotter.plot_state_space(model_configuration_fit,
-        #                              model_inversion.region_labels,
+        #                              region_labels=model_inversion.region_labels,
         #                              special_idx=statistical_model.active_regions,
         #                              model="6d", zmode="lin",
         #                              figure_name=hyp_fit.name + "_Nullclines and equilibria")
