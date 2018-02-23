@@ -10,13 +10,13 @@ matplotlib.use(FiguresConfig.MATPLOTLIB_BACKEND)
 from matplotlib import pyplot, gridspec
 from matplotlib.colors import Normalize
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.plot.base_plotter import BasePlotter
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.computations.math_utils import compute_in_degree
 from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
 from tvb_epilepsy.base.epileptor_models import EpileptorDP2D, EpileptorDPrealistic
-from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string, sort_dict, linspace_broadcast
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string, sort_dict, linspace_broadcast, \
+                                                          generate_region_labels
 from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, extract_dict_stringkeys
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_y1, def_x1lin
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz, calc_fx1, calc_fx1_2d_taylor
@@ -74,16 +74,17 @@ class Plotter(BasePlotter):
         if not (isinstance(figure, pyplot.Figure)):
             figure = pyplot.figure(title, figsize=figsize)
         n_sensors = sensors.number_of_sensors
-        n_regions = len(region_labels)
+        number_of_regions = len(region_labels)
         if len(x_ticks) == 0:
             x_ticks = numpy.array(range(n_sensors), dtype=numpy.int32)
         if len(y_ticks) == 0:
-            y_ticks = numpy.array(range(n_regions), dtype=numpy.int32)
+            y_ticks = numpy.array(range(number_of_regions), dtype=numpy.int32)
         cmap = pyplot.set_cmap('autumn_r')
         img = pyplot.imshow(sensors.gain_matrix[x_ticks][:, y_ticks].T, cmap=cmap, interpolation='none')
         pyplot.grid(True, color='black')
         if y_labels > 0:
-            region_labels = numpy.array(["%d. %s" % l for l in zip(range(n_regions), region_labels)])
+            # region_labels = numpy.array(["%d. %s" % l for l in zip(range(number_of_regions), region_labels)])
+            region_labels = generate_region_labels(number_of_regions, region_labels, ". ")
             pyplot.yticks(y_ticks, region_labels[y_ticks])
         else:
             pyplot.yticks(y_ticks)
@@ -114,13 +115,13 @@ class Plotter(BasePlotter):
                     for s in sensors_list:
                         count = self._plot_sensors(s, head.connectivity.region_labels, count)
 
-    def plot_model_configuration(self, model_configuration, n_regions=None, regions_labels=[], x0_indices=[],
+    def plot_model_configuration(self, model_configuration, number_of_regions=None, regions_labels=[], x0_indices=[],
                                  e_indices=[], disease_indices=[], title="Model Configuration Overview", figure_name='',
                                  figsize=FiguresConfig.VERY_LARGE_SIZE):
-        if n_regions is None:
-            n_regions = len(model_configuration.x0_values)
+        if number_of_regions is None:
+            number_of_regions = len(model_configuration.x0_values)
         if not regions_labels:
-            regions_labels = numpy.array([str(ii) for ii in range(n_regions)])
+            regions_labels = numpy.array([str(ii) for ii in range(number_of_regions)])
         disease_indices = numpy.unique(numpy.concatenate((x0_indices, e_indices, disease_indices), axis=0)).tolist()
         plot_dict_list = model_configuration.prepare_for_plot(x0_indices, e_indices, disease_indices)
         return self.plot_in_columns(plot_dict_list, regions_labels, width_ratios=[],
@@ -445,7 +446,7 @@ class Plotter(BasePlotter):
                                  labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
             self.plot_raster({'x1(t)': res['x1']}, res['time'], time_units=res.get('time_units', "ms"),
                              special_idx=seizure_indices,
-                             title=model._ui_name + ": Simulated x1 rasterplot", offset=5.0, labels=region_labels,
+                             title=model._ui_name + ": Simulated x1 rasterplot", offset=1.0, labels=region_labels,
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
         else:
             # We assume that at least lfp and z are available in res
@@ -467,7 +468,7 @@ class Plotter(BasePlotter):
             start_plot = int(numpy.round(0.01 * res['lfp'].shape[0]))
             self.plot_raster({'lfp': res['lfp'][start_plot:, :]}, res['time'][start_plot:],
                              time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
-                             title=model._ui_name + ": Simulated LFP rasterplot", offset=10.0, labels=region_labels,
+                             title=model._ui_name + ": Simulated LFP rasterplot", offset=0.1, labels=region_labels,
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
         if isinstance(model, EpileptorDPrealistic):
             if isinstance(res.get("slope_t"), numpy.ndarray) and isinstance(res.get("Iext2"), numpy.ndarray):
@@ -539,10 +540,17 @@ class Plotter(BasePlotter):
                                     right_ax_focus_indices=disease_hypothesis.lsa_propagation_indices,
                                     description=description, title=title, figure_name=fig_name)
 
-    def plot_state_space(self, model_config, region_labels, special_idx, model, zmode, figure_name,
+    def plot_state_space(self, model_config, model="6D", region_labels=[], special_idx=[], zmode="lin", figure_name="",
                          approximations=False, **kwargs):
         add_name = " " + "Epileptor " + model + " z-" + str(zmode)
         figure_name = figure_name + add_name
+
+        region_labels = generate_region_labels( model_config.number_of_regions, region_labels, ". ")
+        # n_region_labels = len(region_labels)
+        # if n_region_labels == model_config.number_of_regions:
+        #     region_labels = numpy.array(["%d. %s" % l for l in zip(range(model_config.number_of_regions), region_labels)])
+        # else:
+        #     region_labels = numpy.array(["%d" % l for l in range(model_config.number_of_regions)])
 
         # Fixed parameters for all regions:
         x1eq = model_config.x1EQ
@@ -614,14 +622,15 @@ class Plotter(BasePlotter):
 
         # Points:
         ii = range(len(region_labels))
-        if special_idx is None:
+        n_special_idx = len(special_idx)
+        if n_special_idx > 0:
             ii = numpy.delete(ii, special_idx)
         points = []
         for i in ii:
             point, = pyplot.plot(x1eq[i], zeq[i], '*', mfc='k', mec='k',
                                  ms=10, alpha=0.3, label=str(i) + '.' + region_labels[i])
             points.append(point)
-        if special_idx is None:
+        if n_special_idx > 0:
             for i in special_idx:
                 point, = pyplot.plot(x1eq[i], zeq[i], '*', mfc='r', mec='r', ms=10, alpha=0.8,
                                      label=str(i) + '.' + region_labels[i])
@@ -751,7 +760,7 @@ class Plotter(BasePlotter):
                          trajectories_plot=True, connectivity_plot=True, **kwargs):
         region_labels = kwargs.get("regions_labels", model_inversion.region_labels)
         if isequal_string(region_mode, "all"):
-            region_inds = range(statistical_model.n_regions)
+            region_inds = range(statistical_model.number_of_regions)
             seizure_indices = statistical_model.active_regions
         else:
             region_inds = statistical_model.active_regions

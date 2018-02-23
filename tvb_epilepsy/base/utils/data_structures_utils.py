@@ -279,6 +279,13 @@ def labels_to_inds(labels, lbls):
     return np.unique(idx)
 
 
+def generate_region_labels(n_regions, labels=[], str=". "):
+    if len(labels) == n_regions:
+        return np.array([str.join(["%d", "%s"]) % tuple(l) for l in zip(range(n_regions), labels)])
+    else:
+        return np.array(["%d" % l for l in range(n_regions)])
+
+
 # This function is meant to confirm that two objects assumingly of the same type are equal, i.e., identical
 def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
     def print_not_equal_message(attr, field1, field2, logger):
