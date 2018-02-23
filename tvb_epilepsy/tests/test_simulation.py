@@ -5,9 +5,10 @@ from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.simulator_builder import SimulatorBuilder
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
+from tvb_epilepsy.tests.base import BaseTest
 
 
-class TestSimulationRun(object):
+class TestSimulationRun(BaseTest):
     fs = 2 * 4096.0
     time_length = 30.0
     report_every_n_monitor_steps = 10.0
@@ -17,8 +18,7 @@ class TestSimulationRun(object):
     noise_intensity = 10 ** -8
 
     def _prepare_model_for_simulation(self, connectivity):
-        hypothesis = HypothesisBuilder().set_nr_of_regions(connectivity.number_of_regions
-                                                           ).set_e_hypothesis([1, 1], [0, 10]).build_hypothesis()
+        hypothesis = HypothesisBuilder(connectivity.number_of_regions).set_e_hypothesis([1, 1], [0, 10]).build_hypothesis()
         model_configuration_builder = ModelConfigurationBuilder(connectivity.number_of_regions)
         model_configuration = model_configuration_builder.build_model_from_hypothesis(hypothesis,
                                                                                       connectivity.normalized_weights)

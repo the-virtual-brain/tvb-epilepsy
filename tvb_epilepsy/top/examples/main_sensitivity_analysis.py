@@ -14,11 +14,11 @@ from tvb_epilepsy.io.h5_reader import H5Reader as Reader
 
 logger = initialize_logger(__name__)
 
-if __name__ == "__main__":
+
+def main_sensitivity_analysis(config=Config()):
     # -------------------------------Reading data-----------------------------------
     reader = Reader()
     writer = H5Writer()
-    config = Config()
     head = reader.read_head(config.input.HEAD)
     # --------------------------Hypothesis definition-----------------------------------
     n_samples = 100
@@ -35,8 +35,9 @@ if __name__ == "__main__":
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
     n_healthy = len(healthy_indices)
     # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
-    hyp_x0_E = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions)._build_mixed_hypothesis(
-        e_values, e_indices, x0_values, x0_indices)
+    hyp_x0_E = HypothesisBuilder(head.connectivity.number_of_regions).set_x0_hypothesis(x0_indices,
+                                                                                        x0_values).set_e_hypothesis(
+        e_indices, e_values).build_hypothesis()
     # Now running the sensitivity analysis:
     logger.info("running sensitivity analysis PSE LSA...")
     for m in METHODS:
@@ -50,7 +51,7 @@ if __name__ == "__main__":
                                                                            "low": 0.0, "high": 2 * K_DEF}],
                                                          healthy_regions_parameters=[
                                                              {"name": "x0_values", "indices": healthy_indices}],
-                                                         logger=logger, save_services=True)
+                                                         config=config, save_services=True)
             Plotter(config).plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
                                      lsa_service.eigen_vectors_number, region_labels=head.connectivity.region_labels,
                                      pse_results=pse_results, title=m + "_PSE_LSA_overview_" + lsa_hypothesis.name)
@@ -61,3 +62,7 @@ if __name__ == "__main__":
             writer.write_dictionary(sa_results, result_file)
         except:
             logger.warning("Method " + m + " failed!")
+
+
+if __name__ == "__main__":
+    main_sensitivity_analysis()

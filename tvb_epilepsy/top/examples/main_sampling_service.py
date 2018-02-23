@@ -13,10 +13,10 @@ from tvb_epilepsy.service.sampling.deterministic_sampling_service import Determi
 from tvb_epilepsy.service.sampling.salib_sampling_service import SalibSamplingService
 from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
 
-config = Config()
-logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
 
-if __name__ == "__main__":
+def main_sampling_service(config=Config()):
+    logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
+
     n_samples = 100
     logger.info("\nDeterministic numpy.linspace sampling:")
     sampler = DeterministicSamplingService(n_samples=n_samples, grid_mode=True)
@@ -94,3 +94,7 @@ if __name__ == "__main__":
             if np.any(np.abs(diff.flatten()) > 0.001):
                 logger.warning("Large difference between target and resulting samples' " + stats_m + "!: " + str(diff))
             del parameter
+
+
+if __name__ == "__main__":
+    main_sampling_service()

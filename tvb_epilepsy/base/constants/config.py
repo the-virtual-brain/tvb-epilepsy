@@ -53,6 +53,7 @@ class InputConfig(object):
 
 
 class OutputConfig(object):
+    subfolder = None
 
     def __init__(self, out_base=None, separate_by_run=False):
         """
@@ -78,6 +79,8 @@ class OutputConfig(object):
             folder = folder + datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M')
         if not (os.path.isdir(folder)):
             os.makedirs(folder)
+        if self.subfolder is not None:
+            os.path.join(folder, self.subfolder)
         return folder
 
     @property
@@ -87,6 +90,8 @@ class OutputConfig(object):
             folder = folder + datetime.strftime(datetime.now(), '%Y-%m-%d_%H-%M')
         if not (os.path.isdir(folder)):
             os.makedirs(folder)
+        if self.subfolder is not None:
+            os.path.join(folder, self.subfolder)
         return folder
 
     @property

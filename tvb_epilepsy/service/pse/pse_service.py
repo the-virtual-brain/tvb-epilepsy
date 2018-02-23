@@ -18,7 +18,7 @@ class ABCPSEService(object):
     n_params_vals = []
     n_params = 0
 
-    def run_pse(self, conn_matrix, grid_mode=False, **kwargs):
+    def run_pse(self, conn_matrix, grid_mode=False, *kwargs):
         results = []
         execution_status = []
         loop_tenth = 1
@@ -32,7 +32,7 @@ class ABCPSEService(object):
             status = False
             output = None
             try:
-                status, output = self.run(params, conn_matrix, **kwargs)
+                status, output = self.run(params, conn_matrix, *kwargs)
             except:
                 pass
             if not status:

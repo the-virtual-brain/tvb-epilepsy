@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from tvb_epilepsy.base.constants.model_constants import MAX_DISEASE_VALUE
-from tvb_epilepsy.base.constants.config import OutputConfig
+from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
     dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
@@ -19,9 +19,8 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
                                                  method="sobol", half_range=0.1, global_coupling=[],
                                                  healthy_regions_parameters=[],
                                                  model_configuration_builder=None, lsa_service=None,
-                                                 save_services=False, logger=None, **kwargs):
-    if logger is None:
-        logger = initialize_logger(__name__)
+                                                 save_services=False, config=Config(), **kwargs):
+    logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
     method = method.lower()
     if np.in1d(method, METHODS):
         if np.in1d(method, ["delta", "dgsm"]):
@@ -101,8 +100,7 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
                                     "indices": [inds[ii]], "name": name})
     # Now run pse service to generate output samples:
     pse = LSAPSEService(hypothesis=lsa_hypothesis, params_pse=pse_params_list)
-    pse_results, execution_status = pse.run_pse(connectivity_matrix, grid_mode=False, lsa_service_input=lsa_service,
-                                                model_configuration_builder_input=model_configuration_builder)
+    pse_results, execution_status = pse.run_pse(connectivity_matrix, False, model_configuration_builder, lsa_service)
     pse_results = list_of_dicts_to_dicts_of_ndarrays(pse_results)
     # Now prepare inputs and outputs and run the sensitivity analysis:
     # NOTE!: Without the jittered healthy regions which we don' want to include into the sensitivity analysis!
@@ -115,18 +113,17 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
     if save_services:
         logger.info(pse.__repr__())
         writer = H5Writer()
-        writer.write_pse_service(pse, os.path.join(OutputConfig().FOLDER_RES, method + "_test_pse_service.h5"))
+        writer.write_pse_service(pse, os.path.join(config.out.FOLDER_RES, method + "_test_pse_service.h5"))
         logger.info(sensitivity_analysis_service.__repr__())
         writer.write_sensitivity_analysis_service(sensitivity_analysis_service,
-                                                  os.path.join(OutputConfig().FOLDER_RES, method + "_test_sa_service.h5"))
+                                                  os.path.join(config.out.FOLDER_RES, method + "_test_sa_service.h5"))
     return results, pse_results
 
 
 def sensitivity_analysis_pse_from_hypothesis(hypothesis, connectivity_matrix, region_labels, n_samples,
                                              method="sobol", half_range=0.1, global_coupling=[],
-                                             healthy_regions_parameters=[], save_services=False, logger=None, **kwargs):
-    if logger is None:
-        logger = initialize_logger(__name__)
+                                             healthy_regions_parameters=[], save_services=False, config=Config(), **kwargs):
+    logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
     # Compute lsa for this hypothesis before sensitivity analysis:
     logger.info("Running hypothesis: " + hypothesis.name)
     model_configuration_builder, model_configuration, lsa_service, lsa_hypothesis = \
@@ -136,5 +133,5 @@ def sensitivity_analysis_pse_from_hypothesis(hypothesis, connectivity_matrix, re
                                                                         n_samples, method, half_range, global_coupling,
                                                                         healthy_regions_parameters,
                                                                         model_configuration_builder, lsa_service,
-                                                                        save_services, logger, **kwargs)
+                                                                        save_services, config, **kwargs)
     return model_configuration_builder, model_configuration, lsa_service, lsa_hypothesis, results, pse_results

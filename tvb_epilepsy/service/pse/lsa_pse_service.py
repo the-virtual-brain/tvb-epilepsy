@@ -31,8 +31,8 @@ class LSAPSEService(ABCPSEService):
     def run_pse_parallel(self):
         raise_not_implemented_error("PSE parallel not implemented!", self.logger)
 
-    def run(self, params, conn_matrix, model_config_service_input=None,
-            yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize", lsa_service_input=None,
+    def run(self, params, conn_matrix, model_config_service_input=None, lsa_service_input=None,
+            yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",
             n_eigenvectors=CalculusConfig.EIGENVECTORS_NUMBER_SELECTION, weighted_eigenvector_sum=True):
         try:
             # Copy and update hypothesis

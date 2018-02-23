@@ -1,21 +1,12 @@
-import os
-
-from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
+from tvb_epilepsy.tests.base import BaseTest
 
 
-class TestHypothesisBuilder(object):
-    config = Config()
+class TestHypothesisBuilder(BaseTest):
     ep = "ep_l_frontal_complex"
 
-    @classmethod
-    def setup_class(cls):
-        for direc in (cls.config.out.FOLDER_LOGS, cls.config.out.FOLDER_RES, cls.config.out.FOLDER_FIGURES):
-            if not os.path.exists(direc):
-                os.makedirs(direc)
-
     def test_build_empty_hypothesis(self):
-        hypo_builder = HypothesisBuilder()
+        hypo_builder = HypothesisBuilder(config=self.config)
         hypo = hypo_builder.build_hypothesis()
 
         assert hypo.name == "Hypothesis"
@@ -30,7 +21,7 @@ class TestHypothesisBuilder(object):
         assert len(hypo.lsa_propagation_strengths) == 0
 
     def test_build_hypothesis_by_user_preferences(self):
-        hypo_builder = HypothesisBuilder().set_nr_of_regions(76).set_x0_hypothesis(
+        hypo_builder = HypothesisBuilder(76, self.config).set_x0_hypothesis(
             [1, 2, 3], [1, 1, 1]).set_e_hypothesis([10, 11], [1, 1]).set_normalize(0.90)
         hypo = hypo_builder.build_hypothesis()
 
@@ -46,7 +37,7 @@ class TestHypothesisBuilder(object):
         assert len(hypo.lsa_propagation_strengths) == 0
 
     def test_build_lsa_hypothesis(self):
-        hypo_builder = HypothesisBuilder().set_nr_of_regions(76).set_x0_hypothesis([1, 2], [1, 1])
+        hypo_builder = HypothesisBuilder(76, self.config).set_x0_hypothesis([1, 2], [1, 1])
         hypo = hypo_builder.build_hypothesis()
 
         lsa_hypo = hypo_builder.set_attributes_based_on_hypothesis(hypo).set_lsa_propagation(
@@ -64,7 +55,7 @@ class TestHypothesisBuilder(object):
         assert len(lsa_hypo.lsa_propagation_strengths) == 2
 
     def test_build_hypothesis_from_file_excitability(self):
-        hypo_builder = HypothesisBuilder().set_nr_of_regions(76)
+        hypo_builder = HypothesisBuilder(76, self.config)
         hypo = hypo_builder.build_hypothesis_from_file(self.ep)
 
         assert hypo.name == "x0_Hypothesis"
@@ -78,7 +69,7 @@ class TestHypothesisBuilder(object):
         assert len(hypo.lsa_propagation_strengths) == 0
 
     def test_build_hypothesis_from_file_epileptogenicity(self):
-        hypo_builder = HypothesisBuilder().set_nr_of_regions(76)
+        hypo_builder = HypothesisBuilder(76, self.config)
         hypo = hypo_builder.build_hypothesis_from_file(self.ep, [55, 56, 57, 58, 59, 60, 61])
 
         assert hypo.name == "e_Hypothesis"
@@ -92,7 +83,7 @@ class TestHypothesisBuilder(object):
         assert len(hypo.lsa_propagation_strengths) == 0
 
     def test_build_hypothesis_from_file_mixed(self):
-        hypo_builder = HypothesisBuilder().set_nr_of_regions(76)
+        hypo_builder = HypothesisBuilder(76, self.config)
         hypo = hypo_builder.build_hypothesis_from_file(self.ep, [55, 56])
 
         assert hypo.name == "e_x0_Hypothesis"
@@ -104,10 +95,3 @@ class TestHypothesisBuilder(object):
         assert len(hypo.w_values) == 0
         assert len(hypo.lsa_propagation_indices) == 0
         assert len(hypo.lsa_propagation_strengths) == 0
-
-    @classmethod
-    def teardown_class(cls):
-        for direc in (cls.config.out.FOLDER_LOGS, cls.config.out.FOLDER_RES, cls.config.out.FOLDER_FIGURES):
-            for dir_file in os.listdir(direc):
-                os.remove(os.path.join(os.path.abspath(direc), dir_file))
-            os.removedirs(direc)

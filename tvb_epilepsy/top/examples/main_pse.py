@@ -10,11 +10,11 @@ from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.top.scripts.pse_scripts import pse_from_hypothesis
 from tvb_epilepsy.io.h5_reader import H5Reader as Reader
 
-if __name__ == "__main__":
+
+def main_pse(config=Config()):
     # -------------------------------Reading data-----------------------------------
     reader = Reader()
     writer = H5Writer()
-    config = Config()
     head = reader.read_head(config.input.HEAD)
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
 
@@ -33,9 +33,9 @@ if __name__ == "__main__":
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
     n_healthy = len(healthy_indices)
     # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
-    hyp_x0_E = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions
-                                                     )._build_mixed_hypothesis(e_values, e_indices,
-                                                                               x0_values, x0_indices)
+    hyp_x0_E = HypothesisBuilder(head.connectivity.number_of_regions).set_x0_hypothesis(x0_indices,
+                                                                                        x0_values).set_e_hypothesis(
+        e_indices, e_values).build_hypothesis()
 
     # Now running the parameter search analysis:
     logger.info("running PSE LSA...")
@@ -57,3 +57,7 @@ if __name__ == "__main__":
 
     logger.info("Saving LSA results ...")
     writer.write_dictionary(pse_res, os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5"))
+
+
+if __name__ == "__main__":
+    main_pse()

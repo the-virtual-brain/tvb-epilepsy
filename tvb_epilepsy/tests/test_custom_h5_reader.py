@@ -9,10 +9,10 @@ from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
-from tvb_epilepsy.tests.base import get_temporary_folder, remove_temporary_test_files
+from tvb_epilepsy.tests.base import BaseTest
 
 
-class TestCustomH5Reader(object):
+class TestCustomH5Reader(BaseTest):
     reader = H5Reader()
     writer = H5Writer()
     in_head = InputConfig().HEAD
@@ -82,8 +82,8 @@ class TestCustomH5Reader(object):
         assert sensors_seeg[0].number_of_sensors == 20
 
     def test_read_hypothesis(self):
-        test_file = os.path.join(get_temporary_folder(), "TestHypothesis.h5")
-        hypothesis_builder = HypothesisBuilder().set_nr_of_regions(3)
+        test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestHypothesis.h5")
+        hypothesis_builder = HypothesisBuilder(3, self.config)
         dummy_hypothesis = hypothesis_builder.set_e_hypothesis([0], [0.6]).build_hypothesis()
 
         self.writer.write_hypothesis(dummy_hypothesis, test_file)
@@ -100,7 +100,7 @@ class TestCustomH5Reader(object):
         assert numpy.array_equal(dummy_hypothesis.lsa_propagation_indices, hypothesis.lsa_propagation_indices)
 
     def test_read_model_configuration(self):
-        test_file = os.path.join(get_temporary_folder(), "TestModelConfiguration.h5")
+        test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestModelConfiguration.h5")
         dummy_mc = ModelConfiguration(x1EQ=numpy.array([2.0, 3.0, 1.0]), zmode=None, zEQ=numpy.array([3.0, 2.0, 1.0]),
                                       model_connectivity=numpy.array(
                                           [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0], [2.0, 2.0, 2.0]]),
@@ -114,7 +114,7 @@ class TestCustomH5Reader(object):
         assert numpy.array_equal(dummy_mc.model_connectivity, mc.model_connectivity)
 
     def test_read_lsa_service(self):
-        test_file = os.path.join(get_temporary_folder(), "TestLSAService.h5")
+        test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestLSAService.h5")
         dummy_lsa_service = LSAService()
         self.writer.write_lsa_service(dummy_lsa_service, test_file)
 
@@ -128,7 +128,7 @@ class TestCustomH5Reader(object):
         assert dummy_lsa_service.normalize_propagation_strength == lsa_service.normalize_propagation_strength
 
     def test_read_model_configuration_builder(self):
-        test_file = os.path.join(get_temporary_folder(), "TestModelConfigService.h5")
+        test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestModelConfigService.h5")
         dummy_mc_service = ModelConfigurationBuilder(3)
         self.writer.write_model_configuration_builder(dummy_mc_service, test_file)
 
@@ -154,7 +154,7 @@ class TestCustomH5Reader(object):
         assert dummy_mc_service.rx0 == mc_service.rx0
 
     def test_read_simulation_settigs(self):
-        test_file = os.path.join(get_temporary_folder(), "TestSimSettings.h5")
+        test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestSimSettings.h5")
         dummy_sim_settings = SimulationSettings()
         self.writer.write_simulation_settings(dummy_sim_settings, test_file)
 
@@ -171,7 +171,3 @@ class TestCustomH5Reader(object):
         assert dummy_sim_settings.monitor_sampling_period == sim_settings.monitor_sampling_period
         assert dummy_sim_settings.monitor_expressions == sim_settings.monitor_expressions
         assert numpy.array_equal(dummy_sim_settings.initial_conditions, sim_settings.initial_conditions)
-
-    @classmethod
-    def teardown_class(cls):
-        remove_temporary_test_files()

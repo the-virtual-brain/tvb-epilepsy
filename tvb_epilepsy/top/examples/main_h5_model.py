@@ -13,28 +13,23 @@ from tvb_epilepsy.io.h5_reader import H5Reader
 
 logger = initialize_logger(__name__)
 
-if __name__ == "__main__":
 
+def main_h5_model(config=Config()):
     # -------------------------------Reading data-----------------------------------
-    config = Config()
     reader = TVBReader() if config.input.IS_TVB_MODE else H5Reader()
     writer = H5Writer()
     logger.info("Reading from: %s", config.input.HEAD)
     head = reader.read_head(config.input.HEAD)
 
-    # # Manual definition of hypothesis...:
-    empty_hypothesis = HypothesisBuilder()._build_mixed_hypothesis()
+    empty_hypothesis = HypothesisBuilder().build_hypothesis()
     x0_indices = [20]
     x0_values = [0.9]
     e_indices = [70]
     e_values = [0.9]
-    disease_values = x0_values + e_values
-    disease_indices = x0_indices + e_indices
 
-    # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
-    hyp_x0_E = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions
-                                                     )._build_mixed_hypothesis(e_values, e_indices,
-                                                                               x0_values, x0_indices)
+    hyp_x0_E = HypothesisBuilder(head.connectivity.number_of_regions).set_x0_hypothesis(x0_indices,
+                                                                                        x0_values).set_e_hypothesis(
+        e_indices, e_values).build_hypothesis()
 
     obj = {"hyp_x0_E": hyp_x0_E,
            "test_dict": {"list0": ["l00", 1,
@@ -60,3 +55,7 @@ if __name__ == "__main__":
         logger.info("Read object as dictionary: %s", obj2)
     else:
         logger.error("Comparison failed!: %s", obj2)
+
+
+if __name__ == "__main__":
+    main_h5_model()
