@@ -504,7 +504,7 @@ class Plotter(BasePlotter):
                     start_plot = 0
                 self.plot_raster({'SEEG': res['SEEG' + str(i)][start_plot:, :]}, res['time'][start_plot:],
                                  time_units=res.get('time_units', "ms"), title=title,
-                                 offset=0.0, labels=sensorsSEEG[i].labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
+                                 offset=1.0, labels=sensorsSEEG[i].labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
     def plot_lsa(self, disease_hypothesis, model_configuration, weighted_eigenvector_sum, eigen_vectors_number,
                  region_labels=[], pse_results=None, title="Hypothesis Overview"):
