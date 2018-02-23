@@ -30,7 +30,7 @@ def main_cc_vep(config, head_folder, ep_name="clinical_hypothesis", x0_indices=[
     plotter.plot_head(head)
 
     # --------------------------Hypothesis definition-----------------------------------
-    hypo_builder = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions)
+    hypo_builder = HypothesisBuilder(head.connectivity.number_of_regions)
     all_regions_indices = np.array(range(head.number_of_regions))
 
     # This is an example of Epileptogenicity Hypothesis:
@@ -53,7 +53,8 @@ def main_cc_vep(config, head_folder, ep_name="clinical_hypothesis", x0_indices=[
         e_indices = disease_indices
         e_values = np.array(disease_values)
         x0_values = np.array(x0_values)
-        hyp_x0_E = hypo_builder._build_mixed_hypothesis(e_values, e_indices, x0_values, x0_indices)
+        hyp_x0_E = hypo_builder.set_x0_hypothesis(x0_indices, x0_values).set_e_hypothesis(e_indices,
+                                                                                          e_values).build_hypothesis()
         hypotheses = (hyp_E, hyp_x0, hyp_x0_E)
 
     else:

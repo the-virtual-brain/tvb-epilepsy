@@ -45,7 +45,7 @@ class TestPlotter(BaseTest):
 
     def test_plot_lsa(self):
         figure_name = "LSAPlot"
-        hypo_builder = HypothesisBuilder(self.config).set_name(figure_name)
+        hypo_builder = HypothesisBuilder(config=self.config).set_name(figure_name)
         lsa_hypothesis = hypo_builder.build_lsa_hypothesis()
         mc = ModelConfigurationBuilder().build_model_from_E_hypothesis(lsa_hypothesis, numpy.array([1]))
 
@@ -57,7 +57,7 @@ class TestPlotter(BaseTest):
         assert not os.path.exists(figure_file)
 
     def test_plot_state_space(self):
-        lsa_hypothesis = HypothesisBuilder(self.config).build_lsa_hypothesis()
+        lsa_hypothesis = HypothesisBuilder(config=self.config).build_lsa_hypothesis()
         mc = ModelConfigurationBuilder().build_model_from_E_hypothesis(lsa_hypothesis, numpy.array([1]))
 
         model = "6d"
@@ -73,7 +73,7 @@ class TestPlotter(BaseTest):
         assert os.path.exists(file_name)
 
     def test_plot_sim_results(self):
-        lsa_hypothesis = HypothesisBuilder(self.config).build_lsa_hypothesis()
+        lsa_hypothesis = HypothesisBuilder(config=self.config).build_lsa_hypothesis()
         mc = ModelConfigurationBuilder().build_model_from_E_hypothesis(lsa_hypothesis, numpy.array([1]))
         model = build_EpileptorDP2D(mc)
         res = prepare_vois_ts_dict(VOIS["EpileptorDP2D"], numpy.array([[[1, 2, 3], [1, 2, 3]], [[1, 2, 3], [1, 2, 3]]]))

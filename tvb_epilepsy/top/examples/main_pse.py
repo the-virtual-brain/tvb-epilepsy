@@ -33,9 +33,9 @@ def main_pse(config=Config()):
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
     n_healthy = len(healthy_indices)
     # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis:
-    hyp_x0_E = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions
-                                                     )._build_mixed_hypothesis(e_values, e_indices,
-                                                                               x0_values, x0_indices)
+    hyp_x0_E = HypothesisBuilder(head.connectivity.number_of_regions).set_x0_hypothesis(x0_indices,
+                                                                                        x0_values).set_e_hypothesis(
+        e_indices, e_values).build_hypothesis()
 
     # Now running the parameter search analysis:
     logger.info("running PSE LSA...")

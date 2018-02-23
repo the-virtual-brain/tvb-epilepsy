@@ -83,7 +83,7 @@ class TestCustomH5Reader(BaseTest):
 
     def test_read_hypothesis(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestHypothesis.h5")
-        hypothesis_builder = HypothesisBuilder(self.config).set_nr_of_regions(3)
+        hypothesis_builder = HypothesisBuilder(3, self.config)
         dummy_hypothesis = hypothesis_builder.set_e_hypothesis([0], [0.6]).build_hypothesis()
 
         self.writer.write_hypothesis(dummy_hypothesis, test_file)
