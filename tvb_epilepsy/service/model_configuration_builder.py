@@ -144,7 +144,7 @@ class ModelConfigurationBuilder(object):
         return x1EQ
 
     def _normalize_global_coupling(self):
-        self.K = 10.0 * self.K_unscaled / self.number_of_regions
+        self.K = self.K_unscaled / self.number_of_regions
 
     def _configure_model_from_equilibrium(self, x1EQ, zEQ, model_connectivity):
         # x1EQ, zEQ = self._ensure_equilibrum(x1EQ, zEQ) # We don't this by default anymore
