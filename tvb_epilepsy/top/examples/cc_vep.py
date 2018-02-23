@@ -34,9 +34,9 @@ def main_cc_vep(config, head_folder, ep_name="clinical_hypothesis", x0_indices=[
     all_regions_indices = np.array(range(head.number_of_regions))
 
     # This is an example of Epileptogenicity Hypothesis:
-    hyp_E = hypo_builder.build_hypothesis_from_file(ep_name, x0_indices)
+    hyp_E = HypothesisBuilder(head.connectivity.number_of_regions).build_hypothesis_from_file(ep_name, x0_indices)
     # This is an example of Excitability Hypothesis:
-    hyp_x0 = hypo_builder.build_hypothesis_from_file(ep_name)
+    hyp_x0 = HypothesisBuilder(head.connectivity.number_of_regions).build_hypothesis_from_file(ep_name)
 
     disease_indices = hyp_E.e_indices + hyp_x0.x0_indices
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
@@ -53,8 +53,8 @@ def main_cc_vep(config, head_folder, ep_name="clinical_hypothesis", x0_indices=[
         e_indices = disease_indices
         e_values = np.array(disease_values)
         x0_values = np.array(x0_values)
-        hyp_x0_E = hypo_builder.set_x0_hypothesis(x0_indices, x0_values).set_e_hypothesis(e_indices,
-                                                                                          e_values).build_hypothesis()
+        hyp_x0_E = HypothesisBuilder(head.connectivity.number_of_regions). \
+                    set_x0_hypothesis(x0_indices, x0_values).set_e_hypothesis(e_indices, e_values).build_hypothesis()
         hypotheses = (hyp_E, hyp_x0, hyp_x0_E)
 
     else:
@@ -64,13 +64,15 @@ def main_cc_vep(config, head_folder, ep_name="clinical_hypothesis", x0_indices=[
     for hyp in hypotheses:
         logger.info("Running hypothesis: %s", hyp.name)
         logger.info("Creating model configuration...")
-        builder = ModelConfigurationBuilder(hyp.number_of_regions)
-        writer.write_model_configuration_builder(builder,
+        model_config_builder = ModelConfigurationBuilder(hyp.number_of_regions)
+        writer.write_model_configuration_builder(model_config_builder,
                                                  os.path.join(config.out.FOLDER_RES, "model_config_service.h5"))
-        if hyp.type == "Epileptogenicity":
-            model_configuration = builder.build_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
-        else:
-            model_configuration = builder.build_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
+        # Fix healthy regions to default equilibria:
+        # model_configuration = \
+        #        model_config_builder.build_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
+        # Fix healthy regions to default x0s:
+        model_configuration = \
+            model_config_builder.build_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
         writer.write_model_configuration(model_configuration,
                                          os.path.join(config.out.FOLDER_RES, "ModelConfiguration.h5"))
         # Plot nullclines and equilibria of model configuration
@@ -88,16 +90,14 @@ def main_cc_vep(config, head_folder, ep_name="clinical_hypothesis", x0_indices=[
             n_samples = 100
             # --------------Parameter Search Exploration (PSE)-------------------------------
             logger.info("Running PSE LSA...")
-            pse_results = pse_from_lsa_hypothesis(lsa_hypothesis,
+            pse_results = pse_from_lsa_hypothesis(lsa_hypothesis, model_config_builder, lsa_service,
                                                   head.connectivity.normalized_weights,
                                                   head.connectivity.region_labels,
                                                   n_samples, param_range=0.1,
                                                   global_coupling=[{"indices": all_regions_indices}],
                                                   healthy_regions_parameters=[{"name": "x0_values",
                                                                                "indices": healthy_indices}],
-                                                  model_configuration_builder=builder,
-                                                  lsa_service=lsa_service, save_flag=True,
-                                                  folder_res=config.out.FOLDER_RES,
+                                                  save_flag=True, folder_res=config.out.FOLDER_RES,
                                                   filename="PSE_LSA", logger=logger)[0]
             plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
                              lsa_service.eigen_vectors_number, head.connectivity.region_labels, pse_results,
