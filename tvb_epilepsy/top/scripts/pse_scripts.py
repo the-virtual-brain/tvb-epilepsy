@@ -14,10 +14,8 @@ from tvb_epilepsy.top.scripts.hypothesis_scripts import start_lsa_run
 ###
 # These functions are helper functions to run parameter search exploration (pse) for Linear Stability Analysis (LSA).
 ###
-def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
-                            n_samples, param_range=0.1, global_coupling=[],
-                            healthy_regions_parameters=[],
-                            model_configuration_builder=None, lsa_service=None,
+def pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels, model_configuration_builder, lsa_service,
+                            n_samples, param_range=0.1, global_coupling=[], healthy_regions_parameters=[],
                             save_flag=False, folder_res=OutputConfig().FOLDER_RES, filename=None, logger=None, **kwargs):
     if logger is None:
         logger = initialize_logger(__name__)
@@ -139,10 +137,10 @@ def pse_from_hypothesis(hypothesis, model_connectivity, region_labels, n_samples
     # Compute lsa for this hypothesis before the parameter search:
     model_configuration_builder, model_configuration, lsa_service, lsa_hypothesis = \
         start_lsa_run(hypothesis, model_connectivity)
-    pse_results, pse_params_list = pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity, region_labels,
-                                                           n_samples, param_range, global_coupling,
-                                                           healthy_regions_parameters,
+    pse_results, pse_params_list = pse_from_lsa_hypothesis(lsa_hypothesis, model_connectivity,
                                                            model_configuration_builder, lsa_service,
+                                                           region_labels, n_samples, param_range, global_coupling,
+                                                           healthy_regions_parameters,
                                                            save_flag, folder_res=folder_res, filename=filename,
                                                            logger=logger, **kwargs)
     return model_configuration, lsa_service, lsa_hypothesis, pse_results, pse_params_list

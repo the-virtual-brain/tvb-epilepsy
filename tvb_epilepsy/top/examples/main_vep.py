@@ -19,7 +19,7 @@ from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationB
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
 
-PSE_FLAG = False
+PSE_FLAG = True
 SA_PSE_FLAG = False
 SIM_FLAG = True
 EP_NAME = "ep_l_frontal_complex"
@@ -146,13 +146,13 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
             logger.info("\n\nRunning PSE LSA...")
             pse_results = pse_from_lsa_hypothesis(lsa_hypothesis,
                                                   head.connectivity.normalized_weights,
+                                                  builder, lsa_service,
                                                   head.connectivity.region_labels,
                                                   n_samples, param_range=0.1,
                                                   global_coupling=[{"indices": all_regions_indices}],
                                                   healthy_regions_parameters=[
                                                       {"name": "x0_values", "indices": healthy_indices}],
-                                                  model_configuration_builder=builder,
-                                                  lsa_service=lsa_service, logger=logger, save_flag=True)[0]
+                                                  logger=logger, save_flag=True)[0]
             plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
                              lsa_service.eigen_vectors_number, head.connectivity.region_labels, pse_results)
 
@@ -248,7 +248,7 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
                 #TODO: plotting fails when spectral_raster_plot="lfp". Denis will fix this
                 plotter.plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, res_ts,
                                          head.sensorsSEEG, hpf_flag=True, trajectories_plot=trajectories_plot,
-                                         spectral_raster_plot=False, log_scale=True)
+                                         spectral_raster_plot=spectral_raster_plot, log_scale=True)
                 # Optionally save results in mat files
                 # from scipy.io import savemat
                 # savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), res_ts)
