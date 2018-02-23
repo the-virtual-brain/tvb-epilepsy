@@ -11,12 +11,13 @@ class ABCPSEService(object):
 
     logger = initialize_logger(__name__)
 
-    params_vals = []
-    params_paths = []
-    params_indices = []
-    params_names = []
-    n_params_vals = []
-    n_params = 0
+    def __init__(self):
+        self.params_vals = []
+        self.params_paths = []
+        self.params_indices = []
+        self.params_names = []
+        self.n_params_vals = []
+        self.n_params = 0
 
     def run_pse(self, conn_matrix, grid_mode=False, *kwargs):
         results = []
@@ -31,12 +32,13 @@ class ABCPSEService(object):
 
             status = False
             output = None
-            try:
-                status, output = self.run(params, conn_matrix, *kwargs)
-            except:
-                pass
-            if not status:
-                self.logger.warning("\nExecution of loop " + str(iloop) + " failed!")
+            # try:
+            status, output = self.run(params, conn_matrix, *kwargs)
+            print(output)
+            # except:
+            #     pass
+            # if not status:
+            #     self.logger.warning("\nExecution of loop " + str(iloop) + " failed!")
             results.append(output)
             execution_status.append(status)
         if grid_mode:
