@@ -29,7 +29,7 @@ class TestExamples(BaseTest):
     #     main_vep(self.config, sa_pse_flag=True)
 
     def test_cc_vep(self):
-        main_cc_vep(self.config, self.config.input.HEAD, ep_name="ep_l_frontal_complex", x0_indices=[1, 3, 16, 25])
+        main_cc_vep(self.config, self.config.input.HEAD, ep_name="ep_l_frontal_complex")
 
     # def test_main_fitting_default(self):
     #     main_fit_sim_hyplsa()
