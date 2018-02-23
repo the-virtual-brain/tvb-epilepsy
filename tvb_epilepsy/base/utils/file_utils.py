@@ -12,7 +12,7 @@ def ensure_unique_file(parent_folder, filename):
     return final_path
 
 
-def change_filename_or_overwrite(path, overwrite=False):
+def change_filename_or_overwrite(path, overwrite=True):
     if overwrite:
         if os.path.exists(path):
             os.remove(path)
