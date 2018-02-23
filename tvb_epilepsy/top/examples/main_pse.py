@@ -10,11 +10,11 @@ from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.top.scripts.pse_scripts import pse_from_hypothesis
 from tvb_epilepsy.io.h5_reader import H5Reader as Reader
 
-if __name__ == "__main__":
+
+def main_pse(config=Config()):
     # -------------------------------Reading data-----------------------------------
     reader = Reader()
     writer = H5Writer()
-    config = Config()
     head = reader.read_head(config.input.HEAD)
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
 
@@ -57,3 +57,7 @@ if __name__ == "__main__":
 
     logger.info("Saving LSA results ...")
     writer.write_dictionary(pse_res, os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5"))
+
+
+if __name__ == "__main__":
+    main_pse()

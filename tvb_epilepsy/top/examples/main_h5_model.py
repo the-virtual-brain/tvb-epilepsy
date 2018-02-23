@@ -13,10 +13,9 @@ from tvb_epilepsy.io.h5_reader import H5Reader
 
 logger = initialize_logger(__name__)
 
-if __name__ == "__main__":
 
+def main_h5_model(config=Config()):
     # -------------------------------Reading data-----------------------------------
-    config = Config()
     reader = TVBReader() if config.input.IS_TVB_MODE else H5Reader()
     writer = H5Writer()
     logger.info("Reading from: %s", config.input.HEAD)
@@ -60,3 +59,7 @@ if __name__ == "__main__":
         logger.info("Read object as dictionary: %s", obj2)
     else:
         logger.error("Comparison failed!: %s", obj2)
+
+
+if __name__ == "__main__":
+    main_h5_model()

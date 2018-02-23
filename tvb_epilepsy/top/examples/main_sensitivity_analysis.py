@@ -14,11 +14,10 @@ from tvb_epilepsy.io.h5_reader import H5Reader as Reader
 
 logger = initialize_logger(__name__)
 
-if __name__ == "__main__":
+def main_sensitivity_analysis(config = Config()):
     # -------------------------------Reading data-----------------------------------
     reader = Reader()
     writer = H5Writer()
-    config = Config()
     head = reader.read_head(config.input.HEAD)
     # --------------------------Hypothesis definition-----------------------------------
     n_samples = 100
@@ -61,3 +60,7 @@ if __name__ == "__main__":
             writer.write_dictionary(sa_results, result_file)
         except:
             logger.warning("Method " + m + " failed!")
+
+
+if __name__ == "__main__":
+   main_sensitivity_analysis()
