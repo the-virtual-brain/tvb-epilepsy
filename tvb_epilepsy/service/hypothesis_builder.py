@@ -29,7 +29,7 @@ class HypothesisBuilder(object):
     lsa_propagation_indices = []
     lsa_propagation_strengths = []
 
-    normalize_value = 0.95
+    normalize_value = 0.99
 
     def __init__(self, number_of_regions, config=Config()):
         self.config = config
@@ -59,6 +59,7 @@ class HypothesisBuilder(object):
                               "\nThe maximum indice is " + str(self.number_of_regions)
                               + " for number of brain regions " + str(self.number_of_regions) + " but"
                               "\n" + type + "_indices = " + str(indices))
+        return indices
 
     def _check_indices_vals_sizes(self, indices, values, type):
         n_inds = len(indices)
@@ -87,42 +88,33 @@ class HypothesisBuilder(object):
                                     " hypothesis to a current " + current_hyp + " one!")
 
     def set_x0_hypothesis(self, x0_indices, x0_values):
-        x0_indices = list(x0_indices)
-        x0_values = list(x0_values)
-        self._check_regions_inds_range(x0_indices, "x0")
-        x0_values = self._check_indices_vals_sizes(x0_indices, x0_values, "x0")
-        self.diseased_regions_values[x0_indices] = x0_values
+        x0_indices = self._check_regions_inds_range(list(x0_indices), "x0")
+        self.diseased_regions_values[x0_indices] = self._check_indices_vals_sizes(x0_indices, list(x0_values), "x0")
         return self
 
     def set_e_hypothesis(self, e_indices, e_values):
-        e_indices = list(e_indices)
-        e_values = list(e_values)
-        self._check_regions_inds_range(e_indices, "e")
-        self.e_values = self._check_indices_vals_sizes(e_indices, e_values, "e")
-        self.diseased_regions_values[e_indices] = self.e_values
+        self.e_indices = self._check_regions_inds_range(list(e_indices), "e")
+        self.diseased_regions_values[e_indices] = self._check_indices_vals_sizes(self.e_indices,  list(e_values), "e")
         return self
 
     def set_e_indices(self, e_indices):
-        self.e_indices = list(e_indices)
-        self._check_regions_inds_range(e_indices, "e")
+        self.e_indices = self._check_regions_inds_range(list(e_indices), "e")
         return self
 
     def set_w_hypothesis(self, w_indices, w_values):
         w_indices = list(w_indices)
         for ind, w_ind in enumerate(w_indices):
             w_indices[ind] = tuple(w_ind)
-        w_values = list(w_values)
-        self._check_regions_inds_range(w_indices, "w")
-        self.w_values = self._check_indices_vals_sizes(w_indices, w_values, "w")
-        self.w_indices = w_indices
+        self.w_indices = self._check_regions_inds_range(w_indices, "w")
+        self.w_values = self._check_indices_vals_sizes(w_indices, list(w_values), "w")
         return self
 
-    def set_lsa_propagation_indices(self, lsa_propagation_indices):
-        self.lsa_propagation_indices = lsa_propagation_indices
-        return self
-
-    def set_lsa_propagation_strengths(self, lsa_propagation_strengths):
-        self.lsa_propagation_strengths = lsa_propagation_strengths
+    def set_lsa_propagation(self, lsa_propagation_indices, lsa_propagation_strengths):
+        self.lsa_propagation_indices = numpy.array(self._check_regions_inds_range(lsa_propagation_indices, "lsa_propagation"))
+        self.lsa_propagation_strengths = numpy.array(
+                                                self._check_indices_vals_sizes(self.lsa_propagation_indices,
+                                                                               lsa_propagation_strengths,
+                                                                               "lsa_propagation"))
         return self
 
     def set_normalize(self, value):
@@ -141,7 +133,7 @@ class HypothesisBuilder(object):
                 set_e_hypothesis(disease_hypothesis.e_indices, disease_hypothesis.e_values). \
                     set_x0_hypothesis(disease_hypothesis.x0_indices, disease_hypothesis.x0_values). \
                         set_w_hypothesis(disease_hypothesis.w_indices, disease_hypothesis.w_values). \
-                            set_name(disease_hypothesis.name + "LSA")
+                            set_name("LSA_" + disease_hypothesis.name)
         return self
 
     def build_lsa_hypothesis(self):
@@ -163,7 +155,8 @@ class HypothesisBuilder(object):
 
 
     def build_hypothesis_from_file(self, hyp_file, e_indices=None):
-        self.set_diseased_regions_values(H5Reader().read_epileptogenicity(self.config.input.HEAD, name=hyp_file))
+        self.set_diseased_regions_values(H5Reader().read_epileptogenicity(self.config.hypothesis.head_folder,
+                                                                          name=hyp_file))
         if e_indices:
             self.set_e_indices(e_indices)
         return self.build_hypothesis()

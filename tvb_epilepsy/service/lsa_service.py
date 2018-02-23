@@ -76,7 +76,7 @@ class LSAService(object):
         temp = model_configuration.x1EQ > X1_EQ_CR_DEF - 10 ** (-3)
         if temp.any():
             correction_value = X1_EQ_CR_DEF - 10 ** (-3)
-            self.logger.warning("Equibria x1EQ[" + str(numpy.where(temp)[0]) + "]  = " + str(model_configuration.x1EQ[temp]) +
+            self.logger.warning("Equilibria x1EQ[" + str(numpy.where(temp)[0]) + "]  = " + str(model_configuration.x1EQ[temp]) +
                     "\nwere corrected for LSA to value: X1_EQ_CR_DEF - 10 ** (-3) = " + str(correction_value)
                     + " to be sub-critical!")
             model_configuration.x1EQ[temp] = correction_value
@@ -137,9 +137,9 @@ class LSAService(object):
         propagation_strength_elbow = self.get_curve_elbow_point(lsa_propagation_strength)
         propagation_indices = lsa_propagation_strength.argsort()[-propagation_strength_elbow:]
 
-        hypothesis_builder = HypothesisBuilder().set_attributes_based_on_hypothesis(
-            disease_hypothesis).set_lsa_propagation_indices(propagation_indices).set_lsa_propagation_strengths(
-            lsa_propagation_strength)
+        hypothesis_builder = HypothesisBuilder(disease_hypothesis.number_of_regions).\
+                                set_attributes_based_on_hypothesis(disease_hypothesis). \
+                                    set_lsa_propagation(propagation_indices, lsa_propagation_strength)
 
         return hypothesis_builder.build_lsa_hypothesis()
 
