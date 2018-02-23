@@ -199,7 +199,7 @@ def build_simulator_TVB_fitting(model_configuration, connectivity, **kwargs):
 
 def build_simulator_TVB_realistic(model_configuration, connectivity, **kwargs):
     sim_builder = \
-        SimulatorBuilder().set_model_name("EpileptorDP2Drealistic").set_fs(8192.0).set_simulated_period(50000)
+        SimulatorBuilder().set_model_name("EpileptorDP2D").set_fs(8192.0).set_simulated_period(50000)
     model = sim_builder.generate_model(model_configuration)
     model.tau0 = 30000.0
     model.tau1 = 0.2
