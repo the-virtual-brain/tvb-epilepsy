@@ -1,7 +1,7 @@
 import os
 import numpy
 from tvb_epilepsy.plot.plotter import Plotter
-from tvb_epilepsy.service.epileptor_model_factory import build_ep_2sv_model, VOIS
+from tvb_epilepsy.service.epileptor_model_factory import build_EpileptorDP2D, VOIS
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter
@@ -75,7 +75,7 @@ class TestPlotter(BaseTest):
     def test_plot_sim_results(self):
         lsa_hypothesis = HypothesisBuilder(self.config).build_lsa_hypothesis()
         mc = ModelConfigurationBuilder().build_model_from_E_hypothesis(lsa_hypothesis, numpy.array([1]))
-        model = build_ep_2sv_model(mc)
+        model = build_EpileptorDP2D(mc)
         res = prepare_vois_ts_dict(VOIS["EpileptorDP2D"], numpy.array([[[1, 2, 3], [1, 2, 3]], [[1, 2, 3], [1, 2, 3]]]))
         res['time'] = numpy.array([1, 2, 3])
         res['time_units'] = 'msec'

@@ -30,7 +30,7 @@ class ModelInversionService(object):
         self.observation_shape = ()
         if isinstance(model_configuration, ModelConfiguration):
             self.logger.info("Input model configuration set...")
-            self.n_regions = model_configuration.n_regions
+            self.number_of_regions = model_configuration.number_of_regions
             self._copy_attributes(model_configuration,
                                   ["K", "x1EQ", "zEQ", "e_values", "x0_values", "x0"], deep_copy=True)
             self.model_connectivity = deepcopy(kwargs.pop("model_connectivity", model_configuration.model_connectivity))
@@ -104,7 +104,7 @@ class ModelInversionService(object):
 
     def get_default_MC(self):
         MC_def = self.get_SC()
-        inds = np.triu_indices(self.n_regions, 1)
+        inds = np.triu_indices(self.number_of_regions, 1)
         MC_def[inds] = MC_def[inds] * self.MC_direction_split
         MC_def = MC_def.T
         MC_def[inds] = MC_def[inds] * (1.0 - self.MC_direction_split)
@@ -122,7 +122,7 @@ class ModelInversionService(object):
             SC[SC > MC_MAX] = 1.0
         mc_def_min = MC_MAX / MC_MAX_MIN_RATIO
         SC[SC < mc_def_min] = mc_def_min
-        diag_ind = range(self.n_regions)
+        diag_ind = range(self.number_of_regions)
         SC[diag_ind, diag_ind] = 0.0
         return SC
 
@@ -130,14 +130,14 @@ class ModelInversionService(object):
         # Generative model:
         # Epileptor:
         if isequal_string(kwargs.get("priors_mode", "hypothesis"), "uninformative"):
-            x1eq_prior = X1_DEF * np.ones((self.n_regions,))
+            x1eq_prior = X1_DEF * np.ones((self.number_of_regions,))
         else:
             x1eq_prior = self.x1EQ
         x1eq_max = kwargs.get("x1eq_max", X1EQ_MAX)
         x1eq_star_max = x1eq_max - X1EQ_MIN
         x1eq_star_mean = x1eq_max - x1eq_prior
         x1eq_std = np.minimum(kwargs.get("sig_eq", np.abs(x1eq_star_max-x1eq_star_mean)), np.abs(x1eq_star_mean))/3.0
-        self.default_parameters.update(set_parameter_defaults("x1eq_star", "lognormal", (self.n_regions,),
+        self.default_parameters.update(set_parameter_defaults("x1eq_star", "lognormal", (self.number_of_regions,),
                                                               0.0, x1eq_star_max,
                                                               x1eq_star_mean, x1eq_std,
                                                               pdf_params={"mean": x1eq_star_mean/x1eq_std,
@@ -165,12 +165,12 @@ class ModelInversionService(object):
         MCsplit_std = np.min([self.MC_direction_split, 1.0 - self.MC_direction_split]) \
                        / kwargs.get("MCsplit_scale", 6.0)
         self.default_parameters.update(set_parameter_defaults("MCsplit", "normal", # or "beta"...
-                                                              (self.n_regions * (self.n_regions-1)/2,),
+                                                              (self.number_of_regions * (self.number_of_regions-1)/2,),
                                                               0.0, 1.0,
                                                               pdf_params={"mu": self.MC_direction_split,
                                                                           "sigma": MCsplit_std}, **kwargs))
         MC_def = self.get_default_MC()
-        self.default_parameters.update(set_parameter_defaults("MC", "normal", (self.n_regions, self.n_regions),
+        self.default_parameters.update(set_parameter_defaults("MC", "normal", (self.number_of_regions, self.number_of_regions),
                                                               0.0, MC_MAX,
                                                               pdf_params=
                                                               {"mu": MC_def,
@@ -186,7 +186,7 @@ class ModelInversionService(object):
         tic = time.time()
         self.logger.info("Generating model...")
         self.default_parameters.update(kwargs)
-        model = StatisticalModel(model_name, self.n_regions, **self.default_parameters)
+        model = StatisticalModel(model_name, self.number_of_regions, **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')
         return model

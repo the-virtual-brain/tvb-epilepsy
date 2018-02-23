@@ -186,7 +186,8 @@ class BasePlotter(object):
             big_ax.yaxis.set_ticklabels(labels)
         big_ax.invert_yaxis()
         big_ax.axes.get_xaxis().set_visible(False)
-        big_ax.set_facecolor('none')
+        # TODO: find out what is the next line about and why it fails...
+        # big_ax.axes.set_facecolor('none')
 
     def plot_in_columns(self, data_dict_list, labels, width_ratios=[], left_ax_focus_indices=[],
                         right_ax_focus_indices=[], description="", title="", figure_name=None,

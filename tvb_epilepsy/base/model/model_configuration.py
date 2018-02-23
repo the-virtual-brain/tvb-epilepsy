@@ -12,7 +12,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, dicts_of_
 class ModelConfiguration(object):
     def __init__(self, yc=YC_DEF, Iext1=I_EXT1_DEF, Iext2=I_EXT2_DEF, K=K_DEF, a=A_DEF, b=B_DEF, d=D_DEF,
                  slope=SLOPE_DEF, s=S_DEF, gamma=GAMMA_DEF, x1EQ=None, zEQ=None, Ceq=None, x0=None,
-                 x0_values=X0_DEF, e_values=None, zmode=np.array("lin"), model_connectivity=None, n_regions=0):
+                 x0_values=X0_DEF, e_values=None, zmode=np.array("lin"), model_connectivity=None, number_of_regions=0):
         # These parameters are used for every Epileptor Model...
         self.x0_values = x0_values
         self.x0 = x0
@@ -36,12 +36,12 @@ class ModelConfiguration(object):
         self.Ceq = Ceq
         self.e_values = e_values
         self.model_connectivity = model_connectivity
-        if n_regions == 0 and model_connectivity is not None:
-            self.n_regions = model_connectivity.shape[0]
+        if number_of_regions == 0 and model_connectivity is not None:
+            self.number_of_regions = model_connectivity.shape[0]
 
     def __repr__(self):
         d = {
-            "00. number of regions": self.n_regions,
+            "00. number of regions": self.number_of_regions,
             "01. Excitability": self.x0_values,
             "02. Epileptor Model Excitability": self.x0,
             "03. x1EQ": self.x1EQ,

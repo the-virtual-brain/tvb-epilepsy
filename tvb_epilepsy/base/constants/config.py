@@ -130,12 +130,25 @@ class CalculusConfig(object):
     MIN_INT_VALUE = np.iinfo(np.int64).max
 
 
+class SimulatorConfig(object):
+    USE_TIME_DELAYS_FLAG = True
+    MODE = GenericConfig.MODE_TVB
+
+
+class HypothesisConfig(object):
+
+    def __init__(self, head_folder=None):
+        self.head_folder = head_folder
+
+
 class Config(object):
     generic = GenericConfig()
     figures = FiguresConfig()
     calcul = CalculusConfig()
+    simulator = SimulatorConfig()
 
     def __init__(self, head_folder=None, data_mode=GenericConfig.MODE_JAVA,
                  output_base=None, separate_by_run=False):
         self.input = InputConfig(head_folder, data_mode)
         self.out = OutputConfig(output_base, separate_by_run)
+        self.hypothesis = HypothesisConfig(head_folder)

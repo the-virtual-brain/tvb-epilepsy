@@ -73,7 +73,7 @@ def main_cc_vep(config, head_folder, ep_name="clinical_hypothesis", x0_indices=[
         writer.write_model_configuration(model_configuration,
                                          os.path.join(config.out.FOLDER_RES, "ModelConfiguration.h5"))
         # Plot nullclines and equilibria of model configuration
-        plotter.plot_state_space(model_configuration, head.connectivity.region_labels,
+        plotter.plot_state_space(model_configuration, region_labels=head.connectivity.region_labels,
                                  special_idx=disease_indices, model="2d", zmode="lin",
                                  figure_name=hyp.name + "_StateSpace")
         logger.info("Running LSA...")

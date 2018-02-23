@@ -45,7 +45,7 @@ class SDEModelInversionService(ODEModelInversionService):
         self.logger.info("Generating model...")
         active_regions = kwargs.pop("active_regions", [])
         self.default_parameters.update(kwargs)
-        model = SDEStatisticalModel(model_name, self.n_regions, active_regions, self.n_signals, self.n_times, self.dt,
+        model = SDEStatisticalModel(model_name, self.number_of_regions, active_regions, self.n_signals, self.n_times, self.dt,
                                     **self.default_parameters)
         self.model_generation_time = time.time() - tic
         self.logger.info(str(self.model_generation_time) + ' sec required for model generation')

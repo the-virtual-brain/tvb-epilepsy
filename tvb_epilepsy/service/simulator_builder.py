@@ -5,7 +5,7 @@ from tvb.simulator.monitors import Monitor, TemporalAverage
 from tvb.simulator.noise import Noise, Additive, Multiplicative
 from tvb_epilepsy.base.constants.model_constants import NOISE_SEED, WHITE_NOISE, COLORED_NOISE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.service.epileptor_model_factory import model_build_dict, model_noise_intensity_dict, VOIS, \
                                                             AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_NVARS
@@ -19,9 +19,9 @@ class SimulatorBuilder(object):
     simulator = "tvb"
     model_name = "EpileptorDP"
 
-    simulated_period = 1000
-    fs = 8192.0
-    fs_monitor = 512.0
+    simulated_period = 2000
+    fs = 16384.0
+    fs_monitor = 1024.0
 
     def __init__(self, simulator="tvb"):
         self.simulator = simulator
@@ -52,28 +52,28 @@ class SimulatorBuilder(object):
         monitor_period = scale_fsavg * dt
         return dt, monitor_period
 
-    def generate_model(self, model_configuration, **kwargs):
+    def generate_model(self, model_configuration):
         if isequal_string(self.model_name, EpileptorModel._ui_name) and not isequal_string(self.simulator, "java"):
             raise_value_error("Custom EpileptorModel can be used only with java simulator!")
         elif not isequal_string(self.model_name, EpileptorModel._ui_name) and isequal_string(self.simulator, "java"):
             raise_value_error("Only java EpileptorModel can be used with java simulator!")
-        return model_build_dict[self.model_name](model_configuration, **kwargs)
+        return model_build_dict[self.model_name](model_configuration)
+
+    def _check_noise_intesity_size(self, noise_intensity):
+        nn = len(ensure_list(noise_intensity))
+        if nn != 1 and nn != EPILEPTOR_MODEL_NVARS[self.model_name]:
+            raise_value_error(
+                "Noise intensity is neither of size 1 nor of size equal to the number of model variables, "
+                "\n but of size: " + str(nn) + "!")
 
     def generate_white_noise(self, noise_intensity):
-        nn = len(noise_intensity)
-        if nn != 1 and nn != EPILEPTOR_MODEL_NVARS[self.model_name]:
-            raise_value_error("Noise intensity is neither of size 1 nor of size equal to the number of model variables, "
-                              "\n but of size: " + str(nn) + "!")
+        self._check_noise_intesity_size(noise_intensity)
         noise_instance = noise.Additive(nsig=noise_intensity, random_stream=numpy.random.RandomState(seed=NOISE_SEED))
         noise_instance.configure_white(dt=1.0/self.fs)
         return noise_instance
 
     def generate_colored_noise(self, noise_intensity, ntau, **kwargs):
-        nn = len(noise_intensity)
-        if nn != 1 and nn != EPILEPTOR_MODEL_NVARS[self.model_name]:
-            raise_value_error(
-                "Noise intensity is neither of size 1 nor of size equal to the number of model variables, "
-                "\n but of size: " + str(nn) + "!")
+        self._check_noise_intesity_size(noise_intensity)
         eq = equations.Linear(parameters=kwargs.get("parameters", {"a": 1.0, "b": 0.0}))
         noise_instance = noise.Multiplicative(ntau=ntau, nsig=noise_intensity, b=eq,
                                               random_stream=numpy.random.RandomState(seed=NOISE_SEED))
@@ -93,11 +93,7 @@ class SimulatorBuilder(object):
         # Check if the user provides a preconfigured noise instance to override
         noise = kwargs.get("noise", None)
         if isinstance(noise, Noise):
-            nn = len(noise.nsig)
-            if nn != 1 and nn != EPILEPTOR_MODEL_NVARS[self.model_name]:
-                raise_value_error(
-                    "Noise intensity is neither of size 1 nor of size equal to the number of model variables, "
-                    "\n but of size: " + str(nn) + "!")
+            self._check_noise_intesity_size(noise.nsig)
             sim_settings.noise_intensity = noise.nsig
             if isinstance(noise, Additive):
                 sim_settings.noise_type = WHITE_NOISE
@@ -157,13 +153,13 @@ class SimulatorBuilder(object):
         return self.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity,
                                                                 model, sim_settings, **kwargs)
 
-    def build_simulator_java_from_model_configuration(self, model_configuration, connectivity):
+    def build_simulator_java_from_model_configuration(self, model_configuration, connectivity, **kwargs):
 
+        self.set_model_name("EpileptorModel")
         model = java_model_builder(model_configuration)
 
-        noise_intensity = 1e-6  # numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.])
-
         sim_settings = self.build_sim_settings()
+        sim_settings.noise_intensity = kwargs.get("noise_intensity", 1e-6)
 
         simulator_instance = SimulatorJava(connectivity, model_configuration, model, sim_settings)
 
@@ -171,10 +167,15 @@ class SimulatorBuilder(object):
 
     def build_simulator(self, model_configuration, connectivity, **kwargs):
         if isequal_string(self.simulator, "java"):
-            return self.build_simulator_java_from_model_configuration(model_configuration, connectivity)
+            return self.build_simulator_java_from_model_configuration(model_configuration, connectivity, **kwargs)
         else:
             return self.build_simulator_TVB(model_configuration, connectivity, **kwargs)
 
+
+
+def build_simulator_java(model_configuration, connectivity, **kwargs):
+    return SimulatorBuilder("java").\
+                        build_simulator_java_from_model_configuration(model_configuration, connectivity, **kwargs)
 
 
 def build_simulator_TVB_default(model_configuration, connectivity, **kwargs):
@@ -186,19 +187,20 @@ def build_simulator_TVB_paper(model_configuration, connectivity, **kwargs):
 
 
 def build_simulator_TVB_fitting(model_configuration, connectivity, **kwargs):
-    sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D")
-    model = sim_builder.generate_model(model_configuration, **kwargs)
-    model.tau0 = 10.0
+    sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D").set_fs(4096.0).set_simulated_period(100)
+    model = sim_builder.generate_model(model_configuration)
+    model.tau0 = 30.0
     model.tau1 = 0.5
     sim_settings = sim_builder.build_sim_settings()
-    sim_settings.noise_intensity = [1e-3]
+    sim_settings.noise_intensity = 1e-4
     return sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity,
                                                                    model, sim_settings, **kwargs)
 
 
 def build_simulator_TVB_realistic(model_configuration, connectivity, **kwargs):
-    sim_builder = SimulatorBuilder().set_model_name("EpileptorDPrealistic").set_fs(4096.0).set_simulated_period(50000.0)
-    model = sim_builder.generate_model(model_configuration, **kwargs)
+    sim_builder = \
+        SimulatorBuilder().set_model_name("EpileptorDP2Drealistic").set_fs(8192.0).set_simulated_period(50000)
+    model = sim_builder.generate_model(model_configuration)
     model.tau0 = 30000.0
     model.tau1 = 0.2
     model.slope = 0.25

@@ -11,20 +11,20 @@ from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter
 
 class ODEStatisticalModel(StatisticalModel):
 
-    def __init__(self, name='vep_ode', n_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
+    def __init__(self, name='vep_ode', number_of_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
                  x1eq_min=X1EQ_MIN, x1eq_max=X1EQ_MAX, MC_scale=MC_SCALE,
                  sig_init=SIG_INIT_DEF, observation_model=OBSERVATION_MODEL_DEF,
                  # observation_expression=OBSERVATION_EXPRESSION_DEF, euler_method="forward",
                  **defaults):
-        super(ODEStatisticalModel, self).__init__(name, n_regions, x1eq_min, x1eq_max, MC_scale, **defaults)
+        super(ODEStatisticalModel, self).__init__(name, number_of_regions, x1eq_min, x1eq_max, MC_scale, **defaults)
         self.sig_init = sig_init
-        if np.all(np.in1d(active_regions, range(self.n_regions))):
+        if np.all(np.in1d(active_regions, range(self.number_of_regions))):
             self.active_regions = np.unique(active_regions).tolist()
             self.n_active_regions = len(self.active_regions)
-            self.n_nonactive_regions = self.n_regions - self.n_active_regions
+            self.n_nonactive_regions = self.number_of_regions - self.n_active_regions
         else:
             raise_value_error("Active regions indices:\n" + str(active_regions) +
-                              "\nbeyond number of regions (" + str(self.n_regions) + ")!")
+                              "\nbeyond number of regions (" + str(self.number_of_regions) + ")!")
         self.n_signals = n_signals
         self.n_times = n_times
         self.dt = dt
@@ -50,13 +50,13 @@ class ODEStatisticalModel(StatisticalModel):
         self.__add_parameters(**defaults)
 
     def update_active_regions(self, active_regions):
-        if np.all(np.in1d(active_regions, range(self.n_regions))):
+        if np.all(np.in1d(active_regions, range(self.number_of_regions))):
             self.active_regions = np.unique(ensure_list(active_regions) + self.active_regions).tolist()
             self.n_active_regions = len(self.active_regions)
-            self.n_nonactive_regions = self.n_regions - self.n_active_regions
+            self.n_nonactive_regions = self.number_of_regions - self.n_active_regions
         else:
             raise_value_error("Active regions indices:\n" + str(active_regions) +
-                              "\nbeyond number of regions (" + str(self.n_regions) + ")!")
+                              "\nbeyond number of regions (" + str(self.number_of_regions) + ")!")
 
     def __repr__(self):
         form_repr = super(ODEStatisticalModel, self).__repr__()
