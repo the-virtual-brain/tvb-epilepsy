@@ -15,10 +15,10 @@ from tvb_epilepsy.top.scripts.hypothesis_scripts import start_lsa_run
 
 # These functions are helper functions to run sensitivity analysis parameter search exploration (pse)
 # for Linear Stability Analysis (LSA).
-def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix, region_labels, n_samples,
+def sensitivity_analysis_pse_from_lsa_hypothesis(n_samples, lsa_hypothesis, connectivity_matrix,
+                                                 model_configuration_builder, lsa_service, region_labels,
                                                  method="sobol", half_range=0.1, global_coupling=[],
                                                  healthy_regions_parameters=[],
-                                                 model_configuration_builder=None, lsa_service=None,
                                                  save_services=False, config=Config(), **kwargs):
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
     method = method.lower()
@@ -120,7 +120,7 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_ma
     return results, pse_results
 
 
-def sensitivity_analysis_pse_from_hypothesis(hypothesis, connectivity_matrix, region_labels, n_samples,
+def sensitivity_analysis_pse_from_hypothesis(n_samples, hypothesis, connectivity_matrix, region_labels,
                                              method="sobol", half_range=0.1, global_coupling=[],
                                              healthy_regions_parameters=[], save_services=False, config=Config(), **kwargs):
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
@@ -128,10 +128,9 @@ def sensitivity_analysis_pse_from_hypothesis(hypothesis, connectivity_matrix, re
     logger.info("Running hypothesis: " + hypothesis.name)
     model_configuration_builder, model_configuration, lsa_service, lsa_hypothesis = \
         start_lsa_run(hypothesis, connectivity_matrix)
-    results, pse_results = sensitivity_analysis_pse_from_lsa_hypothesis(lsa_hypothesis, connectivity_matrix,
-                                                                        region_labels,
-                                                                        n_samples, method, half_range, global_coupling,
-                                                                        healthy_regions_parameters,
+    results, pse_results = sensitivity_analysis_pse_from_lsa_hypothesis(n_samples, lsa_hypothesis, connectivity_matrix,
                                                                         model_configuration_builder, lsa_service,
+                                                                        region_labels, method, half_range,
+                                                                        global_coupling, healthy_regions_parameters,
                                                                         save_services, config, **kwargs)
     return model_configuration_builder, model_configuration, lsa_service, lsa_hypothesis, results, pse_results
