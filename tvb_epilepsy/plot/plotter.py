@@ -278,8 +278,8 @@ class Plotter(BasePlotter):
         return data_fun, plot_lines, projection, n_rows, n_cols, def_alpha, loopfun, \
                subtitle, subtitle_col, axlabels, axlimits
 
-    def plot_timeseries(self, data_dict, time=None, mode="ts", subplots=None, special_idx=None, subtitles=[],
-                        offset=1.0, time_units="ms", title='Time series', figure_name=None, labels=None,
+    def plot_timeseries(self, data_dict, time=None, mode="ts", subplots=None, special_idx=[], subtitles=[],
+                        offset=1.0, time_units="ms", title='Time series', figure_name=None, labels=[],
                         figsize=FiguresConfig.LARGE_SIZE):
         n_vars = len(data_dict)
         vars = data_dict.keys()
@@ -298,8 +298,7 @@ class Plotter(BasePlotter):
             nSamples = 1
         if len(subtitles) == 0:
             subtitles = vars
-        if labels is None:
-            labels = numpy.array(range(nTS)).astype(str)
+        labels = generate_region_labels(nTS, labels)
         if isequal_string(mode, "traj"):
             data_fun, plot_lines, projection, n_rows, n_cols, def_alpha, loopfun, \
             subtitle, subtitle_col, axlabels, axlimits = self._trajectories_plot(n_vars, nTS, nSamples, subplots)
@@ -316,9 +315,8 @@ class Plotter(BasePlotter):
         alpha_ratio = 1.0 / nSamples
         colors = numpy.array(['k'] * nTS)
         alphas = numpy.maximum(numpy.array([def_alpha] * nTS) * alpha_ratio, 0.1)
-        if special_idx is not None:
-            colors[special_idx] = 'r'
-            alphas[special_idx] = numpy.maximum(alpha_ratio, 0.1)
+        colors[special_idx] = 'r'
+        alphas[special_idx] = numpy.maximum(alpha_ratio, 0.1)
         lines = []
         pyplot.figure(title, figsize=figsize)
         pyplot.hold(True)
@@ -351,31 +349,30 @@ class Plotter(BasePlotter):
         self._check_show()
         return pyplot.gcf(), axes, lines
 
-    def plot_raster(self, data_dict, time, time_units="ms", special_idx=None, title='Raster plot', subtitles=[],
-                    offset=1.0, figure_name=None, labels=None, figsize=FiguresConfig.VERY_LARGE_SIZE):
+    def plot_raster(self, data_dict, time, time_units="ms", special_idx=[], title='Raster plot', subtitles=[],
+                    offset=1.0, figure_name=None, labels=[], figsize=FiguresConfig.VERY_LARGE_SIZE):
         return self.plot_timeseries(data_dict, time, "raster", None, special_idx, subtitles, offset, time_units, title,
                                     figure_name, labels, figsize)
 
-    def plot_trajectories(self, data_dict, subtitles=None, special_idx=None, title='State space trajectories',
-                          figure_name=None, labels=None, figsize=FiguresConfig.LARGE_SIZE):
+    def plot_trajectories(self, data_dict, subtitles=None, special_idx=[], title='State space trajectories',
+                          figure_name=None, labels=[], figsize=FiguresConfig.LARGE_SIZE):
         return self.plot_timeseries(data_dict, [], "traj", subtitles, special_idx, title=title, figure_name=figure_name,
                                     labels=labels, figsize=figsize)
 
-    def plot_spectral_analysis_raster(self, time, data, time_units="ms", freq=None, special_idx=None,
-                                      title='Spectral Analysis', figure_name=None, labels=None,
+    def plot_spectral_analysis_raster(self, time, data, time_units="ms", freq=None, special_idx=[],
+                                      title='Spectral Analysis', figure_name=None, labels=[],
                                       figsize=FiguresConfig.VERY_LARGE_SIZE, **kwargs):
+        nS = data.shape[1]
+        data = data[:, special_idx]
+        if data.size == 0:
+            return
+        labels = generate_region_labels(nS, labels, ". ")[special_idx]
+        nS = data.shape[1]
         if time_units in ("ms", "msec"):
             fs = 1000.0
         else:
             fs = 1.0
         fs = fs / numpy.mean(numpy.diff(time))
-        if special_idx is not None:
-            data = data[:, special_idx]
-            if labels is not None:
-                labels = numpy.array(labels)[special_idx]
-        nS = data.shape[1]
-        if labels is None:
-            labels = numpy.array(range(nS)).astype(str)
         log_norm = kwargs.get("log_norm", False)
         mode = kwargs.get("mode", "psd")
         psd_label = mode
@@ -437,7 +434,7 @@ class Plotter(BasePlotter):
         return fig, ax, img, line, time, freq, stf, psd
 
     def plot_sim_results(self, model, seizure_indices, res, sensorsSEEG=None, hpf_flag=False, trajectories_plot=False,
-                         spectral_raster_plot=False, region_labels=None, **kwargs):
+                         spectral_raster_plot=False, region_labels=[], **kwargs):
         if isinstance(model, EpileptorDP2D):
             # We assume that at least x1 and z are available in res
             self.plot_timeseries({'x1(t)': res['x1'], 'z(t)': res['z']}, res['time'],
@@ -716,7 +713,7 @@ class Plotter(BasePlotter):
                         figure_name, figsize)
 
     def region_parameters_violin_plots(self, samples, values=None, params=["x0", "x1eq"], stats=None,
-                                       skip_samples=0, per_chain=False, labels=None, seizure_indices=None,
+                                       skip_samples=0, per_chain=False, labels=[], seizure_indices=None,
                                        figure_name="Regions parameters samples", figsize=FiguresConfig.VERY_LARGE_SIZE):
         if isinstance(values, dict):
             vals_fun = lambda param: values.get(param, numpy.array([]))
@@ -732,8 +729,7 @@ class Plotter(BasePlotter):
         else:
             plot_samples = lambda s: s[skip_samples:]
             plot_figure_name = lambda ichain: figure_name + ": chain " + str(ichain + 1)
-        if labels is None:
-            labels = numpy.array(range(samples[params[0]].shape[1])).astype(str)
+        labels = generate_region_labels(samples[params[0]].shape[1], labels)
         params_labels = {}
         for ip, p in enumerate(params):
             if ip == 0:
@@ -841,7 +837,7 @@ class Plotter(BasePlotter):
                 self.plot_regions2regions(est[mc_str], region_labels, 122, MC_title)
                 self._save_figure(pyplot.gcf(), conn_figure_name)
                 self._check_show()
-        self.plot_timeseries(observation_dict, time, special_idx=None, time_units=ests[0].get('time_units', "ms"),
+        self.plot_timeseries(observation_dict, time, special_idx=[], time_units=ests[0].get('time_units', "ms"),
                              title="Observation signals vs fit time series: " + stats_string[signals_str],
                              offset=1.0, labels=sensor_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
