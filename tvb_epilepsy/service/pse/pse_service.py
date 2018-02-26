@@ -34,7 +34,6 @@ class ABCPSEService(object):
             output = None
             # try:
             status, output = self.run(params, conn_matrix, *kwargs)
-            print(output)
             # except:
             #     pass
             # if not status:
