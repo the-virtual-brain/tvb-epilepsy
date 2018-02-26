@@ -154,11 +154,11 @@ class Plotter(BasePlotter):
         def plot_ts_raster(x, iTS, colors, alphas, labels, offset):
             x, time, ivar = x
             try:
-                return pyplot.plot(time, -x[:, iTS] + offset[ivar] * iTS, colors[iTS], label=labels[iTS],
+                return pyplot.plot(time, -x[:, iTS] + (offset * iTS + x[:, iTS].mean()), colors[iTS], label=labels[iTS],
                                    alpha=alphas[iTS])
             except:
                 self.logger.warning("Cannot convert labels' strings for line labels!")
-                return pyplot.plot(time, -x[:, iTS] + offset[ivar] * iTS, colors[iTS], label=str(iTS),
+                return pyplot.plot(time, -x[:, iTS] + offset * iTS, colors[iTS], label=str(iTS),
                                    alpha=alphas[iTS])
 
         def axlabels_ts(labels, n_rows, irow, iTS):
@@ -178,18 +178,19 @@ class Plotter(BasePlotter):
             else:
                 pyplot.autoscale(enable=True, axis='y', tight=True)
 
-        def axYticks(labels, offset, nTS):
-            pyplot.gca().set_yticks((offset * numpy.array([range(nTS)])).tolist())
-            # try:
-            #     pyplot.gca().set_yticklabels(labels)
-            # except:
-            #     self.logger.warning("Cannot convert region labels' strings for y axis ticks!")
+        def axYticks(labels, nTS, ivar, offsets=offset):
+            pyplot.gca().set_yticks((offset * numpy.array([range(nTS)]).flatten()).tolist())
+            try:
+                pyplot.gca().set_yticklabels(labels.flatten().tolist())
+            except:
+                labels = generate_region_labels(nTS, [], "")
+                self.logger.warning("Cannot convert region labels' strings for y axis ticks!")
 
         if offset > 0.0:
-            offsets = offset * numpy.array([numpy.diff(ylim) for ylim in data_lims]).flatten()
-            plot_lines = lambda x, iTS, colors, alphas, labels: plot_ts_raster(x, iTS, colors, alphas, labels, offsets)
+            plot_lines = lambda x, iTS, colors, alphas, labels: plot_ts_raster(x, iTS, colors, alphas, labels, offset)
         else:
             plot_lines = lambda x, iTS, colors, alphas, labels: plot_ts(x, iTS, colors, alphas, labels)
+        this_axYticks = lambda labels, nTS, ivar: axYticks(labels, nTS, offset)
         if subplots:
             n_rows = nTS
             def_alpha = 1.0
@@ -203,7 +204,7 @@ class Plotter(BasePlotter):
         axlimits = lambda data_lims, time, n_vars, icol: axlimits_ts(data_lims, time, icol)
         loopfun = lambda nTS, n_rows, icol: range(nTS)
         return data_fun, time, plot_lines, projection, n_rows, n_vars, def_alpha, loopfun, \
-               subtitle, subtitle_col, axlabels, axlimits, axYticks
+               subtitle, subtitle_col, axlabels, axlimits, this_axYticks
 
     def _trajectories_plot(self, n_dims, nTS, nSamples, subplots):
         data_fun = lambda data, time, icol: data
@@ -286,10 +287,10 @@ class Plotter(BasePlotter):
         data = data_dict.values()
         data_lims = []
         for id, d in enumerate(data):
-            data_lims.append([d.min(), d.max()])
             if isequal_string(mode, "raster"):
-                drange = numpy.percentile(d.flatten(), 99) - numpy.percentile(d.flatten(), 1)
-                data[id] = d / drange - 0.5  # zscore(d, axis=None)
+                drange = numpy.percentile(d.flatten(), 95) - numpy.percentile(d.flatten(), 5)
+                data[id] = d / drange # zscore(d, axis=None)
+            data_lims.append([d.min(), d.max()])
         data_shape = data[0].shape
         n_times, nTS = data_shape[:2]
         if len(data_shape) > 2:
@@ -337,7 +338,7 @@ class Plotter(BasePlotter):
                     axlabels(labels, vars, n_vars, n_rows, (iTS % n_rows) + 1, iTS)
                 lines += ensure_list(plot_lines(data_fun(data, time, icol), iTS, colors, alphas, labels))
             if isequal_string(mode, "raster"):  # set yticks as labels if this is a raster plot
-                # axYticks(labels, offset, nTS)
+                axYticks(labels, nTS, icol)
                 pyplot.gca().invert_yaxis()
 
         if self.config.figures.MOUSE_HOOVER:
@@ -443,7 +444,7 @@ class Plotter(BasePlotter):
                                  labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
             self.plot_raster({'x1(t)': res['x1']}, res['time'], time_units=res.get('time_units', "ms"),
                              special_idx=seizure_indices,
-                             title=model._ui_name + ": Simulated x1 rasterplot", offset=1.0, labels=region_labels,
+                             title=model._ui_name + ": Simulated x1 rasterplot", offset=2.0, labels=region_labels,
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
         else:
             # We assume that at least lfp and z are available in res
@@ -465,7 +466,7 @@ class Plotter(BasePlotter):
             start_plot = int(numpy.round(0.01 * res['lfp'].shape[0]))
             self.plot_raster({'lfp': res['lfp'][start_plot:, :]}, res['time'][start_plot:],
                              time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
-                             title=model._ui_name + ": Simulated LFP rasterplot", offset=0.1, labels=region_labels,
+                             title=model._ui_name + ": Simulated LFP rasterplot", offset=2.0, labels=region_labels,
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
         if isinstance(model, EpileptorDPrealistic):
             if isinstance(res.get("slope_t"), numpy.ndarray) and isinstance(res.get("Iext2"), numpy.ndarray):
@@ -501,7 +502,7 @@ class Plotter(BasePlotter):
                     start_plot = 0
                 self.plot_raster({'SEEG': res['SEEG' + str(i)][start_plot:, :]}, res['time'][start_plot:],
                                  time_units=res.get('time_units', "ms"), title=title,
-                                 offset=1.0, labels=sensorsSEEG[i].labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
+                                 offset=2.0, labels=sensorsSEEG[i].labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
     def plot_lsa(self, disease_hypothesis, model_configuration, weighted_eigenvector_sum, eigen_vectors_number,
                  region_labels=[], pse_results=None, title="Hypothesis Overview"):
