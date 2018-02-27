@@ -635,8 +635,9 @@ class EpileptorDPrealistic(Model):
             Iext2_eq = interval_scaling(xp, xp1, 0.0, xp2, Iext2)
 
         else:
-            slope_eq = slope
-            Iext2_eq = Iext2
+            i1 = numpy.ones(z.shape)
+            slope_eq = slope * i1
+            Iext2_eq = Iext2 * i1
 
         return slope_eq, Iext2_eq
 
