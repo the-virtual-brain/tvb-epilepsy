@@ -19,7 +19,7 @@ from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationB
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
 
-PSE_FLAG = True
+PSE_FLAG = False
 SA_PSE_FLAG = False
 SIM_FLAG = True
 EP_NAME = "ep_l_frontal_complex"
