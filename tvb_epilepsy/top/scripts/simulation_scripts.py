@@ -9,7 +9,7 @@ from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.base.epileptor_models import EpileptorDP2D
-from tvb_epilepsy.service.simulator_builder import build_simulator_TVB_realistic, \
+from tvb_epilepsy.service.simulator.simulator_builder import build_simulator_TVB_realistic, \
                                    build_simulator_TVB_fitting, build_simulator_TVB_default, build_simulator_TVB_paper
 
 logger = initialize_logger(__name__)

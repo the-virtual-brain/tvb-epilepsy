@@ -3,7 +3,7 @@ from copy import deepcopy
 from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
-from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
+from tvb_epilepsy.service.simulator.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.service.pse.pse_service import ABCPSEService
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.service.simulator.simulator_tvb import SimulatorTVB

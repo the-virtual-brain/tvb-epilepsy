@@ -2,8 +2,8 @@ import time
 from copy import deepcopy
 import numpy as np
 from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
-from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1EQ_MAX, MC_SCALE, \
-                     TAU1_DEF, TAU1_MIN, TAU1_MAX, TAU0_DEF, TAU0_MIN, TAU0_MAX, K_MIN, K_MAX, MC_MAX, MC_MAX_MIN_RATIO
+from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1EQ_MAX, TAU1_DEF, TAU1_MIN, TAU1_MAX, \
+    TAU0_DEF, TAU0_MIN, TAU0_MAX, K_MIN, K_MAX, MC_MAX, MC_MAX_MIN_RATIO
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import copy_object_attributes, isequal_string
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r
@@ -14,11 +14,8 @@ from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.statistical_models.statistical_model import StatisticalModel
 from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter_defaults
-from tvb_epilepsy.service.epileptor_model_factory import AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_TAU1, \
-    EPILEPTOR_MODEL_TAU0
 
-
-STATISTICAL_MODEL_TYPES=["vep_sde"] #, "vep_ode", "vep_lsa"]
+STATISTICAL_MODEL_TYPES = ["vep_sde"]  # , "vep_ode", "vep_lsa"]
 
 
 class ModelInversionService(object):
