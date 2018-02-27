@@ -65,7 +65,7 @@ def build_EpileptorDPrealistic(model_configuration):
                                  Iext2=model_configuration.Iext2, K=K, yc=model_configuration.yc,
                                  a=model_configuration.a, b=model_configuration.b, d=model_configuration.d,
                                  s=model_configuration.s, gamma=model_configuration.gamma,
-                                 zmode=model_configuration.zmode)
+                                 zmode=model_configuration.zmode, pmode=numpy.array("z"))
     return model
 
 

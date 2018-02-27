@@ -268,7 +268,7 @@ def eqtn_fK(K_var, K, tau1, tau0):
 
 
 def eqtn_fparams_vars(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope, Iext1, Iext2, K, tau1, tau0,
-                      pmode="const", z=None, g=None):
+                      pmode="z", z=None, g=None):
     fx0 = eqtn_fx0(x0_var, x0, tau1)
     from tvb_epilepsy.base.epileptor_models import EpileptorDPrealistic
     slope_eq, Iext2_eq = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, slope, Iext2)
@@ -279,7 +279,7 @@ def eqtn_fparams_vars(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope,
     return fx0, fslope, fIext1, fIext2, fK
 
 
-def eqtn_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, zmode="lin", pmode="const", x1_neg=True,
+def eqtn_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, zmode="lin", pmode="z", x1_neg=True,
               y1=None, x2=None, y2=None, g=None, x2_neg=False,
               x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
               slope=SLOPE_DEF, Iext2=I_EXT2_DEF, a=A_DEF, b=B_DEF, d=D_DEF, s=S_DEF, gamma=GAMMA_DEF,
