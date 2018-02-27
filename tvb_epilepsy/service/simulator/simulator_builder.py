@@ -211,6 +211,7 @@ def build_simulator_TVB_realistic(model_configuration, connectivity, **kwargs):
     model.tau0 = 30000.0
     model.tau1 = 0.2
     model.slope = 0.25
+    model.pmode = numpy.array(kwargs.get("pmode", "z"))
     sim_settings = sim_builder.build_sim_settings()
     sim_settings.noise_type = COLORED_NOISE
     sim_settings.noise_ntau = 10
