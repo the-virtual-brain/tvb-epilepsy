@@ -3,7 +3,7 @@
 import numpy as np
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
-from tvb_epilepsy.service.simulator_builder import SimulatorBuilder
+from tvb_epilepsy.service.simulator.simulator_builder import SimulatorBuilder
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
 from tvb_epilepsy.tests.base import BaseTest
 

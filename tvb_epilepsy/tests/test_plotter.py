@@ -1,7 +1,7 @@
 import os
 import numpy
 from tvb_epilepsy.plot.plotter import Plotter
-from tvb_epilepsy.service.epileptor_model_factory import build_EpileptorDP2D, VOIS
+from tvb_epilepsy.service.simulator.epileptor_model_factory import build_EpileptorDP2D, VOIS
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter

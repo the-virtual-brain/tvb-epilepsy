@@ -7,7 +7,7 @@ from tvb_epilepsy.base.constants.model_constants import NOISE_SEED, WHITE_NOISE,
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
-from tvb_epilepsy.service.epileptor_model_factory import model_build_dict, model_noise_intensity_dict, VOIS, \
+from tvb_epilepsy.service.simulator.epileptor_model_factory import model_build_dict, model_noise_intensity_dict, VOIS, \
                                                             AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_NVARS
 from tvb_epilepsy.service.simulator.simulator_java import EpileptorModel, java_model_builder, SimulatorJava
 from tvb_epilepsy.service.simulator.simulator_tvb import SimulatorTVB
