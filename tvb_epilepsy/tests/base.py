@@ -11,7 +11,7 @@ from tvb_epilepsy.io.h5_reader import H5Reader
 
 
 class BaseTest(object):
-    config = Config(output_base=os.path.join(os.getcwd(), "tests_out"))
+    config = Config(output_base=os.path.join(os.getcwd(), "vep_test_out"))
 
     dummy_connectivity = Connectivity("", numpy.array([[1.0, 2.0, 3.0], [2.0, 3.0, 1.0], [3.0, 2.0, 1.0]]),
                                       numpy.array([[4, 5, 6], [5, 6, 4], [6, 4, 5]]), labels=["a", "b", "c"],
