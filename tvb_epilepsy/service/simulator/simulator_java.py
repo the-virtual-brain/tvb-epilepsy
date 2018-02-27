@@ -7,21 +7,20 @@ TODO: It is imperative to allow for modification of the connectivity.normalized_
  according to the model_configuration.connectivity
 """
 
-import json
 import os
+import json
+import numpy
 import subprocess
 from copy import copy
-import numpy
 from tvb_epilepsy.base.constants.config import GenericConfig
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import obj_to_dict, assert_arrays
-from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val_to_model_x0
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.service.simulator.simulator import ABCSimulator
 
 
-class SimulationSettings(object):
+class Settings(object):
 
     def __init__(self, integration_step=0.01220703125, noise_seed=42, noise_intensity=10 ** -6, simulated_period=5000,
                  downsampling_period=0.9765625):
@@ -54,7 +53,7 @@ class EpileptorParams(object):
         self.tt = tt
 
 
-class EpileptorModel(object):
+class JavaEpileptor(object):
     _ui_name = "JavaEpileptor"
     _nvar = 2
     a = 1.0
@@ -99,7 +98,7 @@ class EpileptorModel(object):
 class FullConfiguration(object):
 
     def __init__(self, name="full-configuration", connectivity_path="Connectivity.h5", epileptor_params=[],
-                 settings=SimulationSettings(), initial_states=None, initial_states_shape=None):
+                 settings=Settings(), initial_states=None, initial_states_shape=None):
         self.configurationName = name
         self.connectivityPath = connectivity_path
         self.settings = settings
@@ -137,10 +136,10 @@ class SimulatorJava(ABCSimulator):
         result_file.close()
 
     def config_simulation(self):
-        ep_settings = SimulationSettings(self.simulation_settings.integration_step, self.simulation_settings.noise_seed,
-                                         self.simulation_settings.noise_intensity,
-                                         self.simulation_settings.simulated_period,
-                                         self.simulation_settings.monitor_sampling_period)
+        ep_settings = Settings(self.simulation_settings.integration_step, self.simulation_settings.noise_seed,
+                               self.simulation_settings.noise_intensity,
+                               self.simulation_settings.simulated_period,
+                               self.simulation_settings.monitor_sampling_period)
         json_model = self.prepare_epileptor_model_for_json(self.connectivity.number_of_regions)
         # TODO: history length has to be computed given the time delays (i.e., the tract lengts...)
         # TODO: when dfun is implemented for JavaEpileptor, we can use the following commented lines with initial_conditions
@@ -197,7 +196,7 @@ class SimulatorJava(ABCSimulator):
 def java_model_builder(model_configuration, a=1.0, b=3.0, d=5.0):
     x0 = calc_x0_val_to_model_x0(model_configuration.x0_values, model_configuration.yc,
                                  model_configuration.Iext1, a, b - d)
-    model = EpileptorModel(a=a, b=b, d=d, x0=x0, iext=model_configuration.Iext1,
-                           ks=model_configuration.K,
-                           c=model_configuration.yc)
+    model = JavaEpileptor(a=a, b=b, d=d, x0=x0, iext=model_configuration.Iext1,
+                          ks=model_configuration.K,
+                          c=model_configuration.yc)
     return model

@@ -9,17 +9,18 @@ Also, dictionaries to keep noise intensity and type for each model type.
 ###
 import numpy
 from tvb.simulator.models import Epileptor
-from tvb_epilepsy.service.simulator.simulator_java import EpileptorModel
+from tvb_epilepsy.service.simulator.simulator_java import JavaEpileptor
 from tvb_epilepsy.base.epileptor_models import EpileptorDP2D, EpileptorDP, EpileptorDPrealistic
 
-AVAILABLE_DYNAMICAL_MODELS = (Epileptor, EpileptorModel, EpileptorDP2D, EpileptorDP, EpileptorDPrealistic)
+AVAILABLE_DYNAMICAL_MODELS = (Epileptor, JavaEpileptor, EpileptorDP2D, EpileptorDP, EpileptorDPrealistic)
 
 
 AVAILABLE_DYNAMICAL_MODELS_NAMES = []
 for model in AVAILABLE_DYNAMICAL_MODELS:
     AVAILABLE_DYNAMICAL_MODELS_NAMES.append(model._ui_name)
 
-#TODO: Ensure that function signatures are the same. An Epileptor is build using model_configuration attributes. Take zmode it from model_configuration. Keep also pmode there or other values that can be received by kwargs.
+#TODO: Ensure that function signatures are the same. An Epileptor is build using model_configuration attributes.
+# Take zmode it from model_configuration. Keep also pmode there or other values that can be received by kwargs.
 def build_tvb_model(model_configuration):
     # We use the opposite sign for K with respect to all epileptor models
     K = -model_configuration.K
@@ -79,7 +80,7 @@ model_build_dict = {
 
 
 EPILEPTOR_MODEL_NVARS = {
-         "EpileptorModel": EpileptorModel._nvar,
+         "JavaEpileptor": JavaEpileptor._nvar,
          "Epileptor": Epileptor._nvar,
          "EpileptorDP": EpileptorDP._nvar,
          "EpileptorDPrealistic": EpileptorDPrealistic._nvar,
@@ -88,7 +89,7 @@ EPILEPTOR_MODEL_NVARS = {
 
 
 EPILEPTOR_MODEL_TAU1 = {
-         "EpileptorModel": EpileptorModel.tt,
+         "JavaEpileptor": JavaEpileptor.tt,
          "Epileptor": EpileptorDP().tau1,
          "EpileptorDP": EpileptorDP().tau1,
          "EpileptorDPrealistic": EpileptorDPrealistic().tau1,
@@ -97,7 +98,7 @@ EPILEPTOR_MODEL_TAU1 = {
 
 
 EPILEPTOR_MODEL_TAU0 = {
-         "EpileptorModel": 1.0 / EpileptorModel.r,
+         "JavaEpileptor": 1.0 / JavaEpileptor.r,
          "Epileptor": 1.0 / Epileptor().r,
          "EpileptorDP": EpileptorDP().tau0,
          "EpileptorDPrealistic": EpileptorDPrealistic().tau0,
@@ -107,14 +108,14 @@ EPILEPTOR_MODEL_TAU0 = {
 
 model_noise_intensity_dict = {
     "Epileptor": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
-    "EpileptorModel":  1e-6,
+    "JavaEpileptor":  1e-6,
     "EpileptorDP": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
     "EpileptorDPrealistic": numpy.array([0., 0., 1e-8, 0.0, 1e-8, 0., 1e-9, 1e-4, 1e-9, 1e-4, 1e-9]),
     "EpileptorDP2D": numpy.array([0., 1e-7])
 }
 
 VOIS = {
-    "EpileptorModel": ['x1', 'z', 'x2'],
+    "JavaEpileptor": ['x1', 'z', 'x2'],
     "Epileptor": EpileptorDP().variables_of_interest.tolist(),
     "EpileptorDP": EpileptorDP().variables_of_interest.tolist(),
     "EpileptorDPrealistic": EpileptorDPrealistic().variables_of_interest.tolist(),

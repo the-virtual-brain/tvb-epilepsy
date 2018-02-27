@@ -9,22 +9,19 @@ from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.service.simulator.epileptor_model_factory import model_build_dict, model_noise_intensity_dict, VOIS, \
                                                             AVAILABLE_DYNAMICAL_MODELS_NAMES, EPILEPTOR_MODEL_NVARS
-from tvb_epilepsy.service.simulator.simulator_java import EpileptorModel, java_model_builder, SimulatorJava
+from tvb_epilepsy.service.simulator.simulator_java import JavaEpileptor, java_model_builder, SimulatorJava
 from tvb_epilepsy.service.simulator.simulator_tvb import SimulatorTVB
 
 
 class SimulatorBuilder(object):
     logger = initialize_logger(__name__)
 
-    simulator = "tvb"
-    model_name = "EpileptorDP"
-
-    simulated_period = 2000
-    fs = 16384.0
-    fs_monitor = 1024.0
-
     def __init__(self, simulator="tvb"):
         self.simulator = simulator
+        self.model_name = "EpileptorDP"
+        self.simulated_period = 2000
+        self.fs = 16384.0
+        self.fs_monitor = 1024.0
 
     def set_model_name(self, model_name):
         # TODO: check that model_name is one of the available ones
@@ -53,10 +50,10 @@ class SimulatorBuilder(object):
         return dt, monitor_period
 
     def generate_model(self, model_configuration):
-        if isequal_string(self.model_name, EpileptorModel._ui_name) and not isequal_string(self.simulator, "java"):
-            raise_value_error("Custom EpileptorModel can be used only with java simulator!")
-        elif not isequal_string(self.model_name, EpileptorModel._ui_name) and isequal_string(self.simulator, "java"):
-            raise_value_error("Only java EpileptorModel can be used with java simulator!")
+        if isequal_string(self.model_name, JavaEpileptor._ui_name) and not isequal_string(self.simulator, "java"):
+            raise_value_error("JavaEpileptor can be used only with java simulations!")
+        elif not isequal_string(self.model_name, JavaEpileptor._ui_name) and isequal_string(self.simulator, "java"):
+            raise_value_error("Only JavaEpileptor model can be used with java simulator!")
         return model_build_dict[self.model_name](model_configuration)
 
     def _check_noise_intesity_size(self, noise_intensity):
@@ -155,7 +152,7 @@ class SimulatorBuilder(object):
 
     def build_simulator_java_from_model_configuration(self, model_configuration, connectivity, **kwargs):
 
-        self.set_model_name("EpileptorModel")
+        self.set_model_name("JavaEpileptor")
         model = java_model_builder(model_configuration)
 
         sim_settings = self.build_sim_settings()
