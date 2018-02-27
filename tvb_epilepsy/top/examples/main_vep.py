@@ -193,7 +193,7 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
         if sim_flag:
             # ------------------------------Simulation--------------------------------------
             logger.info("\n\nConfiguring simulation from model_configuration...")
-            model = sim_builder.generate_model(model_configuration)
+            model = sim_builder.generate_model_tvb(model_configuration)
             if isequal_string(sim_type, "realistic"):
                 model.tau0 = 30000.0
                 model.tau1 = 0.2
