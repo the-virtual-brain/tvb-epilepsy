@@ -255,7 +255,7 @@ if __name__ == "__main__":
     SUBJECT = "TVB3"
     SEEG_data = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "data/CC", SUBJECT,
                              "raw/seeg/ts_seizure")
-    # TVB3 larger preselection:Polyamorous
+    # TVB3 larger preselection:
     sensors_lbls = \
         [u"B'1", u"B'2", u"B'3", u"B'4",
          u"F'1", u"F'2", u"F'3", u"F'4", u"F'5", u"F'6", u"F'7", u"F'8", u"F'9", u"F'10", u"F'11",

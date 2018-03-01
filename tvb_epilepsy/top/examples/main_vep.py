@@ -57,7 +57,7 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
     # e_indices = hyp_x0.x0_indices[0:-1].tolist()
     # e_values = hyp_x0.x0_values[0:-1].tolist()
     # hyp_x0_E = HypothesisBuilder(head.connectivity.number_of_regions, config=config).set_normalize(0.99). \
-    #               set_x0_hypothesis(x0_indices, x0_values). set_e_hypothesis(e_indices, e_values).build_hypothesis()
+    #               set_x0_hypothesis(x0_indices, x0_values).set_e_hypothesis(e_indices, e_values).build_hypothesis()
 
     # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis set from file:
     all_regions_indices = np.array(range(head.number_of_regions))
