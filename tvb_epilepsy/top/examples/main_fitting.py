@@ -21,8 +21,12 @@ from tvb_epilepsy.top.scripts.hypothesis_scripts import from_head_to_hypotheses,
 from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration_to_simulation
 from tvb_epilepsy.top.scripts.seeg_data_scripts import prepare_seeg_observable
 
+head_folder = os.path.join(os.path.expanduser("~"),
+                               'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
 output = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
-config = Config(output_base=output)
+config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
+#config.generic.C_COMPILER = "gcc" # "clang"
+
 logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
 
 reader = H5Reader()
@@ -48,8 +52,45 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", stats_model_name="vep_sd
                                      fitmethod=fitmethod, random_seed=12345, init="random", config=config)
     stan_service.set_or_compile_model()
 
-    # -------------------------------Reading model_data and hypotheses--------------------------------------------------
-    head, hypos = from_head_to_hypotheses(ep_name, config, plot_head=False)
+    # -------------------------------Reading data-----------------------------------
+    logger.info("Reading from: " + config.input.HEAD)
+    head = reader.read_head(config.input.HEAD)
+    # plotter.plot_head(head)
+
+    # Formulate a VEP hypothesis manually
+    from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
+
+    hyp_builder = HypothesisBuilder(head.connectivity.number_of_regions, config).set_normalize(0.99)
+
+    # Regions of Pathological Excitability hypothesis:
+    x0_indices = [2, 25]
+    x0_values = [0.01, 0.01]
+    hyp_builder.set_x0_hypothesis(x0_indices, x0_values)
+
+    # Regions of Model Epileptogenicity hypothesis:
+    e_indices = list(range(head.connectivity.number_of_regions))
+    e_indices.remove(2)
+    e_indices.remove(25)
+    e_values = np.zeros((head.connectivity.number_of_regions,)) + 0.01
+    e_values[[1, 26]] = 0.99
+    e_values = np.delete(e_values, [2, 25]).tolist()
+    print(e_indices, e_values)
+    hyp_builder.set_e_hypothesis(e_indices, e_values)
+    K_unscaled = 5.0 * K_DEF
+    # Regions of Connectivity hypothesis:
+    w_indices = []  # [(0, 1), (0, 2)]
+    w_values = []  # [0.5, 2.0]
+    # hypo_builder.set_w_indices(w_indices).set_w_values(w_values)
+
+    hypothesis1 = hyp_builder.build_hypothesis()
+
+    e_indices = [1, 26]  # [1, 2, 25, 26]
+    hypothesis2 = hyp_builder.build_hypothesis_from_file("clinical_hypothesis_postseeg", e_indices)
+    # Change something manually if necessary
+    hypothesis2.x0_values = [0.01, 0.01]
+    K_unscaled = 3.0 * K_DEF
+
+    hypos = (hypothesis1, hypothesis2)
 
     for hyp in hypos[:1]:
 
@@ -62,7 +103,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", stats_model_name="vep_sd
         else:
             model_configuration, lsa_hypothesis, model_configuration_builder, lsa_service = \
                 from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
-                                                    config=config, K=K_DEF)
+                                                    config=config, K=K_unscaled)
 
         dynamical_model = "EpileptorDP2D"
 
@@ -211,7 +252,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", stats_model_name="vep_sd
             region_mode = "all"
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
-                                                  chains=1, refresh=1, num_warmup=5, num_samples=5,
+                                                  chains=1, refresh=1, num_warmup=10, num_samples=10,
                                                   max_depth=7, delta=0.8, **kwargs)
         writer.write_generic(ests, config.out.FOLDER_RES, hyp.name + "_fit_est.h5")
         writer.write_generic(samples, config.out.FOLDER_RES, hyp.name + "_fit_samples.h5")
@@ -295,7 +336,7 @@ if __name__ == "__main__":
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
     # ep_name = "clinical_hypothesis_preseeg_right"
-    EMPIRICAL = False
+    EMPIRICAL = True
     # stats_model_name = "vep_sde"
     stats_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
@@ -303,7 +344,7 @@ if __name__ == "__main__":
         main_fit_sim_hyplsa(ep_name=ep_name, stats_model_name=stats_model_name,
                             EMPIRICAL=os.path.join(SEEG_data, seizure),
                             times_on_off=[15.0, 35.0], sensors_lbls=sensors_lbls, sensors_inds=sensors_inds,
-                            fitmethod=fitmethod, stan_service="CmdStan")
+                            fitmethod=fitmethod, stan_service="CmdStan", config=config)
     else:
-        main_fit_sim_hyplsa(ep_name=ep_name, stats_model_name=stats_model_name,
-                            fitmethod=fitmethod, stan_service="CmdStan", sensors_inds=sensors_inds)
+        main_fit_sim_hyplsa(ep_name=ep_name, stats_model_name=stats_model_name, sensors_inds=sensors_inds,
+                            fitmethod=fitmethod, stan_service="CmdStan", config=config)
