@@ -151,10 +151,8 @@ class SimulatorBuilder(object):
         self.set_model_name("JavaEpileptor")
 
         sim_settings = self.build_sim_settings()
-        sim_settings.noise_intensity = kwargs.get("noise_intensity", 1e-6)
-        # sim_settings.noise_intensity = kwargs.get("noise_intensity", numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]))
-        # sim_settings.noise_intensity = kwargs.get("noise_intensity",
-        # numpy.zeros(connectivity.number_of_regions * 6, ))
+        # sim_settings.noise_intensity = kwargs.get("noise_intensity", 1e-6)
+        sim_settings.noise_intensity = kwargs.get("noise_intensity", numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]))
 
         simulator_instance = SimulatorJava(connectivity, model_configuration, sim_settings)
 
@@ -181,7 +179,7 @@ def build_simulator_TVB_paper(model_configuration, connectivity, **kwargs):
 
 
 def build_simulator_TVB_reduced(model_configuration, connectivity, **kwargs):
-    sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D").set_fs(2048.0).set_simulated_period(100)
+    sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D").set_fs(2048.0).set_simulated_period(1000)
     model = sim_builder.generate_model_tvb(model_configuration)
     sim_settings = sim_builder.build_sim_settings()
     return sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity,
