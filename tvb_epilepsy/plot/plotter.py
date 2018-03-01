@@ -543,7 +543,7 @@ class Plotter(BasePlotter):
         add_name = " " + "Epileptor " + model + " z-" + str(zmode)
         figure_name = figure_name + add_name
 
-        region_labels = generate_region_labels( model_config.number_of_regions, region_labels, ". ")
+        region_labels = generate_region_labels(model_config.number_of_regions, region_labels, ". ")
         # n_region_labels = len(region_labels)
         # if n_region_labels == model_config.number_of_regions:
         #     region_labels = numpy.array(["%d. %s" % l for l in zip(range(model_config.number_of_regions), region_labels)])
