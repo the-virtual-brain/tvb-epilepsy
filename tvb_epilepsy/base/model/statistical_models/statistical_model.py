@@ -33,4 +33,5 @@ class StatisticalModel(object):
 
     def _generate_parameters(self, **defaults):
         for p in ["x1eq_star", "K", "tau1", "tau0", "MCsplit", "MC", "eps"]:
+            print("Generating stochastic parameter " + p + "...")
             self.parameters.update({p: set_parameter(p, **defaults)})
