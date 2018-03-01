@@ -175,7 +175,7 @@ class ODEModelInversionService(ModelInversionService):
                                                    kwargs.pop("auto_selection", "rois-correlation-power"), **kwargs)
         self.time = self.set_time(target_data.get("time", None))
         if kwargs.get("decimate", 1) > 1:
-            signals, time, self.dt, self.n_times = decimate_signals(signals, self.time, kwargs.get("decimate"))
+            signals, self.time, self.dt, self.n_times = decimate_signals(signals, self.time, kwargs.get("decimate"))
             self.observation_shape = (self.n_times, self.n_signals)
         if np.sum(kwargs.get("cut_signals_tails", (0, 0))) > 0:
             signals, self.time, self.n_times = cut_signals_tails(signals, self.time, kwargs.get("cut_signals_tails"))
