@@ -2,6 +2,7 @@ from shutil import copyfile
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
 from tvb_epilepsy.base.utils.command_line_utils import execute_command
+from tvb_epilepsy.base.utils.file_utils import change_filename_or_overwrite_with_wildcard
 from tvb_epilepsy.io.csv import parse_csv_in_cols
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.model_inversion.stan.stan_service import StanService
@@ -89,13 +90,20 @@ class CmdStanService(StanService):
         execute_command(command, cwd=self.path, shell=True)
         return summary_filepath
 
-    def fit(self, output_filepath=None, diagnostic_filepath="", summary_filepath=None, debug=0, simulate=0,
-            return_output=True, plot_HMC=True, **kwargs):
+    def set_output_summary_files(self, output_filepath=None, summary_filepath=None, **kwargs):
         if output_filepath is None:
             output_filepath = os.path.join(self.config.out.FOLDER_RES, STAN_OUTPUT_OPTIONS["file"])
         if summary_filepath is None:
             summary_filepath = os.path.join(self.config.out.FOLDER_RES, "stan_summary.csv")
+        return change_filename_or_overwrite_with_wildcard(output_filepath,
+                                                       overwrite=kwargs.get("overwrite_output_files", False)), \
+               change_filename_or_overwrite_with_wildcard(summary_filepath,
+                                                   overwrite=kwargs.get("overwrite_summary_files", False))
 
+
+    def fit(self, output_filepath=None, diagnostic_filepath="", summary_filepath=None, debug=0, simulate=0,
+            return_output=True, plot_HMC=True, **kwargs):
+        output_filepath, summary_filepath = self.set_output_summary_files(output_filepath, summary_filepath, **kwargs)
         self.model_path = kwargs.pop("model_path", self.model_path)
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
         self.fitmethod = kwargs.pop("method", self.fitmethod)
