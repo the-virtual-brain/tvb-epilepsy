@@ -77,7 +77,8 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         return self.alpha * self.theta * scale + loc
 
     def calc_median_manual(self, loc=0.0, scale=1.0):
-        self.logger.warning("Gamma distribution does not have a simple closed form median! Returning nan!")
+        # TODO: find a way to mute this warning...
+        # self.logger.warning("Gamma distribution does not have a simple closed form median! Returning nan!")
         return np.nan
 
     def calc_mode_manual(self, loc=0.0, scale=1.0):

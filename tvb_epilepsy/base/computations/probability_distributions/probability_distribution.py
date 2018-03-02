@@ -222,9 +222,10 @@ class ProbabilityDistribution(object):
         else:
             return self.calc_median_manual(loc, scale)
 
-    def _calc_mode(self, loc=0.0, scale=1.0, use="scipy"):
-        if isequal_string(use, "scipy"):
-            self.logger.warning("No scipy calculation for mode! Switching to manual -following wikipedia- calculation!")
+    def _calc_mode(self, loc=0.0, scale=1.0, use="manual"):
+        # TODO: find a more explicit solution but without printing so many warnings!
+        # if isequal_string(use, "scipy"):
+        #     self.logger.warning("No scipy calculation for mode! Switching to manual -following wikipedia- calculation!")
         return self.calc_mode_manual(loc, scale)
 
     def _calc_var(self, loc=0.0, scale=1.0, use="scipy"):
