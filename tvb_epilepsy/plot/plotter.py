@@ -721,7 +721,7 @@ class Plotter(BasePlotter):
         else:
             plot_samples = lambda s: s[skip_samples:]
             plot_figure_name = lambda ichain: figure_name + ": chain " + str(ichain + 1)
-        labels = generate_region_labels(samples[params[0]].shape[1], labels)
+        labels = generate_region_labels(samples[0][params[0]].shape[1], labels)
         params_labels = {}
         for ip, p in enumerate(params):
             if ip == 0:
@@ -743,7 +743,7 @@ class Plotter(BasePlotter):
             self._check_show()
 
     def plot_fit_results(self, model_inversion, ests, samples, statistical_model, signals, stats=None, time=None,
-                         simulation_values=None, region_mode="all", seizure_indices=[], x1_str="x1", mc_str="MC",
+                         priors=None, region_mode="all", seizure_indices=[], x1_str="x1", mc_str="MC",
                          signals_str="fit_signals", sig_str="sig", dX1t_str="dX1t", dZt_str="dZt",
                          trajectories_plot=True, connectivity_plot=True, **kwargs):
         region_labels = kwargs.get("regions_labels", model_inversion.region_labels)
@@ -761,7 +761,7 @@ class Plotter(BasePlotter):
                                                "offset_signal"]), stats,
                                    kwargs.get("skip_samples", 0), title=statistical_model.name + " parameters samples")
         # plot region-wise parameters
-        self.region_parameters_violin_plots(samples, simulation_values,
+        self.region_parameters_violin_plots(samples, priors,
                                             kwargs.get("region_violin_params", ["x0", "x1eq", "x1init", "zinit"]),
                                             stats, skip_samples=kwargs.get("skip_samples", 0),
                                             per_chain=kwargs.get("violin_plot_per_chain", False),
