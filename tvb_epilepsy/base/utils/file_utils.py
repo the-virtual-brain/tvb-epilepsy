@@ -2,7 +2,7 @@
 
 import os
 from datetime import datetime
-
+import glob
 
 def ensure_unique_file(parent_folder, filename):
     final_path = os.path.join(parent_folder, filename)
@@ -32,6 +32,29 @@ def change_filename_or_overwrite(path, overwrite=True):
         os.remove(path)
 
     return path
+
+
+def change_filename_or_overwrite_with_wildcard(path, overwrite=True):
+    existing_files = glob.glob(path)
+    if len(existing_files) > 0:
+        if overwrite:
+            for file in existing_files:
+                if os.path.exists(file):
+                    os.remove(file)
+            return path
+        else:
+            print("The following files already exist!: ")
+            for file in existing_files:
+                print(file)
+            filename = raw_input("\n\nEnter a different name or press enter to overwrite files: ")
+            if filename == "":
+                return change_filename_or_overwrite_with_wildcard(path, overwrite=True)
+            else:
+                parent_folder = os.path.dirname(path)
+                path = os.path.join(parent_folder, filename)
+                return change_filename_or_overwrite_with_wildcard(path, overwrite)
+    else:
+        return path
 
 
 def write_metadata(meta_dict, h5_file, key_date, key_version, path="/"):
