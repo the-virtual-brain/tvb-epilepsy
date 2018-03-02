@@ -177,6 +177,8 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
                         manual_selection = statistical_model.active_regions
                     else:
                         manual_selection = []
+                simulation_values = {"x0": model_configuration.x0, "x1eq": model_configuration.x1EQ,
+                                     "x1init": model_configuration.x1EQ, "zinit": model_configuration.zEQ}
                 # -------------------------- Select and set observation signals -----------------------------------
             signals, time, statistical_model, vois_ts_dict = \
                 model_inversion.set_target_data_and_time(target_data_type, vois_ts_dict, statistical_model,
@@ -211,14 +213,11 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
             # except:
             model_data = build_stan_model_dict(statistical_model, signals, model_inversion)
             writer.write_dictionary(model_data, os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5"))
-        if os.path.isfile(EMPIRICAL):
-            simulation_values = None
-        else:
-            simulation_values = {"x0": model_configuration.x0, "x1eq": model_configuration.x1EQ,
-                                 "x1init": model_configuration.x1EQ, "zinit": model_configuration.zEQ}
+
         # Stupid code to interface with INS stan model
         if stats_model_name.find("vep-fe-rev") >= 0:
-            model_data = build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_inversion)
+            model_data, x0_star_mu, x_init_mu, z_init_mu = \
+                build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_inversion)
             x1_str = "x"
             input_signals_str = "seeg_log_power"
             signals_str = "mu_seeg_log_power"
@@ -228,10 +227,13 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
             k_str = "k"
             pair_plot_params = ["time_scale", "k", "sigma", "epsilon", "amplitude", "offset"]
             region_violin_params = ["x0", "x_init", "z_init"]
-            if simulation_values is not None:
-                simulation_values.update({"x0": simulation_values["x0"][statistical_model.active_regions]})
-                simulation_values.update({"x_init": simulation_values["x1init"][statistical_model.active_regions]})
-                simulation_values.update({"z_init": simulation_values["zinit"][statistical_model.active_regions]})
+            if EMPIRICAL:
+                priors = {"x0": x0_star_mu, "x_init": x_init_mu, "z_init": z_init_mu}
+            else:
+                priors = dict(simulation_values)
+                priors.update({"x0": simulation_values["x0"][statistical_model.active_regions]})
+                priors.update({"x_init": simulation_values["x1init"][statistical_model.active_regions]})
+                priors.update({"z_init": simulation_values["zinit"][statistical_model.active_regions]})
             connectivity_plot = False
             estMC = lambda: model_configuration.model_connectivity
             region_mode = "active"
@@ -248,10 +250,19 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
             connectivity_plot = False
             estMC = lambda est: est["MC"]
             region_mode = "all"
+            if EMPIRICAL:
+                priors = {"x0": model_inversion.x0[statistical_model.active_regions],
+                          "x1eq": model_data["x1eq_max"]
+                                  - statistical_model.parameters["x1eq_star"].mean[statistical_model.active_regions],
+                          "x_init": statistical_model.parameters["x1init"].mean[statistical_model.active_regions],
+                          "z_init": statistical_model.parameters["zinit"].mean[statistical_model.active_regions]}
+            else:
+                priors = simulation_values
+
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
-                                                  chains=1, refresh=1, num_warmup=10, num_samples=10,
-                                                  max_depth=7, delta=0.8, **kwargs)
+                                                  chains=4, refresh=1, num_warmup=100, num_samples=100,
+                                                  max_depth=10, delta=0.8, **kwargs)
         writer.write_generic(ests, config.out.FOLDER_RES, hyp.name + "_fit_est.h5")
         writer.write_generic(samples, config.out.FOLDER_RES, hyp.name + "_fit_samples.h5")
         if summary is not None:
@@ -262,7 +273,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
                     R_hat = {"R_hat": R_hat}
         ests = ensure_list(ests)
         plotter.plot_fit_results(model_inversion, ests, samples, statistical_model, model_data[input_signals_str],
-                                 R_hat, model_data["time"], simulation_values, region_mode,
+                                 R_hat, model_data["time"], priors, region_mode,
                                  seizure_indices=lsa_hypothesis.get_regions_disease_indices(), x1_str=x1_str,
                                  signals_str=signals_str, sig_str=sig_str, dX1t_str=dX1t_str,
                                  dZt_str=dZt_str, trajectories_plot=True, connectivity_plot=connectivity_plot,
