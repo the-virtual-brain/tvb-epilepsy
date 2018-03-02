@@ -88,8 +88,8 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         np_scale = scale * self.theta * i1
         id = shape >= 1.0
         if not (np.all(id)):
-            self.logger.warning("Mode cannot be calculated for gamma distribution when the shape parameter is smaller than 1.0! "
-                    "Returning nan!")
+            self.logger.warning("Mode cannot be calculated for gamma distribution "
+                                "when the shape parameter is smaller than 1.0! Returning nan!")
             mode = np.nan * np.ones((shape + np_scale).shape)
             id = np.where(id)[0]
             mode[id] = (shape[id] - 1.0) * np_scale[id]

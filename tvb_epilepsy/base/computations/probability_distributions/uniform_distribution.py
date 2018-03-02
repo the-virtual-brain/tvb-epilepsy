@@ -70,7 +70,8 @@ class UniformDistribution(ContinuousProbabilityDistribution):
         return 0.5 * (a + b)
 
     def calc_mode_manual(self, loc=0.0, scale=1.0):
-        self.logger.warning("Uniform distribution does not have a definite mode! Returning nan!")
+        # TODO: find a way to mute this warning...
+        # self.logger.warning("Uniform distribution does not have a definite mode! Returning nan!")
         return np.nan
 
     def calc_var_manual(self, loc=0.0, scale=1.0):

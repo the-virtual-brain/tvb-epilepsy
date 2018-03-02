@@ -49,7 +49,8 @@ class PoissonDistribution(DiscreteProbabilityDistribution):
         return self.lamda + loc
 
     def calc_median_manual(self, loc=0.0, scale=1.0):
-        self.logger.warning("Approximate calculation for median of poisson distribution!")
+        # TODO: find a way to mute this warning...
+        # self.logger.warning("Approximate calculation for median of poisson distribution!")
         return np.int(np.round(self.lamda + 1.0 / 3 - 0.02 / self.lamda + loc))
 
     def calc_mode_manual(self, loc=0.0, scale=1.0):

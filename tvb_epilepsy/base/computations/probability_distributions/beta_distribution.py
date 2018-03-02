@@ -62,14 +62,16 @@ class BetaDistribution(ContinuousProbabilityDistribution):
         alpha = self.alpha * i1
         beta = self.beta * i1
         id = np.logical_and(self.alpha > 1.0, self.beta > 1.0)
-        if np.any(id == False):
-            self.logger.warning("No closed form of median for beta distribution for alpha or beta <= 1.0!" + "\nReturning nan!")
+        if np.any(id==False):
+            self.logger.warning("No closed form of median for beta distribution "
+                                "for alpha or beta <= 1.0!" + "\nReturning nan!")
             median = np.nan((alpha+beta).shape)
             id = np.where(id)[0]
             median[id] = (alpha[id] - 1.0/3) / (alpha[id] + beta[id] - 2.0/3)
             return np.reshape(median, shape) + loc
         else:
-            self.logger.warning("Approximate calculation for median of beta distribution!")
+            # TODO: find a way to mute this warning...
+            # self.logger.warning("Approximate calculation for median of beta distribution!")
             return (self.alpha - 1.0/3) / (self.alpha + self.beta - 2.0/3) + loc
 
     def calc_mode_manual(self, loc=0.0, scale=1.0):
