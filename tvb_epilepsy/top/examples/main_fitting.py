@@ -11,21 +11,20 @@ from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
-from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.model_inversion.sde_model_inversion_service import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
 from tvb_epilepsy.service.model_inversion.stan.pystan_service import PyStanService
 from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import build_stan_model_dict, \
     build_stan_model_dict_to_interface_ins
-from tvb_epilepsy.top.scripts.hypothesis_scripts import from_head_to_hypotheses, from_hypothesis_to_model_config_lsa
+from tvb_epilepsy.top.scripts.hypothesis_scripts import from_hypothesis_to_model_config_lsa
 from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration_to_simulation
 from tvb_epilepsy.top.scripts.seeg_data_scripts import prepare_seeg_observable
 
 head_folder = os.path.join(os.path.expanduser("~"),
-                               'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
+                           'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
 output = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
 config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
-#config.generic.C_COMPILER = "gcc" # "clang"
+# config.generic.C_COMPILER = "gcc" # "clang"
 
 logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
 
@@ -35,7 +34,7 @@ writer = H5Writer()
 plotter = Plotter(config)
 
 
-def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", stats_model_name="vep_sde", EMPIRICAL="",
+def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
                         times_on_off=[], sensors_lbls=[], sensors_inds=[], fitmethod="optimizing",
                         stan_service="CmdStan", config=Config(), **kwargs):
     # ------------------------------Stan model and service--------------------------------------
@@ -58,8 +57,6 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", stats_model_name="vep_sd
     # plotter.plot_head(head)
 
     # Formulate a VEP hypothesis manually
-    from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
-
     hyp_builder = HypothesisBuilder(head.connectivity.number_of_regions, config).set_normalize(0.99)
 
     # Regions of Pathological Excitability hypothesis:
@@ -76,10 +73,10 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", stats_model_name="vep_sd
     e_values = np.delete(e_values, [2, 25]).tolist()
     print(e_indices, e_values)
     hyp_builder.set_e_hypothesis(e_indices, e_values)
-    K_unscaled = 5.0 * K_DEF
+    # K_unscaled = 5.0 * K_DEF
     # Regions of Connectivity hypothesis:
-    w_indices = []  # [(0, 1), (0, 2)]
-    w_values = []  # [0.5, 2.0]
+    # w_indices = []  # [(0, 1), (0, 2)]
+    # w_values = []  # [0.5, 2.0]
     # hypo_builder.set_w_indices(w_indices).set_w_values(w_values)
 
     hypothesis1 = hyp_builder.build_hypothesis()
@@ -120,7 +117,8 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", stats_model_name="vep_sd
             model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
                                                        x1eq_max=-1.0, priors_mode="uninformative")
             # observation_expression="lfp"
-            statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0, observation_model="seeg_logpower")
+            statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0,
+                                                                           observation_model="seeg_logpower")
             statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
                                                                       active_regions_th=0.1, reset=True)
             plotter.plot_statistical_model(statistical_model, "Statistical Model")
@@ -184,7 +182,7 @@ def main_fit_sim_hyplsa(ep_name="ep_l_frontal_complex", stats_model_name="vep_sd
                 model_inversion.set_target_data_and_time(target_data_type, vois_ts_dict, statistical_model,
                                                          decimate=decimate, cut_signals_tails=cut_signals_tails,
                                                          manual_selection=manual_selection,
-                                                         auto_selection="correlation-power", # auto_selection=False,
+                                                         auto_selection="correlation-power",  # auto_selection=False,
                                                          n_electrodes=n_electrodes,
                                                          sensors_per_electrode=sensors_per_electrode,
                                                          group_electrodes=True, normalization="baseline-amplitude",
@@ -325,7 +323,6 @@ if __name__ == "__main__":
     # sensors_inds = [28, 29, 38, 39, 64, 65, 48, 49]
     seizure = 'SZ1_0001.edf'
     times_on_off = [15.0, 35.0]
-    ep_name = "clinical_hypothesis_postseeg"
     # sensors_filename = "SensorsSEEG_116.h5"
     # # TVB4 preselection:
     # sensors_lbls = [u"D5", u"D6", u"D7",  u"D8", u"D9", u"D10", u"Z9", u"Z10", u"Z11", u"Z12", u"Z13", u"Z14",
@@ -335,16 +332,15 @@ if __name__ == "__main__":
     # seizure = 'SZ3_0001.edf'
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
-    # ep_name = "clinical_hypothesis_preseeg_right"
     EMPIRICAL = True
     # stats_model_name = "vep_sde"
     stats_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
     if EMPIRICAL:
-        main_fit_sim_hyplsa(ep_name=ep_name, stats_model_name=stats_model_name,
+        main_fit_sim_hyplsa(stats_model_name=stats_model_name,
                             EMPIRICAL=os.path.join(SEEG_data, seizure),
                             times_on_off=[15.0, 35.0], sensors_lbls=sensors_lbls, sensors_inds=sensors_inds,
                             fitmethod=fitmethod, stan_service="CmdStan", config=config)
     else:
-        main_fit_sim_hyplsa(ep_name=ep_name, stats_model_name=stats_model_name, sensors_inds=sensors_inds,
+        main_fit_sim_hyplsa(stats_model_name=stats_model_name, sensors_inds=sensors_inds,
                             fitmethod=fitmethod, stan_service="CmdStan", config=config)
