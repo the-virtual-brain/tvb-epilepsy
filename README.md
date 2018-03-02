@@ -26,13 +26,14 @@ This project contains the following packages:
     <br>These are usually dependent on the base package because they are working with models, logger and computations. In some cases, there are also dependencies on the io package.
 
 - top
-    <br>Here there are 2 sub-packages: examples and scripts.
+    <br>Here there are 3 sub-packages: examples, scripts and notebooks.
     <br>Inside examples there are main files with different flows that can be used with tvb-epilepsy. As an example, main_vep exemplifies steps for: reading an hypothesis -> generating a model configuration based on it -> configuring a Simulator -> launching a simulation -> plotting the simulation results -> serializing models to h5 files.
     <br>The scrips sub-package contains some helper functions that are used within the main files.
+    <br>Notebooks, are similar with the main files, but with extra text explaining what is happening.
     <br>The package depends on all of the above, as here is where the flow is chosen.
 
 - tests
     <br>Inside this package there are various unit tests implemented for verifying the correctness of the code. They can also be used for tvb-epilepsy guidance, as they are smaller than examples package.
 
 
-[![Build Status](https://travis-ci.org/the-virtual-brain/tvb-epilepsy.svg?branch=review)](https://travis-ci.org/the-virtual-brain/tvb-epilepsy) [![Coverage Status](https://coveralls.io/repos/github/the-virtual-brain/tvb-epilepsy/badge.svg)](https://coveralls.io/github/the-virtual-brain/tvb-epilepsy)
+[![Build Status](https://travis-ci.org/the-virtual-brain/tvb-epilepsy.svg)](https://travis-ci.org/the-virtual-brain/tvb-epilepsy) [![Coverage Status](https://coveralls.io/repos/github/the-virtual-brain/tvb-epilepsy/badge.svg)](https://coveralls.io/github/the-virtual-brain/tvb-epilepsy)

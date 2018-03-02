@@ -434,7 +434,7 @@ def calc_eq_6d(x0, K, w, yc, Iext1, Iext2, x1eq=None, a=A_DEF, b=B_DEF, d=D_DEF,
 
 
 def calc_eq_11d(x0, K, w, yc, Iext1, Iext2, slope, fun_slope_Iext2, x1eq=None, a=A_DEF, b=B_DEF, d=D_DEF, s=S_DEF,
-                gamma=GAMMA_DEF, zmode=numpy.array("lin"), pmode="const"):
+                gamma=GAMMA_DEF, zmode=numpy.array("lin"), pmode="z"):
     if x1eq is None:
         x1eq = calc_eq_x1(yc, Iext1, x0, K, w, a, b, d, zmode=zmode, model="11d")
     y1eq = calc_eq_y1(x1eq, yc, d)

@@ -74,4 +74,5 @@ class ODEStatisticalModel(StatisticalModel):
 
     def __add_parameters(self, **defaults):
         for p in ["x1init", "zinit", "sig_init", "scale_signal", "offset_signal"]:
+            print("Generating stochastic parameter " + p + "...")
             self.parameters.update({p: set_parameter(p, **defaults)})

@@ -5,7 +5,7 @@ from scipy.signal import decimate
 def decimate_signals(signals, time, decim_ratio):
     signals = decimate(signals, decim_ratio, axis=0, zero_phase=True)
     time = decimate(time, decim_ratio, zero_phase=True)
-    dt = np.mean(time)
+    dt = np.mean(np.diff(time))
     (n_times, n_signals) = signals.shape
     return signals, time, dt, n_times
 

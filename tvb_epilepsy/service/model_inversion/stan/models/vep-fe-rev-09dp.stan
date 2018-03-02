@@ -45,15 +45,15 @@ data {
     // row_vector [nn] x0_mu;  // healthy: -2.5, sick ~=-2.0, max = [-3.0, -4.0], min = -1.0
     // real x0_std;
     // real x0_lo;
-    real x0_hi; // [-3.0, -4.0]
+    real x0_hi; // -4.0, [-3.0, -4.0]
     real x_eq_def; // = -5.0/3 the value of all healhty non-active node
     row_vector [nn] x_init_mu; // in [-2.0, -1.0], used -1.566
     row_vector [nn] z_init_mu; // in [2.9, 4.5], used 3.060
     real init_std; // 0.0333
     real time_scale_mu; // 0.5
     real time_scale_std; // 0.0667
-    real k_mu; // 0.575 = 50 / n_regions(=87)
-    real k_std; // 0.096 = k_mu/6
+    real k_mu; // 3.448 = 3 * 100 / n_regions(=87)
+    real k_std; // 0.575 = k_mu/6
     real sigma_mu; // =0.01
     real sigma_std; // =0.01/3
     real epsilon_mu; //=0.1

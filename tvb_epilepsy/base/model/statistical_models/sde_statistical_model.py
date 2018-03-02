@@ -28,4 +28,5 @@ class SDEStatisticalModel(ODEStatisticalModel):
 
     def _add_parameters(self, **defaults):
         for p in ["dX1t", "dZt", "sig"]:
+            print("Generating stochastic parameter " + p + "...")
             self.parameters.update({p: set_parameter(p, **defaults)})

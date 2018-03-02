@@ -3,11 +3,8 @@ from copy import deepcopy
 from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
-from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
 from tvb_epilepsy.service.pse.pse_service import ABCPSEService
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.service.simulator.simulator_tvb import SimulatorTVB
-from tvb_epilepsy.service.simulator.simulator_java import java_model_builder
 
 
 class SimulationPSEService(ABCPSEService):
@@ -48,12 +45,8 @@ class SimulationPSEService(ABCPSEService):
                                                   model_config_service_input, yc, Iext1, K, a, b, x1eq_mode)[1]
                 # Update simulator with new ModelConfiguration
                 simulator_copy.model_configuration = model_configuration
-                # Generate Model with new ModelConfiguration
-                if isinstance(simulator_copy, SimulatorTVB):
-                    model = model_build_dict[model_copy._ui_name](model_configuration, zmode=model_copy.zmode)
-                else:
-                    model = java_model_builder(model_configuration)
-                simulator_copy.model = model
+                # Generate new simulator_copy.model with the new ModelConfiguration
+                simulator_copy.configure_model()
             # Update model if needed
             # TODO: check if the name "model" is correct!
             self.update_object(simulator_copy.model, params, object_type="model")

@@ -9,7 +9,7 @@ import tvb.datatypes.arrays as arrays
 from tvb.simulator.common import get_logger
 from tvb.simulator.models import Model
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, raise_not_implemented_error
-
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 
 LOG = get_logger(__name__)
 
@@ -325,11 +325,11 @@ class EpileptorDP(Model):
         # else_ydot2 = 0
         else_ydot2 = 0
 
-        if self.zmode == 'lin':
+        if isequal_string(str(self.zmode), 'lin'):
             # self.r * (4 * (y[0] - self.x0_values) - y[2]      + where(y[2] < 0., if_ydot2, else_ydot2)
             fz = 4 * (y[0] - self.x0) + where(y[2] < 0., if_ydot2, else_ydot2)
 
-        elif self.zmode == 'sig':
+        elif isequal_string(str(self.zmode), 'sig'):
             fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.x0
 
         else:
@@ -635,8 +635,9 @@ class EpileptorDPrealistic(Model):
             Iext2_eq = interval_scaling(xp, xp1, 0.0, xp2, Iext2)
 
         else:
-            slope_eq = slope
-            Iext2_eq = Iext2
+            i1 = numpy.ones(z.shape)
+            slope_eq = slope * i1
+            Iext2_eq = Iext2 * i1
 
         return slope_eq, Iext2_eq
 
@@ -715,10 +716,10 @@ class EpileptorDPrealistic(Model):
         if_ydot2 = - 0.1 * y[2] ** 7
         else_ydot2 = 0
 
-        if self.zmode == 'lin':
+        if isequal_string(str(self.zmode), 'lin'):
             fz = 4 * (y[0] - x0) + where(y[2] < 0., if_ydot2, else_ydot2)
 
-        elif self.zmode == 'sig':
+        elif isequal_string(str(self.zmode), 'sig'):
             fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - x0
 
         else:
@@ -1004,10 +1005,10 @@ class EpileptorDP2D(Model):
         if_ydot1 = - 0.1 * y[1] ** 7
         else_ydot1 = 0
 
-        if self.zmode == 'lin':
+        if isequal_string(str(self.zmode), 'lin'):
             fz = 4 * (y[0] - self.x0) + where(y[1] < 0.0, if_ydot1, else_ydot1)
 
-        elif self.zmode == 'sig':
+        elif isequal_string(str(self.zmode), 'sig'):
             fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.x0
 
         else:
@@ -1072,10 +1073,10 @@ class EpileptorDP2D(Model):
     #     if_fz = - 0.1 * y[1] ** 7
     #     else_fz = 0
     #     jac_zz = -numpy.diag(numpy.ones((n_ep,)), dtype=y.dtype) / self.tau0
-    #     if self.zmode == 'lin':
+    #     if isequal_string(str(self.zmode), 'lin'):
     #         jac_zx = numpy.diag(4.0) / self.tau0
     #         jac_zz -= numpy.diag(where(y[1] < 0.0, if_fz, else_fz))
-    #     elif self.zmode == 'sig':
+    #     elif isequal_string(str(self.zmode), 'sig'):
     #         exp_fun = numpy.exp(-10.0 * (y[0] + 0.5))
     #         jac_zx = numpy.diag(30.0 * exp_fun / (1.0 + exp_fun) ** 2)/ self.tau0
     #     else:

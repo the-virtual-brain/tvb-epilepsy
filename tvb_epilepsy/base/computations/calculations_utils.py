@@ -220,7 +220,7 @@ def calc_fK(K_var, K, tau1=TAU1_DEF, tau0=TAU0_DEF, shape=None, calc_mode="non_s
 
 
 def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2,
-              zmode="lin", pmode="const", x1_neg=True, z_pos=True, x2_neg=None,
+              zmode="lin", pmode="z", x1_neg=True, z_pos=True, x2_neg=None,
               y1=None, x2=None, y2=None, g=None,
               x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
               slope=SLOPE_DEF, a=A_DEF, b=B_DEF, d=D_DEF, s=S_DEF, Iext2=I_EXT2_DEF, gamma=GAMMA_DEF,
@@ -318,7 +318,7 @@ def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2,
 
 
 def calc_jac(x1, z, yc, Iext1, x0, K, w, model_vars=2,
-             zmode="lin", pmode="const", x1_neg=True, z_pos=True, x2_neg=None,
+             zmode="lin", pmode="z", x1_neg=True, z_pos=True, x2_neg=None,
              y1=None, x2=None, y2=None, g=None,
              x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
              slope=SLOPE_DEF, a=A_DEF, b=B_DEF, d=D_DEF, s=S_DEF, Iext2=I_EXT2_DEF, gamma=GAMMA_DEF,
@@ -659,7 +659,7 @@ def calc_fparams_var(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope, 
 
 
 def calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars=2,
-                    zmode="lin", pmode="const", x1_neg=None, z_pos=None, x2_neg=None,
+                    zmode="lin", pmode="z", x1_neg=None, z_pos=None, x2_neg=None,
                     y1=None, x2=None, y2=None, g=None,
                     x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
                     slope=SLOPE_DEF, a=A_DEF, b=B_DEF, d=D_DEF, s=S_DEF, Iext2=I_EXT2_DEF, gamma=GAMMA_DEF,

@@ -67,12 +67,12 @@ class CmdStanService(StanService):
 
     def read_output(self, output_filepath=None, **kwargs):
         if output_filepath is None:
-            output_filepath = os.path.join(self.config.input.FOLDER_RES, STAN_OUTPUT_OPTIONS["file"])
+            output_filepath = os.path.join(self.config.out.FOLDER_RES, STAN_OUTPUT_OPTIONS["file"])
         samples = self.read_output_samples(output_filepath, **kwargs)
 
         est = self.compute_estimates_from_samples(samples)
         summary_filepath = kwargs.pop("summary_filepath",
-                                      os.path.join(self.config.input.FOLDER_RES, "stan_summary.csv"))
+                                      os.path.join(self.config.out.FOLDER_RES, "stan_summary.csv"))
         if os.path.isfile(summary_filepath):
             summary = parse_csv_in_cols(summary_filepath)
         else:
@@ -81,9 +81,9 @@ class CmdStanService(StanService):
 
     def stan_summary(self, output_filepath=None, summary_filepath=None):
         if output_filepath is None:
-            output_filepath = os.path.join(self.config.input.FOLDER_RES, STAN_OUTPUT_OPTIONS["file"])
+            output_filepath = os.path.join(self.config.out.FOLDER_RES, STAN_OUTPUT_OPTIONS["file"])
         if summary_filepath is None:
-            summary_filepath = os.path.join(self.config.input.FOLDER_RES, "stan_summary.csv")
+            summary_filepath = os.path.join(self.config.out.FOLDER_RES, "stan_summary.csv")
 
         command = "bin/stansummary " + output_filepath[:-4] + "*.csv" + " --csv_file=" + summary_filepath
         execute_command(command, cwd=self.path, shell=True)

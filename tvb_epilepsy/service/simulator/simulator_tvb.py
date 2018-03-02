@@ -10,7 +10,7 @@ from tvb.simulator import coupling, integrators, simulator
 from tvb_epilepsy.base.constants.model_constants import TIME_DELAYS_FLAG
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.service.simulator.simulator import ABCSimulator
-from tvb_epilepsy.service.epileptor_model_factory import model_build_dict
+from tvb_epilepsy.service.simulator.epileptor_model_factory import model_build_dict
 
 
 class SimulatorTVB(ABCSimulator):

@@ -80,8 +80,8 @@ def build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_
     nonactive_regions = model_data["nonactive_regions"] - 1
     SC = statistical_model.parameters["MC"].mode
     act_reg_ones = np.ones((model_data["n_active_regions"],))
-    x0_lo = -3.0
-    x0_hi = -1.0
+    x0_lo = -4.0
+    x0_hi = 0.0
     x0_star_mu = x0_hi - model_inversion.x0[active_regions].mean() * act_reg_ones
     x0_star_std = np.minimum((x0_hi - x0_lo) / 4.0, x0_star_mu / 3.0) * act_reg_ones
     vep_data = {"nn": model_data["n_active_regions"],
@@ -103,8 +103,8 @@ def build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_
                 # "K_v": statistical_model.parameters["K"].var,
                 "time_scale_mu": statistical_model.parameters["tau1"].mean,
                 "time_scale_std": statistical_model.parameters["tau1"].std,
-                "k_mu": statistical_model.parameters["K"].mean,
-                "k_std": statistical_model.parameters["K"].std,
+                "k_mu": statistical_model.parameters["K"].mean/2,
+                "k_std": statistical_model.parameters["K"].std/2,
                 "SC": SC[active_regions][:, active_regions],
                 "SC_var": 5.0,  # 1/36 = 0.02777777,
                 "Ic": np.sum(SC[active_regions][:, nonactive_regions], axis=1),

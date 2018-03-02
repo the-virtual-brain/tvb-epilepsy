@@ -1,6 +1,6 @@
 
 from tvb_epilepsy.base.constants.model_constants import *
-from tvb_epilepsy.base.utils.data_structures_utils import assert_arrays
+from tvb_epilepsy.base.utils.data_structures_utils import assert_arrays, isequal_string
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 
 
@@ -54,14 +54,14 @@ def eqtn_coupling_diff(K, w, ix, jx):
 def eqtn_x0cr_r(Iext1, yc, a, b, d, x1_rest, x1_cr, x0_rest, x0_cr, zmode=np.array("lin")):
     # Correspondence with EpileptorDP2D
     b = b - d
-    if zmode == 'lin':
+    if isequal_string(str(zmode), 'lin'):
         return 0.25 * (x0_rest * (a * x1_cr ** 3 - a * x1_rest ** 3 - b * x1_cr ** 2 +
                                   b * x1_rest ** 2 + 4.0 * x1_cr - 4.0 * x1_rest) +
                        (x0_cr - x0_rest) * (Iext1 - a * x1_rest ** 3 + b * x1_rest ** 2 -
                                             4.0 * x1_rest + yc)) / (x0_cr - x0_rest), \
                0.25 * (a * x1_cr ** 3 - a * x1_rest ** 3 - b * x1_cr ** 2 + b * x1_rest ** 2 + 4.0 * x1_cr -
                        4.0 * x1_rest) / (x0_cr - x0_rest)
-    elif zmode == 'sig':
+    elif isequal_string(str(zmode), 'sig'):
         return (-x0_cr*(3.2e+66*20000000000000.0**(10*x1_cr) + 4.74922109128249e+68*54365636569181.0**(10*x1_cr))
                 *(3.2e+66*1.024e+133**x1_rest*(Iext1 - a*x1_rest**3 + b*x1_rest**2 + yc)
                 + 4.74922109128249e+68*2.25551009738825e+137**x1_rest*(Iext1 - a*x1_rest**3 + b*x1_rest**2 + yc - 3.0))
@@ -95,16 +95,16 @@ def eqtn_x0(x1, z, zmode=np.array("lin"), z_pos=True, K=None, w=None, coupl=None
         else:
             from tvb_epilepsy.base.computations.calculations_utils import calc_coupling
             coupl = calc_coupling(x1, K, w)
-    if zmode == 'lin':
+    if  isequal_string(str(zmode), 'lin'):
         return x1 - (z + np.where(z_pos, 0.0, 0.1 * np.power(z, 7.0)) + coupl) / 4.0
-    elif zmode == 'sig':
+    elif  isequal_string(str(zmode), 'sig'):
         return np.divide(3.0, 1.0 + np.power(np.exp(1), -10.0 * (x1 + 0.5))) - z - coupl
     else:
         raise_value_error('zmode is neither "lin" nor "sig"')
 
 
 def eqtn_fx1(x1, z, y1, Iext1, slope, a, b, d, tau1, x1_neg=True, model="2d", x2=0.0):
-    if model == "2d":
+    if isequal_string(str(model), '2d'):
         # Correspondence with EpileptorDP2D
         b = b - d
         return np.multiply(y1 - z + Iext1 + np.multiply(x1, np.where(x1_neg, if_ydot0(x1, a, b),
@@ -140,9 +140,9 @@ def eqtn_fx1z_diff(x1, K, w, ix, jx, a, b, d, tau1, tau0, zmode=np.array("lin"))
     x1, K, ix, jx, a, b, d, tau1, tau0 = assert_arrays([x1, K, ix, jx, a, b, d, tau1, tau0], (x1.size,))
     tau = np.divide(tau1, tau0)
     dcoupl_dx = eqtn_coupling_diff(K, w, ix, jx)
-    if zmode == 'lin':
+    if isequal_string(str(zmode), 'lin'):
         dfx1_1_dx1 = 4.0 * np.ones(x1[ix].shape)
-    elif zmode == 'sig':
+    elif isequal_string(str(zmode), 'sig'):
         dfx1_1_dx1 = np.divide(30 * np.power(np.exp(1), (-10.0 * (x1[ix] + 0.5))),
                                np.power(1 + np.power(np.exp(1), (-10.0 * (x1[ix] + 0.5))), 2))
     else:
@@ -170,9 +170,9 @@ def eqtn_fz(x1, z, x0, tau1, tau0, zmode=np.array("lin"), z_pos=True, K=None, w=
             from tvb_epilepsy.base.computations.calculations_utils import calc_coupling
             coupl = calc_coupling(x1, K, w)
     tau = np.divide(tau1, tau0)
-    if zmode == 'lin':
+    if isequal_string(str(zmode), 'lin'):
         return np.multiply((4 * (x1 - x0) - np.where(z_pos, z, z + 0.1 * np.power(z, 7.0)) - coupl), tau)
-    elif zmode == 'sig':
+    elif isequal_string(str(zmode), 'sig'):
         return np.multiply(np.divide(3.0, (1 + np.power(np.exp(1), (-10.0 * (x1 + 0.5))))) - x0 - z - coupl, tau)
     else:
         raise_value_error('zmode is neither "lin" nor "sig"')
@@ -181,11 +181,11 @@ def eqtn_fz(x1, z, x0, tau1, tau0, zmode=np.array("lin"), z_pos=True, K=None, w=
 def eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode=np.array("lin"), z_pos=True, K=None, w=None):
     tau = np.divide(tau1, tau0)
     jac_z = - np.ones(z.shape, dtype=z.dtype)
-    if zmode == 'lin':
+    if isequal_string(str(zmode), 'lin'):
         jac_x1 = 4.0 * np.ones(z.shape, dtype=z.dtype)
         if not (z_pos):
             jac_z -= 0.7 * np.power(z, 6.0)
-    elif zmode == 'sig':
+    elif isequal_string(str(zmode), 'sig'):
         jac_x1 = np.divide(30 * np.power(np.exp(1), (-10.0 * (x1 + 0.5))),
                            1 + np.power(np.exp(1), (-10.0 * (x1 + 0.5))))
     else:
@@ -268,7 +268,7 @@ def eqtn_fK(K_var, K, tau1, tau0):
 
 
 def eqtn_fparams_vars(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope, Iext1, Iext2, K, tau1, tau0,
-                      pmode="const", z=None, g=None):
+                      pmode="z", z=None, g=None):
     fx0 = eqtn_fx0(x0_var, x0, tau1)
     from tvb_epilepsy.base.epileptor_models import EpileptorDPrealistic
     slope_eq, Iext2_eq = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, slope, Iext2)
@@ -279,7 +279,7 @@ def eqtn_fparams_vars(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope,
     return fx0, fslope, fIext1, fIext2, fK
 
 
-def eqtn_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, zmode="lin", pmode="const", x1_neg=True,
+def eqtn_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, zmode="lin", pmode="z", x1_neg=True,
               y1=None, x2=None, y2=None, g=None, x2_neg=False,
               x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
               slope=SLOPE_DEF, Iext2=I_EXT2_DEF, a=A_DEF, b=B_DEF, d=D_DEF, s=S_DEF, gamma=GAMMA_DEF,

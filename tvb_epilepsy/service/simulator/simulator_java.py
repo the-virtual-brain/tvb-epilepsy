@@ -1,36 +1,44 @@
 """
-Python Demo for configuring Java Simulations from Python.
+Wrapper for configuring Java Simulations from Python.
 
 Classes Settings, EpileptorParams and FullConfiguration are synchronized with the Java code, and should not be changed!
-
-TODO: It is imperative to allow for modification of the connectivity.normalized_weights of the Connecitivity.h5,
- according to the model_configuration.connectivity
 """
 
-import json
 import os
+import json
+import numpy
 import subprocess
 from copy import copy
-import numpy
 from tvb_epilepsy.base.constants.config import GenericConfig
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import obj_to_dict, assert_arrays
-from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val_to_model_x0
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.service.simulator.simulator import ABCSimulator
 
 
-class SimulationSettings(object):
+class Settings(object):
 
     def __init__(self, integration_step=0.01220703125, noise_seed=42, noise_intensity=10 ** -6, simulated_period=5000,
                  downsampling_period=0.9765625):
+        self.simulated_period = simulated_period
         self.integration_step = integration_step
+
         self.integration_noise_seed = noise_seed
         self.noise_intensity = noise_intensity
+        self.node_noise_dispersions = None  # Could also be a vector double[nNodes * nStateVars]; first by node then SV
+
         self.chunk_length = 2048
         self.downsampling_period = numpy.round(downsampling_period / integration_step)
-        self.simulated_period = simulated_period
+
+    def set_node_noise_dispersions(self, noise):
+        self.node_noise_dispersions = noise
+
+    def set_voi_noise_dispersions(self, noise_voi, no_of_nodes):
+        no_voi = len(noise_voi)
+        self.node_noise_dispersions = numpy.zeros((no_of_nodes * no_voi,))
+        for i in xrange(no_of_nodes):
+            self.node_noise_dispersions[i * no_voi: (i + 1) * no_voi] = noise_voi
 
 
 class EpileptorParams(object):
@@ -54,9 +62,9 @@ class EpileptorParams(object):
         self.tt = tt
 
 
-class EpileptorModel(object):
+class JavaEpileptor(object):
     _ui_name = "JavaEpileptor"
-    _nvar = 2
+    _nvar = 6
     a = 1.0
     b = 3.0
     c = 1.0
@@ -76,7 +84,6 @@ class EpileptorModel(object):
                  iext2=0.45, slope=0.0, x0=-2.1, tt=1.0):
         a, b, c, d, aa, r, kvf, kf, ks, tau, iext, iext2, slope, x0, tt = \
             assert_arrays([a, b, c, d, aa, r, kvf, kf, ks, tau, iext, iext2, slope, x0, tt])
-        # TODO: add desired shape as argument in assert_arrays
         self.nvar = 6
         self.a = a
         self.b = b
@@ -98,8 +105,8 @@ class EpileptorModel(object):
 # ! The attributes names should not be changed because they are synchronized with simulator config model.
 class FullConfiguration(object):
 
-    def __init__(self, name="full-configuration", connectivity_path="Connectivity.h5", epileptor_params=[],
-                 settings=SimulationSettings(), initial_states=None, initial_states_shape=None):
+    def __init__(self, name="full-configuration", connectivity_path="Connectivity.h5", epileptor_params=None,
+                 settings=Settings(), initial_states=None, initial_states_shape=None):
         self.configurationName = name
         self.connectivityPath = connectivity_path
         self.settings = settings
@@ -123,11 +130,14 @@ class SimulatorJava(ABCSimulator):
     reader = H5Reader()
     json_custom_config_file = "SimulationConfiguration.json"
 
-    def __init__(self, connectivity, model_configuration, model, simulation_settings):
-        self.model = model
+    def __init__(self, connectivity, model_configuration, simulation_settings):
+        self.model = None
         self.simulation_settings = simulation_settings
         self.model_configuration = model_configuration
         self.connectivity = connectivity
+        self.head_path = os.path.dirname(self.connectivity.file_path)
+        self.json_config_path = os.path.join(self.head_path, self.json_custom_config_file)
+        self.configure_model()
 
     @staticmethod
     def _save_serialized(ep_full_config, result_path):
@@ -137,26 +147,38 @@ class SimulatorJava(ABCSimulator):
         result_file.close()
 
     def config_simulation(self):
-        ep_settings = SimulationSettings(self.simulation_settings.integration_step, self.simulation_settings.noise_seed,
-                                         self.simulation_settings.noise_intensity,
-                                         self.simulation_settings.simulated_period,
-                                         self.simulation_settings.monitor_sampling_period)
+
+        ep_settings = Settings(integration_step=self.simulation_settings.integration_step,
+                               noise_seed=self.simulation_settings.noise_seed,
+                               simulated_period=self.simulation_settings.simulated_period,
+                               downsampling_period=self.simulation_settings.monitor_sampling_period)
+        if isinstance(self.simulation_settings.noise_intensity, (float, int)):
+            self.logger.info("Using uniform noise %s" % self.simulation_settings.noise_intensity)
+            ep_settings.noise_intensity = self.simulation_settings.noise_intensity
+        elif len(self.simulation_settings.noise_intensity) == JavaEpileptor._nvar:
+            self.logger.info("Using noise/voi %s" % self.simulation_settings.noise_intensity)
+            ep_settings.set_voi_noise_dispersions(self.simulation_settings.noise_intensity,
+                                                  self.connectivity.number_of_regions)
+        elif len(self.simulation_settings.noise_intensity) == JavaEpileptor._nvar * self.connectivity.number_of_regions:
+            self.logger.info("Using node noise %s" % self.simulation_settings.noise_intensity)
+            ep_settings.set_node_noise_dispersions(self.simulation_settings.noise_intensity)
+        else:
+            self.logger.warning("Could not set noise %s" % self.simulation_settings.noise_intensity)
+
         json_model = self.prepare_epileptor_model_for_json(self.connectivity.number_of_regions)
-        # TODO: history length has to be computed given the time delays (i.e., the tract lengts...)
-        # TODO: when dfun is implemented for JavaEpileptor, we can use the following commented lines with initial_conditions
+        # TODO: history length has to be computed given the time delays (i.e., the tract lengths...)
+        # TODO: when dfun is implemented for JavaEpileptor, we can use commented lines with initial_conditions
         # initial_conditions = self.prepare_initial_conditions(history_length=1)
-        # self.custom_config = FullConfiguration(connectivity_path=os.path.abspath(self.connectivity.file_path),
+        # custom_config = FullConfiguration(connectivity_path=os.path.abspath(self.connectivity.file_path),
         #                                        epileptor_params=json_model, settings=ep_settings,
         #                                        initial_states=initial_conditions.flatten(),
         #                                        initial_states_shape=numpy.array(initial_conditions.shape))
-        self.custom_config = FullConfiguration(connectivity_path=os.path.abspath(self.connectivity.file_path),
-                                               epileptor_params=json_model, settings=ep_settings,
-                                               initial_states=None, initial_states_shape=None)
-        self.head_path = os.path.dirname(self.connectivity.file_path)
-        self.json_config_path = os.path.join(self.head_path, self.json_custom_config_file)
-        self._save_serialized(self.custom_config, self.json_config_path)
+        custom_config = FullConfiguration(connectivity_path=os.path.abspath(self.connectivity.file_path),
+                                          epileptor_params=json_model, settings=ep_settings,
+                                          initial_states=None, initial_states_shape=None)
+        self._save_serialized(custom_config, self.json_config_path)
 
-    def launch_simulation(self, n_report_blocks=0):
+    def launch_simulation(self):
         opts = "java -Dncsa.hdf.hdf5lib.H5.hdf5lib=" + os.path.join(GenericConfig.LIB_PATH, GenericConfig.HDF5_LIB) + \
                " " + "-Djava.library.path=" + GenericConfig.LIB_PATH + " " + "-cp" + " " + GenericConfig.JAR_PATH + \
                " " + GenericConfig.JAVA_MAIN_SIM + " " + os.path.abspath(self.json_config_path) + " " + \
@@ -182,8 +204,13 @@ class SimulatorJava(ABCSimulator):
 
         return epileptor_params_list
 
-    def configure_model(self, **kwargs):
-        self.model = java_model_builder(self.model_configuration, **kwargs)
+    def configure_model(self):
+        x0 = calc_x0_val_to_model_x0(self.model_configuration.x0_values, self.model_configuration.yc,
+                                     self.model_configuration.Iext1, self.model_configuration.a,
+                                     self.model_configuration.b - self.model_configuration.d)
+        self.model = JavaEpileptor(a=self.model_configuration.a, b=self.model_configuration.b,
+                                   d=self.model_configuration.d, x0=x0, iext=self.model_configuration.Iext1,
+                                   ks=self.model_configuration.K, c=self.model_configuration.yc)
 
     def configure_initial_conditions(self, initial_conditions=None):
         if isinstance(initial_conditions, numpy.ndarray):
@@ -191,13 +218,3 @@ class SimulatorJava(ABCSimulator):
         else:
             # TODO: have a function to calculate the correct history length when we have time delays
             self.initial_conditions = self.prepare_initial_conditions(history_length=1)
-
-
-# Some helper functions for model and simulator construction
-def java_model_builder(model_configuration, a=1.0, b=3.0, d=5.0):
-    x0 = calc_x0_val_to_model_x0(model_configuration.x0_values, model_configuration.yc,
-                                 model_configuration.Iext1, a, b - d)
-    model = EpileptorModel(a=a, b=b, d=d, x0=x0, iext=model_configuration.Iext1,
-                           ks=model_configuration.K,
-                           c=model_configuration.yc)
-    return model
