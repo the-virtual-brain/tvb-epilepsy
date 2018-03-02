@@ -84,6 +84,8 @@ def build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_
     x0_hi = 0.0
     x0_star_mu = x0_hi - model_inversion.x0[active_regions].mean() * act_reg_ones
     x0_star_std = np.minimum((x0_hi - x0_lo) / 4.0, x0_star_mu / 3.0) * act_reg_ones
+    x_init_mu = statistical_model.parameters["x1init"].mean[active_regions].mean() * act_reg_ones
+    z_init_mu = statistical_model.parameters["zinit"].mean[active_regions].mean() * act_reg_ones
     vep_data = {"nn": model_data["n_active_regions"],
                 "nt": model_data["n_times"],
                 "ns": model_data["n_signals"],
@@ -93,8 +95,8 @@ def build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_
                 "x0_star_std": x0_star_std,
                 "x0_lo": x0_lo,
                 "x0_hi": x0_hi,
-                "x_init_mu": statistical_model.parameters["x1init"].mean[active_regions].mean() * act_reg_ones,
-                "z_init_mu": statistical_model.parameters["zinit"].mean[active_regions].mean() * act_reg_ones,
+                "x_init_mu": x_init_mu,
+                "z_init_mu": z_init_mu,
                 "x_eq_def": model_inversion.x1EQ[nonactive_regions].mean(),
                 "init_std": np.mean(statistical_model.parameters["x1init"].std),
                 "tau0": 10.0,  # statistical_model.parameters["tau0"].mean,
@@ -131,4 +133,4 @@ def build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_
         if mixing.shape[0] > vep_data["ns"]:
             mixing = mixing[model_inversion.signals_inds]
         vep_data["gain"] = mixing
-    return vep_data
+    return vep_data, x0_star_mu, x_init_mu, z_init_mu
