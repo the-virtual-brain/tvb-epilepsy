@@ -83,7 +83,7 @@ def build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_
     x0_lo = -4.0
     x0_hi = 0.0
     x0_star_mu = x0_hi - model_inversion.x0[active_regions].mean() * act_reg_ones
-    x0_star_std = np.minimum((x0_hi - x0_lo) / 4.0, x0_star_mu / 3.0) * act_reg_ones
+    x0_star_std = np.minimum((x0_hi - x0_lo) / 8.0, x0_star_mu / 5.0) * act_reg_ones # ~0.5
     x_init_mu = statistical_model.parameters["x1init"].mean[active_regions].mean() * act_reg_ones
     z_init_mu = statistical_model.parameters["zinit"].mean[active_regions].mean() * act_reg_ones
     vep_data = {"nn": model_data["n_active_regions"],
