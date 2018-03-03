@@ -23,9 +23,10 @@ from tvb_epilepsy.top.scripts.seeg_data_scripts import prepare_seeg_observable
 head_folder = os.path.join(os.path.expanduser("~"),
                            'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
 output = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
-config = Config(head_folder=head_folder, output_base=output, separate_by_run=True)
-# config.generic.C_COMPILER = "gcc" # "clang"
-
+config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
+import platform
+if platform.system() == "Linux":
+    config.generic.C_COMPILER = "gcc" # "clang"
 logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
 
 reader = H5Reader()
@@ -119,7 +120,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
             model_data = stan_service.load_model_data_from_file(model_data_path=model_data_file)
         else:
             model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
-                                                       x1eq_max=-1.0, priors_mode="uninformative")
+                                                       x1eq_max=-1.0, sig=0.01, priors_mode="uninformative")
             # observation_expression="lfp"
             statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0,
                                                                            observation_model="seeg_logpower")
