@@ -1,3 +1,5 @@
+
+import warnings
 import numpy as np
 
 from tvb_epilepsy.io.rdump import rdump
@@ -40,8 +42,9 @@ def parse_csv(fname, merge=True):
             try:
                 line[iline] = float(line[iline])
             except:
-                print("Failed to convert string " + line[iline] + " to float!")
-                print("Skipping line " + str(id_line) + ":  " + str(line) + "!")
+                # TODO: Put this into the logger somehow
+                warnings.warn("Failed to convert string " + line[iline] + " to float!" +
+                              "\nSkipping line " + str(id_line) + ":  " + str(line) + "!")
                 append_data = False
                 break
         if append_data:
