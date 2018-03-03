@@ -33,7 +33,20 @@ def parse_csv(fname, merge=True):
             if not line.startswith('#'):
                 lines.append(line.strip().split(','))
     names = [field.split('.') for field in lines[0]]
-    data = np.array([[float(f) for f in line] for line in lines[1:]])
+    data = []
+    for id_line, line in enumerate(lines[1:]):
+        append_data = True
+        for iline in range(len(line)):
+            try:
+                line[iline] = float(line[iline])
+            except:
+                print("Failed to convert string " + line[iline] + " to float!")
+                print("Skipping line " + str(id_line) + ":  " + str(line) + "!")
+                append_data = False
+                break
+        if append_data:
+            data.append(line)
+    data = np.array(data)
 
     namemap = {}
     maxdims = {}
