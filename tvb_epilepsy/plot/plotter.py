@@ -721,7 +721,7 @@ class Plotter(BasePlotter):
         else:
             plot_samples = lambda s: s[skip_samples:]
             plot_figure_name = lambda ichain: figure_name + ": chain " + str(ichain + 1)
-        labels = generate_region_labels(samples[0][params[0]].shape[1], labels)
+        labels = generate_region_labels(samples[0][params[0]].shape[-1], labels)
         params_labels = {}
         for ip, p in enumerate(params):
             if ip == 0:
