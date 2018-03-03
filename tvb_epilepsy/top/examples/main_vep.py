@@ -119,7 +119,7 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
                                                  logger=logger)))
         # Plot nullclines and equilibria of model configuration
         plotter.plot_state_space(model_configuration, "6d", head.connectivity.region_labels,
-                                 special_idx=hyp_x0.x0_indices + hyp_E.e_indices, zmode="lin",
+                                 special_idx=hyp.get_regions_disease_indices(), zmode="lin",
                                  figure_name=hyp.name + "_StateSpace")
 
         logger.info("\n\nRunning LSA...")
