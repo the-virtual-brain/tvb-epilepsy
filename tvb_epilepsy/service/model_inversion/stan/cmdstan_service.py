@@ -12,12 +12,15 @@ from tvb_epilepsy.service.model_inversion.stan.stan_factory import *
 class CmdStanService(StanService):
 
     def __init__(self, model_name=None, model=None, model_code=None, model_code_path="", model_data_path="",
+                 output_filepath=None, diagnostic_filepath=None, summary_filepath=None,
                  fitmethod="sample", random_seed=12345, init="random", config=None, **options):
         super(CmdStanService, self).__init__(model_name, model, model_code, model_code_path, model_data_path,
                                              fitmethod, config)
         if not os.path.isfile(os.path.join(self.config.generic.CMDSTAN_PATH, 'runCmdStanTests.py')):
             raise_value_error('Please provide CmdStan path, e.g. lib.cmdstan_path("/path/to/")!')
         self.path = self.config.generic.CMDSTAN_PATH
+        self.output_filepath, self.diagnostic_filepath, self.summary_filepath = \
+            self.set_output_files(output_filepath, diagnostic_filepath, summary_filepath, False)
         self.assert_fitmethod()
         self.command = ""
         self.options = {"init": init, "random_seed": random_seed}
@@ -37,6 +40,21 @@ class CmdStanService(StanService):
         else:
             raise_value_error(self.fitmethod + " does not correspond to one of the input methods:\n" +
                               "sample, variational, optimize, diagnose")
+
+    def set_output_files(self, output_filepath=None, summary_filepath=None, diagnostic_filepath=None, check_files=False,
+                         overwrite_output_files=False):
+        if output_filepath is None:
+            output_filepath = os.path.join(self.config.out.FOLDER_RES, STAN_OUTPUT_OPTIONS["file"])
+        if diagnostic_filepath is None:
+            diagnostic_filepath = os.path.join(self.config.out.FOLDER_RES, STAN_OUTPUT_OPTIONS["diagnostic_file"])
+        if summary_filepath is None:
+            summary_filepath = os.path.join(self.config.out.FOLDER_RES, "stan_summary.csv")
+        if check_files:
+            return change_filename_or_overwrite_with_wildcard(output_filepath, overwrite_output_files), \
+                   change_filename_or_overwrite_with_wildcard(diagnostic_filepath, overwrite_output_files), \
+                   change_filename_or_overwrite_with_wildcard(summary_filepath, overwrite_output_files)
+        else:
+            return output_filepath, diagnostic_filepath, summary_filepath
 
     def set_model_data(self, debug=0, simulate=0, **kwargs):
         model_data = super(CmdStanService, self).set_model_data(debug, simulate, **kwargs)
@@ -66,60 +84,42 @@ class CmdStanService(StanService):
             if self.model_path != self.model_code_path.split(".stan", 1)[0]:
                 copyfile(self.model_code_path.split(".stan", 1)[0], self.model_path)
 
-    def read_output(self, output_filepath=None, **kwargs):
-        if output_filepath is None:
-            output_filepath = os.path.join(self.config.out.FOLDER_RES, STAN_OUTPUT_OPTIONS["file"])
-        samples = self.read_output_samples(output_filepath, **kwargs)
-
+    def read_output(self):
+        samples = self.read_output_samples(self.output_filepath)
         est = self.compute_estimates_from_samples(samples)
-        summary_filepath = kwargs.pop("summary_filepath",
-                                      os.path.join(self.config.out.FOLDER_RES, "stan_summary.csv"))
-        if os.path.isfile(summary_filepath):
-            summary = parse_csv_in_cols(summary_filepath)
+        if os.path.isfile(self.summary_filepath):
+            summary = parse_csv_in_cols(self.summary_filepath)
         else:
             summary = None
         return est, samples, summary
 
-    def stan_summary(self, output_filepath=None, summary_filepath=None):
-        if output_filepath is None:
-            output_filepath = os.path.join(self.config.out.FOLDER_RES, STAN_OUTPUT_OPTIONS["file"])
-        if summary_filepath is None:
-            summary_filepath = os.path.join(self.config.out.FOLDER_RES, "stan_summary.csv")
-
-        command = "bin/stansummary " + output_filepath[:-4] + "*.csv" + " --csv_file=" + summary_filepath
+    def stan_summary(self):
+        command = "bin/stansummary " + self.output_filepath[:-4] + "*.csv" + " --csv_file=" + self.summary_filepath
         execute_command(command, cwd=self.path, shell=True)
-        return summary_filepath
 
-    def set_output_summary_files(self, output_filepath=None, summary_filepath=None, **kwargs):
-        if output_filepath is None:
-            output_filepath = os.path.join(self.config.out.FOLDER_RES, STAN_OUTPUT_OPTIONS["file"])
-        if summary_filepath is None:
-            summary_filepath = os.path.join(self.config.out.FOLDER_RES, "stan_summary.csv")
-        return change_filename_or_overwrite_with_wildcard(output_filepath,
-                                                       overwrite=kwargs.get("overwrite_output_files", False)), \
-               change_filename_or_overwrite_with_wildcard(summary_filepath,
-                                                   overwrite=kwargs.get("overwrite_summary_files", False))
-
-
-    def fit(self, output_filepath=None, diagnostic_filepath="", summary_filepath=None, debug=0, simulate=0,
-            return_output=True, plot_HMC=True, **kwargs):
-        output_filepath, summary_filepath = self.set_output_summary_files(output_filepath, summary_filepath, **kwargs)
+    def fit(self,debug=0, simulate=0, return_output=True, plot_HMC=True, overwrite_output_files=False, **kwargs):
+        # Confirm output files and check if overwriting is necessary
+        self.output_filepath, self.diagnostic_filepath, self.summary_filepath = \
+            self.set_output_files(kwargs.pop("output_filepath", self.output_filepath),
+                                  kwargs.pop("diagnostic_filepath", self.diagnostic_filepath),
+                                  kwargs.pop("summary_filepath", self.summary_filepath),
+                                  True, overwrite_output_files)
         self.model_path = kwargs.pop("model_path", self.model_path)
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
         self.fitmethod = kwargs.pop("method", self.fitmethod)
         self.set_options(**kwargs)
-        self.command, output_filepath, diagnostic_filepath = \
+        self.command, self.output_filepath, self.diagnostic_filepath = \
             generate_cmdstan_fit_command(self.fitmethod, self.options, self.model_path,
                                          self.set_model_data(debug, simulate, **kwargs),
-                                         output_filepath, diagnostic_filepath)
+                                         self.output_filepath, self.diagnostic_filepath)
         self.logger.info("Model fitting with " + self.fitmethod +
                          " method of model: " + self.model_path + "...")
         self.fitting_time = execute_command(self.command.replace("\t", ""), shell=True)[1]
         self.logger.info(str(self.fitting_time) + ' sec required to ' + self.fitmethod + "!")
         self.logger.info("Computing stan summary...")
-        summary_filepath = self.stan_summary(output_filepath, summary_filepath)
+        self.stan_summary()
         if return_output:
-            est, samples, summary = self.read_output(output_filepath, summary_filepath=summary_filepath, **kwargs)
+            est, samples, summary = self.read_output()
             if plot_HMC and self.fitmethod.find("sampl") >= 0 and \
                 isequal_string(self.options.get("algorithm", "None"), "HMC"):
                 Plotter(self.config).plot_HMC(samples, kwargs.pop("skip_samples", 0))
