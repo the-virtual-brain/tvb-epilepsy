@@ -1,5 +1,6 @@
 import os
 import pickle
+from shutil import copyfile
 from abc import ABCMeta, abstractmethod
 from scipy.io import savemat, loadmat
 from scipy.stats import describe
@@ -112,6 +113,8 @@ class StanService(object):
         except:
             self.logger.info("Trying to compile model from file: " + str(self.model_code_path) + str("!"))
             self.compile_stan_model(save_model=kwargs.get("save_model", True), **kwargs)
+        copyfile(self.model_code_path, os.path.join(os.path.dirname(self.model_path),
+                                                    os.path.basename(self.model_code_path)))
 
     def read_output_samples(self, output_filepath, **kwargs):
         samples = ensure_list(parse_csv(output_filepath.replace(".csv", "*"), merge=kwargs.pop("merge_outputs", False)))
