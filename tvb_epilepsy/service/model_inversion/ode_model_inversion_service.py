@@ -213,7 +213,7 @@ class ODEModelInversionService(ModelInversionService):
                                                                                      active_regions_th).tolist())
         else:
             self.logger.warning("No LSA results found (empty propagations_strengths vector)!" +
-                                "\nSkipping of setting active_regios according to LSA!")
+                                "\nSkipping of setting active_regions according to LSA!")
         return statistical_model
 
     def update_active_regions_seeg(self, statistical_model, active_regions_th=None, seeg_inds=[], reset=False):
