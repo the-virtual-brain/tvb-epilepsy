@@ -19,12 +19,13 @@ from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import build_sta
 from tvb_epilepsy.top.scripts.hypothesis_scripts import from_hypothesis_to_model_config_lsa
 from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration_to_simulation
 from tvb_epilepsy.top.scripts.seeg_data_scripts import prepare_seeg_observable
-
-head_folder = os.path.join(os.path.expanduser("~"),
-                           'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
-output = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results")
-config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
 User = os.path.expanduser("~")
+head_folder = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
+if User == "/home/denis":
+    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster")
+else:
+    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
+config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
 if User == "/home/denis":
     config.generic.C_COMPILER = "g++"
     config.generic.CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
