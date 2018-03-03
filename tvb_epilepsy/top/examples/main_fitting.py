@@ -24,10 +24,6 @@ head_folder = os.path.join(os.path.expanduser("~"),
                            'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
 output = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
 config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
-import platform
-if platform.system() == "Linux":
-    config.generic.C_COMPILER = "gcc" # "clang"
-logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
 
 reader = H5Reader()
 writer = H5Writer()
