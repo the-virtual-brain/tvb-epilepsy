@@ -9,13 +9,8 @@ from datetime import datetime
 class GenericConfig(object):
     _module_path = os.path.dirname(tvb_epilepsy.__file__)
     STATS_MODELS_PATH = os.path.join(_module_path, "service", "model_inversion", "stan", "models")
-    User = os.path.expanduser("~")
-    if User == "/home/denis":
-        C_COMPILER = "gcc"
-        CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
-    else:
-        CMDSTAN_PATH = os.path.join(User, "ScientificSoftware/git/cmdstan")
-        C_COMPILER = "clang++"
+    CMDSTAN_PATH = os.path.join(os.path.expanduser("~"), "ScientificSoftware/git/cmdstan")
+    C_COMPILER = "clang++"
 
     # Information needed for the Java simulation
     HDF5_LIB = "libjhdf5.dylib"
