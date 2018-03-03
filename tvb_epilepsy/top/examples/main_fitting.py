@@ -23,7 +23,7 @@ from tvb_epilepsy.top.scripts.seeg_data_scripts import prepare_seeg_observable
 head_folder = os.path.join(os.path.expanduser("~"),
                            'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
 output = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
-config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
+config = Config(head_folder=head_folder, output_base=output, separate_by_run=True)
 # config.generic.C_COMPILER = "gcc" # "clang"
 
 logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
@@ -101,7 +101,11 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
             model_configuration, lsa_hypothesis, model_configuration_builder, lsa_service = \
                 from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
                                                     config=config, K=K_unscaled)
-
+            plotter.plot_state_space(model_configuration, "6d", head.connectivity.region_labels,
+                                     special_idx=hyp.get_regions_disease_indices(), zmode="lin",
+                                     figure_name=hyp.name + "_StateSpace")
+            plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
+                             lsa_service.eigen_vectors_number, head.connectivity.region_labels, None)
         dynamical_model = "EpileptorDP2D"
 
         # -------------------------- Get model_data and observation signals: -------------------------------------------
@@ -120,7 +124,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
             statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0,
                                                                            observation_model="seeg_logpower")
             statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
-                                                                      active_regions_th=0.1, reset=True)
+                                                                      active_regions_th=0.05, reset=True)
             plotter.plot_statistical_model(statistical_model, "Statistical Model")
             cut_signals_tails = (6, 6)
             n_electrodes = 8
@@ -261,8 +265,8 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
-                                                  chains=4, refresh=1, num_warmup=100, num_samples=100,
-                                                  max_depth=10, delta=0.8, **kwargs)
+                                                  chains=4, refresh=1, num_warmup=200, num_samples=300,
+                                                  max_depth=12, delta=0.8, **kwargs)
         writer.write_generic(ests, config.out.FOLDER_RES, hyp.name + "_fit_est.h5")
         writer.write_generic(samples, config.out.FOLDER_RES, hyp.name + "_fit_samples.h5")
         if summary is not None:
@@ -271,6 +275,12 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
                 R_hat = summary.get("R_hat", None)
                 if R_hat is not None:
                     R_hat = {"R_hat": R_hat}
+
+        # ests, samples, summary = stan_service.read_output()
+        # if isinstance(summary, dict):
+        #     R_hat = summary.get("R_hat", None)
+        #     if R_hat is not None:
+        #         R_hat = {"R_hat": R_hat}
         ests = ensure_list(ests)
         plotter.plot_fit_results(model_inversion, ests, samples, statistical_model, model_data[input_signals_str],
                                  R_hat, model_data["time"], priors, region_mode,
