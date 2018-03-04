@@ -123,7 +123,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
             model_data = stan_service.load_model_data_from_file(model_data_path=model_data_file)
         else:
             model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
-                                                       x1eq_max=-1.0, sig=0.1, priors_mode="uninformative")
+                                                       x1eq_max=-1.0, sig=0.05, priors_mode="uninformative")
             # observation_expression="lfp"
             statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0,
                                                                            observation_model="seeg_logpower")
