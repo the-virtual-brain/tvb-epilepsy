@@ -82,7 +82,7 @@ def build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_
     SC = statistical_model.parameters["MC"].mode
     act_reg_ones = np.ones((model_data["n_active_regions"],))
     x0_lo = -4.0
-    x0_hi = 0.0
+    x0_hi = 1.0
     if informative_priors:
         x0_mu = model_inversion.x0[active_regions]
     else:

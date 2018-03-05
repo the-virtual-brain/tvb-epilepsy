@@ -88,12 +88,12 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
     e_indices = [1, 26]  # [1, 2, 25, 26]
     hypothesis2 = hyp_builder.build_hypothesis_from_file("clinical_hypothesis_postseeg", e_indices)
     # Change something manually if necessary
-    hypothesis2.x0_values = [0.01, 0.01]
+    # hypothesis2.x0_values = [0.01, 0.01]
     K_unscaled = 3.0 * K_DEF
 
     hypos = (hypothesis1, hypothesis2)
 
-    for hyp in hypos[:1]:
+    for hyp in hypos[1:]:
 
         # --------------------------Model configuration and LSA-----------------------------------
         model_config_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelConfig.h5")
@@ -123,7 +123,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
             model_data = stan_service.load_model_data_from_file(model_data_path=model_data_file)
         else:
             model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
-                                                       x1eq_max=-1.0, sig=0.05, priors_mode="uninformative")
+                                                       x1eq_max=-1.0, sig=0.025, priors_mode="uninformative")
             # observation_expression="lfp"
             statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0,
                                                                            observation_model="seeg_logpower")
