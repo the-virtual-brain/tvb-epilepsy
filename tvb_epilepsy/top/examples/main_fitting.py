@@ -225,7 +225,8 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
         # Stupid code to interface with INS stan model
         if stats_model_name.find("vep-fe-rev") >= 0:
             model_data, x0_star_mu, x_init_mu, z_init_mu = \
-                build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_inversion)
+                build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_inversion,
+                                                       informative_priors=True)
             x1_str = "x"
             input_signals_str = "seeg_log_power"
             signals_str = "mu_seeg_log_power"

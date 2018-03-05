@@ -66,7 +66,8 @@ def build_stan_model_dict(statistical_model, signals, model_inversion, gain_matr
     return sort_dict(model_data)
 
 
-def build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_inversion, gain_matrix=None):
+def build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_inversion, informative_priors=False,
+                                           gain_matrix=None):
     """
     Usually takes as input the model_data created with <build_stan_model_dict> and adds fields that are needed to
     interface the ins stan model.
@@ -82,9 +83,12 @@ def build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_
     act_reg_ones = np.ones((model_data["n_active_regions"],))
     x0_lo = -4.0
     x0_hi = 0.0
-    x0_mu = model_inversion.x0[active_regions].mean() * act_reg_ones
+    if informative_priors:
+        x0_mu = model_inversion.x0[active_regions]
+    else:
+        x0_mu = model_inversion.x0[active_regions].mean() * act_reg_ones
     x0_star_mu = x0_hi - x0_mu
-    x0_star_std = np.minimum((x0_hi - x0_lo) / 8.0, x0_star_mu / 5.0) * act_reg_ones # ~0.5
+    x0_star_std = np.minimum((x0_hi - x0_lo) / 8.0, x0_star_mu / 5.0) # ~0.5
     x_init_mu = statistical_model.parameters["x1init"].mean[active_regions].mean() * act_reg_ones
     z_init_mu = statistical_model.parameters["zinit"].mean[active_regions].mean() * act_reg_ones
     vep_data = {"nn": model_data["n_active_regions"],
