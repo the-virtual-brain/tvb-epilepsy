@@ -279,9 +279,12 @@ def labels_to_inds(labels, lbls):
     return np.unique(idx)
 
 
-def generate_region_labels(n_regions, labels=[], str=". "):
+def generate_region_labels(n_regions, labels=[], str=". ", numbering=True):
     if len(labels) == n_regions:
-        return np.array([str.join(["%d", "%s"]) % tuple(l) for l in zip(range(n_regions), labels)])
+        if numbering:
+            return np.array([str.join(["%d", "%s"]) % tuple(l) for l in zip(range(n_regions), labels)])
+        else:
+            return labels
     else:
         return np.array(["%d" % l for l in range(n_regions)])
 
