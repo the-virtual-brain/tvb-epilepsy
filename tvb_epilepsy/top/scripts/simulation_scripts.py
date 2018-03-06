@@ -105,8 +105,12 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
 
     vois_ts_dict = {}
     if ts_file is not None and os.path.isfile(ts_file):
-        logger.info("\n\nLoading previously simulated time series...")
-        vois_ts_dict = H5Reader().read_dictionary(ts_file)
+        logger.info("\n\nLoading previously simulated time series from file: " + ts_file)
+        if os.path.splitext(ts_file)[-1] == ".mat":
+            from scipy.io import loadmat
+            vois_ts_dict = loadmat(ts_file)
+        else:
+            vois_ts_dict = H5Reader().read_dictionary(ts_file)
     else:
         logger.info("\n\nSimulating...")
         ttavg, tavg_data, status = sim.launch_simulation(report_every_n_monitor_steps=100)
