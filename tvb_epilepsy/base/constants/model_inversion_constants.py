@@ -34,6 +34,7 @@ Z_MAX = 6.0
 
 # Statistical model constants
 SIG_EQ_DEF = (X1_EQ_CR_DEF-X1_DEF)/10
+DT_DEF = 0.05
 
 # ODE statistical model constants
 # EULER_METHODS = ["backward", "midpoint", "forward"]
@@ -42,4 +43,10 @@ SIG_EQ_DEF = (X1_EQ_CR_DEF-X1_DEF)/10
 OBSERVATION_MODELS=[ "seeg_logpower", "seeg_power", "lfp_power"]
 OBSERVATION_MODEL_DEF = "seeg_logpower"
 SIG_INIT_DEF = SIG_EQ_DEF
+
+WIN_LEN_RATIO = 25
+LOW_FREQ = 10.0
+HIGH_FREQ = 100.0
+BIPOLAR = False
+LOG_FLAG = False
 
