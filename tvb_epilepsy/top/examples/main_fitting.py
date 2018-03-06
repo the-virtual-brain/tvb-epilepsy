@@ -24,7 +24,7 @@ from tvb_epilepsy.top.scripts.fitting_data_scripts import prepare_seeg_observabl
 User = os.path.expanduser("~")
 head_folder = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
 if User == "/home/denis":
-    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/empirical/uninformative")
+    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/empirical/informative")
 else:
     output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "laptop/synthetic/source/uninformative")
 config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
@@ -126,7 +126,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", dynamical_mode
             model_data = stan_service.load_model_data_from_file(model_data_path=model_data_file)
         else:
             model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
-                                                       x1eq_max=-1.0, sig=0.05, priors_mode="uninformative")
+                                                       x1eq_max=-1.0, sig=0.05, priors_mode="informative")
             # observation_expression="lfp"
             observation_model = "seeg_logpower"
             statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0, observation_model=observation_model)
@@ -229,7 +229,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", dynamical_mode
         if stats_model_name.find("vep-fe-rev") >= 0:
             model_data, x0_star_mu, x_init_mu, z_init_mu = \
                 build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_inversion,
-                                                       informative_priors=False)
+                                                       informative_priors=True)
             x1_str = "x"
             input_signals_str = "seeg_log_power"
             signals_str = "mu_seeg_log_power"
