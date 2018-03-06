@@ -270,12 +270,12 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
                 priors = simulation_values
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        fit=False
+        fit=True
         num_warmup = 200
         if fit:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
                                                       chains=4, refresh=1, num_warmup=num_warmup, num_samples=300,
-                                                      max_depth=10, delta=0.8, save_warmup=1, plot_warmup=0, **kwargs)
+                                                      max_depth=10, delta=0.8, save_warmup=1, plot_warmup=1, **kwargs)
             writer.write_generic(ests, config.out.FOLDER_RES, hyp.name + "_fit_est.h5")
             writer.write_generic(samples, config.out.FOLDER_RES, hyp.name + "_fit_samples.h5")
             if summary is not None:

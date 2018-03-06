@@ -102,7 +102,7 @@ class CmdStanService(StanService):
                   + self.summary_filepath
         execute_command(command, cwd=self.path, shell=True)
 
-    def fit(self,debug=0, simulate=0, return_output=True, plot_HMC=True, overwrite_output_files=False, plot_warmup=0,
+    def fit(self,debug=0, simulate=0, return_output=True, plot_HMC=True, overwrite_output_files=False, plot_warmup=1,
             **kwargs):
         num_warmup = kwargs.get("num_warmup", 0)
         # Confirm output files and check if overwriting is necessary
