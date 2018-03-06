@@ -35,7 +35,8 @@ def change_filename_or_overwrite(path, overwrite=True):
 
 
 def change_filename_or_overwrite_with_wildcard(path, overwrite=True):
-    existing_files = glob.glob(path)
+    wild_path = path + "*"
+    existing_files = glob.glob(path + "*")
     if len(existing_files) > 0:
         if overwrite:
             for file in existing_files:
@@ -43,7 +44,7 @@ def change_filename_or_overwrite_with_wildcard(path, overwrite=True):
                     os.remove(file)
             return path
         else:
-            print("The following files already exist!: ")
+            print("The following files already exist for base paths " + wild_path + " !: ")
             for file in existing_files:
                 print(file)
             filename = raw_input("\n\nEnter a different name or press enter to overwrite files: ")
