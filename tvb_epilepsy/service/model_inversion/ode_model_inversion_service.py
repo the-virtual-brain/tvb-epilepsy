@@ -2,7 +2,7 @@ import time
 import numpy as np
 from scipy.stats import zscore
 from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1EQ_MAX, X1INIT_MIN, X1INIT_MAX, \
-                                                                         ZINIT_MIN, ZINIT_MAX, MC_SCALE, SIG_INIT_DEF
+    DT_DEF, ZINIT_MIN, ZINIT_MAX, MC_SCALE, SIG_INIT_DEF, WIN_LEN_RATIO, LOW_FREQ, HIGH_FREQ, BIPOLAR, LOG_FLAG
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, assert_arrays, \
     extract_dict_stringkeys
 from tvb_epilepsy.base.computations.math_utils import select_greater_values_array_inds
@@ -13,6 +13,7 @@ from tvb_epilepsy.service.signal_processor import decimate_signals, cut_signals_
 from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter_defaults
 from tvb_epilepsy.service.model_inversion.model_inversion_service import ModelInversionService
 from tvb_epilepsy.base.epileptor_models import *
+from tvb_epilepsy.top.scripts.fitting_data_scripts import prepare_seeg_observable, prepare_signal_observable
 
 
 class ODEModelInversionService(ModelInversionService):
@@ -20,33 +21,33 @@ class ODEModelInversionService(ModelInversionService):
     def __init__(self, model_configuration, hypothesis=None, head=None, dynamical_model=None, **kwargs):
         super(ODEModelInversionService, self).__init__(model_configuration, hypothesis, head, dynamical_model, **kwargs)
         self.time = None
-        self.dt = 0.0
+        self.dt = kwargs.get("dt", DT_DEF)
         self.n_times = 0
         self.n_signals = self.number_of_regions
         self.data_type = "lfp"
         self.signals_inds = range(self.n_signals)
         self._set_default_parameters(**kwargs)
 
-    def set_time(self, time=None):
-        if time is not None:
-            time = np.array(time)
-            try:
-                if time.size == 1:
-                    self.dt = time
-                    return np.arange(self.dt * (self.n_times - 1))
-                elif time.size == self.n_times:
-                    self.dt = np.mean(np.diff(time))
-                    return time
-                else:
-                    raise_value_error("Input time is neither a scalar nor a vector of length equal " +
-                                      "to target_data.shape[0]!" + "\ntime = " + str(time))
-            except:
-                raise_value_error(
-                    "Input time is neither a scalar nor a vector of length equal to target_data.shape[0]!" +
-                    "\ntime = " + str(time))
-        else:
-            raise_value_error("Input time is neither a scalar nor a vector of length equal to target_data.shape[0]!" +
-                              "\ntime = " + str(time))
+    # def set_time(self, time=None):
+    #     if time is not None:
+    #         time = np.array(time)
+    #         try:
+    #             if time.size == 1:
+    #                 self.dt = time
+    #                 return np.arange(self.dt * (self.n_times - 1))
+    #             elif time.size == self.n_times:
+    #                 self.dt = np.mean(np.diff(time))
+    #                 return time
+    #             else:
+    #                 raise_value_error("Input time is neither a scalar nor a vector of length equal " +
+    #                                   "to target_data.shape[0]!" + "\ntime = " + str(time))
+    #         except:
+    #             raise_value_error(
+    #                 "Input time is neither a scalar nor a vector of length equal to target_data.shape[0]!" +
+    #                 "\ntime = " + str(time))
+    #     else:
+    #         raise_value_error("Input time is neither a scalar nor a vector of length equal to target_data.shape[0]!" +
+    #                           "\ntime = " + str(time))
 
     def select_signals_seeg(self, signals, rois, auto_selection, **kwargs):
         sensors = Sensors(self.sensors_labels, self.sensors_locations, gain_matrix=self.gain_matrix)
@@ -106,10 +107,11 @@ class ODEModelInversionService(ModelInversionService):
         (self.n_times, self.n_signals) = self.observation_shape
         return signals
 
-    def set_simulated_target_data(self, target_data, statistical_model, **kwargs):
+    def set_simulated_target_data(self, target_data, statistical_model, dynamical_model, **kwargs):
         self.signals_inds = range(self.number_of_regions)
         self.data_type = "lfp"
         signals = np.array([])
+        self.time = target_data["time"].flatten()
         if statistical_model.observation_model.find("seeg") >= 0:
             self.data_type = "seeg"
             self.signals_inds = range(self.gain_matrix.shape[0])
@@ -121,9 +123,19 @@ class ODEModelInversionService(ModelInversionService):
             if signals.size == 0:
                 signals = np.array(target_data.get("lfp", target_data["x1"]))
                 if isequal_string(statistical_model.observation_model, "seeg_logpower"):
-                    signals = np.log(np.dot(self.gain_matrix[self.signals_inds], np.exp(signals.T))).T
+                    signals = np.log(np.dot(self.gain_matrix, np.exp(signals.T))).T
                 else:
-                    signals = (np.dot(self.gain_matrix[self.signals_inds], signals.T)).T
+                    signals = (np.dot(self.gain_matrix, signals.T)).T
+            signals, self.time, self.signals_inds, self.sensors_labels = \
+                prepare_seeg_observable(signals, self.time, dynamical_model,
+                                        kwargs.get("times_on_off", [self.time[0], self.time[-1]]),
+                                        self.sensors_labels, kwargs.get("manual_selection", []),
+                                        win_len_ratio=kwargs.get("win_len_ratio", WIN_LEN_RATIO),
+                                        low_freq=kwargs.get("low_freq", LOW_FREQ),
+                                        high_freq=kwargs.get("high_freq", HIGH_FREQ),
+                                        bipolar=kwargs.get("bipolar", BIPOLAR),
+                                        log_flag=kwargs.get("log_flag", LOG_FLAG),
+                                        plotter=kwargs.get("plotter", False))
         else:
             # if statistical_model.observation_expression == "x1z_offset":
             #     signals = ((target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T +
@@ -134,12 +146,16 @@ class ODEModelInversionService(ModelInversionService):
             #     signals = (target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T / 2.0
             # else: # statistical_models.observation_expression == "lfp"
             signals = np.array(target_data.get("lfp", target_data["x1"]))
-        target_data["signals"] = np.array(signals)
-        manual_selection = kwargs.get("manual_selection", [])
-        if len(manual_selection) > 0:
-            self.signals_inds = manual_selection
-            if len(self.signals_inds) < signals.shape[1]:
-                signals = signals[:, self.signals_inds]
+            signals, self.time, self.signals_inds = \
+                prepare_signal_observable(signals, self.time, dynamical_model,
+                                          kwargs.get("times_on_off", [self.time[0], self.time[-1]]),
+                                          self.region_labels, rois=kwargs.get("manual_selection", []),
+                                          win_len_ratio=kwargs.get("win_len_ratio", WIN_LEN_RATIO),
+                                          low_freq=kwargs.get("low_freq", LOW_FREQ),
+                                          high_freq=kwargs.get("high_freq", HIGH_FREQ),
+                                          log_flag=kwargs.get("log_flag", LOG_FLAG),
+                                          plotter=kwargs.get("plotter", False))[:3]
+            target_data["signals"] = np.array(signals)
         self.observation_shape = signals.shape
         (self.n_times, self.n_signals) = self.observation_shape
         return signals, target_data
@@ -159,13 +175,15 @@ class ODEModelInversionService(ModelInversionService):
                                  ",\nwhich is not one of the currently available 'zscore' and 'minmax'!")
         return signals
 
-    def set_target_data_and_time(self, target_data_type, target_data, statistical_model, **kwargs):
+    def set_target_data_and_time(self, target_data_type, target_data, statistical_model, dynamical_model, **kwargs):
         if isequal_string(target_data_type, "simulated"):
-            signals, target_data = self.set_simulated_target_data(target_data, statistical_model, **kwargs)
+            signals, target_data = self.set_simulated_target_data(target_data, statistical_model, dynamical_model,
+                                                                  **kwargs)
             self.target_data_type = "simulated"
         else:  # isequal_string(target_data_type, "empirical"):
             signals = self.set_empirical_target_data(target_data, **kwargs)
             self.target_data_type = "empirical"
+            self.time = target_data.get("time", np.arange(self.dt * (self.n_times - 1)))
         if kwargs.get("auto_selection", True) is not False:
             if self.data_type == "lfp":
                 signals = self.select_signals_lfp(signals, statistical_model.active_regions,
@@ -173,7 +191,6 @@ class ODEModelInversionService(ModelInversionService):
             else:
                 signals = self.select_signals_seeg(signals, statistical_model.active_regions,
                                                    kwargs.pop("auto_selection", "rois-correlation-power"), **kwargs)
-        self.time = self.set_time(target_data.get("time", None))
         if kwargs.get("decimate", 1) > 1:
             signals, self.time, self.dt, self.n_times = decimate_signals(signals, self.time, kwargs.get("decimate"))
             self.observation_shape = (self.n_times, self.n_signals)
