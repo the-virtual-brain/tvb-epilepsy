@@ -11,6 +11,7 @@ from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
+from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.model_inversion.sde_model_inversion_service import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
 from tvb_epilepsy.service.model_inversion.stan.pystan_service import PyStanService
@@ -24,7 +25,7 @@ head_folder = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", 
 if User == "/home/denis":
     output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster")
 else:
-    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
+    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "laptop")
 config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
 if User == "/home/denis":
     config.generic.C_COMPILER = "g++"
@@ -123,7 +124,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
             model_data = stan_service.load_model_data_from_file(model_data_path=model_data_file)
         else:
             model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
-                                                       x1eq_max=-1.0, sig=0.025, priors_mode="uninformative")
+                                                       x1eq_max=-1.0, sig=0.05, priors_mode="uninformative")
             # observation_expression="lfp"
             statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0,
                                                                            observation_model="seeg_logpower")
@@ -269,50 +270,60 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="",
                 priors = simulation_values
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
-                                                  chains=4, refresh=1, num_warmup=200, num_samples=300,
-                                                  max_depth=12, delta=0.8, **kwargs)
-        writer.write_generic(ests, config.out.FOLDER_RES, hyp.name + "_fit_est.h5")
-        writer.write_generic(samples, config.out.FOLDER_RES, hyp.name + "_fit_samples.h5")
-        if summary is not None:
-            writer.write_generic(summary, config.out.FOLDER_RES, hyp.name + "_fit_summary.h5")
+        fit=False
+        num_warmup = 200
+        if fit:
+            ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
+                                                      chains=4, refresh=1, num_warmup=num_warmup, num_samples=300,
+                                                      max_depth=10, delta=0.8, save_warmup=1, plot_warmup=0, **kwargs)
+            writer.write_generic(ests, config.out.FOLDER_RES, hyp.name + "_fit_est.h5")
+            writer.write_generic(samples, config.out.FOLDER_RES, hyp.name + "_fit_samples.h5")
+            if summary is not None:
+                writer.write_generic(summary, config.out.FOLDER_RES, hyp.name + "_fit_summary.h5")
+                if isinstance(summary, dict):
+                    R_hat = summary.get("R_hat", None)
+                    if R_hat is not None:
+                        R_hat = {"R_hat": R_hat}
+        else:
+            ests, samples, summary = stan_service.read_output()
             if isinstance(summary, dict):
                 R_hat = summary.get("R_hat", None)
                 if R_hat is not None:
                     R_hat = {"R_hat": R_hat}
-
-        # ests, samples, summary = stan_service.read_output()
-        # if isinstance(summary, dict):
-        #     R_hat = summary.get("R_hat", None)
-        #     if R_hat is not None:
-        #         R_hat = {"R_hat": R_hat}
+            if fitmethod.find("sampl") >= 0:
+                Plotter(config).plot_HMC(samples, skip_samples=num_warmup)
         ests = ensure_list(ests)
         plotter.plot_fit_results(model_inversion, ests, samples, statistical_model, model_data[input_signals_str],
                                  R_hat, model_data["time"], priors, region_mode,
                                  seizure_indices=lsa_hypothesis.get_regions_disease_indices(), x1_str=x1_str,
-                                 signals_str=signals_str, sig_str=sig_str, dX1t_str=dX1t_str,
+                                 k_str=k_str, signals_str=signals_str, sig_str=sig_str, dX1t_str=dX1t_str,
                                  dZt_str=dZt_str, trajectories_plot=True, connectivity_plot=connectivity_plot,
                                  pair_plot_params=pair_plot_params, region_violin_params=region_violin_params)
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
-        # for id_est, est in enumerate(ensure_list(ests)):
-        #     fit_model_configuration_builder = \
-        #         ModelConfigurationBuilder(hyp.number_of_regions, K=est[k_str] * hyp.number_of_regions)
-        #     x0_values_fit = \
-        #         fit_model_configuration_builder._compute_x0_values_from_x0_model(est['x0'])
-        #     hyp_fit = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).set_name(
-        #         'fit' + str(id_est) + "_" + hyp.name)._build_excitability_hypothesis(x0_values_fit, range(
-        #         model_configuration.number_of_regions))
-        #     model_configuration_fit = fit_model_configuration_builder.build_model_from_hypothesis(hyp_fit,  # est["MC"]
-        #                                                                                           estMC(est))
-        #     writer.write_model_configuration(model_configuration_fit,
-        #                                      os.path.join(config.out.FOLDER_RES, hyp_fit.name + "_ModelConfig.h5"))
-        #
-        #     # Plot nullclines and equilibria of model configuration
-        #     plotter.plot_state_space(model_configuration_fit,
-        #                              region_labels=model_inversion.region_labels,
-        #                              special_idx=statistical_model.active_regions,
-        #                              model="6d", zmode="lin",
-        #                              figure_name=hyp_fit.name + "_Nullclines and equilibria")
+        for id_est, est in enumerate(ensure_list(ests)):
+            fit_model_configuration_builder = \
+                ModelConfigurationBuilder(hyp.number_of_regions, K=est[k_str] * hyp.number_of_regions)
+            x0_values_fit = model_configuration.x0_values
+            x0_values_fit[statistical_model.active_regions] = \
+                fit_model_configuration_builder._compute_x0_values_from_x0_model(est['x0'])
+            hyp_fit = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).\
+                                          set_name('fit' + str(id_est) + "_" + hyp.name).\
+                                          set_x0_hypothesis(list(statistical_model.active_regions),
+                                                            x0_values_fit[statistical_model.active_regions]).\
+                                          build_hypothesis()
+            model_configuration_fit = \
+                fit_model_configuration_builder.build_model_from_hypothesis(hyp_fit,  # est["MC"]
+                                                                            model_configuration.model_connectivity)
+
+            writer.write_model_configuration(model_configuration_fit,
+                                             os.path.join(config.out.FOLDER_RES, hyp_fit.name + "_ModelConfig.h5"))
+
+            # Plot nullclines and equilibria of model configuration
+            plotter.plot_state_space(model_configuration_fit,
+                                     region_labels=model_inversion.region_labels,
+                                     special_idx=statistical_model.active_regions,
+                                     model="6d", zmode="lin",
+                                     figure_name=hyp_fit.name + "_Nullclines and equilibria")
         logger.info("Done!")
 
 
