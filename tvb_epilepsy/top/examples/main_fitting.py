@@ -24,7 +24,7 @@ from tvb_epilepsy.top.scripts.fitting_data_scripts import prepare_seeg_observabl
 User = os.path.expanduser("~")
 head_folder = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
 if User == "/home/denis":
-    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/synthetic/sensor/informative")
+    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/empirical/informative")
 else:
     output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "laptop/synthetic")
 config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
@@ -367,7 +367,7 @@ if __name__ == "__main__":
     # seizure = 'SZ3_0001.edf'
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
-    EMPIRICAL = False
+    EMPIRICAL = True
     # stats_model_name = "vep_sde"
     stats_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
