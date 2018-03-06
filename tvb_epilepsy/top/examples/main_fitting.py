@@ -24,9 +24,9 @@ from tvb_epilepsy.top.scripts.fitting_data_scripts import prepare_seeg_observabl
 User = os.path.expanduser("~")
 head_folder = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
 if User == "/home/denis":
-    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster")
+    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/synthetic/source/informative")
 else:
-    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "laptop/empirical")
+    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "laptop/synthetic")
 config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
 if User == "/home/denis":
     config.generic.C_COMPILER = "g++"
@@ -126,12 +126,12 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", dynamical_mode
             model_data = stan_service.load_model_data_from_file(model_data_path=model_data_file)
         else:
             model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
-                                                       x1eq_max=-1.0, sig=0.05, priors_mode="uninformative")
+                                                       x1eq_max=-1.0, sig=0.05, priors_mode="informative")
             # observation_expression="lfp"
-            statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0,
-                                                                           observation_model="seeg_logpower")
+            statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0, # observation_model="seeg_logpower"
+                                                                           observation_model="lfp_power")
             statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
-                                                                      active_regions_th=0.05, reset=True)
+                                                                      active_regions_th=0.2, reset=True)
             # plotter.plot_statistical_model(statistical_model, "Statistical Model")
             n_electrodes = 8
             sensors_per_electrode = 2
@@ -152,7 +152,8 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", dynamical_mode
                         sensors_lbls = head.get_sensors_id().labels
                     signals, time, sensors_inds = \
                         prepare_seeg_observable_from_mne_file(EMPIRICAL, dynamical_model, times_on_off, sensors_lbls,
-                                                              time_units=time_units, plotter=plotter)[:2]
+                                                              sensors_inds, time_units=time_units, win_len_ratio=10,
+                                                              plotter=plotter)[:3]
                     inds = np.argsort(sensors_inds)
                     sensors_inds = np.array(sensors_inds)[inds].flatten().tolist()
                     model_inversion.sensors_labels = np.array(sensors_lbls).flatten().tolist()
@@ -167,7 +168,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", dynamical_mode
             else:
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
                 target_data_type = "simulated"
-                statistical_model.observation_model = "seeg_logpower"  # "seeg_logpower" # "lfp_power"
+                statistical_model.observation_model = "lfp_power"  # "seeg_logpower" # "lfp_power"
                 decimate = 1
                 ts_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ts.mat")
                 vois_ts_dict = \
@@ -268,10 +269,10 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", dynamical_mode
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         fit=True
-        num_warmup = 20
+        num_warmup = 100
         if fit:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
-                                                      chains=2, refresh=1, num_warmup=num_warmup, num_samples=30,
+                                                      chains=2, refresh=1, num_warmup=num_warmup, num_samples=100,
                                                       max_depth=7, delta=0.8, save_warmup=1, plot_warmup=1, **kwargs)
             writer.write_generic(ests, config.out.FOLDER_RES, hyp.name + "_fit_est.h5")
             writer.write_generic(samples, config.out.FOLDER_RES, hyp.name + "_fit_samples.h5")
@@ -335,7 +336,7 @@ if __name__ == "__main__":
          u"G'1", u"G'2", u"G'3", u"G'4", u"G'8", u"G'9", u"G'10", u"G'11", u"G'12", u"G'13", u"G'14", u"G'15",
          u"L'1", u"L'2", u"L'3", u"L'4", u"L'5", u"L'6", u"L'7", u"L'8", u"L'9", u"L'10", u"L'11", u"L'12", u"L'13",
          u"M'1", u"M'2", u"M'3", u"M'7", u"M'8", u"M'9", u"M'10", u"M'11", u"M'12", u"M'13", u"M'14", u"M'15",
-         u"O'1", u"O'2", u"O'3", u"O'6", u"O'7", u"O'8", u"O'9", u"O'10", u"O'11", u"O'12", u"O'13",
+         u"O'1", u"O'2", u"O'3", u"O'6", u"O'7", u"O'8", u"O'9", u"O'10", u"O'11", u"O'12", # u"O'13"
          u"P'1", u"P'2", u"P'3", u"P'8", u"P'10", u"P'11", u"P'12", u"P'13", u"P'14", u"P'15", u"P'16",
          u"R'1", u"R'2", u"R'3", u"R'4", u"R'7", u"R'8", u"R'9",
          ]
@@ -344,7 +345,7 @@ if __name__ == "__main__":
                     28, 29, 30, 31, 36, 37, 38, 39, 40, 41, 42,
                     44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
                     58, 59, 60, 64, 65, 66, 67, 68, 69, 70, 71, 72,
-                    74, 75, 76, 79, 80, 81, 82, 83, 84, 85, 86,
+                    74, 75, 76, 79, 80, 81, 82, 83, 84, 85, # 86,
                     90, 91, 92, 97, 99, 100, 101, 102, 103, 104, 105,
                     106, 107, 108, 109, 112, 113, 114
                     ]
@@ -366,7 +367,7 @@ if __name__ == "__main__":
     # seizure = 'SZ3_0001.edf'
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
-    EMPIRICAL = True
+    EMPIRICAL = False
     # stats_model_name = "vep_sde"
     stats_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
