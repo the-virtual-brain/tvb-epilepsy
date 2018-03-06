@@ -743,10 +743,12 @@ class Plotter(BasePlotter):
             self._check_show()
 
     def plot_fit_results(self, model_inversion, ests, samples, statistical_model, signals, stats=None, time=None,
-                         priors=None, region_mode="all", seizure_indices=[], x1_str="x1", mc_str="MC",
+                         priors=None, region_mode="all", seizure_indices=[], x1_str="x1", k_str="K", mc_str="MC",
                          signals_str="fit_signals", sig_str="sig", dX1t_str="dX1t", dZt_str="dZt",
                          trajectories_plot=True, connectivity_plot=True, **kwargs):
-        region_labels = kwargs.get("regions_labels", model_inversion.region_labels)
+        skip_samples = kwargs.get("skip_samples", 0)
+        region_labels = generate_region_labels(statistical_model.number_of_regions, numbering=False,
+                                               labels=kwargs.get("regions_labels", model_inversion.region_labels))
         if isequal_string(region_mode, "all"):
             region_inds = range(statistical_model.number_of_regions)
             seizure_indices = statistical_model.active_regions
@@ -758,12 +760,22 @@ class Plotter(BasePlotter):
         self.parameters_pair_plots(samples,
                                    kwargs.get("pair_plot_params",
                                               ["tau1", "tau0", "K", "sig_eq", "sig_init", "sig", "eps", "scale_signal",
-                                               "offset_signal"]), stats,
-                                   kwargs.get("skip_samples", 0), title=statistical_model.name + " parameters samples")
+                                               "offset_signal"]), stats, skip_samples,
+                                   title=statistical_model.name + " parameters samples")
+        # plot K-x0 parameters in pair plots
+        x0_K_pair_plot_params = [k_str]
+        x0_K_pair_plot_samples = [{k_str: s[k_str]} for s in samples]
+        for inode, iregion in enumerate(statistical_model.active_regions):
+            temp_name = "x0[" + region_labels[iregion] + "]"
+            x0_K_pair_plot_params.append(temp_name)
+            for ichain, s in enumerate(samples):
+                x0_K_pair_plot_samples[ichain].update({temp_name: s["x0"][:, inode]})
+        self.parameters_pair_plots(x0_K_pair_plot_samples, x0_K_pair_plot_params, None, skip_samples,
+                                   title=statistical_model.name + " global coupling vs x0 pair plot")
         # plot region-wise parameters
         self.region_parameters_violin_plots(samples, priors,
                                             kwargs.get("region_violin_params", ["x0", "x1eq", "x1init", "zinit"]),
-                                            stats, skip_samples=kwargs.get("skip_samples", 0),
+                                            stats, skip_samples,
                                             per_chain=kwargs.get("violin_plot_per_chain", False),
                                             labels=region_labels[region_inds], seizure_indices=seizure_indices,
                                             figure_name=statistical_model.name + " regions parameters samples")
@@ -791,16 +803,17 @@ class Plotter(BasePlotter):
         observation_dict = OrderedDict({'observation signals': signals})
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), ensure_list(samples))):
             name = statistical_model.name + "_chain" + str(id_est+1)
-            observation_dict.update({"fit chain " + str(id_est+1): sample[signals_str].T})
-            self.plot_raster(sort_dict({x1_str: sample[x1_str].T, 'z': sample["z"].T}), time,
-                             special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
+            observation_dict.update({"fit chain " + str(id_est+1): sample[signals_str].T[skip_samples:]})
+            self.plot_raster(sort_dict({x1_str: sample[x1_str].T[skip_samples:], 'z': sample["z"].T[skip_samples:]}),
+                             time[skip_samples:], special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                              title=name + ": Hidden states fit rasterplot",
                              subtitles=['hidden state ' + x1_str + stats_string[x1_str],
                                         'hidden state z' + stats_string["z"]], offset=1.0,
                              labels=region_labels[region_inds],
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
-            self.plot_raster(sort_dict({dX1t_str: sample[dX1t_str].T, dZt_str: sample[dZt_str].T}), time[:-1],  #
-                             time_units=est.get('time_units', "ms"), # special_idx=seizure_indices,
+            self.plot_raster(sort_dict({dX1t_str: sample[dX1t_str].T[skip_samples:],
+                                        dZt_str: sample[dZt_str].T[skip_samples:]}),
+                             time[skip_samples:-1], time_units=est.get('time_units', "ms"), # special_idx=seizure_indices,
                              title=name + ": Hidden states random walk rasterplot",
                              subtitles=[dX1t_str,
                                         dZt_str +
@@ -810,8 +823,9 @@ class Plotter(BasePlotter):
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
             if trajectories_plot:
                 title = name + ': Fit hidden state space trajectories'
-                self.plot_trajectories({x1_str: sample[x1_str].T, 'z': sample['z'].T}, special_idx=seizure_indices,
-                                       title=title, labels=stats_region_labels, figsize=FiguresConfig.SUPER_LARGE_SIZE)
+                self.plot_trajectories({x1_str: sample[x1_str].T[skip_samples:], 'z': sample['z'].T[skip_samples:]},
+                                       special_idx=seizure_indices, title=title, labels=stats_region_labels,
+                                       figsize=FiguresConfig.SUPER_LARGE_SIZE)
             # plot connectivity
             if connectivity_plot:
                 MC_prior = statistical_model.parameters["MC"].mean
@@ -829,7 +843,8 @@ class Plotter(BasePlotter):
                 self.plot_regions2regions(est[mc_str], region_labels, 122, MC_title)
                 self._save_figure(pyplot.gcf(), conn_figure_name)
                 self._check_show()
-        self.plot_timeseries(observation_dict, time, special_idx=[], time_units=ests[0].get('time_units', "ms"),
+        self.plot_timeseries(observation_dict, time[skip_samples:], special_idx=[],
+                             time_units=ests[0].get('time_units', "ms"),
                              title="Observation signals vs fit time series: " + stats_string[signals_str],
                              offset=1.0, labels=sensor_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
