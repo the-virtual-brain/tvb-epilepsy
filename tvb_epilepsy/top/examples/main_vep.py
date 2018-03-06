@@ -19,14 +19,14 @@ from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationB
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
 
-PSE_FLAG = False
+PSE_FLAG = True
 SA_PSE_FLAG = False
-SIM_FLAG = True
+SIM_FLAG = False
 EP_NAME = "clinical_hypothesis_preseeg"
 
 
 def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], hyp_norm=0.99, manual_hypos=[],
-             sim_type="default", pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG, n_samples=100,
+             sim_type="default", pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG, n_samples=1000,
              test_write_read=False):
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
     # -------------------------------Reading data-----------------------------------
@@ -249,5 +249,5 @@ if __name__ == "__main__":
                                'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
     output = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "tests")
     config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
-    main_vep(config)
+    main_vep(config, "clinical_hypothesis_postseeg", ep_indices=[1, 26])
     # main_vep()
