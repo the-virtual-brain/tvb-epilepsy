@@ -16,7 +16,7 @@ from tvb_epilepsy.base.computations.math_utils import compute_in_degree
 from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
 from tvb_epilepsy.base.epileptor_models import EpileptorDP2D, EpileptorDPrealistic
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string, sort_dict, linspace_broadcast, \
-                                                          generate_region_labels
+                                                          generate_region_labels, ensure_string
 from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, extract_dict_stringkeys
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_y1, def_x1lin
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz, calc_fx1, calc_fx1_2d_taylor
@@ -138,9 +138,15 @@ class Plotter(BasePlotter):
 
     def _timeseries_plot(self, time, n_vars, nTS, n_times, time_units, subplots, offset=0.0, data_lims=[]):
         def_time = range(n_times)
-        if not (isinstance(time, numpy.ndarray) and (len(time) == n_times)):
+        try:
+            time = numpy.array(time).flatten()
+            if len(time) != n_times:
+                self.logger.warning("Input time doesn't match data! Setting a default time step vector!")
+                time = def_time
+        except:
+            self.logger.warning("Setting a default time step vector manually! Input time: " + str(time))
             time = def_time
-            self.logger.warning("Input time doesn't match data! Setting a default time step vector!")
+        time_units = ensure_string(time_units)
         data_fun = lambda data, time, icol: (data[icol], time, icol)
 
         def plot_ts(x, iTS, colors, alphas, labels):
@@ -163,7 +169,7 @@ class Plotter(BasePlotter):
 
         def axlabels_ts(labels, n_rows, irow, iTS):
             if irow == n_rows:
-                pyplot.gca().set_xlabel("Time (" + time_units + ")")
+                pyplot.gca().set_xlabel("Time (" + time_units+ ")")
             if n_rows > 1:
                 try:
                     pyplot.gca().set_ylabel(str(iTS) + "." + labels[iTS])
@@ -369,6 +375,9 @@ class Plotter(BasePlotter):
             return
         labels = generate_region_labels(nS, labels, ". ")[special_idx]
         nS = data.shape[1]
+        if not isinstance(time_units, basestring):
+            time_units = list(time_units)[0]
+        time_units = ensure_string(time_units)
         if time_units in ("ms", "msec"):
             fs = 1000.0
         else:
@@ -464,7 +473,7 @@ class Plotter(BasePlotter):
                                      title=model._ui_name + ": Simulated pop2-g",
                                      labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
             start_plot = int(numpy.round(0.01 * res['lfp'].shape[0]))
-            self.plot_raster({'lfp': res['lfp'][start_plot:, :]}, res['time'][start_plot:],
+            self.plot_raster({'lfp': res['lfp'][start_plot:, :]}, res['time'].flatten()[start_plot:],
                              time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
                              title=model._ui_name + ": Simulated LFP rasterplot", offset=2.0, labels=region_labels,
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
