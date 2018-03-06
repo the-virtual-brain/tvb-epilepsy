@@ -133,7 +133,7 @@ def build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_
             gain_matrix = model_inversion.gain_matrix
             mixing = deepcopy(gain_matrix)[:, statistical_model.active_regions]
         else:
-            mixing = np.eye(vep_data["nn"])
+            mixing = np.eye(vep_data["ns"])
         if mixing.shape[0] > vep_data["ns"]:
             mixing = mixing[model_inversion.signals_inds]
         vep_data["gain"] = mixing

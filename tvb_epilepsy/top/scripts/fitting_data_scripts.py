@@ -116,6 +116,8 @@ def prepare_signal_observable(data, times, dynamical_model, on_off_set, labels, 
     # observation -= observation.min()
     # observation /= observation.max()
     if plotter:
+        plotter.plot_raster({"ObservationRaster": data}, times, time_units="msec", special_idx=[], offset=1.0,
+                                title='Observation Raster Plot', figure_name='ObservationRasterPlot', labels=plotlabels)
         plotter.plot_timeseries({"Observation": data}, times, time_units="msec", special_idx=[],
                                 title='Observation Time Series', figure_name='ObservationTimeSeries', labels=plotlabels)
     return data, times, rois, labels

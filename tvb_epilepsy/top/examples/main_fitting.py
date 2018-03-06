@@ -5,7 +5,7 @@ import numpy as np
 from scipy.io import loadmat, savemat
 from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.constants.model_constants import K_DEF
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, extract_dict_stringkeys
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.io.h5_reader import H5Reader
@@ -26,7 +26,7 @@ head_folder = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", 
 if User == "/home/denis":
     output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/empirical/uninformative")
 else:
-    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "laptop/synthetic")
+    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "laptop/synthetic/source/uninformative")
 config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
 if User == "/home/denis":
     config.generic.C_COMPILER = "g++"
@@ -167,9 +167,8 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", dynamical_mode
                 manual_selection = sensors_inds
             else:
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
-                target_data_type = "simulated"
+                target_data_type = "seeg_logpower"
                 statistical_model.observation_model = observation_model
-                decimate = 1
                 ts_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ts.mat")
                 vois_ts_dict = \
                     from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
@@ -199,14 +198,19 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", dynamical_mode
             #             model_inversion.update_active_regions_seeg(statistical_model)
             if model_inversion.data_type == "lfp":
                 labels = model_inversion.region_labels
+                special_idx = []
             else:
                 labels = model_inversion.sensors_labels
             if vois_ts_dict.get("signals", None) is not None:
                 vois_ts_dict["signals"] -= vois_ts_dict["signals"].min()
                 vois_ts_dict["signals"] /= vois_ts_dict["signals"].max()
+                if statistical_model.observation_model == "seeg_logpower":
+                    special_idx = model_inversion.singals_inds
+                else:
+                    special_idx = []
                 plotter.plot_raster({'Target Signals': vois_ts_dict["signals"]}, vois_ts_dict["time"].flatten(),
                                     time_units="ms", title=hyp.name + ' Target Signals raster',
-                                    special_idx=model_inversion.signals_inds, offset=0.1, labels=labels)
+                                    special_idx=special_idx, offset=0.1, labels=labels)
             plotter.plot_timeseries({'Target Signals': signals}, time, time_units="ms",
                                     title=hyp.name + ' Target Signals',
                                     labels=labels[model_inversion.signals_inds])
@@ -225,7 +229,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", dynamical_mode
         if stats_model_name.find("vep-fe-rev") >= 0:
             model_data, x0_star_mu, x_init_mu, z_init_mu = \
                 build_stan_model_dict_to_interface_ins(model_data, statistical_model, model_inversion,
-                                                       informative_priors=True)
+                                                       informative_priors=False)
             x1_str = "x"
             input_signals_str = "seeg_log_power"
             signals_str = "mu_seeg_log_power"
@@ -269,10 +273,10 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", dynamical_mode
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         fit=True
-        num_warmup = 100
+        num_warmup = 5
         if fit:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
-                                                      chains=2, refresh=1, num_warmup=num_warmup, num_samples=100,
+                                                      chains=1, refresh=1, num_warmup=num_warmup, num_samples=5,
                                                       max_depth=7, delta=0.8, save_warmup=1, plot_warmup=1, **kwargs)
             writer.write_generic(ests, config.out.FOLDER_RES, hyp.name + "_fit_est.h5")
             writer.write_generic(samples, config.out.FOLDER_RES, hyp.name + "_fit_samples.h5")
@@ -309,6 +313,8 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", dynamical_mode
                                           set_x0_hypothesis(list(statistical_model.active_regions),
                                                             x0_values_fit[statistical_model.active_regions]).\
                                           build_hypothesis()
+            writer.write_hypothesis(hyp_fit, os.path.join(config.out.FOLDER_RES, hyp_fit.name + ".h5"))
+
             model_configuration_fit = \
                 fit_model_configuration_builder.build_model_from_hypothesis(hyp_fit,  # est["MC"]
                                                                             model_configuration.model_connectivity)
