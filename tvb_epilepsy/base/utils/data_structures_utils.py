@@ -209,6 +209,16 @@ def ensure_list(arg):
     return arg
 
 
+def ensure_string(arg):
+    if not (isinstance(arg, basestring)):
+        if arg is None:
+            return ""
+        else:
+            return ensure_list(arg)[0]
+    else:
+        return arg
+
+
 def set_list_item_by_reference_safely(ind, item, lst):
     while ind >= len(lst):
         lst.append(None)
