@@ -24,7 +24,7 @@ from tvb_epilepsy.top.scripts.fitting_data_scripts import prepare_seeg_observabl
 User = os.path.expanduser("~")
 head_folder = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
 if User == "/home/denis":
-    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/empirical/informative")
+    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/empirical/uninformative")
 else:
     output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "laptop/synthetic")
 config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
@@ -126,7 +126,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", dynamical_mode
             model_data = stan_service.load_model_data_from_file(model_data_path=model_data_file)
         else:
             model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
-                                                       x1eq_max=-1.0, sig=0.05, priors_mode="informative")
+                                                       x1eq_max=-1.0, sig=0.05, priors_mode="uninformative")
             # observation_expression="lfp"
             observation_model = "seeg_logpower"
             statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0, observation_model=observation_model)
