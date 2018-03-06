@@ -175,13 +175,15 @@ def prepare_seeg_observable_from_mne_file(seeg_path, dynamical_model, on_off_set
         if len(this_index) == 1:
             rois.append(iR)
             sensors_inds.append(this_index[0])
-    raw_data.resample(128.0)
+    # raw_data.resample(512.0)
     data, times = raw_data[:, :]
     if ensure_string(time_units) == "sec":
         times = 1000 * times
     data = data[rois].T
-    rois_inds = np.argsort(rois)
-    data = data[:, rois_inds]
+    sort_inds = np.argsort(sensors_inds)
+    sensors_inds = np.array(sensors_inds)[sort_inds]
+    rois = np.array(rois[sort_inds])
+    data = data[:, rois]
     print("Linear detrending of signals...")
     for iS in range(data.shape[1]):
         data[:, iS] = detrend_linear(data[:, iS])
