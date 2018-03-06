@@ -158,32 +158,37 @@ def prepare_seeg_observable(data, times, dynamical_model, on_off_set, sensors_lb
                                      log_flag=log_flag, plotter=plotter)
 
 
-def prepare_seeg_observable_from_mne_file(seeg_path, dynamical_model, on_off_set, sensors_lbls,  time_units="msec",
-                                          win_len_ratio=WIN_LEN_RATIO, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
-                                          bipolar=BIPOLAR, log_flag=LOG_FLAG, plotter=False):
+def prepare_seeg_observable_from_mne_file(seeg_path, dynamical_model, on_off_set, sensors_lbls, initial_selection_inds=[],
+                                          time_units="msec", win_len_ratio=WIN_LEN_RATIO, low_freq=LOW_FREQ,
+                                          high_freq=HIGH_FREQ, bipolar=BIPOLAR, log_flag=LOG_FLAG, plotter=False):
     from pylab import detrend_linear
     from mne.io import read_raw_edf
     print("Reading empirical dataset from mne file...")
     raw_data = read_raw_edf(seeg_path, preload=True)
     rois = []
+    if len(initial_selection_inds) == 0:
+        initial_selection_inds = range(sensors_lbls)
     sensors_inds = []
     sensors_lbls = np.array(sensors_lbls)
+    #included_channels = []
     print("Selecting target signals from dataset...")
     for iR, s in enumerate(raw_data.ch_names):
         this_label = s.split("POL ")[-1]
         this_index = np.where(np.array(this_label) == sensors_lbls)[0]
-        if len(this_index) == 1:
+        if len(this_index) == 1 and this_index[0] in initial_selection_inds:
+            # if this_index[0] == 86:
+            #     print("WTF?!")
+            # included_channels.append(s)
             rois.append(iR)
             sensors_inds.append(this_index[0])
     # raw_data.resample(512.0)
     data, times = raw_data[:, :]
+    data = data[rois].T
     if ensure_string(time_units) == "sec":
         times = 1000 * times
-    data = data[rois].T
     sort_inds = np.argsort(sensors_inds)
     sensors_inds = np.array(sensors_inds)[sort_inds]
-    rois = np.array(rois[sort_inds])
-    data = data[:, rois]
+    data = data[:, sort_inds]
     print("Linear detrending of signals...")
     for iS in range(data.shape[1]):
         data[:, iS] = detrend_linear(data[:, iS])
