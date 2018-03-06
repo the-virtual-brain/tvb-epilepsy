@@ -205,7 +205,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", dynamical_mode
                 vois_ts_dict["signals"] -= vois_ts_dict["signals"].min()
                 vois_ts_dict["signals"] /= vois_ts_dict["signals"].max()
                 if statistical_model.observation_model == "seeg_logpower":
-                    special_idx = model_inversion.singals_inds
+                    special_idx = model_inversion.signals_inds
                 else:
                     special_idx = []
                 plotter.plot_raster({'Target Signals': vois_ts_dict["signals"]}, vois_ts_dict["time"].flatten(),
