@@ -25,7 +25,7 @@ head_folder = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", 
 if User == "/home/denis":
     output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster")
 else:
-    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "laptop")
+    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
 config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
 if User == "/home/denis":
     config.generic.C_COMPILER = "g++"
