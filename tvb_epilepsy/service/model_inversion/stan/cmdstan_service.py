@@ -1,4 +1,5 @@
 from shutil import copyfile
+from glob import glob
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import construct_import_path
 from tvb_epilepsy.base.utils.command_line_utils import execute_command
@@ -41,7 +42,7 @@ class CmdStanService(StanService):
             raise_value_error(self.fitmethod + " does not correspond to one of the input methods:\n" +
                               "sample, variational, optimize, diagnose")
 
-    def set_output_files(self, output_filepath=None, summary_filepath=None, diagnostic_filepath=None, check_files=False,
+    def set_output_files(self, output_filepath=None, diagnostic_filepath=None, summary_filepath=None, check_files=False,
                          overwrite_output_files=False):
         if output_filepath is None:
             output_filepath = os.path.join(self.config.out.FOLDER_RES, STAN_OUTPUT_OPTIONS["file"])
@@ -50,9 +51,12 @@ class CmdStanService(StanService):
         if summary_filepath is None:
             summary_filepath = os.path.join(self.config.out.FOLDER_RES, "stan_summary.csv")
         if check_files:
-            return change_filename_or_overwrite_with_wildcard(output_filepath, overwrite_output_files), \
-                   change_filename_or_overwrite_with_wildcard(diagnostic_filepath, overwrite_output_files), \
-                   change_filename_or_overwrite_with_wildcard(summary_filepath, overwrite_output_files)
+            return change_filename_or_overwrite_with_wildcard(output_filepath.split(".csv")[0],
+                                                              overwrite_output_files) + ".csv", \
+                   change_filename_or_overwrite_with_wildcard(diagnostic_filepath.split(".csv")[0],
+                                                              overwrite_output_files) + ".csv", \
+                   change_filename_or_overwrite_with_wildcard(summary_filepath.split(".csv")[0],
+                                                              overwrite_output_files) + ".csv"
         else:
             return output_filepath, diagnostic_filepath, summary_filepath
 
@@ -94,10 +98,13 @@ class CmdStanService(StanService):
         return est, samples, summary
 
     def stan_summary(self):
-        command = "bin/stansummary " + self.output_filepath[:-4] + "*.csv" + " --csv_file=" + self.summary_filepath
+        command = "bin/stansummary " + self.output_filepath.split(".csv")[0] + "*.csv" + " --csv_file=" \
+                  + self.summary_filepath
         execute_command(command, cwd=self.path, shell=True)
 
-    def fit(self,debug=0, simulate=0, return_output=True, plot_HMC=True, overwrite_output_files=False, **kwargs):
+    def fit(self,debug=0, simulate=0, return_output=True, plot_HMC=True, overwrite_output_files=False, plot_warmup=0,
+            **kwargs):
+        num_warmup = kwargs.get("num_warmup", 0)
         # Confirm output files and check if overwriting is necessary
         self.output_filepath, self.diagnostic_filepath, self.summary_filepath = \
             self.set_output_files(kwargs.pop("output_filepath", self.output_filepath),
@@ -122,7 +129,8 @@ class CmdStanService(StanService):
             est, samples, summary = self.read_output()
             if plot_HMC and self.fitmethod.find("sampl") >= 0 and \
                 isequal_string(self.options.get("algorithm", "None"), "HMC"):
-                Plotter(self.config).plot_HMC(samples, kwargs.pop("skip_samples", 0))
+                Plotter(self.config).plot_HMC(samples,
+                                              kwargs.pop("skip_samples", (1-kwargs.get("plot_warmup", 0)) * num_warmup))
             return est, samples, summary
         else:
             return None, None, None
