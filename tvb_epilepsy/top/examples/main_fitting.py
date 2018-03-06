@@ -24,7 +24,7 @@ from tvb_epilepsy.top.scripts.fitting_data_scripts import prepare_seeg_observabl
 User = os.path.expanduser("~")
 head_folder = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
 if User == "/home/denis":
-    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/synthetic/source/uninformative")
+    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/synthetic/sensor/uninformative")
 else:
     output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "laptop/synthetic")
 config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
@@ -128,8 +128,8 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", dynamical_mode
             model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
                                                        x1eq_max=-1.0, sig=0.05, priors_mode="uninformative")
             # observation_expression="lfp"
-            statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0, # observation_model="seeg_logpower"
-                                                                           observation_model="lfp_power")
+            observation_model = "seeg_logpower"
+            statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0, observation_model=observation_model)
             statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
                                                                       active_regions_th=0.2, reset=True)
             # plotter.plot_statistical_model(statistical_model, "Statistical Model")
@@ -168,7 +168,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", EMPIRICAL="", dynamical_mode
             else:
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
                 target_data_type = "simulated"
-                statistical_model.observation_model = "lfp_power"  # "seeg_logpower" # "lfp_power"
+                statistical_model.observation_model = observation_model
                 decimate = 1
                 ts_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ts.mat")
                 vois_ts_dict = \
