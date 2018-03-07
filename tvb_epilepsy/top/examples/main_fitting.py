@@ -24,7 +24,7 @@ from tvb_epilepsy.top.scripts.fitting_data_scripts import prepare_seeg_observabl
 User = os.path.expanduser("~")
 head_folder = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
 if User == "/home/denis":
-    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/empirical/uninformative")
+    output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/synthetic/sensor/uninformative")
 else:
     output = os.path.join(User, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "laptop/synthetic/source/uninformative")
 config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
