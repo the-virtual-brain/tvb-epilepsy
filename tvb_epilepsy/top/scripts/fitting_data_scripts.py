@@ -120,7 +120,7 @@ def prepare_signal_observable(data, times, dynamical_model, on_off_set, labels, 
                                 title='Observation Raster Plot', figure_name='ObservationRasterPlot', labels=plotlabels)
         plotter.plot_timeseries({"Observation": data}, times, time_units="msec", special_idx=[],
                                 title='Observation Time Series', figure_name='ObservationTimeSeries', labels=plotlabels)
-    return data, times, rois, labels
+    return data, times, np.array(rois), np.array(labels)
 
 
 def prepare_seeg_observable(data, times, dynamical_model, on_off_set, sensors_lbls, sensors_inds=[],
