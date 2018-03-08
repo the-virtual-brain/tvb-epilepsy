@@ -122,20 +122,22 @@ class H5Writer(object):
         """
         h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
-        h5_file.create_dataset("x0_values", data=hypothesis.x0_values)
-        h5_file.create_dataset("e_values", data=hypothesis.e_values)
-        h5_file.create_dataset("w_values", data=hypothesis.w_values)
-        h5_file.create_dataset("lsa_propagation_strengths", data=hypothesis.lsa_propagation_strengths)
+        h5_hypo = hypothesis.prepare_hypothesis_for_h5()
+
+        h5_file.create_dataset("x0_values", data=h5_hypo.x0_values)
+        h5_file.create_dataset("e_values", data=h5_hypo.e_values)
+        h5_file.create_dataset("w_values", data=h5_hypo.w_values)
+        h5_file.create_dataset("lsa_propagation_strengths", data=h5_hypo.lsa_propagation_strengths)
 
         # TODO: change HypothesisModel to GenericModel here and inside Epi
         h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, hypothesis.__class__.__name__)
-        h5_file.attrs.create("number_of_regions", hypothesis.number_of_regions)
-        h5_file.attrs.create("type", hypothesis.type)
-        h5_file.attrs.create("x0_indices", hypothesis.x0_indices)
-        h5_file.attrs.create("e_indices", hypothesis.e_indices)
-        h5_file.attrs.create("w_indices", hypothesis.w_indices)
-        h5_file.attrs.create("lsa_propagation_indices", hypothesis.lsa_propagation_indices)
+        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, h5_hypo.__class__.__name__)
+        h5_file.attrs.create("number_of_regions", h5_hypo.number_of_regions)
+        h5_file.attrs.create("type", h5_hypo.type)
+        h5_file.attrs.create("x0_indices", h5_hypo.x0_indices)
+        h5_file.attrs.create("e_indices", h5_hypo.e_indices)
+        h5_file.attrs.create("w_indices", h5_hypo.w_indices)
+        h5_file.attrs.create("lsa_propagation_indices", h5_hypo.lsa_propagation_indices)
 
         h5_file.close()
 
