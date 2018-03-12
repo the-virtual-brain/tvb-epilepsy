@@ -214,7 +214,10 @@ class DiseaseHypothesis(object):
             x0_values[self.x0_indices] = self.x0_values
 
         if len(self.lsa_propagation_indices) > 0 and self.lsa_propagation_strengths.size > 0:
-            propagation_values[self.lsa_propagation_indices] = self.lsa_propagation_strengths
+            if self.lsa_propagation_strengths.size == propagation_values.size:
+                propagation_values = self.lsa_propagation_strengths
+            else:
+                propagation_values[self.lsa_propagation_indices] = self.lsa_propagation_strengths
 
         hypo = deepcopy(self)
         hypo.e_values = e_values

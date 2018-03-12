@@ -101,7 +101,8 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
         sim, sim_settings, dynamical_model = build_simulator_TVB_default(model_configuration, head.connectivity)
 
     writer = H5Writer()
-    writer.write_generic(sim.model, config.out.FOLDER_RES, dynamical_model._ui_name + "_model.h5")
+    writer.write_simulator_model(sim.model, sim.connectivity.number_of_regions,
+                                 os.path.join(config.out.FOLDER_RES, dynamical_model._ui_name + "_model.h5"))
 
     vois_ts_dict = {}
     if ts_file is not None and os.path.isfile(ts_file):

@@ -198,7 +198,8 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
 
                 # Integrator and initial conditions initialization.
                 # By default initial condition is set right on the equilibrium point.
-                writer.write_generic(sim.model, config.out.FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5")
+                writer.write_simulator_model(sim.model, sim.connectivity.number_of_regions,
+                                             os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5"))
                 logger.info("\n\nSimulating...")
                 ttavg, tavg_data, status = sim.launch_simulation(report_every_n_monitor_steps=100)
 
