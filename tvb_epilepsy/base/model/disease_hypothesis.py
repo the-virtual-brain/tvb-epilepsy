@@ -231,4 +231,8 @@ class DiseaseHypothesis(object):
         self.e_values = self.e_values[self.e_indices]
         self.x0_values = self.x0_values[self.x0_indices]
         self.lsa_propagation_strengths = self.lsa_propagation_strengths[list(self.lsa_propagation_indices)]
-        self.w_values = self.w_values[self.w_indices]
+        if (self.w_values == 1).all():
+            self.w_values = []
+            self.w_indices = []
+        else:
+            self.w_values = self.w_values[self.w_indices]
