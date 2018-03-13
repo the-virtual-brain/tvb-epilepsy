@@ -132,7 +132,7 @@ class ModelConfigurationBuilder(object):
     def _compute_x1_equilibrium(self, e_indices, x1EQ, zEQ, x0_values, model_connectivity):
         self._compute_critical_x0_scaling()
         x0 = self._compute_model_x0(x0_values)
-        x0_indices = np.delete(np.array(range(model_connectivity.shape[0])), e_indices)
+        x0_indices = np.delete(np.array(range(self.number_of_regions)), e_indices)
         if self.x1eq_mode == "linTaylor":
             x1EQ = \
                 eq_x1_hypo_x0_linTaylor(x0_indices, e_indices, x1EQ, zEQ, x0, self.K,
@@ -154,6 +154,8 @@ class ModelConfigurationBuilder(object):
                                   e_values, self.zmode, model_connectivity)
 
     def build_model_from_E_hypothesis(self, disease_hypothesis, model_connectivity):
+        # This function sets healthy regions to the default epileptogenicity.
+
         # Always normalize K first
         self._normalize_global_coupling()
 
@@ -168,9 +170,20 @@ class ModelConfigurationBuilder(object):
         # Compute equilibrium from epileptogenicity:
         x1EQ, zEQ = self._compute_x1_and_z_equilibrium_from_E(e_values)
 
+        if len(disease_hypothesis.x0_values) > 0:
+
+            # If there is also some x0 hypothesis, solve the system for the equilibrium:
+            # x0_values values must have size of len(x0_indices),
+            # e_indices are all regions except for the x0_indices in this case
+            x1EQ = self._compute_x1_equilibrium(np.delete(range(self.number_of_regions), disease_hypothesis.x0_indices),
+                                                x1EQ, zEQ, disease_hypothesis.x0_values, model_connectivity)
+            zEQ = self._compute_z_equilibrium(x1EQ)
+
         return self._configure_model_from_equilibrium(x1EQ, zEQ, model_connectivity)
 
     def build_model_from_hypothesis(self, disease_hypothesis, model_connectivity):
+        # This function sets healthy regions to the default excitability.
+
         # Always normalize K first
         self._normalize_global_coupling()
 
@@ -191,11 +204,11 @@ class ModelConfigurationBuilder(object):
         # and assign any diseased E_values if any
         e_values[disease_hypothesis.e_indices] = disease_hypothesis.e_values
 
-        # Compute equilibrium from epileptogenicity:
-        x1EQ_temp, zEQ_temp = self._compute_x1_and_z_equilibrium_from_E(e_values)
+        # Compute equilibrium only from epileptogenicity:
+        x1EQ, zEQ = self._compute_x1_and_z_equilibrium_from_E(e_values)
 
         # Now, solve the system in order to compute equilibrium:
-        x1EQ = self._compute_x1_equilibrium(disease_hypothesis.e_indices, x1EQ_temp, zEQ_temp, x0_values,
+        x1EQ = self._compute_x1_equilibrium(disease_hypothesis.e_indices, x1EQ, zEQ, x0_values,
                                             model_connectivity)
         zEQ = self._compute_z_equilibrium(x1EQ)
 
