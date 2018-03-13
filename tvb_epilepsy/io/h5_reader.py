@@ -245,7 +245,7 @@ class H5Reader(object):
 
         return time, data
 
-    def read_hypothesis(self, path):
+    def read_hypothesis(self, path, simplify=True):
         """
         :param path: Path towards a Hypothesis H5 file
         :return: DiseaseHypothesis object
@@ -267,6 +267,9 @@ class H5Reader(object):
                 hypothesis.set_attribute(attr, h5_file.attrs[attr])
 
         h5_file.close()
+        if simplify:
+            hypothesis.simplify_hypothesis_from_h5()
+
         return hypothesis
 
     def read_model_configuration(self, path):
