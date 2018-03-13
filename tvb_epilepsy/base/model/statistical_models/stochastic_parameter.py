@@ -46,6 +46,7 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
         self.loc = make_float(params.pop("loc", self.loc))
         self.scale = make_float(params.pop("scale", self.scale))
         self.update_params(self.loc, self.scale, use=use, **params)
+        return self
 
     def _confirm_support(self):
         p_star = (self.low - self.loc) / self.scale
@@ -61,7 +62,7 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
                                 "\n(self.high-self.loc)/self.scale) = " + str(p_star) +
                                 "\ncdf(self.high-self.loc)/self.scale) = " + str(p_star_cdf))
 
-    def _update_loc_scale(self, use="scipy", **target_stats):
+    def update_loc_scale(self, use="scipy", **target_stats):
         param_m = self._calc_mean(use=use)
         target_m = self._calc_mean(use=use)
         param_s = self._calc_std(use=use)
@@ -89,6 +90,7 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
             self.loc = target_m - temp_m
             self._confirm_support()
             self._update_params(use=use)
+        return self
 
 # TODO: this should move to examples
 # if __name__ == "__main__":
