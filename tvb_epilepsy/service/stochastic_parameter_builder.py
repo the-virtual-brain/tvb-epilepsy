@@ -133,4 +133,4 @@ def generate_stochastic_parameter(name="Parameter", low=-CalculusConfig.MAX_SING
         def _numpy(self, size=(1,)):
             return self.numpy(self.loc, self.scale, size)
 
-    return StochasticParameter(name, low, high, loc, scale, p_shape, **target_params)
+    return StochasticParameter(name, low, high, loc, scale, p_shape, use, **target_params)
