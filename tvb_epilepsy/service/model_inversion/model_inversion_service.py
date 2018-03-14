@@ -1,7 +1,7 @@
 import time
 from copy import deepcopy
 import numpy as np
-from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
+from tvb_epilepsy.base.constants.model_constants import X1EQ_CR_DEF, X1_DEF, X0_DEF, X0_CR_DEF
 from tvb_epilepsy.base.constants.model_inversion_constants import X1EQ_MIN, X1EQ_MAX, TAU1_DEF, TAU1_MIN, TAU1_MAX, \
     TAU0_DEF, TAU0_MIN, TAU0_MAX, K_MIN, K_MAX, MC_MAX, MC_MAX_MIN_RATIO
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, raise_not_implemented_error
@@ -29,7 +29,7 @@ class ModelInversionService(object):
             self.logger.info("Input model configuration set...")
             self.number_of_regions = model_configuration.number_of_regions
             self._copy_attributes(model_configuration,
-                                  ["K", "x1EQ", "zEQ", "e_values", "x0_values", "x0"], deep_copy=True)
+                                  ["K", "x1eq", "zeq", "e_values", "x0_values", "x0"], deep_copy=True)
             self.model_connectivity = deepcopy(kwargs.pop("model_connectivity", model_configuration.model_connectivity))
             self.epileptor_parameters = self.get_epileptor_parameters(model_configuration)
         else:
@@ -82,7 +82,7 @@ class ModelInversionService(object):
             epileptor_params.update({p: temp})
         x0cr, rx0 = calc_x0cr_r(epileptor_params["yc"], epileptor_params["Iext1"], epileptor_params["a"],
                                 epileptor_params["b"], epileptor_params["d"], zmode=np.array("lin"),
-                                x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF, test=False,
+                                x1_rest=X1_DEF, x1_cr=X1EQ_CR_DEF, x0def=X0_DEF, x0cr_def=X0_CR_DEF, test=False,
                                 shape=None, calc_mode="non_symbol")
         epileptor_params.update({"x0cr": x0cr, "rx0": rx0})
         return epileptor_params
