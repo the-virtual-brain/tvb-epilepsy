@@ -9,7 +9,7 @@ from tvb_epilepsy.base.computations.symbolic_utils import symbol_vars, symbol_eq
     symbol_calc_coupling_diff, symbol_eqtn_fx1z, symbol_eqtn_fx1z_diff, symbol_eqtn_fx2y2, symbol_calc_2d_taylor, \
     symbol_calc_fx1y1_6d_diff_x1, symbol_calc_fz_jac_square_taylor
 from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF, I_EXT1_DEF, SLOPE_DEF, I_EXT2_DEF, A_DEF, B_DEF, \
-    D_DEF, S_DEF, GAMMA_DEF, TAU1_DEF, TAU2_DEF, TAU0_DEF, X1_DEF, X1_EQ_CR_DEF, X0_DEF, X0_CR_DEF
+    D_DEF, S_DEF, GAMMA_DEF, TAU1_DEF, TAU2_DEF, TAU0_DEF, X1_DEF, X1EQ_CR_DEF, X0_DEF, X0_CR_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import assert_arrays
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.epileptor_models import EpileptorDPrealistic
@@ -47,7 +47,7 @@ class TestComputations(BaseTest):
         z = calc_eq_z(x1, yc, Iext1, "2d", x2=0.0, slope=slope, a=a, b=b, d=d, x1_neg=True)
         zeq = z
 
-        x0cr, r = calc_x0cr_r(yc, Iext1, zmode=zmode, x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
+        x0cr, r = calc_x0cr_r(yc, Iext1, zmode=zmode, x1_rest=X1_DEF, x1_cr=X1EQ_CR_DEF, x0def=X0_DEF,
                               x0cr_def=X0_CR_DEF)
 
         x0 = calc_x0(x1, z, K, w, zmode=zmode, z_pos=True)
@@ -134,7 +134,7 @@ class TestComputations(BaseTest):
         # -------------------------------------------- Test symbolic x0cr, r calculation ----------------------------------
 
         logger.info("\n\nTest symbolic x0cr, r calculation...")
-        x0cr2, r2 = calc_x0cr_r(syc, sIext1, zmode=zmode, x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF, x0def=X0_DEF,
+        x0cr2, r2 = calc_x0cr_r(syc, sIext1, zmode=zmode, x1_rest=X1_DEF, x1_cr=X1EQ_CR_DEF, x0def=X0_DEF,
                                 x0cr_def=X0_CR_DEF)  # test=True
 
         lx0cr_r, sx0cr_r, v = symbol_eqtn_x0cr_r(n, zmode=zmode,
@@ -146,7 +146,7 @@ class TestComputations(BaseTest):
             for iv in range(n):
                 sx0cr_r[ii][iv] = sx0cr_r[ii][iv].subs([(v["a"][iv], a[iv]), (v["b"][iv], b[iv]), (v["d"][iv], d[iv]),
                                                         (v["x1_rest"][iv], X1_DEF), (v["x0_rest"][iv], X0_DEF),
-                                                        (v["x1_cr"][iv], X1_EQ_CR_DEF), (v["x0_cr"][iv], X0_CR_DEF)])
+                                                        (v["x1_cr"][iv], X1EQ_CR_DEF), (v["x0_cr"][iv], X0_CR_DEF)])
 
         assert list(x0cr2) == list(sx0cr_r[0])
         assert list(r2) == list(sx0cr_r[1])

@@ -11,7 +11,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, dicts_of_
 
 class ModelConfiguration(object):
     def __init__(self, yc=YC_DEF, Iext1=I_EXT1_DEF, Iext2=I_EXT2_DEF, K=K_DEF, a=A_DEF, b=B_DEF, d=D_DEF,
-                 slope=SLOPE_DEF, s=S_DEF, gamma=GAMMA_DEF, x1EQ=None, zEQ=None, Ceq=None, x0=None,
+                 slope=SLOPE_DEF, s=S_DEF, gamma=GAMMA_DEF, x1eq=None, zeq=None, Ceq=None, x0=None,
                  x0_values=X0_DEF, e_values=None, zmode=np.array("lin"), model_connectivity=None, number_of_regions=0):
         # These parameters are used for every Epileptor Model...
         self.x0_values = x0_values
@@ -31,8 +31,8 @@ class ModelConfiguration(object):
         self.zmode = zmode
 
         # These parameters are not used for Epileptor Model, but are important to keep (h5 or plotting)
-        self.x1EQ = x1EQ
-        self.zEQ = zEQ
+        self.x1eq = x1eq
+        self.zeq = zeq
         self.Ceq = Ceq
         self.e_values = e_values
         self.model_connectivity = model_connectivity
@@ -44,8 +44,8 @@ class ModelConfiguration(object):
             "00. number of regions": self.number_of_regions,
             "01. Excitability": self.x0_values,
             "02. Epileptor Model Excitability": self.x0,
-            "03. x1EQ": self.x1EQ,
-            "04. zEQ": self.zEQ,
+            "03. x1eq": self.x1eq,
+            "04. zeq": self.zeq,
             "05. Ceq": self.Ceq,
             "06. Epileptogenicity": self.e_values,
             "07. yc": self.yc,
@@ -72,7 +72,7 @@ class ModelConfiguration(object):
     def prepare_for_plot(self, x0_indices=[], e_indices=[], disease_indices=[]):
         names = ["Pathological Excitabilities x0_values", "Model Epileptogenicities e_values", "x1 Equilibria",
                  "z Equilibria", "Total afferent coupling \n at equilibrium"]
-        data = [self.x0_values, self.e_values, self.x1EQ, self.zEQ, self.Ceq]
+        data = [self.x0_values, self.e_values, self.x1eq, self.zeq, self.Ceq]
         disease_indices = np.unique(np.concatenate((x0_indices, e_indices, disease_indices), axis=0)).tolist()
         indices = [x0_indices, e_indices, disease_indices, disease_indices, disease_indices]
         plot_types = ["vector", "vector", "vector", "vector", "regions2regions"]

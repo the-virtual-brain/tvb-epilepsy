@@ -7,7 +7,7 @@ such as eigen_vectors_number and LSAService in a h5 file
 """
 import numpy
 from tvb_epilepsy.base.constants.config import CalculusConfig
-from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF
+from tvb_epilepsy.base.constants.model_constants import X1EQ_CR_DEF
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz_jac_square_taylor
@@ -73,11 +73,11 @@ class LSAService(object):
         # Check if any of the equilibria are in the supercritical regime (beyond the separatrix) and set it right before
         # the bifurcation.
         zEQ = model_configuration.zEQ
-        temp = model_configuration.x1EQ > X1_EQ_CR_DEF - 10 ** (-3)
+        temp = model_configuration.x1EQ > X1EQ_CR_DEF - 10 ** (-3)
         if temp.any():
-            correction_value = X1_EQ_CR_DEF - 10 ** (-3)
-            self.logger.warning("Equilibria x1EQ[" + str(numpy.where(temp)[0]) + "]  = " + str(model_configuration.x1EQ[temp]) +
-                    "\nwere corrected for LSA to value: X1_EQ_CR_DEF - 10 ** (-3) = " + str(correction_value)
+            correction_value = X1EQ_CR_DEF - 10 ** (-3)
+            self.logger.warning("Equilibria x1eq[" + str(numpy.where(temp)[0]) + "]  = " + str(model_configuration.x1EQ[temp]) +
+                    "\nwere corrected for LSA to value: X1EQ_CR_DEF - 10 ** (-3) = " + str(correction_value)
                     + " to be sub-critical!")
             model_configuration.x1EQ[temp] = correction_value
             i_temp = numpy.ones(model_configuration.x1EQ.shape)

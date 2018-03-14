@@ -32,9 +32,9 @@ class ABCSimulator(object):
             type = initial_conditions[5].dtype
             initial_conditions[6] = 0.0 ** numpy.ones(shape, dtype=type)  # hypothesis.x0_values.T
             initial_conditions[7] = 1.0 * numpy.ones(
-                (1, n_regions))  # model.slope * numpy.ones((hypothesis.n_regions,1))
+                (1, n_regions))  # model.slope * numpy.ones((hypothesis.number_of_regions,1))
             initial_conditions[9] = 0.0 * numpy.ones(
-                (1, n_regions))  # model.Iext2.T * numpy.ones((hypothesis.n_regions,1))
+                (1, n_regions))  # model.Iext2.T * numpy.ones((hypothesis.number_of_regions,1))
         # ------------------------------------------------------------------------------------------------------------------
         initial_conditions = numpy.expand_dims(initial_conditions, 2)
         initial_conditions = numpy.tile(initial_conditions, (history_length, 1, 1, 1))

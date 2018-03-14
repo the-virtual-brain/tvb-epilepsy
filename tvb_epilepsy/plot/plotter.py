@@ -21,7 +21,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_y1, def_x1lin
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz, calc_fx1, calc_fx1_2d_taylor
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val_to_model_x0, raise_value_error
-from tvb_epilepsy.base.constants.model_constants import TAU0_DEF, TAU1_DEF, X1_EQ_CR_DEF, X1_DEF, X0_CR_DEF, X0_DEF
+from tvb_epilepsy.base.constants.model_constants import TAU0_DEF, TAU1_DEF, X1EQ_CR_DEF, X1_DEF, X0_CR_DEF, X0_DEF
 from tvb_epilepsy.base.constants.config import FiguresConfig
 
 
@@ -591,8 +591,8 @@ class Plotter(BasePlotter):
         zE2null, = pyplot.plot(x1, zZne, 'g--', label='z nullcline for e_values=0', linewidth=1)
         if approximations:
             # The point of the linear approximation (1st order Taylor expansion)
-            x1LIN = def_x1lin(X1_DEF, X1_EQ_CR_DEF, len(region_labels))
-            x1SQ = X1_EQ_CR_DEF
+            x1LIN = def_x1lin(X1_DEF, X1EQ_CR_DEF, len(region_labels))
+            x1SQ = X1EQ_CR_DEF
             x1lin0 = numpy.mean(x1LIN)
             # The point of the square (parabolic) approximation (2nd order Taylor expansion)
             x1sq0 = numpy.mean(x1SQ)
