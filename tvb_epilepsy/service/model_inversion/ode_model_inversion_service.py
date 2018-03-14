@@ -138,12 +138,12 @@ class ODEModelInversionService(ModelInversionService):
                                         plotter=kwargs.get("plotter", False))
         else:
             # if statistical_model.observation_expression == "x1z_offset":
-            #     signals = ((target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T +
-            #                (target_data["z"].T - np.expand_dims(self.zEQ, 1)).T) / 2.75
+            #     signals = ((target_data["x1"].T - np.expand_dims(self.x1eq, 1)).T +
+            #                (target_data["z"].T - np.expand_dims(self.zeq, 1)).T) / 2.75
             #     # TODO: a better normalization
             # elif statistical_model.observation_expression == "x1_offset":
             #     # TODO: a better normalization
-            #     signals = (target_data["x1"].T - np.expand_dims(self.x1EQ, 1)).T / 2.0
+            #     signals = (target_data["x1"].T - np.expand_dims(self.x1eq, 1)).T / 2.0
             # else: # statistical_models.observation_expression == "lfp"
             signals = np.array(target_data.get("lfp", target_data["x1"]))
             signals, self.time, self.signals_inds = \
