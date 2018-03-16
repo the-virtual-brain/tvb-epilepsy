@@ -113,7 +113,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", empirical_file=None, dynamic
         else:
             model_inversion = SDEModelInversionService(model_configuration, lsa_hypothesis, head, dynamical_model,
                                                        x1eq_max=-1.0, sig=0.05, priors_mode="uninformative")
-            # observation_expression="lfp"
+            # observation_expression="source"
             observation_model = "seeg_logpower"
             statistical_model = model_inversion.generate_statistical_model(x1eq_max=-1.0,
                                                                            observation_model=observation_model)
@@ -183,7 +183,7 @@ def main_fit_sim_hyplsa(stats_model_name="vep_sde", empirical_file=None, dynamic
             # if len(model_inversion.signals_inds) < head.get_sensors_id().number_of_sensors:
             #     statistical_model = \
             #             model_inversion.update_active_regions_seeg(statistical_model)
-            if model_inversion.data_type == "lfp":
+            if model_inversion.data_type == "source":
                 labels = model_inversion.region_labels
                 special_idx = []
             else:
