@@ -1,6 +1,11 @@
 
 import numpy as np
 from scipy.signal import decimate
+from scipy.stats import zscore
+
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+
 
 def decimate_signals(signals, time, decim_ratio):
     signals = decimate(signals, decim_ratio, axis=0, zero_phase=True)
@@ -16,6 +21,22 @@ def cut_signals_tails(signals, time, cut_tails):
     (n_times, n_signals) = signals.shape
     return signals, time, n_times
 
+
+def normalize_signals(signals, normalization=None):
+    if isinstance(normalization, basestring):
+        if isequal_string(normalization, "zscore"):
+            signals = zscore(signals, axis=None) / 3.0
+        elif isequal_string(normalization, "minmax"):
+            signals -= signals.min()
+            signals /= signals.max()
+        elif isequal_string(normalization, "baseline-amplitude"):
+            signals -= np.percentile(signals, 5, 0)
+            signals /= np.percentile(signals, 95)
+        else:
+            raise_value_error("Ignoring signals' normalization " + normalization +
+                             ",\nwhich is not one of the currently available 'zscore' and 'minmax'!")
+
+    return signals
 
 #TODO: Decide upon this commented method
 # def compute_envelope(data, time, samp_rate, hp_freq=5.0, lp_freq=0.1, benv_cut=100, cut_tails=None, order=3):
