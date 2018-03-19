@@ -1,8 +1,13 @@
+from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
+
 import numpy as np
 
-from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string
+from tvb_epilepsy.base.model.vep.connectivity import Connectivity
+from tvb_epilepsy.base.model.vep.sensors import SENSORS_TYPES, Sensors
+
 
 # general comments:
 #
@@ -24,8 +29,9 @@ from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 
 class Signal(object):
 
+    __metaclass__ = ABCMeta
+
     source = "" # "simulation", "empirical" etc
-    _data = OrderedDict() # i.e., {"source": np.array((n_times, n_regions, n_samples))}, {"SEEG0": np.array((n_times, n_sensors, n_samples))}
     _time = np.array([]) # size = data.shape[0]
     _time_units = {"ms": 1e-3} # {unit keys: number to be multiplied to the basic unit of 1 sec}
     _labels = [np.array([])] # list of labels'arrays, of size =1 or equal to length of dimension
@@ -36,75 +42,15 @@ class Signal(object):
     # _reference_object      # a connectivity or sensors object
     # _space_inds           # a indices to make reference to the connectivity or sensors object
 
-    def __getattr__(self, attr):
-        # use: signal.SEEG0
-        return self._data.get(attr, None)
-
-    def __setattr__(self, attr):
-        # use: signal.SEEG0
-        return self._data.get(attr, None)
-
     def check(self):
         self.check_data_shape()
         self.check_time()
         # ...etc other possible checks
 
-    def some_name_of_slicing_operator(self):
-        # return only the data that corresponds to a slice
-        # operate by label -> index
-        # maybe use pandas?
-        pass
-
-    def some_name_of_slicing_operator2(self):
-        # return a new instance of the Signal that corresponds to a slice
-        # operate by label -> index
-        # maybe use pandas?
-        pass
-
     def permute(self, new_inds):
         # permute dimensions
         # maybe use pandas?
         pass
-
-    @property
-    def shape(self):
-        self.check_data_shape()
-        return self._data.values([0]).shape
-
-    @property
-    def dims(self):
-        self.check_data_shape()
-        return self._data.values([0]).ndim
-
-    @property
-    def n_space(self):
-        self.check_data_shape()
-        return self._data.values([0]).shape[1]
-
-    @property
-    def n_times(self):
-        self.check_data_shape()
-        self.chekc_time()
-        return self._data.values([0]).shape[0]
-
-    @property
-    def n_samples(self):
-        self.check_data_shape()
-        if self.data_dims == 3:
-            return self._data.values([0]).shape[2]
-        else:
-            return 1
-
-    @property
-    def data_labels(self):
-        return self.data.keys()
-
-    def substitute_data_labels(self, oldlabels, newlabels):
-        new_data = OrderedDict()
-        for oldlabel, newlabel in zip(ensure_list(oldlabels), ensure_list(newlabels)):
-            new_data[newlabel] = self._data[oldlabel]
-        self._data = new_data
-        return self
 
     def _get_time(self):
         return self.time
@@ -128,6 +74,11 @@ class Signal(object):
 
     @property
     # or sampling_time, or sample_period, any such combination you prefer
+    def time_length(self):
+        return self.time.size
+
+    @property
+    # or sampling_time, or sample_period, any such combination you prefer
     def dt(self):
         return np.diff(self.time).mean()
 
@@ -135,7 +86,6 @@ class Signal(object):
     # or sampling_frequency, sample_freq or whatever such combination
     def fs(self):
         return 1 / self.dt / self._time_units.values()[0]  # therefore in Hz
-
 
     def _get_space_labels(self):
         return self._labels[0]
@@ -170,20 +120,9 @@ class Signal(object):
 
     locations = property(_get_locations, _set_locations)
 
-    def _set_samples_labels(self, labels):
-        self._labels[:1] += [np.array(labels)]
-        self.check_labels()
-        return self
-
-    samples_labels = property(_get_samples_labels, _set_samples_labels)
-
+    @abstractmethod
     def check_time(self):
-        self.time = self.time.flatten()
-        self.n_times = self.time.size
-        self.check_data_shape() # should this be redone here?
-        if self.n_times != self.data.values()[0].shape[0]:
-            raise_value_error("Length of time " + str(self.n_times) +
-                              " and data time axis " + str(self.data.values()[0].shape[0]) + " do not match!")
+        pass
 
     def check_labels(self):
         # the number of labels should be either 1 or equal to the number of elements to the correspodning dimension
@@ -211,8 +150,86 @@ class Signal(object):
         pass
 
 
-
 class RegionsSignal(Signal):
+
+    _data = []
+
+    _state_variables = []
+
+    _connectivity_of_reference = None
+
+    def __getattr__(self, attr):
+        # use: signal.x1
+        try:
+            return self._data[self._data.index(attr)]
+        except:
+            raise_value_error("Failed to retrieve signal with the label " + attr + "!")
+
+    def __setattr__(self, attr, data):
+        # use: signal.x1 = np.array
+        try:
+            self._data[self._data.index(attr)] = np.array(data)
+            self.check()
+            return self
+        except:
+            raise_value_error("Failed to set signal with the label " + attr + "!")
+
+    def some_name_of_slicing_operator(self):
+        # return only the data that corresponds to a slice
+        # operate by label -> index
+        # maybe use pandas?
+        pass
+
+    def some_name_of_slicing_operator2(self):
+        # return a new instance of the Signal that corresponds to a slice
+        # operate by label -> index
+        # maybe use pandas?
+        pass
+
+    @property
+    def shape(self):
+        self.check_data_shape()
+        return self._data[0].shape
+
+    @property
+    def dims(self):
+        return self._data[0].ndim
+
+    @property
+    def n_regions(self):
+        return self._data[0].shape[1]
+
+    @property
+    def n_samples(self):
+        self.check_data_shape()
+        if self.data_dims == 3:
+            return self._data[0].shape[2]
+        else:
+            return 1
+
+    def check_time(self):
+        self.time = self.time.flatten()
+        self.check_data_shape()  # should this be redone here?
+        if self.time_length != self.data.values()[0].shape[0]:
+            raise_value_error("Length of time " + str(self.time_length) +
+                              " and data time axis " + str(self.data[0].shape[0]) + " do not match!")
+
+    def _get_labels(self):
+        return self._state_variables
+
+    def _set_labels(self, labels):
+        self._state_variables = labels
+        #TODO: add some self-consistency checking
+        return self
+
+    labels = property(_get_labels, _set_labels)
+
+    def substitute_data_labels(self, oldlabels, newlabels):
+        new_data = OrderedDict()
+        for oldlabel, newlabel in zip(ensure_list(oldlabels), ensure_list(newlabels)):
+            new_data[newlabel] = self._data[oldlabel]
+        self._data = new_data
+        return self
 
     def _get_centers(self):
         return super(RegionsSignal, self)._get_locations()
@@ -230,21 +247,91 @@ class RegionsSignal(Signal):
 
     regions_labels = property(_get_regions_labels, _set_regions_labels)
 
-
-    # regions_inds = super(RegionsSignal, self).space_inds
-
     @property
     def connectivity(self):
-        return super(RegionsSignal, self)._reference_object
+        if isinstance(self._connectivity_of_reference, Connectivity):
+            return self._connectivity_of_reference
+        else:
+            warning("There are no Connectivity of reference for this RegionsSignal!")
+            return []
 
     @property
-    def n_regions(self):
+    def number_of_regions(self):
         return self.n_space()
+
+    @property
+    def regions_indices(self):
+        try:
+            return np.where([self.connectivity.region_labels.index(region_label)
+                             for region_label in self.regions_labels])[0]
+        except:
+            raise_value_error("Failed to find signal's region_labels inside the reference Connectivity!")
 
 
 class SensorSignal(Signal):
 
-    # sensors_inds = indices of the sensors in the corresponding sensors instance
+    _data = np.array([])
+
+    _sensor_type = SENSORS_TYPES.SEEG_TYPE
+
+    _sensors_of_reference = None
+
+    # Optionally:
+    def __getitem__(self, slice):
+        pass
+        # slicing function
+        # find out if slice is for sensors or samples
+        # convert slice to indexes if it is not already a list of integers
+        #return self._data[slice]
+
+    def __setitem__(self, slice):
+        # accordingly...
+        pass
+
+
+    def __getattr__(self, attr):
+        # use: signal.seeg
+        if isequal_string(self._sensor_type, attr):
+            return self._data
+        else:
+            raise_value_error("Failed to retrieve sensors' signal with the label " + attr + "!")
+
+    def __setattr__(self, attr, data):
+        # use: signal.x1 = np.array
+        if isequal_string(self._sensor_type, attr):
+            self._data = np.array(data)
+            self.check()
+            return self
+        else:
+            raise_value_error("Failed to set sensors' signal with the label " + attr + "!")
+
+    @property
+    def shape(self):
+        self.check_data_shape()
+        return self._data.shape
+
+    @property
+    def dims(self):
+        return self._data.ndim
+
+    @property
+    def n_regions(self):
+        return self._data.shape[1]
+
+    @property
+    def n_sensors(self):
+        self.check_data_shape()
+        if self.data_dims == 3:
+            return self._data.shape[2]
+        else:
+            return 1
+
+    def check_time(self):
+        self.time = self.time.flatten()
+        self.check_data_shape()  # should this be redone here?
+        if self.time_length != self.data.values()[0].shape[0]:
+            raise_value_error("Length of time " + str(self.time_length) +
+                              " and data time axis " + str(self.data.shape[0]) + " do not match!")
 
     def _get_sensors_labels(self):
         return super(SensorSignal, self)._get_space_labels()
@@ -255,7 +342,28 @@ class SensorSignal(Signal):
     sensors_labels = property(_get_sensors_labels, _set_sensors_labels)
 
     @property
-    def n_sensors(self):
+    def sensors(self):
+        if isinstance(self._sensors_of_reference, Sensors):
+            return self._sensors_of_reference
+        else:
+            warning("There are no Sensors of reference for this SensorsSignal!")
+            return []
+
+    @property
+    def sensors_indices(self):
+        if self.sensors is not None:
+            try:
+                return np.where([self.sensors.labels.index(sensor_label) for sensor_label in self.sensors_labels])[0]
+            except:
+                raise_value_error("Failed to find signal's sensors_labels inside the reference Sensors!")
+
+    @property
+    def gain_matrix(self):
+        if self.sensors is not None:
+            return self.sensors.gain_matrix[self.sensors_indices]
+
+    @property
+    def number_of_sensors(self):
         return self.n_space()
 
     def get_bipolar(self):
