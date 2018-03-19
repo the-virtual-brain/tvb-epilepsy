@@ -73,9 +73,9 @@ def verify_index(index, labels):
 
 class LabelledArray(ndarray):
 
-    _labels = np.array([])
+    _labels = []
 
-    def __new__(cls, input_array, labels=np.array([])):
+    def __new__(cls, input_array, labels=[]):
         # Input array is an already formed ndarray instance
         # We first cast to be our class type
         obj = np.asarray(input_array).view(cls)
@@ -84,18 +84,26 @@ class LabelledArray(ndarray):
 
     def __array_finalize__(self, obj):
         if obj is None: return
-        self.info = getattr(obj, '_labels', np.array([]))
+        self.info = getattr(obj, '_labels', [])
+
+    def _slice_labels(self, index):
+        # TODO: make this work!
+        dummy = np.array(self.__getitemonly(index))
+        source = tuple(range(dummy.ndim))
+        target = tuple(source)
+        labels = []
+        for ii in range(dummy.ndim):
+            labels.append((self._labels[ii] * np.ones(np.moveaxis(dummy, source, target)))[index].flatten())
+            target = target[ii:] + target[0:ii]
+        return labels
+
+    def slice(self, index):
+        index = verify_index(index, self._labels)
+        return LabelledArray((LabelledArray, self).__getitem__(index), self._slice_labels(index))
 
     def __getitem__(self, index):
         index = verify_index(index, self._labels)
-        try:
-            labels = []
-            for ind in index:
-                labels.append(self._labels[ind])
-        except:
-            warning("Unable to slice labels!")
-            labels = np.array([])
-        return LabelledArray(super(LabelledArray, self).__getitem__(index), labels)
+        return super(LabelledArray, self).__getitem__(index)
 
     def __setitem__(self, index, data):
         super(LabelledArray, self).__setitem__(verify_index(index, self._labels), data)
