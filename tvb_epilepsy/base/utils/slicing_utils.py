@@ -46,7 +46,7 @@ def verify_inds(inds, labels):
 
 
 def verify_index(index, labels):
-    index = list(index)
+    index = ensure_list(index)
     # For every index...
     for iind, (ind, label) in enumerate(zip(index, labels)):
         # ...if it is a slice object, call the corresponding function to treat it separetely...

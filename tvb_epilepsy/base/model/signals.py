@@ -2,6 +2,7 @@
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
+from numpy import ndarray
 
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
@@ -28,21 +29,27 @@ from tvb_epilepsy.base.model.vep.sensors import SENSORS_TYPES, Sensors
 #   we could associate a connectivity or sensors instance to each kind of Signal
 
 
-class LabelledArray(object):
+class LabelledArray(ndarray):
 
-    _data = np.array([])
-    _labels = []
+    _labels = ()
 
-    def __init__(self, data, labels):
-        self._data = data
-        self._labels = labels
+    def __new__(cls, input_array, labels=()):
+        # Input array is an already formed ndarray instance
+        # We first cast to be our class type
+        obj = np.asarray(input_array).view(cls)
+        obj._labels = labels
+        return obj
+
+    def __array_finalize__(self, obj):
+        if obj is None: return
+        self.info = getattr(obj, '_labels', ())
 
     def __getitem__(self, index):
-        return self._data[verify_index(index, self._labels)]
+        return super(LabelledArray, self).__getitem__(verify_index(index, self._labels))
 
     def __setitem__(self, index, data):
-        self._data[verify_index(index, self._labels)] = data
-        return self
+        super(LabelledArray, self).__setitem__(verify_index(index, self._labels), data)
+
 
 
 # TODO: find a better solution for this
@@ -67,7 +74,7 @@ class Signal(object):
     def __init__(self, time, time_units=TimeUnits["ms"], labels=[], locations=[], source="simulation"):
         self._time = time
         self._time_units = {time_units, TimeUnits[time_units]}
-        self._labels = labels
+        self._labels = list(labels)
         self._locations = locations
         self.source = source
         self.check()
@@ -190,10 +197,10 @@ class RegionsSignal(Signal):
 
     _connectivity_of_reference = None
 
-    def __init__(self, data, state_variables, time, time_units=TimeUnits["ms"], labels=[], locations=np.array([]),
+    def __init__(self, data, state_variables, time, time_units=TimeUnits["ms"], labels=(), locations=np.array([]),
                  source="simulation", connectivity=None):
         super(self, RegionsSignal).__init__(time, time_units, labels, locations, source)
-        self._data = [LabelledArray(d, label) for (d, label) in zip(data, labels)]
+        self._data = [LabelledArray(d, labels) for d in data]
         self._state_variables = state_variables
         self._connectivity_of_reference = connectivity
 
@@ -308,7 +315,7 @@ class SensorSignal(Signal):
 
     _sensors_of_reference = None
 
-    def __init__(self, data, time, time_units=TimeUnits["ms"], labels=[], locations=[],source="simulation",
+    def __init__(self, data, time, time_units=TimeUnits["ms"], labels=(), locations=[],source="simulation",
                  sensors=None):
         super(self, RegionsSignal).__init__(time, time_units, labels, locations, source)
         self._data = LabelledArray(data, labels)
