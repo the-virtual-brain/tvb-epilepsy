@@ -1,10 +1,11 @@
+
 from abc import ABCMeta, abstractmethod
-from collections import OrderedDict
 
 import numpy as np
 
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
-from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+from tvb_epilepsy.base.utils.slicing_utils import verify_index
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.sensors import SENSORS_TYPES, Sensors
 
@@ -27,11 +28,32 @@ from tvb_epilepsy.base.model.vep.sensors import SENSORS_TYPES, Sensors
 #   we could associate a connectivity or sensors instance to each kind of Signal
 
 
+class LabelledArray(object):
+
+    _data = np.array([])
+    _labels = []
+
+    def __init__(self, data, labels):
+        self._data = data
+        self._labels = labels
+
+    def __getitem__(self, index):
+        return self._data[verify_index(index, self._labels)]
+
+    def __setitem__(self, index, data):
+        self._data[verify_index(index, self._labels)] = data
+        return self
+
+
+# TODO: find a better solution for this
+TimeUnits = {"ms": 1e-3, "msec": 1e-3, "s": 1, "sec": 1}
+
+
 class Signal(object):
 
     __metaclass__ = ABCMeta
 
-    source = "" # "simulation", "empirical" etc
+    source = "simulation" # "simulation", "empirical" etc
     _time = np.array([]) # size = data.shape[0]
     _time_units = {"ms": 1e-3} # {unit keys: number to be multiplied to the basic unit of 1 sec}
     _labels = [np.array([])] # list of labels'arrays, of size =1 or equal to length of dimension
@@ -41,6 +63,14 @@ class Signal(object):
     # Alternatively, labels and locations could be referenced from a connectivity or sensors object associated with the Signal
     # _reference_object      # a connectivity or sensors object
     # _space_inds           # a indices to make reference to the connectivity or sensors object
+
+    def __init__(self, time, time_units=TimeUnits["ms"], labels=[], locations=[], source="simulation"):
+        self._time = time
+        self._time_units = {time_units, TimeUnits[time_units]}
+        self._labels = labels
+        self._locations = locations
+        self.source = source
+        self.check()
 
     def check(self):
         self.check_data_shape()
@@ -150,6 +180,8 @@ class Signal(object):
         pass
 
 
+
+
 class RegionsSignal(Signal):
 
     _data = []
@@ -158,21 +190,28 @@ class RegionsSignal(Signal):
 
     _connectivity_of_reference = None
 
+    def __init__(self, data, state_variables, time, time_units=TimeUnits["ms"], labels=[], locations=np.array([]),
+                 source="simulation", connectivity=None):
+        super(self, RegionsSignal).__init__(time, time_units, labels, locations, source)
+        self._data = [LabelledArray(d, label) for (d, label) in zip(data, labels)]
+        self._state_variables = state_variables
+        self._connectivity_of_reference = connectivity
+
+    def _get_state_variable_index(self, state_variable_label):
+        try:
+            return self._state_variables.index(state_variable_label)
+        except:
+            raise_value_error("Failed to set signal with the label " + state_variable_label + "!")
+
     def __getattr__(self, attr):
         # use: signal.x1
-        try:
-            return self._data[self._data.index(attr)]
-        except:
-            raise_value_error("Failed to retrieve signal with the label " + attr + "!")
+        return self._data[self._get_state_variable_index(attr)]
 
     def __setattr__(self, attr, data):
         # use: signal.x1 = np.array
-        try:
-            self._data[self._data.index(attr)] = np.array(data)
-            self.check()
-            return self
-        except:
-            raise_value_error("Failed to set signal with the label " + attr + "!")
+        self._data[self._get_state_variable_index(attr)] = np.array(data)
+        self.check()
+        return self
 
     def some_name_of_slicing_operator(self):
         # return only the data that corresponds to a slice
@@ -224,13 +263,6 @@ class RegionsSignal(Signal):
 
     labels = property(_get_labels, _set_labels)
 
-    def substitute_data_labels(self, oldlabels, newlabels):
-        new_data = OrderedDict()
-        for oldlabel, newlabel in zip(ensure_list(oldlabels), ensure_list(newlabels)):
-            new_data[newlabel] = self._data[oldlabel]
-        self._data = new_data
-        return self
-
     def _get_centers(self):
         return super(RegionsSignal, self)._get_locations()
 
@@ -276,18 +308,11 @@ class SensorSignal(Signal):
 
     _sensors_of_reference = None
 
-    # Optionally:
-    def __getitem__(self, slice):
-        pass
-        # slicing function
-        # find out if slice is for sensors or samples
-        # convert slice to indexes if it is not already a list of integers
-        #return self._data[slice]
-
-    def __setitem__(self, slice):
-        # accordingly...
-        pass
-
+    def __init__(self, data, time, time_units=TimeUnits["ms"], labels=[], locations=[],source="simulation",
+                 sensors=None):
+        super(self, RegionsSignal).__init__(time, time_units, labels, locations, source)
+        self._data = LabelledArray(data, labels)
+        self._sensors_of_reference = sensors
 
     def __getattr__(self, attr):
         # use: signal.seeg
