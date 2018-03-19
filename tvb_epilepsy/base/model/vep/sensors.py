@@ -1,10 +1,17 @@
 # coding=utf-8
-
+from enum import Enum
 import re
 import numpy as np
 from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, labels_to_inds
 from tvb_epilepsy.base.utils.data_structures_utils import split_string_text_numbers
 from tvb_epilepsy.base.computations.math_utils import compute_gain_matrix
+
+
+# SDE model inversion constants
+class SENSORS_TYPES(Enum):
+    TYPE_EEG = 'EEG'
+    TYPE_MEG = "MEG"
+    TYPE_SEEG = "SEEG"
 
 
 class SensorsH5Field(object):
@@ -15,10 +22,9 @@ class SensorsH5Field(object):
 
 
 class Sensors(object):
-    TYPE_EEG = 'EEG'
-    TYPE_MEG = "MEG"
-    TYPE_SEEG = "SEEG"
-    SENSORS_TYPES = [TYPE_SEEG, TYPE_MEG, TYPE_EEG]
+    TYPE_EEG = SENSORS_TYPES.TYPE_EEG
+    TYPE_MEG = SENSORS_TYPES.TYPE_MEG
+    TYPE_SEEG = SENSORS_TYPES.TYPE_SEEG
 
     labels = np.array([])
     locations = np.array([])
