@@ -2,11 +2,10 @@
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
-from numpy import ndarray
 
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
-from tvb_epilepsy.base.utils.slicing_utils import verify_index
+from tvb_epilepsy.base.datatypes import LabelledArray
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.sensors import SENSORS_TYPES, Sensors
 
@@ -29,29 +28,6 @@ from tvb_epilepsy.base.model.vep.sensors import SENSORS_TYPES, Sensors
 #   we could associate a connectivity or sensors instance to each kind of Signal
 
 
-class LabelledArray(ndarray):
-
-    _labels = ()
-
-    def __new__(cls, input_array, labels=()):
-        # Input array is an already formed ndarray instance
-        # We first cast to be our class type
-        obj = np.asarray(input_array).view(cls)
-        obj._labels = labels
-        return obj
-
-    def __array_finalize__(self, obj):
-        if obj is None: return
-        self.info = getattr(obj, '_labels', ())
-
-    def __getitem__(self, index):
-        return super(LabelledArray, self).__getitem__(verify_index(index, self._labels))
-
-    def __setitem__(self, index, data):
-        super(LabelledArray, self).__setitem__(verify_index(index, self._labels), data)
-
-
-
 # TODO: find a better solution for this
 TimeUnits = {"ms": 1e-3, "msec": 1e-3, "s": 1, "sec": 1}
 
@@ -63,7 +39,7 @@ class Signal(object):
     source = "simulation" # "simulation", "empirical" etc
     _time = np.array([]) # size = data.shape[0]
     _time_units = {"ms": 1e-3} # {unit keys: number to be multiplied to the basic unit of 1 sec}
-    _labels = [np.array([])] # list of labels'arrays, of size =1 or equal to length of dimension
+    _labels = [] # list of labels'arrays, of size =1 or equal to length of dimension
                             # i.e., [sensor_labels, np.array("samples")] or [sensor_labels, np.array(["mean", "median", "std])]
     _locations = np.array([]) #np.array((n_space, 3)) # or by reference to a sensor or connectivity instance, look below
 
@@ -197,7 +173,7 @@ class RegionsSignal(Signal):
 
     _connectivity_of_reference = None
 
-    def __init__(self, data, state_variables, time, time_units=TimeUnits["ms"], labels=(), locations=np.array([]),
+    def __init__(self, data, state_variables, time, time_units=TimeUnits["ms"], labels=[], locations=np.array([]),
                  source="simulation", connectivity=None):
         super(self, RegionsSignal).__init__(time, time_units, labels, locations, source)
         self._data = [LabelledArray(d, labels) for d in data]
@@ -315,8 +291,8 @@ class SensorSignal(Signal):
 
     _sensors_of_reference = None
 
-    def __init__(self, data, time, time_units=TimeUnits["ms"], labels=(), locations=[],source="simulation",
-                 sensors=None):
+    def __init__(self, data, time, time_units=TimeUnits["ms"], labels=[], locations=[],
+                 source="simulation", sensors=None):
         super(self, RegionsSignal).__init__(time, time_units, labels, locations, source)
         self._data = LabelledArray(data, labels)
         self._sensors_of_reference = sensors
