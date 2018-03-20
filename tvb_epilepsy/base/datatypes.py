@@ -88,13 +88,12 @@ class LabelledArray(ndarray):
 
     def _slice_labels(self, index):
         # TODO: make this work!
-        dummy = np.array(self.__getitemonly(index))
-        source = tuple(range(dummy.ndim))
-        target = tuple(source)
+        dummy = np.zeros(self.shape)
+        dummy[index] = 1
+        index = np.unravel_index(np.where(p.where(dummy)[0], self.shape))
         labels = []
-        for ii in range(dummy.ndim):
-            labels.append((self._labels[ii] * np.ones(np.moveaxis(dummy, source, target)))[index].flatten())
-            target = target[ii:] + target[0:ii]
+        for ind, label in zip(index, self._labels):
+            labels.append(label[index])
         return labels
 
     def slice(self, index):
@@ -103,11 +102,10 @@ class LabelledArray(ndarray):
 
     def __getitem__(self, index):
         index = verify_index(index, self._labels)
-        return super(LabelledArray, self).__getitem__(index)
+        return np.array(super(LabelledArray, self).__getitem__(index))
 
     def __setitem__(self, index, data):
         super(LabelledArray, self).__setitem__(verify_index(index, self._labels), data)
-
 
     def __repr__(self):
         d = OrderedDict({"array": super(LabelledArray, self).__repr__(),

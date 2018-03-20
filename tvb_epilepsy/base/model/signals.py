@@ -39,8 +39,7 @@ class Signal(object):
     source = "simulation" # "simulation", "empirical" etc
     _time = np.array([]) # size = data.shape[0]
     _time_units = {"ms": 1e-3} # {unit keys: number to be multiplied to the basic unit of 1 sec}
-    _labels = [] # list of labels'arrays, of size =1 or equal to length of dimension
-                            # i.e., [sensor_labels, np.array("samples")] or [sensor_labels, np.array(["mean", "median", "std])]
+    _labels = [] #
     _locations = np.array([]) #np.array((n_space, 3)) # or by reference to a sensor or connectivity instance, look below
 
     # Alternatively, labels and locations could be referenced from a connectivity or sensors object associated with the Signal
@@ -100,28 +99,28 @@ class Signal(object):
     def fs(self):
         return 1 / self.dt / self._time_units.values()[0]  # therefore in Hz
 
-    def _get_space_labels(self):
+    def _get_labels(self):
         return self._labels[0]
 
-    def _set_space_labels(self, labels):
+    def _set_labels(self, labels):
         self._labels[0] = np.array(labels)
         self.check_labels()
         return self
 
-    space_labels = property(_get_space_labels, _set_space_labels)
+    labels = property(_get_labels, _set_labels)
 
-    def _get_samples_labels(self):
-        if len(self._labels) > 1:
-            return self._labels[1]
-        else:
-            return np.array([])
-
-    def _set_samples_labels(self, labels):
-        self._labels[:1] += [np.array(labels)]
-        self.check_labels()
-        return self
-
-    samples_labels = property(_get_samples_labels, _set_samples_labels)
+    # def _get_samples_labels(self):
+    #     if len(self._labels) > 1:
+    #         return self._labels[1]
+    #     else:
+    #         return np.array([])
+    #
+    # def _set_samples_labels(self, labels):
+    #     self._labels[:1] += [np.array(labels)]
+    #     self.check_labels()
+    #     return self
+    #
+    # samples_labels = property(_get_samples_labels, _set_samples_labels)
 
     def _get_locations(self):
         return self._locations
@@ -163,8 +162,6 @@ class Signal(object):
         pass
 
 
-
-
 class RegionsSignal(Signal):
 
     _data = []
@@ -196,13 +193,7 @@ class RegionsSignal(Signal):
         self.check()
         return self
 
-    def some_name_of_slicing_operator(self):
-        # return only the data that corresponds to a slice
-        # operate by label -> index
-        # maybe use pandas?
-        pass
-
-    def some_name_of_slicing_operator2(self):
+    def slice(self):
         # return a new instance of the Signal that corresponds to a slice
         # operate by label -> index
         # maybe use pandas?
@@ -236,15 +227,15 @@ class RegionsSignal(Signal):
             raise_value_error("Length of time " + str(self.time_length) +
                               " and data time axis " + str(self.data[0].shape[0]) + " do not match!")
 
-    def _get_labels(self):
+    def _get_variables(self):
         return self._state_variables
 
-    def _set_labels(self, labels):
+    def _set_variables(self, labels):
         self._state_variables = labels
         #TODO: add some self-consistency checking
         return self
 
-    labels = property(_get_labels, _set_labels)
+    variables = property(_get_variables, _set_variables)
 
     def _get_centers(self):
         return super(RegionsSignal, self)._get_locations()
@@ -255,10 +246,10 @@ class RegionsSignal(Signal):
     centers = property(_get_centers, _set_centers)
 
     def _get_regions_labels(self):
-        return super(RegionsSignal, self)._get_space_labels()
+        return super(RegionsSignal, self)._get_labels()
 
-    def _set_regions_labels(self, region_labels):
-        return super(RegionsSignal, self)._set_space_labels(region_labels)
+    def _set_regions_labels(self, regions_labels):
+        return super(RegionsSignal, self)._set_labels(regions_labels)
 
     regions_labels = property(_get_regions_labels, _set_regions_labels)
 
@@ -293,7 +284,7 @@ class SensorSignal(Signal):
 
     def __init__(self, data, time, time_units=TimeUnits["ms"], labels=[], locations=[],
                  source="simulation", sensors=None):
-        super(self, RegionsSignal).__init__(time, time_units, labels, locations, source)
+        super(self, Signal).__init__(time, time_units, labels, locations, source)
         self._data = LabelledArray(data, labels)
         self._sensors_of_reference = sensors
 
@@ -342,10 +333,10 @@ class SensorSignal(Signal):
                               " and data time axis " + str(self.data.shape[0]) + " do not match!")
 
     def _get_sensors_labels(self):
-        return super(SensorSignal, self)._get_space_labels()
+        return super(SensorSignal, self)._get_labels()
 
-    def _set_sensors_labels(self, region_labels):
-        return super(SensorSignal, self)._set_space_labels(region_labels)
+    def _set_sensors_labels(self, sensors_labels):
+        return super(SensorSignal, self)._set_labels(sensors_labels)
 
     sensors_labels = property(_get_sensors_labels, _set_sensors_labels)
 

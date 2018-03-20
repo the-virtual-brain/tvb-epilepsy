@@ -14,5 +14,11 @@ if __name__ == "__main__":
     print(la['a':None, ['0', '1']])
     print("print(la[..., np.newaxis])=")
     print(la[..., np.newaxis])
-    print("la[-1]=")
+    print("2*la[-1]=")
     print(2*la[-1])
+    print("2*la[::'b']=")
+    print(2*la[::'b'])
+
+    # print("print(la.slice((slice('a', None), slice()))=")
+    # print(la.slice((slice('a', None), slice(None))))
+
