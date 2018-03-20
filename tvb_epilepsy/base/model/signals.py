@@ -189,7 +189,7 @@ class RegionsSignal(Signal):
 
     def __setattr__(self, attr, data):
         # use: signal.x1 = np.array
-        self._data[self._get_state_variable_index(attr)] = np.array(data)
+        self._data[self._get_state_variable_index(attr)] = LabelledArray(data, self._data[0]._labels)
         self.check()
         return self
 
