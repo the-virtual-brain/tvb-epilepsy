@@ -1,6 +1,7 @@
 import numpy as np
 
-from tvb_epilepsy.base.datatypes import LabelledArray
+from tvb_epilepsy.base.datatypes.labelled_array import LabelledArray
+
 
 if __name__ == "__main__":
 
@@ -19,6 +20,6 @@ if __name__ == "__main__":
     print("2*la[::'b']=")
     print(2*la[::'b'])
 
-    # print("print(la.slice((slice('a', None), slice()))=")
-    # print(la.slice((slice('a', None), slice(None))))
+    print("print(la.slice((slice('b', None), slice()))=")
+    print(la.slice((slice('b', None), slice(None))))
 

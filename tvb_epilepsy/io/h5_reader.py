@@ -1,7 +1,7 @@
 import os
 import numpy
 import h5py
-from tvb_epilepsy.base.datatypes import OrderedDictDot, DictDot
+from tvb_epilepsy.base.datatypes.dot_dicts import OrderedDictDot, DictDot
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity, ConnectivityH5Field

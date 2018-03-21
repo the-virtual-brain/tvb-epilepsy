@@ -1,13 +1,10 @@
 from collections import OrderedDict
 
-from numpy import ndarray
 import numpy as np
+from numpy.core.multiarray import ndarray
 
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error, warning
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
-
-
-logger = initialize_logger(__name__)
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, formal_repr, sort_dict
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 
 
 def str_slice_to_ind_slice(old_slice, labels):
@@ -71,6 +68,18 @@ def verify_index(index, labels):
     return tuple(index)
 
 
+def unravel_index(index, shape):
+    dummy = np.zeros(shape)
+    dummy[index] = 1
+    return  np.nonzero(dummy)
+
+
+def marginal_index(index, shape):
+    index = unravel_index(index, shape)
+    index = [np.unique(ind) for ind in index]
+    return tuple(index)
+
+
 class LabelledArray(ndarray):
 
     _labels = []
@@ -88,17 +97,18 @@ class LabelledArray(ndarray):
 
     def _slice_labels(self, index):
         # TODO: make this work!
-        dummy = np.zeros(self.shape)
-        dummy[index] = 1
-        index = np.unravel_index(np.where(p.where(dummy)[0], self.shape))
+        index = marginal_index(index, self.shape)
         labels = []
-        for ind, label in zip(index, self._labels):
-            labels.append(label[index])
+        for label, ind in zip(self._labels, index):
+            if len(label) > 0:
+                labels.append(label[ind])
+            else:
+                labels.append(np.array([]))
         return labels
 
     def slice(self, index):
         index = verify_index(index, self._labels)
-        return LabelledArray((LabelledArray, self).__getitem__(index), self._slice_labels(index))
+        return LabelledArray(self.__getitem__(index), self._slice_labels(index))
 
     def __getitem__(self, index):
         index = verify_index(index, self._labels)
@@ -114,64 +124,3 @@ class LabelledArray(ndarray):
 
     def __str__(self):
         return self.__repr__()
-
-
-# TODO: on medium term, we should remove this module.
-class DictDot(object):
-
-    def __init__(self, d):
-        self.dict = dict(d)
-        for key in self.dict.keys():
-            if isinstance(self.dict[key], OrderedDict):
-                self.dict[key] = OrderedDictDot(self.dict[key])
-            elif isinstance(self.dict[key], dict):
-                self.dict[key] = DictDot(self.dict[key])
-
-    def __getattr__(self, item):
-        try:
-            return dict.__getattr__(self.dict, item)
-        except:
-            try:
-                return self.dict[item]
-            except:
-                try:
-                    for key in self.dict.keys():
-                        if isinstance(key, basestring) and key.find(item) >= 0:
-                            logger.warning("Item with key " + item + " not found!" +
-                                    "\nReturning item with key " + key + " instead!")
-                            return self.dict[key]
-                except KeyError as e:
-                    raise AttributeError(e)
-
-    def __getitem__(self, item):
-        return self.dict[item]
-
-
-class OrderedDictDot(object):
-
-    def __init__(self, d):
-        self.dict = dict(d)
-        for key in self.dict.keys():
-            if isinstance(self.dict[key], OrderedDict):
-                self.dict[key] = OrderedDictDot(self.dict[key])
-            elif isinstance(self.dict[key], dict):
-                self.dict[key] = DictDot(self.dict[key])
-
-    def __getattr__(self, item):
-        try:
-            return OrderedDict.__getattr__(self.dict, item)
-        except:
-            try:
-                return self.dict[item]
-            except:
-                try:
-                    for key in self.dict.keys():
-                        if isinstance(key, basestring) and key.find(item) >= 0:
-                            logger.warning("Item with key " + item + " not found!" +
-                                    "\nReturning item with key " + key + " instead!")
-                            return self.dict[key]
-                except KeyError as e:
-                    raise AttributeError(e)
-
-    def __getitem__(self, item):
-        return self.dict[item]
