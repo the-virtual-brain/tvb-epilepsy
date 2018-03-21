@@ -66,7 +66,7 @@ class ODEStatisticalModel(StatisticalModel):
         self.n_signals = n_signals
         self.n_times = n_times
         self.dt = dt
-        if observation_model in [model.value for model in OBSERVATION_MODELS]:
+        if observation_model in [model for model in OBSERVATION_MODELS]:
             self.observation_model = observation_model
         else:
             raise_value_error("Statistical model's observation expression " + str(observation_model) +

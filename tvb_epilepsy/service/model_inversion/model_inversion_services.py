@@ -1,6 +1,6 @@
 
 import numpy as np
-from tvb_epilepsy.base.constants.model_inversion_constants import WIN_LEN_RATIO, LOW_FREQ, HIGH_FREQ, BIPOLAR, LOG_FLAG
+from tvb_epilepsy.base.constants.model_inversion_constants import *
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, sort_dict, assert_arrays, extract_dict_stringkeys
 from tvb_epilepsy.base.computations.math_utils import select_greater_values_array_inds
@@ -172,43 +172,46 @@ class ODEModelInversionService(ModelInversionService):
         return signals, n_signals
 
     def set_empirical_target_data(self, target_data, **kwargs):
-        self.data_type = "seeg"
-        self.signals_inds = range(len(self.sensors_labels))
+        self.target_data_type = "empirical_seeg"
+        if isinstance(target_data, dict):
+            signals = np.array(target_data.get("signals", target_data.get("target_data", None)))
+        else:
+            signals = np.array(target_data)
         manual_selection = kwargs.get("manual_selection", [])
         if len(manual_selection) > 0:
             self.signals_inds = manual_selection
-        if isinstance(target_data, dict):
-            signals = np.array(target_data.get("signals", target_data.get("target_data", None)))
+        else:
+            self.signals_inds = range(signals.shape[1])
         if len(self.signals_inds) < signals.shape[1]:
             signals = signals[:, self.signals_inds]
         (n_times, n_signals) = signals.shape
         return signals, n_signals, n_times
 
-    def set_simulated_target_data(self, target_data, stats_model, dynamical_model, sensors, **kwargs):
+    def set_simulated_target_data(self, target_data, stats_model, dynamical_model, **kwargs):
         self.signals_inds = range(self.number_of_regions)
-        self.data_type = "source"
+        self.target_data_type = "simulated_source"
         signals = np.array([])
         time = target_data["time"].flatten()
         dt = np.diff(time).mean()
         signals_labels = kwargs.get("signals_labels")
-        if stats_model.observation_model.find("seeg") >= 0:
-            self.data_type = "seeg"
+        if stats_model.observation_model.value in OBSERVATION_MODELS.SEEG.value:
+            self.target_data_type = "simulated_seeg"
             sensors = kwargs.get("sensors")
             gain_matrix = sensors.gain_matrix
             self.signals_inds = range(gain_matrix.shape[0])
-            if not (isequal_string(stats_model.observation_model, "seeg_logpower")):
+            if not stats_model.observation_model is OBSERVATION_MODELS.SEEG_LOGPOWER:
                 signals = extract_dict_stringkeys(sort_dict(target_data), kwargs.get("seeg_dataset", "SEEG0"),
                                                   modefun="find", two_way_search=True, break_after=1)
                 if len(signals) > 0:
                     signals = signals.values()[0]
             if signals.size == 0:
                 signals = np.array(target_data.get("source", target_data["x1"]))
-                if isequal_string(stats_model.observation_model, "seeg_logpower"):
+                if stats_model.observation_model is OBSERVATION_MODELS.SEEG_LOGPOWER:
                     signals = np.log(np.dot(gain_matrix, np.exp(signals.T))).T
                 else:
                     signals = (np.dot(gain_matrix, signals.T)).T
             signals, time, self.signals_inds, signals_labels = \
-                prepare_seeg_observable(signals, self.time, dynamical_model,
+                prepare_seeg_observable(signals, time, dynamical_model,
                                         kwargs.get("times_on_off", [time[0], time[-1]]),
                                         signals_labels, kwargs.get("manual_selection", []),
                                         win_len_ratio=kwargs.get("win_len_ratio", WIN_LEN_RATIO),
@@ -275,7 +278,5 @@ class ODEModelInversionService(ModelInversionService):
 
 class SDEModelInversionService(ODEModelInversionService):
 
-    def __init__(self, statistical_model, model_configuration, hypothesis=None, head=None,
-                       dynamical_model=None, **kwargs):
-        super(SDEModelInversionService, self).__init__(statistical_model, model_configuration, hypothesis, head,
-                                                       dynamical_model, **kwargs)
+    def __init__(self, number_of_regions, **kwargs):
+        super(SDEModelInversionService, self).__init__(number_of_regions, **kwargs)

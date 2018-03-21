@@ -66,6 +66,7 @@ class OBSERVATION_MODELS(Enum):
     SEEG_LOGPOWER = 1
     SEEG_POWER = 2
     SOURCE_POWER = 3
+    SEEG = [1, 2]
 
 OBSERVATION_MODELS=[ "seeg_logpower", "seeg_power", "lfp_power"]
 OBSERVATION_MODEL_DEF = "seeg_logpower"

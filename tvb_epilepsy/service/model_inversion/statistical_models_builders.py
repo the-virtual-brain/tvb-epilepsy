@@ -30,21 +30,21 @@ class StatisticalModelBuilderBase(object):
 
     model_name = "vep"
     number_of_regions = 0
-    parameters = [XModes.X0MODE]
+    parameters = [XModes.X0MODE.value]
     n_parameters = 1
     priors_mode = PriorsModes.NONINFORMATIVE
     xmode = "x0"
     model_generation_time = 0
 
-    def __init__(self, number_of_regions, model_name="vep", parameters=[XModes.X0MODE],
+    def __init__(self, number_of_regions, model_name="vep", parameters=[XModes.X0MODE.value],
                  xmode=XModes.X0MODE, priors_mode=PriorsModes.NONINFORMATIVE):
         self.model_name = model_name
         self.number_of_regions = number_of_regions
+        self.xmode = xmode
         self.parameters = parameters
-        self.parameters[0] = self.xmode
+        self.parameters[0] = self.xmode.value
         self.n_parameters = len(parameters)
         self.priors_mode = priors_mode
-        self.xmode = xmode # else "x1eq"
         self.model_generation_time = 0
 
     def __repr__(self):
@@ -72,18 +72,18 @@ class StatisticalModelBuilderBase(object):
 
 class StatisticalModelBuilder(StatisticalModelBuilderBase):
 
-    parameters = [XModes.X0MODE, "tau1", "K"]
+    parameters = [XModes.X0MODE.value, "tau1", "K"]
     sigma_x = SIGMA_X0_DEF
     sigma_x_scale = 3
     MC_direction_split = 0.5
 
     def __init__(self, number_of_regions, model_name="vep",
-                 parameters=[XModes.X0MODE, "tau1", "K"],
+                 parameters=[XModes.X0MODE.value, "tau1", "K"],
                  xmode=XModes.X0MODE, priors_mode=PriorsModes.NONINFORMATIVE,
                  sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5):
         super(StatisticalModelBuilder, self).__init__(number_of_regions, model_name, parameters, xmode, priors_mode)
         if sigma_x is None:
-            if self.xmode == XModes.X0MODE:
+            if self.xmode is XModes.X0MODE:
                 sigma_x = SIGMA_X0_DEF
             else:
                 sigma_x = SIGMA_EQ_DEF
@@ -129,24 +129,25 @@ class StatisticalModelBuilder(StatisticalModelBuilderBase):
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
         # Generative model:
         # Epileptor stability:
-        self.logger.info("..." + self.xmode + "...")
-        if self.priors_mode == PriorsModes.INFORMATIVE:
-            xprior = getattr(model_config, self.xmode)
+        self.logger.info("..." + self.xmode.value + "...")
+        if self.priors_mode is PriorsModes.INFORMATIVE:
+            xprior = getattr(model_config, self.xmode.value)
             sigma_x = None
         else:
-            xprior = x_def[self.xmode]["def"] * np.ones((self.number_of_regions,))
+            xprior = x_def[self.xmode.value]["def"] * np.ones((self.number_of_regions,))
             sigma_x = self.sigma_x
         parameters.update(
-            {self.xmode: generate_negative_lognormal_parameter(self.xmode, xprior,
-                                                               x_def[self.xmode]["min"], x_def[self.xmode]["max"],
+            {self.xmode.value: generate_negative_lognormal_parameter(self.xmode.value, xprior,
+                                                               x_def[self.xmode.value]["min"],
+                                                               x_def[self.xmode.value]["max"],
                                                                sigma=sigma_x, sigma_scale=self.sigma_x_scale,
                                                                p_shape=(self.number_of_regions,), use="scipy")})
 
         if "sigma_x" in self.parameters:
             self.logger.info("...sigma_x...")
             parameters.update(
-                {"sigma_x": generate_lognormal_parameter("sigma_x", self.sigma_x, 0.0, 10*self.sigma_x, sigma=self.sigma_x,
-                                                       sigma_scale=10, p_shape=(), use="scipy")})
+                {"sigma_x": generate_lognormal_parameter("sigma_x", self.sigma_x, 0.0, 10*self.sigma_x,
+                                                         sigma=self.sigma_x, sigma_scale=10, p_shape=(), use="scipy")})
 
         # Time scales
         if "tau1" in self.parameters:
@@ -190,7 +191,7 @@ class StatisticalModelBuilder(StatisticalModelBuilderBase):
 
 class ODEStatisticalModelBuilder(StatisticalModelBuilder):
 
-    parameters = [XModes.X0MODE, "tau1", "K", "x1init", "zinit", "sigma_init",
+    parameters = [XModes.X0MODE.value, "tau1", "K", "x1init", "zinit", "sigma_init",
                   "epsilon", "scale_signal", "offset_signal"]
     sigma_init = SIGMA_INIT_DEF
     epsilon = EPSILON_DEF
@@ -203,7 +204,7 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
     active_regions = []
 
     def __init__(self, number_of_regions, model_name="vep_ode",
-                 parameters=[XModes.X0MODE, "tau1", "K", "x1init", "zinit", "sigma_init",
+                 parameters=[XModes.X0MODE.value, "tau1", "K", "x1init", "zinit", "sigma_init",
                              "epsilon", "scale_signal", "offset_signal"],
                  xmode=XModes.X0MODE, priors_mode=PriorsModes.NONINFORMATIVE,
                  sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5,
@@ -293,29 +294,32 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
 
 class SDEStatisticalModelBuilder(StatisticalModelBuilder):
 
-    parameters = [XModes.X0MODE, "tau1", "K", "x1init", "zinit", "sigma_init", "dX1t", "dZt", "sigma",
+    parameters = [XModes.X0MODE.value, "tau1", "K", "x1init", "zinit", "sigma_init", "dX1t", "dZt", "sigma",
                   "epsilon", "scale_signal", "offset_signal"]
     sigma = SIGMA_DEF
     sde_mode = SDE_MODES.NONCENTERED
 
-    def __init__(self, number_of_regions, model_name="vep_ode",
-                 parameters=[XModes.X0MODE, "tau1", "K", "x1init", "zinit", "sigma_init",  "dX1t", "dZt", "sigma",
+    def __init__(self, number_of_regions, model_name="vep_sde",
+                 parameters=[XModes.X0MODE.value, "tau1", "K", "x1init", "zinit", "sigma_init",  "dX1t", "dZt", "sigma",
                              "epsilon", "scale_signal", "offset_signal"],
                  xmode=XModes.X0MODE, priors_mode=PriorsModes.NONINFORMATIVE,
                  sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5,
-                 sigma_init=SIGMA_INIT_DEF, epsilon=EPSILON_DEF,
-                 scale_signal=SCALE_SIGNAL_DEF, offset_signal=OFFSET_SIGNAL_DEF, sigma=SIGMA_DEF,
-                 sde_mode=SDE_MODES.NONCENTERED):
+                 sigma_init=SIGMA_INIT_DEF, epsilon=EPSILON_DEF, sigma=SIGMA_DEF,
+                 scale_signal=SCALE_SIGNAL_DEF, offset_signal=OFFSET_SIGNAL_DEF,
+                 sde_mode=SDE_MODES.NONCENTERED, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER,
+                 n_signals=0, n_times=0, dt=DT_DEF, active_regions=[]):
         super(SDEStatisticalModelBuilder, self).__init__(number_of_regions, model_name, parameters, xmode, priors_mode,
                                                          sigma_x, sigma_x_scale, MC_direction_split, sigma_init,
-                                                         epsilon, scale_signal, offset_signal)
+                                                         epsilon, scale_signal, offset_signal, observation_model,
+                                                         n_signals, n_times, dt, active_regions)
         self.sigma_init = sigma_init
         self.sde_mode = sde_mode
+        self.sigma = sigma
 
     def generate_parameters(self, model_config=ModelConfiguration()):
         parameters = super(SDEStatisticalModelBuilder, self).generate_parameters(model_config)
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
-        if self.sde_mode == SDE_MODES.CENTERED:
+        if self.sde_mode is SDE_MODES.CENTERED:
             self.logger.info("...autoregression centered time series parameters...")
             names = ["x1", "z"]
             mins = [X1_MIN, Z_MIN]
