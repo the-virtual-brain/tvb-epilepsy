@@ -131,10 +131,17 @@ class Timeseries(object):
                           self.sampling_period, self.time_unit)
 
     def get_time_window(self, unit_start, unit_end):
-        # O(1)
         timeline = self.get_time_line()
-        index_start, = numpy.where(timeline == unit_start)[0]
-        index_end, = numpy.where(timeline == unit_end)[0]
+        if unit_start >= timeline[0] and unit_start <= timeline[-1]:
+            index_start = numpy.argmin(timeline - unit_start)
+        else:
+            raise_value_error("Starting time " + str(unit_start) + " is out of the signal's time interval!: " +
+                              str([timeline[0], timeline[-1]]))
+        if unit_end >= unit_start and unit_end <= timeline[-1]:
+            index_end = numpy.argmin(timeline == unit_end)
+        else:
+            raise_value_error("Ending time " + str(unit_start) + " is out of the interval [starting_time, time_end] = "
+                              + str([unit_start, timeline[-1]]) + "!")
         return self.get_time_window_by_index(index_start, index_end)
 
     def get_squeezed_data(self):
