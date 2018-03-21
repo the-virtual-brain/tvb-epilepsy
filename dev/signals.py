@@ -5,7 +5,7 @@ import numpy as np
 
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
-from tvb_epilepsy.base.datatypes import LabelledArray
+from tvb_epilepsy.base.datatypes.labelled_array import LabelledArray
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity
 from tvb_epilepsy.base.model.vep.sensors import SENSORS_TYPES, Sensors
 
