@@ -10,6 +10,7 @@ import h5py
 ts_path = "/Users/dionperd/Dropbox/Work/VBtech/VEP/results/tests/res/LSA_e_x0_Hypothesis_ts.h5"
 conn_path = "/Users/dionperd/Dropbox/Work/VBtech/VEP/results/CC/TVB3/Head/Connectivity.h5"
 
+
 def read_ts(path):
     h5_file = h5py.File(path, 'r', libver='latest')
 
