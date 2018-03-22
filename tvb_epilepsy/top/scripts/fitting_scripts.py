@@ -144,3 +144,58 @@ def build_stan_service_and_model(stan_service, stan_model_name, fitmethod, confi
     stan_service.set_or_compile_model()
 
     return stan_service
+
+
+def plot_fitting_results(ests, samples, R_hat, stan_model_name, model_data, statistical_model, model_inversion,
+                         model_configuration, lsa_hypothesis, plotter, x0_star_mu=None, x_init_mu=None, z_init_mu=None):
+
+    simulation_values = {"x0": model_configuration.x0, "x1eq": model_configuration.x1EQ,
+                         "x1init": model_configuration.x1EQ, "zinit": model_configuration.zEQ}
+
+    if stan_model_name.find("vep-fe-rev") >= 0:
+        x1_str = "x"
+        input_signals_str = "seeg_log_power"
+        signals_str = "mu_seeg_log_power"
+        dX1t_str = "x_eta"
+        dZt_str = "z_eta"
+        sig_str = "sigma"
+        k_str = "k"
+        pair_plot_params = ["time_scale", "k", "sigma", "epsilon", "amplitude", "offset"]
+        region_violin_params = ["x0", "x_init", "z_init"]
+        if model_inversion.target_data_type.find("empirical") >= 0:
+            priors = {"x0": x0_star_mu, "x_init": x_init_mu, "z_init": z_init_mu}
+        else:
+            priors = dict(simulation_values)
+            priors.update({"x0": simulation_values["x0"][statistical_model.active_regions]})
+            priors.update({"x_init": simulation_values["x1init"][statistical_model.active_regions]})
+            priors.update({"z_init": simulation_values["zinit"][statistical_model.active_regions]})
+        connectivity_plot = False
+        estMC = lambda: model_configuration.model_connectivity
+        region_mode = "active"
+    else:
+        x1_str = "x1"
+        input_signals_str = "signals"
+        signals_str = "fit_signals"
+        dX1t_str = "dX1t"  # "x1_dWt"
+        dZt_str = "dZt"  # "z_dWt"
+        sig_str = "sig"
+        k_str = "K"
+        pair_plot_params = ["tau1", "tau0", "K", "sig_init", "sig", "eps", "scale_signal", "offset_signal"]
+        region_violin_params = ["x0", "x1eq", "x1init", "zinit"]
+        connectivity_plot = False
+        estMC = lambda est: est["MC"]
+        region_mode = "all"
+        if model_inversion.target_data_type.find("empirical") >= 0:
+            priors = {"x0": model_inversion.x0[statistical_model.active_regions],
+                      "x1eq": model_data["x1eq_max"]
+                              - statistical_model.parameters["x1eq_star"].mean[statistical_model.active_regions],
+                      "x_init": statistical_model.parameters["x1init"].mean[statistical_model.active_regions],
+                      "z_init": statistical_model.parameters["zinit"].mean[statistical_model.active_regions]}
+        else:
+            priors = simulation_values
+    plotter.plot_fit_results(model_inversion, ests, samples, statistical_model, model_data[input_signals_str],
+                             R_hat, model_data["time"], priors, region_mode,
+                             seizure_indices=lsa_hypothesis.get_regions_disease_indices(), x1_str=x1_str,
+                             k_str=k_str, signals_str=signals_str, sig_str=sig_str, dX1t_str=dX1t_str,
+                             dZt_str=dZt_str, trajectories_plot=True, connectivity_plot=connectivity_plot,
+                             pair_plot_params=pair_plot_params, region_violin_params=region_violin_params)
