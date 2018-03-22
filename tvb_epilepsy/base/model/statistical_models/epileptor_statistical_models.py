@@ -23,7 +23,7 @@ class StatisticalModel(object):
         self.name = name
         self.number_of_regions = number_of_regions
         self.parameters = parameters
-        self.model_config = ModelConfiguration()
+        self.model_config = model_config
 
     def __repr__(self):
         d = OrderedDict()
@@ -38,33 +38,33 @@ class StatisticalModel(object):
 class ODEStatisticalModel(StatisticalModel):
 
     observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER
-    n_signals = 0
-    n_times = 0
+    number_of_signals = 0
+    time_length = 0
     dt = DT_DEF
     active_regions = []
     nonactive_regions = []
 
     @property
-    def n_active(self):
+    def number_of_active_regions(self):
         return len(self.active_regions)
 
     @property
-    def non_active(self):
+    def number_of_nonactive_regions(self):
         return len(self.nonactive_regions)
 
     def __init__(self, name='vep_ode', number_of_regions=0, parameters={}, model_config=ModelConfiguration(),
-                 observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER, n_signals=0, n_times=0, dt=DT_DEF,
+                 observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER, number_of_signals=0, time_length=0, dt=DT_DEF,
                  active_regions=[]):
         super(ODEStatisticalModel, self).__init__(name, number_of_regions, parameters, model_config)
         if np.all(np.in1d(active_regions, range(self.number_of_regions))):
             self.active_regions = np.unique(active_regions).tolist()
-            self.n_active_regions = len(self.active_regions)
-            self.n_nonactive_regions = self.number_of_regions - self.n_active_regions
+            self.number_of_active_regions_regions = len(self.active_regions)
+            self.n_nonactive_regions = self.number_of_regions - self.number_of_active_regions_regions
         else:
             raise_value_error("Active regions indices:\n" + str(active_regions) +
                               "\nbeyond number of regions (" + str(self.number_of_regions) + ")!")
-        self.n_signals = n_signals
-        self.n_times = n_times
+        self.number_of_signals = number_of_signals
+        self.time_length = time_length
         self.dt = dt
         if observation_model in [model for model in OBSERVATION_MODELS]:
             self.observation_model = observation_model
@@ -86,8 +86,8 @@ class ODEStatisticalModel(StatisticalModel):
     def update_active_regions(self, active_regions):
         if np.all(np.in1d(active_regions, range(self.number_of_regions))):
             self.active_regions = np.unique(ensure_list(active_regions) + self.active_regions).tolist()
-            self.n_active_regions = len(self.active_regions)
-            self.n_nonactive_regions = self.number_of_regions - self.n_active_regions
+            self.number_of_active_regions_regions = len(self.active_regions)
+            self.n_nonactive_regions = self.number_of_regions - self.number_of_active_regions_regions
         else:
             raise_value_error("Active regions indices:\n" + str(active_regions) +
                               "\nbeyond number of regions (" + str(self.number_of_regions) + ")!")
@@ -98,10 +98,10 @@ class SDEStatisticalModel(ODEStatisticalModel):
     sde_mode = SDE_MODES.NONCENTERED
 
     def __init__(self, name='vep_ode', number_of_regions=0, parameters={}, model_config=ModelConfiguration(),
-                 observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER, n_signals=0, n_times=0, dt=DT_DEF,
+                 observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER, number_of_signals=0, time_length=0, dt=DT_DEF,
                  active_regions=[], sde_mode=SDE_MODES.NONCENTERED):
         super(SDEStatisticalModel, self).__init__(name, number_of_regions, parameters, model_config,
-                                                  observation_model, n_signals, n_times, dt, active_regions)
+                                                  observation_model, number_of_signals, time_length, dt, active_regions)
         self.sde_mode = sde_mode
 
     def __repr__(self):

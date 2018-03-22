@@ -108,26 +108,6 @@ class ODEModelInversionService(ModelInversionService):
                                                               seeg_inds=kwargs.get("seeg_inds", []))
         return stats_model
 
-    # def set_time(self, time=None):
-    #     if time is not None:
-    #         time = np.array(time)
-    #         try:
-    #             if time.size == 1:
-    #                 self.dt = time
-    #                 return np.arange(self.dt * (self.n_times - 1))
-    #             elif time.size == self.n_times:
-    #                 self.dt = np.mean(np.diff(time))
-    #                 return time
-    #             else:
-    #                 raise_value_error("Input time is neither a scalar nor a vector of length equal " +
-    #                                   "to target_data.shape[0]!" + "\ntime = " + str(time))
-    #         except:
-    #             raise_value_error(
-    #                 "Input time is neither a scalar nor a vector of length equal to target_data.shape[0]!" +
-    #                 "\ntime = " + str(time))
-    #     else:
-    #         raise_value_error("Input time is neither a scalar nor a vector of length equal to target_data.shape[0]!" +
-    #                           "\ntime = " + str(time))
 
     def select_signals_seeg(self, signals, sensors, rois, auto_selection, **kwargs):
         inds = range(signals.shape[1])
@@ -154,8 +134,8 @@ class ODEModelInversionService(ModelInversionService):
             power = kwargs.get("power", np.sum(signals ** 2, axis=0) / signals.shape[0])
             inds = select_greater_values_array_inds(power, kwargs.get("power_th", None))
             self.signals_inds = (np.array(self.signals_inds)[inds]).tolist()
-        n_signals = len(self.signals_inds)
-        return signals[:, inds], n_signals
+        number_of_signals = len(self.signals_inds)
+        return signals[:, inds], number_of_signals
 
     def select_signals_source(self, signals, rois, auto_selection, **kwargs):
         if auto_selection.find("rois") >= 0:
@@ -168,8 +148,8 @@ class ODEModelInversionService(ModelInversionService):
             inds = select_greater_values_array_inds(power, kwargs.get("power_th", None))
             signals = signals[:, inds]
             self.signals_inds = (np.array(self.signals_inds)[inds]).tolist()
-        n_signals = len(self.signals_inds)
-        return signals, n_signals
+        number_of_signals = len(self.signals_inds)
+        return signals, number_of_signals
 
     def set_empirical_target_data(self, target_data, **kwargs):
         self.target_data_type = "empirical_seeg"
@@ -184,8 +164,8 @@ class ODEModelInversionService(ModelInversionService):
             self.signals_inds = range(signals.shape[1])
         if len(self.signals_inds) < signals.shape[1]:
             signals = signals[:, self.signals_inds]
-        (n_times, n_signals) = signals.shape
-        return signals, n_signals, n_times
+        (time_length, number_of_signals) = signals.shape
+        return signals, number_of_signals, time_length
 
     def set_simulated_target_data(self, target_data, stats_model, dynamical_model, **kwargs):
         self.signals_inds = range(self.number_of_regions)
@@ -240,8 +220,8 @@ class ODEModelInversionService(ModelInversionService):
                                           log_flag=kwargs.get("log_flag", LOG_FLAG),
                                           plotter=kwargs.get("plotter", False))[:3]
             target_data["signals"] = np.array(signals)
-        (n_times, n_signals) = signals.shape
-        return signals, target_data, signals_labels, n_signals, time, n_times, dt
+        (time_length, number_of_signals) = signals.shape
+        return signals, target_data, signals_labels, number_of_signals, time, time_length, dt
 
     def normalize_signals(self, signals, normalization=None):
         return normalize_signals(signals, normalization)
@@ -249,31 +229,31 @@ class ODEModelInversionService(ModelInversionService):
     def set_target_data_and_time(self, target_data_type, target_data, stats_model, dynamical_model, **kwargs):
         if isequal_string(target_data_type, "simulated"):
             self.target_data_type = "simulated"
-            signals, target_data, signals_labels, n_signals, time, n_times, dt = \
+            signals, target_data, signals_labels, number_of_signals, time, time_length, dt = \
                 self.set_simulated_target_data(target_data, stats_model, dynamical_model, **kwargs)
         else:  # isequal_string(target_data_type, "empirical"):
             self.target_data_type = "empirical"
-            signals, n_signals, n_times = self.set_empirical_target_data(target_data, **kwargs)
+            signals, number_of_signals, time_length = self.set_empirical_target_data(target_data, **kwargs)
             dt = kwargs.get("dt", 1.0)
-            time = target_data.get("time", np.arange(stats_model.dt * (n_times - 1)))
+            time = target_data.get("time", np.arange(stats_model.dt * (time_length - 1)))
         if kwargs.get("auto_selection", True) is not False:
-            if self.data_type == "source":
+            if stats_model.observation_model not in OBSERVATION_MODELS.SEEG.value:
                 signals = self.select_signals_source(signals, stats_model.active_regions,
                                                      kwargs.pop("auto_selection", "rois"), **kwargs)
             else:
                 signals = self.select_signals_seeg(signals, stats_model.active_regions,
                                                    kwargs.pop("auto_selection", "rois-correlation-power"), **kwargs)
         if kwargs.get("decimate", 1) > 1:
-            signals, time, dt, n_times = decimate_signals(signals, time, kwargs.get("decimate"))
+            signals, time, dt, time_length = decimate_signals(signals, time, kwargs.get("decimate"))
         if np.sum(kwargs.get("cut_signals_tails", (0, 0))) > 0:
-            signals, time, n_times = cut_signals_tails(signals, time, kwargs.get("cut_signals_tails"))
+            signals, time, time_length = cut_signals_tails(signals, time, kwargs.get("cut_signals_tails"))
         # TODO: decide about signals' normalization for the different (sensors', sources' cases)
         signals = self.normalize_signals(signals, kwargs.get("normalization", None))
-        stats_model.n_signals = n_signals
-        stats_model.n_times = n_times
+        stats_model.number_of_signals = number_of_signals
+        stats_model.time_length = time_length
         stats_model.dt = dt
         stats_model.time = time
-        return signals, time, stats_model, target_data
+        return signals, time, stats_model, signals_labels, target_data
 
 
 class SDEModelInversionService(ODEModelInversionService):
