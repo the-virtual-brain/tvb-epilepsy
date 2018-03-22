@@ -25,13 +25,13 @@ def prepare_dtype_for_2D(labels_list):
     return list_of_dtype_tuples
 
 
-def prepare_dtype_for_3D(labels_list, sub_dimension_dtype=None, first_dimension_size=None):
+def prepare_dtype_for_3D(labels_list, sub_dimension_dtype=None):
     list_of_dtype_tuples = []
-    if sub_dimension_dtype is None or first_dimension_size is None:
+    if sub_dimension_dtype is None:
         list_of_dtype_tuples = prepare_dtype_for_2D(labels_list)
     else:
         for label in labels_list:
-            list_of_dtype_tuples.append((label, sub_dimension_dtype, (first_dimension_size,)))
+            list_of_dtype_tuples.append((label, sub_dimension_dtype))
 
     return list_of_dtype_tuples
 
@@ -42,11 +42,11 @@ def prepare_data_for_structured_array(data):
         for vector in data:
             result.append(tuple(vector))
     if len(data.shape) == 3:
-        for vector in numpy.transpose(data, (1, 0, 2)):
+        for vector in data:
             subresult = []
             for subvector in vector:
                 subresult.append(tuple(subvector))
-            result.append(subresult)
+            result.append(tuple(subresult))
 
     return result
 
@@ -65,10 +65,12 @@ if __name__ == "__main__":
 
     sv = prepare_dtype_for_2D(["a", "b", "c"])
     rgs = prepare_dtype_for_3D(conn.region_labels)
-    rgs_sv = prepare_dtype_for_3D(conn.region_labels, sv, nr_of_steps)
+    rgs_sv = prepare_dtype_for_3D(conn.region_labels, sv)
 
     data2D = prepare_data_for_structured_array(data[0])
     data3D = prepare_data_for_structured_array(data)
 
     struct_data2D = numpy.array(data2D, dtype=sv)
-    struct_data3D = numpy.array(tuple(data3D), dtype=rgs_sv)
+    struct_data3D = numpy.rec.array(data3D, dtype=rgs_sv)
+
+    print struct_data3D[0]['Unknown']['a']
