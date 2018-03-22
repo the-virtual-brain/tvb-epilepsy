@@ -71,7 +71,7 @@ def verify_index(index, labels):
 def unravel_index(index, shape):
     dummy = np.zeros(shape)
     dummy[index] = 1
-    return  np.nonzero(dummy)
+    return np.nonzero(dummy)
 
 
 def marginal_index(index, shape):
