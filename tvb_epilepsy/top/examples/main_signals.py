@@ -57,20 +57,24 @@ if __name__ == "__main__":
     signal = Timeseries(data, OrderedDict({"space": list(conn.region_labels), "state_variables": ["a", "b", "c"]}),
                         start_time, total_time / float(nr_of_steps))
 
-    #     timeline = signal.get_time_line()
-    #     sv = signal.get_state_variable("a")
-    #     subspace = signal.get_subspace_by_labels(list(conn.region_labels)[:3])
-    #     timewindow = signal.get_time_window(10, 100)
-    #     timewindowUnits = signal.get_time_window_by_units(timeline[10], timeline[100])
+    timeline = signal.get_time_line()
 
-    sv = prepare_dtype_for_2D(["a", "b", "c"])
-    rgs = prepare_dtype_for_3D(conn.region_labels)
-    rgs_sv = prepare_dtype_for_3D(conn.region_labels, sv)
+    sv = signal.get_state_variable("a")
 
-    data2D = prepare_data_for_structured_array(data[0])
-    data3D = prepare_data_for_structured_array(data)
+    subspace = signal.get_subspace_by_labels(list(conn.region_labels)[:3])
+    timewindow = signal.get_time_window(10, 100)
+    timewindowUnits = signal.get_time_window_by_units(timeline[10], timeline[100])
 
-    struct_data2D = numpy.array(data2D, dtype=sv)
-    struct_data3D = numpy.rec.array(data3D, dtype=rgs_sv)
+    # Numpy Structured Array example:
 
-    print struct_data3D[0]['Unknown']['a']
+    # sv = prepare_dtype_for_2D(["a", "b", "c"])
+    # rgs = prepare_dtype_for_3D(conn.region_labels)
+    # rgs_sv = prepare_dtype_for_3D(conn.region_labels, sv)
+    #
+    # data2D = prepare_data_for_structured_array(data[0])
+    # data3D = prepare_data_for_structured_array(data)
+    #
+    # struct_data2D = numpy.array(data2D, dtype=sv)
+    # struct_data3D = numpy.rec.array(data3D, dtype=rgs_sv)
+
+    # print struct_data3D[0]['Unknown']['a']
