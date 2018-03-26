@@ -44,7 +44,7 @@ def load_empirical_data(ts_file):
     sensors_lbls = np.array(signals_ts_dict["sensors_lbls"]).flatten().tolist()
     signals_ts_dict.update({"time": time, "sensors_inds": sensors_inds, "sensors_lbls": sensors_lbls})
     savemat(ts_file, signals_ts_dict)
-    return signals_ts_dict
+    return signals_ts_dict, sensors_inds, sensors_lbls
 
 
 def proprocess_empirical_data(head, empirical_file, ts_file, sensors_inds, sensors_lbls, dynamical_model,
@@ -65,8 +65,7 @@ def proprocess_empirical_data(head, empirical_file, ts_file, sensors_inds, senso
     signals_ts_dict = {"time": time.flatten(), "signals": signals,
                        "sensors_inds": sensors_inds, "sensors_lbls": sensors_lbls}
     savemat(ts_file, signals_ts_dict)
-
-    return signals_ts_dict
+    return signals_ts_dict, sensors_inds, sensors_lbls
 
 
 def set_empirical_data(head, hypname, model_inversion, empirical_file, sensors_inds, sensors_lbls,
@@ -75,15 +74,13 @@ def set_empirical_data(head, hypname, model_inversion, empirical_file, sensors_i
     model_inversion.target_data_type = "empirical"
     ts_file = os.path.join(config.out.FOLDER_RES, hypname + "_ts_empirical.mat")
     try:
-        signals_ts_dict = load_empirical_data(ts_file)
+        signals_ts_dict, sensors_inds, sensors_lbls = load_empirical_data(ts_file)
     except:
         # ... or preprocess empirical data for the first time:
         signals_ts_dict, sensors_inds, sensors_lbls = \
             proprocess_empirical_data(head, empirical_file, ts_file, sensors_inds, sensors_lbls,
                                       dynamical_model, time_units, plotter)
-    manual_selection = sensors_inds
-    signals_labels = head.get_sensors().labels
-    return signals_ts_dict, manual_selection, signals_labels
+    return signals_ts_dict, sensors_inds, head.get_sensors().labels
 
 
 def set_simulated_data(head, hypname, lsa_hypothesis, model_configuration, model_inversion, statistical_model,
@@ -105,7 +102,6 @@ def set_simulated_data(head, hypname, lsa_hypothesis, model_configuration, model
         else:
             manual_selection = []
             signals_labels = head.connectivity.region_labels
-
     return signals_ts_dict, manual_selection, signals_labels
 
 
@@ -142,26 +138,22 @@ def build_stan_service_and_model(stan_service, stan_model_name, fitmethod, confi
                                      model_code_path=model_code_path,
                                      fitmethod=fitmethod, random_seed=12345, init="random", config=config)
     stan_service.set_or_compile_model()
-
     return stan_service
 
 
 def plot_fitting_results(ests, samples, R_hat, stan_model_name, model_data, statistical_model, model_inversion,
-                         model_configuration, lsa_hypothesis, plotter, x0_star_mu=None, x_init_mu=None, z_init_mu=None):
+                         model_configuration, lsa_hypothesis, plotter,
+                         pair_plot_params=["time_scale", "k", "sigma", "epsilon", "amplitude", "offset"],
+                         region_violin_params=["x0", "x_init", "z_init"],
+                         x0_star_mu=None, x_init_mu=None, z_init_mu=None):
 
     simulation_values = {"x0": model_configuration.x0, "x1eq": model_configuration.x1EQ,
                          "x1init": model_configuration.x1EQ, "zinit": model_configuration.zEQ}
 
     if stan_model_name.find("vep-fe-rev") >= 0:
-        x1_str = "x"
         input_signals_str = "seeg_log_power"
-        signals_str = "mu_seeg_log_power"
-        dX1t_str = "x_eta"
-        dZt_str = "z_eta"
-        sig_str = "sigma"
-        k_str = "k"
-        pair_plot_params = ["time_scale", "k", "sigma", "epsilon", "amplitude", "offset"]
-        region_violin_params = ["x0", "x_init", "z_init"]
+        # pair_plot_params = ["time_scale", "k", "sigma", "epsilon", "amplitude", "offset"],
+        # region_violin_params = ["x0", "x_init", "z_init"]
         if model_inversion.target_data_type.find("empirical") >= 0:
             priors = {"x0": x0_star_mu, "x_init": x_init_mu, "z_init": z_init_mu}
         else:
@@ -173,15 +165,9 @@ def plot_fitting_results(ests, samples, R_hat, stan_model_name, model_data, stat
         estMC = lambda: model_configuration.model_connectivity
         region_mode = "active"
     else:
-        x1_str = "x1"
         input_signals_str = "signals"
-        signals_str = "fit_signals"
-        dX1t_str = "dX1t"  # "x1_dWt"
-        dZt_str = "dZt"  # "z_dWt"
-        sig_str = "sig"
-        k_str = "K"
-        pair_plot_params = ["tau1", "tau0", "K", "sig_init", "sig", "eps", "scale_signal", "offset_signal"]
-        region_violin_params = ["x0", "x1eq", "x1init", "zinit"]
+        # pair_plot_params = ["tau1", "tau0", "K", "sig_init", "sig", "eps", "scale_signal", "offset_signal"]
+        # region_violin_params = ["x0", "x1eq", "x1init", "zinit"]
         connectivity_plot = False
         estMC = lambda est: est["MC"]
         region_mode = "all"
@@ -195,7 +181,6 @@ def plot_fitting_results(ests, samples, R_hat, stan_model_name, model_data, stat
             priors = simulation_values
     plotter.plot_fit_results(model_inversion, ests, samples, statistical_model, model_data[input_signals_str],
                              R_hat, model_data["time"], priors, region_mode,
-                             seizure_indices=lsa_hypothesis.get_regions_disease_indices(), x1_str=x1_str,
-                             k_str=k_str, signals_str=signals_str, sig_str=sig_str, dX1t_str=dX1t_str,
-                             dZt_str=dZt_str, trajectories_plot=True, connectivity_plot=connectivity_plot,
+                             seizure_indices=lsa_hypothesis.get_regions_disease_indices(),
+                             trajectories_plot=True, connectivity_plot=connectivity_plot,
                              pair_plot_params=pair_plot_params, region_violin_params=region_violin_params)

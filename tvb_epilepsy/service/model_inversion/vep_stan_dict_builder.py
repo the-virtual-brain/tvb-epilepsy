@@ -1,5 +1,6 @@
 import numpy as np
 from copy import deepcopy
+from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, sort_dict
 from tvb_epilepsy.base.constants.model_inversion_constants import *
 from tvb_epilepsy.base.computations.probability_distributions import ProbabilityDistributionTypes
@@ -37,7 +38,6 @@ def build_stan_model_dict(statistical_model, signals, model_inversion,
     active_regions_flag = np.zeros((statistical_model.number_of_regions,), dtype="i")
     active_regions_flag[statistical_model.active_regions] = 1
     SC = statistical_model.model_config.model_connectivity
-
     model_data = {"number_of_regions": statistical_model.number_of_regions,
                   "n_times": statistical_model.time_length,
                   "n_signals": statistical_model.number_of_signals,
@@ -80,7 +80,12 @@ def build_stan_model_dict(statistical_model, signals, model_inversion,
 
 
 def build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inversion,
-                                           time=None, sensors=None, gain_matrix=None):
+                                           time=None, sensors=None, gain_matrix=None,
+                                           parameter_names={"K": "k", "MC": "FC", "tau1": "time_scale",
+                                                            "x1init": "x_init", "zinit": "z_init",
+                                                            "x1": "x", "dX1t": "x_eta", "dZt": "z_eta",
+                                                            "scale": "amplitude", "signals": "seeg_log_power",
+                                                            }):
     """
     Usually takes as input the model_data created with <build_stan_model_dict> and adds fields that are needed to
     interface the ins stan model.
@@ -104,6 +109,13 @@ def build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inv
     z_init_mu = statistical_model.parameters["zinit"].mean[active_regions].mean() * act_reg_ones
     if time is None:
         time = np.arange(0, statistical_model.dt, statistical_model.time_length)
+    for p_old_name, p_new_name in parameter_names.iteritems():
+        try:
+            statistical_model.parameters[p_new_name] = statistical_model.parameters[p_old_name]
+        except:
+            warning("Parameter " + p_old_name + " not found in statistical model\n" +
+                              str(statistical_model))
+
     vep_data = {"nn": statistical_model.number_of_regions,
                 "nt": statistical_model.time_length,
                 "ns": statistical_model.number_of_signals,
@@ -128,10 +140,10 @@ def build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inv
                 "SC": SC[active_regions][:, active_regions],
                 "SC_var": 5.0,  # 1/36 = 0.02777777,
                 "Ic": np.sum(SC[active_regions][:, nonactive_regions], axis=1),
-                "sigma_mu": statistical_model.parameters["sig"].mean,
-                "sigma_std": statistical_model.parameters["sig"].std,
-                "epsilon_mu": statistical_model.parameters["eps"].mean,
-                "epsilon_std": statistical_model.parameters["eps"].std,
+                "sigma_mu": statistical_model.parameters["sigma"].mean,
+                "sigma_std": statistical_model.parameters["sigma"].std,
+                "epsilon_mu": statistical_model.parameters["epsilon"].mean,
+                "epsilon_std": statistical_model.parameters["epsilon"].std,
                 "sig_hi": 0.025,  # model_data["sig_hi"],
                 "amplitude_mu": statistical_model.parameters["scale_signal"].mean,
                 "amplitude_std": statistical_model.parameters["scale_signal"].std / 6,

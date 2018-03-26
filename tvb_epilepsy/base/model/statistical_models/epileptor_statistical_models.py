@@ -34,6 +34,17 @@ class StatisticalModel(object):
     def __str__(self):
         return formal_repr(self, sort_dict(self.__repr__()))
 
+    # Overwrite the following two methods for models with parameters that are not covered by this formulation
+    def get_prior(self, parameter_name):
+        return self.parameters.get(parameter_name).mean, self.parameters.get(parameter_name)
+
+    def get_truth(self, parameter_name):
+        truth = getattr(self, parameter_name, None)
+        if truth is None:
+            truth = getattr(self.model_config, parameter_name, None)
+        if truth is None:
+            raise_value_error("Ground truth value for parameter " + parameter_name + " was not found!")
+
 
 class ODEStatisticalModel(StatisticalModel):
 
@@ -91,6 +102,9 @@ class ODEStatisticalModel(StatisticalModel):
         else:
             raise_value_error("Active regions indices:\n" + str(active_regions) +
                               "\nbeyond number of regions (" + str(self.number_of_regions) + ")!")
+
+    def get_truth(self, parameter_name):
+        return getattr(self.model_config, parameter_name, None)
 
 
 class SDEStatisticalModel(ODEStatisticalModel):
