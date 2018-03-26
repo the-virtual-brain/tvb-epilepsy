@@ -89,7 +89,7 @@ def set_simulated_data(head, hypname, lsa_hypothesis, model_configuration, model
     ts_file = os.path.join(config.out.FOLDER_RES, hypname + "_ts.mat")
     signals_ts_dict = \
         from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
-                                               sim_type="fitting", dynamical_model=dynamical_model,
+                                               sim_type="realistic", dynamical_model=dynamical_model,
                                                ts_file=ts_file, plot_flag=True, config=config)
     # if len(sensors_inds) > 1:  # get_bipolar_channels(sensors_inds, sensors_lbls)
     #     sensors_inds, sensors_lbls = head.get_sensors_id().get_bipolar_sensors(sensors_inds=sensors_inds)

@@ -12,7 +12,7 @@ from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.model_inversion.statistical_models_builders import SDEStatisticalModelBuilder
 from tvb_epilepsy.service.model_inversion.model_inversion_services import SDEModelInversionService
-from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import build_stan_model_dict
+# from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import build_stan_model_dict
 from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import build_stan_model_dict_to_interface_ins
 from tvb_epilepsy.top.scripts.fitting_scripts import *
 
@@ -81,7 +81,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file=None, dynamica
 
         # -------------------------- Get model_data and observation signals: -------------------------------------------
         # Create model inversion service (stateless)
-        model_inversion = SDEModelInversionService(statistical_model.number_of_regions, **kwargs)
+        model_inversion = SDEModelInversionService(model_configuration.number_of_regions, **kwargs)
         stats_model_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_StatsModel.h5")
         model_data_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5")
         if os.path.isfile(stats_model_file) and os.path.isfile(model_data_file):
@@ -93,13 +93,17 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file=None, dynamica
             # ...or generate a new statistical model and model data
             statistical_model = \
                 SDEStatisticalModelBuilder(model_name="vep_sde", model_config=model_configuration,
-                                           parameters=[XModes.X0MODE.value, "tau1", "K",
-                                                        "x1init", "zinit", "sigma_init", "dX1t", "dZt",
-                                                        "sigma", "epsilon", "scale_signal", "offset_signal"],
-                                           xmode=XModes.X0MODE, priors_mode="informative",
-                                           sigma_init=SIG_INIT_DEF, epsilon=EPSILON_DEF, sigma=SIGMA_DEF,
-                                           sde_mode=SDE_MODES.NONCENTERED,  observation_model=observation_model). \
-                                                                        generate_statistical_model(model_configuration)
+                                           parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K",
+                                                       "x1init", "zinit", "sigma_init",  "dX1t", "dZt", "sigma",
+                                                       "epsilon", "scale", "offset"],
+                                           xmode=XModes.X0MODE, priors_mode=PriorsModes.NONINFORMATIVE,
+                                           sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5,
+                                           sigma_init=SIGMA_INIT_DEF, epsilon=EPSILON_DEF, sigma=SIGMA_DEF,
+                                           scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF,
+                                           sde_mode=SDE_MODES.NONCENTERED,
+                                           observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER,
+                                           number_of_signals=0, time_length=0, dt=DT_DEF, active_regions=[]).\
+                                                                                                       generate_model()
 
             # Update active model's active region nodes
             statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
@@ -134,10 +138,10 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file=None, dynamica
             plot_target_signals(signals_ts_dict, signals, time, signals_labels, hyp.name,
                                 model_inversion, statistical_model, writer, plotter, config)
 
-            # Create model_data for stan
-            model_data = build_stan_model_dict(statistical_model, signals, model_inversion,
-                                                       time=time, sensors=head.get_sensors(), gain_matrix=None)
-            writer.write_dictionary(model_data, os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5"))
+            # # Create model_data for stan
+            # model_data = build_stan_model_dict(statistical_model, signals, model_inversion,
+            #                                            time=time, sensors=head.get_sensors(), gain_matrix=None)
+            # writer.write_dictionary(model_data, os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5"))
 
             # Interface with INS stan models
             if stan_model_name.find("vep-fe-rev") >= 0:
@@ -146,9 +150,6 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file=None, dynamica
                                                        time=time, sensors=head.get_sensors(), gain_matrix=None)
                 k_str = 'k'
             else:
-                x0_star_mu = None
-                x_init_mu = None
-                z_init_mu = None
                 k_str = 'K'
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
@@ -176,8 +177,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file=None, dynamica
         ests = ensure_list(ests)
 
         # -------------------------- Plot fitting results: ------------------------------------------------------------
-        plot_fitting_results(ests, samples, R_hat, stan_model_name, model_data, statistical_model, model_inversion,
-                             model_configuration, lsa_hypothesis, plotter, x0_star_mu, x_init_mu, z_init_mu)
+        # plot_fitting_results(ests, samples, R_hat, stan_model_name, model_data, statistical_model, model_inversion,
+        #                      model_configuration, lsa_hypothesis, plotter, x0_star_mu, x_init_mu, z_init_mu)
 
 
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
@@ -220,7 +221,7 @@ if __name__ == "__main__":
     if user_home == "/home/denis":
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data,
-                        output_base=output, separate_by_run=True)
+                        output_base=output, separate_by_run=False)
         config.generic.C_COMPILER = "g++"
         config.generic.CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
 
@@ -272,7 +273,7 @@ if __name__ == "__main__":
     # seizure = 'SZ3_0001.edf'
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
-    EMPIRICAL = True
+    EMPIRICAL = False
     # stats_model_name = "vep_sde"
     stan_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"

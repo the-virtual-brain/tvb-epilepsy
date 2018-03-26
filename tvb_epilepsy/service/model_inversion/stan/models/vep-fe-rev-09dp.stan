@@ -49,7 +49,8 @@ data {
     real x_eq_def; // = -5.0/3 the value of all healhty non-active node
     row_vector [nn] x_init_mu; // in [-2.0, -1.0], used -1.566
     row_vector [nn] z_init_mu; // in [2.9, 4.5], used 3.060
-    real init_std; // 0.0333
+    real x_init_std; // 0.0333
+    real z_init_std; // 0.0333/2
     real time_scale_mu; // 0.5
     real time_scale_std; // 0.0667
     real k_mu; // 3.448 = 3 * 100 / n_regions(=87)
@@ -125,8 +126,8 @@ transformed parameters {
 model {
     to_row_vector(x0_star) ~ normal(0, 1.0);
     k_star ~ normal(0, 1);
-    x_init ~ normal(x_init_mu, init_std); // 0.0, 1.0
-    z_init ~ normal(z_init_mu, init_std); // 0.0, 1.0
+    x_init ~ normal(x_init_mu, x_init_std); // 0.0, 1.0
+    z_init ~ normal(z_init_mu, z_init_std); // 0.0, 1.0
     sigma_star ~ normal(0, 1.0);
     time_scale_star ~ normal(0, 1.0);
 

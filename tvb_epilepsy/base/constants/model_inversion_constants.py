@@ -68,7 +68,7 @@ class OBSERVATION_MODELS(Enum):
     SOURCE_POWER = 2
     SEEG = [0, 1]
 
-OBSERVATION_MODELS=[ "seeg_logpower", "seeg_power", "lfp_power"]
+# OBSERVATION_MODELS=[ "seeg_logpower", "seeg_power", "lfp_power"]
 OBSERVATION_MODEL_DEF = "seeg_logpower"
 
 # SDE model inversion constants

@@ -13,5 +13,6 @@ def generate_lognormal_parameter(name, mean, low, high, sigma=None, sigma_scale=
                                          update_loc_scale(use=use, **{"mean": mean, "std": sigma})
 
 
+
 def generate_negative_lognormal_parameter(name, mean, low, high, sigma=None, sigma_scale=3, p_shape=(), use="scipy"):
     return generate_lognormal_parameter(name, high - mean, 0.0, high - low, sigma, sigma_scale, p_shape, use)
