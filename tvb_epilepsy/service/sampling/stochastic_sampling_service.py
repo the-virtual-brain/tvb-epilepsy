@@ -4,7 +4,8 @@ import scipy.stats as ss
 from tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, isequal_string
-from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import StochasticParameterBase
+from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import StochasticParameterBase, \
+                                                                                    TransformedStochasticParameterBase
 from tvb_epilepsy.service.sampling.sampling_service import SamplingService
 
 
@@ -41,7 +42,7 @@ class StochasticSamplingService(SamplingService):
 
     def sample(self, parameter=(), loc=0.0, scale=1.0, **kwargs):
         nr.seed(self.random_seed)
-        if isinstance(parameter, StochasticParameterBase):
+        if isinstance(parameter, (StochasticParameterBase, TransformedStochasticParameterBase)):
             parameter_shape = parameter.p_shape
             low = parameter.low
             high = parameter.high
@@ -64,8 +65,8 @@ class StochasticSamplingService(SamplingService):
             if isinstance(prob_distr, basestring):
                 self.sampler = getattr(ss, prob_distr)(*parameter, **kwargs)
                 samples = self._truncated_distribution_sampling({"low": low, "high": high}, out_shape) * scale + loc
-            elif isinstance(prob_distr, StochasticParameterBase):
-                self.sampler = prob_distr._scipy()
+            elif isinstance(prob_distr, (StochasticParameterBase, TransformedStochasticParameterBase)):
+                self.sampler = prob_distr.scipy()
                 samples = self._truncated_distribution_sampling({"low": low, "high": high}, out_shape)
         elif self.sampling_module.find("scipy") >= 0:
             if isinstance(prob_distr, basestring):
@@ -78,7 +79,7 @@ class StochasticSamplingService(SamplingService):
             if isinstance(prob_distr, basestring):
                 self.sampler = lambda size: getattr(nr, prob_distr)(*parameter, size=size, **kwargs)
                 samples = self.sampler(out_shape) * scale + loc
-            elif isinstance(prob_distr, StochasticParameterBase):
-                self.sampler = lambda size: prob_distr._numpy(size=size)
+            elif isinstance(prob_distr, (StochasticParameterBase, TransformedStochasticParameterBase)):
+                self.sampler = lambda size: prob_distr.numpy(size=size)
                 samples = self.sampler(out_shape)
         return samples.T

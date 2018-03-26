@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
@@ -26,12 +28,11 @@ class Parameter(object):
     def p_shape(self):
         return self.__p_shape
 
-    def __repr__(self):
-        d = {"1. name": self.name,
-             "2. low": self.low,
-             "3. high": self.high,
-             "4. shape": self.p_shape}
-        return formal_repr(self, sort_dict(d))
+    def __repr__(self,  d=OrderedDict()):
+        nKeys = len(d)
+        for ikey, key in enumerate(["name", "low", "high", "shape"]):
+            d.update({str(nKeys+ikey) + ". " + key: str(getattr(self, key))})
+        return d
 
     def __str__(self):
-        return self.__repr__()
+        return formal_repr(self, self.__repr__())

@@ -1,6 +1,10 @@
+
+from collections import OrderedDict
+
 import numpy as np
 
 from tvb_epilepsy.base.computations.probability_distributions import ProbabilityDistributionTypes
+from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import TransformedStochasticParameterBase
 from tvb_epilepsy.service.stochastic_parameter_builder import generate_stochastic_parameter
 
 
@@ -13,6 +17,69 @@ def generate_lognormal_parameter(name, mean, low, high, sigma=None, sigma_scale=
                                          update_loc_scale(use=use, **{"mean": mean, "std": sigma})
 
 
-
 def generate_negative_lognormal_parameter(name, mean, low, high, sigma=None, sigma_scale=3, p_shape=(), use="scipy"):
-    return generate_lognormal_parameter(name, high - mean, 0.0, high - low, sigma, sigma_scale, p_shape, use)
+    parameter = generate_lognormal_parameter(name.split("_star")[0]+"_star", high - mean, 0.0, high - low,
+                                             sigma, sigma_scale, p_shape, use)
+
+    class NegativeLognormal(TransformedStochasticParameterBase, object):
+
+        def __init__(self, name, type, parameter, max):
+            super(NegativeLognormal, self).__init__(name, type, parameter)
+            self.max = max
+
+        def __getattr__(self, attr):
+            if attr == "max":
+                return object.__setattr__(self, "max")
+            else:
+                return super(NegativeLognormal, self).__getattr__(attr)
+
+        def __setattr__(self, attr, value):
+            if attr == "max":
+                object.__setattr__(self, "max", value)
+                return self
+            else:
+                super(NegativeLognormal, self).__setattr__(attr, value)
+                return self
+
+        def __repr__(self):
+            d = OrderedDict({"0. max": str(self.max)})
+            d.update(super(NegativeLognormal, self).__repr__(d))
+            return d
+
+        @property
+        def low(self):
+            return self.max - self.star.high
+
+        @property
+        def high(self):
+            return self.max - self.star.low
+
+        @property
+        def mean(self):
+            return self.max - self.star.mean
+
+        @property
+        def median(self):
+            return self.max - self.star.median
+
+        @property
+        def mode(self):
+            return self.max - self.star.mode
+
+        @property
+        def var(self):
+            return self.star.var
+
+        @property
+        def std(self):
+            return self.star.std
+
+        @property
+        def skew(self):
+            return -self.star.skew
+
+        @property
+        def kurt(self):
+            return self.star.kurt
+
+    return NegativeLognormal(parameter.name.split("_star")[0], "NegativeLognormal", parameter, high)

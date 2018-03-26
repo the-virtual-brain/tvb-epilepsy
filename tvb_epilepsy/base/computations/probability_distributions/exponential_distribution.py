@@ -45,10 +45,10 @@ class ExponentialDistribution(ContinuousProbabilityDistribution):
         # By default expr >= 0
         return np.array(1.0 / self.lamda).flatten() - np.finfo(np.float64).eps
 
-    def scipy(self, loc=0.0, scale=1.0):
+    def _scipy(self, loc=0.0, scale=1.0):
         return ss.expon(loc=loc, scale=scale / self.lamda)
 
-    def numpy(self, loc=0.0, scale=1.0, size=(1,)):
+    def _numpy(self, loc=0.0, scale=1.0, size=(1,)):
         return lambda: nr.exponential(scale=scale / self.lamda, size=size) + loc
 
     def calc_mean_manual(self, loc=0.0, scale=1.0):

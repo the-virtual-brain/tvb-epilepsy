@@ -1,7 +1,9 @@
 # coding=utf-8
+from abc import ABCMeta, abstractmethod
+from collections import OrderedDict
 
 import numpy as np
-from abc import ABCMeta, abstractmethod
+
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, isequal_string, shape_to_size
 from tvb_epilepsy.base.utils.data_structures_utils import squeeze_array_to_scalar
@@ -67,28 +69,20 @@ class ProbabilityDistribution(object):
     def __init__(self):
         pass
 
-    def __repr__(self):
-        self._repr()
+    def __repr(self, d=OrderedDict()):
+        nKeys = len(d)
+        for ikey, key in enumerate(["type",  "n_params", "shape", "mean", "median", "mode", "var", "std", "var", "kurt",
+                                    "scipy_name", "numpy_name"]):
+            d.update({str(nKeys + ikey) + ". " + key: str(getattr(self, key))})
+        d.update({str(len(d)) + ". " + "pdf_params": str(self.pdf_params())})
+        d.update({str(len(d)+1) + ". " + "constraint": str(self.constraint())})
+        return d
 
-    def _repr(self):
-        d = {"01. type": self.type,
-             "02. pdf_params": self.pdf_params(),
-             "03. n_params": self.n_params,
-             "04. constraint": self.constraint_string,
-             "05. shape": self.__p_shape,
-             "05. mean": self.__mean,
-             "06. median": self.__median,
-             "07. mode": self.__mode,
-             "08. var": self.__var,
-             "09. std": self.__std,
-             "10. skew": self.__skew,
-             "11. kurt": self.__kurt,
-             "12. scipy_name": self.scipy_name,
-             "13. numpy_name": self.numpy_name}
-        return formal_repr(self, sort_dict(d))
+    def __repr__(self, d=OrderedDict()):
+        return self.__repr(self, d)
 
     def __str__(self):
-        return self._repr()
+        return formal_repr(self, self.__repr())
 
     def __update_params__(self, loc=0.0, scale=1.0, use="scipy", check_constraint=True, **params):
         if len(params) == 0:
@@ -171,7 +165,7 @@ class ProbabilityDistribution(object):
         pass
 
     @abstractmethod
-    def scipy(self, loc=0.0, scale=1.0):
+    def _scipy(self, loc=0.0, scale=1.0):
         pass
 
     @abstractmethod
@@ -179,7 +173,7 @@ class ProbabilityDistribution(object):
         pass
 
     @abstractmethod
-    def numpy(self, loc=0.0, scale=1.0, size=()):
+    def _numpy(self, loc=0.0, scale=1.0, size=()):
         pass
 
     @abstractmethod
@@ -212,13 +206,13 @@ class ProbabilityDistribution(object):
 
     def _calc_mean(self, loc=0.0, scale=1.0, use="scipy"):
         if isequal_string(use, "scipy"):
-            return self.scipy(loc, scale).stats(moments="m")
+            return self._scipy(loc, scale).stats(moments="m")
         else:
             return self.calc_mean_manual(loc, scale)
 
     def _calc_median(self, loc=0.0, scale=1.0, use="scipy"):
         if isequal_string(use, "scipy"):
-            return self.scipy(loc, scale).median()
+            return self._scipy(loc, scale).median()
         else:
             return self.calc_median_manual(loc, scale)
 
@@ -230,24 +224,24 @@ class ProbabilityDistribution(object):
 
     def _calc_var(self, loc=0.0, scale=1.0, use="scipy"):
         if isequal_string(use, "scipy"):
-            return self.scipy(loc, scale).var()
+            return self._scipy(loc, scale).var()
         else:
             return self.calc_var_manual(loc, scale)
 
     def _calc_std(self, loc=0.0, scale=1.0, use="scipy"):
         if isequal_string(use, "scipy"):
-            return self.scipy(loc, scale).std()
+            return self._scipy(loc, scale).std()
         else:
             return self.calc_std_manual(loc, scale)
 
     def _calc_skew(self, loc=0.0, scale=1.0, use="scipy"):
         if isequal_string(use, "scipy"):
-            return self.scipy(loc, scale).stats(moments="s")
+            return self._scipy(loc, scale).stats(moments="s")
         else:
             return self.calc_skew_manual(loc, scale)
 
     def _calc_kurt(self, loc=0.0, scale=1.0, use="scipy"):
         if isequal_string(use, "scipy"):
-            return self.scipy(loc, scale).stats(moments="k")
+            return self._scipy(loc, scale).stats(moments="k")
         else:
             return self.calc_kurt_manual(loc, scale)

@@ -47,10 +47,10 @@ class BetaDistribution(ContinuousProbabilityDistribution):
         return np.hstack([np.array(self.alpha).flatten() - np.finfo(np.float64).eps,
                          np.array(self.beta).flatten() - np.finfo(np.float64).eps])
 
-    def scipy(self, loc=0.0, scale=1.0):
+    def _scipy(self, loc=0.0, scale=1.0):
         return ss.beta(a=self.alpha, b=self.beta, loc=loc, scale=scale)
 
-    def numpy(self, loc=0.0, scale=1.0, size=(1,)):
+    def _numpy(self, loc=0.0, scale=1.0, size=(1,)):
         return lambda: nr.beta(a=self.alpha, b=self.beta, size=size) * scale + loc
 
     def calc_mean_manual(self, loc=0.0, scale=1.0):

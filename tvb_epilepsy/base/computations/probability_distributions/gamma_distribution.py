@@ -67,10 +67,10 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         return np.hstack([np.array(self.alpha).flatten() - np.finfo(np.float64).eps,
                           np.array(self.beta).flatten() - np.finfo(np.float64).eps])
 
-    def scipy(self, loc=0.0, scale=1.0):
+    def _scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(a=self.alpha, loc=loc, scale=self.theta * scale)
 
-    def numpy(self, loc=0.0, scale=1.0, size=(1,)):
+    def _numpy(self, loc=0.0, scale=1.0, size=(1,)):
         return lambda: nr.gamma(shape=self.alpha, scale=self.theta * scale, size=size) + loc
 
     def calc_mean_manual(self, loc=0.0, scale=1.0):

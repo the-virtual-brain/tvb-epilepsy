@@ -121,14 +121,4 @@ def generate_stochastic_parameter(name="Parameter", low=-CalculusConfig.MAX_SING
                                   " with parameters " + str(target_params) + " !")
                 self._update_params(use=use)
 
-        def __str__(self):
-            return StochasticParameterBase.__str__(self) + "\n" \
-                   + "\n".join(thisProbabilityDistribution.__str__(self).splitlines()[1:])
-
-        def _scipy(self):
-            return self.scipy(self.loc, self.scale)
-
-        def _numpy(self, size=(1,)):
-            return self.numpy(self.loc, self.scale, size)
-
     return StochasticParameter(name, low, high, loc, scale, p_shape, use, **target_params)

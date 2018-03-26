@@ -860,12 +860,12 @@ class Plotter(BasePlotter):
     def _prepare_distribution_axes(self, distribution, loc=0.0, scale=1.0, x=numpy.array([]), ax=None, linestyle="-",
                                    lgnd=False):
         if len(x) < 1:
-            x = linspace_broadcast(distribution.scipy(distribution.loc, distribution.scale).ppf(0.01),
-                                   distribution.scipy(distribution.loc, distribution.scale).ppf(0.99), 100)
+            x = linspace_broadcast(distribution._scipy(distribution.loc, distribution.scale).ppf(0.01),
+                                   distribution._scipy(distribution.loc, distribution.scale).ppf(0.99), 100)
         if x is not None:
             if x.ndim == 1:
                 x = x[:, numpy.newaxis]
-            pdf = distribution.scipy(loc, scale).pdf(x)
+            pdf = distribution._scipy(loc, scale).pdf(x)
             if ax is None:
                 _, ax = pyplot.subplots(1, 1)
             for ip, (xx, pp) in enumerate(zip(x.T, pdf.T)):

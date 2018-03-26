@@ -32,10 +32,10 @@ class BernoulliDistribution(DiscreteProbabilityDistribution):
         p = np.array(self.p).flatten()
         return np.hstack([p - np.finfo(np.float64).eps, 1.0 - p + np.finfo(np.float64).eps])
 
-    def scipy(self, loc=0.0, scale=1.0):
+    def _scipy(self, loc=0.0, scale=1.0):
         return ss.bernoulli(p=self.p, loc=loc)
 
-    def numpy(self, loc=0.0, scale=1.0, size=(1,)):
+    def _numpy(self, loc=0.0, scale=1.0, size=(1,)):
         raise_not_implemented_error("No implementation of bernoulli distribution in numpy.random module!")
 
     def calc_mean_manual(self, loc=0.0, scale=1.0):
