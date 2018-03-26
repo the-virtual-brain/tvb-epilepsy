@@ -13,7 +13,18 @@ class TestTimeseries(object):
                            [[3, 4, 5], [6, 7, 8], [9, 0, 1], [2, 3, 4]],
                            [[5, 6, 7], [8, 9, 0], [1, 2, 3], [4, 5, 6]]])
 
-    data_4D = numpy.array([[[[], []], [[], []], [[], []]], [[[], []], [[], []], [[], []]]])
+    data_4D = numpy.array([[[[1, 2, 3, 4], [5, 6, 7, 8], [9, 0, 1, 2]],
+                            [[3, 4, 5, 6], [7, 8, 9, 0], [1, 2, 3, 4]],
+                            [[5, 6, 7, 8], [9, 0, 1, 2], [3, 4, 5, 6]],
+                            [[7, 8, 9, 0], [1, 2, 3, 4], [5, 6, 7, 8]]],
+                           [[[9, 0, 1, 2], [3, 4, 5, 6], [7, 8, 9, 0]],
+                            [[1, 2, 3, 4], [5, 6, 7, 8], [9, 0, 1, 2]],
+                            [[3, 4, 5, 6], [7, 8, 9, 0], [1, 2, 3, 4]],
+                            [[5, 6, 7, 8], [9, 0, 1, 2], [3, 4, 5, 6]]],
+                           [[[7, 8, 9, 0], [1, 2, 3, 4], [5, 6, 7, 8]],
+                            [[9, 0, 1, 2], [3, 4, 5, 6], [7, 8, 9, 0]],
+                            [[1, 2, 3, 4], [5, 6, 7, 8], [9, 0, 1, 2]],
+                            [[3, 4, 5, 6], [7, 8, 9, 0], [1, 2, 3, 4]]]])
     time_start = 0
     time_step = 0.01
     time_unit = "ms"
@@ -162,3 +173,10 @@ class TestTimeseries(object):
 
         with pytest.raises(IndexError):
             ts[0, :, 10, :]
+
+    def test_timeseries_4D(self):
+        ts_4D = Timeseries(self.data_4D,
+                           dimension_labels={TimeseriesDimensions.SPACE: ["r1", "r2", "r3", "r4"],
+                                             TimeseriesDimensions.STATE_VARIABLES: ["sv1", "sv2", "sv3"]},
+                           time_start=self.time_start, time_step=self.time_step, time_unit=self.time_unit)
+        assert ts_4D.data.shape == (3, 4, 3, 4)
