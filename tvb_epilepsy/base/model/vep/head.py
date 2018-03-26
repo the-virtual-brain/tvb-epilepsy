@@ -3,7 +3,7 @@
 import numpy as np
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list
-from tvb_epilepsy.base.model.vep.sensors import Sensors
+from tvb_epilepsy.base.model.vep.sensors import Sensors, SENSORS_TYPES
 
 
 class Head(object):
@@ -21,8 +21,8 @@ class Head(object):
         self.sensorsSEEG = []
         self.sensorsEEG = []
         self.sensorsMEG = []
-        for s_type in Sensors.SENSORS_TYPES:
-            self.set_sensors(kwargs.get("sensors" + s_type), s_type=s_type)
+        for s_type in SENSORS_TYPES:
+            self.set_sensors(kwargs.get("sensors" + s_type.value), s_type=s_type.value)
         if len(name) == 0:
             self.name = 'Head' + str(self.number_of_regions)
         else:
@@ -50,13 +50,13 @@ class Head(object):
     def __str__(self):
         return self.__repr__()
 
-    def get_sensors(self, s_type=Sensors.TYPE_SEEG):
-        if np.in1d(s_type.upper(), Sensors.SENSORS_TYPES):
+    def get_sensors(self, s_type=Sensors.TYPE_SEEG.value):
+        if np.in1d(s_type.upper(), [stype.value for stype in SENSORS_TYPES]):
             return getattr(self, "sensors" + s_type)
         else:
             raise_value_error("Invalid input sensor type " + str(s_type))
 
-    def set_sensors(self, input_sensors, s_type=Sensors.TYPE_SEEG, reset=False):
+    def set_sensors(self, input_sensors, s_type=Sensors.TYPE_SEEG.value, reset=False):
         if input_sensors is None:
             return
         sensors = ensure_list(self.get_sensors(s_type))
@@ -65,7 +65,8 @@ class Head(object):
         for s in ensure_list(input_sensors):
             if isinstance(s, Sensors) and (s.s_type == s_type):
                 if s.gain_matrix is None or s.gain_matrix.shape != (s.number_of_sensors, self.number_of_regions):
-                    self.logger.warning("No correctly sized gain matrix found in sensors! Computing and adding gain matrix!")
+                    self.logger.warning("No correctly sized gain matrix found in sensors! "
+                                        "Computing and adding gain matrix!")
                     s.gain_matrix = s.compute_gain_matrix(self.connectivity)
                 # if s.orientations == None or s.orientations.shape != (s.number_of_sensors, 3):
                 #     self.logger.warning("No orientations found in sensors!")
