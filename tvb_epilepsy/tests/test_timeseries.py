@@ -2,7 +2,6 @@
 
 import numpy
 import pytest
-
 from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
 
 
@@ -89,3 +88,77 @@ class TestTimeseries(object):
                            time_start=self.time_start, time_step=self.time_step, time_unit=self.time_unit)
         assert ts_3D.data.ndim == 4
         assert ts_3D.data.shape[3] == 1
+
+    def test_timeseries_data_access(self):
+        ts = Timeseries(self.data_3D,
+                        dimension_labels={TimeseriesDimensions.SPACE: ["r1", "r2", "r3", "r4"],
+                                          TimeseriesDimensions.STATE_VARIABLES: ["sv1", "sv2", "sv3"]},
+                        time_start=self.time_start, time_step=self.time_step, time_unit=self.time_unit)
+        assert isinstance(ts.r1, Timeseries)
+        assert ts.r1.data.shape == (3, 1, 3, 1)
+
+        assert isinstance(ts.sv1, Timeseries)
+        assert ts.sv1.data.shape == (3, 4, 1, 1)
+
+        with pytest.raises(AttributeError):
+            ts.r9
+
+        with pytest.raises(AttributeError):
+            ts.sv0
+
+        assert ts[:, :, :, :].shape == ts.data.shape
+        assert ts[1:, :, :, :].shape == ts.data[1:, :, :, :].shape
+        assert ts[1:2, :, :, :].shape == ts.data[1:2, :, :, :].shape
+        assert ts[1, :, :, :].shape == ts.data[1, :, :, :].shape
+
+        assert ts[:, 1:, :, :].shape == ts.data[:, 1:, :, :].shape
+        assert ts[:, :1, :, :].shape == ts.data[:, :1, :, :].shape
+        assert ts[:, 1:3, :, :].shape == ts.data[:, 1:3, :, :].shape
+        assert ts[:, 1, :, :].shape == ts.data[:, 1, :, :].shape
+
+        assert ts[:, "r2":, :, :].shape == ts.data[:, 1:, :, :].shape
+        assert ts[:, :"r2", :, :].shape == ts.data[:, :1, :, :].shape
+        assert ts[:, "r2", :, :].shape == ts.data[:, 1, :, :].shape
+        assert ts[:, "r2":"r4", :, :].shape == ts.data[:, 1:3, :, :].shape
+
+        assert ts[1:2, "r2":"r4", :, :].shape == ts.data[1:2, 1:3, :, :].shape
+        assert ts[1, "r2":"r4", :, :].shape == ts.data[1, 1:3, :, :].shape
+
+        assert ts[:, :, 1:, :].shape == ts.data[:, :, 1:, :].shape
+        assert ts[:, :, :1, :].shape == ts.data[:, :, :1, :].shape
+        assert ts[:, :, 0:2, :].shape == ts.data[:, :, 0:2, :].shape
+        assert ts[:, :, 2, :].shape == ts.data[:, :, 2, :].shape
+
+        assert ts[:, :, "sv2":, :].shape == ts.data[:, :, 1:, :].shape
+        assert ts[:, :, :"sv2", :].shape == ts.data[:, :, :1, :].shape
+        assert ts[:, :, "sv1":"sv3", :].shape == ts.data[:, :, 0:2, :].shape
+        assert ts[:, :, "sv3", :].shape == ts.data[:, :, 2, :].shape
+
+        assert ts[1:2, :, "sv2":, :].shape == ts.data[1:2, :, 1:, :].shape
+        assert ts[1:2, :, :"sv2", :].shape == ts.data[1:2, :, :1, :].shape
+        assert ts[1:2, :, "sv1":"sv3", :].shape == ts.data[1:2, :, 0:2, :].shape
+        assert ts[1:2, :, "sv3", :].shape == ts.data[1:2, :, 2, :].shape
+        assert ts[2, :, "sv3", :].shape == ts.data[2, :, 2, :].shape
+
+        assert ts[2, 0:3, "sv3", :].shape == ts.data[2, 0:3, 2, :].shape
+        assert ts[2, "r1":"r4", "sv3", :].shape == ts.data[2, 0:3, 2, :].shape
+        assert ts[0:2, "r1":"r4", "sv3", :].shape == ts.data[0:2, 0:3, 2, :].shape
+        assert ts[0:2, :"r2", "sv3", :].shape == ts.data[0:2, :1, 2, :].shape
+        assert ts[0:2, "r2":, "sv3", :].shape == ts.data[0:2, 1:, 2, :].shape
+        assert ts[0:2, "r1", "sv3", :].shape == ts.data[0:2, 0, 2, :].shape
+
+        assert all(ts[0:2, "r1", "sv3", :] == ts.data[0:2, 0, 2, :])
+        assert ts[0:2, "r1":"r3", "sv3", :].all() == ts.data[0:2, 0:2, 2, :].all()
+        assert ts[0:2, "r1":"r3", :"sv2", :].all() == ts.data[0:2, 0:2, :1, :].all()
+        assert ts[2, "r1":"r3", :"sv2", :].all() == ts.data[2, 0:2, :1, :].all()
+        assert ts[2, "r3", "sv2", :].all() == ts.data[2, 2, 1, :].all()
+        assert ts[2, "r3", "sv2", 0] == ts.data[2, 2, 1, 0]
+
+        with pytest.raises(ValueError):
+            ts[:, :, "sv0", :]
+
+        with pytest.raises(ValueError):
+            ts[0, "r1":"r5", :, :]
+
+        with pytest.raises(IndexError):
+            ts[0, :, 10, :]
