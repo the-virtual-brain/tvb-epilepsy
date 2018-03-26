@@ -145,3 +145,52 @@ class Timeseries(object):
 
     def get_sample_window_by_percentile(self, percentile_start, percentile_end):
         pass
+
+    def __getattr__(self, attr_name):
+        state_variables_keys = []
+        if TimeseriesDimensions.STATE_VARIABLES in self.dimension_labels.keys():
+            state_variables_keys = self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES]
+            if attr_name in self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES]:
+                return self.get_state_variable(attr_name)
+        space_keys = []
+        if (TimeseriesDimensions.SPACE in self.dimension_labels.keys()):
+            space_keys = self.dimension_labels[TimeseriesDimensions.SPACE]
+            if attr_name in self.dimension_labels[TimeseriesDimensions.SPACE]:
+                return self.get_subspace_by_labels([attr_name])
+        self.logger.error(
+            "Attribute %s is not defined for this instance! You can use the folllowing labels: state_variables = %s and space = %s" %
+            (attr_name, state_variables_keys, space_keys))
+        raise AttributeError
+
+    def _get_index_for_slice_label(self, slice_label, slice_idx):
+        if slice_idx == 1:
+            return self._get_indices_for_labels([slice_label])[0]
+        if slice_idx == 2:
+            return self._get_index_of_state_variable(slice_label)
+
+    def _check_for_string_slice_indices(self, current_slice, slice_idx):
+        slice_label1 = current_slice.start
+        slice_label2 = current_slice.stop
+
+        if isinstance(slice_label1, basestring):
+            slice_label1 = self._get_index_for_slice_label(slice_label1, slice_idx)
+        if isinstance(slice_label2, basestring):
+            slice_label2 = self._get_index_for_slice_label(slice_label2, slice_idx)
+
+        return slice(slice_label1, slice_label2, current_slice.step)
+
+    def _get_string_slice_index(self, current_slice_string, slice_idx):
+        return self._get_index_for_slice_label(current_slice_string, slice_idx)
+
+    def __getitem__(self, slice_tuple):
+        slice_list = []
+        for idx, current_slice in enumerate(slice_tuple):
+            if isinstance(current_slice, slice):
+                slice_list.append(self._check_for_string_slice_indices(current_slice, idx))
+            else:
+                if isinstance(current_slice, basestring):
+                    slice_list.append(self._get_string_slice_index(current_slice, idx))
+                else:
+                    slice_list.append(current_slice)
+
+        return self.data[tuple(slice_list)]
