@@ -35,31 +35,17 @@ class StatisticalModel(object):
     def __repr__(self):
         d = OrderedDict()
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
-            d.update({str(ikey) + ". " + key: val})
+            d.update({str(ikey) + ". " + key:  str(val)})
         return d
 
     def __str__(self):
-        return formal_repr(self, sort_dict(self.__repr__()))
+        return formal_repr(self, self.__repr__())
 
     def get_parameter(self, parameter_name):
         parameter = self.parameters.get(parameter_name, None)
         if parameter is None:
             warning("Ground truth value for parameter " + parameter_name + " was not found!")
         return parameter
-
-    # Overwrite the following two methods for models with parameters that are not covered by this formulation,
-    # for instance in case that x0/x1eq are normal parameters and do not need to be transformed
-    def get_prior(self, parameter_name):
-        parameter = self.get_parameter(parameter_name)
-        if parameter is None:
-            return None
-        else:
-            # x0 and x1eq are negative lognormal parameters that undergo a transformation inside stan model file
-            if self.xmode.value in parameter_name:
-                prior = parameter.high - parameter.mean
-            else:
-                prior = parameter.mean
-            return prior, parameter
 
     def get_truth(self, parameter_name):
         truth = getattr(self, parameter_name, None)
@@ -68,6 +54,14 @@ class StatisticalModel(object):
         if truth is None:
             warning("Ground truth value for parameter " + parameter_name + " was not found!")
         return truth
+
+    # Prior is either a parameter or the ground truth
+    def get_prior(self, parameter_name):
+        parameter = self.get_parameter(parameter_name)
+        if parameter is None:
+            return self.get_truth(parameter_name), None
+        else:
+            return parameter.mean, parameter
 
 
 class ODEStatisticalModel(StatisticalModel):
@@ -108,7 +102,7 @@ class ODEStatisticalModel(StatisticalModel):
         if observation_model in [model for model in OBSERVATION_MODELS]:
             self.observation_model = observation_model
         else:
-            raise_value_error("Statistical model's observation expression " + str(observation_model) +
+            raise_value_error("Statistical model's observation model " + str(observation_model) +
                               " is not one of the valid ones: " + str(OBSERVATION_MODELS._member_map_.values()) + "!")
         self.sigma_init = sigma_init
         self.scale = scale
@@ -122,11 +116,11 @@ class ODEStatisticalModel(StatisticalModel):
         d.update(super(ODEStatisticalModel, self).__repr__())
         nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
-            d.update({str(nKeys+ikey) + ". " + key: val})
+            d.update({str(nKeys+ikey) + ". " + key: str(val)})
         return d
 
     def __str__(self):
-        return formal_repr(self, sort_dict(self.__repr__()))
+        return formal_repr(self, self.__repr__())
 
     def update_active_regions(self, active_regions):
         if np.all(np.in1d(active_regions, range(self.number_of_regions))):
@@ -144,8 +138,8 @@ class SDEStatisticalModel(ODEStatisticalModel):
     sigma = SIGMA_DEF
 
     def __init__(self, name='vep_ode', number_of_regions=0, xmode=XModes.X0MODE, priors_mode=PriorsModes.NONINFORMATIVE,
-                 sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, sigma=SIGMA_DEF, scale=1.0, offset=0.0,
                  parameters={}, model_config=ModelConfiguration(), observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER,
+                 sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, sigma=SIGMA_DEF, scale=1.0, offset=0.0,
                  number_of_signals=0, time_length=0, dt=DT_DEF, active_regions=[], sde_mode=SDE_MODES.NONCENTERED):
         super(SDEStatisticalModel, self).__init__(name, number_of_regions, xmode, priors_mode,
                                                   parameters, model_config, observation_model,
@@ -159,8 +153,8 @@ class SDEStatisticalModel(ODEStatisticalModel):
         d.update(super(SDEStatisticalModel, self).__repr__())
         nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
-            d.update({str(nKeys+ikey) + ". " + key: val})
+            d.update({str(nKeys+ikey) + ". " + key:  str(val)})
         return d
 
     def __str__(self):
-        return formal_repr(self, sort_dict(self.__repr__()))
+        return formal_repr(self, self.__repr__())

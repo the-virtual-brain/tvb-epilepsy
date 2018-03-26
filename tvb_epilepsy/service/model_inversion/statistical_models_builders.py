@@ -49,14 +49,13 @@ class StatisticalModelBuilderBase(object):
     def number_of_regions(self):
         return self.model_config.number_of_regions
 
-    def __repr__(self):
-        d = OrderedDict()
+    def __repr__(self, d=OrderedDict()):
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
-            d.update({str(ikey) + ". " + key: val})
+            d.update({str(ikey) + ". " + key: str(val)})
         return d
 
     def __str__(self):
-        return formal_repr(self, sort_dict(self.__repr__()))
+        return formal_repr(self, self.__repr__())
 
     def set_attributes(self, attributes_names, attribute_values):
         for attribute_name, attribute_value in zip(ensure_list(attributes_names), ensure_list(attribute_values)):
@@ -95,12 +94,11 @@ class StatisticalModelBuilder(StatisticalModelBuilderBase):
         self.sigma_x_scale = sigma_x_scale
         self.MC_direction_split = MC_direction_split
 
-    def __repr__(self):
-        d = OrderedDict()
-        d.update(super(StatisticalModelBuilder, self).__repr__())
+    def __repr__(self, d=OrderedDict()):
+        d.update(super(StatisticalModelBuilder, self).__repr__(d))
         nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
-            d.update({str(nKeys+ikey) + ". " + key: val})
+            d.update({str(nKeys+ikey) + ". " + key: str(val)})
         return d
 
     def get_SC(self, model_connectivity):
@@ -139,15 +137,15 @@ class StatisticalModelBuilder(StatisticalModelBuilderBase):
         else:
             xprior = x_def[self.xmode.value]["def"] * np.ones((self.number_of_regions,))
             sigma_x = self.sigma_x
-        x_param_name = self.xmode.value + "_star"
+        x_param_name = self.xmode.value
         parameters.update(
-            {self.xmode: generate_negative_lognormal_parameter(x_param_name, xprior,
+            {self.xmode.value: generate_negative_lognormal_parameter(x_param_name, xprior,
                                                                x_def[self.xmode.value]["min"],
                                                                x_def[self.xmode.value]["max"],
                                                                sigma=sigma_x, sigma_scale=self.sigma_x_scale,
                                                                p_shape=(self.number_of_regions,), use="scipy")})
         # Update sigma_x value and name
-        self.sigma_x = parameters[self.xmode].std
+        self.sigma_x = parameters[self.xmode.value].std
         sigma_x_name = "sigma_" + self.xmode.value
         if sigma_x in self.parameters:
             self.logger.info("..." + sigma_x + "...")
@@ -231,6 +229,13 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
         self.dt = dt
         self.active_regions = active_regions
 
+    def __repr__(self, d=OrderedDict()):
+        d.update(super(ODEStatisticalModelBuilder, self).__repr__(d))
+        nKeys = len(d)
+        for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
+            d.update({str(nKeys+ikey) + ". " + key: str(val)})
+        return d
+
     def generate_parameters(self):
         parameters = super(ODEStatisticalModelBuilder, self).generate_parameters()
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
@@ -250,14 +255,14 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
                                                      p_shape=(self.number_of_regions,),
                                                      probability_distribution=ProbabilityDistributionTypes.NORMAL,
                                                      optimize_pdf=False, use="scipy",
-                                                     **{"mean": x1init, "std": self.sigma_init})})
+                                                     **{"mu": x1init, "sigma": self.sigma_init})})
         self.logger.info("...zinit...")
         parameters.update(
             {"zinit": generate_stochastic_parameter("zinit", Z_MIN, Z_MAX,
                                                      p_shape=(self.number_of_regions,),
                                                      probability_distribution=ProbabilityDistributionTypes.NORMAL,
                                                      optimize_pdf=False, use="scipy",
-                                                     **{"mean": zinit, "std": self.sigma_init/2})})
+                                                     **{"mu": zinit, "sigma": self.sigma_init/2})})
 
         if "sigma_init" in self.parameters:
             self.logger.info("...sigma_init...")
@@ -287,6 +292,7 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
                                                    probability_distribution=ProbabilityDistributionTypes.NORMAL,
                                                    optimize_pdf=False, use="scipy",
                                                    **{"mean": self.offset, "std": 1.0})})
+        return parameters
 
     def generate_model(self):
         tic = time.time()
@@ -325,6 +331,13 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
         self.sde_mode = sde_mode
         self.sigma = sigma
 
+    def __repr__(self, d=OrderedDict()):
+        d.update(super(SDEStatisticalModelBuilder, self).__repr__(d))
+        nKeys = len(d)
+        for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
+            d.update({str(nKeys+ikey) + ". " + key: str(val)})
+        return d
+
     def generate_parameters(self):
         parameters = super(SDEStatisticalModelBuilder, self).generate_parameters()
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
@@ -350,7 +363,7 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
                                                          p_shape=(self.time_length, self.number_of_regions),
                                                          probability_distribution=ProbabilityDistributionTypes.NORMAL,
                                                          optimize_pdf=False, use="scipy",
-                                                         **{"mean": means[iV], "std": self.sigma})})
+                                                         **{"mu": means[iV], "sigma": self.sigma})})
 
         if "sigma" in self.parameters:
             self.logger.info("...sigma...")
@@ -359,6 +372,8 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
                                                         probability_distribution=ProbabilityDistributionTypes.GAMMA,
                                                         optimize_pdf=True, use="scipy", **{"mean": 1.0, "skew": 0.0}).
                                               update_loc_scale(use="scipy", **{"mean": self.sigma, "std": self.sigma})})
+
+        return parameters
 
     def generate_model(self):
         tic = time.time()
