@@ -560,8 +560,8 @@ class Plotter(BasePlotter):
         #     region_labels = numpy.array(["%d" % l for l in range(model_config.number_of_regions)])
 
         # Fixed parameters for all regions:
-        x1eq = model_config.x1EQ
-        zeq = model_config.zEQ
+        x1eq = model_config.x1eq
+        zeq = model_config.zeq
         x0 = a = b = d = yc = slope = Iext1 = Iext2 = s = 0.0
         for p in ["x0", "a", "b", "d", "yc", "slope", "Iext1", "Iext2", "s"]:
             exec (p + " = numpy.mean(model_config." + p + ")")

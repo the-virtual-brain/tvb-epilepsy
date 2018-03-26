@@ -72,22 +72,23 @@ class LSAService(object):
 
         # Check if any of the equilibria are in the supercritical regime (beyond the separatrix) and set it right before
         # the bifurcation.
-        zEQ = model_configuration.zEQ
-        temp = model_configuration.x1EQ > X1EQ_CR_DEF - 10 ** (-3)
+        zeq = model_configuration.zeq
+        temp = model_configuration.x1eq > X1EQ_CR_DEF - 10 ** (-3)
         if temp.any():
             correction_value = X1EQ_CR_DEF - 10 ** (-3)
-            self.logger.warning("Equilibria x1eq[" + str(numpy.where(temp)[0]) + "]  = " + str(model_configuration.x1EQ[temp]) +
-                    "\nwere corrected for LSA to value: X1EQ_CR_DEF - 10 ** (-3) = " + str(correction_value)
-                    + " to be sub-critical!")
-            model_configuration.x1EQ[temp] = correction_value
-            i_temp = numpy.ones(model_configuration.x1EQ.shape)
-            zEQ[temp] = calc_eq_z(model_configuration.x1EQ[temp], model_configuration.yc * i_temp[temp],
+            self.logger.warning("Equilibria x1eq[" + str(numpy.where(temp)[0]) + "]  = "
+                                + str(model_configuration.x1eq[temp]) +
+                                "\nwere corrected for LSA to value: X1EQ_CR_DEF - 10 ** (-3) = "
+                                + str(correction_value) + " to be sub-critical!")
+            model_configuration.x1eq[temp] = correction_value
+            i_temp = numpy.ones(model_configuration.x1eq.shape)
+            zeq[temp] = calc_eq_z(model_configuration.x1eq[temp], model_configuration.yc * i_temp[temp],
                                   model_configuration.Iext1 * i_temp[temp], "2d", 0.0,
                                   model_configuration.slope * i_temp[temp],
                                   model_configuration.a * i_temp[temp], model_configuration.b * i_temp[temp],
                                   model_configuration.d * i_temp[temp])
 
-        fz_jacobian = calc_fz_jac_square_taylor(model_configuration.zEQ, model_configuration.yc,
+        fz_jacobian = calc_fz_jac_square_taylor(model_configuration.zeq, model_configuration.yc,
                                                 model_configuration.Iext1, model_configuration.K,
                                                 model_configuration.model_connectivity,
                                                 model_configuration.a, model_configuration.b, model_configuration.d)
