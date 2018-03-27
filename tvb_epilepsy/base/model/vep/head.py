@@ -22,7 +22,7 @@ class Head(object):
         self.sensorsEEG = []
         self.sensorsMEG = []
         for s_type in SENSORS_TYPES:
-            self.set_sensors(kwargs.get("sensors" + s_type.value), s_type=s_type.value)
+            self.set_sensors(kwargs.get("sensors" + s_type.value), s_type=s_type)
         if len(name) == 0:
             self.name = 'Head' + str(self.number_of_regions)
         else:
@@ -50,13 +50,13 @@ class Head(object):
     def __str__(self):
         return self.__repr__()
 
-    def get_sensors(self, s_type=Sensors.TYPE_SEEG.value):
-        if np.in1d(s_type.upper(), [stype.value for stype in SENSORS_TYPES]):
-            return getattr(self, "sensors" + s_type)
+    def get_sensors(self, s_type=Sensors.TYPE_SEEG):
+        if np.in1d(s_type, [stype for stype in SENSORS_TYPES]):
+            return getattr(self, "sensors" + s_type.value)
         else:
-            raise_value_error("Invalid input sensor type " + str(s_type))
+            raise_value_error("Invalid input sensor type " + str(s_type.value))
 
-    def set_sensors(self, input_sensors, s_type=Sensors.TYPE_SEEG.value, reset=False):
+    def set_sensors(self, input_sensors, s_type=Sensors.TYPE_SEEG, reset=False):
         if input_sensors is None:
             return
         sensors = ensure_list(self.get_sensors(s_type))
@@ -74,11 +74,11 @@ class Head(object):
             else:
                 if s is not None:
                     raise_value_error("Input sensors:\n" + str(s) +
-                                      "\nis not a valid Sensors object of type " + str(s_type) + "!")
+                                      "\nis not a valid Sensors object of type " + str(s_type.value) + "!")
         if len(sensors) == 0:
-            setattr(self, "sensors" + s_type, [])
+            setattr(self, "sensors" + s_type.value, [])
         else:
-            setattr(self, "sensors" + s_type, sensors)
+            setattr(self, "sensors" + s_type.value, sensors)
 
     def get_sensors_id(self, s_type=Sensors.TYPE_SEEG, sensor_ids=0):
         sensors = self.get_sensors(s_type)

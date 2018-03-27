@@ -31,7 +31,7 @@ class Sensors(object):
     needles = np.array([])
     orientations = np.array([])
     gain_matrix = np.array([])
-    s_type = ''
+    s_type = TYPE_SEEG
 
     def __init__(self, labels, locations, needles=np.array([]), orientations=np.array([]), gain_matrix=np.array([]),
                  s_type=TYPE_SEEG):

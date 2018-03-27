@@ -88,11 +88,11 @@ class H5Reader(object):
                 continue
 
             type = str_head_file[len(self.sensors_filename_prefix):str_head_file.index(self.sensors_filename_separator)]
-            if type == Sensors.TYPE_SEEG:
+            if type.upper() == Sensors.TYPE_SEEG.value:
                 sensors_seeg.append(self.read_sensors_of_type(os.path.join(path, head_file), Sensors.TYPE_SEEG))
-            if type == Sensors.TYPE_EEG:
+            if type.upper() == Sensors.TYPE_EEG.value:
                 sensors_eeg.append(self.read_sensors_of_type(os.path.join(path, head_file), Sensors.TYPE_EEG))
-            if type == Sensors.TYPE_MEG:
+            if type.upper() == Sensors.TYPE_MEG.value:
                 sensors_meg.append(self.read_sensors_of_type(os.path.join(path, head_file), Sensors.TYPE_MEG))
 
         self.logger.info("Successfuly read all sensors from: %s" % path)
@@ -110,7 +110,7 @@ class H5Reader(object):
             self.logger.warning("Senors file %s does not exist!" % sensors_file)
             return None
 
-        self.logger.info("Starting to read sensors of type %s from: %s" % (type, sensors_file))
+        self.logger.info("Starting to read sensors of type %s from: %s" % (type.value, sensors_file))
         h5_file = h5py.File(sensors_file, 'r', libver='latest')
 
         labels = h5_file['/' + SensorsH5Field.LABELS][()]
