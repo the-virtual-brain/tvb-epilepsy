@@ -45,7 +45,7 @@ class Timeseries(object):
         return numpy.arange(self.time_start, self.get_end_time() + self.time_step, self.time_step)
 
     def get_squeezed_data(self):
-        pass
+        return numpy.squeeze(self.data)
 
     def _get_index_of_state_variable(self, sv_label):
         try:
@@ -60,7 +60,6 @@ class Timeseries(object):
             raise
         return sv_index
 
-    # TODO: have possibility to access this by Signal.sv_name
     def get_state_variable(self, sv_label):
         sv_data = self.data[:, :, self._get_index_of_state_variable(sv_label), :]
         return Timeseries(numpy.expand_dims(sv_data, 2),
@@ -135,7 +134,14 @@ class Timeseries(object):
         return self.get_time_window(index_start, index_end)
 
     def decimate_time(self, time_step):
-        pass
+        if time_step % self.time_step != 0:
+            self.logger.error("Cannot decimate time if new time step is not a multiple of the old time step")
+            raise ValueError
+
+        index_step = int(time_step / self.time_step)
+        time_data = self.data[::index_step, :, :, :]
+
+        return Timeseries(time_data, self.dimension_labels, self.time_start, time_step, self.time_unit)
 
     def get_sample_window(self, index_start, index_end):
         subsample_data = self.data[:, :, :, index_start:index_end]
