@@ -1,8 +1,7 @@
-from collections import OrderedDict
-import numpy
-from tvb_epilepsy.base.model.timeseries import Timeseries
-from tvb_epilepsy.io.h5_reader import H5Reader
 import h5py
+from collections import OrderedDict
+from tvb_epilepsy.io.h5_reader import H5Reader
+from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
 
 
 def read_ts(path):
@@ -17,6 +16,8 @@ def read_ts(path):
 
     return data, total_time, nr_of_steps, start_time
 
+
+# For structured arrays:
 def prepare_dtype_for_2D(labels_list):
     list_of_dtype_tuples = []
     for label in labels_list:
@@ -54,16 +55,35 @@ def prepare_data_for_structured_array(data):
 if __name__ == "__main__":
     data, total_time, nr_of_steps, start_time = read_ts("/WORK/Episense/trunk/demo-data/Head_TREC/epHH/ts.h5")
     conn = H5Reader().read_connectivity("/WORK/Episense/trunk/demo-data/Head_TREC/Connectivity.h5")
-    signal = Timeseries(data, OrderedDict({"space": list(conn.region_labels), "state_variables": ["a", "b", "c"]}),
+    signal = Timeseries(data, OrderedDict({TimeseriesDimensions.SPACE.value: list(conn.region_labels),
+                                           TimeseriesDimensions.STATE_VARIABLES.value: ["y0", "y2", "c"]}),
                         start_time, total_time / float(nr_of_steps))
 
-    timeline = signal.get_time_line()
+    timeline = signal.time_line
 
-    sv = signal.get_state_variable("a")
+    sv = signal.get_state_variable("y0")
 
     subspace = signal.get_subspace_by_labels(list(conn.region_labels)[:3])
     timewindow = signal.get_time_window(10, 100)
     timewindowUnits = signal.get_time_window_by_units(timeline[10], timeline[100])
+
+    print signal.get_lfp().data.shape
+    print signal.get_lfp().dimension_labels
+    print signal.lfp.data.shape
+
+    print signal.y0.data.shape
+    print signal.data.shape
+    print signal[1:10, 10, :, :].shape
+    print signal[1:10, 10, "y2":, :].shape
+    print signal[10, 10:, "y2":"c", :].shape
+    print signal[10, "ctx-lh-temporalpole":, "y2":"c", :].shape
+    print signal[10, :"ctx-lh-temporalpole", "y2":"c", :].shape
+    print signal[10, :"ctx-lh-temporalpole", "y2":, ...].shape
+    print signal[10, :"ctx-lh-temporalpole", "y2", :].shape
+    print signal[8:10, "ctx-lh-temporalpole", "y2", :]
+    print signal[10, "ctx-lh-temporalpole", "y2", :]
+
+    print signal.decimate_time(8 * signal.time_step).data.shape
 
     # Numpy Structured Array example:
 
