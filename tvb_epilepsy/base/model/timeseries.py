@@ -1,23 +1,27 @@
 import numpy
+from enum import Enum
 from copy import deepcopy
 from collections import OrderedDict
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 
 
-class TimeseriesDimensions(object):
+class TimeseriesDimensions(Enum):
     TIME = "time"
     SPACE = "space"
     STATE_VARIABLES = "state_variables"
     SAMPLES = "samples"
 
-    def getAll(self):
-        return [self.TIME, self.SPACE, self.STATE_VARIABLES, self.SAMPLES]
+
+class PossibleStateVariables(Enum):
+    Y0 = "y0"
+    Y2 = "y2"
+    LFP = "lfp"
 
 
 class Timeseries(object):
     logger = initialize_logger(__name__)
 
-    dimensions = TimeseriesDimensions().getAll()
+    dimensions = TimeseriesDimensions
 
     # dimension_labels = {"space": [], "state_variables": []}
 
@@ -38,46 +42,70 @@ class Timeseries(object):
             data = numpy.expand_dims(data, 3)
         return data
 
-    def get_end_time(self):
+    @property
+    def end_time(self):
         return self.time_start + (self.data.shape[0] - 1) * self.time_step
 
-    def get_time_line(self):
-        return numpy.arange(self.time_start, self.get_end_time() + self.time_step, self.time_step)
+    @property
+    def time_line(self):
+        return numpy.arange(self.time_start, self.end_time + self.time_step, self.time_step)
 
-    def get_squeezed_data(self):
+    @property
+    def squeezed_data(self):
         return numpy.squeeze(self.data)
 
     def _get_index_of_state_variable(self, sv_label):
         try:
-            sv_index = self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES].index(sv_label)
+            sv_index = self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES.value].index(sv_label)
         except KeyError:
             self.logger.error("There are no state variables defined for this instance. Its shape is: %s",
                               self.data.shape)
             raise
         except ValueError:
             self.logger.error("Cannot access index of state variable label: %s. Existing state variables: %s" % (
-                sv_label, self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES]))
+                sv_label, self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES.value]))
             raise
         return sv_index
 
     def get_state_variable(self, sv_label):
         sv_data = self.data[:, :, self._get_index_of_state_variable(sv_label), :]
         return Timeseries(numpy.expand_dims(sv_data, 2),
-                          OrderedDict({TimeseriesDimensions.SPACE: self.dimension_labels[TimeseriesDimensions.SPACE]}),
+                          OrderedDict({TimeseriesDimensions.SPACE.value: self.dimension_labels[
+                              TimeseriesDimensions.SPACE.value]}),
                           self.time_start, self.time_step, self.time_unit)
 
     def get_lfp(self):
-        # compute if not exists
-        pass
+        if TimeseriesDimensions.STATE_VARIABLES.value not in self.dimension_labels.keys():
+            self.logger.error("No state variables are defined for this instance!")
+            raise ValueError
+
+        if PossibleStateVariables.LFP.value in self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES.value]:
+            return self.get_state_variable(PossibleStateVariables.LFP.value)
+        if PossibleStateVariables.Y0.value in self.dimension_labels[
+            TimeseriesDimensions.STATE_VARIABLES.value] and PossibleStateVariables.Y2.value in self.dimension_labels[
+            TimeseriesDimensions.STATE_VARIABLES.value]:
+            self.logger.info("%s are computed using %s and %s state variables!" % (
+                PossibleStateVariables.LFP.value, PossibleStateVariables.Y0.value, PossibleStateVariables.Y2.value))
+            y0_ts = self.get_state_variable(PossibleStateVariables.Y0.value)
+            y2_ts = self.get_state_variable(PossibleStateVariables.Y2.value)
+            lfp_data = y2_ts.data - y0_ts.data
+            lfp_dim_labels = OrderedDict(
+                {TimeseriesDimensions.SPACE.value: self.dimension_labels[TimeseriesDimensions.SPACE.value],
+                 TimeseriesDimensions.STATE_VARIABLES.value: [PossibleStateVariables.LFP.value]})
+            return Timeseries(lfp_data, lfp_dim_labels, self.time_start, self.time_step, self.time_unit)
+        self.logger.error(
+            "%s is not computed and cannot be computed now because state variables %s and %s are not defined!" % (
+                PossibleStateVariables.LFP.value, PossibleStateVariables.Y0.value, PossibleStateVariables.Y2.value))
+        raise ValueError
 
     def _get_indices_for_labels(self, list_of_labels):
         list_of_indices_for_labels = []
         for label in list_of_labels:
             try:
-                space_index = self.dimension_labels[TimeseriesDimensions.SPACE].index(label)
+                space_index = self.dimension_labels[TimeseriesDimensions.SPACE.value].index(label)
             except ValueError:
                 self.logger.error("Cannot access index of space label: %s. Existing space labels: %s" % (
-                    label, self.dimension_labels[TimeseriesDimensions.SPACE]))
+                    label, self.dimension_labels[TimeseriesDimensions.SPACE.value]))
                 raise
             list_of_indices_for_labels.append(space_index)
         return list_of_indices_for_labels
@@ -86,7 +114,7 @@ class Timeseries(object):
         list_of_indices_for_labels = self._get_indices_for_labels(list_of_labels)
         subspace_data = self.data[:, list_of_indices_for_labels, :, :]
         subspace_dimension_labels = deepcopy(self.dimension_labels)
-        subspace_dimension_labels[TimeseriesDimensions.SPACE] = list_of_labels
+        subspace_dimension_labels[TimeseriesDimensions.SPACE.value] = list_of_labels
         if subspace_data.ndim == 3:
             subspace_data = numpy.expand_dims(subspace_data, 1)
         return Timeseries(subspace_data, subspace_dimension_labels, self.time_start, self.time_step, self.time_unit)
@@ -101,8 +129,8 @@ class Timeseries(object):
         self._check_space_indices(list_of_index)
         subspace_data = self.data[:, list_of_index, :, :]
         subspace_dimension_labels = deepcopy(self.dimension_labels)
-        subspace_dimension_labels[TimeseriesDimensions.SPACE] = numpy.array(self.dimension_labels[
-                                                                                TimeseriesDimensions.SPACE])[
+        subspace_dimension_labels[TimeseriesDimensions.SPACE.value] = numpy.array(self.dimension_labels[
+                                                                                      TimeseriesDimensions.SPACE.value])[
             list_of_index]
         if subspace_data.ndim == 3:
             subspace_data = numpy.expand_dims(subspace_data, 1)
@@ -125,7 +153,7 @@ class Timeseries(object):
         return int((time_unit - self.time_start) / self.time_step)
 
     def get_time_window_by_units(self, unit_start, unit_end):
-        end_time = self.get_end_time()
+        end_time = self.end_time
         if unit_start < self.time_start or unit_end > end_time:
             self.logger.error("The time units are outside time series interval: [%s, %s]" % (self.time_start, end_time))
             raise ValueError
@@ -153,15 +181,17 @@ class Timeseries(object):
         pass
 
     def __getattr__(self, attr_name):
+        if attr_name == PossibleStateVariables.LFP.value:
+            return self.get_lfp()
         state_variables_keys = []
-        if TimeseriesDimensions.STATE_VARIABLES in self.dimension_labels.keys():
-            state_variables_keys = self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES]
-            if attr_name in self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES]:
+        if TimeseriesDimensions.STATE_VARIABLES.value in self.dimension_labels.keys():
+            state_variables_keys = self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES.value]
+            if attr_name in self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES.value]:
                 return self.get_state_variable(attr_name)
         space_keys = []
-        if (TimeseriesDimensions.SPACE in self.dimension_labels.keys()):
-            space_keys = self.dimension_labels[TimeseriesDimensions.SPACE]
-            if attr_name in self.dimension_labels[TimeseriesDimensions.SPACE]:
+        if (TimeseriesDimensions.SPACE.value in self.dimension_labels.keys()):
+            space_keys = self.dimension_labels[TimeseriesDimensions.SPACE.value]
+            if attr_name in self.dimension_labels[TimeseriesDimensions.SPACE.value]:
                 return self.get_subspace_by_labels([attr_name])
         self.logger.error(
             "Attribute %s is not defined for this instance! You can use the folllowing labels: state_variables = %s and space = %s" %
