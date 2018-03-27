@@ -1,7 +1,7 @@
 import h5py
 from collections import OrderedDict
 from tvb_epilepsy.io.h5_reader import H5Reader
-from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
+from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions, PossibleStateVariables
 
 
 def read_ts(path):
@@ -56,32 +56,33 @@ if __name__ == "__main__":
     data, total_time, nr_of_steps, start_time = read_ts("/WORK/Episense/trunk/demo-data/Head_TREC/epHH/ts.h5")
     conn = H5Reader().read_connectivity("/WORK/Episense/trunk/demo-data/Head_TREC/Connectivity.h5")
     signal = Timeseries(data, OrderedDict({TimeseriesDimensions.SPACE.value: list(conn.region_labels),
-                                           TimeseriesDimensions.STATE_VARIABLES.value: ["y0", "y2", "c"]}),
+                                           TimeseriesDimensions.STATE_VARIABLES.value: [PossibleStateVariables.X1.value,
+                                                                                        PossibleStateVariables.X2.value,
+                                                                                        "c"]}),
                         start_time, total_time / float(nr_of_steps))
 
     timeline = signal.time_line
 
-    sv = signal.get_state_variable("y0")
+    sv = signal.get_state_variable("x1")
 
     subspace = signal.get_subspace_by_labels(list(conn.region_labels)[:3])
     timewindow = signal.get_time_window(10, 100)
     timewindowUnits = signal.get_time_window_by_units(timeline[10], timeline[100])
 
-    print signal.get_lfp().data.shape
-    print signal.get_lfp().dimension_labels
     print signal.lfp.data.shape
+    print signal.lfp.dimension_labels
 
-    print signal.y0.data.shape
+    print signal.x1.data.shape
     print signal.data.shape
     print signal[1:10, 10, :, :].shape
-    print signal[1:10, 10, "y2":, :].shape
-    print signal[10, 10:, "y2":"c", :].shape
-    print signal[10, "ctx-lh-temporalpole":, "y2":"c", :].shape
-    print signal[10, :"ctx-lh-temporalpole", "y2":"c", :].shape
-    print signal[10, :"ctx-lh-temporalpole", "y2":, ...].shape
-    print signal[10, :"ctx-lh-temporalpole", "y2", :].shape
-    print signal[8:10, "ctx-lh-temporalpole", "y2", :]
-    print signal[10, "ctx-lh-temporalpole", "y2", :]
+    print signal[1:10, 10, "x2":, :].shape
+    print signal[10, 10:, "x2":"c", :].shape
+    print signal[10, "ctx-lh-temporalpole":, "x2":"c", :].shape
+    print signal[10, :"ctx-lh-temporalpole", "x2":"c", :].shape
+    print signal[10, :"ctx-lh-temporalpole", "x2":, ...].shape
+    print signal[10, :"ctx-lh-temporalpole", "x2", :].shape
+    print signal[8:10, "ctx-lh-temporalpole", "x2", :]
+    print signal[10, "ctx-lh-temporalpole", "x2", :]
 
     print signal.decimate_time(8 * signal.time_step).data.shape
 

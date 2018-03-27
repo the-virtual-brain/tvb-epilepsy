@@ -13,8 +13,8 @@ class TimeseriesDimensions(Enum):
 
 
 class PossibleStateVariables(Enum):
-    Y0 = "y0"
-    Y2 = "y2"
+    X1 = "x1"
+    X2 = "x2"
     LFP = "lfp"
 
 
@@ -74,20 +74,21 @@ class Timeseries(object):
                               TimeseriesDimensions.SPACE.value]}),
                           self.time_start, self.time_step, self.time_unit)
 
-    def get_lfp(self):
+    @property
+    def lfp(self):
         if TimeseriesDimensions.STATE_VARIABLES.value not in self.dimension_labels.keys():
             self.logger.error("No state variables are defined for this instance!")
             raise ValueError
 
         if PossibleStateVariables.LFP.value in self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES.value]:
             return self.get_state_variable(PossibleStateVariables.LFP.value)
-        if PossibleStateVariables.Y0.value in self.dimension_labels[
-            TimeseriesDimensions.STATE_VARIABLES.value] and PossibleStateVariables.Y2.value in self.dimension_labels[
+        if PossibleStateVariables.X1.value in self.dimension_labels[
+            TimeseriesDimensions.STATE_VARIABLES.value] and PossibleStateVariables.X2.value in self.dimension_labels[
             TimeseriesDimensions.STATE_VARIABLES.value]:
             self.logger.info("%s are computed using %s and %s state variables!" % (
-                PossibleStateVariables.LFP.value, PossibleStateVariables.Y0.value, PossibleStateVariables.Y2.value))
-            y0_ts = self.get_state_variable(PossibleStateVariables.Y0.value)
-            y2_ts = self.get_state_variable(PossibleStateVariables.Y2.value)
+                PossibleStateVariables.LFP.value, PossibleStateVariables.X1.value, PossibleStateVariables.X2.value))
+            y0_ts = self.get_state_variable(PossibleStateVariables.X1.value)
+            y2_ts = self.get_state_variable(PossibleStateVariables.X2.value)
             lfp_data = y2_ts.data - y0_ts.data
             lfp_dim_labels = OrderedDict(
                 {TimeseriesDimensions.SPACE.value: self.dimension_labels[TimeseriesDimensions.SPACE.value],
@@ -95,7 +96,7 @@ class Timeseries(object):
             return Timeseries(lfp_data, lfp_dim_labels, self.time_start, self.time_step, self.time_unit)
         self.logger.error(
             "%s is not computed and cannot be computed now because state variables %s and %s are not defined!" % (
-                PossibleStateVariables.LFP.value, PossibleStateVariables.Y0.value, PossibleStateVariables.Y2.value))
+                PossibleStateVariables.LFP.value, PossibleStateVariables.X1.value, PossibleStateVariables.X2.value))
         raise ValueError
 
     def _get_indices_for_labels(self, list_of_labels):
@@ -181,8 +182,6 @@ class Timeseries(object):
         pass
 
     def __getattr__(self, attr_name):
-        if attr_name == PossibleStateVariables.LFP.value:
-            return self.get_lfp()
         state_variables_keys = []
         if TimeseriesDimensions.STATE_VARIABLES.value in self.dimension_labels.keys():
             state_variables_keys = self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES.value]

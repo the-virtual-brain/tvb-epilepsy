@@ -2,7 +2,7 @@
 
 import numpy
 import pytest
-from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
+from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions, PossibleStateVariables
 
 
 class TestTimeseries(object):
@@ -94,7 +94,7 @@ class TestTimeseries(object):
             ts_from_2D.get_time_window_by_units(0, 0.025)
 
         with pytest.raises(ValueError):
-            ts_from_2D.get_lfp()
+            ts_from_2D.lfp
 
     def test_timeseries_3D(self):
         ts_3D = Timeseries(self.data_3D,
@@ -179,16 +179,14 @@ class TestTimeseries(object):
             ts[0, :, 10, :]
 
         with pytest.raises(ValueError):
-            ts.get_lfp()
-
-        with pytest.raises(ValueError):
             ts.lfp
 
     def test_timeseries_4D(self):
         ts_4D = Timeseries(self.data_4D,
                            dimension_labels={TimeseriesDimensions.SPACE.value: ["r1", "r2", "r3", "r4"],
-                                             TimeseriesDimensions.STATE_VARIABLES.value: ["y0", "y2", "sv3"]},
+                                             TimeseriesDimensions.STATE_VARIABLES.value: [
+                                                 PossibleStateVariables.X1.value, PossibleStateVariables.X2.value,
+                                                 "sv3"]},
                            time_start=self.time_start, time_step=self.time_step, time_unit=self.time_unit)
         assert ts_4D.data.shape == (3, 4, 3, 4)
-        assert ts_4D.get_lfp().data.shape == (3, 4, 1, 4)
-        assert ts_4D.lfp.data.shape == ts_4D.get_lfp().data.shape
+        assert ts_4D.lfp.data.shape == (3, 4, 1, 4)
