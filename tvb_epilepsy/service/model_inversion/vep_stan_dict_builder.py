@@ -85,7 +85,7 @@ def build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inv
                                            parameter_names={"K": "k", "MC": "FC", "tau1": "time_scale",
                                                             "x1init": "x_init", "zinit": "z_init",
                                                             "x1": "x", "dX1t": "x_eta", "dZt": "z_eta",
-                                                            "scale": "amplitude", "signals": "seeg_log_power",
+                                                            "scale": "amplitude",
                                                             }):
     """
     Usually takes as input the model_data created with <build_stan_model_dict> and adds fields that are needed to
@@ -104,8 +104,7 @@ def build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inv
         try:
             statistical_model.parameters[p_new_name] = statistical_model.parameters[p_old_name]
         except:
-            warning("Parameter " + p_old_name + " not found in statistical model\n" +
-                              str(statistical_model))
+            warning("Parameter " + p_old_name + " not found in statistical model\n" + str(statistical_model))
     vep_data = {"nn": statistical_model.number_of_regions,
                 "nt": statistical_model.time_length,
                 "ns": statistical_model.number_of_signals,

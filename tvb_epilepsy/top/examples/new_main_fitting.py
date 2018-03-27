@@ -51,7 +51,7 @@ def set_hypotheses(head, config):
     return (hypothesis1, hypothesis2)
 
 
-def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file=None, dynamical_model = "EpileptorDP2D",
+def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_model = "EpileptorDP2D",
                         observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER,  times_on_off=[], time_units="msec",
                         sensors_lbls=[], sensors_inds=[], n_electrodes=None, sensors_per_electrode=2,
                         fitmethod="optimizing", stan_service="CmdStan", fit_flag=True, config=Config(), **kwargs):
@@ -64,6 +64,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file=None, dynamica
     # Read head
     logger.info("Reading from: " + config.input.HEAD)
     head = reader.read_head(config.input.HEAD)
+    sensors = head.get_sensors_id()
     # plotter.plot_head(head)
 
     # Set hypotheses:
@@ -107,33 +108,40 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file=None, dynamica
 
             # Update active model's active region nodes
             statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
+                                                                      e_values=lsa_hypothesis.e_values,
+                                                                      lsa_propagation_strength=
+                                                                      lsa_hypothesis.lsa_propagation_strengths,
                                                                       active_regions_th=0.2, reset=True)
-            # plotter.plot_statistical_model(statistical_model, "Statistical Model")
+            plotter.plot_statistical_model(statistical_model, "Statistical Model")
 
             # Now set data:
             if os.path.isfile(empirical_file):
+                model_inversion.target_data_type = "empirical"
                 signals_ts_dict, manual_selection, signals_labels = \
                                 set_empirical_data(head, hyp.name, model_inversion, empirical_file,
                                                    sensors_inds, sensors_lbls, dynamical_model,
                                                    times_on_off, time_units, plotter)
             else:
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
+                model_inversion.target_data_type = "simulated"
                 signals_ts_dict, manual_selection, signals_labels = \
                     set_simulated_data(head, hyp.name, lsa_hypothesis, model_configuration, model_inversion,
                                        statistical_model, sensors_inds, stan_model_name, dynamical_model, config)
             # -------------------------- Select and set observation signals -----------------------------------
             signals, time, stats_model, signals_labels, target_data = \
                     model_inversion.set_target_data_and_time(signals_ts_dict, statistical_model, dynamical_model,
-                                                             sensors=head.get_sensors(), signals_labels=signals_labels,
+                                                             sensors=sensors,
+                                                             signals_labels=signals_labels,
                                                              manual_selection=manual_selection,
                                                              auto_selection="correlation-power", # auto_selection=False,
                                                              n_electrodes=n_electrodes,
                                                              sensors_per_electrode=sensors_per_electrode,
                                                              group_electrodes=True, normalization="baseline-amplitude",
                                                              plotter=plotter)
-            # if len(model_inversion.signals_inds) < head.get_sensors_id().number_of_sensors:
-            #     statistical_model = \
-            #             model_inversion.update_active_regions_seeg(statistical_model)
+            # if len(model_inversion.signals_inds) < sensors.number_of_sensors:
+            #     statistical_model = model_inversion.update_active_regions_seeg(statistical_model,
+            #                                                                    sensors.gain_matrix,
+            #                                                                    active_regions_th=None, reset=False)
 
             plot_target_signals(signals_ts_dict, signals, time, signals_labels, hyp.name,
                                 model_inversion, statistical_model, writer, plotter, config)
@@ -144,13 +152,16 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file=None, dynamica
             # writer.write_dictionary(model_data, os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5"))
 
             # Interface with INS stan models
+            print(statistical_model.parameters)
             if stan_model_name.find("vep-fe-rev") >= 0:
                 model_data, x0_star_mu, x_init_mu, z_init_mu = \
                     build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inversion,
-                                                       time=time, sensors=head.get_sensors(), gain_matrix=None)
+                                                           time=time, sensors=sensors, gain_matrix=None)
                 k_str = 'k'
             else:
                 k_str = 'K'
+
+            writer.write_generic(statistical_model, os.path.join(config.out.FOLDER_RES, hyp.name+"_stats_model.h5"))
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         num_warmup = 200
@@ -282,13 +293,13 @@ if __name__ == "__main__":
     n_electrodes = 8
     sensors_per_electrode = 2
     if EMPIRICAL:
-        main_fit_sim_hyplsa(stats_model_name=stan_model_name, observation_model=observation_model,
+        main_fit_sim_hyplsa(stan_model_name=stan_model_name, observation_model=observation_model,
                             empirical_file=os.path.join(config.input.RAW_DATA_FOLDER, seizure),
                             times_on_off=times_on_off, time_units="sec", sensors_inds=sensors_inds, n_electrodes=8,
                             ensors_per_electrode=2, fitmethod=fitmethod, stan_service="CmdStan", fit_flag=fit_flag,
                             config=config)
     else:
-        main_fit_sim_hyplsa(stats_model_name=stan_model_name, observation_model=observation_model,
+        main_fit_sim_hyplsa(stan_model_name=stan_model_name, observation_model=observation_model,
                             times_on_off=[1000.0, 19000.0], sensors_inds=sensors_inds, n_electrodes=8,
                             sensors_per_electrode=2, fitmethod=fitmethod, stan_service="CmdStan", fit_flag=fit_flag,
                             config=config)

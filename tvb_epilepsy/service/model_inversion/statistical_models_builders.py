@@ -126,7 +126,7 @@ class StatisticalModelBuilder(StatisticalModelBuilderBase):
         return MC_def
 
     def generate_parameters(self):
-        parameters = {}
+        parameters = OrderedDict()
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
         # Generative model:
         # Epileptor stability:

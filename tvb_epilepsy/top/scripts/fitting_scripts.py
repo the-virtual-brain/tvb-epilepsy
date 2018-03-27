@@ -86,7 +86,7 @@ def set_empirical_data(head, hypname, model_inversion, empirical_file, sensors_i
 def set_simulated_data(head, hypname, lsa_hypothesis, model_configuration, model_inversion, statistical_model,
                        sensors_inds, stan_model_name, dynamical_model, config):
     model_inversion.target_data_type = "simulated"
-    ts_file = os.path.join(config.out.FOLDER_RES, hypname + "_ts.mat")
+    ts_file = os.path.join(config.out.FOLDER_RES, hypname + "_ts.h5")
     signals_ts_dict = \
         from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
                                                sim_type="realistic", dynamical_model=dynamical_model,
@@ -95,13 +95,13 @@ def set_simulated_data(head, hypname, lsa_hypothesis, model_configuration, model
     #     sensors_inds, sensors_lbls = head.get_sensors_id().get_bipolar_sensors(sensors_inds=sensors_inds)
     if statistical_model.observation_model.value in OBSERVATION_MODELS.SEEG.value:
         manual_selection = sensors_inds
+        signals_labels = head.get_sensors_id().labels
     else:
+        signals_labels = head.connectivity.region_labels
         if stan_model_name.find("vep-fe-rev") >= 0:
             manual_selection = statistical_model.active_regions
-            signals_labels = head.get_sensors().labels
         else:
             manual_selection = []
-            signals_labels = head.connectivity.region_labels
     return signals_ts_dict, manual_selection, signals_labels
 
 

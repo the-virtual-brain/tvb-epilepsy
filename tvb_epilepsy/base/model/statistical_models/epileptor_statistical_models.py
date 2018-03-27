@@ -32,10 +32,10 @@ class StatisticalModel(object):
         self.parameters = parameters
         self.model_config = model_config
 
-    def __repr__(self):
-        d = OrderedDict()
+    def __repr__(self, d=OrderedDict()):
+        nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
-            d.update({str(ikey) + ". " + key:  str(val)})
+            d.update({str(nKeys+ikey) + ". " + key:  str(val)})
         return d
 
     def __str__(self):

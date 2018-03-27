@@ -134,8 +134,7 @@ class ODEModelInversionService(ModelInversionService):
             power = kwargs.get("power", np.sum(signals ** 2, axis=0) / signals.shape[0])
             inds = select_greater_values_array_inds(power, kwargs.get("power_th", None))
             self.signals_inds = (np.array(self.signals_inds)[inds]).tolist()
-        number_of_signals = len(self.signals_inds)
-        return signals[:, inds], number_of_signals
+        return signals[:, inds]
 
     def select_signals_source(self, signals, rois, auto_selection, **kwargs):
         if auto_selection.find("rois") >= 0:
@@ -148,8 +147,7 @@ class ODEModelInversionService(ModelInversionService):
             inds = select_greater_values_array_inds(power, kwargs.get("power_th", None))
             signals = signals[:, inds]
             self.signals_inds = (np.array(self.signals_inds)[inds]).tolist()
-        number_of_signals = len(self.signals_inds)
-        return signals, number_of_signals
+        return signals
 
     def set_empirical_target_data(self, target_data, **kwargs):
         self.target_data_type = "empirical_seeg"
@@ -226,13 +224,11 @@ class ODEModelInversionService(ModelInversionService):
     def normalize_signals(self, signals, normalization=None):
         return normalize_signals(signals, normalization)
 
-    def set_target_data_and_time(self, target_data_type, target_data, stats_model, dynamical_model, **kwargs):
-        if isequal_string(target_data_type, "simulated"):
-            self.target_data_type = "simulated"
+    def set_target_data_and_time(self, target_data, stats_model, dynamical_model, **kwargs):
+        if self.target_data_type.lower().find("simul") > -1:
             signals, target_data, signals_labels, number_of_signals, time, time_length, dt = \
                 self.set_simulated_target_data(target_data, stats_model, dynamical_model, **kwargs)
         else:  # isequal_string(target_data_type, "empirical"):
-            self.target_data_type = "empirical"
             signals, number_of_signals, time_length = self.set_empirical_target_data(target_data, **kwargs)
             dt = kwargs.get("dt", 1.0)
             time = target_data.get("time", np.arange(stats_model.dt * (time_length - 1)))
