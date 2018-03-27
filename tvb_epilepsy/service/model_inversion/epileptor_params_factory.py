@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 import numpy as np
 
+from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error, raise_value_error
 from tvb_epilepsy.base.computations.probability_distributions import ProbabilityDistributionTypes
 from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import TransformedStochasticParameterBase
 from tvb_epilepsy.service.stochastic_parameter_builder import generate_stochastic_parameter
@@ -81,5 +82,26 @@ def generate_negative_lognormal_parameter(name, mean, low, high, sigma=None, sig
         @property
         def kurt(self):
             return self.star.kurt
+
+        def _scipy_method(self, method, loc=0.0, scale=1.0, *args, **kwargs):
+            if method in ["rvs", "ppf", "isf", "stats", "moment", "median", "mean", "interval"]:
+                return self.max - self.star._scipy_method(method, loc, scale, *args, **kwargs)
+            elif method in ["pdf", "logpdf", "cdf", "logcdf", "sf", "logsf"]:
+                x = kwargs.get("x", None)
+                if x is None and len(args) > 0:
+                    x = args[0]
+                if x is not None:
+                    # Assume that the first argument is x and transform it
+                    args = tuple([self.max - np.array(x)] + list(args[1:]))
+                    return self.star._scipy_method(method, loc, scale, *args, **kwargs)
+                else:
+                    raise_value_error("Scipy method " + method + " for transformed parameter " + self.name +
+                                      " cannot be executed due to missing argument x!")
+            else:
+                raise_not_implemented_error("Scipy method " + method +
+                                            " is not implemented for transformed parameter " + self.name + "!")
+
+        def numpy(self):
+            return self.max - self._numpy(self.loc, self.scale)
 
     return NegativeLognormal(parameter.name.split("_star")[0], "NegativeLognormal", parameter, high)

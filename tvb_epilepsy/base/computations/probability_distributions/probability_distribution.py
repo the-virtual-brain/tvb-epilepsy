@@ -168,12 +168,15 @@ class ProbabilityDistribution(object):
     def _scipy(self, loc=0.0, scale=1.0):
         pass
 
-    @abstractmethod
-    def constraint(self):
-        pass
+    def _scipy_method(self, method, loc=0.0, scale=1.0, *args, **kwargs):
+        return getattr(self._scipy(loc, scale), method)(*args, **kwargs)
 
     @abstractmethod
     def _numpy(self, loc=0.0, scale=1.0, size=()):
+        pass
+
+    @abstractmethod
+    def constraint(self):
         pass
 
     @abstractmethod

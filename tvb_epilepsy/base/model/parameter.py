@@ -30,7 +30,7 @@ class Parameter(object):
 
     def __repr__(self,  d=OrderedDict()):
         nKeys = len(d)
-        for ikey, key in enumerate(["name", "low", "high", "shape"]):
+        for ikey, key in enumerate(["name", "low", "high", "p_shape"]):
             d.update({str(nKeys+ikey) + ". " + key: str(getattr(self, key))})
         return d
 

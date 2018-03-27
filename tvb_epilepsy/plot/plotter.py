@@ -129,7 +129,7 @@ class Plotter(BasePlotter):
                                     title=title, figure_name=figure_name, figsize=figsize)
 
     def plot_statistical_model(self, statistical_model, figure_name=""):
-        _, ax = pyplot.subplots(len(statistical_model.parameters), 2, figsize=FiguresConfig.VERY_LARGE_PORTRAIT)
+        _, ax = pyplot.subplots(len(statistical_model.parameters), 1, figsize=FiguresConfig.VERY_LARGE_PORTRAIT)
         for ip, p in enumerate(statistical_model.parameters.values()):
             self._prepare_parameter_axes(p, x=numpy.array([]), ax=ax[ip], lgnd=False)
         self._save_figure(pyplot.gcf(), figure_name)
@@ -860,12 +860,12 @@ class Plotter(BasePlotter):
     def _prepare_distribution_axes(self, distribution, loc=0.0, scale=1.0, x=numpy.array([]), ax=None, linestyle="-",
                                    lgnd=False):
         if len(x) < 1:
-            x = linspace_broadcast(distribution._scipy(distribution.loc, distribution.scale).ppf(0.01),
-                                   distribution._scipy(distribution.loc, distribution.scale).ppf(0.99), 100)
+            x = linspace_broadcast(distribution._scipy_method("ppf", distribution.loc, distribution.scale, 0.01),
+                                   distribution._scipy_method("ppf", distribution.loc, distribution.scale,0.99), 100)
         if x is not None:
             if x.ndim == 1:
                 x = x[:, numpy.newaxis]
-            pdf = distribution._scipy(loc, scale).pdf(x)
+            pdf = distribution._scipy_method("pdf", loc, scale, x)
             if ax is None:
                 _, ax = pyplot.subplots(1, 1)
             for ip, (xx, pp) in enumerate(zip(x.T, pdf.T)):
@@ -886,17 +886,17 @@ class Plotter(BasePlotter):
 
     def _prepare_parameter_axes(self, parameter, x=numpy.array([]), ax=None, lgnd=False):
         if ax is None:
-            _, ax = pyplot.subplots(1, 2)
+            _, ax = pyplot.subplots(1, 1)
         if len(x) < 1:
             x = linspace_broadcast(
-                numpy.maximum(parameter.low, parameter.scipy(parameter.loc, parameter.scale).ppf(0.01)),
-                numpy.minimum(parameter.high, parameter.scipy(parameter.loc, parameter.scale).ppf(0.99)), 100)
+                numpy.maximum(parameter.low, parameter.scipy_method("ppf", 0.01)),
+                numpy.minimum(parameter.high, parameter.scipy_method("ppf", 0.99)), 100)
         if x is not None:
-            ax[0] = self._prepare_distribution_axes(parameter, parameter.loc, parameter.scale, x, ax[0], "-", lgnd)
-            ax[0].set_title(parameter.name + ": " + parameter.type + " distribution")
-            ax[1] = self._prepare_distribution_axes(parameter, 0.0, 1.0, (x - parameter.loc) / parameter.scale,
-                                                    ax[1], "--", lgnd)
-            ax[1].set_title(parameter.name + "_star: " + parameter.type + " distribution")
+            ax = self._prepare_distribution_axes(parameter, parameter.loc, parameter.scale, x, ax, "-", lgnd)
+            ax.set_title(parameter.name + ": " + parameter.type + " distribution")
+            # ax[1] = self._prepare_distribution_axes(parameter, 0.0, 1.0, (x - parameter.loc) / parameter.scale,
+            #                                         ax[1], "--", lgnd)
+            # ax[1].set_title(parameter.name + "_star: " + parameter.type + " distribution")
             return ax
         else:
             raise_value_error("Stochastic parameter's parameters do not broadcast!")

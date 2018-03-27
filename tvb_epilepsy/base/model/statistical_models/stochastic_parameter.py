@@ -46,6 +46,9 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
     def scipy(self):
         return self._scipy(self.loc, self.scale)
 
+    def scipy_method(self, method, *args, **kwargs):
+        return self._scipy_method(method, self.loc, self.scale, *args, **kwargs)
+
     def numpy(self):
         return self._numpy(self.loc, self.scale)
 
@@ -195,4 +198,15 @@ class TransformedStochasticParameterBase(object):
     @property
     @abstractmethod
     def kurt(self):
+        pass
+
+    @abstractmethod
+    def _scipy_method(self, method, loc=0.0, scale=1.0, *args, **kwargs):
+        pass
+
+    def scipy_method(self, method, *args, **kwargs):
+        return self._scipy_method(method, self.star.loc, self.star.scale, *args, **kwargs)
+
+    @abstractmethod
+    def numpy(self):
         pass
