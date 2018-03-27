@@ -79,8 +79,9 @@ class CmdStanService(StanService):
     def compile_stan_model(self, save_model=True, **kwargs):
         self.model_code_path = kwargs.pop("model_code_path", self.model_code_path)
         self.logger.info("Compiling model...")
-        command = "make CC=" + self.config.generic.C_COMPILER + " " + self.model_code_path.split(".stan", 1)[0] + \
-                  " && " + "chmod +x " + self.model_code_path.split(".stan", 1)[0]
+        mode_code_path = self.model_code_path.split(".stan", 1)[0]
+        command = "make CC=" + self.config.generic.C_COMPILER + " " + mode_code_path + \
+                  " && " + "chmod +x " + mode_code_path
         self.compilation_time = execute_command(command, cwd=self.path, shell=True)[1]
         self.logger.info(str(self.compilation_time) + ' sec required to compile')
         if save_model:
