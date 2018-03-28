@@ -77,7 +77,7 @@ class TestCustomH5writer(BaseTest):
     def test_write_model_configuration(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestModelConfiguration.h5")
         dummy_mc = ModelConfiguration(x1eq=numpy.array([2.0, 3.0, 1.0]), zmode=None,
-                                      zEQ=numpy.array([3.0, 2.0, 1.0]), Ceq=numpy.array([1.0, 2.0, 3.0]),
+                                      zeq=numpy.array([3.0, 2.0, 1.0]), Ceq=numpy.array([1.0, 2.0, 3.0]),
                                       model_connectivity=self.dummy_connectivity.normalized_weights)
 
         assert not os.path.exists(test_file)

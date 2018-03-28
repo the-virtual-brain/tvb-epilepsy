@@ -129,7 +129,7 @@ class ModelInversionService(object):
         if isequal_string(kwargs.get("priors_mode", "hypothesis"), "uninformative"):
             x1eq_prior = X1_DEF * np.ones((self.number_of_regions,))
         else:
-            x1eq_prior = self.x1EQ
+            x1eq_prior = self.x1eq
         x1eq_max = kwargs.get("x1eq_max", X1EQ_MAX)
         x1eq_star_max = x1eq_max - X1EQ_MIN
         x1eq_star_mean = x1eq_max - x1eq_prior

@@ -59,5 +59,5 @@ class LSAPSEService(ABCPSEService):
 
         return {"lsa_propagation_strengths": lsa_hypothesis.lsa_propagation_strengths,
                 "x0_values": model_configuration.x0_values,
-                "e_values": model_configuration.e_values, "x1eq": model_configuration.x1EQ,
-                "zeq": model_configuration.zEQ, "Ceq": model_configuration.Ceq}
+                "e_values": model_configuration.e_values, "x1eq": model_configuration.x1eq,
+                "zeq": model_configuration.zeq, "Ceq": model_configuration.Ceq}
