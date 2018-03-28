@@ -27,7 +27,7 @@ class ModelInversionService(object):
     def _repr(self, d=OrderedDict()):
         nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
-            d.update({str(nKeys+ikey) + ". " + key:  str(val)})
+            d.update({str(nKeys+ikey) + ". " + key:  val})
         return d
 
     def __repr__(self, d=OrderedDict()):
@@ -87,13 +87,6 @@ class ODEModelInversionService(ModelInversionService):
     def __init__(self, number_of_regions, **kwargs):
         super(ODEModelInversionService, self).__init__(number_of_regions, **kwargs)
         self.signals_inds = range(self.number_of_regions)
-
-    def _repr(self, d=OrderedDict()):
-        d.update(super(ODEModelInversionService, self)._repr(d))
-        nKeys = len(d)
-        for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
-            d.update({str(nKeys + ikey) + ". " + key: str(val)})
-        return d
 
     def update_active_regions_seeg(self, stats_model, gain_matrix, active_regions_th=None, seeg_inds=[], reset=False):
         if reset:
@@ -277,10 +270,3 @@ class SDEModelInversionService(ODEModelInversionService):
 
     def __init__(self, number_of_regions, **kwargs):
         super(SDEModelInversionService, self).__init__(number_of_regions, **kwargs)
-
-    def _repr(self, d=OrderedDict()):
-        d.update(super(SDEModelInversionService, self)._repr(d))
-        nKeys = len(d)
-        for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
-            d.update({str(nKeys + ikey) + ". " + key: str(val)})
-        return d

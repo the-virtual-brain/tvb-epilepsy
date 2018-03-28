@@ -151,12 +151,11 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
             #                                            time=time, sensors=head.get_sensors(), gain_matrix=None)
             # writer.write_dictionary(model_data, os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5"))
 
+            print(statistical_model)
             # Interface with INS stan models
-            print(statistical_model.parameters)
             if stan_model_name.find("vep-fe-rev") >= 0:
-                model_data, x0_star_mu, x_init_mu, z_init_mu = \
-                    build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inversion,
-                                                           time=time, sensors=sensors, gain_matrix=None)
+                model_data= build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inversion,
+                                                                   time=time, sensors=sensors, gain_matrix=None)
                 k_str = 'k'
             else:
                 k_str = 'K'
@@ -164,10 +163,10 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
             writer.write_generic(statistical_model, os.path.join(config.out.FOLDER_RES, hyp.name+"_stats_model.h5"))
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        num_warmup = 200
+        num_warmup = 20
         if fit_flag:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
-                                                      chains=4, refresh=1, num_warmup=num_warmup, num_samples=300,
+                                                      chains=4, refresh=1, num_warmup=num_warmup, num_samples=30,
                                                       max_depth=10, delta=0.8, save_warmup=1, plot_warmup=1, **kwargs)
             writer.write_generic(ests, config.out.FOLDER_RES, hyp.name + "_fit_est.h5")
             writer.write_generic(samples, config.out.FOLDER_RES, hyp.name + "_fit_samples.h5")

@@ -35,7 +35,7 @@ class StatisticalModel(object):
     def _repr(self, d=OrderedDict()):
         nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
-            d.update({str(nKeys+ikey) + ". " + key:  str(val)})
+            d.update({str(nKeys+ikey) + ". " + key:  val})
         return d
 
     def __repr__(self, d=OrderedDict()):
@@ -114,13 +114,6 @@ class ODEStatisticalModel(StatisticalModel):
         self.time_length = time_length
         self.dt = dt
 
-    def _repr(self, d=OrderedDict()):
-        d.update(super(ODEStatisticalModel, self)._repr(d))
-        nKeys = len(d)
-        for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
-            d.update({str(nKeys+ikey) + ". " + key: str(val)})
-        return d
-
     def update_active_regions(self, active_regions):
         if np.all(np.in1d(active_regions, range(self.number_of_regions))):
             self.active_regions = np.unique(ensure_list(active_regions) + self.active_regions).tolist()
@@ -147,9 +140,3 @@ class SDEStatisticalModel(ODEStatisticalModel):
         self.sde_mode = sde_mode
         self.sigma = sigma
 
-    def _repr(self, d=OrderedDict()):
-        d.update(super(SDEStatisticalModel, self)._repr(d))
-        nKeys = len(d)
-        for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
-            d.update({str(nKeys+ikey) + ". " + key:  str(val)})
-        return d

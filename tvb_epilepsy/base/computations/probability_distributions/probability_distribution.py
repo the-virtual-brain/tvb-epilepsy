@@ -73,7 +73,7 @@ class ProbabilityDistribution(object):
         nKeys = len(d)
         for ikey, key in enumerate(["type",  "n_params", "shape", "mean", "median", "mode", "var", "std", "var", "kurt",
                                     "scipy_name", "numpy_name"]):
-            d.update({str(nKeys + ikey) + ". " + key: str(getattr(self, key))})
+            d.update({str(nKeys + ikey) + ". " + key: getattr(self, key)})
         d.update({str(len(d)) + ". " + "pdf_params": str(self.pdf_params())})
         d.update({str(len(d)+1) + ". " + "constraint": str(self.constraint())})
         return d

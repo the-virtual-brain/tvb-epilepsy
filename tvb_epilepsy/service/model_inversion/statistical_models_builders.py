@@ -51,7 +51,7 @@ class StatisticalModelBuilderBase(object):
 
     def _repr(self, d=OrderedDict()):
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
-            d.update({str(ikey) + ". " + key: str(val)})
+            d.update({str(ikey) + ". " + key: val})
         return d
 
     def __repr__(self, d=OrderedDict()):
