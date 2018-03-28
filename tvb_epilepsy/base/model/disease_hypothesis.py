@@ -133,6 +133,12 @@ class DiseaseHypothesis(object):
     def get_x0_values_for_all_regions(self):
         return self.get_regions_disease()[self.x0_indices]
 
+    def get_disease_propagation_strengths(self):
+        return self.lsa_propagation_strengths[self.lsa_propagation_indices]
+
+    def get_disease_propagation(self):
+        return self.lsa_propagation_indices, self.get_disease_propagation_strengths()
+
     def update(self, name=""):
         self.type = []
         default_name = "Hypothesis"

@@ -68,7 +68,7 @@ class HypothesisBuilder(object):
         n_vals = len(values)
         if n_inds != n_vals:
             if n_vals != 1:
-                values *= n_inds
+                values *= numpy.ones(numpy.array(indices).shape)
             else:
                 raise_value_error("Sizes of " + type + "_indices (" + str(n_inds) + ") " +
                                   "and " + type + "_values (" + str(n_vals) + ") do not match!")
@@ -114,10 +114,11 @@ class HypothesisBuilder(object):
 
     def set_lsa_propagation(self, lsa_propagation_indices, lsa_propagation_strengths):
         self.lsa_propagation_indices = numpy.array(self._check_regions_inds_range(lsa_propagation_indices, "lsa_propagation"))
-        self.lsa_propagation_strengths = numpy.array(
-                                                self._check_indices_vals_sizes(self.lsa_propagation_indices,
-                                                                               lsa_propagation_strengths,
-                                                                               "lsa_propagation"))
+        # self.lsa_propagation_strengths = numpy.array(
+        #                                         self._check_indices_vals_sizes(self.lsa_propagation_indices,
+        #                                                                        lsa_propagation_strengths,
+        #                                                                        "lsa_propagation"))
+        self.lsa_propagation_strengths = numpy.array(lsa_propagation_strengths)
         return self
 
     def set_normalize(self, value):
