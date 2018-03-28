@@ -107,12 +107,13 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
                                                                                                        generate_model()
 
             # Update active model's active region nodes
-            statistical_model = model_inversion.update_active_regions(statistical_model, methods=["e_values", "LSA"],
+            statistical_model = model_inversion.update_active_regions(statistical_model, methods=["E", "LSA"],
                                                                       e_values=lsa_hypothesis.e_values,
                                                                       lsa_propagation_strength=
                                                                       lsa_hypothesis.lsa_propagation_strengths,
-                                                                      active_regions_th=0.2, reset=True)
+                                                                      active_regions_th=0.1, reset=True)
             plotter.plot_statistical_model(statistical_model, "Statistical Model")
+            print(statistical_model)
 
             # Now set data:
             if os.path.isfile(empirical_file):
@@ -151,7 +152,6 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
             #                                            time=time, sensors=head.get_sensors(), gain_matrix=None)
             # writer.write_dictionary(model_data, os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5"))
 
-            print(statistical_model)
             # Interface with INS stan models
             if stan_model_name.find("vep-fe-rev") >= 0:
                 model_data= build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inversion,
@@ -160,7 +160,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
             else:
                 k_str = 'K'
 
-            writer.write_generic(statistical_model, os.path.join(config.out.FOLDER_RES, hyp.name+"_stats_model.h5"))
+            writer.write_generic(statistical_model, config.out.FOLDER_RES, hyp.name+"_stats_model.h5")
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         num_warmup = 20

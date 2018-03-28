@@ -105,27 +105,28 @@ def build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inv
             statistical_model.parameters[p_new_name] = statistical_model.parameters[p_old_name]
         except:
             warning("Parameter " + p_old_name + " not found in statistical model\n" + str(statistical_model))
-    vep_data = {"nn": statistical_model.number_of_regions,
+    vep_data = {"nn": statistical_model.number_of_active_regions,
                 "nt": statistical_model.time_length,
                 "ns": statistical_model.number_of_signals,
                 "dt": statistical_model.dt,
                 "I1": statistical_model.model_config.Iext1,
-                "x0_star_mu": statistical_model.parameters["x0"].star_mean,
-                "x0_star_std": statistical_model.parameters["x0"].star_std,
+                "x0_star_mu": statistical_model.parameters["x0"].star_mean[active_regions],
+                "x0_star_std": statistical_model.parameters["x0"].star_std[active_regions],
                 "x0_lo": statistical_model.parameters["x0"].low,
                 "x0_hi": statistical_model.parameters["x0"].high,
-                "x_init_mu": statistical_model.parameters["x1init"].mean,
-                "z_init_mu": statistical_model.parameters["zinit"].mean,
+                "x_init_mu": statistical_model.parameters["x_init"].mean[active_regions],
+                "x_init_std": np.mean(statistical_model.parameters["x_init"].std),
+                "z_init_mu": statistical_model.parameters["z_init"].mean[active_regions],
+                "z_init_std": np.mean(statistical_model.parameters["z_init"].std),
                 "x_eq_def": statistical_model.model_config.x1eq[nonactive_regions].mean(),
-                "init_std": np.mean(statistical_model.parameters["x1init"].std),
                 "tau0": 10.0,  # statistical_model.parameters["tau0"].mean,
                 # "K_lo": statistical_model.parameters["k"].low,
                 # "K_u": statistical_model.parameters["k"].mode,
                 # "K_v": statistical_model.parameters["k"].var,
                 "time_scale_mu": statistical_model.parameters["time_scale"].mean,
                 "time_scale_std": statistical_model.parameters["time_scale"].std,
-                "k_mu": statistical_model.parameters["k"].mean,
-                "k_std": statistical_model.parameters["k"].std,
+                "k_mu": np.mean(statistical_model.parameters["k"].mean),
+                "k_std": np.mean(statistical_model.parameters["k"].std),
                 "SC": SC[active_regions][:, active_regions],
                 "SC_var": 5.0,  # 1/36 = 0.02777777,
                 "Ic": np.sum(SC[active_regions][:, nonactive_regions], axis=1),
@@ -141,7 +142,7 @@ def build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inv
                 "offset_std": statistical_model.parameters["offset"].std,
                 "seeg_log_power": signals,
                 # 9.0 * model_data["signals"] - 4.0,  # scale from (0, 1) to (-4, 5)
-                "gain": set_mixing(statistical_model, model_inversion, sensors, gain_matrix),
+                "gain": set_mixing(statistical_model, model_inversion, sensors, gain_matrix)[active_regions],
                 "time": set_time(statistical_model, time)
                 }
     return vep_data
