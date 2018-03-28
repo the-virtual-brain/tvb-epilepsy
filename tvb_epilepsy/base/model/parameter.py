@@ -29,9 +29,8 @@ class Parameter(object):
         return self.__p_shape
 
     def _repr(self,  d=OrderedDict()):
-        nKeys = len(d)
         for ikey, key in enumerate(["name", "low", "high", "p_shape"]):
-            d.update({str(nKeys + ikey) + ". " + key: getattr(self, key)})
+            d.update({key: getattr(self, key)})
         return d
 
     def __repr__(self,  d=OrderedDict()):

@@ -70,12 +70,11 @@ class ProbabilityDistribution(object):
         pass
 
     def _repr(self, d=OrderedDict()):
-        nKeys = len(d)
         for ikey, key in enumerate(["type",  "n_params", "shape", "mean", "median", "mode", "var", "std", "var", "kurt",
                                     "scipy_name", "numpy_name"]):
-            d.update({str(nKeys + ikey) + ". " + key: getattr(self, key)})
-        d.update({str(len(d)) + ". " + "pdf_params": str(self.pdf_params())})
-        d.update({str(len(d)+1) + ". " + "constraint": str(self.constraint())})
+            d.update({key: getattr(self, key)})
+        d.update({"pdf_params": str(self.pdf_params())})
+        d.update({"constraint": str(self.constraint())})
         return d
 
     def __repr__(self, d=OrderedDict()):

@@ -33,9 +33,8 @@ class StatisticalModel(object):
         self.model_config = model_config
 
     def _repr(self, d=OrderedDict()):
-        nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
-            d.update({str(nKeys+ikey) + ". " + key:  val})
+            d.update({key:  val})
         return d
 
     def __repr__(self, d=OrderedDict()):
@@ -117,8 +116,6 @@ class ODEStatisticalModel(StatisticalModel):
     def update_active_regions(self, active_regions):
         if np.all(np.in1d(active_regions, range(self.number_of_regions))):
             self.active_regions = np.unique(ensure_list(active_regions) + self.active_regions).tolist()
-            self.number_of_active_regions_regions = len(self.active_regions)
-            self.n_nonactive_regions = self.number_of_regions - self.number_of_active_regions_regions
         else:
             raise_value_error("Active regions indices:\n" + str(active_regions) +
                               "\nbeyond number of regions (" + str(self.number_of_regions) + ")!")

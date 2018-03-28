@@ -25,9 +25,8 @@ class ModelInversionService(object):
         self.logger.info("Model Inversion Service instance created!")
 
     def _repr(self, d=OrderedDict()):
-        nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
-            d.update({str(nKeys+ikey) + ". " + key:  val})
+            d.update({key:  val})
         return d
 
     def __repr__(self, d=OrderedDict()):
