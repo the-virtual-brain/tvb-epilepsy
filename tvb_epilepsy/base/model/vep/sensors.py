@@ -8,7 +8,7 @@ from tvb_epilepsy.base.computations.math_utils import compute_gain_matrix
 
 
 # SDE model inversion constants
-class SENSORS_TYPES(Enum):
+class SensorTypes(Enum):
     TYPE_EEG = 'EEG'
     TYPE_MEG = "MEG"
     TYPE_SEEG = "SEEG"
@@ -22,9 +22,9 @@ class SensorsH5Field(object):
 
 
 class Sensors(object):
-    TYPE_EEG = SENSORS_TYPES.TYPE_EEG
-    TYPE_MEG = SENSORS_TYPES.TYPE_MEG
-    TYPE_SEEG = SENSORS_TYPES.TYPE_SEEG
+    TYPE_EEG = SensorTypes.TYPE_EEG.value
+    TYPE_MEG = SensorTypes.TYPE_MEG.value
+    TYPE_SEEG = SensorTypes.TYPE_SEEG.value
 
     labels = np.array([])
     locations = np.array([])

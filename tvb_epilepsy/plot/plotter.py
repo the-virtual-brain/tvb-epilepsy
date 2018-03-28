@@ -11,7 +11,7 @@ from matplotlib import pyplot, gridspec
 from matplotlib.colors import Normalize
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.plot.base_plotter import BasePlotter
-from tvb_epilepsy.base.model.vep.sensors import Sensors
+from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorTypes
 from tvb_epilepsy.base.computations.math_utils import compute_in_degree
 from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
 from tvb_epilepsy.base.epileptor_models import EpileptorDP2D, EpileptorDPrealistic
@@ -107,8 +107,8 @@ class Plotter(BasePlotter):
         self._plot_connectivity(head.connectivity)
         self._plot_connectivity_stats(head.connectivity)
         count = 1
-        for s_type in Sensors.SENSORS_TYPES:
-            sensors = getattr(head, "sensors" + s_type)
+        for s_type in SensorTypes:
+            sensors = getattr(head, "sensors" + s_type.value)
             if isinstance(sensors, (list, Sensors)):
                 sensors_list = ensure_list(sensors)
                 if len(sensors_list) > 0:

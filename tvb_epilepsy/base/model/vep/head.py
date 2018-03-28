@@ -3,7 +3,7 @@
 import numpy as np
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list
-from tvb_epilepsy.base.model.vep.sensors import Sensors, SENSORS_TYPES
+from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorTypes
 
 
 class Head(object):
@@ -21,8 +21,8 @@ class Head(object):
         self.sensorsSEEG = []
         self.sensorsEEG = []
         self.sensorsMEG = []
-        for s_type in SENSORS_TYPES:
-            self.set_sensors(kwargs.get("sensors" + s_type.value), s_type=s_type)
+        for s_type in SensorTypes:
+            self.set_sensors(kwargs.get("sensors" + s_type.value), s_type=s_type.value)
         if len(name) == 0:
             self.name = 'Head' + str(self.number_of_regions)
         else:
@@ -51,10 +51,10 @@ class Head(object):
         return self.__repr__()
 
     def get_sensors(self, s_type=Sensors.TYPE_SEEG):
-        if np.in1d(s_type, [stype for stype in SENSORS_TYPES]):
-            return getattr(self, "sensors" + s_type.value)
+        if np.in1d(s_type, [stype.value for stype in SensorTypes]):
+            return getattr(self, "sensors" + s_type)
         else:
-            raise_value_error("Invalid input sensor type " + str(s_type.value))
+            raise_value_error("Invalid input sensor type " + str(s_type))
 
     def set_sensors(self, input_sensors, s_type=Sensors.TYPE_SEEG, reset=False):
         if input_sensors is None:
@@ -76,9 +76,9 @@ class Head(object):
                     raise_value_error("Input sensors:\n" + str(s) +
                                       "\nis not a valid Sensors object of type " + str(s_type.value) + "!")
         if len(sensors) == 0:
-            setattr(self, "sensors" + s_type.value, [])
+            setattr(self, "sensors" + s_type, [])
         else:
-            setattr(self, "sensors" + s_type.value, sensors)
+            setattr(self, "sensors" + s_type, sensors)
 
     def get_sensors_id(self, s_type=Sensors.TYPE_SEEG, sensor_ids=0):
         sensors = self.get_sensors(s_type)
