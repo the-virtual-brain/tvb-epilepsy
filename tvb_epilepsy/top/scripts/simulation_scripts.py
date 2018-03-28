@@ -50,7 +50,7 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
         for sensor in sensors_list:
             if isinstance(sensor, Sensors):
                 idx_proj += 1
-                sensor_name = sensor.s_type.value + '%d' % idx_proj
+                sensor_name = sensor.s_type + '%d' % idx_proj
                 vois_ts_dict[sensor_name] = vois_ts_dict['lfp'].dot(sensor.gain_matrix.T)
                 if hpf_flag:
                     for i in range(vois_ts_dict[sensor_name].shape[1]):
@@ -65,7 +65,7 @@ def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt,
         # Write files:
         if idx_proj > -1:
             for i_sensor, sensor in enumerate(sensors_list):
-                h5_writer.write_ts_seeg_epi(vois_ts_dict[sensor.s_type.value + '%d' % i_sensor], dt,
+                h5_writer.write_ts_seeg_epi(vois_ts_dict[sensor.s_type + '%d' % i_sensor], dt,
                                             os.path.join(folder, filename))
     return vois_ts_dict
 
