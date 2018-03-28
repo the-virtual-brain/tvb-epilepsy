@@ -197,7 +197,7 @@ class BasePlotter(object):
         n_subplots = len(data_dict_list)
         if not width_ratios:
             width_ratios = numpy.ones((n_subplots,)).tolist()
-        matplotlib.gridspec.GridSpec(1, n_subplots, width_ratios)
+        matplotlib.gridspec.GridSpec(1, n_subplots, width_ratios=width_ratios)
         if 10 > n_subplots > 0:
             subplot_ind0 = 100 + 10 * n_subplots
         else:
