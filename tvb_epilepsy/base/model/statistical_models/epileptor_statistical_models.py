@@ -32,14 +32,17 @@ class StatisticalModel(object):
         self.parameters = parameters
         self.model_config = model_config
 
-    def __repr__(self, d=OrderedDict()):
+    def _repr(self, d=OrderedDict()):
         nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
             d.update({str(nKeys+ikey) + ". " + key:  str(val)})
         return d
 
+    def __repr__(self, d=OrderedDict()):
+        return formal_repr(self, self._repr(d))
+
     def __str__(self):
-        return formal_repr(self, self.__repr__())
+        return self.__repr__()
 
     def get_parameter(self, parameter_name):
         parameter = self.parameters.get(parameter_name, None)
@@ -111,16 +114,12 @@ class ODEStatisticalModel(StatisticalModel):
         self.time_length = time_length
         self.dt = dt
 
-    def __repr__(self):
-        d = OrderedDict()
-        d.update(super(ODEStatisticalModel, self).__repr__())
+    def _repr(self, d=OrderedDict()):
+        d.update(super(ODEStatisticalModel, self)._repr(d))
         nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
             d.update({str(nKeys+ikey) + ". " + key: str(val)})
         return d
-
-    def __str__(self):
-        return formal_repr(self, self.__repr__())
 
     def update_active_regions(self, active_regions):
         if np.all(np.in1d(active_regions, range(self.number_of_regions))):
@@ -148,13 +147,9 @@ class SDEStatisticalModel(ODEStatisticalModel):
         self.sde_mode = sde_mode
         self.sigma = sigma
 
-    def __repr__(self):
-        d = OrderedDict()
-        d.update(super(SDEStatisticalModel, self).__repr__())
+    def _repr(self, d=OrderedDict()):
+        d.update(super(SDEStatisticalModel, self)._repr(d))
         nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
             d.update({str(nKeys+ikey) + ". " + key:  str(val)})
         return d
-
-    def __str__(self):
-        return formal_repr(self, self.__repr__())

@@ -28,11 +28,14 @@ class Parameter(object):
     def p_shape(self):
         return self.__p_shape
 
-    def __repr__(self,  d=OrderedDict()):
+    def _repr(self,  d=OrderedDict()):
         nKeys = len(d)
         for ikey, key in enumerate(["name", "low", "high", "p_shape"]):
-            d.update({str(nKeys+ikey) + ". " + key: str(getattr(self, key))})
+            d.update({str(nKeys + ikey) + ". " + key: str(getattr(self, key))})
         return d
 
+    def __repr__(self,  d=OrderedDict()):
+        return formal_repr(self, self._repr(d))
+
     def __str__(self):
-        return formal_repr(self, self.__repr__())
+        return self.__repr__()

@@ -142,7 +142,7 @@ class TransformedStochasticParameterBase(object):
             setattr(self.star, attr, value)
             return self
 
-    def __repr__(self,  d=OrderedDict()):
+    def _repr(self,  d=OrderedDict()):
         nKeys = len(d)
         for ikey, key in enumerate(TransformedStochasticParameterBaseAttributes[:-1]):
             d.update({str(nKeys+ikey) + ". " + key: str(getattr(self, key))})
@@ -152,8 +152,11 @@ class TransformedStochasticParameterBase(object):
         d.update({str(len(d)) + ". star parameter": str(self.star)})
         return d
 
+    def __repr__(self, d=OrderedDict()):
+        return formal_repr(self, self._repr())
+
     def __str__(self):
-        return formal_repr(self, self.__repr__())
+        return self.__repr__()
 
     @property
     @abstractmethod

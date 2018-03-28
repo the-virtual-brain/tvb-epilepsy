@@ -49,13 +49,16 @@ class StatisticalModelBuilderBase(object):
     def number_of_regions(self):
         return self.model_config.number_of_regions
 
-    def __repr__(self, d=OrderedDict()):
+    def _repr(self, d=OrderedDict()):
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
             d.update({str(ikey) + ". " + key: str(val)})
         return d
 
+    def __repr__(self, d=OrderedDict()):
+        return formal_repr(self, self._repr(d))
+
     def __str__(self):
-        return formal_repr(self, self.__repr__())
+        return self.__repr__()
 
     def set_attributes(self, attributes_names, attribute_values):
         for attribute_name, attribute_value in zip(ensure_list(attributes_names), ensure_list(attribute_values)):
@@ -94,8 +97,8 @@ class StatisticalModelBuilder(StatisticalModelBuilderBase):
         self.sigma_x_scale = sigma_x_scale
         self.MC_direction_split = MC_direction_split
 
-    def __repr__(self, d=OrderedDict()):
-        d.update(super(StatisticalModelBuilder, self).__repr__(d))
+    def _repr(self, d=OrderedDict()):
+        d.update(super(StatisticalModelBuilder, self)._repr(d))
         nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
             d.update({str(nKeys+ikey) + ". " + key: str(val)})
@@ -229,8 +232,8 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
         self.dt = dt
         self.active_regions = active_regions
 
-    def __repr__(self, d=OrderedDict()):
-        d.update(super(ODEStatisticalModelBuilder, self).__repr__(d))
+    def _repr(self, d=OrderedDict()):
+        d.update(super(ODEStatisticalModelBuilder, self)._repr(d))
         nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
             d.update({str(nKeys+ikey) + ". " + key: str(val)})
@@ -331,8 +334,8 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
         self.sde_mode = sde_mode
         self.sigma = sigma
 
-    def __repr__(self, d=OrderedDict()):
-        d.update(super(SDEStatisticalModelBuilder, self).__repr__(d))
+    def _repr(self, d=OrderedDict()):
+        d.update(super(SDEStatisticalModelBuilder, self)._repr(d))
         nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
             d.update({str(nKeys+ikey) + ". " + key: str(val)})

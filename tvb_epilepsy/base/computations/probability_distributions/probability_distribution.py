@@ -69,7 +69,7 @@ class ProbabilityDistribution(object):
     def __init__(self):
         pass
 
-    def __repr(self, d=OrderedDict()):
+    def _repr(self, d=OrderedDict()):
         nKeys = len(d)
         for ikey, key in enumerate(["type",  "n_params", "shape", "mean", "median", "mode", "var", "std", "var", "kurt",
                                     "scipy_name", "numpy_name"]):
@@ -79,10 +79,10 @@ class ProbabilityDistribution(object):
         return d
 
     def __repr__(self, d=OrderedDict()):
-        return self.__repr(self, d)
+        return formal_repr(self, self._repr())
 
     def __str__(self):
-        return formal_repr(self, self.__repr())
+        return self.__repr__()
 
     def __update_params__(self, loc=0.0, scale=1.0, use="scipy", check_constraint=True, **params):
         if len(params) == 0:

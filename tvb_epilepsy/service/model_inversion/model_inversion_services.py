@@ -1,8 +1,10 @@
+from collections import OrderedDict
 
 import numpy as np
 from tvb_epilepsy.base.constants.model_inversion_constants import *
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, sort_dict, assert_arrays, extract_dict_stringkeys
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list, sort_dict, assert_arrays, \
+                                                                                                extract_dict_stringkeys
 from tvb_epilepsy.base.computations.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.epileptor_models import *
 from tvb_epilepsy.service.head_service import HeadService
@@ -21,6 +23,18 @@ class ModelInversionService(object):
         self.number_of_regions =number_of_regions
         self.target_data_type = kwargs.get("target_data_type", "")
         self.logger.info("Model Inversion Service instance created!")
+
+    def _repr(self, d=OrderedDict()):
+        nKeys = len(d)
+        for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
+            d.update({str(nKeys+ikey) + ". " + key:  str(val)})
+        return d
+
+    def __repr__(self, d=OrderedDict()):
+        return formal_repr(self, self._repr(d))
+
+    def __str__(self):
+        return self.__repr__()
 
     def update_active_regions_e_values(self, stats_model, e_values, active_regions_th=0.1, reset=False):
         if reset:
@@ -73,6 +87,13 @@ class ODEModelInversionService(ModelInversionService):
     def __init__(self, number_of_regions, **kwargs):
         super(ODEModelInversionService, self).__init__(number_of_regions, **kwargs)
         self.signals_inds = range(self.number_of_regions)
+
+    def _repr(self, d=OrderedDict()):
+        d.update(super(ODEModelInversionService, self)._repr(d))
+        nKeys = len(d)
+        for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
+            d.update({str(nKeys + ikey) + ". " + key: str(val)})
+        return d
 
     def update_active_regions_seeg(self, stats_model, gain_matrix, active_regions_th=None, seeg_inds=[], reset=False):
         if reset:
@@ -256,3 +277,10 @@ class SDEModelInversionService(ODEModelInversionService):
 
     def __init__(self, number_of_regions, **kwargs):
         super(SDEModelInversionService, self).__init__(number_of_regions, **kwargs)
+
+    def _repr(self, d=OrderedDict()):
+        d.update(super(SDEModelInversionService, self)._repr(d))
+        nKeys = len(d)
+        for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
+            d.update({str(nKeys + ikey) + ". " + key: str(val)})
+        return d

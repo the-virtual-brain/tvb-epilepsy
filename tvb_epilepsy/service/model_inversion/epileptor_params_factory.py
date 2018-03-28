@@ -42,9 +42,9 @@ def generate_negative_lognormal_parameter(name, mean, low, high, sigma=None, sig
                 super(NegativeLognormal, self).__setattr__(attr, value)
                 return self
 
-        def __repr__(self):
-            d = OrderedDict({"0. max": str(self.max)})
-            d.update(super(NegativeLognormal, self).__repr__(d))
+        def _repr(self, d = OrderedDict()):
+            d.update({"0. max": str(self.max)})
+            d.update(super(NegativeLognormal, self)._repr(d))
             return d
 
         @property
