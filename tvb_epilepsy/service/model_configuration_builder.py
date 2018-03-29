@@ -80,6 +80,8 @@ class ModelConfigurationBuilder(object):
         return self.__repr__()
 
     def build_model_from_model_config_dict(self, model_config_dict):
+        if not isinstance(model_config_dict, dict):
+            model_config_dict = model_config_dict.__dict__
         model_configuration = ModelConfiguration()
         for attr, value in model_configuration.__dict__.iteritems():
             value = model_config_dict.get(attr, None)

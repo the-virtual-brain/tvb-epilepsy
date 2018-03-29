@@ -69,20 +69,21 @@ class StatisticalModelBuilderBase(object):
             setattr(self, attribute_name, attribute_value)
         return self
 
-    def _set_attributes_from_dict(self, attributes_dict, attributes):
-        if not isinstance(attributes_dict, (dict, DictDot, OrderedDictDot)):
+    def _set_attributes_from_dict(self, attributes_dict):
+        if not isinstance(attributes_dict, dict):
             attributes_dict = attributes_dict.__dict__
-        for attr in attributes:
-            value = attributes_dict.get(attr, None)
-            if value is None:
-                warning(attr + " not found in input dictionary!" +
-                        "\nLeaving as it is: " + attr + " = " + str(getattr(self, attr)))
-            if value is not None:
-                setattr(self, attr, value)
-        return self
+        for attr, value in attributes_dict.iteritems():
+            if not attr in ["model_config", "parameters", "number_of_regions", "number_of_parameters"]:
+                value = attributes_dict.get(attr, None)
+                if value is None:
+                    warning(attr + " not found in input dictionary!" +
+                            "\nLeaving as it is: " + attr + " = " + str(getattr(self, attr)))
+                if value is not None:
+                    setattr(self, attr, value)
+        return attributes_dict
 
     def initialize_from_statistical_model_dict(self, statistical_model):
-        self._set_attributes_from_dict(statistical_model, ["name", "xmode"])
+        statistical_model = self._set_attributes_from_dict(statistical_model)
         model_config_dict = statistical_model.get("model_config", None)
         if model_config_dict is None:
             warning("Model configuration not found in statistical model read from file!" +
@@ -130,11 +131,6 @@ class StatisticalModelBuilder(StatisticalModelBuilderBase):
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
             d.update({str(nKeys+ikey) + ". " + key: str(val)})
         return d
-
-    def initialize_from_statistical_model_dict(self, statistical_model):
-        super(StatisticalModelBuilder, self).initialize_from_statistical_model_dict(statistical_model)
-        self._set_attributes_from_dict(statistical_model, ["sigma_x", "MC_direction_split"])
-        return self
 
     def get_SC(self, model_connectivity):
         # Set symmetric connectivity to be in the interval [MC_MAX / MAX_MIN_RATIO, MC_MAX],
@@ -271,13 +267,6 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
             d.update({str(nKeys+ikey) + ". " + key: str(val)})
         return d
 
-    def initialize_from_statistical_model_dict(self, statistical_model):
-        super(ODEStatisticalModelBuilder, self).initialize_from_statistical_model_dict(statistical_model)
-        self._set_attributes_from_dict(statistical_model,
-                                       ["observation_model", "sigma_init", "scale", "offset", "epsilon",
-                                        "number_of_signals", "time_length", "dt", "active_regions"])
-        return self
-
     def generate_parameters(self):
         parameters = super(ODEStatisticalModelBuilder, self).generate_parameters()
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
@@ -378,11 +367,6 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
             d.update({str(nKeys+ikey) + ". " + key: str(val)})
         return d
-
-    def initialize_from_statistical_model_dict(self, statistical_model, **kwargs):
-        super(SDEStatisticalModelBuilder, self).initialize_from_statistical_model_dict(statistical_model)
-        self._set_attributes_from_dict(statistical_model, ["sigma", "sde_mode"])
-        return self
 
     def generate_parameters(self):
         parameters = super(SDEStatisticalModelBuilder, self).generate_parameters()
