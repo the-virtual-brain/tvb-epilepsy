@@ -154,9 +154,6 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
             if stan_model_name.find("vep-fe-rev") >= 0:
                 model_data= build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inversion,
                                                                    time=time, sensors=sensors, gain_matrix=None)
-                k_str = 'k'
-            else:
-                k_str = 'K'
 
             writer.write_generic(statistical_model, config.out.FOLDER_RES, hyp.name+"_StatsModel.h5")
             writer.write_dictionary(model_data, os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5"))
@@ -192,6 +189,10 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
 
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
         for id_est, est in enumerate(ensure_list(ests)):
+            if stan_model_name.find("vep-fe-rev") >= 0:
+                k_str = 'k'
+            else:
+                k_str = 'K'
             fit_model_configuration_builder = \
                 ModelConfigurationBuilder(hyp.number_of_regions, K=est[k_str] * hyp.number_of_regions)
             x0_values_fit = model_configuration.x0_values
@@ -213,7 +214,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
 
             # Plot nullclines and equilibria of model configuration
             plotter.plot_state_space(model_configuration_fit,
-                                     region_labels=model_inversion.region_labels,
+                                     region_labels=head.connectivity.region_labels,
                                      special_idx=statistical_model.active_regions,
                                      model="6d", zmode="lin",
                                      figure_name=hyp_fit.name + "_Nullclines and equilibria")
