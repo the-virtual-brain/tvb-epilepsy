@@ -134,10 +134,10 @@ class HypothesisBuilder(object):
 
     def set_attributes_based_on_hypothesis(self, disease_hypothesis):
         self.set_nr_of_regions(disease_hypothesis.number_of_regions). \
-                set_e_hypothesis(disease_hypothesis.e_indices, disease_hypothesis.e_values). \
-                    set_x0_hypothesis(disease_hypothesis.x0_indices, disease_hypothesis.x0_values). \
-                        set_w_hypothesis(disease_hypothesis.w_indices, disease_hypothesis.w_values). \
-                            set_name("LSA_" + disease_hypothesis.name)
+                set_name(disease_hypothesis.name). \
+                    set_e_hypothesis(disease_hypothesis.e_indices, disease_hypothesis.e_values). \
+                        set_x0_hypothesis(disease_hypothesis.x0_indices, disease_hypothesis.x0_values). \
+                            set_w_hypothesis(disease_hypothesis.w_indices, disease_hypothesis.w_values)
         return self
 
     def build_lsa_hypothesis(self):

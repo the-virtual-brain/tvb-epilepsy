@@ -70,29 +70,28 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
                                         config=Config(), **kwargs):
     logger.info("\n\nRunning hypothesis: " + hyp.name)
     logger.info("\n\nCreating model configuration...")
+    save_flag = kwargs.pop("save_flag", config.figures.SAVE_FLAG)
+    plot_flag = kwargs.pop("plot_flag", config.figures.SHOW_FLAG)
     builder = ModelConfigurationBuilder(hyp.number_of_regions, **kwargs)
     if hyp.type == "Epileptogenicity":
         model_configuration = builder.build_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
     else:
         model_configuration = builder.build_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
-    writer = H5Writer()
-    if config.figures.SAVE_FLAG:
-        path_mc = os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelConfig.h5")
-        writer.write_model_configuration(model_configuration, path_mc)
-    # Plot nullclines and equilibria of model configuration
-    plotter = Plotter(config)
-    if config.figures.SHOW_FLAG:
-        plotter.plot_state_space(model_configuration, head.connectivity.region_labels,
-                                 special_idx=hyp.get_regions_disease(), model="6d", zmode="lin",
-                                 figure_name=hyp.name + "_StateSpace")
-
     logger.info("\n\nRunning LSA...")
     lsa_service = LSAService(eigen_vectors_number=eigen_vectors_number,
                              weighted_eigenvector_sum=weighted_eigenvector_sum)
     lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
-    if config.figures.SAVE_FLAG:
-        writer.write_hypothesis(lsa_hypothesis, os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_LSA.h5"))
-    if config.figures.SHOW_FLAG:
+    if save_flag:
+        writer = H5Writer()
+        path_mc = os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelConfig.h5")
+        writer.write_model_configuration(model_configuration, path_mc)
+        writer.write_hypothesis(lsa_hypothesis, os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + ".h5"))
+    if plot_flag:
+        plotter = Plotter(config)
+        # Plot nullclines and equilibria of model configuration
+        plotter.plot_state_space(model_configuration, "6d", head.connectivity.region_labels,
+                                 special_idx=hyp.get_regions_disease_indices(), zmode="lin",
+                                 figure_name=hyp.name + "_StateSpace")
         plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
                          lsa_service.eigen_vectors_number, head.connectivity.region_labels, None)
     return model_configuration, lsa_hypothesis, builder, lsa_service

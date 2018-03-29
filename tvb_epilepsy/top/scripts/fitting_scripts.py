@@ -12,7 +12,7 @@ from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration
 from tvb_epilepsy.top.scripts.fitting_data_scripts import prepare_seeg_observable_from_mne_file
 
 
-def set_model_config_LSA(head, hyp, reader, writer, plotter, config, K_unscaled=K_DEF):
+def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF):
     # --------------------------Model configuration and LSA-----------------------------------
     model_config_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelConfig.h5")
     hyp_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_LSA.h5")
@@ -24,15 +24,7 @@ def set_model_config_LSA(head, hyp, reader, writer, plotter, config, K_unscaled=
         # ...or generate new ones
         model_configuration, lsa_hypothesis, model_configuration_builder, lsa_service = \
             from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
-                                                config=config, K=K_unscaled)
-        writer.write_model_configuration(model_configuration, model_config_file)
-        writer.write_hypothesis(lsa_hypothesis, hyp_file)
-        plotter.plot_state_space(model_configuration, "6d", head.connectivity.region_labels,
-                                 special_idx=hyp.get_regions_disease_indices(), zmode="lin",
-                                 figure_name=hyp.name + "_StateSpace")
-        plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
-                         lsa_service.eigen_vectors_number, head.connectivity.region_labels, None)
-
+                                                config=config, K=K_unscaled, save_flag=True, plot_flag=True)
     return model_configuration, lsa_hypothesis
 
 

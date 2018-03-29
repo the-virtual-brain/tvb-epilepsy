@@ -138,9 +138,10 @@ class LSAService(object):
         propagation_strength_elbow = self.get_curve_elbow_point(lsa_propagation_strength)
         propagation_indices = lsa_propagation_strength.argsort()[-propagation_strength_elbow:]
 
-        hypothesis_builder = HypothesisBuilder(disease_hypothesis.number_of_regions).\
+        hypothesis_builder = HypothesisBuilder(disease_hypothesis.number_of_regions). \
                                 set_attributes_based_on_hypothesis(disease_hypothesis). \
-                                    set_lsa_propagation(propagation_indices, lsa_propagation_strength)
+                                    set_name(disease_hypothesis.name + "_LSA"). \
+                                        set_lsa_propagation(propagation_indices, lsa_propagation_strength)
 
         return hypothesis_builder.build_lsa_hypothesis()
 
