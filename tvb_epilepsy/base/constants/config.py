@@ -47,9 +47,18 @@ class InputConfig(object):
         """Identify and choose the Input data type to use"""
         return self._data_mode == GenericConfig.MODE_TVB
 
-    def __init__(self, head_folder=None, data_mode=GenericConfig.MODE_JAVA):
+    @property
+    def RAW_DATA_FOLDER(self):
+        if self._raw_data is not None:
+            return self._raw_data
+
+        # Expecting to run in the top of tvb_epilepsy GIT repo, with the dummy head
+        return os.path.join(self._base_input, "data", "raw")
+
+    def __init__(self, head_folder=None, data_mode=GenericConfig.MODE_JAVA, raw_folder=None):
         self._head_folder = head_folder
         self._data_mode = data_mode
+        self._raw_data = raw_folder
 
 
 class OutputConfig(object):
@@ -148,7 +157,8 @@ class Config(object):
     simulator = SimulatorConfig()
 
     def __init__(self, head_folder=None, data_mode=GenericConfig.MODE_JAVA,
+                 raw_data_folder=None,
                  output_base=None, separate_by_run=False):
-        self.input = InputConfig(head_folder, data_mode)
+        self.input = InputConfig(head_folder, data_mode, raw_data_folder)
         self.out = OutputConfig(output_base, separate_by_run)
         self.hypothesis = HypothesisConfig(head_folder)

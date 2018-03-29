@@ -10,7 +10,7 @@ from copy import deepcopy
 import numpy as np
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, dicts_of_lists_to_lists_of_dicts, ensure_list, \
-                                                          generate_region_labels
+    generate_region_labels
 
 logger = initialize_logger(__name__)
 
@@ -121,8 +121,9 @@ class DiseaseHypothesis(object):
         # In case we need values for all regions, we can use this and have ones where values are not defined
         connectivity_shape = (self.number_of_regions, self.number_of_regions)
         connectivity_disease = np.ones(connectivity_shape)
-        indices = self.w_indices
-        connectivity_disease[indices] = self.w_values
+        if len(self.w_indices) > 0 and self.w_values.size > 0:
+            indices = self.w_indices
+            connectivity_disease[indices] = self.w_values
         return connectivity_disease
 
     # Do we really need those two?:
@@ -131,6 +132,12 @@ class DiseaseHypothesis(object):
 
     def get_x0_values_for_all_regions(self):
         return self.get_regions_disease()[self.x0_indices]
+
+    def get_disease_propagation_strengths(self):
+        return self.lsa_propagation_strengths[self.lsa_propagation_indices]
+
+    def get_disease_propagation(self):
+        return self.lsa_propagation_indices, self.get_disease_propagation_strengths()
 
     def update(self, name=""):
         self.type = []
@@ -200,23 +207,38 @@ class DiseaseHypothesis(object):
             disease_string += region_labels[w_ind[0]] + " -> " + region_labels[w_ind[1]] + ": " + str(w_val) + "\n"
         return disease_string[:-1]
 
-def shorten_values(hyp):
-    for val_name in ["e", "x0", "w"]:
-        vals = getattr(hyp, val_name + "_values").flatten()
-        inds = getattr(hyp, val_name + "_indices")
-        setattr(hyp, val_name + "_values", vals[inds])
-    return hyp
+    def prepare_hypothesis_for_h5(self):
+        e_values = np.zeros(self.number_of_regions)
+        x0_values = np.zeros(self.number_of_regions)
+        propagation_values = np.zeros(self.number_of_regions)
+        w_values = self.get_connectivity_disease()
 
+        if len(self.e_indices) > 0 and self.e_values.size > 0:
+            e_values[self.e_indices] = self.e_values
 
-def lengthen_values(hyp):
-    out_hyp = deepcopy(hyp)
-    for val_name, shape in zip(["e", "x0", "w"],
-                               [(hyp.number_of_regions,), (hyp.number_of_regions,),
-                                (hyp.number_of_regions, hyp.number_of_regions)]):
-        if val_name == "w":
-            values = hyp.get_connectivity_disease()
+        if len(self.x0_indices) > 0 and self.x0_values.size > 0:
+            x0_values[self.x0_indices] = self.x0_values
+
+        if len(self.lsa_propagation_indices) > 0 and self.lsa_propagation_strengths.size > 0:
+            if self.lsa_propagation_strengths.size == propagation_values.size:
+                propagation_values = self.lsa_propagation_strengths
+            else:
+                propagation_values[self.lsa_propagation_indices] = self.lsa_propagation_strengths
+
+        hypo = deepcopy(self)
+        hypo.e_values = e_values
+        hypo.x0_values = x0_values
+        hypo.w_values = w_values
+        hypo.lsa_propagation_strengths = propagation_values
+
+        return hypo
+
+    def simplify_hypothesis_from_h5(self):
+        self.e_values = self.e_values[self.e_indices]
+        self.x0_values = self.x0_values[self.x0_indices]
+        self.lsa_propagation_strengths = self.lsa_propagation_strengths[list(self.lsa_propagation_indices)]
+        if (self.w_values == 1).all():
+            self.w_values = []
+            self.w_indices = []
         else:
-            values = np.zeros(shape)
-            values[getattr(hyp, val_name + "_indices")] = getattr(hyp, val_name + "_values")
-        setattr(out_hyp, val_name + "_values", values)
-    return out_hyp
+            self.w_values = self.w_values[self.w_indices]

@@ -1,7 +1,7 @@
 import os
 import numpy
 import h5py
-from tvb_epilepsy.base.types import OrderedDictDot, DictDot
+from tvb_epilepsy.base.datatypes.dot_dicts import OrderedDictDot, DictDot
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity, ConnectivityH5Field
@@ -88,11 +88,11 @@ class H5Reader(object):
                 continue
 
             type = str_head_file[len(self.sensors_filename_prefix):str_head_file.index(self.sensors_filename_separator)]
-            if type == Sensors.TYPE_SEEG:
+            if type.upper() == Sensors.TYPE_SEEG:
                 sensors_seeg.append(self.read_sensors_of_type(os.path.join(path, head_file), Sensors.TYPE_SEEG))
-            if type == Sensors.TYPE_EEG:
+            if type.upper() == Sensors.TYPE_EEG:
                 sensors_eeg.append(self.read_sensors_of_type(os.path.join(path, head_file), Sensors.TYPE_EEG))
-            if type == Sensors.TYPE_MEG:
+            if type.upper() == Sensors.TYPE_MEG:
                 sensors_meg.append(self.read_sensors_of_type(os.path.join(path, head_file), Sensors.TYPE_MEG))
 
         self.logger.info("Successfuly read all sensors from: %s" % path)
@@ -245,7 +245,7 @@ class H5Reader(object):
 
         return time, data
 
-    def read_hypothesis(self, path):
+    def read_hypothesis(self, path, simplify=True):
         """
         :param path: Path towards a Hypothesis H5 file
         :return: DiseaseHypothesis object
@@ -267,6 +267,9 @@ class H5Reader(object):
                 hypothesis.set_attribute(attr, h5_file.attrs[attr])
 
         h5_file.close()
+        if simplify:
+            hypothesis.simplify_hypothesis_from_h5()
+
         return hypothesis
 
     def read_model_configuration(self, path):

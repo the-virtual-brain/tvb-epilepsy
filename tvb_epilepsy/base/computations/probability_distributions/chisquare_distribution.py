@@ -37,17 +37,18 @@ class ChisquareDistribution(ContinuousProbabilityDistribution):
         # By default expr >= 0
         return np.array(self.df).flatten() - np.finfo(np.float64).eps
 
-    def scipy(self, loc=0.0, scale=1.0):
+    def _scipy(self, loc=0.0, scale=1.0):
         return ss.chi(df=self.df, loc=loc, scale=scale)
 
-    def numpy(self, loc=0.0, scale=1.0, size=(1,)):
+    def _numpy(self, loc=0.0, scale=1.0, size=(1,)):
         return lambda: nr.chisquare(df=self.df, size=size) * scale + loc
 
     def calc_mean_manual(self, loc=0.0, scale=1.0):
         return self.df + make_int(np.around(loc))
 
     def calc_median_manual(self, loc=0.0, scale=1.0):
-        self.logger.warning("Approximate calculation for median of chisquare distribution!")
+        # TODO: find a way to mute this warning...
+        # self.logger.warning("Approximate calculation for median of chisquare distribution!")
         return self.df * (1 - 2.0 / (9 * self.df)) ** 3 + loc
 
     def calc_mode_manual(self, loc=0.0, scale=1.0):

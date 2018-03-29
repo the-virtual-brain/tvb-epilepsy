@@ -63,35 +63,33 @@ def set_parameter_defaults(name, _pdf="normal", _shape=(), _lo=CalculusConfig.MI
     return defaults
 
 
-def set_parameter(name, use="manual", **kwargs):
+def set_parameter(name, use="scipy", **kwargs):
     parameter = kwargs.pop(name, None)
-    # load parameter if it is a file
-    if not (isinstance(parameter, Parameter)):
-        defaults = {}
-        # Get all keyword arguments that correspond to that parameter name
-        defaults.update(extract_dict_stringkeys(kwargs, name + "_"))
-        # assign the mean value if parameter is numeric
-        if isinstance(parameter, (int, long, float)) or (isinstance(parameter, np.ndarray)
-                                                         and np.issubdtype(np.dtype, np.number)):
-            kwargs.update({"_".join([name, "def"]): parameter})
-        # Generate defaults and eventually the parameter:
-        defaults = set_parameter_defaults(name, pdf_params=defaults.pop("_".join([name, "pdf_params"]), {}),
-                                          remove_name=True, **defaults)
-        # If there is a dictionary of pdf parameters, there has to be optimization of the pdf shape as well
-        pdf_params = defaults.pop("pdf_params", {})
-        if len(pdf_params) > 0:
-            optimize_pdf = True
-        else:
-            optimize_pdf = False
-        # Generate the parameter with or without optimization of its shape:
-        parameter = generate_stochastic_parameter(name, probability_distribution=defaults.pop("pdf"),
-                                                  p_shape=defaults.pop("shape"),
-                                                  low=defaults.pop("lo"),
-                                                  high=defaults.pop("hi"),
-                                                  optimize_pdf=optimize_pdf, use=use, **pdf_params)
-        # Update parameter's loc and scale if necessary by moving and/or scaling it accordingly
-        if len(defaults) > 0:
-            parameter._update_loc_scale(use=use, **defaults)
+    # assign the mean value if parameter is numeric
+    if isinstance(parameter, (int, long, float)) or (isinstance(parameter, np.ndarray)
+                                                     and np.issubdtype(np.dtype, np.number)):
+        kwargs.update({"_".join([name, "def"]): parameter})
+    defaults = {}
+    # Get all keyword arguments that correspond to that parameter name
+    defaults.update(extract_dict_stringkeys(kwargs, name + "_"))
+    # Generate defaults and eventually the parameter:
+    defaults = set_parameter_defaults(name, pdf_params=defaults.pop("_".join([name, "pdf_params"]), {}),
+                                      remove_name=True, **defaults)
+    # If there is a dictionary of pdf parameters, there has to be optimization of the pdf shape as well
+    pdf_params = defaults.pop("pdf_params", {})
+    if len(pdf_params) > 0:
+        optimize_pdf = True
+    else:
+        optimize_pdf = False
+    # Generate the parameter with or without optimization of its shape:
+    parameter = generate_stochastic_parameter(name, probability_distribution=defaults.pop("pdf"),
+                                              p_shape=defaults.pop("shape"),
+                                              low=defaults.pop("lo"),
+                                              high=defaults.pop("hi"),
+                                              optimize_pdf=optimize_pdf, use=use, **pdf_params)
+    # Update parameter's loc and scale if necessary by moving and/or scaling it accordingly
+    if len(defaults) > 0:
+        parameter.update_loc_scale(use=use, **defaults)
     return parameter
 
 
@@ -123,14 +121,4 @@ def generate_stochastic_parameter(name="Parameter", low=-CalculusConfig.MAX_SING
                                   " with parameters " + str(target_params) + " !")
                 self._update_params(use=use)
 
-        def __str__(self):
-            return StochasticParameterBase.__str__(self) + "\n" \
-                   + "\n".join(thisProbabilityDistribution.__str__(self).splitlines()[1:])
-
-        def _scipy(self):
-            return self.scipy(self.loc, self.scale)
-
-        def _numpy(self, size=(1,)):
-            return self.numpy(self.loc, self.scale, size)
-
-    return StochasticParameter(name, low, high, loc, scale, p_shape, **target_params)
+    return StochasticParameter(name, low, high, loc, scale, p_shape, use, **target_params)

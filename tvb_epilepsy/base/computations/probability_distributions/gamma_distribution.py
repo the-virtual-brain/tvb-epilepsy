@@ -67,17 +67,18 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         return np.hstack([np.array(self.alpha).flatten() - np.finfo(np.float64).eps,
                           np.array(self.beta).flatten() - np.finfo(np.float64).eps])
 
-    def scipy(self, loc=0.0, scale=1.0):
+    def _scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(a=self.alpha, loc=loc, scale=self.theta * scale)
 
-    def numpy(self, loc=0.0, scale=1.0, size=(1,)):
+    def _numpy(self, loc=0.0, scale=1.0, size=(1,)):
         return lambda: nr.gamma(shape=self.alpha, scale=self.theta * scale, size=size) + loc
 
     def calc_mean_manual(self, loc=0.0, scale=1.0):
         return self.alpha * self.theta * scale + loc
 
     def calc_median_manual(self, loc=0.0, scale=1.0):
-        self.logger.warning("Gamma distribution does not have a simple closed form median! Returning nan!")
+        # TODO: find a way to mute this warning...
+        # self.logger.warning("Gamma distribution does not have a simple closed form median! Returning nan!")
         return np.nan
 
     def calc_mode_manual(self, loc=0.0, scale=1.0):
@@ -87,8 +88,8 @@ class GammaDistribution(ContinuousProbabilityDistribution):
         np_scale = scale * self.theta * i1
         id = shape >= 1.0
         if not (np.all(id)):
-            self.logger.warning("Mode cannot be calculated for gamma distribution when the shape parameter is smaller than 1.0! "
-                    "Returning nan!")
+            self.logger.warning("Mode cannot be calculated for gamma distribution "
+                                "when the shape parameter is smaller than 1.0! Returning nan!")
             mode = np.nan * np.ones((shape + np_scale).shape)
             id = np.where(id)[0]
             mode[id] = (shape[id] - 1.0) * np_scale[id]

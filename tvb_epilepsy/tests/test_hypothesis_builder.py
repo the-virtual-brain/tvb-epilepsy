@@ -43,7 +43,7 @@ class TestHypothesisBuilder(BaseTest):
         lsa_hypo = hypo_builder.set_attributes_based_on_hypothesis(hypo).set_lsa_propagation(
             [3, 4], [0.5, 1]).build_lsa_hypothesis()
 
-        assert lsa_hypo.name == "LSA_x0_Hypothesis"
+        assert lsa_hypo.name == "x0_Hypothesis"
         assert lsa_hypo.number_of_regions == 76
         assert len(lsa_hypo.x0_indices) == 2
         assert len(lsa_hypo.x0_values) == 2

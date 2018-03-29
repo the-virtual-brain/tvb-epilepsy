@@ -63,3 +63,8 @@ def raise_not_implemented_error(msg, logger=None):
     if logger is not None:
         logger.error("\n\nNotImplementedError: " + msg + "\n")
     raise NotImplementedError(msg)
+
+
+def warning(msg, logger=None):
+    if logger is not None:
+        logger.warning("\n" + msg + "\n")

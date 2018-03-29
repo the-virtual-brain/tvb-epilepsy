@@ -53,11 +53,11 @@ class UniformDistribution(ContinuousProbabilityDistribution):
         # By default expr >= 0
         return np.array(self.b).flatten() - np.array(self.a).flatten() - np.finfo(np.float64).eps
 
-    def scipy(self, loc=0.0, scale=1.0):
+    def _scipy(self, loc=0.0, scale=1.0):
         a, b = self.scale_params(loc, scale)
         return getattr(ss, self.scipy_name)(loc=a, scale=b - a)
 
-    def numpy(self, loc=0.0, scale=1.0, size=(1,)):
+    def _numpy(self, loc=0.0, scale=1.0, size=(1,)):
         a, b = self.scale_params(loc, scale)
         return lambda: nr.uniform(a, b, size=size)
 
@@ -70,7 +70,8 @@ class UniformDistribution(ContinuousProbabilityDistribution):
         return 0.5 * (a + b)
 
     def calc_mode_manual(self, loc=0.0, scale=1.0):
-        self.logger.warning("Uniform distribution does not have a definite mode! Returning nan!")
+        # TODO: find a way to mute this warning...
+        # self.logger.warning("Uniform distribution does not have a definite mode! Returning nan!")
         return np.nan
 
     def calc_var_manual(self, loc=0.0, scale=1.0):

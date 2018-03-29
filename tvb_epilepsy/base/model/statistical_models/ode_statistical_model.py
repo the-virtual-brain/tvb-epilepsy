@@ -11,7 +11,7 @@ from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter
 
 class ODEStatisticalModel(StatisticalModel):
 
-    def __init__(self, name='vep_ode', number_of_regions=0, active_regions=[], n_signals=0, n_times=0, dt=1.0,
+    def __init__(self, name='vep_ode', number_of_regions=0, active_regions=[], n_signals=0, n_times=0, dt=0.1,
                  x1eq_min=X1EQ_MIN, x1eq_max=X1EQ_MAX, MC_scale=MC_SCALE,
                  sig_init=SIG_INIT_DEF, observation_model=OBSERVATION_MODEL_DEF,
                  # observation_expression=OBSERVATION_EXPRESSION_DEF, euler_method="forward",

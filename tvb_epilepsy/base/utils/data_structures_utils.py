@@ -62,14 +62,16 @@ def construct_import_path(path, package="tvb_epilepsy"):
     return path[start:].replace("/", ".")
 
 
-def formal_repr(instance, attr_dict):
+def formal_repr(instance, attr_dict, sort_dict_flag=False):
     """ A formal string representation for an object.
     :param attr_dict: dictionary attribute_name: attribute_value
     :param instance:  Instance to read class name from it
     """
     class_name = instance.__class__.__name__
     formal = class_name + "{"
-    for key, val in sort_dict(attr_dict).iteritems():
+    if sort_dict_flag:
+        attr_dict = sort_dict(attr_dict)
+    for key, val in attr_dict.iteritems():
         if isinstance(val, dict):
             formal += "\n" + key + "=["
             for key2, val2 in val.iteritems():
@@ -209,6 +211,16 @@ def ensure_list(arg):
     return arg
 
 
+def ensure_string(arg):
+    if not (isinstance(arg, basestring)):
+        if arg is None:
+            return ""
+        else:
+            return ensure_list(arg)[0]
+    else:
+        return arg
+
+
 def set_list_item_by_reference_safely(ind, item, lst):
     while ind >= len(lst):
         lst.append(None)
@@ -279,9 +291,12 @@ def labels_to_inds(labels, lbls):
     return np.unique(idx)
 
 
-def generate_region_labels(n_regions, labels=[], str=". "):
+def generate_region_labels(n_regions, labels=[], str=". ", numbering=True):
     if len(labels) == n_regions:
-        return np.array([str.join(["%d", "%s"]) % tuple(l) for l in zip(range(n_regions), labels)])
+        if numbering:
+            return np.array([str.join(["%d", "%s"]) % tuple(l) for l in zip(range(n_regions), labels)])
+        else:
+            return labels
     else:
         return np.array(["%d" % l for l in range(n_regions)])
 

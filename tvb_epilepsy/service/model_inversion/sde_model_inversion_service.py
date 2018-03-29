@@ -14,15 +14,15 @@ class SDEModelInversionService(ODEModelInversionService):
         self.set_default_parameters(**kwargs)
 
     def get_default_sig(self, **kwargs):
-        # if kwargs.get("sig", None):
-        #     return kwargs.pop("sig")
+        if kwargs.get("sig", None):
+            return kwargs.pop("sig")
         # elif np.in1d(self.dynamical_model, AVAILABLE_DYNAMICAL_MODELS_NAMES):
         #         if EPILEPTOR_MODEL_NVARS[self.dynamical_model] == 2:
         #             return model_noise_intensity_dict[self.dynamical_model][1]
         #         elif EPILEPTOR_MODEL_NVARS[self.dynamical_model] > 2:
         #             return model_noise_intensity_dict[self.dynamical_model][2]
-        # else:
-        return SIG_DEF
+        else:
+            return SIG_DEF
 
     def set_default_parameters(self, **kwargs):
         sig = self.get_default_sig(**kwargs)

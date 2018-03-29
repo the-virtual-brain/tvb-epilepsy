@@ -122,20 +122,22 @@ class H5Writer(object):
         """
         h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
-        h5_file.create_dataset("x0_values", data=hypothesis.x0_values)
-        h5_file.create_dataset("e_values", data=hypothesis.e_values)
-        h5_file.create_dataset("w_values", data=hypothesis.w_values)
-        h5_file.create_dataset("lsa_propagation_strengths", data=hypothesis.lsa_propagation_strengths)
+        h5_hypo = hypothesis.prepare_hypothesis_for_h5()
+
+        h5_file.create_dataset("x0_values", data=h5_hypo.x0_values)
+        h5_file.create_dataset("e_values", data=h5_hypo.e_values)
+        h5_file.create_dataset("w_values", data=h5_hypo.w_values)
+        h5_file.create_dataset("lsa_propagation_strengths", data=h5_hypo.lsa_propagation_strengths)
 
         # TODO: change HypothesisModel to GenericModel here and inside Epi
         h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, hypothesis.__class__.__name__)
-        h5_file.attrs.create("number_of_regions", hypothesis.number_of_regions)
-        h5_file.attrs.create("type", hypothesis.type)
-        h5_file.attrs.create("x0_indices", hypothesis.x0_indices)
-        h5_file.attrs.create("e_indices", hypothesis.e_indices)
-        h5_file.attrs.create("w_indices", hypothesis.w_indices)
-        h5_file.attrs.create("lsa_propagation_indices", hypothesis.lsa_propagation_indices)
+        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, h5_hypo.__class__.__name__)
+        h5_file.attrs.create("number_of_regions", h5_hypo.number_of_regions)
+        h5_file.attrs.create("type", h5_hypo.type)
+        h5_file.attrs.create("x0_indices", h5_hypo.x0_indices)
+        h5_file.attrs.create("e_indices", h5_hypo.e_indices)
+        h5_file.attrs.create("w_indices", h5_hypo.w_indices)
+        h5_file.attrs.create("lsa_propagation_indices", h5_hypo.lsa_propagation_indices)
 
         h5_file.close()
 
@@ -374,6 +376,22 @@ class H5Writer(object):
             raise_value_error("Invalid TS data. Dictionary or 2D (time, nodes) numpy.ndarray of floats expected")
         h5_file.close()
 
+    def write_simulator_model(self, simulator_model, nr_regions, path):
+        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
+
+        datasets_dict, metadata_dict = self._determine_datasets_and_attributes(simulator_model, nr_regions)
+
+        for key, value in datasets_dict.iteritems():
+            h5_file.create_dataset(key, data=value)
+
+        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, simulator_model.__class__.__name__)
+
+        for key, value in metadata_dict.iteritems():
+            h5_file.attrs.create(key, value)
+
+        h5_file.close()
+
     def write_generic(self, object, folder, path):
         """
         :param object:
@@ -386,13 +404,18 @@ class H5Writer(object):
 
         h5_model.write_to_h5(folder, path)
 
-    def _determine_datasets_and_attributes(self, object):
+    def _determine_datasets_and_attributes(self, object, datasets_size=None):
         datasets_dict = {}
         metadata_dict = {}
 
         for key, value in vars(object).iteritems():
-            if (isinstance(value, numpy.ndarray)) and value.size > 0:
-                datasets_dict.update({key: value})
+            if isinstance(value, numpy.ndarray):
+                if datasets_size is not None and value.size == datasets_size:
+                    datasets_dict.update({key: value})
+                if datasets_size is None and value.size > 0:
+                    datasets_dict.update({key: value})
+                else:
+                    metadata_dict.update({key: value})
             else:
                 if isinstance(value, (float, int, long, complex, str)):
                     metadata_dict.update({key: value})

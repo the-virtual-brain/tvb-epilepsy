@@ -1,6 +1,8 @@
-import numpy as np
+# encoding=utf8
 
+import numpy as np
 from tvb_epilepsy.io.rdump import rdump
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 
 
 def merge_csv_data(*csvs):
@@ -33,7 +35,21 @@ def parse_csv(fname, merge=True):
             if not line.startswith('#'):
                 lines.append(line.strip().split(','))
     names = [field.split('.') for field in lines[0]]
-    data = np.array([[float(f) for f in line] for line in lines[1:]])
+    data = []
+    for id_line, line in enumerate(lines[1:]):
+        append_data = True
+        for iline in range(len(line)):
+            try:
+                line[iline] = float(line[iline])
+            except:
+                logger = initialize_logger(__name__)
+                logger.warn("Failed to convert string " + line[iline] + " to float!" +
+                            "\nSkipping line " + str(id_line) + ":  " + str(line) + "!")
+                append_data = False
+                break
+        if append_data:
+            data.append(line)
+    data = np.array(data)
 
     namemap = {}
     maxdims = {}

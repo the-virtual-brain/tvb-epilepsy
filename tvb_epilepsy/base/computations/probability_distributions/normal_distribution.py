@@ -40,10 +40,10 @@ class NormalDistribution(ContinuousProbabilityDistribution):
         # By default expr >= 0
         return np.array(self.sigma).flatten() - np.finfo(np.float64).eps
 
-    def scipy(self, loc=0.0, scale=1.0):
+    def _scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(loc=self.mu+loc, scale=self.sigma*scale)
 
-    def numpy(self, loc=0.0, scale=1.0, size=(1,)):
+    def _numpy(self, loc=0.0, scale=1.0, size=(1,)):
         return lambda: nr.normal(self.mu + loc, self.sigma * scale, size=size)
 
     def calc_mean_manual(self, loc=0.0, scale=1.0):

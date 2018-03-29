@@ -11,17 +11,17 @@ from matplotlib import pyplot, gridspec
 from matplotlib.colors import Normalize
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.plot.base_plotter import BasePlotter
-from tvb_epilepsy.base.model.vep.sensors import Sensors
+from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorTypes
 from tvb_epilepsy.base.computations.math_utils import compute_in_degree
 from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
 from tvb_epilepsy.base.epileptor_models import EpileptorDP2D, EpileptorDPrealistic
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string, sort_dict, linspace_broadcast, \
-                                                          generate_region_labels
+                                                          generate_region_labels, ensure_string
 from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, extract_dict_stringkeys
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_y1, def_x1lin
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz, calc_fx1, calc_fx1_2d_taylor
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val_to_model_x0, raise_value_error
-from tvb_epilepsy.base.constants.model_constants import TAU0_DEF, TAU1_DEF, X1_EQ_CR_DEF, X1_DEF, X0_CR_DEF, X0_DEF
+from tvb_epilepsy.base.constants.model_constants import TAU0_DEF, TAU1_DEF, X1EQ_CR_DEF, X1_DEF, X0_CR_DEF, X0_DEF
 from tvb_epilepsy.base.constants.config import FiguresConfig
 
 
@@ -107,8 +107,8 @@ class Plotter(BasePlotter):
         self._plot_connectivity(head.connectivity)
         self._plot_connectivity_stats(head.connectivity)
         count = 1
-        for s_type in Sensors.SENSORS_TYPES:
-            sensors = getattr(head, "sensors" + s_type)
+        for s_type in SensorTypes:
+            sensors = getattr(head, "sensors" + s_type.value)
             if isinstance(sensors, (list, Sensors)):
                 sensors_list = ensure_list(sensors)
                 if len(sensors_list) > 0:
@@ -129,7 +129,7 @@ class Plotter(BasePlotter):
                                     title=title, figure_name=figure_name, figsize=figsize)
 
     def plot_statistical_model(self, statistical_model, figure_name=""):
-        _, ax = pyplot.subplots(len(statistical_model.parameters), 2, figsize=FiguresConfig.VERY_LARGE_PORTRAIT)
+        _, ax = pyplot.subplots(len(statistical_model.parameters), 1, figsize=FiguresConfig.VERY_LARGE_PORTRAIT)
         for ip, p in enumerate(statistical_model.parameters.values()):
             self._prepare_parameter_axes(p, x=numpy.array([]), ax=ax[ip], lgnd=False)
         self._save_figure(pyplot.gcf(), figure_name)
@@ -138,9 +138,15 @@ class Plotter(BasePlotter):
 
     def _timeseries_plot(self, time, n_vars, nTS, n_times, time_units, subplots, offset=0.0, data_lims=[]):
         def_time = range(n_times)
-        if not (isinstance(time, numpy.ndarray) and (len(time) == n_times)):
+        try:
+            time = numpy.array(time).flatten()
+            if len(time) != n_times:
+                self.logger.warning("Input time doesn't match data! Setting a default time step vector!")
+                time = def_time
+        except:
+            self.logger.warning("Setting a default time step vector manually! Input time: " + str(time))
             time = def_time
-            self.logger.warning("Input time doesn't match data! Setting a default time step vector!")
+        time_units = ensure_string(time_units)
         data_fun = lambda data, time, icol: (data[icol], time, icol)
 
         def plot_ts(x, iTS, colors, alphas, labels):
@@ -163,7 +169,7 @@ class Plotter(BasePlotter):
 
         def axlabels_ts(labels, n_rows, irow, iTS):
             if irow == n_rows:
-                pyplot.gca().set_xlabel("Time (" + time_units + ")")
+                pyplot.gca().set_xlabel("Time (" + time_units+ ")")
             if n_rows > 1:
                 try:
                     pyplot.gca().set_ylabel(str(iTS) + "." + labels[iTS])
@@ -369,6 +375,9 @@ class Plotter(BasePlotter):
             return
         labels = generate_region_labels(nS, labels, ". ")[special_idx]
         nS = data.shape[1]
+        if not isinstance(time_units, basestring):
+            time_units = list(time_units)[0]
+        time_units = ensure_string(time_units)
         if time_units in ("ms", "msec"):
             fs = 1000.0
         else:
@@ -464,7 +473,7 @@ class Plotter(BasePlotter):
                                      title=model._ui_name + ": Simulated pop2-g",
                                      labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
             start_plot = int(numpy.round(0.01 * res['lfp'].shape[0]))
-            self.plot_raster({'lfp': res['lfp'][start_plot:, :]}, res['time'][start_plot:],
+            self.plot_raster({'lfp': res['lfp'][start_plot:, :]}, res['time'].flatten()[start_plot:],
                              time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
                              title=model._ui_name + ": Simulated LFP rasterplot", offset=2.0, labels=region_labels,
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
@@ -551,8 +560,8 @@ class Plotter(BasePlotter):
         #     region_labels = numpy.array(["%d" % l for l in range(model_config.number_of_regions)])
 
         # Fixed parameters for all regions:
-        x1eq = model_config.x1EQ
-        zeq = model_config.zEQ
+        x1eq = model_config.x1eq
+        zeq = model_config.zeq
         x0 = a = b = d = yc = slope = Iext1 = Iext2 = s = 0.0
         for p in ["x0", "a", "b", "d", "yc", "slope", "Iext1", "Iext2", "s"]:
             exec (p + " = numpy.mean(model_config." + p + ")")
@@ -582,8 +591,8 @@ class Plotter(BasePlotter):
         zE2null, = pyplot.plot(x1, zZne, 'g--', label='z nullcline for e_values=0', linewidth=1)
         if approximations:
             # The point of the linear approximation (1st order Taylor expansion)
-            x1LIN = def_x1lin(X1_DEF, X1_EQ_CR_DEF, len(region_labels))
-            x1SQ = X1_EQ_CR_DEF
+            x1LIN = def_x1lin(X1_DEF, X1EQ_CR_DEF, len(region_labels))
+            x1SQ = X1EQ_CR_DEF
             x1lin0 = numpy.mean(x1LIN)
             # The point of the square (parabolic) approximation (2nd order Taylor expansion)
             x1sq0 = numpy.mean(x1SQ)
@@ -721,7 +730,7 @@ class Plotter(BasePlotter):
         else:
             plot_samples = lambda s: s[skip_samples:]
             plot_figure_name = lambda ichain: figure_name + ": chain " + str(ichain + 1)
-        labels = generate_region_labels(samples[params[0]].shape[1], labels)
+        labels = generate_region_labels(samples[0][params[0]].shape[-1], labels)
         params_labels = {}
         for ip, p in enumerate(params):
             if ip == 0:
@@ -743,10 +752,12 @@ class Plotter(BasePlotter):
             self._check_show()
 
     def plot_fit_results(self, model_inversion, ests, samples, statistical_model, signals, stats=None, time=None,
-                         simulation_values=None, region_mode="all", seizure_indices=[], x1_str="x1", mc_str="MC",
+                         priors=None, region_mode="all", seizure_indices=[], x1_str="x1", k_str="K", mc_str="MC",
                          signals_str="fit_signals", sig_str="sig", dX1t_str="dX1t", dZt_str="dZt",
                          trajectories_plot=True, connectivity_plot=True, **kwargs):
-        region_labels = kwargs.get("regions_labels", model_inversion.region_labels)
+        skip_samples = kwargs.get("skip_samples", 0)
+        region_labels = generate_region_labels(statistical_model.number_of_regions, numbering=False,
+                                               labels=kwargs.get("regions_labels", model_inversion.region_labels))
         if isequal_string(region_mode, "all"):
             region_inds = range(statistical_model.number_of_regions)
             seizure_indices = statistical_model.active_regions
@@ -758,12 +769,22 @@ class Plotter(BasePlotter):
         self.parameters_pair_plots(samples,
                                    kwargs.get("pair_plot_params",
                                               ["tau1", "tau0", "K", "sig_eq", "sig_init", "sig", "eps", "scale_signal",
-                                               "offset_signal"]), stats,
-                                   kwargs.get("skip_samples", 0), title=statistical_model.name + " parameters samples")
+                                               "offset_signal"]), stats, skip_samples,
+                                   title=statistical_model.name + " parameters samples")
+        # plot K-x0 parameters in pair plots
+        x0_K_pair_plot_params = [k_str]
+        x0_K_pair_plot_samples = [{k_str: s[k_str]} for s in samples]
+        for inode, iregion in enumerate(statistical_model.active_regions):
+            temp_name = "x0[" + region_labels[iregion] + "]"
+            x0_K_pair_plot_params.append(temp_name)
+            for ichain, s in enumerate(samples):
+                x0_K_pair_plot_samples[ichain].update({temp_name: s["x0"][:, inode]})
+        self.parameters_pair_plots(x0_K_pair_plot_samples, x0_K_pair_plot_params, None, skip_samples,
+                                   title=statistical_model.name + " global coupling vs x0 pair plot")
         # plot region-wise parameters
-        self.region_parameters_violin_plots(samples, simulation_values,
+        self.region_parameters_violin_plots(samples, priors,
                                             kwargs.get("region_violin_params", ["x0", "x1eq", "x1init", "zinit"]),
-                                            stats, skip_samples=kwargs.get("skip_samples", 0),
+                                            stats, skip_samples,
                                             per_chain=kwargs.get("violin_plot_per_chain", False),
                                             labels=region_labels[region_inds], seizure_indices=seizure_indices,
                                             figure_name=statistical_model.name + " regions parameters samples")
@@ -791,16 +812,17 @@ class Plotter(BasePlotter):
         observation_dict = OrderedDict({'observation signals': signals})
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), ensure_list(samples))):
             name = statistical_model.name + "_chain" + str(id_est+1)
-            observation_dict.update({"fit chain " + str(id_est+1): sample[signals_str].T})
-            self.plot_raster(sort_dict({x1_str: sample[x1_str].T, 'z': sample["z"].T}), time,
-                             special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
+            observation_dict.update({"fit chain " + str(id_est+1): sample[signals_str].T[skip_samples:]})
+            self.plot_raster(sort_dict({x1_str: sample[x1_str].T[skip_samples:], 'z': sample["z"].T[skip_samples:]}),
+                             time[skip_samples:], special_idx=seizure_indices, time_units=est.get('time_units', "ms"),
                              title=name + ": Hidden states fit rasterplot",
                              subtitles=['hidden state ' + x1_str + stats_string[x1_str],
                                         'hidden state z' + stats_string["z"]], offset=1.0,
                              labels=region_labels[region_inds],
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
-            self.plot_raster(sort_dict({dX1t_str: sample[dX1t_str].T, dZt_str: sample[dZt_str].T}), time[:-1],  #
-                             time_units=est.get('time_units', "ms"), # special_idx=seizure_indices,
+            self.plot_raster(sort_dict({dX1t_str: sample[dX1t_str].T[skip_samples:],
+                                        dZt_str: sample[dZt_str].T[skip_samples:]}),
+                             time[skip_samples:-1], time_units=est.get('time_units', "ms"), # special_idx=seizure_indices,
                              title=name + ": Hidden states random walk rasterplot",
                              subtitles=[dX1t_str,
                                         dZt_str +
@@ -810,8 +832,9 @@ class Plotter(BasePlotter):
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
             if trajectories_plot:
                 title = name + ': Fit hidden state space trajectories'
-                self.plot_trajectories({x1_str: sample[x1_str].T, 'z': sample['z'].T}, special_idx=seizure_indices,
-                                       title=title, labels=stats_region_labels, figsize=FiguresConfig.SUPER_LARGE_SIZE)
+                self.plot_trajectories({x1_str: sample[x1_str].T[skip_samples:], 'z': sample['z'].T[skip_samples:]},
+                                       special_idx=seizure_indices, title=title, labels=stats_region_labels,
+                                       figsize=FiguresConfig.SUPER_LARGE_SIZE)
             # plot connectivity
             if connectivity_plot:
                 MC_prior = statistical_model.parameters["MC"].mean
@@ -829,19 +852,20 @@ class Plotter(BasePlotter):
                 self.plot_regions2regions(est[mc_str], region_labels, 122, MC_title)
                 self._save_figure(pyplot.gcf(), conn_figure_name)
                 self._check_show()
-        self.plot_timeseries(observation_dict, time, special_idx=[], time_units=ests[0].get('time_units', "ms"),
+        self.plot_timeseries(observation_dict, time[skip_samples:], special_idx=[],
+                             time_units=ests[0].get('time_units', "ms"),
                              title="Observation signals vs fit time series: " + stats_string[signals_str],
                              offset=1.0, labels=sensor_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
     def _prepare_distribution_axes(self, distribution, loc=0.0, scale=1.0, x=numpy.array([]), ax=None, linestyle="-",
                                    lgnd=False):
         if len(x) < 1:
-            x = linspace_broadcast(distribution.scipy(distribution.loc, distribution.scale).ppf(0.01),
-                                   distribution.scipy(distribution.loc, distribution.scale).ppf(0.99), 100)
+            x = linspace_broadcast(distribution._scipy_method("ppf", distribution.loc, distribution.scale, 0.01),
+                                   distribution._scipy_method("ppf", distribution.loc, distribution.scale,0.99), 100)
         if x is not None:
             if x.ndim == 1:
                 x = x[:, numpy.newaxis]
-            pdf = distribution.scipy(loc, scale).pdf(x)
+            pdf = distribution._scipy_method("pdf", loc, scale, x)
             if ax is None:
                 _, ax = pyplot.subplots(1, 1)
             for ip, (xx, pp) in enumerate(zip(x.T, pdf.T)):
@@ -862,17 +886,17 @@ class Plotter(BasePlotter):
 
     def _prepare_parameter_axes(self, parameter, x=numpy.array([]), ax=None, lgnd=False):
         if ax is None:
-            _, ax = pyplot.subplots(1, 2)
+            _, ax = pyplot.subplots(1, 1)
         if len(x) < 1:
             x = linspace_broadcast(
-                numpy.maximum(parameter.low, parameter.scipy(parameter.loc, parameter.scale).ppf(0.01)),
-                numpy.minimum(parameter.high, parameter.scipy(parameter.loc, parameter.scale).ppf(0.99)), 100)
+                numpy.maximum(parameter.low, parameter.scipy_method("ppf", 0.01)),
+                numpy.minimum(parameter.high, parameter.scipy_method("ppf", 0.99)), 100)
         if x is not None:
-            ax[0] = self._prepare_distribution_axes(parameter, parameter.loc, parameter.scale, x, ax[0], "-", lgnd)
-            ax[0].set_title(parameter.name + ": " + parameter.type + " distribution")
-            ax[1] = self._prepare_distribution_axes(parameter, 0.0, 1.0, (x - parameter.loc) / parameter.scale,
-                                                    ax[1], "--", lgnd)
-            ax[1].set_title(parameter.name + "_star: " + parameter.type + " distribution")
+            ax = self._prepare_distribution_axes(parameter, parameter.loc, parameter.scale, x, ax, "-", lgnd)
+            ax.set_title(parameter.name + ": " + parameter.type + " distribution")
+            # ax[1] = self._prepare_distribution_axes(parameter, 0.0, 1.0, (x - parameter.loc) / parameter.scale,
+            #                                         ax[1], "--", lgnd)
+            # ax[1].set_title(parameter.name + "_star: " + parameter.type + " distribution")
             return ax
         else:
             raise_value_error("Stochastic parameter's parameters do not broadcast!")

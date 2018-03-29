@@ -4,8 +4,8 @@ Entry point for working with VEP
 import os
 import numpy as np
 from tvb_epilepsy.base.constants.config import Config
-from tvb_epilepsy.base.constants.model_constants import COLORED_NOISE
-from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects, isequal_string
+from tvb_epilepsy.base.constants.model_constants import COLORED_NOISE, K_DEF
+from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects, isequal_string, ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
@@ -19,14 +19,15 @@ from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationB
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
 
-PSE_FLAG = False
+PSE_FLAG = True
 SA_PSE_FLAG = False
-SIM_FLAG = True
-EP_NAME = "ep_l_frontal_complex"
+SIM_FLAG = False
+EP_NAME = "clinical_hypothesis_preseeg"
 
 
-def main_vep(config=Config(), sim_type="default", test_write_read=False,
-             pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG):
+def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], hyp_norm=0.99, manual_hypos=[],
+             sim_type="default", pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG, n_samples=1000,
+             test_write_read=False):
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
     # -------------------------------Reading data-----------------------------------
     reader = TVBReader() if config.input.IS_TVB_MODE else H5Reader()
@@ -38,67 +39,31 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
     if test_write_read:
         writer.write_head(head, os.path.join(config.out.FOLDER_RES, "Head"))
     # --------------------------Hypothesis definition-----------------------------------
-    n_samples = 100
 
+    hypotheses = []
     # Reading a h5 file:
 
-    # This is an example of Epileptogenicity Hypothesis: you give as ep all indices for values > 0
-    hyp_E = HypothesisBuilder(head.connectivity.number_of_regions, config=config).set_normalize(0.99). \
-        build_hypothesis_from_file(EP_NAME, e_indices=[1, 3, 16, 25])
-    # print(hyp_E.string_regions_disease(head.connectivity.region_labels))
+    if len(ep_name) > 0:
+        # For an Excitability Hypothesis you leave e_indices empty
+        # For a Mixed Hypothesis: you give as e_indices some indices for values > 0
+        # For an Epileptogenicity Hypothesis: you give as e_indices all indices for values > 0
+        hyp_file = HypothesisBuilder(head.connectivity.number_of_regions, config=config).set_normalize(hyp_norm). \
+            build_hypothesis_from_file(ep_name, e_indices=ep_indices)
+        hyp_file.name += ep_name
+        # print(hyp_file.string_regions_disease(head.connectivity.region_labels))
+        hypotheses.append(hyp_file)
 
-    # This is an example of Excitability Hypothesis:
-    hyp_x0 = HypothesisBuilder(head.connectivity.number_of_regions, config=config).set_normalize(0.99). \
-        build_hypothesis_from_file(EP_NAME)
-
-    # # This is an example of Mixed Hypothesis set manually by the user:
-    # x0_indices = [hyp_x0.x0_indices[-1]]
-    # x0_values = [hyp_x0.x0_values[-1]]
-    # e_indices = hyp_x0.x0_indices[0:-1].tolist()
-    # e_values = hyp_x0.x0_values[0:-1].tolist()
-    # hyp_x0_E = HypothesisBuilder(head.connectivity.number_of_regions, config=config).set_normalize(0.99). \
-    #               set_x0_hypothesis(x0_indices, x0_values).set_e_hypothesis(e_indices, e_values).build_hypothesis()
-
-    # This is an example of x0_values mixed Excitability and Epileptogenicity Hypothesis set from file:
-    all_regions_indices = np.array(range(head.number_of_regions))
-    healthy_indices = np.delete(all_regions_indices, hyp_E.x0_indices + hyp_E.e_indices).tolist()
-    hyp_x0_E = HypothesisBuilder(head.connectivity.number_of_regions, config=config).set_normalize(0.99). \
-        build_hypothesis_from_file(EP_NAME, e_indices=[16, 25])
-
-    hypotheses = (hyp_x0_E, hyp_x0, hyp_E)
-
-    # --------------------------Simulation preparations-----------------------------------
-    # If you choose model...
-    # Available models beyond the TVB Epileptor (they all encompass optional variations from the different papers):
-    # EpileptorDP: similar to the TVB Epileptor + optional variations,
-    # EpileptorDP2D: reduced 2D model, following Proix et all 2014 +optional variations,
-    # EpleptorDPrealistic: starting from the TVB Epileptor + optional variations, but:
-    #      -x0, Iext1, Iext2, slope and K become noisy state variables,
-    #      -Iext2 and slope are coupled to z, g, or z*g in order for spikes to appear before seizure,
-    #      -multiplicative correlated noise is also used
-    # We don't want any time delays for the moment
-    head.connectivity.tract_lengths *= config.simulator.USE_TIME_DELAYS_FLAG
-    sim_builder = SimulatorBuilder(config.simulator.MODE)
-    if isequal_string(sim_type, "realistic"):
-        sim_settings = sim_builder.set_model_name("EpileptorDPrealistic"). \
-            set_fs(4096.0).set_simulated_period(50000).build_sim_settings()
-        sim_settings.noise_type = COLORED_NOISE
-        sim_settings.noise_ntau = 10
-    elif isequal_string(sim_type, "fitting"):
-        sim_settings = sim_builder.set_model_name("EpileptorDP2D").set_fs(4096.0).build_sim_settings()
-        sim_settings.noise_intensity = 1e-6
-    elif isequal_string(sim_type, "paper"):
-        sim_builder.set_model_name("Epileptor")
-        sim_settings = sim_builder.build_sim_settings()
-    else:
-        sim_settings = sim_builder.build_sim_settings()
+    hypotheses += manual_hypos
 
     # --------------------------Hypothesis and LSA-----------------------------------
     for hyp in hypotheses:
         logger.info("\n\nRunning hypothesis: " + hyp.name)
-        logger.info("\n\nCreating model configuration...")
-        model_config_builder = ModelConfigurationBuilder(hyp.number_of_regions)
 
+        all_regions_indices = np.array(range(head.number_of_regions))
+        healthy_indices = np.delete(all_regions_indices, hyp.get_regions_disease_indices()).tolist()
+
+        logger.info("\n\nCreating model configuration...")
+        model_config_builder = ModelConfigurationBuilder(hyp.number_of_regions, K=K_unscaled)
         mcs_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_model_config_builder.h5")
         writer.write_model_configuration_builder(model_config_builder, mcs_file)
         if test_write_read:
@@ -119,7 +84,7 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
                                                  logger=logger)))
         # Plot nullclines and equilibria of model configuration
         plotter.plot_state_space(model_configuration, "6d", head.connectivity.region_labels,
-                                 special_idx=hyp_x0.x0_indices + hyp_E.e_indices, zmode="lin",
+                                 special_idx=hyp.get_regions_disease_indices(), zmode="lin",
                                  figure_name=hyp.name + "_StateSpace")
 
         logger.info("\n\nRunning LSA...")
@@ -191,65 +156,93 @@ def main_vep(config=Config(), sim_type="default", test_write_read=False,
                                                      logger=logger)))
 
         if sim_flag:
-            # ------------------------------Simulation--------------------------------------
-            logger.info("\n\nConfiguring simulation from model_configuration...")
-            model = sim_builder.generate_model_tvb(model_configuration)
-            if isequal_string(sim_type, "realistic"):
-                model.tau0 = 30000.0
-                model.tau1 = 0.2
-                model.slope = 0.25
-            elif isequal_string(sim_type, "fitting"):
-                model.tau0 = 30.0
-                model.tau1 = 0.5
-            sim, sim_settings, model = sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration,
-                                                                                 head.connectivity, model, sim_settings)
+            # --------------------------Simulation preparations-----------------------------------
+            # If you choose model...
+            # Available models beyond the TVB Epileptor (they all encompass optional variations from the different papers):
+            # EpileptorDP: similar to the TVB Epileptor + optional variations,
+            # EpileptorDP2D: reduced 2D model, following Proix et all 2014 +optional variations,
+            # EpleptorDPrealistic: starting from the TVB Epileptor + optional variations, but:
+            #      -x0, Iext1, Iext2, slope and K become noisy state variables,
+            #      -Iext2 and slope are coupled to z, g, or z*g in order for spikes to appear before seizure,
+            #      -multiplicative correlated noise is also used
+            # We don't want any time delays for the moment
+            head.connectivity.tract_lengths *= config.simulator.USE_TIME_DELAYS_FLAG
 
-            # Integrator and initial conditions initialization.
-            # By default initial condition is set right on the equilibrium point.
-            writer.write_generic(sim.model, config.out.FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5")
-            logger.info("\n\nSimulating...")
-            ttavg, tavg_data, status = sim.launch_simulation(report_every_n_monitor_steps=100)
-
-            sim_path = os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")
-            writer.write_simulation_settings(sim.simulation_settings, sim_path)
-            if test_write_read:
-                # TODO: find out why it cannot set monitor expressions
-                logger.info("Written and read simulation settings are identical?: " +
-                            str(assert_equal_objects(sim.simulation_settings,
-                                                     reader.read_simulation_settings(sim_path), logger=logger)))
-            if not status:
-                logger.warning("\nSimulation failed!")
-            else:
-                time = np.array(ttavg, dtype='float32')
-                output_sampling_time = np.mean(np.diff(time))
-                tavg_data = tavg_data[:, :, :, 0]
-                logger.info("\n\nSimulated signal return shape: %s", tavg_data.shape)
-                logger.info("Time: %s - %s", time[0], time[-1])
-                logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
-                # Variables of interest in a dictionary:
-                res_ts = prepare_vois_ts_dict(sim_settings.monitor_expressions, tavg_data)
-                res_ts['time'] = time
-                res_ts['time_units'] = 'msec'
-                res_ts = compute_seeg_and_write_ts_h5_file(config.out.FOLDER_RES, lsa_hypothesis.name + "_ts.h5",
-                                                                 sim.model, res_ts, output_sampling_time,
-                                                                 sim_settings.simulated_period,
-                                                                 hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
-                                                                 sensors_list=head.sensorsSEEG)
-                # Plot results
-                if model._ui_name is "EpileptorDP2D":
-                    spectral_raster_plot = False
-                    trajectories_plot = True
+            sim_types = ensure_list(sim_type)
+            for sim_type in sim_types:
+                # ------------------------------Simulation--------------------------------------
+                logger.info("\n\nConfiguring simulation from model_configuration...")
+                sim_builder = SimulatorBuilder(config.simulator.MODE)
+                model = sim_builder.generate_model_tvb(model_configuration)
+                if isequal_string(sim_type, "realistic"):
+                    sim_settings = sim_builder.set_model_name("EpileptorDPrealistic"). \
+                        set_fs(4096.0).set_simulated_period(50000).build_sim_settings()
+                    sim_settings.noise_type = COLORED_NOISE
+                    sim_settings.noise_ntau = 10
+                    model.tau0 = 30000.0
+                    model.tau1 = 0.2
+                    model.slope = 0.25
+                elif isequal_string(sim_type, "fitting"):
+                    sim_settings = sim_builder.set_model_name("EpileptorDP2D").set_fs(4096.0).build_sim_settings()
+                    sim_settings.noise_intensity = 1e-6
+                    model.tau0 = 30.0
+                    model.tau1 = 0.5
+                elif isequal_string(sim_type, "paper"):
+                    sim_builder.set_model_name("Epileptor")
+                    sim_settings = sim_builder.build_sim_settings()
                 else:
-                    spectral_raster_plot = "lfp"
-                    trajectories_plot = False
-                #TODO: plotting fails when spectral_raster_plot="lfp". Denis will fix this
-                plotter.plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, res_ts,
-                                         head.sensorsSEEG, hpf_flag=True, trajectories_plot=trajectories_plot,
-                                         spectral_raster_plot=spectral_raster_plot,log_scale=True,
-                                         region_labels=head.connectivity.region_labels)
-                # Optionally save results in mat files
-                # from scipy.io import savemat
-                # savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), res_ts)
+                    sim_settings = sim_builder.build_sim_settings()
+
+                sim, sim_settings, model = sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration,
+                                                                                     head.connectivity, model, sim_settings)
+
+                # Integrator and initial conditions initialization.
+                # By default initial condition is set right on the equilibrium point.
+                writer.write_simulator_model(sim.model, sim.connectivity.number_of_regions,
+                                             os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5"))
+                logger.info("\n\nSimulating...")
+                ttavg, tavg_data, status = sim.launch_simulation(report_every_n_monitor_steps=100)
+
+                sim_path = os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")
+                writer.write_simulation_settings(sim.simulation_settings, sim_path)
+                if test_write_read:
+                    # TODO: find out why it cannot set monitor expressions
+                    logger.info("Written and read simulation settings are identical?: " +
+                                str(assert_equal_objects(sim.simulation_settings,
+                                                         reader.read_simulation_settings(sim_path), logger=logger)))
+                if not status:
+                    logger.warning("\nSimulation failed!")
+                else:
+                    time = np.array(ttavg, dtype='float32')
+                    output_sampling_time = np.mean(np.diff(time))
+                    tavg_data = tavg_data[:, :, :, 0]
+                    logger.info("\n\nSimulated signal return shape: %s", tavg_data.shape)
+                    logger.info("Time: %s - %s", time[0], time[-1])
+                    logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
+                    # Variables of interest in a dictionary:
+                    res_ts = prepare_vois_ts_dict(sim_settings.monitor_expressions, tavg_data)
+                    res_ts['time'] = time
+                    res_ts['time_units'] = 'msec'
+                    res_ts = compute_seeg_and_write_ts_h5_file(config.out.FOLDER_RES, lsa_hypothesis.name + "_ts.h5",
+                                                                     sim.model, res_ts, output_sampling_time,
+                                                                     sim_settings.simulated_period,
+                                                                     hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
+                                                                     sensors_list=head.sensorsSEEG)
+                    # Plot results
+                    if model._ui_name is "EpileptorDP2D":
+                        spectral_raster_plot = False
+                        trajectories_plot = True
+                    else:
+                        spectral_raster_plot = "lfp"
+                        trajectories_plot = False
+                    #TODO: plotting fails when spectral_raster_plot="lfp". Denis will fix this
+                    plotter.plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, res_ts,
+                                             head.sensorsSEEG, hpf_flag=True, trajectories_plot=trajectories_plot,
+                                             spectral_raster_plot=spectral_raster_plot,log_scale=True,
+                                             region_labels=head.connectivity.region_labels)
+                    # Optionally save results in mat files
+                    # from scipy.io import savemat
+                    # savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), res_ts)
 
 
 if __name__ == "__main__":
@@ -257,5 +250,5 @@ if __name__ == "__main__":
                                'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
     output = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "tests")
     config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
-    main_vep(config)
+    main_vep(config, "clinical_hypothesis_postseeg", ep_indices=[1, 26])
     # main_vep()

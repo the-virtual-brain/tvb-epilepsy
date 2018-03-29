@@ -40,16 +40,17 @@ data {
     real I1; //=3.1
     real tau0; //=10, [3, 30]
     real dt; //~= 0.1 (used 0.0976562)
-    row_vector [nn] x0_star_mu;
-    row_vector [nn] x0_star_std; // 1/3 of the smaller distance of mu to boundary (either max or min value) for each x0
-    // row_vector [nn] x0_mu;  // healthy: -2.5, sick ~=-2.0, max = [-3.0, -4.0], min = -1.0
-    // real x0_std;
-    // real x0_lo;
     real x0_hi; // -4.0, [-3.0, -4.0]
+    // real x0_std; // ~0.5
+    // real x0_lo;  // 0.0
+    row_vector [nn] x0_star_mu; // x0_hi - x0_mean = 0.0 - ~[2.2 to 2.5] = ~[2.2 to 2.5]
+    row_vector [nn] x0_star_std; // minimum((x0_hi - x0_lo)/8.0, x0_star_mu/5.0) ~= 0.5
+    // row_vector [nn] x0_mu;  // healthy: -2.5, sick ~=-2.0, max = [-3.0, -4.0], min = -1.0
     real x_eq_def; // = -5.0/3 the value of all healhty non-active node
     row_vector [nn] x_init_mu; // in [-2.0, -1.0], used -1.566
     row_vector [nn] z_init_mu; // in [2.9, 4.5], used 3.060
-    real init_std; // 0.0333
+    real x_init_std; // 0.0333
+    real z_init_std; // 0.0333/2
     real time_scale_mu; // 0.5
     real time_scale_std; // 0.0667
     real k_mu; // 3.448 = 3 * 100 / n_regions(=87)
@@ -86,9 +87,9 @@ transformed data {
 parameters {
     // integrate and predict
     row_vector<upper=3.0> [nn] x0_star;
-    real epsilon_star;
+    real<upper=3.0> epsilon_star;
     real<lower=-3.0, upper=3.0> amplitude_star;
-    real offset;
+    real<lower=-1.0, upper=1.0> offset;
     real<lower=-3.0, upper=3.0> time_scale_star;
 
     // time-series state non-centering:
@@ -96,8 +97,8 @@ parameters {
     row_vector[nn] z_init;
     row_vector[nn] x_eta[nt - 1];
     row_vector[nn] z_eta[nt - 1];
-    real<lower=0.0> sigma_star;
-    real k_star;
+    real<upper=3.0> sigma_star;
+    real<upper=3.0> k_star;
 }
 
 transformed parameters {
@@ -125,8 +126,8 @@ transformed parameters {
 model {
     to_row_vector(x0_star) ~ normal(0, 1.0);
     k_star ~ normal(0, 1);
-    x_init ~ normal(x_init_mu, init_std); // 0.0, 1.0
-    z_init ~ normal(z_init_mu, init_std); // 0.0, 1.0
+    x_init ~ normal(x_init_mu, x_init_std); // 0.0, 1.0
+    z_init ~ normal(z_init_mu, z_init_std); // 0.0, 1.0
     sigma_star ~ normal(0, 1.0);
     time_scale_star ~ normal(0, 1.0);
 

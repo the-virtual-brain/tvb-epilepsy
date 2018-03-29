@@ -101,15 +101,15 @@ class TestCustomH5Reader(BaseTest):
 
     def test_read_model_configuration(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestModelConfiguration.h5")
-        dummy_mc = ModelConfiguration(x1EQ=numpy.array([2.0, 3.0, 1.0]), zmode=None, zEQ=numpy.array([3.0, 2.0, 1.0]),
+        dummy_mc = ModelConfiguration(x1eq=numpy.array([2.0, 3.0, 1.0]), zmode=None, zeq=numpy.array([3.0, 2.0, 1.0]),
                                       model_connectivity=numpy.array(
                                           [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0], [2.0, 2.0, 2.0]]),
                                       Ceq=numpy.array([1.0, 2.0, 3.0]))
         self.writer.write_model_configuration(dummy_mc, test_file)
         mc = self.reader.read_model_configuration(test_file)
 
-        assert numpy.array_equal(dummy_mc.x1EQ, mc.x1EQ)
-        assert numpy.array_equal(dummy_mc.zEQ, mc.zEQ)
+        assert numpy.array_equal(dummy_mc.x1eq, mc.x1eq)
+        assert numpy.array_equal(dummy_mc.zeq, mc.zeq)
         assert numpy.array_equal(dummy_mc.Ceq, mc.Ceq)
         assert numpy.array_equal(dummy_mc.model_connectivity, mc.model_connectivity)
 

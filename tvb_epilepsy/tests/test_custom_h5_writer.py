@@ -1,6 +1,6 @@
 import os
 import numpy
-from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF
+from tvb_epilepsy.base.constants.model_constants import X1EQ_CR_DEF
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.io.h5_writer import H5Writer
@@ -76,8 +76,8 @@ class TestCustomH5writer(BaseTest):
 
     def test_write_model_configuration(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestModelConfiguration.h5")
-        dummy_mc = ModelConfiguration(x1EQ=numpy.array([2.0, 3.0, 1.0]), zmode=None,
-                                      zEQ=numpy.array([3.0, 2.0, 1.0]), Ceq=numpy.array([1.0, 2.0, 3.0]),
+        dummy_mc = ModelConfiguration(x1eq=numpy.array([2.0, 3.0, 1.0]), zmode=None,
+                                      zeq=numpy.array([3.0, 2.0, 1.0]), Ceq=numpy.array([1.0, 2.0, 3.0]),
                                       model_connectivity=self.dummy_connectivity.normalized_weights)
 
         assert not os.path.exists(test_file)
@@ -109,7 +109,7 @@ class TestCustomH5writer(BaseTest):
     def test_write_model_inversion_service(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestModelInversionService.h5")
         dummy_model_inversion_service = ModelInversionService(
-            ModelConfiguration(model_connectivity=self.dummy_connectivity.normalized_weights, x1EQ=X1_EQ_CR_DEF),
+            ModelConfiguration(model_connectivity=self.dummy_connectivity.normalized_weights, x1eq=X1EQ_CR_DEF),
             dynamical_model="Epileptor", sig_eq=(-4.0 / 3.0 - -5.0 / 3.0) / 10.0)
 
         assert not os.path.exists(test_file)

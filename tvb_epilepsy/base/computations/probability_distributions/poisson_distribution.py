@@ -39,17 +39,18 @@ class PoissonDistribution(DiscreteProbabilityDistribution):
         lamda = np.array(self.lamda).flatten()
         return np.hstack([lamda - np.finfo(np.float64).eps, 1.0 - lamda + np.finfo(np.float64).eps])
 
-    def scipy(self, loc=0.0, scale=1.0):
+    def _scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(self.lamda, loc=loc, scale=scale)
 
-    def numpy(self, loc=0.0, scale=1.0, size=(1,)):
+    def _numpy(self, loc=0.0, scale=1.0, size=(1,)):
         return lambda: nr.poisson(self.lamda, size=size) + loc
 
     def calc_mean_manual(self, loc=0.0, scale=1.0):
         return self.lamda + loc
 
     def calc_median_manual(self, loc=0.0, scale=1.0):
-        self.logger.warning("Approximate calculation for median of poisson distribution!")
+        # TODO: find a way to mute this warning...
+        # self.logger.warning("Approximate calculation for median of poisson distribution!")
         return np.int(np.round(self.lamda + 1.0 / 3 - 0.02 / self.lamda + loc))
 
     def calc_mode_manual(self, loc=0.0, scale=1.0):

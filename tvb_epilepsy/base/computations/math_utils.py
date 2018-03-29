@@ -64,7 +64,7 @@ def get_greater_values_array_inds(values, n_vals=1):
 
 
 def select_greater_values_array_inds(values, threshold=None, verbose=False):
-    if isinstance(threshold, np.float):
+    if threshold is not None:
         return np.where(values > threshold)[0]
     else:
         if verbose:

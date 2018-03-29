@@ -560,7 +560,7 @@ def calc_fx1y1_6d_diff_x1(x1, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, tau1=TAU1_DE
         return np.multiply(np.multiply(-3 * np.multiply(x1, a) + 2 * b, x1), tau1)
 
 
-def calc_x0cr_r(yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), x1_rest=X1_DEF, x1_cr=X1_EQ_CR_DEF,
+def calc_x0cr_r(yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), x1_rest=X1_DEF, x1_cr=X1EQ_CR_DEF,
                 x0def=X0_DEF, x0cr_def=X0_CR_DEF, test=False, shape=None,
                 calc_mode="non_symbol"):  # epileptor_model="2d",
     calc_mode = confirm_calc_mode(calc_mode)
@@ -632,7 +632,7 @@ def calc_x0cr_r(yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), x1_
 
 
 def calc_fz_jac_square_taylor(zeq, yc, Iext1, K, w, a=A_DEF, b=B_DEF, d=D_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
-                              x_taylor=X1_EQ_CR_DEF, calc_mode="non_symbol"):
+                              x_taylor=X1EQ_CR_DEF, calc_mode="non_symbol"):
     calc_mode = confirm_calc_mode(calc_mode)
     zeq, yc, Iext1, K, a, b, d, tau1, tau0, x_taylor = \
         assert_arrays([zeq, yc, Iext1, K, a, b, d, tau1, tau0, x_taylor], (1, zeq.size))

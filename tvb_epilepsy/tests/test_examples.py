@@ -1,6 +1,6 @@
 import os
 from tvb_epilepsy.tests.base import BaseTest
-from tvb_epilepsy.top.examples.cc_vep import main_cc_vep
+from tvb_epilepsy.top.examples.vep_study import vep_study
 from tvb_epilepsy.top.examples.main_vep import main_vep
 from tvb_epilepsy.top.examples.main_sensitivity_analysis import main_sensitivity_analysis
 from tvb_epilepsy.top.examples.main_pse import main_pse
@@ -23,13 +23,13 @@ class TestExamples(BaseTest):
     #     main_sampling_service(self.config)
 
     def test_main_vep_default(self):
-        main_vep(self.config)
+        main_vep(self.config, ep_name="ep_l_frontal_complex")
 
     # def test_main_vep_everything(self):
     #     main_vep(self.config, sa_pse_flag=True)
 
-    def test_cc_vep(self):
-        main_cc_vep(self.config, self.config.input.HEAD, ep_name="ep_l_frontal_complex")
+    def test_vep_study(self):
+        vep_study()
 
     # def test_main_fitting_default(self):
     #     main_fit_sim_hyplsa()

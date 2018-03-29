@@ -15,14 +15,14 @@ from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r, calc_
     calc_x0_val_to_model_x0, calc_model_x0_to_x0_val
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z, eq_x1_hypo_x0_linTaylor, \
     eq_x1_hypo_x0_optimize
-from tvb_epilepsy.base.constants.model_constants import X1_EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, \
+from tvb_epilepsy.base.constants.model_constants import X1EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, \
     I_EXT2_DEF, A_DEF, B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF
 
 
 class ModelConfigurationBuilder(object):
     logger = initialize_logger(__name__)
 
-    x1EQcr = X1_EQ_CR_DEF
+    x1eq_cr = X1EQ_CR_DEF
 
     def __init__(self, number_of_regions=1, x0_values=X0_DEF, e_values=E_DEF, yc=YC_DEF, Iext1=I_EXT1_DEF,
                  Iext2=I_EXT2_DEF, K=K_DEF, a=A_DEF, b=B_DEF, d=D_DEF, slope=SLOPE_DEF, s=S_DEF, gamma=GAMMA_DEF,
@@ -85,42 +85,42 @@ class ModelConfigurationBuilder(object):
     def _compute_model_x0(self, x0_values):
         return calc_x0_val_to_model_x0(x0_values, self.yc, self.Iext1, self.a, self.b, self.d, self.zmode)
 
-    def _ensure_equilibrum(self, x1EQ, zEQ):
-        temp = x1EQ > self.x1EQcr - 10 ** (-3)
+    def _ensure_equilibrum(self, x1eq, zeq):
+        temp = x1eq > self.x1eq_cr - 10 ** (-3)
         if temp.any():
-            x1EQ[temp] = self.x1EQcr - 10 ** (-3)
-            zEQ = self._compute_z_equilibrium(x1EQ)
+            x1eq[temp] = self.x1eq_cr - 10 ** (-3)
+            zeq = self._compute_z_equilibrium(x1eq)
 
-        return x1EQ, zEQ
+        return x1eq, zeq
 
     def _compute_x1_equilibrium_from_E(self, e_values):
         array_ones = np.ones((self.number_of_regions,), dtype=np.float32)
         return ((e_values - 5.0) / 3.0) * array_ones
 
-    def _compute_z_equilibrium(self, x1EQ):
-        return calc_eq_z(x1EQ, self.yc, self.Iext1, "2d", slope=self.slope, a=self.a, b=self.b, d=self.d)
+    def _compute_z_equilibrium(self, x1eq):
+        return calc_eq_z(x1eq, self.yc, self.Iext1, "2d", slope=self.slope, a=self.a, b=self.b, d=self.d)
 
     def _compute_critical_x0_scaling(self):
         (self.x0cr, self.rx0) = calc_x0cr_r(self.yc, self.Iext1, a=self.a, b=self.b, d=self.d, zmode=self.zmode)
 
-    def _compute_coupling_at_equilibrium(self, x1EQ, model_connectivity):
-        return calc_coupling(x1EQ, self.K, model_connectivity)
+    def _compute_coupling_at_equilibrium(self, x1eq, model_connectivity):
+        return calc_coupling(x1eq, self.K, model_connectivity)
 
     def _compute_x0_values_from_x0_model(self, x0):
         return calc_model_x0_to_x0_val(x0, self.yc, self.Iext1, self.a, self.b, self.d, self.zmode)
 
-    def _compute_x0_values(self, x1EQ, zEQ, model_connectivity):
-        x0 = calc_x0(x1EQ, zEQ, self.K, model_connectivity)
+    def _compute_x0_values(self, x1eq, zeq, model_connectivity):
+        x0 = calc_x0(x1eq, zeq, self.K, model_connectivity)
         return self._compute_x0_values_from_x0_model(x0)
 
-    def _compute_e_values(self, x1EQ):
-        return 3.0 * x1EQ + 5.0
+    def _compute_e_values(self, x1eq):
+        return 3.0 * x1eq + 5.0
 
-    def _compute_params_after_equilibration(self, x1EQ, zEQ, model_connectivity):
+    def _compute_params_after_equilibration(self, x1eq, zeq, model_connectivity):
         self._compute_critical_x0_scaling()
-        Ceq = self._compute_coupling_at_equilibrium(x1EQ, model_connectivity)
-        x0_values = self._compute_x0_values(x1EQ, zEQ, model_connectivity)
-        e_values = self._compute_e_values(x1EQ)
+        Ceq = self._compute_coupling_at_equilibrium(x1eq, model_connectivity)
+        x0_values = self._compute_x0_values(x1eq, zeq, model_connectivity)
+        e_values = self._compute_e_values(x1eq)
         x0 = self._compute_model_x0(x0_values)
         return x0, Ceq, x0_values, e_values
 
@@ -129,31 +129,33 @@ class ModelConfigurationBuilder(object):
         zEQ = self._compute_z_equilibrium(x1EQ)
         return x1EQ, zEQ
 
-    def _compute_x1_equilibrium(self, e_indices, x1EQ, zEQ, x0_values, model_connectivity):
+    def _compute_x1_equilibrium(self, e_indices, x1eq, zeq, x0_values, model_connectivity):
         self._compute_critical_x0_scaling()
         x0 = self._compute_model_x0(x0_values)
-        x0_indices = np.delete(np.array(range(model_connectivity.shape[0])), e_indices)
+        x0_indices = np.delete(np.array(range(self.number_of_regions)), e_indices)
         if self.x1eq_mode == "linTaylor":
-            x1EQ = \
-                eq_x1_hypo_x0_linTaylor(x0_indices, e_indices, x1EQ, zEQ, x0, self.K,
+            x1eq = \
+                eq_x1_hypo_x0_linTaylor(x0_indices, e_indices, x1eq, zeq, x0, self.K,
                                         model_connectivity, self.yc, self.Iext1, self.a, self.b, self.d)[0]
         else:
-            x1EQ = \
-                eq_x1_hypo_x0_optimize(x0_indices, e_indices, x1EQ, zEQ, x0, self.K,
+            x1eq = \
+                eq_x1_hypo_x0_optimize(x0_indices, e_indices, x1eq, zeq, x0, self.K,
                                        model_connectivity, self.yc, self.Iext1, self.a, self.b, self.d)[0]
-        return x1EQ
+        return x1eq
 
     def _normalize_global_coupling(self):
         self.K = self.K_unscaled / self.number_of_regions
 
-    def _configure_model_from_equilibrium(self, x1EQ, zEQ, model_connectivity):
-        # x1EQ, zEQ = self._ensure_equilibrum(x1EQ, zEQ) # We don't this by default anymore
-        x0, Ceq, x0_values, e_values = self._compute_params_after_equilibration(x1EQ, zEQ, model_connectivity)
+    def _configure_model_from_equilibrium(self, x1eq, zeq, model_connectivity):
+        # x1eq, zeq = self._ensure_equilibrum(x1eq, zeq) # We don't this by default anymore
+        x0, Ceq, x0_values, e_values = self._compute_params_after_equilibration(x1eq, zeq, model_connectivity)
         return ModelConfiguration(self.yc, self.Iext1, self.Iext2, self.K, self.a, self.b, self.d,
-                                  self.slope, self.s, self.gamma, x1EQ, zEQ, Ceq, x0, x0_values,
+                                  self.slope, self.s, self.gamma, x1eq, zeq, Ceq, x0, x0_values,
                                   e_values, self.zmode, model_connectivity)
 
     def build_model_from_E_hypothesis(self, disease_hypothesis, model_connectivity):
+        # This function sets healthy regions to the default epileptogenicity.
+
         # Always normalize K first
         self._normalize_global_coupling()
 
@@ -166,11 +168,22 @@ class ModelConfigurationBuilder(object):
         e_values[disease_hypothesis.e_indices] = disease_hypothesis.e_values
 
         # Compute equilibrium from epileptogenicity:
-        x1EQ, zEQ = self._compute_x1_and_z_equilibrium_from_E(e_values)
+        x1eq, zeq = self._compute_x1_and_z_equilibrium_from_E(e_values)
 
-        return self._configure_model_from_equilibrium(x1EQ, zEQ, model_connectivity)
+        if len(disease_hypothesis.x0_values) > 0:
+
+            # If there is also some x0 hypothesis, solve the system for the equilibrium:
+            # x0_values values must have size of len(x0_indices),
+            # e_indices are all regions except for the x0_indices in this case
+            x1eq = self._compute_x1_equilibrium(np.delete(range(self.number_of_regions), disease_hypothesis.x0_indices),
+                                                x1eq, zeq, disease_hypothesis.x0_values, model_connectivity)
+            zeq = self._compute_z_equilibrium(x1eq)
+
+        return self._configure_model_from_equilibrium(x1eq, zeq, model_connectivity)
 
     def build_model_from_hypothesis(self, disease_hypothesis, model_connectivity):
+        # This function sets healthy regions to the default excitability.
+
         # Always normalize K first
         self._normalize_global_coupling()
 
@@ -191,15 +204,15 @@ class ModelConfigurationBuilder(object):
         # and assign any diseased E_values if any
         e_values[disease_hypothesis.e_indices] = disease_hypothesis.e_values
 
-        # Compute equilibrium from epileptogenicity:
-        x1EQ_temp, zEQ_temp = self._compute_x1_and_z_equilibrium_from_E(e_values)
+        # Compute equilibrium only from epileptogenicity:
+        x1eq, zeq = self._compute_x1_and_z_equilibrium_from_E(e_values)
 
         # Now, solve the system in order to compute equilibrium:
-        x1EQ = self._compute_x1_equilibrium(disease_hypothesis.e_indices, x1EQ_temp, zEQ_temp, x0_values,
+        x1eq = self._compute_x1_equilibrium(disease_hypothesis.e_indices, x1eq, zeq, x0_values,
                                             model_connectivity)
-        zEQ = self._compute_z_equilibrium(x1EQ)
+        zeq = self._compute_z_equilibrium(x1eq)
 
-        return self._configure_model_from_equilibrium(x1EQ, zEQ, model_connectivity)
+        return self._configure_model_from_equilibrium(x1eq, zeq, model_connectivity)
 
     # TODO: This is used from PSE for varying an attribute's value. We should find a better way, not hardcoded strings.
     def set_attributes_from_pse(self, values, paths, indices):

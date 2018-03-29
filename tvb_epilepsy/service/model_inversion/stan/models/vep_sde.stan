@@ -152,8 +152,6 @@ data {
     real yc;
     real Iext1;
     real slope;
-    real x0cr;
-    real rx0;
     // real x0_lo;
     // real x0_hi;
     /* x1eq_star parameter  */

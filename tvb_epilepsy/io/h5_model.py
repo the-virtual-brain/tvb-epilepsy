@@ -7,7 +7,7 @@ import h5py
 
 import numpy as np
 
-from tvb_epilepsy.base.types import OrderedDictDot
+from tvb_epilepsy.base.datatypes.dot_dicts import OrderedDictDot
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import sort_dict, iterable_to_dict, dict_to_list_or_tuple, \
     set_list_item_by_reference_safely, get_list_or_tuple_item_safely, isequal_string

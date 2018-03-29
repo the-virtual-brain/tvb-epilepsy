@@ -44,10 +44,10 @@ class LognormalDistribution(ContinuousProbabilityDistribution):
         # By default expr >= 0
         return np.array(self.sigma).flatten() - np.finfo(np.float64).eps
 
-    def scipy(self, loc=0.0, scale=1.0):
+    def _scipy(self, loc=0.0, scale=1.0):
         return getattr(ss, self.scipy_name)(s=self.sigma, loc=loc, scale=np.exp(self.mu) * scale)
 
-    def numpy(self, loc=0.0, scale=1.0, size=(1,)):
+    def _numpy(self, loc=0.0, scale=1.0, size=(1,)):
         mu = self.scale_params(loc, scale)[0]
         return lambda: nr.lognormal(mean=self.mu, sigma=self.sigma, size=size) + loc
 
