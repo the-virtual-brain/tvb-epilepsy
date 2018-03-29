@@ -335,16 +335,16 @@ class H5Reader(object):
         h5_file.close()
         return mc_service
 
-    def read_model_inversions_service(self, path):
+    def read_model_inversion_service(self, path):
         """
                 :param path: Path towards a ModelConfigurationService H5 file
                 :return: ModelInversionService object
                 """
         # TODO: add a specialized reader function
-        model_inversions_service = self.read_dictionary(path, "OrderedDictDot")
-        if model_inversions_service.dict.get("signals_inds", None) is not None:
-            model_inversions_service.dict["signals_inds"] = model_inversions_service.dict["signals_inds"].tolist()
-        return model_inversions_service
+        model_inversion_service = self.read_dictionary(path, "OrderedDictDot")
+        if model_inversion_service.dict.get("signals_inds", None) is not None:
+            model_inversion_service.dict["signals_inds"] = model_inversion_service.dict["signals_inds"].tolist()
+        return model_inversion_service
 
     def read_dictionary(self, path, type="dict"):
         """

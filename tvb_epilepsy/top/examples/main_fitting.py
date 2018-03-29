@@ -81,15 +81,15 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
 
         # -------------------------- Get model_data and observation signals: -------------------------------------------
         # Create model inversion service (stateless)
-        model_inversion = SDEModelInversionService(model_configuration.number_of_regions, **kwargs)
         stats_model_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_StatsModel.h5")
         model_data_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5")
         if os.path.isfile(stats_model_file) and os.path.isfile(model_data_file):
             # Read existing statistical model and model data...
             statistical_model = reader.read_statistical_model(stats_model_file)
-            statistical_model.model_config = model_configuration
             model_data = stan_service.load_model_data_from_file(model_data_path=model_data_file)
         else:
+            model_inversion = SDEModelInversionService(model_configuration.number_of_regions, **kwargs)
+
             # ...or generate a new statistical model and model data
             statistical_model = \
                 SDEStatisticalModelBuilder(model_name="vep_sde", model_config=model_configuration,

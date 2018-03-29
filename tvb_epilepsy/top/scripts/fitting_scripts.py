@@ -85,7 +85,7 @@ def set_simulated_data(head, hypname, lsa_hypothesis, model_configuration, model
                                                ts_file=ts_file, plot_flag=True, config=config)
     # if len(sensors_inds) > 1:  # get_bipolar_channels(sensors_inds, sensors_lbls)
     #     sensors_inds, sensors_lbls = head.get_sensors_id().get_bipolar_sensors(sensors_inds=sensors_inds)
-    if statistical_model.observation_model.value in OBSERVATION_MODELS.SEEG.value:
+    if statistical_model.observation_model in OBSERVATION_MODELS.SEEG.value:
         manual_selection = sensors_inds
         signals_labels = head.get_sensors_id().labels
     else:

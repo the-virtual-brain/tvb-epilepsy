@@ -188,7 +188,7 @@ class ODEModelInversionService(ModelInversionService):
             sensors = kwargs.get("sensors")
             gain_matrix = sensors.gain_matrix
             self.signals_inds = range(gain_matrix.shape[0])
-            if stats_model.observation_model.value != OBSERVATION_MODELS.SEEG_LOGPOWER.value:
+            if stats_model.observation_model != OBSERVATION_MODELS.SEEG_LOGPOWER.value:
                 signals = extract_dict_stringkeys(sort_dict(target_data), kwargs.get("seeg_dataset", "SEEG0"),
                                                   modefun="find", two_way_search=True, break_after=1)
                 if len(signals) > 0:
