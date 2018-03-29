@@ -77,8 +77,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
     for hyp in hypotheses[1:]:
 
         # Set model configuration and compute LSA
-        model_configuration, lsa_hypothesis = set_model_config_LSA(head, hyp, reader, writer, plotter, config,
-                                                                   K_unscaled=3*K_DEF)
+        model_configuration, lsa_hypothesis = set_model_config_LSA(head, hyp, reader, config, K_unscaled=3*K_DEF)
 
         # -------------------------- Get model_data and observation signals: -------------------------------------------
         # Create model inversion service (stateless)
@@ -102,7 +101,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
                                            sigma_init=SIGMA_INIT_DEF, epsilon=EPSILON_DEF, sigma=SIGMA_DEF,
                                            scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF,
                                            sde_mode=SDE_MODES.NONCENTERED,
-                                           observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER,
+                                           observation_model=observation_model,
                                            number_of_signals=0, time_length=0, dt=DT_DEF, active_regions=[]).\
                                                                                                        generate_model()
 
@@ -150,7 +149,6 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
             # # Create model_data for stan
             # model_data = build_stan_model_dict(statistical_model, signals, model_inversion,
             #                                            time=time, sensors=head.get_sensors(), gain_matrix=None)
-            # writer.write_dictionary(model_data, os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5"))
 
             # Interface with INS stan models
             if stan_model_name.find("vep-fe-rev") >= 0:
@@ -160,13 +158,14 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
             else:
                 k_str = 'K'
 
-            writer.write_generic(statistical_model, config.out.FOLDER_RES, hyp.name+"_stats_model.h5")
+            writer.write_generic(statistical_model, config.out.FOLDER_RES, hyp.name+"_StatsModel.h5")
+            writer.write_dictionary(model_data, os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5"))
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         num_warmup = 20
         if fit_flag:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
-                                                      chains=4, refresh=1, num_warmup=num_warmup, num_samples=30,
+                                                      chains=2, refresh=1, num_warmup=num_warmup, num_samples=30,
                                                       max_depth=10, delta=0.8, save_warmup=1, plot_warmup=1, **kwargs)
             writer.write_generic(ests, config.out.FOLDER_RES, hyp.name + "_fit_est.h5")
             writer.write_generic(samples, config.out.FOLDER_RES, hyp.name + "_fit_samples.h5")

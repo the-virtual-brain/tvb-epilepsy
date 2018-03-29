@@ -283,9 +283,8 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
         if "scale" in self.parameters:
             self.logger.info("...scale...")
             parameters.update(
-                {"scale": generate_lognormal_parameter("scale", self.scale,
-                                                              0.0, 10*self.scale,
-                                                              sigma=self.scale, p_shape=(), use="scipy")})
+                {"scale": generate_lognormal_parameter("scale", self.scale, 0.0, 10*self.scale,
+                                                       sigma=self.scale, p_shape=(), use="scipy")})
             
         if "offset" in self.parameters:
             self.logger.info("...offset...")
@@ -294,7 +293,7 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
                      generate_stochastic_parameter("offset", -1.0, 1.0, p_shape=(),
                                                    probability_distribution=ProbabilityDistributionTypes.NORMAL,
                                                    optimize_pdf=False, use="scipy",
-                                                   **{"mean": self.offset, "std": 1.0})})
+                                                   **{"mu": self.offset, "sigma": 0.1})})
         return parameters
 
     def generate_model(self):

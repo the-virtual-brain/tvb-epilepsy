@@ -142,7 +142,7 @@ def build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inv
                 "offset_std": statistical_model.parameters["offset"].std,
                 "seeg_log_power": signals,
                 # 9.0 * model_data["signals"] - 4.0,  # scale from (0, 1) to (-4, 5)
-                "gain": set_mixing(statistical_model, model_inversion, sensors, gain_matrix)[active_regions],
+                "gain": set_mixing(statistical_model, model_inversion, sensors, gain_matrix)[:, active_regions],
                 "time": set_time(statistical_model, time)
                 }
     return vep_data

@@ -89,7 +89,7 @@ parameters {
     row_vector<upper=3.0> [nn] x0_star;
     real<upper=3.0> epsilon_star;
     real<lower=-3.0, upper=3.0> amplitude_star;
-    real offset;
+    real<lower=-1.0, upper=1.0> offset;
     real<lower=-3.0, upper=3.0> time_scale_star;
 
     // time-series state non-centering:

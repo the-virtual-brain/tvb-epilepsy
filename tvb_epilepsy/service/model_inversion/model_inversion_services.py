@@ -182,7 +182,6 @@ class ODEModelInversionService(ModelInversionService):
         self.target_data_type = "simulated_source"
         signals = np.array([])
         time = target_data["time"].flatten()
-        dt = np.diff(time).mean()
         signals_labels = kwargs.get("signals_labels")
         if stats_model.observation_model.value in OBSERVATION_MODELS.SEEG.value:
             self.target_data_type = "simulated_seeg"
@@ -232,7 +231,7 @@ class ODEModelInversionService(ModelInversionService):
                                           plotter=kwargs.get("plotter", False))[:3]
             target_data["signals"] = np.array(signals)
         (time_length, number_of_signals) = signals.shape
-        return signals, target_data, signals_labels, number_of_signals, time, time_length, dt
+        return signals, target_data, signals_labels, number_of_signals, time, time_length
 
     def normalize_signals(self, signals, normalization=None):
         return normalize_signals(signals, normalization)
@@ -240,12 +239,14 @@ class ODEModelInversionService(ModelInversionService):
     def set_target_data_and_time(self, target_data, stats_model, dynamical_model, **kwargs):
         if self.target_data_type.lower().find("simul") > -1:
             signals, target_data, signals_labels, stats_model.number_of_signals, \
-            stats_model.time, stats_model.time_length, stats_model.dt = \
+            stats_model.time, stats_model.time_length = \
                 self.set_simulated_target_data(target_data, stats_model, dynamical_model, **kwargs)
+            # TODO: a better rule for dt
+            stats_model.dt = kwargs.get("dt", 1000.0 / signals.shape[0])
         else:  # isequal_string(target_data_type, "empirical"):
             signals, stats_model.number_of_signals, stats_model.time_length = \
                 self.set_empirical_target_data(target_data, **kwargs)
-            stats_model.dt = kwargs.get("dt", 1.0)
+            stats_model.dt = kwargs.get("dt", 1000.0 / signals.shape[0])
             stats_model.time = target_data.get("time", np.arange(stats_model.dt * (stats_model.time_length - 1)))
         if kwargs.get("auto_selection", True) is not False:
             if stats_model.observation_model.value in OBSERVATION_MODELS.SEEG.value:
@@ -254,7 +255,7 @@ class ODEModelInversionService(ModelInversionService):
             else:
                 signals = self.select_signals_source(signals, stats_model.active_regions,
                                                      kwargs.pop("auto_selection", "rois"), **kwargs)
-            stats_model.number_of_signals = signals.shape[0]
+            stats_model.number_of_signals = signals.shape[1]
         if kwargs.get("decimate", 1) > 1:
             signals, stats_model.time, stats_model.dt, stats_model.time_length = \
                 decimate_signals(signals, stats_model.time, kwargs.get("decimate"))
