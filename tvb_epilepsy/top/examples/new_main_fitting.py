@@ -52,7 +52,7 @@ def set_hypotheses(head, config):
 
 
 def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_model = "EpileptorDP2D",
-                        observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER,  times_on_off=[], time_units="msec",
+                        observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,  times_on_off=[], time_units="msec",
                         sensors_lbls=[], sensors_inds=[], n_electrodes=None, sensors_per_electrode=2,
                         fitmethod="optimizing", stan_service="CmdStan", fit_flag=True, config=Config(), **kwargs):
     # Prepare necessary services:
@@ -96,11 +96,11 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
                                            parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K",
                                                        "x1init", "zinit", "sigma_init",  "dX1t", "dZt", "sigma",
                                                        "epsilon", "scale", "offset"],
-                                           xmode=XModes.X0MODE, priors_mode=PriorsModes.NONINFORMATIVE,
+                                           xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                                            sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5,
                                            sigma_init=SIGMA_INIT_DEF, epsilon=EPSILON_DEF, sigma=SIGMA_DEF,
                                            scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF,
-                                           sde_mode=SDE_MODES.NONCENTERED,
+                                           sde_mode=SDE_MODES.NONCENTERED.value,
                                            observation_model=observation_model,
                                            number_of_signals=0, time_length=0, dt=DT_DEF, active_regions=[]).\
                                                                                                        generate_model()
@@ -144,7 +144,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
             #                                                                    active_regions_th=None, reset=False)
 
             plot_target_signals(signals_ts_dict, signals, time, signals_labels, hyp.name,
-                                model_inversion, statistical_model, writer, plotter, config)
+                                model_inversion, statistical_model, plotter)
 
             # # Create model_data for stan
             # model_data = build_stan_model_dict(statistical_model, signals, model_inversion,
@@ -152,8 +152,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
 
             # Interface with INS stan models
             if stan_model_name.find("vep-fe-rev") >= 0:
-                model_data= build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inversion,
-                                                                   time=time, sensors=sensors, gain_matrix=None)
+                model_data = build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inversion,
+                                                                    time=time, sensors=sensors, gain_matrix=None)
 
             writer.write_generic(statistical_model, config.out.FOLDER_RES, hyp.name+"_StatsModel.h5")
             writer.write_dictionary(model_data, os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5"))
@@ -183,7 +183,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
         ests = ensure_list(ests)
 
         # -------------------------- Plot fitting results: ------------------------------------------------------------
-        # plot_fitting_results(ests, samples, R_hat, stan_model_name, model_data, statistical_model, model_inversion,
+        # plot_fitting_results(ests, samples, R_hat, stan_model_name, model_data, statistical_model,
         #                      model_configuration, lsa_hypothesis, plotter, x0_star_mu, x_init_mu, z_init_mu)
 
 
@@ -287,7 +287,7 @@ if __name__ == "__main__":
     # stats_model_name = "vep_sde"
     stan_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
-    observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER
+    observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
     fit_flag = True
     n_electrodes = 8
     sensors_per_electrode = 2

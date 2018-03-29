@@ -8,8 +8,7 @@ yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF
 For now, we assume default values, or externally set
 """
 import numpy as np
-from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r, calc_coupling, calc_x0, \
     calc_x0_val_to_model_x0, calc_model_x0_to_x0_val
@@ -17,6 +16,7 @@ from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z, eq
     eq_x1_hypo_x0_optimize
 from tvb_epilepsy.base.constants.model_constants import X1EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, \
     I_EXT2_DEF, A_DEF, B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF
+from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 
 
 class ModelConfigurationBuilder(object):
@@ -78,6 +78,17 @@ class ModelConfigurationBuilder(object):
 
     def __str__(self):
         return self.__repr__()
+
+    def build_model_from_model_config_dict(self, model_config_dict):
+        model_configuration = ModelConfiguration()
+        for attr, value in model_configuration.__dict__.iteritems():
+            value = model_config_dict.get(attr, None)
+            if value is None:
+                warning(attr + " not found in the input model configuraiton dictionary!" +
+                        "\nLeaving default " + attr + ": " + str(getattr(model_configuration, attr)))
+            if value is not None:
+                setattr(model_configuration, attr, value)
+        return model_configuration
 
     def set_attribute(self, attr_name, data):
         setattr(self, attr_name, data)

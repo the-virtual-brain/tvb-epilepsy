@@ -98,7 +98,7 @@ def set_simulated_data(head, hypname, lsa_hypothesis, model_configuration, model
 
 
 def plot_target_signals(signals_ts_dict, signals, time, signals_labels, hypname,
-                        model_inversion, statistical_model, writer, plotter, config):
+                        model_inversion, statistical_model, plotter):
     if signals_ts_dict.get("signals", None) is not None:
         signals_ts_dict["signals"] -= signals_ts_dict["signals"].min()
         signals_ts_dict["signals"] /= signals_ts_dict["signals"].max()
@@ -112,9 +112,6 @@ def plot_target_signals(signals_ts_dict, signals, time, signals_labels, hypname,
     plotter.plot_timeseries({'Target Signals': signals}, time, time_units="ms",
                             title=hypname + ' Target Signals',
                             labels=signals_labels[model_inversion.signals_inds])
-    writer.write_model_inversion_service(model_inversion, os.path.join(config.out.FOLDER_RES,
-                                                                       hypname + "_ModelInversionService.h5"))
-    writer.write_generic(statistical_model, config.out.FOLDER_RES, hypname + "_StatsModel.h5")
 
 
 def build_stan_service_and_model(stan_service, stan_model_name, fitmethod, config):
