@@ -2,9 +2,11 @@
 Entry point for working with VEP
 """
 import os
+from collections import OrderedDict
 import numpy as np
 from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.constants.model_constants import COLORED_NOISE, K_DEF
+from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects, isequal_string, ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
@@ -13,7 +15,7 @@ from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.simulator.simulator_builder import SimulatorBuilder
 from tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.top.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
-from tvb_epilepsy.top.scripts.simulation_scripts import prepare_vois_ts_dict, compute_seeg_and_write_ts_h5_file
+from tvb_epilepsy.top.scripts.simulation_scripts import compute_seeg_and_write_ts_to_h5
 from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.io.h5_reader import H5Reader
@@ -219,27 +221,25 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
                     logger.info("\n\nSimulated signal return shape: %s", tavg_data.shape)
                     logger.info("Time: %s - %s", time[0], time[-1])
                     logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
-                    # Variables of interest in a dictionary:
-                    res_ts = prepare_vois_ts_dict(sim_settings.monitor_expressions, tavg_data)
-                    res_ts['time'] = time
-                    res_ts['time_units'] = 'msec'
-                    res_ts = compute_seeg_and_write_ts_h5_file(config.out.FOLDER_RES, lsa_hypothesis.name + "_ts.h5",
-                                                                     sim.model, res_ts, output_sampling_time,
-                                                                     sim_settings.simulated_period,
-                                                                     hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
-                                                                     sensors_list=head.sensorsSEEG)
+
+                    ts_obj = Timeseries(np.swapaxes(tavg_data, 1, 2), OrderedDict(
+                        {TimeseriesDimensions.SPACE.value: sim.connectivity.region_labels,
+                         TimeseriesDimensions.STATE_VARIABLES.value: sim_settings.monitor_expressions}), time[0],
+                                        time[1] - time[0], "ms")
+
+
+                    compute_seeg_and_write_ts_to_h5(ts_obj, sim.model, head.sensorsSEEG, output_sampling_time,
+                                                    os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_ts.h5"),
+                                                    hpf_flag=True, hpf_low=10.0, hpf_high=512.0)
+
                     # Plot results
                     if model._ui_name is "EpileptorDP2D":
                         spectral_raster_plot = False
-                        trajectories_plot = True
                     else:
-                        spectral_raster_plot = "lfp"
-                        trajectories_plot = False
-                    #TODO: plotting fails when spectral_raster_plot="lfp". Denis will fix this
-                    plotter.plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, res_ts,
-                                             head.sensorsSEEG, hpf_flag=True, trajectories_plot=trajectories_plot,
-                                             spectral_raster_plot=spectral_raster_plot,log_scale=True,
-                                             region_labels=head.connectivity.region_labels)
+                        spectral_raster_plot = True
+                    plotter.plot_simulated_timeseries(ts_obj, sim.model, lsa_hypothesis.lsa_propagation_indices,
+                                                      spectral_raster_plot=spectral_raster_plot, log_scale=True)
+
                     # Optionally save results in mat files
                     # from scipy.io import savemat
                     # savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), res_ts)
