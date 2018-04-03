@@ -54,7 +54,7 @@ def _compute_and_write_seeg(lfp_timeseries, sensors_list, dt, filename, title_pr
             h5_writer.write_ts_seeg_epi(seeg_data, dt, filename)
             plotter.plot_simulated_seeg_timeseries(seeg_ts, title_prefix, hpf_flag)
 
-
+# TODO: simplify and separate flow steps
 def compute_seeg_and_write_ts_to_h5(timeseries, model, sensors_list, dt, filename, hpf_flag=False, hpf_low=10.0,
                                  hpf_high=256.0):
     h5_writer = H5Writer()
