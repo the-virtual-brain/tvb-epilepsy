@@ -321,31 +321,26 @@ class H5Writer(object):
         except Exception, e:
             raise_error(e + "\nSeeg dataset already written as " + sensors_name, self.logger)
 
-    def write_ts_epi(self, raw_data, sampling_period, path, lfp_data=None):
+    def write_ts_epi(self, raw_ts, sampling_period, path, lfp_ts=None):
         path = change_filename_or_overwrite(os.path.join(path))
 
-        if raw_data is None or len(raw_data.shape) != 3:
+        if raw_ts is None or len(raw_ts.squeezed_data.shape) != 3:
             raise_value_error("Invalid TS data 3D (time, regions, sv) expected", self.logger)
         self.logger.info("Writing a TS at:\n" + path)
-        if type(lfp_data) == int:
-            lfp_data = raw_data[:, :, lfp_data[1]]
-            raw_data[:, :, lfp_data[1]] = []
-        elif isinstance(lfp_data, list):
-            lfp_data = raw_data[:, :, lfp_data[1]] - raw_data[:, :, lfp_data[0]]
-        elif isinstance(lfp_data, numpy.ndarray):
-            lfp_data = lfp_data.reshape((lfp_data.shape[0], lfp_data.shape[1], 1))
-        else:
-            raise_value_error("Invalid lfp_data 3D (time, regions, sv) expected", self.logger)
+        if lfp_ts is None:
+            lfp_ts = raw_ts.lfp
         h5_file = h5py.File(path, 'a', libver='latest')
-        h5_file.create_dataset("/data", data=raw_data)
-        h5_file.create_dataset("/lfpdata", data=lfp_data)
+        h5_file.create_dataset("/data", data=raw_ts.squeezed_data)
+        h5_file.create_dataset("/lfpdata", data=lfp_ts.squeezed_data)
         write_metadata({KEY_TYPE: "TimeSeries"}, h5_file, KEY_DATE, KEY_VERSION)
-        write_metadata({KEY_MAX: raw_data.max(), KEY_MIN: raw_data.min(), KEY_STEPS: raw_data.shape[0],
-                        KEY_CHANNELS: raw_data.shape[1], KEY_SV: raw_data.shape[2], KEY_SAMPLING: sampling_period,
-                        KEY_START: 0.0}, h5_file, KEY_DATE, KEY_VERSION, "/data")
-        write_metadata({KEY_MAX: lfp_data.max(), KEY_MIN: lfp_data.min(), KEY_STEPS: lfp_data.shape[0],
-                        KEY_CHANNELS: lfp_data.shape[1], KEY_SV: 1, KEY_SAMPLING: sampling_period, KEY_START: 0.0},
-                       h5_file, KEY_DATE, KEY_VERSION, "/lfpdata")
+        write_metadata({KEY_MAX: raw_ts.squeezed_data.max(), KEY_MIN: raw_ts.squeezed_data.min(),
+                        KEY_STEPS: raw_ts.squeezed_data.shape[0], KEY_CHANNELS: raw_ts.squeezed_data.shape[1],
+                        KEY_SV: raw_ts.squeezed_data.shape[2], KEY_SAMPLING: sampling_period,
+                        KEY_START: raw_ts.time_start}, h5_file, KEY_DATE, KEY_VERSION, "/data")
+        write_metadata({KEY_MAX: lfp_ts.squeezed_data.max(), KEY_MIN: lfp_ts.squeezed_data.min(),
+                        KEY_STEPS: lfp_ts.squeezed_data.shape[0], KEY_CHANNELS: lfp_ts.squeezed_data.shape[1],
+                        KEY_SV: 1, KEY_SAMPLING: sampling_period, KEY_START: lfp_ts.time_start}, h5_file, KEY_DATE,
+                       KEY_VERSION, "/lfpdata")
         h5_file.close()
 
     def write_ts(self, raw_data, sampling_period, path):
