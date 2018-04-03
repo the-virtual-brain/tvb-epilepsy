@@ -16,6 +16,15 @@ class PossibleStateVariables(Enum):
     X1 = "x1"
     X2 = "x2"
     LFP = "lfp"
+    Z = "z"
+    Y1 = "y1"
+    Y2 = "y2"
+    G = "g"
+    SLOPE_T = "slope_t"
+    IEXT2_T = "Iext2_t"
+    IEXT1_T = "Iext1_t"
+    K_T = "K_t"
+    X0_T = "x0_t"
 
 
 class Timeseries(object):
@@ -41,6 +50,10 @@ class Timeseries(object):
                 data = numpy.expand_dims(data, 2)
             data = numpy.expand_dims(data, 3)
         return data
+
+    @property
+    def space_labels(self):
+        return self.dimension_labels[TimeseriesDimensions.SPACE.value]
 
     @property
     def end_time(self):

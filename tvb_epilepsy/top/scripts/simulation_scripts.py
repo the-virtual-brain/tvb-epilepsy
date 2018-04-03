@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from tvb_epilepsy.base.constants.config import Config
+from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
@@ -10,7 +11,7 @@ from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.base.epileptor_models import EpileptorDP2D
 from tvb_epilepsy.service.simulator.simulator_builder import build_simulator_TVB_realistic, \
-                                   build_simulator_TVB_fitting, build_simulator_TVB_default, build_simulator_TVB_paper
+    build_simulator_TVB_fitting, build_simulator_TVB_default, build_simulator_TVB_paper
 
 logger = initialize_logger(__name__)
 
@@ -23,6 +24,52 @@ def prepare_vois_ts_dict(vois, data):
     return vois_ts_dict
 
 
+def _compute_and_write_seeg(lfp_timeseries, sensors_list, dt, filename, title_prefix="Ep", hpf_flag=False, hpf_low=10.0,
+                            hpf_high=256.0):
+    h5_writer = H5Writer()
+    plotter = Plotter()
+
+    fsAVG = 1000.0 / dt
+
+    if hpf_flag:
+        hpf_low = max(hpf_low, 1000.0 / (lfp_timeseries.end_time - lfp_timeseries.time_start))
+        hpf_high = min(fsAVG / 2.0 - 10.0, hpf_high)
+
+    idx_proj = -1
+    for sensor in sensors_list:
+        if isinstance(sensor, Sensors):
+            idx_proj += 1
+            seeg_data = lfp_timeseries.squeezed_data.dot(sensor.gain_matrix.T)
+
+            if hpf_flag:
+                for i in range(seeg_data.shape[1]):
+                    seeg_data[:, i] = filter_data(seeg_data[:, i], fsAVG, hpf_low, hpf_high)
+
+            seeg_data -= np.min(seeg_data)
+            seeg_data /= np.max(seeg_data)
+
+            seeg_ts = Timeseries(seeg_data, {TimeseriesDimensions.SPACE.value: sensor.labels}, lfp_timeseries.time_start,
+                                 lfp_timeseries.time_step, lfp_timeseries.time_unit)
+
+            h5_writer.write_ts_seeg_epi(seeg_data, dt, filename)
+            plotter.plot_simulated_seeg_timeseries(seeg_ts, title_prefix, hpf_flag)
+
+# TODO: simplify and separate flow steps
+def compute_seeg_and_write_ts_to_h5(timeseries, model, sensors_list, dt, filename, hpf_flag=False, hpf_low=10.0,
+                                 hpf_high=256.0):
+    h5_writer = H5Writer()
+
+    if isinstance(model, EpileptorDP2D):
+        lfp_timeseries = timeseries.x1
+        h5_writer.write_ts_epi(timeseries, dt, filename, lfp_timeseries)
+        _compute_and_write_seeg(lfp_timeseries, sensors_list, dt, filename)
+
+    else:
+        lfp_timeseries = timeseries.lfp
+        h5_writer.write_ts_epi(timeseries, dt, filename, lfp_timeseries)
+        _compute_and_write_seeg(lfp_timeseries, sensors_list, dt, filename, model._ui_name, hpf_flag, hpf_low, hpf_high)
+
+#TODO: deprecated, kept only for fitting usages.
 def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt, time_length, hpf_flag=False,
                                       hpf_low=10.0, hpf_high=256.0, sensors_list=[], save_flag=True):
     fsAVG = 1000.0 / dt
