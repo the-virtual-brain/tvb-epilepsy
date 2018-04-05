@@ -183,19 +183,19 @@ class ODEModelInversionService(ModelInversionService):
         signals = np.array([])
         time = target_data["time"].flatten()
         signals_labels = kwargs.get("signals_labels")
-        if stats_model.observation_model.value in OBSERVATION_MODELS.SEEG.value:
+        if stats_model.observation_model in OBSERVATION_MODELS.SEEG.value:
             self.target_data_type = "simulated_seeg"
             sensors = kwargs.get("sensors")
             gain_matrix = sensors.gain_matrix
             self.signals_inds = range(gain_matrix.shape[0])
-            if not stats_model.observation_model is OBSERVATION_MODELS.SEEG_LOGPOWER:
+            if stats_model.observation_model != OBSERVATION_MODELS.SEEG_LOGPOWER.value:
                 signals = extract_dict_stringkeys(sort_dict(target_data), kwargs.get("seeg_dataset", "SEEG0"),
                                                   modefun="find", two_way_search=True, break_after=1)
                 if len(signals) > 0:
                     signals = signals.values()[0]
             if len(signals) == 0:
                 signals = np.array(target_data.get("source", target_data["x1"]))
-                if stats_model.observation_model is OBSERVATION_MODELS.SEEG_LOGPOWER:
+                if stats_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
                     signals = np.log(np.dot(gain_matrix, np.exp(signals.T))).T
                 else:
                     signals = (np.dot(gain_matrix, signals.T)).T
@@ -249,7 +249,7 @@ class ODEModelInversionService(ModelInversionService):
             stats_model.dt = kwargs.get("dt", 1000.0 / signals.shape[0])
             stats_model.time = target_data.get("time", np.arange(stats_model.dt * (stats_model.time_length - 1)))
         if kwargs.get("auto_selection", True) is not False:
-            if stats_model.observation_model.value in OBSERVATION_MODELS.SEEG.value:
+            if stats_model.observation_model in OBSERVATION_MODELS.SEEG.value:
                 signals = self.select_signals_seeg(signals, kwargs.pop("sensors"), stats_model.active_regions,
                                                    kwargs.pop("auto_selection", "rois-correlation-power"), **kwargs)
             else:

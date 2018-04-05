@@ -2,6 +2,8 @@
 Read VEP related entities from TVB format (tvb_data module) and data-structures
 """
 import os
+import zipfile
+import shutil
 import numpy as np
 from tvb.basic.profile import TvbProfile
 

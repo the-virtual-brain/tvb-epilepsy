@@ -6,7 +6,7 @@ This will be used to populate a Model instance needed in order to launch a simul
 """
 
 from tvb_epilepsy.base.constants.model_constants import *
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, dicts_of_lists_to_lists_of_dicts
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, dicts_of_lists_to_lists_of_dicts, ensure_list
 
 
 class ModelConfiguration(object):
@@ -38,6 +38,8 @@ class ModelConfiguration(object):
         self.model_connectivity = model_connectivity
         if number_of_regions == 0 and model_connectivity is not None:
             self.number_of_regions = model_connectivity.shape[0]
+        else:
+            self.number_of_regions = len(ensure_list(self.x1eq))
 
     def __repr__(self):
         d = {

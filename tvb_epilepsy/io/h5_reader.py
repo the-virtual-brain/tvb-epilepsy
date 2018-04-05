@@ -2,7 +2,7 @@ import os
 from collections import OrderedDict
 import numpy
 import h5py
-from tvb_epilepsy.base.datatypes.dot_dicts import OrderedDictDot, DictDot
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.statistical_models.epileptor_statistical_models import StatisticalModel, \
@@ -11,9 +11,10 @@ from tvb_epilepsy.base.model.vep.connectivity import Connectivity, ConnectivityH
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorsH5Field
 from tvb_epilepsy.base.model.vep.surface import Surface, SurfaceH5Field
+from tvb_epilepsy.base.model.statistical_models.epileptor_statistical_models import EpileptorStatisticalModels
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+
+from tvb_epilepsy.service.model_inversion.statistical_models_builders import *
 from tvb_epilepsy.io.h5_model import read_h5_model
 from tvb_epilepsy.service.stochastic_parameter_builder import generate_stochastic_parameter
 
@@ -336,16 +337,16 @@ class H5Reader(object):
         h5_file.close()
         return mc_service
 
-    def read_model_inversions_service(self, path):
+    def read_model_inversion_service(self, path):
         """
                 :param path: Path towards a ModelConfigurationService H5 file
                 :return: ModelInversionService object
                 """
         # TODO: add a specialized reader function
-        model_inversions_service = self.read_dictionary(path, "OrderedDictDot")
-        if model_inversions_service.dict.get("signals_inds", None) is not None:
-            model_inversions_service.dict["signals_inds"] = model_inversions_service.dict["signals_inds"].tolist()
-        return model_inversions_service
+        model_inversion_service = self.read_dictionary(path, "OrderedDictDot")
+        if model_inversion_service.dict.get("signals_inds", None) is not None:
+            model_inversion_service.dict["signals_inds"] = model_inversion_service.dict["signals_inds"].tolist()
+        return model_inversion_service
 
     def read_dictionary(self, path, type="dict"):
         """

@@ -8,7 +8,7 @@ from tvb_epilepsy.base.computations.probability_distributions import Probability
 
 def set_mixing(statistical_model, model_inversion, sensors=None, gain_matrix=None):
     if gain_matrix is None:
-        if statistical_model.observation_model.value in OBSERVATION_MODELS.SEEG.value:
+        if statistical_model.observation_model in OBSERVATION_MODELS.SEEG.value:
             mixing = deepcopy(sensors.gain_matrix)
         else:
             mixing = np.eye(statistical_model.number_of_regions)
