@@ -19,43 +19,11 @@ from tvb_epilepsy.base.model.vep.head import Head
 from tvb.datatypes import connectivity, surfaces, region_mapping, sensors, structural, projections
 
 
-def centers_to_centres_filename(path, tvb_conn_zip):
-    # Unzip to a temporary folder
-    temp_dir = os.path.join(os.path.dirname(path), "connectivity_tmp/")
-    os.mkdir(temp_dir)
-    tvb_conn_zip.extractall(temp_dir)
-    tvb_conn_zip.close()
-    # Rename the centers file
-    for file in tvb_conn_zip.namelist():
-        if "centers.txt" in file:
-            temp_conn_dir = os.path.dirname(file)
-            temp_conn_dir = os.path.join(temp_dir, temp_conn_dir)
-            os.rename(os.path.join(temp_conn_dir, "centers.txt"), os.path.join(temp_conn_dir, "centres.txt"))
-            break
-    if temp_conn_dir == temp_dir:
-        target_conn_dir = os.path.join(temp_conn_dir, "connectivity")
-    else:
-        target_conn_dir = temp_conn_dir
-    # Create a new temporary zip file
-    shutil.make_archive(target_conn_dir, 'zip', temp_conn_dir)
-    # Use this path now
-    tvb_conn = connectivity.Connectivity.from_file(target_conn_dir + ".zip")
-    shutil.rmtree(temp_dir)
-    return tvb_conn
-
-
 class TVBReader(object):
     logger = initialize_logger(__name__)
 
     def read_connectivity(self, path):
-        # The following lines handle the case where the name of the regions' centers txt file is centers.txt instead
-        # of centres.txt
-        tvb_conn_zip = zipfile.ZipFile(path)
-        filenames = [os.path.basename(filepath) for filepath in tvb_conn_zip.namelist()]
-        if "centres.txt" not in filenames and "centers.txt" in filenames:
-            tvb_conn = centers_to_centres_filename(path, tvb_conn_zip)
-        else:
-            tvb_conn = connectivity.Connectivity.from_file(path)
+        tvb_conn = connectivity.Connectivity.from_file(path)
         return Connectivity(path, tvb_conn.weights, tvb_conn.tract_lengths,
                             tvb_conn.region_labels, tvb_conn.centres,
                             tvb_conn.hemispheres, tvb_conn.orientations, tvb_conn.areas)
