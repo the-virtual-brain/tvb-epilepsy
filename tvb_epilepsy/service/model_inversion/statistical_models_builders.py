@@ -1,17 +1,20 @@
 import time
+from enum import Enum
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 
 import numpy as np
 
 from tvb_epilepsy.base.constants.model_inversion_constants import *
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list
+from tvb_epilepsy.base.datatypes.dot_dicts import DictDot, OrderedDictDot
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
 from tvb_epilepsy.base.computations.probability_distributions import ProbabilityDistributionTypes
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.statistical_models.epileptor_statistical_models \
                                                      import StatisticalModel, ODEStatisticalModel, SDEStatisticalModel
+from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.stochastic_parameter_builder import generate_stochastic_parameter
 from tvb_epilepsy.service.model_inversion.epileptor_params_factory \
                                             import generate_lognormal_parameter, generate_negative_lognormal_parameter
@@ -28,31 +31,19 @@ class StatisticalModelBuilderBase(object):
 
     logger = initialize_logger(__name__)
 
-    model_name = "vep"
+    name = "vep"
     model_config = ModelConfiguration()
     parameters = [XModes.X0MODE.value]
-    n_parameters = 1
-    priors_mode = PriorsModes.NONINFORMATIVE
-    xmode = "x0"
+    xmode = XModes.X0MODE.value
+    priors_mode = PriorsModes.NONINFORMATIVE.value
 
-    def __init__(self, model_name="vep", model_config=ModelConfiguration(),
-                 parameters=[XModes.X0MODE.value], xmode=XModes.X0MODE, priors_mode=PriorsModes.NONINFORMATIVE):
-        self.model_name = model_name
+    def __init__(self, model_name="vep", model_config=ModelConfiguration(), parameters=[XModes.X0MODE.value],
+                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value):
+        self.name = model_name
         self.model_config = model_config
         self.xmode = xmode
         self.parameters = parameters
-        self.parameters[0] = self.xmode.value
-        self.n_parameters = len(parameters)
         self.priors_mode = priors_mode
-
-    @property
-    def number_of_regions(self):
-        return self.model_config.number_of_regions
-
-    def _repr(self, d=OrderedDict()):
-        for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
-            d.update({str(ikey) + ". " + key: val})
-        return d
 
     def __repr__(self, d=OrderedDict()):
         return formal_repr(self, self._repr(d))
@@ -60,9 +51,46 @@ class StatisticalModelBuilderBase(object):
     def __str__(self):
         return self.__repr__()
 
+    @property
+    def number_of_regions(self):
+        return self.model_config.number_of_regions
+
+    @property
+    def number_of_parameters(self):
+        return len(self.parameters)
+
+    def _repr(self, d=OrderedDict()):
+        for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
+            d.update({str(ikey) + ". " + key: val})
+        return d
+
     def set_attributes(self, attributes_names, attribute_values):
         for attribute_name, attribute_value in zip(ensure_list(attributes_names), ensure_list(attribute_values)):
             setattr(self, attribute_name, attribute_value)
+        return self
+
+    def _set_attributes_from_dict(self, attributes_dict):
+        if not isinstance(attributes_dict, dict):
+            attributes_dict = attributes_dict.__dict__
+        for attr, value in attributes_dict.iteritems():
+            if not attr in ["model_config", "parameters", "number_of_regions", "number_of_parameters"]:
+                value = attributes_dict.get(attr, None)
+                if value is None:
+                    warning(attr + " not found in input dictionary!" +
+                            "\nLeaving as it is: " + attr + " = " + str(getattr(self, attr)))
+                if value is not None:
+                    setattr(self, attr, value)
+        return attributes_dict
+
+    def initialize_from_statistical_model_dict(self, statistical_model):
+        statistical_model = self._set_attributes_from_dict(statistical_model)
+        model_config_dict = statistical_model.get("model_config", None)
+        if model_config_dict is None:
+            warning("Model configuration not found in statistical model read from file!" +
+                    "\nLeaving as it is: " + str(self.model_config))
+        if model_config_dict is not None:
+            setattr(self, "model_config",
+                    ModelConfigurationBuilder().build_model_from_model_config_dict(model_config_dict))
         return self
 
     @abstractmethod
@@ -84,11 +112,11 @@ class StatisticalModelBuilder(StatisticalModelBuilderBase):
 
     def __init__(self, model_name="vep", model_config=ModelConfiguration(),
                  parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K"],
-                 xmode=XModes.X0MODE, priors_mode=PriorsModes.NONINFORMATIVE,
+                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                  sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5):
         super(StatisticalModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode)
         if sigma_x is None:
-            if self.xmode is XModes.X0MODE:
+            if self.xmode == XModes.X0MODE.value:
                 self.sigma_x = SIGMA_X0_DEF
             else:
                 self.sigma_x = SIGMA_EQ_DEF
@@ -133,23 +161,23 @@ class StatisticalModelBuilder(StatisticalModelBuilderBase):
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
         # Generative model:
         # Epileptor stability:
-        self.logger.info("..." + self.xmode.value + "...")
-        if self.priors_mode is PriorsModes.INFORMATIVE:
-            xprior = getattr(self.model_config, self.xmode.value)
+        self.logger.info("..." + self.xmode + "...")
+        if self.priors_mode == PriorsModes.INFORMATIVE.value:
+            xprior = getattr(self.model_config, self.xmode)
             sigma_x = None
         else:
-            xprior = x_def[self.xmode.value]["def"] * np.ones((self.number_of_regions,))
+            xprior = x_def[self.xmode]["def"] * np.ones((self.number_of_regions,))
             sigma_x = self.sigma_x
-        x_param_name = self.xmode.value
+        x_param_name = self.xmode
         parameters.update(
-            {self.xmode.value: generate_negative_lognormal_parameter(x_param_name, xprior,
-                                                               x_def[self.xmode.value]["min"],
-                                                               x_def[self.xmode.value]["max"],
+            {self.xmode: generate_negative_lognormal_parameter(x_param_name, xprior,
+                                                               x_def[self.xmode]["min"],
+                                                               x_def[self.xmode]["max"],
                                                                sigma=sigma_x, sigma_scale=self.sigma_x_scale,
                                                                p_shape=(self.number_of_regions,), use="scipy")})
         # Update sigma_x value and name
-        self.sigma_x = parameters[self.xmode.value].std
-        sigma_x_name = "sigma_" + self.xmode.value
+        self.sigma_x = parameters[self.xmode].std
+        sigma_x_name = "sigma_" + self.xmode
         if sigma_x in self.parameters:
             self.logger.info("..." + sigma_x + "...")
             parameters.update(
@@ -189,8 +217,8 @@ class StatisticalModelBuilder(StatisticalModelBuilderBase):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
         parameters = self.generate_parameters()
-        model = StatisticalModel(self.model_name, self.number_of_regions, self.xmode, self.priors_mode,
-                                 parameters, self.model_config, self.sigma_x)
+        model = StatisticalModel(self.name, self.number_of_regions, self.xmode, self.priors_mode,
+                                 parameters, self.model_config, self.sigma_x, self.MC_direction_split)
         self.logger.info(self.__class__.__name__  + " took " +
                          str( time.time() - tic) + ' sec for model generation')
         return model
@@ -205,7 +233,7 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
     epsilon = EPSILON_DEF
     scale = SCALE_SIGNAL_DEF
     offset = OFFSET_SIGNAL_DEF
-    observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER
+    observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
     number_of_signals = 0
     time_length = 0
     dt = DT_DEF
@@ -214,11 +242,11 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
     def __init__(self, model_name="vep_ode", model_config=ModelConfiguration(),
                  parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1init", "zinit",
                              "sigma_init", "epsilon", "scale", "offset"],
-                 xmode=XModes.X0MODE, priors_mode=PriorsModes.NONINFORMATIVE,
+                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                  sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5,
                  sigma_init=SIGMA_INIT_DEF, epsilon=EPSILON_DEF,
                  scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF,
-                 observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER,
+                 observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  number_of_signals=0, time_length=0, dt=DT_DEF, active_regions=[]):
         super(ODEStatisticalModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode,
                                                          sigma_x, sigma_x_scale, MC_direction_split)
@@ -244,7 +272,7 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
 
         self.logger.info("...initial conditions' parameters...")
-        if self.priors_mode == PriorsModes.INFORMATIVE:
+        if self.priors_mode == PriorsModes.INFORMATIVE.value:
             x1init = self.model_config.x1eq
             zinit = self.model_config.zeq
         else:
@@ -300,9 +328,9 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
         parameters = self.generate_parameters()
-        model = ODEStatisticalModel(self.model_name, self.number_of_regions, self.xmode, self.priors_mode,
+        model = ODEStatisticalModel(self.name, self.number_of_regions, self.xmode, self.priors_mode,
                                     parameters, self.model_config, self.observation_model,
-                                    self.sigma_x, self.sigma_init, self.scale, self.offset,
+                                    self.sigma_x, self.sigma_init, self.scale, self.offset, self.epsilon,
                                     self.number_of_signals, self.time_length, self.dt, self.active_regions)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
@@ -314,16 +342,16 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
     parameters = [XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1init", "zinit",
                   "sigma_init", "dX1t", "dZt", "sigma", "epsilon", "scale", "offset"]
     sigma = SIGMA_DEF
-    sde_mode = SDE_MODES.NONCENTERED
+    sde_mode = SDE_MODES.NONCENTERED.value
 
     def __init__(self, model_name="vep_sde", model_config=ModelConfiguration(),
                  parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1init", "zinit",
                              "sigma_init",  "dX1t", "dZt", "sigma", "epsilon", "scale", "offset"],
-                 xmode=XModes.X0MODE, priors_mode=PriorsModes.NONINFORMATIVE,
+                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                  sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5,
                  sigma_init=SIGMA_INIT_DEF, epsilon=EPSILON_DEF, sigma=SIGMA_DEF,
                  scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF,
-                 sde_mode=SDE_MODES.NONCENTERED, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER,
+                 sde_mode=SDE_MODES.NONCENTERED.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  number_of_signals=0, time_length=0, dt=DT_DEF, active_regions=[]):
         super(SDEStatisticalModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode,
                                                          sigma_x, sigma_x_scale, MC_direction_split, sigma_init,
@@ -343,7 +371,7 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
     def generate_parameters(self):
         parameters = super(SDEStatisticalModelBuilder, self).generate_parameters()
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
-        if self.sde_mode is SDE_MODES.CENTERED:
+        if self.sde_mode == SDE_MODES.CENTERED.value:
             self.logger.info("...autoregression centered time series parameters...")
             names = ["x1", "z"]
             mins = [X1_MIN, Z_MIN]
@@ -381,11 +409,17 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
         parameters = self.generate_parameters()
-        model = SDEStatisticalModel(self.model_name, self.number_of_regions, self.xmode, self.priors_mode,
+        model = SDEStatisticalModel(self.name, self.number_of_regions, self.xmode, self.priors_mode,
                                     parameters, self.model_config, self.observation_model,
-                                    self.sigma_x, self.sigma_init, self.sigma, self.scale, self.offset,
+                                    self.sigma_x, self.sigma_init, self.sigma, self.scale, self.offset, self.epsilon,
                                     self.number_of_signals, self.time_length, self.dt, self.active_regions,
                                     self.sde_mode)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
         return model
+
+
+class EpileptorStatisticalModelBuilders(Enum):
+    STATISTICAL_MODEL_BUILDER = StatisticalModelBuilder()
+    ODESTATISTICAL_MODEL_BUILDER = ODEStatisticalModelBuilder()
+    SDESTATISTICAL_MODEL_BUILDER = SDEStatisticalModelBuilder()

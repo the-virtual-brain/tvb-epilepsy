@@ -35,6 +35,10 @@ class DictDot(object):
     def __getitem__(self, item):
         return self.dict[item]
 
+    @property
+    def __dict__(self):
+        return self.dict
+
 
 class OrderedDictDot(object):
 
@@ -64,3 +68,7 @@ class OrderedDictDot(object):
 
     def __getitem__(self, item):
         return self.dict[item]
+
+    @property
+    def __dict__(self):
+        return self.dict
