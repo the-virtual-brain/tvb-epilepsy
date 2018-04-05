@@ -1,20 +1,16 @@
 import os
 import numpy
 import h5py
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
-from tvb_epilepsy.base.datatypes.dot_dicts import OrderedDictDot, DictDot
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity, ConnectivityH5Field
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorsH5Field
 from tvb_epilepsy.base.model.vep.surface import Surface, SurfaceH5Field
-from tvb_epilepsy.base.model.statistical_models.epileptor_statistical_models import EpileptorStatisticalModels
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
-
 from tvb_epilepsy.service.model_inversion.statistical_models_builders import *
 from tvb_epilepsy.io.h5_model import read_h5_model
+from tvb_epilepsy.service.stochastic_parameter_builder import generate_stochastic_parameter
 
 
 class H5Reader(object):
@@ -388,21 +384,64 @@ class H5Reader(object):
         return sim_settings
 
     def read_statistical_model(self, path):
-        statistical_model = read_h5_model(path)
-        statistical_model_type = statistical_model.metadata_dict["/type"]
-        statistical_model = statistical_model.convert_from_h5_model()
-        if isequal_string(statistical_model_type, EpileptorStatisticalModels.SDESTATISTICAL_MODEL.value):
-            return EpileptorStatisticalModelBuilders.SDESTATISTICAL_MODEL_BUILDER.value. \
-                        initialize_from_statistical_model_dict(statistical_model).generate_model()
-        elif isequal_string(statistical_model_type, EpileptorStatisticalModels.ODESTATISTICAL_MODEL.value):
-            return EpileptorStatisticalModelBuilders.ODESTATISTICAL_MODEL_BUILDER.value.\
-                        initialize_from_statistical_model_dict(statistical_model).generate_model()
-        elif isequal_string(statistical_model_type, EpileptorStatisticalModels.STATISTICAL_MODEL.value):
-            return EpileptorStatisticalModelBuilders.STATISTICAL_MODEL_BUILDER.value.\
-                        initialize_from_statistical_model_dict(statistical_model).generate_model()
-        else:
-            raise_value_error(statistical_model_type + " is none of the available statistical model types!:\n" +
-                              str([_.value for _ in EpileptorStatisticalModelBuilders]))
+        h5_file = h5py.File(path, 'r', libver='latest')
+        epi_subtype_key = "EPI_Subtype"
+
+        statistical_model = None
+        epi_subtype = h5_file.attrs[epi_subtype_key]
+
+        if epi_subtype == StatisticalModel.__name__:
+            statistical_model = StatisticalModel()
+        if epi_subtype == ODEStatisticalModel.__name__:
+            statistical_model = ODEStatisticalModel()
+        if epi_subtype == SDEStatisticalModel.__name__:
+            statistical_model = SDEStatisticalModel()
+
+        for attr in h5_file.attrs.keys():
+            statistical_model.__setattr__(attr, h5_file.attrs[attr])
+
+        for key, value in h5_file.iteritems():
+            if isinstance(value, h5py.Dataset):
+                statistical_model.__setattr__(key, value[()])
+            if isinstance(value, h5py.Group):
+                if key == "model_config" and value.attrs[epi_subtype_key] == ModelConfiguration.__name__:
+                    model_config = ModelConfiguration()
+
+                    for mc_dataset in value.keys():
+                        model_config.set_attribute(mc_dataset, value[mc_dataset][()])
+
+                    for mc_attr in value.attrs.keys():
+                        if mc_attr != epi_subtype_key:
+                            model_config.__setattr__(mc_attr, value.attrs[mc_attr])
+
+                    statistical_model.__setattr__(key, model_config)
+
+                if key == "parameters" and value.attrs[epi_subtype_key] == OrderedDict.__name__:
+                    parameters = OrderedDict()
+                    for group_key, group_value in value.iteritems():
+                        parameter = None
+                        param_epi_subtype = group_value.attrs[epi_subtype_key]
+                        if param_epi_subtype == "StochasticParameter":
+                            parameter = generate_stochastic_parameter(
+                                probability_distribution=group_value.attrs["type"])
+                        # if param_epi_subtype == "NegativeLognormal":
+                        #     parameter = generate_negative_lognormal_parameter("", 0, 0, 0.1)
+                        else:
+                            continue
+
+                        for p_dataset in group_value.keys():
+                            parameter.__setattr__(p_dataset, group_value[p_dataset][()])
+
+                        for p_attr in group_value.attrs.keys():
+                            if p_attr != epi_subtype_key:
+                                parameter.__setattr__(p_attr, group_value.attrs[p_attr])
+
+                        parameters.update({group_key: parameter})
+
+                    statistical_model.__setattr__(key, parameters)
+
+        h5_file.close()
+        return statistical_model
 
     def read_generic(self, path, obj=None, output_shape=None):
         return read_h5_model(path).convert_from_h5_model(obj, output_shape)

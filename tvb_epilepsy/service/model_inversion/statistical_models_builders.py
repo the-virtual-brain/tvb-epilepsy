@@ -1,12 +1,8 @@
 import time
-from enum import Enum
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
-
 import numpy as np
-
 from tvb_epilepsy.base.constants.model_inversion_constants import *
-from tvb_epilepsy.base.datatypes.dot_dicts import DictDot, OrderedDictDot
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
@@ -14,7 +10,6 @@ from tvb_epilepsy.base.computations.probability_distributions import Probability
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.statistical_models.epileptor_statistical_models \
                                                      import StatisticalModel, ODEStatisticalModel, SDEStatisticalModel
-from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.stochastic_parameter_builder import generate_stochastic_parameter
 from tvb_epilepsy.service.model_inversion.epileptor_params_factory \
                                             import generate_lognormal_parameter, generate_negative_lognormal_parameter
@@ -81,17 +76,6 @@ class StatisticalModelBuilderBase(object):
                 if value is not None:
                     setattr(self, attr, value)
         return attributes_dict
-
-    def initialize_from_statistical_model_dict(self, statistical_model):
-        statistical_model = self._set_attributes_from_dict(statistical_model)
-        model_config_dict = statistical_model.get("model_config", None)
-        if model_config_dict is None:
-            warning("Model configuration not found in statistical model read from file!" +
-                    "\nLeaving as it is: " + str(self.model_config))
-        if model_config_dict is not None:
-            setattr(self, "model_config",
-                    ModelConfigurationBuilder().build_model_from_model_config_dict(model_config_dict))
-        return self
 
     @abstractmethod
     def generate_parameters(self):
@@ -417,9 +401,3 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
         return model
-
-
-class EpileptorStatisticalModelBuilders(Enum):
-    STATISTICAL_MODEL_BUILDER = StatisticalModelBuilder()
-    ODESTATISTICAL_MODEL_BUILDER = ODEStatisticalModelBuilder()
-    SDESTATISTICAL_MODEL_BUILDER = SDEStatisticalModelBuilder()

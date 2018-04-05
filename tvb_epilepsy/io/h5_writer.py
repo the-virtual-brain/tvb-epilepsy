@@ -148,7 +148,7 @@ class H5Writer(object):
         """
         h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
-        datasets_dict, metadata_dict = self._determine_datasets_and_attributes(model_configuration)
+        datasets_dict, metadata_dict, _ = self._determine_datasets_and_attributes(model_configuration)
 
         for key, value in datasets_dict.iteritems():
             h5_file.create_dataset(key, data=value)
@@ -168,7 +168,7 @@ class H5Writer(object):
         """
         h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
-        datasets_dict, metadata_dict = self._determine_datasets_and_attributes(model_configuration_builder)
+        datasets_dict, metadata_dict, _ = self._determine_datasets_and_attributes(model_configuration_builder)
 
         for key, value in datasets_dict.iteritems():
             h5_file.create_dataset(key, data=value)
@@ -188,7 +188,7 @@ class H5Writer(object):
         """
         h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
-        datasets_dict, metadata_dict = self._determine_datasets_and_attributes(lsa_service)
+        datasets_dict, metadata_dict, _ = self._determine_datasets_and_attributes(lsa_service)
 
         for key, value in datasets_dict.iteritems():
             h5_file.create_dataset(key, data=value)
@@ -211,7 +211,7 @@ class H5Writer(object):
 
         h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
-        datasets_dict, metadata_dict = self._determine_datasets_and_attributes(model_inversion_service)
+        datasets_dict, metadata_dict, _ = self._determine_datasets_and_attributes(model_inversion_service)
 
         for key, value in datasets_dict.iteritems():
             h5_file.create_dataset(key, data=value)
@@ -291,7 +291,7 @@ class H5Writer(object):
         """
         h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
-        datasets_dict, metadata_dict = self._determine_datasets_and_attributes(simulation_settings)
+        datasets_dict, metadata_dict, _ = self._determine_datasets_and_attributes(simulation_settings)
 
         for key, value in datasets_dict.iteritems():
             h5_file.create_dataset(key, data=value)
@@ -374,7 +374,7 @@ class H5Writer(object):
     def write_simulator_model(self, simulator_model, nr_regions, path):
         h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
-        datasets_dict, metadata_dict = self._determine_datasets_and_attributes(simulator_model, nr_regions)
+        datasets_dict, metadata_dict, _ = self._determine_datasets_and_attributes(simulator_model, nr_regions)
 
         for key, value in datasets_dict.iteritems():
             h5_file.create_dataset(key, data=value)
@@ -384,6 +384,51 @@ class H5Writer(object):
 
         for key, value in metadata_dict.iteritems():
             h5_file.attrs.create(key, value)
+
+        h5_file.close()
+
+    def _write_dicts_at_location(self, datasets_dict, metadata_dict, location):
+        for key, value in datasets_dict.iteritems():
+            location.create_dataset(key, data=value)
+
+        for key, value in metadata_dict.iteritems():
+            location.attrs.create(key, value)
+
+    def write_statistical_model(self, statistical_model, nr_regions, path):
+        """
+        :param object:
+        :param path:H5 path to be written
+        """
+        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
+
+        datasets_dict, metadata_dict, groups_keys = self._determine_datasets_and_attributes(statistical_model,
+                                                                                            nr_regions)
+        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, statistical_model.__class__.__name__)
+
+        self._write_dicts_at_location(datasets_dict, metadata_dict, h5_file)
+
+        for group_key in groups_keys:
+            if group_key == "model_config":
+                group = h5_file.create_group(group_key)
+                group_datasets, group_metadata, _ = self._determine_datasets_and_attributes(
+                    statistical_model.model_config, nr_regions)
+
+                group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, statistical_model.model_config.__class__.__name__)
+
+                self._write_dicts_at_location(group_datasets, group_metadata, group)
+
+            if group_key == "parameters":
+                group = h5_file.create_group(group_key)
+                group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, statistical_model.parameters.__class__.__name__)
+                for param_key, param_value in statistical_model.parameters.iteritems():
+                    param_group = group.create_group(param_key)
+                    param_group_datasets, param_group_metadata, _ = self._determine_datasets_and_attributes(param_value,
+                                                                                                            nr_regions)
+
+                    param_group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, param_value.__class__.__name__)
+
+                    self._write_dicts_at_location(param_group_datasets, param_group_metadata, param_group)
 
         h5_file.close()
 
@@ -399,45 +444,24 @@ class H5Writer(object):
 
         h5_model.write_to_h5(folder, path)
 
-    def write_statistical_model(self, object, folder, path):
-        """
-        :param object:
-        :param path:H5 path to be written
-        """
-        h5_model = convert_to_h5_model(object)
-
-        h5_model.add_or_update_metadata_attribute(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_model.add_or_update_metadata_attribute(self.H5_SUBTYPE_ATTRIBUTE, object.__class__.__name__)
-        h5_model.add_or_update_metadata_attribute("type", object.__class__.__name__)
-
-        h5_model.write_to_h5(folder, path)
-
-    def write_generic(self, object, folder, path):
-        """
-        :param object:
-        :param path:H5 path to be written
-        """
-        h5_model = convert_to_h5_model(object)
-
-        h5_model.add_or_update_metadata_attribute(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_model.add_or_update_metadata_attribute(self.H5_SUBTYPE_ATTRIBUTE, object.__class__.__name__)
-
-        h5_model.write_to_h5(folder, path)
-
-    def _determine_datasets_and_attributes(self, object, datasets_size=None):
+    def _determine_datasets_and_attributes(self, current_object, datasets_size=None):
         datasets_dict = {}
         metadata_dict = {}
+        groups_keys = []
 
-        for key, value in vars(object).iteritems():
+        for key, value in vars(current_object).iteritems():
             if isinstance(value, numpy.ndarray):
                 if datasets_size is not None and value.size == datasets_size:
                     datasets_dict.update({key: value})
-                if datasets_size is None and value.size > 0:
-                    datasets_dict.update({key: value})
                 else:
-                    metadata_dict.update({key: value})
+                    if datasets_size is None and value.size > 0:
+                        datasets_dict.update({key: value})
+                    else:
+                        metadata_dict.update({key: value})
             else:
                 if isinstance(value, (float, int, long, complex, str)):
                     metadata_dict.update({key: value})
+                else:
+                    groups_keys.append(key)
 
-        return datasets_dict, metadata_dict
+        return datasets_dict, metadata_dict, groups_keys
