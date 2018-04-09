@@ -1,10 +1,11 @@
 
 import numpy as np
-from scipy.signal import decimate
+from scipy.signal import decimate, convolve
 from scipy.stats import zscore
 
-from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
 
 
 def decimate_signals(signals, time, decim_ratio):
@@ -63,3 +64,27 @@ def normalize_signals(signals, normalization=None):
 #     lbenv = np.log(np.clip(benv[isort], benv[benv > 0].min(), None))
 #     lbenv_all = np.log(np.clip(benv, benv[benv > 0].min(), None))
 #     return te, isort, iother, lbenv, lbenv_all
+
+
+class TimeSeriesService(object):
+
+    logger = initialize_logger(__name__)
+
+    def __init__(self, logger=initialize_logger(__name__)):
+
+        self.logger = logger
+
+    def decimate(self, time_series, decim_ratio):
+        decim_data, decim_time, decim_dt, decim_n_times = decimate_signals(time_series[:],
+                                                                           time_series.time_line, decim_ratio)
+        return Timeseries(decim_data, {TimeseriesDimensions.SPACE.value: time_series.space_labels},
+                          decim_time[0], decim_dt, time_series.time_unit)
+
+    def convolve(self, time_series, win_len=None, kernel=None):
+        if kernel is None:
+            kernel = np.ones((np.int(np.round(win_len), )))
+        kernel_shape = tuple([len(kernel)] + list(time_series[:].shape[1:]))
+        kernel = np.broadcast_to(kernel, kernel_shape)
+        convolved_data = convolve(time_series[:], kernel, mode='same')
+        return Timeseries(convolved_data, {TimeseriesDimensions.SPACE.value: time_series.space_labels},
+                          time_series.time_start, time_series.time_step, time_series.time_unit)
