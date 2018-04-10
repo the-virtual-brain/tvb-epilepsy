@@ -8,7 +8,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_li
 from tvb_epilepsy.base.computations.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.base.epileptor_models import *
 from tvb_epilepsy.service.head_service import HeadService
-from tvb_epilepsy.service.signal_processor import decimate_signals, cut_signals_tails, normalize_signals
+from tvb_epilepsy.service.timeseries_service import decimate_signals, cut_signals_tails, normalize_signals
 from tvb_epilepsy.top.scripts.fitting_data_scripts import prepare_seeg_observable, prepare_signal_observable
 
 

@@ -52,6 +52,26 @@ class Timeseries(object):
         return data
 
     @property
+    def shape(self):
+        return self.data.shape
+
+    @property
+    def time_length(self):
+        return self.data.shape[0]
+
+    @property
+    def number_of_labels(self):
+        return self.data.shape[1]
+
+    @property
+    def number_of_variables(self):
+        return self.data.shape[2]
+
+    @property
+    def number_of_samples(self):
+        return self.data.shape[3]
+
+    @property
     def space_labels(self):
         return self.dimension_labels[TimeseriesDimensions.SPACE.value]
 

@@ -83,7 +83,7 @@ class TimeSeriesService(object):
     def convolve(self, time_series, win_len=None, kernel=None):
         if kernel is None:
             kernel = np.ones((np.int(np.round(win_len), )))
-        kernel_shape = tuple([len(kernel)] + list(time_series[:].shape[1:]))
+        kernel_shape = tuple([len(kernel)] + list(time_series.shape[1:]))
         kernel = np.broadcast_to(kernel, kernel_shape)
         convolved_data = convolve(time_series[:], kernel, mode='same')
         return Timeseries(convolved_data, {TimeseriesDimensions.SPACE.value: time_series.space_labels},
