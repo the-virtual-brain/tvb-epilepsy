@@ -3,6 +3,7 @@ from enum import Enum
 from copy import deepcopy
 from collections import OrderedDict
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.base.utils.data_structures_utils import monopolar_to_bipolar
 
 
 class TimeseriesDimensions(Enum):
@@ -16,6 +17,7 @@ class PossibleStateVariables(Enum):
     X1 = "x1"
     X2 = "x2"
     LFP = "lfp"
+    SOURCE = "source"
     Z = "z"
     Y1 = "y1"
     Y2 = "y2"
@@ -84,7 +86,7 @@ class Timeseries(object):
         return numpy.arange(self.time_start, self.end_time + self.time_step, self.time_step)
 
     @property
-    def squeezed_data(self):
+    def squeezed(self):
         return numpy.squeeze(self.data)
 
     def _get_index_of_state_variable(self, sv_label):
@@ -108,28 +110,31 @@ class Timeseries(object):
                           self.time_start, self.time_step, self.time_unit)
 
     @property
-    def lfp(self):
+    def source(self):
         if TimeseriesDimensions.STATE_VARIABLES.value not in self.dimension_labels.keys():
             self.logger.error("No state variables are defined for this instance!")
             raise ValueError
 
-        if PossibleStateVariables.LFP.value in self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES.value]:
-            return self.get_state_variable(PossibleStateVariables.LFP.value)
-        if PossibleStateVariables.X1.value in self.dimension_labels[
-            TimeseriesDimensions.STATE_VARIABLES.value] and PossibleStateVariables.X2.value in self.dimension_labels[
-            TimeseriesDimensions.STATE_VARIABLES.value]:
-            self.logger.info("%s are computed using %s and %s state variables!" % (
-                PossibleStateVariables.LFP.value, PossibleStateVariables.X1.value, PossibleStateVariables.X2.value))
+        if PossibleStateVariables.SOURCE.value in self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES.value]:
+            return self.get_state_variable(PossibleStateVariables.SOURCE.value)
+        if PossibleStateVariables.X1.value in self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES.value]:
             y0_ts = self.get_state_variable(PossibleStateVariables.X1.value)
-            y2_ts = self.get_state_variable(PossibleStateVariables.X2.value)
-            lfp_data = y2_ts.data - y0_ts.data
+            if PossibleStateVariables.X2.value in self.dimension_labels[TimeseriesDimensions.STATE_VARIABLES.value]:
+                self.logger.info("%s are computed using %s and %s state variables!" % (
+                    PossibleStateVariables.SOURCE.value, PossibleStateVariables.X1.value, PossibleStateVariables.X2.value))
+                y2_ts = self.get_state_variable(PossibleStateVariables.X2.value)
+                lfp_data = y2_ts.data - y0_ts.data
+            else:
+                self.logger.warn("%s are computed using %sstate variable!" % (
+                                                    PossibleStateVariables.SOURCE.value, PossibleStateVariables.X1.value))
+                lfp_data = y0_ts.data
             lfp_dim_labels = OrderedDict(
                 {TimeseriesDimensions.SPACE.value: self.dimension_labels[TimeseriesDimensions.SPACE.value],
-                 TimeseriesDimensions.STATE_VARIABLES.value: [PossibleStateVariables.LFP.value]})
+                 TimeseriesDimensions.STATE_VARIABLES.value: [PossibleStateVariables.SOURCE.value]})
             return Timeseries(lfp_data, lfp_dim_labels, self.time_start, self.time_step, self.time_unit)
         self.logger.error(
             "%s is not computed and cannot be computed now because state variables %s and %s are not defined!" % (
-                PossibleStateVariables.LFP.value, PossibleStateVariables.X1.value, PossibleStateVariables.X2.value))
+                PossibleStateVariables.SOURCE.value, PossibleStateVariables.X1.value, PossibleStateVariables.X2.value))
         raise ValueError
 
     def _get_indices_for_labels(self, list_of_labels):
@@ -262,3 +267,9 @@ class Timeseries(object):
                     slice_list.append(current_slice)
 
         return self.data[tuple(slice_list)]
+
+    def get_bipolar(self):
+        bipolar_labels, bipolar_inds = monopolar_to_bipolar(self.space_labels)
+        data = self.data[:, bipolar_inds[0]] - self.data[:, bipolar_inds[1]]
+        return Timeseries(data, self.dimension_labels, self.time_start, self.time_step, self.time_unit)
+
