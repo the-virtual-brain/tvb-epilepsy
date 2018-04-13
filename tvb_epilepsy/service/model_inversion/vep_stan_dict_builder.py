@@ -6,26 +6,13 @@ from tvb_epilepsy.base.constants.model_inversion_constants import *
 from tvb_epilepsy.base.computations.probability_distributions import ProbabilityDistributionTypes
 
 
-def set_mixing(statistical_model, model_inversion, sensors=None, gain_matrix=None):
-    if gain_matrix is None:
-        if statistical_model.observation_model in OBSERVATION_MODELS.SEEG.value:
-            mixing = deepcopy(sensors.gain_matrix)
-        else:
-            mixing = np.eye(statistical_model.number_of_regions)
-    else:
-        mixing = deepcopy(gain_matrix)
-    if mixing.shape[0] > len(model_inversion.signals_inds):
-        mixing = mixing[model_inversion.signals_inds]
-    return mixing
-
-
 def set_time(statistical_model, time=None):
     if time is None:
         time = np.arange(0, statistical_model.dt, statistical_model.time_length)
     return time
 
 
-# def build_stan_model_dict(statistical_model, signals, model_inversion,
+# def build_stan_model_dict(statistical_model, signals, 
 #                           time=None, sensors=None, gain_matrix=None):
 # TODO: needs updating
 #     """
@@ -54,7 +41,7 @@ def set_time(statistical_model, time=None):
 #                   "dt": statistical_model.dt,
 #                   "signals": signals,
 #                   "time": set_time(statistical_model, time),
-#                   "mixing": set_mixing(statistical_model, model_inversion, sensors, gain_matrix),
+#                   "mixing": set_mixing(statistical_model, sensors, gain_matrix),
 #                   "observation_model": statistical_model.observation_model.value,
 #                   # "observation_expression": np.where(np.in1d(OBSERVATION_MODEL_EXPRESSIONS,
 #                   #                                            statistical_model.observation_expression))[0][0],
@@ -80,13 +67,11 @@ def set_time(statistical_model, time=None):
 #     return sort_dict(model_data)
 
 
-def build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inversion,
-                                           time=None, sensors=None, gain_matrix=None,
-                                           parameter_names={"K": "k", "MC": "FC", "tau1": "time_scale",
-                                                            "x1init": "x_init", "zinit": "z_init",
-                                                            "x1": "x", "dX1t": "x_eta", "dZt": "z_eta",
-                                                            "scale": "amplitude",
-                                                            }):
+def build_stan_model_dict_to_interface_ins(statistical_model, signals, gain_matrix,
+                                           time=None, parameter_names={"K": "k", "MC": "FC", "tau1": "time_scale",
+                                                                       "x1init": "x_init", "zinit": "z_init",
+                                                                       "x1": "x", "dX1t": "x_eta", "dZt": "z_eta",
+                                                                       "scale": "amplitude",}):
     """
     Usually takes as input the model_data created with <build_stan_model_dict> and adds fields that are needed to
     interface the ins stan model.
@@ -142,7 +127,7 @@ def build_stan_model_dict_to_interface_ins(statistical_model, signals, model_inv
                 "offset_std": statistical_model.parameters["offset"].std,
                 "seeg_log_power": signals,
                 # 9.0 * model_data["signals"] - 4.0,  # scale from (0, 1) to (-4, 5)
-                "gain": set_mixing(statistical_model, model_inversion, sensors, gain_matrix)[:, active_regions],
+                "gain": gain_matrix,
                 "time": set_time(statistical_model, time)
                 }
     return vep_data

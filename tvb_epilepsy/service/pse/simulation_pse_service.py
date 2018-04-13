@@ -57,11 +57,7 @@ class SimulationPSEService(ABCPSEService):
             # If initial conditions were parameters, then, this flag can be set to False
             if update_initial_conditions:
                 simulator_copy.configure_initial_conditions()
-            time, data, status = simulator_copy.launch()
-            output = self.prepare_run_results(data, time)
-            return True, output
+            output, status = simulator_copy.launch()
+            return status, output
         except:
             return False, None
-
-    def prepare_run_results(self, data, time):
-        return {"time": time, "data": data}

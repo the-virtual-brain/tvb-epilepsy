@@ -59,16 +59,13 @@ EPS_DEF = 0.1
 EPSILON_DEF = EPS_DEF
 SCALE_SIGNAL_DEF = 1.0
 OFFSET_SIGNAL_DEF = 0.0
-# EULER_METHODS = ["backward", "midpoint", "forward"]
-# OBSERVATION_MODEL_EXPRESSIONS=["source", "x1_offset", "x1z_offset"]
-# OBSERVATION_EXPRESSION_DEF = "source"
+
 class OBSERVATION_MODELS(Enum):
     SEEG_LOGPOWER = 0
     SEEG_POWER = 1
     SOURCE_POWER = 2
     SEEG = [0, 1]
 
-# OBSERVATION_MODELS=[ "seeg_logpower", "seeg_power", "lfp_power"]
 OBSERVATION_MODEL_DEF = "seeg_logpower"
 
 # SDE model inversion constants

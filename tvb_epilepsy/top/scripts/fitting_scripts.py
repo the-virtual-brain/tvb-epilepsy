@@ -3,13 +3,16 @@ from scipy.io import savemat, loadmat
 import numpy as np
 
 from tvb_epilepsy.base.constants.model_constants import K_DEF
-from tvb_epilepsy.base.constants.model_inversion_constants import OBSERVATION_MODELS
+from tvb_epilepsy.base.constants.model_inversion_constants import *
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+from tvb_epilepsy.service.timeseries_service import TimeseriesService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
 from tvb_epilepsy.service.model_inversion.stan.pystan_service import PyStanService
+from tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.top.scripts.hypothesis_scripts import from_hypothesis_to_model_config_lsa
 from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration_to_simulation
-from tvb_epilepsy.top.scripts.fitting_data_scripts import prepare_seeg_observable_from_mne_file
+from tvb_epilepsy.top.scripts.fitting_data_scripts import *
 
 
 def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF):
@@ -28,106 +31,46 @@ def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF):
     return model_configuration, lsa_hypothesis
 
 
-def load_empirical_data(ts_file):
-    # Try to read a dictionary of previously written to file empirical data
-    signals_ts_dict = loadmat(ts_file)
-    time = signals_ts_dict["time"].flatten()
-    sensors_inds = np.array(signals_ts_dict["sensors_inds"]).flatten().tolist()
-    sensors_lbls = np.array(signals_ts_dict["sensors_lbls"]).flatten().tolist()
-    signals_ts_dict.update({"time": time, "sensors_inds": sensors_inds, "sensors_lbls": sensors_lbls})
-    savemat(ts_file, signals_ts_dict)
-    return signals_ts_dict, sensors_inds, sensors_lbls
-
-
-def proprocess_empirical_data(head, empirical_file, ts_file, sensors_inds, sensors_lbls, dynamical_model,
-                              times_on_off, time_units, plotter):
-    if len(sensors_lbls) == 0:
-        sensors_lbls = head.get_sensors_id().labels
-    signals, time, sensors_inds = \
-        prepare_seeg_observable_from_mne_file(empirical_file, dynamical_model, times_on_off,
-                                              sensors_lbls, sensors_inds, time_units=time_units,
-                                              win_len_ratio=10, plotter=plotter)[:3]
-    inds = np.argsort(sensors_inds)
-    sensors_inds = np.array(sensors_inds)[inds].flatten().tolist()
-    sensors_lbls = np.array(sensors_lbls).flatten().tolist()
-    all_signals = np.zeros((signals.shape[0], len(sensors_lbls)))
-    all_signals[:, sensors_inds] = signals[:, inds]
-    signals = all_signals
-    del all_signals
-    signals_ts_dict = {"time": time.flatten(), "signals": signals,
-                       "sensors_inds": sensors_inds, "sensors_lbls": sensors_lbls}
-    savemat(ts_file, signals_ts_dict)
-    return signals_ts_dict, sensors_inds, sensors_lbls
-
-
-def set_empirical_data(head, hypname, model_inversion, empirical_file, sensors_inds, sensors_lbls,
-                       dynamical_model, time_units, plotter, config):
-    # ---------------------------------------Get empirical data-------------------------------------------
-    model_inversion.target_data_type = "empirical"
-    ts_file = os.path.join(config.out.FOLDER_RES, hypname + "_ts_empirical.mat")
+def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, dynamical_model, times_on_off,
+                       label_strip_fun=None, plotter=False, **kwargs):
     try:
-        signals_ts_dict, sensors_inds, sensors_lbls = load_empirical_data(ts_file)
+        return H5Reader().read_timeseries(ts_file)
     except:
         # ... or preprocess empirical data for the first time:
-        signals_ts_dict, sensors_inds, sensors_lbls = \
-            proprocess_empirical_data(head, empirical_file, ts_file, sensors_inds, sensors_lbls,
-                                      dynamical_model, time_units, plotter)
-    return signals_ts_dict, sensors_inds, head.get_sensors().labels
+        if len(sensors_lbls) == 0:
+            sensors_lbls = head.get_sensors_id().labels
+        signals = prepare_seeg_observable_from_mne_file(empirical_file, head.get_sensors_id(), sensors_lbls,
+                                                        dynamical_model, times_on_off,
+                                                        label_strip_fun=label_strip_fun, bipolar=False, plotter=plotter,
+                                                        **kwargs)
+        H5Writer().write_timeseries(signals, ts_file)
+        return signals
 
 
-def set_simulated_data(head, hypname, lsa_hypothesis, model_configuration, model_inversion, statistical_model,
-                       sensors_inds, stan_model_name, dynamical_model, config):
-    model_inversion.target_data_type = "simulated"
-    ts_file = os.path.join(config.out.FOLDER_RES, hypname + "_ts.h5")
-    signals_ts_dict = \
-        from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
-                                               sim_type="realistic", dynamical_model=dynamical_model,
-                                               ts_file=ts_file, plot_flag=True, config=config)
-    # if len(sensors_inds) > 1:  # get_bipolar_channels(sensors_inds, sensors_lbls)
-    #     sensors_inds, sensors_lbls = head.get_sensors_id().get_bipolar_sensors(sensors_inds=sensors_inds)
+def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis, statistical_model, dynamical_model,
+                              config, sensors_id=0, **kwargs):
+    if statistical_model.observation.model == OBSERVATION_MODELS.SEEG_LOGPOWER:
+        seeg_gain_mode = "exp"
+    else:
+        seeg_gain_mode = "lin"
+    signals = from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
+                                                     sim_type="realistic", dynamical_model=dynamical_model,
+                                                     ts_file=ts_file, seeg_gain_mode=seeg_gain_mode, config=config)
+    time = signals.time_line
     if statistical_model.observation_model in OBSERVATION_MODELS.SEEG.value:
-        manual_selection = sensors_inds
-        signals_labels = head.get_sensors_id().labels
-    else:
-        signals_labels = head.connectivity.region_labels
-        if stan_model_name.find("vep-fe-rev") >= 0:
-            manual_selection = statistical_model.active_regions
+        if statistical_model.observation_model != OBSERVATION_MODELS.SEEG_LOGPOWER.value:
+            try:
+                signals = signals["seeg"][sensors_id]
+            except:
+                signals = TimeseriesService().compute_seeg(signals["source"].source, head.sensorsSEEG[sensors_id])[0]
         else:
-            manual_selection = []
-    return signals_ts_dict, manual_selection, signals_labels
-
-
-def plot_target_signals(signals_ts_dict, signals, time, signals_labels, hypname,
-                        model_inversion, statistical_model, plotter):
-    if signals_ts_dict.get("signals", None) is not None:
-        signals_ts_dict["signals"] -= signals_ts_dict["signals"].min()
-        signals_ts_dict["signals"] /= signals_ts_dict["signals"].max()
-        if statistical_model.observation_model == "seeg_logpower":
-            special_idx = model_inversion.signals_inds
-        else:
-            special_idx = []
-        plotter.plot_raster({'Target Signals': signals_ts_dict["signals"]}, signals_ts_dict["time"].flatten(),
-                            time_units="ms", title=hypname + ' Target Signals raster',
-                            special_idx=special_idx, offset=0.1, labels=signals_labels)
-    plotter.plot_timeseries({'Target Signals': signals}, time, time_units="ms",
-                            title=hypname + ' Target Signals',
-                            labels=signals_labels[model_inversion.signals_inds])
-
-
-def build_stan_service_and_model(stan_service, stan_model_name, fitmethod, config):
-    # Compile or load model:
-    # model_code_path = os.path.join(STATS_MODELS_PATH, stats_model_name + ".stan")
-    model_code_path = os.path.join(config.generic.STATS_MODELS_PATH, stan_model_name + ".stan")
-    if isequal_string(stan_service, "CmdStan"):
-        stan_service = CmdStanService(model_name=stan_model_name, model=None, model_code=None,
-                                      model_code_path=model_code_path,
-                                      fitmethod=fitmethod, random_seed=12345, init="random", config=config)
+            signals = TimeseriesService().compute_seeg(signals["source"].source, head.sensorsSEEG[sensors_id],
+                                                       sum_mode="exp")[0]
+        signals = \
+            prepare_seeg_observable(signals, dynamical_model, **kwargs)
     else:
-        stan_service = PyStanService(model_name=stan_model_name, model=None, model_code=None,
-                                     model_code_path=model_code_path,
-                                     fitmethod=fitmethod, random_seed=12345, init="random", config=config)
-    stan_service.set_or_compile_model()
-    return stan_service
+        signals = prepare_signal_observable(signals["source"].source, time, dynamical_model,**kwargs)
+    return signals
 
 
 def plot_fitting_results(ests, samples, R_hat, stan_model_name, model_data, statistical_model, model_inversion,

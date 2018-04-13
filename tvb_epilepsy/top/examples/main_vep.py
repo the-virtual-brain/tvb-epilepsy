@@ -203,7 +203,7 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
                 writer.write_simulator_model(sim.model, sim.connectivity.number_of_regions,
                                              os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_sim_model.h5"))
                 logger.info("\n\nSimulating...")
-                ttavg, tavg_data, status = sim.launch_simulation(report_every_n_monitor_steps=100)
+                sim_output, status = sim.launch_simulation(report_every_n_monitor_steps=100)
 
                 sim_path = os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_sim_settings.h5")
                 writer.write_simulation_settings(sim.simulation_settings, sim_path)
@@ -215,34 +215,27 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
                 if not status:
                     logger.warning("\nSimulation failed!")
                 else:
-                    time = np.array(ttavg, dtype='float32')
-                    output_sampling_time = np.mean(np.diff(time))
-                    tavg_data = tavg_data[:, :, :, 0]
-                    logger.info("\n\nSimulated signal return shape: %s", tavg_data.shape)
+                    time = np.array(sim_output.time_line).astype("f")
+                    logger.info("\n\nSimulated signal return shape: %s", sim_output.shape)
                     logger.info("Time: %s - %s", time[0], time[-1])
-                    logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
-
-                    ts_obj = Timeseries(np.swapaxes(tavg_data, 1, 2), OrderedDict(
-                        {TimeseriesDimensions.SPACE.value: sim.connectivity.region_labels,
-                         TimeseriesDimensions.STATE_VARIABLES.value: sim_settings.monitor_expressions}), time[0],
-                                        time[1] - time[0], "ms")
-
-
-                    compute_seeg_and_write_ts_to_h5(ts_obj, sim.model, head.sensorsSEEG, output_sampling_time,
-                                                    os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_ts.h5"),
-                                                    hpf_flag=True, hpf_low=10.0, hpf_high=512.0)
+                    logger.info("Values: %s - %s", sim_output.data.min(), sim_output.data.max())
+                    if not status:
+                        logger.warning("\nSimulation failed!")
+                    else:
+                        sim_output, seeg = compute_seeg_and_write_ts_to_h5(sim_output, sim.model, head.sensorsSEEG,
+                                                                           os.path.join(config.out.FOLDER_RES,
+                                                                                        model._ui_name + "_ts.h5"),
+                                                                           sim_settings.simulated_period,
+                                                                           hpf_flag=True, hpf_low=10.0, hpf_high=512.0)
 
                     # Plot results
                     if model._ui_name is "EpileptorDP2D":
                         spectral_raster_plot = False
                     else:
                         spectral_raster_plot = True
-                    plotter.plot_simulated_timeseries(ts_obj, sim.model, lsa_hypothesis.lsa_propagation_indices,
-                                                      spectral_raster_plot=spectral_raster_plot, log_scale=True)
-
-                    # Optionally save results in mat files
-                    # from scipy.io import savemat
-                    # savemat(os.path.join(FOLDER_RES, lsa_hypothesis.name + "_ts.mat"), res_ts)
+                    plotter.plot_simulated_timeseries(sim_output, sim.model, lsa_hypothesis.lsa_propagation_indices,
+                                                      seeg_list=seeg, spectral_raster_plot=spectral_raster_plot,
+                                                      hpf_flag=False, log_scale=True)
 
 
 if __name__ == "__main__":
