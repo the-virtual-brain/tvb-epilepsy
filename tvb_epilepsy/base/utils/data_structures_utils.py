@@ -301,6 +301,27 @@ def generate_region_labels(n_regions, labels=[], str=". ", numbering=True):
         return np.array(["%d" % l for l in range(n_regions)])
 
 
+def monopolar_to_bipolar(labels, indices=None, data=None):
+    if indices is None:
+        indices = range(len(labels))
+    bipolar_lbls = []
+    bipolar_inds = [[], []]
+    for ind in range(len(indices) - 1):
+        iS1 = indices[ind]
+        iS2 = indices[ind + 1]
+        if (labels[iS1][0] == labels[iS2][0]) and \
+                int(re.findall(r'\d+', labels[iS1])[0]) == \
+                int(re.findall(r'\d+', labels[iS2])[0]) - 1:
+            bipolar_lbls.append(labels[iS1] + "-" + labels[iS2])
+            bipolar_inds[0].append(iS1)
+            bipolar_inds[1].append(iS2)
+    if isinstance(data, np.array):
+        data = data[bipolar_inds[0]] - data[bipolar_inds[1]]
+        return bipolar_lbls, bipolar_inds, data
+    else:
+        return bipolar_lbls, bipolar_inds
+
+
 # This function is meant to confirm that two objects assumingly of the same type are equal, i.e., identical
 def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
     def print_not_equal_message(attr, field1, field2, logger):
