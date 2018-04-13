@@ -7,8 +7,8 @@ from tvb_epilepsy.base.utils.data_structures_utils import ensure_string
 from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
 
 
-def read_edf(path, sensors, rois_selection=None, label_strip_fun=None, time_units="ms",
-                           logger=initialize_logger(__name__)):
+def read_edf(path, sensors, rois_selection=None, label_strip_fun=None, time_units="ms"):
+    logger = initialize_logger(__name__)
 
     logger.info("Reading empirical dataset from mne file...")
     raw_data = read_raw_edf(path, preload=True)
@@ -36,7 +36,7 @@ def read_edf(path, sensors, rois_selection=None, label_strip_fun=None, time_unit
     # Assuming that edf file time units is "sec"
     if ensure_string(time_units).find("ms") == 0:
         times = 1000 * times
-    sort_inds = np.argsort(rois_inds)
+    sort_inds = np.argsort(rois_lbls)
     rois = np.array(rois)[sort_inds]
     rois_inds = np.array(rois_inds)[sort_inds]
     rois_lbls = np.array(rois_lbls)[sort_inds]
@@ -45,11 +45,9 @@ def read_edf(path, sensors, rois_selection=None, label_strip_fun=None, time_unit
     return data, times, rois, rois_inds, rois_lbls
 
 
-def read_edf_to_TimeSeries(path, sensors, rois_selection=None, label_strip_fun=None, time_units="ms",
-                           logger=initialize_logger(__name__)):
-
+def read_edf_to_Timeseries(path, sensors, rois_selection=None, label_strip_fun=None, time_units="ms"):
     data, times, rois, rois_inds, rois_lbls = \
-        read_edf(path, sensors, rois_selection, label_strip_fun, time_units, logger)
+        read_edf(path, sensors, rois_selection, label_strip_fun, time_units)
 
     return Timeseries(data, {TimeseriesDimensions.SPACE.value: rois_lbls},
                       times[0], np.mean(np.diff(times)), time_units)
