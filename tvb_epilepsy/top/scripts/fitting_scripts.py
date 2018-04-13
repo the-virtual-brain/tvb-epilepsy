@@ -60,6 +60,7 @@ def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis
         else:
             signals = TimeseriesService().compute_seeg(signals["source"].source,
                                                        head.get_sensors_id(sensor_ids=sensors_id), sum_mode="exp")[0]
+
         signals = prepare_seeg_observable(signals, times_on_off, plotter=plotter, **kwargs)
     else:
         signals = prepare_signal_observable(signals["source"].source, times_on_off, plotter=plotter, **kwargs)
