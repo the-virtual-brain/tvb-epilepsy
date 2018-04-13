@@ -15,6 +15,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import obj_to_dict, assert_ar
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val_to_model_x0
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.service.simulator.simulator import ABCSimulator
+from tvb_epilepsy.service.simulator.epileptor_model_factory import VOIS
 
 
 class Settings(object):
@@ -139,6 +140,10 @@ class SimulatorJava(ABCSimulator):
         self.json_config_path = os.path.join(self.head_path, self.json_custom_config_file)
         self.configure_model()
 
+    @property
+    def get_vois(self):
+        return VOIS[self.model._ui_name]
+
     @staticmethod
     def _save_serialized(ep_full_config, result_path):
         json_text = json.dumps(obj_to_dict(ep_full_config), indent=2)
@@ -189,7 +194,7 @@ class SimulatorJava(ABCSimulator):
         except:
             status = False
             self.logger.warning("Something went wrong with this simulation...")
-        time, data = self.reader.read_timeseries(os.path.join(self.head_path, "full-configuration", "ts.h5"))
+        time, data = self.reader.read_ts(os.path.join(self.head_path, "full-configuration", "ts.h5"))
         return time, data, status
 
     def prepare_epileptor_model_for_json(self, no_regions=88):
