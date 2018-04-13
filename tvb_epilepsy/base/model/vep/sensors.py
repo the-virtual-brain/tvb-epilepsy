@@ -2,7 +2,8 @@
 from enum import Enum
 import re
 import numpy as np
-from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, labels_to_inds
+from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, \
+                                                                                    labels_to_inds, monopolar_to_bipolar
 from tvb_epilepsy.base.utils.data_structures_utils import split_string_text_numbers
 from tvb_epilepsy.base.computations.math_utils import compute_gain_matrix
 
@@ -125,17 +126,18 @@ class Sensors(object):
     def get_bipolar_sensors(self, sensors_inds=None):
         if sensors_inds is None:
             sensors_inds = range(self.number_of_sensors)
-        bipolar_sensors_lbls = []
-        bipolar_sensors_inds = []
-        for ind in range(len(sensors_inds) - 1):
-            iS1 = sensors_inds[ind]
-            iS2 = sensors_inds[ind + 1]
-            if (self.labels[iS1][0] == self.labels[iS2][0]) and \
-                    int(re.findall(r'\d+', self.labels[iS1])[0]) == \
-                    int(re.findall(r'\d+', self.labels[iS2])[0]) - 1:
-                bipolar_sensors_lbls.append(self.labels[iS1] + "-" + self.labels[iS2])
-                bipolar_sensors_inds.append(iS1)
-        return bipolar_sensors_inds, bipolar_sensors_lbls
+        # bipolar_sensors_lbls = []
+        # bipolar_sensors_inds = []
+        # for ind in range(len(sensors_inds) - 1):
+        #     iS1 = sensors_inds[ind]
+        #     iS2 = sensors_inds[ind + 1]
+        #     if (self.labels[iS1][0] == self.labels[iS2][0]) and \
+        #             int(re.findall(r'\d+', self.labels[iS1])[0]) == \
+        #             int(re.findall(r'\d+', self.labels[iS2])[0]) - 1:
+        #         bipolar_sensors_lbls.append(self.labels[iS1] + "-" + self.labels[iS2])
+        #         bipolar_sensors_inds.append(iS1)
+        # return bipolar_sensors_inds, bipolar_sensors_lbls
+        return monopolar_to_bipolar(self.labels, sensors_inds)
 
     def get_bipolar_elecs(self, elecs):
         try:
