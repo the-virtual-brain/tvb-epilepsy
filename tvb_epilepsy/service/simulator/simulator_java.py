@@ -15,7 +15,6 @@ from tvb_epilepsy.base.utils.data_structures_utils import obj_to_dict, assert_ar
 from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val_to_model_x0
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.service.simulator.simulator import ABCSimulator
-from tvb_epilepsy.service.simulator.epileptor_model_factory import VOIS
 
 
 class Settings(object):
@@ -102,6 +101,10 @@ class JavaEpileptor(object):
         self.x0 = x0
         self.tt = tt
 
+    @property
+    def vois(self):
+        return ['x1', 'z', 'x2']
+
 
 # ! The attributes names should not be changed because they are synchronized with simulator config model.
 class FullConfiguration(object):
@@ -140,9 +143,8 @@ class SimulatorJava(ABCSimulator):
         self.json_config_path = os.path.join(self.head_path, self.json_custom_config_file)
         self.configure_model()
 
-    @property
     def get_vois(self):
-        return VOIS[self.model._ui_name]
+        return self.model.vois
 
     @staticmethod
     def _save_serialized(ep_full_config, result_path):

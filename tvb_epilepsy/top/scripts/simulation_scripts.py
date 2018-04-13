@@ -29,25 +29,22 @@ def _compute_and_write_seeg(source_timeseries, sensors_list, filename, title_pre
         hpf_high = min(fsAVG / 2.0 - 10.0, hpf_high)
 
     idx_proj = -1
-    seeg_ts_all = []
+    seeg_data = []
     for sensor in sensors_list:
         if isinstance(sensor, Sensors):
             idx_proj += 1
-            seeg_data = ts_service.compute_seeg(source_timeseries, [sensor], sum_mode=seeg_gain_mode)[0]
+            seeg = ts_service.compute_seeg(source_timeseries, [sensor], sum_mode=seeg_gain_mode)[0]
 
             if hpf_flag:
-                seeg_data = ts_service.filter(fsAVG, hpf_low, hpf_high, mode='bandpass', order=3)
+                seeg = ts_service.filter(seeg, fsAVG, hpf_low, hpf_high, mode='bandpass', order=3)
 
-            seeg_data = ts_service.normalize(seeg_data, "baseline-amplitude")
+            seeg = ts_service.normalize(seeg, "baseline-amplitude")
 
-            seeg_ts = Timeseries(seeg_data, {TimeseriesDimensions.SPACE.value: sensor.labels}, source_timeseries.time_start,
-                                 source_timeseries.time_step, source_timeseries.time_unit)
+            # TODO: test the case where we save subsequent seeg data from different sensors
+            h5_writer.write_ts_seeg_epi(seeg, source_timeseries.time_step, filename)
+            seeg_data.append(seeg)
 
-            h5_writer.write_ts_seeg_epi(seeg_data, source_timeseries.time_step, filename)
-            plotter.plot_simulated_seeg_timeseries(seeg_ts, title_prefix, hpf_flag)
-            seeg_ts_all.append(seeg_ts)
-
-    return seeg_ts_all
+    return seeg_data
 
 
 # TODO: simplify and separate flow steps
@@ -81,12 +78,6 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     #      -Iext2 and slope are coupled to z, g, or z*g in order for spikes to appear before seizure,
     #      -multiplicative correlated noise is also used
     # Optional variations:
-    if dynamical_model is "EpileptorDP2D":
-        spectral_raster_plot = False
-        trajectories_plot = True
-    else:
-        spectral_raster_plot = False  # "source"
-        trajectories_plot = False
 
     # ------------------------------Simulation--------------------------------------
     logger.info("\n\nConfiguring simulation...")
@@ -102,7 +93,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     writer = H5Writer()
     writer.write_simulator_model(sim.model, sim.connectivity.number_of_regions,
                                  os.path.join(config.out.FOLDER_RES, dynamical_model._ui_name + "_model.h5"))
-    sim_output = False
+    sim_output = []
     seeg=[]
     if ts_file is not None and os.path.isfile(ts_file):
         logger.info("\n\nLoading previously simulated time series from file: " + ts_file)
@@ -117,7 +108,6 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
             time = np.array(sim_output.time_line).astype("f")
             logger.info("\n\nSimulated signal return shape: %s", sim_output.shape)
             logger.info("Time: %s - %s", time[0], time[-1])
-            logger.info("Values: %s - %s", sim_output.data.min(), sim_output.data.max())
             sim_output, seeg = compute_seeg_and_write_ts_to_h5(sim_output, sim.model, head.sensorsSEEG,
                                                                os.path.join(config.out.FOLDER_RES,
                                                                         dynamical_model._ui_name + "_ts.h5"),
@@ -127,7 +117,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     if plot_flag and sim_output:
         # Plot results
         Plotter(config).plot_simulated_timeseries(sim_output, sim.model, lsa_hypothesis.lsa_propagation_indices,
-                                                      seeg_list=seeg, spectral_raster_plot=spectral_raster_plot,
-                                                      hpf_flag=False, log_scale=True)
+                                                  seeg_list=seeg, spectral_raster_plot=False,
+                                                  hpf_flag=False, log_scale=True)
 
     return {"source": sim_output, "seeg": seeg}

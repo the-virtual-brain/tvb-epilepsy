@@ -12,12 +12,13 @@ from tvb.simulator.models import Epileptor
 from tvb_epilepsy.service.simulator.simulator_java import JavaEpileptor
 from tvb_epilepsy.base.epileptor_models import EpileptorDP2D, EpileptorDP, EpileptorDPrealistic
 
-AVAILABLE_DYNAMICAL_MODELS = (Epileptor, JavaEpileptor, EpileptorDP2D, EpileptorDP, EpileptorDPrealistic)
 
+AVAILABLE_DYNAMICAL_MODELS = (Epileptor, JavaEpileptor, EpileptorDP2D, EpileptorDP, EpileptorDPrealistic)
 
 AVAILABLE_DYNAMICAL_MODELS_NAMES = []
 for model in AVAILABLE_DYNAMICAL_MODELS:
     AVAILABLE_DYNAMICAL_MODELS_NAMES.append(model._ui_name)
+
 
 #TODO: Ensure that function signatures are the same. An Epileptor is build using model_configuration attributes.
 # Take zmode it from model_configuration. Keep also pmode there or other values that can be received by kwargs.

@@ -264,7 +264,7 @@ class H5Reader(object):
         h5_file.close()
 
         return Timeseries(data, {TimeseriesDimensions.SPACE.value: labels,
-                                 TimeseriesDimensions.STATE_VARIABLES.value: variables},
+                                 TimeseriesDimensions.VARIABLES.value: variables},
                           time[0], np.mean(np.diff(time)), time_unit)
 
     def read_hypothesis(self, path, simplify=True):

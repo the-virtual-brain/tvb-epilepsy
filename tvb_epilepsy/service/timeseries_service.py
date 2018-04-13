@@ -8,7 +8,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure
 from tvb_epilepsy.base.computations.math_utils import select_greater_values_array_inds, \
                                                       select_by_hierarchical_group_metric_clustering
 from tvb_epilepsy.base.computations.analyzers_utils import filter_data
-from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
+from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions, PossibleVariables
 
 
 def decimate_signals(signals, time, decim_ratio):
@@ -79,7 +79,7 @@ class TimeseriesService(object):
         self.logger = logger
 
     def decimate(self, timeseries, decim_ratio):
-        decim_data, decim_time, decim_dt, decim_n_times = decimate_signals(timeseries[:],
+        decim_data, decim_time, decim_dt, decim_n_times = decimate_signals(timeseries.squeezed,
                                                                            timeseries.time_line, decim_ratio)
         return Timeseries(decim_data, timeseries.dimension_labels,
                           decim_time[0], decim_dt, timeseries.time_unit)
@@ -89,24 +89,24 @@ class TimeseriesService(object):
             kernel = np.ones((np.int(np.round(win_len), )))
         kernel_shape = tuple([len(kernel)] + list(timeseries.shape[1:]))
         kernel = np.broadcast_to(kernel, kernel_shape)
-        convolved_data = convolve(timeseries[:], kernel, mode='same')
+        convolved_data = convolve(timeseries.squeezed, kernel, mode='same')
         return Timeseries(convolved_data, timeseries.dimension_labels,
                           timeseries.time_start, timeseries.time_step, timeseries.time_unit)
     
     def detrend(self, timeseries, type='linear'):
-        return Timeseries(detrend(timeseries[:], axis=0, type=type), timeseries.dimension_labels,
+        return Timeseries(detrend(timeseries.squeezed, axis=0, type=type), timeseries.dimension_labels,
                           timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def normalize(self, timeseries, normalization=None):
-        return Timeseries(normalize_signals(timeseries[:], normalization), timeseries.dimension_labels,
+        return Timeseries(normalize_signals(timeseries.squeezed, normalization), timeseries.dimension_labels,
                           timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def filter(self, timeseries, fs, lowcut=None, highcut=None, mode='bandpass', order=3):
-        return Timeseries(filter_data(timeseries[:], fs, lowcut, highcut, mode, order), timeseries.dimension_labels,
-                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+        return Timeseries(filter_data(timeseries.squeezed, fs, lowcut, highcut, mode, order),
+                        timeseries.dimension_labels, timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def log(self, timeseries):
-        return Timeseries(np.log(timeseries[:]), timeseries.dimension_labels,
+        return Timeseries(np.log(timeseries), timeseries.dimension_labels,
                           timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def power(self, timeseries):
@@ -159,9 +159,12 @@ class TimeseriesService(object):
             seeg_fun = lambda source, gain_matrix: source.squeezed.dot(gain_matrix.T)
         seeg = []
         for sensor in ensure_list(sensors):
-            sensor.append(Timeseries(seeg_fun(source_timeseries, sensor.gain_matrix),
-                          {TimeseriesDimensions.SPACE.value: sensor.labels},
-                          source_timeseries.time_start, source_timeseries.time_step, source_timeseries.time_unit))
+            seeg.append(Timeseries(seeg_fun(source_timeseries, sensor.gain_matrix),
+                                   {TimeseriesDimensions.SPACE.value: sensor.labels,
+                                    TimeseriesDimensions.VARIABLES.value:
+                                        PossibleVariables.SEEG.value + str(sensor.labels)},
+                                   source_timeseries.time_start, source_timeseries.time_step,
+                                   source_timeseries.time_unit))
         return seeg
 
 

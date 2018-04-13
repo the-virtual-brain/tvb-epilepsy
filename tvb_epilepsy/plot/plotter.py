@@ -4,7 +4,7 @@ import numpy
 import matplotlib
 from collections import OrderedDict
 from tvb_epilepsy.base.constants.config import FiguresConfig
-from tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, PossibleStateVariables
+from tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, PossibleVariables
 matplotlib.use(FiguresConfig.MATPLOTLIB_BACKEND)
 from matplotlib import pyplot, gridspec
 from matplotlib.colors import Normalize
@@ -451,14 +451,14 @@ class Plotter(BasePlotter):
             else:
                 title = title_prefix + ": Simulated SEEG" + str(len(seeg.space_labels)) + " raster plot"
                 start_plot = 0
-            self.plot_raster({'SEEG': seeg.squeezed_data[start_plot:, :]}, seeg.time_line[start_plot:],
+            self.plot_raster({'SEEG': seeg.squeezed[start_plot:, :]}, seeg.time_line[start_plot:],
                              time_units=seeg.time_unit, title=title, offset=2.0, labels=seeg.space_labels,
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
 
     def plot_simulated_timeseries(self, timeseries, model, seizure_indices, seeg_list=[],
                                   spectral_raster_plot=False, **kwargs):
         region_labels = timeseries.space_labels
-        state_variables = timeseries.dimension_labels[TimeseriesDimensions.STATE_VARIABLES.value]
+        state_variables = timeseries.dimension_labels[TimeseriesDimensions.VARIABLES.value]
 
         if isinstance(model, EpileptorDP2D):
             # We assume that at least x1 and z are available in res
@@ -478,56 +478,59 @@ class Plotter(BasePlotter):
                                    title=model._ui_name + ': State space trajectories', labels=region_labels,
                                    figsize=FiguresConfig.LARGE_SIZE)
         else:
-            # We assume that at least lfp and z are available in res
-            lfp_ts = timeseries.lfp
-            sv_dict = {'LFP(t)': lfp_ts.squeezed_data, 'z(t)': timeseries.z.squeezed_data}
+            # We assume that at least source and z are available in res
+            source_ts = timeseries.source
+            sv_dict = {'LFP(t)': source_ts.squeezed, 'z(t)': timeseries.z.squeezed}
 
             self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
                                  special_idx=seizure_indices, title=model._ui_name + ": Simulated LFP-z",
                                  labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
-            start_plot = int(numpy.round(0.01 * timeseries.lfp.data.shape[0]))
-            self.plot_raster({'lfp': lfp_ts.squeezed_data[start_plot:, :]}, timeseries.time_line.flatten()[start_plot:],
+            start_plot = int(numpy.round(0.01 * timeseries.source.data.shape[0]))
+            self.plot_raster({'source': source_ts.squeezed[start_plot:, :]}, timeseries.time_line.flatten()[start_plot:],
                              time_units=timeseries.time_unit, special_idx=seizure_indices,
                              title=model._ui_name + ": Simulated LFP rasterplot", offset=2.0, labels=region_labels,
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
 
-            if PossibleStateVariables.X1.value in state_variables and PossibleStateVariables.Y1.value in state_variables:
-                sv_dict = {'x1(t)': timeseries.x1.squeezed_data, 'y1(t)': timeseries.y1.squeezed_data}
+            if PossibleVariables.X1.value in state_variables and PossibleVariables.Y1.value in state_variables:
+                sv_dict = {'x1(t)': timeseries.x1.squeezed, 'y1(t)': timeseries.y1.squeezed}
 
                 self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
                                      special_idx=seizure_indices, title=model._ui_name + ": Simulated pop1",
                                      labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
-            if PossibleStateVariables.X2.value in state_variables and PossibleStateVariables.Y2.value in state_variables and PossibleStateVariables.G.value in state_variables:
-                sv_dict = {'x2(t)': timeseries.x2.squeezed_data, 'y2(t)': timeseries.y2.squeezed_data,
-                           'g(t)': timeseries.g.squeezed_data}
+            if PossibleVariables.X2.value in state_variables and PossibleVariables.Y2.value in state_variables and PossibleVariables.G.value in state_variables:
+                sv_dict = {'x2(t)': timeseries.x2.squeezed, 'y2(t)': timeseries.y2.squeezed,
+                           'g(t)': timeseries.g.squeezed}
 
                 self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
                                      special_idx=seizure_indices, title=model._ui_name + ": Simulated pop2-g",
                                      labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
+            if spectral_raster_plot:
+                self.plot_spectral_analysis_raster(timeseries.time_line, timeseries.source.squeezed,
+                                                   time_units=timeseries.time_unit, freq=None,
+                                                   special_idx=seizure_indices,
+                                                   title=model._ui_name + ": Spectral Analysis", labels=region_labels,
+                                                   figsize=FiguresConfig.LARGE_SIZE, **kwargs)
+
         if isinstance(model, EpileptorDPrealistic):
-            if PossibleStateVariables.SLOPE_T.value in state_variables and PossibleStateVariables.IEXT2_T.value in state_variables:
-                sv_dict = {'1/(1+exp(-10(z-3.03))': 1 / (1 + numpy.exp(-10 * (timeseries.z.squeezed_data - 3.03))),
-                           'slope': timeseries.slope_t.squeezed_data, 'Iext2': timeseries.Iext2_t.squeezed_data}
+            if PossibleVariables.SLOPE_T.value in state_variables and PossibleVariables.IEXT2_T.value in state_variables:
+                sv_dict = {'1/(1+exp(-10(z-3.03))': 1 / (1 + numpy.exp(-10 * (timeseries.z.squeezed - 3.03))),
+                           'slope': timeseries.slope_t.squeezed, 'Iext2': timeseries.Iext2_t.squeezed}
                 title = model._ui_name + ": Simulated controlled parameters"
 
                 self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
                                      special_idx=seizure_indices, title=title, labels=region_labels,
                                      figsize=FiguresConfig.VERY_LARGE_SIZE)
-            if PossibleStateVariables.X0_T.value in state_variables and PossibleStateVariables.IEXT1_T.value in state_variables and PossibleStateVariables.K_T.value:
-                sv_dict = {'x0_values': timeseries.x0_t.squeezed_data, 'Iext1': timeseries.Iext1_t.squeezed_data,
-                           'K': timeseries.K_t.squeezed_data}
+            if PossibleVariables.X0_T.value in state_variables and PossibleVariables.IEXT1_T.value in state_variables \
+                    and PossibleVariables.K_T.value:
+                sv_dict = {'x0_values': timeseries.x0_t.squeezed, 'Iext1': timeseries.Iext1_t.squeezed,
+                           'K': timeseries.K_t.squeezed}
 
                 self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
                                      special_idx=seizure_indices, title=model._ui_name + ": Simulated parameters",
                                      labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
-        if spectral_raster_plot:
-            self.plot_spectral_analysis_raster(timeseries.time_line, timeseries.lfp.squeezed_data,
-                                               time_units=timeseries.time_unit, freq=None, special_idx=seizure_indices,
-                                               title=model._ui_name + ": Spectral Analysis", labels=region_labels,
-                                               figsize=FiguresConfig.LARGE_SIZE, **kwargs)
 
         self.plot_simulated_seeg_timeseries(seeg_list, title_prefix=model._ui_name,
                                             hpf_flag=kwargs.get("hpf_flag", False))
