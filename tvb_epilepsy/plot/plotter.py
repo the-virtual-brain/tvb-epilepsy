@@ -442,19 +442,21 @@ class Plotter(BasePlotter):
         self._check_show()
         return fig, ax, img, line, time, freq, stf, psd
 
-    def plot_simulated_seeg_timeseries(self, seeg_ts, title_prefix="Ep", hpf_flag=False):
-        if hpf_flag:
-            title = title_prefix + ": Simulated high pass filtered SEEG" + str(
-                len(seeg_ts.space_labels)) + " raster plot"
-            start_plot = int(numpy.round(0.01 * seeg_ts.squeezed_data.shape[0]))
-        else:
-            title = title_prefix + ": Simulated SEEG" + str(len(seeg_ts.space_labels)) + " raster plot"
-            start_plot = 0
-        self.plot_raster({'SEEG': seeg_ts.squeezed_data[start_plot:, :]}, seeg_ts.time_line[start_plot:],
-                         time_units=seeg_ts.time_unit, title=title, offset=2.0, labels=seeg_ts.space_labels,
-                         figsize=FiguresConfig.VERY_LARGE_SIZE)
+    def plot_simulated_seeg_timeseries(self, seeg_list, title_prefix="Ep", hpf_flag=False):
+        for seeg in ensure_list(seeg_list):
+            if hpf_flag:
+                title = title_prefix + ": Simulated high pass filtered SEEG" + str(
+                    len(seeg.space_labels)) + " raster plot"
+                start_plot = int(numpy.round(0.01 * seeg.time_length))
+            else:
+                title = title_prefix + ": Simulated SEEG" + str(len(seeg.space_labels)) + " raster plot"
+                start_plot = 0
+            self.plot_raster({'SEEG': seeg.squeezed_data[start_plot:, :]}, seeg.time_line[start_plot:],
+                             time_units=seeg.time_unit, title=title, offset=2.0, labels=seeg.space_labels,
+                             figsize=FiguresConfig.VERY_LARGE_SIZE)
 
-    def plot_simulated_timeseries(self, timeseries, model, seizure_indices, spectral_raster_plot=False, **kwargs):
+    def plot_simulated_timeseries(self, timeseries, model, seizure_indices, seeg_list=[],
+                                  spectral_raster_plot=False, **kwargs):
         region_labels = timeseries.space_labels
         state_variables = timeseries.dimension_labels[TimeseriesDimensions.STATE_VARIABLES.value]
 
@@ -527,76 +529,9 @@ class Plotter(BasePlotter):
                                                title=model._ui_name + ": Spectral Analysis", labels=region_labels,
                                                figsize=FiguresConfig.LARGE_SIZE, **kwargs)
 
-    #TODO: deprecated, kept only for fitting calls. Should be removed when Timeseries are used in fitting.
-    def plot_sim_results(self, model, seizure_indices, res, sensorsSEEG=None, hpf_flag=False, trajectories_plot=False,
-                         spectral_raster_plot=False, region_labels=[], **kwargs):
-        if isinstance(model, EpileptorDP2D):
-            # We assume that at least x1 and z are available in res
-            self.plot_timeseries({'x1(t)': res['x1'], 'z(t)': res['z']}, res['time'],
-                                 time_units=res.get('time_units', "ms"),
-                                 special_idx=seizure_indices, title=model._ui_name + ": Simulated TAVG",
-                                 labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
-            self.plot_raster({'x1(t)': res['x1']}, res['time'], time_units=res.get('time_units', "ms"),
-                             special_idx=seizure_indices,
-                             title=model._ui_name + ": Simulated x1 rasterplot", offset=2.0, labels=region_labels,
-                             figsize=FiguresConfig.VERY_LARGE_SIZE)
-        else:
-            # We assume that at least lfp and z are available in res
-            self.plot_timeseries({'LFP(t)': res['lfp'], 'z(t)': res['z']}, res['time'],
-                                 time_units=res.get('time_units', "ms"),
-                                 special_idx=seizure_indices, title=model._ui_name + ": Simulated LFP-z",
-                                 labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
-            if isinstance(res.get("x1"), numpy.ndarray) and isinstance(res.get("y1"), numpy.ndarray):
-                self.plot_timeseries({'x1(t)': res['x1'], 'y1(t)': res['y1']}, res['time'],
-                                     time_units=res.get('time_units', "ms"),
-                                     special_idx=seizure_indices, title=model._ui_name + ": Simulated pop1",
-                                     labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
-            if isinstance(res.get("x2"), numpy.ndarray) and isinstance(res.get("y3"), numpy.ndarray) \
-                and isinstance(res.get("g"), numpy.ndarray):
-                self.plot_timeseries({'x2(t)': res['x2'], 'y2(t)': res['y2'], 'g(t)': res['g']}, res['time'],
-                                     time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
-                                     title=model._ui_name + ": Simulated pop2-g",
-                                     labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
-            start_plot = int(numpy.round(0.01 * res['lfp'].shape[0]))
-            self.plot_raster({'lfp': res['lfp'][start_plot:, :]}, res['time'].flatten()[start_plot:],
-                             time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
-                             title=model._ui_name + ": Simulated LFP rasterplot", offset=2.0, labels=region_labels,
-                             figsize=FiguresConfig.VERY_LARGE_SIZE)
-        if isinstance(model, EpileptorDPrealistic):
-            if isinstance(res.get("slope_t"), numpy.ndarray) and isinstance(res.get("Iext2"), numpy.ndarray):
-                self.plot_timeseries({'1/(1+exp(-10(z-3.03))': 1 / (1 + numpy.exp(-10 * (res['z'] - 3.03))),
-                                      'slope': res['slope_t'], 'Iext2': res['Iext2_t']}, res['time'],
-                                      time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
-                                      title=model._ui_name + ": Simulated controlled parameters", labels=region_labels,
-                                      figsize=FiguresConfig.VERY_LARGE_SIZE)
-            if isinstance(res.get("x0_t"), numpy.ndarray) and isinstance(res.get("Iext1_t"), numpy.ndarray) \
-                and isinstance(res.get("K_t"), numpy.ndarray):
-                self.plot_timeseries({'x0_values': res['x0_t'], 'Iext1': res['Iext1_t'], 'K': res['K_t']}, res['time'],
-                                    time_units=res.get('time_units', "ms"), special_idx=seizure_indices,
-                                    title=model._ui_name + ": Simulated parameters", labels=region_labels,
-                                    figsize=FiguresConfig.VERY_LARGE_SIZE)
-        if trajectories_plot:
-            if isinstance(res.get("x1"), numpy.ndarray):
-                self.plot_trajectories({'x1': res['x1'], 'z': res['z']}, special_idx=seizure_indices,
-                                       title=model._ui_name + ': State space trajectories', labels=region_labels,
-                                       figsize=FiguresConfig.LARGE_SIZE)
-        if spectral_raster_plot is "lfp":
-            self.plot_spectral_analysis_raster(res["time"], res['lfp'], time_units=res.get('time_units', "ms"),
-                                               freq=None, special_idx=seizure_indices,
-                                               title=model._ui_name + ": Spectral Analysis", labels=region_labels,
-                                               figsize=FiguresConfig.LARGE_SIZE, **kwargs)
-        if sensorsSEEG is not None:
-            sensorsSEEG = ensure_list(sensorsSEEG)
-            for i in range(len(sensorsSEEG)):
-                if hpf_flag:
-                    title = model._ui_name + ": Simulated high pass filtered SEEG" + str(i) + " raster plot"
-                    start_plot = int(numpy.round(0.01 * res['SEEG' + str(i)].shape[0]))
-                else:
-                    title = model._ui_name + ": Simulated SEEG" + str(i) + " raster plot"
-                    start_plot = 0
-                self.plot_raster({'SEEG': res['SEEG' + str(i)][start_plot:, :]}, res['time'][start_plot:],
-                                 time_units=res.get('time_units', "ms"), title=title,
-                                 offset=2.0, labels=sensorsSEEG[i].labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
+        self.plot_simulated_seeg_timeseries(seeg_list, title_prefix=model._ui_name,
+                                            hpf_flag=kwargs.get("hpf_flag", False))
+
 
     def plot_lsa(self, disease_hypothesis, model_configuration, weighted_eigenvector_sum, eigen_vectors_number,
                  region_labels=[], pse_results=None, title="Hypothesis Overview"):
