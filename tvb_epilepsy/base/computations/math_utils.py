@@ -1,9 +1,13 @@
 # Some math tools
+from itertools import product
+from sklearn.cluster import AgglomerativeClustering
 
 import numpy as np
-from itertools import product
+
 from tvb_epilepsy.base.constants.config import CalculusConfig, FiguresConfig
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
+
 
 logger = initialize_logger(__name__)
 
@@ -71,6 +75,29 @@ def select_greater_values_array_inds(values, threshold=None, verbose=False):
             logger.warning("Switching to curve elbow point method since threshold=" + str(threshold))
         elbow_point = curve_elbow_point(values)
         return get_greater_values_array_inds(values, elbow_point + 1)
+
+
+def select_by_hierarchical_group_metric_clustering(distance, disconnectivity=np.array([]), metric=None,
+                                              n_groups=10, members_per_group=1):
+    if disconnectivity.shape == distance.shape:
+        distance = distance * disconnectivity
+    n_groups = np.minimum(np.maximum(n_groups, 3), n_groups // members_per_group)
+    clustering = AgglomerativeClustering(n_groups, affinity="precomputed", linkage="average")
+    clusters_labels = clustering.fit_predict(distance)
+    selection = []
+    for cluster_id in range(len(np.unique(clusters_labels))):
+        # For each cluster, select the first...
+        cluster_inds = np.where(clusters_labels == cluster_id)[0]
+        # ... at least members_per_group elements...
+        n_select = np.minimum(members_per_group, len(cluster_inds))
+        if metric is not None and len(ensure_list(metric)) == n_groups:
+            #...optionally according to some metric
+            inds_select = np.argsort(metric[cluster_inds])[-n_select:]
+        else:
+            #...otherwise, randomly
+            inds_select = range(n_select)
+        selection.append(cluster_inds[inds_select])
+    return selection
 
 
 def curve_elbow_point(vals, interactive=CalculusConfig.INTERACTIVE_ELBOW_POINT):
