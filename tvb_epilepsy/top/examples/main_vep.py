@@ -21,7 +21,7 @@ from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationB
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.tvb_data_reader import TVBReader
 
-PSE_FLAG = False
+PSE_FLAG = True
 SA_PSE_FLAG = False
 SIM_FLAG = True
 EP_NAME = "clinical_hypothesis_preseeg"
@@ -225,8 +225,8 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
                         sim_output, seeg = compute_seeg_and_write_ts_to_h5(sim_output, sim.model, head.sensorsSEEG,
                                                                            os.path.join(config.out.FOLDER_RES,
                                                                                         model._ui_name + "_ts.h5"),
-                                                                           seeg_gain_mode="lin",
-                                                                           hpf_flag=True, hpf_low=10.0, hpf_high=512.0)
+                                                                           seeg_gain_mode="lin", hpf_flag=True,
+                                                                           hpf_low=10.0, hpf_high=512.0)
 
                     # Plot results
                     plotter.plot_simulated_timeseries(sim_output, sim.model, lsa_hypothesis.lsa_propagation_indices,

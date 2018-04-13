@@ -4,7 +4,6 @@ from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.model.vep.sensors import Sensors
-from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.plot.plotter import Plotter
@@ -17,10 +16,8 @@ from tvb_epilepsy.service.timeseries_service import TimeseriesService
 logger = initialize_logger(__name__)
 
 
-def _compute_and_write_seeg(source_timeseries, sensors_list, filename, title_prefix="Ep", hpf_flag=False, hpf_low=10.0,
-                            hpf_high=256.0, seeg_gain_mode="lin"):
-    h5_writer = H5Writer()
-    plotter = Plotter()
+def _compute_and_write_seeg(source_timeseries, sensors_list, filename, hpf_flag=False, hpf_low=10.0,
+                            hpf_high=256.0, seeg_gain_mode="lin", h5_writer=H5Writer()):
     ts_service = TimeseriesService()
     fsAVG = 1000.0 / source_timeseries.time_step
 
@@ -49,26 +46,26 @@ def _compute_and_write_seeg(source_timeseries, sensors_list, filename, title_pre
 
 # TODO: simplify and separate flow steps
 def compute_seeg_and_write_ts_to_h5(timeseries, model, sensors_list, filename, seeg_gain_mode="lin",
-                                    hpf_flag=False, hpf_low=10.0, hpf_high=256.0):
-    h5_writer = H5Writer()
+                                    hpf_flag=False, hpf_low=10.0, hpf_high=256.0, h5_writer=H5Writer()):
 
     if isinstance(model, EpileptorDP2D):
         source_timeseries = timeseries.x1
         h5_writer.write_ts_epi(timeseries, timeseries.time_step, filename, source_timeseries)
-        seeg_ts_all = _compute_and_write_seeg(source_timeseries, sensors_list, filename, seeg_gain_mode=seeg_gain_mode)
+        seeg_ts_all = _compute_and_write_seeg(source_timeseries, sensors_list, filename,
+                                              seeg_gain_mode=seeg_gain_mode, h5_writer=h5_writer)
 
     else:
         source_timeseries = timeseries.source
         h5_writer.write_ts_epi(timeseries, timeseries.time_step, filename, source_timeseries)
-        seeg_ts_all = _compute_and_write_seeg(source_timeseries, sensors_list, filename, model._ui_name,
-                                              hpf_flag, hpf_low, hpf_high, seeg_gain_mode=seeg_gain_mode)
+        seeg_ts_all = _compute_and_write_seeg(source_timeseries, sensors_list, filename,
+                                              hpf_flag, hpf_low, hpf_high, seeg_gain_mode, h5_writer=h5_writer)
 
     return timeseries, seeg_ts_all
 
 
 def from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
-                                           sim_type="realistic", dynamical_model="EpileptorDP2D",
-                                           ts_file=None, seeg_gain_mode="lin", plot_flag=True, config=Config()):
+                                           sim_type="realistic", ts_file=None, seeg_gain_mode="lin", plot_flag=True,
+                                           config=Config()):
     # Choose model
     # Available models beyond the TVB Epileptor (they all encompass optional variations from the different papers):
     # EpileptorDP: similar to the TVB Epileptor + optional variations,
@@ -109,9 +106,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
             logger.info("\n\nSimulated signal return shape: %s", sim_output.shape)
             logger.info("Time: %s - %s", time[0], time[-1])
             sim_output, seeg = compute_seeg_and_write_ts_to_h5(sim_output, sim.model, head.sensorsSEEG,
-                                                               os.path.join(config.out.FOLDER_RES,
-                                                                        dynamical_model._ui_name + "_ts.h5"),
-                                                               seeg_gain_mode=seeg_gain_mode,
+                                                               ts_file, seeg_gain_mode=seeg_gain_mode,
                                                                hpf_flag=True, hpf_low=10.0, hpf_high=512.0)
 
     if plot_flag and sim_output:

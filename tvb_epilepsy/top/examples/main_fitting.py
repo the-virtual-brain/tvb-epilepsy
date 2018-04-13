@@ -2,12 +2,14 @@
 
 
 from tvb_epilepsy.base.constants.config import Config
-from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.model_inversion.statistical_models_builders import SDEStatisticalModelBuilder
 from tvb_epilepsy.service.model_inversion.model_inversion_services import SDEModelInversionService
+from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
+from tvb_epilepsy.service.model_inversion.stan.pystan_service import PyStanService
 from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import build_stan_model_dict_to_interface_ins
 from tvb_epilepsy.top.scripts.fitting_scripts import *
 
@@ -59,7 +61,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
     # Read head
     logger.info("Reading from: " + config.input.HEAD)
     head = reader.read_head(config.input.HEAD)
-    sensors = head.get_sensors_id(sensors_id)
+    sensors = head.get_sensors_id(sensor_ids=sensors_id)
     # plotter.plot_head(head)
 
     # Set hypotheses:
@@ -72,7 +74,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
                                       config=config)
     else:
         stan_service = PyStanService(model_name=stan_model_name, model_code_path=model_code_path, fitmethod=fitmethod,
-                                    config=config)
+                                     config=config)
     stan_service.set_or_compile_model()
 
     for hyp in hypotheses[1:]:
@@ -89,7 +91,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
             statistical_model = reader.read_statistical_model(stats_model_file)
             model_data = stan_service.load_model_data_from_file(model_data_path=model_data_file)
         else:
-            model_inversion = SDEModelInversionService(model_configuration.number_of_regions, **kwargs)
+            model_inversion = SDEModelInversionService()
 
             # ...or generate a new statistical model and model data
             statistical_model = \
@@ -102,7 +104,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
                                                                                                        generate_model()
 
             # Update active model's active region nodes
-            statistical_model = model_inversion.update_active_regions(statistical_model, e_values=lsa_hypothesis.e_values,
+            statistical_model = model_inversion.update_active_regions(statistical_model,
+                                                                      e_values=lsa_hypothesis.e_values,
                                                                       lsa_propagation_strength=
                                                                             lsa_hypothesis.lsa_propagation_strengths,
                                                                       reset=True)
@@ -120,11 +123,12 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
                 signals = set_simulated_target_data(os.path.join(config.out.FOLDER_RES, hyp.name + "_ts.h5"),
                                                     model_configuration, head, lsa_hypothesis, statistical_model,
-                                                    dynamical_model, config, sensors_id=sensors_id, **kwargs)
+                                                    times_on_off, sensors_id, plotter, config, **kwargs)
 
             # -------------------------- Select and set target data from signals ---------------------------------------
             target_data, statistical_model, gain_matrix = \
-                model_inversion.set_target_data_and_time(signals, statistical_model, dynamical_model, sensors=sensors)
+                model_inversion.set_target_data_and_time(signals, statistical_model, dynamical_model, sensors=sensors,
+                                                         head=head)
 
             plotter.plot_raster({'Target Signals': signals.squeezed}, signals.time_line,
                                 time_units=signals.time_unit, title=hyp.name + ' Target Signals raster',

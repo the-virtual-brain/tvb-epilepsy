@@ -1,13 +1,8 @@
 import os
-from scipy.io import savemat, loadmat
-import numpy as np
 
+from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.constants.model_inversion_constants import *
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
-from tvb_epilepsy.service.timeseries_service import TimeseriesService
-from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
-from tvb_epilepsy.service.model_inversion.stan.pystan_service import PyStanService
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.top.scripts.hypothesis_scripts import from_hypothesis_to_model_config_lsa
@@ -31,8 +26,8 @@ def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF):
     return model_configuration, lsa_hypothesis
 
 
-def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, dynamical_model, times_on_off,
-                       label_strip_fun=None, plotter=False, **kwargs):
+def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, times_on_off, label_strip_fun=None, plotter=False,
+                       **kwargs):
     try:
         return H5Reader().read_timeseries(ts_file)
     except:
@@ -40,36 +35,34 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, dynamical_mo
         if len(sensors_lbls) == 0:
             sensors_lbls = head.get_sensors_id().labels
         signals = prepare_seeg_observable_from_mne_file(empirical_file, head.get_sensors_id(), sensors_lbls,
-                                                        dynamical_model, times_on_off,
-                                                        label_strip_fun=label_strip_fun, bipolar=False, plotter=plotter,
-                                                        **kwargs)
+                                                        times_on_off, label_strip_fun=label_strip_fun, bipolar=False,
+                                                        plotter=plotter, **kwargs)
         H5Writer().write_timeseries(signals, ts_file)
         return signals
 
 
-def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis, statistical_model, dynamical_model,
-                              config, sensors_id=0, **kwargs):
-    if statistical_model.observation.model == OBSERVATION_MODELS.SEEG_LOGPOWER:
+def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis, statistical_model, times_on_off,
+                              sensors_id=0, plotter=False, config=Config(), **kwargs):
+    if statistical_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
         seeg_gain_mode = "exp"
     else:
         seeg_gain_mode = "lin"
     signals = from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
-                                                     sim_type="realistic", dynamical_model=dynamical_model,
-                                                     ts_file=ts_file, seeg_gain_mode=seeg_gain_mode, config=config)
-    time = signals.time_line
+                                                     sim_type="realistic", ts_file=ts_file,
+                                                     seeg_gain_mode=seeg_gain_mode, config=config)
     if statistical_model.observation_model in OBSERVATION_MODELS.SEEG.value:
         if statistical_model.observation_model != OBSERVATION_MODELS.SEEG_LOGPOWER.value:
             try:
                 signals = signals["seeg"][sensors_id]
             except:
-                signals = TimeseriesService().compute_seeg(signals["source"].source, head.sensorsSEEG[sensors_id])[0]
+                signals = TimeseriesService().compute_seeg(signals["source"].source,
+                                                           head.get_sensors_id(sensor_ids=sensors_id))[0]
         else:
-            signals = TimeseriesService().compute_seeg(signals["source"].source, head.sensorsSEEG[sensors_id],
-                                                       sum_mode="exp")[0]
-        signals = \
-            prepare_seeg_observable(signals, dynamical_model, **kwargs)
+            signals = TimeseriesService().compute_seeg(signals["source"].source,
+                                                       head.get_sensors_id(sensor_ids=sensors_id), sum_mode="exp")[0]
+        signals = prepare_seeg_observable(signals, times_on_off, plotter=plotter, **kwargs)
     else:
-        signals = prepare_signal_observable(signals["source"].source, time, dynamical_model,**kwargs)
+        signals = prepare_signal_observable(signals["source"].source, times_on_off, plotter=plotter, **kwargs)
     return signals
 
 

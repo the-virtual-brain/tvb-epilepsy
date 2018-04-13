@@ -1,6 +1,6 @@
 import numpy as np
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.constants.model_inversion_constants import WIN_LEN_RATIO, LOW_FREQ, HIGH_FREQ, BIPOLAR, LOG_FLAG
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.edf import read_edf_to_Timeseries
 from tvb_epilepsy.service.timeseries_service import TimeseriesService
 
@@ -8,9 +8,11 @@ from tvb_epilepsy.service.timeseries_service import TimeseriesService
 logger = initialize_logger(__name__)
 
 
-def prepare_signal_observable(data, times, on_off_set, rois=[], win_len_ratio=WIN_LEN_RATIO, filter_flag=True,
-                              low_freq=LOW_FREQ, high_freq=HIGH_FREQ, log_flag=LOG_FLAG, plotter=False, **kwargs):
+def prepare_signal_observable(data, on_off_set=[], rois=[], win_len_ratio=WIN_LEN_RATIO, filter_flag=True,
+                              low_freq=LOW_FREQ, high_freq=HIGH_FREQ, log_flag=LOG_FLAG, plotter=False):
     ts_service = TimeseriesService()
+    if len(on_off_set) == 0:
+        on_off_set = [data.time_start, data.time_line[-1]]
     win_len = int(np.round(data.time_length / win_len_ratio))
     n_rois = len(rois)
     if n_rois > 0:
@@ -25,6 +27,7 @@ def prepare_signal_observable(data, times, on_off_set, rois=[], win_len_ratio=WI
                                               freq=np.array(range(1, 51, 1)), title='Spectral Analysis',
                                               figure_name='Spectral Analysis', labels=data.space_labels, log_scale=True)
     if filter_flag:
+        times = data.time_line
         fs = 1000.0 / np.mean(np.diff(times))
         high_freq = np.minimum(high_freq, 512.0)
         logger.info("Filtering signals...")
@@ -117,8 +120,8 @@ def prepare_signal_observable(data, times, on_off_set, rois=[], win_len_ratio=WI
     return data
 
 
-def prepare_seeg_observable(data, on_off_set, rois=[], win_len_ratio=WIN_LEN_RATIO, filter_flag=True, low_freq=LOW_FREQ,
-                            high_freq=HIGH_FREQ, bipolar=BIPOLAR, log_flag=LOG_FLAG, plotter=False, **kwargs):
+def prepare_seeg_observable(data, on_off_set=[], rois=[], win_len_ratio=WIN_LEN_RATIO, filter_flag=True, low_freq=LOW_FREQ,
+                            high_freq=HIGH_FREQ, bipolar=BIPOLAR, log_flag=LOG_FLAG, plotter=False):
     if plotter:
         plotter.plot_spectral_analysis_raster(data.time_line, data.squeezed, time_units="ms",
                                               freq=np.array(range(1, 51, 1)), title='Spectral Analysis',
@@ -141,8 +144,7 @@ def prepare_seeg_observable(data, on_off_set, rois=[], win_len_ratio=WIN_LEN_RAT
 def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, on_off_set,
                                           time_units="ms", label_strip_fun=None,
                                           win_len_ratio=WIN_LEN_RATIO, filter_flag=True, low_freq=LOW_FREQ,
-                                          high_freq=HIGH_FREQ, bipolar=BIPOLAR, log_flag=LOG_FLAG, plotter=False,
-                                          **kwargs):
+                                          high_freq=HIGH_FREQ, bipolar=BIPOLAR, log_flag=LOG_FLAG, plotter=False):
     logger.info("Reading empirical dataset from edf file...")
     data = read_edf_to_Timeseries(seeg_path, sensors, rois_selection,
                                   label_strip_fun=label_strip_fun, time_units=time_units)
