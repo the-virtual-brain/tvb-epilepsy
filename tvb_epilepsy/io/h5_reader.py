@@ -1,12 +1,14 @@
 import os
 import numpy
 import h5py
+from tvb_epilepsy.base.datatypes.dot_dicts import DictDot, OrderedDictDot
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.model.vep.connectivity import Connectivity, ConnectivityH5Field
 from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorsH5Field
 from tvb_epilepsy.base.model.vep.surface import Surface, SurfaceH5Field
+from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.service.model_inversion.statistical_models_builders import *
 from tvb_epilepsy.io.h5_model import read_h5_model
@@ -224,7 +226,7 @@ class H5Reader(object):
 
         return values
 
-    def read_timeseries(self, path):
+    def read_ts(self, path):
         """
         :param path: Path towards a valid TimeSeries H5 file
         :return: Timeseries data and time in 2 numpy arrays
@@ -239,10 +241,31 @@ class H5Reader(object):
         time = numpy.linspace(start_time, total_time, nr_of_steps)
 
         self.logger.info("First Channel sv sum: " + str(numpy.sum(data[:, 0])))
-        self.logger.info("Successfully read Timeseries!") #: %s" % data)
+        self.logger.info("Successfully read timeseries!") #: %s" % data)
         h5_file.close()
 
         return time, data
+
+    def read_timeseries(self, path):
+        """
+        :param path: Path towards a valid TimeSeries H5 file
+        :return: Timeseries data and time in 2 numpy arrays
+        """
+        self.logger.info("Starting to read TimeSeries from: %s" % path)
+        h5_file = h5py.File(path, 'r', libver='latest')
+
+        data = h5_file['/data'][()]
+        time = h5_file['/time'][()]
+        labels = h5_file['/labels'][()]
+        variables = h5_file['/variables'][()]
+        time_unit = h5_file["/data"].attrs["time_unit"][0]
+        self.logger.info("First Channel sv sum: " + str(numpy.sum(data[:, 0])))
+        self.logger.info("Successfully read Timeseries!") #: %s" % data)
+        h5_file.close()
+
+        return Timeseries(data, {TimeseriesDimensions.SPACE.value: labels,
+                                 TimeseriesDimensions.STATE_VARIABLES.value: variables},
+                          time[0], np.mean(np.diff(time)), time_unit)
 
     def read_hypothesis(self, path, simplify=True):
         """
