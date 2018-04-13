@@ -1,10 +1,13 @@
 
 import numpy as np
-from scipy.signal import decimate, convolve
+from scipy.signal import decimate, convolve, detrend
 from scipy.stats import zscore
 
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
+from tvb_epilepsy.base.computations.math_utils import select_greater_values_array_inds, \
+                                                      select_by_hierarchical_group_metric_clustering
+from tvb_epilepsy.base.computations.analyzers_utils import filter_data
 from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
 
 
@@ -35,7 +38,8 @@ def normalize_signals(signals, normalization=None):
             signals /= np.percentile(signals, 95)
         else:
             raise_value_error("Ignoring signals' normalization " + normalization +
-                             ",\nwhich is not one of the currently available 'zscore' and 'minmax'!")
+                             ",\nwhich is not one of the currently available 'zscore', 'minmax' " +
+                             "and  'baseline-amplitude'!")
 
     return signals
 
@@ -66,7 +70,7 @@ def normalize_signals(signals, normalization=None):
 #     return te, isort, iother, lbenv, lbenv_all
 
 
-class TimeSeriesService(object):
+class TimeseriesService(object):
 
     logger = initialize_logger(__name__)
 
@@ -74,17 +78,98 @@ class TimeSeriesService(object):
 
         self.logger = logger
 
-    def decimate(self, time_series, decim_ratio):
-        decim_data, decim_time, decim_dt, decim_n_times = decimate_signals(time_series[:],
-                                                                           time_series.time_line, decim_ratio)
-        return Timeseries(decim_data, {TimeseriesDimensions.SPACE.value: time_series.space_labels},
-                          decim_time[0], decim_dt, time_series.time_unit)
+    def decimate(self, timeseries, decim_ratio):
+        decim_data, decim_time, decim_dt, decim_n_times = decimate_signals(timeseries[:],
+                                                                           timeseries.time_line, decim_ratio)
+        return Timeseries(decim_data, timeseries.dimension_labels,
+                          decim_time[0], decim_dt, timeseries.time_unit)
 
-    def convolve(self, time_series, win_len=None, kernel=None):
+    def convolve(self, timeseries, win_len=None, kernel=None):
         if kernel is None:
             kernel = np.ones((np.int(np.round(win_len), )))
-        kernel_shape = tuple([len(kernel)] + list(time_series.shape[1:]))
+        kernel_shape = tuple([len(kernel)] + list(timeseries.shape[1:]))
         kernel = np.broadcast_to(kernel, kernel_shape)
-        convolved_data = convolve(time_series[:], kernel, mode='same')
-        return Timeseries(convolved_data, {TimeseriesDimensions.SPACE.value: time_series.space_labels},
-                          time_series.time_start, time_series.time_step, time_series.time_unit)
+        convolved_data = convolve(timeseries[:], kernel, mode='same')
+        return Timeseries(convolved_data, timeseries.dimension_labels,
+                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+    
+    def detrend(self, timeseries, type='linear'):
+        return Timeseries(detrend(timeseries[:], axis=0, type=type), timeseries.dimension_labels,
+                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+
+    def normalize(self, timeseries, normalization=None):
+        return Timeseries(normalize_signals(timeseries[:], normalization), timeseries.dimension_labels,
+                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+
+    def filter(self, timeseries, fs, lowcut=None, highcut=None, mode='bandpass', order=3):
+        return Timeseries(filter_data(timeseries[:], fs, lowcut, highcut, mode, order), timeseries.dimension_labels,
+                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+
+    def log(self, timeseries):
+        return Timeseries(np.log(timeseries[:]), timeseries.dimension_labels,
+                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+
+    def power(self, timeseries):
+        return np.sum(timeseries.squeezed ** 2, axis=0)
+
+    def correlation(self, timeseries):
+        return np.corrcoef(timeseries.squeezed.T)
+
+    def select_by_metric(self, timeseries, metric, metric_th=None):
+        return timeseries.get_subspace_by_index(select_greater_values_array_inds(metric, metric_th))
+
+    def select_by_power(self, timeseries, power=np.array([]), power_th=None):
+        if len(power) != timeseries.number_of_labels:
+            power = self.power(timeseries)
+        return self.select_by_metric(power, power_th)
+
+    def select_by_hierarchical_group_metric_clustering(self, timeseries, distance, disconnectivity=np.array([]),
+                                                       metric=None, n_groups=10, members_per_group=1):
+        selection = select_by_hierarchical_group_metric_clustering(distance, disconnectivity, metric,
+                                                                   n_groups, members_per_group)
+        return timeseries.get_subspace_by_index(selection)
+
+    def select_by_correlation_power(self, timeseries, correlation=np.array([]), disconnectivity=np.array([]),
+                                    power=np.array([]), n_groups=10, members_per_group=1):
+        if correlation.shape[0] != timeseries.number_of_labels:
+            correlation = self.correlation(timeseries)
+        if len(power) != timeseries.number_of_labels:
+            power = self.power(timeseries)
+        return self.select_by_hierarchical_group_metric_clustering(timeseries, 1-correlation,
+                                                                   disconnectivity, power, n_groups, members_per_group)
+
+    def select_by_rois_proximity(self, timeseries, proximity, proximity_th=None):
+        initial_selection = range(timeseries.number_of_labels)
+        selection = []
+        for prox in proximity:
+                selection += (
+                    np.array(initial_selection)[select_greater_values_array_inds(prox, proximity_th)]).tolist()
+        return timeseries.get_subspace_by_index(np.unique(selection).tolist())
+
+    def select_by_rois(selfs, timeseries, rois, all_labels):
+        for ir, roi in rois:
+            if not(isinstance(roi, basestring)):
+                rois[ir] = all_labels[roi]
+        return timeseries.get_subspace_by_labels(rois)
+
+    def compute_seeg(self, source_timeseries, sensors, sum_mode="lin"):
+        if sum_mode == "exp":
+            seeg_fun = lambda source, gain_matrix: np.log(np.exp(source.squeezed).dot(gain_matrix.T))
+        else:
+            seeg_fun = lambda source, gain_matrix: source.squeezed.dot(gain_matrix.T)
+        seeg = []
+        for sensor in ensure_list(sensors):
+            sensor.append(Timeseries(seeg_fun(source_timeseries, sensor.gain_matrix),
+                          {TimeseriesDimensions.SPACE.value: sensor.labels},
+                          source_timeseries.time_start, source_timeseries.time_step, source_timeseries.time_unit))
+        return seeg
+
+
+
+
+
+
+
+
+
+
