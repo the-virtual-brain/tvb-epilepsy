@@ -33,7 +33,7 @@ def prepare_signal_observable(data, on_off_set=[], rois=[], win_len_ratio=WIN_LE
         logger.info("Filtering signals...")
         data = ts_service.filter(data, fs, low_freq, high_freq, "bandpass", order=3)
         if plotter:
-            plot_data = data.get_time_window(4*win_len, data.time_length--4*win_len).squeezed
+            plot_data = data.get_time_window(4*win_len, data.time_length-4*win_len).squeezed
             plot_time = data.time_line[4*win_len:-4*win_len]
             plotter.plot_raster({"Filtering": plot_data}, plot_time, time_units=data.time_unit,
                                 special_idx=[], title='Filtered Time Series', offset=1.0,
@@ -58,8 +58,8 @@ def prepare_signal_observable(data, on_off_set=[], rois=[], win_len_ratio=WIN_LE
         if len(t_offset) > 0:
             t_offset = t_offset[0]
         else:
-            t_offset = n_times
-        t_offset = np.minimum(int(np.maximum(t_offset, n_times - dtimes)), n_times)
+            t_offset = n_times - 1
+        t_offset = np.minimum(int(np.maximum(t_offset, n_times - dtimes)), n_times - 1)
         return data.get_time_window(t_onset, t_offset)
 
     def xdecimate(data, decim_ratio, plotter):
@@ -92,12 +92,12 @@ def prepare_signal_observable(data, on_off_set=[], rois=[], win_len_ratio=WIN_LE
         return data, win_len
 
     decim_ratio = 1
-    data = data ** 2
+    data = ts_service.square(data)
     if data.time_length >= 1012:
         data = cut_fun(data, np.mod(data.time_length, 1012))
     data, win_len = convolve(data, win_len, decim_ratio, plotter)
     if data.time_length >= 1012:
-        data = cut_fun(data, data.time_length, int(np.round(np.mod(data.time_length, 1012))))
+        data = cut_fun(data, np.mod(data.time_length, 1012))
         while data.time_length >= 3.0 * 1012 and data.time_length > 2 * win_len:
             data, decim_ratio = xdecimate(data, decim_ratio, plotter)
             data, win_len = convolve(data, win_len, decim_ratio, plotter)

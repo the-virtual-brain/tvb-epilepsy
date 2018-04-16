@@ -370,11 +370,11 @@ class H5Writer(object):
             else:
                 raise_value_error("Invalid TS data. 2D (time, nodes) numpy.ndarray of floats expected")
         elif isinstance(raw_data, Timeseries):
-            if len(raw_data.shape) != 4 and str(raw_data.dtype)[0] != "f":
+            if len(raw_data.shape) == 4 and str(raw_data.data.dtype)[0] == "f":
                 h5_file.create_dataset("/data", data=raw_data.data)
                 h5_file.create_dataset("/time", data=raw_data.time_line)
-                h5_file.create_dataset("/labels", data=raw_data.space_labels)
-                h5_file.create_dataset("/variables", data=raw_data.dimension_labels.get("state_variables", []))
+                h5_file.create_dataset("/labels", data=numpy.string_(raw_data.space_labels))
+                h5_file.create_dataset("/variables", data=raw_data.variables_labels)
                 h5_file.attrs.create("time_unit", raw_data.time_unit)
                 write_metadata({KEY_MAX: raw_data.data.max(), KEY_MIN: raw_data.data.min(),
                                 KEY_STEPS: raw_data.data.shape[0],KEY_CHANNELS: raw_data.data.shape[1],

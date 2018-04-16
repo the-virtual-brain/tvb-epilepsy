@@ -86,31 +86,34 @@ class TimeseriesService(object):
 
     def convolve(self, timeseries, win_len=None, kernel=None):
         if kernel is None:
-            kernel = np.ones((np.int(np.round(win_len), )))
-        kernel_shape = tuple([len(kernel)] + list(timeseries.shape[1:]))
-        kernel = np.broadcast_to(kernel, kernel_shape)
-        convolved_data = convolve(timeseries.squeezed, kernel, mode='same')
-        return Timeseries(convolved_data, timeseries.dimension_labels,
+            kernel = np.ones((np.int(np.round(win_len)), 1, 1, 1))
+        else:
+            kernel = kernel * np.ones((np.int(np.round(win_len)), 1, 1, 1))
+        return Timeseries(convolve(timeseries.data, kernel, mode='same'), timeseries.dimension_labels,
                           timeseries.time_start, timeseries.time_step, timeseries.time_unit)
     
     def detrend(self, timeseries, type='linear'):
-        return Timeseries(detrend(timeseries.squeezed, axis=0, type=type), timeseries.dimension_labels,
+        return Timeseries(detrend(timeseries.data, axis=0, type=type), timeseries.dimension_labels,
                           timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def normalize(self, timeseries, normalization=None):
-        return Timeseries(normalize_signals(timeseries.squeezed, normalization), timeseries.dimension_labels,
+        return Timeseries(normalize_signals(timeseries.data, normalization), timeseries.dimension_labels,
                           timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def filter(self, timeseries, fs, lowcut=None, highcut=None, mode='bandpass', order=3):
-        return Timeseries(filter_data(timeseries.squeezed, fs, lowcut, highcut, mode, order),
+        return Timeseries(filter_data(timeseries.data, fs, lowcut, highcut, mode, order),
                         timeseries.dimension_labels, timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def log(self, timeseries):
-        return Timeseries(np.log(timeseries), timeseries.dimension_labels,
+        return Timeseries(np.log(timeseries.data), timeseries.dimension_labels,
                           timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def power(self, timeseries):
-        return np.sum(timeseries.squeezed ** 2, axis=0)
+        return np.sum(self.square(timeseries).squeezed, axis=0)
+
+    def square(self, timeseries):
+        return Timeseries(timeseries.data ** 2, timeseries.dimension_labels,
+                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def correlation(self, timeseries):
         return np.corrcoef(timeseries.squeezed.T)

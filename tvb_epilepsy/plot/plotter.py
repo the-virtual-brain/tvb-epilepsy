@@ -479,17 +479,18 @@ class Plotter(BasePlotter):
                                    figsize=FiguresConfig.LARGE_SIZE)
         else:
             # We assume that at least source and z are available in res
-            source_ts = timeseries.source
-            sv_dict = {'LFP(t)': source_ts.squeezed, 'z(t)': timeseries.z.squeezed}
+            source_ts = timeseries.get_source()
+            sv_dict = {'source(t)': source_ts.squeezed, 'z(t)': timeseries.z.squeezed}
 
             self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
-                                 special_idx=seizure_indices, title=model._ui_name + ": Simulated LFP-z",
+                                 special_idx=seizure_indices, title=model._ui_name + ": Simulated source-z",
                                  labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
-            start_plot = int(numpy.round(0.01 * timeseries.source.data.shape[0]))
-            self.plot_raster({'source': source_ts.squeezed[start_plot:, :]}, timeseries.time_line.flatten()[start_plot:],
+            start_plot = int(numpy.round(0.01 * source_ts.data.shape[0]))
+            self.plot_raster({'source': source_ts.squeezed[start_plot:, :]},
+                             timeseries.time_line.flatten()[start_plot:],
                              time_units=timeseries.time_unit, special_idx=seizure_indices,
-                             title=model._ui_name + ": Simulated LFP rasterplot", offset=2.0, labels=region_labels,
+                             title=model._ui_name + ": Simulated source rasterplot", offset=2.0, labels=region_labels,
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
 
             if PossibleVariables.X1.value in state_variables and PossibleVariables.Y1.value in state_variables:
@@ -498,7 +499,8 @@ class Plotter(BasePlotter):
                 self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
                                      special_idx=seizure_indices, title=model._ui_name + ": Simulated pop1",
                                      labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
-            if PossibleVariables.X2.value in state_variables and PossibleVariables.Y2.value in state_variables and PossibleVariables.G.value in state_variables:
+            if PossibleVariables.X2.value in state_variables and PossibleVariables.Y2.value in state_variables and \
+                    PossibleVariables.G.value in state_variables:
                 sv_dict = {'x2(t)': timeseries.x2.squeezed, 'y2(t)': timeseries.y2.squeezed,
                            'g(t)': timeseries.g.squeezed}
 
@@ -514,7 +516,8 @@ class Plotter(BasePlotter):
                                                    figsize=FiguresConfig.LARGE_SIZE, **kwargs)
 
         if isinstance(model, EpileptorDPrealistic):
-            if PossibleVariables.SLOPE_T.value in state_variables and PossibleVariables.IEXT2_T.value in state_variables:
+            if PossibleVariables.SLOPE_T.value in state_variables and \
+                    PossibleVariables.IEXT2_T.value in state_variables:
                 sv_dict = {'1/(1+exp(-10(z-3.03))': 1 / (1 + numpy.exp(-10 * (timeseries.z.squeezed - 3.03))),
                            'slope': timeseries.slope_t.squeezed, 'Iext2': timeseries.Iext2_t.squeezed}
                 title = model._ui_name + ": Simulated controlled parameters"

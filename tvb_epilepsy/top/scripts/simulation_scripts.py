@@ -47,18 +47,14 @@ def _compute_and_write_seeg(source_timeseries, sensors_list, filename, hpf_flag=
 # TODO: simplify and separate flow steps
 def compute_seeg_and_write_ts_to_h5(timeseries, model, sensors_list, filename, seeg_gain_mode="lin",
                                     hpf_flag=False, hpf_low=10.0, hpf_high=256.0, h5_writer=H5Writer()):
-
+    filename_epi = os.path.splitext(filename)[0] + "_epi.h5"
+    h5_writer.write_ts(timeseries, timeseries.time_step, filename)
+    source_timeseries = timeseries.get_source()
+    h5_writer.write_ts_epi(timeseries, timeseries.time_step, filename_epi, source_timeseries)
     if isinstance(model, EpileptorDP2D):
-        source_timeseries = timeseries.x1
-        h5_writer.write_ts_epi(timeseries, timeseries.time_step, filename, source_timeseries)
-        seeg_ts_all = _compute_and_write_seeg(source_timeseries, sensors_list, filename,
-                                              seeg_gain_mode=seeg_gain_mode, h5_writer=h5_writer)
-
-    else:
-        source_timeseries = timeseries.source
-        h5_writer.write_ts_epi(timeseries, timeseries.time_step, filename, source_timeseries)
-        seeg_ts_all = _compute_and_write_seeg(source_timeseries, sensors_list, filename,
-                                              hpf_flag, hpf_low, hpf_high, seeg_gain_mode, h5_writer=h5_writer)
+        hpf_flag = False
+    seeg_ts_all = _compute_and_write_seeg(source_timeseries, sensors_list, filename_epi, hpf_flag, hpf_low, hpf_high,
+                                          seeg_gain_mode, h5_writer=h5_writer)
 
     return timeseries, seeg_ts_all
 
@@ -95,7 +91,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     if ts_file is not None and os.path.isfile(ts_file):
         logger.info("\n\nLoading previously simulated time series from file: " + ts_file)
         sim_output = H5Reader().read_timeseries(ts_file)
-        seeg = TimeseriesService().compute_seeg(sim_output, head.sensorsSEEG, sum_mode=seeg_gain_mode)
+        seeg = TimeseriesService().compute_seeg(sim_output.get_source(), head.sensorsSEEG, sum_mode=seeg_gain_mode)
     else:
         logger.info("\n\nSimulating...")
         sim_output, status = sim.launch_simulation(report_every_n_monitor_steps=100)

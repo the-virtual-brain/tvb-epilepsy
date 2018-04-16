@@ -92,7 +92,7 @@ def build_stan_model_dict_to_interface_ins(statistical_model, signals, gain_matr
             warning("Parameter " + p_old_name + " not found in statistical model\n" + str(statistical_model))
     vep_data = {"nn": statistical_model.number_of_active_regions,
                 "nt": statistical_model.time_length,
-                "ns": statistical_model.number_of_signals,
+                "ns": statistical_model.number_of_target_data,
                 "dt": statistical_model.dt,
                 "I1": statistical_model.model_config.Iext1,
                 "x0_star_mu": statistical_model.parameters["x0"].star_mean[active_regions],

@@ -138,7 +138,7 @@ class ODEModelInversionService(ModelInversionService):
             target_data = self.ts_service.select_by_correlation_power(target_data, disconnectivity=disconnectivity,
                                                                       n_groups=self.n_electrodes,
                                                                       members_per_group=self.sensors_per_electrode)
-        elif self.auto_selection.find("power"):
+        elif self.auto_selection.find("power") >= 0:
             target_data = self.ts_service.select_by_power(target_data, power, self.power_th)
         return target_data
 
@@ -152,7 +152,7 @@ class ODEModelInversionService(ModelInversionService):
     def set_gain_matrix(self, target_data, stats_model, sensors=None):
         if stats_model.observation_model in OBSERVATION_MODELS.SEEG.value:
             signals_inds = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
-            gain_matrix = np.array(sensors.gain_matrix[signals_inds], stats_model.active_regions)
+            gain_matrix = np.array(sensors.gain_matrix[signals_inds][:, stats_model.active_regions])
         else:
             gain_matrix = np.ones((target_data.number_of_labels, target_data.number_of_labels))
         return gain_matrix
@@ -174,14 +174,16 @@ class ODEModelInversionService(ModelInversionService):
         if self.decim_ratio > 1:
             target_data = self.ts_service.decimate(target_data, self.decim_ratio)
         if np.any(self.cut_target_data_tails > 0):
-            target_data = target_data.get_time_window_by_units(self.cut_target_data_tails[0], 
-                                                               target_data.time_length-self.cut_target_data_tails[1])
+            target_data = target_data.get_time_window(np.maximum(self.cut_target_data_tails[0], 0),
+                                                      target_data.time_length -
+                                                        np.maximum(self.cut_target_data_tails[1], 1))
         if self.bipolar:
             target_data = target_data.get_bipolar()
         # TODO: decide about target_data' normalization for the different (sensors', sources' cases)
         if self.normalization:
             target_data = self.ts_service.normalize(target_data, self.normalization)
         stats_model.time = target_data.time_line
+        stats_model.time_length = len(stats_model.time)
         stats_model.dt = target_data.time_step
         stats_model.number_of_target_data = target_data.number_of_labels
         return target_data, stats_model, self.set_gain_matrix(target_data, stats_model, sensors)

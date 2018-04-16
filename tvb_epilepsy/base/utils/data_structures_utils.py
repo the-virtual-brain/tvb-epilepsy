@@ -284,10 +284,8 @@ def labels_to_inds(labels, lbls):
     idx = []
     lbls = ensure_list(lbls)
     for i, label in enumerate(labels):
-        for lbl in lbls:
-            if lbl in label or label in lbl:
-                idx.append(i)
-                break
+        if label in lbls:
+            idx.append(i)
     return np.unique(idx)
 
 

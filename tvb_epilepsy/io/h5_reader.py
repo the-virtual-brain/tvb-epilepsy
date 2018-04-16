@@ -256,9 +256,9 @@ class H5Reader(object):
 
         data = h5_file['/data'][()]
         time = h5_file['/time'][()]
-        labels = h5_file['/labels'][()]
-        variables = h5_file['/variables'][()]
-        time_unit = h5_file["/data"].attrs["time_unit"][0]
+        labels = ensure_list(h5_file['/labels'][()])
+        variables = ensure_list(h5_file['/variables'][()])
+        time_unit = h5_file.attrs["time_unit"]
         self.logger.info("First Channel sv sum: " + str(numpy.sum(data[:, 0])))
         self.logger.info("Successfully read Timeseries!") #: %s" % data)
         h5_file.close()

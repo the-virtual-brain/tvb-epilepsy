@@ -49,8 +49,8 @@ def set_hypotheses(head, config):
 
 
 def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_model = "EpileptorDP2D",
-                        observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,  times_on_off=[],
-                        sensors_lbls=[], sensors_id=0, fitmethod="optimizing", stan_service="CmdStan",
+                        observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,  sensors_lbls=[], sensors_id=0,
+                        times_on_off=[], fitmethod="optimizing", stan_service="CmdStan",
                         fit_flag=True, config=Config(), **kwargs):
     # Prepare necessary services:
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
@@ -117,32 +117,34 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
                 # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
                 signals = set_empirical_data(empirical_file, os.path.join(config.out.FOLDER_RES,
                                                                           hyp.name + "_ts_empirical.h5"),
-                                             head, sensors_lbls, dynamical_model, times_on_off,
+                                             head, sensors_lbls, sensors_id, times_on_off,
                                              label_strip_fun=lambda s: s.split("POL ")[-1], plotter=plotter)
             else:
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
                 signals = set_simulated_target_data(os.path.join(config.out.FOLDER_RES, hyp.name + "_ts.h5"),
                                                     model_configuration, head, lsa_hypothesis, statistical_model,
-                                                    times_on_off, sensors_id, plotter, config, **kwargs)
+                                                    sensors_id, times_on_off, plotter, config, **kwargs)
 
             # -------------------------- Select and set target data from signals ---------------------------------------
+            if statistical_model.observation_model in OBSERVATION_MODELS.SEEG.value:
+                model_inversion.auto_selection = "correlation-power"
             target_data, statistical_model, gain_matrix = \
-                model_inversion.set_target_data_and_time(signals, statistical_model, dynamical_model, sensors=sensors,
-                                                         head=head)
+                model_inversion.set_target_data_and_time(signals, statistical_model, head=head, sensors=sensors)
 
-            plotter.plot_raster({'Target Signals': signals.squeezed}, signals.time_line,
-                                time_units=signals.time_unit, title=hyp.name + ' Target Signals raster',
-                                offset=0.1, labels=signals.space_labels)
-            plotter.plot_timeseries({'Target Signals': signals.squeezed}, signals.time_line,
-                                    time_units=signals.time_unit,
-                                    title=hyp.name + ' Target Signals', labels=signals.space_labels)
+            plotter.plot_raster({'Target Signals': target_data.squeezed}, target_data.time_line,
+                                time_units=target_data.time_unit, title=hyp.name + ' Target Signals raster',
+                                offset=0.1, labels=target_data.space_labels)
+            plotter.plot_timeseries({'Target Signals': target_data.squeezed}, target_data.time_line,
+                                    time_units=target_data.time_unit,
+                                    title=hyp.name + ' Target Signals', labels=target_data.space_labels)
 
             # Interface with INS stan models
             if stan_model_name.find("vep-fe-rev") >= 0:
                 model_data = build_stan_model_dict_to_interface_ins(statistical_model, target_data.squeezed,
                                                                     gain_matrix, time=target_data.time_line)
 
-            writer.write_statistical_model(statistical_model, config.out.FOLDER_RES, hyp.name+"_StatsModel.h5")
+            writer.write_statistical_model(statistical_model, model_configuration.number_of_regions,
+                                           os.path.join(config.out.FOLDER_RES, hyp.name + "_StatsModel.h5"))
             writer.write_dictionary(model_data, os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5"))
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
@@ -266,7 +268,7 @@ if __name__ == "__main__":
     # seizure = 'SZ3_0001.edf'
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
-    EMPIRICAL = False
+    EMPIRICAL = True
     # stats_model_name = "vep_sde"
     stan_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"

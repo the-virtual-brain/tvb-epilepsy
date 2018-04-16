@@ -76,7 +76,7 @@ class ODEStatisticalModel(StatisticalModel):
     scale = 1.0
     offset = 0.0
     epsilon = EPSILON_DEF
-    number_of_signals = 0
+    number_of_target_data = 0
     time_length = 0
     dt = DT_DEF
     active_regions = []
@@ -97,7 +97,7 @@ class ODEStatisticalModel(StatisticalModel):
                  priors_mode=PriorsModes.NONINFORMATIVE.value, parameters={},
                  model_config=ModelConfiguration(), observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, scale=1.0, offset=0.0, epsilon=EPSILON_DEF,
-                 number_of_signals=0, time_length=0, dt=DT_DEF, active_regions=[]):
+                 number_of_target_data=0, time_length=0, dt=DT_DEF, active_regions=[]):
         super(ODEStatisticalModel, self).__init__(name, number_of_regions,  xmode, priors_mode,
                                                   parameters, model_config, sigma_x)
         if np.all(np.in1d(active_regions, range(self.number_of_regions))):
@@ -115,7 +115,7 @@ class ODEStatisticalModel(StatisticalModel):
         self.scale = scale
         self.offset = offset
         self.epsilon
-        self.number_of_signals = number_of_signals
+        self.number_of_target_data = number_of_target_data
         self.time_length = time_length
         self.dt = dt
 
@@ -136,12 +136,12 @@ class SDEStatisticalModel(ODEStatisticalModel):
                  priors_mode=PriorsModes.NONINFORMATIVE.value, parameters={},
                  model_config=ModelConfiguration(), observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, sigma=SIGMA_DEF, scale=1.0, offset=0.0,
-                 epsilon=EPSILON_DEF, number_of_signals=0, time_length=0, dt=DT_DEF, active_regions=[],
+                 epsilon=EPSILON_DEF, number_of_target_data=0, time_length=0, dt=DT_DEF, active_regions=[],
                  sde_mode=SDE_MODES.NONCENTERED.value):
         super(SDEStatisticalModel, self).__init__(name, number_of_regions, xmode, priors_mode,
                                                   parameters, model_config, observation_model,
                                                   sigma_x, sigma_init, scale, offset, epsilon,
-                                                  number_of_signals, time_length, dt, active_regions)
+                                                  number_of_target_data, time_length, dt, active_regions)
         self.sigma = sigma
         self.sde_mode = sde_mode
 

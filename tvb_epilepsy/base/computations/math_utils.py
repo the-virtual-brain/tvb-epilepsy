@@ -97,7 +97,7 @@ def select_by_hierarchical_group_metric_clustering(distance, disconnectivity=np.
             #...otherwise, randomly
             inds_select = range(n_select)
         selection.append(cluster_inds[inds_select])
-    return selection
+    return np.unique(selection).tolist()
 
 
 def curve_elbow_point(vals, interactive=CalculusConfig.INTERACTIVE_ELBOW_POINT):
