@@ -8,7 +8,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict
 class Parameter(object):
 
     def __init__(self, name="Parameter", low=CalculusConfig.MIN_SINGLE_VALUE, high=CalculusConfig.MAX_SINGLE_VALUE,
-                 p_shape=(), **kwargs):
+                 p_shape=()):
         if isinstance(name, basestring):
             self.name = name
         else:

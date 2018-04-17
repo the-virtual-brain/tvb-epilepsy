@@ -2,8 +2,8 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 import numpy as np
 from tvb_epilepsy.base.constants.config import CalculusConfig
-from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, make_float
+from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, raise_not_implemented_error
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, make_float
 from tvb_epilepsy.base.utils.data_structures_utils import get_val_key_for_first_keymatch_in_dict
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.computations.probability_distributions.probability_distribution import ProbabilityDistribution
@@ -107,11 +107,13 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
 #     sp = generate_stochastic_parameter("test", probability_distribution="gamma", optimize=False, shape=1.0, scale=2.0)
 #     initialize_logger(__name__).info(sp)
 
+
 TransformedStochasticParameterBaseAttributes = ["name", "type", "low", "high", "mean", "median", "mode",
                                                 "var", "std", "skew", "kurt", "star"]
 
 TransformedStochasticParameterBaseStarAttributes = ["star_low", "star_high", "star_mean", "star_median", "star_mode",
                                                     "star_var", "star_std", "star_skew", "star_kurt"]
+
 
 class TransformedStochasticParameterBase(object):
     __metaclass__ = ABCMeta
@@ -211,3 +213,86 @@ class TransformedStochasticParameterBase(object):
     @abstractmethod
     def numpy(self):
         pass
+
+
+class NegativeLognormal(TransformedStochasticParameterBase, object):
+
+    def __init__(self, name, type, parameter, max):
+        super(NegativeLognormal, self).__init__(name, type, parameter)
+        self.max = max
+
+    def __getattr__(self, attr):
+        if attr == "max":
+            return object.__setattr__(self, "max")
+        else:
+            return super(NegativeLognormal, self).__getattr__(attr)
+
+    def __setattr__(self, attr, value):
+        if attr == "max":
+            object.__setattr__(self, "max", value)
+            return self
+        else:
+            super(NegativeLognormal, self).__setattr__(attr, value)
+            return self
+
+    def _repr(self, d = OrderedDict()):
+        d.update({"0. max": str(self.max)})
+        d.update(super(NegativeLognormal, self)._repr(d))
+        return d
+
+    @property
+    def low(self):
+        return self.max - self.star.high
+
+    @property
+    def high(self):
+        return self.max - self.star.low
+
+    @property
+    def mean(self):
+        return self.max - self.star.mean
+
+    @property
+    def median(self):
+        return self.max - self.star.median
+
+    @property
+    def mode(self):
+        return self.max - self.star.mode
+
+    @property
+    def var(self):
+        return self.star.var
+
+    @property
+    def std(self):
+        return self.star.std
+
+    @property
+    def skew(self):
+        return -self.star.skew
+
+    @property
+    def kurt(self):
+        return self.star.kurt
+
+    def _scipy_method(self, method, loc=0.0, scale=1.0, *args, **kwargs):
+        if method in ["rvs", "ppf", "isf", "stats", "moment", "median", "mean", "interval"]:
+            return self.max - self.star._scipy_method(method, loc, scale, *args, **kwargs)
+        elif method in ["pdf", "logpdf", "cdf", "logcdf", "sf", "logsf"]:
+            x = kwargs.get("x", None)
+            if x is None and len(args) > 0:
+                x = args[0]
+            if x is not None:
+                # Assume that the first argument is x and transform it
+                args = tuple([self.max - np.array(x)] + list(args[1:]))
+                return self.star._scipy_method(method, loc, scale, *args, **kwargs)
+            else:
+                raise_value_error("Scipy method " + method + " for transformed parameter " + self.name +
+                                  " cannot be executed due to missing argument x!")
+        else:
+            raise_not_implemented_error("Scipy method " + method +
+                                        " is not implemented for transformed parameter " + self.name + "!")
+
+    def numpy(self):
+        return self.max - self._numpy(self.loc, self.scale)
