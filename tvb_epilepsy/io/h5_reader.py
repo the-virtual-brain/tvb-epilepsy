@@ -9,10 +9,17 @@ from tvb_epilepsy.base.model.vep.head import Head
 from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorsH5Field
 from tvb_epilepsy.base.model.vep.surface import Surface, SurfaceH5Field
 from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
+from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.service.model_inversion.statistical_models_builders import *
 from tvb_epilepsy.io.h5_model import read_h5_model
+from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.stochastic_parameter_builder import generate_stochastic_parameter
+
+
+H5_TYPE_ATTRIBUTE = H5Writer().H5_TYPE_ATTRIBUTE
+H5_SUBTYPE_ATTRIBUTE = H5Writer().H5_SUBTYPE_ATTRIBUTE
+H5_TYPES_ATTRUBUTES = [H5_TYPE_ATTRIBUTE, H5_SUBTYPE_ATTRIBUTE]
 
 
 class H5Reader(object):
@@ -407,13 +414,45 @@ class H5Reader(object):
         return sim_settings
 
     def read_statistical_model(self, path):
+
+        def strip_key_name(key):
+            if key != "star":
+                if key.find("_ProbabilityDistribution_") >= 0:
+                    key_name = key.split("_ProbabilityDistribution_")[-1]
+                elif key.find("_Parameter_") >= 0:
+                    key_name = key.split("_Parameter_")[-1]
+                else:
+                    key_name = key
+            return key_name
+
+        def setattr_param(param, key, key_name, value):
+            param.__setattr__(key_name, value)
+            if key != key_name:
+                try:
+                    param.__setattr__(key, value)
+                except:
+                    pass
+
+        def set_parameter_datasets(param, h5location):
+            for key in h5location.keys():
+                if key != "star":
+                    key_name = strip_key_name(key)
+                    if key.find("p_shape") >= 0:
+                        setattr_param(param, key, key_name, tuple(h5location[key][()]))
+                    else:
+                        setattr_param(param, key, key_name, h5location[key][()])
+
+        def set_parameter_attributes(param, h5location):
+            for key in h5location.attrs.keys():
+                if key not in H5_TYPES_ATTRUBUTES:
+                    setattr_param(param, key, strip_key_name(key), h5location.attrs[key])
+
         h5_file = h5py.File(path, 'r', libver='latest')
-        epi_subtype_key = "EPI_Subtype"
 
         statistical_model = None
-        epi_subtype = h5_file.attrs[epi_subtype_key]
+        epi_subtype = h5_file.attrs[H5_SUBTYPE_ATTRIBUTE]
 
-        if epi_subtype == StatisticalModel.__name__:
+        if H5_SUBTYPE_ATTRIBUTE == StatisticalModel.__name__:
             statistical_model = StatisticalModel()
         if epi_subtype == ODEStatisticalModel.__name__:
             statistical_model = ODEStatisticalModel()
@@ -421,47 +460,48 @@ class H5Reader(object):
             statistical_model = SDEStatisticalModel()
 
         for attr in h5_file.attrs.keys():
-            statistical_model.__setattr__(attr, h5_file.attrs[attr])
+            if attr not in H5_TYPES_ATTRUBUTES:
+                statistical_model.__setattr__(attr, h5_file.attrs[attr])
 
         for key, value in h5_file.iteritems():
             if isinstance(value, h5py.Dataset):
                 statistical_model.__setattr__(key, value[()])
             if isinstance(value, h5py.Group):
-                if key == "model_config" and value.attrs[epi_subtype_key] == ModelConfiguration.__name__:
+                if key == "model_config" and value.attrs[H5_SUBTYPE_ATTRIBUTE] == ModelConfiguration.__name__:
                     model_config = ModelConfiguration()
 
                     for mc_dataset in value.keys():
                         model_config.set_attribute(mc_dataset, value[mc_dataset][()])
 
                     for mc_attr in value.attrs.keys():
-                        if mc_attr != epi_subtype_key:
+                        if mc_attr not in H5_TYPES_ATTRUBUTES:
                             model_config.__setattr__(mc_attr, value.attrs[mc_attr])
 
                     statistical_model.__setattr__(key, model_config)
 
-                if key == "parameters" and value.attrs[epi_subtype_key] == OrderedDict.__name__:
+                if key == "parameters":  # and value.attrs[epi_subtype_key] == OrderedDict.__name__:
                     parameters = OrderedDict()
                     for group_key, group_value in value.iteritems():
-                        parameter = None
-                        param_epi_subtype = group_value.attrs[epi_subtype_key]
+                        param_epi_subtype = group_value.attrs[H5_SUBTYPE_ATTRIBUTE]
                         if param_epi_subtype == "StochasticParameter":
                             parameter = generate_stochastic_parameter(
-                                probability_distribution=group_value.attrs["type"])
-                        # if param_epi_subtype == "NegativeLognormal":
-                        #     parameter = generate_negative_lognormal_parameter("", 0, 0, 0.1)
+                                    probability_distribution=group_value.attrs["type"])
+                        elif param_epi_subtype == "NegativeLognormal":
+                            parameter = generate_negative_lognormal_parameter("", 1.0, 0.0, 2.0)
+                            set_parameter_datasets(parameter.star, group_value["star"])
+                            set_parameter_attributes(parameter.star, group_value["star"])
                         else:
-                            continue
+                            parameter = Parameter()
 
-                        for p_dataset in group_value.keys():
-                            parameter.__setattr__(p_dataset, group_value[p_dataset][()])
-
-                        for p_attr in group_value.attrs.keys():
-                            if p_attr != epi_subtype_key:
-                                parameter.__setattr__(p_attr, group_value.attrs[p_attr])
+                        set_parameter_datasets(parameter, group_value)
+                        set_parameter_attributes(parameter, group_value)
 
                         parameters.update({group_key: parameter})
 
                     statistical_model.__setattr__(key, parameters)
+
+                if key == "active_regions":
+                    statistical_model.active_regions = ensure_list(value)
 
         h5_file.close()
         return statistical_model
