@@ -48,7 +48,7 @@ def set_hypotheses(head, config):
     return (hypothesis1, hypothesis2)
 
 
-def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_model = "EpileptorDP2D",
+def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                         observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,  sensors_lbls=[], sensors_id=0,
                         times_on_off=[], fitmethod="optimizing", stan_service="CmdStan",
                         fit_flag=True, config=Config(), **kwargs):
@@ -110,7 +110,6 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
                                                                             lsa_hypothesis.lsa_propagation_strengths,
                                                                       reset=True)
             plotter.plot_statistical_model(statistical_model, "Statistical Model")
-            print(statistical_model)
 
             # Now some scripts for settting and preprocessing target signals:
             if os.path.isfile(empirical_file):
@@ -128,6 +127,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", dynamical_
             # -------------------------- Select and set target data from signals ---------------------------------------
             if statistical_model.observation_model in OBSERVATION_MODELS.SEEG.value:
                 model_inversion.auto_selection = "correlation-power"
+                model_inversion.sensors_per_electrode = 2
             target_data, statistical_model, gain_matrix = \
                 model_inversion.set_target_data_and_time(signals, statistical_model, head=head, sensors=sensors)
 
@@ -268,7 +268,7 @@ if __name__ == "__main__":
     # seizure = 'SZ3_0001.edf'
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
-    EMPIRICAL = True
+    EMPIRICAL = False
     # stats_model_name = "vep_sde"
     stan_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
