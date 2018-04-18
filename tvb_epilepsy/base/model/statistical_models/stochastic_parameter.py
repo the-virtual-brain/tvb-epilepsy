@@ -3,8 +3,8 @@ from collections import OrderedDict
 import numpy as np
 from tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, make_float
-from tvb_epilepsy.base.utils.data_structures_utils import get_val_key_for_first_keymatch_in_dict
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, make_float, linspace_broadcast, \
+    get_val_key_for_first_keymatch_in_dict
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.computations.probability_distributions.probability_distribution import ProbabilityDistribution
 
@@ -43,14 +43,29 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
     def calc_kurt(self, use="scipy"):
         return self._calc_kurt(self.loc, self.scale, use)
 
+    @property
     def scipy(self):
         return self._scipy(self.loc, self.scale)
 
     def scipy_method(self, method, *args, **kwargs):
-        return self._scipy_method(method, self.loc, self.scale, *args, **kwargs)
+        if method in ["rvs", "ppf", "isf", "stats", "moment", "median", "mean", "interval"]:
+            return self._scipy_method(method, self.loc, self.scale, *args, **kwargs)
+        elif method in ["pdf", "logpdf", "cdf", "logcdf", "sf", "logsf"]:
+            x = kwargs.get("x", None)
+            if x is None and len(args) > 0:
+                # Assume that the first argument is x
+                x = args[0]
+            else:
+                # Generate our own x
+                x = np.arange(self.low, self.high, 100.0 / (self.high - self.low))
+            args = tuple([x] + list(args[1:]))
+            return x, self._scipy_method(method, self.loc, self.scale, *args, **kwargs)
+        else:
+            raise_not_implemented_error("Scipy method " + method +
+                                        " is not implemented for parameter " + self.name + "!")
 
-    def numpy(self):
-        return self._numpy(self.loc, self.scale)
+    def numpy(self, size=()):
+        return self._numpy(self.loc, self.scale, size)
 
     def _update_params(self, use="scipy", **params):
         self.loc = make_float(params.pop("loc", self.loc))
@@ -60,13 +75,13 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
 
     def _confirm_support(self):
         p_star = (self.low - self.loc) / self.scale
-        p_star_cdf = self.scipy().cdf(p_star)
+        p_star_cdf = self.scipy.cdf(p_star)
         if np.any(p_star_cdf + np.finfo(np.float).eps <= 0.0):  #
             raise_value_error("Lower limit of " + self.name + " base distribution outside support!: " +
                               "\n(self.low-self.loc)/self.scale) = " + str(p_star) +
                               "\ncdf(self.low-self.loc)/self.scale) = " + str(p_star_cdf))
         p_star = (self.high - self.loc) / self.scale
-        p_star_cdf = self.scipy().cdf(p_star)
+        p_star_cdf = self.scipy.cdf(p_star)
         if np.any(p_star_cdf - np.finfo(np.float).eps) >= 1.0:
             self.logger.warning("Upper limit of base " + self.name + "  distribution outside support!: " +
                                 "\n(self.high-self.loc)/self.scale) = " + str(p_star) +
@@ -159,60 +174,46 @@ class TransformedStochasticParameterBase(object):
         return self.__repr__()
 
     @property
-    @abstractmethod
     def low(self):
-        pass
+        return self.star.low
 
-    @property
     @abstractmethod
     def high(self):
-        pass
+        return self.star.high
 
     @property
-    @abstractmethod
     def mean(self):
-        pass
+        return self.star.mean
 
     @property
-    @abstractmethod
     def median(self):
-        pass
+        return self.star.median
 
     @property
-    @abstractmethod
     def mode(self):
-        pass
+        return self.star.mode
 
     @property
-    @abstractmethod
     def var(self):
-        pass
+        return self.star.var
 
     @property
-    @abstractmethod
     def std(self):
-        pass
+        return self.star.std
 
     @property
-    @abstractmethod
     def skew(self):
-        pass
+        return self.star.skew
 
     @property
-    @abstractmethod
     def kurt(self):
-        pass
+        return self.star.kurt
 
-    @abstractmethod
-    def _scipy_method(self, method, loc=0.0, scale=1.0, *args, **kwargs):
-        pass
+    def numpy(self, size=()):
+        return self.star.numpy(size)
 
-    def scipy_method(self, method, *args, **kwargs):
-        return self._scipy_method(method, self.star.loc, self.star.scale, *args, **kwargs)
-
-    @abstractmethod
-    def numpy(self):
-        pass
+    def scipy_method(self, method, loc=0.0, scale=1.0, *args, **kwargs):
+        return self.star.scipy_method(method, loc, scale, *args, **kwargs)
 
 
 class NegativeLognormal(TransformedStochasticParameterBase, object):
@@ -261,38 +262,30 @@ class NegativeLognormal(TransformedStochasticParameterBase, object):
         return self.max - self.star.mode
 
     @property
-    def var(self):
-        return self.star.var
-
-    @property
-    def std(self):
-        return self.star.std
-
-    @property
     def skew(self):
         return -self.star.skew
 
-    @property
-    def kurt(self):
-        return self.star.kurt
-
-    def _scipy_method(self, method, loc=0.0, scale=1.0, *args, **kwargs):
+    def scipy_method(self, method, *args, **kwargs):
         if method in ["rvs", "ppf", "isf", "stats", "moment", "median", "mean", "interval"]:
-            return self.max - self.star._scipy_method(method, loc, scale, *args, **kwargs)
+            return self.max - self.star.scipy_method(method, *args, **kwargs)
         elif method in ["pdf", "logpdf", "cdf", "logcdf", "sf", "logsf"]:
             x = kwargs.get("x", None)
             if x is None and len(args) > 0:
-                x = args[0]
-            if x is not None:
-                # Assume that the first argument is x and transform it
-                args = tuple([self.max - np.array(x)] + list(args[1:]))
-                return self.star._scipy_method(method, loc, scale, *args, **kwargs)
+                # Assume that the first argument is x and needs transformation
+                x = np.array(args[0])
+                x_transf = self.max - x
             else:
-                raise_value_error("Scipy method " + method + " for transformed parameter " + self.name +
-                                  " cannot be executed due to missing argument x!")
+                # Generate our own x
+                x_transf = linspace_broadcast(
+                                np.maximum(self.low, self.scipy_method("ppf", 0.01)),
+                                np.minimum(self.high, self.scipy_method("ppf", 0.99)), 100)
+                x = self.max - x_transf
+            args = tuple([x_transf] + list(args[1:]))
+            pdf = self.star.scipy_method(method,  *args, **kwargs)[0]
+            return x, pdf
         else:
             raise_not_implemented_error("Scipy method " + method +
                                         " is not implemented for transformed parameter " + self.name + "!")
 
-    def numpy(self):
-        return self.max - self._numpy(self.loc, self.scale)
+    def numpy(self, size=()):
+        return self.max - self._numpy(self.loc, self.scale, size)
