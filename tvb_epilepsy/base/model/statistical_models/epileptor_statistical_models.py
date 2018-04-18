@@ -7,7 +7,7 @@ from tvb_epilepsy.base.constants.model_inversion_constants import *
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
-
+from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import StochasticParameterBase
 
 class StatisticalModel(object):
 
@@ -56,6 +56,9 @@ class StatisticalModel(object):
         truth = getattr(self, parameter_name, None)
         if truth is None:
             truth = getattr(self.model_config, parameter_name, None)
+            # TODO: find a more general solution here...
+            if truth is None and parameter_name == "MC" or parameter_name == "FC":
+                truth = self.model_config.model_connectivity
         if truth is None:
             warning("Ground truth value for parameter " + parameter_name + " was not found!")
         return truth
@@ -67,6 +70,14 @@ class StatisticalModel(object):
             return self.get_truth(parameter_name), None
         else:
             return parameter.mean, parameter
+
+    def get_prior_pdf(self, parameter_name):
+        mean_or_truth, parameter = self.get_prior(parameter_name)
+        if isinstance(parameter, StochasticParameterBase):
+            return parameter.scipy_method("pdf")
+        else:
+            warning("No parameter " + parameter_name + " was found!\nReturning true value instead of pdf!")
+            return mean_or_truth
 
 
 class ODEStatisticalModel(StatisticalModel):
