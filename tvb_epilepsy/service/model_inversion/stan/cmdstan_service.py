@@ -103,6 +103,13 @@ class CmdStanService(StanService):
                   + self.summary_filepath
         execute_command(command, cwd=self.path, shell=True)
 
+    def get_Rhat(self, summary):
+        if isinstance(summary, dict):
+            Rhat = summary.get("R_hat", None)
+            if Rhat is not None:
+                Rhat = {"R_hat": Rhat}
+        return Rhat
+
     def fit(self,debug=0, simulate=0, return_output=True, plot_HMC=True, overwrite_output_files=False, plot_warmup=1,
             **kwargs):
         num_warmup = kwargs.get("num_warmup", 0)
