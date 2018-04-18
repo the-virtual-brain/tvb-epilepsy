@@ -2,17 +2,17 @@
 
 
 from tvb_epilepsy.base.constants.config import Config
-from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string
-from tvb_epilepsy.plot.plotter import Plotter
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.model_inversion.statistical_models_builders import SDEStatisticalModelBuilder
 from tvb_epilepsy.service.model_inversion.model_inversion_services import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
 from tvb_epilepsy.service.model_inversion.stan.pystan_service import PyStanService
-from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import build_stan_model_dict_to_interface_ins
+from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import build_stan_model_dict_to_interface_ins, \
+                                                                                        convert_params_names_from_ins
 from tvb_epilepsy.top.scripts.fitting_scripts import *
-
+from tvb_epilepsy.plot.plotter import Plotter
 
 def set_hypotheses(head, config):
     # Formulate a VEP hypothesis manually
@@ -77,6 +77,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                      config=config)
     stan_service.set_or_compile_model()
 
+    target_data = None
+
     for hyp in hypotheses[1:]:
 
         # Set model configuration and compute LSA
@@ -86,10 +88,12 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         # Create model inversion service (stateless)
         stats_model_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_StatsModel.h5")
         model_data_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5")
-        if os.path.isfile(stats_model_file) and os.path.isfile(model_data_file):
+        target_data_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_TargetData.h5")
+        if os.path.isfile(stats_model_file) and os.path.isfile(model_data_file) and os.path.isfile(target_data_file):
             # Read existing statistical model and model data...
             statistical_model = reader.read_statistical_model(stats_model_file)
             model_data = stan_service.load_model_data_from_file(model_data_path=model_data_file)
+            target_data = reader.read_timeseries(target_data_file)
         else:
             model_inversion = SDEModelInversionService()
 
@@ -138,14 +142,14 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                     time_units=target_data.time_unit,
                                     title=hyp.name + ' Target Signals', labels=target_data.space_labels)
 
+            writer.write_statistical_model(statistical_model, model_configuration.number_of_regions, stats_model_file)
+            writer.write_timeseries(target_data, target_data_file)
+
             # Interface with INS stan models
             if stan_model_name.find("vep-fe-rev") >= 0:
                 model_data = build_stan_model_dict_to_interface_ins(statistical_model, target_data.squeezed,
                                                                     gain_matrix, time=target_data.time_line)
-
-            writer.write_statistical_model(statistical_model, model_configuration.number_of_regions,
-                                           os.path.join(config.out.FOLDER_RES, hyp.name + "_StatsModel.h5"))
-            writer.write_dictionary(model_data, os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5"))
+            writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         num_warmup = 20
@@ -157,29 +161,32 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_generic(samples, config.out.FOLDER_RES, hyp.name + "_fit_samples.h5")
             if summary is not None:
                 writer.write_generic(summary, config.out.FOLDER_RES, hyp.name + "_fit_summary.h5")
-                if isinstance(summary, dict):
-                    R_hat = summary.get("R_hat", None)
-                    if R_hat is not None:
-                        R_hat = {"R_hat": R_hat}
         else:
             ests, samples, summary = stan_service.read_output()
-            if isinstance(summary, dict):
-                R_hat = summary.get("R_hat", None)
-                if R_hat is not None:
-                    R_hat = {"R_hat": R_hat}
             if fitmethod.find("sampl") >= 0:
                 Plotter(config).plot_HMC(samples, skip_samples=num_warmup)
-        ests = ensure_list(ests)
+
+        # Interface with INS stan models
+        if stan_model_name.find("vep-fe-rev") >= 0:
+            ests, samples, summary, model_data = convert_params_names_from_ins([ests, samples, summary, model_data])
+
+        # Pack fit samples time series into timeseries objects:
+        samples, target_data = samples_to_timeseries(samples, model_data, target_data, head.connectivity.region_labels,
+                                                     region_mode="active")
 
         # -------------------------- Plot fitting results: ------------------------------------------------------------
-        # plot_fitting_results(ests, samples, R_hat, stan_model_name, model_data, statistical_model,
-        #                      model_configuration, lsa_hypothesis, plotter, x0_star_mu, x_init_mu, z_init_mu)
+        plotter.plot_fit_results(ests, samples, model_data, target_data, statistical_model=None,
+                                 stats=stan_service.get_Rhat(summary),
+                                 pair_plot_params=["tau1", "tau0", "K", "sigma_eq", "sigma_init",
+                                                   "sigma", "epsilon", "scale", "offset"],
+                                 region_violin_params=["x0", "x1eq", "x1init", "zinit"], region_mode="active",
+                                 trajectories_plot=True, connectivity_plot=False, skip_samples=num_warmup)
 
 
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
         for id_est, est in enumerate(ensure_list(ests)):
             fit_model_configuration_builder = \
-                ModelConfigurationBuilder(hyp.number_of_regions, K=est["k"] * hyp.number_of_regions)
+                ModelConfigurationBuilder(hyp.number_of_regions, K=est["K"] * hyp.number_of_regions)
             x0_values_fit = model_configuration.x0_values
             x0_values_fit[statistical_model.active_regions] = \
                 fit_model_configuration_builder._compute_x0_values_from_x0_model(est['x0'])
