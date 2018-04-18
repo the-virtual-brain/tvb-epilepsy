@@ -3,6 +3,8 @@ import os
 from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.constants.model_constants import K_DEF
 from tvb_epilepsy.base.constants.model_inversion_constants import *
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, generate_region_labels
+from tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, Timeseries
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.top.scripts.hypothesis_scripts import from_hypothesis_to_model_config_lsa
@@ -67,46 +69,51 @@ def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis
     return signals
 
 
-def plot_fitting_results(ests, samples, R_hat, stan_model_name, model_data, statistical_model, model_inversion,
-                         model_configuration, lsa_hypothesis, plotter,
-                         pair_plot_params=["time_scale", "k", "sigma", "epsilon", "amplitude", "offset"],
-                         region_violin_params=["x0", "x_init", "z_init"],
-                         x0_star_mu=None, x_init_mu=None, z_init_mu=None):
 
-    simulation_values = {"x0": model_configuration.x0, "x1eq": model_configuration.x1EQ,
-                         "x1init": model_configuration.x1EQ, "zinit": model_configuration.zEQ}
+def samples_to_timeseries(samples, model_data, target_data=None, region_labels=[], region_mode="all"):
+    samples = ensure_list(samples)
 
-    if stan_model_name.find("vep-fe-rev") >= 0:
-        input_signals_str = "seeg_log_power"
-        # pair_plot_params = ["time_scale", "k", "sigma", "epsilon", "amplitude", "offset"],
-        # region_violin_params = ["x0", "x_init", "z_init"]
-        if model_inversion.target_data_type.find("empirical") >= 0:
-            priors = {"x0": x0_star_mu, "x_init": x_init_mu, "z_init": z_init_mu}
-        else:
-            priors = dict(simulation_values)
-            priors.update({"x0": simulation_values["x0"][statistical_model.active_regions]})
-            priors.update({"x_init": simulation_values["x1init"][statistical_model.active_regions]})
-            priors.update({"z_init": simulation_values["zinit"][statistical_model.active_regions]})
-        connectivity_plot = False
-        estMC = lambda: model_configuration.model_connectivity
-        region_mode = "active"
+    if isinstance(target_data, Timeseries):
+        time = target_data.time_line
+        n_target_data = target_data.number_of_labels
+        target_data_labels = target_data.space_labels
     else:
-        input_signals_str = "signals"
-        # pair_plot_params = ["tau1", "tau0", "K", "sig_init", "sig", "eps", "scale_signal", "offset_signal"]
-        # region_violin_params = ["x0", "x1eq", "x1init", "zinit"]
-        connectivity_plot = False
-        estMC = lambda est: est["MC"]
-        region_mode = "all"
-        if model_inversion.target_data_type.find("empirical") >= 0:
-            priors = {"x0": model_inversion.x0[statistical_model.active_regions],
-                      "x1eq": model_data["x1eq_max"]
-                              - statistical_model.parameters["x1eq_star"].mean[statistical_model.active_regions],
-                      "x_init": statistical_model.parameters["x1init"].mean[statistical_model.active_regions],
-                      "z_init": statistical_model.parameters["zinit"].mean[statistical_model.active_regions]}
-        else:
-            priors = simulation_values
-    plotter.plot_fit_results(model_inversion, ests, samples, statistical_model, model_data[input_signals_str],
-                             R_hat, model_data["time"], priors, region_mode,
-                             seizure_indices=lsa_hypothesis.get_regions_disease_indices(),
-                             trajectories_plot=True, connectivity_plot=connectivity_plot,
-                             pair_plot_params=pair_plot_params, region_violin_params=region_violin_params)
+        time = model_data.get("time", False)
+        n_target_data = samples[0]["fit_target_data"]
+        target_data_labels = generate_region_labels(n_target_data, [], ". ", False)
+
+    if time:
+        time_start = time[0]
+        time_step = np.diff(time).mean()
+    else:
+        time_start = 0
+        time_step = 1
+
+    if isinstance(target_data, Timeseries):
+        target_data = Timeseries(target_data,
+                                 {TimeseriesDimensions.SPACE.value: target_data_labels,
+                                  TimeseriesDimensions.VARIABLES.value: ["target_data"]},
+                                 time_start=time_start, time_step=time_step,
+                                 time_unit=samples[0]["target_data"].time_unit)
+
+    (n_samples, n_times, n_regions) = samples[0]["x1"]
+    active_regions = model_data.get("active_regions", range(n_regions))
+    regions_labels = generate_region_labels(n_regions, region_labels, ". ", False)
+    if region_mode == "active" and n_regions > len(active_regions):
+        regions_labels = regions_labels[active_regions]
+
+    for sample in ensure_list(samples):
+        for x in ["x1", "z", "dX1t", "dZt"]:
+            try:
+                sample[x] = Timeseries(sample[x].T, {TimeseriesDimensions.SPACE.value: regions_labels,
+                                                     TimeseriesDimensions.VARIABLES.value: [x]},
+                                       time_start=time_start, time_step=time_step, time_unit=target_data.time_unit)
+            except:
+                pass
+
+        sample["fit_target_data"] = Timeseries(sample["fit_target_data"].T,
+                                               {TimeseriesDimensions.SPACE.value: target_data_labels,
+                                                TimeseriesDimensions.VARIABLES.value: ["fit_target_data"]},
+                               time_start=time_start, time_step=time_step)
+
+    return samples, target_data
