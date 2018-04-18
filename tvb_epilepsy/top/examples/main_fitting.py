@@ -153,7 +153,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         num_warmup = 20
-        if fit_flag:
+        if False:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
                                                       chains=2, refresh=1, num_warmup=num_warmup, num_samples=30,
                                                       max_depth=10, delta=0.8, save_warmup=1, plot_warmup=1, **kwargs)
@@ -177,9 +177,9 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         # -------------------------- Plot fitting results: ------------------------------------------------------------
         plotter.plot_fit_results(ests, samples, model_data, target_data, statistical_model=None,
                                  stats=stan_service.get_Rhat(summary),
-                                 pair_plot_params=["tau1", "tau0", "K", "sigma_eq", "sigma_init",
-                                                   "sigma", "epsilon", "scale", "offset"],
-                                 region_violin_params=["x0", "x1eq", "x1init", "zinit"], region_mode="active",
+                                 pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
+                                 region_violin_params=["x0", "x1init", "zinit"], region_mode="active",
+                                 regions_labels=head.connectivity.region_labels,
                                  trajectories_plot=True, connectivity_plot=False, skip_samples=num_warmup)
 
 

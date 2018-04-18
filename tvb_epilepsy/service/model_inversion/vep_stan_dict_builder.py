@@ -7,7 +7,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import ensure_list  # isequal
 
 
 INS_PARAMS_NAMES_DICT={"K": "k", "MC": "FC", "tau1": "time_scale", "tau0": "tau",
-                       "scale": "amplitude", "target_data": "seeg_log_power", "fit_target_data": "seeg_log_power",
+                       "scale": "amplitude", "target_data": "seeg_log_power", "fit_target_data": "mu_seeg_log_power",
                        "x1init": "x_init", "zinit": "z_init", "x1": "x", "dX1t": "x_eta", "dZt": "z_eta"}
 
 

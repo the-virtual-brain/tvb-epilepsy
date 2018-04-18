@@ -790,12 +790,9 @@ class Plotter(BasePlotter):
                     subtitles[ip] = subtitles[ip][:-2]
         return subtitles
 
-    def parameters_pair_plots(self, samples, params=["tau1", "tau0", "K", "sig_eq", "eps"], stats=None, priors={},
+    def parameters_pair_plots(self, samples, params=["tau1",  "K", "sigma_eq", "epsilon", "scale", "offset"], stats=None, priors={},
                               truth={}, skip_samples=0, title='Parameters samples', figure_name=None,
                               figsize=FiguresConfig.VERY_LARGE_SIZE):
-
-
-
         subtitles = list(self._params_stats_subtitles(params, stats))
         subtitles.sort()
         samples = ensure_list(samples)
@@ -811,7 +808,7 @@ class Plotter(BasePlotter):
         return self.pair_plots(samples, samples.keys(), diagonal_plots, True, skip_samples,
                                     title, subtitles, figure_name, figsize)
 
-    def region_parameters_violin_plots(self, samples, values=None, lines=None, params=["x0", "x1eq"], stats=None,
+    def region_parameters_violin_plots(self, samples, values=None, lines=None, params=["x0"], stats=None,
                                        skip_samples=0, per_chain=False, labels=[], seizure_indices=None,
                                        figure_name="Regions parameters samples", figsize=FiguresConfig.VERY_LARGE_SIZE):
         if isinstance(values, dict):
@@ -927,22 +924,22 @@ class Plotter(BasePlotter):
                     stats_string[p_str] = stats_string[p_str][:-2]
         else:
             stats_string = dict(zip(["target_data", "x1", "z"], 3*[""]))
-        observation_dict = OrderedDict({'observation time series': target_data.squeezed})
+        observation_dict = OrderedDict({'observation time series': target_data.squeezed[:, :, skip_samples]})
         time = target_data.time_line
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), samples)):
             name = statistical_model.name + "_chain" + str(id_est + 1)
             observation_dict.update({"fit chain " + str(id_est + 1):
-                                         sample["fit_target_data"].squeezed[:, :, :, skip_samples:]})
-            self.plot_raster(sort_dict({"x1": sample["x1"].squeezed[:, :, :, skip_samples:],
-                                        'z': sample["z"].squeezed[:, :, :, skip_samples:]}),
+                                         sample["fit_target_data"].squeezed[:, :, skip_samples:]})
+            self.plot_raster(sort_dict({"x1": sample["x1"].squeezed[:, :, skip_samples:],
+                                        'z': sample["z"].squeezed[:, :, skip_samples:]}),
                              time, special_idx=seizure_indices, time_units=target_data.time_unit,
                              title=name + ": Hidden states fit rasterplot",
                              subtitles=['hidden state ' + "x1" + stats_string["x1"],
                                         'hidden state z' + stats_string["z"]], offset=1.0,
                              labels=region_labels,
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
-            self.plot_raster(sort_dict({"dX1t": sample["dX1t"].squeezed[:, :, :, skip_samples:],
-                                        "dZt": sample["dZt"].squeezed[:, :, :, skip_samples:]}),
+            self.plot_raster(sort_dict({"dX1t": sample["dX1t"].squeezed[:, :, skip_samples:],
+                                        "dZt": sample["dZt"].squeezed[:, :, skip_samples:]}),
                              time, time_units=target_data.time_unit,
                              # special_idx=seizure_indices,
                              title=name + ": Hidden states random walk rasterplot",
@@ -951,7 +948,7 @@ class Plotter(BasePlotter):
                              offset=1.0, labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
             if trajectories_plot:
                 title = name + ': Fit hidden state space trajectories'
-                self.plot_trajectories({"x1": sample["x1"].squeezed[:, :, :, skip_samples:],
+                self.plot_trajectories({"x1": sample["x1"].squeezed[:, :, skip_samples:],
                                         'z': sample['z'].squeezed[:, :, :, skip_samples:]},
                                        special_idx=seizure_indices, title=title, labels=stats_region_labels,
                                        figsize=FiguresConfig.SUPER_LARGE_SIZE)
@@ -990,14 +987,15 @@ class Plotter(BasePlotter):
     def plot_fit_results(self, ests, samples, model_data, target_data, statistical_model=None, stats=None,
                          pair_plot_params=
                             ["tau1", "tau0", "K", "sigma_eq", "sigma_init", "sigma", "epsilon", "scale", "offset"],
-                         region_violin_params=["x0", "x1eq", "x1init", "zinit"], region_mode="all", n_regions=1,
+                         region_violin_params=["x0", "x1eq", "x1init", "zinit"],
+                         regions_labels=[], region_mode="all", n_regions=1,
                          trajectories_plot=True, connectivity_plot=True, skip_samples=0):
         if statistical_model is not None:
             n_regions = statistical_model.number_of_regions
             active_regions = statistical_model.active_regions
         else:
             active_regions = model_data.get("active_regions", range(n_regions))
-            regions_labels = generate_region_labels(n_regions, model_data["region_labels"], ". ", False)
+            regions_labels = generate_region_labels(n_regions, regions_labels, ". ", False)
         if isequal_string(region_mode, "all"):
             region_inds = range(n_regions)
             seizure_indices = active_regions

@@ -82,36 +82,35 @@ def samples_to_timeseries(samples, model_data, target_data=None, region_labels=[
         n_target_data = samples[0]["fit_target_data"]
         target_data_labels = generate_region_labels(n_target_data, [], ". ", False)
 
-    if time:
+    if time is not False:
         time_start = time[0]
         time_step = np.diff(time).mean()
     else:
         time_start = 0
         time_step = 1
 
-    if isinstance(target_data, Timeseries):
+    if not isinstance(target_data, Timeseries):
         target_data = Timeseries(target_data,
                                  {TimeseriesDimensions.SPACE.value: target_data_labels,
                                   TimeseriesDimensions.VARIABLES.value: ["target_data"]},
-                                 time_start=time_start, time_step=time_step,
-                                 time_unit=samples[0]["target_data"].time_unit)
+                                  time_start=time_start, time_step=time_step)
 
-    (n_samples, n_times, n_regions) = samples[0]["x1"]
+    (n_times, n_regions, n_samples) = samples[0]["x1"].T.shape
     active_regions = model_data.get("active_regions", range(n_regions))
     regions_labels = generate_region_labels(n_regions, region_labels, ". ", False)
-    if region_mode == "active" and n_regions > len(active_regions):
+    if len(regions_labels) > len(active_regions):
         regions_labels = regions_labels[active_regions]
 
     for sample in ensure_list(samples):
         for x in ["x1", "z", "dX1t", "dZt"]:
             try:
-                sample[x] = Timeseries(sample[x].T, {TimeseriesDimensions.SPACE.value: regions_labels,
+                sample[x] = Timeseries(np.expand_dims(sample[x].T, 2), {TimeseriesDimensions.SPACE.value: regions_labels,
                                                      TimeseriesDimensions.VARIABLES.value: [x]},
                                        time_start=time_start, time_step=time_step, time_unit=target_data.time_unit)
             except:
                 pass
 
-        sample["fit_target_data"] = Timeseries(sample["fit_target_data"].T,
+        sample["fit_target_data"] = Timeseries(np.expand_dims(sample["fit_target_data"].T, 2),
                                                {TimeseriesDimensions.SPACE.value: target_data_labels,
                                                 TimeseriesDimensions.VARIABLES.value: ["fit_target_data"]},
                                time_start=time_start, time_step=time_step)
