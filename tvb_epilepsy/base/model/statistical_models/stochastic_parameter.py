@@ -57,7 +57,9 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
                 x = args[0]
             else:
                 # Generate our own x
-                x = np.arange(self.low, self.high, 100.0 / (self.high - self.low))
+                x = linspace_broadcast(
+                    np.maximum(self.low, self.scipy_method("ppf", 0.01)),
+                    np.minimum(self.high, self.scipy_method("ppf", 0.99)), 100)
             args = tuple([x] + list(args[1:]))
             return x, self._scipy_method(method, self.loc, self.scale, *args, **kwargs)
         else:
@@ -173,6 +175,7 @@ class TransformedStochasticParameterBase(object):
     def __str__(self):
         return self.__repr__()
 
+    # Overwrite any of the methods below for any specific implementation...
     @property
     def low(self):
         return self.star.low
@@ -280,9 +283,9 @@ class NegativeLognormal(TransformedStochasticParameterBase, object):
                                 np.maximum(self.low, self.scipy_method("ppf", 0.01)),
                                 np.minimum(self.high, self.scipy_method("ppf", 0.99)), 100)
                 x = self.max - x_transf
-            args = tuple([x_transf] + list(args[1:]))
+            args = tuple([x] + list(args[1:]))
             pdf = self.star.scipy_method(method,  *args, **kwargs)[0]
-            return x, pdf
+            return x_transf, pdf
         else:
             raise_not_implemented_error("Scipy method " + method +
                                         " is not implemented for transformed parameter " + self.name + "!")
