@@ -500,6 +500,15 @@ class H5Reader(object):
 
                     statistical_model.__setattr__(key, parameters)
 
+                if key == "ground_truth":
+                    ground_truth = OrderedDict()
+                    for group_key, group_value in value.iteritems():
+                        for dataset in group_value.keys():
+                            ground_truth[dataset] = group_value[group_key]
+                        for attr in group_value.attrs.keys():
+                            if attr not in H5_TYPES_ATTRUBUTES:
+                                ground_truth[attr] = group_value.attrs[attr]
+
                 if key == "active_regions":
                     statistical_model.active_regions = ensure_list(value)
 
