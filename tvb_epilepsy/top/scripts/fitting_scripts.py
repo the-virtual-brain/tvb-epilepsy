@@ -49,9 +49,9 @@ def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis
         seeg_gain_mode = "exp"
     else:
         seeg_gain_mode = "lin"
-    signals = from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
-                                                     sim_type="paper", ts_file=ts_file,
-                                                     seeg_gain_mode=seeg_gain_mode, config=config)
+    signals, simulator = from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
+                                                                sim_type="paper", ts_file=ts_file,
+                                                                seeg_gain_mode=seeg_gain_mode, config=config)
     if statistical_model.observation_model in OBSERVATION_MODELS.SEEG.value:
         if statistical_model.observation_model != OBSERVATION_MODELS.SEEG_LOGPOWER.value:
             try:
@@ -66,11 +66,10 @@ def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis
         signals = prepare_seeg_observable(signals, times_on_off, plotter=plotter, **kwargs)
     else:
         signals = prepare_signal_observable(signals["source"].get_source(), times_on_off, plotter=plotter, **kwargs)
-    return signals
+    return signals, simulator
 
 
-
-def samples_to_timeseries(samples, model_data, target_data=None, region_labels=[], region_mode="all"):
+def samples_to_timeseries(samples, model_data, target_data=None, regions_labels=[]):
     samples = ensure_list(samples)
 
     if isinstance(target_data, Timeseries):
@@ -97,7 +96,7 @@ def samples_to_timeseries(samples, model_data, target_data=None, region_labels=[
 
     (n_times, n_regions, n_samples) = samples[0]["x1"].T.shape
     active_regions = model_data.get("active_regions", range(n_regions))
-    regions_labels = generate_region_labels(n_regions, region_labels, ". ", False)
+    regions_labels = generate_region_labels(np.maximum(n_regions, len(regions_labels)), regions_labels, ". ", False)
     if len(regions_labels) > len(active_regions):
         regions_labels = regions_labels[active_regions]
 
