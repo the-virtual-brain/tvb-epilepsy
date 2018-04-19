@@ -29,13 +29,17 @@ class H5Writer(object):
     H5_TYPE_ATTRIBUTE = "EPI_Type"
     H5_SUBTYPE_ATTRIBUTE = "EPI_Subtype"
 
-    def _determine_datasets_and_attributes(self, current_object, datasets_size=None):
+    def _determine_datasets_and_attributes(self, object, datasets_size=None):
         datasets_dict = {}
         metadata_dict = {}
         groups_keys = []
 
         try:
-            for key, value in vars(current_object).iteritems():
+            if isinstance(object, dict):
+                dict_object = object
+            else:
+                dict_object = vars(object)
+            for key, value in dict_object.iteritems():
                 if isinstance(value, numpy.ndarray):
                     if datasets_size is not None and value.size == datasets_size:
                         datasets_dict.update({key: value})
@@ -50,9 +54,9 @@ class H5Writer(object):
                     else:
                         groups_keys.append(key)
         except:
-            msg = "Failed to decompose group object: " + str(current_object) + "!"
+            msg = "Failed to decompose group object: " + str(object) + "!"
             try:
-                self.logger.info(str(current_object.__dict__))
+                self.logger.info(str(object.__dict__))
             except:
                 msg += "\n It has no __dict__ attribute!"
             warning(msg, self.logger)
