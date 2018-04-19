@@ -1,28 +1,28 @@
 # coding=utf-8
 
-import numpy
-import matplotlib
-from collections import OrderedDict
 from tvb_epilepsy.base.constants.config import FiguresConfig
-from tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, PossibleVariables
+import matplotlib
 matplotlib.use(FiguresConfig.MATPLOTLIB_BACKEND)
 from matplotlib import pyplot, gridspec
 from matplotlib.colors import Normalize
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from tvb_epilepsy.plot.base_plotter import BasePlotter
-from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorTypes
-from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
+
+import numpy
+from collections import OrderedDict
+
+from tvb_epilepsy.base.constants.model_constants import TAU0_DEF, TAU1_DEF, X1EQ_CR_DEF, X1_DEF, X0_CR_DEF, X0_DEF
+from tvb_epilepsy.base.utils.log_error_utils import warning
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string, sort_dict, linspace_broadcast, \
+    generate_region_labels, ensure_string, list_of_dicts_to_dicts_of_ndarrays, extract_dict_stringkeys
 from tvb_epilepsy.base.computations.math_utils import compute_in_degree
+from tvb_epilepsy.base.computations.calculations_utils import calc_fz, calc_fx1, calc_fx1_2d_taylor, \
+                                                                            calc_x0_val_to_model_x0, raise_value_error
+from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_y1, def_x1lin
 from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
 from tvb_epilepsy.base.epileptor_models import EpileptorDP2D, EpileptorDPrealistic
-from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string, sort_dict, linspace_broadcast, \
-    generate_region_labels, ensure_string
-from tvb_epilepsy.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, extract_dict_stringkeys
-from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_y1, def_x1lin
-from tvb_epilepsy.base.computations.calculations_utils import calc_fz, calc_fx1, calc_fx1_2d_taylor
-from tvb_epilepsy.base.computations.calculations_utils import calc_x0_val_to_model_x0, raise_value_error
-from tvb_epilepsy.base.constants.model_constants import TAU0_DEF, TAU1_DEF, X1EQ_CR_DEF, X1_DEF, X0_CR_DEF, X0_DEF
-from tvb_epilepsy.base.constants.config import FiguresConfig
+from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorTypes
+from tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, PossibleVariables
+from tvb_epilepsy.plot.base_plotter import BasePlotter
 
 
 class Plotter(BasePlotter):
@@ -790,7 +790,7 @@ class Plotter(BasePlotter):
                     subtitles[ip] = subtitles[ip][:-2]
         return subtitles
 
-    def parameters_pair_plots(self, samples, params=["tau1",  "K", "sigma_eq", "epsilon", "scale", "offset"], stats=None, priors={},
+    def parameters_pair_plots(self, samples, params=["tau1",  "K", "sigma", "epsilon", "scale", "offset"], stats=None, priors={},
                               truth={}, skip_samples=0, title='Parameters samples', figure_name=None,
                               figsize=FiguresConfig.VERY_LARGE_SIZE):
         subtitles = list(self._params_stats_subtitles(params, stats))
@@ -800,17 +800,19 @@ class Plotter(BasePlotter):
             samples = list_of_dicts_to_dicts_of_ndarrays(samples)
         else:
             samples = samples[0]
-        samples = sort_dict(extract_dict_stringkeys(samples, params, modefun="equal"))
+        # samples = sort_dict(extract_dict_stringkeys(samples, params, modefun="equal"))
         diagonal_plots = {}
-        for sampl_key, sample_val in samples.iteritems():
-            diagonal_plots.update({sampl_key: [priors.get(sampl_key, ()), truth.get(sampl_key, ())]})
+        # for param_key in samples.keys():
+        for param_key in params:
+            diagonal_plots.update({param_key: [priors.get(param_key, ()), truth.get(param_key, ())]})
 
-        return self.pair_plots(samples, samples.keys(), diagonal_plots, True, skip_samples,
+        return self.pair_plots(samples, params, diagonal_plots, True, skip_samples,
                                     title, subtitles, figure_name, figsize)
 
-    def region_parameters_violin_plots(self, samples, values=None, lines=None, params=["x0"], stats=None,
-                                       skip_samples=0, per_chain=False, labels=[], seizure_indices=None,
-                                       figure_name="Regions parameters samples", figsize=FiguresConfig.VERY_LARGE_SIZE):
+    def region_parameters_violin_plots(self, samples, values=None, lines=None, stats=None,
+                                       params=["x0", "x1init", "zinit"], skip_samples=0, per_chain=False, labels=[],
+                                       seizure_indices=None, figure_name="Regions parameters samples",
+                                       figsize=FiguresConfig.VERY_LARGE_SIZE):
         if isinstance(values, dict):
             vals_fun = lambda param: values.get(param, numpy.array([]))
         else:
@@ -823,11 +825,11 @@ class Plotter(BasePlotter):
         n_chains = len(samples)
         if not per_chain and len(samples) > 1:
             samples = ensure_list(list_of_dicts_to_dicts_of_ndarrays(samples))
-            plot_samples = lambda s: numpy.concatenate(numpy.split(s[skip_samples:].T, n_chains, axis=2),
+            plot_samples = lambda s: numpy.concatenate(numpy.split(s[:, skip_samples:].T, n_chains, axis=2),
                                                        axis=1).squeeze().T
             plot_figure_name = lambda ichain: figure_name
         else:
-            plot_samples = lambda s: s[skip_samples:]
+            plot_samples = lambda s: s[:, skip_samples:]
             plot_figure_name = lambda ichain: figure_name + ": chain " + str(ichain + 1)
         labels = generate_region_labels(samples[0][params[0]].shape[-1], labels)
         params_labels = {}
@@ -838,7 +840,7 @@ class Plotter(BasePlotter):
                 params_labels[p] = self._params_stats_labels(p, stats, "")
         n_params = len(params)
         if n_params > 9:
-            raise_value_error("Number of subplots in column wise vector-violin-plots cannot be > 9 and it is "
+            warning("Number of subplots in column wise vector-violin-plots cannot be > 9 and it is "
                               + str(n_params) + "!")
         subplot_ind = 100 + n_params * 10
         for ichain, chain_sample in enumerate(samples):
@@ -852,8 +854,7 @@ class Plotter(BasePlotter):
             self._check_show()
 
     def plot_fit_scalar_params(self, samples, stats, statistical_model=None,
-                               pair_plot_params= ["tau1", "tau0", "K", "sigma_eq", "sigma_init", "sigma",
-                                                  "epsilon", "scale", "offset"], skip_samples=0):
+                               pair_plot_params=["tau1",  "K", "sigma", "epsilon", "scale", "offset"], skip_samples=0):
         # plot scalar parameters in pair plots
         priors = {}
         truth = {}
@@ -861,44 +862,60 @@ class Plotter(BasePlotter):
             title = statistical_model.name + " parameters samples"
             for p in pair_plot_params:
                 priors.update({p: statistical_model.get_prior_pdf(p)})
-                truth.update({p: statistical_model.get_truth(p)})
+                truth.update({p: numpy.nanmean(statistical_model.get_truth(p))})
         else:
             title = "Parameters samples"
 
         self.parameters_pair_plots(samples, pair_plot_params, stats, priors, truth, skip_samples, title=title)
 
     def plot_fit_region_params(self, samples, stats=None, statistical_model=None,
-                               region_violin_params=["x0", "x1eq", "x1init", "zinit"], skip_samples=0,
-                               region_labels=[], seizure_indices=[], per_chain_plotting=False):
-        # plot K-x0 parameters in pair plots
-        x0_K_pair_plot_params = ["K"]
-        x0_K_pair_plot_samples = [{"K": s["K"]} for s in samples]
+                               region_violin_params=["x0", "x1init", "zinit"], skip_samples=0,
+                               region_labels=[], seizure_indices=[], region_mode="all", per_chain_plotting=False):
+        samples = ensure_list(samples)
         priors = {}
         truth = {}
         if statistical_model is not None:
             title_pair_plot = statistical_model.name + " global coupling vs x0 pair plot"
             title_violin_plot = statistical_model.name + " regions parameters samples"
-            regions_inds = statistical_model.active_regions
+            if region_mode=="active":
+                regions_inds = statistical_model.active_regions
+            else:
+                regions_inds = range(statistical_model.number_of_regions)
             for p in region_violin_params:
-                priors.update({p: statistical_model.get_prior_pdf(p)})
-                truth.update({p: statistical_model.get_truth(p)})
+                pdf = statistical_model.get_prior_pdf(p)
+                priors.update({p: (pdf[0][:, regions_inds], pdf[1][:, regions_inds])})
+                this_truth = statistical_model.get_truth(p)
+                if this_truth is numpy.nan:
+                    this_truth = this_truth * numpy.ones((len(regions_inds), ))
+                else:
+                    this_truth = this_truth[regions_inds]
+                truth.update({p: this_truth})
         else:
             title_pair_plot = statistical_model.name + "Global coupling vs x0 pair plot"
             title_violin_plot = statistical_model.name + "Regions parameters samples"
             regions_inds = range(samples[0]["x0"].shape[2])
-
-        for inode, iregion in enumerate(regions_inds):
-            temp_name = "x0[" + region_labels[iregion] + "]"
-            x0_K_pair_plot_params.append(temp_name)
-            for ichain, s in enumerate(samples):
-                x0_K_pair_plot_samples[ichain].update({temp_name: s["x0"][:, inode]})
-        self.parameters_pair_plots(x0_K_pair_plot_samples, x0_K_pair_plot_params, None, priors, truth, skip_samples,
-                                   title=title_pair_plot)
         # plot region-wise parameters
-        self.region_parameters_violin_plots(samples, stats, truth, priors, region_violin_params, skip_samples,
-                                            per_chain=per_chain_plotting,
-                                            labels=region_labels, seizure_indices=seizure_indices,
-                                            figure_name=title_violin_plot)
+        self.region_parameters_violin_plots(samples, truth, priors, stats, region_violin_params, skip_samples,
+                                            per_chain=per_chain_plotting, labels=region_labels,
+                                            seizure_indices=seizure_indices, figure_name=title_violin_plot)
+        if "x0" in region_violin_params:
+            x0_K_pair_plot_params = []
+            x0_K_pair_plot_samples = {}
+            if samples[0].get("K", None) is not None:
+                # plot K-x0 parameters in pair plots
+                x0_K_pair_plot_params = ["K"]
+                x0_K_pair_plot_samples = [{"K": s["K"]} for s in samples]
+                priors.update({"K": statistical_model.get_prior_pdf("K")})
+                truth.update({"K": statistical_model.get_truth("K")})
+            for inode, iregion in enumerate(regions_inds):
+                temp_name = "x0[" + region_labels[iregion] + "]"
+                x0_K_pair_plot_params.append(temp_name)
+                for ichain, s in enumerate(samples):
+                    x0_K_pair_plot_samples[ichain].update({temp_name: s["x0"][:, inode]})
+                    priors.update({temp_name: (priors["x0"][0][:, inode], priors["x0"][1][:, inode])})
+                    truth.update({temp_name: truth["x0"][inode]})
+            self.parameters_pair_plots(x0_K_pair_plot_samples, x0_K_pair_plot_params, None, priors, truth, skip_samples,
+                                       title=title_pair_plot)
 
     def plot_fit_timeseries(self, target_data, samples, ests, stats=None, statistical_model=None,
                             seizure_indices=[], skip_samples=0, trajectories_plot=False):
@@ -910,17 +927,17 @@ class Plotter(BasePlotter):
             sig_prior_str = ""
         stats_region_labels = region_labels
         if stats is not None:
-            stats_string = {"target_data": "\n", "x1": "\n", "z": "\n", "MC": ""}
+            stats_string = {"fit_target_data": "\n", "x1": "\n", "z": "\n", "MC": ""}
             if isinstance(stats, dict):
                 for skey, sval in stats.iteritems():
-                    for p_str in ["target_data", "x1", "z"]:
+                    for p_str in ["fit_target_data", "x1", "z"]:
                         stats_string[p_str] \
                             = stats_string[p_str] + skey + "_mean=" + str(numpy.mean(sval[p_str])) + ", "
                     stats_region_labels = [stats_region_labels[ip] + ", " +
                                            skey + "_" + "x1" + "_mean=" + str(sval["x1"][:, ip].mean()) + ", " +
                                            skey + "_z_mean=" + str(sval["z"][:, ip].mean())
                                            for ip in range(len(region_labels))]
-                for p_str in ["target_data", "x1", "z"]:
+                for p_str in ["fit_target_data", "x1", "z"]:
                     stats_string[p_str] = stats_string[p_str][:-2]
         else:
             stats_string = dict(zip(["target_data", "x1", "z"], 3*[""]))
@@ -985,9 +1002,8 @@ class Plotter(BasePlotter):
             self._check_show()
 
     def plot_fit_results(self, ests, samples, model_data, target_data, statistical_model=None, stats=None,
-                         pair_plot_params=
-                            ["tau1", "tau0", "K", "sigma_eq", "sigma_init", "sigma", "epsilon", "scale", "offset"],
-                         region_violin_params=["x0", "x1eq", "x1init", "zinit"],
+                         pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
+                         region_violin_params=["x0", "x1init", "zinit"],
                          regions_labels=[], region_mode="all", n_regions=1,
                          trajectories_plot=True, connectivity_plot=True, skip_samples=0):
         if statistical_model is not None:
@@ -1002,11 +1018,12 @@ class Plotter(BasePlotter):
         else:
             region_inds = active_regions
             seizure_indices = None
+            regions_labels = regions_labels[region_inds]
 
         self.plot_fit_scalar_params(samples, stats, statistical_model, pair_plot_params, skip_samples)
 
         self.plot_fit_region_params(samples, stats, statistical_model, region_violin_params, skip_samples,
-                                    regions_labels[region_inds], seizure_indices, per_chain_plotting=False)
+                                    regions_labels, seizure_indices, region_mode, per_chain_plotting=False)
 
         self.plot_fit_timeseries(target_data, samples, ests, stats, statistical_model,
                                  seizure_indices, skip_samples, trajectories_plot)

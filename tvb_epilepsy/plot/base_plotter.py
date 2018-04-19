@@ -82,8 +82,8 @@ class BasePlotter(object):
         ax = pyplot.subplot(subplot, sharey=sharey)
         # ax.hold(True)
         pyplot.title(title)
-        n_vector = len(labels)
-        y_ticks = numpy.array(range(n_vector), dtype=numpy.int32)
+        n_violins = len(labels)
+        y_ticks = numpy.array(range(n_violins), dtype=numpy.int32)
         # the vector plot
         coldif = False
         if indices_red is None:
@@ -103,20 +103,20 @@ class BasePlotter(object):
             violin_parts['bodies'][ii]._alpha = 0.75
             violin_parts['bodies'][ii]._edgecolors = numpy.reshape(colormap[ii], (1, 4))
             violin_parts['bodies'][ii]._facecolors = numpy.reshape(colormap[ii], (1, 4))
-        if len(vector) == n_vector:
-            color = 'k'
-            colors = numpy.repeat([color], n_vector)
-            if indices_red is not None:
-                colors[indices_red] = 'r'
-                coldif = True
-            for ii in range(n_vector):
-                ax.plot(vector[ii], y_ticks[ii], '*', mfc=colors[ii], mec=colors[ii], ms=10)
-            for ii in range(lines.shape[0]):
-                ax.plot(lines[ii, 1],  y_ticks[ii] + lines[ii, 2], '--', mfc=colors[ii], mec=colors[ii], ms=10)
+        color = 'k'
+        colors = numpy.repeat([color], n_violins)
+        if indices_red is not None:
+            colors[indices_red] = 'r'
+            coldif = True
+        for ii in range(n_violins):
+            ax.plot(vector[ii], y_ticks[ii], '*', mfc=colors[ii], mec=colors[ii], ms=10)
+        for ii in range(n_violins):
+            ax.plot(lines[0][:, ii],  y_ticks[ii] + 0.5*lines[1][:, ii]/numpy.max(lines[1][:, ii]),
+                    '--', mfc=colors[ii], mec=colors[ii], ms=10)
         ax.grid(True, color='grey')
         ax.set_yticks(y_ticks)
         if show_y_labels:
-            region_labels = numpy.array(["%d. %s" % l for l in zip(range(n_vector), labels)])
+            region_labels = numpy.array(["%d. %s" % l for l in zip(range(n_violins), labels)])
             ax.set_yticklabels(region_labels)
             if coldif:
                 labels = ax.yaxis.get_ticklabels()
@@ -280,19 +280,21 @@ class BasePlotter(object):
                     else:
                         di = datai[key_i][skip:]
                     if i == j:
-                        hist_data = axes[i, j].hist(di, int(numpy.round(numpy.sqrt(len(di)))), log=True)
-                        hist_max = hist_data.max()
+                        hist_data = axes[i, j].hist(di, int(numpy.round(numpy.sqrt(len(di)))), log=True)[0]
+                        hist_max = numpy.array(hist_data).max()
                         # Plot a line (or marker) in the same axis as hist
-                        diag_line_plot = diagonal_plots.get("key", ())[0]
+                        diag_line_plot = ensure_list(diagonal_plots.get(key_i, ((), ()))[0])
                         if len(diag_line_plot) in [1, 2]:
-                            if len(diag_line_plot) == 1:
+                            if len(diag_line_plot) == 1 :
                                 diag_line_plot = confirm_y_coordinate(diag_line_plot, hist_max)
-                            if diag_line_plot[0] == 1:
+                            else:
+                                diag_line_plot[1] = diag_line_plot[1]/numpy.max(diag_line_plot[1])*hist_max
+                            if len(diag_line_plot[0]) == 1:
                                 axes[i, j].plot(diag_line_plot[0], diag_line_plot[1], "go", markersize=5)
                             else:
                                 axes[i, j].plot(diag_line_plot[0], diag_line_plot[1], "g--", linewidth=1)
                         # Plot a marker in the same axis as hist
-                        diag_marker_plot = diagonal_plots.get("key", ())[1]
+                        diag_marker_plot = ensure_list(diagonal_plots.get(key_i, ((), ()))[1])
                         if len(diag_marker_plot) in [1, 2]:
                             if len(diag_marker_plot) == 1:
                                 diag_marker_plot = confirm_y_coordinate(diag_marker_plot, hist_max)

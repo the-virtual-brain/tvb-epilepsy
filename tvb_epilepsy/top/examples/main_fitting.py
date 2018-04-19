@@ -100,9 +100,9 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             # ...or generate a new statistical model and model data
             statistical_model = \
                 SDEStatisticalModelBuilder(model_name="vep_sde", model_config=model_configuration,
-                                           parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K",
-                                                       "x1init", "zinit", "sigma_init",  "dX1t", "dZt", "sigma",
-                                                       "epsilon", "scale", "offset"],
+                                           parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value,
+                                                        "tau1", "tau0","K", "x1init", "zinit", "sigma_init", "sigma_eq",
+                                                        "sigma", "dX1t", "dZt", "epsilon", "scale", "offset"],
                                            xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                                            sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,).\
                                                                                                        generate_model()
@@ -124,9 +124,13 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                              label_strip_fun=lambda s: s.split("POL ")[-1], plotter=plotter)
             else:
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
-                signals = set_simulated_target_data(os.path.join(config.out.FOLDER_RES, hyp.name + "_ts.h5"),
-                                                    model_configuration, head, lsa_hypothesis, statistical_model,
-                                                    sensors_id, times_on_off, plotter, config, **kwargs)
+                signals, simulator = \
+                    set_simulated_target_data(os.path.join(config.out.FOLDER_RES, hyp.name + "_ts.h5"),
+                                              model_configuration, head, lsa_hypothesis, statistical_model,
+                                             sensors_id, times_on_off, plotter, config, **kwargs)
+                statistical_model.ground_truth.update({"tau1": np.mean(simulator.model.tt),
+                                                       "tau0": 1.0 / np.mean(simulator.model.r),
+                                                       "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
 
             # -------------------------- Select and set target data from signals ---------------------------------------
             if statistical_model.observation_model in OBSERVATION_MODELS.SEEG.value:
@@ -168,15 +172,14 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
         # Interface with INS stan models
         if stan_model_name.find("vep-fe-rev") >= 0:
-            ests, samples, summary, model_data = convert_params_names_from_ins([ests, samples, summary, model_data])
+            ests, samples, Rhat, model_data = \
+                convert_params_names_from_ins([ests, samples, stan_service.get_Rhat(summary), model_data])
 
         # Pack fit samples time series into timeseries objects:
-        samples, target_data = samples_to_timeseries(samples, model_data, target_data, head.connectivity.region_labels,
-                                                     region_mode="active")
+        samples, target_data = samples_to_timeseries(samples, model_data, target_data, head.connectivity.region_labels)
 
         # -------------------------- Plot fitting results: ------------------------------------------------------------
-        plotter.plot_fit_results(ests, samples, model_data, target_data, statistical_model=None,
-                                 stats=stan_service.get_Rhat(summary),
+        plotter.plot_fit_results(ests, samples, model_data, target_data, statistical_model, stats={"Rhat": Rhat},
                                  pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
                                  region_violin_params=["x0", "x1init", "zinit"], region_mode="active",
                                  regions_labels=head.connectivity.region_labels,
