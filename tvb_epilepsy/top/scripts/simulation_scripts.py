@@ -111,4 +111,4 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
                                                   seeg_list=seeg, spectral_raster_plot=False,
                                                   hpf_flag=False, log_scale=True)
 
-    return {"source": sim_output, "seeg": seeg}
+    return {"source": sim_output, "seeg": seeg}, sim
