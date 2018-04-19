@@ -105,10 +105,12 @@ class CmdStanService(StanService):
 
     def get_Rhat(self, summary):
         if isinstance(summary, dict):
-            Rhat = summary.get("R_hat", None)
-            if Rhat is not None:
-                Rhat = {"R_hat": Rhat}
-        return Rhat
+            return summary.get("R_hat", None)
+        #     if Rhat is not None:
+        #         Rhat = {"R_hat": Rhat}
+        # return Rhat
+        else:
+            return None
 
     def fit(self,debug=0, simulate=0, return_output=True, plot_HMC=True, overwrite_output_files=False, plot_warmup=1,
             **kwargs):
