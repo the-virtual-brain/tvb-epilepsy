@@ -77,8 +77,6 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                      config=config)
     stan_service.set_or_compile_model()
 
-    target_data = None
-
     for hyp in hypotheses[1:]:
 
         # Set model configuration and compute LSA
@@ -181,7 +179,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         # -------------------------- Plot fitting results: ------------------------------------------------------------
         plotter.plot_fit_results(ests, samples, model_data, target_data, statistical_model, stats={"Rhat": Rhat},
                                  pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
-                                 region_violin_params=["x0", "x1init", "zinit"], region_mode="active",
+                                 region_violin_params=["x0", "x1init", "zinit"], regions_mode="active",
                                  regions_labels=head.connectivity.region_labels,
                                  trajectories_plot=True, connectivity_plot=False, skip_samples=num_warmup)
 

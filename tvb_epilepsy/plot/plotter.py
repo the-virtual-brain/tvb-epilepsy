@@ -870,26 +870,27 @@ class Plotter(BasePlotter):
 
     def plot_fit_region_params(self, samples, stats=None, statistical_model=None,
                                region_violin_params=["x0", "x1init", "zinit"], skip_samples=0,
-                               region_labels=[], seizure_indices=[], region_mode="all", per_chain_plotting=False):
+                               region_labels=[], seizure_indices=[], regions_mode="all", per_chain_plotting=False):
+        # We assume in this function that regions_inds run for all regions for the statistical model,
+        # and either among all or only among active regions for samples, ests and stats, depending on regions_mode
         samples = ensure_list(samples)
         priors = {}
         truth = {}
         if statistical_model is not None:
             title_pair_plot = statistical_model.name + " global coupling vs x0 pair plot"
             title_violin_plot = statistical_model.name + " regions parameters samples"
-            if region_mode=="active":
+            if regions_mode=="active":
                 regions_inds = statistical_model.active_regions
             else:
                 regions_inds = range(statistical_model.number_of_regions)
-            for p in region_violin_params:
-                pdf = statistical_model.get_prior_pdf(p)
-                priors.update({p: (pdf[0][:, regions_inds], pdf[1][:, regions_inds])})
-                this_truth = statistical_model.get_truth(p)
-                if this_truth is numpy.nan:
-                    this_truth = this_truth * numpy.ones((len(regions_inds), ))
-                else:
-                    this_truth = this_truth[regions_inds]
-                truth.update({p: this_truth})
+            I = numpy.ones((statistical_model.number_of_regions, 1))
+            for param in region_violin_params:
+                pdf = ensure_list(statistical_model.get_prior_pdf(param))
+                for ip, p in enumerate(pdf):
+                    pdf[ip] = ((p.T * I)[regions_inds]).T
+                priors.update({param: (pdf[0].squeeze(), pdf[1].squeeze())})
+                this_truth = (statistical_model.get_truth(param) * I[:, 0])[regions_inds]
+                truth.update({param: this_truth.squeeze()})
         else:
             title_pair_plot = statistical_model.name + "Global coupling vs x0 pair plot"
             title_violin_plot = statistical_model.name + "Regions parameters samples"
@@ -907,8 +908,8 @@ class Plotter(BasePlotter):
                 x0_K_pair_plot_samples = [{"K": s["K"]} for s in samples]
                 priors.update({"K": statistical_model.get_prior_pdf("K")})
                 truth.update({"K": statistical_model.get_truth("K")})
-            for inode, iregion in enumerate(regions_inds):
-                temp_name = "x0[" + region_labels[iregion] + "]"
+            for inode, label in enumerate(region_labels):
+                temp_name = "x0[" + label + "]"
                 x0_K_pair_plot_params.append(temp_name)
                 for ichain, s in enumerate(samples):
                     x0_K_pair_plot_samples[ichain].update({temp_name: s["x0"][:, inode]})
@@ -922,7 +923,7 @@ class Plotter(BasePlotter):
         samples = ensure_list(samples)
         region_labels = samples[0]["x1"].space_labels
         if statistical_model is not None:
-            sig_prior_str = " sig_prior = " + str(statistical_model.get_prior("sigma"))
+            sig_prior_str = " sig_prior = " + str(statistical_model.get_prior("sigma")[0])
         else:
             sig_prior_str = ""
         stats_region_labels = region_labels
@@ -941,7 +942,7 @@ class Plotter(BasePlotter):
                     stats_string[p_str] = stats_string[p_str][:-2]
         else:
             stats_string = dict(zip(["target_data", "x1", "z"], 3*[""]))
-        observation_dict = OrderedDict({'observation time series': target_data.squeezed[:, :, skip_samples]})
+        observation_dict = OrderedDict({'observation time series': target_data.squeezed})
         time = target_data.time_line
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), samples)):
             name = statistical_model.name + "_chain" + str(id_est + 1)
@@ -957,7 +958,7 @@ class Plotter(BasePlotter):
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
             self.plot_raster(sort_dict({"dX1t": sample["dX1t"].squeezed[:, :, skip_samples:],
                                         "dZt": sample["dZt"].squeezed[:, :, skip_samples:]}),
-                             time, time_units=target_data.time_unit,
+                             time[:-1], time_units=target_data.time_unit,
                              # special_idx=seizure_indices,
                              title=name + ": Hidden states random walk rasterplot",
                              subtitles=["dX1t",
@@ -966,11 +967,11 @@ class Plotter(BasePlotter):
             if trajectories_plot:
                 title = name + ': Fit hidden state space trajectories'
                 self.plot_trajectories({"x1": sample["x1"].squeezed[:, :, skip_samples:],
-                                        'z': sample['z'].squeezed[:, :, :, skip_samples:]},
+                                        'z': sample['z'].squeezed[:, :, skip_samples:]},
                                        special_idx=seizure_indices, title=title, labels=stats_region_labels,
                                        figsize=FiguresConfig.SUPER_LARGE_SIZE)
         self.plot_timeseries(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
-                             title="Observation target vs fit time series: " + stats_string["target_data"],
+                             title="Observation target vs fit time series: " + stats_string["fit_target_data"],
                              offset=1.0, labels=target_data.space_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
     def plot_fit_connectivity(self, ests, samples, stats=None, statistical_model=None, region_labels=[]):
@@ -1004,7 +1005,7 @@ class Plotter(BasePlotter):
     def plot_fit_results(self, ests, samples, model_data, target_data, statistical_model=None, stats=None,
                          pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
                          region_violin_params=["x0", "x1init", "zinit"],
-                         regions_labels=[], region_mode="all", n_regions=1,
+                         regions_labels=[], regions_mode="all", n_regions=1,
                          trajectories_plot=True, connectivity_plot=True, skip_samples=0):
         if statistical_model is not None:
             n_regions = statistical_model.number_of_regions
@@ -1012,8 +1013,7 @@ class Plotter(BasePlotter):
         else:
             active_regions = model_data.get("active_regions", range(n_regions))
             regions_labels = generate_region_labels(n_regions, regions_labels, ". ", False)
-        if isequal_string(region_mode, "all"):
-            region_inds = range(n_regions)
+        if isequal_string(regions_mode, "all"):
             seizure_indices = active_regions
         else:
             region_inds = active_regions
@@ -1023,7 +1023,7 @@ class Plotter(BasePlotter):
         self.plot_fit_scalar_params(samples, stats, statistical_model, pair_plot_params, skip_samples)
 
         self.plot_fit_region_params(samples, stats, statistical_model, region_violin_params, skip_samples,
-                                    regions_labels, seizure_indices, region_mode, per_chain_plotting=False)
+                                    regions_labels, seizure_indices, regions_mode, per_chain_plotting=False)
 
         self.plot_fit_timeseries(target_data, samples, ests, stats, statistical_model,
                                  seizure_indices, skip_samples, trajectories_plot)
