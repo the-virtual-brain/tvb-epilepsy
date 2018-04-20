@@ -163,13 +163,13 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                                       chains=2, refresh=1, num_warmup=num_warmup, num_samples=30,
                                                       max_depth=10, delta=0.8, save_warmup=1, plot_warmup=1, **kwargs)
             writer.write_generic(ests, path("FitEst"))
-            writer.write_generic(samples, path("FitSamplesEst"))
+            writer.write_generic(samples, path("FitSamples"))
             if summary is not None:
                 writer.write_generic(summary, path("FitSummary"))
         else:
             ests, samples, summary = stan_service.read_output()
             if fitmethod.find("sampl") >= 0:
-                Plotter(config).plot_HMC(samples, skip_samples=num_warmup, figure_name=hyp.name + " HMC NUTS trace")
+                plotter.plot_HMC(samples, skip_samples=num_warmup, figure_name=hyp.name + " HMC NUTS trace")
 
         # Interface with INS stan models
         if stan_model_name.find("vep-fe-rev") >= 0:
