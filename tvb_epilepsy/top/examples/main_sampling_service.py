@@ -1,5 +1,5 @@
 # coding=utf-8
-
+import os
 import numpy as np
 from copy import deepcopy
 from tvb_epilepsy.base.constants.config import Config
@@ -25,7 +25,7 @@ def main_sampling_service(config=Config()):
         logger.info("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
     writer = H5Writer()
-    writer.write_generic(sampler, config.out.FOLDER_RES, "test_Stochastic_Sampler.h5")
+    writer.write_generic(sampler, os.path.join(config.out.FOLDER_RES, "test_Stochastic_Sampler.h5"))
 
     logger.info("\nStochastic uniform sampling with numpy:")
     sampler = StochasticSamplingService(n_samples=n_samples, sampling_module="numpy")
@@ -37,7 +37,7 @@ def main_sampling_service(config=Config()):
         logger.info("\n" + key + ": " + str(value))
 
     logger.info(sampler.__repr__())
-    writer.write_generic(sampler, config.out.FOLDER_RES, "test1_Stochastic_Sampler.h5")
+    writer.write_generic(sampler, os.path.join(config.out.FOLDER_RES, "test1_Stochastic_Sampler.h5"))
 
     logger.info("\nStochastic truncated normal sampling with scipy:")
     sampler = StochasticSamplingService(n_samples=n_samples)
@@ -47,7 +47,7 @@ def main_sampling_service(config=Config()):
     for key, value in stats.iteritems():
         logger.info("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
-    writer.write_generic(sampler, config.out.FOLDER_RES, "test2_Stochastic_Sampler.h5")
+    writer.write_generic(sampler, os.path.join(config.out.FOLDER_RES, "test2_Stochastic_Sampler.h5"))
 
     logger.info("\nSensitivity analysis sampling:")
     sampler = SalibSamplingService(n_samples=n_samples, sampler="latin")
@@ -55,7 +55,7 @@ def main_sampling_service(config=Config()):
     for key, value in stats.iteritems():
         logger.info("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
-    writer.write_generic(sampler, config.out.FOLDER_RES, "test3_Stochastic_Sampler.h5")
+    writer.write_generic(sampler, os.path.join(config.out.FOLDER_RES, "test3_Stochastic_Sampler.h5"))
 
     logger.info("\nTesting distribution class and conversions...")
     sampler = StochasticSamplingService(n_samples=n_samples)

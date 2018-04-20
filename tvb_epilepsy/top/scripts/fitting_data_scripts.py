@@ -9,7 +9,7 @@ logger = initialize_logger(__name__)
 
 
 def prepare_signal_observable(data, on_off_set=[], rois=[], win_len_ratio=WIN_LEN_RATIO, filter_flag=True,
-                              low_freq=LOW_FREQ, high_freq=HIGH_FREQ, log_flag=LOG_FLAG, plotter=False):
+                              low_freq=LOW_FREQ, high_freq=HIGH_FREQ, log_flag=LOG_FLAG, plotter=False, title_prefix=""):
     ts_service = TimeseriesService()
     if len(on_off_set) == 0:
         on_off_set = [data.time_start, data.time_line[-1]]
@@ -25,7 +25,8 @@ def prepare_signal_observable(data, on_off_set=[], rois=[], win_len_ratio=WIN_LE
     if plotter:
         plotter.plot_spectral_analysis_raster(data.time_line, data.squeezed, time_units=data.time_unit,
                                               freq=np.array(range(1, 51, 1)), title='Spectral Analysis',
-                                              figure_name='Spectral Analysis', labels=data.space_labels, log_scale=True)
+                                              figure_name=title_prefix + 'SpectralAnalysis',
+                                              labels=data.space_labels, log_scale=True)
     if filter_flag:
         times = data.time_line
         fs = 1000.0 / np.mean(np.diff(times))
@@ -37,11 +38,11 @@ def prepare_signal_observable(data, on_off_set=[], rois=[], win_len_ratio=WIN_LE
             plot_time = data.time_line[4*win_len:-4*win_len]
             plotter.plot_raster({"Filtering": plot_data}, plot_time, time_units=data.time_unit,
                                 special_idx=[], title='Filtered Time Series', offset=1.0,
-                                figure_name='FilteredTimeSeries', labels=data.space_labels)
+                                figure_name=title_prefix + 'FilteredTimeSeries', labels=data.space_labels)
             plotter.plot_spectral_analysis_raster(plot_time, plot_data, time_units="ms", freq=np.array(range(1, 51, 1)),
                                                   title='Spectral Analysis_Filtered',
-                                                  figure_name='Spectral Analysis Filtered', labels=data.space_labels,
-                                                  log_scale=True)
+                                                  figure_name=title_prefix + 'Spectral nalysisFiltered',
+                                                  labels=data.space_labels, log_scale=True)
             del plot_data, plot_time
 
     def cut_fun(data, dtimes):
@@ -73,7 +74,8 @@ def prepare_signal_observable(data, on_off_set=[], rois=[], win_len_ratio=WIN_LE
             plotter.plot_raster({str_decim_ratio + "xDecimationX": data.squeezed}, data.time_line,
                                 time_units=data.time_unit, special_idx=[],
                                 title=str_decim_ratio + 'x Decimated Time Series', offset=0.1,
-                                figure_name=str_decim_ratio + 'xDecimatedTimeSeries', labels=data.space_labels)
+                                figure_name=title_prefix + str_decim_ratio + 'xDecimatedTimeSeries',
+                                labels=data.space_labels)
         return data, decim_ratio
 
     def convolve(data, win_len, decim_ratio, plotter):
@@ -88,7 +90,7 @@ def prepare_signal_observable(data, on_off_set=[], rois=[], win_len_ratio=WIN_LE
             plotter.plot_raster({str_decim_ratio + "Convolution": data.squeezed}, data.time_line,
                                 time_units=data.time_unit, special_idx=[],
                                 title=str_decim_ratio + 'Convolved Time Series', offset=0.1,
-                                figure_name=str_decim_ratio + 'ConvolvedTimeSeries', labels=data.space_labels)
+                                figure_name=title_prefix + str_decim_ratio + 'ConvolvedTimeSeries', labels=data.space_labels)
         return data, win_len
 
     decim_ratio = 1
@@ -113,38 +115,41 @@ def prepare_signal_observable(data, on_off_set=[], rois=[], win_len_ratio=WIN_LE
     if plotter:
         plotter.plot_raster({"ObservationRaster": data.squeezed}, data.time_line, time_units=data.time_unit,
                             special_idx=[], offset=1.0, title='Observation Raster Plot',
-                            figure_name='ObservationRasterPlot', labels=data.space_labels)
+                            figure_name=title_prefix + 'ObservationRasterPlot', labels=data.space_labels)
         plotter.plot_timeseries({"Observation": data.squeezed}, data.time_line, time_units=data.time_unit,
                                 special_idx=[], title='Observation Time Series',
-                                figure_name='ObservationTimeSeries', labels=data.space_labels)
+                                figure_name=title_prefix + 'ObservationTimeSeries', labels=data.space_labels)
     return data
 
 
 def prepare_seeg_observable(data, on_off_set=[], rois=[], win_len_ratio=WIN_LEN_RATIO, filter_flag=True, low_freq=LOW_FREQ,
-                            high_freq=HIGH_FREQ, bipolar=BIPOLAR, log_flag=LOG_FLAG, plotter=False):
+                            high_freq=HIGH_FREQ, bipolar=BIPOLAR, log_flag=LOG_FLAG, plotter=False, title_prefix=""):
     if plotter:
         plotter.plot_spectral_analysis_raster(data.time_line, data.squeezed, time_units="ms",
                                               freq=np.array(range(1, 51, 1)), title='Spectral Analysis',
-                                              figure_name='Spectral Analysis', labels=data.space_labels, log_scale=True)
+                                              figure_name=title_prefix + 'Spectral Analysis', labels=data.space_labels,
+                                              log_scale=True)
     if bipolar:
         logger.info("Computing bipolar signals...")
         data = data.get_bipolar()
         if plotter:
             plotter.plot_raster({"Bipolar": data.squeezed}, data.time_line, time_units=data.time_unit,
                                 special_idx=[], title='Bipolar Time Series', offset=0.1,
-                                figure_name='BipolarTimeSeries', labels=data.space_labels)
+                                figure_name=title_prefix + 'BipolarTimeSeries', labels=data.space_labels)
             plotter.plot_spectral_analysis_raster(data.time_line, data.squeezed, time_units=data.time_unit,
                                                   freq=np.array(range(1, 51, 1)), title='Spectral Analysis',
-                                                  figure_name='Spectral Analysis Bipolar',
+                                                  figure_name=title_prefix + 'Spectral Analysis Bipolar',
                                                   labels=data.space_labels, log_scale=True)
     return prepare_signal_observable(data, on_off_set, rois, win_len_ratio=win_len_ratio, filter_flag=filter_flag,
-                                     low_freq=low_freq, high_freq=high_freq, log_flag=log_flag, plotter=plotter)
+                                     low_freq=low_freq, high_freq=high_freq, log_flag=log_flag, plotter=plotter,
+                                     title_prefix=title_prefix)
 
 
 def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, on_off_set,
                                           time_units="ms", label_strip_fun=None,
                                           win_len_ratio=WIN_LEN_RATIO, filter_flag=True, low_freq=LOW_FREQ,
-                                          high_freq=HIGH_FREQ, bipolar=BIPOLAR, log_flag=LOG_FLAG, plotter=False):
+                                          high_freq=HIGH_FREQ, bipolar=BIPOLAR, log_flag=LOG_FLAG, plotter=False,
+                                          title_prefix=""):
     logger.info("Reading empirical dataset from edf file...")
     data = read_edf_to_Timeseries(seeg_path, sensors, rois_selection,
                                   label_strip_fun=label_strip_fun, time_units=time_units)
@@ -152,7 +157,7 @@ def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, on
     if plotter:
         plotter.plot_raster({"Detrended": data.squeezed}, data.time_line, time_units=data.time_unit,
                             special_idx=[], title='Detrended Time Series', offset=0.1,
-                            figure_name='DetrendedTimeSeries', labels=data.space_labels)
+                            figure_name=title_prefix + 'DetrendedTimeSeries', labels=data.space_labels)
     return prepare_seeg_observable(data, on_off_set, rois=range(data.number_of_labels), win_len_ratio=win_len_ratio,
                                    filter_flag=filter_flag, low_freq=low_freq, high_freq=high_freq, bipolar=bipolar,
-                                   log_flag=log_flag, plotter=plotter)
+                                   log_flag=log_flag, plotter=plotter, title_prefix=title_prefix)

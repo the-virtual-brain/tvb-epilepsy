@@ -457,7 +457,9 @@ class Plotter(BasePlotter):
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
 
     def plot_simulated_timeseries(self, timeseries, model, seizure_indices, seeg_list=[],
-                                  spectral_raster_plot=False, **kwargs):
+                                  spectral_raster_plot=False, title_prefix="", **kwargs):
+        if len(title_prefix) > 0:
+            title_prefix = title_prefix + ", "
         region_labels = timeseries.space_labels
         state_variables = timeseries.dimension_labels[TimeseriesDimensions.VARIABLES.value]
 
@@ -466,17 +468,17 @@ class Plotter(BasePlotter):
             sv_dict = {'x1(t)': timeseries.x1.data, 'z(t)': timeseries.z.data}
 
             self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
-                                 special_idx=seizure_indices, title=model._ui_name + ": Simulated TAVG",
+                                 special_idx=seizure_indices, title=title_prefix + model._ui_name + ": Simulated TAVG",
                                  labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
             self.plot_raster({'x1(t)': timeseries.x1.data}, timeseries.time_line, time_units=timeseries.time_unit,
-                             special_idx=seizure_indices, title=model._ui_name + ": Simulated x1 rasterplot",
+                             special_idx=seizure_indices, title=title_prefix + model._ui_name + ": Simulated x1 rasterplot",
                              offset=2.0, labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
             sv_dict = {'x1': timeseries.x1.data, 'z': timeseries.z.data}
 
             self.plot_trajectories(sv_dict, special_idx=seizure_indices,
-                                   title=model._ui_name + ': State space trajectories', labels=region_labels,
+                                   title=title_prefix + model._ui_name + ': State space trajectories', labels=region_labels,
                                    figsize=FiguresConfig.LARGE_SIZE)
         else:
             # We assume that at least source and z are available in res
@@ -484,21 +486,21 @@ class Plotter(BasePlotter):
             sv_dict = {'source(t)': source_ts.squeezed, 'z(t)': timeseries.z.squeezed}
 
             self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
-                                 special_idx=seizure_indices, title=model._ui_name + ": Simulated source-z",
+                                 special_idx=seizure_indices, title=title_prefix + model._ui_name + ": Simulated source-z",
                                  labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
             start_plot = int(numpy.round(0.01 * source_ts.data.shape[0]))
             self.plot_raster({'source': source_ts.squeezed[start_plot:, :]},
                              timeseries.time_line.flatten()[start_plot:],
                              time_units=timeseries.time_unit, special_idx=seizure_indices,
-                             title=model._ui_name + ": Simulated source rasterplot", offset=2.0, labels=region_labels,
-                             figsize=FiguresConfig.VERY_LARGE_SIZE)
+                             title=title_prefix + model._ui_name + ": Simulated source rasterplot", offset=2.0,
+                             labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
             if PossibleVariables.X1.value in state_variables and PossibleVariables.Y1.value in state_variables:
                 sv_dict = {'x1(t)': timeseries.x1.squeezed, 'y1(t)': timeseries.y1.squeezed}
 
                 self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
-                                     special_idx=seizure_indices, title=model._ui_name + ": Simulated pop1",
+                                     special_idx=seizure_indices, title=title_prefix + model._ui_name + ": Simulated pop1",
                                      labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
             if PossibleVariables.X2.value in state_variables and PossibleVariables.Y2.value in state_variables and \
                     PossibleVariables.G.value in state_variables:
@@ -506,15 +508,15 @@ class Plotter(BasePlotter):
                            'g(t)': timeseries.g.squeezed}
 
                 self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
-                                     special_idx=seizure_indices, title=model._ui_name + ": Simulated pop2-g",
+                                     special_idx=seizure_indices, title=title_prefix + model._ui_name + ": Simulated pop2-g",
                                      labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
             if spectral_raster_plot:
                 self.plot_spectral_analysis_raster(timeseries.time_line, timeseries.source.squeezed,
                                                    time_units=timeseries.time_unit, freq=None,
                                                    special_idx=seizure_indices,
-                                                   title=model._ui_name + ": Spectral Analysis", labels=region_labels,
-                                                   figsize=FiguresConfig.LARGE_SIZE, **kwargs)
+                                                   title=title_prefix + model._ui_name + ": Spectral Analysis",
+                                                   labels=region_labels, figsize=FiguresConfig.LARGE_SIZE, **kwargs)
 
         if isinstance(model, EpileptorDPrealistic):
             if PossibleVariables.SLOPE_T.value in state_variables and \
@@ -524,7 +526,7 @@ class Plotter(BasePlotter):
                 title = model._ui_name + ": Simulated controlled parameters"
 
                 self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
-                                     special_idx=seizure_indices, title=title, labels=region_labels,
+                                     special_idx=seizure_indices, title=title_prefix + title, labels=region_labels,
                                      figsize=FiguresConfig.VERY_LARGE_SIZE)
             if PossibleVariables.X0_T.value in state_variables and PossibleVariables.IEXT1_T.value in state_variables \
                     and PossibleVariables.K_T.value:
@@ -532,11 +534,12 @@ class Plotter(BasePlotter):
                            'K': timeseries.K_t.squeezed}
 
                 self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
-                                     special_idx=seizure_indices, title=model._ui_name + ": Simulated parameters",
+                                     special_idx=seizure_indices,
+                                     title=title_prefix + model._ui_name + ": Simulated parameters",
                                      labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
 
-        self.plot_simulated_seeg_timeseries(seeg_list, title_prefix=model._ui_name,
+        self.plot_simulated_seeg_timeseries(seeg_list, title_prefix=title_prefix + model._ui_name,
                                             hpf_flag=kwargs.get("hpf_flag", False))
 
 
@@ -854,31 +857,36 @@ class Plotter(BasePlotter):
             self._check_show()
 
     def plot_fit_scalar_params(self, samples, stats, statistical_model=None,
-                               pair_plot_params=["tau1",  "K", "sigma", "epsilon", "scale", "offset"], skip_samples=0):
+                               pair_plot_params=["tau1",  "K", "sigma", "epsilon", "scale", "offset"], skip_samples=0,
+                               title_prefix=""):
         # plot scalar parameters in pair plots
+        if len(title_prefix) > 0:
+            title_prefix = title_prefix + ": "
         priors = {}
         truth = {}
         if statistical_model is not None:
-            title = statistical_model.name + " parameters samples"
+            title = title_prefix + statistical_model.name + " parameters samples"
             for p in pair_plot_params:
                 priors.update({p: statistical_model.get_prior_pdf(p)})
                 truth.update({p: numpy.nanmean(statistical_model.get_truth(p))})
         else:
-            title = "Parameters samples"
+            title = title_prefix + "Parameters samples"
 
         self.parameters_pair_plots(samples, pair_plot_params, stats, priors, truth, skip_samples, title=title)
 
     def plot_fit_region_params(self, samples, stats=None, statistical_model=None,
-                               region_violin_params=["x0", "x1init", "zinit"], skip_samples=0,
-                               region_labels=[], seizure_indices=[], regions_mode="all", per_chain_plotting=False):
+                               region_violin_params=["x0", "x1init", "zinit"], seizure_indices=[], region_labels=[],
+                               regions_mode="all", per_chain_plotting=False, skip_samples=0, title_prefix=""):
+        if len(title_prefix) > 0:
+            title_prefix = title_prefix + " "
         # We assume in this function that regions_inds run for all regions for the statistical model,
         # and either among all or only among active regions for samples, ests and stats, depending on regions_mode
         samples = ensure_list(samples)
         priors = {}
         truth = {}
         if statistical_model is not None:
-            title_pair_plot = statistical_model.name + " global coupling vs x0 pair plot"
-            title_violin_plot = statistical_model.name + " regions parameters samples"
+            title_pair_plot = title_prefix + statistical_model.name + " global coupling vs x0 pair plot"
+            title_violin_plot = title_prefix + statistical_model.name + " regions parameters samples"
             if regions_mode=="active":
                 regions_inds = statistical_model.active_regions
             else:
@@ -892,8 +900,8 @@ class Plotter(BasePlotter):
                 this_truth = (statistical_model.get_truth(param) * I[:, 0])[regions_inds]
                 truth.update({param: this_truth.squeeze()})
         else:
-            title_pair_plot = statistical_model.name + "Global coupling vs x0 pair plot"
-            title_violin_plot = statistical_model.name + "Regions parameters samples"
+            title_pair_plot = title_prefix + statistical_model.name + "Global coupling vs x0 pair plot"
+            title_violin_plot = title_prefix + statistical_model.name + "Regions parameters samples"
             regions_inds = range(samples[0]["x0"].shape[2])
         # plot region-wise parameters
         self.region_parameters_violin_plots(samples, truth, priors, stats, region_violin_params, skip_samples,
@@ -919,7 +927,9 @@ class Plotter(BasePlotter):
                                        title=title_pair_plot)
 
     def plot_fit_timeseries(self, target_data, samples, ests, stats=None, statistical_model=None,
-                            seizure_indices=[], skip_samples=0, trajectories_plot=False):
+                            seizure_indices=[], skip_samples=0, trajectories_plot=False, title_prefix=""):
+        if len(title_prefix) > 0:
+            title_prefix = title_prefix + ": "
         samples = ensure_list(samples)
         region_labels = samples[0]["x1"].space_labels
         if statistical_model is not None:
@@ -945,7 +955,7 @@ class Plotter(BasePlotter):
         observation_dict = OrderedDict({'observation time series': target_data.squeezed})
         time = target_data.time_line
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), samples)):
-            name = statistical_model.name + "_chain" + str(id_est + 1)
+            name = title_prefix + statistical_model.name + "_chain" + str(id_est + 1)
             observation_dict.update({"fit chain " + str(id_est + 1):
                                          sample["fit_target_data"].squeezed[:, :, skip_samples:]})
             self.plot_raster(sort_dict({"x1": sample["x1"].squeezed[:, :, skip_samples:],
@@ -965,28 +975,29 @@ class Plotter(BasePlotter):
                                         "dZt" + "\ndynamic noise" + sig_prior_str + ", sig_post = " + str(est["sigma"])],
                              offset=1.0, labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
             if trajectories_plot:
-                title = name + ': Fit hidden state space trajectories'
+                title = title_prefix + name + ' Fit hidden state space trajectories'
                 self.plot_trajectories({"x1": sample["x1"].squeezed[:, :, skip_samples:],
                                         'z': sample['z'].squeezed[:, :, skip_samples:]},
                                        special_idx=seizure_indices, title=title, labels=stats_region_labels,
                                        figsize=FiguresConfig.SUPER_LARGE_SIZE)
         self.plot_timeseries(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
-                             title="Observation target vs fit time series: " + stats_string["fit_target_data"],
+                             title=title_prefix + "Observation target vs fit time series: " + stats_string["fit_target_data"],
                              offset=1.0, labels=target_data.space_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
-    def plot_fit_connectivity(self, ests, samples, stats=None, statistical_model=None, region_labels=[]):
+    def plot_fit_connectivity(self, ests, samples, stats=None, statistical_model=None, region_labels=[], title_prefix=""):
         # plot connectivity
+        if len(title_prefix) > 0:
+            title_prefix = title_prefix + "_"
         if statistical_model is not None:
-            name0 = statistical_model.name + "_"
+            name0 = title_prefix + statistical_model.name + "_"
             MC_prior = statistical_model.get_prior("MC")
             MC_subplot = 122
         else:
-            name0 = ""
+            name0 = title_prefix
             MC_prior = False
             MC_subplot = 111
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), ensure_list(samples))):
-            name = name0 + "chain" + str(id_est + 1)
-            conn_figure_name = name + "Model Connectivity"
+            conn_figure_name = name0 + "chain" + str(id_est + 1) + ": Model Connectivity"
             pyplot.figure(conn_figure_name, FiguresConfig.VERY_LARGE_SIZE)
             # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
             if MC_prior:
@@ -1006,7 +1017,7 @@ class Plotter(BasePlotter):
                          pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
                          region_violin_params=["x0", "x1init", "zinit"],
                          regions_labels=[], regions_mode="all", n_regions=1,
-                         trajectories_plot=True, connectivity_plot=True, skip_samples=0):
+                         trajectories_plot=True, connectivity_plot=True, skip_samples=0, title_prefix=""):
         if statistical_model is not None:
             active_regions = statistical_model.active_regions
         else:
@@ -1019,13 +1030,13 @@ class Plotter(BasePlotter):
             seizure_indices = None
             regions_labels = regions_labels[region_inds]
 
-        self.plot_fit_scalar_params(samples, stats, statistical_model, pair_plot_params, skip_samples)
+        self.plot_fit_scalar_params(samples, stats, statistical_model, pair_plot_params, skip_samples, title_prefix)
 
-        self.plot_fit_region_params(samples, stats, statistical_model, region_violin_params, skip_samples,
-                                    regions_labels, seizure_indices, regions_mode, per_chain_plotting=False)
+        self.plot_fit_region_params(samples, stats, statistical_model, region_violin_params, seizure_indices,
+                                    regions_labels, regions_mode, False, skip_samples, title_prefix)
 
         self.plot_fit_timeseries(target_data, samples, ests, stats, statistical_model,
-                                 seizure_indices, skip_samples, trajectories_plot)
+                                 seizure_indices, skip_samples, trajectories_plot, title_prefix)
 
         if connectivity_plot:
-            self.plot_fit_connectivity(ests, stats, statistical_model, regions_labels)
+            self.plot_fit_connectivity(ests, stats, statistical_model, regions_labels, title_prefix)

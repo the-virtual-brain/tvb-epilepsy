@@ -52,6 +52,10 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                         observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,  sensors_lbls=[], sensors_id=0,
                         times_on_off=[], fitmethod="optimizing", stan_service="CmdStan",
                         fit_flag=True, config=Config(), **kwargs):
+
+    def path(name):
+        return base_path + "_" + name + ".h5"
+
     # Prepare necessary services:
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
     reader = H5Reader()
@@ -62,7 +66,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
     logger.info("Reading from: " + config.input.HEAD)
     head = reader.read_head(config.input.HEAD)
     sensors = head.get_sensors_id(sensor_ids=sensors_id)
-    # plotter.plot_head(head)
+    plotter.plot_head(head)
 
     # Set hypotheses:
     hypotheses = set_hypotheses(head, config)
@@ -78,15 +82,15 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
     stan_service.set_or_compile_model()
 
     for hyp in hypotheses[1:]:
-
+        base_path = os.path.join(config.out.FOLDER_RES, hyp.name)
         # Set model configuration and compute LSA
         model_configuration, lsa_hypothesis = set_model_config_LSA(head, hyp, reader, config, K_unscaled=3*K_DEF)
 
         # -------------------------- Get model_data and observation signals: -------------------------------------------
         # Create model inversion service (stateless)
-        stats_model_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_StatsModel.h5")
-        model_data_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelData.h5")
-        target_data_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_TargetData.h5")
+        stats_model_file = path("StatsModel")
+        model_data_file = path("ModelData")
+        target_data_file = path("TargetData")
         if os.path.isfile(stats_model_file) and os.path.isfile(model_data_file) and os.path.isfile(target_data_file):
             # Read existing statistical model and model data...
             statistical_model = reader.read_statistical_model(stats_model_file)
@@ -111,21 +115,19 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                                                       lsa_propagation_strength=
                                                                             lsa_hypothesis.lsa_propagation_strengths,
                                                                       reset=True)
-            plotter.plot_statistical_model(statistical_model, "Statistical Model")
 
             # Now some scripts for settting and preprocessing target signals:
             if os.path.isfile(empirical_file):
                 # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
-                signals = set_empirical_data(empirical_file, os.path.join(config.out.FOLDER_RES,
-                                                                          hyp.name + "_ts_empirical.h5"),
+                signals = set_empirical_data(empirical_file, path("ts_empirical"),
                                              head, sensors_lbls, sensors_id, times_on_off,
-                                             label_strip_fun=lambda s: s.split("POL ")[-1], plotter=plotter)
+                                             label_strip_fun=lambda s: s.split("POL ")[-1], plotter=plotter,
+                                             title_prefix=hyp.name)
             else:
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
                 signals, simulator = \
-                    set_simulated_target_data(os.path.join(config.out.FOLDER_RES, hyp.name + "_ts.h5"),
-                                              model_configuration, head, lsa_hypothesis, statistical_model,
-                                             sensors_id, times_on_off, plotter, config, **kwargs)
+                    set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, statistical_model,
+                                             sensors_id, times_on_off, plotter, config, title_prefix=hyp.name, **kwargs)
                 statistical_model.ground_truth.update({"tau1": np.mean(simulator.model.tt),
                                                        "tau0": 1.0 / np.mean(simulator.model.r),
                                                        "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
@@ -137,6 +139,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             target_data, statistical_model, gain_matrix = \
                 model_inversion.set_target_data_and_time(signals, statistical_model, head=head, sensors=sensors)
 
+            plotter.plot_statistical_model(statistical_model, hyp.name + " Statistical Model")
             plotter.plot_raster({'Target Signals': target_data.squeezed}, target_data.time_line,
                                 time_units=target_data.time_unit, title=hyp.name + ' Target Signals raster',
                                 offset=0.1, labels=target_data.space_labels)
@@ -159,14 +162,14 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
                                                       chains=2, refresh=1, num_warmup=num_warmup, num_samples=30,
                                                       max_depth=10, delta=0.8, save_warmup=1, plot_warmup=1, **kwargs)
-            writer.write_generic(ests, config.out.FOLDER_RES, hyp.name + "_fit_est.h5")
-            writer.write_generic(samples, config.out.FOLDER_RES, hyp.name + "_fit_samples.h5")
+            writer.write_generic(ests, path("FitEst"))
+            writer.write_generic(samples, path("FitSamplesEst"))
             if summary is not None:
-                writer.write_generic(summary, config.out.FOLDER_RES, hyp.name + "_fit_summary.h5")
+                writer.write_generic(summary, path("FitSummary"))
         else:
             ests, samples, summary = stan_service.read_output()
             if fitmethod.find("sampl") >= 0:
-                Plotter(config).plot_HMC(samples, skip_samples=num_warmup)
+                Plotter(config).plot_HMC(samples, skip_samples=num_warmup, figure_name=hyp.name + " HMC NUTS trace")
 
         # Interface with INS stan models
         if stan_model_name.find("vep-fe-rev") >= 0:
@@ -180,8 +183,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         plotter.plot_fit_results(ests, samples, model_data, target_data, statistical_model, stats={"Rhat": Rhat},
                                  pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
                                  region_violin_params=["x0", "x1init", "zinit"], regions_mode="active",
-                                 regions_labels=head.connectivity.region_labels,
-                                 trajectories_plot=True, connectivity_plot=False, skip_samples=num_warmup)
+                                 regions_labels=head.connectivity.region_labels, trajectories_plot=True,
+                                 connectivity_plot=False, skip_samples=num_warmup, title_prefix=hyp.name)
 
 
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
@@ -196,20 +199,18 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                           set_x0_hypothesis(list(statistical_model.active_regions),
                                                             x0_values_fit[statistical_model.active_regions]).\
                                           build_hypothesis()
-            writer.write_hypothesis(hyp_fit, os.path.join(config.out.FOLDER_RES, hyp_fit.name + ".h5"))
+            base_path = os.path.join(config.out.FOLDER_RES, hyp_fit.name)
+            writer.write_hypothesis(hyp_fit, path(""))
 
             model_configuration_fit = \
                 fit_model_configuration_builder.build_model_from_hypothesis(hyp_fit,  # est["MC"]
                                                                             model_configuration.model_connectivity)
 
-            writer.write_model_configuration(model_configuration_fit,
-                                             os.path.join(config.out.FOLDER_RES, hyp_fit.name + "_ModelConfig.h5"))
+            writer.write_model_configuration(model_configuration_fit, path("ModelConfig"))
 
             # Plot nullclines and equilibria of model configuration
-            plotter.plot_state_space(model_configuration_fit,
-                                     region_labels=head.connectivity.region_labels,
-                                     special_idx=statistical_model.active_regions,
-                                     model="6d", zmode="lin",
+            plotter.plot_state_space(model_configuration_fit, region_labels=head.connectivity.region_labels,
+                                     special_idx=statistical_model.active_regions, model="6d", zmode="lin",
                                      figure_name=hyp_fit.name + "_Nullclines and equilibria")
         logger.info("Done!")
 

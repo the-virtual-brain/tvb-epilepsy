@@ -85,7 +85,8 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
 
     writer = H5Writer()
     writer.write_simulator_model(sim.model, sim.connectivity.number_of_regions,
-                                 os.path.join(config.out.FOLDER_RES, dynamical_model._ui_name + "_model.h5"))
+                                 os.path.join(config.out.FOLDER_RES,
+                                              lsa_hypothesis.name + dynamical_model._ui_name + "_model.h5"))
     sim_output = []
     seeg=[]
     if ts_file is not None and os.path.isfile(ts_file):
@@ -109,6 +110,6 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
         # Plot results
         Plotter(config).plot_simulated_timeseries(sim_output, sim.model, lsa_hypothesis.lsa_propagation_indices,
                                                   seeg_list=seeg, spectral_raster_plot=False,
-                                                  hpf_flag=False, log_scale=True)
+                                                  hpf_flag=False, log_scale=True, title_prefix=lsa_hypothesis.name)
 
     return {"source": sim_output, "seeg": seeg}, sim
