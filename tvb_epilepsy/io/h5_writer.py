@@ -436,7 +436,7 @@ class H5Writer(object):
         h5_file.close()
 
     # TODO: this should be deprecated when/if _determine_datasets_and_attributes becomes recursive into groups
-    def write_generic(self, object, folder, path):
+    def write_generic(self, object, path):
         """
         :param object:
         :param path:H5 path to be written
@@ -446,4 +446,4 @@ class H5Writer(object):
         h5_model.add_or_update_metadata_attribute(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
         h5_model.add_or_update_metadata_attribute(self.H5_SUBTYPE_ATTRIBUTE, object.__class__.__name__)
 
-        h5_model.write_to_h5(folder, path)
+        h5_model.write_to_h5(path)
