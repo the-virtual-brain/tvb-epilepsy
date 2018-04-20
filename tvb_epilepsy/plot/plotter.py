@@ -718,6 +718,7 @@ class Plotter(BasePlotter):
                 pyplot.legend()
             return ax
         else:
+            # TODO: is this message correct??
             raise_value_error("Distribution parameters do not broadcast!")
 
     def plot_distribution(self, distribution, loc=0.0, scale=1.0, x=numpy.array([]), ax=None, linestyle="-", lgnd=True,
@@ -731,19 +732,18 @@ class Plotter(BasePlotter):
     def _prepare_parameter_axes(self, parameter, x=numpy.array([]), ax=None, lgnd=False):
         if ax is None:
             _, ax = pyplot.subplots(1, 1)
-        if len(x) < 1:
-            x = linspace_broadcast(
-                numpy.maximum(parameter.low, parameter.scipy_method("ppf", 0.01)),
-                numpy.minimum(parameter.high, parameter.scipy_method("ppf", 0.99)), 100)
-        if x is not None:
-            ax = self._prepare_distribution_axes(parameter, parameter.loc, parameter.scale, x, ax, "-", lgnd)
-            ax.set_title(parameter.name + ": " + parameter.type + " distribution")
-            # ax[1] = self._prepare_distribution_axes(parameter, 0.0, 1.0, (x - parameter.loc) / parameter.scale,
-            #                                         ax[1], "--", lgnd)
-            # ax[1].set_title(parameter.name + "_star: " + parameter.type + " distribution")
-            return ax
-        else:
-            raise_value_error("Stochastic parameter's parameters do not broadcast!")
+        x, pdf = parameter.scipy_method("pdf", x)
+        if x.ndim == 1:
+            x = x[:, numpy.newaxis]
+        x, pdf = parameter.scipy_method("pdf", x)
+        if ax is None:
+            _, ax = pyplot.subplots(1, 1)
+        for ip, (xx, pp) in enumerate(zip(x.T, pdf.T)):
+            ax.plot(xx.T, pp.T, linestyle="-", linewidth=1, label=str(ip), alpha=0.5)
+        if lgnd:
+            pyplot.legend()
+        ax.set_title(parameter.name + ": " + parameter.type + " distribution")
+        return ax
 
     def plot_stochastic_parameter(self, parameter, x=numpy.array([]), ax=None, lgnd=True, figure_name=""):
         ax = self._prepare_parameter_axes(parameter, x, ax, lgnd)
@@ -1008,7 +1008,6 @@ class Plotter(BasePlotter):
                          regions_labels=[], regions_mode="all", n_regions=1,
                          trajectories_plot=True, connectivity_plot=True, skip_samples=0):
         if statistical_model is not None:
-            n_regions = statistical_model.number_of_regions
             active_regions = statistical_model.active_regions
         else:
             active_regions = model_data.get("active_regions", range(n_regions))

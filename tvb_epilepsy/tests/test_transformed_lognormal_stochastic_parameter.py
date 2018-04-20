@@ -10,5 +10,7 @@ if __name__ == "__main__":
                                                sigma=None, sigma_scale=3,
                                                p_shape=(2,), use="scipy")
 
-    print(x0)
     Plotter(BaseTest.config).plot_stochastic_parameter(x0, figure_name="test_transformed_stochastic_parameter")
+    Plotter(BaseTest.config).plot_stochastic_parameter(x0.star, figure_name="test_transformed_stochastic_parameter_star")
+    print(x0)
+    print("Done")

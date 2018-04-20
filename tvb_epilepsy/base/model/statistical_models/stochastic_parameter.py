@@ -51,16 +51,7 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
         if method in ["rvs", "ppf", "isf", "stats", "moment", "median", "mean", "interval"]:
             return self._scipy_method(method, self.loc, self.scale, *args, **kwargs)
         elif method in ["pdf", "logpdf", "cdf", "logcdf", "sf", "logsf"]:
-            x = kwargs.get("x", None)
-            if x is None and len(args) > 0:
-                # Assume that the first argument is x
-                x = args[0]
-            else:
-                # Generate our own x
-                x = linspace_broadcast(
-                    np.maximum(self.low, self.scipy_method("ppf", 0.01)),
-                    np.minimum(self.high, self.scipy_method("ppf", 0.99)), 100)
-            args = tuple([x] + list(args[1:]))
+            x, args, kwargs = get_x_arg_for_param_distrib(self, *args, **kwargs)
             return x, self._scipy_method(method, self.loc, self.scale, *args, **kwargs)
         else:
             raise_not_implemented_error("Scipy method " + method +
@@ -272,23 +263,28 @@ class NegativeLognormal(TransformedStochasticParameterBase, object):
         if method in ["rvs", "ppf", "isf", "stats", "moment", "median", "mean", "interval"]:
             return self.max - self.star.scipy_method(method, *args, **kwargs)
         elif method in ["pdf", "logpdf", "cdf", "logcdf", "sf", "logsf"]:
-            x = kwargs.get("x", None)
-            if x is None and len(args) > 0:
-                # Assume that the first argument is x and needs transformation
-                x = np.array(args[0])
-                x_transf = self.max - x
-            else:
-                # Generate our own x
-                x_transf = linspace_broadcast(
-                                np.maximum(self.low, self.scipy_method("ppf", 0.01)),
-                                np.minimum(self.high, self.scipy_method("ppf", 0.99)), 100)
-                x = self.max - x_transf
-            args = tuple([x] + list(args[1:]))
-            pdf = self.star.scipy_method(method,  *args, **kwargs)[0]
-            return x_transf, pdf
+            x, args, kwargs = get_x_arg_for_param_distrib(self, *args, **kwargs)
+            args[0] = self.max - x
+            pdf = self.star.scipy_method(method,  *args, **kwargs)[1]
+            return x, pdf
         else:
             raise_not_implemented_error("Scipy method " + method +
                                         " is not implemented for transformed parameter " + self.name + "!")
 
     def numpy(self, size=()):
         return self.max - self._numpy(self.loc, self.scale, size)
+
+
+def get_x_arg_for_param_distrib(parameter, *args, **kwargs):
+    args = list(args)
+    x = kwargs.pop("x", None)
+    if x is None or len(x) == 0:
+        if len(args) > 0:
+            x = np.array(args.pop(0))
+        if x is None or len(x) == 0:
+            # Generate our own x
+            x = linspace_broadcast(np.maximum(parameter.low, parameter.scipy_method("ppf", 0.01)),
+                                   np.minimum(parameter.high, parameter.scipy_method("ppf", 0.99)), 100)
+    args = [x] + args
+    return x, args, kwargs
+
