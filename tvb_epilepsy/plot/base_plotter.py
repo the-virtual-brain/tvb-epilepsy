@@ -77,12 +77,12 @@ class BasePlotter(object):
         return ax
 
     @staticmethod
-    def plot_vector_violin(dataset, vector, lines, labels, subplot, title, colormap="YlOrRd", show_y_labels=True,
-                           indices_red=None, sharey=None):
+    def plot_vector_violin(dataset, vector=[], lines=[], labels=[], subplot=111, title="",
+                           colormap="YlOrRd", show_y_labels=True, indices_red=None, sharey=None):
         ax = pyplot.subplot(subplot, sharey=sharey)
         # ax.hold(True)
         pyplot.title(title)
-        n_violins = len(labels)
+        n_violins = dataset.shape[1]
         y_ticks = numpy.array(range(n_violins), dtype=numpy.int32)
         # the vector plot
         coldif = False
@@ -108,11 +108,13 @@ class BasePlotter(object):
         if indices_red is not None:
             colors[indices_red] = 'r'
             coldif = True
-        for ii in range(n_violins):
-            ax.plot(vector[ii], y_ticks[ii], '*', mfc=colors[ii], mec=colors[ii], ms=10)
-        for ii in range(n_violins):
-            ax.plot(lines[0][:, ii],  y_ticks[ii] - 0.25*lines[1][:, ii]/numpy.max(lines[1][:, ii]),
-                    '--', mfc=colors[ii], mec=colors[ii], ms=10)
+        if len(vector) == n_violins:
+            for ii in range(n_violins):
+                ax.plot(vector[ii], y_ticks[ii], '*', mfc=colors[ii], mec=colors[ii], ms=10)
+        if len(lines) == 2 and lines[0].shape[0] == n_violins and lines[1].shape[0] == n_violins:
+            for ii in range(n_violins):
+                ax.plot(lines[0][ii],  y_ticks[ii] - 0.45*lines[1][ii]/numpy.max(lines[1][ii]),
+                        '--', mfc=colors[ii], mec=colors[ii], ms=10)
         ax.grid(True, color='grey')
         ax.set_yticks(y_ticks)
         if show_y_labels:

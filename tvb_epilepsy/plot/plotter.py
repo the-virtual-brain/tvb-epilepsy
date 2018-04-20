@@ -895,7 +895,7 @@ class Plotter(BasePlotter):
             for param in region_violin_params:
                 pdf = ensure_list(statistical_model.get_prior_pdf(param))
                 for ip, p in enumerate(pdf):
-                    pdf[ip] = ((p.T * I)[regions_inds]).T
+                    pdf[ip] = ((p.T * I)[regions_inds])
                 priors.update({param: (pdf[0].squeeze(), pdf[1].squeeze())})
                 this_truth = (statistical_model.get_truth(param) * I[:, 0])[regions_inds]
                 truth.update({param: this_truth.squeeze()})
