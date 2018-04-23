@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.signal import butter, lfilter, welch, periodogram, spectrogram
+from scipy.signal import butter, filtfilt, welch, periodogram, spectrogram
 from scipy.interpolate import interp1d, griddata
 
 # x is assumed to be data (real numbers) arranged along the first dimension of an ndarray
@@ -133,7 +133,8 @@ def filter_data(data, fs, lowcut=None, highcut=None, mode='bandpass', order=3, a
     # get filter coefficients
     b, a = _butterworth_bandpass(fs, mode, lowcut, highcut, order)
     # filter data
-    y = lfilter(b, a, data, axis=axis)
+    y = filtfilt(b, a, data, axis=axis)
+    # y = lfilter(b, a, data, axis=axis)
     return y
 
 
