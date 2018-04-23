@@ -28,22 +28,22 @@ def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF):
     return model_configuration, lsa_hypothesis
 
 
-def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensors_id=0, times_on_off=[],
+def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0, times_on_off=[],
                        label_strip_fun=None, plotter=False, title_prefix="", **kwargs):
     try:
         return H5Reader().read_timeseries(ts_file)
     except:
         # ... or preprocess empirical data for the first time:
         if len(sensors_lbls) == 0:
-            sensors_lbls = head.get_sensors_id(sensor_ids=sensors_id).labels
-        signals = prepare_seeg_observable_from_mne_file(empirical_file, head.get_sensors_id(sensor_ids=sensors_id),
+            sensors_lbls = head.get_sensors_id(sensor_ids=sensor_id).labels
+        signals = prepare_seeg_observable_from_mne_file(empirical_file, head.get_sensors_id(sensor_ids=sensor_id),
                                                         sensors_lbls, times_on_off, label_strip_fun=label_strip_fun,
                                                         bipolar=False, plotter=plotter, title_prefix=title_prefix, **kwargs)
         H5Writer().write_timeseries(signals, ts_file)
         return signals
 
 
-def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis, statistical_model, sensors_id=0,
+def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis, statistical_model, sensor_id=0,
                               times_on_off=[], plotter=False, config=Config(), title_prefix="", **kwargs):
     if statistical_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
         seeg_gain_mode = "exp"
@@ -55,13 +55,13 @@ def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis
     if statistical_model.observation_model in OBSERVATION_MODELS.SEEG.value:
         if statistical_model.observation_model != OBSERVATION_MODELS.SEEG_LOGPOWER.value:
             try:
-                signals = signals["seeg"][sensors_id]
+                signals = signals["seeg"][sensor_id]
             except:
                 signals = TimeseriesService().compute_seeg(signals["source"].get_source(),
-                                                           head.get_sensors_id(sensor_ids=sensors_id))[0]
+                                                           head.get_sensors_id(sensor_ids=sensor_id))[0]
         else:
             signals = TimeseriesService().compute_seeg(signals["source"].get_source(),
-                                                       head.get_sensors_id(sensor_ids=sensors_id), sum_mode="exp")[0]
+                                                       head.get_sensors_id(sensor_ids=sensor_id), sum_mode="exp")[0]
 
         signals = prepare_seeg_observable(signals, times_on_off, plotter=plotter, title_prefix=title_prefix, **kwargs)
     else:

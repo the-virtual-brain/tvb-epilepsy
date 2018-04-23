@@ -41,7 +41,7 @@ def prepare_signal_observable(data, on_off_set=[], rois=[], win_len_ratio=WIN_LE
                                 figure_name=title_prefix + 'FilteredTimeSeries', labels=data.space_labels)
             plotter.plot_spectral_analysis_raster(plot_time, plot_data, time_units="ms", freq=np.array(range(1, 51, 1)),
                                                   title='Spectral Analysis_Filtered',
-                                                  figure_name=title_prefix + 'Spectral nalysisFiltered',
+                                                  figure_name=title_prefix + 'SpectralAnalysisFiltered',
                                                   labels=data.space_labels, log_scale=True)
             del plot_data, plot_time
 
