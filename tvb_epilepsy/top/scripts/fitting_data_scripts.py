@@ -54,9 +54,6 @@ def prepare_signal_observable(data, on_off_set=[], rois=[],  filter_flag=True, l
                                 figure_name=title_prefix + str_decim_ratio + 'xDecimatedTimeSeries',
                                 labels=data.space_labels)
 
-    # Cut to the desired interval
-    data = data.get_time_window_by_units(on_off_set[0], on_off_set[1])
-
     # # Square data to get positive "power like" timeseries (introducing though higher frequencies)
     # data = ts_service.square(data)
     # Now get the signals' envelope via Hilbert transform
@@ -79,6 +76,9 @@ def prepare_signal_observable(data, on_off_set=[], rois=[],  filter_flag=True, l
                                 title='Convolved Time Series with a window of ' + str_win_len + " points",  # offset=0.1,
                                 figure_name=title_prefix + str_win_len + 'pointWinConvolvedTimeSeries',
                                 labels=data.space_labels)
+
+    # Cut to the desired interval
+    data = data.get_time_window_by_units(on_off_set[0], on_off_set[1])
 
     # Finally, normalize signals
     logger.info("Normalizing signals...")
