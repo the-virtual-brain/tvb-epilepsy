@@ -32,7 +32,7 @@ class BasePlotter(object):
             fig = pyplot.gcf()
         if figure_name is None:
             figure_name = fig.get_label()
-        figure_name = figure_name.replace(": ", "_").replace(" ", "_").replace("\t", "_")
+        figure_name = figure_name.replace(": ", "_").replace(" ", "_").replace("\t", "_").replace(",", "")
         return figure_name
 
     def _save_figure(self, fig, figure_name):
