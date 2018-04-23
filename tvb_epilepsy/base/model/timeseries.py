@@ -207,7 +207,7 @@ class Timeseries(object):
         return Timeseries(subspace_data, subspace_dimension_labels, self.time_start, self.time_step, self.time_unit)
 
     def get_time_window(self, index_start, index_end):
-        if index_start < 0 or index_end > self.data.shape[0] - 1:
+        if index_start < 0 or index_end > self.data.shape[0]:
             self.logger.error("The time indices are outside time series interval: [%s, %s]" % (0, self.data.shape[0]))
             raise IndexError
         subtime_data = self.data[index_start:index_end, :, :, :]
