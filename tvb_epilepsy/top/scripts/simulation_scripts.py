@@ -33,7 +33,7 @@ def _compute_and_write_seeg(source_timeseries, sensors_list, filename, hpf_flag=
             seeg = ts_service.compute_seeg(source_timeseries, [sensor], sum_mode=seeg_gain_mode)[0]
 
             if hpf_flag:
-                seeg = ts_service.filter(seeg, fsAVG, hpf_low, hpf_high, mode='bandpass', order=3)
+                seeg = ts_service.filter(seeg, hpf_low, hpf_high, mode='bandpass', order=3)
 
             seeg = ts_service.normalize(seeg, "baseline-amplitude")
 
@@ -60,8 +60,8 @@ def compute_seeg_and_write_ts_to_h5(timeseries, model, sensors_list, filename, s
 
 
 def from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
-                                           sim_type="realistic", ts_file=None, seeg_gain_mode="lin", plot_flag=True,
-                                           config=Config()):
+                                           sim_type="realistic", ts_file=None, seeg_gain_mode="lin", hpf_flag=False,
+                                           hpf_low=10.0, hpf_high=512.0, config=Config(), plotter=False):
     # Choose model
     # Available models beyond the TVB Epileptor (they all encompass optional variations from the different papers):
     # EpileptorDP: similar to the TVB Epileptor + optional variations,
@@ -73,6 +73,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     # Optional variations:
 
     # ------------------------------Simulation--------------------------------------
+    hypname = lsa_hypothesis.name.replace("_LSA", "")
     logger.info("\n\nConfiguring simulation...")
     if isequal_string(sim_type, "realistic"):
         sim, sim_settings, dynamical_model = build_simulator_TVB_realistic(model_configuration, head.connectivity)
@@ -86,7 +87,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     writer = H5Writer()
     writer.write_simulator_model(sim.model, sim.connectivity.number_of_regions,
                                  os.path.join(config.out.FOLDER_RES,
-                                              lsa_hypothesis.name + dynamical_model._ui_name + "_model.h5"))
+                                              hypname + dynamical_model._ui_name + "_model.h5"))
     sim_output = []
     seeg=[]
     if ts_file is not None and os.path.isfile(ts_file):
@@ -104,12 +105,13 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
             logger.info("Time: %s - %s", time[0], time[-1])
             sim_output, seeg = compute_seeg_and_write_ts_to_h5(sim_output, sim.model, head.sensorsSEEG,
                                                                ts_file, seeg_gain_mode=seeg_gain_mode,
-                                                               hpf_flag=True, hpf_low=10.0, hpf_high=512.0)
+                                                               hpf_flag=hpf_flag, hpf_low=hpf_low, hpf_high=hpf_high)
 
-    if plot_flag and sim_output:
+    if plotter:
+        if not isinstance(plotter, Plotter):
+            plotter = Plotter(config)
         # Plot results
-        Plotter(config).plot_simulated_timeseries(sim_output, sim.model, lsa_hypothesis.lsa_propagation_indices,
-                                                  seeg_list=seeg, spectral_raster_plot=False,
-                                                  hpf_flag=False, log_scale=True, title_prefix=lsa_hypothesis.name)
+        plotter.plot_simulated_timeseries(sim_output, sim.model, lsa_hypothesis.lsa_propagation_indices, seeg_list=seeg,
+                                          spectral_raster_plot=False, log_scale=True, title_prefix=hypname)
 
     return {"source": sim_output, "seeg": seeg}, sim

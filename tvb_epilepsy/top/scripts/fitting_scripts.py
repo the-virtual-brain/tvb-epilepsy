@@ -38,20 +38,22 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
             sensors_lbls = head.get_sensors_id(sensor_ids=sensor_id).labels
         signals = prepare_seeg_observable_from_mne_file(empirical_file, head.get_sensors_id(sensor_ids=sensor_id),
                                                         sensors_lbls, times_on_off, label_strip_fun=label_strip_fun,
-                                                        bipolar=False, plotter=plotter, title_prefix=title_prefix, **kwargs)
+                                                        bipolar=False, plotter=plotter, title_prefix=title_prefix,
+                                                        **kwargs)
         H5Writer().write_timeseries(signals, ts_file)
         return signals
 
 
 def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis, statistical_model, sensor_id=0,
-                              times_on_off=[], plotter=False, config=Config(), title_prefix="", **kwargs):
+                              times_on_off=[], config=Config(), plotter=False, title_prefix="", **kwargs):
     if statistical_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
         seeg_gain_mode = "exp"
     else:
         seeg_gain_mode = "lin"
     signals, simulator = from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
                                                                 sim_type="paper", ts_file=ts_file,
-                                                                seeg_gain_mode=seeg_gain_mode, config=config)
+                                                                seeg_gain_mode=seeg_gain_mode,
+                                                                config=config, plotter=plotter)
     if statistical_model.observation_model in OBSERVATION_MODELS.SEEG.value:
         if statistical_model.observation_model != OBSERVATION_MODELS.SEEG_LOGPOWER.value:
             try:

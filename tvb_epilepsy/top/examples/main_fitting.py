@@ -54,7 +54,10 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                         fit_flag=True, config=Config(), **kwargs):
 
     def path(name):
-        return base_path + "_" + name + ".h5"
+        if len(name) > 0:
+            return base_path + "_" + name + ".h5"
+        else:
+            return base_path + ".h5"
 
     # Prepare necessary services:
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
@@ -127,7 +130,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
                 signals, simulator = \
                     set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, statistical_model,
-                                              sensor_id, times_on_off, plotter, config, title_prefix=hyp.name, **kwargs)
+                                              sensor_id, times_on_off, config, plotter, title_prefix=hyp.name, **kwargs)
                 statistical_model.ground_truth.update({"tau1": np.mean(simulator.model.tt),
                                                        "tau0": 1.0 / np.mean(simulator.model.r),
                                                        "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
@@ -277,7 +280,7 @@ if __name__ == "__main__":
     # seizure = 'SZ3_0001.edf'
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
-    EMPIRICAL = False
+    EMPIRICAL = True
     # stats_model_name = "vep_sde"
     stan_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
@@ -290,5 +293,5 @@ if __name__ == "__main__":
                             stan_service="CmdStan", fit_flag=fit_flag, config=config)
     else:
         main_fit_sim_hyplsa(stan_model_name=stan_model_name, observation_model=observation_model,
-                            sensors_lbls=sensors_lbls, times_on_off=[1000.0, 19000.0], fitmethod=fitmethod,
+                            sensors_lbls=sensors_lbls, times_on_off=[50.0, 550.0], fitmethod=fitmethod,
                             stan_service="CmdStan", fit_flag=fit_flag, config=config)

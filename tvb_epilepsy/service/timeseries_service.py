@@ -1,6 +1,6 @@
 
 import numpy as np
-from scipy.signal import decimate, convolve, detrend
+from scipy.signal import decimate, convolve, detrend, hilbert
 from scipy.stats import zscore
 
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
@@ -12,11 +12,12 @@ from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions,
 
 
 def decimate_signals(signals, time, decim_ratio):
-    signals = decimate(signals, decim_ratio, axis=0, zero_phase=True)
-    time = decimate(time, decim_ratio, zero_phase=True)
-    dt = np.mean(np.diff(time))
-    (n_times, n_signals) = signals.shape
-    return signals, time, dt, n_times
+    if decim_ratio > 1:
+        signals = decimate(signals, decim_ratio, axis=0, zero_phase=True, ftype="fir")
+        time = decimate(time, decim_ratio, zero_phase=True, ftype="fir")
+        dt = np.mean(np.diff(time))
+        (n_times, n_signals) = signals.shape
+        return signals, time, dt, n_times
 
 
 def cut_signals_tails(signals, time, cut_tails):
@@ -79,10 +80,20 @@ class TimeseriesService(object):
         self.logger = logger
 
     def decimate(self, timeseries, decim_ratio):
-        decim_data, decim_time, decim_dt, decim_n_times = decimate_signals(timeseries.squeezed,
-                                                                           timeseries.time_line, decim_ratio)
-        return Timeseries(decim_data, timeseries.dimension_labels,
-                          decim_time[0], decim_dt, timeseries.time_unit)
+        if decim_ratio > 1:
+            return Timeseries(timeseries.data[0:timeseries.time_length:decim_ratio], timeseries.dimension_labels,
+                              timeseries.time_start, decim_ratio*timeseries.time_step, timeseries.time_unit)
+        else:
+            return timeseries
+
+    def decimate_by_filtering(self, timeseries, decim_ratio):
+        if decim_ratio > 1:
+            decim_data, decim_time, decim_dt, decim_n_times = decimate_signals(timeseries.squeezed,
+                                                                               timeseries.time_line, decim_ratio)
+            return Timeseries(decim_data, timeseries.dimension_labels,
+                              decim_time[0], decim_dt, timeseries.time_unit)
+        else:
+            return timeseries
 
     def convolve(self, timeseries, win_len=None, kernel=None):
         if kernel is None:
@@ -91,7 +102,11 @@ class TimeseriesService(object):
             kernel = kernel * np.ones((np.int(np.round(win_len)), 1, 1, 1))
         return Timeseries(convolve(timeseries.data, kernel, mode='same'), timeseries.dimension_labels,
                           timeseries.time_start, timeseries.time_step, timeseries.time_unit)
-    
+
+    def hilbert_envelope(self, timeseries):
+        return Timeseries(np.abs(hilbert(timeseries.data, axis=0)), timeseries.dimension_labels,
+                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+
     def detrend(self, timeseries, type='linear'):
         return Timeseries(detrend(timeseries.data, axis=0, type=type), timeseries.dimension_labels,
                           timeseries.time_start, timeseries.time_step, timeseries.time_unit)
@@ -100,9 +115,9 @@ class TimeseriesService(object):
         return Timeseries(normalize_signals(timeseries.data, normalization), timeseries.dimension_labels,
                           timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
-    def filter(self, timeseries, fs, lowcut=None, highcut=None, mode='bandpass', order=3):
-        return Timeseries(filter_data(timeseries.data, fs, lowcut, highcut, mode, order),
-                        timeseries.dimension_labels, timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+    def filter(self, timeseries, lowcut=None, highcut=None, mode='bandpass', order=3):
+        return Timeseries(filter_data(timeseries.data, timeseries.sampling_frequency, lowcut, highcut, mode, order),
+                         timeseries.dimension_labels, timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def log(self, timeseries):
         return Timeseries(np.log(timeseries.data), timeseries.dimension_labels,
@@ -149,7 +164,7 @@ class TimeseriesService(object):
                     np.array(initial_selection)[select_greater_values_array_inds(prox, proximity_th)]).tolist()
         return timeseries.get_subspace_by_index(np.unique(selection).tolist())
 
-    def select_by_rois(selfs, timeseries, rois, all_labels):
+    def select_by_rois(self, timeseries, rois, all_labels):
         for ir, roi in rois:
             if not(isinstance(roi, basestring)):
                 rois[ir] = all_labels[roi]

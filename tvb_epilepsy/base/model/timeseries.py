@@ -63,6 +63,13 @@ class Timeseries(object):
         return self.data.shape[0]
 
     @property
+    def sampling_frequency(self):
+        if len(self.time_unit) > 0 and self.time_unit[0] == "m":
+            return 1000.0/self.time_step
+        else:
+            return 1.0/self.time_step
+
+    @property
     def number_of_labels(self):
         return self.data.shape[1]
 
