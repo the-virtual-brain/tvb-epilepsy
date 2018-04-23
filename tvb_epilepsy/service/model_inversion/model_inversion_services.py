@@ -157,10 +157,11 @@ class ODEModelInversionService(ModelInversionService):
             gain_matrix = np.ones((target_data.number_of_labels, target_data.number_of_labels))
         return gain_matrix
 
-    def set_target_data_and_time(self, target_data, stats_model, head=None, sensors=None, power=np.array([])):
+    def set_target_data_and_time(self, target_data, stats_model, head=None, sensors=None, sensor_id=0,
+                                 power=np.array([])):
         if sensors is None and head is not None:
             try:
-                sensors = sensors.head.get_sensors_id()
+                sensors = sensors.head.get_sensors_id(sensor_ids=sensor_id)
             except:
                 sensors = None
         if len(self.manual_selection) > 0:
@@ -173,10 +174,10 @@ class ODEModelInversionService(ModelInversionService):
 
         if self.decim_ratio > 1:
             target_data = self.ts_service.decimate(target_data, self.decim_ratio)
-        if np.any(self.cut_target_data_tails > 0):
+        if np.any(np.array(self.cut_target_data_tails)):
             target_data = target_data.get_time_window(np.maximum(self.cut_target_data_tails[0], 0),
                                                       target_data.time_length -
-                                                        np.maximum(self.cut_target_data_tails[1], 1))
+                                                        np.maximum(self.cut_target_data_tails[1], 0))
         if self.bipolar:
             target_data = target_data.get_bipolar()
         # TODO: decide about target_data' normalization for the different (sensors', sources' cases)

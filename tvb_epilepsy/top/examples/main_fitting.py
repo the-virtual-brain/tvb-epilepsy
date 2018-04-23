@@ -49,7 +49,7 @@ def set_hypotheses(head, config):
 
 
 def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
-                        observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,  sensors_lbls=[], sensors_id=0,
+                        observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, sensors_lbls=[], sensor_id=0,
                         times_on_off=[], fitmethod="optimizing", stan_service="CmdStan",
                         fit_flag=True, config=Config(), **kwargs):
 
@@ -65,7 +65,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
     # Read head
     logger.info("Reading from: " + config.input.HEAD)
     head = reader.read_head(config.input.HEAD)
-    sensors = head.get_sensors_id(sensor_ids=sensors_id)
+    sensors = head.get_sensors_id(sensor_ids=sensor_id)
     plotter.plot_head(head)
 
     # Set hypotheses:
@@ -120,14 +120,14 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             if os.path.isfile(empirical_file):
                 # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
                 signals = set_empirical_data(empirical_file, path("ts_empirical"),
-                                             head, sensors_lbls, sensors_id, times_on_off,
+                                             head, sensors_lbls, sensor_id, times_on_off,
                                              label_strip_fun=lambda s: s.split("POL ")[-1], plotter=plotter,
                                              title_prefix=hyp.name)
             else:
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
                 signals, simulator = \
                     set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, statistical_model,
-                                             sensors_id, times_on_off, plotter, config, title_prefix=hyp.name, **kwargs)
+                                              sensor_id, times_on_off, plotter, config, title_prefix=hyp.name, **kwargs)
                 statistical_model.ground_truth.update({"tau1": np.mean(simulator.model.tt),
                                                        "tau0": 1.0 / np.mean(simulator.model.r),
                                                        "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
