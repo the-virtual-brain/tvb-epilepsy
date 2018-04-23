@@ -45,7 +45,8 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
 
 
 def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis, statistical_model, sensor_id=0,
-                              times_on_off=[], config=Config(), plotter=False, title_prefix="", **kwargs):
+                              times_on_off=[], preprocess=True, config=Config(), plotter=False, title_prefix="",
+                              **kwargs):
     if statistical_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
         seeg_gain_mode = "exp"
     else:
@@ -64,11 +65,18 @@ def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis
         else:
             signals = TimeseriesService().compute_seeg(signals["source"].get_source(),
                                                        head.get_sensors_id(sensor_ids=sensor_id), sum_mode="exp")[0]
-
-        signals = prepare_seeg_observable(signals, times_on_off, plotter=plotter, title_prefix=title_prefix, **kwargs)
+        if preprocess:
+            signals = prepare_seeg_observable(signals, times_on_off, plotter=plotter, title_prefix=title_prefix,
+                                              **kwargs)
+        else:
+            signals.data = -signals.data  # change sign to fit x1
+            signals
     else:
-        signals = prepare_signal_observable(signals["source"].get_source(), times_on_off,
-                                            plotter=plotter, title_prefix=title_prefix, **kwargs)
+        if preprocess:
+            signals = prepare_signal_observable(signals["source"].get_source(), times_on_off,
+                                                plotter=plotter, title_prefix=title_prefix, **kwargs)
+        else:
+            signals.data = -signals.data  # change sign to fit x1
     return signals, simulator
 
 

@@ -130,7 +130,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
                 signals, simulator = \
                     set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, statistical_model,
-                                              sensor_id, times_on_off, config, plotter, title_prefix=hyp.name, **kwargs)
+                                              sensor_id, times_on_off, preprocess=True, config=config, plotter=plotter,
+                                              title_prefix=hyp.name, **kwargs)
                 statistical_model.ground_truth.update({"tau1": np.mean(simulator.model.tt),
                                                        "tau0": 1.0 / np.mean(simulator.model.r),
                                                        "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
@@ -270,7 +271,7 @@ if __name__ == "__main__":
     # sensors_lbls = [u"G'1", u"G'2", u"G'11", u"G'12", u"M'7", u"M'8", u"L'5", u"L'6"]
     # sensors_inds = [28, 29, 38, 39, 64, 65, 48, 49]
     seizure = 'SZ1_0001.edf'
-    times_on_off = [15.0, 35.0] * 1000
+    times_on_off = (np.array([15.0, 35.0]) * 1000).tolist()
     # sensors_filename = "SensorsSEEG_116.h5"
     # # TVB4 preselection:
     # sensors_lbls = [u"D5", u"D6", u"D7",  u"D8", u"D9", u"D10", u"Z9", u"Z10", u"Z11", u"Z12", u"Z13", u"Z14",
