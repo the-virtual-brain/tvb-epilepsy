@@ -9,7 +9,8 @@ logger = initialize_logger(__name__)
 
 
 def prepare_signal_observable(data, on_off_set=[], rois=[],  filter_flag=True, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
-                              win_len_ratio=WIN_LEN_RATIO, plotter=False, title_prefix=""):
+                              envelope_flag=True, smooth_flag=True, win_len_ratio=WIN_LEN_RATIO,
+                              plotter=False, title_prefix=""):
     ts_service = TimeseriesService()
 
     # Select rois if any:
@@ -57,25 +58,27 @@ def prepare_signal_observable(data, on_off_set=[], rois=[],  filter_flag=True, l
     # # Square data to get positive "power like" timeseries (introducing though higher frequencies)
     # data = ts_service.square(data)
     # Now get the signals' envelope via Hilbert transform
-    data = ts_service.hilbert_envelope(data)
-    if plotter:
-        plotter.plot_timeseries({"Envelope": data.squeezed}, data.time_line,
-                                time_units=data.time_unit, special_idx=[],
-                                title='Envelope by Hilbert transform',  # offset=0.1,
-                                figure_name=title_prefix + 'EnvelopeTimeSeries',
-                                labels=data.space_labels)
+    if envelope_flag:
+        data = ts_service.hilbert_envelope(data)
+        if plotter:
+            plotter.plot_timeseries({"Envelope": data.squeezed}, data.time_line,
+                                    time_units=data.time_unit, special_idx=[],
+                                    title='Envelope by Hilbert transform',  # offset=0.1,
+                                    figure_name=title_prefix + 'EnvelopeTimeSeries',
+                                    labels=data.space_labels)
 
     # Now convolve to smooth...
-    win_len = int(np.round(1.0*data.time_length/win_len_ratio))
-    str_win_len = str(win_len)
-    data = ts_service.convolve(data, win_len)
-    logger.info("Convolving signals with a square window of " + str_win_len + " points...")
-    if plotter:
-        plotter.plot_timeseries({"Smoothing": data.squeezed}, data.time_line,
-                                time_units=data.time_unit, special_idx=[],
-                                title='Convolved Time Series with a window of ' + str_win_len + " points",  # offset=0.1,
-                                figure_name=title_prefix + str_win_len + 'pointWinConvolvedTimeSeries',
-                                labels=data.space_labels)
+    if smooth_flag:
+        win_len = int(np.round(1.0*data.time_length/win_len_ratio))
+        str_win_len = str(win_len)
+        data = ts_service.convolve(data, win_len)
+        logger.info("Convolving signals with a square window of " + str_win_len + " points...")
+        if plotter:
+            plotter.plot_timeseries({"Smoothing": data.squeezed}, data.time_line,
+                                    time_units=data.time_unit, special_idx=[],
+                                    title='Convolved Time Series with a window of ' + str_win_len + " points",  # offset=0.1,
+                                    figure_name=title_prefix + str_win_len + 'pointWinConvolvedTimeSeries',
+                                    labels=data.space_labels)
 
     # Cut to the desired interval
     data = data.get_time_window_by_units(on_off_set[0], on_off_set[1])
@@ -93,8 +96,8 @@ def prepare_signal_observable(data, on_off_set=[], rois=[],  filter_flag=True, l
     return data
 
 
-def prepare_seeg_observable(data, on_off_set=[], rois=[], filter_flag=True, low_freq=LOW_FREQ,
-                            high_freq=HIGH_FREQ, bipolar=BIPOLAR,  win_len_ratio=WIN_LEN_RATIO,
+def prepare_seeg_observable(data, on_off_set=[], rois=[], filter_flag=True, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
+                            bipolar=BIPOLAR,  envelope_flag=True, smooth_flag=True, win_len_ratio=WIN_LEN_RATIO,
                             plotter=False, title_prefix=""):
 
     if bipolar:
@@ -105,16 +108,16 @@ def prepare_seeg_observable(data, on_off_set=[], rois=[], filter_flag=True, low_
                                 special_idx=[], title='Bipolar Time Series', offset=0.1,
                                 figure_name=title_prefix + 'BipolarTimeSeries', labels=data.space_labels)
 
-    return prepare_signal_observable(data, on_off_set, rois, filter_flag=filter_flag,
-                                     low_freq=low_freq, high_freq=high_freq,  win_len_ratio=win_len_ratio,
-                                     plotter=plotter, title_prefix=title_prefix)
+    return prepare_signal_observable(data, on_off_set, rois, filter_flag=filter_flag, low_freq=low_freq,
+                                     high_freq=high_freq,  envelope_flag=envelope_flag, smooth_flag=smooth_flag,
+                                     win_len_ratio=win_len_ratio, plotter=plotter, title_prefix=title_prefix)
 
 # win_len_ratio=WIN_LEN_RATIO,
 def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, on_off_set,
                                           time_units="ms", label_strip_fun=None,
                                           filter_flag=True, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
-                                          bipolar=BIPOLAR,  win_len_ratio=WIN_LEN_RATIO,
-                                          plotter=False, title_prefix=""):
+                                          bipolar=BIPOLAR,  envelope_flag=True, smooth_flag=True,
+                                          win_len_ratio=WIN_LEN_RATIO, plotter=False, title_prefix=""):
     logger.info("Reading empirical dataset from edf file...")
     data = read_edf_to_Timeseries(seeg_path, sensors, rois_selection,
                                   label_strip_fun=label_strip_fun, time_units=time_units)
@@ -125,5 +128,5 @@ def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, on
                             figure_name=title_prefix + 'DetrendedTimeSeries', labels=data.space_labels)
     return prepare_seeg_observable(data, on_off_set, rois=range(data.number_of_labels),
                                    filter_flag=filter_flag, low_freq=low_freq, high_freq=high_freq,
-                                   bipolar=bipolar,  win_len_ratio=win_len_ratio,
-                                   plotter=plotter, title_prefix=title_prefix)
+                                   bipolar=bipolar,  envelope_flag=envelope_flag, smooth_flag=smooth_flag,
+                                   win_len_ratio=win_len_ratio, plotter=plotter, title_prefix=title_prefix)
