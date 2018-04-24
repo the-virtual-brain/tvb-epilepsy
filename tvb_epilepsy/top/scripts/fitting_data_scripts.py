@@ -29,7 +29,7 @@ def prepare_signal_observable(data, on_off_set=[], rois=[],  filter_flag=True, l
     duration = on_off_set[1] - on_off_set[0]
     temp_on_off = [np.maximum(data.time_start, on_off_set[0] - 0.1 * duration),
                    np.minimum(data.time_line[-1], on_off_set[1] + 0.1 * duration)]
-    data.get_time_window_by_units(temp_on_off[0], temp_on_off[1])
+    data = data.get_time_window_by_units(temp_on_off[0], temp_on_off[1])
 
     # Now filter, if needed, before decimation introduces any artifacts
     if filter_flag:
