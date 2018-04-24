@@ -788,11 +788,10 @@ class Plotter(BasePlotter):
                     subtitles[ip] = subtitles[ip][:-2]
         return subtitles
 
-    def parameters_pair_plots(self, samples, params=["tau1",  "K", "sigma", "epsilon", "scale", "offset"], stats=None, priors={},
-                              truth={}, skip_samples=0, title='Parameters samples', figure_name=None,
+    def parameters_pair_plots(self, samples, params=["tau1",  "K", "sigma", "epsilon", "scale", "offset"], stats=None,
+                              priors={}, truth={}, skip_samples=0, title='Parameters samples', figure_name=None,
                               figsize=FiguresConfig.VERY_LARGE_SIZE):
         subtitles = list(self._params_stats_subtitles(params, stats))
-        subtitles.sort()
         samples = ensure_list(samples)
         if len(samples) > 1:
             samples = list_of_dicts_to_dicts_of_ndarrays(samples)
@@ -902,22 +901,26 @@ class Plotter(BasePlotter):
         self.region_parameters_violin_plots(samples, truth, priors, stats, region_violin_params, skip_samples,
                                             per_chain=per_chain_plotting, labels=region_labels,
                                             seizure_indices=seizure_indices, figure_name=title_violin_plot)
-        if "x0" in region_violin_params:
+        if "x0" in region_violin_params and samples[0]["x0"].shape[1] < 10:
             x0_K_pair_plot_params = []
             x0_K_pair_plot_samples = {}
+            priors = {}
+            truth = {}
             if samples[0].get("K", None) is not None:
                 # plot K-x0 parameters in pair plots
                 x0_K_pair_plot_params = ["K"]
                 x0_K_pair_plot_samples = [{"K": s["K"]} for s in samples]
-                priors.update({"K": statistical_model.get_prior_pdf("K")})
-                truth.update({"K": statistical_model.get_truth("K")})
+                if statistical_model is None:
+                    priors.update({"K": statistical_model.get_prior_pdf("K")})
+                    truth.update({"K": statistical_model.get_truth("K")})
             for inode, label in enumerate(region_labels):
                 temp_name = "x0[" + label + "]"
                 x0_K_pair_plot_params.append(temp_name)
                 for ichain, s in enumerate(samples):
                     x0_K_pair_plot_samples[ichain].update({temp_name: s["x0"][:, inode]})
-                    priors.update({temp_name: (priors["x0"][0][:, inode], priors["x0"][1][:, inode])})
-                    truth.update({temp_name: truth["x0"][inode]})
+                    if statistical_model is None:
+                        priors.update({temp_name: (priors["x0"][0][:, inode], priors["x0"][1][:, inode])})
+                        truth.update({temp_name: truth["x0"][inode]})
             self.parameters_pair_plots(x0_K_pair_plot_samples, x0_K_pair_plot_params, None, priors, truth, skip_samples,
                                        title=title_pair_plot)
 
