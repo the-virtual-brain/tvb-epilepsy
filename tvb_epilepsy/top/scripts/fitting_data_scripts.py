@@ -10,7 +10,7 @@ logger = initialize_logger(__name__)
 
 def prepare_signal_observable(data, on_off_set=[], rois=[],  filter_flag=True, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
                               envelope_flag=True, smooth_flag=True, win_len_ratio=WIN_LEN_RATIO,
-                              plotter=False, title_prefix=""):
+                              plotter=None, title_prefix=""):
     ts_service = TimeseriesService()
 
     # Select rois if any:
@@ -98,7 +98,7 @@ def prepare_signal_observable(data, on_off_set=[], rois=[],  filter_flag=True, l
 
 def prepare_seeg_observable(data, on_off_set=[], rois=[], filter_flag=True, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
                             bipolar=BIPOLAR,  envelope_flag=True, smooth_flag=True, win_len_ratio=WIN_LEN_RATIO,
-                            plotter=False, title_prefix=""):
+                            plotter=None, title_prefix=""):
 
     if bipolar:
         logger.info("Computing bipolar signals...")
@@ -117,7 +117,7 @@ def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, on
                                           time_units="ms", label_strip_fun=None,
                                           filter_flag=True, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
                                           bipolar=BIPOLAR,  envelope_flag=True, smooth_flag=True,
-                                          win_len_ratio=WIN_LEN_RATIO, plotter=False, title_prefix=""):
+                                          win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
     logger.info("Reading empirical dataset from edf file...")
     data = read_edf_to_Timeseries(seeg_path, sensors, rois_selection,
                                   label_strip_fun=label_strip_fun, time_units=time_units)

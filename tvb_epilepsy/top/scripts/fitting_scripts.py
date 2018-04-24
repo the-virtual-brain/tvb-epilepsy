@@ -13,7 +13,7 @@ from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration
 from tvb_epilepsy.top.scripts.fitting_data_scripts import *
 
 
-def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, pse_flag=True, plotter=False, writer=False):
+def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, pse_flag=True, plotter=None, writer=None):
     # --------------------------Model configuration and LSA-----------------------------------
     model_config_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelConfig.h5")
     hyp_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_LSA.h5")
@@ -37,15 +37,12 @@ def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, pse_flag=T
             all_regions_indices = np.array(range(head.number_of_regions))
             disease_indices = lsa_hypothesis.get_regions_disease_indices()
             healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
-            pse_results = pse_from_lsa_hypothesis(n_samples, lsa_hypothesis,
-                                                  head.connectivity.normalized_weights,
-                                                  model_configuration_builder, lsa_service,
-                                                  head.connectivity.region_labels,
-                                                  param_range=0.1,
-                                                  global_coupling=[{"indices": all_regions_indices}],
-                                                  healthy_regions_parameters=[
-                                                      {"name": "x0_values", "indices": healthy_indices}],
-                                                  logger=logger, save_flag=False)[0]
+            pse_results = \
+                pse_from_lsa_hypothesis(n_samples, lsa_hypothesis, head.connectivity.normalized_weights,
+                                        model_configuration_builder, lsa_service, head.connectivity.region_labels,
+                                        param_range=0.1, global_coupling=[{"indices": all_regions_indices}],
+                                        healthy_regions_parameters=[ {"name": "x0_values", "indices": healthy_indices}],
+                                        logger=logger, save_flag=False)[0]
             if plotter:
                 plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
                                   lsa_service.eigen_vectors_number, head.connectivity.region_labels, pse_results)
@@ -57,7 +54,7 @@ def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, pse_flag=T
 
 
 def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0, times_on_off=[],
-                       label_strip_fun=None, plotter=False, title_prefix="", **kwargs):
+                       label_strip_fun=None, plotter=None, title_prefix="", **kwargs):
     try:
         return H5Reader().read_timeseries(ts_file)
     except:
@@ -72,7 +69,7 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
 
 
 def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis, statistical_model, sensor_id=0,
-                              sim_type="paper", times_on_off=[], config=Config(), plotter=False, title_prefix="",
+                              sim_type="paper", times_on_off=[], config=Config(), plotter=None, title_prefix="",
                               **kwargs):
     if statistical_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
         seeg_gain_mode = "exp"
