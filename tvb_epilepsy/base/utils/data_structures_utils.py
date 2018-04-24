@@ -313,7 +313,7 @@ def monopolar_to_bipolar(labels, indices=None, data=None):
             bipolar_lbls.append(labels[iS1] + "-" + labels[iS2])
             bipolar_inds[0].append(iS1)
             bipolar_inds[1].append(iS2)
-    if isinstance(data, np.array):
+    if isinstance(data, np.ndarray):
         data = data[bipolar_inds[0]] - data[bipolar_inds[1]]
         return bipolar_lbls, bipolar_inds, data
     else:
