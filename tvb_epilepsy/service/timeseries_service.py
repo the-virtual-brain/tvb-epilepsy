@@ -139,7 +139,7 @@ class TimeseriesService(object):
     def select_by_power(self, timeseries, power=np.array([]), power_th=None):
         if len(power) != timeseries.number_of_labels:
             power = self.power(timeseries)
-        return self.select_by_metric(power, power_th)
+        return self.select_by_metric(timeseries, power, power_th)
 
     def select_by_hierarchical_group_metric_clustering(self, timeseries, distance, disconnectivity=np.array([]),
                                                        metric=None, n_groups=10, members_per_group=1):

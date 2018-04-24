@@ -261,12 +261,12 @@ class Timeseries(object):
         if PossibleVariables.X1.value in self.dimension_labels[TimeseriesDimensions.VARIABLES.value]:
             y0_ts = self.get_state_variable(PossibleVariables.X1.value)
             if PossibleVariables.X2.value in self.dimension_labels[TimeseriesDimensions.VARIABLES.value]:
-                self.logger.info("%s are computed using %s and %s state variables!" % (
+                self.logger.info("%s is computed using %s and %s state variables!" % (
                     PossibleVariables.SOURCE.value, PossibleVariables.X1.value, PossibleVariables.X2.value))
                 y2_ts = self.get_state_variable(PossibleVariables.X2.value)
                 lfp_data = y2_ts.data - y0_ts.data
             else:
-                self.logger.warn("%s are computed using %sstate variable!" % (
+                self.logger.warn("%s is computed using %sstate variable!" % (
                     PossibleVariables.SOURCE.value, PossibleVariables.X1.value))
                 lfp_data = y0_ts.data
             lfp_dim_labels = OrderedDict(
