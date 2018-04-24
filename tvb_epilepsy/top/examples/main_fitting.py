@@ -87,7 +87,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
     for hyp in hypotheses[1:]:
         base_path = os.path.join(config.out.FOLDER_RES, hyp.name)
         # Set model configuration and compute LSA
-        model_configuration, lsa_hypothesis, pse_lsa_results = \
+        model_configuration, lsa_hypothesis, pse_results = \
             set_model_config_LSA(head, hyp, reader, config, K_unscaled=3*K_DEF,
                                  pse_flag=pse_flag, plotter=plotter, writer=writer)
 
@@ -111,13 +111,14 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                                         "tau1", "tau0","K", "x1init", "zinit", "sigma_init", "sigma_eq",
                                                         "sigma", "dX1t", "dZt", "epsilon", "scale", "offset"],
                                            xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
-                                           sde_mode=SDE_MODES.NONCENTERED.value, observation_model=OBSERVATION_MODELS.SOURCE_POWER.value,).\
+                                           sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,).\
                                                                                                        generate_model()
 
             # Update active model's active region nodes
-            e_values = pse_lsa_results.get("e_values_mean", model_configuration.e_values)
-            lsa_propagation_strength = pse_lsa_results.get("lsa_propagation_strengths_mean",
+            e_values = pse_results.get("e_values_mean", model_configuration.e_values)
+            lsa_propagation_strength = pse_results.get("lsa_propagation_strengths_mean",
                                                            lsa_hypothesis.lsa_propagation_strengths)
+            model_inversion.active_e_th = 0.2
             statistical_model = \
                 model_inversion.update_active_regions(statistical_model, e_values=e_values,
                                                       lsa_propagation_strengths=lsa_propagation_strength, reset=True)
@@ -134,8 +135,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                 signals, simulator = \
                     set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, statistical_model,
                                               sensor_id, sim_type="paper", times_on_off=times_on_off, config=config,
-                                              plotter=plotter, title_prefix=hyp.name, bipolar=False, filter_flag=False,
-                                              envelope_flag=False, smooth_flag=False, **kwargs)
+                                              plotter=plotter, title_prefix=hyp.name, bipolar=False, filter_flag=True,
+                                              envelope_flag=True, smooth_flag=True, **kwargs)
                 statistical_model.ground_truth.update({"tau1": np.mean(simulator.model.tt),
                                                        "tau0": 1.0 / np.mean(simulator.model.r),
                                                        "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
@@ -165,10 +166,10 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        num_warmup = 20
+        num_warmup = 200
         if fit_flag:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
-                                                      chains=2, refresh=1, num_warmup=num_warmup, num_samples=30,
+                                                      chains=2, refresh=1, num_warmup=num_warmup, num_samples=300,
                                                       max_depth=10, delta=0.8, save_warmup=1, plot_warmup=1, **kwargs)
             writer.write_generic(ests, path("FitEst"))
             writer.write_generic(samples, path("FitSamples"))
@@ -243,7 +244,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit2")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data,
                         output_base=output, separate_by_run=False)
 
@@ -285,7 +286,7 @@ if __name__ == "__main__":
     # seizure = 'SZ3_0001.edf'
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
-    EMPIRICAL = False
+    EMPIRICAL = True
     # stats_model_name = "vep_sde"
     stan_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
