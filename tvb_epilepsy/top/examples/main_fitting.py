@@ -51,7 +51,7 @@ def set_hypotheses(head, config):
 def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                         observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, sensors_lbls=[], sensor_id=0,
                         times_on_off=[], fitmethod="optimizing", stan_service="CmdStan",
-                        fit_flag=True, config=Config(), **kwargs):
+                        pse_flag=True, fit_flag=True, config=Config(), **kwargs):
 
     def path(name):
         if len(name) > 0:
@@ -87,7 +87,9 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
     for hyp in hypotheses[1:]:
         base_path = os.path.join(config.out.FOLDER_RES, hyp.name)
         # Set model configuration and compute LSA
-        model_configuration, lsa_hypothesis = set_model_config_LSA(head, hyp, reader, config, K_unscaled=3*K_DEF)
+        model_configuration, lsa_hypothesis, pse_lsa_results = \
+            set_model_config_LSA(head, hyp, reader, config, K_unscaled=3*K_DEF,
+                                 pse_flag=pse_flag, plotter=plotter, writer=writer)
 
         # -------------------------- Get model_data and observation signals: -------------------------------------------
         # Create model inversion service (stateless)
@@ -109,15 +111,16 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                                         "tau1", "tau0","K", "x1init", "zinit", "sigma_init", "sigma_eq",
                                                         "sigma", "dX1t", "dZt", "epsilon", "scale", "offset"],
                                            xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
-                                           sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,).\
+                                           sde_mode=SDE_MODES.NONCENTERED.value, observation_model=OBSERVATION_MODELS.SOURCE_POWER.value,).\
                                                                                                        generate_model()
 
             # Update active model's active region nodes
-            statistical_model = model_inversion.update_active_regions(statistical_model,
-                                                                      e_values=lsa_hypothesis.e_values,
-                                                                      lsa_propagation_strength=
-                                                                            lsa_hypothesis.lsa_propagation_strengths,
-                                                                      reset=True)
+            e_values = pse_lsa_results.get("e_values_mean", model_configuration.e_values)
+            lsa_propagation_strength = pse_lsa_results.get("lsa_propagation_strengths_mean",
+                                                           lsa_hypothesis.lsa_propagation_strengths)
+            statistical_model = \
+                model_inversion.update_active_regions(statistical_model, e_values=e_values,
+                                                      lsa_propagation_strengths=lsa_propagation_strength, reset=True)
 
             # Now some scripts for settting and preprocessing target signals:
             if os.path.isfile(empirical_file):
@@ -125,13 +128,14 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                 signals = set_empirical_data(empirical_file, path("ts_empirical"),
                                              head, sensors_lbls, sensor_id, times_on_off,
                                              label_strip_fun=lambda s: s.split("POL ")[-1], plotter=plotter,
-                                             title_prefix=hyp.name)
+                                             title_prefix=hyp.name, bipolar=True)
             else:
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
                 signals, simulator = \
                     set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, statistical_model,
-                                              sensor_id, times_on_off, preprocess=True, config=config, plotter=plotter,
-                                              title_prefix=hyp.name, **kwargs)
+                                              sensor_id, sim_type="paper", times_on_off=times_on_off, config=config,
+                                              plotter=plotter, title_prefix=hyp.name, bipolar=False, filter_flag=False,
+                                              envelope_flag=False, smooth_flag=False, **kwargs)
                 statistical_model.ground_truth.update({"tau1": np.mean(simulator.model.tt),
                                                        "tau0": 1.0 / np.mean(simulator.model.r),
                                                        "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
@@ -162,7 +166,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         num_warmup = 20
-        if False:
+        if fit_flag:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
                                                       chains=2, refresh=1, num_warmup=num_warmup, num_samples=30,
                                                       max_depth=10, delta=0.8, save_warmup=1, plot_warmup=1, **kwargs)
@@ -271,7 +275,7 @@ if __name__ == "__main__":
     # sensors_lbls = [u"G'1", u"G'2", u"G'11", u"G'12", u"M'7", u"M'8", u"L'5", u"L'6"]
     # sensors_inds = [28, 29, 38, 39, 64, 65, 48, 49]
     seizure = 'SZ1_0001.edf'
-    times_on_off = (np.array([15.0, 35.0]) * 1000).tolist()
+    times_on_off = (np.array([15.0, 35.0]) * 1000.0).tolist()
     # sensors_filename = "SensorsSEEG_116.h5"
     # # TVB4 preselection:
     # sensors_lbls = [u"D5", u"D6", u"D7",  u"D8", u"D9", u"D10", u"Z9", u"Z10", u"Z11", u"Z12", u"Z13", u"Z14",
@@ -281,18 +285,19 @@ if __name__ == "__main__":
     # seizure = 'SZ3_0001.edf'
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
-    EMPIRICAL = True
+    EMPIRICAL = False
     # stats_model_name = "vep_sde"
     stan_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
     observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
+    pse_flag = True
     fit_flag = True
     if EMPIRICAL:
         main_fit_sim_hyplsa(stan_model_name=stan_model_name, observation_model=observation_model,
                             empirical_file=os.path.join(config.input.RAW_DATA_FOLDER, seizure),
                             sensors_lbls=sensors_lbls, times_on_off=times_on_off, fitmethod=fitmethod,
-                            stan_service="CmdStan", fit_flag=fit_flag, config=config)
+                            stan_service="CmdStan", pse_flag=pse_flag, fit_flag=fit_flag, config=config)
     else:
         main_fit_sim_hyplsa(stan_model_name=stan_model_name, observation_model=observation_model,
                             sensors_lbls=sensors_lbls, times_on_off=[50.0, 550.0], fitmethod=fitmethod,
-                            stan_service="CmdStan", fit_flag=fit_flag, config=config)
+                            stan_service="CmdStan", pse_flag=pse_flag, fit_flag=fit_flag, config=config)

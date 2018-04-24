@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import numpy as np
 from tvb_epilepsy.base.constants.model_inversion_constants import BIPOLAR, OBSERVATION_MODELS
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, raise_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list, isequal_string
 from tvb_epilepsy.base.computations.math_utils import select_greater_values_array_inds
 from tvb_epilepsy.service.head_service import HeadService
@@ -66,7 +66,7 @@ class ModelInversionService(object):
                                 "\nSkipping of setting active regions according to LSA!")
         return stats_model
 
-    def update_active_regions(self, stats_model, e_values=[], x0_values=[], lsa_propagation_strength=[], reset=False):
+    def update_active_regions(self, stats_model, e_values=[], x0_values=[], lsa_propagation_strengths=[], reset=False):
         if reset:
             stats_model.update_active_regions([])
         for m in ensure_list(self.active_regions_selection_methods):
@@ -75,7 +75,7 @@ class ModelInversionService(object):
             elif isequal_string(m, "x0"):
                 stats_model = self.update_active_regions_x0_values(stats_model, x0_values, reset=False)
             elif isequal_string(m, "LSA"):
-                stats_model = self.update_active_regions_lsa(stats_model,lsa_propagation_strength, reset=False)
+                stats_model = self.update_active_regions_lsa(stats_model, lsa_propagation_strengths, reset=False)
         return stats_model
 
 
@@ -118,12 +118,12 @@ class ODEModelInversionService(ModelInversionService):
         return stats_model
 
     def update_active_regions(self, stats_model, sensors=None, target_data=None, e_values=[], x0_values=[],
-                              lsa_propagation_strength=[], reset=False):
+                              lsa_propagation_strengths=[], reset=False):
         if reset:
             stats_model.update_active_regions([])
         stats_model = \
             super(ODEModelInversionService, self).update_active_regions(stats_model, e_values, x0_values,
-                                                                        lsa_propagation_strength, reset=False)
+                                                                        lsa_propagation_strengths, reset=False)
         stats_model = self.update_active_regions_seeg(target_data, stats_model, sensors, reset=False)
         return stats_model
 
@@ -142,19 +142,12 @@ class ODEModelInversionService(ModelInversionService):
             target_data = self.ts_service.select_by_power(target_data, power, self.power_th)
         return target_data
 
-    def select_target_data_source(self, target_data, rois, head, power=np.array([])):
-        if self.auto_selection.find("rois") >= 0:
-            target_data = self.ts_service.select_by_rois(target_data, rois, head.connectivity.region_labels)
-        if self.auto_selection.find("power") >= 0:
-            target_data = self.ts_service.select_by_power(target_data, power, self.power_th)
-        return target_data
-
     def set_gain_matrix(self, target_data, stats_model, sensors=None):
         if stats_model.observation_model in OBSERVATION_MODELS.SEEG.value:
             signals_inds = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
             gain_matrix = np.array(sensors.gain_matrix[signals_inds][:, stats_model.active_regions])
         else:
-            gain_matrix = np.ones((target_data.number_of_labels, target_data.number_of_labels))
+            gain_matrix = np.eye(target_data.number_of_labels)
         return gain_matrix
 
     def set_target_data_and_time(self, target_data, stats_model, head=None, sensors=None, sensor_id=0,
@@ -163,15 +156,17 @@ class ODEModelInversionService(ModelInversionService):
             try:
                 sensors = sensors.head.get_sensors_id(sensor_ids=sensor_id)
             except:
-                sensors = None
+                if stats_model.observation_model in OBSERVATION_MODELS.SEEG.value:
+                    raise_error("No sensors instance! Needed for gain_matrix computation!")
+                else:
+                    pass
         if len(self.manual_selection) > 0:
             target_data = target_data.get_subspace_by_index(self.manual_selection)
         if self.auto_selection:
             if stats_model.observation_model in OBSERVATION_MODELS.SEEG.value:
                 target_data = self.select_target_data_seeg(target_data, sensors, stats_model.active_regions, power)
             else:
-                target_data = self.select_target_data_source(target_data, stats_model.active_regions, head, power)
-
+                target_data = target_data.get_subspace_by_index(stats_model.active_regions)
         if self.decim_ratio > 1:
             target_data = self.ts_service.decimate(target_data, self.decim_ratio)
         if np.any(np.array(self.cut_target_data_tails)):

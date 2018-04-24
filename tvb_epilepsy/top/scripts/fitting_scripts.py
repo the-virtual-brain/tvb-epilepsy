@@ -8,11 +8,12 @@ from tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, Timeseries
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.top.scripts.hypothesis_scripts import from_hypothesis_to_model_config_lsa
+from tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration_to_simulation
 from tvb_epilepsy.top.scripts.fitting_data_scripts import *
 
 
-def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF):
+def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, pse_flag=True, plotter=False, writer=False):
     # --------------------------Model configuration and LSA-----------------------------------
     model_config_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelConfig.h5")
     hyp_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_LSA.h5")
@@ -25,7 +26,34 @@ def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF):
         model_configuration, lsa_hypothesis, model_configuration_builder, lsa_service = \
             from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
                                                 config=config, K=K_unscaled, save_flag=True, plot_flag=True)
-    return model_configuration, lsa_hypothesis
+        # --------------Parameter Search Exploration (PSE)-------------------------------
+    if pse_flag:
+        psa_lsa_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_PSE_LSA_results.h5")
+        try:
+            pse_results = reader.read_dictionary(psa_lsa_file)
+        except:
+            logger.info("\n\nRunning PSE LSA...")
+            n_samples = 100
+            all_regions_indices = np.array(range(head.number_of_regions))
+            disease_indices = lsa_hypothesis.get_regions_disease_indices()
+            healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
+            pse_results = pse_from_lsa_hypothesis(n_samples, lsa_hypothesis,
+                                                  head.connectivity.normalized_weights,
+                                                  model_configuration_builder, lsa_service,
+                                                  head.connectivity.region_labels,
+                                                  param_range=0.1,
+                                                  global_coupling=[{"indices": all_regions_indices}],
+                                                  healthy_regions_parameters=[
+                                                      {"name": "x0_values", "indices": healthy_indices}],
+                                                  logger=logger, save_flag=False)[0]
+            if plotter:
+                plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
+                                  lsa_service.eigen_vectors_number, head.connectivity.region_labels, pse_results)
+            if writer:
+                writer.write_dictionary(pse_results, psa_lsa_file)
+    else:
+        pse_results = {}
+    return model_configuration, lsa_hypothesis, pse_results
 
 
 def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0, times_on_off=[],
