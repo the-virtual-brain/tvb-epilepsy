@@ -78,7 +78,7 @@ def select_greater_values_array_inds(values, threshold=None, verbose=False):
 
 
 def select_by_hierarchical_group_metric_clustering(distance, disconnectivity=np.array([]), metric=None,
-                                              n_groups=10, members_per_group=1):
+                                                  n_groups=10, members_per_group=1):
     if disconnectivity.shape == distance.shape:
         distance = distance * disconnectivity
     n_groups = np.minimum(np.maximum(n_groups, 3), n_groups // members_per_group)
@@ -97,7 +97,7 @@ def select_by_hierarchical_group_metric_clustering(distance, disconnectivity=np.
             #...otherwise, randomly
             inds_select = range(n_select)
         selection.append(cluster_inds[inds_select])
-    return np.unique(selection).tolist()
+    return np.unique(np.hstack(selection)).tolist()
 
 
 def curve_elbow_point(vals, interactive=CalculusConfig.INTERACTIVE_ELBOW_POINT):
