@@ -496,7 +496,7 @@ class Plotter(BasePlotter):
                 sv_dict = {'x1(t)': timeseries.x1.squeezed, 'y1(t)': timeseries.y1.squeezed}
 
                 self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
-                                     special_idx=seizure_indices, title=title_prefix + ":Simulated pop1",
+                                     special_idx=seizure_indices, title=title_prefix + "Simulated pop1",
                                      labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
             if PossibleVariables.X2.value in state_variables and PossibleVariables.Y2.value in state_variables and \
                     PossibleVariables.G.value in state_variables:
