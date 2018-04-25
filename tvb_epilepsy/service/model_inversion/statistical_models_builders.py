@@ -197,11 +197,11 @@ class StatisticalModelBuilder(StatisticalModelBuilderBase):
 
         return parameters
 
-    def generate_model(self, ground_truth={}):
+    def generate_model(self, target_data_type=TARGET_DATA_TYPE.SYNTHETIC.value, ground_truth={}):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
         parameters = self.generate_parameters()
-        model = StatisticalModel(self.name, self.number_of_regions, self.xmode, self.priors_mode,
+        model = StatisticalModel(self.name, self.number_of_regions, target_data_type, self.xmode, self.priors_mode,
                                  parameters, ground_truth, self.model_config, self.sigma_x, self.MC_direction_split)
         self.logger.info(self.__class__.__name__  + " took " +
                          str( time.time() - tic) + ' sec for model generation')
@@ -308,11 +308,11 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
                                                    **{"mu": self.offset, "sigma": 0.1})})
         return parameters
 
-    def generate_model(self, ground_truth={}):
+    def generate_model(self, target_data_type=TARGET_DATA_TYPE.SYNTHETIC.value, ground_truth={}):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
         parameters = self.generate_parameters()
-        model = ODEStatisticalModel(self.name, self.number_of_regions, self.xmode, self.priors_mode,
+        model = ODEStatisticalModel(self.name, self.number_of_regions, target_data_type, self.xmode, self.priors_mode,
                                     parameters, ground_truth, self.model_config, self.observation_model,
                                     self.sigma_x, self.sigma_init, self.scale, self.offset, self.epsilon,
                                     self.number_of_signals, self.time_length, self.dt, self.active_regions)
@@ -389,11 +389,11 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
 
         return parameters
 
-    def generate_model(self, ground_truth={}):
+    def generate_model(self, target_data_type=TARGET_DATA_TYPE.SYNTHETIC.value, ground_truth={}):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
         parameters = self.generate_parameters()
-        model = SDEStatisticalModel(self.name, self.number_of_regions, self.xmode, self.priors_mode,
+        model = SDEStatisticalModel(self.name, self.number_of_regions, target_data_type, self.xmode, self.priors_mode,
                                     parameters, ground_truth, self.model_config, self.observation_model,
                                     self.sigma_x, self.sigma_init, self.sigma, self.scale, self.offset, self.epsilon,
                                     self.number_of_signals, self.time_length, self.dt, self.active_regions,

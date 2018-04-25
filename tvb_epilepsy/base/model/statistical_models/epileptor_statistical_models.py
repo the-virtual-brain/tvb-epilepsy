@@ -13,6 +13,7 @@ from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import Stoc
 class StatisticalModel(object):
 
     name = "vep"
+    target_data_type = TARGET_DATA_TYPE.EMPIRICAL.value
     parameters = {}
     model_config = ModelConfiguration()
     xmode = XModes.X0MODE.value
@@ -25,8 +26,8 @@ class StatisticalModel(object):
     def number_of_parameters(self):
         return len(self.parameters)
 
-    def __init__(self, name='vep', number_of_regions=0,  xmode=XModes.X0MODE.value,
-                 priors_mode=PriorsModes.NONINFORMATIVE.value, parameters={}, ground_truth={},
+    def __init__(self, name='vep', number_of_regions=0,  target_data_type=TARGET_DATA_TYPE.EMPIRICAL.value,
+                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, parameters={}, ground_truth={},
                  model_config=ModelConfiguration(), sigma_x=SIGMA_X0_DEF, MC_direction_split=0.5):
         self.name = name
         self.number_of_regions = number_of_regions
@@ -37,6 +38,7 @@ class StatisticalModel(object):
         self.model_config = model_config
         self.MC_direction_split = MC_direction_split
         self.ground_truth = ground_truth
+        self.target_data_type = target_data_type
 
     def _repr(self, d=OrderedDict()):
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
@@ -56,15 +58,17 @@ class StatisticalModel(object):
         return parameter
 
     def get_truth(self, parameter_name):
-        truth = self.ground_truth.get(parameter_name, np.nan)
-        if truth is np.nan:
-            truth = getattr(self.model_config, parameter_name, np.nan)
-            # TODO: find a more general solution here...
-            if truth is np.nan and parameter_name == "MC" or parameter_name == "FC":
-                truth = self.model_config.model_connectivity
-        if truth is np.nan:
-            warning("Ground truth value for parameter " + parameter_name + " was not found!")
-        return truth
+        if self.target_data_type is TARGET_DATA_TYPE.SYNTHETIC.value:
+            truth = self.ground_truth.get(parameter_name, np.nan)
+            if truth is np.nan:
+                truth = getattr(self.model_config, parameter_name, np.nan)
+                # TODO: find a more general solution here...
+                if truth is np.nan and parameter_name == "MC" or parameter_name == "FC":
+                    truth = self.model_config.model_connectivity
+            if truth is np.nan:
+                warning("Ground truth value for parameter " + parameter_name + " was not found!")
+            return truth
+        return np.nan
 
     # Prior is either a parameter or the ground truth
     def get_prior(self, parameter_name):
@@ -107,12 +111,12 @@ class ODEStatisticalModel(StatisticalModel):
     def number_of_nonactive_regions(self):
         return len(self.nonactive_regions)
 
-    def __init__(self, name='vep_ode', number_of_regions=0, xmode=XModes.X0MODE.value,
-                 priors_mode=PriorsModes.NONINFORMATIVE.value, parameters={}, ground_truth={},
+    def __init__(self, name='vep_ode',number_of_regions=0, target_data_type=TARGET_DATA_TYPE.EMPIRICAL.value,
+                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, parameters={}, ground_truth={},
                  model_config=ModelConfiguration(), observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, scale=1.0, offset=0.0, epsilon=EPSILON_DEF,
                  number_of_target_data=0, time_length=0, dt=DT_DEF, active_regions=[]):
-        super(ODEStatisticalModel, self).__init__(name, number_of_regions,  xmode, priors_mode,
+        super(ODEStatisticalModel, self).__init__(name, number_of_regions,  target_data_type, xmode, priors_mode,
                                                   parameters, ground_truth, model_config, sigma_x)
         if np.all(np.in1d(active_regions, range(self.number_of_regions))):
             self.active_regions = np.unique(active_regions).tolist()
@@ -146,13 +150,13 @@ class SDEStatisticalModel(ODEStatisticalModel):
     sigma = SIGMA_DEF
     sde_mode = SDE_MODES.NONCENTERED.value
 
-    def __init__(self, name='vep_ode', number_of_regions=0, xmode=XModes.X0MODE.value,
-                 priors_mode=PriorsModes.NONINFORMATIVE.value, parameters={}, ground_truth={},
+    def __init__(self, name='vep_ode', number_of_regions=0, target_data_type=TARGET_DATA_TYPE.EMPIRICAL.value,
+                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, parameters={}, ground_truth={},
                  model_config=ModelConfiguration(), observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, sigma=SIGMA_DEF, scale=1.0, offset=0.0,
                  epsilon=EPSILON_DEF, number_of_target_data=0, time_length=0, dt=DT_DEF, active_regions=[],
                  sde_mode=SDE_MODES.NONCENTERED.value):
-        super(SDEStatisticalModel, self).__init__(name, number_of_regions, xmode, priors_mode,
+        super(SDEStatisticalModel, self).__init__(name, number_of_regions, target_data_type, xmode, priors_mode,
                                                   parameters, ground_truth, model_config, observation_model,
                                                   sigma_x, sigma_init, scale, offset, epsilon,
                                                   number_of_target_data, time_length, dt, active_regions)
