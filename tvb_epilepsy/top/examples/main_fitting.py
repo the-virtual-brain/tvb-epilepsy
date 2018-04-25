@@ -125,6 +125,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
             # Now some scripts for settting and preprocessing target signals:
             if os.path.isfile(empirical_file):
+                statistical_model.target_data_type = TARGET_DATA_TYPE.EMPIRICAL.value
                 # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
                 signals = set_empirical_data(empirical_file, path("ts_empirical"),
                                              head, sensors_lbls, sensor_id, times_on_off,
@@ -132,6 +133,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                              title_prefix=hyp.name, bipolar=True)
             else:
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
+                statistical_model.target_data_type = TARGET_DATA_TYPE.SYNTHETIC.value
                 signals, simulator = \
                     set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, statistical_model,
                                               sensor_id, sim_type="paper", times_on_off=times_on_off, config=config,
@@ -166,10 +168,10 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        num_warmup = 200
+        num_warmup = 20
         if fit_flag:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
-                                                      chains=2, refresh=1, num_warmup=num_warmup, num_samples=300,
+                                                      chains=2, refresh=1, num_warmup=num_warmup, num_samples=30,
                                                       max_depth=10, delta=0.8, save_warmup=1, plot_warmup=1, **kwargs)
             writer.write_generic(ests, path("FitEst"))
             writer.write_generic(samples, path("FitSamples"))
