@@ -186,6 +186,7 @@ class H5Writer(object):
         # TODO: change HypothesisModel to GenericModel here and inside Epi
         h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
         h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, h5_hypo.__class__.__name__)
+        h5_file.attrs.create("name", h5_hypo.name)
         h5_file.attrs.create("number_of_regions", h5_hypo.number_of_regions)
         h5_file.attrs.create("type", h5_hypo.type)
         h5_file.attrs.create("x0_indices", h5_hypo.x0_indices)
