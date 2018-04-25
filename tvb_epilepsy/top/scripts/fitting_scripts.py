@@ -6,6 +6,7 @@ from tvb_epilepsy.base.constants.model_inversion_constants import *
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, generate_region_labels
 from tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, Timeseries
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
+from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.top.scripts.hypothesis_scripts import from_hypothesis_to_model_config_lsa
@@ -16,6 +17,7 @@ from tvb_epilepsy.top.scripts.fitting_data_scripts import *
 
 def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, pse_flag=True, plotter=None, writer=None):
     model_configuration_builder = None
+    lsa_service = None
     # --------------------------Model configuration and LSA-----------------------------------
     model_config_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelConfig.h5")
     hyp_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_LSA.h5")
@@ -41,6 +43,8 @@ def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, pse_flag=T
             healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
             if model_configuration_builder is None:
                 model_configuration_builder = ModelConfigurationBuilder(hyp.number_of_regions, K=K_unscaled)
+            if lsa_service is None:
+                lsa_service =  LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
             pse_results = \
                 pse_from_lsa_hypothesis(n_samples, lsa_hypothesis, head.connectivity.normalized_weights,
                                         model_configuration_builder, lsa_service, head.connectivity.region_labels,
