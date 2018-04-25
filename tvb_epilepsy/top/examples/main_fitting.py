@@ -167,9 +167,9 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        num_warmup = 30  # 1000
-        n_chains = 2  # 4
-        num_samples = 20  # min(int(np.round(1000.0/n_chains)), 500)
+        num_warmup = 1000
+        n_chains = 4
+        num_samples = min(int(np.round(1000.0/n_chains)), 500)
         if fit_flag:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
                                                       chains=n_chains, num_warmup=num_warmup, num_samples=num_samples,
