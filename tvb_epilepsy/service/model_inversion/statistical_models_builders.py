@@ -295,7 +295,7 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
         if "scale" in self.parameters:
             self.logger.info("...scale...")
             parameters.update(
-                {"scale": generate_lognormal_parameter("scale", self.scale, 0.1, 2*self.scale,
+                {"scale": generate_lognormal_parameter("scale", self.scale, 0.1, 10*self.scale,
                                                        sigma=self.scale, p_shape=(), use="scipy")})
             
         if "offset" in self.parameters:
