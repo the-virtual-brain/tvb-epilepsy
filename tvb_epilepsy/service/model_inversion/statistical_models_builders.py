@@ -302,7 +302,7 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
             self.logger.info("...offset...")
             parameters.update(
                 {"offset":
-                     generate_stochastic_parameter("offset", -1.0, 1.0, p_shape=(),
+                     generate_stochastic_parameter("offset", self.offset-1.0, self.offset+1.0, p_shape=(),
                                                    probability_distribution=ProbabilityDistributionTypes.NORMAL,
                                                    optimize_pdf=False, use="scipy",
                                                    **{"mu": self.offset, "sigma": 0.1})})
