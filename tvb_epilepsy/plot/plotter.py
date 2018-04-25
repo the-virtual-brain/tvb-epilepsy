@@ -891,8 +891,7 @@ class Plotter(BasePlotter):
                 for ip, p in enumerate(pdf):
                     pdf[ip] = ((p.T * I)[regions_inds])
                 priors.update({param: (pdf[0].squeeze(), pdf[1].squeeze())})
-                this_truth = (statistical_model.get_truth(param) * I[:, 0])[regions_inds]
-                truth.update({param: this_truth.squeeze()})
+                truth.update({param: ((statistical_model.get_truth(param) * I[:, 0])[regions_inds]).squeeze()})
         else:
             title_pair_plot = title_prefix + statistical_model.name + "Global coupling vs x0 pair plot"
             title_violin_plot = title_prefix + statistical_model.name + "Regions parameters samples"
@@ -904,13 +903,11 @@ class Plotter(BasePlotter):
         if "x0" in region_violin_params and samples[0]["x0"].shape[1] < 10:
             x0_K_pair_plot_params = []
             x0_K_pair_plot_samples = {}
-            priors = {}
-            truth = {}
             if samples[0].get("K", None) is not None:
                 # plot K-x0 parameters in pair plots
                 x0_K_pair_plot_params = ["K"]
                 x0_K_pair_plot_samples = [{"K": s["K"]} for s in samples]
-                if statistical_model is None:
+                if statistical_model is not None:
                     priors.update({"K": statistical_model.get_prior_pdf("K")})
                     truth.update({"K": statistical_model.get_truth("K")})
             for inode, label in enumerate(region_labels):
@@ -918,8 +915,8 @@ class Plotter(BasePlotter):
                 x0_K_pair_plot_params.append(temp_name)
                 for ichain, s in enumerate(samples):
                     x0_K_pair_plot_samples[ichain].update({temp_name: s["x0"][:, inode]})
-                    if statistical_model is None:
-                        priors.update({temp_name: (priors["x0"][0][:, inode], priors["x0"][1][:, inode])})
+                    if statistical_model is not None:
+                        priors.update({temp_name: (priors["x0"][0][inode], priors["x0"][1][inode])})
                         truth.update({temp_name: truth["x0"][inode]})
             self.parameters_pair_plots(x0_K_pair_plot_samples, x0_K_pair_plot_params, None, priors, truth, skip_samples,
                                        title=title_pair_plot)
@@ -973,14 +970,16 @@ class Plotter(BasePlotter):
                                         "dZt" + "\ndynamic noise" + sig_prior_str + ", sig_post = " + str(est["sigma"])],
                              offset=1.0, labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
             if trajectories_plot:
-                title = title_prefix + name + ' Fit hidden state space trajectories'
+                title = name + ' Fit hidden state space trajectories'
                 self.plot_trajectories({"x1": sample["x1"].squeezed[:, :, skip_samples:],
                                         'z': sample['z'].squeezed[:, :, skip_samples:]},
                                        special_idx=seizure_indices, title=title, labels=stats_region_labels,
                                        figsize=FiguresConfig.SUPER_LARGE_SIZE)
-        self.plot_timeseries(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
-                             title=title_prefix + "Observation target vs fit time series: " + stats_string["fit_target_data"],
-                             offset=1.0, labels=target_data.space_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
+        self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
+                         title=title_prefix + statistical_model.name + "Observation target vs fit time series: "
+                                + stats_string["fit_target_data"],
+                         figure_name=title_prefix + statistical_model.name + "ObservationTarget_VS_FitTimeSeries",
+                         offset=1.0, labels=target_data.space_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
     def plot_fit_connectivity(self, ests, samples, stats=None, statistical_model=None, region_labels=[], title_prefix=""):
         # plot connectivity

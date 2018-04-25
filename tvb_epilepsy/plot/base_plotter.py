@@ -113,8 +113,7 @@ class BasePlotter(object):
                 ax.plot(vector[ii], y_ticks[ii], '*', mfc=colors[ii], mec=colors[ii], ms=10)
         if len(lines) == 2 and lines[0].shape[0] == n_violins and lines[1].shape[0] == n_violins:
             for ii in range(n_violins):
-                ax.plot(lines[0][ii],  y_ticks[ii] - 0.45*lines[1][ii]/numpy.max(lines[1][ii]),
-                        '--', mfc=colors[ii], mec=colors[ii], ms=10)
+                ax.plot(lines[0][ii],  y_ticks[ii] - 0.45*lines[1][ii]/numpy.max(lines[1][ii]), '--', color=colors[ii])
         ax.grid(True, color='grey')
         ax.set_yticks(y_ticks)
         if show_y_labels:
@@ -274,6 +273,7 @@ class BasePlotter(object):
         n = len(keys)
         fig, axes = pyplot.subplots(n, n, figsize=figsize)
         fig.set_label(title)
+        colorcycle = pyplot.rcParams['axes.prop_cycle'].by_key()['color']
         for i, key_i in enumerate(keys):
             for j, key_j in enumerate(keys):
                 for datai in data:
@@ -284,6 +284,9 @@ class BasePlotter(object):
                     if i == j:
                         hist_data = axes[i, j].hist(di, int(numpy.round(numpy.sqrt(len(di)))), log=True)[0]
                         hist_max = numpy.array(hist_data).max()
+                        # The mean line
+                        axes[i, j].vlines(di.mean(axis=0), 0, hist_max, color=colorcycle, linestyle='dashed',
+                                          linewidth=1)
                         # Plot a line (or marker) in the same axis as hist
                         diag_line_plot = ensure_list(diagonal_plots.get(key_i, ((), ()))[0])
                         if len(diag_line_plot) in [1, 2]:
@@ -292,15 +295,16 @@ class BasePlotter(object):
                             else:
                                 diag_line_plot[1] = diag_line_plot[1]/numpy.max(diag_line_plot[1])*hist_max
                             if len(diag_line_plot[0]) == 1:
-                                axes[i, j].plot(diag_line_plot[0], diag_line_plot[1], "go", markersize=5)
+                                axes[i, j].plot(diag_line_plot[0], diag_line_plot[1], "o", color='k', markersize=5)
                             else:
-                                axes[i, j].plot(diag_line_plot[0], diag_line_plot[1], "g--", linewidth=1)
+                                axes[i, j].plot(diag_line_plot[0], diag_line_plot[1], color='k',
+                                                linestyle="dashed", linewidth=1)
                         # Plot a marker in the same axis as hist
                         diag_marker_plot = ensure_list(diagonal_plots.get(key_i, ((), ()))[1])
                         if len(diag_marker_plot) in [1, 2]:
                             if len(diag_marker_plot) == 1:
                                 diag_marker_plot = confirm_y_coordinate(diag_marker_plot, hist_max)
-                            axes[i, j].plot(diag_marker_plot[0], diag_marker_plot[1], "r*", markersize=5)
+                            axes[i, j].plot(diag_marker_plot[0], diag_marker_plot[1], "*", color='k',markersize=5)
 
                     else:
                         if transpose:
