@@ -4,7 +4,6 @@
 from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
-from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.model_inversion.statistical_models_builders import SDEStatisticalModelBuilder
 from tvb_epilepsy.service.model_inversion.model_inversion_services import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
@@ -137,8 +136,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                 signals, simulator = \
                     set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, statistical_model,
                                               sensor_id, sim_type="paper", times_on_off=times_on_off, config=config,
-                                              plotter=plotter, title_prefix=hyp.name, bipolar=False, filter_flag=True,
-                                              envelope_flag=True, smooth_flag=True, **kwargs)
+                                              plotter=plotter, title_prefix=hyp.name, bipolar=False, filter_flag=False,
+                                              envelope_flag=False, smooth_flag=True, **kwargs)
                 statistical_model.ground_truth.update({"tau1": np.mean(simulator.model.tt),
                                                        "tau0": 1.0 / np.mean(simulator.model.r),
                                                        "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
@@ -168,11 +167,14 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        num_warmup = 20
+        num_warmup = 30  # 1000
+        n_chains = 2  # 4
+        num_samples = 20  # min(int(np.round(1000.0/n_chains)), 500)
         if fit_flag:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
-                                                      chains=2, refresh=1, num_warmup=num_warmup, num_samples=30,
-                                                      max_depth=10, delta=0.8, save_warmup=1, plot_warmup=1, **kwargs)
+                                                      chains=n_chains, num_warmup=num_warmup, num_samples=num_samples,
+                                                      refresh=1, max_depth=10, delta=0.8, save_warmup=1, plot_warmup=1,
+                                                      **kwargs)
             writer.write_generic(ests, path("FitEst"))
             writer.write_generic(samples, path("FitSamples"))
             if summary is not None:
@@ -246,7 +248,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_sim_source")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data,
                         output_base=output, separate_by_run=False)
 
@@ -288,11 +290,11 @@ if __name__ == "__main__":
     # seizure = 'SZ3_0001.edf'
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
-    EMPIRICAL = True
+    EMPIRICAL = False
     # stats_model_name = "vep_sde"
     stan_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
-    observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
+    observation_model = OBSERVATION_MODELS.SOURCE_POWER.value
     pse_flag = True
     fit_flag = True
     if EMPIRICAL:
