@@ -85,7 +85,7 @@ def prepare_signal_observable(data, on_off_set=[], rois=[],  filter_flag=True, l
 
     # Finally, normalize signals
     logger.info("Normalizing signals...")
-    data = ts_service.normalize(data, "zscore")
+    data = ts_service.normalize(data, "baseline-amplitude")  #  or "zscore"
     if plotter:
         plotter.plot_raster({"ObservationRaster": data.squeezed}, data.time_line, time_units=data.time_unit,
                             special_idx=[], offset=0.1, title='Observation Raster Plot',
