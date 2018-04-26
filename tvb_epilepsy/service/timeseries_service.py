@@ -39,8 +39,8 @@ def normalize_signals(signals, normalization=None):
             signals /= np.percentile(signals, 95)
         else:
             raise_value_error("Ignoring signals' normalization " + normalization +
-                             ",\nwhich is not one of the currently available 'zscore', 'minmax' " +
-                             "and  'baseline-amplitude'!")
+                             ",\nwhich is not one of the currently available " +
+                             "'zscore', 'minmax' and  'baseline-amplitude'!")
 
     return signals
 
