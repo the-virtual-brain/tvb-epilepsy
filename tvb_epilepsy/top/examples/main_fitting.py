@@ -167,9 +167,9 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        num_warmup = 20  # 1000
-        n_chains = 2  # 4
-        num_samples = 30  # min(int(np.round(1000.0/n_chains)), 500)
+        num_warmup = 1000
+        n_chains = 4
+        num_samples = min(int(np.round(1000.0/n_chains)), 500)
         if fit_flag:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
                                                       chains=n_chains, num_warmup=num_warmup, num_samples=num_samples,
@@ -237,8 +237,7 @@ if __name__ == "__main__":
 
     if user_home == "/home/denis":
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster")
-        config = Config(head_folder=head_folder, raw_data_folder=SEEG_data,
-                        output_base=output, separate_by_run=False)
+        config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.C_COMPILER = "g++"
         config.generic.CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
 
@@ -249,8 +248,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_sim_source")
-        config = Config(head_folder=head_folder, raw_data_folder=SEEG_data,
-                        output_base=output, separate_by_run=False)
+        config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
 
     # TVB3 larger preselection:
     sensors_lbls = \
