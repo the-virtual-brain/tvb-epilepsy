@@ -283,6 +283,8 @@ class BasePlotter(object):
                         di = datai[key_i][skip:]
                     if i == j:
                         hist_data = axes[i, j].hist(di, int(numpy.round(numpy.sqrt(len(di)))), log=True)[0]
+                        if i==0 and len(di.shape) > 1 and di.shape[1] > 1:
+                            axes[i, j].legend(["chain " + str(ichain) for ichain in range(di.shape[1])])
                         hist_max = numpy.array(hist_data).max()
                         # The mean line
                         axes[i, j].vlines(di.mean(axis=0), 0, hist_max, color=colorcycle, linestyle='dashed',
