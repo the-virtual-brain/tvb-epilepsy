@@ -516,25 +516,25 @@ class Plotter(BasePlotter):
                                                    title=title_prefix + "Spectral Analysis",
                                                    labels=region_labels, figsize=FiguresConfig.LARGE_SIZE, **kwargs)
 
-        if isinstance(model, EpileptorDPrealistic):
-            if PossibleVariables.SLOPE_T.value in state_variables and \
-                    PossibleVariables.IEXT2_T.value in state_variables:
-                sv_dict = {'1/(1+exp(-10(z-3.03))': 1 / (1 + numpy.exp(-10 * (timeseries.z.squeezed - 3.03))),
-                           'slope': timeseries.slope_t.squeezed, 'Iext2': timeseries.Iext2_t.squeezed}
-                title = model._ui_name + ": Simulated controlled parameters"
+            if isinstance(model, EpileptorDPrealistic):
+                if PossibleVariables.SLOPE_T.value in state_variables and \
+                        PossibleVariables.IEXT2_T.value in state_variables:
+                    sv_dict = {'1/(1+exp(-10(z-3.03))': 1 / (1 + numpy.exp(-10 * (timeseries.z.squeezed - 3.03))),
+                               'slope': timeseries.slope_t.squeezed, 'Iext2': timeseries.Iext2_t.squeezed}
+                    title = model._ui_name + ": Simulated controlled parameters"
 
-                self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
-                                     special_idx=seizure_indices, title=title_prefix + title, labels=region_labels,
-                                     figsize=FiguresConfig.VERY_LARGE_SIZE)
-            if PossibleVariables.X0_T.value in state_variables and PossibleVariables.IEXT1_T.value in state_variables \
-                    and PossibleVariables.K_T.value:
-                sv_dict = {'x0_values': timeseries.x0_t.squeezed, 'Iext1': timeseries.Iext1_t.squeezed,
-                           'K': timeseries.K_t.squeezed}
+                    self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
+                                         special_idx=seizure_indices, title=title_prefix + title, labels=region_labels,
+                                         figsize=FiguresConfig.VERY_LARGE_SIZE)
+                if PossibleVariables.X0_T.value in state_variables and PossibleVariables.IEXT1_T.value in state_variables \
+                        and PossibleVariables.K_T.value:
+                    sv_dict = {'x0_values': timeseries.x0_t.squeezed, 'Iext1': timeseries.Iext1_t.squeezed,
+                               'K': timeseries.K_t.squeezed}
 
-                self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
-                                     special_idx=seizure_indices,
-                                     title=title_prefix + "Simulated parameters",
-                                     labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
+                    self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
+                                         special_idx=seizure_indices,
+                                         title=title_prefix + "Simulated parameters",
+                                         labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
         self.plot_simulated_seeg_timeseries(seeg_list, title_prefix=title_prefix)
 
