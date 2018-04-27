@@ -236,7 +236,7 @@ if __name__ == "__main__":
                              "raw/seeg/ts_seizure")
 
     if user_home == "/home/denis":
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/fit_empirical")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/fit_sim_sensor")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.C_COMPILER = "g++"
         config.generic.CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
@@ -288,7 +288,7 @@ if __name__ == "__main__":
     # seizure = 'SZ3_0001.edf'
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
-    EMPIRICAL = True
+    EMPIRICAL = False
     # stats_model_name = "vep_sde"
     stan_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
