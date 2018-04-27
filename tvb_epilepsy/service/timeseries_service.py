@@ -35,8 +35,8 @@ def normalize_signals(signals, normalization=None):
             signals -= signals.min()
             signals /= signals.max()
         elif isequal_string(normalization, "baseline-amplitude"):
-            signals -= np.percentile(signals, 5, 0)
-            signals /= np.percentile(signals, 95)
+            signals -= np.percentile(signals, 1)
+            signals /= np.percentile(signals, 99)
         else:
             raise_value_error("Ignoring signals' normalization " + normalization +
                              ",\nwhich is not one of the currently available " +
