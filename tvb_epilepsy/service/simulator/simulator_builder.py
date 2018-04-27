@@ -180,7 +180,7 @@ def build_simulator_TVB_paper(model_configuration, connectivity, **kwargs):
 
 
 def build_simulator_TVB_reduced(model_configuration, connectivity, **kwargs):
-    sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D").set_fs(2048.0).set_simulated_period(1000)
+    sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D").set_fs(4096.0).set_simulated_period(1000)
     model = sim_builder.generate_model_tvb(model_configuration)
     sim_settings = sim_builder.build_sim_settings()
     return sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity,
@@ -188,7 +188,7 @@ def build_simulator_TVB_reduced(model_configuration, connectivity, **kwargs):
 
 
 def build_simulator_TVB_fitting(model_configuration, connectivity, **kwargs):
-    sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D").set_fs(2048.0).set_simulated_period(1000)
+    sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D").set_fs(2048.0).set_simulated_period(100)
     model = sim_builder.generate_model_tvb(model_configuration)
     model.tau0 = 30.0
     model.tau1 = 0.5
