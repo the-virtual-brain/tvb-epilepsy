@@ -28,7 +28,7 @@ EP_NAME = "clinical_hypothesis_preseeg"
 
 
 def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], hyp_norm=0.99, manual_hypos=[],
-             sim_type="default", pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG, n_samples=1000,
+             sim_type="paper", pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG, n_samples=1000,
              test_write_read=False):
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
     # -------------------------------Reading data-----------------------------------
@@ -175,28 +175,37 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
                 # ------------------------------Simulation--------------------------------------
                 logger.info("\n\nConfiguring simulation from model_configuration...")
                 sim_builder = SimulatorBuilder(config.simulator.MODE)
-                model = sim_builder.generate_model_tvb(model_configuration)
                 if isequal_string(sim_type, "realistic"):
                     sim_settings = sim_builder.set_model_name("EpileptorDPrealistic"). \
-                        set_fs(4096.0).set_simulated_period(50000).build_sim_settings()
+                        set_fs(4096.0).set_simulated_period(30000).build_sim_settings()
                     sim_settings.noise_type = COLORED_NOISE
                     sim_settings.noise_ntau = 10
+                    model = sim_builder.generate_model_tvb(model_configuration)
                     model.tau0 = 30000.0
                     model.tau1 = 0.2
                     model.slope = 0.25
                 elif isequal_string(sim_type, "fitting"):
-                    sim_settings = sim_builder.set_model_name("EpileptorDP2D").set_fs(4096.0).build_sim_settings()
+                    sim_settings = sim_builder.set_model_name("EpileptorDP2D").set_fs(2048.0).\
+                                                                    set_simulated_period(100).build_sim_settings()
                     sim_settings.noise_intensity = 1e-6
+                    model = sim_builder.generate_model_tvb(model_configuration)
                     model.tau0 = 30.0
                     model.tau1 = 0.5
+                elif isequal_string(sim_type, "reduced"):
+                    sim_settings = sim_builder.set_model_name("EpileptorDP2D").set_fs(4096.0). \
+                                                                    set_simulated_period(1000).build_sim_settings()
+                    model = sim_builder.generate_model_tvb(model_configuration)
                 elif isequal_string(sim_type, "paper"):
                     sim_builder.set_model_name("Epileptor")
                     sim_settings = sim_builder.build_sim_settings()
+                    model = sim_builder.generate_model_tvb(model_configuration)
                 else:
                     sim_settings = sim_builder.build_sim_settings()
+                    model = sim_builder.generate_model_tvb(model_configuration)
 
-                sim, sim_settings, model = sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration,
-                                                                                     head.connectivity, model, sim_settings)
+                sim, sim_settings, model = \
+                    sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration,
+                                                                            head.connectivity, model, sim_settings)
 
                 # Integrator and initial conditions initialization.
                 # By default initial condition is set right on the equilibrium point.
@@ -230,8 +239,8 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
 
                     # Plot results
                     plotter.plot_simulated_timeseries(sim_output, sim.model, lsa_hypothesis.lsa_propagation_indices,
-                                                      seeg_list=seeg, spectral_raster_plot=True,
-                                                      hpf_flag=False, log_scale=True)
+                                                      seeg_list=seeg, spectral_raster_plot=True, log_scale=True,
+                                                      title_prefix=hyp.name)
 
 
 if __name__ == "__main__":
