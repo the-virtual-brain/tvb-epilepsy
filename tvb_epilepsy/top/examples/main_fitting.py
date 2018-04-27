@@ -163,7 +163,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             # Interface with INS stan models
             if stan_model_name.find("vep-fe-rev") >= 0:
                 model_data = build_stan_model_dict_to_interface_ins(statistical_model, target_data.squeezed,
-                                                                    gain_matrix, time=target_data.time_line)
+                                                                    model_configuration.model_connectivity, gain_matrix,
+                                                                    time=target_data.time_line)
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
@@ -236,7 +237,7 @@ if __name__ == "__main__":
                              "raw/seeg/ts_seizure")
 
     if user_home == "/home/denis":
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/fit_sim_source")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/fit_empirical")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.C_COMPILER = "g++"
         config.generic.CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
@@ -288,11 +289,11 @@ if __name__ == "__main__":
     # seizure = 'SZ3_0001.edf'
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
-    EMPIRICAL = False
+    EMPIRICAL = True
     # stats_model_name = "vep_sde"
     stan_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
-    observation_model = OBSERVATION_MODELS.SOURCE_POWER.value
+    observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
     pse_flag = True
     fit_flag = True
     if EMPIRICAL:

@@ -45,7 +45,7 @@ def convert_params_names_to_ins(dicts_list, parameter_names=INS_PARAMS_NAMES_DIC
     return tuple(output)
 
 
-def build_stan_model_dict_to_interface_ins(statistical_model, signals, gain_matrix, time=None,
+def build_stan_model_dict_to_interface_ins(statistical_model, signals, connectivity_matrix, gain_matrix, time=None,
                                            parameter_names=INS_PARAMS_NAMES_DICT):
     """
     Usually takes as input the model_data created with <build_stan_model_dict> and adds fields that are needed to
@@ -54,7 +54,6 @@ def build_stan_model_dict_to_interface_ins(statistical_model, signals, gain_matr
     """
     active_regions = statistical_model.active_regions
     nonactive_regions = statistical_model.nonactive_regions
-    SC = statistical_model.get_truth("MC")
     if time is None:
         time = np.arange(0, statistical_model.dt, statistical_model.time_length)
     statistical_model.parameters = convert_params_names_to_ins(statistical_model.parameters, parameter_names)[0]
@@ -80,9 +79,9 @@ def build_stan_model_dict_to_interface_ins(statistical_model, signals, gain_matr
                 "time_scale_std": statistical_model.parameters["time_scale"].std,
                 "k_mu": np.mean(statistical_model.parameters["k"].mean),
                 "k_std": np.mean(statistical_model.parameters["k"].std),
-                "SC": SC[active_regions][:, active_regions],
+                "SC": connectivity_matrix[active_regions][:, active_regions],
                 "SC_var": 5.0,  # 1/36 = 0.02777777,
-                "Ic": np.sum(SC[active_regions][:, nonactive_regions], axis=1),
+                "Ic": np.sum(connectivity_matrix[active_regions][:, nonactive_regions], axis=1),
                 "sigma_mu": statistical_model.parameters["sigma"].mean,
                 "sigma_std": statistical_model.parameters["sigma"].std,
                 "epsilon_mu": statistical_model.parameters["epsilon"].mean,
