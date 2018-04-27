@@ -129,7 +129,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                 signals = set_empirical_data(empirical_file, path("ts_empirical"),
                                              head, sensors_lbls, sensor_id, times_on_off,
                                              label_strip_fun=lambda s: s.split("POL ")[-1], plotter=plotter,
-                                             title_prefix=hyp.name, bipolar=True)
+                                             title_prefix=hyp.name, bipolar=False)
             else:
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
                 statistical_model.target_data_type = TARGET_DATA_TYPE.SYNTHETIC.value
@@ -169,11 +169,11 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         num_warmup = 1000
         n_chains = 4
-        num_samples = min(int(np.round(1000.0/n_chains)), 500)
+        num_samples = max(int(np.round(1000.0/n_chains)), 500)
         if fit_flag:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
                                                       chains=n_chains, num_warmup=num_warmup, num_samples=num_samples,
-                                                      refresh=1, max_depth=10, delta=0.8, save_warmup=1, plot_warmup=1,
+                                                      refresh=1, max_depth=12, delta=0.85, save_warmup=1, plot_warmup=1,
                                                       **kwargs)
             writer.write_generic(ests, path("FitEst"))
             writer.write_generic(samples, path("FitSamples"))
@@ -236,7 +236,7 @@ if __name__ == "__main__":
                              "raw/seeg/ts_seizure")
 
     if user_home == "/home/denis":
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/fit_sim_source")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.C_COMPILER = "g++"
         config.generic.CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
@@ -292,7 +292,7 @@ if __name__ == "__main__":
     # stats_model_name = "vep_sde"
     stan_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
-    observation_model = OBSERVATION_MODELS.SOURCE_POWER.value
+    observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
     pse_flag = True
     fit_flag = True
     if EMPIRICAL:
