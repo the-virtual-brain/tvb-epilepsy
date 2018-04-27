@@ -292,7 +292,7 @@ if __name__ == "__main__":
     # stats_model_name = "vep_sde"
     stan_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
-    observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
+    observation_model = OBSERVATION_MODELS.SOURCE_POWER.value
     pse_flag = True
     fit_flag = True
     if EMPIRICAL:
