@@ -370,13 +370,22 @@ class Plotter(BasePlotter):
                                       title='Spectral Analysis', figure_name=None, labels=[],
                                       figsize=FiguresConfig.VERY_LARGE_SIZE, **kwargs):
         nS = data.shape[1]
-        if len(special_idx) > 0:
+        n_special_idx = len(special_idx)
+        if n_special_idx > 0:
             data = data[:, special_idx]
-        nS = data.shape[1]
+            nS = data.shape[1]
+            if len(labels) > n_special_idx:
+                labels = numpy.array([str(ilbl) + ". " + str(labels[ilbl]) for ilbl in special_idx])
+            elif len(labels) == n_special_idx:
+                labels = numpy.array([str(ilbl) + ". " + str(label) for ilbl, label in zip(special_idx, labels)])
+            else:
+                labels = numpy.array([str(ilbl) for ilbl in special_idx])
+        else:
+            if len(labels) != nS:
+                labels = numpy.array([str(ilbl) for ilbl in range(nS)])
         if nS > 20:
             warning("It is not possible to plot spectral analysis plots for more than 20 signals!")
             return
-        labels = generate_region_labels(nS, labels, ". ")[special_idx]
         if not isinstance(time_units, basestring):
             time_units = list(time_units)[0]
         time_units = ensure_string(time_units)
@@ -458,39 +467,32 @@ class Plotter(BasePlotter):
             title_prefix = title_prefix + ", " + model._ui_name + ": "
         region_labels = timeseries.space_labels
         state_variables = timeseries.dimension_labels[TimeseriesDimensions.VARIABLES.value]
+        source_ts = timeseries.get_source()
+        start_plot = int(numpy.round(0.01 * source_ts.data.shape[0]))
+        self.plot_raster({'source(t)': source_ts.squeezed[start_plot:, :]},
+                         timeseries.time_line.flatten()[start_plot:],
+                         time_units=timeseries.time_unit, special_idx=seizure_indices,
+                         title=title_prefix + "Simulated source rasterplot", offset=2.0,
+                         labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
         if isinstance(model, EpileptorDP2D):
             # We assume that at least x1 and z are available in res
-            sv_dict = {'x1(t)': timeseries.x1.data, 'z(t)': timeseries.z.data}
+            sv_dict = {'x1(t)': timeseries.x1.squeezed, 'z(t)': timeseries.z.squeezed}
 
             self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
                                  special_idx=seizure_indices, title=title_prefix + "Simulated TAVG",
                                  labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
-
-            self.plot_raster({'x1(t)': timeseries.x1.data}, timeseries.time_line, time_units=timeseries.time_unit,
-                             special_idx=seizure_indices, title=title_prefix + "Simulated x1 rasterplot",
-                             offset=2.0, labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
-
-            sv_dict = {'x1': timeseries.x1.data, 'z': timeseries.z.data}
 
             self.plot_trajectories(sv_dict, special_idx=seizure_indices,
                                    title=title_prefix + 'State space trajectories', labels=region_labels,
                                    figsize=FiguresConfig.LARGE_SIZE)
         else:
             # We assume that at least source and z are available in res
-            source_ts = timeseries.get_source()
             sv_dict = {'source(t)': source_ts.squeezed, 'z(t)': timeseries.z.squeezed}
 
             self.plot_timeseries(sv_dict, timeseries.time_line, time_units=timeseries.time_unit,
                                  special_idx=seizure_indices, title=title_prefix + "Simulated source-z",
                                  labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
-
-            start_plot = int(numpy.round(0.01 * source_ts.data.shape[0]))
-            self.plot_raster({'source': source_ts.squeezed[start_plot:, :]},
-                             timeseries.time_line.flatten()[start_plot:],
-                             time_units=timeseries.time_unit, special_idx=seizure_indices,
-                             title=title_prefix + "Simulated source rasterplot", offset=2.0,
-                             labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
             if PossibleVariables.X1.value in state_variables and PossibleVariables.Y1.value in state_variables:
                 sv_dict = {'x1(t)': timeseries.x1.squeezed, 'y1(t)': timeseries.y1.squeezed}
@@ -508,7 +510,7 @@ class Plotter(BasePlotter):
                                      labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
             if spectral_raster_plot:
-                self.plot_spectral_analysis_raster(timeseries.time_line, timeseries.source.squeezed,
+                self.plot_spectral_analysis_raster(timeseries.time_line, source_ts.squeezed,
                                                    time_units=timeseries.time_unit, freq=None,
                                                    special_idx=seizure_indices,
                                                    title=title_prefix + "Spectral Analysis",
@@ -533,7 +535,6 @@ class Plotter(BasePlotter):
                                      special_idx=seizure_indices,
                                      title=title_prefix + "Simulated parameters",
                                      labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
-
 
         self.plot_simulated_seeg_timeseries(seeg_list, title_prefix=title_prefix)
 
