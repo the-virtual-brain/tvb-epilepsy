@@ -35,8 +35,6 @@ def _compute_and_write_seeg(source_timeseries, sensors_list, filename, hpf_flag=
             if hpf_flag:
                 seeg = ts_service.filter(seeg, hpf_low, hpf_high, mode='bandpass', order=3)
 
-            seeg = ts_service.normalize(seeg, "baseline-amplitude")
-
             # TODO: test the case where we save subsequent seeg data from different sensors
             h5_writer.write_ts_seeg_epi(seeg, source_timeseries.time_step, filename)
             seeg_data.append(seeg)
