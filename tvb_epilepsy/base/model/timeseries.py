@@ -268,7 +268,7 @@ class Timeseries(object):
             else:
                 self.logger.warn("%s is computed using %sstate variable!" % (
                     PossibleVariables.SOURCE.value, PossibleVariables.X1.value))
-                lfp_data = y0_ts.data
+                lfp_data = -y0_ts.data
             lfp_dim_labels = OrderedDict(
                 {TimeseriesDimensions.SPACE.value: self.dimension_labels[TimeseriesDimensions.SPACE.value],
                  TimeseriesDimensions.VARIABLES.value: [PossibleVariables.SOURCE.value]})
