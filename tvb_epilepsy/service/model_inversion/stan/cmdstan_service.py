@@ -13,15 +13,15 @@ from tvb_epilepsy.service.model_inversion.stan.stan_factory import *
 class CmdStanService(StanService):
 
     def __init__(self, model_name=None, model=None, model_code=None, model_code_path="", model_data_path="",
-                 output_filepath=None, diagnostic_filepath=None, summary_filepath=None,
+                 output_filepath=None, diagnostic_filepath=None, summary_filepath=None, command_filepath=None,
                  fitmethod="sample", random_seed=12345, init="random", config=None, **options):
         super(CmdStanService, self).__init__(model_name, model, model_code, model_code_path, model_data_path,
                                              fitmethod, config)
         if not os.path.isfile(os.path.join(self.config.generic.CMDSTAN_PATH, 'runCmdStanTests.py')):
             raise_value_error('Please provide CmdStan path, e.g. lib.cmdstan_path("/path/to/")!')
         self.path = self.config.generic.CMDSTAN_PATH
-        self.output_filepath, self.diagnostic_filepath, self.summary_filepath = \
-            self.set_output_files(output_filepath, diagnostic_filepath, summary_filepath, False)
+        self.output_filepath, self.diagnostic_filepath, self.summary_filepath, self.command_filepath = \
+            self.set_output_files(output_filepath, diagnostic_filepath, summary_filepath, command_filepath, False)
         self.assert_fitmethod()
         self.command = ""
         self.options = {"init": init, "random_seed": random_seed}
@@ -34,31 +34,35 @@ class CmdStanService(StanService):
             self.fitmethod = "sample"
         elif self.fitmethod.lower().find("v") >= 0:  # for variational or vb or advi
             self.fitmethod = "variational"
-        elif self.fitmethod.lower().find("optimiz") >= 0:  # for optimization or optimizing or optimize
+        elif self.fitmethod.lower().find("opt") >= 0:  # for optimization or optimizing or optimize
             self.fitmethod = "optimize"
-        elif self.fitmethod.lower().find("diagnos") >= 0:  # for diagnose or diagnosing
+        elif self.fitmethod.lower().find("diag") >= 0:  # for diagnose or diagnosing
             self.fitmethod = "diagnose"
         else:
             raise_value_error(self.fitmethod + " does not correspond to one of the input methods:\n" +
                               "sample, variational, optimize, diagnose")
 
-    def set_output_files(self, output_filepath=None, diagnostic_filepath=None, summary_filepath=None, check_files=False,
-                         overwrite_output_files=False):
+    def set_output_files(self, output_filepath=None, diagnostic_filepath=None, summary_filepath=None,
+                         command_filepath=None, check_files=False, overwrite_output_files=False):
         if output_filepath is None:
             output_filepath = os.path.join(self.config.out.FOLDER_RES, STAN_OUTPUT_OPTIONS["file"])
         if diagnostic_filepath is None:
             diagnostic_filepath = os.path.join(self.config.out.FOLDER_RES, STAN_OUTPUT_OPTIONS["diagnostic_file"])
         if summary_filepath is None:
             summary_filepath = os.path.join(self.config.out.FOLDER_RES, "stan_summary.csv")
+        if command_filepath is None:
+            command_filepath = os.path.join(self.config.out.FOLDER_RES, "command.txt")
         if check_files:
             return change_filename_or_overwrite_with_wildcard(output_filepath.split(".csv")[0],
                                                               overwrite_output_files) + ".csv", \
                    change_filename_or_overwrite_with_wildcard(diagnostic_filepath.split(".csv")[0],
                                                               overwrite_output_files) + ".csv", \
                    change_filename_or_overwrite_with_wildcard(summary_filepath.split(".csv")[0],
-                                                              overwrite_output_files) + ".csv"
+                                                              overwrite_output_files) + ".csv", \
+                   change_filename_or_overwrite_with_wildcard(command_filepath.split(".txt")[0],
+                                                               overwrite_output_files) + ".txt"
         else:
-            return output_filepath, diagnostic_filepath, summary_filepath
+            return output_filepath, diagnostic_filepath, summary_filepath, command_filepath
 
     def set_model_data(self, debug=0, simulate=0, **kwargs):
         model_data = super(CmdStanService, self).set_model_data(debug, simulate, **kwargs)
@@ -116,10 +120,11 @@ class CmdStanService(StanService):
             **kwargs):
         num_warmup = kwargs.get("num_warmup", 0)
         # Confirm output files and check if overwriting is necessary
-        self.output_filepath, self.diagnostic_filepath, self.summary_filepath = \
+        self.output_filepath, self.diagnostic_filepath, self.summary_filepath, self.command_filepath = \
             self.set_output_files(kwargs.pop("output_filepath", self.output_filepath),
                                   kwargs.pop("diagnostic_filepath", self.diagnostic_filepath),
                                   kwargs.pop("summary_filepath", self.summary_filepath),
+                                  kwargs.pop("command_path", self.command_filepath),
                                   True, overwrite_output_files)
         self.model_path = kwargs.pop("model_path", self.model_path)
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
@@ -131,6 +136,8 @@ class CmdStanService(StanService):
                                          self.output_filepath, self.diagnostic_filepath)
         self.logger.info("Model fitting with " + self.fitmethod +
                          " method of model: " + self.model_path + "...")
+        with open(self.command_filepath, "w") as text_file:
+            text_file.write(self.command)
         self.fitting_time = execute_command(self.command.replace("\t", ""), shell=True)[1]
         self.logger.info(str(self.fitting_time) + ' sec required to ' + self.fitmethod + "!")
         self.logger.info("Computing stan summary...")
