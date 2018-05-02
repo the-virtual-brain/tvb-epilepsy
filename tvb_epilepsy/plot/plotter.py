@@ -827,7 +827,7 @@ class Plotter(BasePlotter):
                                                        axis=1).squeeze().T
             plot_figure_name = lambda ichain: figure_name
         else:
-            plot_samples = lambda s: s[:, skip_samples:]
+            plot_samples = lambda s: s[skip_samples:]
             plot_figure_name = lambda ichain: figure_name + ": chain " + str(ichain + 1)
         labels = generate_region_labels(samples[0][params[0]].shape[-1], labels)
         params_labels = {}
@@ -901,7 +901,7 @@ class Plotter(BasePlotter):
         self.region_parameters_violin_plots(samples, truth, priors, stats, region_violin_params, skip_samples,
                                             per_chain=per_chain_plotting, labels=region_labels,
                                             seizure_indices=seizure_indices, figure_name=title_violin_plot)
-        if "x0" in region_violin_params and samples[0]["x0"].shape[1] < 10:
+        if not(per_chain_plotting) and "x0" in region_violin_params and samples[0]["x0"].shape[1] < 10:
             x0_K_pair_plot_params = []
             x0_K_pair_plot_samples = {}
             if samples[0].get("K", None) is not None:
@@ -1032,6 +1032,9 @@ class Plotter(BasePlotter):
 
         self.plot_fit_region_params(samples, stats, statistical_model, region_violin_params, seizure_indices,
                                     regions_labels, regions_mode, False, skip_samples, title_prefix)
+
+        self.plot_fit_region_params(samples, stats, statistical_model, region_violin_params, seizure_indices,
+                                    regions_labels, regions_mode, True, skip_samples, title_prefix)
 
         self.plot_fit_timeseries(target_data, samples, ests, stats, statistical_model,
                                  seizure_indices, skip_samples, trajectories_plot, title_prefix)
