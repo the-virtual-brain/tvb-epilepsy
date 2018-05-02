@@ -81,7 +81,7 @@ transformed data {
     //matrix[ns, nn] log_gain = log(gain);
     matrix [nn, nn] SC_ = SC;
     for (i in 1:nn) SC_[i, i] = 0;
-        SC_ /= max(SC_) * rows(SC_);
+        SC_ = SC_ / max(SC_) * rows(SC_);
 }
 
 parameters {
