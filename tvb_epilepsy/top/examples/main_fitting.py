@@ -168,9 +168,10 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        num_warmup = 1000
-        n_chains = 4
-        num_samples = max(int(np.round(1000.0/n_chains)), 500)
+        num_warmup = 20  #1000
+        skip_samples = num_warmup
+        n_chains = 2  # 4
+        num_samples = 30  # max(int(np.round(1000.0/n_chains)), 500)
         if fit_flag:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
                                                       chains=n_chains, num_warmup=num_warmup, num_samples=num_samples,
@@ -183,7 +184,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         else:
             ests, samples, summary = stan_service.read_output()
             if fitmethod.find("sampl") >= 0:
-                plotter.plot_HMC(samples, skip_samples=num_warmup, figure_name=hyp.name + " HMC NUTS trace")
+                plotter.plot_HMC(samples, figure_name=hyp.name + " HMC NUTS trace")
 
         # Interface with INS stan models
         if stan_model_name.find("vep-fe-rev") >= 0:
@@ -194,11 +195,12 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         samples, target_data = samples_to_timeseries(samples, model_data, target_data, head.connectivity.region_labels)
 
         # -------------------------- Plot fitting results: ------------------------------------------------------------
-        plotter.plot_fit_results(ests, samples, model_data, target_data, statistical_model, stats={"Rhat": Rhat},
+        if stan_service.fitmethod.find("opt") < 0:
+            plotter.plot_fit_results(ests, samples, model_data, target_data, statistical_model, stats={"Rhat": Rhat},
                                  pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
                                  region_violin_params=["x0", "x1init", "zinit"], regions_mode="active",
                                  regions_labels=head.connectivity.region_labels, trajectories_plot=True,
-                                 connectivity_plot=False, skip_samples=num_warmup, title_prefix=hyp.name)
+                                 connectivity_plot=False, skip_samples=skip_samples, title_prefix=hyp.name)
 
 
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
@@ -209,7 +211,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             x0_values_fit[statistical_model.active_regions] = \
                 fit_model_configuration_builder._compute_x0_values_from_x0_model(est['x0'])
             hyp_fit = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).\
-                                          set_name('fit' + str(id_est) + "_" + hyp.name).\
+                                          set_name('fit' + str(id_est+1) + "_" + hyp.name).\
                                           set_x0_hypothesis(list(statistical_model.active_regions),
                                                             x0_values_fit[statistical_model.active_regions]).\
                                           build_hypothesis()
@@ -248,7 +250,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fitADVI")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
 
     # TVB3 larger preselection:
@@ -289,7 +291,7 @@ if __name__ == "__main__":
     # seizure = 'SZ3_0001.edf'
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
-    EMPIRICAL = True
+    EMPIRICAL = False
     # stats_model_name = "vep_sde"
     stan_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
