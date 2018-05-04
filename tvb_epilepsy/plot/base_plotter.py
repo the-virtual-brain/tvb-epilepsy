@@ -297,7 +297,7 @@ class BasePlotter(object):
                             else:
                                 diag_line_plot[1] = diag_line_plot[1]/numpy.max(diag_line_plot[1])*hist_max
                             if len(diag_line_plot[0]) == 1:
-                                axes[i, j].plot(diag_line_plot[0], diag_line_plot[1], "o", color='k', markersize=5)
+                                axes[i, j].plot(diag_line_plot[0], diag_line_plot[1], "o", color='k', markersize=10)
                             else:
                                 axes[i, j].plot(diag_line_plot[0], diag_line_plot[1], color='k',
                                                 linestyle="dashed", linewidth=1)
@@ -306,7 +306,7 @@ class BasePlotter(object):
                         if len(diag_marker_plot) in [1, 2]:
                             if len(diag_marker_plot) == 1:
                                 diag_marker_plot = confirm_y_coordinate(diag_marker_plot, hist_max)
-                            axes[i, j].plot(diag_marker_plot[0], diag_marker_plot[1], "*", color='k',markersize=5)
+                            axes[i, j].plot(diag_marker_plot[0], diag_marker_plot[1], "*", color='k', markersize=10)
 
                     else:
                         if transpose:
