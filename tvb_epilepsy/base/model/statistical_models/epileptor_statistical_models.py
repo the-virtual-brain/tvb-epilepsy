@@ -58,7 +58,7 @@ class StatisticalModel(object):
         return parameter
 
     def get_truth(self, parameter_name):
-        if self.target_data_type is TARGET_DATA_TYPE.SYNTHETIC.value:
+        if self.target_data_type == TARGET_DATA_TYPE.SYNTHETIC.value:
             truth = self.ground_truth.get(parameter_name, np.nan)
             if truth is np.nan:
                 truth = getattr(self.model_config, parameter_name, np.nan)
