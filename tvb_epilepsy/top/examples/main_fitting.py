@@ -170,7 +170,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        num_warmup = 200  #1000
+        num_warmup = 500  #1000
         skip_samples = num_warmup
         n_chains = 2  # 4
         num_samples = 300  # max(int(np.round(1000.0/n_chains)), 500)
@@ -309,5 +309,5 @@ if __name__ == "__main__":
                             stan_service="CmdStan", pse_flag=pse_flag, fit_flag=fit_flag, config=config)
     else:
         main_fit_sim_hyplsa(stan_model_name=stan_model_name, observation_model=observation_model,
-                            sensors_lbls=sensors_lbls, times_on_off=[50.0, 550.0], fitmethod=fitmethod,
+                            sensors_lbls=sensors_lbls, times_on_off=times_on_off, fitmethod=fitmethod,
                             stan_service="CmdStan", pse_flag=pse_flag, fit_flag=fit_flag, config=config)
