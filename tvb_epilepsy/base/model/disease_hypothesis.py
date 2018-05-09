@@ -9,8 +9,8 @@ TODO: if needed in the future: Generate a richer disease hypothesis as a combina
 from copy import deepcopy
 import numpy as np
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, dicts_of_lists_to_lists_of_dicts, ensure_list, \
-    generate_region_labels
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list, \
+                                                          generate_region_labels, dicts_of_lists_to_lists_of_dicts
 
 logger = initialize_logger(__name__)
 
@@ -49,7 +49,7 @@ class DiseaseHypothesis(object):
              "04. Excitability (x0) disease indices": self.x0_indices,
              "05. Excitability (x0) disease values": self.x0_values,
              "06. Epileptogenicity (E) disease indices": self.e_indices,
-             "07. Epileptogenicity (E) disease indices": self.e_values,
+             "07. Epileptogenicity (E) disease values": self.e_values,
              "08. Connectivity (W) disease indices": self.w_indices,
              "09. Connectivity (W) disease values": self.w_values,
              "10. Propagation indices": self.lsa_propagation_indices,
@@ -60,7 +60,7 @@ class DiseaseHypothesis(object):
         else:
             d.update({"11. Propagation strengths of indices": self.lsa_propagation_strengths})
         # d.update({"11. Connectivity": str(self.connectivity)})
-        return formal_repr(self, d)
+        return formal_repr(self, sort_dict(d))
 
     def __str__(self):
         return self.__repr__()
