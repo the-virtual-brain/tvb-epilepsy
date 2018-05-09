@@ -13,23 +13,25 @@ from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import build_sta
 from tvb_epilepsy.top.scripts.fitting_scripts import *
 from tvb_epilepsy.plot.plotter import Plotter
 
+
 def set_hypotheses(head, config):
     # Formulate a VEP hypothesis manually
     hyp_builder = HypothesisBuilder(head.connectivity.number_of_regions, config).set_normalize(0.99)
 
     # Regions of Pathological Excitability hypothesis:
-    x0_indices = [2, 25]
+    x0_indices = [2, 24]
     x0_values = [0.01, 0.01]
     hyp_builder.set_x0_hypothesis(x0_indices, x0_values)
 
     # Regions of Model Epileptogenicity hypothesis:
-    e_indices = list(range(head.connectivity.number_of_regions))
-    e_indices.remove(2)
-    e_indices.remove(25)
-    e_values = np.zeros((head.connectivity.number_of_regions,)) + 0.01
-    e_values[[1, 26]] = 0.99
-    e_values = np.delete(e_values, [2, 25]).tolist()
-    print(e_indices, e_values)
+    e_indices = [1, 26]
+    # e_indices = list(range(head.connectivity.number_of_regions))
+    # e_indices.remove(2)
+    # e_indices.remove(25)
+    # e_values = np.zeros((head.connectivity.number_of_regions,)) + 0.01
+    # e_values[[1, 26]] = 0.99
+    # e_values = np.delete(e_values, [2, 25]).tolist()
+    e_values = np.array([0.99] * 2)
     hyp_builder.set_e_hypothesis(e_indices, e_values)
 
     # Regions of Connectivity hypothesis:
@@ -83,7 +85,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                      config=config)
     stan_service.set_or_compile_model()
 
-    for hyp in hypotheses[1:]:
+    for hyp in hypotheses[:1]:
         base_path = os.path.join(config.out.FOLDER_RES, hyp.name)
         # Set model configuration and compute LSA
         model_configuration, lsa_hypothesis, pse_results = \
@@ -135,9 +137,9 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                 statistical_model.target_data_type = TARGET_DATA_TYPE.SYNTHETIC.value
                 signals, simulator = \
                     set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, statistical_model,
-                                              sensor_id, sim_type="paper", times_on_off=times_on_off, config=config,
+                                              sensor_id, sim_type="fitting", times_on_off=times_on_off, config=config,
                                               plotter=plotter, title_prefix=hyp.name, bipolar=False, filter_flag=False,
-                                              envelope_flag=False, smooth_flag=True, **kwargs)
+                                              envelope_flag=False, smooth_flag=False, **kwargs)
                 statistical_model.ground_truth.update({"tau1": np.mean(simulator.model.tt),
                                                        "tau0": 1.0 / np.mean(simulator.model.r),
                                                        "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
@@ -168,10 +170,10 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        num_warmup = 20  #1000
+        num_warmup = 200  #1000
         skip_samples = num_warmup
         n_chains = 2  # 4
-        num_samples = 30  # max(int(np.round(1000.0/n_chains)), 500)
+        num_samples = 300  # max(int(np.round(1000.0/n_chains)), 500)
         if fit_flag:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
                                                       chains=n_chains, num_warmup=num_warmup, num_samples=num_samples,
@@ -250,7 +252,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit2D")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
 
     # TVB3 larger preselection:
@@ -292,10 +294,12 @@ if __name__ == "__main__":
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
     EMPIRICAL = False
+    # times_on_off = [50.0, 550.0]  # for paper"" simulations
+    times_on_off = [1100.0, 1400.0]  # for paper"" simulations
     # stats_model_name = "vep_sde"
     stan_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
-    observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
+    observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  # OBSERVATION_MODELS.SEEG_LOGPOWER.value
     pse_flag = True
     fit_flag = True
     if EMPIRICAL:
