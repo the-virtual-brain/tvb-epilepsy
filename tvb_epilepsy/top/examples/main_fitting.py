@@ -129,7 +129,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                 statistical_model.target_data_type = TARGET_DATA_TYPE.EMPIRICAL.value
                 # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
                 signals = set_empirical_data(empirical_file, path("ts_empirical"),
-                                             head, sensors_lbls, sensor_id, times_on_off,
+                                             head, sensors_lbls, sensor_id, statistical_model.dt, times_on_off,
                                              label_strip_fun=lambda s: s.split("POL ")[-1], plotter=plotter,
                                              title_prefix=hyp.name, bipolar=False)
             else:
@@ -140,13 +140,11 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                               sensor_id, sim_type="fitting", times_on_off=times_on_off, config=config,
                                               plotter=plotter, title_prefix=hyp.name, bipolar=False, filter_flag=False,
                                               envelope_flag=False, smooth_flag=False, **kwargs)
-                # statistical_model.ground_truth.update({"tau1": np.mean(simulator.model.tt),
-                #                                        "tau0": 1.0 / np.mean(simulator.model.r),
-                #                                        "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
-                statistical_model.ground_truth.update({"tau1": np.mean(simulator.model.tau1),
-                                                       "tau0": np.mean(simulator.model.tau0),
+                statistical_model.ground_truth.update({"tau1": np.mean(simulator.model.tau1), # "tau1": np.mean(simulator.model.tt),
+                                                       "tau0": np.mean(simulator.model.tau0),  #1.0 / np.mean(simulator.model.r),
                                                        "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
                 statistical_model.tau0 = np.mean(simulator.model.tau0)
+                statistical_model.dt = simulator.simTVB.integrator.dt
 
             # -------------------------- Select and set target data from signals ---------------------------------------
             if statistical_model.observation_model in OBSERVATION_MODELS.SEEG.value:
@@ -174,10 +172,10 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        num_warmup = 500  #1000
+        num_warmup = 1000
         skip_samples = num_warmup
-        n_chains = 2  # 4
-        num_samples = 300  # max(int(np.round(1000.0/n_chains)), 500)
+        n_chains = 4
+        num_samples = max(int(np.round(1000.0/n_chains)), 500)
         if fit_flag:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
                                                       chains=n_chains, num_warmup=num_warmup, num_samples=num_samples,
