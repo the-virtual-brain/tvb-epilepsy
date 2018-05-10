@@ -140,9 +140,13 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                               sensor_id, sim_type="fitting", times_on_off=times_on_off, config=config,
                                               plotter=plotter, title_prefix=hyp.name, bipolar=False, filter_flag=False,
                                               envelope_flag=False, smooth_flag=False, **kwargs)
-                statistical_model.ground_truth.update({"tau1": np.mean(simulator.model.tt),
-                                                       "tau0": 1.0 / np.mean(simulator.model.r),
+                # statistical_model.ground_truth.update({"tau1": np.mean(simulator.model.tt),
+                #                                        "tau0": 1.0 / np.mean(simulator.model.r),
+                #                                        "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
+                statistical_model.ground_truth.update({"tau1": np.mean(simulator.model.tau1),
+                                                       "tau0": np.mean(simulator.model.tau0),
                                                        "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
+                statistical_model.tau0 = np.mean(simulator.model.tau0)
 
             # -------------------------- Select and set target data from signals ---------------------------------------
             if statistical_model.observation_model in OBSERVATION_MODELS.SEEG.value:
@@ -295,7 +299,7 @@ if __name__ == "__main__":
     # times_on_off = [20.0, 100.0]
     EMPIRICAL = False
     # times_on_off = [50.0, 550.0]  # for paper"" simulations
-    times_on_off = [1100.0, 1400.0]  # for paper"" simulations
+    times_on_off = [1100.0, 1300.0]  # for paper"" simulations
     # stats_model_name = "vep_sde"
     stan_model_name = "vep-fe-rev-09dp"
     fitmethod = "sample"
