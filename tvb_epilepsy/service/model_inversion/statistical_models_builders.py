@@ -88,14 +88,14 @@ class StatisticalModelBuilderBase(object):
 
 class StatisticalModelBuilder(StatisticalModelBuilderBase):
 
-    parameters = [XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K"]
+    parameters = [XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "K"]
     sigma_x = SIGMA_X0_DEF
     sigma_x_scale = 3
     MC_direction_split = 0.5
     model_config = ModelConfiguration()
 
     def __init__(self, model_name="vep", model_config=ModelConfiguration(),
-                 parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K"],
+                 parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "K"],
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                  sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5):
         super(StatisticalModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode)
@@ -168,19 +168,6 @@ class StatisticalModelBuilder(StatisticalModelBuilderBase):
                 {sigma_x: generate_lognormal_parameter(sigma_x_name, self.sigma_x, 0.0, 10*self.sigma_x,
                                                        sigma=self.sigma_x, sigma_scale=10, p_shape=(), use="scipy")})
 
-        # Time scales
-        if "tau1" in self.parameters:
-            self.logger.info("...tau1...")
-            parameters.update(
-                {"tau1": generate_lognormal_parameter("tau1", TAU1_DEF, TAU1_MIN, TAU1_MAX, sigma=None,
-                                                      sigma_scale=TAU1_SCALE, p_shape=(), use="scipy")})
-
-        if "tau0" in self.parameters:
-            self.logger.info("...tau0...")
-            parameters.update(
-                {"tau0": generate_lognormal_parameter("tau0", TAU0_DEF, TAU0_MIN, TAU0_MAX, sigma=None,
-                                                      sigma_scale=TAU0_SCALE, p_shape=(), use="scipy")})
-
         # Coupling
         if "MC" in self.parameters:
             self.logger.info("...MC...")
@@ -222,19 +209,23 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
     time_length = 0
     dt = DT_DEF
     active_regions = []
+    tau1 = TAU1_DEF
+    tau0 = TAU0_DEF
 
     def __init__(self, model_name="vep_ode", model_config=ModelConfiguration(),
                  parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1init", "zinit",
                              "sigma_init", "epsilon", "scale", "offset"],
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                  sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5,
-                 sigma_init=SIGMA_INIT_DEF, epsilon=EPSILON_DEF,
+                 sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF,
                  scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF,
                  observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  number_of_signals=0, time_length=0, dt=DT_DEF, active_regions=[]):
         super(ODEStatisticalModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode,
                                                          sigma_x, sigma_x_scale, MC_direction_split)
         self.sigma_init = sigma_init
+        self.tau1 = tau1
+        self.tau0 = tau0
         self.epsilon = epsilon
         self.scale = scale
         self.offset = offset
@@ -279,6 +270,19 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
                                                      optimize_pdf=False, use="scipy",
                                                      **{"mu": zinit, "sigma": self.sigma_init/2})})
 
+        # Time scales
+        if "tau1" in self.parameters:
+            self.logger.info("...tau1...")
+            parameters.update(
+                {"tau1": generate_lognormal_parameter("tau1", self.tau1, TAU1_MIN, TAU1_MAX, sigma=None,
+                                                      sigma_scale=TAU1_SCALE, p_shape=(), use="scipy")})
+
+        if "tau0" in self.parameters:
+            self.logger.info("...tau0...")
+            parameters.update(
+                {"tau0": generate_lognormal_parameter("tau0", self.tau0, TAU0_MIN, TAU0_MAX, sigma=None,
+                                                      sigma_scale=TAU0_SCALE, p_shape=(), use="scipy")})
+
         if "sigma_init" in self.parameters:
             self.logger.info("...sigma_init...")
             parameters.update(
@@ -314,7 +318,8 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
         parameters = self.generate_parameters()
         model = ODEStatisticalModel(self.name, self.number_of_regions, target_data_type, self.xmode, self.priors_mode,
                                     parameters, ground_truth, self.model_config, self.observation_model,
-                                    self.sigma_x, self.sigma_init, self.scale, self.offset, self.epsilon,
+                                    self.sigma_x, self.sigma_init, self.tau1, self.tau0,
+                                    self.scale, self.offset, self.epsilon,
                                     self.number_of_signals, self.time_length, self.dt, self.active_regions)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
@@ -333,13 +338,13 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
                              "sigma_init",  "dX1t", "dZt", "sigma", "epsilon", "scale", "offset"],
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                  sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5,
-                 sigma_init=SIGMA_INIT_DEF, epsilon=EPSILON_DEF, sigma=SIGMA_DEF,
+                 sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF, sigma=SIGMA_DEF,
                  scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF,
                  sde_mode=SDE_MODES.NONCENTERED.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  number_of_signals=0, time_length=0, dt=DT_DEF, active_regions=[]):
         super(SDEStatisticalModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode,
                                                          sigma_x, sigma_x_scale, MC_direction_split, sigma_init,
-                                                         epsilon, scale, offset, observation_model,
+                                                         tau1, tau0, epsilon, scale, offset, observation_model,
                                                          number_of_signals, time_length, dt, active_regions)
         self.sigma_init = sigma_init
         self.sde_mode = sde_mode
@@ -395,7 +400,8 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
         parameters = self.generate_parameters()
         model = SDEStatisticalModel(self.name, self.number_of_regions, target_data_type, self.xmode, self.priors_mode,
                                     parameters, ground_truth, self.model_config, self.observation_model,
-                                    self.sigma_x, self.sigma_init, self.sigma, self.scale, self.offset, self.epsilon,
+                                    self.sigma_x, self.sigma_init, self.sigma, self.tau1, self.tau0,
+                                    self.scale, self.offset, self.epsilon,
                                     self.number_of_signals, self.time_length, self.dt, self.active_regions,
                                     self.sde_mode)
         self.logger.info(self.__class__.__name__  + " took " +

@@ -66,6 +66,9 @@ class StatisticalModel(object):
                 if truth is np.nan and parameter_name == "MC" or parameter_name == "FC":
                     truth = self.model_config.model_connectivity
             if truth is np.nan:
+                # TODO: decide if it is a good idea to return this kind of modeler's "truth"...
+                truth = getattr(self, parameter_name, np.nan)
+            if truth is np.nan:
                 warning("Ground truth value for parameter " + parameter_name + " was not found!")
             return truth
         return np.nan
@@ -74,7 +77,8 @@ class StatisticalModel(object):
     def get_prior(self, parameter_name):
         parameter = self.get_parameter(parameter_name)
         if parameter is None:
-            return self.get_truth(parameter_name), None
+            # TODO: decide if it is a good idea to return this kind of modeler's fixed "prior"...
+            return getattr(self, parameter_name, np.nan), None
         else:
             return parameter.mean, parameter
 
@@ -91,8 +95,10 @@ class ODEStatisticalModel(StatisticalModel):
 
     observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
     sigma_init = SIGMA_INIT_DEF
-    scale = 1.0
-    offset = 0.0
+    tau1 = TAU1_DEF
+    tau0 = TAU0_DEF
+    scale = SCALE_SIGNAL_DEF
+    offset = OFFSET_SIGNAL_DEF
     epsilon = EPSILON_DEF
     number_of_target_data = 0
     time_length = 0
@@ -114,7 +120,8 @@ class ODEStatisticalModel(StatisticalModel):
     def __init__(self, name='vep_ode',number_of_regions=0, target_data_type=TARGET_DATA_TYPE.EMPIRICAL.value,
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, parameters={}, ground_truth={},
                  model_config=ModelConfiguration(), observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
-                 sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, scale=1.0, offset=0.0, epsilon=EPSILON_DEF,
+                 sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
+                 scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF, epsilon=EPSILON_DEF,
                  number_of_target_data=0, time_length=0, dt=DT_DEF, active_regions=[]):
         super(ODEStatisticalModel, self).__init__(name, number_of_regions,  target_data_type, xmode, priors_mode,
                                                   parameters, ground_truth, model_config, sigma_x)
@@ -130,9 +137,11 @@ class ODEStatisticalModel(StatisticalModel):
             raise_value_error("Statistical model's observation model " + str(observation_model) +
                               " is not one of the valid ones: " + str([_.value for _ in OBSERVATION_MODELS]) + "!")
         self.sigma_init = sigma_init
+        self.tau1 = tau1
+        self.tau0 = tau0
         self.scale = scale
         self.offset = offset
-        self.epsilon
+        self.epsilon = epsilon
         self.number_of_target_data = number_of_target_data
         self.time_length = time_length
         self.dt = dt
@@ -153,12 +162,13 @@ class SDEStatisticalModel(ODEStatisticalModel):
     def __init__(self, name='vep_ode', number_of_regions=0, target_data_type=TARGET_DATA_TYPE.EMPIRICAL.value,
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, parameters={}, ground_truth={},
                  model_config=ModelConfiguration(), observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
-                 sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, sigma=SIGMA_DEF, scale=1.0, offset=0.0,
-                 epsilon=EPSILON_DEF, number_of_target_data=0, time_length=0, dt=DT_DEF, active_regions=[],
+                 sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, sigma=SIGMA_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
+                 scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF, epsilon=EPSILON_DEF,
+                 number_of_target_data=0, time_length=0, dt=DT_DEF, active_regions=[],
                  sde_mode=SDE_MODES.NONCENTERED.value):
         super(SDEStatisticalModel, self).__init__(name, number_of_regions, target_data_type, xmode, priors_mode,
                                                   parameters, ground_truth, model_config, observation_model,
-                                                  sigma_x, sigma_init, scale, offset, epsilon,
+                                                  sigma_x, sigma_init, tau1, tau0, scale, offset, epsilon,
                                                   number_of_target_data, time_length, dt, active_regions)
         self.sigma = sigma
         self.sde_mode = sde_mode
