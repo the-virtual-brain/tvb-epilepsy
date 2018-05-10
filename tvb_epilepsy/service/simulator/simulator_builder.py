@@ -188,7 +188,8 @@ def build_simulator_TVB_reduced(model_configuration, connectivity, **kwargs):
 
 
 def build_simulator_TVB_fitting(model_configuration, connectivity, **kwargs):
-    sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D").set_fs(2048.0).set_simulated_period(2000)
+    sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D").\
+                                                set_fs(2048.0).set_fs_monitor(2048.0).set_simulated_period(2000)
     model = sim_builder.generate_model_tvb(model_configuration)
     model.tau0 = 300.0
     model.tau1 = 0.5

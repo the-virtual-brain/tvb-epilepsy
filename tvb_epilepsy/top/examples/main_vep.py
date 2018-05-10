@@ -185,7 +185,7 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
                     model.tau1 = 0.2
                     model.slope = 0.25
                 elif isequal_string(sim_type, "fitting"):
-                    sim_settings = sim_builder.set_model_name("EpileptorDP2D").set_fs(2048.0).\
+                    sim_settings = sim_builder.set_model_name("EpileptorDP2D").set_fs(2048.0).set_fs_monitor(2048.0).\
                                                                     set_simulated_period(2000).build_sim_settings()
                     sim_settings.noise_intensity = 1e-5
                     model = sim_builder.generate_model_tvb(model_configuration)
