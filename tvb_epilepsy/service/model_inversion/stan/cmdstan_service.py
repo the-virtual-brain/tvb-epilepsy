@@ -110,9 +110,6 @@ class CmdStanService(StanService):
     def get_Rhat(self, summary):
         if isinstance(summary, dict):
             return summary.get("R_hat", None)
-        #     if Rhat is not None:
-        #         Rhat = {"R_hat": Rhat}
-        # return Rhat
         else:
             return None
 
