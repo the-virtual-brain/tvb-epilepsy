@@ -1,5 +1,5 @@
 import numpy as np
-from tvb_epilepsy.base.constants.model_inversion_constants import WIN_LEN_RATIO, LOW_FREQ, HIGH_FREQ, BIPOLAR
+from tvb_epilepsy.base.constants.model_inversion_constants import DT_DEF, WIN_LEN_RATIO, LOW_FREQ, HIGH_FREQ, BIPOLAR
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.edf import read_edf_to_Timeseries
 from tvb_epilepsy.service.timeseries_service import TimeseriesService
@@ -8,7 +8,8 @@ from tvb_epilepsy.service.timeseries_service import TimeseriesService
 logger = initialize_logger(__name__)
 
 
-def prepare_signal_observable(data, on_off_set=[], rois=[],  filter_flag=True, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
+def prepare_signal_observable(data, dt=DT_DEF, on_off_set=[], rois=[],
+                              filter_flag=True, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
                               envelope_flag=True, smooth_flag=True, win_len_ratio=WIN_LEN_RATIO,
                               plotter=None, title_prefix=""):
     ts_service = TimeseriesService()
@@ -43,7 +44,7 @@ def prepare_signal_observable(data, on_off_set=[], rois=[],  filter_flag=True, l
 
     # Now decimate to get close to 1024 points
     temp_duration = temp_on_off[1] - temp_on_off[0]
-    decim_ratio = int(np.round((data.time_length/1024.0) / (temp_duration/duration)))
+    decim_ratio = int(np.round((dt/data.time_step) / (temp_duration/duration)))  # (data.time_length/1024.0)
     if decim_ratio > 1:
         str_decim_ratio = str(decim_ratio)
         logger.info("Decimating signals " + str_decim_ratio + " times...")
@@ -96,7 +97,7 @@ def prepare_signal_observable(data, on_off_set=[], rois=[],  filter_flag=True, l
     return data
 
 
-def prepare_seeg_observable(data, on_off_set=[], rois=[], filter_flag=True, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
+def prepare_seeg_observable(data, dt=DT_DEF, on_off_set=[], rois=[], filter_flag=True, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
                             bipolar=BIPOLAR,  envelope_flag=True, smooth_flag=True, win_len_ratio=WIN_LEN_RATIO,
                             plotter=None, title_prefix=""):
 
@@ -108,12 +109,12 @@ def prepare_seeg_observable(data, on_off_set=[], rois=[], filter_flag=True, low_
                                 special_idx=[], title='Bipolar Time Series', offset=0.1,
                                 figure_name=title_prefix + 'BipolarTimeSeries', labels=data.space_labels)
 
-    return prepare_signal_observable(data, on_off_set, rois, filter_flag=filter_flag, low_freq=low_freq,
+    return prepare_signal_observable(data, dt, on_off_set, rois, filter_flag=filter_flag, low_freq=low_freq,
                                      high_freq=high_freq,  envelope_flag=envelope_flag, smooth_flag=smooth_flag,
                                      win_len_ratio=win_len_ratio, plotter=plotter, title_prefix=title_prefix)
 
 # win_len_ratio=WIN_LEN_RATIO,
-def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, on_off_set,
+def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, dt=DT_DEF, on_off_set=[],
                                           time_units="ms", label_strip_fun=None,
                                           filter_flag=True, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
                                           bipolar=BIPOLAR,  envelope_flag=True, smooth_flag=True,
@@ -126,7 +127,7 @@ def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, on
         plotter.plot_raster({"Detrended": data.squeezed}, data.time_line, time_units=data.time_unit,
                             special_idx=[], title='Detrended Time Series', offset=0.1,
                             figure_name=title_prefix + 'DetrendedTimeSeries', labels=data.space_labels)
-    return prepare_seeg_observable(data, on_off_set, rois=range(data.number_of_labels),
+    return prepare_seeg_observable(data, dt, on_off_set, rois=range(data.number_of_labels),
                                    filter_flag=filter_flag, low_freq=low_freq, high_freq=high_freq,
                                    bipolar=bipolar,  envelope_flag=envelope_flag, smooth_flag=smooth_flag,
                                    win_len_ratio=win_len_ratio, plotter=plotter, title_prefix=title_prefix)

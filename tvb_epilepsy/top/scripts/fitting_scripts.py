@@ -61,7 +61,7 @@ def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, pse_flag=T
     return model_configuration, lsa_hypothesis, pse_results
 
 
-def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0, times_on_off=[],
+def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0, dt=DT_DEF, times_on_off=[],
                        label_strip_fun=None, plotter=None, title_prefix="", **kwargs):
     try:
         return H5Reader().read_timeseries(ts_file)
@@ -70,7 +70,7 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
         if len(sensors_lbls) == 0:
             sensors_lbls = head.get_sensors_id(sensor_ids=sensor_id).labels
         signals = prepare_seeg_observable_from_mne_file(empirical_file, head.get_sensors_id(sensor_ids=sensor_id),
-                                                        sensors_lbls, times_on_off, label_strip_fun=label_strip_fun,
+                                                        sensors_lbls, dt, times_on_off, label_strip_fun=label_strip_fun,
                                                         plotter=plotter, title_prefix=title_prefix, **kwargs)
         H5Writer().write_timeseries(signals, ts_file)
         return signals
@@ -87,6 +87,7 @@ def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis
                                                                 sim_type=sim_type, ts_file=ts_file,
                                                                 seeg_gain_mode=seeg_gain_mode,
                                                                 config=config, plotter=plotter)
+    dt = simulator.simTVB.integrator.dt
     if statistical_model.observation_model in OBSERVATION_MODELS.SEEG.value:
         if statistical_model.observation_model != OBSERVATION_MODELS.SEEG_LOGPOWER.value:
             try:
@@ -98,13 +99,15 @@ def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis
             signals = TimeseriesService().compute_seeg(signals["source"].get_source(),
                                                        head.get_sensors_id(sensor_ids=sensor_id), sum_mode="exp")[0]
         signals.data = -signals.data
-        signals = prepare_seeg_observable(signals, times_on_off, plotter=plotter, title_prefix=title_prefix, **kwargs)
+        signals = \
+            prepare_seeg_observable(signals, dt, times_on_off, plotter=plotter, title_prefix=title_prefix, **kwargs)
 
     else:
         signals = signals["source"].get_source()
         signals.data = -signals.data  # change sign to fit x1
         kwargs.pop("bipolar", None)
-        signals = prepare_signal_observable(signals, times_on_off, plotter=plotter, title_prefix=title_prefix, **kwargs)
+        signals = \
+            prepare_signal_observable(signals, dt, times_on_off, plotter=plotter, title_prefix=title_prefix, **kwargs)
     return signals, simulator
 
 
