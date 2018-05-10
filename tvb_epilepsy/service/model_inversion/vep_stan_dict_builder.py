@@ -71,10 +71,7 @@ def build_stan_model_dict_to_interface_ins(statistical_model, signals, connectiv
                 "z_init_mu": statistical_model.parameters["z_init"].mean[active_regions],
                 "z_init_std": np.mean(statistical_model.parameters["z_init"].std),
                 "x_eq_def": statistical_model.model_config.x1eq[nonactive_regions].mean(),
-                "tau0": 10.0,  # statistical_model.parameters["tau0"].mean,
-                # "K_lo": statistical_model.parameters["k"].low,
-                # "K_u": statistical_model.parameters["k"].mode,
-                # "K_v": statistical_model.parameters["k"].var,
+                "tau0": statistical_model.tau0,  # 10.0
                 "time_scale_mu": statistical_model.parameters["time_scale"].mean,
                 "time_scale_std": statistical_model.parameters["time_scale"].std,
                 "k_mu": np.mean(statistical_model.parameters["k"].mean),
