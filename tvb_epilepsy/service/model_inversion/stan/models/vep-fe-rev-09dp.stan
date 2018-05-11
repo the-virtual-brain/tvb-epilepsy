@@ -124,20 +124,20 @@ transformed parameters {
 }
 
 model {
-    to_row_vector(x0_star) ~ normal(0, 1.0);
-    k_star ~ normal(0, 1);
+    to_row_vector(x0_star) ~ normal(0.0, 1.0);
+    k_star ~ normal(0.0, 1);
     x_init ~ normal(x_init_mu, x_init_std); // 0.0, 1.0
     z_init ~ normal(z_init_mu, z_init_std); // 0.0, 1.0
-    sigma_star ~ normal(0, 1.0);
-    time_scale_star ~ normal(0, 1.0);
+    sigma_star ~ normal(0.0, 1.0);
+    time_scale_star ~ normal(0.0, 1.0);
 
     amplitude_star ~ normal(0.0, 1.0);
     offset ~ normal(offset_mu, offset_std);
-    epsilon_star ~ normal(0, 1.0);
+    epsilon_star ~ normal(0.0, 1.0);
 
     for (t in 1:(nt - 1)) {
-        to_vector(x_eta[t]) ~ normal(0, 1);
-        to_vector(z_eta[t]) ~ normal(0, 1);
+        to_vector(x_eta[t]) ~ normal(0.0, 1.0);
+        to_vector(z_eta[t]) ~ normal(0.0, 1.0);
     }
 
     if (SIMULATE<1)
