@@ -109,7 +109,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             statistical_model = \
                 SDEStatisticalModelBuilder(model_name="vep_sde", model_config=model_configuration,
                                            parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value,
-                                                        "tau1", "tau0","K", "x1init", "zinit", "sigma_init", "sigma_eq",
+                                                        "x1init", "zinit", "tau1", "K", # "tau0",
                                                         "sigma", "dX1t", "dZt", "epsilon", "scale", "offset"],
                                            xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                                            sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,).\
@@ -176,10 +176,10 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         skip_samples = num_warmup
         n_chains = 4
         num_samples = max(int(np.round(1000.0/n_chains)), 500)
-        if fit_flag:
+        if False:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
                                                       chains=n_chains, num_warmup=num_warmup, num_samples=num_samples,
-                                                      refresh=1, max_depth=12, delta=0.85, save_warmup=1, plot_warmup=1,
+                                                      refresh=1, max_depth=15, delta=0.9, save_warmup=1, plot_warmup=1,
                                                       **kwargs)
             writer.write_generic(ests, path("FitEst"))
             writer.write_generic(samples, path("FitSamples"))
@@ -201,7 +201,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         # -------------------------- Plot fitting results: ------------------------------------------------------------
         if stan_service.fitmethod.find("opt") < 0:
             plotter.plot_fit_results(ests, samples, model_data, target_data, statistical_model, stats={"Rhat": Rhat},
-                                 pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
+                                 pair_plot_params=["sigma", "epsilon", "scale", "offset"],  # "tau1", "K",
                                  region_violin_params=["x0", "x1init", "zinit"], regions_mode="active",
                                  regions_labels=head.connectivity.region_labels, trajectories_plot=True,
                                  connectivity_plot=False, skip_samples=skip_samples, title_prefix=hyp.name)
@@ -209,8 +209,9 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
         for id_est, est in enumerate(ensure_list(ests)):
+            K = est.get("K", model_configuration.K)
             fit_model_configuration_builder = \
-                ModelConfigurationBuilder(hyp.number_of_regions, K=est["K"] * hyp.number_of_regions)
+                ModelConfigurationBuilder(hyp.number_of_regions, K=K * hyp.number_of_regions)
             x0_values_fit = model_configuration.x0_values
             x0_values_fit[statistical_model.active_regions] = \
                 fit_model_configuration_builder._compute_x0_values_from_x0_model(est['x0'])
@@ -243,7 +244,7 @@ if __name__ == "__main__":
                              "raw/seeg/ts_seizure")
 
     if user_home == "/home/denis":
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/fit_empirical")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/fit_fixedKtau1_tau0300")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.C_COMPILER = "g++"
         config.generic.CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
@@ -254,7 +255,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit2D_4chains")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_fixedKtau1_tau0300")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
 
     # TVB3 larger preselection:
@@ -299,7 +300,7 @@ if __name__ == "__main__":
     # times_on_off = [50.0, 550.0]  # for paper"" simulations
     times_on_off = [1100.0, 1300.0]  # for paper"" simulations
     # stats_model_name = "vep_sde"
-    stan_model_name = "vep-fe-rev-09dp"
+    stan_model_name = "vep-fe-rev-09dp_simple"
     fitmethod = "sample"
     observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  # OBSERVATION_MODELS.SEEG_LOGPOWER.value
     pse_flag = True
