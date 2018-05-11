@@ -143,8 +143,8 @@ class CmdStanService(StanService):
             est, samples, summary = self.read_output()
             if plot_HMC and self.fitmethod.find("sampl") >= 0 and \
                 isequal_string(self.options.get("algorithm", "None"), "HMC"):
-                Plotter(self.config).plot_HMC(samples,
-                                              kwargs.pop("skip_samples", (1-kwargs.get("plot_warmup", 0)) * num_warmup))
+                Plotter(self.config).plot_HMC(samples, skip_samples=kwargs.pop("skip_samples", num_warmup *
+                                                                                (1-kwargs.get("plot_warmup", True)) ))
             return est, samples, summary
         else:
             return None, None, None
