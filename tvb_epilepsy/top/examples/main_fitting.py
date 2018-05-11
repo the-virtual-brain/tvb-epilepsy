@@ -111,7 +111,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                            parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value,
                                                         "x1init", "zinit", "tau1", "K", # "tau0",
                                                         "sigma", "dX1t", "dZt", "epsilon", "scale", "offset"],
-                                           xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
+                                           xmode=XModes.X0MODE.value, priors_mode=PriorsModes.INFORMATIVE.value,
                                            sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,).\
                                                                                                        generate_model()
 
@@ -244,7 +244,7 @@ if __name__ == "__main__":
                              "raw/seeg/ts_seizure")
 
     if user_home == "/home/denis":
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/fit_fixedKtau1_tau0300")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/fit_fixedKtau1_tau0300_info")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.C_COMPILER = "g++"
         config.generic.CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
@@ -255,7 +255,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_fixedKtau1_tau0300")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_fixedKtau1_tau0300_info")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
 
     # TVB3 larger preselection:
