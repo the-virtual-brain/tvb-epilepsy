@@ -903,7 +903,7 @@ class Plotter(BasePlotter):
                                             seizure_indices=seizure_indices, figure_name=title_violin_plot)
         if not(per_chain_plotting) and "x0" in region_violin_params and samples[0]["x0"].shape[1] < 10:
             x0_K_pair_plot_params = []
-            x0_K_pair_plot_samples = {}
+            x0_K_pair_plot_samples = [{} for _ in range(len(samples))]
             if samples[0].get("K", None) is not None:
                 # plot K-x0 parameters in pair plots
                 x0_K_pair_plot_params = ["K"]
