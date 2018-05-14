@@ -962,14 +962,20 @@ class Plotter(BasePlotter):
                                         'hidden state z' + stats_string["z"]], offset=1.0,
                              labels=region_labels,
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
-            self.plot_raster(sort_dict({"dX1t": sample["dX1t"].squeezed[:, :, skip_samples:],
-                                        "dZt": sample["dZt"].squeezed[:, :, skip_samples:]}),
-                             time[:-1], time_units=target_data.time_unit,
-                             # special_idx=seizure_indices,
-                             title=name + ": Hidden states random walk rasterplot",
-                             subtitles=["dX1t",
-                                        "dZt" + "\ndynamic noise" + sig_prior_str + ", sig_post = " + str(est["sigma"])],
-                             offset=1.0, labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
+            dWt = {}
+            subtitles = []
+            if sample.get("dX1t", None):
+                dWt.update({"dX1t": sample["dX1t"].squeezed[:, :, skip_samples:]})
+                subtitles.append("dX1t")
+            if sample.get("dZt", None):
+                dWt.update({"dZt": sample["dZt"].squeezed[:, :, skip_samples:]})
+                subtitles.append("dZt")
+            if len(dWt) > 0:
+                subtitles[-1] += "\ndynamic noise" + sig_prior_str + ", sig_post = " + str(est["sigma"])
+                self.plot_raster(sort_dict(dWt), time[:-1], time_units=target_data.time_unit,
+                                 special_idx=seizure_indices, title=name + ": Hidden states random walk rasterplot",
+                                 subtitles=subtitles, offset=1.0, labels=region_labels,
+                                 figsize=FiguresConfig.VERY_LARGE_SIZE)
             if trajectories_plot:
                 title = name + ' Fit hidden state space trajectories'
                 self.plot_trajectories({"x1": sample["x1"].squeezed[:, :, skip_samples:],
