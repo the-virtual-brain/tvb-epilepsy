@@ -42,7 +42,7 @@ class ProbabilisticSamplingService(SamplingService):
 
     def sample(self, parameter=(), loc=0.0, scale=1.0, **kwargs):
         nr.seed(self.random_seed)
-        if isinstance(parameter, (ProbabilisticParameterBase, TransformedStochasticParameterBase)):
+        if isinstance(parameter, (ProbabilisticParameterBase, TransformedProbabilisticParameterBase)):
             parameter_shape = parameter.p_shape
             low = parameter.low
             high = parameter.high
@@ -65,7 +65,7 @@ class ProbabilisticSamplingService(SamplingService):
             if isinstance(prob_distr, basestring):
                 self.sampler = getattr(ss, prob_distr)(*parameter, **kwargs)
                 samples = self._truncated_distribution_sampling({"low": low, "high": high}, out_shape) * scale + loc
-            elif isinstance(prob_distr, (ProbabilisticParameterBase, TransformedStochasticParameterBase)):
+            elif isinstance(prob_distr, (ProbabilisticParameterBase, TransformedProbabilisticParameterBase)):
                 self.sampler = prob_distr.scipy()
                 samples = self._truncated_distribution_sampling({"low": low, "high": high}, out_shape)
         elif self.sampling_module.find("scipy") >= 0:
@@ -79,7 +79,7 @@ class ProbabilisticSamplingService(SamplingService):
             if isinstance(prob_distr, basestring):
                 self.sampler = lambda size: getattr(nr, prob_distr)(*parameter, size=size, **kwargs)
                 samples = self.sampler(out_shape) * scale + loc
-            elif isinstance(prob_distr, (ProbabilisticParameterBase, TransformedStochasticParameterBase)):
+            elif isinstance(prob_distr, (ProbabilisticParameterBase, TransformedProbabilisticParameterBase)):
                 self.sampler = lambda size: prob_distr.numpy(size=size)
                 samples = self.sampler(out_shape)
         return samples.T

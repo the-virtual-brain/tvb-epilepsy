@@ -8,7 +8,7 @@ from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.statistical_models.probabilistic_parameter import ProbabilisticParameterBase, \
-                                                                                    TransformedStochasticParameterBase
+                                                                                TransformedProbabilisticParameterBase
 
 class StatisticalModel(object):
 
@@ -84,7 +84,7 @@ class StatisticalModel(object):
 
     def get_prior_pdf(self, parameter_name):
         mean_or_truth, parameter = self.get_prior(parameter_name)
-        if isinstance(parameter, (ProbabilisticParameterBase, TransformedStochasticParameterBase)):
+        if isinstance(parameter, (ProbabilisticParameterBase, TransformedProbabilisticParameterBase)):
             return parameter.scipy_method("pdf")
         else:
             warning("No parameter " + parameter_name + " was found!\nReturning true value instead of pdf!")
