@@ -2,16 +2,16 @@
 import numpy as np
 
 from tvb_epilepsy.base.computations.probability_distributions import ProbabilityDistributionTypes
-from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import NegativeLognormal
-from tvb_epilepsy.service.stochastic_parameter_builder import generate_stochastic_parameter
+from tvb_epilepsy.base.model.statistical_models.probabilistic_parameter import NegativeLognormal
+from tvb_epilepsy.service.probabilistic_parameter_builder import generate_probabilistic_parameter
 
 
 def generate_lognormal_parameter(name, mean, low, high, sigma=None, sigma_scale=3, p_shape=(), use="scipy"):
     if sigma is None:
         sigma = np.abs(mean - low) / sigma_scale
-    return generate_stochastic_parameter(name, low, high, loc=0.0, scale=1.0, p_shape=p_shape,
-                                         probability_distribution=ProbabilityDistributionTypes.LOGNORMAL,
-                                         optimize_pdf=True, use=use, **{"mean": mean/sigma, "skew": 0.0}). \
+    return generate_probabilistic_parameter(name, low, high, loc=0.0, scale=1.0, p_shape=p_shape,
+                                            probability_distribution=ProbabilityDistributionTypes.LOGNORMAL,
+                                            optimize_pdf=True, use=use, **{"mean": mean/sigma, "skew": 0.0}). \
                                          update_loc_scale(use=use, **{"mean": mean, "std": sigma})
 
 

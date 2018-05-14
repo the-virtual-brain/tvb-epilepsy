@@ -1,7 +1,7 @@
 import numpy as np
 from tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_epilepsy.base.model.parameter import Parameter
-from tvb_epilepsy.base.model.statistical_models.stochastic_parameter import StochasticParameterBase
+from tvb_epilepsy.base.model.statistical_models.probabilistic_parameter import ProbabilisticParameterBase
 from tvb_epilepsy.base.utils.data_structures_utils import extract_dict_stringkeys, \
     get_val_key_for_first_keymatch_in_dict
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error
@@ -82,27 +82,27 @@ def set_parameter(name, use="scipy", **kwargs):
     else:
         optimize_pdf = False
     # Generate the parameter with or without optimization of its shape:
-    parameter = generate_stochastic_parameter(name, probability_distribution=defaults.pop("pdf"),
-                                              p_shape=defaults.pop("shape"),
-                                              low=defaults.pop("lo"),
-                                              high=defaults.pop("hi"),
-                                              optimize_pdf=optimize_pdf, use=use, **pdf_params)
+    parameter = generate_probabilistic_parameter(name, probability_distribution=defaults.pop("pdf"),
+                                                 p_shape=defaults.pop("shape"),
+                                                 low=defaults.pop("lo"),
+                                                 high=defaults.pop("hi"),
+                                                 optimize_pdf=optimize_pdf, use=use, **pdf_params)
     # Update parameter's loc and scale if necessary by moving and/or scaling it accordingly
     if len(defaults) > 0:
         parameter.update_loc_scale(use=use, **defaults)
     return parameter
 
 
-def generate_stochastic_parameter(name="Parameter", low=-CalculusConfig.MAX_SINGLE_VALUE, 
-                                  high=CalculusConfig.MAX_SINGLE_VALUE, loc=0.0, scale=1.0,
-                                  p_shape=(), probability_distribution=ProbabilityDistributionTypes.UNIFORM,
-                                  optimize_pdf=False, use="scipy", **target_params):
+def generate_probabilistic_parameter(name="Parameter", low=-CalculusConfig.MAX_SINGLE_VALUE,
+                                     high=CalculusConfig.MAX_SINGLE_VALUE, loc=0.0, scale=1.0,
+                                     p_shape=(), probability_distribution=ProbabilityDistributionTypes.UNIFORM,
+                                     optimize_pdf=False, use="scipy", **target_params):
     thisProbabilityDistribution = probability_distribution_factory(probability_distribution.lower(), get_instance=False)
 
-    class StochasticParameter(StochasticParameterBase, thisProbabilityDistribution):
+    class ProbabilisticParameter(ProbabilisticParameterBase, thisProbabilityDistribution):
         def __init__(self, name="Parameter", low=-CalculusConfig.MAX_SINGLE_VALUE, high=CalculusConfig.MAX_SINGLE_VALUE,
                      loc=0.0, scale=1.0, p_shape=(), use="scipy", **target_params):
-            StochasticParameterBase.__init__(self, name, low, high, loc, scale, p_shape)
+            ProbabilisticParameterBase.__init__(self, name, low, high, loc, scale, p_shape)
             thisProbabilityDistribution.__init__(self, **target_params)
             success = True
             for p_key, p_val in target_params.iteritems():
@@ -121,4 +121,4 @@ def generate_stochastic_parameter(name="Parameter", low=-CalculusConfig.MAX_SING
                                   " with parameters " + str(target_params) + " !")
                 self._update_params(use=use)
 
-    return StochasticParameter(name, low, high, loc, scale, p_shape, use, **target_params)
+    return ProbabilisticParameter(name, low, high, loc, scale, p_shape, use, **target_params)

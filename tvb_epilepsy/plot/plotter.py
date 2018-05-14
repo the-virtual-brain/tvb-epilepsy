@@ -744,7 +744,7 @@ class Plotter(BasePlotter):
         ax.set_title(parameter.name + ": " + parameter.type + " distribution")
         return ax
 
-    def plot_stochastic_parameter(self, parameter, x=numpy.array([]), ax=None, lgnd=True, figure_name=""):
+    def plot_probabilistic_parameter(self, parameter, x=numpy.array([]), ax=None, lgnd=True, figure_name=""):
         ax = self._prepare_parameter_axes(parameter, x, ax, lgnd)
         if len(figure_name) < 1:
             figure_name = "parameter_" + parameter.name

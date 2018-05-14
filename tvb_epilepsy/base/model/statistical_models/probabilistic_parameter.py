@@ -9,7 +9,7 @@ from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.computations.probability_distributions.probability_distribution import ProbabilityDistribution
 
 
-class StochasticParameterBase(Parameter, ProbabilityDistribution):
+class ProbabilisticParameterBase(Parameter, ProbabilityDistribution):
     __metaclass__ = ABCMeta
 
     def __init__(self, name="Parameter", low=CalculusConfig.MIN_SINGLE_VALUE, high=CalculusConfig.MAX_SINGLE_VALUE,
@@ -112,18 +112,18 @@ class StochasticParameterBase(Parameter, ProbabilityDistribution):
 
 # TODO: this should move to examples
 # if __name__ == "__main__":
-#     sp = generate_stochastic_parameter("test", probability_distribution="gamma", optimize=False, shape=1.0, scale=2.0)
+#     sp = generate_probabilistic_parameter("test", probability_distribution="gamma", optimize=False, shape=1.0, scale=2.0)
 #     initialize_logger(__name__).info(sp)
 
 
-TransformedStochasticParameterBaseAttributes = ["name", "type", "low", "high", "mean", "median", "mode",
+TransformedProbabilisticParameterBaseAttributes = ["name", "type", "low", "high", "mean", "median", "mode",
                                                 "var", "std", "skew", "kurt", "star"]
 
-TransformedStochasticParameterBaseStarAttributes = ["star_low", "star_high", "star_mean", "star_median", "star_mode",
+TransformedProbabilisticParameterBaseStarAttributes = ["star_low", "star_high", "star_mean", "star_median", "star_mode",
                                                     "star_var", "star_std", "star_skew", "star_kurt"]
 
 
-class TransformedStochasticParameterBase(object):
+class TransformedProbabilisticParameterBase(object):
     __metaclass__ = ABCMeta
 
     name = ""
@@ -137,8 +137,8 @@ class TransformedStochasticParameterBase(object):
         self.star.name = self.star.name.split("_star")[0] + "_star"
 
     def __getattr__(self, attr):
-        if attr in TransformedStochasticParameterBaseAttributes:
-            return super(TransformedStochasticParameterBase, self).__getattr__(attr)
+        if attr in TransformedProbabilisticParameterBaseAttributes:
+            return super(TransformedProbabilisticParameterBase, self).__getattr__(attr)
         elif attr.find("star_") == 0:
             return getattr(self.star, attr.split("star_")[1])
         else:
@@ -146,16 +146,16 @@ class TransformedStochasticParameterBase(object):
 
     def __setattr__(self, attr, value):
         if attr in ["name", "type", "star"]:
-            super(TransformedStochasticParameterBase, self).__setattr__(attr, value)
+            super(TransformedProbabilisticParameterBase, self).__setattr__(attr, value)
             return self
         else:
             setattr(self.star, attr, value)
             return self
 
     def _repr(self,  d=OrderedDict()):
-        for ikey, key in enumerate(TransformedStochasticParameterBaseAttributes[:-1]):
+        for ikey, key in enumerate(TransformedProbabilisticParameterBaseAttributes[:-1]):
             d.update({key: getattr(self, key)})
-        for ikey, key in enumerate(TransformedStochasticParameterBaseStarAttributes):
+        for ikey, key in enumerate(TransformedProbabilisticParameterBaseStarAttributes):
             d.update({key: getattr(self, key)})
         d.update({"star parameter": str(self.star)})
         return d
@@ -210,7 +210,7 @@ class TransformedStochasticParameterBase(object):
         return self.star.scipy_method(method, loc, scale, *args, **kwargs)
 
 
-class NegativeLognormal(TransformedStochasticParameterBase, object):
+class NegativeLognormal(TransformedProbabilisticParameterBase, object):
 
     def __init__(self, name, type, parameter, max):
         super(NegativeLognormal, self).__init__(name, type, parameter)

@@ -7,7 +7,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import dicts_of_lists_to_list
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.pse.lsa_pse_service import LSAPSEService
-from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
+from tvb_epilepsy.service.sampling.probabilistic_sampling_service import ProbabilisticSamplingService
 from tvb_epilepsy.top.scripts.hypothesis_scripts import start_lsa_run
 
 
@@ -23,7 +23,7 @@ def pse_from_lsa_hypothesis(n_samples, lsa_hypothesis, model_connectivity, model
     disease_indices = lsa_hypothesis.get_regions_disease_indices()
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
     pse_params = {"path": [], "indices": [], "name": [], "samples": []}
-    sampler = StochasticSamplingService(n_samples=n_samples, random_seed=kwargs.get("random_seed", None))
+    sampler = ProbabilisticSamplingService(n_samples=n_samples, random_seed=kwargs.get("random_seed", None))
     # First build from the hypothesis the input parameters of the parameter search exploration.
     # These can be either originating from excitability, epileptogenicity or connectivity hypotheses,
     # or they can relate to the global coupling scaling (parameter K of the model configuration)

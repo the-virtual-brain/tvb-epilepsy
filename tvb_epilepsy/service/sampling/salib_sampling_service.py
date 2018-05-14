@@ -4,10 +4,10 @@ from SALib.sample import saltelli, fast_sampler, morris, ff
 from tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_epilepsy.base.model.parameter import Parameter
-from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
+from tvb_epilepsy.service.sampling.probabilistic_sampling_service import ProbabilisticSamplingService
 
 
-class SalibSamplingService(StochasticSamplingService):
+class SalibSamplingService(ProbabilisticSamplingService):
 
     def __init__(self, n_samples=10, sampler="saltelli", random_seed=None):
         super(SalibSamplingService, self).__init__(n_samples, "salib", random_seed)

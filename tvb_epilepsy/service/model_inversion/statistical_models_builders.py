@@ -10,7 +10,7 @@ from tvb_epilepsy.base.computations.probability_distributions import Probability
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.statistical_models.epileptor_statistical_models \
                                                      import StatisticalModel, ODEStatisticalModel, SDEStatisticalModel
-from tvb_epilepsy.service.stochastic_parameter_builder import generate_stochastic_parameter
+from tvb_epilepsy.service.probabilistic_parameter_builder import generate_probabilistic_parameter
 from tvb_epilepsy.service.model_inversion.epileptor_params_factory \
                                             import generate_lognormal_parameter, generate_negative_lognormal_parameter
 
@@ -257,18 +257,18 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
                               d=self.model_config.d, x1_neg=True)
         self.logger.info("...x1init...")
         parameters.update(
-            {"x1init": generate_stochastic_parameter("x1init", X1_MIN, X1_MAX,
-                                                     p_shape=(self.number_of_regions,),
-                                                     probability_distribution=ProbabilityDistributionTypes.NORMAL,
-                                                     optimize_pdf=False, use="scipy",
-                                                     **{"mu": x1init, "sigma": self.sigma_init})})
+            {"x1init": generate_probabilistic_parameter("x1init", X1_MIN, X1_MAX,
+                                                        p_shape=(self.number_of_regions,),
+                                                        probability_distribution=ProbabilityDistributionTypes.NORMAL,
+                                                        optimize_pdf=False, use="scipy",
+                                                        **{"mu": x1init, "sigma": self.sigma_init})})
         self.logger.info("...zinit...")
         parameters.update(
-            {"zinit": generate_stochastic_parameter("zinit", Z_MIN, Z_MAX,
-                                                     p_shape=(self.number_of_regions,),
-                                                     probability_distribution=ProbabilityDistributionTypes.NORMAL,
-                                                     optimize_pdf=False, use="scipy",
-                                                     **{"mu": zinit, "sigma": self.sigma_init/2})})
+            {"zinit": generate_probabilistic_parameter("zinit", Z_MIN, Z_MAX,
+                                                       p_shape=(self.number_of_regions,),
+                                                       probability_distribution=ProbabilityDistributionTypes.NORMAL,
+                                                       optimize_pdf=False, use="scipy",
+                                                       **{"mu": zinit, "sigma": self.sigma_init/2})})
 
         # Time scales
         if "tau1" in self.parameters:
@@ -306,10 +306,10 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
             self.logger.info("...offset...")
             parameters.update(
                 {"offset":
-                     generate_stochastic_parameter("offset", self.offset-10.0, self.offset+10.0, p_shape=(),
-                                                   probability_distribution=ProbabilityDistributionTypes.NORMAL,
-                                                   optimize_pdf=False, use="scipy",
-                                                   **{"mu": self.offset, "sigma": 1.0})})
+                     generate_probabilistic_parameter("offset", self.offset - 10.0, self.offset + 10.0, p_shape=(),
+                                                      probability_distribution=ProbabilityDistributionTypes.NORMAL,
+                                                      optimize_pdf=False, use="scipy",
+                                                      **{"mu": self.offset, "sigma": 1.0})})
         return parameters
 
     def generate_model(self, target_data_type=TARGET_DATA_TYPE.SYNTHETIC.value, ground_truth={}):
@@ -363,9 +363,9 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
         if "sigma" in self.parameters:
             self.logger.info("...sigma...")
             parameters.update(
-                {"sigma": generate_stochastic_parameter("sigma", 0.0, 10*self.sigma, p_shape=(),
-                                                        probability_distribution=ProbabilityDistributionTypes.GAMMA,
-                                                        optimize_pdf=True, use="scipy", **{"mean": 1.0, "skew": 0.0}).
+                {"sigma": generate_probabilistic_parameter("sigma", 0.0, 10 * self.sigma, p_shape=(),
+                                                           probability_distribution=ProbabilityDistributionTypes.GAMMA,
+                                                           optimize_pdf=True, use="scipy", **{"mean": 1.0, "skew": 0.0}).
                                               update_loc_scale(use="scipy", **{"mean": self.sigma, "std": self.sigma})})
         names = []
         mins = []
@@ -396,11 +396,11 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
         for iV in range(n_xp):
             self.logger.info("..." + names[iV] + "...")
             parameters.update(
-                {names[iV]: generate_stochastic_parameter(names[iV], mins[iV], maxs[iV],
-                                                         p_shape=(self.time_length, self.number_of_regions),
-                                                         probability_distribution=ProbabilityDistributionTypes.NORMAL,
-                                                         optimize_pdf=False, use="scipy",
-                                                         **{"mu": means[iV], "sigma": self.sigma})})
+                {names[iV]: generate_probabilistic_parameter(names[iV], mins[iV], maxs[iV],
+                                                             p_shape=(self.time_length, self.number_of_regions),
+                                                             probability_distribution=ProbabilityDistributionTypes.NORMAL,
+                                                             optimize_pdf=False, use="scipy",
+                                                             **{"mu": means[iV], "sigma": self.sigma})})
         return parameters
 
     def generate_model(self, target_data_type=TARGET_DATA_TYPE.SYNTHETIC.value, ground_truth={}):

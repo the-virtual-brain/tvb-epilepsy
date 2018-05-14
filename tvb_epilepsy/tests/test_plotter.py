@@ -4,7 +4,7 @@ from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.service.simulator.epileptor_model_factory import build_EpileptorDP2D, VOIS
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
-from tvb_epilepsy.service.stochastic_parameter_builder import set_parameter
+from tvb_epilepsy.service.probabilistic_parameter_builder import set_parameter
 from tvb_epilepsy.top.scripts.simulation_scripts import prepare_vois_ts_dict
 from tvb_epilepsy.tests.base import BaseTest
 
@@ -39,7 +39,7 @@ class TestPlotter(BaseTest):
         figure_file = os.path.join(self.config.out.FOLDER_FIGURES, figure_name + ".png")
         assert not os.path.exists(figure_file)
 
-        self.plotter.plot_stochastic_parameter(K, figure_name=figure_name)
+        self.plotter.plot_probabilistic_parameter(K, figure_name=figure_name)
 
         assert os.path.exists(figure_file)
 

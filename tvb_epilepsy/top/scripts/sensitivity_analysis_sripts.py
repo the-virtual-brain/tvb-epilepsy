@@ -8,7 +8,7 @@ from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_val
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.pse.lsa_pse_service import LSAPSEService
 from tvb_epilepsy.service.sampling.salib_sampling_service import SalibSamplingService
-from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
+from tvb_epilepsy.service.sampling.probabilistic_sampling_service import ProbabilisticSamplingService
 from tvb_epilepsy.service.sensitivity_analysis_service import SensitivityAnalysisService, METHODS
 from tvb_epilepsy.top.scripts.hypothesis_scripts import start_lsa_run
 
@@ -87,7 +87,7 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(n_samples, lsa_hypothesis, conn
     pse_params.update({"samples": [np.array(value) for value in input_samples.tolist()]})
     pse_params_list = dicts_of_lists_to_lists_of_dicts(pse_params)
     # Add a random jitter to the healthy regions if required...:
-    sampler = StochasticSamplingService(n_samples=n_samples, random_seed=kwargs.get("random_seed", None))
+    sampler = ProbabilisticSamplingService(n_samples=n_samples, random_seed=kwargs.get("random_seed", None))
     for val in healthy_regions_parameters:
         inds = val.get("indices", healthy_indices)
         name = val.get("name", "x0_values")

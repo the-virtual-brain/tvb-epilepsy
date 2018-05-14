@@ -14,7 +14,7 @@ from tvb_epilepsy.base.simulation_settings import SimulationSettings
 from tvb_epilepsy.service.model_inversion.statistical_models_builders import *
 from tvb_epilepsy.io.h5_model import read_h5_model
 from tvb_epilepsy.io.h5_writer import H5Writer
-from tvb_epilepsy.service.stochastic_parameter_builder import generate_stochastic_parameter
+from tvb_epilepsy.service.probabilistic_parameter_builder import generate_probabilistic_parameter
 
 
 H5_TYPE_ATTRIBUTE = H5Writer().H5_TYPE_ATTRIBUTE
@@ -484,7 +484,7 @@ class H5Reader(object):
                     for group_key, group_value in value.iteritems():
                         param_epi_subtype = group_value.attrs[H5_SUBTYPE_ATTRIBUTE]
                         if param_epi_subtype == "StochasticParameter":
-                            parameter = generate_stochastic_parameter(
+                            parameter = generate_probabilistic_parameter(
                                     probability_distribution=group_value.attrs["type"])
                         elif param_epi_subtype == "NegativeLognormal":
                             parameter = generate_negative_lognormal_parameter("", 1.0, 0.0, 2.0)
