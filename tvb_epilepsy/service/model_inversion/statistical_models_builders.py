@@ -360,30 +360,6 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
     def generate_parameters(self):
         parameters = super(SDEStatisticalModelBuilder, self).generate_parameters()
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
-        if self.sde_mode == SDE_MODES.CENTERED.value:
-            self.logger.info("...autoregression centered time series parameters...")
-            names = ["x1", "z"]
-            mins = [X1_MIN, Z_MIN]
-            maxs = [X1_MAX, Z_MAX]
-            means = [X1_REST,
-                     calc_eq_z(X1_REST, self.model_config.yc, self.model_config.Iext1, "2d", x2=0.0,
-                               slope=self.model_config.slope, a=self.model_config.a, b=self.model_config.b,
-                               d=self.model_config.d, x1_neg=True)]
-        else:
-            self.logger.info("...autoregression noncentered time series parameters...")
-            names = ["dX1t", "dZt"]
-            mins = 2*[-1.0]
-            maxs = 2*[1.0]
-            means = 2*[0.0]
-        for iV in range(2):
-            self.logger.info("..." + names[iV] + "...")
-            parameters.update(
-                {names[iV]: generate_stochastic_parameter(names[iV], mins[iV], maxs[iV],
-                                                         p_shape=(self.time_length, self.number_of_regions),
-                                                         probability_distribution=ProbabilityDistributionTypes.NORMAL,
-                                                         optimize_pdf=False, use="scipy",
-                                                         **{"mu": means[iV], "sigma": self.sigma})})
-
         if "sigma" in self.parameters:
             self.logger.info("...sigma...")
             parameters.update(
@@ -391,7 +367,40 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
                                                         probability_distribution=ProbabilityDistributionTypes.GAMMA,
                                                         optimize_pdf=True, use="scipy", **{"mean": 1.0, "skew": 0.0}).
                                               update_loc_scale(use="scipy", **{"mean": self.sigma, "std": self.sigma})})
-
+        names = []
+        mins = []
+        maxs = []
+        means = []
+        if self.sde_mode == SDE_MODES.CENTERED.value:
+            self.logger.info("...autoregression centered time series parameters...")
+            if "x1" in self.parameters:
+                names.append("x1")
+                mins.append(X1_MIN)
+                maxs.append(X1_MAX)
+                means.append(X1_REST)
+            if "z" in self.parameters:
+                names.append("z")
+                mins.append(Z_MIN)
+                maxs.append(Z_MAX)
+                means.append(calc_eq_z(X1_REST, self.model_config.yc, self.model_config.Iext1, "2d", x2=0.0,
+                               slope=self.model_config.slope, a=self.model_config.a, b=self.model_config.b,
+                               d=self.model_config.d, x1_neg=True))
+            n_xp =len(names)
+        else:
+            self.logger.info("...autoregression noncentered time series parameters...")
+            names = list(set(["dX1t", "dZt"]) & set(self.parameters))
+            n_xp = len(names)
+            mins = n_xp*[-1.0]
+            maxs = n_xp*[1.0]
+            means = n_xp*[0.0]
+        for iV in range(n_xp):
+            self.logger.info("..." + names[iV] + "...")
+            parameters.update(
+                {names[iV]: generate_stochastic_parameter(names[iV], mins[iV], maxs[iV],
+                                                         p_shape=(self.time_length, self.number_of_regions),
+                                                         probability_distribution=ProbabilityDistributionTypes.NORMAL,
+                                                         optimize_pdf=False, use="scipy",
+                                                         **{"mu": means[iV], "sigma": self.sigma})})
         return parameters
 
     def generate_model(self, target_data_type=TARGET_DATA_TYPE.SYNTHETIC.value, ground_truth={}):
