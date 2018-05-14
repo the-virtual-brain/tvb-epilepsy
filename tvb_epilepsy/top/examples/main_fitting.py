@@ -201,10 +201,10 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         # -------------------------- Plot fitting results: ------------------------------------------------------------
         if stan_service.fitmethod.find("opt") < 0:
             plotter.plot_fit_results(ests, samples, model_data, target_data, statistical_model, stats={"Rhat": Rhat},
-                                 pair_plot_params=["sigma", "epsilon", "scale", "offset"],  # "tau1", "K",
-                                 region_violin_params=["x0", "x1init", "zinit"], regions_mode="active",
-                                 regions_labels=head.connectivity.region_labels, trajectories_plot=True,
-                                 connectivity_plot=False, skip_samples=skip_samples, title_prefix=hyp.name)
+                                     pair_plot_params=["sigma", "epsilon", "scale", "offset"],  # "tau1", "K",
+                                     region_violin_params=["x0", "x1init", "zinit"],
+                                     regions_labels=head.connectivity.region_labels, skip_samples=skip_samples,
+                                     title_prefix=hyp.name)
 
 
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------

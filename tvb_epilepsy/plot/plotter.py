@@ -1020,8 +1020,8 @@ class Plotter(BasePlotter):
     def plot_fit_results(self, ests, samples, model_data, target_data, statistical_model=None, stats=None,
                          pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
                          region_violin_params=["x0", "x1init", "zinit"],
-                         regions_labels=[], regions_mode="all", n_regions=1,
-                         trajectories_plot=True, connectivity_plot=True, skip_samples=0, title_prefix=""):
+                         regions_labels=[], regions_mode="active", n_regions=1,
+                         trajectories_plot=True, connectivity_plot=False, skip_samples=0, title_prefix=""):
         if statistical_model is not None:
             active_regions = statistical_model.active_regions
         else:
