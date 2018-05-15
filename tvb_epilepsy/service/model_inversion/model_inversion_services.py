@@ -33,50 +33,50 @@ class ModelInversionService(object):
     def __str__(self):
         return self.__repr__()
 
-    def update_active_regions_e_values(self, stats_model, e_values, reset=False):
+    def update_active_regions_e_values(self, probabilistic_model, e_values, reset=False):
         if reset:
-            stats_model.update_active_regions([])
+            probabilistic_model.update_active_regions([])
         if len(e_values) > 0:
-            stats_model.update_active_regions(stats_model.active_regions +
+            probabilistic_model.update_active_regions(probabilistic_model.active_regions +
                                               select_greater_values_array_inds(e_values, self.active_e_th).tolist())
         else:
             warning("Skipping active regions setting by E values because no such values were provided!")
-        return stats_model
+        return probabilistic_model
 
-    def update_active_regions_x0_values(self, stats_model, x0_values, reset=False):
+    def update_active_regions_x0_values(self, probabilistic_model, x0_values, reset=False):
         if reset:
-            stats_model.update_active_regions([])
+            probabilistic_model.update_active_regions([])
         if len(x0_values) > 0:
-            stats_model.update_active_regions(stats_model.active_regions +
+            probabilistic_model.update_active_regions(probabilistic_model.active_regions +
                                           select_greater_values_array_inds(x0_values, self.active_x0_th).tolist())
         else:
             warning("Skipping active regions setting by x0 values because no such values were provided!")
-        return stats_model
+        return probabilistic_model
 
-    def update_active_regions_lsa(self, stats_model, lsa_propagation_strengths, reset=False):
+    def update_active_regions_lsa(self, probabilistic_model, lsa_propagation_strengths, reset=False):
         if reset:
-            stats_model.update_active_regions([])
+            probabilistic_model.update_active_regions([])
         if len(lsa_propagation_strengths) > 0:
             ps_strengths = lsa_propagation_strengths / np.max(lsa_propagation_strengths)
-            stats_model.update_active_regions(stats_model.active_regions +
+            probabilistic_model.update_active_regions(probabilistic_model.active_regions +
                                               select_greater_values_array_inds(ps_strengths,
                                                                                self.active_lsa_th).tolist())
         else:
             self.logger.warning("No LSA results found (empty propagations_strengths vector)!" +
                                 "\nSkipping of setting active regions according to LSA!")
-        return stats_model
+        return probabilistic_model
 
-    def update_active_regions(self, stats_model, e_values=[], x0_values=[], lsa_propagation_strengths=[], reset=False):
+    def update_active_regions(self, probabilistic_model, e_values=[], x0_values=[], lsa_propagation_strengths=[], reset=False):
         if reset:
-            stats_model.update_active_regions([])
+            probabilistic_model.update_active_regions([])
         for m in ensure_list(self.active_regions_selection_methods):
             if isequal_string(m, "E"):
-                stats_model = self.update_active_regions_e_values(stats_model, e_values, reset=False)
+                probabilistic_model = self.update_active_regions_e_values(probabilistic_model, e_values, reset=False)
             elif isequal_string(m, "x0"):
-                stats_model = self.update_active_regions_x0_values(stats_model, x0_values, reset=False)
+                probabilistic_model = self.update_active_regions_x0_values(probabilistic_model, x0_values, reset=False)
             elif isequal_string(m, "LSA"):
-                stats_model = self.update_active_regions_lsa(stats_model, lsa_propagation_strengths, reset=False)
-        return stats_model
+                probabilistic_model = self.update_active_regions_lsa(probabilistic_model, lsa_propagation_strengths, reset=False)
+        return probabilistic_model
 
 
 class ODEModelInversionService(ModelInversionService):
@@ -99,33 +99,33 @@ class ODEModelInversionService(ModelInversionService):
         super(ODEModelInversionService, self).__init__()
         self.ts_service = TimeseriesService()
 
-    def update_active_regions_seeg(self, target_data, stats_model, sensors, reset=False):
+    def update_active_regions_seeg(self, target_data, probabilistic_model, sensors, reset=False):
         if reset:
-            stats_model.update_active_regions([])
+            probabilistic_model.update_active_regions([])
         if target_data:
-            active_regions = stats_model.active_regions
+            active_regions = probabilistic_model.active_regions
             gain_matrix = np.array(sensors.gain_matrix)
             seeg_inds = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
             if len(seeg_inds) != 0:
                 gain_matrix = gain_matrix[seeg_inds]
                 for proj in gain_matrix:
                     active_regions += select_greater_values_array_inds(proj).tolist()
-                    stats_model.update_active_regions(active_regions)
+                    probabilistic_model.update_active_regions(active_regions)
             else:
                 warning("Skipping active regions setting by seeg power because no data were assigned to sensors!")
         else:
             warning("Skipping active regions setting by seeg power because no target data were provided!")
-        return stats_model
+        return probabilistic_model
 
-    def update_active_regions(self, stats_model, sensors=None, target_data=None, e_values=[], x0_values=[],
+    def update_active_regions(self, probabilistic_model, sensors=None, target_data=None, e_values=[], x0_values=[],
                               lsa_propagation_strengths=[], reset=False):
         if reset:
-            stats_model.update_active_regions([])
-        stats_model = \
-            super(ODEModelInversionService, self).update_active_regions(stats_model, e_values, x0_values,
+            probabilistic_model.update_active_regions([])
+        probabilistic_model = \
+            super(ODEModelInversionService, self).update_active_regions(probabilistic_model, e_values, x0_values,
                                                                         lsa_propagation_strengths, reset=False)
-        stats_model = self.update_active_regions_seeg(target_data, stats_model, sensors, reset=False)
-        return stats_model
+        probabilistic_model = self.update_active_regions_seeg(target_data, probabilistic_model, sensors, reset=False)
+        return probabilistic_model
 
     def select_target_data_seeg(self, target_data, sensors, rois, power=np.array([])):
         if self.auto_selection.find("rois") >= 0:
@@ -142,31 +142,31 @@ class ODEModelInversionService(ModelInversionService):
             target_data = self.ts_service.select_by_power(target_data, power, self.power_th)
         return target_data
 
-    def set_gain_matrix(self, target_data, stats_model, sensors=None):
-        if stats_model.observation_model in OBSERVATION_MODELS.SEEG.value:
+    def set_gain_matrix(self, target_data, probabilistic_model, sensors=None):
+        if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
             signals_inds = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
-            gain_matrix = np.array(sensors.gain_matrix[signals_inds][:, stats_model.active_regions])
+            gain_matrix = np.array(sensors.gain_matrix[signals_inds][:, probabilistic_model.active_regions])
         else:
             gain_matrix = np.eye(target_data.number_of_labels)
         return gain_matrix
 
-    def set_target_data_and_time(self, target_data, stats_model, head=None, sensors=None, sensor_id=0,
+    def set_target_data_and_time(self, target_data, probabilistic_model, head=None, sensors=None, sensor_id=0,
                                  power=np.array([])):
         if sensors is None and head is not None:
             try:
                 sensors = sensors.head.get_sensors_id(sensor_ids=sensor_id)
             except:
-                if stats_model.observation_model in OBSERVATION_MODELS.SEEG.value:
+                if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
                     raise_error("No sensors instance! Needed for gain_matrix computation!")
                 else:
                     pass
         if len(self.manual_selection) > 0:
             target_data = target_data.get_subspace_by_index(self.manual_selection)
         if self.auto_selection:
-            if stats_model.observation_model in OBSERVATION_MODELS.SEEG.value:
-                target_data = self.select_target_data_seeg(target_data, sensors, stats_model.active_regions, power)
+            if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
+                target_data = self.select_target_data_seeg(target_data, sensors, probabilistic_model.active_regions, power)
             else:
-                target_data = target_data.get_subspace_by_index(stats_model.active_regions)
+                target_data = target_data.get_subspace_by_index(probabilistic_model.active_regions)
         if self.decim_ratio > 1:
             target_data = self.ts_service.decimate(target_data, self.decim_ratio)
         if np.any(np.array(self.cut_target_data_tails)):
@@ -178,11 +178,11 @@ class ODEModelInversionService(ModelInversionService):
         # TODO: decide about target_data' normalization for the different (sensors', sources' cases)
         if self.normalization:
             target_data = self.ts_service.normalize(target_data, self.normalization)
-        stats_model.time = target_data.time_line
-        stats_model.time_length = len(stats_model.time)
-        stats_model.dt = target_data.time_step
-        stats_model.number_of_target_data = target_data.number_of_labels
-        return target_data, stats_model, self.set_gain_matrix(target_data, stats_model, sensors)
+        probabilistic_model.time = target_data.time_line
+        probabilistic_model.time_length = len(probabilistic_model.time)
+        probabilistic_model.dt = target_data.time_step
+        probabilistic_model.number_of_target_data = target_data.number_of_labels
+        return target_data, probabilistic_model, self.set_gain_matrix(target_data, probabilistic_model, sensors)
 
 
 class SDEModelInversionService(ODEModelInversionService):

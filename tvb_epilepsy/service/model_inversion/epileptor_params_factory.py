@@ -2,7 +2,7 @@
 import numpy as np
 
 from tvb_epilepsy.base.computations.probability_distributions import ProbabilityDistributionTypes
-from tvb_epilepsy.base.model.statistical_models.probabilistic_parameter import NegativeLognormal
+from tvb_epilepsy.base.model.probabilistic_models.probabilistic_parameter import NegativeLognormal
 from tvb_epilepsy.service.probabilistic_parameter_builder import generate_probabilistic_parameter
 
 

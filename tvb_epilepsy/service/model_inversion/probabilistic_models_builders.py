@@ -8,8 +8,8 @@ from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_li
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z
 from tvb_epilepsy.base.computations.probability_distributions import ProbabilityDistributionTypes
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
-from tvb_epilepsy.base.model.statistical_models.epileptor_statistical_models \
-                                                     import StatisticalModel, ODEStatisticalModel, SDEStatisticalModel
+from tvb_epilepsy.base.model.probabilistic_models.epileptor_probabilistic_models \
+                                                     import ProbabilisticModel, ODEProbabilisticModel, SDEProbabilisticModel
 from tvb_epilepsy.service.probabilistic_parameter_builder import generate_probabilistic_parameter
 from tvb_epilepsy.service.model_inversion.epileptor_params_factory \
                                             import generate_lognormal_parameter, generate_negative_lognormal_parameter
@@ -20,7 +20,7 @@ x1eq_def = {"def": X1EQ_DEF, "min": X1EQ_MIN, "max": X1EQ_MAX}
 x_def = {"x0": x0_def, "x1eq": x0_def}
 
 
-class StatisticalModelBuilderBase(object):
+class ProbabilisticModelBuilderBase(object):
 
     __metaclass__ = ABCMeta
 
@@ -86,7 +86,7 @@ class StatisticalModelBuilderBase(object):
         pass
 
 
-class StatisticalModelBuilder(StatisticalModelBuilderBase):
+class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
 
     parameters = [XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "K"]
     sigma_x = SIGMA_X0_DEF
@@ -98,7 +98,7 @@ class StatisticalModelBuilder(StatisticalModelBuilderBase):
                  parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "K"],
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                  sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5):
-        super(StatisticalModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode)
+        super(ProbabilisticModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode)
         if sigma_x is None:
             if self.xmode == XModes.X0MODE.value:
                 self.sigma_x = SIGMA_X0_DEF
@@ -110,7 +110,7 @@ class StatisticalModelBuilder(StatisticalModelBuilderBase):
         self.MC_direction_split = MC_direction_split
 
     def _repr(self, d=OrderedDict()):
-        d.update(super(StatisticalModelBuilder, self)._repr(d))
+        d.update(super(ProbabilisticModelBuilder, self)._repr(d))
         nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
             d.update({str(nKeys+ikey) + ". " + key: str(val)})
@@ -188,15 +188,15 @@ class StatisticalModelBuilder(StatisticalModelBuilderBase):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
         parameters = self.generate_parameters()
-        model = StatisticalModel(self.name, self.number_of_regions, target_data_type, self.xmode, self.priors_mode,
-                                 parameters, ground_truth, self.model_config, self.sigma_x, self.MC_direction_split)
+        model = ProbabilisticModel(self.name, self.number_of_regions, target_data_type, self.xmode, self.priors_mode,
+                                   parameters, ground_truth, self.model_config, self.sigma_x, self.MC_direction_split)
         self.logger.info(self.__class__.__name__  + " took " +
                          str( time.time() - tic) + ' sec for model generation')
         return model
 
 
 
-class ODEStatisticalModelBuilder(StatisticalModelBuilder):
+class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
     parameters = [XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1init", "zinit",
                   "sigma_init", "epsilon", "scale", "offset"]
@@ -221,8 +221,8 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
                  scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF,
                  observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  number_of_signals=0, time_length=0, dt=DT_DEF, active_regions=[]):
-        super(ODEStatisticalModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode,
-                                                         sigma_x, sigma_x_scale, MC_direction_split)
+        super(ODEProbabilisticModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode,
+                                                           sigma_x, sigma_x_scale, MC_direction_split)
         self.sigma_init = sigma_init
         self.tau1 = tau1
         self.tau0 = tau0
@@ -236,14 +236,14 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
         self.active_regions = active_regions
 
     def _repr(self, d=OrderedDict()):
-        d.update(super(ODEStatisticalModelBuilder, self)._repr(d))
+        d.update(super(ODEProbabilisticModelBuilder, self)._repr(d))
         nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
             d.update({str(nKeys+ikey) + ". " + key: str(val)})
         return d
 
     def generate_parameters(self):
-        parameters = super(ODEStatisticalModelBuilder, self).generate_parameters()
+        parameters = super(ODEProbabilisticModelBuilder, self).generate_parameters()
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
 
         self.logger.info("...initial conditions' parameters...")
@@ -316,17 +316,17 @@ class ODEStatisticalModelBuilder(StatisticalModelBuilder):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
         parameters = self.generate_parameters()
-        model = ODEStatisticalModel(self.name, self.number_of_regions, target_data_type, self.xmode, self.priors_mode,
-                                    parameters, ground_truth, self.model_config, self.observation_model,
-                                    self.sigma_x, self.sigma_init, self.tau1, self.tau0,
-                                    self.scale, self.offset, self.epsilon,
-                                    self.number_of_signals, self.time_length, self.dt, self.active_regions)
+        model = ODEProbabilisticModel(self.name, self.number_of_regions, target_data_type, self.xmode, self.priors_mode,
+                                      parameters, ground_truth, self.model_config, self.observation_model,
+                                      self.sigma_x, self.sigma_init, self.tau1, self.tau0,
+                                      self.scale, self.offset, self.epsilon,
+                                      self.number_of_signals, self.time_length, self.dt, self.active_regions)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
         return model
 
 
-class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
+class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
 
     parameters = [XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1init", "zinit",
                   "sigma_init", "dX1t", "dZt", "sigma", "epsilon", "scale", "offset"]
@@ -342,23 +342,23 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
                  scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF,
                  sde_mode=SDE_MODES.NONCENTERED.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  number_of_signals=0, time_length=0, dt=DT_DEF, active_regions=[]):
-        super(SDEStatisticalModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode,
-                                                         sigma_x, sigma_x_scale, MC_direction_split, sigma_init,
-                                                         tau1, tau0, epsilon, scale, offset, observation_model,
-                                                         number_of_signals, time_length, dt, active_regions)
+        super(SDEProbabilisticModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode,
+                                                           sigma_x, sigma_x_scale, MC_direction_split, sigma_init,
+                                                           tau1, tau0, epsilon, scale, offset, observation_model,
+                                                           number_of_signals, time_length, dt, active_regions)
         self.sigma_init = sigma_init
         self.sde_mode = sde_mode
         self.sigma = sigma
 
     def _repr(self, d=OrderedDict()):
-        d.update(super(SDEStatisticalModelBuilder, self)._repr(d))
+        d.update(super(SDEProbabilisticModelBuilder, self)._repr(d))
         nKeys = len(d)
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
             d.update({str(nKeys+ikey) + ". " + key: str(val)})
         return d
 
     def generate_parameters(self):
-        parameters = super(SDEStatisticalModelBuilder, self).generate_parameters()
+        parameters = super(SDEProbabilisticModelBuilder, self).generate_parameters()
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
         if "sigma" in self.parameters:
             self.logger.info("...sigma...")
@@ -407,12 +407,12 @@ class SDEStatisticalModelBuilder(ODEStatisticalModelBuilder):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
         parameters = self.generate_parameters()
-        model = SDEStatisticalModel(self.name, self.number_of_regions, target_data_type, self.xmode, self.priors_mode,
-                                    parameters, ground_truth, self.model_config, self.observation_model,
-                                    self.sigma_x, self.sigma_init, self.sigma, self.tau1, self.tau0,
-                                    self.scale, self.offset, self.epsilon,
-                                    self.number_of_signals, self.time_length, self.dt, self.active_regions,
-                                    self.sde_mode)
+        model = SDEProbabilisticModel(self.name, self.number_of_regions, target_data_type, self.xmode, self.priors_mode,
+                                      parameters, ground_truth, self.model_config, self.observation_model,
+                                      self.sigma_x, self.sigma_init, self.sigma, self.tau1, self.tau0,
+                                      self.scale, self.offset, self.epsilon,
+                                      self.number_of_signals, self.time_length, self.dt, self.active_regions,
+                                      self.sde_mode)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
         return model

@@ -384,7 +384,7 @@ class H5Writer(object):
     def write_simulator_model(self, simulator_model, nr_regions, path):
         self.write_object_to_file(path, simulator_model, "HypothesisModel", nr_regions)
 
-    def write_statistical_model(self, statistical_model, nr_regions, path):
+    def write_probabilistic_model(self, probabilistic_model, nr_regions, path):
         """
         :param object:
         :param path:H5 path to be written
@@ -412,27 +412,27 @@ class H5Writer(object):
 
         h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
-        datasets_dict, metadata_dict, groups_keys = self._determine_datasets_and_attributes(statistical_model,
+        datasets_dict, metadata_dict, groups_keys = self._determine_datasets_and_attributes(probabilistic_model,
                                                                                             nr_regions)
         h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, statistical_model.__class__.__name__)
+        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, probabilistic_model.__class__.__name__)
 
         self._write_dicts_at_location(datasets_dict, metadata_dict, h5_file)
 
         for group_key in groups_keys:
             if group_key == "active_regions":
-                h5_file.create_dataset(group_key, data=numpy.array(statistical_model.active_regions))
+                h5_file.create_dataset(group_key, data=numpy.array(probabilistic_model.active_regions))
 
             elif group_key == "parameters":
                 group = h5_file.create_group(group_key)
-                group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, statistical_model.parameters.__class__.__name__)
-                for param_key, param_value in statistical_model.parameters.iteritems():
+                group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, probabilistic_model.parameters.__class__.__name__)
+                for param_key, param_value in probabilistic_model.parameters.iteritems():
                     group, param_group =_set_parameter_to_group(group, param_value, nr_regions, param_key)
 
             else:
                 group = h5_file.create_group(group_key)
-                group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, getattr(statistical_model, group_key).__class__.__name__)
-                group, _ = self._prepare_object_for_group(group, getattr(statistical_model, group_key), nr_regions)
+                group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, getattr(probabilistic_model, group_key).__class__.__name__)
+                group, _ = self._prepare_object_for_group(group, getattr(probabilistic_model, group_key), nr_regions)
 
         h5_file.close()
 

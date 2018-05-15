@@ -4,7 +4,7 @@
 from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
-from tvb_epilepsy.service.model_inversion.statistical_models_builders import SDEStatisticalModelBuilder
+from tvb_epilepsy.service.model_inversion.probabilistic_models_builders import SDEProbabilisticModelBuilder
 from tvb_epilepsy.service.model_inversion.model_inversion_services import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
 from tvb_epilepsy.service.model_inversion.stan.pystan_service import PyStanService
@@ -94,25 +94,25 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
         # -------------------------- Get model_data and observation signals: -------------------------------------------
         # Create model inversion service (stateless)
-        stats_model_file = path("StatsModel")
+        problstc_model_file = path("ProblstcModel")
         model_data_file = path("ModelData")
         target_data_file = path("TargetData")
-        if os.path.isfile(stats_model_file) and os.path.isfile(model_data_file) and os.path.isfile(target_data_file):
-            # Read existing statistical model and model data...
-            statistical_model = reader.read_statistical_model(stats_model_file)
+        if os.path.isfile(problstc_model_file) and os.path.isfile(model_data_file) and os.path.isfile(target_data_file):
+            # Read existing probabilistic model and model data...
+            probabilistic_model = reader.read_probabilistic_model(problstc_model_file)
             model_data = stan_service.load_model_data_from_file(model_data_path=model_data_file)
             target_data = reader.read_timeseries(target_data_file)
         else:
             model_inversion = SDEModelInversionService()
 
-            # ...or generate a new statistical model and model data
-            statistical_model = \
-                SDEStatisticalModelBuilder(model_name="vep_sde", model_config=model_configuration,
-                                           parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value,
+            # ...or generate a new probabilistic model and model data
+            probabilistic_model = \
+                SDEProbabilisticModelBuilder(model_name="vep_sde", model_config=model_configuration,
+                                             parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value,
                                                         "x1init", "zinit", "tau1", "K", # "tau0",
-                                                        "sigma", "dZt", "epsilon", "scale", "offset"], # "dX1t",
-                                           xmode=XModes.X0MODE.value, priors_mode=PriorsModes.INFORMATIVE.value,
-                                           sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,).\
+                                                        "sigma", "dZt", "epsilon", "scale", "offset"],  # "dX1t",
+                                             xmode=XModes.X0MODE.value, priors_mode=PriorsModes.INFORMATIVE.value,
+                                             sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model, ).\
                                                                                                        generate_model()
 
             # Update active model's active region nodes
@@ -120,40 +120,40 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             lsa_propagation_strength = pse_results.get("lsa_propagation_strengths_mean",
                                                            lsa_hypothesis.lsa_propagation_strengths)
             model_inversion.active_e_th = 0.2
-            statistical_model = \
-                model_inversion.update_active_regions(statistical_model, e_values=e_values,
+            probabilistic_model = \
+                model_inversion.update_active_regions(probabilistic_model, e_values=e_values,
                                                       lsa_propagation_strengths=lsa_propagation_strength, reset=True)
 
             # Now some scripts for settting and preprocessing target signals:
             if os.path.isfile(empirical_file):
-                statistical_model.target_data_type = TARGET_DATA_TYPE.EMPIRICAL.value
+                probabilistic_model.target_data_type = TARGET_DATA_TYPE.EMPIRICAL.value
                 # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
                 signals = set_empirical_data(empirical_file, path("ts_empirical"),
-                                             head, sensors_lbls, sensor_id, statistical_model.dt, times_on_off,
+                                             head, sensors_lbls, sensor_id, probabilistic_model.dt, times_on_off,
                                              label_strip_fun=lambda s: s.split("POL ")[-1], plotter=plotter,
                                              title_prefix=hyp.name, bipolar=False)
             else:
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
-                statistical_model.target_data_type = TARGET_DATA_TYPE.SYNTHETIC.value
+                probabilistic_model.target_data_type = TARGET_DATA_TYPE.SYNTHETIC.value
                 signals, simulator = \
-                    set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, statistical_model,
+                    set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, probabilistic_model,
                                               sensor_id, sim_type="fitting", times_on_off=times_on_off, config=config,
                                               plotter=plotter, title_prefix=hyp.name, bipolar=False, filter_flag=False,
                                               envelope_flag=False, smooth_flag=False, **kwargs)
-                statistical_model.ground_truth.update({"tau1": np.mean(simulator.model.tau1), # "tau1": np.mean(simulator.model.tt),
-                                                       "tau0": np.mean(simulator.model.tau0),  #1.0 / np.mean(simulator.model.r),
-                                                       "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
-                statistical_model.tau0 = np.mean(simulator.model.tau0)
-                statistical_model.dt = simulator.simTVB.integrator.dt
+                probabilistic_model.ground_truth.update({"tau1": np.mean(simulator.model.tau1), # "tau1": np.mean(simulator.model.tt),
+                                                         "tau0": np.mean(simulator.model.tau0),  #1.0 / np.mean(simulator.model.r),
+                                                         "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
+                probabilistic_model.tau0 = np.mean(simulator.model.tau0)
+                probabilistic_model.dt = simulator.simTVB.integrator.dt
 
             # -------------------------- Select and set target data from signals ---------------------------------------
-            if statistical_model.observation_model in OBSERVATION_MODELS.SEEG.value:
+            if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
                 model_inversion.auto_selection = "correlation-power"
                 model_inversion.sensors_per_electrode = 2
-            target_data, statistical_model, gain_matrix = \
-                model_inversion.set_target_data_and_time(signals, statistical_model, head=head, sensors=sensors)
+            target_data, probabilistic_model, gain_matrix = \
+                model_inversion.set_target_data_and_time(signals, probabilistic_model, head=head, sensors=sensors)
 
-            plotter.plot_statistical_model(statistical_model, hyp.name + " Statistical Model")
+            plotter.plot_probabilistic_model(probabilistic_model, hyp.name + " Probabilistic Model")
             plotter.plot_raster({'Target Signals': target_data.squeezed}, target_data.time_line,
                                 time_units=target_data.time_unit, title=hyp.name + ' Target Signals raster',
                                 offset=0.1, labels=target_data.space_labels)
@@ -161,25 +161,26 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                     time_units=target_data.time_unit,
                                     title=hyp.name + ' Target Signals', labels=target_data.space_labels)
 
-            writer.write_statistical_model(statistical_model, model_configuration.number_of_regions, stats_model_file)
+            writer.\
+              write_probabilistic_model(probabilistic_model, model_configuration.number_of_regions, problstc_model_file)
             writer.write_timeseries(target_data, target_data_file)
 
             # Interface with INS stan models
             if stan_model_name.find("vep-fe-rev") >= 0:
-                model_data = build_stan_model_dict_to_interface_ins(statistical_model, target_data.squeezed,
+                model_data = build_stan_model_dict_to_interface_ins(probabilistic_model, target_data.squeezed,
                                                                     model_configuration.model_connectivity, gain_matrix,
                                                                     time=target_data.time_line)
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        num_warmup = 1000
+        num_warmup = 30
         skip_samples = num_warmup
-        n_chains = 4
-        num_samples = max(int(np.round(1000.0/n_chains)), 500)
+        n_chains = 2
+        num_samples = 20  # max(int(np.round(1000.0/n_chains)), 500)
         if fit_flag:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
                                                       chains=n_chains, num_warmup=num_warmup, num_samples=num_samples,
-                                                      refresh=1, max_depth=12, delta=0.85, save_warmup=1, plot_warmup=1,
+                                                      refresh=1, max_depth=8, delta=0.8, save_warmup=1, plot_warmup=1,
                                                       **kwargs)
             writer.write_generic(ests, path("FitEst"))
             writer.write_generic(samples, path("FitSamples"))
@@ -200,7 +201,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
         # -------------------------- Plot fitting results: ------------------------------------------------------------
         if stan_service.fitmethod.find("opt") < 0:
-            plotter.plot_fit_results(ests, samples, model_data, target_data, statistical_model, stats={"Rhat": Rhat},
+            plotter.plot_fit_results(ests, samples, model_data, target_data, probabilistic_model, stats={"Rhat": Rhat},
                                      pair_plot_params=["sigma", "epsilon", "scale", "offset"],  # "tau1", "K",
                                      region_violin_params=["x0", "x1init", "zinit"],
                                      regions_labels=head.connectivity.region_labels, skip_samples=skip_samples,
@@ -213,12 +214,12 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             fit_model_configuration_builder = \
                 ModelConfigurationBuilder(hyp.number_of_regions, K=K * hyp.number_of_regions)
             x0_values_fit = model_configuration.x0_values
-            x0_values_fit[statistical_model.active_regions] = \
+            x0_values_fit[probabilistic_model.active_regions] = \
                 fit_model_configuration_builder._compute_x0_values_from_x0_model(est['x0'])
             hyp_fit = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).\
                                           set_name('fit' + str(id_est+1) + "_" + hyp.name).\
-                                          set_x0_hypothesis(list(statistical_model.active_regions),
-                                                            x0_values_fit[statistical_model.active_regions]).\
+                                          set_x0_hypothesis(list(probabilistic_model.active_regions),
+                                                            x0_values_fit[probabilistic_model.active_regions]).\
                                           build_hypothesis()
             base_path = os.path.join(config.out.FOLDER_RES, hyp_fit.name)
             writer.write_hypothesis(hyp_fit, path(""))
@@ -231,7 +232,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
             # Plot nullclines and equilibria of model configuration
             plotter.plot_state_space(model_configuration_fit, region_labels=head.connectivity.region_labels,
-                                     special_idx=statistical_model.active_regions, model="6d", zmode="lin",
+                                     special_idx=probabilistic_model.active_regions, model="6d", zmode="lin",
                                      figure_name=hyp_fit.name + "_Nullclines and equilibria")
         logger.info("Done!")
 
@@ -244,7 +245,7 @@ if __name__ == "__main__":
                              "raw/seeg/ts_seizure")
 
     if user_home == "/home/denis":
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/fit_fixedKtau1_tau0300_info")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/fit")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.C_COMPILER = "g++"
         config.generic.CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
@@ -299,7 +300,7 @@ if __name__ == "__main__":
     EMPIRICAL = False
     # times_on_off = [50.0, 550.0]  # for paper"" simulations
     times_on_off = [1100.0, 1300.0]  # for paper"" simulations
-    # stats_model_name = "vep_sde"
+    # prob_model_name = "vep_sde"
     stan_model_name = "vep-fe-rev-09dp_simple"
     fitmethod = "sample"
     observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  # OBSERVATION_MODELS.SEEG_LOGPOWER.value

@@ -128,9 +128,9 @@ class Plotter(BasePlotter):
                                     left_ax_focus_indices=disease_indices, right_ax_focus_indices=disease_indices,
                                     title=title, figure_name=figure_name, figsize=figsize)
 
-    def plot_statistical_model(self, statistical_model, figure_name=""):
-        _, ax = pyplot.subplots(len(statistical_model.parameters), 1, figsize=FiguresConfig.VERY_LARGE_PORTRAIT)
-        for ip, p in enumerate(statistical_model.parameters.values()):
+    def plot_probabilistic_model(self, probabilistic_model, figure_name=""):
+        _, ax = pyplot.subplots(len(probabilistic_model.parameters), 1, figsize=FiguresConfig.VERY_LARGE_PORTRAIT)
+        for ip, p in enumerate(probabilistic_model.parameters.values()):
             self._prepare_parameter_axes(p, x=numpy.array([]), ax=ax[ip], lgnd=False)
         self._save_figure(pyplot.gcf(), figure_name)
         self._check_show()
@@ -851,7 +851,7 @@ class Plotter(BasePlotter):
             self._save_figure(pyplot.gcf(), None)
             self._check_show()
 
-    def plot_fit_scalar_params(self, samples, stats, statistical_model=None,
+    def plot_fit_scalar_params(self, samples, stats, probabilistic_model=None,
                                pair_plot_params=["tau1",  "K", "sigma", "epsilon", "scale", "offset"], skip_samples=0,
                                title_prefix=""):
         # plot scalar parameters in pair plots
@@ -859,17 +859,17 @@ class Plotter(BasePlotter):
             title_prefix = title_prefix + ": "
         priors = {}
         truth = {}
-        if statistical_model is not None:
-            title = title_prefix + statistical_model.name + " parameters samples"
+        if probabilistic_model is not None:
+            title = title_prefix + probabilistic_model.name + " parameters samples"
             for p in pair_plot_params:
-                priors.update({p: statistical_model.get_prior_pdf(p)})
-                truth.update({p: numpy.nanmean(statistical_model.get_truth(p))})
+                priors.update({p: probabilistic_model.get_prior_pdf(p)})
+                truth.update({p: numpy.nanmean(probabilistic_model.get_truth(p))})
         else:
             title = title_prefix + "Parameters samples"
 
         self.parameters_pair_plots(samples, pair_plot_params, stats, priors, truth, skip_samples, title=title)
 
-    def plot_fit_region_params(self, samples, stats=None, statistical_model=None,
+    def plot_fit_region_params(self, samples, stats=None, probabilistic_model=None,
                                region_violin_params=["x0", "x1init", "zinit"], seizure_indices=[], region_labels=[],
                                regions_mode="all", per_chain_plotting=False, skip_samples=0, title_prefix=""):
         if len(title_prefix) > 0:
@@ -879,23 +879,23 @@ class Plotter(BasePlotter):
         samples = ensure_list(samples)
         priors = {}
         truth = {}
-        if statistical_model is not None:
-            title_pair_plot = title_prefix + statistical_model.name + " global coupling vs x0 pair plot"
-            title_violin_plot = title_prefix + statistical_model.name + " regions parameters samples"
+        if probabilistic_model is not None:
+            title_pair_plot = title_prefix + probabilistic_model.name + " global coupling vs x0 pair plot"
+            title_violin_plot = title_prefix + probabilistic_model.name + " regions parameters samples"
             if regions_mode=="active":
-                regions_inds = statistical_model.active_regions
+                regions_inds = probabilistic_model.active_regions
             else:
-                regions_inds = range(statistical_model.number_of_regions)
-            I = numpy.ones((statistical_model.number_of_regions, 1))
+                regions_inds = range(probabilistic_model.number_of_regions)
+            I = numpy.ones((probabilistic_model.number_of_regions, 1))
             for param in region_violin_params:
-                pdf = ensure_list(statistical_model.get_prior_pdf(param))
+                pdf = ensure_list(probabilistic_model.get_prior_pdf(param))
                 for ip, p in enumerate(pdf):
                     pdf[ip] = ((p.T * I)[regions_inds])
                 priors.update({param: (pdf[0].squeeze(), pdf[1].squeeze())})
-                truth.update({param: ((statistical_model.get_truth(param) * I[:, 0])[regions_inds]).squeeze()})
+                truth.update({param: ((probabilistic_model.get_truth(param) * I[:, 0])[regions_inds]).squeeze()})
         else:
-            title_pair_plot = title_prefix + statistical_model.name + "Global coupling vs x0 pair plot"
-            title_violin_plot = title_prefix + statistical_model.name + "Regions parameters samples"
+            title_pair_plot = title_prefix + probabilistic_model.name + "Global coupling vs x0 pair plot"
+            title_violin_plot = title_prefix + probabilistic_model.name + "Regions parameters samples"
             regions_inds = range(samples[0]["x0"].shape[2])
         # plot region-wise parameters
         self.region_parameters_violin_plots(samples, truth, priors, stats, region_violin_params, skip_samples,
@@ -908,28 +908,28 @@ class Plotter(BasePlotter):
                 # plot K-x0 parameters in pair plots
                 x0_K_pair_plot_params = ["K"]
                 x0_K_pair_plot_samples = [{"K": s["K"]} for s in samples]
-                if statistical_model is not None:
-                    priors.update({"K": statistical_model.get_prior_pdf("K")})
-                    truth.update({"K": statistical_model.get_truth("K")})
+                if probabilistic_model is not None:
+                    priors.update({"K": probabilistic_model.get_prior_pdf("K")})
+                    truth.update({"K": probabilistic_model.get_truth("K")})
             for inode, label in enumerate(region_labels):
                 temp_name = "x0[" + label + "]"
                 x0_K_pair_plot_params.append(temp_name)
                 for ichain, s in enumerate(samples):
                     x0_K_pair_plot_samples[ichain].update({temp_name: s["x0"][:, inode]})
-                    if statistical_model is not None:
+                    if probabilistic_model is not None:
                         priors.update({temp_name: (priors["x0"][0][inode], priors["x0"][1][inode])})
                         truth.update({temp_name: truth["x0"][inode]})
             self.parameters_pair_plots(x0_K_pair_plot_samples, x0_K_pair_plot_params, None, priors, truth, skip_samples,
                                        title=title_pair_plot)
 
-    def plot_fit_timeseries(self, target_data, samples, ests, stats=None, statistical_model=None,
+    def plot_fit_timeseries(self, target_data, samples, ests, stats=None, probabilistic_model=None,
                             seizure_indices=[], skip_samples=0, trajectories_plot=False, title_prefix=""):
         if len(title_prefix) > 0:
             title_prefix = title_prefix + ": "
         samples = ensure_list(samples)
         region_labels = samples[0]["x1"].space_labels
-        if statistical_model is not None:
-            sig_prior_str = " sig_prior = " + str(statistical_model.get_prior("sigma")[0])
+        if probabilistic_model is not None:
+            sig_prior_str = " sig_prior = " + str(probabilistic_model.get_prior("sigma")[0])
         else:
             sig_prior_str = ""
         stats_region_labels = region_labels
@@ -951,7 +951,7 @@ class Plotter(BasePlotter):
         observation_dict = OrderedDict({'observation time series': target_data.squeezed})
         time = target_data.time_line
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), samples)):
-            name = title_prefix + statistical_model.name + "_chain" + str(id_est + 1)
+            name = title_prefix + probabilistic_model.name + "_chain" + str(id_est + 1)
             observation_dict.update({"fit chain " + str(id_est + 1):
                                          sample["fit_target_data"].squeezed[:, :, skip_samples:]})
             self.plot_raster(sort_dict({"x1": sample["x1"].squeezed[:, :, skip_samples:],
@@ -983,18 +983,18 @@ class Plotter(BasePlotter):
                                        special_idx=seizure_indices, title=title, labels=stats_region_labels,
                                        figsize=FiguresConfig.SUPER_LARGE_SIZE)
         self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
-                         title=title_prefix + statistical_model.name + "Observation target vs fit time series: "
+                         title=title_prefix + probabilistic_model.name + "Observation target vs fit time series: "
                                 + stats_string["fit_target_data"],
-                         figure_name=title_prefix + statistical_model.name + "ObservationTarget_VS_FitTimeSeries",
+                         figure_name=title_prefix + probabilistic_model.name + "ObservationTarget_VS_FitTimeSeries",
                          offset=1.0, labels=target_data.space_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
-    def plot_fit_connectivity(self, ests, samples, stats=None, statistical_model=None, region_labels=[], title_prefix=""):
+    def plot_fit_connectivity(self, ests, samples, stats=None, probabilistic_model=None, region_labels=[], title_prefix=""):
         # plot connectivity
         if len(title_prefix) > 0:
             title_prefix = title_prefix + "_"
-        if statistical_model is not None:
-            name0 = title_prefix + statistical_model.name + "_"
-            MC_prior = statistical_model.get_prior("MC")
+        if probabilistic_model is not None:
+            name0 = title_prefix + probabilistic_model.name + "_"
+            MC_prior = probabilistic_model.get_prior("MC")
             MC_subplot = 122
         else:
             name0 = title_prefix
@@ -1017,13 +1017,13 @@ class Plotter(BasePlotter):
             self._save_figure(pyplot.gcf(), conn_figure_name)
             self._check_show()
 
-    def plot_fit_results(self, ests, samples, model_data, target_data, statistical_model=None, stats=None,
+    def plot_fit_results(self, ests, samples, model_data, target_data, probabilistic_model=None, stats=None,
                          pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
                          region_violin_params=["x0", "x1init", "zinit"],
                          regions_labels=[], regions_mode="active", n_regions=1,
                          trajectories_plot=True, connectivity_plot=False, skip_samples=0, title_prefix=""):
-        if statistical_model is not None:
-            active_regions = statistical_model.active_regions
+        if probabilistic_model is not None:
+            active_regions = probabilistic_model.active_regions
         else:
             active_regions = model_data.get("active_regions", range(n_regions))
             regions_labels = generate_region_labels(n_regions, regions_labels, ". ", False)
@@ -1034,16 +1034,16 @@ class Plotter(BasePlotter):
             seizure_indices = None
             regions_labels = regions_labels[region_inds]
 
-        self.plot_fit_scalar_params(samples, stats, statistical_model, pair_plot_params, skip_samples, title_prefix)
+        self.plot_fit_scalar_params(samples, stats, probabilistic_model, pair_plot_params, skip_samples, title_prefix)
 
-        self.plot_fit_region_params(samples, stats, statistical_model, region_violin_params, seizure_indices,
+        self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
                                     regions_labels, regions_mode, False, skip_samples, title_prefix)
 
-        self.plot_fit_region_params(samples, stats, statistical_model, region_violin_params, seizure_indices,
+        self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
                                     regions_labels, regions_mode, True, skip_samples, title_prefix)
 
-        self.plot_fit_timeseries(target_data, samples, ests, stats, statistical_model,
+        self.plot_fit_timeseries(target_data, samples, ests, stats, probabilistic_model,
                                  seizure_indices, skip_samples, trajectories_plot, title_prefix)
 
         if connectivity_plot:
-            self.plot_fit_connectivity(ests, stats, statistical_model, regions_labels, title_prefix)
+            self.plot_fit_connectivity(ests, stats, probabilistic_model, regions_labels, title_prefix)

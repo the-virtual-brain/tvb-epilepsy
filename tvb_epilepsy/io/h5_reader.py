@@ -11,7 +11,7 @@ from tvb_epilepsy.base.model.vep.surface import Surface, SurfaceH5Field
 from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
 from tvb_epilepsy.base.model.parameter import Parameter
 from tvb_epilepsy.base.simulation_settings import SimulationSettings
-from tvb_epilepsy.service.model_inversion.statistical_models_builders import *
+from tvb_epilepsy.service.model_inversion.probabilistic_models_builders import *
 from tvb_epilepsy.io.h5_model import read_h5_model
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.probabilistic_parameter_builder import generate_probabilistic_parameter
@@ -413,7 +413,7 @@ class H5Reader(object):
         h5_file.close()
         return sim_settings
 
-    def read_statistical_model(self, path):
+    def read_probabilistic_model(self, path):
 
         def strip_key_name(key):
             if key != "star":
@@ -449,23 +449,23 @@ class H5Reader(object):
 
         h5_file = h5py.File(path, 'r', libver='latest')
 
-        statistical_model = None
+        probabilistic_model = None
         epi_subtype = h5_file.attrs[H5_SUBTYPE_ATTRIBUTE]
 
-        if H5_SUBTYPE_ATTRIBUTE == StatisticalModel.__name__:
-            statistical_model = StatisticalModel()
-        if epi_subtype == ODEStatisticalModel.__name__:
-            statistical_model = ODEStatisticalModel()
-        if epi_subtype == SDEStatisticalModel.__name__:
-            statistical_model = SDEStatisticalModel()
+        if H5_SUBTYPE_ATTRIBUTE == ProbabilisticModel.__name__:
+            probabilistic_model = ProbabilisticModel()
+        if epi_subtype == ODEProbabilisticModel.__name__:
+            probabilistic_model = ODEProbabilisticModel()
+        if epi_subtype == SDEProbabilisticModel.__name__:
+            probabilistic_model = SDEProbabilisticModel()
 
         for attr in h5_file.attrs.keys():
             if attr not in H5_TYPES_ATTRUBUTES:
-                statistical_model.__setattr__(attr, h5_file.attrs[attr])
+                probabilistic_model.__setattr__(attr, h5_file.attrs[attr])
 
         for key, value in h5_file.iteritems():
             if isinstance(value, h5py.Dataset):
-                statistical_model.__setattr__(key, value[()])
+                probabilistic_model.__setattr__(key, value[()])
             if isinstance(value, h5py.Group):
                 if key == "model_config" and value.attrs[H5_SUBTYPE_ATTRIBUTE] == ModelConfiguration.__name__:
                     model_config = ModelConfiguration()
@@ -477,7 +477,7 @@ class H5Reader(object):
                         if mc_attr not in H5_TYPES_ATTRUBUTES:
                             model_config.__setattr__(mc_attr, value.attrs[mc_attr])
 
-                    statistical_model.__setattr__(key, model_config)
+                    probabilistic_model.__setattr__(key, model_config)
 
                 if key == "parameters":  # and value.attrs[epi_subtype_key] == OrderedDict.__name__:
                     parameters = OrderedDict()
@@ -498,20 +498,20 @@ class H5Reader(object):
 
                         parameters.update({group_key: parameter})
 
-                    statistical_model.__setattr__(key, parameters)
+                    probabilistic_model.__setattr__(key, parameters)
 
                 if key == "ground_truth":
                     for dataset in value.keys():
-                        statistical_model.ground_truth[dataset] = value[dataset]
+                        probabilistic_model.ground_truth[dataset] = value[dataset]
                     for attr in value.attrs.keys():
                         if attr not in H5_TYPES_ATTRUBUTES:
-                            statistical_model.ground_truth[attr] = value.attrs[attr]
+                            probabilistic_model.ground_truth[attr] = value.attrs[attr]
 
                 if key == "active_regions":
-                    statistical_model.active_regions = ensure_list(value)
+                    probabilistic_model.active_regions = ensure_list(value)
 
         h5_file.close()
-        return statistical_model
+        return probabilistic_model
 
     def read_generic(self, path, obj=None, output_shape=None):
         return read_h5_model(path).convert_from_h5_model(obj, output_shape)

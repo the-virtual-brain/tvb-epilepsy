@@ -1,7 +1,7 @@
 import numpy as np
 from tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_epilepsy.base.model.parameter import Parameter
-from tvb_epilepsy.base.model.statistical_models.probabilistic_parameter import ProbabilisticParameterBase
+from tvb_epilepsy.base.model.probabilistic_models.probabilistic_parameter import ProbabilisticParameterBase
 from tvb_epilepsy.base.utils.data_structures_utils import extract_dict_stringkeys, \
     get_val_key_for_first_keymatch_in_dict
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error

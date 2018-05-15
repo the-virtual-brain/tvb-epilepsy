@@ -4,7 +4,7 @@ import scipy.stats as ss
 from tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import dict_str, formal_repr, isequal_string
-from tvb_epilepsy.base.model.statistical_models.probabilistic_parameter import ProbabilisticParameterBase, \
+from tvb_epilepsy.base.model.probabilistic_models.probabilistic_parameter import ProbabilisticParameterBase, \
                                                                                 TransformedProbabilisticParameterBase
 from tvb_epilepsy.service.sampling.sampling_service import SamplingService
 

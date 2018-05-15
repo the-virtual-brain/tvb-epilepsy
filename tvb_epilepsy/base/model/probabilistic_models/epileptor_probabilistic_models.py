@@ -7,10 +7,10 @@ from tvb_epilepsy.base.constants.model_inversion_constants import *
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, warning
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, ensure_list
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
-from tvb_epilepsy.base.model.statistical_models.probabilistic_parameter import ProbabilisticParameterBase, \
+from tvb_epilepsy.base.model.probabilistic_models.probabilistic_parameter import ProbabilisticParameterBase, \
                                                                                 TransformedProbabilisticParameterBase
 
-class StatisticalModel(object):
+class ProbabilisticModel(object):
 
     name = "vep"
     target_data_type = TARGET_DATA_TYPE.EMPIRICAL.value
@@ -91,7 +91,7 @@ class StatisticalModel(object):
             return mean_or_truth
 
 
-class ODEStatisticalModel(StatisticalModel):
+class ODEProbabilisticModel(ProbabilisticModel):
 
     observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
     sigma_init = SIGMA_INIT_DEF
@@ -123,8 +123,8 @@ class ODEStatisticalModel(StatisticalModel):
                  sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                  scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF, epsilon=EPSILON_DEF,
                  number_of_target_data=0, time_length=0, dt=DT_DEF, active_regions=[]):
-        super(ODEStatisticalModel, self).__init__(name, number_of_regions,  target_data_type, xmode, priors_mode,
-                                                  parameters, ground_truth, model_config, sigma_x)
+        super(ODEProbabilisticModel, self).__init__(name, number_of_regions, target_data_type, xmode, priors_mode,
+                                                    parameters, ground_truth, model_config, sigma_x)
         if np.all(np.in1d(active_regions, range(self.number_of_regions))):
             self.active_regions = np.unique(active_regions).tolist()
         else:
@@ -154,7 +154,7 @@ class ODEStatisticalModel(StatisticalModel):
                               "\nbeyond number of regions (" + str(self.number_of_regions) + ")!")
 
 
-class SDEStatisticalModel(ODEStatisticalModel):
+class SDEProbabilisticModel(ODEProbabilisticModel):
 
     sigma = SIGMA_DEF
     sde_mode = SDE_MODES.NONCENTERED.value
@@ -166,15 +166,15 @@ class SDEStatisticalModel(ODEStatisticalModel):
                  scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF, epsilon=EPSILON_DEF,
                  number_of_target_data=0, time_length=0, dt=DT_DEF, active_regions=[],
                  sde_mode=SDE_MODES.NONCENTERED.value):
-        super(SDEStatisticalModel, self).__init__(name, number_of_regions, target_data_type, xmode, priors_mode,
-                                                  parameters, ground_truth, model_config, observation_model,
-                                                  sigma_x, sigma_init, tau1, tau0, scale, offset, epsilon,
-                                                  number_of_target_data, time_length, dt, active_regions)
+        super(SDEProbabilisticModel, self).__init__(name, number_of_regions, target_data_type, xmode, priors_mode,
+                                                    parameters, ground_truth, model_config, observation_model,
+                                                    sigma_x, sigma_init, tau1, tau0, scale, offset, epsilon,
+                                                    number_of_target_data, time_length, dt, active_regions)
         self.sigma = sigma
         self.sde_mode = sde_mode
 
 
-class EpileptorStatisticalModels(Enum):
-    STATISTICAL_MODEL = StatisticalModel().__class__.__name__
-    ODESTATISTICAL_MODEL = ODEStatisticalModel().__class__.__name__
-    SDESTATISTICAL_MODEL = SDEStatisticalModel().__class__.__name__
+class EpileptorProbabilisticModels(Enum):
+    STATISTICAL_MODEL = ProbabilisticModel().__class__.__name__
+    ODESTATISTICAL_MODEL = ODEProbabilisticModel().__class__.__name__
+    SDESTATISTICAL_MODEL = SDEProbabilisticModel().__class__.__name__
