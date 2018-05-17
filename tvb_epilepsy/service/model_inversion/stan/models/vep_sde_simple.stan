@@ -29,6 +29,37 @@ functions {
         z_next = z + (time_scale * dz) + z_eta * sigma;
         return z_next;
     }
+
+    real[] normal_mean_std_to_lognorm_mu_sigma(real mean, real std) {
+        real logsm21 = log((std/mean) ** 2 + 1);
+        real mustd[2];
+        mu_sigma[1] = log(mean) - 0.5*logsm21;
+        mu_sigma[2] = sqrt(logsm21);
+        return mu_sigma
+    }
+
+    row_vector normal_mean_std_to_lognorm_mu(row_vector mean, row_vector std) {
+        int nn = num_elements(mean);
+        row_vector[nn] logsm21 = std./mean
+        logsm21 = log(logsm21 .* logsm21 + 1);
+        return log(mean) - 0.5*logsm21;
+    }
+
+    row_vector normal_mean_std_to_lognorm_sigma(row_vector mean, row_vector std) {
+        int nn = num_elements(mean);
+        row_vector[nn] logsm21 = std./mean
+        logsm21 = log(logsm21 .* logsm21 + 1);
+        return sqrt(logsm21);
+    }
+
+    real standard_normal_to_lognormal(real standard_normal, real mu, real sigma){
+        return (exp(mu + sigma*standard_normal);
+    }
+
+
+    row_vector standard_normal_to_lognormal_row(row_vector standard_normal, row_vector mu, row_vector sigma){
+        return exp(mu + sigma.*standard_normal;
+    }
 }
 
 data {
@@ -72,12 +103,14 @@ data {
 
 transformed data {
     real sqrtdt = sqrt(dt);
-    real time_scale_zscore = time_scale_std/time_scale_mu;
-    real k_zscore = k_std/k_mu;
-    real amplitude_zscore = amplitude_std/amplitude_mu;
-    real epsilon_zscore = epsilon_std/epsilon_mu;
-    real sigma_zscore = sigma_std/sigma_mu;
-    row_vector[nn] x0_star_zscore = x0_star_std ./ x0_star_mu;
+    real[2] amplitude_mu_sigma = normal_mean_std_to_lognorm_mu_sigma(amplitude_mu, amplitude_std);
+    real[2] epsilon_mu_sigma = normal_mean_std_to_lognorm_mu_sigma(epsilon_mu, epsilon_std);
+    real[2] time_scale_mu_sigma = normal_mean_std_to_lognorm_mu_sigma(time_scale_mu, time_scale_std);
+    // real[2] k_mu_sigma = normal_mean_std_to_lognorm_mu_sigma(k_mu, k_std);
+    real k = k_mu;
+    real[2] sigma_mu_sigma = normal_mean_std_to_lognorm_mu_sigma(sigma_mu, sigma_std);
+    row_vector[nn] x0_logmu = normal_mean_std_to_lognorm_mu(x0_hi-x0_star_mu, x0_star_std);
+    row_vector[nn] x0_sigma = normal_mean_std_to_lognorm_sigma(x0_hi-x0_star_mu, x0_star_std);
     //matrix[ns, nn] log_gain = log(gain);
     matrix [nn, nn] SC_ = SC;
     for (i in 1:nn) SC_[i, i] = 0;
@@ -86,28 +119,32 @@ transformed data {
 
 parameters {
     // integrate and predict
-    row_vector<upper=3.0> [nn] x0_star;
-    real<upper=3.0> epsilon_star;
-    real<lower=-3.0, upper=3.0> amplitude_star;
-    real<lower=-1.0, upper=1.0> offset;
-    real<lower=-3.0, upper=3.0> time_scale_star;
+    row_vector [nn] x0_star;
+    real epsilon_star;
+    real amplitude_star;
+    real offset_star;
+    real sigma_star;
+    real time_scale_star;
+    // real k_star;
 
     // time-series state non-centering:
-    row_vector[nn] x_init;
-    row_vector[nn] z_init;
+    row_vector[nn] x_init_star;
+    row_vector[nn] z_init_star;
     // row_vector[nn] x_eta[nt - 1];
     row_vector[nn] z_eta[nt - 1];
-    real<upper=3.0> sigma_star;
-    real<upper=3.0> k_star;
+
 }
 
 transformed parameters {
-    real amplitude = amplitude_mu * exp(amplitude_zscore * amplitude_star);
-    real epsilon = epsilon_mu * exp(epsilon_zscore * epsilon_star); //0.05
-    real sigma = sigma_mu * exp(sigma_zscore * sigma_star); //0.053 * exp(0.1 * sigma_star);
-    real time_scale = time_scale_mu * exp(time_scale_zscore * time_scale_star); //0.15 * exp(0.4 * time_scale_star - 1.0);
-    real k = k_mu * exp(k_zscore * k_star); //1e-3 * exp(0.5 * k_star);
-    row_vector[nn] x0 = x0_hi - (x0_star_mu .* exp(x0_star_zscore .* x0_star));
+    real offset = offset_mu + offset_star * offset_std;
+    real amplitude = standard_normal_to_lognormal(amplitude_star, amplitude_mu_sigma[1], amplitude_mu_sigma[2]);
+    real epsilon = standard_normal_to_lognormal(epsilon_star, epsilon_mu_sigma[1], epsilon_mu_sigma[2]);
+    real sigma = standard_normal_to_lognormal(sigma_star, sigma_mu_sigma[1], sigma_mu_sigma[2]);
+    real time_scale = standard_normal_to_lognormal(time_scale_star, time_scale_mu_sigma[1], time_scale_mu_sigma[2]);
+    // real k = standard_normal_to_lognormal(k_star, k_mu_sigma[1], k_mu_sigma[2]);
+    row_vector[nn] x0 = x0_hi - standard_normal_to_lognormal_row(x0_star, x0_logmu, x0_sigma);
+    row_vector[nn] x_init = x_init_mu + x_init_star * x_init_std;
+    row_vector[nn] z_init = z_init_mu + z_init_star * z_init_std;
     row_vector[nn] x[nt];
     row_vector[nn] z[nt];
     row_vector[ns] mu_seeg_log_power[nt];
@@ -124,16 +161,15 @@ transformed parameters {
 }
 
 model {
-    to_row_vector(x0_star) ~ normal(0.0, 1.0);
-    k_star ~ normal(0.0, 1);
-    x_init ~ normal(x_init_mu, x_init_std); // 0.0, 1.0
-    z_init ~ normal(z_init_mu, z_init_std); // 0.0, 1.0
+    offset_star ~ normal(0.0, 1.0);
+    amplitude_star ~ normal(0.0, 1.0);
+    epsilon_star ~ normal(0.0, 1.0);
     sigma_star ~ normal(0.0, 1.0);
     time_scale_star ~ normal(0.0, 1.0);
-
-    amplitude_star ~ normal(0.0, 1.0);
-    offset ~ normal(offset_mu, offset_std);
-    epsilon_star ~ normal(0.0, 1.0);
+    // k_star ~ normal(0.0, 1.0);
+    to_row_vector(x0_star) ~ normal(0.0, 1.0);
+    x_init_star ~ normal(0.0, 1.0);
+    z_init_star ~ normal(0.0, 1.0);
 
     for (t in 1:(nt - 1)) {
         // to_vector(x_eta[t]) ~ normal(0.0, 1.0);
@@ -145,11 +181,9 @@ model {
             seeg_log_power[t] ~ normal(mu_seeg_log_power[t], epsilon);
 }
 
-/*
+
 generated quantities {
-    row_vector[ns] gq_seeg_log_power[nt];
+    row_vector[ns] log_likelihood[nt];
     for (t in 1:nt)
-        for (i in 1:ns)
-            gq_seeg_log_power[t][i] = normal_rng(mu_seeg_log_power[t][i], epsilon);
+        log_likelihood[t] = ﻿normal_lpdf(seeg_log_power[t] | mu_seeg_log_power[t], epsilon)
 }
-*/

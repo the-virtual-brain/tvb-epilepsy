@@ -301,7 +301,7 @@ if __name__ == "__main__":
     # times_on_off = [50.0, 550.0]  # for paper"" simulations
     times_on_off = [1100.0, 1300.0]  # for paper"" simulations
     # prob_model_name = "vep_sde"
-    stan_model_name = "vep-fe-rev-09dp_simple"
+    stan_model_name = "vep_sde_simple"
     fitmethod = "sample"
     observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  # OBSERVATION_MODELS.SEEG_LOGPOWER.value
     pse_flag = True
