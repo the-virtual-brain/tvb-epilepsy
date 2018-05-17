@@ -166,7 +166,7 @@ class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
             self.logger.info("..." + sigma_x + "...")
             parameters.update(
                 {sigma_x: generate_lognormal_parameter(sigma_x_name, self.sigma_x, 0.0, 10*self.sigma_x,
-                                                       sigma=self.sigma_x, sigma_scale=10, p_shape=(), use="scipy")})
+                                                       sigma_scale=self.sigma_x, p_shape=(), use="scipy")})
 
         # Coupling
         if "MC" in self.parameters:
@@ -199,7 +199,7 @@ class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
 class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
     parameters = [XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1init", "zinit",
-                  "sigma_init", "epsilon", "scale", "offset"]
+                  "epsilon", "scale", "offset"]
     sigma_init = SIGMA_INIT_DEF
     epsilon = EPSILON_DEF
     scale = SCALE_SIGNAL_DEF
@@ -214,7 +214,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
     def __init__(self, model_name="vep_ode", model_config=ModelConfiguration(),
                  parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1init", "zinit",
-                             "sigma_init", "epsilon", "scale", "offset"],
+                             "epsilon", "scale", "offset"],
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                  sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5,
                  sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF,
@@ -329,13 +329,13 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
 
     parameters = [XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1init", "zinit",
-                  "sigma_init", "dX1t", "dZt", "sigma", "epsilon", "scale", "offset"]
+                  "dX1t", "dZt", "sigma", "epsilon", "scale", "offset"]
     sigma = SIGMA_DEF
     sde_mode = SDE_MODES.NONCENTERED.value
 
     def __init__(self, model_name="vep_sde", model_config=ModelConfiguration(),
                  parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1init", "zinit",
-                             "sigma_init",  "dX1t", "dZt", "sigma", "epsilon", "scale", "offset"],
+                             "dX1t", "dZt", "sigma", "epsilon", "scale", "offset"],
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                  sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5,
                  sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF, sigma=SIGMA_DEF,
@@ -363,10 +363,8 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
         if "sigma" in self.parameters:
             self.logger.info("...sigma...")
             parameters.update(
-                {"sigma": generate_probabilistic_parameter("sigma", 0.0, 10 * self.sigma, p_shape=(),
-                                                           probability_distribution=ProbabilityDistributionTypes.GAMMA,
-                                                           optimize_pdf=True, use="scipy", **{"mean": 1.0, "skew": 0.0}).
-                                              update_loc_scale(use="scipy", **{"mean": self.sigma, "std": self.sigma})})
+                {"sigma": generate_lognormal_parameter("sigma", self.sigma, 0.0, SIGMA_MAX,
+                                                       sigma=None, sigma_scale=SIGMA_SCALE, p_shape=(), use="scipy")})
         names = []
         mins = []
         maxs = []
