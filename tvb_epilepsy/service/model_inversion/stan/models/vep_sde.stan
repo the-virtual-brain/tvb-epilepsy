@@ -139,7 +139,7 @@ parameters {
     real offset_star;
     real sigma_star;
     real time_scale_star;
-    // real k_star;
+    real k_star;
 
     // time-series state non-centering:
     row_vector[nn] x_init_star;
