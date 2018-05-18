@@ -143,7 +143,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
                 probabilistic_model.ground_truth.update({"tau1": np.mean(simulator.model.tau1), # "tau1": np.mean(simulator.model.tt),
                                                          "tau0": np.mean(simulator.model.tau0),  #1.0 / np.mean(simulator.model.r),
                                                          "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
-                probabilistic_model.tau0 = np.mean(simulator.model.tau0)
+                # probabilistic_model.tau0 = np.mean(simulator.model.tau0)
                 probabilistic_model.dt = simulator.simTVB.integrator.dt
 
             # -------------------------- Select and set target data from signals ---------------------------------------
@@ -265,7 +265,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fitADVI")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
 
     # TVB3 larger preselection:
@@ -311,7 +311,7 @@ if __name__ == "__main__":
     times_on_off = [1100.0, 1300.0]  # for paper"" simulations
     # prob_model_name = "vep_sde.stan"
     stan_model_name = "vep_sde_simple"
-    fitmethod = "advi"
+    fitmethod = "sample"
     observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  # OBSERVATION_MODELS.SEEG_LOGPOWER.value
     pse_flag = True
     fit_flag = True
