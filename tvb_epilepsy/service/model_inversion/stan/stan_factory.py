@@ -40,7 +40,7 @@ STAN_OPTIMIZE_OPTIONS = sort_dict({"iter": 2000,           # int > 0
 STAN_OPTIMIZE_OPTIONS.update({"algorithm": "lbfgs"})   # others: "bfgs", "newton"
 
 STAN_VARIATIONAL_ADAPT_OPTIONS = sort_dict({"engaged": 1,             # 0, 1
-                                            "iter": 50,               # int > 0
+                                            "adapt_iter": 50,               # int > 0
                                             "tol_rel_obj": 0.01,      # tol_rel_obj >= 0
                                             "eval_elbo": 100,         # int > 0
                                             "output_samples": 1000})  # int > 0
@@ -134,7 +134,10 @@ def generate_cmdstan_fit_command(fitmethod, options, model_path, model_data_path
         else:
             adapt_options = STAN_VARIATIONAL_ADAPT_OPTIONS
         for option in adapt_options.keys():
-            command += "\t\t\t\t" + option + "=" + str(options[option]) + ' \\' + "\n"
+            if option.find("iter") < 0:
+                command += "\t\t\t\t" + option + "=" + str(options[option]) + ' \\' + "\n"
+            else:
+                command += "\t\t\t\t" + "iter=" + str(options[option]) + ' \\' + "\n"
     command += "\t\tdata file=" + model_data_path + ' \\' + "\n"
     command += "\t\tinit=" + str(options["init"]) + ' \\' + "\n"
     command += "\t\trandom seed=" + str(options["random_seed"]) + ' \\' + "\n"
