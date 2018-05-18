@@ -483,7 +483,7 @@ class H5Reader(object):
                     parameters = OrderedDict()
                     for group_key, group_value in value.iteritems():
                         param_epi_subtype = group_value.attrs[H5_SUBTYPE_ATTRIBUTE]
-                        if param_epi_subtype == "StochasticParameter":
+                        if param_epi_subtype == "ProbabilisticParameter":
                             parameter = generate_probabilistic_parameter(
                                     probability_distribution=group_value.attrs["type"])
                         elif param_epi_subtype == "NegativeLognormal":
