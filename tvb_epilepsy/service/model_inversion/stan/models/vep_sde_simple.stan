@@ -30,35 +30,36 @@ functions {
         return z_next;
     }
 
-    real[] normal_mean_std_to_lognorm_mu_sigma(real mean, real std) {
-        real logsm21 = log((std/mean) ** 2 + 1);
-        real mustd[2];
-        mu_sigma[1] = log(mean) - 0.5*logsm21;
+    real[] normal_mean_std_to_lognorm_mu_sigma(real mean_, real std_) {
+        real mu_sigma[2];
+        real logsm21 = std_/mean_;
+        logsm21 = log(logsm21 * logsm21 + 1.0);
+        mu_sigma[1] = log(mean_) - 0.5 * logsm21;
         mu_sigma[2] = sqrt(logsm21);
-        return mu_sigma
+        return mu_sigma;
     }
 
-    row_vector normal_mean_std_to_lognorm_mu(row_vector mean, row_vector std) {
-        int nn = num_elements(mean);
-        row_vector[nn] logsm21 = std./mean
-        logsm21 = log(logsm21 .* logsm21 + 1);
-        return log(mean) - 0.5*logsm21;
+    row_vector normal_mean_std_to_lognorm_mu(row_vector mean_, row_vector std_) {
+        int nn = num_elements(mean_);
+        row_vector[nn] logsm21 = std_ ./ mean_;
+        logsm21 = log(logsm21 .* logsm21 + 1.0);
+        return log(mean_) - 0.5 * logsm21;
     }
 
-    row_vector normal_mean_std_to_lognorm_sigma(row_vector mean, row_vector std) {
-        int nn = num_elements(mean);
-        row_vector[nn] logsm21 = std./mean
-        logsm21 = log(logsm21 .* logsm21 + 1);
+    row_vector normal_mean_std_to_lognorm_sigma(row_vector mean_, row_vector std_) {
+        int nn = num_elements(mean_);
+        row_vector[nn] logsm21 = std_ ./ mean_;
+        logsm21 = log(logsm21 .* logsm21 + 1.0);
         return sqrt(logsm21);
     }
 
     real standard_normal_to_lognormal(real standard_normal, real mu, real sigma){
-        return (exp(mu + sigma*standard_normal);
+        return exp(mu + sigma * standard_normal);
     }
 
 
     row_vector standard_normal_to_lognormal_row(row_vector standard_normal, row_vector mu, row_vector sigma){
-        return exp(mu + sigma.*standard_normal;
+        return exp(mu + sigma .* standard_normal);
     }
 }
 
@@ -71,11 +72,11 @@ data {
     real I1; //=3.1
     real tau0; //=10, [3, 30]
     real dt; //~= 0.1 (used 0.0976562)
-    real x0_hi; // -4.0, [-3.0, -4.0]
+    real x0_hi; // 2.5
     // real x0_std; // ~0.5
     // real x0_lo;  // 0.0
-    row_vector [nn] x0_star_mu; // x0_hi - x0_mean = 0.0 - ~[2.2 to 2.5] = ~[2.2 to 2.5]
-    row_vector [nn] x0_star_std; // minimum((x0_hi - x0_lo)/8.0, x0_star_mu/5.0) ~= 0.5
+    row_vector [nn] x0_star_mu; // x0_hi - x0_mean = 2.5 - ~[-2.5 to 0.0] = ~[2.5 to 5]
+    row_vector [nn] x0_star_std; // minimum((x0_mean - x0_lo)/2.0) ~= 1.0
     // row_vector [nn] x0_mu;  // healthy: -2.5, sick ~=-2.0, max = [-3.0, -4.0], min = -1.0
     real x_eq_def; // = -5.0/3 the value of all healhty non-active node
     row_vector [nn] x_init_mu; // in [-2.0, -1.0], used -1.566
@@ -103,18 +104,30 @@ data {
 
 transformed data {
     real sqrtdt = sqrt(dt);
-    real[2] amplitude_mu_sigma = normal_mean_std_to_lognorm_mu_sigma(amplitude_mu, amplitude_std);
-    real[2] epsilon_mu_sigma = normal_mean_std_to_lognorm_mu_sigma(epsilon_mu, epsilon_std);
-    real[2] time_scale_mu_sigma = normal_mean_std_to_lognorm_mu_sigma(time_scale_mu, time_scale_std);
-    // real[2] k_mu_sigma = normal_mean_std_to_lognorm_mu_sigma(k_mu, k_std);
+    real amplitude_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(amplitude_mu, amplitude_std);
+    real epsilon_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(epsilon_mu, epsilon_std);
+    real time_scale_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(time_scale_mu, time_scale_std);
+    // real k_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(k_mu, k_std);
     real k = k_mu;
-    real[2] sigma_mu_sigma = normal_mean_std_to_lognorm_mu_sigma(sigma_mu, sigma_std);
-    row_vector[nn] x0_logmu = normal_mean_std_to_lognorm_mu(x0_hi-x0_star_mu, x0_star_std);
-    row_vector[nn] x0_sigma = normal_mean_std_to_lognorm_sigma(x0_hi-x0_star_mu, x0_star_std);
+    real sigma_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(sigma_mu, sigma_std);
+    row_vector[nn] x0_logmu = normal_mean_std_to_lognorm_mu(x0_star_mu, x0_star_std);
+    row_vector[nn] x0_sigma = normal_mean_std_to_lognorm_sigma(x0_star_mu, x0_star_std);
     //matrix[ns, nn] log_gain = log(gain);
     matrix [nn, nn] SC_ = SC;
     for (i in 1:nn) SC_[i, i] = 0;
     SC_ = SC_ / max(SC_) * rows(SC_);
+
+    /*
+    print("amplitude_mu_sigma=", amplitude_mu_sigma,
+           ", amplitude=", standard_normal_to_lognormal(0.0, amplitude_mu_sigma[1], amplitude_mu_sigma[2]));
+    print("epsilon_mu_sigma=", epsilon_mu_sigma,
+          ", epsilon=", standard_normal_to_lognormal(0.0, epsilon_mu_sigma[1], epsilon_mu_sigma[2]));
+    print("time_scale_mu_sigma=", time_scale_mu_sigma,
+          ", time_scale=", standard_normal_to_lognormal(0.0, time_scale_mu_sigma[1], time_scale_mu_sigma[2]));
+    print("sigma_mu_sigma=", sigma_mu_sigma,
+          ", sigma=", standard_normal_to_lognormal(0.0, sigma_mu_sigma[1], sigma_mu_sigma[2]));
+    print("x0_logmu=", x0_logmu, ", x0_sigma=", x0_sigma);
+    */
 }
 
 parameters {
@@ -158,6 +171,15 @@ transformed parameters {
 
     for (t in 1:nt)
         mu_seeg_log_power[t] = amplitude * (log(gain * exp(x[t]'-x_eq_def)) + offset)';
+
+    /*
+    print("offset=", offset);
+    print("amplitude=", amplitude);
+    print("epsilon=", epsilon);
+    print("sigma=", sigma);
+    print("time_scale=", time_scale);
+    print("x0=", x0);
+    */
 }
 
 model {
@@ -184,6 +206,9 @@ model {
 
 generated quantities {
     row_vector[ns] log_likelihood[nt];
-    for (t in 1:nt)
-        log_likelihood[t] = ﻿normal_lpdf(seeg_log_power[t] | mu_seeg_log_power[t], epsilon)
+    for (t in 1:nt) {
+        for (s in 1:ns) {
+            log_likelihood[t][s] = normal_lpdf(seeg_log_power[t][s] |  mu_seeg_log_power[t][s], epsilon);
+        }
+    }
 }

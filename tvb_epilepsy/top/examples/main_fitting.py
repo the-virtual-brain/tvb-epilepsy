@@ -49,7 +49,7 @@ def set_hypotheses(head, config):
     return (hypothesis1, hypothesis2)
 
 
-def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
+def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
                         observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, sensors_lbls=[], sensor_id=0,
                         times_on_off=[], fitmethod="optimizing", stan_service="CmdStan",
                         pse_flag=True, fit_flag=True, config=Config(), **kwargs):
@@ -76,7 +76,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
     hypotheses = set_hypotheses(head, config)
 
     # ------------------------------Stan model and service--------------------------------------
-    model_code_path = os.path.join(config.generic.STATS_MODELS_PATH, stan_model_name + ".stan")
+    model_code_path = os.path.join(config.generic.PROBLSTC_MODELS_PATH, stan_model_name + ".stan")
     if isequal_string(stan_service, "CmdStan"):
         stan_service = CmdStanService(model_name=stan_model_name, model_code_path=model_code_path, fitmethod=fitmethod,
                                       config=config)
@@ -107,7 +107,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
             # ...or generate a new probabilistic model and model data
             probabilistic_model = \
-                SDEProbabilisticModelBuilder(model_name="vep_sde", model_config=model_configuration,
+                SDEProbabilisticModelBuilder(model_name="vep_sde.stan", model_config=model_configuration,
                                              parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value,
                                                         "x1init", "zinit", "tau1", "K", # "tau0",
                                                         "sigma", "dZt", "epsilon", "scale", "offset"],  # "dX1t",
@@ -166,21 +166,31 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_timeseries(target_data, target_data_file)
 
             # Interface with INS stan models
-            if stan_model_name.find("vep-fe-rev") >= 0:
-                model_data = build_stan_model_dict_to_interface_ins(probabilistic_model, target_data.squeezed,
-                                                                    model_configuration.model_connectivity, gain_matrix,
-                                                                    time=target_data.time_line)
+            model_data = build_stan_model_dict_to_interface_ins(probabilistic_model, target_data.squeezed,
+                                                                model_configuration.model_connectivity, gain_matrix,
+                                                                time=target_data.time_line)
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        num_warmup = 30
-        skip_samples = num_warmup
-        n_chains = 2
-        num_samples = 20  # max(int(np.round(1000.0/n_chains)), 500)
+        # HMC
+        num_warmup = 1000
+        n_chains = 4
+        num_samples = max(int(np.round(1000.0/n_chains)), 500)
+        max_depth = 12
+        delta = 0.9
+        # ADVI:
+        iter = 1e6
+        tol_rel_obj = 1e-6
+        if fitmethod.find("sampl") >= 0:
+            skip_samples = num_warmup
+        else:
+            skip_samples = 0
         if fit_flag:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
                                                       chains=n_chains, num_warmup=num_warmup, num_samples=num_samples,
-                                                      refresh=1, max_depth=8, delta=0.8, save_warmup=1, plot_warmup=1,
+                                                      refresh=1, max_depth=max_depth, delta=delta,
+                                                      iter=iter, tol_rel_obj=tol_rel_obj,
+                                                      save_warmup=1, plot_warmup=1,
                                                       **kwargs)
             writer.write_generic(ests, path("FitEst"))
             writer.write_generic(samples, path("FitSamples"))
@@ -192,9 +202,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                 plotter.plot_HMC(samples, figure_name=hyp.name + " HMC NUTS trace")
 
         # Interface with INS stan models
-        if stan_model_name.find("vep-fe-rev") >= 0:
-            ests, samples, Rhat, model_data = \
-                convert_params_names_from_ins([ests, samples, stan_service.get_Rhat(summary), model_data])
+        ests, samples, Rhat, model_data = \
+            convert_params_names_from_ins([ests, samples, stan_service.get_Rhat(summary), model_data])
 
         # Pack fit samples time series into timeseries objects:
         samples, target_data = samples_to_timeseries(samples, model_data, target_data, head.connectivity.region_labels)
@@ -202,7 +211,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         # -------------------------- Plot fitting results: ------------------------------------------------------------
         if stan_service.fitmethod.find("opt") < 0:
             plotter.plot_fit_results(ests, samples, model_data, target_data, probabilistic_model, stats={"Rhat": Rhat},
-                                     pair_plot_params=["sigma", "epsilon", "scale", "offset"],  # "tau1", "K",
+                                     pair_plot_params=["tau1","sigma", "epsilon", "scale", "offset"],  #  "K",
                                      region_violin_params=["x0", "x1init", "zinit"],
                                      regions_labels=head.connectivity.region_labels, skip_samples=skip_samples,
                                      title_prefix=hyp.name)
@@ -256,7 +265,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fitADVI")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
 
     # TVB3 larger preselection:
@@ -300,9 +309,9 @@ if __name__ == "__main__":
     EMPIRICAL = False
     # times_on_off = [50.0, 550.0]  # for paper"" simulations
     times_on_off = [1100.0, 1300.0]  # for paper"" simulations
-    # prob_model_name = "vep_sde"
+    # prob_model_name = "vep_sde.stan"
     stan_model_name = "vep_sde_simple"
-    fitmethod = "sample"
+    fitmethod = "advi"
     observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  # OBSERVATION_MODELS.SEEG_LOGPOWER.value
     pse_flag = True
     fit_flag = True

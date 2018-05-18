@@ -143,6 +143,9 @@ model {
 
 generated quantities {
     row_vector[ns] log_likelihood[nt];
-    for (t in 1:nt)
-        log_likelihood[t] = ﻿normal_lpdf(seeg_log_power[t] | mu_seeg_log_power[t], epsilon)
+    for (t in 1:nt) {
+        for (s in 1:ns) {
+            log_likelihood[t][s] = normal_lpdf(seeg_log_power[t][s] |  mu_seeg_log_power[t][s], epsilon);
+        }
+    }
 }
