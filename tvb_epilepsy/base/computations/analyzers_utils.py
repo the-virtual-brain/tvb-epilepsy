@@ -46,8 +46,8 @@ def interval_scaling(x, min_targ=0.0, max_targ=1.0, min_orig=None, max_orig=None
         min_orig = np.min(x, axis=0)
     if max_orig is None:
         max_orig = np.max(x, axis=0)
-    scale_factor = (max_targ - max_orig) / (min_targ - min_orig)
-    return max_orig + (x - min_orig) * scale_factor
+    scale_factor = (max_targ - min_targ) / (max_orig - min_orig)
+    return min_targ + (x - min_orig) * scale_factor
 
 
 def threshold(x, th=0.0, out=None):
