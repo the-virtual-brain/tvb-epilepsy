@@ -62,7 +62,7 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
         logger.info("\n\nRunning hypothesis: " + hyp.name)
 
         all_regions_indices = np.array(range(head.number_of_regions))
-        healthy_indices = np.delete(all_regions_indices, hyp.get_regions_disease_indices()).tolist()
+        healthy_indices = np.delete(all_regions_indices, hyp.regions_disease_indices).tolist()
 
         logger.info("\n\nCreating model configuration...")
         model_config_builder = ModelConfigurationBuilder(hyp.number_of_regions, K=K_unscaled)
@@ -86,7 +86,7 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
                                                  logger=logger)))
         # Plot nullclines and equilibria of model configuration
         plotter.plot_state_space(model_configuration, "6d", head.connectivity.region_labels,
-                                 special_idx=hyp.get_regions_disease_indices(), zmode="lin",
+                                 special_idx=hyp.regions_disease_indices, zmode="lin",
                                  figure_name=hyp.name + "_StateSpace")
 
         logger.info("\n\nRunning LSA...")

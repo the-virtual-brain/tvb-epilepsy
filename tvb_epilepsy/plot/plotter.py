@@ -569,7 +569,7 @@ class Plotter(BasePlotter):
             description += "eigenvectors has been used"
 
         return self.plot_in_columns(plot_dict_list, region_labels, width_ratios=[],
-                                    left_ax_focus_indices=disease_hypothesis.get_all_disease_indices(),
+                                    left_ax_focus_indices=disease_hypothesis.all_disease_indices,
                                     right_ax_focus_indices=disease_hypothesis.lsa_propagation_indices,
                                     description=description, title=title, figure_name=fig_name)
 

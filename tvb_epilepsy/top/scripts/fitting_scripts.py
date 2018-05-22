@@ -39,7 +39,7 @@ def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, pse_flag=T
             logger.info("\n\nRunning PSE LSA...")
             n_samples = 100
             all_regions_indices = np.array(range(head.number_of_regions))
-            disease_indices = lsa_hypothesis.get_regions_disease_indices()
+            disease_indices = lsa_hypothesis.regions_disease_indices
             healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
             if model_configuration_builder is None:
                 model_configuration_builder = ModelConfigurationBuilder(hyp.number_of_regions, K=K_unscaled)

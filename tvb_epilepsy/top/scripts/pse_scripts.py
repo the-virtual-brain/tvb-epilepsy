@@ -20,7 +20,7 @@ def pse_from_lsa_hypothesis(n_samples, lsa_hypothesis, model_connectivity, model
     if logger is None:
         logger = initialize_logger(__name__)
     all_regions_indices = range(lsa_hypothesis.number_of_regions)
-    disease_indices = lsa_hypothesis.get_regions_disease_indices()
+    disease_indices = lsa_hypothesis.regions_disease_indices
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
     pse_params = {"path": [], "indices": [], "name": [], "samples": []}
     sampler = ProbabilisticSamplingService(n_samples=n_samples, random_seed=kwargs.get("random_seed", None))

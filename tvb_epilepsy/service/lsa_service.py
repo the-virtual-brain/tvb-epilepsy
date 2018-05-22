@@ -110,7 +110,7 @@ class LSAService(object):
         self.eigen_vectors = eigen_vectors[:, sorted_indices]
 
         self._ensure_eigen_vectors_number(self.eigen_values, model_configuration.e_values,
-                                          model_configuration.x0_values, disease_hypothesis.get_all_disease_indices())
+                                          model_configuration.x0_values, disease_hypothesis.regions_disease_indices)
 
         if self.eigen_vectors_number == disease_hypothesis.number_of_regions:
             # Calculate the propagation strength index by summing all eigenvectors

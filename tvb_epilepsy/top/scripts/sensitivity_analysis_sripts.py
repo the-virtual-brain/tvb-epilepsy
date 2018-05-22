@@ -34,7 +34,7 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(n_samples, lsa_hypothesis, conn
     else:
         raise_value_error("Method " + str(method) + " is not one of the available methods " + str(METHODS) + " !")
     all_regions_indices = range(lsa_hypothesis.number_of_regions)
-    disease_indices = lsa_hypothesis.get_regions_disease_indices()
+    disease_indices = lsa_hypothesis.regions_disease_indices
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
     pse_params = {"path": [], "indices": [], "name": [], "low": [], "high": []}
     n_inputs = 0

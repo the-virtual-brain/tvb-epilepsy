@@ -174,7 +174,7 @@ class ModelConfigurationBuilder(object):
 
         # Then apply connectivity disease hypothesis scaling if any:
         if len(disease_hypothesis.w_indices) > 0:
-            model_connectivity *= disease_hypothesis.get_connectivity_disease()
+            model_connectivity *= disease_hypothesis.connectivity_disease
 
         # All nodes except for the diseased ones will get the default epileptogenicity:
         e_values = np.array(self.e_values)
@@ -202,7 +202,7 @@ class ModelConfigurationBuilder(object):
 
         # Then apply connectivity disease hypothesis scaling if any:
         if len(disease_hypothesis.w_indices) > 0:
-            model_connectivity *= disease_hypothesis.get_connectivity_disease()
+            model_connectivity *= disease_hypothesis.connectivity_disease
 
         # We assume that all nodes have the default (healthy) excitability:
         x0_values = np.array(self.x0_values)

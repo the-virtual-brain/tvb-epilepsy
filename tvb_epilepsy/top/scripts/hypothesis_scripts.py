@@ -90,7 +90,7 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
         plotter = Plotter(config)
         # Plot nullclines and equilibria of model configuration
         plotter.plot_state_space(model_configuration, "6d", head.connectivity.region_labels,
-                                 special_idx=hyp.get_regions_disease_indices(), zmode="lin",
+                                 special_idx=hyp.regions_disease_indices, zmode="lin",
                                  figure_name=hyp.name + "_StateSpace")
         plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
                          lsa_service.eigen_vectors_number, head.connectivity.region_labels, None)

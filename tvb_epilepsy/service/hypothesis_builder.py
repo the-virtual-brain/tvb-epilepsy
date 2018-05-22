@@ -4,6 +4,8 @@ import numpy
 from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
+from tvb_epilepsy.base.computations.analyzers_utils import interval_scaling
 from tvb_epilepsy.io.h5_reader import H5Reader
 
 # TODO: In the future we should allow for various not 0 healthy values.
@@ -30,7 +32,7 @@ class HypothesisBuilder(object):
     lsa_propagation_indices = []
     lsa_propagation_strengths = []
 
-    normalize_value = 0.99
+    normalize_values = ensure_list(0.99)
 
     def __init__(self, number_of_regions=0, config=Config()):
         self.config = config
@@ -121,15 +123,23 @@ class HypothesisBuilder(object):
         self.lsa_propagation_strengths = numpy.array(lsa_propagation_strengths)
         return self
 
-    def set_normalize(self, value):
-        self.normalize_value = value
+    def set_normalize(self, values):
+        values = ensure_list(values)
+        n_vals = len(values)
+        if n_vals > 2:
+            raise_value_error("Invalid disease hypothesis normalization values!: " + str(values) +
+                              "\nThey cannot be more than 2!")
+        else:
+            if n_vals < 2:
+                values = [numpy.min(self.diseased_regions_values)] + values
+            self.normalize_values = values
         return self
 
     def _normalize_disease_values(self):
-        disease_values = self.diseased_regions_values[self.diseased_regions_values > 0.0]
-        if len(disease_values) > 0:
-            disease_values += (self.normalize_value - numpy.max(disease_values))
-            self.diseased_regions_values[self.diseased_regions_values > 0.0] = disease_values
+        disease_values = numpy.array(self.diseased_regions_values)
+        self.set_normalize(self.normalize_values)
+        self.diseased_regions_values = \
+            interval_scaling(disease_values, self.normalize_values[0], self.normalize_values[1])
         return self
 
     def set_attributes_based_on_hypothesis(self, disease_hypothesis):
@@ -144,9 +154,9 @@ class HypothesisBuilder(object):
         return self.build_hypothesis()
 
     def build_hypothesis(self):
-        if self.normalize_value:
+        if self.normalize_values:
             self._normalize_disease_values()
-        disease_indices, = numpy.where(self.diseased_regions_values > 0.0)
+        disease_indices, = numpy.where(self.diseased_regions_values != 0.0)
         x0_indices = numpy.setdiff1d(disease_indices, self.e_indices)
         return DiseaseHypothesis(self.number_of_regions,
                                  excitability_hypothesis={tuple(x0_indices):
