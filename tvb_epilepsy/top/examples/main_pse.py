@@ -53,7 +53,7 @@ def main_pse(config=Config()):
     logger.info("Plotting LSA...")
     Plotter(config).plot_lsa(lsa_hypothesis, model_config, lsa_service.weighted_eigenvector_sum,
                              lsa_service.eigen_vectors_number, region_labels=head.connectivity.region_labels,
-                             pse_results=pse_res)
+                             pse_results=pse_res, lsa_service=lsa_service)
 
     logger.info("Saving LSA results ...")
     writer.write_dictionary(pse_res, os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_PSE_LSA_results.h5"))

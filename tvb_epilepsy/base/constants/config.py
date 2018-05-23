@@ -116,9 +116,9 @@ class FiguresConfig(object):
     SMALL_SIZE = (15, 10)
     FIG_FORMAT = 'png'
     SAVE_FLAG = True
-    SHOW_FLAG = False
+    SHOW_FLAG = True
     MOUSE_HOOVER = False
-    MATPLOTLIB_BACKEND = "Agg"
+    MATPLOTLIB_BACKEND = "Qt4Agg" # , "Agg"
 
 
 class CalculusConfig(object):
@@ -129,6 +129,7 @@ class CalculusConfig(object):
 
     # Options: "auto_eigenvals",  "auto_disease", "auto_epileptogenicity", "auto_excitability",
     # or "user_defined", in which case we expect a number equal to from 1 to hypothesis.n_regions
+    LSA_METHOD = "1D" # other options: "2D", "auto"
     EIGENVECTORS_NUMBER_SELECTION = "auto_eigenvals"
     WEIGHTED_EIGENVECTOR_SUM = True
     INTERACTIVE_ELBOW_POINT = False

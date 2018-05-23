@@ -15,7 +15,8 @@ from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration
 from tvb_epilepsy.top.scripts.fitting_data_scripts import *
 
 
-def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, pse_flag=True, plotter=None, writer=None):
+def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, pse_flag=True,
+                         plotter=None, writer=None):
     model_configuration_builder = None
     lsa_service = None
     # --------------------------Model configuration and LSA-----------------------------------
@@ -29,7 +30,8 @@ def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, pse_flag=T
         # ...or generate new ones
         model_configuration, lsa_hypothesis, model_configuration_builder, lsa_service = \
             from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
-                                                config=config, K=K_unscaled, save_flag=True, plot_flag=True)
+                                                config=config, K=K_unscaled, tau1=tau1, tau0=tau0,
+                                                save_flag=True, plot_flag=True)
         # --------------Parameter Search Exploration (PSE)-------------------------------
     if pse_flag:
         psa_lsa_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_PSE_LSA_results.h5")

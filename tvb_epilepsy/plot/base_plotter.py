@@ -74,6 +74,8 @@ class BasePlotter(object):
         else:
             ax.set_yticklabels([])
         ax.autoscale(tight=True)
+        if sharey is None:
+            ax.invert_yaxis()
         return ax
 
     @staticmethod
@@ -126,7 +128,8 @@ class BasePlotter(object):
                 ax.yaxis.set_ticklabels(labels)
         else:
             ax.set_yticklabels([])
-        ax.invert_yaxis()
+        if sharey is None:
+            ax.invert_yaxis()
         ax.autoscale(tight=True)
         return ax
 
@@ -209,7 +212,7 @@ class BasePlotter(object):
         subplot_ind = subplot_ind0
         ax = None
         ax0 = None
-        for data_dict in data_dict_list:
+        for iS, data_dict in enumerate(data_dict_list):
             subplot_ind += 1
             data = data_dict["data"]
             focus_indices = data_dict.get("focus_indices")

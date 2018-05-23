@@ -54,7 +54,8 @@ def main_sensitivity_analysis(config=Config()):
                                                          config=config, save_services=True)
             Plotter(config).plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
                                      lsa_service.eigen_vectors_number, region_labels=head.connectivity.region_labels,
-                                     pse_results=pse_results, title=m + "_PSE_LSA_overview_" + lsa_hypothesis.name)
+                                     pse_results=pse_results, title=m + "_PSE_LSA_overview_" + lsa_hypothesis.name,
+                                     lsa_service=lsa_service)
             # , show_flag=True, save_flag=False
             result_file = os.path.join(config.out.FOLDER_RES, m + "_PSE_LSA_results_" + lsa_hypothesis.name + ".h5")
             writer.write_dictionary(pse_results, result_file)

@@ -147,6 +147,8 @@ class TestCustomH5Reader(BaseTest):
         assert dummy_mc_service.slope == mc_service.slope
         assert dummy_mc_service.s == mc_service.s
         assert dummy_mc_service.gamma == mc_service.gamma
+        assert dummy_mc_service.tau1 == mc_service.tau1
+        assert dummy_mc_service.tau0 == mc_service.tau0
         assert dummy_mc_service.zmode == mc_service.zmode
         assert dummy_mc_service.x1eq_mode == mc_service.x1eq_mode
         assert dummy_mc_service.K.all() == mc_service.K.all()

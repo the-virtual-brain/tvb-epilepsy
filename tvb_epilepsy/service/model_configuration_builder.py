@@ -14,8 +14,7 @@ from tvb_epilepsy.base.computations.calculations_utils import calc_x0cr_r, calc_
     calc_x0_val_to_model_x0, calc_model_x0_to_x0_val
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_z, eq_x1_hypo_x0_linTaylor, \
     eq_x1_hypo_x0_optimize
-from tvb_epilepsy.base.constants.model_constants import X1EQ_CR_DEF, E_DEF, X0_DEF, K_DEF, YC_DEF, I_EXT1_DEF, \
-    I_EXT2_DEF, A_DEF, B_DEF, D_DEF, SLOPE_DEF, S_DEF, GAMMA_DEF
+from tvb_epilepsy.base.constants.model_constants import *
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 
 
@@ -26,7 +25,7 @@ class ModelConfigurationBuilder(object):
 
     def __init__(self, number_of_regions=1, x0_values=X0_DEF, e_values=E_DEF, yc=YC_DEF, Iext1=I_EXT1_DEF,
                  Iext2=I_EXT2_DEF, K=K_DEF, a=A_DEF, b=B_DEF, d=D_DEF, slope=SLOPE_DEF, s=S_DEF, gamma=GAMMA_DEF,
-                 zmode=np.array("lin"), x1eq_mode="optimize"):
+                 tau1=TAU1_DEF, tau0=TAU0_DEF, zmode=np.array("lin"), x1eq_mode="optimize"):
         self.number_of_regions = number_of_regions
         self.x0_values = x0_values * np.ones((self.number_of_regions,), dtype=np.float32)
         self.yc = yc
@@ -38,6 +37,8 @@ class ModelConfigurationBuilder(object):
         self.slope = slope
         self.s = s
         self.gamma = gamma
+        self.tau1 = tau1
+        self.tau0 = tau0
         self.zmode = zmode
         self.x1eq_mode = x1eq_mode
         if len(ensure_list(K)) == 1:
@@ -71,8 +72,10 @@ class ModelConfigurationBuilder(object):
              "13. s": self.s,
              "14. slope": self.slope,
              "15. gamma": self.gamma,
-             "16. zmode": self.zmode,
-             "07. x1eq_mode": self.x1eq_mode
+             "16. tau1": self.tau1,
+             "17. tau0": self.tau0,
+             "18. zmode": self.zmode,
+             "19. x1eq_mode": self.x1eq_mode
              }
         return formal_repr(self, d)
 
@@ -163,7 +166,7 @@ class ModelConfigurationBuilder(object):
         # x1eq, zeq = self._ensure_equilibrum(x1eq, zeq) # We don't this by default anymore
         x0, Ceq, x0_values, e_values = self._compute_params_after_equilibration(x1eq, zeq, model_connectivity)
         return ModelConfiguration(self.yc, self.Iext1, self.Iext2, self.K, self.a, self.b, self.d,
-                                  self.slope, self.s, self.gamma, x1eq, zeq, Ceq, x0, x0_values,
+                                  self.slope, self.s, self.gamma, self.tau1, self.tau0, x1eq, zeq, Ceq, x0, x0_values,
                                   e_values, self.zmode, model_connectivity)
 
     def build_model_from_E_hypothesis(self, disease_hypothesis, model_connectivity):

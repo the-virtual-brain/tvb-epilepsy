@@ -11,8 +11,9 @@ from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, dicts_of_
 
 class ModelConfiguration(object):
     def __init__(self, yc=YC_DEF, Iext1=I_EXT1_DEF, Iext2=I_EXT2_DEF, K=K_DEF, a=A_DEF, b=B_DEF, d=D_DEF,
-                 slope=SLOPE_DEF, s=S_DEF, gamma=GAMMA_DEF, x1eq=None, zeq=None, Ceq=None, x0=None,
-                 x0_values=X0_DEF, e_values=None, zmode=np.array("lin"), model_connectivity=None, number_of_regions=0):
+                 slope=SLOPE_DEF, s=S_DEF, gamma=GAMMA_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
+                 x1eq=None, zeq=None, Ceq=None, x0=None, x0_values=X0_DEF, e_values=None,
+                 zmode=np.array("lin"), model_connectivity=None, number_of_regions=0):
         # These parameters are used for every Epileptor Model...
         self.x0_values = x0_values
         self.x0 = x0
@@ -26,7 +27,8 @@ class ModelConfiguration(object):
         self.s = s
         self.slope = slope
         self.gamma = gamma
-
+        self.tau1 = tau1
+        self.tau0 = tau0
         # These parameters are used only for EpileptorDP2D Model
         self.zmode = zmode
 
@@ -60,8 +62,10 @@ class ModelConfiguration(object):
             "14. s": self.s,
             "15. slope": self.slope,
             "16. gamma": self.gamma,
-            "17. zmode": self.zmode,
-            "18. Model connectivity": self.model_connectivity
+            "17. tau1": self.tau1,
+            "18. tau0": self.tau0,
+            "19. zmode": self.zmode,
+            "20. Model connectivity": self.model_connectivity
         }
         return formal_repr(self, d)
 

@@ -89,7 +89,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
         base_path = os.path.join(config.out.FOLDER_RES, hyp.name)
         # Set model configuration and compute LSA
         model_configuration, lsa_hypothesis, pse_results = \
-            set_model_config_LSA(head, hyp, reader, config, K_unscaled=3*K_DEF,
+            set_model_config_LSA(head, hyp, reader, config, K_unscaled=3*K_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                                  pse_flag=pse_flag, plotter=plotter, writer=writer)
 
         # -------------------------- Get model_data and observation signals: -------------------------------------------
@@ -220,8 +220,10 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
         for id_est, est in enumerate(ensure_list(ests)):
             K = est.get("K", model_configuration.K)
+            tau1 = est.get("tau1", model_configuration.tau1)
+            tau0 = est.get("tau0", model_configuration.tau0)
             fit_model_configuration_builder = \
-                ModelConfigurationBuilder(hyp.number_of_regions, K=K * hyp.number_of_regions)
+                ModelConfigurationBuilder(hyp.number_of_regions, K=K * hyp.number_of_regions, tau1=tau1, tau0=tau0)
             x0_values_fit = model_configuration.x0_values
             x0_values_fit[probabilistic_model.active_regions] = \
                 fit_model_configuration_builder._compute_x0_values_from_x0_model(est['x0'])

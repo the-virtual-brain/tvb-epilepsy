@@ -26,9 +26,9 @@ def build_tvb_model(model_configuration):
     # We use the opposite sign for K with respect to all epileptor models
     K = -model_configuration.K
     model_instance = Epileptor(x0=model_configuration.x0, Iext=model_configuration.Iext1, Iext2=model_configuration.Iext2,
-                               Ks=K, c=model_configuration.yc,
-                               a=model_configuration.a, b=model_configuration.b, d=model_configuration.d,
-                               aa=model_configuration.s)
+                               Ks=K, c=model_configuration.yc, a=model_configuration.a, b=model_configuration.b,
+                               d=model_configuration.d, aa=model_configuration.s,
+                               tt=model_configuration.tau1, r=1.0/model_configuration.tau0)
     return model_instance
 
 
@@ -40,7 +40,8 @@ def build_EpileptorDP2D(model_configuration):
     K = -model_configuration.K
     model = EpileptorDP2D(x0=model_configuration.x0, Iext1=model_configuration.Iext1, K=K,
                           yc=model_configuration.yc, a=model_configuration.a, b=model_configuration.b,
-                          d=model_configuration.d, zmode=model_configuration.zmode)
+                          d=model_configuration.d, tau1=model_configuration.tau1, tau0=model_configuration.tau0,
+                          zmode=model_configuration.zmode)
     return model
 
 
@@ -53,7 +54,8 @@ def build_EpileptorDP(model_configuration):
     model = EpileptorDP(x0=model_configuration.x0, Iext1=model_configuration.Iext1, Iext2=model_configuration.Iext2,
                         K=K, yc=model_configuration.yc, a=model_configuration.a,
                         b=model_configuration.b, d=model_configuration.d, s=model_configuration.s,
-                        gamma=model_configuration.gamma, zmode=model_configuration.zmode)
+                        gamma=model_configuration.gamma, tau1=model_configuration.tau1, tau0=model_configuration.tau0,
+                        zmode=model_configuration.zmode)
     return model
 
 
@@ -67,6 +69,7 @@ def build_EpileptorDPrealistic(model_configuration):
                                  Iext2=model_configuration.Iext2, K=K, yc=model_configuration.yc,
                                  a=model_configuration.a, b=model_configuration.b, d=model_configuration.d,
                                  s=model_configuration.s, gamma=model_configuration.gamma,
+                                 tau1=model_configuration.tau1, tau0=model_configuration.tau0,
                                  zmode=model_configuration.zmode, pmode=numpy.array("z"))
     return model
 

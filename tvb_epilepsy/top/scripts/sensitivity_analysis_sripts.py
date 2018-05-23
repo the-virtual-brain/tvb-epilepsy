@@ -122,12 +122,13 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(n_samples, lsa_hypothesis, conn
 
 def sensitivity_analysis_pse_from_hypothesis(n_samples, hypothesis, connectivity_matrix, region_labels,
                                              method="sobol", half_range=0.1, global_coupling=[],
-                                             healthy_regions_parameters=[], save_services=False, config=Config(), **kwargs):
+                                             healthy_regions_parameters=[], save_services=False, config=Config(),
+                                             model_config_kwargs={}, **kwargs):
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
     # Compute lsa for this hypothesis before sensitivity analysis:
     logger.info("Running hypothesis: " + hypothesis.name)
     model_configuration_builder, model_configuration, lsa_service, lsa_hypothesis = \
-        start_lsa_run(hypothesis, connectivity_matrix)
+        start_lsa_run(hypothesis, connectivity_matrix, config, **model_config_kwargs)
     results, pse_results = sensitivity_analysis_pse_from_lsa_hypothesis(n_samples, lsa_hypothesis, connectivity_matrix,
                                                                         model_configuration_builder, lsa_service,
                                                                         region_labels, method, half_range,

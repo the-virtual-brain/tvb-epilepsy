@@ -5,8 +5,7 @@ import os
 from collections import OrderedDict
 import numpy as np
 from tvb_epilepsy.base.constants.config import Config
-from tvb_epilepsy.base.constants.model_constants import COLORED_NOISE, K_DEF
-from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
+from tvb_epilepsy.base.constants.model_constants import COLORED_NOISE, K_DEF, TAU0_DEF, TAU1_DEF
 from tvb_epilepsy.base.utils.data_structures_utils import assert_equal_objects, isequal_string, ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.io.h5_writer import H5Writer
@@ -65,7 +64,8 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
         healthy_indices = np.delete(all_regions_indices, hyp.regions_disease_indices).tolist()
 
         logger.info("\n\nCreating model configuration...")
-        model_config_builder = ModelConfigurationBuilder(hyp.number_of_regions, K=K_unscaled)
+        model_config_builder = ModelConfigurationBuilder(hyp.number_of_regions, K=K_unscaled,
+                                                         tau1=TAU1_DEF, tau0=TAU0_DEF)
         mcs_file = os.path.join(config.out.FOLDER_RES, hyp.name + "_model_config_builder.h5")
         writer.write_model_configuration_builder(model_config_builder, mcs_file)
         if test_write_read:
@@ -103,7 +103,8 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
             logger.info("Written and read LSA hypotheses are identical (no input check)?: " +
                         str(assert_equal_objects(lsa_hypothesis, reader.read_hypothesis(lsa_path), logger=logger)))
         plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
-                         lsa_service.eigen_vectors_number, head.connectivity.region_labels, None)
+                         lsa_service.eigen_vectors_number, head.connectivity.region_labels, None,
+                         lsa_service=lsa_service)
 
         if pse_flag:
             # --------------Parameter Search Exploration (PSE)-------------------------------

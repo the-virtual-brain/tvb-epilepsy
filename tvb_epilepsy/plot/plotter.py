@@ -2,7 +2,7 @@
 
 from tvb_epilepsy.base.constants.config import FiguresConfig
 import matplotlib
-matplotlib.use(FiguresConfig.MATPLOTLIB_BACKEND)
+matplotlib.use(FiguresConfig().MATPLOTLIB_BACKEND)
 from matplotlib import pyplot, gridspec
 from matplotlib.colors import Normalize
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -13,15 +13,19 @@ from collections import OrderedDict
 from tvb_epilepsy.base.constants.model_constants import TAU0_DEF, TAU1_DEF, X1EQ_CR_DEF, X1_DEF, X0_CR_DEF, X0_DEF
 from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string, sort_dict, linspace_broadcast, \
-    generate_region_labels, ensure_string, list_of_dicts_to_dicts_of_ndarrays, extract_dict_stringkeys
+                                                          generate_region_labels, ensure_string, \
+                                                          list_of_dicts_to_dicts_of_ndarrays, \
+                                                          dicts_of_lists_to_lists_of_dicts, \
+                                                          extract_dict_stringkeys
 from tvb_epilepsy.base.computations.math_utils import compute_in_degree
 from tvb_epilepsy.base.computations.calculations_utils import calc_fz, calc_fx1, calc_fx1_2d_taylor, \
-                                                                            calc_x0_val_to_model_x0, raise_value_error
+                                                             calc_x0_val_to_model_x0, raise_value_error
 from tvb_epilepsy.base.computations.equilibrium_computation import calc_eq_y1, def_x1lin
 from tvb_epilepsy.base.computations.analyzers_utils import time_spectral_analysis
 from tvb_epilepsy.base.epileptor_models import EpileptorDP2D, EpileptorDPrealistic
 from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorTypes
 from tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, PossibleVariables
+from tvb_epilepsy.service.lsa_service import LSAService
 from tvb_epilepsy.plot.base_plotter import BasePlotter
 
 
@@ -55,10 +59,8 @@ class Plotter(BasePlotter):
         ax = self.plot_vector(compute_in_degree(connectivity.normalized_weights), connectivity.region_labels,
                               111 + 10 * areas_flag,
                               "w in-degree")
-        ax.invert_yaxis()
         if len(connectivity.areas) == len(connectivity.region_labels):
             ax = self.plot_vector(connectivity.areas, connectivity.region_labels, 122, "region areas")
-            ax.invert_yaxis()
         self._save_figure(None, figure_name.replace(" ", "").replace("\t", ""))
         self._check_show()
 
@@ -420,16 +422,19 @@ class Plotter(BasePlotter):
         img = numpy.empty((nS,), dtype="O")
         line = numpy.empty((nS,), dtype="O")
         for iS in range(nS, -1, -1):
-            if iS < nS - 1:
-                ax[iS, 0] = pyplot.subplot(gs[iS, :20], sharex=ax[iS, 0])
-                ax[iS, 1] = pyplot.subplot(gs[iS, 20:22], sharex=ax[iS, 1], sharey=ax[iS, 0])
-            else:
-                ax[iS, 0] = pyplot.subplot(gs[iS, :20])
-                ax[iS, 1] = pyplot.subplot(gs[iS, 20:22], sharey=ax[iS, 0])
-            img[iS] = ax[iS, 0].imshow(numpy.squeeze(stf[:, :, iS]).T, cmap=pyplot.set_cmap('jet'),
-                                       interpolation='none',
-                                       norm=Normalize(vmin=min_val, vmax=max_val), aspect='auto', origin='lower',
-                                       extent=(time.min(), time.max(), freq.min(), freq.max()))
+            try:
+                if iS < nS - 1:
+                    ax[iS, 0] = pyplot.subplot(gs[iS, :20], sharex=ax[iS, 0])
+                    ax[iS, 1] = pyplot.subplot(gs[iS, 20:22], sharex=ax[iS, 1], sharey=ax[iS, 0])
+                else:
+                    ax[iS, 0] = pyplot.subplot(gs[iS, :20])
+                    ax[iS, 1] = pyplot.subplot(gs[iS, 20:22], sharey=ax[iS, 0])
+                img[iS] = ax[iS, 0].imshow(numpy.squeeze(stf[:, :, iS]).T, cmap=pyplot.set_cmap('jet'),
+                                           interpolation='none',
+                                           norm=Normalize(vmin=min_val, vmax=max_val), aspect='auto', origin='lower',
+                                           extent=(time.min(), time.max(), freq.min(), freq.max()))
+            except:
+                print("WTF?")
             # img[iS].clim(min_val, max_val)
             ax[iS, 0].set_title(labels[iS])
             ax[iS, 0].set_ylabel("Frequency (Hz)")
@@ -539,17 +544,47 @@ class Plotter(BasePlotter):
         self.plot_simulated_seeg_timeseries(seeg_list, title_prefix=title_prefix)
 
 
-    def plot_lsa(self, disease_hypothesis, model_configuration, weighted_eigenvector_sum, eigen_vectors_number,
-                 region_labels=[], pse_results=None, title="Hypothesis Overview"):
+    def plot_lsa_eigen_vals_vectors(self, lsa_service, lsa_hypothesis, region_labels=[]):
+        fig_name = lsa_hypothesis.name + " " + "Eigen-values-vectors"
+        n_subplots = lsa_service.eigen_vectors_number + 1
+        plot_types = ["vector"] * n_subplots
+        names = ["LSA eigenvalues"]
+        data = [lsa_service.eigen_values]
+        indices = [[]]
+        for ii in range(lsa_service.eigen_vectors_number):
+            names += ["LSA eigenvectror " + str(ii + 1)]
+            data += [lsa_service.eigen_vectors[:, ii]]
+            indices += [lsa_hypothesis.lsa_propagation_indices]
 
-        hyp_dict_list = disease_hypothesis.prepare_for_plot(model_configuration.model_connectivity)
+        plot_dict_list = dicts_of_lists_to_lists_of_dicts({"name": names, "data": data, "focus_indices": indices,
+                                                           "plot_type": plot_types})
+        description = "LSA eigenvalues and first "+  str(lsa_service.eigen_vectors_number) + " eigenvectors"
+
+        return self.plot_in_columns(plot_dict_list, region_labels, width_ratios=[],
+                                    left_ax_focus_indices=lsa_hypothesis.lsa_propagation_indices,
+                                    right_ax_focus_indices=lsa_hypothesis.lsa_propagation_indices,
+                                    description=description, title=fig_name, figure_name=fig_name)
+
+
+    def plot_lsa(self, lsa_hypothesis, model_configuration, weighted_eigenvector_sum=None, eigen_vectors_number=None,
+                 region_labels=[], pse_results=None, title="Hypothesis Overview", lsa_service=None):
+        if isinstance(lsa_service, LSAService):
+            f2 = self.plot_lsa_eigen_vals_vectors(lsa_service, lsa_hypothesis, region_labels)
+            weighted_eigenvector_sum = lsa_service.weighted_eigenvector_sum
+            eigen_vectors_number = lsa_service.eigen_vectors_number
+        else:
+            f2=None
+            if weighted_eigenvector_sum is None:
+                weighted_eigenvector_sum = self.config.calcul.WEIGHTED_EIGENVECTOR_SUM
+
+        hyp_dict_list = lsa_hypothesis.prepare_for_plot(model_configuration.model_connectivity)
         model_config_dict_list = model_configuration.prepare_for_plot()[:2]
 
         model_config_dict_list += hyp_dict_list
         plot_dict_list = model_config_dict_list
 
         if pse_results is not None and isinstance(pse_results, dict):
-            fig_name = disease_hypothesis.name + " PSE " + title
+            fig_name = lsa_hypothesis.name + " PSE " + title
             ind_ps = len(plot_dict_list) - 2
             for ii, value in enumerate(["lsa_propagation_strengths", "e_values", "x0_values"]):
                 ind = ind_ps - ii
@@ -559,7 +594,7 @@ class Plotter(BasePlotter):
                         plot_dict_list[ind]["plot_type"] = "vector_violin"
 
         else:
-            fig_name = disease_hypothesis.name + " " + title
+            fig_name = lsa_hypothesis.name + " " + title
 
         description = ""
         if weighted_eigenvector_sum:
@@ -568,10 +603,16 @@ class Plotter(BasePlotter):
                 description += "first " + str(eigen_vectors_number) + " "
             description += "eigenvectors has been used"
 
-        return self.plot_in_columns(plot_dict_list, region_labels, width_ratios=[],
-                                    left_ax_focus_indices=disease_hypothesis.all_disease_indices,
-                                    right_ax_focus_indices=disease_hypothesis.lsa_propagation_indices,
-                                    description=description, title=title, figure_name=fig_name)
+        f1 = self.plot_in_columns(plot_dict_list, region_labels, width_ratios=[],
+                                  left_ax_focus_indices=lsa_hypothesis.all_disease_indices,
+                                  right_ax_focus_indices=lsa_hypothesis.lsa_propagation_indices,
+                                  description=description, title=title, figure_name=fig_name)
+
+        if f2:
+            return f1, f2
+        else:
+            return f1
+
 
     def plot_state_space(self, model_config, model="6D", region_labels=[], special_idx=[], zmode="lin", figure_name="",
                          approximations=False, **kwargs):

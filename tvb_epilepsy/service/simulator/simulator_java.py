@@ -217,7 +217,8 @@ class SimulatorJava(ABCSimulator):
                                      self.model_configuration.b - self.model_configuration.d)
         self.model = JavaEpileptor(a=self.model_configuration.a, b=self.model_configuration.b,
                                    d=self.model_configuration.d, x0=x0, iext=self.model_configuration.Iext1,
-                                   ks=self.model_configuration.K, c=self.model_configuration.yc)
+                                   ks=self.model_configuration.K, c=self.model_configuration.yc,
+                                   tt=self.model_configuration.tau1, r=1.0/self.model_configuration.tau0)
 
     def configure_initial_conditions(self, initial_conditions=None):
         if isinstance(initial_conditions, numpy.ndarray):
