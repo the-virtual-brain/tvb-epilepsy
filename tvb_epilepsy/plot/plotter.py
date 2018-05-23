@@ -422,19 +422,16 @@ class Plotter(BasePlotter):
         img = numpy.empty((nS,), dtype="O")
         line = numpy.empty((nS,), dtype="O")
         for iS in range(nS, -1, -1):
-            try:
-                if iS < nS - 1:
-                    ax[iS, 0] = pyplot.subplot(gs[iS, :20], sharex=ax[iS, 0])
-                    ax[iS, 1] = pyplot.subplot(gs[iS, 20:22], sharex=ax[iS, 1], sharey=ax[iS, 0])
-                else:
-                    ax[iS, 0] = pyplot.subplot(gs[iS, :20])
-                    ax[iS, 1] = pyplot.subplot(gs[iS, 20:22], sharey=ax[iS, 0])
-                img[iS] = ax[iS, 0].imshow(numpy.squeeze(stf[:, :, iS]).T, cmap=pyplot.set_cmap('jet'),
-                                           interpolation='none',
-                                           norm=Normalize(vmin=min_val, vmax=max_val), aspect='auto', origin='lower',
-                                           extent=(time.min(), time.max(), freq.min(), freq.max()))
-            except:
-                print("WTF?")
+            if iS < nS - 1:
+                ax[iS, 0] = pyplot.subplot(gs[iS, :20], sharex=ax[iS, 0])
+                ax[iS, 1] = pyplot.subplot(gs[iS, 20:22], sharex=ax[iS, 1], sharey=ax[iS, 0])
+            else:
+                ax[iS, 0] = pyplot.subplot(gs[iS, :20])
+                ax[iS, 1] = pyplot.subplot(gs[iS, 20:22], sharey=ax[iS, 0])
+            img[iS] = ax[iS, 0].imshow(numpy.squeeze(stf[:, :, iS]).T, cmap=pyplot.set_cmap('jet'),
+                                       interpolation='none',
+                                       norm=Normalize(vmin=min_val, vmax=max_val), aspect='auto', origin='lower',
+                                       extent=(time.min(), time.max(), freq.min(), freq.max()))
             # img[iS].clim(min_val, max_val)
             ax[iS, 0].set_title(labels[iS])
             ax[iS, 0].set_ylabel("Frequency (Hz)")
