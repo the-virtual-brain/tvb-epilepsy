@@ -1055,8 +1055,26 @@ class Plotter(BasePlotter):
             self._save_figure(pyplot.gcf(), conn_figure_name)
             self._check_show()
 
-    def plot_fit_results(self, ests, samples, model_data, target_data, probabilistic_model=None, stats=None,
-                         pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
+    def plot_model_comparison(self, model_comps, probabilistic_model=None, time=None, labels=[], title_prefix=""):
+        model_comps = ensure_list(model_comps)
+        n_chains = len(model_comps)
+        loos_dict = {}
+        ks_dict = {}
+        # for id_est, model_comp in enumerate(model_comps):
+        #     if n_chains > 1:
+        #         loos_dict.update({"loos chain " + str(id_est + 1): model_comp["loos"]})
+        #         ks_dict.update({"ks chain " + str(id_est + 1): model_comp["ks_dict"]})
+        #     else:
+        #         loos_dict.update({"loos": model_comp["loos"]})
+        #         ks_dict.update({"ks": model_comp["ks_dict"]})
+        #     self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
+        #                      title=title_prefix + probabilistic_model.name + "Observation target vs fit time series: "
+        #                            + stats_string["fit_target_data"],
+        #                      figure_name=title_prefix + probabilistic_model.name + "ObservationTarget_VS_FitTimeSeries",
+        #                      offset=1.0, labels=target_data.space_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
+
+    def plot_fit_results(self, ests, samples, model_data, target_data, probabilistic_model=None, model_comp=None,
+                         stats=None, pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
                          region_violin_params=["x0", "x1init", "zinit"],
                          regions_labels=[], regions_mode="active", n_regions=1,
                          trajectories_plot=True, connectivity_plot=False, skip_samples=0, title_prefix=""):
@@ -1071,6 +1089,10 @@ class Plotter(BasePlotter):
             region_inds = active_regions
             seizure_indices = None
             regions_labels = regions_labels[region_inds]
+
+        if model_comp is not None:
+            self.plot_model_comparison(model_comp, probabilistic_model, target_data.time_line, target_data.space_labels,
+                                       title_prefix)
 
         self.plot_fit_scalar_params(samples, stats, probabilistic_model, pair_plot_params, skip_samples, title_prefix)
 

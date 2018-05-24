@@ -185,7 +185,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
             skip_samples = num_warmup
         else:
             skip_samples = 0
-        if fit_flag:
+        if False:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
                                                       chains=n_chains, num_warmup=num_warmup, num_samples=num_samples,
                                                       refresh=1, max_depth=max_depth, delta=delta,
@@ -201,6 +201,18 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
             if fitmethod.find("sampl") >= 0:
                 plotter.plot_HMC(samples, figure_name=hyp.name + " HMC NUTS trace")
 
+        # Model comparison:
+        # scale_signal, offset_signal, time_scale, epsilon, sigma -> 5 (+ K = 6)
+        # x0[active] -> probabilistic_model.model.number_of_active_regions
+        # x1init[active], zinit[active] -> 2 * probabilistic_model.number_of_active_regions
+        # dZt[active, t] -> probabilistic_model.number_of_active_regions * (probabilistic_model.time_length-1)
+        number_of_total_params = 5 + probabilistic_model.number_of_active_regions * (3 + (probabilistic_model.time_length-1))
+        model_comp = stan_service.compute_model_comparison(samples, number_of_total_params,
+                                              parameters=["amplitude_star", "offset_star", "epsilon_star", "sigma_star",
+                                                          "time_scale_star", "x0_star", "x_init_star", "z_init_star",
+                                                          "z_eta"])
+        writer.write_generic(model_comp, path("ModelComp"))
+
         # Interface with INS stan models
         ests, samples, Rhat, model_data = \
             convert_params_names_from_ins([ests, samples, stan_service.get_Rhat(summary), model_data])
@@ -210,7 +222,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
 
         # -------------------------- Plot fitting results: ------------------------------------------------------------
         if stan_service.fitmethod.find("opt") < 0:
-            plotter.plot_fit_results(ests, samples, model_data, target_data, probabilistic_model, stats={"Rhat": Rhat},
+            plotter.plot_fit_results(ests, samples, model_data, target_data, probabilistic_model, model_comp,
+                                     stats={"Rhat": Rhat},
                                      pair_plot_params=["tau1","sigma", "epsilon", "scale", "offset"],  #  "K",
                                      region_violin_params=["x0", "x1init", "zinit"],
                                      regions_labels=head.connectivity.region_labels, skip_samples=skip_samples,
