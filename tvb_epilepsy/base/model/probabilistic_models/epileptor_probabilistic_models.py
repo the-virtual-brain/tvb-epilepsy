@@ -51,6 +51,13 @@ class ProbabilisticModel(object):
     def __str__(self):
         return self.__repr__()
 
+    @property
+    def number_of_total_parameters(self):
+        nparams = 0
+        for p in self.parameters.values():
+            nparams += np.maximum(1, np.prod(p.p_shape))
+        return nparams
+
     def get_parameter(self, parameter_name):
         parameter = self.parameters.get(parameter_name, None)
         if parameter is None:
