@@ -10,6 +10,7 @@ class GenericConfig(object):
     _module_path = os.path.dirname(tvb_epilepsy.__file__)
     PROBLSTC_MODELS_PATH = os.path.join(_module_path, "service", "model_inversion", "stan", "models")
     CMDSTAN_PATH = os.path.join(os.path.expanduser("~"), "ScientificSoftware/git/cmdstan")
+    MODEL_COMPARISON_PATH = os.path.join(os.path.dirname(_module_path), "extern")
     C_COMPILER = "clang++"
 
     # Information needed for the Java simulation
@@ -116,7 +117,7 @@ class FiguresConfig(object):
     SMALL_SIZE = (15, 10)
     FIG_FORMAT = 'png'
     SAVE_FLAG = True
-    SHOW_FLAG = True
+    SHOW_FLAG = False
     MOUSE_HOOVER = False
     MATPLOTLIB_BACKEND = "Qt4Agg" # , "Agg"
 
