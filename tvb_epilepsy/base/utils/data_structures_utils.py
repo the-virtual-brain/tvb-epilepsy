@@ -153,7 +153,7 @@ def sort_dict(d):
     return OrderedDict(sorted(d.items(), key=lambda t: t[0]))
 
 
-def switch_dict_levels(d):
+def switch_levels_of_dicts_of_dicts(d):
     keys = d.values()[0].keys()
     return {key: {k: d[k][key] for k in d if key in d[k]} for key in keys}
 

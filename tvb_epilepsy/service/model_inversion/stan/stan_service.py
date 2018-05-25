@@ -8,8 +8,8 @@ import numpy as np
 from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, \
                                                     raise_value_error, raise_not_implemented_error
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, switch_dict_levels, \
-                                                          list_of_dicts_to_dicts_of_ndarrays
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict,  \
+                                                    list_of_dicts_to_dicts_of_ndarrays, switch_levels_of_dicts_of_dicts
 from tvb_epilepsy.io.rdump import rdump, rload
 from tvb_epilepsy.io.csv import parse_csv
 from tvb_epilepsy.io.h5_reader import H5Reader
@@ -301,7 +301,7 @@ class StanService(object):
                                                      parameters, skip_samples, merge_samples, log_like_str)
 
         # Return result into a dictionary with metrics at the upper level and models at the lower one
-        return switch_dict_levels(results)
+        return switch_levels_of_dicts_of_dicts(results)
 
 
 
