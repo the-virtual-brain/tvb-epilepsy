@@ -90,7 +90,7 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
                                  figure_name=hyp.name + "_StateSpace")
 
         logger.info("\n\nRunning LSA...")
-        lsa_service = LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
+        lsa_service = LSAService(eigen_vectors_number=1)
         lsa_hypothesis = lsa_service.run_lsa(hyp, model_configuration)
 
         lsa_path = os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_LSA.h5")

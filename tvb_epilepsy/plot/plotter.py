@@ -547,19 +547,32 @@ class Plotter(BasePlotter):
         plot_types = ["vector"] * n_subplots
         names = ["LSA eigenvalues"]
         data = [lsa_service.eigen_values]
+        n_regions = lsa_hypothesis.number_of_regions
+        if len(lsa_service.eigen_values) == 2*n_regions:
+            region_labels = numpy.array(["-".join(lbl) for lbl in
+                                         (list(zip(n_regions*["x1"], region_labels)) +
+                                          list(zip(n_regions*["z"], region_labels)))])
+            index_doubling = lambda index: \
+                numpy.concatenate([numpy.array(index), numpy.array(index) + lsa_hypothesis.number_of_regions]).tolist()
+            eig_vec = lambda v: numpy.log10(numpy.abs(v))
+            name_fun = lambda ii: ["log10(abs(LSA eigenvectror " + str(ii + 1) + "))"]
+        else:
+            index_doubling = lambda index: numpy.array(index).tolist()
+            eig_vec = lambda v: v
+            name_fun = lambda ii: ["LSA eigenvectror " + str(ii + 1)]
         indices = [[]]
         for ii in range(lsa_service.eigen_vectors_number):
-            names += ["LSA eigenvectror " + str(ii + 1)]
-            data += [lsa_service.eigen_vectors[:, ii]]
-            indices += [lsa_hypothesis.lsa_propagation_indices]
+            names += name_fun(ii)
+            data += [eig_vec(lsa_service.eigen_vectors[:, ii])]
+            indices += [index_doubling(lsa_hypothesis.lsa_propagation_indices)]
 
         plot_dict_list = dicts_of_lists_to_lists_of_dicts({"name": names, "data": data, "focus_indices": indices,
                                                            "plot_type": plot_types})
-        description = "LSA eigenvalues and first "+  str(lsa_service.eigen_vectors_number) + " eigenvectors"
+        description = "LSA eigenvalues and first " + str(lsa_service.eigen_vectors_number) + " eigenvectors"
 
         return self.plot_in_columns(plot_dict_list, region_labels, width_ratios=[],
-                                    left_ax_focus_indices=lsa_hypothesis.lsa_propagation_indices,
-                                    right_ax_focus_indices=lsa_hypothesis.lsa_propagation_indices,
+                                    left_ax_focus_indices=index_doubling(lsa_hypothesis.lsa_propagation_indices),
+                                    right_ax_focus_indices=index_doubling(lsa_hypothesis.lsa_propagation_indices),
                                     description=description, title=fig_name, figure_name=fig_name)
 
 
@@ -846,7 +859,7 @@ class Plotter(BasePlotter):
                                     title, subtitles, figure_name, figsize)
 
     def region_parameters_violin_plots(self, samples, values=None, lines=None, stats=None,
-                                       params=["x0", "x1init", "zinit"], skip_samples=0, per_chain=False, labels=[],
+                                       params=["x0", "x1init", "zinit"], skip_samples=0, per_chain_or_run=False, labels=[],
                                        seizure_indices=None, figure_name="Regions parameters samples",
                                        figsize=FiguresConfig.VERY_LARGE_SIZE):
         if isinstance(values, dict):
@@ -859,7 +872,7 @@ class Plotter(BasePlotter):
             lines_fun = lambda param: []
         samples = ensure_list(samples)
         n_chains = len(samples)
-        if not per_chain and len(samples) > 1:
+        if not per_chain_or_run and len(samples) > 1:
             samples = ensure_list(list_of_dicts_to_dicts_of_ndarrays(samples))
             plot_samples = lambda s: numpy.concatenate(numpy.split(s[:, skip_samples:].T, n_chains, axis=2),
                                                        axis=1).squeeze().T
@@ -909,7 +922,7 @@ class Plotter(BasePlotter):
 
     def plot_fit_region_params(self, samples, stats=None, probabilistic_model=None,
                                region_violin_params=["x0", "x1init", "zinit"], seizure_indices=[], region_labels=[],
-                               regions_mode="all", per_chain_plotting=False, skip_samples=0, title_prefix=""):
+                               regions_mode="all", per_chain_or_run=False, skip_samples=0, title_prefix=""):
         if len(title_prefix) > 0:
             title_prefix = title_prefix + " "
         # We assume in this function that regions_inds run for all regions for the statistical model,
@@ -937,9 +950,9 @@ class Plotter(BasePlotter):
             regions_inds = range(samples[0]["x0"].shape[2])
         # plot region-wise parameters
         self.region_parameters_violin_plots(samples, truth, priors, stats, region_violin_params, skip_samples,
-                                            per_chain=per_chain_plotting, labels=region_labels,
+                                            per_chain_or_run=per_chain_or_run, labels=region_labels,
                                             seizure_indices=seizure_indices, figure_name=title_violin_plot)
-        if not(per_chain_plotting) and "x0" in region_violin_params and samples[0]["x0"].shape[1] < 10:
+        if not(per_chain_or_run) and "x0" in region_violin_params and samples[0]["x0"].shape[1] < 10:
             x0_K_pair_plot_params = []
             x0_K_pair_plot_samples = [{} for _ in range(len(samples))]
             if samples[0].get("K", None) is not None:
@@ -1055,23 +1068,25 @@ class Plotter(BasePlotter):
             self._save_figure(pyplot.gcf(), conn_figure_name)
             self._check_show()
 
-    def plot_model_comparison(self, model_comps, probabilistic_model=None, time=None, labels=[], title_prefix=""):
+    def plot_scalar_model_comparison(self, model_comps, title_prefix=""):
+        pass
+        # if isinstance(model_comps, list)
+
+
+
+    def plot_model_comparison_metrics(self, model_comps, probabilistic_model=None, time=None, labels=[], title_prefix=""):
         model_comps = ensure_list(model_comps)
-        n_chains = len(model_comps)
+        n_chains_or_runs = len(model_comps)
         loos_dict = {}
         ks_dict = {}
+
         # for id_est, model_comp in enumerate(model_comps):
-        #     if n_chains > 1:
-        #         loos_dict.update({"loos chain " + str(id_est + 1): model_comp["loos"]})
-        #         ks_dict.update({"ks chain " + str(id_est + 1): model_comp["ks_dict"]})
-        #     else:
-        #         loos_dict.update({"loos": model_comp["loos"]})
-        #         ks_dict.update({"ks": model_comp["ks_dict"]})
-        #     self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
-        #                      title=title_prefix + probabilistic_model.name + "Observation target vs fit time series: "
-        #                            + stats_string["fit_target_data"],
-        #                      figure_name=title_prefix + probabilistic_model.name + "ObservationTarget_VS_FitTimeSeries",
-        #                      offset=1.0, labels=target_data.space_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
+        #
+        #     # self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
+        #     #                  title=title_prefix + probabilistic_model.name + "Observation target vs fit time series: "
+        #     #                        + stats_string["fit_target_data"],
+        #     #                  figure_name=title_prefix + probabilistic_model.name + "ObservationTarget_VS_FitTimeSeries",
+        #     #                  offset=1.0, labels=target_data.space_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
     def plot_fit_results(self, ests, samples, model_data, target_data, probabilistic_model=None, model_comp=None,
                          stats=None, pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
@@ -1091,8 +1106,8 @@ class Plotter(BasePlotter):
             regions_labels = regions_labels[region_inds]
 
         if model_comp is not None:
-            self.plot_model_comparison(model_comp, probabilistic_model, target_data.time_line, target_data.space_labels,
-                                       title_prefix)
+            self.plot_model_comparison_metrics(model_comp, probabilistic_model, target_data.time_line,
+                                               target_data.space_labels, title_prefix)
 
         self.plot_fit_scalar_params(samples, stats, probabilistic_model, pair_plot_params, skip_samples, title_prefix)
 

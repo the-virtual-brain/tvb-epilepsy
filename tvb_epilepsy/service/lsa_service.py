@@ -129,14 +129,13 @@ class LSAService(object):
         eigen_vectors = numpy.real(eigen_vectors)
         sorted_indices = numpy.argsort(eigen_values, kind='mergesort')
         if self.lsa_method == "2D":
-            sorted_indices = sorted_indices[::-1][:disease_hypothesis.number_of_regions]
-        self.eigen_vectors = eigen_vectors[:disease_hypothesis.number_of_regions][:, sorted_indices]
+            sorted_indices = sorted_indices[::-1]
+        self.eigen_vectors = eigen_vectors[:, sorted_indices]
         self.eigen_values = eigen_values[sorted_indices]
-        # if self.lsa_method == "2D":
-        #     self.eigen_vectors = numpy.sqrt(self.eigen_vectors[0::2, :] ** 2 + self.eigen_vectors[1::2, :] ** 2)
 
-        self._ensure_eigen_vectors_number(self.eigen_values, model_configuration.e_values,
-                                          model_configuration.x0_values, disease_hypothesis.regions_disease_indices)
+        self._ensure_eigen_vectors_number(self.eigen_values[:disease_hypothesis.number_of_regions],
+                                          model_configuration.e_values, model_configuration.x0_values,
+                                          disease_hypothesis.regions_disease_indices)
 
         if self.eigen_vectors_number == disease_hypothesis.number_of_regions:
             # Calculate the propagation strength index by summing all eigenvectors
@@ -151,11 +150,22 @@ class LSAService(object):
                                                   numpy.array(self.eigen_vectors[:, :self.eigen_vectors_number]),
                                                               normalize=True))
             else:
-                lsa_propagation_strength = numpy.abs(numpy.sum(self.eigen_vectors[:, :self.eigen_vectors_number], axis=1))
+                lsa_propagation_strength = \
+                    numpy.abs(numpy.sum(self.eigen_vectors[:, :self.eigen_vectors_number], axis=1))
 
         if self.lsa_method == "2D":
+            # lsa_propagation_strength = lsa_propagation_strength[:disease_hypothesis.number_of_regions]
+            # or
+            # lsa_propagation_strength = numpy.where(lsa_propagation_strength[:disease_hypothesis.number_of_regions] >=
+            #                                        lsa_propagation_strength[disease_hypothesis.number_of_regions:],
+            #                                        lsa_propagation_strength[:disease_hypothesis.number_of_regions],
+            #                                        lsa_propagation_strength[disease_hypothesis.number_of_regions:])
+            # or
+            lsa_propagation_strength = numpy.sqrt(lsa_propagation_strength[:disease_hypothesis.number_of_regions]**2 +
+                                                  lsa_propagation_strength[disease_hypothesis.number_of_regions:]**2)
             lsa_propagation_strength = numpy.log10(lsa_propagation_strength)
             lsa_propagation_strength -= lsa_propagation_strength.min()
+
 
         if self.normalize_propagation_strength:
             # Normalize by the maximum
