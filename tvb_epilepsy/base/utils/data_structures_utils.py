@@ -153,6 +153,11 @@ def sort_dict(d):
     return OrderedDict(sorted(d.items(), key=lambda t: t[0]))
 
 
+def switch_dict_levels(d):
+    keys = d.values()[0].keys()
+    return {key: {k: d[k][key] for k in d if key in d[k]} for key in keys}
+
+
 def dicts_of_lists(dictionary, n=1):
     for key, value in dictionary.iteritems():
         dictionary[key] = ensure_list(dictionary[key])
