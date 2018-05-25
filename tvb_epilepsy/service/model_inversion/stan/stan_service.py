@@ -6,7 +6,8 @@ from scipy.io import savemat, loadmat
 from scipy.stats import describe
 import numpy as np
 from tvb_epilepsy.base.constants.config import Config
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_not_implemented_error, warning
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning, \
+                                                    raise_value_error, raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, \
                                                           list_of_dicts_to_dicts_of_ndarrays
 from tvb_epilepsy.io.rdump import rdump, rload
@@ -125,37 +126,50 @@ class StanService(object):
 
     def compute_estimates_from_samples(self, samples):
         ests = []
-        for chain_samples in ensure_list(samples):
+        for chain_or_run_samples in ensure_list(samples):
             est = {}
-            for pkey, pval in chain_samples.iteritems():
+            for pkey, pval in chain_or_run_samples.items():
                 try:
-                    est[pkey + "_low"], est[pkey], est[pkey + "_std"] = describe(chain_samples[pkey])[1:4]
+                    est[pkey + "_low"], est[pkey], est[pkey + "_std"] = describe(chain_or_run_samples[pkey])[1:4]
                     est[pkey + "_high"] = est[pkey + "_low"][1]
                     est[pkey + "_low"] = est[pkey + "_low"][0]
                     est[pkey + "_std"] = np.sqrt(est[pkey + "_std"])
                     for skey in [pkey, pkey + "_low", pkey + "_high", pkey + "_std"]:
                         est[skey] = np.squeeze(est[skey])
                 except:
-                    est[pkey] = chain_samples[pkey]
+                    est[pkey] = chain_or_run_samples[pkey]
             ests.append(sort_dict(est))
         if len(ests) == 1:
             return ests[0]
         else:
             return ests
 
-    def merge_samples(self, samples):
+    def merge_samples(self, samples, skip_samples=0):
         samples = list_of_dicts_to_dicts_of_ndarrays(ensure_list(samples))
         if len(samples) > 1:
-            for skey, sval in samples.iteritems():
+            for skey, sval in samples.items():
                 sshape = sval.shape
                 if len(sshape) > 2:
-                    samples[skey] = np.reshape(sval, tuple((-1,) + sshape[2:]))
+                    samples[skey] = np.reshape(sval[:, skip_samples:], tuple((-1,) + sshape[2:]))
                 else:
-                    samples[skey] = sval.flatten()
+                    samples[skey] = sval[:, skip_samples:].flatten()
         return samples
 
-    def compute_model_comparison(self, samples, nparams=None, nsamples=None, ndata=None, parameters=[],
-                                 merge_samples=True, log_like_str='log_likelihood'):
+    def compute_model_comparison_metrics(self, samples, nparams=None, nsamples=None, ndata=None, parameters=[],
+                                         skip_samples=0, merge_samples=True, log_like_str='log_likelihood'):
+
+        """
+
+        :param samples: a dictionary of stan outputs or a list of dictionaries for multiple runs/chains
+        :param nparams: number of model parameters, it can be inferred from parameters if None
+        :param nsamples: number of samples, it can be inferred from loglikelihood if None
+        :param ndata: number of data points, it can be inferred from loglikelihood if None
+        :param parameters: a list of parameter names, necessary for dic metric computations and in case nparams is None,
+                           as well as for aicc, aic and bic computation
+        :param merge_samples: logical flag for merging seperate chains/runs, default is True
+        :param log_like_str: the name of the log likelihood output of stan, default ''log_likelihood
+        :return:
+        """
 
         import sys
         sys.path.insert(0, self.config.generic.MODEL_COMPARISON_PATH)
@@ -168,12 +182,13 @@ class StanService(object):
             return None
 
         samples = ensure_list(samples)
-        if merge_samples:
-            samples = ensure_list(self.merge_samples(samples))
+        if merge_samples and len(samples) > 1:
+            samples = ensure_list(self.merge_samples(samples, skip_samples))
+            skip_samples = 0
 
         results = []
         for sample in samples:
-            log_likelihood = -1 * sample[log_like_str]
+            log_likelihood = -1 * sample[log_like_str][skip_samples:]
             log_lik_shape = log_likelihood.shape
             if len(log_lik_shape) > 1:
                 target_shape = log_lik_shape[1:]
@@ -202,7 +217,8 @@ class StanService(object):
                 nparams_real = 0
                 zscore_params = []
                 for p in parameters:
-                    pzscore = np.array((sample[p] - np.mean(sample[p], axis=0)) / np.std(sample[p], axis=0))
+                    pval = sample[p][skip_samples:]
+                    pzscore = np.array((pval - np.mean(pval, axis=0)) / np.std(pval, axis=0))
                     if len(pzscore.shape) > 2:
                         pzscore = np.reshape(pzscore, (pzscore.shape[0], -1))
                     zscore_params.append(pzscore)
@@ -217,10 +233,15 @@ class StanService(object):
                             ") is not equal to number of parameters included in the dic computation (" +
                             str(nparams_real) + ")!")
                 result['dic'] = dic(log_likelihood, zscore_params)
+            else:
+                warning("Parameters' names' list is empty! No computation of dic!")
 
-            result['aicc'] = aicc(log_likelihood, nparams, ndata)
-            result['aic'] = aic(log_likelihood, nparams)
-            result['bic'] = bic(log_likelihood, nparams, ndata)
+            if nparams is not None:
+                result['aicc'] = aicc(log_likelihood, nparams, ndata)
+                result['aic'] = aic(log_likelihood, nparams)
+                result['bic'] = bic(log_likelihood, nparams, ndata)
+            else:
+                warning("Unknown number of parameters! No computation of aic, aaic, bic!")
 
             result.update(psisloo(log_likelihood))
             result["loos"] = np.reshape(result["loos"], target_shape)
@@ -231,6 +252,57 @@ class StanService(object):
             return results[0]
         else:
             return results
+
+    def compare_models(self, samples, nparams=None, nsamples=None, ndata=None, parameters=[],
+                       skip_samples=0, merge_samples=True, log_like_str='log_likelihood'):
+
+        """
+
+        :param samples: a dictionary of model's names and samples
+        :param nparams: a number or list of numbers of parameters, if it is None,
+                        it will have to inferred from the parameters list for aicc, aic and bic computation
+        :param nsamples: a number or lists of numbers of samples, it can be inferred from loglikelihood if None
+        :param ndata: a number or lists of numbers of data point, it can be inferred from loglikelihood if None
+        :param parameters: a list of parameter names, necessary for dic metric computations and in case nparams is None,
+                           as well as for aicc, aic and bic computation
+        :param merge_samples: logical flag for merging seperate chains/runs, default is True
+        :param log_like_str: the name of the log likelihood output of stan, default ''log_likelihood
+        :return:
+        """
+
+        def check_number_of_inputs(nmodels, input, input_str):
+            input = ensure_list(input)
+            ninput = len(input)
+            if ninput != nmodels:
+                if ninput == 1:
+                    input *= nmodels
+                else:
+                    raise_value_error("The size of input " + input_str + " (" + str(ninput) +
+                                      ") is neither equal to the number of models (" + str(nmodels) +
+                                      ") nor equal to 1!")
+            return input
+
+        nmodels = len(samples)
+
+        if nparams is None:
+            if len(parameters) == 0:
+                warning("Input nparams is None and parameters' names' list is empty! "
+                        "We cannot compute aic, aaic, bic and dic!")
+
+        nparams = check_number_of_inputs(nmodels, nparams, "number of parameters")
+        nsamples = check_number_of_inputs(nmodels, nsamples, "number of samples")
+        ndata = check_number_of_inputs(nmodels, ndata, "number of data points")
+
+        results = {}
+
+        for i_model, (model_name, model_samples) in enumerate(samples.items()):
+            results[model_name] = \
+               self.compute_model_comparison_metrics(model_samples, nparams[i_model], nsamples[i_model], ndata[i_model],
+                                                     parameters, skip_samples, merge_samples, log_like_str)
+
+        return results
+
+
 
 
 
