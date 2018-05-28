@@ -1068,13 +1068,29 @@ class Plotter(BasePlotter):
             self._save_figure(pyplot.gcf(), conn_figure_name)
             self._check_show()
 
-    def plot_scalar_model_comparison(self, model_comps, title_prefix=""):
+    def plot_scalar_model_comparison(self, model_comps, title="",
+                                     figsize=FiguresConfig.VERY_LARGE_SIZE, figure_name=None):
         from tvb_epilepsy.service.model_inversion.stan.stan_service import prepare_model_comparison_metrics_dict
         metrics = ["maxlike", "aic", "aaic", "bic", "dic", "waic", "p-waic", "elpd_waic", "loo"]
         metrics = numpy.intersect1d(metrics, model_comps.keys())
-        metrics_dict = prepare_model_comparison_metrics_dict(model_comps, metrics)
+        metrics_dicts = prepare_model_comparison_metrics_dict(model_comps, metrics)
 
-        n_subplots = len(metrics)
+        subplot_shape = self.rect_subplot_shape(len(metrics_dicts), mode="col")
+
+        fig, axes = pyplot.subplots(subplot_shape[0], subplot_shape[1], figsize=figsize)
+        pyplot.suptitle(title)
+
+        for imetric, (metric, metrics_dict) in enumerate(metrics_dicts.items()):
+            isb, jsb = numpy.unravel_index(imetric, subplot_shape)
+            group_names = metrics_dict.keys()
+            group_data = metrics_dict.values()[0]
+            axes[isb, jsb] = self.plot_bars(group_data, ax=axes[isb, jsb], fig=fig, title=metric,
+                                            group_names=group_names, legend_prefix="chains/runs")[0]
+        fig.tight_layout()
+        self._save_figure(fig, figure_name)
+        self._check_show()
+        return fig, axes
+
         # TODO: make a plot of grouped bar diagrams with one subplot for each metric, models for groups of chains/runs
 
     def plot_array_model_comparison(self, model_comps, title_prefix=""):

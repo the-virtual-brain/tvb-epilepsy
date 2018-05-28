@@ -45,6 +45,15 @@ class BasePlotter(object):
             pyplot.savefig(os.path.join(figure_dir, figure_name))
 
     @staticmethod
+    def rect_subplot_shape(self, n, mode="col"):
+        nj = int(numpy.ceil(numpy.sqrt(n)))
+        ni = int(numpy.ceil(1.0 * n / nj))
+        if mode.find("row") >= 0:
+            return nj, ni
+        else:
+            return ni, nj
+
+    @staticmethod
     def plot_vector(vector, labels, subplot, title, show_y_labels=True, indices_red=None, sharey=None):
         ax = pyplot.subplot(subplot, sharey=sharey)
         pyplot.title(title)
@@ -325,3 +334,11 @@ class BasePlotter(object):
         self._save_figure(fig, figure_name)
         self._check_show()
         return fig, axes
+
+    def plot_bars(self, data, ax=None, fig=None, title="", group_names=[], legend_prefix="",
+                  figsize=FiguresConfig.VERY_LARGE_SIZE):
+
+        if fig is None:
+            fig = pyplot.figure(title, frameon=False, figsize=figsize)
+
+        n_groups, n_elements = data.shape
