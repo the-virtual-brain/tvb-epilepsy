@@ -306,5 +306,31 @@ class StanService(object):
 
 
 
+def prepare_model_comparison_metrics_dict(model_comps, metrics=None):
+    """
+    This function prepares a dictionary of model comparison metrics of possibly several models for plotting
+    :param model_comps: a dictionary of metrics names as keys, and for values:
+                        either a float/numpy array for ks and loos of metric values for 1 model 1 chain/run
+                        or a list of values for 1 model several chains/runs
+                        or a dictionary of  model names for keys, and values as above (either floats/arrays or lists)
+                            for several models
+    :param metrics: a selection of metrics, otherwise all of the model_comps keys are selected
+    :return: metrics_dicts: a dictionary of tuples of model names as keys,
+                            and numpy arrays of metric values for all possible chains/runs for values,
+                            in case that models do not have the same number of chains or runs, we fill in with numpy.nan
+    """
+    if metrics is None:
+        metrics = model_comps.keys()
+    metrics_dict = {}
+    for metric in metrics:
+        if isinstance(model_comps[metric], dict):
+            from itertools import izip_longest
+            this_models_names = tuple(model_comps[metric].keys())
+            values = np.array(list(izip_longest(*model_comps[metric].values(), fillvalue=numpy.nan))).T
+        else:
+            this_models_names = ("",)
+            values = np.array(model_comps[metric])
 
+        metrics_dict[metric] = {this_models_names: values}
+    return metrics_dict
 
