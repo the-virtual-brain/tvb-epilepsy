@@ -1069,24 +1069,22 @@ class Plotter(BasePlotter):
             self._check_show()
 
     def plot_scalar_model_comparison(self, model_comps, title_prefix=""):
-        pass
-        # if isinstance(model_comps, list)
+        from tvb_epilepsy.service.model_inversion.stan.stan_service import prepare_model_comparison_metrics_dict
+        metrics = ["maxlike", "aic", "aaic", "bic", "dic", "waic", "p-waic", "elpd_waic", "loo"]
+        metrics = numpy.intersect1d(metrics, model_comps.keys())
+        metrics_dict = prepare_model_comparison_metrics_dict(model_comps, metrics)
 
+        n_subplots = len(metrics)
+        # TODO: make a plot of grouped bar diagrams with one subplot for each metric, models for groups of chains/runs
 
+    def plot_array_model_comparison(self, model_comps, title_prefix=""):
+        from tvb_epilepsy.service.model_inversion.stan.stan_service import prepare_model_comparison_metrics_dict
+        metrics = numpy.intersect1d(["loos", "ks"], model_comps.keys())
+        metrics_dict = prepare_model_comparison_metrics_dict(model_comps, metrics)
 
-    def plot_model_comparison_metrics(self, model_comps, probabilistic_model=None, time=None, labels=[], title_prefix=""):
-        model_comps = ensure_list(model_comps)
-        n_chains_or_runs = len(model_comps)
-        loos_dict = {}
-        ks_dict = {}
+        # TODO: make a figure of number of target_data_signals x two metrics (loos, ks) if only 1 model
+        # TODO: or one figure of number of models x target_data_signals for each metric if models are more than 1
 
-        # for id_est, model_comp in enumerate(model_comps):
-        #
-        #     # self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
-        #     #                  title=title_prefix + probabilistic_model.name + "Observation target vs fit time series: "
-        #     #                        + stats_string["fit_target_data"],
-        #     #                  figure_name=title_prefix + probabilistic_model.name + "ObservationTarget_VS_FitTimeSeries",
-        #     #                  offset=1.0, labels=target_data.space_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
     def plot_fit_results(self, ests, samples, model_data, target_data, probabilistic_model=None, model_comp=None,
                          stats=None, pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
@@ -1105,9 +1103,10 @@ class Plotter(BasePlotter):
             seizure_indices = None
             regions_labels = regions_labels[region_inds]
 
-        if model_comp is not None:
-            self.plot_model_comparison_metrics(model_comp, probabilistic_model, target_data.time_line,
-                                               target_data.space_labels, title_prefix)
+        # if model_comp is not None:
+        #     # Stil TODO
+        #     self.plot_model_comparison_metrics(model_comp, probabilistic_model, target_data.time_line,
+        #                                        target_data.space_labels, title_prefix)
 
         self.plot_fit_scalar_params(samples, stats, probabilistic_model, pair_plot_params, skip_samples, title_prefix)
 

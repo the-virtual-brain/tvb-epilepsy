@@ -187,7 +187,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
             skip_samples = 0
         if False:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
-                                                      chains=n_chains, num_warmup=num_warmup, num_samples=num_samples,
+                                                      chains_or_runs=n_chains, num_warmup=num_warmup, num_samples=num_samples,
                                                       refresh=1, max_depth=max_depth, delta=delta,
                                                       iter=iter, tol_rel_obj=tol_rel_obj,
                                                       save_warmup=1, plot_warmup=1,
@@ -207,8 +207,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
         # x1init[active], zinit[active] -> 2 * probabilistic_model.number_of_active_regions
         # dZt[active, t] -> probabilistic_model.number_of_active_regions * (probabilistic_model.time_length-1)
         number_of_total_params = 5 + probabilistic_model.number_of_active_regions * (3 + (probabilistic_model.time_length-1))
-        model_comp = stan_service.compute_model_comparison(samples, number_of_total_params,
-                                              parameters=["amplitude_star", "offset_star", "epsilon_star", "sigma_star",
+        model_comp = stan_service.compute_model_comparison_metrics(samples, number_of_total_params, skip_samples=skip_samples,
+                                                                   parameters=["amplitude_star", "offset_star", "epsilon_star", "sigma_star",
                                                           "time_scale_star", "x0_star", "x_init_star", "z_init_star",
                                                           "z_eta"])
         writer.write_generic(model_comp, path("ModelComp"))
