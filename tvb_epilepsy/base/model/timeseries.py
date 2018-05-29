@@ -169,9 +169,12 @@ class Timeseries(object):
             space_keys = self.dimension_labels[TimeseriesDimensions.SPACE.value]
             if attr_name in self.dimension_labels[TimeseriesDimensions.SPACE.value]:
                 return self.get_subspace_by_labels([attr_name])
-        self.logger.error(
-            "Attribute %s is not defined for this instance! You can use the folllowing labels: state_variables = %s and space = %s" %
-            (attr_name, state_variables_keys, space_keys))
+        # Hack to avoid stupid error messages when searching for __ attributes in numpy.array() call...
+        # TODO: something better? Maybe not needed if we never do something like numpy.array(timeseries)
+        if attr_name.find("__") < 0:
+            self.logger.error(
+                "Attribute %s is not defined for this instance! You can use the folllowing labels: state_variables = %s and space = %s" %
+                (attr_name, state_variables_keys, space_keys))
         raise AttributeError
 
     def __getitem__(self, slice_tuple):
