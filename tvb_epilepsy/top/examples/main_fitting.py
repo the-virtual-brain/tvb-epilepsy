@@ -186,7 +186,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
         else:
             skip_samples = 0
         prob_model_name = probabilistic_model.name.split(".")[0]
-        if False:
+        if fit_flag:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
                                                       chains_or_runs=n_chains, num_warmup=num_warmup, num_samples=num_samples,
                                                       refresh=1, max_depth=max_depth, delta=delta,
@@ -202,7 +202,6 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
             if fitmethod.find("sampl") >= 0:
                 plotter.plot_HMC(samples, figure_name=hyp.name + "-" + prob_model_name + " HMC NUTS trace")
 
-        plotter.plot_HMC(samples, figure_name=hyp.name + "-" + prob_model_name + " HMC NUTS trace")
         # Model comparison:
         # scale_signal, offset_signal, time_scale, epsilon, sigma -> 5 (+ K = 6)
         # x0[active] -> probabilistic_model.model.number_of_active_regions
