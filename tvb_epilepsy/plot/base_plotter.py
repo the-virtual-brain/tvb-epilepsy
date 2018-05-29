@@ -6,8 +6,8 @@ import matplotlib
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.base.constants.config import Config, FiguresConfig
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 
 
 class BasePlotter(object):
@@ -338,7 +338,62 @@ class BasePlotter(object):
     def plot_bars(self, data, ax=None, fig=None, title="", group_names=[], legend_prefix="",
                   figsize=FiguresConfig.VERY_LARGE_SIZE):
 
-        if fig is None:
-            fig = pyplot.figure(title, frameon=False, figsize=figsize)
+        def barlabel(ax, rects, positions):
+            """
+            Attach a text label on each bar displaying its height
+            """
+            for rect, pos in zip(rects, positions):
+                height = rect.get_height()
+                if pos < 0:
+                    y = -height
+                    pos = 0.75 * pos
+                else:
+                    y = height
+                    pos = 0.25 * pos
+                ax.text(rect.get_x() + rect.get_width() / 2., pos, '%0.2f' % y,
+                        color="k", ha='center', va='bottom', rotation=90)
 
+        if fig is None:
+            fig, ax = pyplot.subplots(1, 1, figsize=figsize)
+            show_and_save = True
+        else:
+            show_and_save = False
+            if ax is None:
+                ax = pyplot.gca()
+        if isinstance(data, (list, tuple)):  # If, there are many groups, data is a list:
+            # Fill in with nan in case that not all groups have the same number of elements
+            from itertools import izip_longest
+            data = numpy.array(list(izip_longest(*ensure_list(data), fillvalue=numpy.nan))).T
+        elif data.ndim == 1: # This is the case where there is only one group...
+            data = numpy.expand_dims(data, axis=1).T
         n_groups, n_elements = data.shape
+        posmax = data.max()
+        negmax = -(-data).max()
+        n_groups_names = len(group_names)
+        if n_groups_names != n_groups:
+            if n_groups_names != 0:
+                warning("Ignoring group_names because their number (" + str(n_groups_names) +
+                        ") is not equal to the number of groups (" + str(n_groups) + ")!")
+            group_names = n_groups * [""]
+        colorcycle = pyplot.rcParams['axes.prop_cycle'].by_key()['color']
+        n_colors = len(colorcycle)
+        x_inds = numpy.arange(n_groups)
+        width = 0.9 / n_elements
+        elements = []
+        for iE in range(n_elements):
+            elements.append(ax.bar(x_inds + iE*width, data[:, iE], width, color=colorcycle[iE % n_colors]))
+            positions = [negmax if d < 0 else posmax for d in data[:, iE]]
+            barlabel(ax, elements[-1], positions)
+        if n_elements > 1:
+            legend = [legend_prefix+str(ii) for ii in range(1, n_elements+1)]
+            ax.legend(tuple([element[0] for element in elements]), tuple(legend))
+        ax.set_xticks(x_inds + n_elements*width/2)
+        ax.set_xticklabels(tuple(group_names))
+        ax.set_title(title)
+        ax.autoscale()  # tight=True
+        ax.set_xlim([0, (n_groups + width) * 1.05])
+        if show_and_save:
+            fig.tight_layout()
+            self._save_figure(fig)
+            self._check_show()
+        return fig, ax

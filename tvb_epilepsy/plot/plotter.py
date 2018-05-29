@@ -805,12 +805,13 @@ class Plotter(BasePlotter):
 
     def plot_HMC(self, samples, skip_samples=0, title='HMC NUTS trace', figure_name=None,
                  figsize=FiguresConfig.LARGE_SIZE):
-        samples = ensure_list(samples)
-        if len(samples) > 1:
-            samples = list_of_dicts_to_dicts_of_ndarrays(samples)
+        nuts = [] 
+        for sample in ensure_list(samples):
+            nuts.append(extract_dict_stringkeys(sample, "__", modefun="find"))
+        if len(nuts) > 1:
+            nuts = list_of_dicts_to_dicts_of_ndarrays(nuts)
         else:
-            samples = samples[0]
-        nuts = extract_dict_stringkeys(samples, '__', modefun="find")
+            nuts = nuts[0]
         self.plots(nuts, shape=(2, 4), transpose=True, skip=skip_samples, xlabels={}, xscales={},
                    yscales={"stepsize__": "log"}, title=title, figure_name=figure_name, figsize=figsize)
 
@@ -840,16 +841,18 @@ class Plotter(BasePlotter):
                     subtitles[ip] = subtitles[ip][:-2]
         return subtitles
 
-    def parameters_pair_plots(self, samples, params=["tau1",  "K", "sigma", "epsilon", "scale", "offset"], stats=None,
-                              priors={}, truth={}, skip_samples=0, title='Parameters samples', figure_name=None,
+    def parameters_pair_plots(self, samples_all, params=["tau1",  "K", "sigma", "epsilon", "scale", "offset"],
+                              stats=None, priors={}, truth={}, skip_samples=0, title='Parameters samples', figure_name=None,
                               figsize=FiguresConfig.VERY_LARGE_SIZE):
         subtitles = list(self._params_stats_subtitles(params, stats))
-        samples = ensure_list(samples)
-        if len(samples) > 1:
+        samples = []
+        samples_all = ensure_list(samples_all)
+        for sample in samples_all:
+            samples.append(extract_dict_stringkeys(sample, params, modefun="equal"))
+        if len(samples_all) > 1:
             samples = list_of_dicts_to_dicts_of_ndarrays(samples)
         else:
-            samples = samples[0]
-        # samples = sort_dict(extract_dict_stringkeys(samples, params, modefun="equal"))
+            samples = samples_all[0]
         diagonal_plots = {}
         # for param_key in samples.keys():
         for param_key in params:
@@ -858,9 +861,9 @@ class Plotter(BasePlotter):
         return self.pair_plots(samples, params, diagonal_plots, True, skip_samples,
                                     title, subtitles, figure_name, figsize)
 
-    def region_parameters_violin_plots(self, samples, values=None, lines=None, stats=None,
-                                       params=["x0", "x1init", "zinit"], skip_samples=0, per_chain_or_run=False, labels=[],
-                                       seizure_indices=None, figure_name="Regions parameters samples",
+    def region_parameters_violin_plots(self, samples_all, values=None, lines=None, stats=None,
+                                       params=["x0", "x1init", "zinit"], skip_samples=0, per_chain_or_run=False,
+                                       labels=[], seizure_indices=None, figure_name="Regions parameters samples",
                                        figsize=FiguresConfig.VERY_LARGE_SIZE):
         if isinstance(values, dict):
             vals_fun = lambda param: values.get(param, numpy.array([]))
@@ -870,9 +873,11 @@ class Plotter(BasePlotter):
             lines_fun = lambda param: lines.get(param, numpy.array([]))
         else:
             lines_fun = lambda param: []
-        samples = ensure_list(samples)
-        n_chains = len(samples)
-        if not per_chain_or_run and len(samples) > 1:
+        samples = []
+        for sample in ensure_list(samples_all):
+            samples.append(extract_dict_stringkeys(sample, params, modefun="equal"))
+        n_chains = len(samples_all)
+        if not per_chain_or_run and n_chains > 1:
             samples = ensure_list(list_of_dicts_to_dicts_of_ndarrays(samples))
             plot_samples = lambda s: numpy.concatenate(numpy.split(s[:, skip_samples:].T, n_chains, axis=2),
                                                        axis=1).squeeze().T
@@ -908,16 +913,13 @@ class Plotter(BasePlotter):
         # plot scalar parameters in pair plots
         if len(title_prefix) > 0:
             title_prefix = title_prefix + ": "
+        title = title_prefix + " Parameters samples"
         priors = {}
         truth = {}
         if probabilistic_model is not None:
-            title = title_prefix + probabilistic_model.name + " parameters samples"
             for p in pair_plot_params:
                 priors.update({p: probabilistic_model.get_prior_pdf(p)})
                 truth.update({p: numpy.nanmean(probabilistic_model.get_truth(p))})
-        else:
-            title = title_prefix + "Parameters samples"
-
         self.parameters_pair_plots(samples, pair_plot_params, stats, priors, truth, skip_samples, title=title)
 
     def plot_fit_region_params(self, samples, stats=None, probabilistic_model=None,
@@ -925,14 +927,14 @@ class Plotter(BasePlotter):
                                regions_mode="all", per_chain_or_run=False, skip_samples=0, title_prefix=""):
         if len(title_prefix) > 0:
             title_prefix = title_prefix + " "
+        title_pair_plot = title_prefix + "Global coupling vs x0 pair plot"
+        title_violin_plot = title_prefix + "Regions parameters samples"
         # We assume in this function that regions_inds run for all regions for the statistical model,
         # and either among all or only among active regions for samples, ests and stats, depending on regions_mode
         samples = ensure_list(samples)
         priors = {}
         truth = {}
         if probabilistic_model is not None:
-            title_pair_plot = title_prefix + probabilistic_model.name + " global coupling vs x0 pair plot"
-            title_violin_plot = title_prefix + probabilistic_model.name + " regions parameters samples"
             if regions_mode=="active":
                 regions_inds = probabilistic_model.active_regions
             else:
@@ -945,8 +947,6 @@ class Plotter(BasePlotter):
                 priors.update({param: (pdf[0].squeeze(), pdf[1].squeeze())})
                 truth.update({param: ((probabilistic_model.get_truth(param) * I[:, 0])[regions_inds]).squeeze()})
         else:
-            title_pair_plot = title_prefix + probabilistic_model.name + "Global coupling vs x0 pair plot"
-            title_violin_plot = title_prefix + probabilistic_model.name + "Regions parameters samples"
             regions_inds = range(samples[0]["x0"].shape[2])
         # plot region-wise parameters
         self.region_parameters_violin_plots(samples, truth, priors, stats, region_violin_params, skip_samples,
@@ -1002,7 +1002,7 @@ class Plotter(BasePlotter):
         observation_dict = OrderedDict({'observation time series': target_data.squeezed})
         time = target_data.time_line
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), samples)):
-            name = title_prefix + probabilistic_model.name + "_chain" + str(id_est + 1)
+            name = title_prefix + "_chain" + str(id_est + 1)
             observation_dict.update({"fit chain " + str(id_est + 1):
                                          sample["fit_target_data"].squeezed[:, :, skip_samples:]})
             self.plot_raster(sort_dict({"x1": sample["x1"].squeezed[:, :, skip_samples:],
@@ -1034,25 +1034,24 @@ class Plotter(BasePlotter):
                                        special_idx=seizure_indices, title=title, labels=stats_region_labels,
                                        figsize=FiguresConfig.SUPER_LARGE_SIZE)
         self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
-                         title=title_prefix + probabilistic_model.name + "Observation target vs fit time series: "
+                         title=title_prefix + "Observation target vs fit time series: "
                                 + stats_string["fit_target_data"],
-                         figure_name=title_prefix + probabilistic_model.name + "ObservationTarget_VS_FitTimeSeries",
+                         figure_name=title_prefix + "ObservationTarget_VS_FitTimeSeries",
                          offset=1.0, labels=target_data.space_labels, figsize=FiguresConfig.VERY_LARGE_SIZE)
 
-    def plot_fit_connectivity(self, ests, samples, stats=None, probabilistic_model=None, region_labels=[], title_prefix=""):
+    def plot_fit_connectivity(self, ests, samples, stats=None, probabilistic_model=None,
+                              region_labels=[], title_prefix=""):
         # plot connectivity
         if len(title_prefix) > 0:
             title_prefix = title_prefix + "_"
         if probabilistic_model is not None:
-            name0 = title_prefix + probabilistic_model.name + "_"
             MC_prior = probabilistic_model.get_prior("MC")
             MC_subplot = 122
         else:
-            name0 = title_prefix
             MC_prior = False
             MC_subplot = 111
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), ensure_list(samples))):
-            conn_figure_name = name0 + "chain" + str(id_est + 1) + ": Model Connectivity"
+            conn_figure_name = title_prefix + "chain" + str(id_est + 1) + ": Model Connectivity"
             pyplot.figure(conn_figure_name, FiguresConfig.VERY_LARGE_SIZE)
             # plot_regions2regions(conn.weights, conn.region_labels, 121, "weights")
             if MC_prior:
@@ -1068,41 +1067,122 @@ class Plotter(BasePlotter):
             self._save_figure(pyplot.gcf(), conn_figure_name)
             self._check_show()
 
-    def plot_scalar_model_comparison(self, model_comps, title="",
-                                     figsize=FiguresConfig.VERY_LARGE_SIZE, figure_name=None):
-        from tvb_epilepsy.service.model_inversion.stan.stan_service import prepare_model_comparison_metrics_dict
-        metrics = ["maxlike", "aic", "aaic", "bic", "dic", "waic", "p-waic", "elpd_waic", "loo"]
-        metrics = numpy.intersect1d(metrics, model_comps.keys())
-        metrics_dicts = prepare_model_comparison_metrics_dict(model_comps, metrics)
-
-        subplot_shape = self.rect_subplot_shape(len(metrics_dicts), mode="col")
-
+    def plot_scalar_model_comparison(self, model_comps, title_prefix="",
+                                     metrics=["aic", "aicc", "bic", "dic", "waic", "p_waic", "elpd_waic", "loo"],
+                                     subplot_shape=(4, 2), figsize=FiguresConfig.VERY_LARGE_SIZE, figure_name=None):
+        metrics = [metric for metric in metrics if metric in model_comps.keys()]
+        if subplot_shape is None:
+            subplot_shape = self.rect_subplot_shape(len(metrics), mode="col")
+        if len(title_prefix) > 0:
+            title = title_prefix + ": " + "information criteria"
+        else:
+            title = "Information criteria"
         fig, axes = pyplot.subplots(subplot_shape[0], subplot_shape[1], figsize=figsize)
-        pyplot.suptitle(title)
-
-        for imetric, (metric, metrics_dict) in enumerate(metrics_dicts.items()):
+        fig.suptitle(title)
+        fig.set_label(title)
+        for imetric, metric in enumerate(metrics):
+            if isinstance(model_comps[metric], dict):
+                metric_data = model_comps[metric].values()
+                group_names = model_comps[metric].keys()
+            else:
+                metric_data = [model_comps[metric]]
+                group_names = [""]
             isb, jsb = numpy.unravel_index(imetric, subplot_shape)
-            group_names = metrics_dict.keys()
-            group_data = metrics_dict.values()[0]
-            axes[isb, jsb] = self.plot_bars(group_data, ax=axes[isb, jsb], fig=fig, title=metric,
-                                            group_names=group_names, legend_prefix="chains/runs")[0]
-        fig.tight_layout()
+            axes[isb, jsb] = self.plot_bars(metric_data, ax=axes[isb, jsb], fig=fig, title=metric,
+                                            group_names=group_names, legend_prefix="chain/run")[1]
+        # fig.tight_layout()
         self._save_figure(fig, figure_name)
         self._check_show()
         return fig, axes
 
-        # TODO: make a plot of grouped bar diagrams with one subplot for each metric, models for groups of chains/runs
+    def plot_array_model_comparison(self, model_comps, title_prefix="", metrics=["loos", "ks"],  labels=[],
+                                    xdata=None, xlabel="", figsize=FiguresConfig.VERY_LARGE_SIZE, figure_name=None):
 
-    def plot_array_model_comparison(self, model_comps, title_prefix=""):
-        from tvb_epilepsy.service.model_inversion.stan.stan_service import prepare_model_comparison_metrics_dict
-        metrics = numpy.intersect1d(["loos", "ks"], model_comps.keys())
-        metrics_dict = prepare_model_comparison_metrics_dict(model_comps, metrics)
+        def arrange_chains_or_runs(metric_data):
+            n_chains_or_runs = 1
+            for imodel, model in enumerate(metric_data):
+                if model.ndim > 2:
+                    if model.shape[0] > n_chains_or_runs:
+                        n_chains_or_runs = model.shape[0]
+                else:
+                    metric_data[imodel] = numpy.expand_dims(model, axis=0)
+            return metric_data
 
-        # TODO: make a figure of number of target_data_signals x two metrics (loos, ks) if only 1 model
-        # TODO: or one figure of number of models x target_data_signals for each metric if models are more than 1
+        colorcycle = pyplot.rcParams['axes.prop_cycle'].by_key()['color']
+        n_colors = len(colorcycle)
+        metrics = [metric for metric in metrics if metric in model_comps.keys()]
+        figs=[]
+        axs = []
+        for metric in metrics:
+            if isinstance(model_comps[metric], dict):
+                # Multiple models as a list of np.arrays of chains x data
+                metric_data = model_comps[metric].values()
+                model_names = model_comps[metric].keys()
+            else:
+                # Single models as a one element list of one np.array of chains x data
+                metric_data = [model_comps[metric]]
+                model_names = [""]
+            metric_data = arrange_chains_or_runs(metric_data)
+            n_models = len(metric_data)
+            n_subplots = metric_data[0].shape[1]
+            n_labels = len(labels)
+            if n_labels != n_subplots:
+                if n_labels != 0:
+                    warning("Ignoring labels because their number (" + str(n_labels) +
+                            ") is not equal to the number of row subplots (" + str(n_subplots) + ")!")
+                labels = [str(ii + 1) for ii in range(n_subplots)]
+            if xdata is None:
+                xdata = numpy.arange(metric_data[jj].shape[-1])
+            else:
+                xdata = xdata.flatten()
+            xdata0 = numpy.concatenate([numpy.reshape(xdata[0] - 0.1*(xdata[-1]-xdata[0]), (1,)), xdata])
+            xdata1 = xdata[-1] + 0.1 * (xdata[-1] - xdata[0])
+            if len(title_prefix) > 0:
+                title = title_prefix + ": " + metric
+            else:
+                title = metric
+            fig = pyplot.figure(title, figsize=figsize)
+            fig.suptitle(title)
+            fig.set_label(title)
+            gs = gridspec.GridSpec(n_subplots, n_models)
+            axes = numpy.empty((n_subplots, n_models), dtype="O")
+            for ii in range(n_subplots-1,-1, -1):
+                for jj in range(n_models):
+                    if ii > n_subplots-1:
+                        if jj > 0:
+                            axes[ii, jj] = pyplot.subplot(gs[ii, jj], sharex=axes[n_subplots-1, jj], sharey=axes[ii, 0])
+                        else:
+                            axes[ii, jj] = pyplot.subplot(gs[ii, jj], sharex=axes[n_subplots-1, jj])
+                    else:
+                        if jj > 0:
+                            axes[ii, jj] = pyplot.subplot(gs[ii, jj], sharey=axes[ii, 0])
+                        else:
+                            axes[ii, jj] = pyplot.subplot(gs[ii, jj])
+                    n_chains_or_runs = metric_data[jj].shape[0]
+                    for kk in range(n_chains_or_runs):
+                        c = colorcycle[kk % n_colors]
+                        axes[ii, jj].plot(xdata, metric_data[jj][kk][ii, :],  label="chain/run" +str(kk + 1),
+                                          marker="o", markersize=1, markeredgecolor=c, markerfacecolor=None,
+                                          linestyle="None")
+                        if n_chains_or_runs > 1:
+                            axes[ii, jj].legend()
+                        m = numpy.mean(metric_data[jj][kk][ii, :])
+                        axes[ii, jj].plot(xdata0, m * numpy.ones(xdata0.shape), color=c, linewidth=1)
+                        axes[ii, jj].text(xdata0[0], 1.1 * m, 'mean=%0.2f' % m, ha='center', va='bottom', color=c)
+                    axes[ii, jj].set_xlabel(xlabel)
+                    if ii == 0:
+                        axes[ii, jj].set_title(model_names[ii])
+                if ii == n_subplots-1:
+                    axes[ii, 0].autoscale()  # tight=True
+                    axes[ii, 0].set_xlim([xdata0[0], xdata1])  # tight=True
+            # fig.tight_layout()
+            self._save_figure(fig, figure_name)
+            self._check_show()
+            figs.append(fig)
+            axs.append(axes)
+        return figs, axs
 
-
-    def plot_fit_results(self, ests, samples, model_data, target_data, probabilistic_model=None, model_comp=None,
+    def plot_fit_results(self, ests, samples, model_data, target_data, probabilistic_model=None, info_crit=None,
                          stats=None, pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
                          region_violin_params=["x0", "x1init", "zinit"],
                          regions_labels=[], regions_mode="active", n_regions=1,
@@ -1119,10 +1199,10 @@ class Plotter(BasePlotter):
             seizure_indices = None
             regions_labels = regions_labels[region_inds]
 
-        # if model_comp is not None:
-        #     # Stil TODO
-        #     self.plot_model_comparison_metrics(model_comp, probabilistic_model, target_data.time_line,
-        #                                        target_data.space_labels, title_prefix)
+        if info_crit is not None:
+            self.plot_scalar_model_comparison(info_crit, title_prefix)
+            self.plot_array_model_comparison(info_crit, title_prefix, labels=target_data.space_labels,
+                                             xdata=target_data.time_line, xlabel="Time")
 
         self.plot_fit_scalar_params(samples, stats, probabilistic_model, pair_plot_params, skip_samples, title_prefix)
 
@@ -1132,6 +1212,9 @@ class Plotter(BasePlotter):
         self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
                                     regions_labels, regions_mode, True, skip_samples, title_prefix)
 
+        # Pack fit samples time series into timeseries objects:
+        from tvb_epilepsy.top.scripts.fitting_scripts import samples_to_timeseries
+        samples, target_data = samples_to_timeseries(samples, model_data, target_data, regions_labels)
         self.plot_fit_timeseries(target_data, samples, ests, stats, probabilistic_model,
                                  seizure_indices, skip_samples, trajectories_plot, title_prefix)
 
