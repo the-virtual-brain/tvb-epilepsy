@@ -470,7 +470,8 @@ class EpileptorDPrealistic(Model):
     pmode = arrays.FloatArray(
         label="pmode",
         default=numpy.array("const"),
-        doc="pmode = numpy.array(""g""), numpy.array(""z""), numpy.array(""z*g"") or numpy.array(""const"") parameters following the g, z, z*g dynamics or staying constamt, respectively",
+        doc="pmode = numpy.array(""g""), numpy.array(""z""), numpy.array(""z*g"") or numpy.array(""const"") " +
+            "parameters following the g, z, z*g dynamics or staying constamt, respectively",
         order=-1)
 
     a = arrays.FloatArray(
