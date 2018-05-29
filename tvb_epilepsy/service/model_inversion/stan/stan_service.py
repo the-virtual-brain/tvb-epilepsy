@@ -155,8 +155,8 @@ class StanService(object):
                     samples[skey] = sval[:, skip_samples:].flatten()
         return samples
 
-    def compute_model_comparison_metrics(self, samples, nparams=None, nsamples=None, ndata=None, parameters=[],
-                                         skip_samples=0, merge_samples=True, log_like_str='log_likelihood'):
+    def compute_information_criteria(self, samples, nparams=None, nsamples=None, ndata=None, parameters=[],
+                                     skip_samples=0, merge_samples=False, log_like_str='log_likelihood'):
 
         """
 
@@ -173,8 +173,8 @@ class StanService(object):
 
         import sys
         sys.path.insert(0, self.config.generic.MODEL_COMPARISON_PATH)
-        from model_comparison.ComputeIC import maxlike, aicc, aic, bic, dic, waic
-        from model_comparison.ComputePSIS import psisloo
+        from information_criteria.ComputeIC import maxlike, aicc, aic, bic, dic, waic
+        from information_criteria.ComputePSIS import psisloo
 
 
         if self.fitmethod.find("opt") >= 0:
@@ -232,7 +232,8 @@ class StanService(object):
                     warning("nparams (" + str(nparams) +
                             ") is not equal to number of parameters included in the dic computation (" +
                             str(nparams_real) + ")!")
-                result['dic'] = dic(log_likelihood, zscore_params)
+                # TODO: find out how to reduce dic to 1 value, from 1 value per parameter. mean(.) for the moment:
+                result['dic'] = np.mean(dic(log_likelihood, zscore_params))
             else:
                 warning("Parameters' names' list is empty! No computation of dic!")
 
@@ -251,10 +252,10 @@ class StanService(object):
         if len(results) == 1:
             return results[0]
         else:
-            return results
+            return list_of_dicts_to_dicts_of_ndarrays(results)
 
     def compare_models(self, samples, nparams=None, nsamples=None, ndata=None, parameters=[],
-                       skip_samples=0, merge_samples=True, log_like_str='log_likelihood'):
+                       skip_samples=0, merge_samples=False, log_like_str='log_likelihood'):
 
         """
 
@@ -297,40 +298,10 @@ class StanService(object):
 
         for i_model, (model_name, model_samples) in enumerate(samples.items()):
             results[model_name] = \
-               self.compute_model_comparison_metrics(model_samples, nparams[i_model], nsamples[i_model], ndata[i_model],
-                                                     parameters, skip_samples, merge_samples, log_like_str)
+               self.compute_information_criteria(model_samples, nparams[i_model], nsamples[i_model], ndata[i_model],
+                                                 parameters, skip_samples, merge_samples, log_like_str)
 
         # Return result into a dictionary with metrics at the upper level and models at the lower one
         return switch_levels_of_dicts_of_dicts(results)
 
-
-
-
-def prepare_model_comparison_metrics_dict(model_comps, metrics=None):
-    """
-    This function prepares a dictionary of model comparison metrics of possibly several models for plotting
-    :param model_comps: a dictionary of metrics names as keys, and for values:
-                        either a float/numpy array for ks and loos of metric values for 1 model 1 chain/run
-                        or a list of values for 1 model several chains/runs
-                        or a dictionary of  model names for keys, and values as above (either floats/arrays or lists)
-                            for several models
-    :param metrics: a selection of metrics, otherwise all of the model_comps keys are selected
-    :return: metrics_dicts: a dictionary of tuples of model names as keys,
-                            and numpy arrays of metric values for all possible chains/runs for values,
-                            in case that models do not have the same number of chains or runs, we fill in with numpy.nan
-    """
-    if metrics is None:
-        metrics = model_comps.keys()
-    metrics_dict = {}
-    for metric in metrics:
-        if isinstance(model_comps[metric], dict):
-            from itertools import izip_longest
-            this_models_names = tuple(model_comps[metric].keys())
-            values = np.array(list(izip_longest(*model_comps[metric].values(), fillvalue=numpy.nan))).T
-        else:
-            this_models_names = ("",)
-            values = np.array(model_comps[metric])
-
-        metrics_dict[metric] = {this_models_names: values}
-    return metrics_dict
 
