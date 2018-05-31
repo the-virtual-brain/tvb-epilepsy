@@ -391,7 +391,7 @@ class BasePlotter(object):
         ax.set_xticklabels(tuple(group_names))
         ax.set_title(title)
         ax.autoscale()  # tight=True
-        ax.set_xlim([0, (n_groups + width) * 1.05])
+        ax.set_xlim([-1.05*width, n_groups*1.05])
         if show_and_save:
             fig.tight_layout()
             self._save_figure(fig)
