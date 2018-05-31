@@ -174,8 +174,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         # HMC
         num_warmup = 1000
-        n_chains = 4
-        num_samples = max(int(np.round(1000.0/n_chains)), 500)
+        n_chains = 2
+        num_samples =  max(int(np.round(1000.0/n_chains)), 500)
         max_depth = 12
         delta = 0.9
         # ADVI:
@@ -211,11 +211,12 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
             5 + probabilistic_model.number_of_active_regions * (3 + (probabilistic_model.time_length-1))
         info_crit = \
             stan_service.compute_information_criteria(samples, number_of_total_params, skip_samples=skip_samples,
-                                                      parameters=["amplitude_star", "offset_star", "epsilon_star",
-                                                                       "sigma_star", "time_scale_star", "x0_star",
-                                                                       "x_init_star", "z_init_star", "z_eta"],
+                                                      # parameters=["amplitude_star", "offset_star", "epsilon_star",
+                                                      #                  "sigma_star", "time_scale_star", "x0_star",
+                                                      #                  "x_init_star", "z_init_star", "z_eta_star"],
                                                       merge_samples=False)
-        writer.write_generic(info_crit, path(prob_model_name + "_ModelComp"))
+
+        writer.write_generic(info_crit, path(prob_model_name + "_InfoCrit"))
 
         # Interface with INS stan models
         ests, samples, Rhat, model_data = \
@@ -281,7 +282,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fitADVI")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
 
     # TVB3 larger preselection:
@@ -327,7 +328,7 @@ if __name__ == "__main__":
     times_on_off = [1100.0, 1300.0]  # for paper"" simulations
     # prob_model_name = "vep_sde.stan"
     stan_model_name = "vep_sde_simple"
-    fitmethod = "advi"
+    fitmethod = "advi"  # "sample"  # "advi"
     observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  # OBSERVATION_MODELS.SEEG_LOGPOWER.value
     pse_flag = True
     fit_flag = True
