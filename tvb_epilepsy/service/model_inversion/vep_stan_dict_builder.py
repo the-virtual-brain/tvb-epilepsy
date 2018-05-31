@@ -8,7 +8,7 @@ from tvb_epilepsy.base.utils.data_structures_utils import ensure_list  # isequal
 
 INS_PARAMS_NAMES_DICT={"K": "k", "MC": "FC", "tau1": "time_scale", "tau0": "tau",
                        "scale": "amplitude", "target_data": "seeg_log_power", "fit_target_data": "mu_seeg_log_power",
-                       "x1init": "x_init", "zinit": "z_init", "x1": "x", "dX1t": "x_eta", "dZt": "z_eta"}
+                       "x1init": "x_init", "zinit": "z_init", "x1": "x", "dX1t": "x_eta_star", "dZt": "z_eta_star"}
 
 
 def set_time(probabilistic_model, time=None):
@@ -96,60 +96,3 @@ def build_stan_model_dict_to_interface_ins(probabilistic_model, signals, connect
                 "active_regions": np.array(probabilistic_model.active_regions),
                 }
     return vep_data
-
-
-
-# def build_stan_model_dict(probabilistic_model, signals, 
-#                           time=None, sensors=None, gain_matrix=None):
-# TODO: needs updating
-#     """
-#     Builds a dictionary with data needed for stan models.
-#     :param probabilistic_model: ProbabilisticModel object
-#     :param signals:
-#     :param model_inversion: ModelInversionService object
-#     :param gain_matrix: array
-#     :return: dictionary with stan data
-#     """
-#     active_regions_flag = np.zeros((probabilistic_model.number_of_regions,), dtype="i")
-#     active_regions_flag[probabilistic_model.active_regions] = 1
-#     SC = probabilistic_model.model_config.model_connectivity
-#     model_data = {"number_of_regions": probabilistic_model.number_of_regions,
-#                   "n_times": probabilistic_model.time_length,
-#                   "n_signals": probabilistic_model.number_of_signals,
-#                   "n_active_regions": probabilistic_model.number_of_active_regions,
-#                   "n_nonactive_regions": probabilistic_model.number_of_nonactive_regions,
-#                   "n_connections": probabilistic_model.number_of_regions * (probabilistic_model.number_of_regions - 1) / 2,
-#                   "active_regions_flag": np.array(active_regions_flag),
-#                   "active_regions": np.array(probabilistic_model.active_regions) + 1,  # cmdstan cannot take lists!
-#                   "nonactive_regions": np.array(probabilistic_model.nonactive_regions) + 1,  # indexing starts from 1!
-#                   "x1eq_min": probabilistic_model.parameters["x1eq"].low,
-#                   "x1eq_max": probabilistic_model.parameters["x1eq"].high,
-#                   "SC": SC[np.triu_indices(SC.shape[0], 1)],
-#                   "dt": probabilistic_model.dt,
-#                   "signals": signals,
-#                   "time": set_time(probabilistic_model, time),
-#                   "mixing": set_mixing(probabilistic_model, sensors, gain_matrix),
-#                   "observation_model": probabilistic_model.observation_model.value,
-#                   # "observation_expression": np.where(np.in1d(OBSERVATION_MODEL_EXPRESSIONS,
-#                   #                                            probabilistic_model.observation_expression))[0][0],
-#                   # "euler_method": np.where(np.in1d(EULER_METHODS, probabilistic_model.euler_method))[0][0] - 1,
-#                   }
-#     for p in ["a", "b", "d", "yc", "Iext1", "slope"]:
-#         model_data.update({p: getattr(probabilistic_model.model_config, p)})
-#     for p in probabilistic_model.parameters.values():
-#         model_data.update({p.name + "_lo": p.low, p.name + "_hi": p.high})
-#         if not (isequal_string(p.type, "normal")):
-#             model_data.update({p.name + "_loc": p.loc, p.name + "_scale": p.scale,
-#                                p.name + "_pdf":
-#                                    np.where(np.in1d(ProbabilityDistributionTypes.available_distributions, p.type))[0][
-#                                        0],
-#                                p.name + "_p": (np.array(p.pdf_params().values()).T * np.ones((2,))).squeeze()})
-#     model_data["x1eq_star_loc"] = probabilistic_model.parameters["x1eq_star"].mean
-#     model_data["x1eq_star_scale"] = probabilistic_model.parameters["x1eq_star"].std
-#     model_data["MC_scale"] = probabilistic_model.MC_scale
-#     MCsplit_shape = np.ones(probabilistic_model.parameters["MCsplit"].p_shape)
-#     model_data["MCsplit_loc"] = probabilistic_model.parameters["MCsplit"].mean * MCsplit_shape
-#     model_data["MCsplit_scale"] = probabilistic_model.parameters["MCsplit"].std * MCsplit_shape
-#     model_data["offset_signal_p"] = np.array(probabilistic_model.parameters["offset_signal"].pdf_params().values())
-#     return sort_dict(model_data)
-

@@ -213,7 +213,9 @@ class StanService(object):
             result = maxlike(log_likelihood)
             result.update(waic(log_likelihood))
 
-            if len(parameters) > 0:
+            if len(parameters) == 0:
+                parameters = [param for param in sample.keys() if param.find("_star") >= 0]
+            if len(parameters) == 0:
                 nparams_real = 0
                 zscore_params = []
                 for p in parameters:
@@ -235,7 +237,7 @@ class StanService(object):
                 # TODO: find out how to reduce dic to 1 value, from 1 value per parameter. mean(.) for the moment:
                 result['dic'] = np.mean(dic(log_likelihood, zscore_params))
             else:
-                warning("Parameters' names' list is empty! No computation of dic!")
+                warning("Parameters' names' list is empty and we found no _star parameters! No computation of dic!")
 
             if nparams is not None:
                 result['aicc'] = aicc(log_likelihood, nparams, ndata)
@@ -260,12 +262,12 @@ class StanService(object):
         """
 
         :param samples: a dictionary of model's names and samples
-        :param nparams: a number or list of numbers of parameters, if it is None,
-                        it will have to inferred from the parameters list for aicc, aic and bic computation
+        :param nparams: a number or list of numbers of parameters,
+                       it can be inferred from parameters list or from _star parameters
         :param nsamples: a number or lists of numbers of samples, it can be inferred from loglikelihood if None
         :param ndata: a number or lists of numbers of data point, it can be inferred from loglikelihood if None
-        :param parameters: a list of parameter names, necessary for dic metric computations and in case nparams is None,
-                           as well as for aicc, aic and bic computation
+        :param parameters: a list (or list of lists) of parameter names,
+                          it can be inferred from parameters list or from _star parameters
         :param merge_samples: logical flag for merging seperate chains/runs, default is True
         :param log_like_str: the name of the log likelihood output of stan, default ''log_likelihood
         :return:
@@ -285,21 +287,25 @@ class StanService(object):
 
         nmodels = len(samples)
 
-        if nparams is None:
-            if len(parameters) == 0:
-                warning("Input nparams is None and parameters' names' list is empty! "
-                        "We cannot compute aic, aaic, bic and dic!")
-
+        n_parameters = parameters
+        if n_parameters > 0:
+            if isinstance(parameters[0], (list, tuple)):
+                parameters = check_number_of_inputs(nmodels, parameters, "number of parameters")
+            else:
+                parameters = nmodels*[parameters]
         nparams = check_number_of_inputs(nmodels, nparams, "number of parameters")
         nsamples = check_number_of_inputs(nmodels, nsamples, "number of samples")
         ndata = check_number_of_inputs(nmodels, ndata, "number of data points")
+        skip_samples = check_number_of_inputs(nmodels, skip_samples, "skip_samples")
+        log_like_str = check_number_of_inputs(nmodels, log_like_str, "log_like_str")
 
         results = {}
 
         for i_model, (model_name, model_samples) in enumerate(samples.items()):
             results[model_name] = \
                self.compute_information_criteria(model_samples, nparams[i_model], nsamples[i_model], ndata[i_model],
-                                                 parameters, skip_samples, merge_samples, log_like_str)
+                                                 parameters[i_model], skip_samples[i_model], merge_samples,
+                                                 log_like_str[i_model])
 
         # Return result into a dictionary with metrics at the upper level and models at the lower one
         return switch_levels_of_dicts_of_dicts(results)

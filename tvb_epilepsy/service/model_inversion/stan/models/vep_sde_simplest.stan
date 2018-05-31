@@ -95,8 +95,8 @@ parameters {
     // time-series state non-centering:
     row_vector[nn] x_init_star;
     row_vector[nn] z_init_star;
-    // row_vector[nn] x_eta[nt - 1];
-    row_vector[nn] z_eta[nt - 1];
+    // row_vector[nn] x_eta_star[nt - 1];
+    row_vector[nn] z_eta_star[nt - 1];
 }
 
 transformed parameters {
@@ -114,8 +114,8 @@ transformed parameters {
     x[1] = x_init; // - 1.5;
     z[1] = z_init; // 3.0;
     for (t in 1:(nt-1)) {
-        x[t+1] = x_step(x[t], z[t], I1, dt*time_scale); //, x_eta[t], sqrtdt*sigma
-        z[t+1] = z_step(x[t], z[t], x0, k*SC, Ic, x_eq_def, dt*time_scale, z_eta[t], sqrtdt*sigma, tau0);
+        x[t+1] = x_step(x[t], z[t], I1, dt*time_scale); //, x_eta_star[t], sqrtdt*sigma
+        z[t+1] = z_step(x[t], z[t], x0, k*SC, Ic, x_eq_def, dt*time_scale, z_eta_star[t], sqrtdt*sigma, tau0);
     }
 
     for (t in 1:nt)
@@ -132,8 +132,8 @@ model {
     z_init_star ~ normal(0.0, 1.0);
 
     for (t in 1:(nt - 1)) {
-        // to_vector(x_eta[t]) ~ normal(0.0, 1.0);
-        to_vector(z_eta[t]) ~ normal(0.0, 1.0);
+        // to_vector(x_eta_star[t]) ~ normal(0.0, 1.0);
+        to_vector(z_eta_star[t]) ~ normal(0.0, 1.0);
     }
 
     if (SIMULATE<1)
