@@ -1124,6 +1124,13 @@ class Plotter(BasePlotter):
                 model_names = [""]
             metric_data = arrange_chains_or_runs(metric_data)
             n_models = len(metric_data)
+            for jj in range(n_models):
+                # Necessary because ks gets infinite sometimes...
+                temp = metric_data[jj] == numpy.inf
+                if numpy.any(temp):
+                    warning("Infinite values found for metric " + metric + " of model " + model_names[ii] + "!\n" +
+                            "Substituting them with the maximum non-infite value!")
+                    metric_data[jj][temp] = metric_data[jj][~temp].max()
             n_subplots = metric_data[0].shape[1]
             n_labels = len(labels)
             if n_labels != n_subplots:
@@ -1166,7 +1173,7 @@ class Plotter(BasePlotter):
                                           linestyle="None")
                         if n_chains_or_runs > 1:
                             axes[ii, jj].legend()
-                        m = numpy.mean(metric_data[jj][kk][ii, :])
+                        m = numpy.nanmean(metric_data[jj][kk][ii, :])
                         axes[ii, jj].plot(xdata0, m * numpy.ones(xdata0.shape), color=c, linewidth=1)
                         axes[ii, jj].text(xdata0[0], 1.1 * m, 'mean=%0.2f' % m, ha='center', va='bottom', color=c)
                     axes[ii, jj].set_xlabel(xlabel)
