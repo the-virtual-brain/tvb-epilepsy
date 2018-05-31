@@ -179,7 +179,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
         max_depth = 12
         delta = 0.9
         # ADVI:
-        iter = 1e6
+        iter = 1000000
         tol_rel_obj = 1e-6
         if fitmethod.find("sampl") >= 0:
             skip_samples = num_warmup
