@@ -68,7 +68,7 @@ class SimulatorBuilder(object):
     def generate_colored_noise(self, noise_intensity, ntau, **kwargs):
         self._check_noise_intesity_size(noise_intensity)
         eq = equations.Linear(parameters=kwargs.get("parameters", {"a": 1.0, "b": 0.0}))
-        noise_instance = noise.Multiplicative(ntau=ntau, nsig=noise_intensity, b=eq,
+        noise_instance = noise.Additive(ntau=ntau, nsig=noise_intensity, b=eq,
                                               random_stream=numpy.random.RandomState(seed=NOISE_SEED))
         noise_shape = noise_instance.nsig.shape
         noise_instance.configure_coloured(dt=1.0 / self.fs, shape=noise_shape)
@@ -88,9 +88,9 @@ class SimulatorBuilder(object):
         if isinstance(noise, Noise):
             self._check_noise_intesity_size(noise.nsig)
             sim_settings.noise_intensity = noise.nsig
-            if isinstance(noise, Additive):
+            if noise.ntau == 0:
                 sim_settings.noise_type = WHITE_NOISE
-            elif isinstance(noise, Multiplicative):
+            else:
                 sim_settings.noise_type = COLORED_NOISE
             sim_settings.noise_ntau = noise.ntau
         else:
