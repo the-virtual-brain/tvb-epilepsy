@@ -702,13 +702,17 @@ class Plotter(BasePlotter):
             ii = numpy.delete(ii, special_idx)
         points = []
         for i in ii:
-            point, = pyplot.plot(x1eq[i], zeq[i], '*', mfc='k', mec='k',
-                                 ms=10, alpha=0.3, label=str(i) + '.' + region_labels[i])
+            point = pyplot.text(x1eq[i], zeq[i], str(i), fontsize=10, color='k', alpha=0.3,
+                                 label=str(i) + '.' + region_labels[i])
+            # point, = pyplot.plot(x1eq[i], zeq[i], '*', mfc='k', mec='k',
+            #                      ms=10, alpha=0.3, label=str(i) + '.' + region_labels[i])
             points.append(point)
         if n_special_idx > 0:
             for i in special_idx:
-                point, = pyplot.plot(x1eq[i], zeq[i], '*', mfc='r', mec='r', ms=10, alpha=0.8,
+                point = pyplot.text(x1eq[i], zeq[i], str(i), fontsize=10, color='r', alpha=0.8,
                                      label=str(i) + '.' + region_labels[i])
+                # point, = pyplot.plot(x1eq[i], zeq[i], '*', mfc='r', mec='r', ms=10, alpha=0.8,
+                #                      label=str(i) + '.' + region_labels[i])
                 points.append(point)
         # ax.plot(x1lin0, zlin0, '*', mfc='r', mec='r', ms=10)
         # ax.axes.text(x1lin0 - 0.1, zlin0 + 0.2, 'e_values=0.0', fontsize=10, color='r')
