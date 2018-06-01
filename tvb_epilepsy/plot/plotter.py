@@ -1089,7 +1089,7 @@ class Plotter(BasePlotter):
                 metric_data = model_comps[metric].values()
                 group_names = model_comps[metric].keys()
             else:
-                metric_data = [model_comps[metric]]
+                metric_data = model_comps[metric]
                 group_names = [""]
             isb, jsb = numpy.unravel_index(imetric, subplot_shape)
             axes[isb, jsb] = self.plot_bars(metric_data, ax=axes[isb, jsb], fig=fig, title=metric,
