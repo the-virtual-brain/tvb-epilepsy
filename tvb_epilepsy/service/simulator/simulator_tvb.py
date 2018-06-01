@@ -48,10 +48,11 @@ class SimulatorTVB(ABCSimulator):
                                                           self.model_configuration.model_connectivity)
         else:
             tvb_connectivity = self._vep2tvb_connectivity(self.connectivity)
+
         tvb_coupling = coupling.Difference(a=1.)
 
-        integrator = kwargs.get("integrator",
-                                integrators.HeunStochastic(dt=self.simulation_settings.integration_step, noise=noise))
+        integrator = getattr(integrators, kwargs.get("integrator", "HeunStochastic"))(
+                                                            dt=self.simulation_settings.integration_step, noise=noise)
 
         self.simTVB = simulator.Simulator(model=self.model, connectivity=tvb_connectivity, coupling=tvb_coupling,
                                           integrator=integrator, monitors=monitors,
