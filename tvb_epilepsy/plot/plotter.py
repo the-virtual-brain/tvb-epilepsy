@@ -460,7 +460,7 @@ class Plotter(BasePlotter):
         for seeg in ensure_list(seeg_list):
             title = title_prefix + "Simulated SEEG" + str(len(seeg.space_labels)) + " raster plot"
             self.plot_raster({'SEEG': seeg.squeezed}, seeg.time_line,
-                             time_units=seeg.time_unit, title=title, offset=0.1, labels=seeg.space_labels,
+                             time_units=seeg.time_unit, title=title, offset=1.0, labels=seeg.space_labels,
                              figsize=FiguresConfig.VERY_LARGE_SIZE)
 
     def plot_simulated_timeseries(self, timeseries, model, seizure_indices, seeg_list=[],
