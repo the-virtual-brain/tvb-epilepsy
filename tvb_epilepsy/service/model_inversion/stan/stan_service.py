@@ -249,6 +249,10 @@ class StanService(object):
             result.update(psisloo(log_likelihood))
             result["loos"] = np.reshape(result["loos"], target_shape)
             result["ks"] = np.reshape(result["ks"], target_shape)
+            
+            for metric, value in result.items():
+                result[metric] = value * np.ones(1,)
+
             results.append(result)
 
         if len(results) == 1:
