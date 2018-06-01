@@ -634,7 +634,7 @@ class EpileptorDPrealistic(Model):
             #                             targ min,max orig min,max
             slope_eq = interval_scaling(xp, 1.0, slope, xp1, xp2)
             # slope_eq = slope * numpy.ones(z.shape)
-            Iext2_eq = interval_scaling(xp, 0.3, Iext2, xp1, xp2)
+            Iext2_eq = interval_scaling(xp, 0.0, Iext2, xp1, xp2)
 
         else:
             i1 = numpy.ones(z.shape)
@@ -742,13 +742,13 @@ class EpileptorDPrealistic(Model):
         # x0_values
         ydot[6] = self.tau1 * (-y[6] + self.x0)
         # slope
-        ydot[7] = 10 * self.tau1 * (-y[7] + slope_eq)  # 5*
+        ydot[7] = 10*self.tau1 * (-y[7] + slope_eq)  #
         # Iext1
-        ydot[8] = self.tau1 * (-y[8] + self.Iext1) / self.tau0
+        ydot[8] = 100 * self.tau1 * (-y[8] + self.Iext1) / self.tau0
         # Iext2
-        ydot[9] = 5 * self.tau1 * (-y[9] + Iext2_eq)
+        ydot[9] = 5*self.tau1 * (-y[9] + Iext2_eq) #
         # K
-        ydot[10] = self.tau1 * (-y[10] + self.K) / self.tau0
+        ydot[10] = 100 * self.tau1 * (-y[10] + self.K) / self.tau0
 
         return ydot
 
