@@ -114,7 +114,8 @@ model_noise_intensity_dict = {
     "Epileptor": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
     "JavaEpileptor": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
     "EpileptorDP": numpy.array([0., 0., 5e-6, 0.0, 5e-6, 0.]),
-    "EpileptorDPrealistic": numpy.array([0., 0., 1e-8, 0.0, 1e-8, 0., 1e-9, 1e-4, 1e-9, 1e-4, 1e-9])/2,
+                                                               # x0_t  K_t   slope_t Iext1_t Iext2_T
+    "EpileptorDPrealistic": [2.5e-4, 2.5e-4, 2e-6, 1e-7, 1e-7, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5, 1e-5],
     "EpileptorDP2D": numpy.array([0., 1e-7])
 }
 
