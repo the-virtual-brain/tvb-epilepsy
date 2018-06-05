@@ -30,7 +30,7 @@ def list_of_strings_to_string(lstr, sep=","):
 
 def dict_str(d):
     s = "{"
-    for key, value in d.iteritems():
+    for key, value in d.items():
         s += ("\n" + key + ": " + str(value))
     s += "}"
     return s
@@ -71,10 +71,10 @@ def formal_repr(instance, attr_dict, sort_dict_flag=False):
     formal = class_name + "{"
     if sort_dict_flag:
         attr_dict = sort_dict(attr_dict)
-    for key, val in attr_dict.iteritems():
+    for key, val in attr_dict.items():
         if isinstance(val, dict):
             formal += "\n" + key + "=["
-            for key2, val2 in val.iteritems():
+            for key2, val2 in val.items():
                 formal += "\n" + str(key2) + " = " + str(val2)
             formal += "]"
         else:
@@ -159,7 +159,7 @@ def switch_levels_of_dicts_of_dicts(d):
 
 
 def dicts_of_lists(dictionary, n=1):
-    for key, value in dictionary.iteritems():
+    for key, value in dictionary.items():
         dictionary[key] = ensure_list(dictionary[key])
         if len(dictionary[key]) == 1 and n > 1:
             dictionary[key] = dictionary[key] * n
@@ -184,18 +184,23 @@ def dict_to_list_or_tuple(dictionary, output_obj="list"):
 def list_of_dicts_to_dicts_of_ndarrays(lst, shape=None):
     d = dict(zip(lst[0], zip(*list([d.values() for d in lst]))))
     if isinstance(shape, tuple):
-        for key, val in d.iteritems():
+        for key, val in d.items():
             d[key] = np.reshape(np.stack(d[key]), shape)
     else:
-        for key, val in d.iteritems():
-            d[key] = np.squeeze(np.stack(d[key]))
+        for key, val in d.items():
+            d[key] = np.stack(d[key])
+            for sh in d[key].shape[:0:-1]:
+                if sh == 1:
+                    d[key] = np.squeeze(d[key], axis=-1)
+                else:
+                    break
     return d
 
 
 def arrays_of_dicts_to_dicts_of_ndarrays(arr):
     lst = arr.flatten().tolist()
     d = list_of_dicts_to_dicts_of_ndarrays(lst)
-    for key, val in d.iteritems():
+    for key, val in d.items():
         d[key] = np.reshape(d[key], arr.shape)
     return d
 
@@ -262,7 +267,7 @@ def extract_dict_stringkeys(d, keys, modefun="find", two_way_search=False,
         out_dict = {}
     keys = ensure_list(keys)
     counts = 0
-    for key, value in d.iteritems():
+    for key, value in d.items():
         for k in keys:
             if modefun(key, k):
                 if remove:
