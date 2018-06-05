@@ -1152,6 +1152,7 @@ class Plotter(BasePlotter):
                     warning("Inf values found for metric " + metric + " of model " + model_names[ii] + "!\n" +
                             "Substituting them with the maximum non-infite value!")
                     metric_data[jj][temp] = metric_data[jj][~temp].max()
+            n_subplots = metric_data[0].shape[1]
             n_labels = len(labels)
             if n_labels != n_subplots:
                 if n_labels != 0:
