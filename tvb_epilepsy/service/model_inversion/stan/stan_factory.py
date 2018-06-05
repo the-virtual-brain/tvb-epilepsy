@@ -92,7 +92,7 @@ def generate_cmdstan_options(method, **kwargs):
     options.update({"init": kwargs.get("init", 2)})
     options.update({"random_seed": kwargs.get("random_seed", 12345)})
     options.update({"random_seed": kwargs.get("seed", options["random_seed"])})
-    options.update({"chains_or_runs": kwargs.get("chains_or_runs", 4)})
+    options.update({"n_chains_or_runs": kwargs.get("n_chains_or_runs", 4)})
     return options
 
 
@@ -143,8 +143,8 @@ def generate_cmdstan_fit_command(fitmethod, options, model_path, model_data_path
     command += "\t\trandom seed=" + str(options["random_seed"]) + ' \\' + "\n"
     if diagnostic_filepath == "":
         diagnostic_filepath = os.path.join(os.path.dirname(output_filepath), STAN_OUTPUT_OPTIONS["diagnostic_file"])
-    if options["chains_or_runs"] > 1:
-        command = ("for i in {1.." + str(options["chains_or_runs"]) + "}\ndo\n" +
+    if options["n_chains_or_runs"] > 1:
+        command = ("for i in {1.." + str(options["n_chains_or_runs"]) + "}\ndo\n" +
                    "\t" + command +
                    "\t\tid=$i" + ' \\' + "\n" +
                    "\t\toutput file=" + output_filepath[:-4] + "$i.csv"' \\' + "\n" +
