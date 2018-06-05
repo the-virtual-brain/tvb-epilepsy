@@ -113,7 +113,7 @@ class CmdStanService(StanService):
         else:
             return None
 
-    def fit(self,debug=0, simulate=0, return_output=True, plot_HMC=True, overwrite_output_files=False, plot_warmup=1,
+    def fit(self, debug=0, simulate=0, return_output=True, plot_HMC=True, overwrite_output_files=False, plot_warmup=1,
             **kwargs):
         num_warmup = kwargs.get("num_warmup", 0)
         # Confirm output files and check if overwriting is necessary
@@ -144,7 +144,7 @@ class CmdStanService(StanService):
             if plot_HMC and self.fitmethod.find("sampl") >= 0 and \
                 isequal_string(self.options.get("algorithm", "None"), "HMC"):
                 Plotter(self.config).plot_HMC(samples, skip_samples=kwargs.pop("skip_samples", num_warmup *
-                                                                                (1-kwargs.get("plot_warmup", True)) ))
+                                                                                (1-kwargs.get("plot_warmup", True))))
             return est, samples, summary
         else:
             return None, None, None

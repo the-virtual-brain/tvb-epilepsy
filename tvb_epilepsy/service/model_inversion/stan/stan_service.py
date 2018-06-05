@@ -144,19 +144,9 @@ class StanService(object):
         else:
             return ests
 
-    def merge_samples(self, samples, skip_samples=0):
-        samples = list_of_dicts_to_dicts_of_ndarrays(ensure_list(samples))
-        if len(samples) > 1:
-            for skey, sval in samples.items():
-                sshape = sval.shape
-                if len(sshape) > 2:
-                    samples[skey] = np.reshape(sval[:, skip_samples:], tuple((-1,) + sshape[2:]))
-                else:
-                    samples[skey] = sval[:, skip_samples:].flatten()
-        return samples
 
     def compute_information_criteria(self, samples, nparams=None, nsamples=None, ndata=None, parameters=[],
-                                     skip_samples=0, merge_samples=False, log_like_str='log_likelihood'):
+                                     skip_samples=0, merge_chains_or_runs_flag=False, log_like_str='log_likelihood'):
 
         """
 
@@ -166,7 +156,7 @@ class StanService(object):
         :param ndata: number of data points, it can be inferred from loglikelihood if None
         :param parameters: a list of parameter names, necessary for dic metric computations and in case nparams is None,
                            as well as for aicc, aic and bic computation
-        :param merge_samples: logical flag for merging seperate chains/runs, default is True
+        :param merge_chains_or_runs_flag: logical flag for merging seperate chains/runs, default is True
         :param log_like_str: the name of the log likelihood output of stan, default ''log_likelihood
         :return:
         """
@@ -177,13 +167,13 @@ class StanService(object):
         from information_criteria.ComputePSIS import psisloo
 
 
-        if self.fitmethod.find("opt") >= 0:
-            warning("No model comparison can be computed for optimization method!")
-            return None
+        # if self.fitmethod.find("opt") >= 0:
+        #     warning("No model comparison can be computed for optimization method!")
+        #     return None
 
         samples = ensure_list(samples)
-        if merge_samples and len(samples) > 1:
-            samples = ensure_list(self.merge_samples(samples, skip_samples))
+        if merge_chains_or_runs_flag and len(samples) > 1:
+            samples = ensure_list(merge_samples(samples, skip_samples, flatten=True))
             skip_samples = 0
 
         results = []
@@ -211,11 +201,10 @@ class StanService(object):
                 warning("ndata (" + str(ndata) + ") is not equal to likelihood.shape[1] (" + str(ndata_real) + ")!")
 
             result = maxlike(log_likelihood)
-            result.update(waic(log_likelihood))
 
             if len(parameters) == 0:
                 parameters = [param for param in sample.keys() if param.find("_star") >= 0]
-            if len(parameters) == 0:
+            if len(parameters) > 0:
                 nparams_real = 0
                 zscore_params = []
                 for p in parameters:
@@ -246,10 +235,15 @@ class StanService(object):
             else:
                 warning("Unknown number of parameters! No computation of aic, aaic, bic!")
 
-            result.update(psisloo(log_likelihood))
-            result["loos"] = np.reshape(result["loos"], target_shape)
-            result["ks"] = np.reshape(result["ks"], target_shape)
-            
+            result.update(waic(log_likelihood))
+
+            if nsamples > 1:
+                result.update(psisloo(log_likelihood))
+                result["loos"] = np.reshape(result["loos"], target_shape)
+                result["ks"] = np.reshape(result["ks"], target_shape)
+            else:
+                result.pop('p_waic', None)
+
             for metric, value in result.items():
                 result[metric] = value * np.ones(1,)
 
@@ -261,7 +255,7 @@ class StanService(object):
             return list_of_dicts_to_dicts_of_ndarrays(results)
 
     def compare_models(self, samples, nparams=None, nsamples=None, ndata=None, parameters=[],
-                       skip_samples=0, merge_samples=False, log_like_str='log_likelihood'):
+                       skip_samples=0, merge_chains_or_runs_flag=False, log_like_str='log_likelihood'):
 
         """
 
@@ -272,7 +266,7 @@ class StanService(object):
         :param ndata: a number or lists of numbers of data point, it can be inferred from loglikelihood if None
         :param parameters: a list (or list of lists) of parameter names,
                           it can be inferred from parameters list or from _star parameters
-        :param merge_samples: logical flag for merging seperate chains/runs, default is True
+        :param merge_chains_or_runs_flag: logical flag for merging seperate chains/runs, default is True
         :param log_like_str: the name of the log likelihood output of stan, default ''log_likelihood
         :return:
         """
@@ -308,10 +302,28 @@ class StanService(object):
         for i_model, (model_name, model_samples) in enumerate(samples.items()):
             results[model_name] = \
                self.compute_information_criteria(model_samples, nparams[i_model], nsamples[i_model], ndata[i_model],
-                                                 parameters[i_model], skip_samples[i_model], merge_samples,
+                                                 parameters[i_model], skip_samples[i_model], merge_chains_or_runs_flag,
                                                  log_like_str[i_model])
 
         # Return result into a dictionary with metrics at the upper level and models at the lower one
         return switch_levels_of_dicts_of_dicts(results)
 
+
+def merge_samples(samples, skip_samples=0, flatten=False):
+    samples = ensure_list(samples)
+    if len(samples) > 1:
+        samples = list_of_dicts_to_dicts_of_ndarrays(samples)
+        for skey in samples.keys():
+            if len(samples[skey].shape) == 1:
+                samples[skey] = (samples[skey]*np.ones((1, 1))).T
+            if flatten:
+                sshape = samples[skey].shape
+                if len(sshape) > 2:
+                    samples[skey] = np.reshape(samples[skey][:, skip_samples:], tuple((-1,) + sshape[2:]))
+                else:
+                    samples[skey] = samples[skey][:, skip_samples:].flatten()
+
+        return samples
+    else:
+        return samples[0]
 
