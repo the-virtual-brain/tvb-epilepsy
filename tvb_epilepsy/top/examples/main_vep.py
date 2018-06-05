@@ -167,24 +167,27 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
             # EpleptorDPrealistic: starting from the TVB Epileptor + optional variations, but:
             #      -x0, Iext1, Iext2, slope and K become noisy state variables,
             #      -Iext2 and slope are coupled to z, g, or z*g in order for spikes to appear before seizure,
-            #      -multiplicative correlated noise is also used
+            #      -correlated noise is also used
             # We don't want any time delays for the moment
             head.connectivity.tract_lengths *= config.simulator.USE_TIME_DELAYS_FLAG
 
             sim_types = ensure_list(sim_type)
+            integrator = "HeunStochastic"
             for sim_type in sim_types:
                 # ------------------------------Simulation--------------------------------------
                 logger.info("\n\nConfiguring simulation from model_configuration...")
                 sim_builder = SimulatorBuilder(config.simulator.MODE)
                 if isequal_string(sim_type, "realistic"):
-                    sim_settings = sim_builder.set_model_name("EpileptorDPrealistic"). \
-                        set_fs(4096.0).set_simulated_period(30000).build_sim_settings()
-                    sim_settings.noise_type = COLORED_NOISE
-                    sim_settings.noise_ntau = 10
-                    model = sim_builder.generate_model_tvb(model_configuration)
-                    model.tau0 = 30000.0
+                    model.tau0 = 60000.0
                     model.tau1 = 0.2
                     model.slope = 0.25
+                    model.Iext2 = 0.45
+                    model.pmode = np.array("z")  # np.array("None") to opt out for feedback
+                    sim_settings = \
+                        sim_builder.set_fs(2048.0).set_fs_monitor(1024.0).set_simulated_period(60000).build_sim_settings()
+                    sim_settings.noise_type = COLORED_NOISE
+                    sim_settings.noise_ntau = 20
+                    integrator = "Dop853Stochastic"
                 elif isequal_string(sim_type, "fitting"):
                     sim_settings = sim_builder.set_model_name("EpileptorDP2D").set_fs(2048.0).set_fs_monitor(2048.0).\
                                                                     set_simulated_period(2000).build_sim_settings()
@@ -205,8 +208,8 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
                     model = sim_builder.generate_model_tvb(model_configuration)
 
                 sim, sim_settings, model = \
-                    sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration,
-                                                                            head.connectivity, model, sim_settings)
+                    sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration,head.connectivity,
+                                                                            model, sim_settings, integrator=integrator)
 
                 # Integrator and initial conditions initialization.
                 # By default initial condition is set right on the equilibrium point.
@@ -240,7 +243,7 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
 
                     # Plot results
                     plotter.plot_simulated_timeseries(sim_output, sim.model, lsa_hypothesis.lsa_propagation_indices,
-                                                      seeg_list=seeg, spectral_raster_plot=True, log_scale=True,
+                                                      seeg_list=seeg, spectral_raster_plot=False, log_scale=True,
                                                       title_prefix=hyp.name)
 
 

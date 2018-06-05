@@ -51,8 +51,8 @@ def set_hypotheses(head, config):
 
 def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
                         observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, sensors_lbls=[], sensor_id=0,
-                        times_on_off=[], fitmethod="optimizing", stan_service="CmdStan",
-                        pse_flag=True, fit_flag=True, config=Config(), **kwargs):
+                        times_on_off=[], fitmethod="optimizing", pse_flag=True, fit_flag=True, config=Config(),
+                        **kwargs):
 
     def path(name):
         if len(name) > 0:
@@ -77,13 +77,10 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
 
     # ------------------------------Stan model and service--------------------------------------
     model_code_path = os.path.join(config.generic.PROBLSTC_MODELS_PATH, stan_model_name + ".stan")
-    if isequal_string(stan_service, "CmdStan"):
-        stan_service = CmdStanService(model_name=stan_model_name, model_code_path=model_code_path, fitmethod=fitmethod,
+    stan_service = CmdStanService(model_name=stan_model_name, model_code_path=model_code_path, fitmethod=fitmethod,
                                       config=config)
-    else:
-        stan_service = PyStanService(model_name=stan_model_name, model_code_path=model_code_path, fitmethod=fitmethod,
-                                     config=config)
     stan_service.set_or_compile_model()
+
 
     for hyp in hypotheses[:1]:
         base_path = os.path.join(config.out.FOLDER_RES, hyp.name)
@@ -172,13 +169,14 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        # HMC
+        n_chains_or_runs = 4
+        output_samples = max(int(np.round(1000.0 / n_chains_or_runs)), 500)
+        # Sampling (HMC)
+        num_samples = output_samples
         num_warmup = 1000
-        n_chains = 2
-        num_samples =  max(int(np.round(1000.0/n_chains)), 500)
         max_depth = 12
         delta = 0.9
-        # ADVI:
+        # ADVI or optimization:
         iter = 1000000
         tol_rel_obj = 1e-6
         if fitmethod.find("sampl") >= 0:
@@ -186,13 +184,13 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
         else:
             skip_samples = 0
         prob_model_name = probabilistic_model.name.split(".")[0]
-        if fit_flag:
-            ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, merge_outputs=False,
-                                                      chains_or_runs=n_chains, num_warmup=num_warmup, num_samples=num_samples,
-                                                      refresh=1, max_depth=max_depth, delta=delta,
+        if False:
+            ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, refresh=1,
+                                                      n_chains_or_runs=n_chains_or_runs,
                                                       iter=iter, tol_rel_obj=tol_rel_obj,
-                                                      save_warmup=1, plot_warmup=1,
-                                                      **kwargs)
+                                                      num_warmup=num_warmup, num_samples=num_samples,
+                                                      max_depth=max_depth, delta=delta,
+                                                      save_warmup=1, plot_warmup=1, **kwargs)
             writer.write_generic(ests, path(prob_model_name + "_FitEst"))
             writer.write_generic(samples, path(prob_model_name + "_FitSamples"))
             if summary is not None:
@@ -214,18 +212,21 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
                                                       # parameters=["amplitude_star", "offset_star", "epsilon_star",
                                                       #                  "sigma_star", "time_scale_star", "x0_star",
                                                       #                  "x_init_star", "z_init_star", "z_eta_star"],
-                                                      merge_samples=False)
+                                                      merge_chains_or_runs_flag=False)
 
         writer.write_generic(info_crit, path(prob_model_name + "_InfoCrit"))
 
         # Interface with INS stan models
         ests, samples, Rhat, model_data = \
             convert_params_names_from_ins([ests, samples, stan_service.get_Rhat(summary), model_data])
-
+        if fitmethod.find("opt") < 0:
+            stats = {"Rhat": Rhat}
+        else:
+            stats = None
         # -------------------------- Plot fitting results: ------------------------------------------------------------
-        if stan_service.fitmethod.find("opt") < 0:
-            plotter.plot_fit_results(ests, samples, model_data, target_data, probabilistic_model, info_crit,
-                                     stats={"Rhat": Rhat},
+        # if stan_service.fitmethod.find("opt") < 0:
+        plotter.plot_fit_results(ests, samples, model_data, target_data, probabilistic_model, info_crit,
+                                     stats=stats,
                                      pair_plot_params=["tau1","sigma", "epsilon", "scale", "offset"],  #  "K",
                                      region_violin_params=["x0", "x1init", "zinit"],
                                      regions_labels=head.connectivity.region_labels, skip_samples=skip_samples,
@@ -282,7 +283,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fitADVI")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
 
     # TVB3 larger preselection:
@@ -324,11 +325,10 @@ if __name__ == "__main__":
     # sensors_filename = "SensorsSEEG_210.h5"
     # times_on_off = [20.0, 100.0]
     EMPIRICAL = False
-    # times_on_off = [50.0, 550.0]  # for paper"" simulations
-    times_on_off = [1100.0, 1300.0]  # for paper"" simulations
-    # prob_model_name = "vep_sde.stan"
-    stan_model_name = "vep_sde_simple"
-    fitmethod = "advi"  # "sample"  # "advi"
+    # times_on_off = [50.0, 550.0]  # for "paper" simulations
+    times_on_off = [1100.0, 1300.0]  # for "paper" simulations
+    stan_model_name = "vep_sde_simple" # "vep_sde.stan" to fit K as well
+    fitmethod = "sample"  # "sample"  # "advi" or "opt"
     observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  # OBSERVATION_MODELS.SEEG_LOGPOWER.value
     pse_flag = True
     fit_flag = True
@@ -336,8 +336,8 @@ if __name__ == "__main__":
         main_fit_sim_hyplsa(stan_model_name=stan_model_name, observation_model=observation_model,
                             empirical_file=os.path.join(config.input.RAW_DATA_FOLDER, seizure),
                             sensors_lbls=sensors_lbls, times_on_off=times_on_off, fitmethod=fitmethod,
-                            stan_service="CmdStan", pse_flag=pse_flag, fit_flag=fit_flag, config=config)
+                            pse_flag=pse_flag, fit_flag=fit_flag, config=config)
     else:
         main_fit_sim_hyplsa(stan_model_name=stan_model_name, observation_model=observation_model,
                             sensors_lbls=sensors_lbls, times_on_off=times_on_off, fitmethod=fitmethod,
-                            stan_service="CmdStan", pse_flag=pse_flag, fit_flag=fit_flag, config=config)
+                            pse_flag=pse_flag, fit_flag=fit_flag, config=config)
