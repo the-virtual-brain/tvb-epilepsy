@@ -426,6 +426,7 @@ class Plotter(BasePlotter):
                 ax[iS, 0] = pyplot.subplot(gs[iS, :20], sharex=ax[iS, 0])
                 ax[iS, 1] = pyplot.subplot(gs[iS, 20:22], sharex=ax[iS, 1], sharey=ax[iS, 0])
             else:
+                # TODO: find and correct bug here
                 ax[iS, 0] = pyplot.subplot(gs[iS, :20])
                 ax[iS, 1] = pyplot.subplot(gs[iS, 20:22], sharey=ax[iS, 0])
             img[iS] = ax[iS, 0].imshow(numpy.squeeze(stf[:, :, iS]).T, cmap=pyplot.set_cmap('jet'),
