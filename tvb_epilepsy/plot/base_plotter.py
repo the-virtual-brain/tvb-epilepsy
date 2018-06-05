@@ -88,7 +88,7 @@ class BasePlotter(object):
         return ax
 
     @staticmethod
-    def plot_vector_violin(dataset, vector=[], lines=[], labels=[], subplot=111, title="",
+    def plot_vector_violin(dataset, vector=[], lines=[], labels=[], subplot=111, title="", violin_flag=True,
                            colormap="YlOrRd", show_y_labels=True, indices_red=None, sharey=None):
         ax = pyplot.subplot(subplot, sharey=sharey)
         # ax.hold(True)
@@ -99,21 +99,29 @@ class BasePlotter(object):
         coldif = False
         if indices_red is None:
             indices_red = []
-        # the violin plot
-        colormap = matplotlib.cm.ScalarMappable(cmap=pyplot.set_cmap(colormap))
-        colormap = colormap.to_rgba(numpy.mean(dataset, axis=0), alpha=0.75)
-        violin_parts = ax.violinplot(dataset, y_ticks, vert=False, widths=0.9,
-                                     showmeans=True, showmedians=True, showextrema=True)
-        violin_parts['cmeans'].set_color("k")
-        violin_parts['cmins'].set_color("b")
-        violin_parts['cmaxes'].set_color("b")
-        violin_parts['cbars'].set_color("b")
-        violin_parts['cmedians'].set_color("b")
-        for ii in range(len(violin_parts['bodies'])):
-            violin_parts['bodies'][ii].set_color(numpy.reshape(colormap[ii], (1, 4)))
-            violin_parts['bodies'][ii]._alpha = 0.75
-            violin_parts['bodies'][ii]._edgecolors = numpy.reshape(colormap[ii], (1, 4))
-            violin_parts['bodies'][ii]._facecolors = numpy.reshape(colormap[ii], (1, 4))
+        if violin_flag:
+            # the violin plot
+            colormap = matplotlib.cm.ScalarMappable(cmap=pyplot.set_cmap(colormap))
+            colormap = colormap.to_rgba(numpy.mean(dataset, axis=0), alpha=0.75)
+            violin_parts = ax.violinplot(dataset, y_ticks, vert=False, widths=0.9,
+                                         showmeans=True, showmedians=True, showextrema=True)
+            violin_parts['cmeans'].set_color("k")
+            violin_parts['cmins'].set_color("b")
+            violin_parts['cmaxes'].set_color("b")
+            violin_parts['cbars'].set_color("b")
+            violin_parts['cmedians'].set_color("b")
+            for ii in range(len(violin_parts['bodies'])):
+                violin_parts['bodies'][ii].set_color(numpy.reshape(colormap[ii], (1, 4)))
+                violin_parts['bodies'][ii]._alpha = 0.75
+                violin_parts['bodies'][ii]._edgecolors = numpy.reshape(colormap[ii], (1, 4))
+                violin_parts['bodies'][ii]._facecolors = numpy.reshape(colormap[ii], (1, 4))
+        else:
+            colorcycle = pyplot.rcParams['axes.prop_cycle'].by_key()['color']
+            n_samples = dataset.shape[0]
+            for ii in range(n_violins):
+                for jj in range(n_samples):
+                    ax.plot(dataset[jj, ii], y_ticks[ii], "D",
+                            mfc=colorcycle[jj%n_samples], mec=colorcycle[jj%n_samples], ms=20)
         color = 'k'
         colors = numpy.repeat([color], n_violins)
         if indices_red is not None:
@@ -139,7 +147,7 @@ class BasePlotter(object):
             ax.set_yticklabels([])
         if sharey is None:
             ax.invert_yaxis()
-        ax.autoscale(tight=True)
+        ax.autoscale()
         return ax
 
     @staticmethod
@@ -271,7 +279,7 @@ class BasePlotter(object):
         return fig, axes
 
     def pair_plots(self, data, keys, diagonal_plots={}, transpose=False, skip=0,
-                   title='Pair plots', subtitles=None, figure_name=None,
+                   title='Pair plots', legend_prefix="chains/runs", subtitles=None, figure_name=None,
                    figsize=FiguresConfig.VERY_LARGE_SIZE):
 
         def confirm_y_coordinate(data, ymax):
@@ -294,31 +302,43 @@ class BasePlotter(object):
                     else:
                         di = datai[key_i][skip:]
                     if i == j:
-                        hist_data = axes[i, j].hist(di, int(numpy.round(numpy.sqrt(len(di)))), log=True)[0]
-                        if i == 0 and len(di.shape) > 1 and di.shape[1] > 1:
-                            axes[i, j].legend(["chain " + str(ichain+1) for ichain in range(di.shape[1])])
-                        hist_max = numpy.array(hist_data).max()
-                        # The mean line
-                        axes[i, j].vlines(di.mean(axis=0), 0, hist_max, color=colorcycle, linestyle='dashed',
-                                          linewidth=1)
-                        # Plot a line (or marker) in the same axis as hist
+                        if di.shape[0] > 1:
+                            hist_data = axes[i, j].hist(di, int(numpy.round(numpy.sqrt(len(di)))), log=True)[0]
+                            if i == 0 and len(di.shape) > 1 and di.shape[1] > 1:
+                                axes[i, j].legend([legend_prefix + str(ii + 1) for ii in range(di.shape[1])])
+                            y_max = numpy.array(hist_data).max()
+                            # The mean line
+                            axes[i, j].vlines(di.mean(axis=0), 0, y_max, color=colorcycle, linestyle='dashed',
+                                              linewidth=1)
+                        else:
+                            # This is for the case of only 1 sample (optimization)
+                            y_max = 1.0
+                            for ii in range(di.shape[1]):
+                                axes[i, j].plot(di[0, ii], y_max, "D", color=colorcycle[ii%di.shape[1]], markersize=20,
+                                                label=legend_prefix + str(ii + 1))
+                            if i == 0 and len(di.shape) > 1 and di.shape[1] > 1:
+                                axes[i, j].legend()
+                        # Plot a line (or marker) in the same axis
                         diag_line_plot = ensure_list(diagonal_plots.get(key_i, ((), ()))[0])
                         if len(diag_line_plot) in [1, 2]:
                             if len(diag_line_plot) == 1 :
-                                diag_line_plot = confirm_y_coordinate(diag_line_plot, hist_max)
+                                diag_line_plot = confirm_y_coordinate(diag_line_plot, y_max)
                             else:
-                                diag_line_plot[1] = diag_line_plot[1]/numpy.max(diag_line_plot[1])*hist_max
+                                diag_line_plot[1] = diag_line_plot[1]/numpy.max(diag_line_plot[1])*y_max
                             if len(diag_line_plot[0]) == 1:
-                                axes[i, j].plot(diag_line_plot[0], diag_line_plot[1], "o", color='k', markersize=10)
+                                axes[i, j].plot(diag_line_plot[0], diag_line_plot[1], "o", mfc="k", mec="k",
+                                                markersize=10)
                             else:
                                 axes[i, j].plot(diag_line_plot[0], diag_line_plot[1], color='k',
                                                 linestyle="dashed", linewidth=1)
-                        # Plot a marker in the same axis as hist
+                        # Plot a marker in the same axis
                         diag_marker_plot = ensure_list(diagonal_plots.get(key_i, ((), ()))[1])
                         if len(diag_marker_plot) in [1, 2]:
                             if len(diag_marker_plot) == 1:
-                                diag_marker_plot = confirm_y_coordinate(diag_marker_plot, hist_max)
+                                diag_marker_plot = confirm_y_coordinate(diag_marker_plot, y_max)
                             axes[i, j].plot(diag_marker_plot[0], diag_marker_plot[1], "*", color='k', markersize=10)
+                        axes[i, j].autoscale()
+                        axes[i, j].set_ylim([0, 1.1*y_max])
 
                     else:
                         if transpose:

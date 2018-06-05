@@ -14,7 +14,6 @@ from tvb_epilepsy.base.constants.model_constants import TAU0_DEF, TAU1_DEF, X1EQ
 from tvb_epilepsy.base.utils.log_error_utils import warning
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string, sort_dict, linspace_broadcast, \
                                                           generate_region_labels, ensure_string, \
-                                                          list_of_dicts_to_dicts_of_ndarrays, \
                                                           dicts_of_lists_to_lists_of_dicts, \
                                                           extract_dict_stringkeys
 from tvb_epilepsy.base.computations.math_utils import compute_in_degree
@@ -26,6 +25,7 @@ from tvb_epilepsy.base.epileptor_models import EpileptorDP2D, EpileptorDPrealist
 from tvb_epilepsy.base.model.vep.sensors import Sensors, SensorTypes
 from tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, PossibleVariables
 from tvb_epilepsy.service.lsa_service import LSAService
+from tvb_epilepsy.service.model_inversion.stan.stan_service import merge_samples
 from tvb_epilepsy.plot.base_plotter import BasePlotter
 
 
@@ -813,7 +813,7 @@ class Plotter(BasePlotter):
         for sample in ensure_list(samples):
             nuts.append(extract_dict_stringkeys(sample, "__", modefun="find"))
         if len(nuts) > 1:
-            nuts = list_of_dicts_to_dicts_of_ndarrays(nuts)
+            nuts = merge_samples(nuts)
         else:
             nuts = nuts[0]
         self.plots(nuts, shape=(2, 4), transpose=True, skip=skip_samples, xlabels={}, xscales={},
@@ -854,16 +854,19 @@ class Plotter(BasePlotter):
         for sample in samples_all:
             samples.append(extract_dict_stringkeys(sample, params, modefun="equal"))
         if len(samples_all) > 1:
-            samples = list_of_dicts_to_dicts_of_ndarrays(samples)
+            samples = merge_samples(samples)
         else:
             samples = samples_all[0]
+            n_samples = (samples.values()[0]).shape[0]
+            for p_key, p_val in samples.items():
+                samples[p_key] = numpy.reshape(p_val, (1, n_samples))
         diagonal_plots = {}
         # for param_key in samples.keys():
-        for param_key in params:
-            diagonal_plots.update({param_key: [priors.get(param_key, ()), truth.get(param_key, ())]})
+        for p_key in params:
+            diagonal_plots.update({p_key: [priors.get(p_key, ()), truth.get(p_key, ())]})
 
         return self.pair_plots(samples, params, diagonal_plots, True, skip_samples,
-                                    title, subtitles, figure_name, figsize)
+                               title, "chains/runs ", subtitles, figure_name, figsize)
 
     def region_parameters_violin_plots(self, samples_all, values=None, lines=None, stats=None,
                                        params=["x0", "x1init", "zinit"], skip_samples=0, per_chain_or_run=False,
@@ -880,16 +883,21 @@ class Plotter(BasePlotter):
         samples = []
         for sample in ensure_list(samples_all):
             samples.append(extract_dict_stringkeys(sample, params, modefun="equal"))
+        labels = generate_region_labels(samples[0].values()[0].shape[-1], labels)
         n_chains = len(samples_all)
+        n_samples = samples[0].values()[0].shape[0]
+        if n_samples > 1:
+            violin_flag = True
+        else:
+            violin_flag = False
         if not per_chain_or_run and n_chains > 1:
-            samples = ensure_list(list_of_dicts_to_dicts_of_ndarrays(samples))
+            samples = [merge_samples(samples)]
             plot_samples = lambda s: numpy.concatenate(numpy.split(s[:, skip_samples:].T, n_chains, axis=2),
                                                        axis=1).squeeze().T
             plot_figure_name = lambda ichain: figure_name
         else:
             plot_samples = lambda s: s[skip_samples:]
             plot_figure_name = lambda ichain: figure_name + ": chain " + str(ichain + 1)
-        labels = generate_region_labels(samples[0][params[0]].shape[-1], labels)
         params_labels = {}
         for ip, p in enumerate(params):
             if ip == 0:
@@ -906,7 +914,8 @@ class Plotter(BasePlotter):
             for ip, param in enumerate(params):
                 self.plot_vector_violin(plot_samples(chain_sample[param]), vals_fun(param),
                                         lines_fun(param), params_labels[param],
-                                        subplot_ind + ip + 1, param, colormap="YlOrRd", show_y_labels=True,
+                                        subplot_ind + ip + 1, param, violin_flag=violin_flag,
+                                        colormap="YlOrRd", show_y_labels=True,
                                         indices_red=seizure_indices, sharey=None)
             self._save_figure(pyplot.gcf(), None)
             self._check_show()
@@ -927,7 +936,7 @@ class Plotter(BasePlotter):
         self.parameters_pair_plots(samples, pair_plot_params, stats, priors, truth, skip_samples, title=title)
 
     def plot_fit_region_params(self, samples, stats=None, probabilistic_model=None,
-                               region_violin_params=["x0", "x1init", "zinit"], seizure_indices=[], region_labels=[],
+                               params=["x0", "x1init", "zinit"], seizure_indices=[], region_labels=[],
                                regions_mode="all", per_chain_or_run=False, skip_samples=0, title_prefix=""):
         if len(title_prefix) > 0:
             title_prefix = title_prefix + " "
@@ -939,12 +948,12 @@ class Plotter(BasePlotter):
         priors = {}
         truth = {}
         if probabilistic_model is not None:
-            if regions_mode=="active":
+            if regions_mode == "active":
                 regions_inds = probabilistic_model.active_regions
             else:
                 regions_inds = range(probabilistic_model.number_of_regions)
             I = numpy.ones((probabilistic_model.number_of_regions, 1))
-            for param in region_violin_params:
+            for param in params:
                 pdf = ensure_list(probabilistic_model.get_prior_pdf(param))
                 for ip, p in enumerate(pdf):
                     pdf[ip] = ((p.T * I)[regions_inds])
@@ -953,10 +962,10 @@ class Plotter(BasePlotter):
         else:
             regions_inds = range(samples[0]["x0"].shape[2])
         # plot region-wise parameters
-        self.region_parameters_violin_plots(samples, truth, priors, stats, region_violin_params, skip_samples,
+        self.region_parameters_violin_plots(samples, truth, priors, stats, params, skip_samples,
                                             per_chain_or_run=per_chain_or_run, labels=region_labels,
                                             seizure_indices=seizure_indices, figure_name=title_violin_plot)
-        if not(per_chain_or_run) and "x0" in region_violin_params and samples[0]["x0"].shape[1] < 10:
+        if not(per_chain_or_run) and "x0" in params and samples[0]["x0"].shape[1] < 10:
             x0_K_pair_plot_params = []
             x0_K_pair_plot_samples = [{} for _ in range(len(samples))]
             if samples[0].get("K", None) is not None:
@@ -1002,15 +1011,15 @@ class Plotter(BasePlotter):
                 for p_str in ["fit_target_data", "x1", "z"]:
                     stats_string[p_str] = stats_string[p_str][:-2]
         else:
-            stats_string = dict(zip(["target_data", "x1", "z"], 3*[""]))
+            stats_string = dict(zip(["fit_target_data", "x1", "z"], 3*[""]))
         observation_dict = OrderedDict({'observation time series': target_data.squeezed})
         time = target_data.time_line
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), samples)):
             name = title_prefix + "_chain" + str(id_est + 1)
             observation_dict.update({"fit chain " + str(id_est + 1):
-                                         sample["fit_target_data"].squeezed[:, :, skip_samples:]})
-            self.plot_raster(sort_dict({"x1": sample["x1"].squeezed[:, :, skip_samples:],
-                                        'z': sample["z"].squeezed[:, :, skip_samples:]}),
+                                         sample["fit_target_data"].data[:, :, :, skip_samples:].squeeze()})
+            self.plot_raster(sort_dict({"x1": sample["x1"].data[:, :, :, skip_samples:].squeeze(),
+                                        'z': sample["z"].data[:, :, :, skip_samples:].squeeze()}),
                              time, special_idx=seizure_indices, time_units=target_data.time_unit,
                              title=name + ": Hidden states fit rasterplot",
                              subtitles=['hidden state ' + "x1" + stats_string["x1"],
@@ -1020,10 +1029,10 @@ class Plotter(BasePlotter):
             dWt = {}
             subtitles = []
             if sample.get("dX1t", None):
-                dWt.update({"dX1t": sample["dX1t"].squeezed[:, :, skip_samples:]})
+                dWt.update({"dX1t": sample["dX1t"].data[:, :, :, skip_samples:].squeeze()})
                 subtitles.append("dX1t")
             if sample.get("dZt", None):
-                dWt.update({"dZt": sample["dZt"].squeezed[:, :, skip_samples:]})
+                dWt.update({"dZt": sample["dZt"].data[:, :, :, skip_samples:].squeeze()})
                 subtitles.append("dZt")
             if len(dWt) > 0:
                 subtitles[-1] += "\ndynamic noise" + sig_prior_str + ", sig_post = " + str(est["sigma"])
@@ -1033,8 +1042,8 @@ class Plotter(BasePlotter):
                                  figsize=FiguresConfig.VERY_LARGE_SIZE)
             if trajectories_plot:
                 title = name + ' Fit hidden state space trajectories'
-                self.plot_trajectories({"x1": sample["x1"].squeezed[:, :, skip_samples:],
-                                        'z': sample['z'].squeezed[:, :, skip_samples:]},
+                self.plot_trajectories({"x1": sample["x1"].data[:, :, :, skip_samples:].squeeze(),
+                                        'z': sample['z'].data[:, :, :, skip_samples:].squeeze()},
                                        special_idx=seizure_indices, title=title, labels=stats_region_labels,
                                        figsize=FiguresConfig.SUPER_LARGE_SIZE)
         self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
@@ -1073,10 +1082,15 @@ class Plotter(BasePlotter):
 
     def plot_scalar_model_comparison(self, model_comps, title_prefix="",
                                      metrics=["aic", "aicc", "bic", "dic", "waic", "p_waic", "elpd_waic", "loo"],
-                                     subplot_shape=(4, 2), figsize=FiguresConfig.VERY_LARGE_SIZE, figure_name=None):
+                                     subplot_shape=None, figsize=FiguresConfig.VERY_LARGE_SIZE, figure_name=None):
         metrics = [metric for metric in metrics if metric in model_comps.keys()]
         if subplot_shape is None:
-            subplot_shape = self.rect_subplot_shape(len(metrics), mode="col")
+            # subplot_shape = self.rect_subplot_shape(len(metrics), mode="col")
+            n_metrics = len(metrics)
+            if n_metrics > 1:
+                subplot_shape = (int(numpy.ceil(1.0*n_metrics/2)), 2)
+            else:
+                subplot_shape = (1, 1)
         if len(title_prefix) > 0:
             title = title_prefix + ": " + "information criteria"
         else:
@@ -1131,11 +1145,13 @@ class Plotter(BasePlotter):
             for jj in range(n_models):
                 # Necessary because ks gets infinite sometimes...
                 temp = metric_data[jj] == numpy.inf
-                if numpy.any(temp):
-                    warning("Infinite values found for metric " + metric + " of model " + model_names[ii] + "!\n" +
+                if numpy.all(temp):
+                    warning("All values are inf for metric " + metric + " of model " + model_names[ii] + "!\n")
+                    return
+                elif numpy.any(temp):
+                    warning("Inf values found for metric " + metric + " of model " + model_names[ii] + "!\n" +
                             "Substituting them with the maximum non-infite value!")
                     metric_data[jj][temp] = metric_data[jj][~temp].max()
-            n_subplots = metric_data[0].shape[1]
             n_labels = len(labels)
             if n_labels != n_subplots:
                 if n_labels != 0:
@@ -1218,7 +1234,7 @@ class Plotter(BasePlotter):
         self.plot_fit_scalar_params(samples, stats, probabilistic_model, pair_plot_params, skip_samples, title_prefix)
 
         self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
-                                    regions_labels, regions_mode, False, skip_samples, title_prefix)
+                                        regions_labels, regions_mode, False, skip_samples, title_prefix)
 
         self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
                                     regions_labels, regions_mode, True, skip_samples, title_prefix)
@@ -1231,3 +1247,5 @@ class Plotter(BasePlotter):
 
         if connectivity_plot:
             self.plot_fit_connectivity(ests, stats, probabilistic_model, regions_labels, title_prefix)
+
+
