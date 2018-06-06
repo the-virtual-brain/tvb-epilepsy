@@ -57,6 +57,12 @@ def build_stan_model_dict_to_interface_ins(probabilistic_model, signals, connect
     if time is None:
         time = np.arange(0, probabilistic_model.dt, probabilistic_model.time_length)
     probabilistic_model.parameters = convert_params_names_to_ins(probabilistic_model.parameters, parameter_names)[0]
+    if "k" in probabilistic_model.parameters.keys():
+        k_mu = np.mean(probabilistic_model.parameters["k"].mean)
+        k_std = np.mean(probabilistic_model.parameters["k"].std)
+    else:
+        k_mu = np.mean(probabilistic_model.get_truth("K"))
+        k_std = 1.0
     vep_data = {"nn": probabilistic_model.number_of_active_regions,
                 "nt": probabilistic_model.time_length,
                 "ns": probabilistic_model.number_of_target_data,
@@ -74,8 +80,8 @@ def build_stan_model_dict_to_interface_ins(probabilistic_model, signals, connect
                 "tau0": probabilistic_model.tau0,  # 10.0
                 "time_scale_mu": probabilistic_model.parameters["time_scale"].mean,
                 "time_scale_std": probabilistic_model.parameters["time_scale"].std,
-                "k_mu": np.mean(probabilistic_model.parameters["k"].mean),
-                "k_std": np.mean(probabilistic_model.parameters["k"].std),
+                "k_mu": k_mu,
+                "k_std": k_std,
                 "SC": connectivity_matrix[active_regions][:, active_regions],
                 "SC_var": 5.0,  # 1/36 = 0.02777777,
                 "Ic": np.sum(connectivity_matrix[active_regions][:, nonactive_regions], axis=1),
