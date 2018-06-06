@@ -180,7 +180,7 @@ def build_simulator_TVB_paper(model_configuration, connectivity, **kwargs):
 
 
 def build_simulator_TVB_reduced(model_configuration, connectivity, **kwargs):
-    sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D").set_fs(4096.0).set_simulated_period(1000)
+    sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D").set_fs(4096.0).set_simulated_period(1000.0)
     model = sim_builder.generate_model_tvb(model_configuration)
     sim_settings = sim_builder.build_sim_settings()
     return sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity,
@@ -189,7 +189,7 @@ def build_simulator_TVB_reduced(model_configuration, connectivity, **kwargs):
 
 def build_simulator_TVB_fitting(model_configuration, connectivity, **kwargs):
     sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D").\
-                                                set_fs(4096.0).set_fs_monitor(2048.0).set_simulated_period(300.0)
+                                                set_fs(2048.0).set_fs_monitor(2048.0).set_simulated_period(300.0)
     model = sim_builder.generate_model_tvb(model_configuration)
     model.tau0 = 30.0
     model.tau1 = 0.5
@@ -200,9 +200,9 @@ def build_simulator_TVB_fitting(model_configuration, connectivity, **kwargs):
 
 
 def build_simulator_TVB_realistic(model_configuration, connectivity, **kwargs):
-    sim_builder = SimulatorBuilder().set_model_name("EpileptorDPrealistic").set_fs(2048.0).set_simulated_period(30000)
+    sim_builder = SimulatorBuilder().set_model_name("EpileptorDPrealistic").set_fs(2048.0).set_simulated_period(60000.0)
     model = sim_builder.generate_model_tvb(model_configuration)
-    model.tau0 = 30000.0
+    model.tau0 = 60000.0
     model.tau1 = 0.2
     model.slope = 0.25
     model.pmode = numpy.array(kwargs.pop("pmode", "z"))
