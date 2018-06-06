@@ -852,6 +852,7 @@ class Plotter(BasePlotter):
         subtitles = list(self._params_stats_subtitles(params, stats))
         samples = []
         samples_all = ensure_list(samples_all)
+        params = [param for param in params if param in samples_all[0].keys()]
         for sample in samples_all:
             samples.append(extract_dict_stringkeys(sample, params, modefun="equal"))
         if len(samples_all) > 1:
@@ -881,8 +882,10 @@ class Plotter(BasePlotter):
             lines_fun = lambda param: lines.get(param, numpy.array([]))
         else:
             lines_fun = lambda param: []
+        samples_all = ensure_list(samples_all)
+        params = [param for param in params if param in samples_all[0].keys()]
         samples = []
-        for sample in ensure_list(samples_all):
+        for sample in samples_all:
             samples.append(extract_dict_stringkeys(sample, params, modefun="equal"))
         labels = generate_region_labels(samples[0].values()[0].shape[-1], labels)
         n_chains = len(samples_all)
@@ -922,7 +925,7 @@ class Plotter(BasePlotter):
             self._check_show()
 
     def plot_fit_scalar_params(self, samples, stats, probabilistic_model=None,
-                               pair_plot_params=["tau1",  "K", "sigma", "epsilon", "scale", "offset"], skip_samples=0,
+                               params=["tau1", "K", "sigma", "epsilon", "scale", "offset"], skip_samples=0,
                                title_prefix=""):
         # plot scalar parameters in pair plots
         if len(title_prefix) > 0:
@@ -931,10 +934,35 @@ class Plotter(BasePlotter):
         priors = {}
         truth = {}
         if probabilistic_model is not None:
-            for p in pair_plot_params:
+            for p in params:
                 priors.update({p: probabilistic_model.get_prior_pdf(p)})
                 truth.update({p: numpy.nanmean(probabilistic_model.get_truth(p))})
-        self.parameters_pair_plots(samples, pair_plot_params, stats, priors, truth, skip_samples, title=title)
+        self.parameters_pair_plots(samples, params, stats, priors, truth, skip_samples, title=title)
+
+    def plot_fit_scalar_params_iters(self, samples_all, params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
+                                     skip_samples=0, title_prefix="", subplot_shape=None, figure_name=None,
+                                     figsize=FiguresConfig.LARGE_SIZE):
+        if len(title_prefix) > 0:
+            title_prefix = title_prefix + ": "
+        title = title_prefix + " Parameters samples per iteration"
+        samples_all = ensure_list(samples_all)
+        params = [param for param in params if param in samples_all[0].keys()]
+        samples = []
+        for sample in samples_all:
+            samples.append(extract_dict_stringkeys(sample, params, modefun="equal"))
+        if len(samples) > 1:
+            samples = merge_samples(samples)
+        else:
+            samples = samples[0]
+        if subplot_shape is None:
+            n_params = len(samples)
+            # subplot_shape = self.rect_subplot_shape(n_params, mode="col")
+            if n_params > 1:
+                subplot_shape = (int(numpy.ceil(1.0*n_params/2)), 2)
+            else:
+                subplot_shape = (1, 1)
+        self.plots(samples, shape=subplot_shape, transpose=True, skip=skip_samples, xlabels={}, xscales={},
+                   yscales={}, title=title, figure_name=figure_name, figsize=figsize)
 
     def plot_fit_region_params(self, samples, stats=None, probabilistic_model=None,
                                params=["x0", "x1init", "zinit"], seizure_indices=[], region_labels=[],
@@ -1086,8 +1114,8 @@ class Plotter(BasePlotter):
                                      subplot_shape=None, figsize=FiguresConfig.VERY_LARGE_SIZE, figure_name=None):
         metrics = [metric for metric in metrics if metric in model_comps.keys()]
         if subplot_shape is None:
-            # subplot_shape = self.rect_subplot_shape(len(metrics), mode="col")
             n_metrics = len(metrics)
+            # subplot_shape = self.rect_subplot_shape(n_metrics, mode="col")
             if n_metrics > 1:
                 subplot_shape = (int(numpy.ceil(1.0*n_metrics/2)), 2)
             else:
@@ -1234,6 +1262,8 @@ class Plotter(BasePlotter):
                                              xdata=target_data.time_line, xlabel="Time")
 
         self.plot_fit_scalar_params(samples, stats, probabilistic_model, pair_plot_params, skip_samples, title_prefix)
+
+        self.plot_fit_scalar_params_iters(samples, pair_plot_params, skip_samples, title_prefix, subplot_shape=None)
 
         self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
                                         regions_labels, regions_mode, False, skip_samples, title_prefix)
