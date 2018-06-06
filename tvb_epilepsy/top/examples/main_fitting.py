@@ -14,7 +14,7 @@ from tvb_epilepsy.plot.plotter import Plotter
 
 def set_hypotheses(head, config):
     # Formulate a VEP hypothesis manually
-    hyp_builder = HypothesisBuilder(head.connectivity.number_of_regions, config).set_normalize(0.99)
+    hyp_builder = HypothesisBuilder(head.connectivity.number_of_regions, config)  # .set_normalize(0.99)
 
     # Regions of Pathological Excitability hypothesis:
     x0_indices = [2, 24]
@@ -29,7 +29,7 @@ def set_hypotheses(head, config):
     # e_values = np.zeros((head.connectivity.number_of_regions,)) + 0.01
     # e_values[[1, 26]] = 0.99
     # e_values = np.delete(e_values, [2, 25]).tolist()
-    e_values = np.array([0.99] * 2)
+    e_values = np.array([1.5, 1.25])  # np.array([0.99] * 2)
     hyp_builder.set_e_hypothesis(e_indices, e_values)
 
     # Regions of Connectivity hypothesis:
@@ -168,13 +168,13 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        n_chains_or_runs = 2
-        output_samples = 20 # max(int(np.round(1000.0 / n_chains_or_runs)), 500)
+        n_chains_or_runs = 4
+        output_samples = max(int(np.round(1000.0 / n_chains_or_runs)), 500)
         # Sampling (HMC)
         num_samples = output_samples
-        num_warmup = 30
-        max_depth = 8  # 12
-        delta = 0.8  # 0.9
+        num_warmup = 1000
+        max_depth = 12
+        delta = 0.9
         # ADVI or optimization:
         iter = 1000000
         tol_rel_obj = 1e-6
@@ -282,7 +282,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_sim_source_tau030_Kfixed")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
 
     # TVB3 larger preselection:
@@ -312,20 +312,23 @@ if __name__ == "__main__":
     # TVB3 selection:
     # sensors_lbls = [u"G'1", u"G'2", u"G'11", u"G'12", u"M'7", u"M'8", u"L'5", u"L'6"]
     # sensors_inds = [28, 29, 38, 39, 64, 65, 48, 49]
-    seizure = 'SZ1_0001.edf'
-    times_on_off = (np.array([15.0, 35.0]) * 1000.0).tolist()
-    # sensors_filename = "SensorsSEEG_116.h5"
-    # # TVB4 preselection:
-    # sensors_lbls = [u"D5", u"D6", u"D7",  u"D8", u"D9", u"D10", u"Z9", u"Z10", u"Z11", u"Z12", u"Z13", u"Z14",
-    #                 u"S1", u"S2", u"S3", u"D'3", u"D'4", u"D'10", u"D'11", u"D'12", u"D'13", u"D'14"]
-    # sensors_inds = [4, 5, 6, 7, 8, 9, 86, 87, 88, 89, 90, 91, 94, 95, 96, 112, 113, 119, 120, 121, 122, 123]
-    # # TVB4:
-    # seizure = 'SZ3_0001.edf'
-    # sensors_filename = "SensorsSEEG_210.h5"
-    # times_on_off = [20.0, 100.0]
     EMPIRICAL = False
-    # times_on_off = [50.0, 550.0]  # for "paper" simulations
-    times_on_off = [1100.0, 1300.0]  # for "paper" simulations
+    if EMPIRICAL:
+        seizure = 'SZ1_0001.edf'
+        times_on_off = (np.array([15.0, 35.0]) * 1000.0).tolist()
+        # sensors_filename = "SensorsSEEG_116.h5"
+        # # TVB4 preselection:
+        # sensors_lbls = [u"D5", u"D6", u"D7",  u"D8", u"D9", u"D10", u"Z9", u"Z10", u"Z11", u"Z12", u"Z13", u"Z14",
+        #                 u"S1", u"S2", u"S3", u"D'3", u"D'4", u"D'10", u"D'11", u"D'12", u"D'13", u"D'14"]
+        # sensors_inds = [4, 5, 6, 7, 8, 9, 86, 87, 88, 89, 90, 91, 94, 95, 96, 112, 113, 119, 120, 121, 122, 123]
+        # # TVB4:
+        # seizure = 'SZ3_0001.edf'
+        # sensors_filename = "SensorsSEEG_210.h5"
+        # times_on_off = [20.0, 100.0]
+    else:
+        # times_on_off = [50.0, 550.0]  # for "paper" simulations
+        # times_on_off = [1100.0, 1300.0]  # for "fitting" simulations with tau0=300.0
+        times_on_off = [100.0, 200.0]  # for "fitting" simulations with tau0=30.0
     stan_model_name = "vep_sde_simple" # "vep_sde.stan" to fit K as well
     fitmethod = "sample"  # "sample"  # "advi" or "opt"
     observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  # OBSERVATION_MODELS.SEEG_LOGPOWER.value
