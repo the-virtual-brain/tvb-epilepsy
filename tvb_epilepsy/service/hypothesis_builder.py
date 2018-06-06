@@ -32,7 +32,7 @@ class HypothesisBuilder(object):
     lsa_propagation_indices = []
     lsa_propagation_strengths = []
 
-    normalize_values = ensure_list(0.99)
+    normalize_values = []
 
     def __init__(self, number_of_regions=0, config=Config()):
         self.config = config
@@ -126,20 +126,23 @@ class HypothesisBuilder(object):
     def set_normalize(self, values):
         values = ensure_list(values)
         n_vals = len(values)
-        if n_vals > 2:
-            raise_value_error("Invalid disease hypothesis normalization values!: " + str(values) +
-                              "\nThey cannot be more than 2!")
-        else:
-            if n_vals < 2:
-                values = [numpy.min(self.diseased_regions_values)] + values
-            self.normalize_values = values
+        if n_vals > 0:
+            if n_vals > 2:
+                raise_value_error("Invalid disease hypothesis normalization values!: " + str(values) +
+                                  "\nThey cannot be more than 2!")
+            else:
+                if n_vals < 1:
+                    # Assuming normalization only to a maximum value, keeping the existing minimum one
+                    values = [numpy.min(self.diseased_regions_values)] + values
+                self.normalize_values = values
         return self
 
     def _normalize_disease_values(self):
-        disease_values = numpy.array(self.diseased_regions_values)
-        self.set_normalize(self.normalize_values)
-        self.diseased_regions_values = \
-            interval_scaling(disease_values, self.normalize_values[0], self.normalize_values[1])
+        if self.normalize_values:
+            disease_values = numpy.array(self.diseased_regions_values)
+            self.set_normalize(self.normalize_values)
+            self.diseased_regions_values = \
+                interval_scaling(disease_values, self.normalize_values[0], self.normalize_values[1])
         return self
 
     def set_attributes_based_on_hypothesis(self, disease_hypothesis):
@@ -154,8 +157,7 @@ class HypothesisBuilder(object):
         return self.build_hypothesis()
 
     def build_hypothesis(self):
-        if self.normalize_values:
-            self._normalize_disease_values()
+        self._normalize_disease_values()
         disease_indices, = numpy.where(self.diseased_regions_values != 0.0)
         x0_indices = numpy.setdiff1d(disease_indices, self.e_indices)
         return DiseaseHypothesis(self.number_of_regions,
