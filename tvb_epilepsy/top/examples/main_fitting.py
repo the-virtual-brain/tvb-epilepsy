@@ -2,12 +2,10 @@
 
 
 from tvb_epilepsy.base.constants.config import Config
-from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_inversion.probabilistic_models_builders import SDEProbabilisticModelBuilder
 from tvb_epilepsy.service.model_inversion.model_inversion_services import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
-from tvb_epilepsy.service.model_inversion.stan.pystan_service import PyStanService
 from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import build_stan_model_dict_to_interface_ins, \
                                                                                         convert_params_names_from_ins
 from tvb_epilepsy.top.scripts.fitting_scripts import *
@@ -106,10 +104,11 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
             probabilistic_model = \
                 SDEProbabilisticModelBuilder(model_name="vep_sde.stan", model_config=model_configuration,
                                              parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value,
-                                                        "x1init", "zinit", "tau1", "K", # "tau0",
+                                                        "x1init", "zinit", "tau1",  # "tau0", "K",
                                                         "sigma", "dZt", "epsilon", "scale", "offset"],  # "dX1t",
+                                             #tau0=30.0,
                                              xmode=XModes.X0MODE.value, priors_mode=PriorsModes.INFORMATIVE.value,
-                                             sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model, ).\
+                                             sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model).\
                                                                                                        generate_model()
 
             # Update active model's active region nodes
@@ -169,13 +168,13 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        n_chains_or_runs = 4
-        output_samples = max(int(np.round(1000.0 / n_chains_or_runs)), 500)
+        n_chains_or_runs = 2
+        output_samples = 20 # max(int(np.round(1000.0 / n_chains_or_runs)), 500)
         # Sampling (HMC)
         num_samples = output_samples
-        num_warmup = 1000
-        max_depth = 12
-        delta = 0.9
+        num_warmup = 30
+        max_depth = 8  # 12
+        delta = 0.8  # 0.9
         # ADVI or optimization:
         iter = 1000000
         tol_rel_obj = 1e-6
@@ -184,7 +183,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
         else:
             skip_samples = 0
         prob_model_name = probabilistic_model.name.split(".")[0]
-        if False:
+        if fit_flag:
             ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, refresh=1,
                                                       n_chains_or_runs=n_chains_or_runs,
                                                       iter=iter, tol_rel_obj=tol_rel_obj,

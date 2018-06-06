@@ -110,6 +110,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
             plotter = Plotter(config)
         # Plot results
         plotter.plot_simulated_timeseries(sim_output, sim.model, lsa_hypothesis.lsa_propagation_indices, seeg_list=seeg,
-                                          spectral_raster_plot=False, log_scale=True, title_prefix=hypname)
+                                          spectral_raster_plot=False, title_prefix=hypname,
+                                          spectral_options={"log_scale": True})
 
     return {"source": sim_output, "seeg": seeg}, sim
