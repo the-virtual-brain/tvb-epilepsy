@@ -272,7 +272,7 @@ if __name__ == "__main__":
 
     if user_home == "/home/denis":
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "INScluster/fit_tau030_Kfixed/sim_sensor_info")
+                              "INScluster/fit_tau030_Kfixed/empirical_info")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.C_COMPILER = "g++"
         config.generic.CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
@@ -313,7 +313,7 @@ if __name__ == "__main__":
     # TVB3 selection:
     # sensors_lbls = [u"G'1", u"G'2", u"G'11", u"G'12", u"M'7", u"M'8", u"L'5", u"L'6"]
     # sensors_inds = [28, 29, 38, 39, 64, 65, 48, 49]
-    EMPIRICAL = False
+    EMPIRICAL = True
     if EMPIRICAL:
         seizure = 'SZ1_0001.edf'
         times_on_off = (np.array([15.0, 35.0]) * 1000.0).tolist()
