@@ -272,7 +272,7 @@ if __name__ == "__main__":
 
     if user_home == "/home/denis":
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "INScluster/fit_tau030_Kfixed/fit_sim_source_noninfo")
+                              "INScluster/fit_tau030_Kfixed/sim_source_noninfo")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.C_COMPILER = "g++"
         config.generic.CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
