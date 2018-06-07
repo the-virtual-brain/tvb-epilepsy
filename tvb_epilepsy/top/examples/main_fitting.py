@@ -79,7 +79,6 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
                                       config=config)
     stan_service.set_or_compile_model()
 
-
     for hyp in hypotheses[:1]:
         base_path = os.path.join(config.out.FOLDER_RES, hyp.name)
         # Set model configuration and compute LSA
@@ -106,7 +105,6 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
                                              parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value,
                                                         "x1init", "zinit", "tau1",  # "tau0", "K",
                                                         "sigma", "dZt", "epsilon", "scale", "offset"],  # "dX1t",
-                                             #tau0=30.0,
                                              xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                                              sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model).\
                                                                                                        generate_model()
@@ -125,9 +123,9 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
                 probabilistic_model.target_data_type = TARGET_DATA_TYPE.EMPIRICAL.value
                 # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
                 signals = set_empirical_data(empirical_file, path("ts_empirical"),
-                                             head, sensors_lbls, sensor_id, probabilistic_model.dt, times_on_off,
-                                             label_strip_fun=lambda s: s.split("POL ")[-1], plotter=plotter,
-                                             title_prefix=hyp.name, bipolar=False)
+                                             head, sensors_lbls, sensor_id, probabilistic_model.time_length,
+                                             times_on_off, label_strip_fun=lambda s: s.split("POL ")[-1],
+                                             plotter=plotter, title_prefix=hyp.name, bipolar=False)
             else:
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
                 probabilistic_model.target_data_type = TARGET_DATA_TYPE.SYNTHETIC.value
@@ -136,11 +134,6 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
                                               sensor_id, sim_type="fitting", times_on_off=times_on_off, config=config,
                                               plotter=plotter, title_prefix=hyp.name, bipolar=False, filter_flag=False,
                                               envelope_flag=False, smooth_flag=False, **kwargs)
-                probabilistic_model.ground_truth.update({"tau1": np.mean(simulator.model.tau1), # "tau1": np.mean(simulator.model.tt),
-                                                         "tau0": np.mean(simulator.model.tau0),  #1.0 / np.mean(simulator.model.r),
-                                                         "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
-                # probabilistic_model.tau0 = np.mean(simulator.model.tau0)
-                probabilistic_model.dt = simulator.simTVB.integrator.dt
 
             # -------------------------- Select and set target data from signals ---------------------------------------
             if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
@@ -283,8 +276,11 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_sim_source_tau030_Kfixed")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_tau030_Kfixed/empirical_noninfo")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
+        import socket
+        if socket.gethostname().split(".")[0] == 'CBRs-iMac':
+            config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
     # TVB3 larger preselection:
     sensors_lbls = \
@@ -316,7 +312,7 @@ if __name__ == "__main__":
     EMPIRICAL = True
     if EMPIRICAL:
         seizure = 'SZ1_0001.edf'
-        times_on_off = (np.array([15.0, 35.0]) * 1000.0).tolist()
+        times_on_off = (np.array([15.0, 30.0]) * 1000.0).tolist() #(np.array([15.0, 35.0]) * 1000.0).tolist()
         # sensors_filename = "SensorsSEEG_116.h5"
         # # TVB4 preselection:
         # sensors_lbls = [u"D5", u"D6", u"D7",  u"D8", u"D9", u"D10", u"Z9", u"Z10", u"Z11", u"Z12", u"Z13", u"Z14",
