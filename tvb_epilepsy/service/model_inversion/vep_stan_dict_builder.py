@@ -61,7 +61,7 @@ def build_stan_model_dict_to_interface_ins(probabilistic_model, signals, connect
         k_mu = np.mean(probabilistic_model.parameters["k"].mean)
         k_std = np.mean(probabilistic_model.parameters["k"].std)
     else:
-        k_mu = np.mean(probabilistic_model.get_truth("K"))
+        k_mu = np.mean(probabilistic_model.model_config.K)
         k_std = 1.0
     vep_data = {"nn": probabilistic_model.number_of_active_regions,
                 "nt": probabilistic_model.time_length,
