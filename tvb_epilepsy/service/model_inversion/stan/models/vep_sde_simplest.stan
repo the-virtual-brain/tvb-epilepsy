@@ -1,151 +1,218 @@
 functions {
 
-    matrix vector_differencing(row_vector x) {
-        matrix[num_elements(x), num_elements(x)] D;
-        for (i in 1:num_elements(x)) {
-            D[i] = x - x[i];
+    matrix vector_differencing(row_vector x1) {
+        matrix[num_elements(x1), num_elements(x1)] D;
+        for (i in 1:num_elements(x1)) {
+            D[i] = x1 - x1[i];
         }
         return D;
     }
 
-    row_vector x_step(row_vector x, row_vector z, real I1, real time_scale) { //, row_vector x_eta, real sigma
-        int nn = num_elements(x);
-        row_vector[nn] x_next;
-        row_vector[nn] I1_vec = rep_row_vector(I1 + 1.0, nn);
-        row_vector[nn] dx = I1_vec - (x .* x .* x) - 2.0 * (x .* x) - z;
-        x_next = x + (time_scale * dx); # + x_eta * sigma;
-        return x_next;
+    row_vector x1_step(row_vector x1, row_vector z, real Iext1, real tau1) { //, row_vector dX1t, real sigma
+        int n_active_regions = num_elements(x1);
+        row_vector[n_active_regions] x1_next;
+        row_vector[n_active_regions] Iext1_vec = rep_row_vector(Iext1 + 1.0, n_active_regions);
+        row_vector[n_active_regions] dx1 = Iext1_vec - (x1 .* x1 .* x1) - 2.0 * (x1 .* x1) - z;
+        x1_next = x1 + (tau1 * dx1); # + dX1t * sigma;
+        return x1_next;
     }
 
-    row_vector z_step(row_vector x, row_vector z, row_vector x0, matrix FC, vector Ic, real x_eq_def, real time_scale,
-                      row_vector z_eta, real sigma, real tau0) {
-        int nn = num_elements(z);
-        row_vector[nn] z_next;
-        matrix[nn, nn] D = vector_differencing(x);
+    row_vector z_step(row_vector x1, row_vector z, row_vector x0, matrix FC, vector Ic, real x1_eq_def, real tau1,
+                      row_vector dZt, real sigma, real tau0) {
+        int n_active_regions = num_elements(z);
+        row_vector[n_active_regions] z_next;
+        matrix[n_active_regions, n_active_regions] D = vector_differencing(x1);
         // Ic = Ic_i = sum_{j in nonactive regions} [w_ij]
-        // gx(nonactive->active) = Ic * (x_j - x_i) = Ic * (x_eq_def - x)
-        row_vector[nn] gx = to_row_vector(rows_dot_product(FC, D) + Ic .* to_vector(x_eq_def - x));
-        row_vector[nn] dz = inv(tau0) * (4 * (x - x0) - z - gx);
-        z_next = z + (time_scale * dz) + z_eta * sigma;
+        // gx(nonactive->active) = Ic * (x1_j - x1_i) = Ic * (x1_eq_def - x1)
+        row_vector[n_active_regions] gx = to_row_vector(rows_dot_product(FC, D) + Ic .* to_vector(x1_eq_def - x1));
+        row_vector[n_active_regions] dz = inv(tau0) * (4 * (x1 - x0) - z - gx);
+        z_next = z + (tau1 * dz) + dZt * sigma;
         return z_next;
+    }
+
+    real[] normal_mean_std_to_lognorm_mu_sigma(real mean_, real std_) {
+        real mu_sigma[2];
+        real logsm21 = std_/mean_;
+        logsm21 = log(logsm21 * logsm21 + 1.0);
+        mu_sigma[1] = log(mean_) - 0.5 * logsm21;
+        mu_sigma[2] = sqrt(logsm21);
+        return mu_sigma;
+    }
+
+    row_vector normal_mean_std_to_lognorm_mu(row_vector mean_, row_vector std_) {
+        int n_active_regions = num_elements(mean_);
+        row_vector[n_active_regions] logsm21 = std_ ./ mean_;
+        logsm21 = log(logsm21 .* logsm21 + 1.0);
+        return log(mean_) - 0.5 * logsm21;
+    }
+
+    row_vector normal_mean_std_to_lognorm_sigma(row_vector mean_, row_vector std_) {
+        int n_active_regions = num_elements(mean_);
+        row_vector[n_active_regions] logsm21 = std_ ./ mean_;
+        logsm21 = log(logsm21 .* logsm21 + 1.0);
+        return sqrt(logsm21);
+    }
+
+    real standard_normal_to_lognormal(real standard_normal, real mu, real sigma){
+        return exp(mu + sigma * standard_normal);
+    }
+
+
+    row_vector standard_normal_to_lognormal_row(row_vector standard_normal, row_vector mu, row_vector sigma){
+        return exp(mu + sigma .* standard_normal);
     }
 }
 
 data {
     int DEBUG;
     int SIMULATE;
-    int nn;
-    int nt; // 1012
-    int ns;
-    real I1; //=3.1
+    int n_active_regions;
+    int n_times; // 1012
+    int n_target_data;
+    real Iext1; //=3.1
     real tau0; //=10, [3, 30]
     real dt; //~= 0.1 (used 0.0976562)
-    real x0_hi; // -4.0, [-3.0, -4.0]
+    real x0_hi; // 2.5
     // real x0_std; // ~0.5
     // real x0_lo;  // 0.0
-    row_vector [nn] x0_star_mu; // x0_hi - x0_mean = 0.0 - ~[2.2 to 2.5] = ~[2.2 to 2.5]
-    row_vector [nn] x0_star_std; // minimum((x0_hi - x0_lo)/8.0, x0_star_mu/5.0) ~= 0.5
-    // row_vector [nn] x0_mu;  // healthy: -2.5, sick ~=-2.0, max = [-3.0, -4.0], min = -1.0
-    real x_eq_def; // = -5.0/3 the value of all healhty non-active node
-    row_vector [nn] x_init_mu; // in [-2.0, -1.0], used -1.566
-    row_vector [nn] z_init_mu; // in [2.9, 4.5], used 3.060
-    real x_init_std; // 0.0333
+    row_vector [n_active_regions] x0_star_mu; // x0_hi - x0_mean = 2.5 - ~[-2.5 to 0.0] = ~[2.5 to 5]
+    row_vector [n_active_regions] x0_star_std; // minimum((x0_mean - x0_lo)/2.0) ~= 1.0
+    // row_vector [n_active_regions] x0_mu;  // healthy: -2.5, sick ~=-2.0, max = [-3.0, -4.0], min = -1.0
+    real x1_eq_def; // = -5.0/3 the value of all healhty non-active node
+    row_vector [n_active_regions] x1_init_mu; // in [-2.0, -1.0], used -1.566
+    row_vector [n_active_regions] z_init_mu; // in [2.9, 4.5], used 3.060
+    real x1_init_std; // 0.0333
     real z_init_std; // 0.0333/2
-    real time_scale_mu; // 0.5
-    real time_scale_std; // 0.0667
-    real k_mu; // 3.448 = 3 * 100 / n_regions(=87)
-    real k_std; // 0.575 = k_mu/6
+    real tau1_mu; // 0.5
+    real tau1_std; // 0.0667
+    real K_mu; // 3.448 = 3 * 100 / n_regions(=87)
+    real K_std; // 0.575 = K_mu/6
     real sigma_mu; // =0.01
     real sigma_std; // =0.01/3
     real epsilon_mu; //=0.1
     real epsilon_std; //=0.1/3
     real offset_mu;  //=0.0
     real offset_std; //=1.0
-    real amplitude_mu; //=1.0
-    real amplitude_std; //=1.0/6
-    real amplitude_lo; // =0.3
-    matrix[ns, nn] gain;
-    row_vector[ns] seeg_log_power[nt];
-    vector[nn] Ic;
-    matrix<lower=0.0, upper=1.0>[nn, nn] SC;
+    real scale_mu; //=1.0
+    real scale_std; //=1.0/6
+    real scale_lo; // =0.3
+    matrix[n_target_data, n_active_regions] gain;
+    row_vector[n_target_data] target_data[n_times];
+    vector[n_active_regions] Ic;
+    matrix<lower=0.0, upper=1.0>[n_active_regions, n_active_regions] SC;
 }
 
 transformed data {
     real sqrtdt = sqrt(dt);
-    real amplitude_zscore = amplitude_std/amplitude_mu;
-    real epsilon_zscore = epsilon_std/epsilon_mu;
-    real time_scale = time_scale_mu;
-    real k = k_mu;
-    real sigma_zscore = sigma_std/sigma_mu;
-    row_vector[nn] x0_star_zscore = x0_star_std ./ x0_star_mu;
-    //matrix[ns, nn] log_gain = log(gain);
-    matrix [nn, nn] SC_ = SC;
-    for (i in 1:nn) SC_[i, i] = 0;
+    real scale_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(scale_mu, scale_std);
+    real epsilon_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(epsilon_mu, epsilon_std);
+    // real tau1_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(tau1_mu, tau1_std);
+    real tau1 = tau1_mu;
+    // real K_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(K_mu, K_std);
+    real K = K_mu;
+    real sigma_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(sigma_mu, sigma_std);
+    row_vector[n_active_regions] x0_logmu = normal_mean_std_to_lognorm_mu(x0_star_mu, x0_star_std);
+    row_vector[n_active_regions] x0_sigma = normal_mean_std_to_lognorm_sigma(x0_star_mu, x0_star_std);
+    //matrix[n_target_data, n_active_regions] log_gain = log(gain);
+    matrix [n_active_regions, n_active_regions] SC_ = SC;
+    for (i in 1:n_active_regions) SC_[i, i] = 0;
     SC_ = SC_ / max(SC_) * rows(SC_);
+
+    /*
+    print("scale_mu_sigma=", scale_mu_sigma,
+           ", scale=", standard_normal_to_lognormal(0.0, scale_mu_sigma[1], scale_mu_sigma[2]));
+    print("epsilon_mu_sigma=", epsilon_mu_sigma,
+          ", epsilon=", standard_normal_to_lognormal(0.0, epsilon_mu_sigma[1], epsilon_mu_sigma[2]));
+    print("tau1_mu_sigma=", tau1_mu_sigma,
+          ", tau1=", standard_normal_to_lognormal(0.0, tau1_mu_sigma[1], tau1_mu_sigma[2]));
+    print("K_mu_sigma=", K_mu_sigma,
+          ", k=", standard_normal_to_lognormal(0.0, K_mu_sigma[1], K_mu_sigma[2]));
+    print("sigma_mu_sigma=", sigma_mu_sigma,
+          ", sigma=", standard_normal_to_lognormal(0.0, sigma_mu_sigma[1], sigma_mu_sigma[2]));
+    print("x0_logmu=", x0_logmu, ", x0_sigma=", x0_sigma);
+    */
 }
 
 parameters {
     // integrate and predict
-    real<lower=-1.0, upper=1.0> offset_star;
-    real<lower=-3.0, upper=3.0> amplitude_star;
-    real<upper=3.0> epsilon_star;
-    real<upper=3.0> sigma_star;
-    row_vector<upper=3.0> [nn] x0_star;
+    row_vector [n_active_regions] x0_star;
+    real epsilon_star;
+    real scale_star;
+    real offset_star;
+    real sigma_star;
+    // real tau1_star;
+    // real K_star;
 
     // time-series state non-centering:
-    row_vector[nn] x_init_star;
-    row_vector[nn] z_init_star;
-    // row_vector[nn] x_eta_star[nt - 1];
-    row_vector[nn] z_eta_star[nt - 1];
+    row_vector[n_active_regions] x1_init_star;
+    row_vector[n_active_regions] z_init_star;
+    // row_vector[n_active_regions] dX1t_star[n_times - 1];
+    row_vector[n_active_regions] dZt_star[n_times - 1];
+
 }
 
 transformed parameters {
     real offset = offset_mu + offset_star * offset_std;
-    real amplitude = amplitude_mu * exp(amplitude_zscore * amplitude_star);
-    real epsilon = epsilon_mu * exp(epsilon_zscore * epsilon_star);
-    real sigma = sigma_mu * exp(sigma_zscore * sigma_star);
-    row_vector[nn] x0 = x0_hi - (x0_star_mu .* exp(x0_star_zscore .* x0_star));
-    row_vector[nn] x_init = x_init_mu + x_init_star * x_init_std;
-    row_vector[nn] z_init = z_init_mu + z_init_star * z_init_std;
-    row_vector[nn] x[nt];
-    row_vector[nn] z[nt];
-    row_vector[ns] mu_seeg_log_power[nt];
+    real scale = standard_normal_to_lognormal(scale_star, scale_mu_sigma[1], scale_mu_sigma[2]);
+    real epsilon = standard_normal_to_lognormal(epsilon_star, epsilon_mu_sigma[1], epsilon_mu_sigma[2]);
+    real sigma = standard_normal_to_lognormal(sigma_star, sigma_mu_sigma[1], sigma_mu_sigma[2]);
+    // real tau1 = standard_normal_to_lognormal(tau1_star, tau1_mu_sigma[1], tau1_mu_sigma[2]);
+    // real K = standard_normal_to_lognormal(K_star, K_mu_sigma[1], K_mu_sigma[2]);
+    row_vector[n_active_regions] x0 = x0_hi - standard_normal_to_lognormal_row(x0_star, x0_logmu, x0_sigma);
+    row_vector[n_active_regions] x1_init = x1_init_mu + x1_init_star * x1_init_std;
+    row_vector[n_active_regions] z_init = z_init_mu + z_init_star * z_init_std;
+    row_vector[n_active_regions] x1[n_times];
+    row_vector[n_active_regions] z[n_times];
+    row_vector[n_target_data] fit_target_data[n_times];
 
-    x[1] = x_init; // - 1.5;
+    x1[1] = x1_init; // - 1.5;
     z[1] = z_init; // 3.0;
-    for (t in 1:(nt-1)) {
-        x[t+1] = x_step(x[t], z[t], I1, dt*time_scale); //, x_eta_star[t], sqrtdt*sigma
-        z[t+1] = z_step(x[t], z[t], x0, k*SC, Ic, x_eq_def, dt*time_scale, z_eta_star[t], sqrtdt*sigma, tau0);
+    for (t in 1:(n_times-1)) {
+        x1[t+1] = x1_step(x1[t], z[t], Iext1, dt*tau1); //, dX1t_star[t], sqrtdt*sigma
+        z[t+1] = z_step(x1[t], z[t], x0, K*SC, Ic, x1_eq_def, dt*tau1, dZt_star[t], sqrtdt*sigma, tau0);
     }
 
-    for (t in 1:nt)
-        mu_seeg_log_power[t] = amplitude * (log(gain * exp(x[t]'-x_eq_def)) + offset)';
+    for (t in 1:n_times)
+        fit_target_data[t] = scale * (log(gain * exp(x1[t]'-x1_eq_def)) + offset)';
+
+    /*
+    print("offset=", offset);
+    print("scale=", scale);
+    print("epsilon=", epsilon);
+    print("k=", k);
+    print("sigma=", sigma);
+    print("tau1=", tau1);
+    print("x0=", x0);
+    */
 }
 
 model {
     offset_star ~ normal(0.0, 1.0);
-    amplitude_star ~ normal(0.0, 1.0);
+    scale_star ~ normal(0.0, 1.0);
     epsilon_star ~ normal(0.0, 1.0);
     sigma_star ~ normal(0.0, 1.0);
+    // tau1_star ~ normal(0.0, 1.0);
+    // K_star ~ normal(0.0, 1.0);
     to_row_vector(x0_star) ~ normal(0.0, 1.0);
-    x_init_star ~ normal(0.0, 1.0);
+    x1_init_star ~ normal(0.0, 1.0);
     z_init_star ~ normal(0.0, 1.0);
 
-    for (t in 1:(nt - 1)) {
-        // to_vector(x_eta_star[t]) ~ normal(0.0, 1.0);
-        to_vector(z_eta_star[t]) ~ normal(0.0, 1.0);
+    for (t in 1:(n_times - 1)) {
+        // to_vector(dX1t_star[t]) ~ normal(0.0, 1.0);
+        to_vector(dZt_star[t]) ~ normal(0.0, 1.0);
     }
 
     if (SIMULATE<1)
-        for (t in 1:nt)
-            seeg_log_power[t] ~ normal(mu_seeg_log_power[t], epsilon);
+        for (t in 1:n_times)
+            target_data[t] ~ normal(fit_target_data[t], epsilon);
 }
 
+
 generated quantities {
-    row_vector[ns] log_likelihood[nt];
-    for (t in 1:nt) {
-        for (s in 1:ns) {
-            log_likelihood[t][s] = normal_lpdf(seeg_log_power[t][s] |  mu_seeg_log_power[t][s], epsilon);
+    row_vector[n_target_data] log_likelihood[n_times];
+    for (t in 1:n_times) {
+        for (s in 1:n_target_data) {
+            log_likelihood[t][s] = normal_lpdf(target_data[t][s] |  fit_target_data[t][s], epsilon);
         }
     }
 }

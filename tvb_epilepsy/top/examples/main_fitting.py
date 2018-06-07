@@ -6,8 +6,8 @@ from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_inversion.probabilistic_models_builders import SDEProbabilisticModelBuilder
 from tvb_epilepsy.service.model_inversion.model_inversion_services import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
-from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import build_stan_model_dict_to_interface_ins, \
-                                                                                        convert_params_names_from_ins
+from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder \
+    import build_stan_model_data_dict, build_stan_model_data_dict_to_interface_ins, convert_params_names_from_ins
 from tvb_epilepsy.top.scripts.fitting_scripts import *
 from tvb_epilepsy.plot.plotter import Plotter
 
@@ -47,7 +47,7 @@ def set_hypotheses(head, config):
     return (hypothesis1, hypothesis2)
 
 
-def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
+def main_fit_sim_hyplsa(stan_model_name="vep_sde_ins.stan", empirical_file="",
                         observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, sensors_lbls=[], sensor_id=0,
                         times_on_off=[], fitmethod="optimizing", pse_flag=True, fit_flag=True, config=Config(),
                         **kwargs):
@@ -101,9 +101,9 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
 
             # ...or generate a new probabilistic model and model data
             probabilistic_model = \
-                SDEProbabilisticModelBuilder(model_name="vep_sde.stan", model_config=model_configuration,
+                SDEProbabilisticModelBuilder(model_name="vep_sde_ins.stan", model_config=model_configuration,
                                              parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value,
-                                                        "x1init", "zinit", "tau1",  # "tau0", "K",
+                                                        "x1_init", "z_init", "tau1",  # "tau0", "K",
                                                         "sigma", "dZt", "epsilon", "scale", "offset"],  # "dX1t",
                                              xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                                              sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model).\
@@ -154,20 +154,24 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
               write_probabilistic_model(probabilistic_model, model_configuration.number_of_regions, problstc_model_file)
             writer.write_timeseries(target_data, target_data_file)
 
-            # Interface with INS stan models
-            model_data = build_stan_model_dict_to_interface_ins(probabilistic_model, target_data.squeezed,
-                                                                model_configuration.model_connectivity, gain_matrix,
-                                                                time=target_data.time_line)
+            # Construct the stan model data dict:
+            model_data = build_stan_model_data_dict(probabilistic_model, target_data.squeezed,
+                                                    model_configuration.model_connectivity, gain_matrix,
+                                                    time=target_data.time_line)
+            # # ...or interface with INS stan models
+            # model_data = build_stan_model_data_dict_to_interface_ins(probabilistic_model, target_data.squeezed,
+            #                                                          model_configuration.model_connectivity, gain_matrix,
+            #                                                          time=target_data.time_line)
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        n_chains_or_runs = 4
-        output_samples = max(int(np.round(1000.0 / n_chains_or_runs)), 500)
+        n_chains_or_runs = 2  # 4
+        output_samples = 20 # max(int(np.round(1000.0 / n_chains_or_runs)), 500)
         # Sampling (HMC)
         num_samples = output_samples
-        num_warmup = 1000
-        max_depth = 12
-        delta = 0.9
+        num_warmup = 30  # 1000
+        max_depth = 8 # 12
+        delta = 0.8  # 0.9
         # ADVI or optimization:
         iter = 1000000
         tol_rel_obj = 1e-6
@@ -177,18 +181,18 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
             skip_samples = 0
         prob_model_name = probabilistic_model.name.split(".")[0]
         if fit_flag:
-            ests, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, refresh=1,
+            estimates, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, refresh=1,
                                                       n_chains_or_runs=n_chains_or_runs,
                                                       iter=iter, tol_rel_obj=tol_rel_obj,
                                                       num_warmup=num_warmup, num_samples=num_samples,
                                                       max_depth=max_depth, delta=delta,
                                                       save_warmup=1, plot_warmup=1, **kwargs)
-            writer.write_generic(ests, path(prob_model_name + "_FitEst"))
+            writer.write_generic(estimates, path(prob_model_name + "_FitEst"))
             writer.write_generic(samples, path(prob_model_name + "_FitSamples"))
             if summary is not None:
                 writer.write_generic(summary, path(prob_model_name + "_FitSummary"))
         else:
-            ests, samples, summary = stan_service.read_output()
+            estimates, samples, summary = stan_service.read_output()
             if fitmethod.find("sampl") >= 0:
                 plotter.plot_HMC(samples, figure_name=hyp.name + "-" + prob_model_name + " HMC NUTS trace")
 
@@ -208,25 +212,26 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
 
         writer.write_generic(info_crit, path(prob_model_name + "_InfoCrit"))
 
-        # Interface with INS stan models
-        ests, samples, Rhat, model_data = \
-            convert_params_names_from_ins([ests, samples, stan_service.get_Rhat(summary), model_data])
+        Rhat = stan_service.get_Rhat(summary)
+        # Interface backwards with INS stan models
+        # estimates, samples, Rhat, model_data = \
+        #     convert_params_names_from_ins([estimates, samples, Rhat, model_data])
         if fitmethod.find("opt") < 0:
             stats = {"Rhat": Rhat}
         else:
             stats = None
+
         # -------------------------- Plot fitting results: ------------------------------------------------------------
         # if stan_service.fitmethod.find("opt") < 0:
-        plotter.plot_fit_results(ests, samples, model_data, target_data, probabilistic_model, info_crit,
-                                     stats=stats,
-                                     pair_plot_params=["tau1","sigma", "epsilon", "scale", "offset"],  #  "K",
-                                     region_violin_params=["x0", "x1init", "zinit"],
-                                     regions_labels=head.connectivity.region_labels, skip_samples=skip_samples,
-                                     title_prefix=hyp.name + "-" + prob_model_name)
+        plotter.plot_fit_results(estimates, samples, model_data, target_data, probabilistic_model, info_crit,
+                                 stats=stats, pair_plot_params=["tau1","sigma", "epsilon", "scale", "offset"],  #  "K",
+                                 region_violin_params=["x0", "x1_init", "z_init"],
+                                 regions_labels=head.connectivity.region_labels, skip_samples=skip_samples,
+                                 title_prefix=hyp.name + "-" + prob_model_name)
 
 
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
-        for id_est, est in enumerate(ensure_list(ests)):
+        for id_est, est in enumerate(ensure_list(estimates)):
             K = est.get("K", model_configuration.K)
             tau1 = est.get("tau1", model_configuration.tau1)
             tau0 = est.get("tau0", model_configuration.tau0)
@@ -276,11 +281,9 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_tau030_Kfixed/empirical_noninfo")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_test")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
-        import socket
-        if socket.gethostname().split(".")[0] == 'CBRs-iMac':
-            config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
+        config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
     # TVB3 larger preselection:
     sensors_lbls = \
@@ -326,7 +329,7 @@ if __name__ == "__main__":
         # times_on_off = [50.0, 550.0]  # for "paper" simulations
         # times_on_off = [1100.0, 1300.0]  # for "fitting" simulations with tau0=300.0
         times_on_off = [100.0, 200.0]  # for "fitting" simulations with tau0=30.0
-    stan_model_name = "vep_sde_simple" # "vep_sde.stan" to fit K as well
+    stan_model_name = "vep_sde_simple" # "vep_sde_ins.stan" to fit K as well
     fitmethod = "sample"  # "sample"  # "advi" or "opt"
     observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value  # OBSERVATION_MODELS.SOURCE_POWER.value  #
     pse_flag = True

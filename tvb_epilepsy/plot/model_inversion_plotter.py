@@ -72,7 +72,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
                                title, "chains/runs ", subtitles, figure_name, figsize)
 
     def _region_parameters_violin_plots(self, samples_all, values=None, lines=None, stats=None,
-                                        params=["x0", "x1init", "zinit"], skip_samples=0, per_chain_or_run=False,
+                                        params=["x0", "x1_init", "z_init"], skip_samples=0, per_chain_or_run=False,
                                         labels=[], seizure_indices=None, figure_name="Regions parameters samples",
                                         figsize=FiguresConfig.VERY_LARGE_SIZE):
         if isinstance(values, dict):
@@ -181,7 +181,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
         return self._parameters_pair_plots(samples, params, stats, priors, truth, skip_samples, title=title)
 
     def plot_fit_region_params(self, samples, stats=None, probabilistic_model=None,
-                               params=["x0", "x1init", "zinit"], seizure_indices=[], region_labels=[],
+                               params=["x0", "x1_init", "z_init"], seizure_indices=[], region_labels=[],
                                regions_mode="all", per_chain_or_run=False, skip_samples=0, title_prefix=""):
         if len(title_prefix) > 0:
             title_prefix = title_prefix + " "
@@ -465,7 +465,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
 
     def plot_fit_results(self, ests, samples, model_data, target_data, probabilistic_model=None, info_crit=None,
                          stats=None, pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
-                         region_violin_params=["x0", "x1init", "zinit"],
+                         region_violin_params=["x0", "x1_init", "z_init"],
                          regions_labels=[], regions_mode="active", n_regions=1,
                          trajectories_plot=True, connectivity_plot=False, skip_samples=0, title_prefix=""):
         if probabilistic_model is not None:

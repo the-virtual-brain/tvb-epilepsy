@@ -17,14 +17,14 @@ static int current_statement_begin__;
 
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
-    reader.add_event(0, 0, "start", "/Users/dionperd/VEPtools/software/git/tvb-epilepsy/tvb_epilepsy/service/model_inversion/stan/models/vep_sde_simple.stan");
-    reader.add_event(214, 214, "end", "/Users/dionperd/VEPtools/software/git/tvb-epilepsy/tvb_epilepsy/service/model_inversion/stan/models/vep_sde_simple.stan");
+    reader.add_event(0, 0, "start", "/Users/dionperd/VEPtools/git/tvb-epilepsy/tvb_epilepsy/service/model_inversion/stan/models/vep_sde_simple.stan");
+    reader.add_event(217, 217, "end", "/Users/dionperd/VEPtools/git/tvb-epilepsy/tvb_epilepsy/service/model_inversion/stan/models/vep_sde_simple.stan");
     return reader;
 }
 
 template <typename T0__>
 Eigen::Matrix<typename boost::math::tools::promote_args<T0__>::type, Eigen::Dynamic,Eigen::Dynamic>
-vector_differencing(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x, std::ostream* pstream__) {
+vector_differencing(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x1, std::ostream* pstream__) {
     typedef typename boost::math::tools::promote_args<T0__>::type local_scalar_t__;
     typedef local_scalar_t__ fun_return_scalar_t__;
     const static bool propto__ = true;
@@ -36,9 +36,9 @@ vector_differencing(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x, std::ostream
     try {
         {
         current_statement_begin__ = 4;
-        validate_non_negative_index("D", "num_elements(x)", num_elements(x));
-        validate_non_negative_index("D", "num_elements(x)", num_elements(x));
-        Eigen::Matrix<local_scalar_t__,Eigen::Dynamic,Eigen::Dynamic>  D(static_cast<Eigen::VectorXd::Index>(num_elements(x)),static_cast<Eigen::VectorXd::Index>(num_elements(x)));
+        validate_non_negative_index("D", "num_elements(x1)", num_elements(x1));
+        validate_non_negative_index("D", "num_elements(x1)", num_elements(x1));
+        Eigen::Matrix<local_scalar_t__,Eigen::Dynamic,Eigen::Dynamic>  D(static_cast<Eigen::VectorXd::Index>(num_elements(x1)),static_cast<Eigen::VectorXd::Index>(num_elements(x1)));
         (void) D;  // dummy to suppress unused var warning
 
         stan::math::initialize(D, DUMMY_VAR__);
@@ -46,10 +46,10 @@ vector_differencing(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x, std::ostream
 
 
         current_statement_begin__ = 5;
-        for (int i = 1; i <= num_elements(x); ++i) {
+        for (int i = 1; i <= num_elements(x1); ++i) {
 
             current_statement_begin__ = 6;
-            stan::math::assign(get_base1_lhs(D,i,"D",1), subtract(x,get_base1(x,i,"x",1)));
+            stan::math::assign(get_base1_lhs(D,i,"D",1), subtract(x1,get_base1(x1,i,"x1",1)));
         }
         current_statement_begin__ = 8;
         return stan::math::promote_scalar<fun_return_scalar_t__>(D);
@@ -65,17 +65,17 @@ vector_differencing(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x, std::ostream
 struct vector_differencing_functor__ {
     template <typename T0__>
         Eigen::Matrix<typename boost::math::tools::promote_args<T0__>::type, Eigen::Dynamic,Eigen::Dynamic>
-    operator()(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x, std::ostream* pstream__) const {
-        return vector_differencing(x, pstream__);
+    operator()(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x1, std::ostream* pstream__) const {
+        return vector_differencing(x1, pstream__);
     }
 };
 
 template <typename T0__, typename T1__, typename T2__, typename T3__>
 Eigen::Matrix<typename boost::math::tools::promote_args<T0__, T1__, T2__, T3__>::type, 1,Eigen::Dynamic>
-x_step(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x,
-           const Eigen::Matrix<T1__, 1,Eigen::Dynamic>& z,
-           const T2__& I1,
-           const T3__& time_scale, std::ostream* pstream__) {
+x1_step(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x1,
+            const Eigen::Matrix<T1__, 1,Eigen::Dynamic>& z,
+            const T2__& Iext1,
+            const T3__& tau1, std::ostream* pstream__) {
     typedef typename boost::math::tools::promote_args<T0__, T1__, T2__, T3__>::type local_scalar_t__;
     typedef local_scalar_t__ fun_return_scalar_t__;
     const static bool propto__ = true;
@@ -87,40 +87,40 @@ x_step(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x,
     try {
         {
         current_statement_begin__ = 12;
-        int nn(0);
-        (void) nn;  // dummy to suppress unused var warning
+        int n_active_regions(0);
+        (void) n_active_regions;  // dummy to suppress unused var warning
 
-        stan::math::fill(nn, std::numeric_limits<int>::min());
-        stan::math::assign(nn,num_elements(x));
+        stan::math::fill(n_active_regions, std::numeric_limits<int>::min());
+        stan::math::assign(n_active_regions,num_elements(x1));
         current_statement_begin__ = 13;
-        validate_non_negative_index("x_next", "nn", nn);
-        Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x_next(static_cast<Eigen::VectorXd::Index>(nn));
-        (void) x_next;  // dummy to suppress unused var warning
+        validate_non_negative_index("x1_next", "n_active_regions", n_active_regions);
+        Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x1_next(static_cast<Eigen::VectorXd::Index>(n_active_regions));
+        (void) x1_next;  // dummy to suppress unused var warning
 
-        stan::math::initialize(x_next, DUMMY_VAR__);
-        stan::math::fill(x_next,DUMMY_VAR__);
+        stan::math::initialize(x1_next, DUMMY_VAR__);
+        stan::math::fill(x1_next,DUMMY_VAR__);
         current_statement_begin__ = 14;
-        validate_non_negative_index("I1_vec", "nn", nn);
-        Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  I1_vec(static_cast<Eigen::VectorXd::Index>(nn));
-        (void) I1_vec;  // dummy to suppress unused var warning
+        validate_non_negative_index("Iext1_vec", "n_active_regions", n_active_regions);
+        Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  Iext1_vec(static_cast<Eigen::VectorXd::Index>(n_active_regions));
+        (void) Iext1_vec;  // dummy to suppress unused var warning
 
-        stan::math::initialize(I1_vec, DUMMY_VAR__);
-        stan::math::fill(I1_vec,DUMMY_VAR__);
-        stan::math::assign(I1_vec,rep_row_vector((I1 + 1.0),nn));
+        stan::math::initialize(Iext1_vec, DUMMY_VAR__);
+        stan::math::fill(Iext1_vec,DUMMY_VAR__);
+        stan::math::assign(Iext1_vec,rep_row_vector((Iext1 + 1.0),n_active_regions));
         current_statement_begin__ = 15;
-        validate_non_negative_index("dx", "nn", nn);
-        Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  dx(static_cast<Eigen::VectorXd::Index>(nn));
-        (void) dx;  // dummy to suppress unused var warning
+        validate_non_negative_index("dx1", "n_active_regions", n_active_regions);
+        Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  dx1(static_cast<Eigen::VectorXd::Index>(n_active_regions));
+        (void) dx1;  // dummy to suppress unused var warning
 
-        stan::math::initialize(dx, DUMMY_VAR__);
-        stan::math::fill(dx,DUMMY_VAR__);
-        stan::math::assign(dx,subtract(subtract(subtract(I1_vec,elt_multiply(elt_multiply(x,x),x)),multiply(2.0,elt_multiply(x,x))),z));
+        stan::math::initialize(dx1, DUMMY_VAR__);
+        stan::math::fill(dx1,DUMMY_VAR__);
+        stan::math::assign(dx1,subtract(subtract(subtract(Iext1_vec,elt_multiply(elt_multiply(x1,x1),x1)),multiply(2.0,elt_multiply(x1,x1))),z));
 
 
         current_statement_begin__ = 16;
-        stan::math::assign(x_next, add(x,multiply(time_scale,dx)));
+        stan::math::assign(x1_next, add(x1,multiply(tau1,dx1)));
         current_statement_begin__ = 17;
-        return stan::math::promote_scalar<fun_return_scalar_t__>(x_next);
+        return stan::math::promote_scalar<fun_return_scalar_t__>(x1_next);
         }
     } catch (const std::exception& e) {
         stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
@@ -130,27 +130,27 @@ x_step(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x,
 }
 
 
-struct x_step_functor__ {
+struct x1_step_functor__ {
     template <typename T0__, typename T1__, typename T2__, typename T3__>
         Eigen::Matrix<typename boost::math::tools::promote_args<T0__, T1__, T2__, T3__>::type, 1,Eigen::Dynamic>
-    operator()(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x,
-           const Eigen::Matrix<T1__, 1,Eigen::Dynamic>& z,
-           const T2__& I1,
-           const T3__& time_scale, std::ostream* pstream__) const {
-        return x_step(x, z, I1, time_scale, pstream__);
+    operator()(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x1,
+            const Eigen::Matrix<T1__, 1,Eigen::Dynamic>& z,
+            const T2__& Iext1,
+            const T3__& tau1, std::ostream* pstream__) const {
+        return x1_step(x1, z, Iext1, tau1, pstream__);
     }
 };
 
 template <typename T0__, typename T1__, typename T2__, typename T3__, typename T4__, typename T5__, typename T6__, typename T7__, typename T8__, typename T9__>
 Eigen::Matrix<typename boost::math::tools::promote_args<T0__, T1__, T2__, T3__, typename boost::math::tools::promote_args<T4__, T5__, T6__, T7__, typename boost::math::tools::promote_args<T8__, T9__>::type>::type>::type, 1,Eigen::Dynamic>
-z_step(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x,
+z_step(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x1,
            const Eigen::Matrix<T1__, 1,Eigen::Dynamic>& z,
            const Eigen::Matrix<T2__, 1,Eigen::Dynamic>& x0,
            const Eigen::Matrix<T3__, Eigen::Dynamic,Eigen::Dynamic>& FC,
            const Eigen::Matrix<T4__, Eigen::Dynamic,1>& Ic,
-           const T5__& x_eq_def,
-           const T6__& time_scale,
-           const Eigen::Matrix<T7__, 1,Eigen::Dynamic>& z_eta,
+           const T5__& x1_eq_def,
+           const T6__& tau1,
+           const Eigen::Matrix<T7__, 1,Eigen::Dynamic>& dZt,
            const T8__& sigma,
            const T9__& tau0, std::ostream* pstream__) {
     typedef typename boost::math::tools::promote_args<T0__, T1__, T2__, T3__, typename boost::math::tools::promote_args<T4__, T5__, T6__, T7__, typename boost::math::tools::promote_args<T8__, T9__>::type>::type>::type local_scalar_t__;
@@ -164,47 +164,47 @@ z_step(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x,
     try {
         {
         current_statement_begin__ = 22;
-        int nn(0);
-        (void) nn;  // dummy to suppress unused var warning
+        int n_active_regions(0);
+        (void) n_active_regions;  // dummy to suppress unused var warning
 
-        stan::math::fill(nn, std::numeric_limits<int>::min());
-        stan::math::assign(nn,num_elements(z));
+        stan::math::fill(n_active_regions, std::numeric_limits<int>::min());
+        stan::math::assign(n_active_regions,num_elements(z));
         current_statement_begin__ = 23;
-        validate_non_negative_index("z_next", "nn", nn);
-        Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  z_next(static_cast<Eigen::VectorXd::Index>(nn));
+        validate_non_negative_index("z_next", "n_active_regions", n_active_regions);
+        Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  z_next(static_cast<Eigen::VectorXd::Index>(n_active_regions));
         (void) z_next;  // dummy to suppress unused var warning
 
         stan::math::initialize(z_next, DUMMY_VAR__);
         stan::math::fill(z_next,DUMMY_VAR__);
         current_statement_begin__ = 24;
-        validate_non_negative_index("D", "nn", nn);
-        validate_non_negative_index("D", "nn", nn);
-        Eigen::Matrix<local_scalar_t__,Eigen::Dynamic,Eigen::Dynamic>  D(static_cast<Eigen::VectorXd::Index>(nn),static_cast<Eigen::VectorXd::Index>(nn));
+        validate_non_negative_index("D", "n_active_regions", n_active_regions);
+        validate_non_negative_index("D", "n_active_regions", n_active_regions);
+        Eigen::Matrix<local_scalar_t__,Eigen::Dynamic,Eigen::Dynamic>  D(static_cast<Eigen::VectorXd::Index>(n_active_regions),static_cast<Eigen::VectorXd::Index>(n_active_regions));
         (void) D;  // dummy to suppress unused var warning
 
         stan::math::initialize(D, DUMMY_VAR__);
         stan::math::fill(D,DUMMY_VAR__);
-        stan::math::assign(D,vector_differencing(x, pstream__));
+        stan::math::assign(D,vector_differencing(x1, pstream__));
         current_statement_begin__ = 27;
-        validate_non_negative_index("gx", "nn", nn);
-        Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  gx(static_cast<Eigen::VectorXd::Index>(nn));
+        validate_non_negative_index("gx", "n_active_regions", n_active_regions);
+        Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  gx(static_cast<Eigen::VectorXd::Index>(n_active_regions));
         (void) gx;  // dummy to suppress unused var warning
 
         stan::math::initialize(gx, DUMMY_VAR__);
         stan::math::fill(gx,DUMMY_VAR__);
-        stan::math::assign(gx,to_row_vector(add(rows_dot_product(FC,D),elt_multiply(Ic,to_vector(subtract(x_eq_def,x))))));
+        stan::math::assign(gx,to_row_vector(add(rows_dot_product(FC,D),elt_multiply(Ic,to_vector(subtract(x1_eq_def,x1))))));
         current_statement_begin__ = 28;
-        validate_non_negative_index("dz", "nn", nn);
-        Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  dz(static_cast<Eigen::VectorXd::Index>(nn));
+        validate_non_negative_index("dz", "n_active_regions", n_active_regions);
+        Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  dz(static_cast<Eigen::VectorXd::Index>(n_active_regions));
         (void) dz;  // dummy to suppress unused var warning
 
         stan::math::initialize(dz, DUMMY_VAR__);
         stan::math::fill(dz,DUMMY_VAR__);
-        stan::math::assign(dz,multiply(inv(tau0),subtract(subtract(multiply(4,subtract(x,x0)),z),gx)));
+        stan::math::assign(dz,multiply(inv(tau0),subtract(subtract(multiply(4,subtract(x1,x0)),z),gx)));
 
 
         current_statement_begin__ = 29;
-        stan::math::assign(z_next, add(add(z,multiply(time_scale,dz)),multiply(z_eta,sigma)));
+        stan::math::assign(z_next, add(add(z,multiply(tau1,dz)),multiply(dZt,sigma)));
         current_statement_begin__ = 30;
         return stan::math::promote_scalar<fun_return_scalar_t__>(z_next);
         }
@@ -219,17 +219,17 @@ z_step(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x,
 struct z_step_functor__ {
     template <typename T0__, typename T1__, typename T2__, typename T3__, typename T4__, typename T5__, typename T6__, typename T7__, typename T8__, typename T9__>
         Eigen::Matrix<typename boost::math::tools::promote_args<T0__, T1__, T2__, T3__, typename boost::math::tools::promote_args<T4__, T5__, T6__, T7__, typename boost::math::tools::promote_args<T8__, T9__>::type>::type>::type, 1,Eigen::Dynamic>
-    operator()(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x,
+    operator()(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& x1,
            const Eigen::Matrix<T1__, 1,Eigen::Dynamic>& z,
            const Eigen::Matrix<T2__, 1,Eigen::Dynamic>& x0,
            const Eigen::Matrix<T3__, Eigen::Dynamic,Eigen::Dynamic>& FC,
            const Eigen::Matrix<T4__, Eigen::Dynamic,1>& Ic,
-           const T5__& x_eq_def,
-           const T6__& time_scale,
-           const Eigen::Matrix<T7__, 1,Eigen::Dynamic>& z_eta,
+           const T5__& x1_eq_def,
+           const T6__& tau1,
+           const Eigen::Matrix<T7__, 1,Eigen::Dynamic>& dZt,
            const T8__& sigma,
            const T9__& tau0, std::ostream* pstream__) const {
-        return z_step(x, z, x0, FC, Ic, x_eq_def, time_scale, z_eta, sigma, tau0, pstream__);
+        return z_step(x1, z, x0, FC, Ic, x1_eq_def, tau1, dZt, sigma, tau0, pstream__);
     }
 };
 
@@ -302,14 +302,14 @@ normal_mean_std_to_lognorm_mu(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& mean_
     try {
         {
         current_statement_begin__ = 43;
-        int nn(0);
-        (void) nn;  // dummy to suppress unused var warning
+        int n_active_regions(0);
+        (void) n_active_regions;  // dummy to suppress unused var warning
 
-        stan::math::fill(nn, std::numeric_limits<int>::min());
-        stan::math::assign(nn,num_elements(mean_));
+        stan::math::fill(n_active_regions, std::numeric_limits<int>::min());
+        stan::math::assign(n_active_regions,num_elements(mean_));
         current_statement_begin__ = 44;
-        validate_non_negative_index("logsm21", "nn", nn);
-        Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  logsm21(static_cast<Eigen::VectorXd::Index>(nn));
+        validate_non_negative_index("logsm21", "n_active_regions", n_active_regions);
+        Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  logsm21(static_cast<Eigen::VectorXd::Index>(n_active_regions));
         (void) logsm21;  // dummy to suppress unused var warning
 
         stan::math::initialize(logsm21, DUMMY_VAR__);
@@ -354,14 +354,14 @@ normal_mean_std_to_lognorm_sigma(const Eigen::Matrix<T0__, 1,Eigen::Dynamic>& me
     try {
         {
         current_statement_begin__ = 50;
-        int nn(0);
-        (void) nn;  // dummy to suppress unused var warning
+        int n_active_regions(0);
+        (void) n_active_regions;  // dummy to suppress unused var warning
 
-        stan::math::fill(nn, std::numeric_limits<int>::min());
-        stan::math::assign(nn,num_elements(mean_));
+        stan::math::fill(n_active_regions, std::numeric_limits<int>::min());
+        stan::math::assign(n_active_regions,num_elements(mean_));
         current_statement_begin__ = 51;
-        validate_non_negative_index("logsm21", "nn", nn);
-        Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  logsm21(static_cast<Eigen::VectorXd::Index>(nn));
+        validate_non_negative_index("logsm21", "n_active_regions", n_active_regions);
+        Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  logsm21(static_cast<Eigen::VectorXd::Index>(n_active_regions));
         (void) logsm21;  // dummy to suppress unused var warning
 
         stan::math::initialize(logsm21, DUMMY_VAR__);
@@ -465,42 +465,42 @@ class vep_sde_simple_model : public prob_grad {
 private:
     int DEBUG;
     int SIMULATE;
-    int nn;
-    int nt;
-    int ns;
-    double I1;
+    int n_active_regions;
+    int n_times;
+    int n_target_data;
+    double Iext1;
     double tau0;
     double dt;
     double x0_hi;
     row_vector_d x0_star_mu;
     row_vector_d x0_star_std;
-    double x_eq_def;
-    row_vector_d x_init_mu;
+    double x1_eq_def;
+    row_vector_d x1_init_mu;
     row_vector_d z_init_mu;
-    double x_init_std;
+    double x1_init_std;
     double z_init_std;
-    double time_scale_mu;
-    double time_scale_std;
-    double k_mu;
-    double k_std;
+    double tau1_mu;
+    double tau1_std;
+    double K_mu;
+    double K_std;
     double sigma_mu;
     double sigma_std;
     double epsilon_mu;
     double epsilon_std;
     double offset_mu;
     double offset_std;
-    double amplitude_mu;
-    double amplitude_std;
-    double amplitude_lo;
+    double scale_mu;
+    double scale_std;
+    double scale_lo;
     matrix_d gain;
-    vector<row_vector_d> seeg_log_power;
+    vector<row_vector_d> target_data;
     vector_d Ic;
     matrix_d SC;
     double sqrtdt;
-    vector<double> amplitude_mu_sigma;
+    vector<double> scale_mu_sigma;
     vector<double> epsilon_mu_sigma;
-    vector<double> time_scale_mu_sigma;
-    double k;
+    vector<double> tau1_mu_sigma;
+    double K;
     vector<double> sigma_mu_sigma;
     row_vector_d x0_logmu;
     row_vector_d x0_sigma;
@@ -554,29 +554,29 @@ public:
             pos__ = 0;
             SIMULATE = vals_i__[pos__++];
             current_statement_begin__ = 69;
-            context__.validate_dims("data initialization", "nn", "int", context__.to_vec());
-            nn = int(0);
-            vals_i__ = context__.vals_i("nn");
+            context__.validate_dims("data initialization", "n_active_regions", "int", context__.to_vec());
+            n_active_regions = int(0);
+            vals_i__ = context__.vals_i("n_active_regions");
             pos__ = 0;
-            nn = vals_i__[pos__++];
+            n_active_regions = vals_i__[pos__++];
             current_statement_begin__ = 70;
-            context__.validate_dims("data initialization", "nt", "int", context__.to_vec());
-            nt = int(0);
-            vals_i__ = context__.vals_i("nt");
+            context__.validate_dims("data initialization", "n_times", "int", context__.to_vec());
+            n_times = int(0);
+            vals_i__ = context__.vals_i("n_times");
             pos__ = 0;
-            nt = vals_i__[pos__++];
+            n_times = vals_i__[pos__++];
             current_statement_begin__ = 71;
-            context__.validate_dims("data initialization", "ns", "int", context__.to_vec());
-            ns = int(0);
-            vals_i__ = context__.vals_i("ns");
+            context__.validate_dims("data initialization", "n_target_data", "int", context__.to_vec());
+            n_target_data = int(0);
+            vals_i__ = context__.vals_i("n_target_data");
             pos__ = 0;
-            ns = vals_i__[pos__++];
+            n_target_data = vals_i__[pos__++];
             current_statement_begin__ = 72;
-            context__.validate_dims("data initialization", "I1", "double", context__.to_vec());
-            I1 = double(0);
-            vals_r__ = context__.vals_r("I1");
+            context__.validate_dims("data initialization", "Iext1", "double", context__.to_vec());
+            Iext1 = double(0);
+            vals_r__ = context__.vals_r("Iext1");
             pos__ = 0;
-            I1 = vals_r__[pos__++];
+            Iext1 = vals_r__[pos__++];
             current_statement_begin__ = 73;
             context__.validate_dims("data initialization", "tau0", "double", context__.to_vec());
             tau0 = double(0);
@@ -596,61 +596,61 @@ public:
             pos__ = 0;
             x0_hi = vals_r__[pos__++];
             current_statement_begin__ = 78;
-            validate_non_negative_index("x0_star_mu", "nn", nn);
-            context__.validate_dims("data initialization", "x0_star_mu", "row_vector_d", context__.to_vec(nn));
-            validate_non_negative_index("x0_star_mu", "nn", nn);
-            x0_star_mu = row_vector_d(static_cast<Eigen::VectorXd::Index>(nn));
+            validate_non_negative_index("x0_star_mu", "n_active_regions", n_active_regions);
+            context__.validate_dims("data initialization", "x0_star_mu", "row_vector_d", context__.to_vec(n_active_regions));
+            validate_non_negative_index("x0_star_mu", "n_active_regions", n_active_regions);
+            x0_star_mu = row_vector_d(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             vals_r__ = context__.vals_r("x0_star_mu");
             pos__ = 0;
-            size_t x0_star_mu_i_vec_lim__ = nn;
+            size_t x0_star_mu_i_vec_lim__ = n_active_regions;
             for (size_t i_vec__ = 0; i_vec__ < x0_star_mu_i_vec_lim__; ++i_vec__) {
                 x0_star_mu[i_vec__] = vals_r__[pos__++];
             }
             current_statement_begin__ = 79;
-            validate_non_negative_index("x0_star_std", "nn", nn);
-            context__.validate_dims("data initialization", "x0_star_std", "row_vector_d", context__.to_vec(nn));
-            validate_non_negative_index("x0_star_std", "nn", nn);
-            x0_star_std = row_vector_d(static_cast<Eigen::VectorXd::Index>(nn));
+            validate_non_negative_index("x0_star_std", "n_active_regions", n_active_regions);
+            context__.validate_dims("data initialization", "x0_star_std", "row_vector_d", context__.to_vec(n_active_regions));
+            validate_non_negative_index("x0_star_std", "n_active_regions", n_active_regions);
+            x0_star_std = row_vector_d(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             vals_r__ = context__.vals_r("x0_star_std");
             pos__ = 0;
-            size_t x0_star_std_i_vec_lim__ = nn;
+            size_t x0_star_std_i_vec_lim__ = n_active_regions;
             for (size_t i_vec__ = 0; i_vec__ < x0_star_std_i_vec_lim__; ++i_vec__) {
                 x0_star_std[i_vec__] = vals_r__[pos__++];
             }
             current_statement_begin__ = 81;
-            context__.validate_dims("data initialization", "x_eq_def", "double", context__.to_vec());
-            x_eq_def = double(0);
-            vals_r__ = context__.vals_r("x_eq_def");
+            context__.validate_dims("data initialization", "x1_eq_def", "double", context__.to_vec());
+            x1_eq_def = double(0);
+            vals_r__ = context__.vals_r("x1_eq_def");
             pos__ = 0;
-            x_eq_def = vals_r__[pos__++];
+            x1_eq_def = vals_r__[pos__++];
             current_statement_begin__ = 82;
-            validate_non_negative_index("x_init_mu", "nn", nn);
-            context__.validate_dims("data initialization", "x_init_mu", "row_vector_d", context__.to_vec(nn));
-            validate_non_negative_index("x_init_mu", "nn", nn);
-            x_init_mu = row_vector_d(static_cast<Eigen::VectorXd::Index>(nn));
-            vals_r__ = context__.vals_r("x_init_mu");
+            validate_non_negative_index("x1_init_mu", "n_active_regions", n_active_regions);
+            context__.validate_dims("data initialization", "x1_init_mu", "row_vector_d", context__.to_vec(n_active_regions));
+            validate_non_negative_index("x1_init_mu", "n_active_regions", n_active_regions);
+            x1_init_mu = row_vector_d(static_cast<Eigen::VectorXd::Index>(n_active_regions));
+            vals_r__ = context__.vals_r("x1_init_mu");
             pos__ = 0;
-            size_t x_init_mu_i_vec_lim__ = nn;
-            for (size_t i_vec__ = 0; i_vec__ < x_init_mu_i_vec_lim__; ++i_vec__) {
-                x_init_mu[i_vec__] = vals_r__[pos__++];
+            size_t x1_init_mu_i_vec_lim__ = n_active_regions;
+            for (size_t i_vec__ = 0; i_vec__ < x1_init_mu_i_vec_lim__; ++i_vec__) {
+                x1_init_mu[i_vec__] = vals_r__[pos__++];
             }
             current_statement_begin__ = 83;
-            validate_non_negative_index("z_init_mu", "nn", nn);
-            context__.validate_dims("data initialization", "z_init_mu", "row_vector_d", context__.to_vec(nn));
-            validate_non_negative_index("z_init_mu", "nn", nn);
-            z_init_mu = row_vector_d(static_cast<Eigen::VectorXd::Index>(nn));
+            validate_non_negative_index("z_init_mu", "n_active_regions", n_active_regions);
+            context__.validate_dims("data initialization", "z_init_mu", "row_vector_d", context__.to_vec(n_active_regions));
+            validate_non_negative_index("z_init_mu", "n_active_regions", n_active_regions);
+            z_init_mu = row_vector_d(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             vals_r__ = context__.vals_r("z_init_mu");
             pos__ = 0;
-            size_t z_init_mu_i_vec_lim__ = nn;
+            size_t z_init_mu_i_vec_lim__ = n_active_regions;
             for (size_t i_vec__ = 0; i_vec__ < z_init_mu_i_vec_lim__; ++i_vec__) {
                 z_init_mu[i_vec__] = vals_r__[pos__++];
             }
             current_statement_begin__ = 84;
-            context__.validate_dims("data initialization", "x_init_std", "double", context__.to_vec());
-            x_init_std = double(0);
-            vals_r__ = context__.vals_r("x_init_std");
+            context__.validate_dims("data initialization", "x1_init_std", "double", context__.to_vec());
+            x1_init_std = double(0);
+            vals_r__ = context__.vals_r("x1_init_std");
             pos__ = 0;
-            x_init_std = vals_r__[pos__++];
+            x1_init_std = vals_r__[pos__++];
             current_statement_begin__ = 85;
             context__.validate_dims("data initialization", "z_init_std", "double", context__.to_vec());
             z_init_std = double(0);
@@ -658,29 +658,29 @@ public:
             pos__ = 0;
             z_init_std = vals_r__[pos__++];
             current_statement_begin__ = 86;
-            context__.validate_dims("data initialization", "time_scale_mu", "double", context__.to_vec());
-            time_scale_mu = double(0);
-            vals_r__ = context__.vals_r("time_scale_mu");
+            context__.validate_dims("data initialization", "tau1_mu", "double", context__.to_vec());
+            tau1_mu = double(0);
+            vals_r__ = context__.vals_r("tau1_mu");
             pos__ = 0;
-            time_scale_mu = vals_r__[pos__++];
+            tau1_mu = vals_r__[pos__++];
             current_statement_begin__ = 87;
-            context__.validate_dims("data initialization", "time_scale_std", "double", context__.to_vec());
-            time_scale_std = double(0);
-            vals_r__ = context__.vals_r("time_scale_std");
+            context__.validate_dims("data initialization", "tau1_std", "double", context__.to_vec());
+            tau1_std = double(0);
+            vals_r__ = context__.vals_r("tau1_std");
             pos__ = 0;
-            time_scale_std = vals_r__[pos__++];
+            tau1_std = vals_r__[pos__++];
             current_statement_begin__ = 88;
-            context__.validate_dims("data initialization", "k_mu", "double", context__.to_vec());
-            k_mu = double(0);
-            vals_r__ = context__.vals_r("k_mu");
+            context__.validate_dims("data initialization", "K_mu", "double", context__.to_vec());
+            K_mu = double(0);
+            vals_r__ = context__.vals_r("K_mu");
             pos__ = 0;
-            k_mu = vals_r__[pos__++];
+            K_mu = vals_r__[pos__++];
             current_statement_begin__ = 89;
-            context__.validate_dims("data initialization", "k_std", "double", context__.to_vec());
-            k_std = double(0);
-            vals_r__ = context__.vals_r("k_std");
+            context__.validate_dims("data initialization", "K_std", "double", context__.to_vec());
+            K_std = double(0);
+            vals_r__ = context__.vals_r("K_std");
             pos__ = 0;
-            k_std = vals_r__[pos__++];
+            K_std = vals_r__[pos__++];
             current_statement_begin__ = 90;
             context__.validate_dims("data initialization", "sigma_mu", "double", context__.to_vec());
             sigma_mu = double(0);
@@ -718,77 +718,77 @@ public:
             pos__ = 0;
             offset_std = vals_r__[pos__++];
             current_statement_begin__ = 96;
-            context__.validate_dims("data initialization", "amplitude_mu", "double", context__.to_vec());
-            amplitude_mu = double(0);
-            vals_r__ = context__.vals_r("amplitude_mu");
+            context__.validate_dims("data initialization", "scale_mu", "double", context__.to_vec());
+            scale_mu = double(0);
+            vals_r__ = context__.vals_r("scale_mu");
             pos__ = 0;
-            amplitude_mu = vals_r__[pos__++];
+            scale_mu = vals_r__[pos__++];
             current_statement_begin__ = 97;
-            context__.validate_dims("data initialization", "amplitude_std", "double", context__.to_vec());
-            amplitude_std = double(0);
-            vals_r__ = context__.vals_r("amplitude_std");
+            context__.validate_dims("data initialization", "scale_std", "double", context__.to_vec());
+            scale_std = double(0);
+            vals_r__ = context__.vals_r("scale_std");
             pos__ = 0;
-            amplitude_std = vals_r__[pos__++];
+            scale_std = vals_r__[pos__++];
             current_statement_begin__ = 98;
-            context__.validate_dims("data initialization", "amplitude_lo", "double", context__.to_vec());
-            amplitude_lo = double(0);
-            vals_r__ = context__.vals_r("amplitude_lo");
+            context__.validate_dims("data initialization", "scale_lo", "double", context__.to_vec());
+            scale_lo = double(0);
+            vals_r__ = context__.vals_r("scale_lo");
             pos__ = 0;
-            amplitude_lo = vals_r__[pos__++];
+            scale_lo = vals_r__[pos__++];
             current_statement_begin__ = 99;
-            validate_non_negative_index("gain", "ns", ns);
-            validate_non_negative_index("gain", "nn", nn);
-            context__.validate_dims("data initialization", "gain", "matrix_d", context__.to_vec(ns,nn));
-            validate_non_negative_index("gain", "ns", ns);
-            validate_non_negative_index("gain", "nn", nn);
-            gain = matrix_d(static_cast<Eigen::VectorXd::Index>(ns),static_cast<Eigen::VectorXd::Index>(nn));
+            validate_non_negative_index("gain", "n_target_data", n_target_data);
+            validate_non_negative_index("gain", "n_active_regions", n_active_regions);
+            context__.validate_dims("data initialization", "gain", "matrix_d", context__.to_vec(n_target_data,n_active_regions));
+            validate_non_negative_index("gain", "n_target_data", n_target_data);
+            validate_non_negative_index("gain", "n_active_regions", n_active_regions);
+            gain = matrix_d(static_cast<Eigen::VectorXd::Index>(n_target_data),static_cast<Eigen::VectorXd::Index>(n_active_regions));
             vals_r__ = context__.vals_r("gain");
             pos__ = 0;
-            size_t gain_m_mat_lim__ = ns;
-            size_t gain_n_mat_lim__ = nn;
+            size_t gain_m_mat_lim__ = n_target_data;
+            size_t gain_n_mat_lim__ = n_active_regions;
             for (size_t n_mat__ = 0; n_mat__ < gain_n_mat_lim__; ++n_mat__) {
                 for (size_t m_mat__ = 0; m_mat__ < gain_m_mat_lim__; ++m_mat__) {
                     gain(m_mat__,n_mat__) = vals_r__[pos__++];
                 }
             }
             current_statement_begin__ = 100;
-            validate_non_negative_index("seeg_log_power", "nt", nt);
-            validate_non_negative_index("seeg_log_power", "ns", ns);
-            context__.validate_dims("data initialization", "seeg_log_power", "row_vector_d", context__.to_vec(nt,ns));
-            validate_non_negative_index("seeg_log_power", "nt", nt);
-            validate_non_negative_index("seeg_log_power", "ns", ns);
-            seeg_log_power = std::vector<row_vector_d>(nt,row_vector_d(static_cast<Eigen::VectorXd::Index>(ns)));
-            vals_r__ = context__.vals_r("seeg_log_power");
+            validate_non_negative_index("target_data", "n_times", n_times);
+            validate_non_negative_index("target_data", "n_target_data", n_target_data);
+            context__.validate_dims("data initialization", "target_data", "row_vector_d", context__.to_vec(n_times,n_target_data));
+            validate_non_negative_index("target_data", "n_times", n_times);
+            validate_non_negative_index("target_data", "n_target_data", n_target_data);
+            target_data = std::vector<row_vector_d>(n_times,row_vector_d(static_cast<Eigen::VectorXd::Index>(n_target_data)));
+            vals_r__ = context__.vals_r("target_data");
             pos__ = 0;
-            size_t seeg_log_power_i_vec_lim__ = ns;
-            for (size_t i_vec__ = 0; i_vec__ < seeg_log_power_i_vec_lim__; ++i_vec__) {
-                size_t seeg_log_power_limit_0__ = nt;
-                for (size_t i_0__ = 0; i_0__ < seeg_log_power_limit_0__; ++i_0__) {
-                    seeg_log_power[i_0__][i_vec__] = vals_r__[pos__++];
+            size_t target_data_i_vec_lim__ = n_target_data;
+            for (size_t i_vec__ = 0; i_vec__ < target_data_i_vec_lim__; ++i_vec__) {
+                size_t target_data_limit_0__ = n_times;
+                for (size_t i_0__ = 0; i_0__ < target_data_limit_0__; ++i_0__) {
+                    target_data[i_0__][i_vec__] = vals_r__[pos__++];
             }
             }
             current_statement_begin__ = 101;
-            validate_non_negative_index("Ic", "nn", nn);
-            context__.validate_dims("data initialization", "Ic", "vector_d", context__.to_vec(nn));
-            validate_non_negative_index("Ic", "nn", nn);
-            Ic = vector_d(static_cast<Eigen::VectorXd::Index>(nn));
+            validate_non_negative_index("Ic", "n_active_regions", n_active_regions);
+            context__.validate_dims("data initialization", "Ic", "vector_d", context__.to_vec(n_active_regions));
+            validate_non_negative_index("Ic", "n_active_regions", n_active_regions);
+            Ic = vector_d(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             vals_r__ = context__.vals_r("Ic");
             pos__ = 0;
-            size_t Ic_i_vec_lim__ = nn;
+            size_t Ic_i_vec_lim__ = n_active_regions;
             for (size_t i_vec__ = 0; i_vec__ < Ic_i_vec_lim__; ++i_vec__) {
                 Ic[i_vec__] = vals_r__[pos__++];
             }
             current_statement_begin__ = 102;
-            validate_non_negative_index("SC", "nn", nn);
-            validate_non_negative_index("SC", "nn", nn);
-            context__.validate_dims("data initialization", "SC", "matrix_d", context__.to_vec(nn,nn));
-            validate_non_negative_index("SC", "nn", nn);
-            validate_non_negative_index("SC", "nn", nn);
-            SC = matrix_d(static_cast<Eigen::VectorXd::Index>(nn),static_cast<Eigen::VectorXd::Index>(nn));
+            validate_non_negative_index("SC", "n_active_regions", n_active_regions);
+            validate_non_negative_index("SC", "n_active_regions", n_active_regions);
+            context__.validate_dims("data initialization", "SC", "matrix_d", context__.to_vec(n_active_regions,n_active_regions));
+            validate_non_negative_index("SC", "n_active_regions", n_active_regions);
+            validate_non_negative_index("SC", "n_active_regions", n_active_regions);
+            SC = matrix_d(static_cast<Eigen::VectorXd::Index>(n_active_regions),static_cast<Eigen::VectorXd::Index>(n_active_regions));
             vals_r__ = context__.vals_r("SC");
             pos__ = 0;
-            size_t SC_m_mat_lim__ = nn;
-            size_t SC_n_mat_lim__ = nn;
+            size_t SC_m_mat_lim__ = n_active_regions;
+            size_t SC_n_mat_lim__ = n_active_regions;
             for (size_t n_mat__ = 0; n_mat__ < SC_n_mat_lim__; ++n_mat__) {
                 for (size_t m_mat__ = 0; m_mat__ < SC_m_mat_lim__; ++m_mat__) {
                     SC(m_mat__,n_mat__) = vals_r__[pos__++];
@@ -837,48 +837,48 @@ public:
             stan::math::fill(sqrtdt,DUMMY_VAR__);
             stan::math::assign(sqrtdt,stan::math::sqrt(dt));
             current_statement_begin__ = 107;
-            validate_non_negative_index("amplitude_mu_sigma", "2", 2);
-            amplitude_mu_sigma = std::vector<double>(2,double(0));
-            stan::math::fill(amplitude_mu_sigma,DUMMY_VAR__);
-            stan::math::assign(amplitude_mu_sigma,normal_mean_std_to_lognorm_mu_sigma(amplitude_mu,amplitude_std, pstream__));
+            validate_non_negative_index("scale_mu_sigma", "2", 2);
+            scale_mu_sigma = std::vector<double>(2,double(0));
+            stan::math::fill(scale_mu_sigma,DUMMY_VAR__);
+            stan::math::assign(scale_mu_sigma,normal_mean_std_to_lognorm_mu_sigma(scale_mu,scale_std, pstream__));
             current_statement_begin__ = 108;
             validate_non_negative_index("epsilon_mu_sigma", "2", 2);
             epsilon_mu_sigma = std::vector<double>(2,double(0));
             stan::math::fill(epsilon_mu_sigma,DUMMY_VAR__);
             stan::math::assign(epsilon_mu_sigma,normal_mean_std_to_lognorm_mu_sigma(epsilon_mu,epsilon_std, pstream__));
             current_statement_begin__ = 109;
-            validate_non_negative_index("time_scale_mu_sigma", "2", 2);
-            time_scale_mu_sigma = std::vector<double>(2,double(0));
-            stan::math::fill(time_scale_mu_sigma,DUMMY_VAR__);
-            stan::math::assign(time_scale_mu_sigma,normal_mean_std_to_lognorm_mu_sigma(time_scale_mu,time_scale_std, pstream__));
+            validate_non_negative_index("tau1_mu_sigma", "2", 2);
+            tau1_mu_sigma = std::vector<double>(2,double(0));
+            stan::math::fill(tau1_mu_sigma,DUMMY_VAR__);
+            stan::math::assign(tau1_mu_sigma,normal_mean_std_to_lognorm_mu_sigma(tau1_mu,tau1_std, pstream__));
             current_statement_begin__ = 111;
-            k = double(0);
-            stan::math::fill(k,DUMMY_VAR__);
-            stan::math::assign(k,k_mu);
+            K = double(0);
+            stan::math::fill(K,DUMMY_VAR__);
+            stan::math::assign(K,K_mu);
             current_statement_begin__ = 112;
             validate_non_negative_index("sigma_mu_sigma", "2", 2);
             sigma_mu_sigma = std::vector<double>(2,double(0));
             stan::math::fill(sigma_mu_sigma,DUMMY_VAR__);
             stan::math::assign(sigma_mu_sigma,normal_mean_std_to_lognorm_mu_sigma(sigma_mu,sigma_std, pstream__));
             current_statement_begin__ = 113;
-            validate_non_negative_index("x0_logmu", "nn", nn);
-            x0_logmu = row_vector_d(static_cast<Eigen::VectorXd::Index>(nn));
+            validate_non_negative_index("x0_logmu", "n_active_regions", n_active_regions);
+            x0_logmu = row_vector_d(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             stan::math::fill(x0_logmu,DUMMY_VAR__);
             stan::math::assign(x0_logmu,normal_mean_std_to_lognorm_mu(x0_star_mu,x0_star_std, pstream__));
             current_statement_begin__ = 114;
-            validate_non_negative_index("x0_sigma", "nn", nn);
-            x0_sigma = row_vector_d(static_cast<Eigen::VectorXd::Index>(nn));
+            validate_non_negative_index("x0_sigma", "n_active_regions", n_active_regions);
+            x0_sigma = row_vector_d(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             stan::math::fill(x0_sigma,DUMMY_VAR__);
             stan::math::assign(x0_sigma,normal_mean_std_to_lognorm_sigma(x0_star_mu,x0_star_std, pstream__));
             current_statement_begin__ = 116;
-            validate_non_negative_index("SC_", "nn", nn);
-            validate_non_negative_index("SC_", "nn", nn);
-            SC_ = matrix_d(static_cast<Eigen::VectorXd::Index>(nn),static_cast<Eigen::VectorXd::Index>(nn));
+            validate_non_negative_index("SC_", "n_active_regions", n_active_regions);
+            validate_non_negative_index("SC_", "n_active_regions", n_active_regions);
+            SC_ = matrix_d(static_cast<Eigen::VectorXd::Index>(n_active_regions),static_cast<Eigen::VectorXd::Index>(n_active_regions));
             stan::math::fill(SC_,DUMMY_VAR__);
             stan::math::assign(SC_,SC);
 
             current_statement_begin__ = 117;
-            for (int i = 1; i <= nn; ++i) {
+            for (int i = 1; i <= n_active_regions; ++i) {
                 current_statement_begin__ = 117;
                 stan::math::assign(get_base1_lhs(SC_,i,i,"SC_",1), 0);
             }
@@ -899,29 +899,29 @@ public:
             // validate, set parameter ranges
             num_params_r__ = 0U;
             param_ranges_i__.clear();
-            current_statement_begin__ = 135;
-        validate_non_negative_index("x0_star", "nn", nn);
-            num_params_r__ += nn;
-            current_statement_begin__ = 136;
-            ++num_params_r__;
             current_statement_begin__ = 137;
-            ++num_params_r__;
+        validate_non_negative_index("x0_star", "n_active_regions", n_active_regions);
+            num_params_r__ += n_active_regions;
             current_statement_begin__ = 138;
             ++num_params_r__;
             current_statement_begin__ = 139;
             ++num_params_r__;
             current_statement_begin__ = 140;
             ++num_params_r__;
-            current_statement_begin__ = 144;
-        validate_non_negative_index("x_init_star", "nn", nn);
-            num_params_r__ += nn;
-            current_statement_begin__ = 145;
-        validate_non_negative_index("z_init_star", "nn", nn);
-            num_params_r__ += nn;
+            current_statement_begin__ = 141;
+            ++num_params_r__;
+            current_statement_begin__ = 142;
+            ++num_params_r__;
+            current_statement_begin__ = 146;
+        validate_non_negative_index("x1_init_star", "n_active_regions", n_active_regions);
+            num_params_r__ += n_active_regions;
             current_statement_begin__ = 147;
-        validate_non_negative_index("z_eta_star", "nn", nn);
-            validate_non_negative_index("z_eta_star", "(nt - 1)", (nt - 1));
-            num_params_r__ += nn * (nt - 1);
+        validate_non_negative_index("z_init_star", "n_active_regions", n_active_regions);
+            num_params_r__ += n_active_regions;
+            current_statement_begin__ = 149;
+        validate_non_negative_index("dZt_star", "n_active_regions", n_active_regions);
+            validate_non_negative_index("dZt_star", "(n_times - 1)", (n_times - 1));
+            num_params_r__ += n_active_regions * (n_times - 1);
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
             // Next line prevents compiler griping about no return
@@ -946,10 +946,10 @@ public:
             throw std::runtime_error("variable x0_star missing");
         vals_r__ = context__.vals_r("x0_star");
         pos__ = 0U;
-        validate_non_negative_index("x0_star", "nn", nn);
-        context__.validate_dims("initialization", "x0_star", "row_vector_d", context__.to_vec(nn));
-        row_vector_d x0_star(static_cast<Eigen::VectorXd::Index>(nn));
-        for (int j1__ = 0U; j1__ < nn; ++j1__)
+        validate_non_negative_index("x0_star", "n_active_regions", n_active_regions);
+        context__.validate_dims("initialization", "x0_star", "row_vector_d", context__.to_vec(n_active_regions));
+        row_vector_d x0_star(static_cast<Eigen::VectorXd::Index>(n_active_regions));
+        for (int j1__ = 0U; j1__ < n_active_regions; ++j1__)
             x0_star(j1__) = vals_r__[pos__++];
         try {
             writer__.row_vector_unconstrain(x0_star);
@@ -970,17 +970,17 @@ public:
             throw std::runtime_error(std::string("Error transforming variable epsilon_star: ") + e.what());
         }
 
-        if (!(context__.contains_r("amplitude_star")))
-            throw std::runtime_error("variable amplitude_star missing");
-        vals_r__ = context__.vals_r("amplitude_star");
+        if (!(context__.contains_r("scale_star")))
+            throw std::runtime_error("variable scale_star missing");
+        vals_r__ = context__.vals_r("scale_star");
         pos__ = 0U;
-        context__.validate_dims("initialization", "amplitude_star", "double", context__.to_vec());
-        double amplitude_star(0);
-        amplitude_star = vals_r__[pos__++];
+        context__.validate_dims("initialization", "scale_star", "double", context__.to_vec());
+        double scale_star(0);
+        scale_star = vals_r__[pos__++];
         try {
-            writer__.scalar_unconstrain(amplitude_star);
+            writer__.scalar_unconstrain(scale_star);
         } catch (const std::exception& e) { 
-            throw std::runtime_error(std::string("Error transforming variable amplitude_star: ") + e.what());
+            throw std::runtime_error(std::string("Error transforming variable scale_star: ") + e.what());
         }
 
         if (!(context__.contains_r("offset_star")))
@@ -1009,42 +1009,42 @@ public:
             throw std::runtime_error(std::string("Error transforming variable sigma_star: ") + e.what());
         }
 
-        if (!(context__.contains_r("time_scale_star")))
-            throw std::runtime_error("variable time_scale_star missing");
-        vals_r__ = context__.vals_r("time_scale_star");
+        if (!(context__.contains_r("tau1_star")))
+            throw std::runtime_error("variable tau1_star missing");
+        vals_r__ = context__.vals_r("tau1_star");
         pos__ = 0U;
-        context__.validate_dims("initialization", "time_scale_star", "double", context__.to_vec());
-        double time_scale_star(0);
-        time_scale_star = vals_r__[pos__++];
+        context__.validate_dims("initialization", "tau1_star", "double", context__.to_vec());
+        double tau1_star(0);
+        tau1_star = vals_r__[pos__++];
         try {
-            writer__.scalar_unconstrain(time_scale_star);
+            writer__.scalar_unconstrain(tau1_star);
         } catch (const std::exception& e) { 
-            throw std::runtime_error(std::string("Error transforming variable time_scale_star: ") + e.what());
+            throw std::runtime_error(std::string("Error transforming variable tau1_star: ") + e.what());
         }
 
-        if (!(context__.contains_r("x_init_star")))
-            throw std::runtime_error("variable x_init_star missing");
-        vals_r__ = context__.vals_r("x_init_star");
+        if (!(context__.contains_r("x1_init_star")))
+            throw std::runtime_error("variable x1_init_star missing");
+        vals_r__ = context__.vals_r("x1_init_star");
         pos__ = 0U;
-        validate_non_negative_index("x_init_star", "nn", nn);
-        context__.validate_dims("initialization", "x_init_star", "row_vector_d", context__.to_vec(nn));
-        row_vector_d x_init_star(static_cast<Eigen::VectorXd::Index>(nn));
-        for (int j1__ = 0U; j1__ < nn; ++j1__)
-            x_init_star(j1__) = vals_r__[pos__++];
+        validate_non_negative_index("x1_init_star", "n_active_regions", n_active_regions);
+        context__.validate_dims("initialization", "x1_init_star", "row_vector_d", context__.to_vec(n_active_regions));
+        row_vector_d x1_init_star(static_cast<Eigen::VectorXd::Index>(n_active_regions));
+        for (int j1__ = 0U; j1__ < n_active_regions; ++j1__)
+            x1_init_star(j1__) = vals_r__[pos__++];
         try {
-            writer__.row_vector_unconstrain(x_init_star);
+            writer__.row_vector_unconstrain(x1_init_star);
         } catch (const std::exception& e) { 
-            throw std::runtime_error(std::string("Error transforming variable x_init_star: ") + e.what());
+            throw std::runtime_error(std::string("Error transforming variable x1_init_star: ") + e.what());
         }
 
         if (!(context__.contains_r("z_init_star")))
             throw std::runtime_error("variable z_init_star missing");
         vals_r__ = context__.vals_r("z_init_star");
         pos__ = 0U;
-        validate_non_negative_index("z_init_star", "nn", nn);
-        context__.validate_dims("initialization", "z_init_star", "row_vector_d", context__.to_vec(nn));
-        row_vector_d z_init_star(static_cast<Eigen::VectorXd::Index>(nn));
-        for (int j1__ = 0U; j1__ < nn; ++j1__)
+        validate_non_negative_index("z_init_star", "n_active_regions", n_active_regions);
+        context__.validate_dims("initialization", "z_init_star", "row_vector_d", context__.to_vec(n_active_regions));
+        row_vector_d z_init_star(static_cast<Eigen::VectorXd::Index>(n_active_regions));
+        for (int j1__ = 0U; j1__ < n_active_regions; ++j1__)
             z_init_star(j1__) = vals_r__[pos__++];
         try {
             writer__.row_vector_unconstrain(z_init_star);
@@ -1052,22 +1052,22 @@ public:
             throw std::runtime_error(std::string("Error transforming variable z_init_star: ") + e.what());
         }
 
-        if (!(context__.contains_r("z_eta_star")))
-            throw std::runtime_error("variable z_eta_star missing");
-        vals_r__ = context__.vals_r("z_eta_star");
+        if (!(context__.contains_r("dZt_star")))
+            throw std::runtime_error("variable dZt_star missing");
+        vals_r__ = context__.vals_r("dZt_star");
         pos__ = 0U;
-        validate_non_negative_index("z_eta_star", "(nt - 1)", (nt - 1));
-        validate_non_negative_index("z_eta_star", "nn", nn);
-        context__.validate_dims("initialization", "z_eta_star", "row_vector_d", context__.to_vec((nt - 1),nn));
-        std::vector<row_vector_d> z_eta_star((nt - 1),row_vector_d(static_cast<Eigen::VectorXd::Index>(nn)));
-        for (int j1__ = 0U; j1__ < nn; ++j1__)
-            for (int i0__ = 0U; i0__ < (nt - 1); ++i0__)
-                z_eta_star[i0__](j1__) = vals_r__[pos__++];
-        for (int i0__ = 0U; i0__ < (nt - 1); ++i0__)
+        validate_non_negative_index("dZt_star", "(n_times - 1)", (n_times - 1));
+        validate_non_negative_index("dZt_star", "n_active_regions", n_active_regions);
+        context__.validate_dims("initialization", "dZt_star", "row_vector_d", context__.to_vec((n_times - 1),n_active_regions));
+        std::vector<row_vector_d> dZt_star((n_times - 1),row_vector_d(static_cast<Eigen::VectorXd::Index>(n_active_regions)));
+        for (int j1__ = 0U; j1__ < n_active_regions; ++j1__)
+            for (int i0__ = 0U; i0__ < (n_times - 1); ++i0__)
+                dZt_star[i0__](j1__) = vals_r__[pos__++];
+        for (int i0__ = 0U; i0__ < (n_times - 1); ++i0__)
             try {
-            writer__.row_vector_unconstrain(z_eta_star[i0__]);
+            writer__.row_vector_unconstrain(dZt_star[i0__]);
         } catch (const std::exception& e) { 
-            throw std::runtime_error(std::string("Error transforming variable z_eta_star: ") + e.what());
+            throw std::runtime_error(std::string("Error transforming variable dZt_star: ") + e.what());
         }
 
         params_r__ = writer__.data_r();
@@ -1106,9 +1106,9 @@ public:
             Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x0_star;
             (void) x0_star;  // dummy to suppress unused var warning
             if (jacobian__)
-                x0_star = in__.row_vector_constrain(nn,lp__);
+                x0_star = in__.row_vector_constrain(n_active_regions,lp__);
             else
-                x0_star = in__.row_vector_constrain(nn);
+                x0_star = in__.row_vector_constrain(n_active_regions);
 
             local_scalar_t__ epsilon_star;
             (void) epsilon_star;  // dummy to suppress unused var warning
@@ -1117,12 +1117,12 @@ public:
             else
                 epsilon_star = in__.scalar_constrain();
 
-            local_scalar_t__ amplitude_star;
-            (void) amplitude_star;  // dummy to suppress unused var warning
+            local_scalar_t__ scale_star;
+            (void) scale_star;  // dummy to suppress unused var warning
             if (jacobian__)
-                amplitude_star = in__.scalar_constrain(lp__);
+                scale_star = in__.scalar_constrain(lp__);
             else
-                amplitude_star = in__.scalar_constrain();
+                scale_star = in__.scalar_constrain();
 
             local_scalar_t__ offset_star;
             (void) offset_star;  // dummy to suppress unused var warning
@@ -1138,134 +1138,134 @@ public:
             else
                 sigma_star = in__.scalar_constrain();
 
-            local_scalar_t__ time_scale_star;
-            (void) time_scale_star;  // dummy to suppress unused var warning
+            local_scalar_t__ tau1_star;
+            (void) tau1_star;  // dummy to suppress unused var warning
             if (jacobian__)
-                time_scale_star = in__.scalar_constrain(lp__);
+                tau1_star = in__.scalar_constrain(lp__);
             else
-                time_scale_star = in__.scalar_constrain();
+                tau1_star = in__.scalar_constrain();
 
-            Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x_init_star;
-            (void) x_init_star;  // dummy to suppress unused var warning
+            Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x1_init_star;
+            (void) x1_init_star;  // dummy to suppress unused var warning
             if (jacobian__)
-                x_init_star = in__.row_vector_constrain(nn,lp__);
+                x1_init_star = in__.row_vector_constrain(n_active_regions,lp__);
             else
-                x_init_star = in__.row_vector_constrain(nn);
+                x1_init_star = in__.row_vector_constrain(n_active_regions);
 
             Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  z_init_star;
             (void) z_init_star;  // dummy to suppress unused var warning
             if (jacobian__)
-                z_init_star = in__.row_vector_constrain(nn,lp__);
+                z_init_star = in__.row_vector_constrain(n_active_regions,lp__);
             else
-                z_init_star = in__.row_vector_constrain(nn);
+                z_init_star = in__.row_vector_constrain(n_active_regions);
 
-            vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > z_eta_star;
-            size_t dim_z_eta_star_0__ = (nt - 1);
-            z_eta_star.reserve(dim_z_eta_star_0__);
-            for (size_t k_0__ = 0; k_0__ < dim_z_eta_star_0__; ++k_0__) {
+            vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > dZt_star;
+            size_t dim_dZt_star_0__ = (n_times - 1);
+            dZt_star.reserve(dim_dZt_star_0__);
+            for (size_t k_0__ = 0; k_0__ < dim_dZt_star_0__; ++k_0__) {
                 if (jacobian__)
-                    z_eta_star.push_back(in__.row_vector_constrain(nn,lp__));
+                    dZt_star.push_back(in__.row_vector_constrain(n_active_regions,lp__));
                 else
-                    z_eta_star.push_back(in__.row_vector_constrain(nn));
+                    dZt_star.push_back(in__.row_vector_constrain(n_active_regions));
             }
 
 
             // transformed parameters
-            current_statement_begin__ = 152;
+            current_statement_begin__ = 154;
             local_scalar_t__ offset;
             (void) offset;  // dummy to suppress unused var warning
 
             stan::math::initialize(offset, DUMMY_VAR__);
             stan::math::fill(offset,DUMMY_VAR__);
             stan::math::assign(offset,(offset_mu + (offset_star * offset_std)));
-            current_statement_begin__ = 153;
-            local_scalar_t__ amplitude;
-            (void) amplitude;  // dummy to suppress unused var warning
+            current_statement_begin__ = 155;
+            local_scalar_t__ scale;
+            (void) scale;  // dummy to suppress unused var warning
 
-            stan::math::initialize(amplitude, DUMMY_VAR__);
-            stan::math::fill(amplitude,DUMMY_VAR__);
-            stan::math::assign(amplitude,standard_normal_to_lognormal(amplitude_star,get_base1(amplitude_mu_sigma,1,"amplitude_mu_sigma",1),get_base1(amplitude_mu_sigma,2,"amplitude_mu_sigma",1), pstream__));
-            current_statement_begin__ = 154;
+            stan::math::initialize(scale, DUMMY_VAR__);
+            stan::math::fill(scale,DUMMY_VAR__);
+            stan::math::assign(scale,standard_normal_to_lognormal(scale_star,get_base1(scale_mu_sigma,1,"scale_mu_sigma",1),get_base1(scale_mu_sigma,2,"scale_mu_sigma",1), pstream__));
+            current_statement_begin__ = 156;
             local_scalar_t__ epsilon;
             (void) epsilon;  // dummy to suppress unused var warning
 
             stan::math::initialize(epsilon, DUMMY_VAR__);
             stan::math::fill(epsilon,DUMMY_VAR__);
             stan::math::assign(epsilon,standard_normal_to_lognormal(epsilon_star,get_base1(epsilon_mu_sigma,1,"epsilon_mu_sigma",1),get_base1(epsilon_mu_sigma,2,"epsilon_mu_sigma",1), pstream__));
-            current_statement_begin__ = 155;
+            current_statement_begin__ = 157;
             local_scalar_t__ sigma;
             (void) sigma;  // dummy to suppress unused var warning
 
             stan::math::initialize(sigma, DUMMY_VAR__);
             stan::math::fill(sigma,DUMMY_VAR__);
             stan::math::assign(sigma,standard_normal_to_lognormal(sigma_star,get_base1(sigma_mu_sigma,1,"sigma_mu_sigma",1),get_base1(sigma_mu_sigma,2,"sigma_mu_sigma",1), pstream__));
-            current_statement_begin__ = 156;
-            local_scalar_t__ time_scale;
-            (void) time_scale;  // dummy to suppress unused var warning
-
-            stan::math::initialize(time_scale, DUMMY_VAR__);
-            stan::math::fill(time_scale,DUMMY_VAR__);
-            stan::math::assign(time_scale,standard_normal_to_lognormal(time_scale_star,get_base1(time_scale_mu_sigma,1,"time_scale_mu_sigma",1),get_base1(time_scale_mu_sigma,2,"time_scale_mu_sigma",1), pstream__));
             current_statement_begin__ = 158;
-            validate_non_negative_index("x0", "nn", nn);
-            Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x0(static_cast<Eigen::VectorXd::Index>(nn));
+            local_scalar_t__ tau1;
+            (void) tau1;  // dummy to suppress unused var warning
+
+            stan::math::initialize(tau1, DUMMY_VAR__);
+            stan::math::fill(tau1,DUMMY_VAR__);
+            stan::math::assign(tau1,standard_normal_to_lognormal(tau1_star,get_base1(tau1_mu_sigma,1,"tau1_mu_sigma",1),get_base1(tau1_mu_sigma,2,"tau1_mu_sigma",1), pstream__));
+            current_statement_begin__ = 160;
+            validate_non_negative_index("x0", "n_active_regions", n_active_regions);
+            Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x0(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             (void) x0;  // dummy to suppress unused var warning
 
             stan::math::initialize(x0, DUMMY_VAR__);
             stan::math::fill(x0,DUMMY_VAR__);
             stan::math::assign(x0,subtract(x0_hi,standard_normal_to_lognormal_row(x0_star,x0_logmu,x0_sigma, pstream__)));
-            current_statement_begin__ = 159;
-            validate_non_negative_index("x_init", "nn", nn);
-            Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x_init(static_cast<Eigen::VectorXd::Index>(nn));
-            (void) x_init;  // dummy to suppress unused var warning
+            current_statement_begin__ = 161;
+            validate_non_negative_index("x1_init", "n_active_regions", n_active_regions);
+            Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x1_init(static_cast<Eigen::VectorXd::Index>(n_active_regions));
+            (void) x1_init;  // dummy to suppress unused var warning
 
-            stan::math::initialize(x_init, DUMMY_VAR__);
-            stan::math::fill(x_init,DUMMY_VAR__);
-            stan::math::assign(x_init,add(x_init_mu,multiply(x_init_star,x_init_std)));
-            current_statement_begin__ = 160;
-            validate_non_negative_index("z_init", "nn", nn);
-            Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  z_init(static_cast<Eigen::VectorXd::Index>(nn));
+            stan::math::initialize(x1_init, DUMMY_VAR__);
+            stan::math::fill(x1_init,DUMMY_VAR__);
+            stan::math::assign(x1_init,add(x1_init_mu,multiply(x1_init_star,x1_init_std)));
+            current_statement_begin__ = 162;
+            validate_non_negative_index("z_init", "n_active_regions", n_active_regions);
+            Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  z_init(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             (void) z_init;  // dummy to suppress unused var warning
 
             stan::math::initialize(z_init, DUMMY_VAR__);
             stan::math::fill(z_init,DUMMY_VAR__);
             stan::math::assign(z_init,add(z_init_mu,multiply(z_init_star,z_init_std)));
-            current_statement_begin__ = 161;
-            validate_non_negative_index("x", "nn", nn);
-            validate_non_negative_index("x", "nt", nt);
-            vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > x(nt, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(nn))));
-            stan::math::initialize(x, DUMMY_VAR__);
-            stan::math::fill(x,DUMMY_VAR__);
-            current_statement_begin__ = 162;
-            validate_non_negative_index("z", "nn", nn);
-            validate_non_negative_index("z", "nt", nt);
-            vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > z(nt, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(nn))));
+            current_statement_begin__ = 163;
+            validate_non_negative_index("x1", "n_active_regions", n_active_regions);
+            validate_non_negative_index("x1", "n_times", n_times);
+            vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > x1(n_times, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(n_active_regions))));
+            stan::math::initialize(x1, DUMMY_VAR__);
+            stan::math::fill(x1,DUMMY_VAR__);
+            current_statement_begin__ = 164;
+            validate_non_negative_index("z", "n_active_regions", n_active_regions);
+            validate_non_negative_index("z", "n_times", n_times);
+            vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > z(n_times, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(n_active_regions))));
             stan::math::initialize(z, DUMMY_VAR__);
             stan::math::fill(z,DUMMY_VAR__);
-            current_statement_begin__ = 163;
-            validate_non_negative_index("mu_seeg_log_power", "ns", ns);
-            validate_non_negative_index("mu_seeg_log_power", "nt", nt);
-            vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > mu_seeg_log_power(nt, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(ns))));
-            stan::math::initialize(mu_seeg_log_power, DUMMY_VAR__);
-            stan::math::fill(mu_seeg_log_power,DUMMY_VAR__);
-
-
             current_statement_begin__ = 165;
-            stan::math::assign(get_base1_lhs(x,1,"x",1), x_init);
-            current_statement_begin__ = 166;
-            stan::math::assign(get_base1_lhs(z,1,"z",1), z_init);
-            current_statement_begin__ = 167;
-            for (int t = 1; t <= (nt - 1); ++t) {
+            validate_non_negative_index("fit_target_data", "n_target_data", n_target_data);
+            validate_non_negative_index("fit_target_data", "n_times", n_times);
+            vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > fit_target_data(n_times, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(n_target_data))));
+            stan::math::initialize(fit_target_data, DUMMY_VAR__);
+            stan::math::fill(fit_target_data,DUMMY_VAR__);
 
-                current_statement_begin__ = 168;
-                stan::math::assign(get_base1_lhs(x,(t + 1),"x",1), x_step(get_base1(x,t,"x",1),get_base1(z,t,"z",1),I1,(dt * time_scale), pstream__));
-                current_statement_begin__ = 169;
-                stan::math::assign(get_base1_lhs(z,(t + 1),"z",1), z_step(get_base1(x,t,"x",1),get_base1(z,t,"z",1),x0,multiply(k,SC),Ic,x_eq_def,(dt * time_scale),get_base1(z_eta_star,t,"z_eta_star",1),(sqrtdt * sigma),tau0, pstream__));
+
+            current_statement_begin__ = 167;
+            stan::math::assign(get_base1_lhs(x1,1,"x1",1), x1_init);
+            current_statement_begin__ = 168;
+            stan::math::assign(get_base1_lhs(z,1,"z",1), z_init);
+            current_statement_begin__ = 169;
+            for (int t = 1; t <= (n_times - 1); ++t) {
+
+                current_statement_begin__ = 170;
+                stan::math::assign(get_base1_lhs(x1,(t + 1),"x1",1), x1_step(get_base1(x1,t,"x1",1),get_base1(z,t,"z",1),Iext1,(dt * tau1), pstream__));
+                current_statement_begin__ = 171;
+                stan::math::assign(get_base1_lhs(z,(t + 1),"z",1), z_step(get_base1(x1,t,"x1",1),get_base1(z,t,"z",1),x0,multiply(K,SC),Ic,x1_eq_def,(dt * tau1),get_base1(dZt_star,t,"dZt_star",1),(sqrtdt * sigma),tau0, pstream__));
             }
-            current_statement_begin__ = 172;
-            for (int t = 1; t <= nt; ++t) {
-                current_statement_begin__ = 173;
-                stan::math::assign(get_base1_lhs(mu_seeg_log_power,t,"mu_seeg_log_power",1), multiply(amplitude,transpose(add(stan::math::log(multiply(gain,stan::math::exp(subtract(transpose(get_base1(x,t,"x",1)),x_eq_def)))),offset))));
+            current_statement_begin__ = 174;
+            for (int t = 1; t <= n_times; ++t) {
+                current_statement_begin__ = 175;
+                stan::math::assign(get_base1_lhs(fit_target_data,t,"fit_target_data",1), multiply(scale,transpose(add(stan::math::log(multiply(gain,stan::math::exp(subtract(transpose(get_base1(x1,t,"x1",1)),x1_eq_def)))),offset))));
             }
 
             // validate transformed parameters
@@ -1274,9 +1274,9 @@ public:
                 msg__ << "Undefined transformed parameter: offset";
                 throw std::runtime_error(msg__.str());
             }
-            if (stan::math::is_uninitialized(amplitude)) {
+            if (stan::math::is_uninitialized(scale)) {
                 std::stringstream msg__;
-                msg__ << "Undefined transformed parameter: amplitude";
+                msg__ << "Undefined transformed parameter: scale";
                 throw std::runtime_error(msg__.str());
             }
             if (stan::math::is_uninitialized(epsilon)) {
@@ -1289,43 +1289,43 @@ public:
                 msg__ << "Undefined transformed parameter: sigma";
                 throw std::runtime_error(msg__.str());
             }
-            if (stan::math::is_uninitialized(time_scale)) {
+            if (stan::math::is_uninitialized(tau1)) {
                 std::stringstream msg__;
-                msg__ << "Undefined transformed parameter: time_scale";
+                msg__ << "Undefined transformed parameter: tau1";
                 throw std::runtime_error(msg__.str());
             }
-            for (int i0__ = 0; i0__ < nn; ++i0__) {
+            for (int i0__ = 0; i0__ < n_active_regions; ++i0__) {
                 if (stan::math::is_uninitialized(x0(i0__))) {
                     std::stringstream msg__;
                     msg__ << "Undefined transformed parameter: x0" << '[' << i0__ << ']';
                     throw std::runtime_error(msg__.str());
                 }
             }
-            for (int i0__ = 0; i0__ < nn; ++i0__) {
-                if (stan::math::is_uninitialized(x_init(i0__))) {
+            for (int i0__ = 0; i0__ < n_active_regions; ++i0__) {
+                if (stan::math::is_uninitialized(x1_init(i0__))) {
                     std::stringstream msg__;
-                    msg__ << "Undefined transformed parameter: x_init" << '[' << i0__ << ']';
+                    msg__ << "Undefined transformed parameter: x1_init" << '[' << i0__ << ']';
                     throw std::runtime_error(msg__.str());
                 }
             }
-            for (int i0__ = 0; i0__ < nn; ++i0__) {
+            for (int i0__ = 0; i0__ < n_active_regions; ++i0__) {
                 if (stan::math::is_uninitialized(z_init(i0__))) {
                     std::stringstream msg__;
                     msg__ << "Undefined transformed parameter: z_init" << '[' << i0__ << ']';
                     throw std::runtime_error(msg__.str());
                 }
             }
-            for (int i0__ = 0; i0__ < nt; ++i0__) {
-                for (int i1__ = 0; i1__ < nn; ++i1__) {
-                    if (stan::math::is_uninitialized(x[i0__](i1__))) {
+            for (int i0__ = 0; i0__ < n_times; ++i0__) {
+                for (int i1__ = 0; i1__ < n_active_regions; ++i1__) {
+                    if (stan::math::is_uninitialized(x1[i0__](i1__))) {
                         std::stringstream msg__;
-                        msg__ << "Undefined transformed parameter: x" << '[' << i0__ << ']' << '[' << i1__ << ']';
+                        msg__ << "Undefined transformed parameter: x1" << '[' << i0__ << ']' << '[' << i1__ << ']';
                         throw std::runtime_error(msg__.str());
                     }
                 }
             }
-            for (int i0__ = 0; i0__ < nt; ++i0__) {
-                for (int i1__ = 0; i1__ < nn; ++i1__) {
+            for (int i0__ = 0; i0__ < n_times; ++i0__) {
+                for (int i1__ = 0; i1__ < n_active_regions; ++i1__) {
                     if (stan::math::is_uninitialized(z[i0__](i1__))) {
                         std::stringstream msg__;
                         msg__ << "Undefined transformed parameter: z" << '[' << i0__ << ']' << '[' << i1__ << ']';
@@ -1333,11 +1333,11 @@ public:
                     }
                 }
             }
-            for (int i0__ = 0; i0__ < nt; ++i0__) {
-                for (int i1__ = 0; i1__ < ns; ++i1__) {
-                    if (stan::math::is_uninitialized(mu_seeg_log_power[i0__](i1__))) {
+            for (int i0__ = 0; i0__ < n_times; ++i0__) {
+                for (int i1__ = 0; i1__ < n_target_data; ++i1__) {
+                    if (stan::math::is_uninitialized(fit_target_data[i0__](i1__))) {
                         std::stringstream msg__;
-                        msg__ << "Undefined transformed parameter: mu_seeg_log_power" << '[' << i0__ << ']' << '[' << i1__ << ']';
+                        msg__ << "Undefined transformed parameter: fit_target_data" << '[' << i0__ << ']' << '[' << i1__ << ']';
                         throw std::runtime_error(msg__.str());
                     }
                 }
@@ -1345,48 +1345,48 @@ public:
 
             const char* function__ = "validate transformed params";
             (void) function__;  // dummy to suppress unused var warning
-            current_statement_begin__ = 152;
-            current_statement_begin__ = 153;
             current_statement_begin__ = 154;
             current_statement_begin__ = 155;
             current_statement_begin__ = 156;
+            current_statement_begin__ = 157;
             current_statement_begin__ = 158;
-            current_statement_begin__ = 159;
             current_statement_begin__ = 160;
             current_statement_begin__ = 161;
             current_statement_begin__ = 162;
             current_statement_begin__ = 163;
+            current_statement_begin__ = 164;
+            current_statement_begin__ = 165;
 
             // model body
 
-            current_statement_begin__ = 186;
-            lp_accum__.add(normal_log<propto__>(offset_star, 0.0, 1.0));
-            current_statement_begin__ = 187;
-            lp_accum__.add(normal_log<propto__>(amplitude_star, 0.0, 1.0));
-            current_statement_begin__ = 188;
-            lp_accum__.add(normal_log<propto__>(epsilon_star, 0.0, 1.0));
             current_statement_begin__ = 189;
-            lp_accum__.add(normal_log<propto__>(sigma_star, 0.0, 1.0));
+            lp_accum__.add(normal_log<propto__>(offset_star, 0.0, 1.0));
             current_statement_begin__ = 190;
-            lp_accum__.add(normal_log<propto__>(time_scale_star, 0.0, 1.0));
+            lp_accum__.add(normal_log<propto__>(scale_star, 0.0, 1.0));
+            current_statement_begin__ = 191;
+            lp_accum__.add(normal_log<propto__>(epsilon_star, 0.0, 1.0));
             current_statement_begin__ = 192;
-            lp_accum__.add(normal_log<propto__>(to_row_vector(x0_star), 0.0, 1.0));
+            lp_accum__.add(normal_log<propto__>(sigma_star, 0.0, 1.0));
             current_statement_begin__ = 193;
-            lp_accum__.add(normal_log<propto__>(x_init_star, 0.0, 1.0));
-            current_statement_begin__ = 194;
-            lp_accum__.add(normal_log<propto__>(z_init_star, 0.0, 1.0));
+            lp_accum__.add(normal_log<propto__>(tau1_star, 0.0, 1.0));
+            current_statement_begin__ = 195;
+            lp_accum__.add(normal_log<propto__>(to_row_vector(x0_star), 0.0, 1.0));
             current_statement_begin__ = 196;
-            for (int t = 1; t <= (nt - 1); ++t) {
+            lp_accum__.add(normal_log<propto__>(x1_init_star, 0.0, 1.0));
+            current_statement_begin__ = 197;
+            lp_accum__.add(normal_log<propto__>(z_init_star, 0.0, 1.0));
+            current_statement_begin__ = 199;
+            for (int t = 1; t <= (n_times - 1); ++t) {
 
-                current_statement_begin__ = 198;
-                lp_accum__.add(normal_log<propto__>(to_vector(get_base1(z_eta_star,t,"z_eta_star",1)), 0.0, 1.0));
+                current_statement_begin__ = 201;
+                lp_accum__.add(normal_log<propto__>(to_vector(get_base1(dZt_star,t,"dZt_star",1)), 0.0, 1.0));
             }
-            current_statement_begin__ = 201;
+            current_statement_begin__ = 204;
             if (as_bool(logical_lt(SIMULATE,1))) {
-                current_statement_begin__ = 202;
-                for (int t = 1; t <= nt; ++t) {
-                    current_statement_begin__ = 203;
-                    lp_accum__.add(normal_log<propto__>(get_base1(seeg_log_power,t,"seeg_log_power",1), get_base1(mu_seeg_log_power,t,"mu_seeg_log_power",1), epsilon));
+                current_statement_begin__ = 205;
+                for (int t = 1; t <= n_times; ++t) {
+                    current_statement_begin__ = 206;
+                    lp_accum__.add(normal_log<propto__>(get_base1(target_data,t,"target_data",1), get_base1(fit_target_data,t,"fit_target_data",1), epsilon));
                 }
             }
 
@@ -1417,24 +1417,24 @@ public:
         names__.resize(0);
         names__.push_back("x0_star");
         names__.push_back("epsilon_star");
-        names__.push_back("amplitude_star");
+        names__.push_back("scale_star");
         names__.push_back("offset_star");
         names__.push_back("sigma_star");
-        names__.push_back("time_scale_star");
-        names__.push_back("x_init_star");
+        names__.push_back("tau1_star");
+        names__.push_back("x1_init_star");
         names__.push_back("z_init_star");
-        names__.push_back("z_eta_star");
+        names__.push_back("dZt_star");
         names__.push_back("offset");
-        names__.push_back("amplitude");
+        names__.push_back("scale");
         names__.push_back("epsilon");
         names__.push_back("sigma");
-        names__.push_back("time_scale");
+        names__.push_back("tau1");
         names__.push_back("x0");
-        names__.push_back("x_init");
+        names__.push_back("x1_init");
         names__.push_back("z_init");
-        names__.push_back("x");
+        names__.push_back("x1");
         names__.push_back("z");
-        names__.push_back("mu_seeg_log_power");
+        names__.push_back("fit_target_data");
         names__.push_back("log_likelihood");
     }
 
@@ -1443,7 +1443,7 @@ public:
         dimss__.resize(0);
         std::vector<size_t> dims__;
         dims__.resize(0);
-        dims__.push_back(nn);
+        dims__.push_back(n_active_regions);
         dimss__.push_back(dims__);
         dims__.resize(0);
         dimss__.push_back(dims__);
@@ -1456,18 +1456,14 @@ public:
         dims__.resize(0);
         dimss__.push_back(dims__);
         dims__.resize(0);
-        dims__.push_back(nn);
+        dims__.push_back(n_active_regions);
         dimss__.push_back(dims__);
         dims__.resize(0);
-        dims__.push_back(nn);
+        dims__.push_back(n_active_regions);
         dimss__.push_back(dims__);
         dims__.resize(0);
-        dims__.push_back((nt - 1));
-        dims__.push_back(nn);
-        dimss__.push_back(dims__);
-        dims__.resize(0);
-        dimss__.push_back(dims__);
-        dims__.resize(0);
+        dims__.push_back((n_times - 1));
+        dims__.push_back(n_active_regions);
         dimss__.push_back(dims__);
         dims__.resize(0);
         dimss__.push_back(dims__);
@@ -1476,29 +1472,33 @@ public:
         dims__.resize(0);
         dimss__.push_back(dims__);
         dims__.resize(0);
-        dims__.push_back(nn);
         dimss__.push_back(dims__);
         dims__.resize(0);
-        dims__.push_back(nn);
         dimss__.push_back(dims__);
         dims__.resize(0);
-        dims__.push_back(nn);
+        dims__.push_back(n_active_regions);
         dimss__.push_back(dims__);
         dims__.resize(0);
-        dims__.push_back(nt);
-        dims__.push_back(nn);
+        dims__.push_back(n_active_regions);
         dimss__.push_back(dims__);
         dims__.resize(0);
-        dims__.push_back(nt);
-        dims__.push_back(nn);
+        dims__.push_back(n_active_regions);
         dimss__.push_back(dims__);
         dims__.resize(0);
-        dims__.push_back(nt);
-        dims__.push_back(ns);
+        dims__.push_back(n_times);
+        dims__.push_back(n_active_regions);
         dimss__.push_back(dims__);
         dims__.resize(0);
-        dims__.push_back(nt);
-        dims__.push_back(ns);
+        dims__.push_back(n_times);
+        dims__.push_back(n_active_regions);
+        dimss__.push_back(dims__);
+        dims__.resize(0);
+        dims__.push_back(n_times);
+        dims__.push_back(n_target_data);
+        dimss__.push_back(dims__);
+        dims__.resize(0);
+        dims__.push_back(n_times);
+        dims__.push_back(n_target_data);
         dimss__.push_back(dims__);
     }
 
@@ -1517,36 +1517,36 @@ public:
         static const char* function__ = "vep_sde_simple_model_namespace::write_array";
         (void) function__;  // dummy to suppress unused var warning
         // read-transform, write parameters
-        row_vector_d x0_star = in__.row_vector_constrain(nn);
+        row_vector_d x0_star = in__.row_vector_constrain(n_active_regions);
         double epsilon_star = in__.scalar_constrain();
-        double amplitude_star = in__.scalar_constrain();
+        double scale_star = in__.scalar_constrain();
         double offset_star = in__.scalar_constrain();
         double sigma_star = in__.scalar_constrain();
-        double time_scale_star = in__.scalar_constrain();
-        row_vector_d x_init_star = in__.row_vector_constrain(nn);
-        row_vector_d z_init_star = in__.row_vector_constrain(nn);
-        vector<row_vector_d> z_eta_star;
-        size_t dim_z_eta_star_0__ = (nt - 1);
-        for (size_t k_0__ = 0; k_0__ < dim_z_eta_star_0__; ++k_0__) {
-            z_eta_star.push_back(in__.row_vector_constrain(nn));
+        double tau1_star = in__.scalar_constrain();
+        row_vector_d x1_init_star = in__.row_vector_constrain(n_active_regions);
+        row_vector_d z_init_star = in__.row_vector_constrain(n_active_regions);
+        vector<row_vector_d> dZt_star;
+        size_t dim_dZt_star_0__ = (n_times - 1);
+        for (size_t k_0__ = 0; k_0__ < dim_dZt_star_0__; ++k_0__) {
+            dZt_star.push_back(in__.row_vector_constrain(n_active_regions));
         }
-            for (int k_0__ = 0; k_0__ < nn; ++k_0__) {
+            for (int k_0__ = 0; k_0__ < n_active_regions; ++k_0__) {
             vars__.push_back(x0_star[k_0__]);
             }
         vars__.push_back(epsilon_star);
-        vars__.push_back(amplitude_star);
+        vars__.push_back(scale_star);
         vars__.push_back(offset_star);
         vars__.push_back(sigma_star);
-        vars__.push_back(time_scale_star);
-            for (int k_0__ = 0; k_0__ < nn; ++k_0__) {
-            vars__.push_back(x_init_star[k_0__]);
+        vars__.push_back(tau1_star);
+            for (int k_0__ = 0; k_0__ < n_active_regions; ++k_0__) {
+            vars__.push_back(x1_init_star[k_0__]);
             }
-            for (int k_0__ = 0; k_0__ < nn; ++k_0__) {
+            for (int k_0__ = 0; k_0__ < n_active_regions; ++k_0__) {
             vars__.push_back(z_init_star[k_0__]);
             }
-            for (int k_1__ = 0; k_1__ < nn; ++k_1__) {
-                for (int k_0__ = 0; k_0__ < (nt - 1); ++k_0__) {
-                vars__.push_back(z_eta_star[k_0__][k_1__]);
+            for (int k_1__ = 0; k_1__ < n_active_regions; ++k_1__) {
+                for (int k_0__ = 0; k_0__ < (n_times - 1); ++k_0__) {
+                vars__.push_back(dZt_star[k_0__][k_1__]);
                 }
             }
 
@@ -1559,175 +1559,175 @@ public:
         (void) DUMMY_VAR__;  // suppress unused var warning
 
         try {
-            current_statement_begin__ = 152;
+            current_statement_begin__ = 154;
             local_scalar_t__ offset;
             (void) offset;  // dummy to suppress unused var warning
 
             stan::math::initialize(offset, DUMMY_VAR__);
             stan::math::fill(offset,DUMMY_VAR__);
             stan::math::assign(offset,(offset_mu + (offset_star * offset_std)));
-            current_statement_begin__ = 153;
-            local_scalar_t__ amplitude;
-            (void) amplitude;  // dummy to suppress unused var warning
+            current_statement_begin__ = 155;
+            local_scalar_t__ scale;
+            (void) scale;  // dummy to suppress unused var warning
 
-            stan::math::initialize(amplitude, DUMMY_VAR__);
-            stan::math::fill(amplitude,DUMMY_VAR__);
-            stan::math::assign(amplitude,standard_normal_to_lognormal(amplitude_star,get_base1(amplitude_mu_sigma,1,"amplitude_mu_sigma",1),get_base1(amplitude_mu_sigma,2,"amplitude_mu_sigma",1), pstream__));
-            current_statement_begin__ = 154;
+            stan::math::initialize(scale, DUMMY_VAR__);
+            stan::math::fill(scale,DUMMY_VAR__);
+            stan::math::assign(scale,standard_normal_to_lognormal(scale_star,get_base1(scale_mu_sigma,1,"scale_mu_sigma",1),get_base1(scale_mu_sigma,2,"scale_mu_sigma",1), pstream__));
+            current_statement_begin__ = 156;
             local_scalar_t__ epsilon;
             (void) epsilon;  // dummy to suppress unused var warning
 
             stan::math::initialize(epsilon, DUMMY_VAR__);
             stan::math::fill(epsilon,DUMMY_VAR__);
             stan::math::assign(epsilon,standard_normal_to_lognormal(epsilon_star,get_base1(epsilon_mu_sigma,1,"epsilon_mu_sigma",1),get_base1(epsilon_mu_sigma,2,"epsilon_mu_sigma",1), pstream__));
-            current_statement_begin__ = 155;
+            current_statement_begin__ = 157;
             local_scalar_t__ sigma;
             (void) sigma;  // dummy to suppress unused var warning
 
             stan::math::initialize(sigma, DUMMY_VAR__);
             stan::math::fill(sigma,DUMMY_VAR__);
             stan::math::assign(sigma,standard_normal_to_lognormal(sigma_star,get_base1(sigma_mu_sigma,1,"sigma_mu_sigma",1),get_base1(sigma_mu_sigma,2,"sigma_mu_sigma",1), pstream__));
-            current_statement_begin__ = 156;
-            local_scalar_t__ time_scale;
-            (void) time_scale;  // dummy to suppress unused var warning
-
-            stan::math::initialize(time_scale, DUMMY_VAR__);
-            stan::math::fill(time_scale,DUMMY_VAR__);
-            stan::math::assign(time_scale,standard_normal_to_lognormal(time_scale_star,get_base1(time_scale_mu_sigma,1,"time_scale_mu_sigma",1),get_base1(time_scale_mu_sigma,2,"time_scale_mu_sigma",1), pstream__));
             current_statement_begin__ = 158;
-            validate_non_negative_index("x0", "nn", nn);
-            Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x0(static_cast<Eigen::VectorXd::Index>(nn));
+            local_scalar_t__ tau1;
+            (void) tau1;  // dummy to suppress unused var warning
+
+            stan::math::initialize(tau1, DUMMY_VAR__);
+            stan::math::fill(tau1,DUMMY_VAR__);
+            stan::math::assign(tau1,standard_normal_to_lognormal(tau1_star,get_base1(tau1_mu_sigma,1,"tau1_mu_sigma",1),get_base1(tau1_mu_sigma,2,"tau1_mu_sigma",1), pstream__));
+            current_statement_begin__ = 160;
+            validate_non_negative_index("x0", "n_active_regions", n_active_regions);
+            Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x0(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             (void) x0;  // dummy to suppress unused var warning
 
             stan::math::initialize(x0, DUMMY_VAR__);
             stan::math::fill(x0,DUMMY_VAR__);
             stan::math::assign(x0,subtract(x0_hi,standard_normal_to_lognormal_row(x0_star,x0_logmu,x0_sigma, pstream__)));
-            current_statement_begin__ = 159;
-            validate_non_negative_index("x_init", "nn", nn);
-            Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x_init(static_cast<Eigen::VectorXd::Index>(nn));
-            (void) x_init;  // dummy to suppress unused var warning
+            current_statement_begin__ = 161;
+            validate_non_negative_index("x1_init", "n_active_regions", n_active_regions);
+            Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x1_init(static_cast<Eigen::VectorXd::Index>(n_active_regions));
+            (void) x1_init;  // dummy to suppress unused var warning
 
-            stan::math::initialize(x_init, DUMMY_VAR__);
-            stan::math::fill(x_init,DUMMY_VAR__);
-            stan::math::assign(x_init,add(x_init_mu,multiply(x_init_star,x_init_std)));
-            current_statement_begin__ = 160;
-            validate_non_negative_index("z_init", "nn", nn);
-            Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  z_init(static_cast<Eigen::VectorXd::Index>(nn));
+            stan::math::initialize(x1_init, DUMMY_VAR__);
+            stan::math::fill(x1_init,DUMMY_VAR__);
+            stan::math::assign(x1_init,add(x1_init_mu,multiply(x1_init_star,x1_init_std)));
+            current_statement_begin__ = 162;
+            validate_non_negative_index("z_init", "n_active_regions", n_active_regions);
+            Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  z_init(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             (void) z_init;  // dummy to suppress unused var warning
 
             stan::math::initialize(z_init, DUMMY_VAR__);
             stan::math::fill(z_init,DUMMY_VAR__);
             stan::math::assign(z_init,add(z_init_mu,multiply(z_init_star,z_init_std)));
-            current_statement_begin__ = 161;
-            validate_non_negative_index("x", "nn", nn);
-            validate_non_negative_index("x", "nt", nt);
-            vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > x(nt, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(nn))));
-            stan::math::initialize(x, DUMMY_VAR__);
-            stan::math::fill(x,DUMMY_VAR__);
-            current_statement_begin__ = 162;
-            validate_non_negative_index("z", "nn", nn);
-            validate_non_negative_index("z", "nt", nt);
-            vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > z(nt, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(nn))));
+            current_statement_begin__ = 163;
+            validate_non_negative_index("x1", "n_active_regions", n_active_regions);
+            validate_non_negative_index("x1", "n_times", n_times);
+            vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > x1(n_times, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(n_active_regions))));
+            stan::math::initialize(x1, DUMMY_VAR__);
+            stan::math::fill(x1,DUMMY_VAR__);
+            current_statement_begin__ = 164;
+            validate_non_negative_index("z", "n_active_regions", n_active_regions);
+            validate_non_negative_index("z", "n_times", n_times);
+            vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > z(n_times, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(n_active_regions))));
             stan::math::initialize(z, DUMMY_VAR__);
             stan::math::fill(z,DUMMY_VAR__);
-            current_statement_begin__ = 163;
-            validate_non_negative_index("mu_seeg_log_power", "ns", ns);
-            validate_non_negative_index("mu_seeg_log_power", "nt", nt);
-            vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > mu_seeg_log_power(nt, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(ns))));
-            stan::math::initialize(mu_seeg_log_power, DUMMY_VAR__);
-            stan::math::fill(mu_seeg_log_power,DUMMY_VAR__);
-
-
             current_statement_begin__ = 165;
-            stan::math::assign(get_base1_lhs(x,1,"x",1), x_init);
-            current_statement_begin__ = 166;
-            stan::math::assign(get_base1_lhs(z,1,"z",1), z_init);
-            current_statement_begin__ = 167;
-            for (int t = 1; t <= (nt - 1); ++t) {
+            validate_non_negative_index("fit_target_data", "n_target_data", n_target_data);
+            validate_non_negative_index("fit_target_data", "n_times", n_times);
+            vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > fit_target_data(n_times, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(n_target_data))));
+            stan::math::initialize(fit_target_data, DUMMY_VAR__);
+            stan::math::fill(fit_target_data,DUMMY_VAR__);
 
-                current_statement_begin__ = 168;
-                stan::math::assign(get_base1_lhs(x,(t + 1),"x",1), x_step(get_base1(x,t,"x",1),get_base1(z,t,"z",1),I1,(dt * time_scale), pstream__));
-                current_statement_begin__ = 169;
-                stan::math::assign(get_base1_lhs(z,(t + 1),"z",1), z_step(get_base1(x,t,"x",1),get_base1(z,t,"z",1),x0,multiply(k,SC),Ic,x_eq_def,(dt * time_scale),get_base1(z_eta_star,t,"z_eta_star",1),(sqrtdt * sigma),tau0, pstream__));
+
+            current_statement_begin__ = 167;
+            stan::math::assign(get_base1_lhs(x1,1,"x1",1), x1_init);
+            current_statement_begin__ = 168;
+            stan::math::assign(get_base1_lhs(z,1,"z",1), z_init);
+            current_statement_begin__ = 169;
+            for (int t = 1; t <= (n_times - 1); ++t) {
+
+                current_statement_begin__ = 170;
+                stan::math::assign(get_base1_lhs(x1,(t + 1),"x1",1), x1_step(get_base1(x1,t,"x1",1),get_base1(z,t,"z",1),Iext1,(dt * tau1), pstream__));
+                current_statement_begin__ = 171;
+                stan::math::assign(get_base1_lhs(z,(t + 1),"z",1), z_step(get_base1(x1,t,"x1",1),get_base1(z,t,"z",1),x0,multiply(K,SC),Ic,x1_eq_def,(dt * tau1),get_base1(dZt_star,t,"dZt_star",1),(sqrtdt * sigma),tau0, pstream__));
             }
-            current_statement_begin__ = 172;
-            for (int t = 1; t <= nt; ++t) {
-                current_statement_begin__ = 173;
-                stan::math::assign(get_base1_lhs(mu_seeg_log_power,t,"mu_seeg_log_power",1), multiply(amplitude,transpose(add(stan::math::log(multiply(gain,stan::math::exp(subtract(transpose(get_base1(x,t,"x",1)),x_eq_def)))),offset))));
+            current_statement_begin__ = 174;
+            for (int t = 1; t <= n_times; ++t) {
+                current_statement_begin__ = 175;
+                stan::math::assign(get_base1_lhs(fit_target_data,t,"fit_target_data",1), multiply(scale,transpose(add(stan::math::log(multiply(gain,stan::math::exp(subtract(transpose(get_base1(x1,t,"x1",1)),x1_eq_def)))),offset))));
             }
 
             // validate transformed parameters
-            current_statement_begin__ = 152;
-            current_statement_begin__ = 153;
             current_statement_begin__ = 154;
             current_statement_begin__ = 155;
             current_statement_begin__ = 156;
+            current_statement_begin__ = 157;
             current_statement_begin__ = 158;
-            current_statement_begin__ = 159;
             current_statement_begin__ = 160;
             current_statement_begin__ = 161;
             current_statement_begin__ = 162;
             current_statement_begin__ = 163;
+            current_statement_begin__ = 164;
+            current_statement_begin__ = 165;
 
             // write transformed parameters
             if (include_tparams__) {
         vars__.push_back(offset);
-        vars__.push_back(amplitude);
+        vars__.push_back(scale);
         vars__.push_back(epsilon);
         vars__.push_back(sigma);
-        vars__.push_back(time_scale);
-            for (int k_0__ = 0; k_0__ < nn; ++k_0__) {
+        vars__.push_back(tau1);
+            for (int k_0__ = 0; k_0__ < n_active_regions; ++k_0__) {
             vars__.push_back(x0[k_0__]);
             }
-            for (int k_0__ = 0; k_0__ < nn; ++k_0__) {
-            vars__.push_back(x_init[k_0__]);
+            for (int k_0__ = 0; k_0__ < n_active_regions; ++k_0__) {
+            vars__.push_back(x1_init[k_0__]);
             }
-            for (int k_0__ = 0; k_0__ < nn; ++k_0__) {
+            for (int k_0__ = 0; k_0__ < n_active_regions; ++k_0__) {
             vars__.push_back(z_init[k_0__]);
             }
-            for (int k_1__ = 0; k_1__ < nn; ++k_1__) {
-                for (int k_0__ = 0; k_0__ < nt; ++k_0__) {
-                vars__.push_back(x[k_0__][k_1__]);
+            for (int k_1__ = 0; k_1__ < n_active_regions; ++k_1__) {
+                for (int k_0__ = 0; k_0__ < n_times; ++k_0__) {
+                vars__.push_back(x1[k_0__][k_1__]);
                 }
             }
-            for (int k_1__ = 0; k_1__ < nn; ++k_1__) {
-                for (int k_0__ = 0; k_0__ < nt; ++k_0__) {
+            for (int k_1__ = 0; k_1__ < n_active_regions; ++k_1__) {
+                for (int k_0__ = 0; k_0__ < n_times; ++k_0__) {
                 vars__.push_back(z[k_0__][k_1__]);
                 }
             }
-            for (int k_1__ = 0; k_1__ < ns; ++k_1__) {
-                for (int k_0__ = 0; k_0__ < nt; ++k_0__) {
-                vars__.push_back(mu_seeg_log_power[k_0__][k_1__]);
+            for (int k_1__ = 0; k_1__ < n_target_data; ++k_1__) {
+                for (int k_0__ = 0; k_0__ < n_times; ++k_0__) {
+                vars__.push_back(fit_target_data[k_0__][k_1__]);
                 }
             }
             }
             if (!include_gqs__) return;
             // declare and define generated quantities
-            current_statement_begin__ = 208;
-            validate_non_negative_index("log_likelihood", "ns", ns);
-            validate_non_negative_index("log_likelihood", "nt", nt);
-            vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > log_likelihood(nt, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(ns))));
+            current_statement_begin__ = 211;
+            validate_non_negative_index("log_likelihood", "n_target_data", n_target_data);
+            validate_non_negative_index("log_likelihood", "n_times", n_times);
+            vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > log_likelihood(n_times, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(n_target_data))));
             stan::math::initialize(log_likelihood, DUMMY_VAR__);
             stan::math::fill(log_likelihood,DUMMY_VAR__);
 
 
-            current_statement_begin__ = 209;
-            for (int t = 1; t <= nt; ++t) {
+            current_statement_begin__ = 212;
+            for (int t = 1; t <= n_times; ++t) {
 
-                current_statement_begin__ = 210;
-                for (int s = 1; s <= ns; ++s) {
+                current_statement_begin__ = 213;
+                for (int s = 1; s <= n_target_data; ++s) {
 
-                    current_statement_begin__ = 211;
-                    stan::math::assign(get_base1_lhs(get_base1_lhs(log_likelihood,t,"log_likelihood",1),s,"log_likelihood",2), normal_log(get_base1(get_base1(seeg_log_power,t,"seeg_log_power",1),s,"seeg_log_power",2),get_base1(get_base1(mu_seeg_log_power,t,"mu_seeg_log_power",1),s,"mu_seeg_log_power",2),epsilon));
+                    current_statement_begin__ = 214;
+                    stan::math::assign(get_base1_lhs(get_base1_lhs(log_likelihood,t,"log_likelihood",1),s,"log_likelihood",2), normal_log(get_base1(get_base1(target_data,t,"target_data",1),s,"target_data",2),get_base1(get_base1(fit_target_data,t,"fit_target_data",1),s,"fit_target_data",2),epsilon));
                 }
             }
 
             // validate generated quantities
-            current_statement_begin__ = 208;
+            current_statement_begin__ = 211;
 
             // write generated quantities
-            for (int k_1__ = 0; k_1__ < ns; ++k_1__) {
-                for (int k_0__ = 0; k_0__ < nt; ++k_0__) {
+            for (int k_1__ = 0; k_1__ < n_target_data; ++k_1__) {
+                for (int k_0__ = 0; k_0__ < n_times; ++k_0__) {
                 vars__.push_back(log_likelihood[k_0__][k_1__]);
                 }
             }
@@ -1766,7 +1766,7 @@ public:
                                  bool include_tparams__ = true,
                                  bool include_gqs__ = true) const {
         std::stringstream param_name_stream__;
-        for (int k_0__ = 1; k_0__ <= nn; ++k_0__) {
+        for (int k_0__ = 1; k_0__ <= n_active_regions; ++k_0__) {
             param_name_stream__.str(std::string());
             param_name_stream__ << "x0_star" << '.' << k_0__;
             param_names__.push_back(param_name_stream__.str());
@@ -1775,7 +1775,7 @@ public:
         param_name_stream__ << "epsilon_star";
         param_names__.push_back(param_name_stream__.str());
         param_name_stream__.str(std::string());
-        param_name_stream__ << "amplitude_star";
+        param_name_stream__ << "scale_star";
         param_names__.push_back(param_name_stream__.str());
         param_name_stream__.str(std::string());
         param_name_stream__ << "offset_star";
@@ -1784,22 +1784,22 @@ public:
         param_name_stream__ << "sigma_star";
         param_names__.push_back(param_name_stream__.str());
         param_name_stream__.str(std::string());
-        param_name_stream__ << "time_scale_star";
+        param_name_stream__ << "tau1_star";
         param_names__.push_back(param_name_stream__.str());
-        for (int k_0__ = 1; k_0__ <= nn; ++k_0__) {
+        for (int k_0__ = 1; k_0__ <= n_active_regions; ++k_0__) {
             param_name_stream__.str(std::string());
-            param_name_stream__ << "x_init_star" << '.' << k_0__;
+            param_name_stream__ << "x1_init_star" << '.' << k_0__;
             param_names__.push_back(param_name_stream__.str());
         }
-        for (int k_0__ = 1; k_0__ <= nn; ++k_0__) {
+        for (int k_0__ = 1; k_0__ <= n_active_regions; ++k_0__) {
             param_name_stream__.str(std::string());
             param_name_stream__ << "z_init_star" << '.' << k_0__;
             param_names__.push_back(param_name_stream__.str());
         }
-        for (int k_1__ = 1; k_1__ <= nn; ++k_1__) {
-            for (int k_0__ = 1; k_0__ <= (nt - 1); ++k_0__) {
+        for (int k_1__ = 1; k_1__ <= n_active_regions; ++k_1__) {
+            for (int k_0__ = 1; k_0__ <= (n_times - 1); ++k_0__) {
                 param_name_stream__.str(std::string());
-                param_name_stream__ << "z_eta_star" << '.' << k_0__ << '.' << k_1__;
+                param_name_stream__ << "dZt_star" << '.' << k_0__ << '.' << k_1__;
                 param_names__.push_back(param_name_stream__.str());
             }
         }
@@ -1811,7 +1811,7 @@ public:
             param_name_stream__ << "offset";
             param_names__.push_back(param_name_stream__.str());
             param_name_stream__.str(std::string());
-            param_name_stream__ << "amplitude";
+            param_name_stream__ << "scale";
             param_names__.push_back(param_name_stream__.str());
             param_name_stream__.str(std::string());
             param_name_stream__ << "epsilon";
@@ -1820,41 +1820,41 @@ public:
             param_name_stream__ << "sigma";
             param_names__.push_back(param_name_stream__.str());
             param_name_stream__.str(std::string());
-            param_name_stream__ << "time_scale";
+            param_name_stream__ << "tau1";
             param_names__.push_back(param_name_stream__.str());
-            for (int k_0__ = 1; k_0__ <= nn; ++k_0__) {
+            for (int k_0__ = 1; k_0__ <= n_active_regions; ++k_0__) {
                 param_name_stream__.str(std::string());
                 param_name_stream__ << "x0" << '.' << k_0__;
                 param_names__.push_back(param_name_stream__.str());
             }
-            for (int k_0__ = 1; k_0__ <= nn; ++k_0__) {
+            for (int k_0__ = 1; k_0__ <= n_active_regions; ++k_0__) {
                 param_name_stream__.str(std::string());
-                param_name_stream__ << "x_init" << '.' << k_0__;
+                param_name_stream__ << "x1_init" << '.' << k_0__;
                 param_names__.push_back(param_name_stream__.str());
             }
-            for (int k_0__ = 1; k_0__ <= nn; ++k_0__) {
+            for (int k_0__ = 1; k_0__ <= n_active_regions; ++k_0__) {
                 param_name_stream__.str(std::string());
                 param_name_stream__ << "z_init" << '.' << k_0__;
                 param_names__.push_back(param_name_stream__.str());
             }
-            for (int k_1__ = 1; k_1__ <= nn; ++k_1__) {
-                for (int k_0__ = 1; k_0__ <= nt; ++k_0__) {
+            for (int k_1__ = 1; k_1__ <= n_active_regions; ++k_1__) {
+                for (int k_0__ = 1; k_0__ <= n_times; ++k_0__) {
                     param_name_stream__.str(std::string());
-                    param_name_stream__ << "x" << '.' << k_0__ << '.' << k_1__;
+                    param_name_stream__ << "x1" << '.' << k_0__ << '.' << k_1__;
                     param_names__.push_back(param_name_stream__.str());
                 }
             }
-            for (int k_1__ = 1; k_1__ <= nn; ++k_1__) {
-                for (int k_0__ = 1; k_0__ <= nt; ++k_0__) {
+            for (int k_1__ = 1; k_1__ <= n_active_regions; ++k_1__) {
+                for (int k_0__ = 1; k_0__ <= n_times; ++k_0__) {
                     param_name_stream__.str(std::string());
                     param_name_stream__ << "z" << '.' << k_0__ << '.' << k_1__;
                     param_names__.push_back(param_name_stream__.str());
                 }
             }
-            for (int k_1__ = 1; k_1__ <= ns; ++k_1__) {
-                for (int k_0__ = 1; k_0__ <= nt; ++k_0__) {
+            for (int k_1__ = 1; k_1__ <= n_target_data; ++k_1__) {
+                for (int k_0__ = 1; k_0__ <= n_times; ++k_0__) {
                     param_name_stream__.str(std::string());
-                    param_name_stream__ << "mu_seeg_log_power" << '.' << k_0__ << '.' << k_1__;
+                    param_name_stream__ << "fit_target_data" << '.' << k_0__ << '.' << k_1__;
                     param_names__.push_back(param_name_stream__.str());
                 }
             }
@@ -1862,8 +1862,8 @@ public:
 
 
         if (!include_gqs__) return;
-        for (int k_1__ = 1; k_1__ <= ns; ++k_1__) {
-            for (int k_0__ = 1; k_0__ <= nt; ++k_0__) {
+        for (int k_1__ = 1; k_1__ <= n_target_data; ++k_1__) {
+            for (int k_0__ = 1; k_0__ <= n_times; ++k_0__) {
                 param_name_stream__.str(std::string());
                 param_name_stream__ << "log_likelihood" << '.' << k_0__ << '.' << k_1__;
                 param_names__.push_back(param_name_stream__.str());
@@ -1876,7 +1876,7 @@ public:
                                    bool include_tparams__ = true,
                                    bool include_gqs__ = true) const {
         std::stringstream param_name_stream__;
-        for (int k_0__ = 1; k_0__ <= nn; ++k_0__) {
+        for (int k_0__ = 1; k_0__ <= n_active_regions; ++k_0__) {
             param_name_stream__.str(std::string());
             param_name_stream__ << "x0_star" << '.' << k_0__;
             param_names__.push_back(param_name_stream__.str());
@@ -1885,7 +1885,7 @@ public:
         param_name_stream__ << "epsilon_star";
         param_names__.push_back(param_name_stream__.str());
         param_name_stream__.str(std::string());
-        param_name_stream__ << "amplitude_star";
+        param_name_stream__ << "scale_star";
         param_names__.push_back(param_name_stream__.str());
         param_name_stream__.str(std::string());
         param_name_stream__ << "offset_star";
@@ -1894,22 +1894,22 @@ public:
         param_name_stream__ << "sigma_star";
         param_names__.push_back(param_name_stream__.str());
         param_name_stream__.str(std::string());
-        param_name_stream__ << "time_scale_star";
+        param_name_stream__ << "tau1_star";
         param_names__.push_back(param_name_stream__.str());
-        for (int k_0__ = 1; k_0__ <= nn; ++k_0__) {
+        for (int k_0__ = 1; k_0__ <= n_active_regions; ++k_0__) {
             param_name_stream__.str(std::string());
-            param_name_stream__ << "x_init_star" << '.' << k_0__;
+            param_name_stream__ << "x1_init_star" << '.' << k_0__;
             param_names__.push_back(param_name_stream__.str());
         }
-        for (int k_0__ = 1; k_0__ <= nn; ++k_0__) {
+        for (int k_0__ = 1; k_0__ <= n_active_regions; ++k_0__) {
             param_name_stream__.str(std::string());
             param_name_stream__ << "z_init_star" << '.' << k_0__;
             param_names__.push_back(param_name_stream__.str());
         }
-        for (int k_1__ = 1; k_1__ <= nn; ++k_1__) {
-            for (int k_0__ = 1; k_0__ <= (nt - 1); ++k_0__) {
+        for (int k_1__ = 1; k_1__ <= n_active_regions; ++k_1__) {
+            for (int k_0__ = 1; k_0__ <= (n_times - 1); ++k_0__) {
                 param_name_stream__.str(std::string());
-                param_name_stream__ << "z_eta_star" << '.' << k_0__ << '.' << k_1__;
+                param_name_stream__ << "dZt_star" << '.' << k_0__ << '.' << k_1__;
                 param_names__.push_back(param_name_stream__.str());
             }
         }
@@ -1921,7 +1921,7 @@ public:
             param_name_stream__ << "offset";
             param_names__.push_back(param_name_stream__.str());
             param_name_stream__.str(std::string());
-            param_name_stream__ << "amplitude";
+            param_name_stream__ << "scale";
             param_names__.push_back(param_name_stream__.str());
             param_name_stream__.str(std::string());
             param_name_stream__ << "epsilon";
@@ -1930,41 +1930,41 @@ public:
             param_name_stream__ << "sigma";
             param_names__.push_back(param_name_stream__.str());
             param_name_stream__.str(std::string());
-            param_name_stream__ << "time_scale";
+            param_name_stream__ << "tau1";
             param_names__.push_back(param_name_stream__.str());
-            for (int k_0__ = 1; k_0__ <= nn; ++k_0__) {
+            for (int k_0__ = 1; k_0__ <= n_active_regions; ++k_0__) {
                 param_name_stream__.str(std::string());
                 param_name_stream__ << "x0" << '.' << k_0__;
                 param_names__.push_back(param_name_stream__.str());
             }
-            for (int k_0__ = 1; k_0__ <= nn; ++k_0__) {
+            for (int k_0__ = 1; k_0__ <= n_active_regions; ++k_0__) {
                 param_name_stream__.str(std::string());
-                param_name_stream__ << "x_init" << '.' << k_0__;
+                param_name_stream__ << "x1_init" << '.' << k_0__;
                 param_names__.push_back(param_name_stream__.str());
             }
-            for (int k_0__ = 1; k_0__ <= nn; ++k_0__) {
+            for (int k_0__ = 1; k_0__ <= n_active_regions; ++k_0__) {
                 param_name_stream__.str(std::string());
                 param_name_stream__ << "z_init" << '.' << k_0__;
                 param_names__.push_back(param_name_stream__.str());
             }
-            for (int k_1__ = 1; k_1__ <= nn; ++k_1__) {
-                for (int k_0__ = 1; k_0__ <= nt; ++k_0__) {
+            for (int k_1__ = 1; k_1__ <= n_active_regions; ++k_1__) {
+                for (int k_0__ = 1; k_0__ <= n_times; ++k_0__) {
                     param_name_stream__.str(std::string());
-                    param_name_stream__ << "x" << '.' << k_0__ << '.' << k_1__;
+                    param_name_stream__ << "x1" << '.' << k_0__ << '.' << k_1__;
                     param_names__.push_back(param_name_stream__.str());
                 }
             }
-            for (int k_1__ = 1; k_1__ <= nn; ++k_1__) {
-                for (int k_0__ = 1; k_0__ <= nt; ++k_0__) {
+            for (int k_1__ = 1; k_1__ <= n_active_regions; ++k_1__) {
+                for (int k_0__ = 1; k_0__ <= n_times; ++k_0__) {
                     param_name_stream__.str(std::string());
                     param_name_stream__ << "z" << '.' << k_0__ << '.' << k_1__;
                     param_names__.push_back(param_name_stream__.str());
                 }
             }
-            for (int k_1__ = 1; k_1__ <= ns; ++k_1__) {
-                for (int k_0__ = 1; k_0__ <= nt; ++k_0__) {
+            for (int k_1__ = 1; k_1__ <= n_target_data; ++k_1__) {
+                for (int k_0__ = 1; k_0__ <= n_times; ++k_0__) {
                     param_name_stream__.str(std::string());
-                    param_name_stream__ << "mu_seeg_log_power" << '.' << k_0__ << '.' << k_1__;
+                    param_name_stream__ << "fit_target_data" << '.' << k_0__ << '.' << k_1__;
                     param_names__.push_back(param_name_stream__.str());
                 }
             }
@@ -1972,8 +1972,8 @@ public:
 
 
         if (!include_gqs__) return;
-        for (int k_1__ = 1; k_1__ <= ns; ++k_1__) {
-            for (int k_0__ = 1; k_0__ <= nt; ++k_0__) {
+        for (int k_1__ = 1; k_1__ <= n_target_data; ++k_1__) {
+            for (int k_0__ = 1; k_0__ <= n_times; ++k_0__) {
                 param_name_stream__.str(std::string());
                 param_name_stream__ << "log_likelihood" << '.' << k_0__ << '.' << k_1__;
                 param_names__.push_back(param_name_stream__.str());

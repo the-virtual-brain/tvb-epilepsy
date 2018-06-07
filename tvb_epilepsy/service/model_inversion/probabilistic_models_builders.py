@@ -197,7 +197,7 @@ class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
 
 class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
-    parameters = [XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1init", "zinit",
+    parameters = [XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1_init", "z_init",
                   "epsilon", "scale", "offset"]
     sigma_init = SIGMA_INIT_DEF
     epsilon = EPSILON_DEF
@@ -212,7 +212,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
     dt = DT_DEF
 
     def __init__(self, model_name="vep_ode", model_config=ModelConfiguration(),
-                 parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1init", "zinit",
+                 parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1_init", "z_init",
                              "epsilon", "scale", "offset"],
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                  sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5,
@@ -253,27 +253,27 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
         self.logger.info("...initial conditions' parameters...")
         if self.priors_mode == PriorsModes.INFORMATIVE.value:
-            x1init = self.model_config.x1eq
-            zinit = self.model_config.zeq
+            x1_init = self.model_config.x1eq
+            z_init = self.model_config.zeq
         else:
-            x1init = X1_REST * np.ones((self.number_of_regions,))
-            zinit = calc_eq_z(x1init, self.model_config.yc, self.model_config.Iext1, "2d", x2=0.0,
+            x1_init = X1_REST * np.ones((self.number_of_regions,))
+            z_init = calc_eq_z(x1_init, self.model_config.yc, self.model_config.Iext1, "2d", x2=0.0,
                               slope=self.model_config.slope, a=self.model_config.a, b=self.model_config.b,
                               d=self.model_config.d, x1_neg=True)
-        self.logger.info("...x1init...")
+        self.logger.info("...x1_init...")
         parameters.update(
-            {"x1init": generate_probabilistic_parameter("x1init", X1_MIN, X1_MAX,
+            {"x1_init": generate_probabilistic_parameter("x1_init", X1_MIN, X1_MAX,
                                                         p_shape=(self.number_of_regions,),
                                                         probability_distribution=ProbabilityDistributionTypes.NORMAL,
                                                         optimize_pdf=False, use="scipy",
-                                                        **{"mu": x1init, "sigma": self.sigma_init})})
-        self.logger.info("...zinit...")
+                                                        **{"mu": x1_init, "sigma": self.sigma_init})})
+        self.logger.info("...z_init...")
         parameters.update(
-            {"zinit": generate_probabilistic_parameter("zinit", Z_MIN, Z_MAX,
+            {"z_init": generate_probabilistic_parameter("z_init", Z_MIN, Z_MAX,
                                                        p_shape=(self.number_of_regions,),
                                                        probability_distribution=ProbabilityDistributionTypes.NORMAL,
                                                        optimize_pdf=False, use="scipy",
-                                                       **{"mu": zinit, "sigma": self.sigma_init/2})})
+                                                       **{"mu": z_init, "sigma": self.sigma_init/2})})
 
         # Time scales
         if "tau1" in self.parameters:
@@ -333,13 +333,13 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
 class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
 
-    parameters = [XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1init", "zinit",
+    parameters = [XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1_init", "z_init",
                   "dX1t", "dZt", "sigma", "epsilon", "scale", "offset"]
     sigma = SIGMA_DEF
     sde_mode = SDE_MODES.NONCENTERED.value
 
     def __init__(self, model_name="vep_sde", model_config=ModelConfiguration(),
-                 parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1init", "zinit",
+                 parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1_init", "z_init",
                              "dX1t", "dZt", "sigma", "epsilon", "scale", "offset"],
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                  sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5,

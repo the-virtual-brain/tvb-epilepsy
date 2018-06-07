@@ -48,10 +48,10 @@ MC_MAX_MIN_RATIO = 1000.0
 MC_SCALE = 6.0
 
 # ODE model inversion constants
-X1INIT_MIN = -2.0
-X1INIT_MAX = 0.0
-ZINIT_MIN = 2.0
-ZINIT_MAX = 5.0
+X1_INIT_MIN = -2.0
+X1_INIT_MAX = 0.0
+Z_INIT_MIN = 2.0
+Z_INIT_MAX = 5.0
 
 
 def compute_seizure_length(tau0):
