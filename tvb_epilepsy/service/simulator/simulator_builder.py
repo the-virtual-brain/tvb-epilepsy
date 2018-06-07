@@ -211,7 +211,6 @@ def build_simulator_TVB_realistic(model_configuration, connectivity, **kwargs):
     sim_settings.noise_ntau = 20
     # Necessary a more stable integrator:
     integrator = kwargs.pop("integrator", "Dop853Stochastic")
-    sim = sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity, model,
-                                                                  sim_settings, integrator=integrator,  **kwargs)
-    return sim
+    return sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity, model,
+                                                                   sim_settings, integrator=integrator,  **kwargs)
 
