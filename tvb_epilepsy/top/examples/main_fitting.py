@@ -107,7 +107,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde.stan", empirical_file="",
                                                         "x1init", "zinit", "tau1",  # "tau0", "K",
                                                         "sigma", "dZt", "epsilon", "scale", "offset"],  # "dX1t",
                                              #tau0=30.0,
-                                             xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
+                                             xmode=XModes.X0MODE.value, priors_mode=PriorsModes.INFORMATIVE.value,
                                              sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model).\
                                                                                                        generate_model()
 
@@ -272,7 +272,7 @@ if __name__ == "__main__":
 
     if user_home == "/home/denis":
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "INScluster/fit_tau030_Kfixed/sim_sensor_noninfo")
+                              "INScluster/fit_tau030_Kfixed/sim_sensor_info")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.C_COMPILER = "g++"
         config.generic.CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
