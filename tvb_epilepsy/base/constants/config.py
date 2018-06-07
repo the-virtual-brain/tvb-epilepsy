@@ -119,7 +119,7 @@ class FiguresConfig(object):
     SAVE_FLAG = True
     SHOW_FLAG = False
     MOUSE_HOOVER = False
-    MATPLOTLIB_BACKEND = "Qt4Agg" # , "Agg"
+    MATPLOTLIB_BACKEND = "Agg" # , "Qt4Agg"
 
 
 class CalculusConfig(object):
