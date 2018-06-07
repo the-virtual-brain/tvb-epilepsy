@@ -131,7 +131,7 @@ class HypothesisBuilder(object):
                 raise_value_error("Invalid disease hypothesis normalization values!: " + str(values) +
                                   "\nThey cannot be more than 2!")
             else:
-                if n_vals < 1:
+                if n_vals < 2:
                     # Assuming normalization only to a maximum value, keeping the existing minimum one
                     values = [numpy.min(self.diseased_regions_values)] + values
                 self.normalize_values = values
