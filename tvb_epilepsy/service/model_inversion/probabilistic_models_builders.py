@@ -195,7 +195,6 @@ class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
         return model
 
 
-
 class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
     parameters = [XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1init", "zinit",
@@ -206,11 +205,11 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
     offset = OFFSET_SIGNAL_DEF
     observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
     number_of_signals = 0
-    time_length = 0
-    dt = DT_DEF
     active_regions = []
     tau1 = TAU1_DEF
     tau0 = TAU0_DEF
+    time_length = SEIZURE_LENGTH
+    dt = DT_DEF
 
     def __init__(self, model_name="vep_ode", model_config=ModelConfiguration(),
                  parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1init", "zinit",
@@ -220,7 +219,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                  sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF,
                  scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF,
                  observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
-                 number_of_signals=0, time_length=0, dt=DT_DEF, active_regions=[]):
+                 number_of_signals=0, active_regions=[]):
         super(ODEProbabilisticModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode,
                                                            sigma_x, sigma_x_scale, MC_direction_split)
         self.sigma_init = sigma_init
@@ -231,8 +230,8 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         self.offset = offset
         self.observation_model = observation_model
         self.number_of_signals = number_of_signals
-        self.time_length = time_length
-        self.dt = dt
+        self.time_length = self.compute_seizure_length()
+        self.dt = self.compute_dt()
         self.active_regions = active_regions
 
     def _repr(self, d=OrderedDict()):
@@ -241,6 +240,12 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
             d.update({str(nKeys+ikey) + ". " + key: str(val)})
         return d
+
+    def compute_seizure_length(self):
+        return compute_seizure_length(self.tau0)
+
+    def compute_dt(self):
+        return compute_dt(self.tau1)
 
     def generate_parameters(self):
         parameters = super(ODEProbabilisticModelBuilder, self).generate_parameters()
@@ -341,11 +346,11 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
                  sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF, sigma=SIGMA_DEF,
                  scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF,
                  sde_mode=SDE_MODES.NONCENTERED.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
-                 number_of_signals=0, time_length=0, dt=DT_DEF, active_regions=[]):
+                 number_of_signals=0, active_regions=[]):
         super(SDEProbabilisticModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode,
                                                            sigma_x, sigma_x_scale, MC_direction_split, sigma_init,
                                                            tau1, tau0, epsilon, scale, offset, observation_model,
-                                                           number_of_signals, time_length, dt, active_regions)
+                                                           number_of_signals, active_regions)
         self.sigma_init = sigma_init
         self.sde_mode = sde_mode
         self.sigma = sigma

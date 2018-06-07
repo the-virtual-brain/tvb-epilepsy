@@ -180,7 +180,6 @@ class ODEModelInversionService(ModelInversionService):
             target_data = self.ts_service.normalize(target_data, self.normalization)
         probabilistic_model.time = target_data.time_line
         probabilistic_model.time_length = len(probabilistic_model.time)
-        probabilistic_model.dt = target_data.time_step
         probabilistic_model.number_of_target_data = target_data.number_of_labels
         return target_data, probabilistic_model, self.set_gain_matrix(target_data, probabilistic_model, sensors)
 

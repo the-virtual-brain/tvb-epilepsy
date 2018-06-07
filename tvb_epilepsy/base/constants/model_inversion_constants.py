@@ -1,5 +1,7 @@
 from enum import Enum
 
+import numpy as np
+
 from tvb_epilepsy.base.constants.model_constants import X1_DEF, X1EQ_CR_DEF
 
 # Model inversion constants
@@ -50,7 +52,19 @@ X1INIT_MIN = -2.0
 X1INIT_MAX = 0.0
 ZINIT_MIN = 2.0
 ZINIT_MAX = 5.0
-DT_DEF = 0.05
+
+
+def compute_seizure_length(tau0):
+    return int(np.ceil(128 * (1 + 2*np.log10(tau0 / 30.0))))
+
+
+def compute_dt(tau1):
+    return (1000.0 / 2048.0) * (0.5 / tau1)
+
+
+SEIZURE_LENGTH = compute_seizure_length(TAU0_DEF)
+DT_DEF = compute_dt(TAU1_DEF)
+
 SIGMA_INIT_DEF = 0.1*SIGMA_EQ_DEF
 EPSILON_DEF = 0.1
 # Assuming that target signals are normalized with their amplitude after baseline substraction,
@@ -89,4 +103,6 @@ WIN_LEN_RATIO = 10
 LOW_FREQ = 10.0
 HIGH_FREQ = 256.0
 BIPOLAR = False
+
+
 

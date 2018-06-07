@@ -108,7 +108,7 @@ class ODEProbabilisticModel(ProbabilisticModel):
     offset = OFFSET_SIGNAL_DEF
     epsilon = EPSILON_DEF
     number_of_target_data = 0
-    time_length = 0
+    time_length = SEIZURE_LENGTH
     dt = DT_DEF
     active_regions = []
 
@@ -159,6 +159,20 @@ class ODEProbabilisticModel(ProbabilisticModel):
         else:
             raise_value_error("Active regions indices:\n" + str(active_regions) +
                               "\nbeyond number of regions (" + str(self.number_of_regions) + ")!")
+
+    def update_seizure_length(self, time_length=None):
+        if time_length is None:
+            self.time_length = compute_seizure_length(self.tau0)
+        else:
+            self.time_length = time_length
+        return self
+
+    def update_dt(self, dt=None):
+        if dt is None:
+            self.dt = compute_dt(self.tau1)
+        else:
+            self.dt = dt
+        return self
 
 
 class SDEProbabilisticModel(ODEProbabilisticModel):
