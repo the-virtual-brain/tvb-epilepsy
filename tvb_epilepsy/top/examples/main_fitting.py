@@ -272,7 +272,7 @@ if __name__ == "__main__":
 
     if user_home == "/home/denis":
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "INScluster/fit_tau030_Kfixed/sim_source_noninfo")
+                              "INScluster/fit_tau030_Kfixed/sim_sensor_noninfo")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.C_COMPILER = "g++"
         config.generic.CMDSTAN_PATH = "/soft/stan/cmdstan-2.17.0"
@@ -332,7 +332,7 @@ if __name__ == "__main__":
         times_on_off = [100.0, 200.0]  # for "fitting" simulations with tau0=30.0
     stan_model_name = "vep_sde_simple" # "vep_sde.stan" to fit K as well
     fitmethod = "sample"  # "sample"  # "advi" or "opt"
-    observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  # OBSERVATION_MODELS.SEEG_LOGPOWER.value
+    observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value  # OBSERVATION_MODELS.SOURCE_POWER.value  #
     pse_flag = True
     fit_flag = True
     if EMPIRICAL:
