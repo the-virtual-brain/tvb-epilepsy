@@ -2,7 +2,7 @@
 from enum import Enum
 import re
 import numpy as np
-from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, \
+from tvb_epilepsy.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list, \
                                                                                     labels_to_inds, monopolar_to_bipolar
 from tvb_epilepsy.base.utils.data_structures_utils import split_string_text_numbers
 from tvb_epilepsy.base.computations.math_utils import compute_gain_matrix
@@ -83,6 +83,8 @@ class Sensors(object):
             return indexes
 
     def get_sensors_inds_by_sensors_labels(self, lbls):
+        # Make sure that the labels are not bipolar:
+        lbls = [label.split("-")[0] for label in ensure_list(lbls)]
         return labels_to_inds(self.labels, lbls)
 
     def get_elecs_inds_by_elecs_labels(self, lbls):
