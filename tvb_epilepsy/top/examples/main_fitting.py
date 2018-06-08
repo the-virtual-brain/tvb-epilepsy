@@ -1,15 +1,25 @@
 # encoding=utf8
 
+import os
+
+import numpy as np
 
 from tvb_epilepsy.base.constants.config import Config
+from tvb_epilepsy.base.constants.model_constants import K_DEF, TAU1_DEF, TAU0_DEF
+from tvb_epilepsy.base.constants.model_inversion_constants import XModes, SDE_MODES, PriorsModes, TARGET_DATA_TYPE, \
+    OBSERVATION_MODELS, BIPOLAR
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
+from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_epilepsy.service.model_inversion.probabilistic_models_builders import SDEProbabilisticModelBuilder
 from tvb_epilepsy.service.model_inversion.model_inversion_services import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
-from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder \
-    import build_stan_model_data_dict, build_stan_model_data_dict_to_interface_ins, convert_params_names_from_ins
-from tvb_epilepsy.top.scripts.fitting_scripts import *
+from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import build_stan_model_data_dict
+from tvb_epilepsy.top.scripts.fitting_scripts import set_model_config_LSA, set_empirical_data, set_simulated_target_data
 from tvb_epilepsy.plot.plotter import Plotter
+from tvb_epilepsy.io.h5_reader import H5Reader
+from tvb_epilepsy.io.h5_writer import H5Writer
 
 
 def set_hypotheses(head, config):
@@ -124,16 +134,20 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde_ins.stan", empirical_file="",
                 # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
                 signals = set_empirical_data(empirical_file, path("ts_empirical"),
                                              head, sensors_lbls, sensor_id, probabilistic_model.time_length,
-                                             times_on_off, label_strip_fun=lambda s: s.split("POL ")[-1],
-                                             plotter=plotter, title_prefix=hyp.name, bipolar=False)
+                                             log_flag=probabilistic_model.observation_model ==
+                                                      OBSERVATION_MODELS.SEEG_LOGPOWER.value,
+                                             times_on_off=times_on_off, label_strip_fun=lambda s: s.split("POL ")[-1],
+                                             filter_flag=True, envelope_flag=True, smooth_flag=True,
+                                             bipolar=BIPOLAR, plotter=plotter, title_prefix=hyp.name)
             else:
                 # -------------------------- Get simulated data (simulate if necessary) -------------------------------
                 probabilistic_model.target_data_type = TARGET_DATA_TYPE.SYNTHETIC.value
                 signals, simulator = \
-                    set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, probabilistic_model,
-                                              sensor_id, sim_type="fitting", times_on_off=times_on_off, config=config,
-                                              plotter=plotter, title_prefix=hyp.name, bipolar=False, filter_flag=False,
-                                              envelope_flag=False, smooth_flag=False, **kwargs)
+                   set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, probabilistic_model,
+                                             sensor_id, sim_type="fitting", times_on_off=times_on_off, config=config,
+                                             # Maybe change some of those for Epileptor 6D simulations:
+                                             bipolar=False, filter_flag=False, envelope_flag=False, smooth_flag=False,
+                                             plotter=plotter, title_prefix=hyp.name)
 
             # -------------------------- Select and set target data from signals ---------------------------------------
             if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
@@ -159,19 +173,21 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde_ins.stan", empirical_file="",
                                                     model_configuration.model_connectivity, gain_matrix,
                                                     time=target_data.time_line)
             # # ...or interface with INS stan models
+            # from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import \
+            #   build_stan_model_data_dict_to_interface_ins
             # model_data = build_stan_model_data_dict_to_interface_ins(probabilistic_model, target_data.squeezed,
             #                                                          model_configuration.model_connectivity, gain_matrix,
             #                                                          time=target_data.time_line)
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        n_chains_or_runs = 4
-        output_samples = max(int(np.round(1000.0 / n_chains_or_runs)), 500)
+        n_chains_or_runs = 2  # 4
+        output_samples = 20  #max(int(np.round(1000.0 / n_chains_or_runs)), 500)
         # Sampling (HMC)
         num_samples = output_samples
-        num_warmup = 1000
-        max_depth = 12
-        delta = 0.9
+        num_warmup = 30  # 1000
+        max_depth = 8  #
+        delta = 0.8  # 0.9
         # ADVI or optimization:
         iter = 1000000
         tol_rel_obj = 1e-6
@@ -180,7 +196,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde_ins.stan", empirical_file="",
         else:
             skip_samples = 0
         prob_model_name = probabilistic_model.name.split(".")[0]
-        if fit_flag:
+        if False:
             estimates, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, refresh=1,
                                                       n_chains_or_runs=n_chains_or_runs,
                                                       iter=iter, tol_rel_obj=tol_rel_obj,
@@ -214,6 +230,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde_ins.stan", empirical_file="",
 
         Rhat = stan_service.get_Rhat(summary)
         # Interface backwards with INS stan models
+        # from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import convert_params_names_from_ins
         # estimates, samples, Rhat, model_data = \
         #     convert_params_names_from_ins([estimates, samples, Rhat, model_data])
         if fitmethod.find("opt") < 0:
@@ -281,7 +298,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_test")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 

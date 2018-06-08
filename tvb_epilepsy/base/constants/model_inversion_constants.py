@@ -67,10 +67,6 @@ DT_DEF = compute_dt(TAU1_DEF)
 
 SIGMA_INIT_DEF = 0.1*SIGMA_EQ_DEF
 EPSILON_DEF = 0.1
-# Assuming that target signals are normalized with their amplitude after baseline substraction,
-# and that the resting x1 value (baseline) is also removed from the x1 hidden states inside stan file:
-SCALE_SIGNAL_DEF = 0.5
-OFFSET_SIGNAL_DEF = 0.0
 
 
 class TARGET_DATA_TYPE(Enum):
@@ -84,7 +80,9 @@ class OBSERVATION_MODELS(Enum):
     SOURCE_POWER = 2
     SEEG = [0, 1]
 
+
 OBSERVATION_MODEL_DEF = "seeg_logpower"
+
 
 # SDE model inversion constants
 class SDE_MODES(Enum):
