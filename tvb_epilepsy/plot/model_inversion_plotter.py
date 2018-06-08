@@ -69,7 +69,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
             diagonal_plots.update({p_key: [priors.get(p_key, ()), truth.get(p_key, ())]})
 
         return self.pair_plots(samples, params, diagonal_plots, True, skip_samples,
-                               title, "chains/runs ", subtitles, figure_name, figsize)
+                               title, "chain/run ", subtitles, figure_name, figsize)
 
     def _region_parameters_violin_plots(self, samples_all, values=None, lines=None, stats=None,
                                         params=["x0", "x1_init", "z_init"], skip_samples=0, per_chain_or_run=False,
@@ -137,8 +137,11 @@ class ModelInversionPlotter(TimeseriesPlotter):
             nuts = merge_samples(nuts)
         else:
             nuts = nuts[0]
-        return self.plots(nuts, shape=(2, 4), transpose=True, skip=skip_samples, xlabels={}, xscales={},
-                          yscales={"stepsize__": "log"}, title=title, figure_name=figure_name, figsize=figsize)
+        n_chains_or_runs = nuts.values()[0].shape[0]
+        legend = {nuts.keys()[0]: ["chain/run " + str(ii + 1) for ii in range(n_chains_or_runs)]}
+        return self.plots(nuts, shape=(4, 2), transpose=True, skip=skip_samples, xlabels={}, xscales={},
+                          yscales={"stepsize__": "log"}, lgnd=legend, title=title,
+                          figure_name=figure_name, figsize=figsize)
 
     def plot_fit_scalar_params_iters(self, samples_all, params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
                                      skip_samples=0, title_prefix="", subplot_shape=None, figure_name=None,
@@ -162,8 +165,10 @@ class ModelInversionPlotter(TimeseriesPlotter):
                 subplot_shape = (int(numpy.ceil(1.0*n_params/2)), 2)
             else:
                 subplot_shape = (1, 1)
+        n_chains_or_runs = samples.values()[0].shape[0]
+        legend = {samples.keys()[0]: ["chain/run " + str(ii+1) for ii in range(n_chains_or_runs)]}
         return self.plots(samples, shape=subplot_shape, transpose=True, skip=skip_samples, xlabels={}, xscales={},
-                          yscales={}, title=title, figure_name=figure_name, figsize=figsize)
+                          yscales={}, title=title, lgnd=legend, figure_name=figure_name, figsize=figsize)
 
     def plot_fit_scalar_params(self, samples, stats, probabilistic_model=None,
                                params=["tau1", "K", "sigma", "epsilon", "scale", "offset"], skip_samples=0,
@@ -360,7 +365,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
                 group_names = [""]
             isb, jsb = numpy.unravel_index(imetric, subplot_shape)
             axes[isb, jsb] = self.plot_bars(metric_data, ax=axes[isb, jsb], fig=fig, title=metric,
-                                            group_names=group_names, legend_prefix="chain/run")[1]
+                                            group_names=group_names, legend_prefix="chain/run ")[1]
         # fig.tight_layout()
         self._save_figure(fig, figure_name)
         self._check_show()
@@ -442,7 +447,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
                     n_chains_or_runs = metric_data[jj].shape[0]
                     for kk in range(n_chains_or_runs):
                         c = colorcycle[kk % n_colors]
-                        axes[ii, jj].plot(xdata, metric_data[jj][kk][ii, :],  label="chain/run" +str(kk + 1),
+                        axes[ii, jj].plot(xdata, metric_data[jj][kk][ii, :],  label="chain/run " + str(kk + 1),
                                           marker="o", markersize=1, markeredgecolor=c, markerfacecolor=None,
                                           linestyle="None")
                         if n_chains_or_runs > 1:

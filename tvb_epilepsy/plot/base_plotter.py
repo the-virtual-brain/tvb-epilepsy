@@ -258,7 +258,7 @@ class BasePlotter(object):
         return fig
 
     def plots(self, data_dict, shape=None, transpose=False, skip=0, xlabels={}, xscales={}, yscales={}, title='Plots',
-              figure_name=None, figsize=FiguresConfig.VERY_LARGE_SIZE):
+              lgnd={}, figure_name=None, figsize=FiguresConfig.VERY_LARGE_SIZE):
         if shape is None:
             shape = (1, len(data_dict))
         fig, axes = pyplot.subplots(shape[0], shape[1], figsize=figsize)
@@ -273,13 +273,16 @@ class BasePlotter(object):
             axes[ind].set_yscale(yscales.get(key, "linear"))
             axes[ind].set_xlabel(xlabels.get(key, ""))
             axes[ind].set_ylabel(key)
+            this_legend = lgnd.get(key, None)
+            if this_legend is not None:
+                axes[ind].legend(this_legend)
         fig.tight_layout()
         self._save_figure(fig, figure_name)
         self._check_show()
         return fig, axes
 
     def pair_plots(self, data, keys, diagonal_plots={}, transpose=False, skip=0,
-                   title='Pair plots', legend_prefix="chains/runs", subtitles=None, figure_name=None,
+                   title='Pair plots', legend_prefix="", subtitles=None, figure_name=None,
                    figsize=FiguresConfig.VERY_LARGE_SIZE):
 
         def confirm_y_coordinate(data, ymax):
