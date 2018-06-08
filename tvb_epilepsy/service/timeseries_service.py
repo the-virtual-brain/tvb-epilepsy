@@ -123,6 +123,14 @@ class TimeseriesService(object):
         return Timeseries(np.log(timeseries.data), timeseries.dimension_labels,
                           timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
+    def exp(self, timeseries):
+        return Timeseries(np.exp(timeseries.data), timeseries.dimension_labels,
+                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+
+    def abs(self, timeseries):
+        return Timeseries(np.abs(timeseries.data), timeseries.dimension_labels,
+                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+
     def power(self, timeseries):
         return np.sum(self.square(timeseries).squeezed, axis=0)
 
@@ -176,11 +184,11 @@ class TimeseriesService(object):
         else:
             seeg_fun = lambda source, gain_matrix: source.squeezed.dot(gain_matrix.T)
         seeg = []
-        for sensor in ensure_list(sensors):
+        for id, sensor in enumerate(ensure_list(sensors)):
             seeg.append(Timeseries(seeg_fun(source_timeseries, sensor.gain_matrix),
                                    {TimeseriesDimensions.SPACE.value: sensor.labels,
                                     TimeseriesDimensions.VARIABLES.value:
-                                        PossibleVariables.SEEG.value + str(sensor.labels)},
+                                        PossibleVariables.SEEG.value + str(id)},
                                    source_timeseries.time_start, source_timeseries.time_step,
                                    source_timeseries.time_unit))
         return seeg
