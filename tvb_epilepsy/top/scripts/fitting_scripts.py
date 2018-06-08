@@ -1,9 +1,12 @@
 import os
 
+import numpy as np
+
 from tvb_epilepsy.base.constants.config import Config
-from tvb_epilepsy.base.constants.model_constants import K_DEF
-from tvb_epilepsy.base.constants.model_inversion_constants import *
-from tvb_epilepsy.base.utils.log_error_utils import warning
+from tvb_epilepsy.base.constants.model_constants import K_DEF, TAU1_DEF, TAU0_DEF
+from tvb_epilepsy.base.constants.model_inversion_constants import OBSERVATION_MODELS, SEIZURE_LENGTH, \
+    HIGH_FREQ, LOW_FREQ, WIN_LEN_RATIO, BIPOLAR
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, generate_region_labels
 from tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, Timeseries
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
@@ -13,7 +16,11 @@ from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.top.scripts.hypothesis_scripts import from_hypothesis_to_model_config_lsa
 from tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration_to_simulation
-from tvb_epilepsy.top.scripts.fitting_data_scripts import *
+from tvb_epilepsy.top.scripts.fitting_data_scripts import prepare_seeg_observable_from_mne_file, \
+    prepare_simulated_seeg_observable, prepare_signal_observable
+
+
+logger = initialize_logger(__name__)
 
 
 def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, pse_flag=True,
@@ -65,7 +72,9 @@ def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, tau1=TAU1_
 
 
 def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0, seizure_length=SEIZURE_LENGTH,
-                       times_on_off=[], label_strip_fun=None, plotter=None, title_prefix="", **kwargs):
+                       log_flag=True, times_on_off=[], time_units="ms", label_strip_fun=None, filter_flag=True,
+                       low_freq=LOW_FREQ, high_freq=HIGH_FREQ, bipolar=BIPOLAR, envelope_flag=True, smooth_flag=True,
+                       win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
     try:
         return H5Reader().read_timeseries(ts_file)
     except:
@@ -73,23 +82,21 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
         if len(sensors_lbls) == 0:
             sensors_lbls = head.get_sensors_id(sensor_ids=sensor_id).labels
         signals = prepare_seeg_observable_from_mne_file(empirical_file, head.get_sensors_id(sensor_ids=sensor_id),
-                                                        sensors_lbls, seizure_length, times_on_off,
-                                                        label_strip_fun=label_strip_fun, plotter=plotter,
-                                                        title_prefix=title_prefix, **kwargs)
+                                                        sensors_lbls, seizure_length, log_flag, times_on_off,
+                                                        time_units, label_strip_fun, filter_flag, low_freq, high_freq,
+                                                        bipolar, envelope_flag, smooth_flag, win_len_ratio, plotter,
+                                                        title_prefix)
         H5Writer().write_timeseries(signals, ts_file)
         return signals
 
 
 def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis, probabilistic_model, sensor_id=0,
-                              sim_type="paper", times_on_off=[], config=Config(), plotter=None, title_prefix="",
-                              **kwargs):
-    if probabilistic_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
-        seeg_gain_mode = "exp"
-    else:
-        seeg_gain_mode = "lin"
+                              sim_type="paper", times_on_off=[], config=Config(),
+                              filter_flag=True, low_freq=LOW_FREQ, high_freq=HIGH_FREQ, bipolar=BIPOLAR,
+                              envelope_flag=True, smooth_flag=True, win_len_ratio=WIN_LEN_RATIO,
+                              plotter=None, title_prefix=""):
     signals, simulator = from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
                                                                 sim_type=sim_type, ts_file=ts_file,
-                                                                seeg_gain_mode=seeg_gain_mode,
                                                                 config=config, plotter=plotter)
     try:
         probabilistic_model.ground_truth.update({"tau1": np.mean(simulator.model.tau1),
@@ -99,26 +106,18 @@ def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis
         probabilistic_model.ground_truth.update({"tau1": np.mean(simulator.model.tt),
                                                  "tau0": 1.0 / np.mean(simulator.model.r),
                                                  "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
+    signals = signals["source"].get_source()
+    signals.data = -signals.data  # change sign to fit x1
     if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
-        if probabilistic_model.observation_model != OBSERVATION_MODELS.SEEG_LOGPOWER.value:
-            try:
-                signals = signals["seeg"][sensor_id]
-            except:
-                signals = TimeseriesService().compute_seeg(signals["source"].get_source(),
-                                                           head.get_sensors_id(sensor_ids=sensor_id))[0]
-        else:
-            signals = TimeseriesService().compute_seeg(signals["source"].get_source(),
-                                                       head.get_sensors_id(sensor_ids=sensor_id), sum_mode="exp")[0]
-        signals.data = -signals.data
-        signals = prepare_seeg_observable(signals, probabilistic_model.time_length, times_on_off,
-                                          plotter=plotter, title_prefix=title_prefix, **kwargs)
-
+        log_flag = probabilistic_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
+        signals = prepare_simulated_seeg_observable(signals, head.get_sensors_id(sensor_ids=sensor_id),
+                                                    probabilistic_model.time_length, log_flag, times_on_off, [],
+                                                    filter_flag, low_freq, high_freq, bipolar, envelope_flag,
+                                                    smooth_flag, win_len_ratio, plotter, title_prefix)
     else:
-        signals = signals["source"].get_source()
-        signals.data = -signals.data  # change sign to fit x1
-        kwargs.pop("bipolar", None)
-        signals = prepare_signal_observable(signals, probabilistic_model.time_length, times_on_off,
-                                            plotter=plotter, title_prefix=title_prefix, **kwargs)
+        signals = prepare_signal_observable(signals, probabilistic_model.time_length, times_on_off, [],
+                                            filter_flag, low_freq, high_freq, envelope_flag, False,
+                                            smooth_flag, win_len_ratio, plotter, title_prefix)
     return signals, simulator
 
 
