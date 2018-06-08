@@ -267,15 +267,15 @@ class Timeseries(object):
                 self.logger.info("%s is computed using %s and %s state variables!" % (
                     PossibleVariables.SOURCE.value, PossibleVariables.X1.value, PossibleVariables.X2.value))
                 y2_ts = self.get_state_variable(PossibleVariables.X2.value)
-                lfp_data = y2_ts.data - y0_ts.data
+                source_data = y2_ts.data - y0_ts.data
             else:
                 self.logger.warn("%s is computed using %sstate variable!" % (
                     PossibleVariables.SOURCE.value, PossibleVariables.X1.value))
-                lfp_data = -y0_ts.data
-            lfp_dim_labels = OrderedDict(
+                source_data = -y0_ts.data
+            source_dim_labels = OrderedDict(
                 {TimeseriesDimensions.SPACE.value: self.dimension_labels[TimeseriesDimensions.SPACE.value],
                  TimeseriesDimensions.VARIABLES.value: [PossibleVariables.SOURCE.value]})
-            return Timeseries(lfp_data, lfp_dim_labels, self.time_start, self.time_step, self.time_unit)
+            return Timeseries(source_data, source_dim_labels, self.time_start, self.time_step, self.time_unit)
         self.logger.error(
             "%s is not computed and cannot be computed now because state variables %s and %s are not defined!" % (
                 PossibleVariables.SOURCE.value, PossibleVariables.X1.value, PossibleVariables.X2.value))
@@ -284,5 +284,7 @@ class Timeseries(object):
     def get_bipolar(self):
         bipolar_labels, bipolar_inds = monopolar_to_bipolar(self.space_labels)
         data = self.data[:, bipolar_inds[0]] - self.data[:, bipolar_inds[1]]
-        return Timeseries(data, self.dimension_labels, self.time_start, self.time_step, self.time_unit)
+        bipolar_dimension_labels = deepcopy(self.dimension_labels)
+        bipolar_dimension_labels["space"] = numpy.array(bipolar_labels)
+        return Timeseries(data, bipolar_dimension_labels, self.time_start, self.time_step, self.time_unit)
 
