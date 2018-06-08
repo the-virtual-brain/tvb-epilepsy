@@ -190,7 +190,7 @@ class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
         parameters = self.generate_parameters()
         model = ProbabilisticModel(self.name, self.number_of_regions, target_data_type, self.xmode, self.priors_mode,
                                    parameters, ground_truth, self.model_config, self.sigma_x, self.MC_direction_split)
-        self.logger.info(self.__class__.__name__  + " took " +
+        self.logger.info(self.__class__.__name__ + " took " +
                          str( time.time() - tic) + ' sec for model generation')
         return model
 
@@ -201,8 +201,8 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                   "epsilon", "scale", "offset"]
     sigma_init = SIGMA_INIT_DEF
     epsilon = EPSILON_DEF
-    scale = SCALE_SIGNAL_DEF
-    offset = OFFSET_SIGNAL_DEF
+    scale = 1.0
+    offset = 0.0
     observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
     number_of_signals = 0
     active_regions = []
@@ -217,7 +217,6 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                  sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5,
                  sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF,
-                 scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF,
                  observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  number_of_signals=0, active_regions=[]):
         super(ODEProbabilisticModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode,
@@ -226,8 +225,15 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         self.tau1 = tau1
         self.tau0 = tau0
         self.epsilon = epsilon
-        self.scale = scale
-        self.offset = offset
+        if observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
+            self.scale = 1.0   # TODO: find those!
+            self.offset = -2.5  # TODO: find those!
+        elif observation_model == OBSERVATION_MODELS.SEEG_POWER.value:
+            self.scale = 0.25
+            self.offset = 0.0
+        else:
+            self.scale = 0.5
+            self.offset = 0.2
         self.observation_model = observation_model
         self.number_of_signals = number_of_signals
         self.time_length = self.compute_seizure_length()
@@ -304,14 +310,14 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         if "scale" in self.parameters:
             self.logger.info("...scale...")
             parameters.update(
-                {"scale": generate_lognormal_parameter("scale", self.scale, 0.1, 10*self.scale,
+                {"scale": generate_lognormal_parameter("scale", self.scale, 0.1, 2*self.scale,
                                                        sigma=self.scale, p_shape=(), use="scipy")})
             
         if "offset" in self.parameters:
             self.logger.info("...offset...")
             parameters.update(
                 {"offset":
-                     generate_probabilistic_parameter("offset", self.offset - 10.0, self.offset + 10.0, p_shape=(),
+                     generate_probabilistic_parameter("offset", self.offset - 3.0, self.offset + 3.0, p_shape=(),
                                                       probability_distribution=ProbabilityDistributionTypes.NORMAL,
                                                       optimize_pdf=False, use="scipy",
                                                       **{"mu": self.offset, "sigma": 1.0})})
@@ -344,12 +350,11 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                  sigma_x=None, sigma_x_scale=3, MC_direction_split=0.5,
                  sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF, sigma=SIGMA_DEF,
-                 scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF,
                  sde_mode=SDE_MODES.NONCENTERED.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  number_of_signals=0, active_regions=[]):
         super(SDEProbabilisticModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode,
                                                            sigma_x, sigma_x_scale, MC_direction_split, sigma_init,
-                                                           tau1, tau0, epsilon, scale, offset, observation_model,
+                                                           tau1, tau0, epsilon, observation_model,
                                                            number_of_signals, active_regions)
         self.sigma_init = sigma_init
         self.sde_mode = sde_mode

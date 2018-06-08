@@ -104,8 +104,8 @@ class ODEProbabilisticModel(ProbabilisticModel):
     sigma_init = SIGMA_INIT_DEF
     tau1 = TAU1_DEF
     tau0 = TAU0_DEF
-    scale = SCALE_SIGNAL_DEF
-    offset = OFFSET_SIGNAL_DEF
+    scale = 1.0
+    offset = 0.0
     epsilon = EPSILON_DEF
     number_of_target_data = 0
     time_length = SEIZURE_LENGTH
@@ -128,7 +128,7 @@ class ODEProbabilisticModel(ProbabilisticModel):
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, parameters={}, ground_truth={},
                  model_config=ModelConfiguration(), observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
-                 scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF, epsilon=EPSILON_DEF,
+                 scale=1.0, offset=0.0, epsilon=EPSILON_DEF,
                  number_of_target_data=0, time_length=0, dt=DT_DEF, active_regions=[]):
         super(ODEProbabilisticModel, self).__init__(name, number_of_regions, target_data_type, xmode, priors_mode,
                                                     parameters, ground_truth, model_config, sigma_x)
@@ -184,7 +184,7 @@ class SDEProbabilisticModel(ODEProbabilisticModel):
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, parameters={}, ground_truth={},
                  model_config=ModelConfiguration(), observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, sigma=SIGMA_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
-                 scale=SCALE_SIGNAL_DEF, offset=OFFSET_SIGNAL_DEF, epsilon=EPSILON_DEF,
+                 scale=1.0, offset=0.0, epsilon=EPSILON_DEF,
                  number_of_target_data=0, time_length=0, dt=DT_DEF, active_regions=[],
                  sde_mode=SDE_MODES.NONCENTERED.value):
         super(SDEProbabilisticModel, self).__init__(name, number_of_regions, target_data_type, xmode, priors_mode,

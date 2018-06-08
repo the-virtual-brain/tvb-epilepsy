@@ -96,6 +96,7 @@ data {
     real scale_mu; //=1.0
     real scale_std; //=1.0/6
     real scale_lo; // =0.3
+    int log_target_data; // 1 for log, 0 for linear obervation function
     matrix[n_target_data, n_active_regions] gain;
     row_vector[n_target_data] target_data[n_times];
     vector[n_active_regions] Ic;
@@ -112,7 +113,6 @@ transformed data {
     real sigma_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(sigma_mu, sigma_std);
     row_vector[n_active_regions] x0_logmu = normal_mean_std_to_lognorm_mu(x0_star_mu, x0_star_std);
     row_vector[n_active_regions] x0_sigma = normal_mean_std_to_lognorm_sigma(x0_star_mu, x0_star_std);
-    //matrix[n_target_data, n_active_regions] log_gain = log(gain);
     matrix [n_active_regions, n_active_regions] SC_ = SC;
     for (i in 1:n_active_regions) SC_[i, i] = 0;
     SC_ = SC_ / max(SC_) * rows(SC_);
@@ -171,8 +171,13 @@ transformed parameters {
         z[t+1] = z_step(x1[t], z[t], x0, K*SC, Ic, x1_eq_def, dt*tau1, dZt_star[t], sqrtdt*sigma, tau0);
     }
 
-    for (t in 1:n_times)
-        fit_target_data[t] = scale * (log(gain * exp(x1[t]'-x1_eq_def)) + offset)';
+    if (log_target_data>0) {
+        for (t in 1:n_times)
+            fit_target_data[t] = scale * (log(gain * exp(x1[t]'-x1_eq_def)) + offset)';
+    } else {
+        for (t in 1:n_times)
+            fit_target_data[t] = scale * (gain * (x1[t]'-x1_eq_def) + offset)';
+    }
 
     /*
     print("offset=", offset);

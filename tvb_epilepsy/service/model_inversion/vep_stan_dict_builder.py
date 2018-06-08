@@ -1,9 +1,9 @@
+
 import numpy as np
-# from copy import deepcopy
+
+from tvb_epilepsy.base.constants.model_inversion_constants import OBSERVATION_MODELS
 from tvb_epilepsy.base.utils.log_error_utils import warning
-from tvb_epilepsy.base.utils.data_structures_utils import ensure_list  # isequal_string, sort_dict
-# from tvb_epilepsy.base.constants.model_inversion_constants import *
-# from tvb_epilepsy.base.computations.probability_distributions import ProbabilityDistributionTypes
+from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 
 
 INS_PARAMS_NAMES_DICT={"K": "k", "MC": "FC", "tau1": "time_scale", "tau0": "tau",
@@ -94,7 +94,6 @@ def build_stan_model_data_dict_to_interface_ins(probabilistic_model, signals, co
                 "offset_mu": probabilistic_model.parameters["offset"].mean,
                 "offset_std": probabilistic_model.parameters["offset"].std,
                 "seeg_log_power": signals,
-                # 9.0 * model_data["signals"] - 4.0,  # scale from (0, 1) to (-4, 5)
                 "gain": gain_matrix,
                 "time": set_time(probabilistic_model, time),
                 "active_regions": np.array(probabilistic_model.active_regions),
@@ -148,8 +147,8 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "scale_lo": 0.3,
                 "offset_mu": probabilistic_model.parameters["offset"].mean,
                 "offset_std": probabilistic_model.parameters["offset"].std,
+                "log_target_data": int(probabilistic_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value),
                 "target_data": signals,
-                # 9.0 * model_data["signals"] - 4.0,  # scale from (0, 1) to (-4, 5)
                 "gain": gain_matrix,
                 "time": set_time(probabilistic_model, time),
                 "active_regions": np.array(probabilistic_model.active_regions),
