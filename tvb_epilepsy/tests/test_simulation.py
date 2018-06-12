@@ -35,7 +35,7 @@ class TestSimulationRun(BaseTest):
 
         simulator_builder = SimulatorBuilder()
         simulator, _, _ = simulator_builder.build_simulator(model_configuration, connectivity)
-        ttavg, tavg_data, status = simulator.launch_simulation(100)
+        ts, status = simulator.launch_simulation(100)
         assert status
 
     # This can be ran only locally for the moment
