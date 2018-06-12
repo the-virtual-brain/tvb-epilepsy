@@ -78,7 +78,7 @@ class TestPlotter(BaseTest):
         model = build_EpileptorDP2D(mc)
 
         # TODO: this figure_name is constructed inside plot method, so it can change
-        figure_name = "EpileptorDP2D_Simulated_TAVG"
+        figure_name = "Simulated_TAVG"
         file_name = os.path.join(self.config.out.FOLDER_FIGURES, figure_name + ".png")
         assert not os.path.exists(file_name)
 
