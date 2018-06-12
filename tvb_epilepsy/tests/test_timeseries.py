@@ -93,7 +93,7 @@ class TestTimeseries(object):
         with pytest.raises(ValueError):
             ts_from_2D.get_time_window_by_units(0, 0.025)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(AttributeError):
             ts_from_2D.lfp
 
     def test_timeseries_3D(self):
