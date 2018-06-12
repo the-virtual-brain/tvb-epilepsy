@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.signal import butter, lfilter, welch, periodogram, spectrogram
+from scipy.signal import butter, filtfilt, welch, periodogram, spectrogram
 from scipy.interpolate import interp1d, griddata
 
 # x is assumed to be data (real numbers) arranged along the first dimension of an ndarray
@@ -46,8 +46,8 @@ def interval_scaling(x, min_targ=0.0, max_targ=1.0, min_orig=None, max_orig=None
         min_orig = np.min(x, axis=0)
     if max_orig is None:
         max_orig = np.max(x, axis=0)
-    scale_factor = (max_targ - max_orig) / (min_targ - min_orig)
-    return max_orig + (x - min_orig) * scale_factor
+    scale_factor = (max_targ - min_targ) / (max_orig - min_orig)
+    return min_targ + (x - min_orig) * scale_factor
 
 
 def threshold(x, th=0.0, out=None):
@@ -129,11 +129,12 @@ def _butterworth_bandpass(fs, mode, lowcut, highcut, order=3):
     return b, a
 
 
-def filter_data(data, fs, lowcut=None, highcut=None, mode='bandpass', order=3):
+def filter_data(data, fs, lowcut=None, highcut=None, mode='bandpass', order=3, axis=0):
     # get filter coefficients
     b, a = _butterworth_bandpass(fs, mode, lowcut, highcut, order)
     # filter data
-    y = lfilter(b, a, data)
+    y = filtfilt(b, a, data, axis=axis)
+    # y = lfilter(b, a, data, axis=axis)
     return y
 
 

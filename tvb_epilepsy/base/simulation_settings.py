@@ -35,7 +35,7 @@ class SimulationSettings(object):
              "07. noise_intensity": self.noise_intensity,
              "08. monitor_type": self.monitor_type,
              "09. monitor_sampling_period": self.monitor_sampling_period,
-             "10. variables_names": self.variables_names,
+             "10. monitor_expressions": self.monitor_expressions,
              "11. initial_conditions": self.initial_conditions,
              }
         return formal_repr(self, d)

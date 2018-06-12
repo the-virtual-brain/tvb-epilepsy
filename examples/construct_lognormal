@@ -1,0 +1,66 @@
+import numpy as np
+
+MU = 0.0
+SIGMA = 0.01
+
+
+def scale_params(mu=MU, sigma=SIGMA, loc=0.0, scale=1.0):
+    scale = np.exp(mu) * scale
+    mu = np.log(scale)
+    return mu, sigma
+
+
+def calc_mean(mu=MU, sigma=SIGMA, loc=0.0, scale=1.0):
+    mu = scale_params(mu, sigma, loc, scale)[0]
+    return np.exp(mu + sigma ** 2 / 2.0) + loc
+
+
+def calc_median(mu=MU, sigma=SIGMA, loc=0.0, scale=1.0):
+    mu = scale_params(mu, sigma, loc, scale)[0]
+    return np.exp(mu) + loc
+
+
+def calc_mode(mu=MU, sigma=SIGMA, loc=0.0, scale=1.0):
+    mu = scale_params(mu, sigma, loc, scale)[0]
+    return np.exp(mu - sigma ** 2) + loc
+
+
+def calc_var(mu=MU, sigma=SIGMA, loc=0.0, scale=1.0):
+    mu = scale_params(mu, sigma, loc, scale)[0]
+    sigma2 = sigma ** 2
+    return (np.exp(sigma2) - 1.0) * np.exp(2.0 * mu + sigma2)
+
+
+def calc_std(mu=MU, sigma=SIGMA, loc=0.0, scale=1.0):
+    return np.sqrt(calc_var(mu, sigma, loc, scale))
+
+
+def calc_skew(mu=MU, sigma=SIGMA, loc=0.0, scale=1.0):
+    sigma2exp = np.exp(sigma ** 2)
+    return (sigma2exp + 2.0) * np.sqrt(sigma2exp - 1.0)
+
+
+def calc_kurt(mu=MU, sigma=SIGMA, loc=0.0, scale=1.0):
+    sigma2 = sigma ** 2
+    return np.exp(4.0 * sigma2) + 2.0 * np.exp(3.0 * sigma2) + 3.0 * np.exp(2.0 * sigma2) - 6.0
+
+
+def calc_loc_scale(target_m, std, mfun="mean", mu=MU, sigma=SIGMA):
+
+    if mfun == "median":
+        mfun = calc_median
+    elif mfun == "mode":
+        mfun = calc_mode
+    else:
+        mfun = calc_mean
+
+    scale = std / calc_std(mu, sigma)
+    temp_m = mfun(mu, sigma, scale=scale)
+    loc = target_m - temp_m
+
+    return loc, scale, mfun(mu, sigma, loc, scale), calc_std(mu, sigma, loc, scale)
+
+
+def standard_normal_to_lognormal(standard_normal, target_m, std, mfun="mean", mu=MU, sigma=SIGMA):
+    loc, scale = calc_loc_scale(target_m, std, mfun, mu, sigma)[:2]
+    return np.exp(mu + sigma*standard_normal) * scale + loc

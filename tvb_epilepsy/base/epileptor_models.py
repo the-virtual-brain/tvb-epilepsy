@@ -470,7 +470,8 @@ class EpileptorDPrealistic(Model):
     pmode = arrays.FloatArray(
         label="pmode",
         default=numpy.array("const"),
-        doc="pmode = numpy.array(""g""), numpy.array(""z""), numpy.array(""z*g"") or numpy.array(""const"") parameters following the g, z, z*g dynamics or staying constamt, respectively",
+        doc="pmode = numpy.array(""g""), numpy.array(""z""), numpy.array(""z*g"") or numpy.array(""const"") " +
+            "parameters following the g, z, z*g dynamics or staying constamt, respectively",
         order=-1)
 
     a = arrays.FloatArray(
@@ -630,9 +631,10 @@ class EpileptorDPrealistic(Model):
                 xp = z * g
                 xp1 = -0.7
                 xp2 = 0.1
-            slope_eq = interval_scaling(xp, xp1, 1.0, xp2, slope)
-            # slope_eq = self.slope
-            Iext2_eq = interval_scaling(xp, xp1, 0.0, xp2, Iext2)
+            #                             targ min,max orig min,max
+            slope_eq = interval_scaling(xp, 1.0, slope, xp1, xp2)
+            # slope_eq = slope * numpy.ones(z.shape)
+            Iext2_eq = interval_scaling(xp, 0.0, Iext2, xp1, xp2)
 
         else:
             i1 = numpy.ones(z.shape)
@@ -735,18 +737,20 @@ class EpileptorDPrealistic(Model):
         # filter
         ydot[5] = self.tau1 * (-0.01 * (y[5] - self.gamma * y[0]))
 
+        feedback = (self.pmode == numpy.array(['g', 'z', 'z*g'])).any()
         slope_eq, Iext2_eq = self.fun_slope_Iext2(y[2], y[5], self.pmode, self.slope, self.Iext2)
+        tau0_feedback = numpy.where(feedback, 1.0, self.tau0/100)
 
         # x0_values
-        ydot[6] = self.tau1 * (-y[6] + self.x0)
+        ydot[6] = 1000*self.tau1 * (-y[6] + self.x0) / self.tau0
         # slope
-        ydot[7] = 10 * self.tau1 * (-y[7] + slope_eq)  # 5*
+        ydot[7] = 10*self.tau1 * (-y[7] + slope_eq) / tau0_feedback #
         # Iext1
-        ydot[8] = self.tau1 * (-y[8] + self.Iext1) / self.tau0
+        ydot[8] = 1000*self.tau1 * (-y[8] + self.Iext1) / self.tau0
         # Iext2
-        ydot[9] = 5 * self.tau1 * (-y[9] + Iext2_eq)
+        ydot[9] = 10*self.tau1 * (-y[9] + Iext2_eq) / tau0_feedback #
         # K
-        ydot[10] = self.tau1 * (-y[10] + self.K) / self.tau0
+        ydot[10] = 1000 * self.tau1 * (-y[10] + self.K) / self.tau0
 
         return ydot
 

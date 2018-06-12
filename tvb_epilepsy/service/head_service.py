@@ -1,9 +1,10 @@
 import numpy as np
-from sklearn.cluster import AgglomerativeClustering
+
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
 from tvb_epilepsy.base.utils.log_error_utils import raise_value_error, initialize_logger
-from tvb_epilepsy.base.computations.math_utils import select_greater_values_array_inds
+from tvb_epilepsy.base.computations.math_utils import select_greater_values_array_inds, \
+                                                      select_by_hierarchical_group_metric_clustering
 
 
 class HeadService(object):
@@ -58,6 +59,17 @@ class HeadService(object):
                     np.array(initial_selection)[select_greater_values_array_inds(proj, gain_matrix_th)]).tolist()
         return np.unique(selection).tolist()
 
+    def sensors_in_electrodes_disconnectivity(self, sensors, sensors_labels=[]):
+        if len(sensors_labels) < 2:
+            sensors_labels = sensors.labels
+        n_sensors = len(sensors_labels)
+        elec_labels, elec_inds = sensors.group_sensors_to_electrodes(sensors_labels)
+        if len(elec_labels) >= 2:
+            disconnectivity = np.ones((n_sensors, n_sensors))
+            for ch in elec_inds:
+                disconnectivity[np.meshgrid(ch, ch)] = 0.0
+        return disconnectivity
+
     def select_sensors_corr(self, sensors, distance, initial_selection=[], n_electrodes=10, sensors_per_electrode=1,
                             power=None, group_electrodes=False):
         if len(initial_selection) == 0:
@@ -67,25 +79,12 @@ class HeadService(object):
             initial_selection = np.array(initial_selection)
             distance = 1.0 - distance
             if group_electrodes:
-                elec_labels, elec_inds = sensors.group_sensors_to_electrodes(sensors.labels[initial_selection])
-                if len(elec_labels) >= 2:
-                    noconnectivity = np.ones((n_sensors, n_sensors))
-                    for ch in elec_inds:
-                        noconnectivity[np.meshgrid(ch, ch)] = 0.0
-                    distance = distance * noconnectivity
-            n_electrodes = np.minimum(np.maximum(n_electrodes, 3), n_sensors // sensors_per_electrode)
-            clustering = AgglomerativeClustering(n_electrodes, affinity="precomputed", linkage="average")
-            clusters_labels = clustering.fit_predict(distance)
-            selection = []
-            for cluster_id in range(len(np.unique(clusters_labels))):
-                cluster_inds = np.where(clusters_labels == cluster_id)[0]
-                n_select = np.minimum(sensors_per_electrode, len(cluster_inds))
-                if power is not None and len(ensure_list(power)) == n_sensors:
-                    inds_select = np.argsort(power[cluster_inds])[-n_select:]
-                else:
-                    inds_select = range(n_select)
-                selection.append(initial_selection[cluster_inds[inds_select]])
-            return np.unique(np.hstack(selection)).tolist()
+                disconnectivity = self.sensors_in_electrodes_disconnectivity(sensors, sensors.labels[initial_selection])
+            selection = \
+                select_by_hierarchical_group_metric_clustering(distance, disconnectivity, metric=power,
+                                                               n_groups=n_electrodes,
+                                                               members_per_group=sensors_per_electrode)
+            return np.unique(np.hstack(initial_selection[selection])).tolist()
         else:
-            self.logger.warning("Number of sensors' left < 6!\n" + "Skipping clustering and returning all of them!")
+            self.logger.warning("Number of sensors' left < 2!\n" + "Skipping clustering and returning all of them!")
             return initial_selection

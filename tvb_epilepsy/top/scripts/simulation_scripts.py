@@ -1,10 +1,8 @@
 import os
 import numpy as np
 from tvb_epilepsy.base.constants.config import Config
-from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, isequal_string
-from tvb_epilepsy.base.computations.analyzers_utils import filter_data
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.base.model.vep.sensors import Sensors
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.io.h5_writer import H5Writer
@@ -12,114 +10,56 @@ from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.base.epileptor_models import EpileptorDP2D
 from tvb_epilepsy.service.simulator.simulator_builder import build_simulator_TVB_realistic, \
     build_simulator_TVB_fitting, build_simulator_TVB_default, build_simulator_TVB_paper
+from tvb_epilepsy.service.timeseries_service import TimeseriesService
+
 
 logger = initialize_logger(__name__)
 
 
-def prepare_vois_ts_dict(vois, data):
-    # Pack results into a dictionary:
-    vois_ts_dict = dict()
-    for idx_voi, voi in enumerate(vois):
-        vois_ts_dict[voi] = data[:, idx_voi, :].astype('f')
-    return vois_ts_dict
-
-
-def _compute_and_write_seeg(lfp_timeseries, sensors_list, dt, filename, title_prefix="Ep", hpf_flag=False, hpf_low=10.0,
-                            hpf_high=256.0):
-    h5_writer = H5Writer()
-    plotter = Plotter()
-
-    fsAVG = 1000.0 / dt
+def _compute_and_write_seeg(source_timeseries, sensors_list, filename, hpf_flag=False, hpf_low=10.0,
+                            hpf_high=256.0, seeg_gain_mode="lin", h5_writer=H5Writer()):
+    ts_service = TimeseriesService()
+    fsAVG = 1000.0 / source_timeseries.time_step
 
     if hpf_flag:
-        hpf_low = max(hpf_low, 1000.0 / (lfp_timeseries.end_time - lfp_timeseries.time_start))
+        hpf_low = max(hpf_low, 1000.0 / (source_timeseries.end_time - source_timeseries.time_start))
         hpf_high = min(fsAVG / 2.0 - 10.0, hpf_high)
 
     idx_proj = -1
+    seeg_data = []
     for sensor in sensors_list:
         if isinstance(sensor, Sensors):
             idx_proj += 1
-            seeg_data = lfp_timeseries.squeezed_data.dot(sensor.gain_matrix.T)
+            seeg = ts_service.compute_seeg(source_timeseries, [sensor], sum_mode=seeg_gain_mode)[0]
 
             if hpf_flag:
-                for i in range(seeg_data.shape[1]):
-                    seeg_data[:, i] = filter_data(seeg_data[:, i], fsAVG, hpf_low, hpf_high)
+                seeg = ts_service.filter(seeg, hpf_low, hpf_high, mode='bandpass', order=3)
 
-            seeg_data -= np.min(seeg_data)
-            seeg_data /= np.max(seeg_data)
+            # TODO: test the case where we save subsequent seeg data from different sensors
+            h5_writer.write_ts_seeg_epi(seeg, source_timeseries.time_step, filename)
+            seeg_data.append(seeg)
 
-            seeg_ts = Timeseries(seeg_data, {TimeseriesDimensions.SPACE.value: sensor.labels}, lfp_timeseries.time_start,
-                                 lfp_timeseries.time_step, lfp_timeseries.time_unit)
+    return seeg_data
 
-            h5_writer.write_ts_seeg_epi(seeg_data, dt, filename)
-            plotter.plot_simulated_seeg_timeseries(seeg_ts, title_prefix, hpf_flag)
 
 # TODO: simplify and separate flow steps
-def compute_seeg_and_write_ts_to_h5(timeseries, model, sensors_list, dt, filename, hpf_flag=False, hpf_low=10.0,
-                                 hpf_high=256.0):
-    h5_writer = H5Writer()
-
+def compute_seeg_and_write_ts_to_h5(timeseries, model, sensors_list, filename, seeg_gain_mode="lin",
+                                    hpf_flag=False, hpf_low=10.0, hpf_high=256.0, h5_writer=H5Writer()):
+    filename_epi = os.path.splitext(filename)[0] + "_epi.h5"
+    h5_writer.write_ts(timeseries, timeseries.time_step, filename)
+    source_timeseries = timeseries.get_source()
+    h5_writer.write_ts_epi(timeseries, timeseries.time_step, filename_epi, source_timeseries)
     if isinstance(model, EpileptorDP2D):
-        lfp_timeseries = timeseries.x1
-        h5_writer.write_ts_epi(timeseries, dt, filename, lfp_timeseries)
-        _compute_and_write_seeg(lfp_timeseries, sensors_list, dt, filename)
+        hpf_flag = False
+    seeg_ts_all = _compute_and_write_seeg(source_timeseries, sensors_list, filename_epi, hpf_flag, hpf_low, hpf_high,
+                                          seeg_gain_mode, h5_writer=h5_writer)
 
-    else:
-        lfp_timeseries = timeseries.lfp
-        h5_writer.write_ts_epi(timeseries, dt, filename, lfp_timeseries)
-        _compute_and_write_seeg(lfp_timeseries, sensors_list, dt, filename, model._ui_name, hpf_flag, hpf_low, hpf_high)
-
-#TODO: deprecated, kept only for fitting usages.
-def compute_seeg_and_write_ts_h5_file(folder, filename, model, vois_ts_dict, dt, time_length, hpf_flag=False,
-                                      hpf_low=10.0, hpf_high=256.0, sensors_list=[], save_flag=True):
-    fsAVG = 1000.0 / dt
-    sensors_list = ensure_list(sensors_list)
-    # Optionally high pass filter, and compute SEEG:
-    if isinstance(model, EpileptorDP2D):
-        raw_data = np.dstack(
-            [vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x1"]])
-        vois_ts_dict["lfp"] = vois_ts_dict["x1"]
-        idx_proj = -1
-        for sensor in sensors_list:
-            if isinstance(sensor, Sensors):
-                idx_proj += 1
-                sensor_name = sensor.s_type + '%d' % idx_proj
-                vois_ts_dict[sensor_name] = vois_ts_dict['x1'].dot(sensor.gain_matrix.T)
-                vois_ts_dict[sensor_name] -= np.min(vois_ts_dict[sensor_name])
-                vois_ts_dict[sensor_name] /= np.max(vois_ts_dict[sensor_name])
-    else:
-        vois_ts_dict["lfp"] = vois_ts_dict["x2"] - vois_ts_dict["x1"]
-        raw_data = np.dstack([vois_ts_dict["x1"], vois_ts_dict["z"], vois_ts_dict["x2"]])
-        if hpf_flag:
-            hpf_low = max(hpf_low, 1000.0 / time_length)
-            hpf_high = min(fsAVG / 2.0 - 10.0, hpf_high)
-        idx_proj = -1
-        for sensor in sensors_list:
-            if isinstance(sensor, Sensors):
-                idx_proj += 1
-                sensor_name = sensor.s_type + '%d' % idx_proj
-                vois_ts_dict[sensor_name] = vois_ts_dict['lfp'].dot(sensor.gain_matrix.T)
-                if hpf_flag:
-                    for i in range(vois_ts_dict[sensor_name].shape[1]):
-                        vois_ts_dict[sensor_name][:, i] = \
-                            filter_data(vois_ts_dict[sensor_name][:, i], fsAVG, hpf_low, hpf_high)
-                vois_ts_dict[sensor_name] -= np.min(vois_ts_dict[sensor_name])
-                vois_ts_dict[sensor_name] /= np.max(vois_ts_dict[sensor_name])
-
-    if save_flag:
-        h5_writer = H5Writer()
-        h5_writer.write_ts_epi(raw_data, dt, os.path.join(folder, filename), vois_ts_dict["lfp"])
-        # Write files:
-        if idx_proj > -1:
-            for i_sensor, sensor in enumerate(sensors_list):
-                h5_writer.write_ts_seeg_epi(vois_ts_dict[sensor.s_type + '%d' % i_sensor], dt,
-                                            os.path.join(folder, filename))
-    return vois_ts_dict
+    return timeseries, seeg_ts_all
 
 
 def from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
-                                           sim_type="realistic", dynamical_model="EpileptorDP2D", ts_file=None,
-                                           plot_flag=True, config=Config()):
+                                           sim_type="realistic", ts_file=None, seeg_gain_mode="lin", hpf_flag=False,
+                                           hpf_low=10.0, hpf_high=512.0, config=Config(), plotter=False):
     # Choose model
     # Available models beyond the TVB Epileptor (they all encompass optional variations from the different papers):
     # EpileptorDP: similar to the TVB Epileptor + optional variations,
@@ -129,14 +69,9 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     #      -Iext2 and slope are coupled to z, g, or z*g in order for spikes to appear before seizure,
     #      -multiplicative correlated noise is also used
     # Optional variations:
-    if dynamical_model is "EpileptorDP2D":
-        spectral_raster_plot = False
-        trajectories_plot = True
-    else:
-        spectral_raster_plot = False  # "lfp"
-        trajectories_plot = False
 
     # ------------------------------Simulation--------------------------------------
+    hypname = lsa_hypothesis.name.replace("_LSA", "")
     logger.info("\n\nConfiguring simulation...")
     if isequal_string(sim_type, "realistic"):
         sim, sim_settings, dynamical_model = build_simulator_TVB_realistic(model_configuration, head.connectivity)
@@ -149,41 +84,33 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
 
     writer = H5Writer()
     writer.write_simulator_model(sim.model, sim.connectivity.number_of_regions,
-                                 os.path.join(config.out.FOLDER_RES, dynamical_model._ui_name + "_model.h5"))
-
-    vois_ts_dict = {}
+                                 os.path.join(config.out.FOLDER_RES,
+                                              hypname + dynamical_model._ui_name + "_model.h5"))
+    sim_output = []
+    seeg=[]
     if ts_file is not None and os.path.isfile(ts_file):
         logger.info("\n\nLoading previously simulated time series from file: " + ts_file)
-        vois_ts_dict = H5Reader().read_dictionary(ts_file)
+        sim_output = H5Reader().read_timeseries(ts_file)
+        seeg = TimeseriesService().compute_seeg(sim_output.get_source(), head.sensorsSEEG, sum_mode=seeg_gain_mode)
     else:
         logger.info("\n\nSimulating...")
-        ttavg, tavg_data, status = sim.launch_simulation(report_every_n_monitor_steps=100)
+        sim_output, status = sim.launch_simulation(report_every_n_monitor_steps=100)
         if not status:
             logger.warning("\nSimulation failed!")
         else:
-            time = np.array(ttavg, dtype='float32').flatten()
-            output_sampling_time = np.mean(np.diff(time))
-            tavg_data = tavg_data[:, :, :, 0]
-            logger.info("\n\nSimulated signal return shape: %s", tavg_data.shape)
+            time = np.array(sim_output.time_line).astype("f")
+            logger.info("\n\nSimulated signal return shape: %s", sim_output.shape)
             logger.info("Time: %s - %s", time[0], time[-1])
-            logger.info("Values: %s - %s", tavg_data.min(), tavg_data.max())
-            # Variables of interest in a dictionary:
-            vois_ts_dict = prepare_vois_ts_dict(dynamical_model.variables_of_interest, tavg_data)
-            vois_ts_dict['time'] = time
-            vois_ts_dict['time_units'] = 'msec'
-            vois_ts_dict = compute_seeg_and_write_ts_h5_file(config.out.FOLDER_RES, dynamical_model._ui_name + "_ts.h5",
-                                                             sim.model,
-                                                             vois_ts_dict, output_sampling_time,
-                                                             sim_settings.simulated_period,
-                                                             hpf_flag=True, hpf_low=10.0, hpf_high=512.0,
-                                                             sensors_list=head.sensorsSEEG, save_flag=True)
-            if isinstance(ts_file, basestring):
-                writer.write_dictionary(vois_ts_dict, os.path.join(os.path.dirname(ts_file), os.path.basename(ts_file)))
-    if plot_flag and len(vois_ts_dict) > 0:
+            sim_output, seeg = compute_seeg_and_write_ts_to_h5(sim_output, sim.model, head.sensorsSEEG,
+                                                               ts_file, seeg_gain_mode=seeg_gain_mode,
+                                                               hpf_flag=hpf_flag, hpf_low=hpf_low, hpf_high=hpf_high)
+
+    if plotter:
+        if not isinstance(plotter, Plotter):
+            plotter = Plotter(config)
         # Plot results
-        Plotter(config).plot_sim_results(sim.model, lsa_hypothesis.lsa_propagation_indices, vois_ts_dict,
-                                         sensorsSEEG=head.sensorsSEEG, hpf_flag=False,
-                                         trajectories_plot=trajectories_plot,
-                                         spectral_raster_plot=spectral_raster_plot, log_scale=True,
-                                         region_labels=head.connectivity.region_labels)
-    return vois_ts_dict
+        plotter.plot_simulated_timeseries(sim_output, sim.model, lsa_hypothesis.lsa_propagation_indices, seeg_list=seeg,
+                                          spectral_raster_plot=False, title_prefix=hypname,
+                                          spectral_options={"log_scale": True})
+
+    return {"source": sim_output, "seeg": seeg}, sim

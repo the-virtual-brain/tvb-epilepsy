@@ -9,8 +9,8 @@ TODO: if needed in the future: Generate a richer disease hypothesis as a combina
 from copy import deepcopy
 import numpy as np
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
-from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, dicts_of_lists_to_lists_of_dicts, ensure_list, \
-    generate_region_labels
+from tvb_epilepsy.base.utils.data_structures_utils import formal_repr, sort_dict, ensure_list, \
+                                                          generate_region_labels, dicts_of_lists_to_lists_of_dicts
 
 logger = initialize_logger(__name__)
 
@@ -46,10 +46,10 @@ class DiseaseHypothesis(object):
         d = {"01. Name": self.name,
              "02. Type": self.type,
              "03. Number of regions": self.number_of_regions,
-             "04. Excitability (x0) disease indices": self.x0_indices,
-             "05. Excitability (x0) disease values": self.x0_values,
-             "06. Epileptogenicity (E) disease indices": self.e_indices,
-             "07. Epileptogenicity (E) disease indices": self.e_values,
+             "04. Excitability (x0) disease indices": self.x0_disease_indices,  # x0_indices,
+             "05. Excitability (x0) disease values": self.x0_disease_values,  # x0_values,
+             "06. Epileptogenicity (E) disease indices": self.e_disease_indices,  # e_indices,
+             "07. Epileptogenicity (E) disease values": self.e_disease_values,  # e_values,
              "08. Connectivity (W) disease indices": self.w_indices,
              "09. Connectivity (W) disease values": self.w_values,
              "10. Propagation indices": self.lsa_propagation_indices,
@@ -60,7 +60,7 @@ class DiseaseHypothesis(object):
         else:
             d.update({"11. Propagation strengths of indices": self.lsa_propagation_strengths})
         # d.update({"11. Connectivity": str(self.connectivity)})
-        return formal_repr(self, d)
+        return formal_repr(self, sort_dict(d))
 
     def __str__(self):
         return self.__repr__()
@@ -93,51 +93,82 @@ class DiseaseHypothesis(object):
         else:
             return [], []
 
-    def get_regions_disease_indices(self):
+    # This return all e_indices and x0_indices
+    @property
+    def regions_indices(self):
         return np.unique(self.x0_indices + self.e_indices).astype("i").tolist()
 
-    def get_regions_disease_values(self):
-        return self.get_regions_disease()[self.get_regions_disease_indices()]
+    # The following functions return only those e/x0 indices and values that correspond to e/x0_values > 0.0
+    @property
+    def regions_disease_indices(self):
+        return np.where(self.regions_disease > 0.0)[0].tolist()
 
-    def get_connectivity_disease_indices(self):
-        return self.w_indices
+    @property
+    def x0_disease_indices(self):
+        return np.intersect1d(self.regions_disease_indices, self.x0_indices).tolist()
 
-    def get_connectivity_disease_values(self):
-        return self.w_values
+    @property
+    def x0_disease_values(self):
+        return self.regions_disease[np.intersect1d(self.regions_disease_indices, self.x0_indices)].tolist()
 
-    def get_all_disease_indices(self):
+    @property
+    def e_disease_indices(self):
+        return np.intersect1d(self.regions_disease_indices, self.e_indices).tolist()
+
+    @property
+    def e_disease_values(self):
+        return self.regions_disease[np.intersect1d(self.regions_disease_indices, self.e_indices)].tolist()
+
+    @property
+    def regions_disease_values(self):
+        return self.regions_disease[self.regions_disease_indices]
+
+    @property
+    def connectivity_disease_indices(self):
+        if len(self.w_indices) > 0:
+            return np.array(self.w_indices)[self.w_values != 1.0]
+        else:
+            return []
+
+
+    @property
+    def connectivity_disease_values(self):
+        if len(self.w_values) > 0:
+            return self.w_values[self.w_values != 1.0]
+        else:
+            return np.array([])
+
+    @property
+    def all_disease_indices(self):
         return np.unique(
-            np.concatenate([self.get_regions_disease_indices(),
-                            np.array(self.get_connectivity_disease_indices()).flatten()])).astype("i").tolist()
+            np.concatenate([self.regions_disease_indices,
+                            np.array(self.connectivity_disease_indices).flatten()])).astype("i").tolist()
 
-    def get_regions_disease(self):
+    @property
+    def regions_disease(self):
         # In case we need values for all regions, we can use this and have zeros where values are not defined
         regions_disease = np.zeros(self.number_of_regions)
         regions_disease[self.x0_indices] = self.x0_values
         regions_disease[self.e_indices] = self.e_values
         return regions_disease
 
-    def get_connectivity_disease(self):
+    @property
+    def connectivity_disease(self):
         # In case we need values for all regions, we can use this and have ones where values are not defined
         connectivity_shape = (self.number_of_regions, self.number_of_regions)
         connectivity_disease = np.ones(connectivity_shape)
-        if len(self.w_indices) > 0 and self.w_values.size > 0:
-            indices = self.w_indices
-            connectivity_disease[indices] = self.w_values
+        if len(self.connectivity_disease_indices) > 0 and self.connectivity_disease_values.size > 0:
+            indices = self.connectivity_disease_indices
+            connectivity_disease[indices] = self.connectivity_disease_values
         return connectivity_disease
 
-    # Do we really need those two?:
-    def get_e_values_for_all_regions(self):
-        return self.get_regions_disease()[self.e_indices]
-
-    def get_x0_values_for_all_regions(self):
-        return self.get_regions_disease()[self.x0_indices]
-
-    def get_disease_propagation_strengths(self):
+    @property
+    def disease_propagation_strengths(self):
         return self.lsa_propagation_strengths[self.lsa_propagation_indices]
 
-    def get_disease_propagation(self):
-        return self.lsa_propagation_indices, self.get_disease_propagation_strengths()
+    @property
+    def disease_propagation(self):
+        return self.lsa_propagation_indices, self.disease_propagation_strengths
 
     def update(self, name=""):
         self.type = []
@@ -190,9 +221,9 @@ class DiseaseHypothesis(object):
 
     def string_regions_disease(self, region_labels=[]):
         region_labels = generate_region_labels(self.number_of_regions, region_labels, str=". ")
-        disease_values = self.get_regions_disease()
+        disease_values = self.regions_disease
         disease_string = ""
-        for iRegion in self.get_regions_disease_indices():
+        for iRegion in self.regions_disease_indices:
             if iRegion in self.e_indices:
                 hyp_type = "E"
             else:
@@ -211,7 +242,7 @@ class DiseaseHypothesis(object):
         e_values = np.zeros(self.number_of_regions)
         x0_values = np.zeros(self.number_of_regions)
         propagation_values = np.zeros(self.number_of_regions)
-        w_values = self.get_connectivity_disease()
+        w_values = self.w_values
 
         if len(self.e_indices) > 0 and self.e_values.size > 0:
             e_values[self.e_indices] = self.e_values
@@ -236,7 +267,7 @@ class DiseaseHypothesis(object):
     def simplify_hypothesis_from_h5(self):
         self.e_values = self.e_values[self.e_indices]
         self.x0_values = self.x0_values[self.x0_indices]
-        self.lsa_propagation_strengths = self.lsa_propagation_strengths[list(self.lsa_propagation_indices)]
+        self.lsa_propagation_strengths = self.lsa_propagation_strengths  # [list(self.lsa_propagation_indices)]
         if (self.w_values == 1).all():
             self.w_values = []
             self.w_indices = []

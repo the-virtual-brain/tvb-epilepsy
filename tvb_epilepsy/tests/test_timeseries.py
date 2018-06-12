@@ -2,7 +2,7 @@
 
 import numpy
 import pytest
-from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions, PossibleStateVariables
+from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions, PossibleVariables
 
 
 class TestTimeseries(object):
@@ -88,18 +88,18 @@ class TestTimeseries(object):
         assert ts_time_window_units.time_start == 0.01
 
         with pytest.raises(IndexError):
-            ts_from_2D.get_time_window(2, 3)
+            ts_from_2D.get_time_window(2, 4)
 
         with pytest.raises(ValueError):
             ts_from_2D.get_time_window_by_units(0, 0.025)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(AttributeError):
             ts_from_2D.lfp
 
     def test_timeseries_3D(self):
         ts_3D = Timeseries(self.data_3D,
                            dimension_labels={TimeseriesDimensions.SPACE.value: [],
-                                             TimeseriesDimensions.STATE_VARIABLES.value: []},
+                                             TimeseriesDimensions.VARIABLES.value: []},
                            time_start=self.time_start, time_step=self.time_step, time_unit=self.time_unit)
         assert ts_3D.data.ndim == 4
         assert ts_3D.data.shape[3] == 1
@@ -107,7 +107,7 @@ class TestTimeseries(object):
     def test_timeseries_data_access(self):
         ts = Timeseries(self.data_3D,
                         dimension_labels={TimeseriesDimensions.SPACE.value: ["r1", "r2", "r3", "r4"],
-                                          TimeseriesDimensions.STATE_VARIABLES.value: ["sv1", "sv2", "sv3"]},
+                                          TimeseriesDimensions.VARIABLES.value: ["sv1", "sv2", "sv3"]},
                         time_start=self.time_start, time_step=self.time_step, time_unit=self.time_unit)
         assert isinstance(ts.r1, Timeseries)
         assert ts.r1.data.shape == (3, 1, 3, 1)
@@ -178,15 +178,15 @@ class TestTimeseries(object):
         with pytest.raises(IndexError):
             ts[0, :, 10, :]
 
-        with pytest.raises(ValueError):
+        with pytest.raises(AttributeError):
             ts.lfp
 
     def test_timeseries_4D(self):
         ts_4D = Timeseries(self.data_4D,
                            dimension_labels={TimeseriesDimensions.SPACE.value: ["r1", "r2", "r3", "r4"],
-                                             TimeseriesDimensions.STATE_VARIABLES.value: [
-                                                 PossibleStateVariables.X1.value, PossibleStateVariables.X2.value,
+                                             TimeseriesDimensions.VARIABLES.value: [
+                                                 PossibleVariables.X1.value, PossibleVariables.X2.value,
                                                  "sv3"]},
                            time_start=self.time_start, time_step=self.time_step, time_unit=self.time_unit)
         assert ts_4D.data.shape == (3, 4, 3, 4)
-        assert ts_4D.lfp.data.shape == (3, 4, 1, 4)
+        assert ts_4D.x1.data.shape == (3, 4, 1, 4)

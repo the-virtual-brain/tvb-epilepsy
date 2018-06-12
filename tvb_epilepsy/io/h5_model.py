@@ -49,11 +49,11 @@ class H5Model(object):
         for key, value in h5_model.metadata_dict.iteritems():
             self.add_or_update_metadata_attribute(key, value)
 
-    def write_to_h5(self, folder_name, file_name):
+    def write_to_h5(self, path):
         """
         Store H5Model object to a hdf5 file
         """
-        final_path = change_filename_or_overwrite(os.path.join(folder_name, file_name))
+        final_path = change_filename_or_overwrite(path)
         # final_path = ensure_unique_file(folder_name, file_name)
         logger.info("Writing %s at: %s" % (self, final_path))
         h5_file = h5py.File(final_path, 'a', libver='latest')

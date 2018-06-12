@@ -1,7 +1,7 @@
 from copy import deepcopy
 import numpy as np
 from abc import abstractmethod, ABCMeta
-from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
+from tvb_epilepsy.base.constants.model_constants import *
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 
@@ -87,7 +87,8 @@ class ABCPSEService(object):
             self.logger.warning("\nparams_pse is not a list of tuples!")
 
     def update_hypo_model_config(self, hypothesis, params, conn_matrix, model_config_service_input=None,
-                           yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",):
+                                yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
+                                x1eq_mode="optimize",):
         # Copy and update hypothesis
         hypo_copy = deepcopy(hypothesis)
         hypo_copy.update_for_pse(params, self.params_paths, self.params_indices)
@@ -97,7 +98,7 @@ class ABCPSEService(object):
         else:
             model_configuration_builder = ModelConfigurationBuilder(hypo_copy.number_of_regions,
                                                                     yc=yc, Iext1=Iext1, K=K, a=a, b=b,
-                                                                    x1eq_mode=x1eq_mode)
+                                                                    tau1=tau1, tau0=tau0, x1eq_mode=x1eq_mode)
         model_configuration_builder.set_attributes_from_pse(params, self.params_paths, self.params_indices)
         # Obtain Modelconfiguration
         if hypo_copy.type == "Epileptogenicity":

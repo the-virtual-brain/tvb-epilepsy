@@ -101,6 +101,10 @@ class JavaEpileptor(object):
         self.x0 = x0
         self.tt = tt
 
+    @property
+    def vois(self):
+        return ['x1', 'z', 'x2']
+
 
 # ! The attributes names should not be changed because they are synchronized with simulator config model.
 class FullConfiguration(object):
@@ -138,6 +142,9 @@ class SimulatorJava(ABCSimulator):
         self.head_path = os.path.dirname(self.connectivity.file_path)
         self.json_config_path = os.path.join(self.head_path, self.json_custom_config_file)
         self.configure_model()
+
+    def get_vois(self):
+        return self.model.vois
 
     @staticmethod
     def _save_serialized(ep_full_config, result_path):
@@ -189,7 +196,7 @@ class SimulatorJava(ABCSimulator):
         except:
             status = False
             self.logger.warning("Something went wrong with this simulation...")
-        time, data = self.reader.read_timeseries(os.path.join(self.head_path, "full-configuration", "ts.h5"))
+        time, data = self.reader.read_ts(os.path.join(self.head_path, "full-configuration", "ts.h5"))
         return time, data, status
 
     def prepare_epileptor_model_for_json(self, no_regions=88):
@@ -210,7 +217,8 @@ class SimulatorJava(ABCSimulator):
                                      self.model_configuration.b - self.model_configuration.d)
         self.model = JavaEpileptor(a=self.model_configuration.a, b=self.model_configuration.b,
                                    d=self.model_configuration.d, x0=x0, iext=self.model_configuration.Iext1,
-                                   ks=self.model_configuration.K, c=self.model_configuration.yc)
+                                   ks=self.model_configuration.K, c=self.model_configuration.yc,
+                                   tt=self.model_configuration.tau1, r=1.0/self.model_configuration.tau0)
 
     def configure_initial_conditions(self, initial_conditions=None):
         if isinstance(initial_conditions, numpy.ndarray):

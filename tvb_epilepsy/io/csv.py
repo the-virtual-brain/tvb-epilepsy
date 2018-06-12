@@ -1,7 +1,7 @@
 # encoding=utf8
 
 import numpy as np
-from tvb_epilepsy.io.rdump import rdump
+from tvb_epilepsy.io.r_file_io import rdump
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 
 
@@ -67,7 +67,7 @@ def parse_csv(fname, merge=True):
         maxdims[name] = tuple(reversed(dims))
 
     # data in linear order per Stan, e.g. mat is col maj
-    # TODO array is row maj, how to distinguish matrix v array[,]?
+    # TODO array is row maj, how to distinguish matrix vs array[,]?
     data_ = {}
     for name, idx in namemap.items():
         new_shape = (-1,) + maxdims.get(name, ())

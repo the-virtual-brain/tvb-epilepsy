@@ -1,6 +1,6 @@
 import numpy
 from copy import deepcopy
-from tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF, I_EXT1_DEF, A_DEF, B_DEF
+from tvb_epilepsy.base.constants.model_constants import *
 from tvb_epilepsy.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_epilepsy.base.utils.data_structures_utils import formal_repr
 from tvb_epilepsy.service.pse.pse_service import ABCPSEService
@@ -32,7 +32,7 @@ class SimulationPSEService(ABCPSEService):
         raise_not_implemented_error("PSE parallel not implemented!", self.logger)
 
     def run(self, params, conn_matrix, hypothesis_input=None, model_config_service_input=None,
-            yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, x1eq_mode="optimize",
+            yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, x1eq_mode="optimize",
             update_initial_conditions=True):
         # Create new objects from the input simulator
         simulator_copy = deepcopy(self.simulator)
@@ -42,7 +42,8 @@ class SimulationPSEService(ABCPSEService):
                 # Copy and update hypothesis
                 model_configuration = \
                     self.update_hypo_model_config(hypothesis_input, params, conn_matrix,
-                                                  model_config_service_input, yc, Iext1, K, a, b, x1eq_mode)[1]
+                                                  model_config_service_input, yc, Iext1, K, a, b,
+                                                  tau1, tau0, x1eq_mode)[1]
                 # Update simulator with new ModelConfiguration
                 simulator_copy.model_configuration = model_configuration
                 # Generate new simulator_copy.model with the new ModelConfiguration
@@ -57,11 +58,7 @@ class SimulationPSEService(ABCPSEService):
             # If initial conditions were parameters, then, this flag can be set to False
             if update_initial_conditions:
                 simulator_copy.configure_initial_conditions()
-            time, data, status = simulator_copy.launch()
-            output = self.prepare_run_results(data, time)
-            return True, output
+            output, status = simulator_copy.launch()
+            return status, output
         except:
             return False, None
-
-    def prepare_run_results(self, data, time):
-        return {"time": time, "data": data}

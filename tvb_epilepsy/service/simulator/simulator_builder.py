@@ -2,7 +2,7 @@ import numpy
 from tvb.datatypes import equations
 from tvb.simulator import noise
 from tvb.simulator.monitors import Monitor, TemporalAverage
-from tvb.simulator.noise import Noise, Additive, Multiplicative
+from tvb.simulator.noise import Noise, Additive
 from tvb_epilepsy.base.constants.model_constants import NOISE_SEED, WHITE_NOISE, COLORED_NOISE
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_epilepsy.base.utils.data_structures_utils import isequal_string, ensure_list
@@ -68,8 +68,8 @@ class SimulatorBuilder(object):
     def generate_colored_noise(self, noise_intensity, ntau, **kwargs):
         self._check_noise_intesity_size(noise_intensity)
         eq = equations.Linear(parameters=kwargs.get("parameters", {"a": 1.0, "b": 0.0}))
-        noise_instance = noise.Multiplicative(ntau=ntau, nsig=noise_intensity, b=eq,
-                                              random_stream=numpy.random.RandomState(seed=NOISE_SEED))
+        noise_instance = noise.Additive(ntau=ntau, nsig=noise_intensity,
+                                        random_stream=numpy.random.RandomState(seed=NOISE_SEED))
         noise_shape = noise_instance.nsig.shape
         noise_instance.configure_coloured(dt=1.0 / self.fs, shape=noise_shape)
         return noise_instance
@@ -88,9 +88,9 @@ class SimulatorBuilder(object):
         if isinstance(noise, Noise):
             self._check_noise_intesity_size(noise.nsig)
             sim_settings.noise_intensity = noise.nsig
-            if isinstance(noise, Additive):
+            if noise.ntau == 0:
                 sim_settings.noise_type = WHITE_NOISE
-            elif isinstance(noise, Multiplicative):
+            else:
                 sim_settings.noise_type = COLORED_NOISE
             sim_settings.noise_ntau = noise.ntau
         else:
@@ -108,7 +108,8 @@ class SimulatorBuilder(object):
         return monitor
 
     def set_monitor(self, model, sim_settings, monitors=None):
-        model.variables_of_interest = [me.replace('lfp', 'x2 - x1') for me in sim_settings.monitor_expressions]
+        # TODO: change 'lfp' for 'source'
+        model.variables_of_interest = [me.replace('source', 'x2 - x1') for me in sim_settings.monitor_expressions]
         # Check if the user provides a preconfigured set of monitor instances to override
         if isinstance(monitors, Monitor):
             monitors = (monitors,)
@@ -133,7 +134,7 @@ class SimulatorBuilder(object):
         noise, sim_settings = self.set_noise(sim_settings, **kwargs)
 
         simulator_instance = SimulatorTVB(connectivity, model_configuration, model, sim_settings)
-        simulator_instance.config_simulation(noise, monitors, initial_conditions=None)
+        simulator_instance.config_simulation(noise, monitors, initial_conditions=None, **kwargs)
 
         return simulator_instance, sim_settings, model
 
@@ -179,7 +180,7 @@ def build_simulator_TVB_paper(model_configuration, connectivity, **kwargs):
 
 
 def build_simulator_TVB_reduced(model_configuration, connectivity, **kwargs):
-    sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D").set_fs(2048.0).set_simulated_period(1000)
+    sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D").set_fs(4096.0).set_simulated_period(1000.0)
     model = sim_builder.generate_model_tvb(model_configuration)
     sim_settings = sim_builder.build_sim_settings()
     return sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity,
@@ -187,25 +188,29 @@ def build_simulator_TVB_reduced(model_configuration, connectivity, **kwargs):
 
 
 def build_simulator_TVB_fitting(model_configuration, connectivity, **kwargs):
-    sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D").set_fs(2048.0).set_simulated_period(1000)
+    sim_builder = SimulatorBuilder().set_model_name("EpileptorDP2D").\
+                                                set_fs(2048.0).set_fs_monitor(2048.0).set_simulated_period(300.0)
     model = sim_builder.generate_model_tvb(model_configuration)
     model.tau0 = 30.0
     model.tau1 = 0.5
     sim_settings = sim_builder.build_sim_settings()
-    sim_settings.noise_intensity = 1e-6
+    sim_settings.noise_intensity = [0.0, 1e-5]
     return sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity,
                                                                    model, sim_settings, **kwargs)
 
 
 def build_simulator_TVB_realistic(model_configuration, connectivity, **kwargs):
-    sim_builder = SimulatorBuilder().set_model_name("EpileptorDPrealistic").set_fs(4096.0).set_simulated_period(30000)
+    sim_builder = SimulatorBuilder().set_model_name("EpileptorDPrealistic").set_fs(2048.0).set_simulated_period(60000.0)
     model = sim_builder.generate_model_tvb(model_configuration)
-    model.tau0 = 30000.0
+    model.tau0 = 60000.0
     model.tau1 = 0.2
     model.slope = 0.25
-    model.pmode = numpy.array(kwargs.get("pmode", "z"))
+    model.pmode = numpy.array(kwargs.pop("pmode", "z"))
     sim_settings = sim_builder.build_sim_settings()
     sim_settings.noise_type = COLORED_NOISE
-    sim_settings.noise_ntau = 10
-    return sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity,
-                                                                   model, sim_settings, **kwargs)
+    sim_settings.noise_ntau = 20
+    # Necessary a more stable integrator:
+    integrator = kwargs.pop("integrator", "Dop853Stochastic")
+    return sim_builder.build_simulator_TVB_from_model_sim_settings(model_configuration, connectivity, model,
+                                                                   sim_settings, integrator=integrator,  **kwargs)
+

@@ -40,7 +40,7 @@ STAN_OPTIMIZE_OPTIONS = sort_dict({"iter": 2000,           # int > 0
 STAN_OPTIMIZE_OPTIONS.update({"algorithm": "lbfgs"})   # others: "bfgs", "newton"
 
 STAN_VARIATIONAL_ADAPT_OPTIONS = sort_dict({"engaged": 1,             # 0, 1
-                                            "iter": 50,               # int > 0
+                                            "adapt_iter": 50,               # int > 0
                                             "tol_rel_obj": 0.01,      # tol_rel_obj >= 0
                                             "eval_elbo": 100,         # int > 0
                                             "output_samples": 1000})  # int > 0
@@ -92,7 +92,7 @@ def generate_cmdstan_options(method, **kwargs):
     options.update({"init": kwargs.get("init", 2)})
     options.update({"random_seed": kwargs.get("random_seed", 12345)})
     options.update({"random_seed": kwargs.get("seed", options["random_seed"])})
-    options.update({"chains": kwargs.get("chains", 4)})
+    options.update({"n_chains_or_runs": kwargs.get("n_chains_or_runs", 4)})
     return options
 
 
@@ -134,14 +134,17 @@ def generate_cmdstan_fit_command(fitmethod, options, model_path, model_data_path
         else:
             adapt_options = STAN_VARIATIONAL_ADAPT_OPTIONS
         for option in adapt_options.keys():
-            command += "\t\t\t\t" + option + "=" + str(options[option]) + ' \\' + "\n"
+            if option.find("iter") < 0:
+                command += "\t\t\t\t" + option + "=" + str(options[option]) + ' \\' + "\n"
+            else:
+                command += "\t\t\t\t" + "iter=" + str(options[option]) + ' \\' + "\n"
     command += "\t\tdata file=" + model_data_path + ' \\' + "\n"
     command += "\t\tinit=" + str(options["init"]) + ' \\' + "\n"
     command += "\t\trandom seed=" + str(options["random_seed"]) + ' \\' + "\n"
     if diagnostic_filepath == "":
         diagnostic_filepath = os.path.join(os.path.dirname(output_filepath), STAN_OUTPUT_OPTIONS["diagnostic_file"])
-    if options["chains"] > 1:
-        command = ("for i in {1.." + str(options["chains"]) + "}\ndo\n" +
+    if options["n_chains_or_runs"] > 1:
+        command = ("for i in {1.." + str(options["n_chains_or_runs"]) + "}\ndo\n" +
                    "\t" + command +
                    "\t\tid=$i" + ' \\' + "\n" +
                    "\t\toutput file=" + output_filepath[:-4] + "$i.csv"' \\' + "\n" +

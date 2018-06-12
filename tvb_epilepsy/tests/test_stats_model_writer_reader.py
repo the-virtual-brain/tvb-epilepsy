@@ -4,7 +4,7 @@ from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
-from tvb_epilepsy.service.model_inversion.statistical_models_builders import SDEStatisticalModelBuilder
+from tvb_epilepsy.service.model_inversion.probabilistic_models_builders import SDEProbabilisticModelBuilder
 
 
 if __name__ == "__main__":
@@ -35,9 +35,9 @@ if __name__ == "__main__":
         ModelConfigurationBuilder(head.connectivity.number_of_regions).\
             build_model_from_E_hypothesis(hypothesis, head.connectivity.normalized_weights)
 
-    statistical_model = SDEStatisticalModelBuilder(model_config=model_configuration).generate_model()
-    H5Writer().write_statistical_model(statistical_model, config.out.FOLDER_RES, "TestStatsModelorig.h5")
+    statistical_model = SDEProbabilisticModelBuilder(model_config=model_configuration).generate_model()
+    H5Writer().write_probabilistic_model(statistical_model, config.out.FOLDER_RES, "TestStatsModelorig.h5")
 
-    statistical_model2 = reader.read_statistical_model(os.path.join(config.out.FOLDER_RES, "TestStatsModelorig.h5"))
-    H5Writer().write_statistical_model(statistical_model2, config.out.FOLDER_RES, "TestStatsModelread.h5")
+    statistical_model2 = reader.read_probabilistic_model(os.path.join(config.out.FOLDER_RES, "TestStatsModelorig.h5"))
+    H5Writer().write_probabilistic_model(statistical_model2, config.out.FOLDER_RES, "TestStatsModelread.h5")
 

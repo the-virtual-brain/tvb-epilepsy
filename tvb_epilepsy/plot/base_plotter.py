@@ -6,8 +6,8 @@ import matplotlib
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_epilepsy.base.constants.config import Config, FiguresConfig
+from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, warning
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 
 
 class BasePlotter(object):
@@ -32,7 +32,7 @@ class BasePlotter(object):
             fig = pyplot.gcf()
         if figure_name is None:
             figure_name = fig.get_label()
-        figure_name = figure_name.replace(": ", "_").replace(" ", "_").replace("\t", "_")
+        figure_name = figure_name.replace(": ", "_").replace(" ", "_").replace("\t", "_").replace(",", "")
         return figure_name
 
     def _save_figure(self, fig, figure_name):
@@ -43,6 +43,15 @@ class BasePlotter(object):
             if not (os.path.isdir(figure_dir)):
                 os.mkdir(figure_dir)
             pyplot.savefig(os.path.join(figure_dir, figure_name))
+
+    @staticmethod
+    def rect_subplot_shape(self, n, mode="col"):
+        nj = int(numpy.ceil(numpy.sqrt(n)))
+        ni = int(numpy.ceil(1.0 * n / nj))
+        if mode.find("row") >= 0:
+            return nj, ni
+        else:
+            return ni, nj
 
     @staticmethod
     def plot_vector(vector, labels, subplot, title, show_y_labels=True, indices_red=None, sharey=None):
@@ -74,47 +83,60 @@ class BasePlotter(object):
         else:
             ax.set_yticklabels([])
         ax.autoscale(tight=True)
+        if sharey is None:
+            ax.invert_yaxis()
         return ax
 
     @staticmethod
-    def plot_vector_violin(vector, dataset, labels, subplot, title, colormap="YlOrRd", show_y_labels=True,
-                           indices_red=None, sharey=None):
+    def plot_vector_violin(dataset, vector=[], lines=[], labels=[], subplot=111, title="", violin_flag=True,
+                           colormap="YlOrRd", show_y_labels=True, indices_red=None, sharey=None):
         ax = pyplot.subplot(subplot, sharey=sharey)
         # ax.hold(True)
         pyplot.title(title)
-        n_vector = len(labels)
-        y_ticks = numpy.array(range(n_vector), dtype=numpy.int32)
+        n_violins = dataset.shape[1]
+        y_ticks = numpy.array(range(n_violins), dtype=numpy.int32)
         # the vector plot
         coldif = False
-        if len(vector) == n_vector:
-            color = 'k'
-            colors = numpy.repeat([color], n_vector)
-            if indices_red is not None:
-                colors[indices_red] = 'r'
-                coldif = True
-            for ii in range(n_vector):
-                ax.plot(vector[ii], y_ticks[ii], '*', mfc=colors[ii], mec=colors[ii], ms=10)
         if indices_red is None:
             indices_red = []
-        # the violin plot
-        colormap = matplotlib.cm.ScalarMappable(cmap=pyplot.set_cmap(colormap))
-        colormap = colormap.to_rgba(numpy.mean(dataset, axis=0), alpha=0.75)
-        violin_parts = ax.violinplot(dataset, y_ticks, vert=False, widths=0.9,
-                                     showmeans=True, showmedians=True, showextrema=True)
-        violin_parts['cmeans'].set_color("k")
-        violin_parts['cmins'].set_color("b")
-        violin_parts['cmaxes'].set_color("b")
-        violin_parts['cbars'].set_color("b")
-        violin_parts['cmedians'].set_color("b")
-        for ii in range(len(violin_parts['bodies'])):
-            violin_parts['bodies'][ii].set_color(numpy.reshape(colormap[ii], (1, 4)))
-            violin_parts['bodies'][ii]._alpha = 0.75
-            violin_parts['bodies'][ii]._edgecolors = numpy.reshape(colormap[ii], (1, 4))
-            violin_parts['bodies'][ii]._facecolors = numpy.reshape(colormap[ii], (1, 4))
+        if violin_flag:
+            # the violin plot
+            colormap = matplotlib.cm.ScalarMappable(cmap=pyplot.set_cmap(colormap))
+            colormap = colormap.to_rgba(numpy.mean(dataset, axis=0), alpha=0.75)
+            violin_parts = ax.violinplot(dataset, y_ticks, vert=False, widths=0.9,
+                                         showmeans=True, showmedians=True, showextrema=True)
+            violin_parts['cmeans'].set_color("k")
+            violin_parts['cmins'].set_color("b")
+            violin_parts['cmaxes'].set_color("b")
+            violin_parts['cbars'].set_color("b")
+            violin_parts['cmedians'].set_color("b")
+            for ii in range(len(violin_parts['bodies'])):
+                violin_parts['bodies'][ii].set_color(numpy.reshape(colormap[ii], (1, 4)))
+                violin_parts['bodies'][ii]._alpha = 0.75
+                violin_parts['bodies'][ii]._edgecolors = numpy.reshape(colormap[ii], (1, 4))
+                violin_parts['bodies'][ii]._facecolors = numpy.reshape(colormap[ii], (1, 4))
+        else:
+            colorcycle = pyplot.rcParams['axes.prop_cycle'].by_key()['color']
+            n_samples = dataset.shape[0]
+            for ii in range(n_violins):
+                for jj in range(n_samples):
+                    ax.plot(dataset[jj, ii], y_ticks[ii], "D",
+                            mfc=colorcycle[jj%n_samples], mec=colorcycle[jj%n_samples], ms=20)
+        color = 'k'
+        colors = numpy.repeat([color], n_violins)
+        if indices_red is not None:
+            colors[indices_red] = 'r'
+            coldif = True
+        if len(vector) == n_violins:
+            for ii in range(n_violins):
+                ax.plot(vector[ii], y_ticks[ii], '*', mfc=colors[ii], mec=colors[ii], ms=10)
+        if len(lines) == 2 and lines[0].shape[0] == n_violins and lines[1].shape[0] == n_violins:
+            for ii in range(n_violins):
+                ax.plot(lines[0][ii],  y_ticks[ii] - 0.45*lines[1][ii]/numpy.max(lines[1][ii]), '--', color=colors[ii])
         ax.grid(True, color='grey')
         ax.set_yticks(y_ticks)
         if show_y_labels:
-            region_labels = numpy.array(["%d. %s" % l for l in zip(range(n_vector), labels)])
+            region_labels = numpy.array(["%d. %s" % l for l in zip(range(n_violins), labels)])
             ax.set_yticklabels(region_labels)
             if coldif:
                 labels = ax.yaxis.get_ticklabels()
@@ -123,8 +145,9 @@ class BasePlotter(object):
                 ax.yaxis.set_ticklabels(labels)
         else:
             ax.set_yticklabels([])
-        ax.invert_yaxis()
-        ax.autoscale(tight=True)
+        if sharey is None:
+            ax.invert_yaxis()
+        ax.autoscale()
         return ax
 
     @staticmethod
@@ -206,7 +229,7 @@ class BasePlotter(object):
         subplot_ind = subplot_ind0
         ax = None
         ax0 = None
-        for data_dict in data_dict_list:
+        for iS, data_dict in enumerate(data_dict_list):
             subplot_ind += 1
             data = data_dict["data"]
             focus_indices = data_dict.get("focus_indices")
@@ -216,8 +239,8 @@ class BasePlotter(object):
             else:
                 ax0 = ax
             if data_dict.get("plot_type") == "vector_violin":
-                ax = self.plot_vector_violin(data, data_dict.get("data_samples", []), labels, subplot_ind,
-                                             data_dict["name"],
+                ax = self.plot_vector_violin(data_dict.get("data_samples", []), data, [],
+                                             labels, subplot_ind, data_dict["name"],
                                              colormap=kwargs.get("colormap", "YlOrRd"), show_y_labels=False,
                                              indices_red=focus_indices, sharey=ax0)
             elif data_dict.get("plot_type") == "regions2regions":
@@ -255,14 +278,22 @@ class BasePlotter(object):
         self._check_show()
         return fig, axes
 
-    def pair_plots(self, data, keys, transpose=False, skip=0, title='Pair plots', subtitles=None, figure_name=None,
+    def pair_plots(self, data, keys, diagonal_plots={}, transpose=False, skip=0,
+                   title='Pair plots', legend_prefix="chains/runs", subtitles=None, figure_name=None,
                    figsize=FiguresConfig.VERY_LARGE_SIZE):
+
+        def confirm_y_coordinate(data, ymax):
+            data = list(data)
+            data.append(ymax)
+            return tuple(data)
+
         if subtitles is None:
             subtitles = keys
         data = ensure_list(data)
         n = len(keys)
         fig, axes = pyplot.subplots(n, n, figsize=figsize)
         fig.set_label(title)
+        colorcycle = pyplot.rcParams['axes.prop_cycle'].by_key()['color']
         for i, key_i in enumerate(keys):
             for j, key_j in enumerate(keys):
                 for datai in data:
@@ -271,7 +302,44 @@ class BasePlotter(object):
                     else:
                         di = datai[key_i][skip:]
                     if i == j:
-                        axes[i, j].hist(di, int(numpy.round(numpy.sqrt(len(di)))), log=True)
+                        if di.shape[0] > 1:
+                            hist_data = axes[i, j].hist(di, int(numpy.round(numpy.sqrt(len(di)))), log=True)[0]
+                            if i == 0 and len(di.shape) > 1 and di.shape[1] > 1:
+                                axes[i, j].legend([legend_prefix + str(ii + 1) for ii in range(di.shape[1])])
+                            y_max = numpy.array(hist_data).max()
+                            # The mean line
+                            axes[i, j].vlines(di.mean(axis=0), 0, y_max, color=colorcycle, linestyle='dashed',
+                                              linewidth=1)
+                        else:
+                            # This is for the case of only 1 sample (optimization)
+                            y_max = 1.0
+                            for ii in range(di.shape[1]):
+                                axes[i, j].plot(di[0, ii], y_max, "D", color=colorcycle[ii%di.shape[1]], markersize=20,
+                                                label=legend_prefix + str(ii + 1))
+                            if i == 0 and len(di.shape) > 1 and di.shape[1] > 1:
+                                axes[i, j].legend()
+                        # Plot a line (or marker) in the same axis
+                        diag_line_plot = ensure_list(diagonal_plots.get(key_i, ((), ()))[0])
+                        if len(diag_line_plot) in [1, 2]:
+                            if len(diag_line_plot) == 1 :
+                                diag_line_plot = confirm_y_coordinate(diag_line_plot, y_max)
+                            else:
+                                diag_line_plot[1] = diag_line_plot[1]/numpy.max(diag_line_plot[1])*y_max
+                            if len(diag_line_plot[0]) == 1:
+                                axes[i, j].plot(diag_line_plot[0], diag_line_plot[1], "o", mfc="k", mec="k",
+                                                markersize=10)
+                            else:
+                                axes[i, j].plot(diag_line_plot[0], diag_line_plot[1], color='k',
+                                                linestyle="dashed", linewidth=1)
+                        # Plot a marker in the same axis
+                        diag_marker_plot = ensure_list(diagonal_plots.get(key_i, ((), ()))[1])
+                        if len(diag_marker_plot) in [1, 2]:
+                            if len(diag_marker_plot) == 1:
+                                diag_marker_plot = confirm_y_coordinate(diag_marker_plot, y_max)
+                            axes[i, j].plot(diag_marker_plot[0], diag_marker_plot[1], "*", color='k', markersize=10)
+                        axes[i, j].autoscale()
+                        axes[i, j].set_ylim([0, 1.1*y_max])
+
                     else:
                         if transpose:
                             dj = datai[key_j].T[skip:]
@@ -286,3 +354,66 @@ class BasePlotter(object):
         self._save_figure(fig, figure_name)
         self._check_show()
         return fig, axes
+
+    def plot_bars(self, data, ax=None, fig=None, title="", group_names=[], legend_prefix="",
+                  figsize=FiguresConfig.VERY_LARGE_SIZE):
+
+        def barlabel(ax, rects, positions):
+            """
+            Attach a text label on each bar displaying its height
+            """
+            for rect, pos in zip(rects, positions):
+                height = rect.get_height()
+                if pos < 0:
+                    y = -height
+                    pos = 0.75 * pos
+                else:
+                    y = height
+                    pos = 0.25 * pos
+                ax.text(rect.get_x() + rect.get_width() / 2., pos, '%0.2f' % y,
+                        color="k", ha='center', va='bottom', rotation=90)
+
+        if fig is None:
+            fig, ax = pyplot.subplots(1, 1, figsize=figsize)
+            show_and_save = True
+        else:
+            show_and_save = False
+            if ax is None:
+                ax = pyplot.gca()
+        if isinstance(data, (list, tuple)):  # If, there are many groups, data is a list:
+            # Fill in with nan in case that not all groups have the same number of elements
+            from itertools import izip_longest
+            data = numpy.array(list(izip_longest(*ensure_list(data), fillvalue=numpy.nan))).T
+        elif data.ndim == 1: # This is the case where there is only one group...
+            data = numpy.expand_dims(data, axis=1).T
+        n_groups, n_elements = data.shape
+        posmax = data.max()
+        negmax = -(-data).max()
+        n_groups_names = len(group_names)
+        if n_groups_names != n_groups:
+            if n_groups_names != 0:
+                warning("Ignoring group_names because their number (" + str(n_groups_names) +
+                        ") is not equal to the number of groups (" + str(n_groups) + ")!")
+            group_names = n_groups * [""]
+        colorcycle = pyplot.rcParams['axes.prop_cycle'].by_key()['color']
+        n_colors = len(colorcycle)
+        x_inds = numpy.arange(n_groups)
+        width = 0.9 / n_elements
+        elements = []
+        for iE in range(n_elements):
+            elements.append(ax.bar(x_inds + iE*width, data[:, iE], width, color=colorcycle[iE % n_colors]))
+            positions = [negmax if d < 0 else posmax for d in data[:, iE]]
+            barlabel(ax, elements[-1], positions)
+        if n_elements > 1:
+            legend = [legend_prefix+str(ii) for ii in range(1, n_elements+1)]
+            ax.legend(tuple([element[0] for element in elements]), tuple(legend))
+        ax.set_xticks(x_inds + n_elements*width/2)
+        ax.set_xticklabels(tuple(group_names))
+        ax.set_title(title)
+        ax.autoscale()  # tight=True
+        ax.set_xlim([-1.05*width, n_groups*1.05])
+        if show_and_save:
+            fig.tight_layout()
+            self._save_figure(fig)
+            self._check_show()
+        return fig, ax

@@ -8,12 +8,12 @@ functions {
         return D;
     }
 
-    row_vector x_step(row_vector x, row_vector z, real I1, real time_scale, row_vector x_eta, real sigma) {
+    row_vector x_step(row_vector x, row_vector z, real I1, real time_scale) { //, row_vector x_eta, real sigma
         int nn = num_elements(x);
         row_vector[nn] x_next;
         row_vector[nn] I1_vec = rep_row_vector(I1 + 1.0, nn);
         row_vector[nn] dx = I1_vec - (x .* x .* x) - 2.0 * (x .* x) - z;
-        x_next = x + (time_scale * dx) + x_eta * sigma;
+        x_next = x + (time_scale * dx); # + x_eta * sigma;
         return x_next;
     }
 
@@ -81,7 +81,7 @@ transformed data {
     //matrix[ns, nn] log_gain = log(gain);
     matrix [nn, nn] SC_ = SC;
     for (i in 1:nn) SC_[i, i] = 0;
-        SC_ /= max(SC_) * rows(SC_);
+    SC_ = SC_ / max(SC_) * rows(SC_);
 }
 
 parameters {
@@ -95,7 +95,7 @@ parameters {
     // time-series state non-centering:
     row_vector[nn] x_init;
     row_vector[nn] z_init;
-    row_vector[nn] x_eta[nt - 1];
+    // row_vector[nn] x_eta[nt - 1];
     row_vector[nn] z_eta[nt - 1];
     real<upper=3.0> sigma_star;
     real<upper=3.0> k_star;
@@ -115,7 +115,7 @@ transformed parameters {
     x[1] = x_init; // - 1.5;
     z[1] = z_init; // 3.0;
     for (t in 1:(nt-1)) {
-        x[t+1] = x_step(x[t], z[t], I1, dt*time_scale, x_eta[t], sqrtdt*sigma);
+        x[t+1] = x_step(x[t], z[t], I1, dt*time_scale); //, x_eta[t], sqrtdt*sigma
         z[t+1] = z_step(x[t], z[t], x0, k*SC, Ic, x_eq_def, dt*time_scale, z_eta[t], sqrtdt*sigma, tau0);
     }
 
@@ -124,20 +124,20 @@ transformed parameters {
 }
 
 model {
-    to_row_vector(x0_star) ~ normal(0, 1.0);
-    k_star ~ normal(0, 1);
+    to_row_vector(x0_star) ~ normal(0.0, 1.0);
+    k_star ~ normal(0.0, 1);
     x_init ~ normal(x_init_mu, x_init_std); // 0.0, 1.0
     z_init ~ normal(z_init_mu, z_init_std); // 0.0, 1.0
-    sigma_star ~ normal(0, 1.0);
-    time_scale_star ~ normal(0, 1.0);
+    sigma_star ~ normal(0.0, 1.0);
+    time_scale_star ~ normal(0.0, 1.0);
 
     amplitude_star ~ normal(0.0, 1.0);
     offset ~ normal(offset_mu, offset_std);
-    epsilon_star ~ normal(0, 1.0);
+    epsilon_star ~ normal(0.0, 1.0);
 
     for (t in 1:(nt - 1)) {
-        to_vector(x_eta[t]) ~ normal(0, 1);
-        to_vector(z_eta[t]) ~ normal(0, 1);
+        // to_vector(x_eta[t]) ~ normal(0.0, 1.0);
+        to_vector(z_eta[t]) ~ normal(0.0, 1.0);
     }
 
     if (SIMULATE<1)

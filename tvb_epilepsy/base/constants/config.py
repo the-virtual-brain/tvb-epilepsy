@@ -8,8 +8,9 @@ from datetime import datetime
 
 class GenericConfig(object):
     _module_path = os.path.dirname(tvb_epilepsy.__file__)
-    STATS_MODELS_PATH = os.path.join(_module_path, "service", "model_inversion", "stan", "models")
+    PROBLSTC_MODELS_PATH = os.path.join(_module_path, "service", "model_inversion", "stan", "models")
     CMDSTAN_PATH = os.path.join(os.path.expanduser("~"), "ScientificSoftware/git/cmdstan")
+    MODEL_COMPARISON_PATH = os.path.join(os.path.dirname(_module_path), "extern")
     C_COMPILER = "clang++"
 
     # Information needed for the Java simulation
@@ -118,7 +119,7 @@ class FiguresConfig(object):
     SAVE_FLAG = True
     SHOW_FLAG = False
     MOUSE_HOOVER = False
-    MATPLOTLIB_BACKEND = "Agg"
+    MATPLOTLIB_BACKEND = "Qt4Agg"  # "Agg" # ,
 
 
 class CalculusConfig(object):
@@ -129,6 +130,7 @@ class CalculusConfig(object):
 
     # Options: "auto_eigenvals",  "auto_disease", "auto_epileptogenicity", "auto_excitability",
     # or "user_defined", in which case we expect a number equal to from 1 to hypothesis.n_regions
+    LSA_METHOD = "1D" # other options: "2D", "auto"
     EIGENVECTORS_NUMBER_SELECTION = "auto_eigenvals"
     WEIGHTED_EIGENVECTOR_SUM = True
     INTERACTIVE_ELBOW_POINT = False

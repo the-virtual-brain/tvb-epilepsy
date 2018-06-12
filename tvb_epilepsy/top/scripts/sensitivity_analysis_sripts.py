@@ -8,7 +8,7 @@ from tvb_epilepsy.base.utils.log_error_utils import initialize_logger, raise_val
 from tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_epilepsy.service.pse.lsa_pse_service import LSAPSEService
 from tvb_epilepsy.service.sampling.salib_sampling_service import SalibSamplingService
-from tvb_epilepsy.service.sampling.stochastic_sampling_service import StochasticSamplingService
+from tvb_epilepsy.service.sampling.probabilistic_sampling_service import ProbabilisticSamplingService
 from tvb_epilepsy.service.sensitivity_analysis_service import SensitivityAnalysisService, METHODS
 from tvb_epilepsy.top.scripts.hypothesis_scripts import start_lsa_run
 
@@ -34,7 +34,7 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(n_samples, lsa_hypothesis, conn
     else:
         raise_value_error("Method " + str(method) + " is not one of the available methods " + str(METHODS) + " !")
     all_regions_indices = range(lsa_hypothesis.number_of_regions)
-    disease_indices = lsa_hypothesis.get_regions_disease_indices()
+    disease_indices = lsa_hypothesis.regions_disease_indices
     healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
     pse_params = {"path": [], "indices": [], "name": [], "low": [], "high": []}
     n_inputs = 0
@@ -87,7 +87,7 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(n_samples, lsa_hypothesis, conn
     pse_params.update({"samples": [np.array(value) for value in input_samples.tolist()]})
     pse_params_list = dicts_of_lists_to_lists_of_dicts(pse_params)
     # Add a random jitter to the healthy regions if required...:
-    sampler = StochasticSamplingService(n_samples=n_samples, random_seed=kwargs.get("random_seed", None))
+    sampler = ProbabilisticSamplingService(n_samples=n_samples, random_seed=kwargs.get("random_seed", None))
     for val in healthy_regions_parameters:
         inds = val.get("indices", healthy_indices)
         name = val.get("name", "x0_values")
@@ -122,12 +122,13 @@ def sensitivity_analysis_pse_from_lsa_hypothesis(n_samples, lsa_hypothesis, conn
 
 def sensitivity_analysis_pse_from_hypothesis(n_samples, hypothesis, connectivity_matrix, region_labels,
                                              method="sobol", half_range=0.1, global_coupling=[],
-                                             healthy_regions_parameters=[], save_services=False, config=Config(), **kwargs):
+                                             healthy_regions_parameters=[], save_services=False, config=Config(),
+                                             model_config_kwargs={}, **kwargs):
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
     # Compute lsa for this hypothesis before sensitivity analysis:
     logger.info("Running hypothesis: " + hypothesis.name)
     model_configuration_builder, model_configuration, lsa_service, lsa_hypothesis = \
-        start_lsa_run(hypothesis, connectivity_matrix)
+        start_lsa_run(hypothesis, connectivity_matrix, config, **model_config_kwargs)
     results, pse_results = sensitivity_analysis_pse_from_lsa_hypothesis(n_samples, lsa_hypothesis, connectivity_matrix,
                                                                         model_configuration_builder, lsa_service,
                                                                         region_labels, method, half_range,

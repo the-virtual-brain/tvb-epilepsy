@@ -1,13 +1,13 @@
 import os
 import h5py
 import numpy
-from tvb_epilepsy.base.utils.log_error_utils import raise_error, raise_value_error
+from tvb_epilepsy.base.utils.log_error_utils import warning, raise_error, raise_value_error, initialize_logger
 from tvb_epilepsy.base.utils.file_utils import change_filename_or_overwrite, write_metadata
-from tvb_epilepsy.io.h5_model import convert_to_h5_model
 from tvb_epilepsy.base.model.vep.connectivity import ConnectivityH5Field
 from tvb_epilepsy.base.model.vep.sensors import SensorsH5Field
 from tvb_epilepsy.base.model.vep.surface import SurfaceH5Field
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.base.model.timeseries import Timeseries
+from tvb_epilepsy.io.h5_model import convert_to_h5_model
 
 KEY_TYPE = "EPI_Type"
 KEY_VERSION = "EPI_Version"
@@ -28,6 +28,60 @@ class H5Writer(object):
 
     H5_TYPE_ATTRIBUTE = "EPI_Type"
     H5_SUBTYPE_ATTRIBUTE = "EPI_Subtype"
+
+    def _determine_datasets_and_attributes(self, object, datasets_size=None):
+        datasets_dict = {}
+        metadata_dict = {}
+        groups_keys = []
+
+        try:
+            if isinstance(object, dict):
+                dict_object = object
+            else:
+                dict_object = vars(object)
+            for key, value in dict_object.iteritems():
+                if isinstance(value, numpy.ndarray):
+                    if datasets_size is not None and value.size == datasets_size:
+                        datasets_dict.update({key: value})
+                    else:
+                        if datasets_size is None and value.size > 0:
+                            datasets_dict.update({key: value})
+                        else:
+                            metadata_dict.update({key: value})
+                else:
+                    if isinstance(value, (float, int, long, complex, str)):
+                        metadata_dict.update({key: value})
+                    else:
+                        groups_keys.append(key)
+        except:
+            msg = "Failed to decompose group object: " + str(object) + "!"
+            try:
+                self.logger.info(str(object.__dict__))
+            except:
+                msg += "\n It has no __dict__ attribute!"
+            warning(msg, self.logger)
+
+        return datasets_dict, metadata_dict, groups_keys
+
+    def _write_dicts_at_location(self, datasets_dict, metadata_dict, location):
+        for key, value in datasets_dict.iteritems():
+            location.create_dataset(key, data=value)
+
+        for key, value in metadata_dict.iteritems():
+            location.attrs.create(key, value)
+        return location
+
+    def _prepare_object_for_group(self, group, object, h5_type_attribute="HypothesisModel", nr_regions=None):
+        group.attrs.create(self.H5_TYPE_ATTRIBUTE, h5_type_attribute)
+        group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, object.__class__.__name__)
+        datasets_dict, metadata_dict, subgroups = self._determine_datasets_and_attributes(object, nr_regions)
+        group = self._write_dicts_at_location(datasets_dict, metadata_dict, group)
+        return group, subgroups
+
+    def write_object_to_file(self, path, object, h5_type_attribute="HypothesisModel", nr_regions=None):
+        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
+        h5_file, _ = self._prepare_object_for_group(h5_file, object, h5_type_attribute, nr_regions)
+        h5_file.close()
 
     # TODO: write variants.
     def write_connectivity(self, connectivity, path):
@@ -132,6 +186,7 @@ class H5Writer(object):
         # TODO: change HypothesisModel to GenericModel here and inside Epi
         h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
         h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, h5_hypo.__class__.__name__)
+        h5_file.attrs.create("name", h5_hypo.name)
         h5_file.attrs.create("number_of_regions", h5_hypo.number_of_regions)
         h5_file.attrs.create("type", h5_hypo.type)
         h5_file.attrs.create("x0_indices", h5_hypo.x0_indices)
@@ -141,67 +196,28 @@ class H5Writer(object):
 
         h5_file.close()
 
-    def write_model_configuration(self, model_configuration, path):
+    def write_model_configuration(self, model_configuration, path, nr_regions=None):
         """
         :param model_configuration: ModelConfiguration object to write in H5
         :param path: H5 path to be written
         """
-        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
+        self.write_object_to_file(path, model_configuration, "HypothesisModel", nr_regions)
 
-        datasets_dict, metadata_dict, _ = self._determine_datasets_and_attributes(model_configuration)
-
-        for key, value in datasets_dict.iteritems():
-            h5_file.create_dataset(key, data=value)
-
-        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, model_configuration.__class__.__name__)
-
-        for key, value in metadata_dict.iteritems():
-            h5_file.attrs.create(key, value)
-
-        h5_file.close()
-
-    def write_model_configuration_builder(self, model_configuration_builder, path):
+    def write_model_configuration_builder(self, model_configuration_builder, path, nr_regions=None):
         """
         :param model_configuration_builder: ModelConfigurationService object to write in H5
         :param path: H5 path to be written
         """
-        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
+        self.write_object_to_file(path, model_configuration_builder, "HypothesisModel", nr_regions)
 
-        datasets_dict, metadata_dict, _ = self._determine_datasets_and_attributes(model_configuration_builder)
-
-        for key, value in datasets_dict.iteritems():
-            h5_file.create_dataset(key, data=value)
-
-        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, model_configuration_builder.__class__.__name__)
-
-        for key, value in metadata_dict.iteritems():
-            h5_file.attrs.create(key, value)
-
-        h5_file.close()
-
-    def write_lsa_service(self, lsa_service, path):
+    def write_lsa_service(self, lsa_service, path, nr_regions=None):
         """
         :param lsa_service: LSAService object to write in H5
         :param path: H5 path to be written
         """
-        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
+        self.write_object_to_file(path, lsa_service, "HypothesisModel", nr_regions)
 
-        datasets_dict, metadata_dict, _ = self._determine_datasets_and_attributes(lsa_service)
-
-        for key, value in datasets_dict.iteritems():
-            h5_file.create_dataset(key, data=value)
-
-        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, lsa_service.__class__.__name__)
-
-        for key, value in metadata_dict.iteritems():
-            h5_file.attrs.create(key, value)
-
-        h5_file.close()
-
-    def write_model_inversion_service(self, model_inversion_service, path):
+    def write_model_inversion_service(self, model_inversion_service, path, nr_regions=None):
         """
         :param model_inversion_service: ModelInversionService object to write in H5
         :param path: H5 path to be written
@@ -209,20 +225,7 @@ class H5Writer(object):
         if getattr(model_inversion_service, "signals_inds", None) is not None:
             model_inversion_service.signals_inds = numpy.array(model_inversion_service.signals_inds)
 
-        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
-
-        datasets_dict, metadata_dict, _ = self._determine_datasets_and_attributes(model_inversion_service)
-
-        for key, value in datasets_dict.iteritems():
-            h5_file.create_dataset(key, data=value)
-
-        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, model_inversion_service.__class__.__name__)
-
-        for key, value in metadata_dict.iteritems():
-            h5_file.attrs.create(key, value)
-
-        h5_file.close()
+        self.write_object_to_file(path, model_inversion_service, "HypothesisModel", nr_regions)
 
     def write_pse_service(self, pse_service, path):
         """
@@ -284,25 +287,12 @@ class H5Writer(object):
         h5_file.close()
 
     # TODO: can this be visualized? should we keep groups?
-    def write_simulation_settings(self, simulation_settings, path):
+    def write_simulation_settings(self, simulation_settings, path, nr_regions=None):
         """
         :param simulation_settings: SimulationSettings object to write in H5
         :param path: H5 path to be written
         """
-        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
-
-        datasets_dict, metadata_dict, _ = self._determine_datasets_and_attributes(simulation_settings)
-
-        for key, value in datasets_dict.iteritems():
-            h5_file.create_dataset(key, data=value)
-
-        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, simulation_settings.__class__.__name__)
-
-        for key, value in metadata_dict.iteritems():
-            h5_file.attrs.create(key, value)
-
-        h5_file.close()
+        self.write_object_to_file(path, simulation_settings, "HypothesisModel", nr_regions)
 
     def write_ts_seeg_epi(self, seeg_data, sampling_period, path):
         if not os.path.exists(path):
@@ -312,34 +302,36 @@ class H5Writer(object):
 
         self.logger.info("Writing a TS at:\n" + path + ", " + sensors_name)
         try:
+            if isinstance(seeg_data, Timeseries):
+                seeg_ts = seeg_data.squeezed
             h5_file = h5py.File(path, 'a', libver='latest')
-            h5_file.create_dataset("/" + sensors_name, data=seeg_data)
-            write_metadata({KEY_MAX: seeg_data.max(), KEY_MIN: seeg_data.min(), KEY_STEPS: seeg_data.shape[0],
-                            KEY_CHANNELS: seeg_data.shape[1], KEY_SV: 1, KEY_SAMPLING: sampling_period, KEY_START: 0.0},
+            h5_file.create_dataset("/" + sensors_name, data=seeg_ts)
+            write_metadata({KEY_MAX: seeg_ts.max(), KEY_MIN: seeg_ts.min(), KEY_STEPS: seeg_ts.shape[0],
+                            KEY_CHANNELS: seeg_ts.shape[1], KEY_SV: 1, KEY_SAMPLING: sampling_period, KEY_START: 0.0},
                            h5_file, KEY_DATE, KEY_VERSION, "/" + sensors_name)
             h5_file.close()
         except Exception, e:
-            raise_error(e + "\nSeeg dataset already written as " + sensors_name, self.logger)
+            raise_error(str(e) + "\nSeeg dataset already written as " + sensors_name, self.logger)
 
-    def write_ts_epi(self, raw_ts, sampling_period, path, lfp_ts=None):
+    def write_ts_epi(self, raw_ts, sampling_period, path, source_ts=None):
         path = change_filename_or_overwrite(os.path.join(path))
 
-        if raw_ts is None or len(raw_ts.squeezed_data.shape) != 3:
+        if raw_ts is None or len(raw_ts.squeezed.shape) != 3:
             raise_value_error("Invalid TS data 3D (time, regions, sv) expected", self.logger)
         self.logger.info("Writing a TS at:\n" + path)
-        if lfp_ts is None:
-            lfp_ts = raw_ts.lfp
+        if source_ts is None:
+            source_ts = raw_ts.source
         h5_file = h5py.File(path, 'a', libver='latest')
-        h5_file.create_dataset("/data", data=raw_ts.squeezed_data)
-        h5_file.create_dataset("/lfpdata", data=lfp_ts.squeezed_data)
+        h5_file.create_dataset("/data", data=raw_ts.squeezed)
+        h5_file.create_dataset("/lfpdata", data=source_ts.squeezed)
         write_metadata({KEY_TYPE: "TimeSeries"}, h5_file, KEY_DATE, KEY_VERSION)
-        write_metadata({KEY_MAX: raw_ts.squeezed_data.max(), KEY_MIN: raw_ts.squeezed_data.min(),
-                        KEY_STEPS: raw_ts.squeezed_data.shape[0], KEY_CHANNELS: raw_ts.squeezed_data.shape[1],
-                        KEY_SV: raw_ts.squeezed_data.shape[2], KEY_SAMPLING: sampling_period,
+        write_metadata({KEY_MAX: raw_ts.squeezed.max(), KEY_MIN: raw_ts.squeezed.min(),
+                        KEY_STEPS: raw_ts.squeezed.shape[0], KEY_CHANNELS: raw_ts.squeezed.shape[1],
+                        KEY_SV: raw_ts.squeezed.shape[2], KEY_SAMPLING: sampling_period,
                         KEY_START: raw_ts.time_start}, h5_file, KEY_DATE, KEY_VERSION, "/data")
-        write_metadata({KEY_MAX: lfp_ts.squeezed_data.max(), KEY_MIN: lfp_ts.squeezed_data.min(),
-                        KEY_STEPS: lfp_ts.squeezed_data.shape[0], KEY_CHANNELS: lfp_ts.squeezed_data.shape[1],
-                        KEY_SV: 1, KEY_SAMPLING: sampling_period, KEY_START: lfp_ts.time_start}, h5_file, KEY_DATE,
+        write_metadata({KEY_MAX: source_ts.squeezed.max(), KEY_MIN: source_ts.squeezed.min(),
+                        KEY_STEPS: source_ts.squeezed.shape[0], KEY_CHANNELS: source_ts.squeezed.shape[1],
+                        KEY_SV: 1, KEY_SAMPLING: sampling_period, KEY_START: source_ts.time_start}, h5_file, KEY_DATE,
                        KEY_VERSION, "/lfpdata")
         h5_file.close()
 
@@ -367,72 +359,85 @@ class H5Writer(object):
                                 KEY_START: 0.0}, h5_file, KEY_DATE, KEY_VERSION, "/data")
             else:
                 raise_value_error("Invalid TS data. 2D (time, nodes) numpy.ndarray of floats expected")
+        elif isinstance(raw_data, Timeseries):
+            if len(raw_data.shape) == 4 and str(raw_data.data.dtype)[0] == "f":
+                h5_file.create_dataset("/data", data=raw_data.data)
+                h5_file.create_dataset("/time", data=raw_data.time_line)
+                h5_file.create_dataset("/labels",
+                                       data=numpy.array([numpy.string_(label) for label in raw_data.space_labels]))
+                h5_file.create_dataset("/variables",
+                                       data=numpy.array([numpy.string_(var) for var in raw_data.variables_labels]))
+                h5_file.attrs.create("time_unit", raw_data.time_unit)
+                write_metadata({KEY_MAX: raw_data.data.max(), KEY_MIN: raw_data.data.min(),
+                                KEY_STEPS: raw_data.data.shape[0],KEY_CHANNELS: raw_data.data.shape[1],
+                                KEY_SV: 1, KEY_SAMPLING: raw_data.time_step,
+                                KEY_START: raw_data.time_start}, h5_file, KEY_DATE, KEY_VERSION, "/data")
+            else:
+                raise_value_error("Invalid TS data. 4D (time, nodes) numpy.ndarray of floats expected")
         else:
             raise_value_error("Invalid TS data. Dictionary or 2D (time, nodes) numpy.ndarray of floats expected")
         h5_file.close()
 
+    def write_timeseries(self, timeseries, path):
+        self.write_ts(timeseries, timeseries.time_step, path)
+
     def write_simulator_model(self, simulator_model, nr_regions, path):
-        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
+        self.write_object_to_file(path, simulator_model, "HypothesisModel", nr_regions)
 
-        datasets_dict, metadata_dict, _ = self._determine_datasets_and_attributes(simulator_model, nr_regions)
-
-        for key, value in datasets_dict.iteritems():
-            h5_file.create_dataset(key, data=value)
-
-        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, simulator_model.__class__.__name__)
-
-        for key, value in metadata_dict.iteritems():
-            h5_file.attrs.create(key, value)
-
-        h5_file.close()
-
-    def _write_dicts_at_location(self, datasets_dict, metadata_dict, location):
-        for key, value in datasets_dict.iteritems():
-            location.create_dataset(key, data=value)
-
-        for key, value in metadata_dict.iteritems():
-            location.attrs.create(key, value)
-
-    def write_statistical_model(self, statistical_model, nr_regions, path):
+    def write_probabilistic_model(self, probabilistic_model, nr_regions, path):
         """
         :param object:
         :param path:H5 path to be written
         """
+
+        def _set_parameter_to_group(parent_group, parameter, nr_regions, param_name=None):
+            if param_name is None:
+                this_param_group = parent_group.create_group(parameter.name)
+            else:
+                this_param_group = parent_group.create_group(param_name)
+            this_param_group, parameter_subgroups = \
+                self._prepare_object_for_group(this_param_group, parameter, nr_regions=nr_regions)
+            for param_subgroup_key in parameter_subgroups:
+                if param_subgroup_key.find("p_shape") >= 0:
+                    this_param_group[param_subgroup_key] = numpy.array(getattr(param_value, param_subgroup_key))
+                elif param_subgroup_key == "star":
+                    this_param_group, parameter_subgroup = \
+                        _set_parameter_to_group(this_param_group, parameter.star, nr_regions, "star")
+                else:
+                    parameter_subgroup = param_group.create_group(param_subgroup_key)
+                    parameter_subgroup, _ = self._prepare_object_for_group(parameter_subgroup,
+                                                                           getattr(param_value, param_subgroup_key),
+                                                                           nr_regions)
+            return parent_group, this_param_group
+
         h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
 
-        datasets_dict, metadata_dict, groups_keys = self._determine_datasets_and_attributes(statistical_model,
+        datasets_dict, metadata_dict, groups_keys = self._determine_datasets_and_attributes(probabilistic_model,
                                                                                             nr_regions)
         h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, statistical_model.__class__.__name__)
+        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, probabilistic_model.__class__.__name__)
 
         self._write_dicts_at_location(datasets_dict, metadata_dict, h5_file)
 
         for group_key in groups_keys:
-            if group_key == "model_config":
+            if group_key == "active_regions":
+                h5_file.create_dataset(group_key, data=numpy.array(probabilistic_model.active_regions))
+
+            elif group_key == "parameters":
                 group = h5_file.create_group(group_key)
-                group_datasets, group_metadata, _ = self._determine_datasets_and_attributes(
-                    statistical_model.model_config, nr_regions)
+                group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, probabilistic_model.parameters.__class__.__name__)
+                for param_key, param_value in probabilistic_model.parameters.iteritems():
+                    group, param_group =_set_parameter_to_group(group, param_value, nr_regions, param_key)
 
-                group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, statistical_model.model_config.__class__.__name__)
-
-                self._write_dicts_at_location(group_datasets, group_metadata, group)
-
-            if group_key == "parameters":
+            else:
                 group = h5_file.create_group(group_key)
-                group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, statistical_model.parameters.__class__.__name__)
-                for param_key, param_value in statistical_model.parameters.iteritems():
-                    param_group = group.create_group(param_key)
-                    param_group_datasets, param_group_metadata, _ = self._determine_datasets_and_attributes(param_value,
-                                                                                                            nr_regions)
-
-                    param_group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, param_value.__class__.__name__)
-
-                    self._write_dicts_at_location(param_group_datasets, param_group_metadata, param_group)
+                group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, getattr(probabilistic_model, group_key).__class__.__name__)
+                group, _ = self._prepare_object_for_group(group, getattr(probabilistic_model, group_key), nr_regions)
 
         h5_file.close()
 
-    def write_generic(self, object, folder, path):
+    # TODO: this should be deprecated when/if _determine_datasets_and_attributes becomes recursive into groups
+    def write_generic(self, object, path):
         """
         :param object:
         :param path:H5 path to be written
@@ -442,26 +447,4 @@ class H5Writer(object):
         h5_model.add_or_update_metadata_attribute(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
         h5_model.add_or_update_metadata_attribute(self.H5_SUBTYPE_ATTRIBUTE, object.__class__.__name__)
 
-        h5_model.write_to_h5(folder, path)
-
-    def _determine_datasets_and_attributes(self, current_object, datasets_size=None):
-        datasets_dict = {}
-        metadata_dict = {}
-        groups_keys = []
-
-        for key, value in vars(current_object).iteritems():
-            if isinstance(value, numpy.ndarray):
-                if datasets_size is not None and value.size == datasets_size:
-                    datasets_dict.update({key: value})
-                else:
-                    if datasets_size is None and value.size > 0:
-                        datasets_dict.update({key: value})
-                    else:
-                        metadata_dict.update({key: value})
-            else:
-                if isinstance(value, (float, int, long, complex, str)):
-                    metadata_dict.update({key: value})
-                else:
-                    groups_keys.append(key)
-
-        return datasets_dict, metadata_dict, groups_keys
+        h5_model.write_to_h5(path)

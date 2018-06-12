@@ -9,6 +9,7 @@ from tvb.datatypes import connectivity
 from tvb.simulator import coupling, integrators, simulator
 from tvb_epilepsy.base.constants.model_constants import TIME_DELAYS_FLAG
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
 from tvb_epilepsy.service.simulator.simulator import ABCSimulator
 from tvb_epilepsy.service.simulator.epileptor_model_factory import model_build_dict
 
@@ -36,6 +37,10 @@ class SimulatorTVB(ABCSimulator):
                                          centres=vep_conn.centres, hemispheres=vep_conn.hemispheres,
                                          orientations=vep_conn.orientations, areas=vep_conn.areas)
 
+    def get_vois(self):
+        # TODO: change 'lfp' for 'source'
+        return [me.replace('x2 - x1', 'source') for me in self.simulation_settings.monitor_expressions]
+
     def config_simulation(self, noise, monitors, initial_conditions=None, **kwargs):
 
         if isinstance(self.model_configuration.model_connectivity, numpy.ndarray):
@@ -43,10 +48,11 @@ class SimulatorTVB(ABCSimulator):
                                                           self.model_configuration.model_connectivity)
         else:
             tvb_connectivity = self._vep2tvb_connectivity(self.connectivity)
+
         tvb_coupling = coupling.Difference(a=1.)
 
-        integrator = kwargs.get("integrator",
-                                integrators.HeunStochastic(dt=self.simulation_settings.integration_step, noise=noise))
+        integrator = getattr(integrators, kwargs.get("integrator", "HeunStochastic"))(
+                                                            dt=self.simulation_settings.integration_step, noise=noise)
 
         self.simTVB = simulator.Simulator(model=self.model, connectivity=tvb_connectivity, coupling=tvb_coupling,
                                           integrator=integrator, monitors=monitors,
@@ -111,7 +117,13 @@ class SimulatorTVB(ABCSimulator):
                 self.logger.warning("Something went wrong with this simulation...:" + "\n" + str(error_message))
                 return None, None, status
 
-            return numpy.array(tavg_time), numpy.array(tavg_data), status
+            tavg_time = numpy.array(tavg_time).flatten().astype('f')
+            tavg_data = numpy.swapaxes(tavg_data, 1, 2).astype('f')
+            # Variables of interest in a dictionary:
+            sim_output = Timeseries(tavg_data, {TimeseriesDimensions.SPACE.value: self.connectivity.region_labels,
+                                                TimeseriesDimensions.VARIABLES.value: self.get_vois()},
+                                    tavg_time[0], numpy.diff(tavg_time).mean(), "ms")
+            return sim_output, status
 
     def configure_model(self, **kwargs):
         self.model = model_build_dict[self.model._ui_name](self.model_configuration, **kwargs)

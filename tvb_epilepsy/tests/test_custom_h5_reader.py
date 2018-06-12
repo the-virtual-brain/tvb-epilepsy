@@ -96,8 +96,11 @@ class TestCustomH5Reader(BaseTest):
         assert dummy_hypothesis.e_indices == hypothesis.e_indices
         assert numpy.array_equal(dummy_hypothesis.w_values, hypothesis.w_values)
         assert dummy_hypothesis.w_indices == hypothesis.w_indices
-        assert numpy.array_equal(dummy_hypothesis.lsa_propagation_strengths, hypothesis.lsa_propagation_strengths)
         assert numpy.array_equal(dummy_hypothesis.lsa_propagation_indices, hypothesis.lsa_propagation_indices)
+        if len(dummy_hypothesis.lsa_propagation_indices) == 0:
+            assert numpy.array_equal([0, 0, 0], hypothesis.lsa_propagation_strengths)
+        else:
+            assert numpy.array_equal(dummy_hypothesis.lsa_propagation_strengths, hypothesis.lsa_propagation_strengths)
 
     def test_read_model_configuration(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestModelConfiguration.h5")
@@ -147,6 +150,8 @@ class TestCustomH5Reader(BaseTest):
         assert dummy_mc_service.slope == mc_service.slope
         assert dummy_mc_service.s == mc_service.s
         assert dummy_mc_service.gamma == mc_service.gamma
+        assert dummy_mc_service.tau1 == mc_service.tau1
+        assert dummy_mc_service.tau0 == mc_service.tau0
         assert dummy_mc_service.zmode == mc_service.zmode
         assert dummy_mc_service.x1eq_mode == mc_service.x1eq_mode
         assert dummy_mc_service.K.all() == mc_service.K.all()

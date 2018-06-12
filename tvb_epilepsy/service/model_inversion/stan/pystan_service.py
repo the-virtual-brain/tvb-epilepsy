@@ -27,7 +27,7 @@ class PyStanService(StanService):
             self.fitmethod = "sampling"
         elif self.fitmethod.lower().find("v") >= 0:  # for variational or vb or advi
             self.fitmethod = "vb"
-        elif self.fitmethod.lower().find("optimiz") >= 0:  # for optimization or optimizing or optimize
+        elif self.fitmethod.lower().find("opt") >= 0:  # for optimization or optimizing or optimize
             self.fitmethod = "optimizing"
         else:
             raise_value_error(self.fitmethod + " does not correspond to one of the input methods:\n" +
