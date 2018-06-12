@@ -1,5 +1,6 @@
 # coding=utf-8
 
+import os
 import numpy as np
 from copy import deepcopy
 from tvb_epilepsy.base.constants.config import Config
@@ -38,7 +39,7 @@ def main_h5_model(config=Config()):
     logger.info("Original object: %s", obj)
 
     logger.info("Writing object to h5 file...")
-    writer.write_generic(obj, config.out.FOLDER_RES, "test_h5_model.h5")
+    writer.write_generic(obj, os.path.join(config.out.FOLDER_RES, "test_h5_model.h5"))
 
     h5_model1 = read_h5_model(config.out.FOLDER_RES + "/test_h5_model.h5")
     obj1 = h5_model1.convert_from_h5_model(deepcopy(obj))
