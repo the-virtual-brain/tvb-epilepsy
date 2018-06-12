@@ -8,3 +8,6 @@ __pycache__
 .pytest_cache
 vep_out
 vep_test_out
+build
+dist
+tvb_epilepsy.egg-info
