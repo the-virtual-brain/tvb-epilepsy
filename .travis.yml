@@ -19,11 +19,11 @@ install:
   # Useful for debugging any issues with conda
   - conda info -a
   # setup env
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy matplotlib scipy cython sympy
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION matplotlib scipy cython sympy
   - source activate test-environment
-  - pip install pytest-cov coveralls h5py mpldatacursor gdist SALib
+  - pip install numpy pytest-cov coveralls h5py mpldatacursor gdist SALib
   - conda install llvmlite numba
-  - conda install pyqt
+  - conda install pyqt=4
   - pushd extern/tvb-library && python setup.py install && popd
 before_script: # configure a headless display to test plot generation
   - export DISPLAY=:99.0

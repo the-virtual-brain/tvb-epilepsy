@@ -108,9 +108,7 @@ class TestCustomH5writer(BaseTest):
 
     def test_write_model_inversion_service(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestModelInversionService.h5")
-        dummy_model_inversion_service = ModelInversionService(
-            ModelConfiguration(model_connectivity=self.dummy_connectivity.normalized_weights, x1eq=X1EQ_CR_DEF),
-            dynamical_model="Epileptor", sig_eq=(-4.0 / 3.0 - -5.0 / 3.0) / 10.0)
+        dummy_model_inversion_service = ModelInversionService()
 
         assert not os.path.exists(test_file)
 

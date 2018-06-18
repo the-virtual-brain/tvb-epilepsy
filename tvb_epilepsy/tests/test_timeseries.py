@@ -88,12 +88,12 @@ class TestTimeseries(object):
         assert ts_time_window_units.time_start == 0.01
 
         with pytest.raises(IndexError):
-            ts_from_2D.get_time_window(2, 3)
+            ts_from_2D.get_time_window(2, 4)
 
         with pytest.raises(ValueError):
             ts_from_2D.get_time_window_by_units(0, 0.025)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(AttributeError):
             ts_from_2D.lfp
 
     def test_timeseries_3D(self):
@@ -178,7 +178,7 @@ class TestTimeseries(object):
         with pytest.raises(IndexError):
             ts[0, :, 10, :]
 
-        with pytest.raises(ValueError):
+        with pytest.raises(AttributeError):
             ts.lfp
 
     def test_timeseries_4D(self):
@@ -189,4 +189,4 @@ class TestTimeseries(object):
                                                  "sv3"]},
                            time_start=self.time_start, time_step=self.time_step, time_unit=self.time_unit)
         assert ts_4D.data.shape == (3, 4, 3, 4)
-        assert ts_4D.lfp.data.shape == (3, 4, 1, 4)
+        assert ts_4D.x1.data.shape == (3, 4, 1, 4)

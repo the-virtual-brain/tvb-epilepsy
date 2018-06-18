@@ -23,7 +23,7 @@ class TestExamples(BaseTest):
     #     main_sampling_service(self.config)
 
     def test_main_vep_default(self):
-        main_vep(self.config, ep_name="ep_l_frontal_complex")
+        main_vep(self.config, ep_name="ep_l_frontal_complex", ep_indices=[1])
 
     # def test_main_vep_everything(self):
     #     main_vep(self.config, sa_pse_flag=True)
