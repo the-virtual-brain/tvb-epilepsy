@@ -102,5 +102,4 @@ LOW_FREQ = 10.0
 HIGH_FREQ = 256.0
 BIPOLAR = False
 
-
-
+TARGET_DATA_PREPROCESSING = ["filter", "abs", "convolve", "log"]

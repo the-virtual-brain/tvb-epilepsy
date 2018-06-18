@@ -1,7 +1,8 @@
 import numpy as np
 from tvb_epilepsy.base.constants.model_inversion_constants import SEIZURE_LENGTH, HIGH_FREQ, LOW_FREQ, \
-                                                                  WIN_LEN_RATIO, BIPOLAR
+                                                                  WIN_LEN_RATIO, BIPOLAR, TARGET_DATA_PREPROCESSING
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
+from tvb_epilepsy.base.utils.data_structures_utils import isequal_string
 from tvb_epilepsy.io.edf import read_edf_to_Timeseries
 from tvb_epilepsy.service.timeseries_service import TimeseriesService
 
@@ -10,9 +11,8 @@ logger = initialize_logger(__name__)
 
 
 def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[], rois=[],
-                              filter_flag=True, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
-                              envelope_flag=True, log_flag=True, smooth_flag=True, win_len_ratio=WIN_LEN_RATIO,
-                              plotter=None, title_prefix=""):
+                              preprocessing=TARGET_DATA_PREPROCESSING, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
+                              win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
     ts_service = TimeseriesService()
 
     # Select rois if any:
@@ -33,53 +33,61 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
                    np.minimum(data.time_line[-1], on_off_set[1] + 2 * duration/win_len_ratio)]
     data = data.get_time_window_by_units(temp_on_off[0], temp_on_off[1])
 
-    # Now filter, if needed, before decimation introduces any artifacts
-    if filter_flag:
-        high_freq = np.minimum(high_freq, 512.0)
-        logger.info("Filtering signals...")
-        data = ts_service.filter(data, low_freq, high_freq, "bandpass", order=3)
-        if plotter:
-            plotter.plot_raster({"Filtering": data.squeezed}, data.time_line, time_units=data.time_unit,
-                                    special_idx=[], title='Filtered Time Series',  offset=1.0,
-                                    figure_name=title_prefix + 'FilteredTimeSeries', labels=data.space_labels)
+    for preproc in preprocessing:
 
+        # Now filter, if needed, before decimation introduces any artifacts
+        if isequal_string(preproc, "filter"):
+            high_freq = np.minimum(high_freq, 512.0)
+            logger.info("Filtering signals...")
+            data = ts_service.filter(data, low_freq, high_freq, "bandpass", order=3)
+            if plotter:
+                plotter.plot_raster({"Filtering": data.squeezed}, data.time_line, time_units=data.time_unit,
+                                        special_idx=[], title='Filtered Time Series',  offset=1.0,
+                                        figure_name=title_prefix + '_FilteredTimeSeries', labels=data.space_labels)
 
-    if envelope_flag:
-        # Square data to get positive "power like" timeseries (introducing though higher frequencies)
-        # data = ts_service.square(data)
-        # or
-        # ...get the signals' envelope via Hilbert transform
-        # data = ts_service.hilbert_envelope(data)
-        # or
-        #...the absolute value...
-        data = ts_service.abs(data)
-        if plotter:
-            plotter.plot_raster({"Envelope": data.squeezed}, data.time_line,
+        plot_envelope = ""
+        if isequal_string(preproc, "square"):
+            # Square data to get positive "power like" timeseries (introducing though higher frequencies)
+            data = ts_service.square(data)
+            plot_envelope = "Square envelope"
+        elif isequal_string(preproc, "hilbert"):
+            # or
+            # ...get the signals' envelope via Hilbert transform
+            data = ts_service.hilbert_envelope(data)
+            plot_envelope = "Hilbert transform envelope"
+            # or
+        elif isequal_string(preproc, "abs"):
+            #...the absolute value...
+            data = ts_service.abs(data)
+            plot_envelope = "abs envelope"
+        if plot_envelope and plotter:
+            plot_envelop_ = plot_envelope.replace(" ", "_")
+            plotter.plot_raster({plot_envelop_: data.squeezed}, data.time_line,
                                 time_units=data.time_unit, special_idx=[],
-                                title='Envelope by Hilbert transform', offset=1.0,
-                                figure_name=title_prefix + 'EnvelopeTimeSeries',
+                                title=plot_envelope, offset=1.0,
+                                figure_name=title_prefix + "_" + plot_envelop_ + "TimeSeries",
                                 labels=data.space_labels)
 
-    if log_flag:
-        logger.info("Computing log of signals...")
-        data = TimeseriesService().log(data)
-        if plotter:
-            plotter.plot_raster({"LogData": data.squeezed}, data.time_line, time_units=data.time_unit,
-                                special_idx=[], title='Log of Time Series', offset=1.0,
-                                figure_name=title_prefix + 'LogTimeSeries', labels=data.space_labels)
+        if isequal_string(preproc, "log"):
+            logger.info("Computing log of signals...")
+            data = TimeseriesService().log(data)
+            if plotter:
+                plotter.plot_raster({"LogTimeSeries": data.squeezed}, data.time_line, time_units=data.time_unit,
+                                    special_idx=[], title='Log of Time Series', offset=0.1,
+                                    figure_name=title_prefix + '_LogTimeSeries', labels=data.space_labels)
 
-    # Now convolve to smooth...
-    if smooth_flag:
-        win_len = int(np.round(1.0*data.time_length/win_len_ratio))
-        str_win_len = str(win_len)
-        data = ts_service.convolve(data, win_len)
-        logger.info("Convolving signals with a square window of " + str_win_len + " points...")
-        if plotter:
-            plotter.plot_raster({"Smoothing": data.squeezed}, data.time_line,
-                                time_units=data.time_unit, special_idx=[], offset=0.1,
-                                title='Convolved Time Series with a window of ' + str_win_len + " points",
-                                figure_name=title_prefix + str_win_len + 'pointWinConvolvedTimeSeries',
-                                labels=data.space_labels)
+        # Now convolve to smooth...
+        if isequal_string(preproc, "convolve"):
+            win_len = int(np.round(1.0*data.time_length/win_len_ratio))
+            str_win_len = str(win_len)
+            data = ts_service.convolve(data, win_len)
+            logger.info("Convolving signals with a square window of " + str_win_len + " points...")
+            if plotter:
+                plotter.plot_raster({"ConvolutionSmoothing": data.squeezed}, data.time_line,
+                                    time_units=data.time_unit, special_idx=[], offset=0.1,
+                                    title='Convolved Time Series with a window of ' + str_win_len + " points",
+                                    figure_name=title_prefix + "_" + str_win_len + 'pointWinConvolvedTimeSeries',
+                                    labels=data.space_labels)
 
     # Now decimate to get close to seizure_length points
     temp_duration = temp_on_off[1] - temp_on_off[0]
@@ -103,7 +111,7 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
     data = ts_service.normalize(data, "baseline-amplitude")  #  or "zscore"
     if plotter:
         plotter.plot_raster({"ObservationRaster": data.squeezed}, data.time_line, time_units=data.time_unit,
-                            special_idx=[], offset=1.0, title='Observation Raster Plot',
+                            special_idx=[], offset=0.1, title='Observation Raster Plot',
                             figure_name=title_prefix + 'ObservationRasterPlot', labels=data.space_labels)
         plotter.plot_timeseries({"Observation": data.squeezed}, data.time_line, time_units=data.time_unit,
                                 special_idx=[], title='Observation Time Series',
@@ -111,10 +119,10 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
     return data
 
 
-def prepare_simulated_seeg_observable(data, sensor, seizure_length=SEIZURE_LENGTH, log_flag=True, on_off_set=[], rois=[],
-                                      filter_flag=True, low_freq=LOW_FREQ, high_freq=HIGH_FREQ, bipolar=BIPOLAR,
-                                      envelope_flag=True, smooth_flag=True, win_len_ratio=WIN_LEN_RATIO,
-                                      plotter=None, title_prefix=""):
+def prepare_simulated_seeg_observable(data, sensor, seizure_length=SEIZURE_LENGTH, log_flag=True, on_off_set=[],
+                                      rois=[], preprocessing=TARGET_DATA_PREPROCESSING,
+                                      low_freq=LOW_FREQ, high_freq=HIGH_FREQ, bipolar=BIPOLAR,
+                                      win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
 
     logger.info("Computing SEEG signals...")
     data = TimeseriesService().compute_seeg(data, sensor, sum_mode=np.where(log_flag, "exp", "lin"))[0]
@@ -129,14 +137,14 @@ def prepare_simulated_seeg_observable(data, sensor, seizure_length=SEIZURE_LENGT
             plotter.plot_raster({"BipolarData": data.squeezed}, data.time_line, time_units=data.time_unit,
                                 special_idx=[], title='Bipolar Time Series', offset=0.1,
                                 figure_name=title_prefix + 'BipolarTimeSeries', labels=data.space_labels)
-    return prepare_signal_observable(data, seizure_length, on_off_set, rois, filter_flag, low_freq, high_freq,
-                                     envelope_flag, False, smooth_flag, win_len_ratio, plotter, title_prefix)
+    return prepare_signal_observable(data, seizure_length, on_off_set, rois, preprocessing, low_freq, high_freq,
+                                   win_len_ratio, plotter, title_prefix)
 
 
 def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, seizure_length=SEIZURE_LENGTH,
-                                          log_flag=True, on_off_set=[], time_units="ms", label_strip_fun=None,
-                                          filter_flag=True, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
-                                          bipolar=BIPOLAR,  envelope_flag=True, smooth_flag=True,
+                                          on_off_set=[], time_units="ms", label_strip_fun=None,
+                                          preprocessing=TARGET_DATA_PREPROCESSING,
+                                          low_freq=LOW_FREQ, high_freq=HIGH_FREQ, bipolar=BIPOLAR,
                                           win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
     logger.info("Reading empirical dataset from edf file...")
     data = read_edf_to_Timeseries(seeg_path, sensors, rois_selection,
@@ -159,6 +167,5 @@ def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, se
                                 figure_name=title_prefix + 'BipolarTimeSeries', labels=data.space_labels)
 
     return prepare_signal_observable(data, seizure_length, on_off_set, range(data.number_of_labels),
-                                     filter_flag, low_freq, high_freq, envelope_flag, log_flag, smooth_flag,
-                                     win_len_ratio, plotter, title_prefix)
+                                     preprocessing, low_freq, high_freq, win_len_ratio, plotter, title_prefix)
 

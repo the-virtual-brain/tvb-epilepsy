@@ -5,7 +5,7 @@ import numpy as np
 from tvb_epilepsy.base.constants.config import Config
 from tvb_epilepsy.base.constants.model_constants import K_DEF, TAU1_DEF, TAU0_DEF
 from tvb_epilepsy.base.constants.model_inversion_constants import OBSERVATION_MODELS, SEIZURE_LENGTH, \
-    HIGH_FREQ, LOW_FREQ, WIN_LEN_RATIO, BIPOLAR
+    HIGH_FREQ, LOW_FREQ, WIN_LEN_RATIO, BIPOLAR, TARGET_DATA_PREPROCESSING
 from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
 from tvb_epilepsy.base.utils.data_structures_utils import ensure_list, generate_region_labels
 from tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, Timeseries
@@ -72,9 +72,9 @@ def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, tau1=TAU1_
 
 
 def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0, seizure_length=SEIZURE_LENGTH,
-                       log_flag=True, times_on_off=[], time_units="ms", label_strip_fun=None, filter_flag=True,
-                       low_freq=LOW_FREQ, high_freq=HIGH_FREQ, bipolar=BIPOLAR, envelope_flag=True, smooth_flag=True,
-                       win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
+                       times_on_off=[], time_units="ms", label_strip_fun=None, preprocessing=TARGET_DATA_PREPROCESSING,
+                       low_freq=LOW_FREQ, high_freq=HIGH_FREQ, bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO,
+                       plotter=None, title_prefix=""):
     try:
         return H5Reader().read_timeseries(ts_file)
     except:
@@ -82,19 +82,17 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
         if len(sensors_lbls) == 0:
             sensors_lbls = head.get_sensors_id(sensor_ids=sensor_id).labels
         signals = prepare_seeg_observable_from_mne_file(empirical_file, head.get_sensors_id(sensor_ids=sensor_id),
-                                                        sensors_lbls, seizure_length, log_flag, times_on_off,
-                                                        time_units, label_strip_fun, filter_flag, low_freq, high_freq,
-                                                        bipolar, envelope_flag, smooth_flag, win_len_ratio, plotter,
-                                                        title_prefix)
+                                                        sensors_lbls, seizure_length, times_on_off, time_units,
+                                                        label_strip_fun, preprocessing, low_freq, high_freq,
+                                                        bipolar, win_len_ratio, plotter, title_prefix)
         H5Writer().write_timeseries(signals, ts_file)
         return signals
 
 
 def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis, probabilistic_model, sensor_id=0,
                               sim_type="paper", times_on_off=[], config=Config(),
-                              filter_flag=True, low_freq=LOW_FREQ, high_freq=HIGH_FREQ, bipolar=BIPOLAR,
-                              envelope_flag=True, smooth_flag=True, win_len_ratio=WIN_LEN_RATIO,
-                              plotter=None, title_prefix=""):
+                              preprocessing=TARGET_DATA_PREPROCESSING, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
+                              bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
     signals, simulator = from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
                                                                 sim_type=sim_type, ts_file=ts_file,
                                                                 config=config, plotter=plotter)
@@ -111,13 +109,12 @@ def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis
     if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
         log_flag = probabilistic_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
         signals = prepare_simulated_seeg_observable(signals, head.get_sensors_id(sensor_ids=sensor_id),
-                                                    probabilistic_model.time_length, log_flag, times_on_off, [],
-                                                    filter_flag, low_freq, high_freq, bipolar, envelope_flag,
-                                                    smooth_flag, win_len_ratio, plotter, title_prefix)
+                                                    probabilistic_model.time_length, times_on_off, [],
+                                                    preprocessing, low_freq, high_freq, bipolar,
+                                                    win_len_ratio, plotter, title_prefix)
     else:
         signals = prepare_signal_observable(signals, probabilistic_model.time_length, times_on_off, [],
-                                            filter_flag, low_freq, high_freq, envelope_flag, False,
-                                            smooth_flag, win_len_ratio, plotter, title_prefix)
+                                            preprocessing, low_freq, high_freq, win_len_ratio, plotter, title_prefix)
     return signals, simulator
 
 
