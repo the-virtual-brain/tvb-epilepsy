@@ -192,9 +192,9 @@ class Timeseries(object):
 
     def get_state_variable(self, sv_label):
         sv_data = self.data[:, :, self._get_index_of_state_variable(sv_label), :]
-        return Timeseries(numpy.expand_dims(sv_data, 2),
-                          OrderedDict({TimeseriesDimensions.SPACE.value: self.dimension_labels[
-                              TimeseriesDimensions.SPACE.value]}),
+        subspace_dimension_labels = deepcopy(self.dimension_labels)
+        subspace_dimension_labels[TimeseriesDimensions.VARIABLES.value] = [sv_label]
+        return Timeseries(numpy.expand_dims(sv_data, 2), subspace_dimension_labels,
                           self.time_start, self.time_step, self.time_unit)
 
     def get_subspace_by_labels(self, list_of_labels):
