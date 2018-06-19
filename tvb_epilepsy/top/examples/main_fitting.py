@@ -116,8 +116,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde_ins.stan", empirical_file="",
                                                         "x1_init", "z_init", "tau1",  # "tau0", "K",
                                                         "sigma", "dZt", "epsilon", "scale", "offset"],  # "dX1t",
                                              xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
-                                             sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model).\
-                                                                                                       generate_model()
+                                             sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model)\
+                                                                                                      .generate_model()
 
             # Update active model's active region nodes
             e_values = pse_results.get("e_values_mean", model_configuration.e_values)
@@ -128,6 +128,14 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde_ins.stan", empirical_file="",
                 model_inversion.update_active_regions(probabilistic_model, e_values=e_values,
                                                       lsa_propagation_strengths=lsa_propagation_strength, reset=True)
 
+            # -------------------------- Get simulated data (simulate if necessary) -------------------------------
+            sim_signals, simulator = \
+                set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, probabilistic_model,
+                                          sensor_id, sim_type="fitting", times_on_off=times_on_off, config=config,
+                                          # Maybe change some of those for Epileptor 6D simulations:
+                                          bipolar=False, preprocessing=preprocessing_sequence,
+                                          plotter=plotter, title_prefix=hyp.name)
+
             # Now some scripts for settting and preprocessing target signals:
             if os.path.isfile(empirical_file):
                 probabilistic_model.target_data_type = TARGET_DATA_TYPE.EMPIRICAL.value
@@ -137,14 +145,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde_ins.stan", empirical_file="",
                                              times_on_off=times_on_off, label_strip_fun=lambda s: s.split("POL ")[-1],
                                              preprocessing=preprocessing_sequence, plotter=plotter, title_prefix=hyp.name)
             else:
-                # -------------------------- Get simulated data (simulate if necessary) -------------------------------
                 probabilistic_model.target_data_type = TARGET_DATA_TYPE.SYNTHETIC.value
-                signals, simulator = \
-                   set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, probabilistic_model,
-                                             sensor_id, sim_type="fitting", times_on_off=times_on_off, config=config,
-                                             # Maybe change some of those for Epileptor 6D simulations:
-                                             bipolar=False, preprocessing=preprocessing_sequence,
-                                             plotter=plotter, title_prefix=hyp.name)
+                signals = sim_signals
 
             # -------------------------- Select and set target data from signals ---------------------------------------
             if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
@@ -153,17 +155,21 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde_ins.stan", empirical_file="",
             target_data, probabilistic_model, gain_matrix = \
                 model_inversion.set_target_data_and_time(signals, probabilistic_model, head=head, sensors=sensors)
 
-            plotter.plot_probabilistic_model(probabilistic_model, hyp.name + " Probabilistic Model")
             plotter.plot_raster({'Target Signals': target_data.squeezed}, target_data.time_line,
                                 time_units=target_data.time_unit, title=hyp.name + ' Target Signals raster',
                                 offset=0.1, labels=target_data.space_labels)
             plotter.plot_timeseries({'Target Signals': target_data.squeezed}, target_data.time_line,
                                     time_units=target_data.time_unit,
                                     title=hyp.name + ' Target Signals', labels=target_data.space_labels)
+            writer.write_timeseries(target_data, target_data_file)
 
+            #---------------------------------Finally set priors for the parameters-------------------------------------
+            probabilistic_model.parameters.append(
+                SDEProbabilisticModelBuilder(probabilistic_model). \
+                    generate_parameters(target_data, sim_signals, gain_matrix))
+            plotter.plot_probabilistic_model(probabilistic_model, hyp.name + " Probabilistic Model")
             writer.\
               write_probabilistic_model(probabilistic_model, model_configuration.number_of_regions, problstc_model_file)
-            writer.write_timeseries(target_data, target_data_file)
 
             # Construct the stan model data dict:
             model_data = build_stan_model_data_dict(probabilistic_model, target_data.squeezed,
