@@ -13,7 +13,7 @@ from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_epilepsy.base.model.probabilistic_models.epileptor_probabilistic_models \
                                                 import ProbabilisticModel, ODEProbabilisticModel, SDEProbabilisticModel
-from tvb_epilepsy.service.timeseries_service import TimeseriesService
+from tvb_epilepsy.service.timeseries_service import compute_seeg_exp, compute_seeg_lin
 from tvb_epilepsy.service.probabilistic_parameter_builder import generate_probabilistic_parameter
 from tvb_epilepsy.service.model_inversion.epileptor_params_factory \
                                             import generate_lognormal_parameter, generate_negative_lognormal_parameter
@@ -320,36 +320,43 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
     def generate_parameters(self, target_data=None, sim_signals=None, gain_matrix=None):
         parameters = super(ODEProbabilisticModelBuilder, self).generate_parameters()
+        if isinstance(self.model, ODEProbabilisticModel):
+            active_regions = self.model.active_regions
+        else:
+            active_regions = []
+        if len(active_regions) == 0:
+            active_regions = list(range(self.number_of_regions))
+        n_active_regions = len(active_regions)
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
         if "x1" in self.parameters:
-            self.logger.info("...tau1...")
+            self.logger.info("...x1...")
             if isinstance(sim_signals, Timeseries) and isinstance(getattr(sim_signals, "x1", None), Timeseries):
                 x1_sim_ts = sim_signals.x1.squeezed
-                mu_prior = np.zeros(self.number_of_regions, )
-                sigma_prior = np.zeros(self.number_of_regions, )
-                loc_prior = np.zeros(self.number_of_regions, )
+                mu_prior = np.zeros(n_active_regions, )
+                sigma_prior = np.zeros(n_active_regions, )
+                loc_prior = np.zeros(n_active_regions, )
                 if self.priors_mode == PriorsModes.INFORMATIVE.value:
-                    for ii in range(self.number_of_regions):
-                        fit = ss.lognorm.fit(x1_sim_ts[:, ii])
+                    for ii, iR in enumerate(active_regions):
+                        fit = ss.lognorm.fit(x1_sim_ts[:, iR] - X1_MIN)
                         sigma_prior[ii] = fit[0]
                         mu_prior[ii] = np.exp(fit[2]) # mu = exp(scale)
-                        loc_prior[ii] = fit[1]
+                        loc_prior[ii] = fit[1] + X1_MIN
                 else:
-                    fit = ss.lognorm.fit(x1_sim_ts.flatten())
+                    fit = ss.lognorm.fit(x1_sim_ts[:, active_regions].flatten() - X1_MIN)
                     sigma_prior += fit[0]
                     mu_prior += np.exp(fit[2])  # mu = exp(scale)
-                    loc_prior += fit[1]
+                    loc_prior += fit[1] + X1_MIN
             else:
-                sigma_prior = X1_LOGSIGMA_DEF * np.ones(self.number_of_regions, )
-                mu_prior = X1_LOGMU_DEF * np.ones(self.number_of_regions, )
-                loc_prior = X1_LOGLOC_DEF * np.ones(self.number_of_regions, )
+                sigma_prior = X1_LOGSIGMA_DEF * np.ones(n_active_regions, )
+                mu_prior = X1_LOGMU_DEF * np.ones(n_active_regions, )
+                loc_prior = X1_LOGLOC_DEF * np.ones(n_active_regions, ) + X1_MIN
                 if self.priors_mode == PriorsModes.INFORMATIVE.value:
                     sigma_prior[self.active_regions] = X1_LOGSIGMA_ACTIVE
                     mu_prior[self.active_regions] = X1_LOGMU_ACTIVE
-                    loc_prior[self.active_regions] = X1_LOGLOC_ACTIVE
+                    loc_prior[self.active_regions] = X1_LOGLOC_ACTIVE + X1_MIN
             parameters.update(
                 {"x1":
-                     generate_probabilistic_parameter("x1", X1_MIN, X1_MAX, p_shape=(self.number_of_regions, ),
+                     generate_probabilistic_parameter("x1", X1_MIN, X1_MAX, p_shape=(n_active_regions, ),
                                                       probability_distribution=ProbabilityDistributionTypes.LOGNORMAL,
                                                       optimize_pdf=False, use="scipy", loc=loc_prior,
                                                       **{"mu": mu_prior, "sigma": sigma_prior})})
@@ -406,15 +413,14 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
         if isinstance(sim_signals, Timeseries) and isinstance(getattr(sim_signals, "x1", None), Timeseries) and \
             isinstance(target_data, Timeseries):
+            sim_seeg = sim_signals.x1.squeezed[:, active_regions] - self.model_config.x1eq.mean()
             if isinstance(gain_matrix, np.ndarray):
                 if self.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
-                    seeg = TimeseriesService()._compute_seeg_exp(self, sim_signals.x1, gain_matrix)
+                    sim_seeg = compute_seeg_exp(sim_seeg, gain_matrix)
                 else:
-                    seeg = TimeseriesService()._compute_seeg_lin(self, sim_signals.x1, gain_matrix)
-            else:
-                seeg = sim_signals.x1
-            self.offset = target_data.data.median() - seeg.data.median()
-            self.scale = target_data.data.std() / seeg.data.std()
+                    sim_seeg = compute_seeg_lin(sim_seeg, gain_matrix)
+            self.scale = target_data.data.std() / sim_seeg.std()
+            self.offset = target_data.data.median() - (self.scale*sim_seeg).median()
 
         if "scale" in self.parameters:
             self.logger.info("...scale...")
