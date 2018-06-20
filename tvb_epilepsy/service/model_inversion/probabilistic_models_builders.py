@@ -12,7 +12,8 @@ from tvb_epilepsy.base.computations.probability_distributions import Probability
 from tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_epilepsy.base.model.probabilistic_models.epileptor_probabilistic_models \
-                                                     import ProbabilisticModel, ODEProbabilisticModel, SDEProbabilisticModel
+                                                import ProbabilisticModel, ODEProbabilisticModel, SDEProbabilisticModel
+from tvb_epilepsy.service.timeseries_service import TimeseriesService
 from tvb_epilepsy.service.probabilistic_parameter_builder import generate_probabilistic_parameter
 from tvb_epilepsy.service.model_inversion.epileptor_params_factory \
                                             import generate_lognormal_parameter, generate_negative_lognormal_parameter
@@ -407,12 +408,12 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             isinstance(target_data, Timeseries):
             if isinstance(gain_matrix, np.ndarray):
                 if self.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
-                    seeg = np.log(np.dot(np.exp(sim_signals.x1.squeezed), gain_matrix))
+                    seeg = TimeseriesService()._compute_seeg_exp(self, sim_signals.x1, gain_matrix)
                 else:
-                    seeg = np.dot(sim_signals.x1.squeezed, gain_matrix)
+                    seeg = TimeseriesService()._compute_seeg_lin(self, sim_signals.x1, gain_matrix)
             else:
-                seeg = sim_signals.x1.squeezed
-            self.offset = target_data.data.median() - seeg.median()
+                seeg = sim_signals.x1
+            self.offset = target_data.data.median() - seeg.data.median()
             self.scale = target_data.data.std() / seeg.data.std()
 
         if "scale" in self.parameters:
