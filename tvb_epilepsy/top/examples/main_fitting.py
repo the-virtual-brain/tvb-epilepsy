@@ -117,7 +117,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde_ins.stan", empirical_file="",
                                                         "sigma", "dZt", "epsilon", "scale", "offset"],  # "dX1t",
                                              xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                                              sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model)\
-                                                                                                      .generate_model()
+                                                                              .generate_model(generate_parameters=False)
 
             # Update active model's active region nodes
             e_values = pse_results.get("e_values_mean", model_configuration.e_values)
