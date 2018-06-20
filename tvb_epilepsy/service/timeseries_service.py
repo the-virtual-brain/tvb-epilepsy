@@ -180,9 +180,9 @@ class TimeseriesService(object):
 
     def compute_seeg(self, source_timeseries, sensors, sum_mode="lin"):
         if sum_mode == "exp":
-            seeg_fun = lambda source, gain_matrix: np.log(np.exp(source.squeezed).dot(gain_matrix.T))
+            seeg_fun = lambda source, gain_matrix: self._compute_seeg_exp(source, gain_matrix)
         else:
-            seeg_fun = lambda source, gain_matrix: source.squeezed.dot(gain_matrix.T)
+            seeg_fun = lambda source, gain_matrix: self._compute_seeg_lin(source, gain_matrix)
         seeg = []
         for id, sensor in enumerate(ensure_list(sensors)):
             seeg.append(Timeseries(seeg_fun(source_timeseries, sensor.gain_matrix),
@@ -193,6 +193,11 @@ class TimeseriesService(object):
                                    source_timeseries.time_unit))
         return seeg
 
+    def _compute_seeg_lin(self, source_timeseries, gain_matrix):
+        return source_timeseries.squeezed.dot(gain_matrix.T)
+
+    def _compute_seeg_exp(self, source_timeseries, gain_matrix):
+        return np.log(np.exp(source_timeseries.squeezed).dot(gain_matrix.T))
 
 
 
