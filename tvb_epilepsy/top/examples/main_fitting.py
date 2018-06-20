@@ -165,8 +165,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde_ins.stan", empirical_file="",
 
             #---------------------------------Finally set priors for the parameters-------------------------------------
             probabilistic_model.parameters.append(
-                SDEProbabilisticModelBuilder(probabilistic_model). \
-                    generate_parameters(target_data, sim_signals, gain_matrix))
+                SDEProbabilisticModelBuilder(probabilistic_model).generate_parameters(target_data, sim_signals,
+                                                                                      gain_matrix))
             plotter.plot_probabilistic_model(probabilistic_model, hyp.name + " Probabilistic Model")
             writer.\
               write_probabilistic_model(probabilistic_model, model_configuration.number_of_regions, problstc_model_file)
