@@ -57,9 +57,9 @@ def set_hypotheses(head, config):
     return (hypothesis1, hypothesis2)
 
 
-def main_fit_sim_hyplsa(stan_model_name="vep_sde_ins.stan", empirical_file="",
+def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                         observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, sensors_lbls=[], sensor_id=0,
-                        times_on_off=[], preprocessing_sequence=TARGET_DATA_PREPROCESSING,
+                        times_on_off=[], sim_times_on_off=[80.0, 120.0], preprocessing_sequence=TARGET_DATA_PREPROCESSING,
                         fitmethod="optimizing", pse_flag=True, fit_flag=True, config=Config(), **kwargs):
 
     def path(name):
@@ -116,8 +116,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde_ins.stan", empirical_file="",
                                                         "x1_init", "z_init", "tau1",  # "tau0", "K",
                                                         "sigma", "dZt", "epsilon", "scale", "offset"],  # "dX1t",
                                              xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
-                                             sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model)\
-                                                                              .generate_model(generate_parameters=False)
+                                             sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,
+                                             K=model_configuration.K).generate_model(generate_parameters=False)
 
             # Update active model's active region nodes
             e_values = pse_results.get("e_values_mean", model_configuration.e_values)
@@ -131,7 +131,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde_ins.stan", empirical_file="",
             # -------------------------- Get simulated data (simulate if necessary) -------------------------------
             sim_signals, simulator = \
                 set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, probabilistic_model,
-                                          sensor_id, sim_type="fitting", times_on_off=times_on_off, config=config,
+                                          sensor_id, sim_type="fitting", times_on_off=sim_times_on_off, config=config,
                                           # Maybe change some of those for Epileptor 6D simulations:
                                           bipolar=False, preprocessing=preprocessing_sequence,
                                           plotter=plotter, title_prefix=hyp.name)
@@ -332,6 +332,10 @@ if __name__ == "__main__":
     # TVB3 selection:
     # sensors_lbls = [u"G'1", u"G'2", u"G'11", u"G'12", u"M'7", u"M'8", u"L'5", u"L'6"]
     # sensors_inds = [28, 29, 38, 39, 64, 65, 48, 49]
+    # Simulation times_on_off
+    sim_times_on_off = [80.0, 120.0]  # for "fitting" simulations with tau0=30.0
+    # times_on_off = [50.0, 550.0]  # for "paper" simulations
+    # times_on_off = [1100.0, 1300.0]  # for "fitting" simulations with tau0=300.0
     EMPIRICAL = True
     if EMPIRICAL:
         seizure = 'SZ1_0001.edf'
@@ -346,10 +350,8 @@ if __name__ == "__main__":
         # sensors_filename = "SensorsSEEG_210.h5"
         # times_on_off = [20.0, 100.0]
     else:
-        # times_on_off = [50.0, 550.0]  # for "paper" simulations
-        # times_on_off = [1100.0, 1300.0]  # for "fitting" simulations with tau0=300.0
-        times_on_off = [100.0, 200.0]  # for "fitting" simulations with tau0=30.0
-    stan_model_name = "vep_sde_simple" # "vep_sde_ins.stan" to fit K as well
+        times_on_off = sim_times_on_off
+    stan_model_name = "vep_sde"
     fitmethod = "sample"  # "sample"  # "advi" or "opt"
     observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value  # OBSERVATION_MODELS.SOURCE_POWER.value  #
     preprocessing = ["filter", "abs", "convolve"]
@@ -362,9 +364,11 @@ if __name__ == "__main__":
     if EMPIRICAL:
         main_fit_sim_hyplsa(stan_model_name=stan_model_name, observation_model=observation_model,
                             empirical_file=os.path.join(config.input.RAW_DATA_FOLDER, seizure),
-                            sensors_lbls=sensors_lbls, times_on_off=times_on_off, preprocessing_sequence=preprocessing,
-                            fitmethod=fitmethod, pse_flag=pse_flag, fit_flag=fit_flag, config=config)
+                            sensors_lbls=sensors_lbls, times_on_off=times_on_off, sim_times_on_off=sim_times_on_off,
+                            preprocessing_sequence=preprocessing, fitmethod=fitmethod,
+                            pse_flag=pse_flag, fit_flag=fit_flag, config=config)
     else:
         main_fit_sim_hyplsa(stan_model_name=stan_model_name, observation_model=observation_model,
-                            sensors_lbls=sensors_lbls, times_on_off=times_on_off, preprocessing_sequence=preprocessing,
-                            fitmethod=fitmethod, pse_flag=pse_flag, fit_flag=fit_flag, config=config)
+                            sensors_lbls=sensors_lbls, times_on_off=times_on_off, sim_times_on_off=sim_times_on_off,
+                            preprocessing_sequence=preprocessing, fitmethod=fitmethod,
+                            pse_flag=pse_flag, fit_flag=fit_flag, config=config)
