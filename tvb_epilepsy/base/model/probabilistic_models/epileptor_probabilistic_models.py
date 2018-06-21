@@ -19,7 +19,8 @@ class ProbabilisticModel(object):
     xmode = XModes.X0MODE.value
     priors_mode = PriorsModes.NONINFORMATIVE.value
     sigma_x = SIGMA_X0_DEF
-    MC_direction_split = 0.5
+    K = K_DEF
+    # MC_direction_split = 0.5
     ground_truth = {}
 
     @property
@@ -28,7 +29,7 @@ class ProbabilisticModel(object):
 
     def __init__(self, name='vep', number_of_regions=0,  target_data_type=TARGET_DATA_TYPE.EMPIRICAL.value,
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, parameters={}, ground_truth={},
-                 model_config=ModelConfiguration(), sigma_x=SIGMA_X0_DEF, MC_direction_split=0.5):
+                 model_config=ModelConfiguration(), K=K_DEF, sigma_x=SIGMA_X0_DEF):  #, MC_direction_split=0.5
         self.name = name
         self.number_of_regions = number_of_regions
         self.xmode = xmode
@@ -36,7 +37,8 @@ class ProbabilisticModel(object):
         self.sigma_x = sigma_x
         self.parameters = parameters
         self.model_config = model_config
-        self.MC_direction_split = MC_direction_split
+        self.K = K
+        # self.MC_direction_split = MC_direction_split
         self.ground_truth = ground_truth
         self.target_data_type = target_data_type
 
@@ -126,12 +128,12 @@ class ODEProbabilisticModel(ProbabilisticModel):
 
     def __init__(self, name='vep_ode',number_of_regions=0, target_data_type=TARGET_DATA_TYPE.EMPIRICAL.value,
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, parameters={}, ground_truth={},
-                 model_config=ModelConfiguration(), observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
+                 model_config=ModelConfiguration(), observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, K=K_DEF,
                  sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                  scale=1.0, offset=0.0, epsilon=EPSILON_DEF,
                  number_of_target_data=0, time_length=0, dt=DT_DEF, active_regions=[]):
         super(ODEProbabilisticModel, self).__init__(name, number_of_regions, target_data_type, xmode, priors_mode,
-                                                    parameters, ground_truth, model_config, sigma_x)
+                                                    parameters, ground_truth, model_config, K, sigma_x)
         if np.all(np.in1d(active_regions, range(self.number_of_regions))):
             self.active_regions = np.unique(active_regions).tolist()
         else:
@@ -182,14 +184,14 @@ class SDEProbabilisticModel(ODEProbabilisticModel):
 
     def __init__(self, name='vep_ode', number_of_regions=0, target_data_type=TARGET_DATA_TYPE.EMPIRICAL.value,
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, parameters={}, ground_truth={},
-                 model_config=ModelConfiguration(), observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
+                 model_config=ModelConfiguration(), observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, K=K_DEF,
                  sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, sigma=SIGMA_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                  scale=1.0, offset=0.0, epsilon=EPSILON_DEF,
                  number_of_target_data=0, time_length=0, dt=DT_DEF, active_regions=[],
                  sde_mode=SDE_MODES.NONCENTERED.value):
         super(SDEProbabilisticModel, self).__init__(name, number_of_regions, target_data_type, xmode, priors_mode,
                                                     parameters, ground_truth, model_config, observation_model,
-                                                    sigma_x, sigma_init, tau1, tau0, scale, offset, epsilon,
+                                                    K, sigma_x, sigma_init, tau1, tau0, scale, offset, epsilon,
                                                     number_of_target_data, time_length, dt, active_regions)
         self.sigma = sigma
         self.sde_mode = sde_mode
