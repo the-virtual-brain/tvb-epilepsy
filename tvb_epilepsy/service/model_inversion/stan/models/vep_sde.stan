@@ -67,6 +67,7 @@ functions {
 
 }
 
+
 data {
     int DEBUG;
     int SIMULATE;
@@ -93,6 +94,8 @@ data {
     real x1_init_lo;
     real x1_init_hi;
     real x1_init_std; // 0.0333
+    real z_init_lo;
+    real z_init_hi;
     real z_init_std; // 0.0333/2
     int TAU1_PRIOR;
     real tau1_mu; // 0.5
@@ -127,6 +130,7 @@ data {
     vector[n_active_regions] Ic;
     matrix<lower=0.0, upper=1.0>[n_active_regions, n_active_regions] SC;
 }
+
 
 transformed data {
     real sqrtdt = sqrt(dt);
@@ -199,6 +203,7 @@ transformed data {
     }
 }
 
+
 parameters {
     // integrate and predict
     row_vector [n_active_regions] x0_star;
@@ -212,11 +217,12 @@ parameters {
 
     // time-series state non-centering:
     row_vector<lower=x1_init_lo-max(x1_init_mu), upper=x1_init_hi-min(x1_init_mu)>[n_active_regions] x1_init_star;
-    row_vector[n_active_regions] z_init_star;
+    row_vector<lower=z_init_lo-max(z_init_mu), upper=z_init_hi-min(z_init_mu)>[n_active_regions] z_init_star;
     // row_vector[n_active_regions] dX1t_star[n_times - 1];
     row_vector[n_active_regions] dZt_star[n_times - 1];
 
 }
+
 
 transformed parameters {
     real offset = offset_mu + offset_star * offset_std;
@@ -284,6 +290,7 @@ transformed parameters {
     }
 }
 
+
 model {
     offset_star ~ normal(0.0, 1.0);
     scale_star ~ normal(0.0, 1.0);
@@ -303,7 +310,7 @@ model {
 
     if (X1_PRIOR>0) {
          for (t in 1:(n_times - 1))
-            to_vector(x1[t] - x1_lo - x1_loc) ~ lognormal(x1_mu, x1_sigma);
+            to_vector(x1[t] - x1_loc) ~ lognormal(x1_mu, x1_sigma);
     }
 
     if (SIMULATE<1)
