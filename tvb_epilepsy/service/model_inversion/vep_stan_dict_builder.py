@@ -112,27 +112,7 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
     nonactive_regions = probabilistic_model.nonactive_regions
     if time is None:
         time = np.arange(0, probabilistic_model.dt, probabilistic_model.time_length)
-    if "K" in probabilistic_model.parameters.keys():
-        K_mu = np.mean(probabilistic_model.parameters["K"].mean)
-        K_std = np.mean(probabilistic_model.parameters["K"].std)
-    else:
-        K_mu = np.mean(probabilistic_model.model_config.K)
-        K_std = 1.0
-    i1 = np.ones((probabilistic_model.number_of_active_regions,))
-    if "x1" in probabilistic_model.parameters.keys():
-        x1_min = np.mean(probabilistic_model.parameters["x1"].low)
-        x1_max = np.mean(probabilistic_model.parameters["x1"].low)
-        x1_mu = probabilistic_model.parameters["x1"].mu * i1
-        x1_sigma = probabilistic_model.parameters["x1"].sigma * i1
-        x1_loc = probabilistic_model.parameters["x1"].loc * i1
-        X1_PRIOR = int(1)
-    else:
-        x1_min = X1_MIN
-        x1_max = X1_MAX
-        x1_mu = X1_LOGMU_DEF * i1
-        x1_sigma = X1_LOGSIGMA_DEF * i1
-        x1_loc = X1_LOGLOC_DEF * i1
-        X1_PRIOR = int(0)
+
     vep_data = {"n_active_regions": probabilistic_model.number_of_active_regions,
                 "n_times": probabilistic_model.time_length,
                 "n_target_data": probabilistic_model.number_of_target_data,
@@ -142,28 +122,15 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "x0_star_std": probabilistic_model.parameters["x0"].star_std[active_regions],
                 "x0_lo": probabilistic_model.parameters["x0"].low,
                 "x0_hi": probabilistic_model.parameters["x0"].high,
-                "x1_init_min": np.mean(probabilistic_model.parameters["x1_init"].low),
-                "x1_init_max": np.mean(probabilistic_model.parameters["x1_init"].high),
+                "x1_init_lo": np.mean(probabilistic_model.parameters["x1_init"].low),
+                "x1_init_hi": np.mean(probabilistic_model.parameters["x1_init"].high),
                 "x1_init_mu": probabilistic_model.parameters["x1_init"].mean[active_regions],
                 "x1_init_std": np.mean(probabilistic_model.parameters["x1_init"].std),
                 "z_init_mu": probabilistic_model.parameters["z_init"].mean[active_regions],
                 "z_init_std": np.mean(probabilistic_model.parameters["z_init"].std),
                 "x1_eq_def": probabilistic_model.model_config.x1eq[nonactive_regions].mean(),
-                "x1_min": x1_min,
-                "x1_max": x1_max,
-                "X1_PRIOR": X1_PRIOR,
-                "x1_mu": x1_mu,
-                "x1_sigma": x1_sigma,
-                "x1_loc": x1_loc,
-                "tau0": probabilistic_model.tau0,  # 10.0
-                "tau1_mu": probabilistic_model.parameters["tau1"].mean,
-                "tau1_std": probabilistic_model.parameters["tau1"].std,
-                "K_mu": K_mu,
-                "K_std": K_std,
                 "SC": connectivity_matrix[active_regions][:, active_regions],
                 "Ic": np.sum(connectivity_matrix[active_regions][:, nonactive_regions], axis=1),
-                "sigma_mu": probabilistic_model.parameters["sigma"].mean,
-                "sigma_std": probabilistic_model.parameters["sigma"].std,
                 "epsilon_mu": probabilistic_model.parameters["epsilon"].mean,
                 "epsilon_std": probabilistic_model.parameters["epsilon"].std,
                 "scale_mu": probabilistic_model.parameters["scale"].mean,
@@ -177,4 +144,24 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "time": set_time(probabilistic_model, time),
                 "active_regions": np.array(probabilistic_model.active_regions),
                 }
+    NO_PRIOR_CONST = 0.001
+    for pkey, pflag in zip(["sigma", "tau1", "tau0", "K"], ["SDE", "TAU1_PRIOR", "TAU0_PRIOR", "K_PRIOR"]):
+        param = probabilistic_model.parameters.get(pkey, None)
+        if param is None:
+            mean = np.mean(probabilistic_model.getattr(pkey, NO_PRIOR_CONST))
+            vep_data.update({pflag: int(0), pkey+"_mu": mean, pkey + "_std": NO_PRIOR_CONST,
+                             pkey + "_lo": mean-NO_PRIOR_CONST, pkey + "_hi": mean+NO_PRIOR_CONST})
+        else:
+            vep_data.update({pflag: int(1), pkey+"_mu": np.mean(param.mean), pkey + "_std": np.mean(param.std),
+                             pkey + "_lo": np.min(param.low), pkey + "_hi": np.max(param.high)})
+    i1 = np.ones((probabilistic_model.number_of_active_regions,))
+    param = probabilistic_model.parameters.get("x1", None)
+    if param is None:
+        vep_data.update({"X1_PRIOR": int(0), "x1_lo": X1_MIN, "x1_hi": X1_MAX,
+                         "x1_mu": X1_LOGMU_DEF * i1, "x1_sigma": X1_LOGSIGMA_DEF * i1, "x1_loc": X1_LOGLOC_DEF * i1})
+    else:
+        vep_data.update({"X1_PRIOR": int(1), "x1_lo": np.min(param.low), "x1_hi": np.max(param.high),
+                         "x1_mu": param.mu * i1, "x1_sigma": param.sigma * i1, "x1_loc": param.loc * i1})
     return vep_data
+
+
