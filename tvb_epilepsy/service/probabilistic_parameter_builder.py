@@ -105,7 +105,7 @@ def generate_probabilistic_parameter(name="Parameter", low=-CalculusConfig.MAX_S
             ProbabilisticParameterBase.__init__(self, name, low, high, loc, scale, p_shape)
             thisProbabilityDistribution.__init__(self, **target_params)
             success = True
-            for p_key, p_val in target_params.iteritems():
+            for p_key, p_val in target_params.items():
                 if np.any(p_val != getattr(self, p_key)):
                     success = False
             if success is False:
@@ -113,7 +113,7 @@ def generate_probabilistic_parameter(name="Parameter", low=-CalculusConfig.MAX_S
                     pdf_params = compute_pdf_params(probability_distribution.lower(), target_params, loc, scale, use)
                     thisProbabilityDistribution.__init__(self, **pdf_params)
                     success = True
-                    for p_key, p_val in target_params.iteritems():
+                    for p_key, p_val in target_params.items():
                         if np.any(np.abs(p_val - getattr(self, p_key)) > 0.1):
                             success = False
             if success is False:
