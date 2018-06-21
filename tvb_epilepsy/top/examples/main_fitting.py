@@ -16,6 +16,7 @@ from tvb_epilepsy.service.model_inversion.probabilistic_models_builders import S
 from tvb_epilepsy.service.model_inversion.model_inversion_services import SDEModelInversionService
 from tvb_epilepsy.service.model_inversion.stan.cmdstan_service import CmdStanService
 from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import build_stan_model_data_dict
+from tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration_to_simulation
 from tvb_epilepsy.top.scripts.fitting_scripts import set_model_config_LSA, set_empirical_data, set_simulated_target_data
 from tvb_epilepsy.plot.plotter import Plotter
 from tvb_epilepsy.io.h5_reader import H5Reader
@@ -112,9 +113,6 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             # ...or generate a new probabilistic model and model data
             probabilistic_model = \
                 SDEProbabilisticModelBuilder(model_name="vep_sde_ins.stan", model_config=model_configuration,
-                                             parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value,
-                                                        "x1_init", "z_init", "tau1",  # "tau0", "K",
-                                                        "sigma", "dZt", "epsilon", "scale", "offset"],  # "dX1t",
                                              xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                                              sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,
                                              K=model_configuration.K).generate_model(generate_parameters=False)
@@ -128,13 +126,12 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                 model_inversion.update_active_regions(probabilistic_model, e_values=e_values,
                                                       lsa_propagation_strengths=lsa_propagation_strength, reset=True)
 
-            # -------------------------- Get simulated data (simulate if necessary) -------------------------------
-            sim_signals, simulator = \
-                set_simulated_target_data(path("ts"), model_configuration, head, lsa_hypothesis, probabilistic_model,
-                                          sensor_id, sim_type="fitting", times_on_off=sim_times_on_off, config=config,
-                                          # Maybe change some of those for Epileptor 6D simulations:
-                                          bipolar=False, preprocessing=preprocessing_sequence,
-                                          plotter=plotter, title_prefix=hyp.name)
+            # --------------------- Get prototypical simulated data (simulate if necessary) ----------------------------
+            source_ts = from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
+                                                               sim_type="fitting", ts_file=path("ts"),
+                                                               config=config, plotter=plotter)[0]["source"]. \
+                        get_time_window_by_units(sim_times_on_off[0], sim_times_on_off[1])
+
 
             # Now some scripts for settting and preprocessing target signals:
             if os.path.isfile(empirical_file):
@@ -145,8 +142,16 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                              times_on_off=times_on_off, label_strip_fun=lambda s: s.split("POL ")[-1],
                                              preprocessing=preprocessing_sequence, plotter=plotter, title_prefix=hyp.name)
             else:
+                # --------------------- Get fitting target simulated data (simulate if necessary) ----------------------
                 probabilistic_model.target_data_type = TARGET_DATA_TYPE.SYNTHETIC.value
-                signals = sim_signals
+                signals, simulator = \
+                    set_simulated_target_data(path("ts_fit"), model_configuration, head, lsa_hypothesis,
+                                              probabilistic_model,
+                                              sensor_id, sim_type="fitting", times_on_off=times_on_off,
+                                              config=config,
+                                              # Maybe change some of those for Epileptor 6D simulations:
+                                              bipolar=False, preprocessing=preprocessing_sequence,
+                                              plotter=plotter, title_prefix=hyp.name)
 
             # -------------------------- Select and set target data from signals ---------------------------------------
             if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
@@ -164,9 +169,12 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_timeseries(target_data, target_data_file)
 
             #---------------------------------Finally set priors for the parameters-------------------------------------
-            probabilistic_model.parameters.append(
-                SDEProbabilisticModelBuilder(probabilistic_model).generate_parameters(target_data, sim_signals,
-                                                                                      gain_matrix))
+            probabilistic_model.parameters.update(
+                SDEProbabilisticModelBuilder(probabilistic_model). \
+                    generate_parameters([XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value,
+                                         "x1", "x1_init", "z_init", "tau1",  # "tau0", "K",
+                                         "sigma", "dZt", "epsilon", "scale", "offset"],
+                                        target_data, source_ts, gain_matrix))
             plotter.plot_probabilistic_model(probabilistic_model, hyp.name + " Probabilistic Model")
             writer.\
               write_probabilistic_model(probabilistic_model, model_configuration.number_of_regions, problstc_model_file)
@@ -184,13 +192,13 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        n_chains_or_runs = 2  # 4
-        output_samples = 20  #max(int(np.round(1000.0 / n_chains_or_runs)), 500)
+        n_chains_or_runs = 4
+        output_samples = max(int(np.round(1000.0 / n_chains_or_runs)), 500)
         # Sampling (HMC)
         num_samples = output_samples
-        num_warmup = 30  # 1000
-        max_depth = 8  #
-        delta = 0.8  # 0.9
+        num_warmup = 1000
+        max_depth = 12
+        delta = 0.9
         # ADVI or optimization:
         iter = 1000000
         tol_rel_obj = 1e-6
@@ -201,11 +209,11 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         prob_model_name = probabilistic_model.name.split(".")[0]
         if fit_flag:
             estimates, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, refresh=1,
-                                                      n_chains_or_runs=n_chains_or_runs,
-                                                      iter=iter, tol_rel_obj=tol_rel_obj,
-                                                      num_warmup=num_warmup, num_samples=num_samples,
-                                                      max_depth=max_depth, delta=delta,
-                                                      save_warmup=1, plot_warmup=1, **kwargs)
+                                                           n_chains_or_runs=n_chains_or_runs,
+                                                           iter=iter, tol_rel_obj=tol_rel_obj,
+                                                           num_warmup=num_warmup, num_samples=num_samples,
+                                                           max_depth=max_depth, delta=delta,
+                                                           save_warmup=1, plot_warmup=1, **kwargs)
             writer.write_generic(estimates, path(prob_model_name + "_FitEst"))
             writer.write_generic(samples, path(prob_model_name + "_FitSamples"))
             if summary is not None:
@@ -334,8 +342,6 @@ if __name__ == "__main__":
     # sensors_inds = [28, 29, 38, 39, 64, 65, 48, 49]
     # Simulation times_on_off
     sim_times_on_off = [80.0, 120.0]  # for "fitting" simulations with tau0=30.0
-    # times_on_off = [50.0, 550.0]  # for "paper" simulations
-    # times_on_off = [1100.0, 1300.0]  # for "fitting" simulations with tau0=300.0
     EMPIRICAL = True
     if EMPIRICAL:
         seizure = 'SZ1_0001.edf'
@@ -350,7 +356,9 @@ if __name__ == "__main__":
         # sensors_filename = "SensorsSEEG_210.h5"
         # times_on_off = [20.0, 100.0]
     else:
-        times_on_off = sim_times_on_off
+        times_on_off = sim_times_on_off # for "fitting" simulations with tau0=30.0
+        # times_on_off = [50.0, 550.0]  # for "paper" simulations
+        # times_on_off = [1100.0, 1300.0]  # for "fitting" simulations with tau0=300.0
     stan_model_name = "vep_sde"
     fitmethod = "sample"  # "sample"  # "advi" or "opt"
     observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value  # OBSERVATION_MODELS.SOURCE_POWER.value  #
