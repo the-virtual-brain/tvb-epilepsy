@@ -179,7 +179,7 @@ class TimeseriesService(object):
         return timeseries.get_subspace_by_labels(rois)
 
     def compute_seeg(self, source_timeseries, sensors, sum_mode="lin"):
-        if sum_mode == "exp":
+        if np.all(sum_mode == "exp"):
             seeg_fun = lambda source, gain_matrix: compute_seeg_exp(source.squeezed, gain_matrix)
         else:
             seeg_fun = lambda source, gain_matrix: compute_seeg_lin(source.squeezed, gain_matrix)
