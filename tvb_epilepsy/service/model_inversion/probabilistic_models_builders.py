@@ -463,7 +463,7 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
     sigma = SIGMA_DEF
     sde_mode = SDE_MODES.NONCENTERED.value
 
-    def __init__(self, model_name="vep_sde", model_config=ModelConfiguration(),
+    def __init__(self, model=None, model_name="vep_sde", model_config=ModelConfiguration(),
                  parameters=[XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "tau1", "K", "x1_init", "z_init",
                              "dX1t", "dZt", "sigma", "epsilon", "scale", "offset"],
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
@@ -471,9 +471,9 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
                  sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF, sigma=SIGMA_DEF,
                  sde_mode=SDE_MODES.NONCENTERED.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  number_of_signals=0, active_regions=[]):
-        super(SDEProbabilisticModelBuilder, self).__init__(model_name, model_config, parameters, xmode, priors_mode,
-                                                           sigma_x, sigma_x_scale, MC_direction_split, sigma_init,
-                                                           tau1, tau0, epsilon, observation_model,
+        super(SDEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, parameters, xmode,
+                                                           priors_mode, sigma_x, sigma_x_scale, MC_direction_split,
+                                                           sigma_init, tau1, tau0, epsilon, observation_model,
                                                            number_of_signals, active_regions)
         self.sigma_init = sigma_init
         self.sde_mode = sde_mode
