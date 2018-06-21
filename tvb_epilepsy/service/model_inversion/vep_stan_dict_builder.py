@@ -112,7 +112,6 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
     nonactive_regions = probabilistic_model.nonactive_regions
     if time is None:
         time = np.arange(0, probabilistic_model.dt, probabilistic_model.time_length)
-
     vep_data = {"n_active_regions": probabilistic_model.number_of_active_regions,
                 "n_times": probabilistic_model.time_length,
                 "n_target_data": probabilistic_model.number_of_target_data,
@@ -125,6 +124,8 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "x1_init_lo": np.mean(probabilistic_model.parameters["x1_init"].low),
                 "x1_init_hi": np.mean(probabilistic_model.parameters["x1_init"].high),
                 "x1_init_mu": probabilistic_model.parameters["x1_init"].mean[active_regions],
+                "z_init_lo": np.mean(probabilistic_model.parameters["z_init"].low),
+                "z_init_hi": np.mean(probabilistic_model.parameters["z_init"].high),
                 "x1_init_std": np.mean(probabilistic_model.parameters["x1_init"].std),
                 "z_init_mu": probabilistic_model.parameters["z_init"].mean[active_regions],
                 "z_init_std": np.mean(probabilistic_model.parameters["z_init"].std),
@@ -148,7 +149,7 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
     for pkey, pflag in zip(["sigma", "tau1", "tau0", "K"], ["SDE", "TAU1_PRIOR", "TAU0_PRIOR", "K_PRIOR"]):
         param = probabilistic_model.parameters.get(pkey, None)
         if param is None:
-            mean = np.mean(probabilistic_model.getattr(pkey, NO_PRIOR_CONST))
+            mean = np.mean(getattr(probabilistic_model,pkey, NO_PRIOR_CONST))
             vep_data.update({pflag: int(0), pkey+"_mu": mean, pkey + "_std": NO_PRIOR_CONST,
                              pkey + "_lo": mean-NO_PRIOR_CONST, pkey + "_hi": mean+NO_PRIOR_CONST})
         else:
