@@ -44,6 +44,34 @@ class ProbabilisticParameterBase(Parameter, ProbabilityDistribution):
         return self._calc_kurt(self.loc, self.scale, use)
 
     @property
+    def mean(self):
+        return self.calc_mean()
+
+    @property
+    def median(self):
+        return self.calc_median()
+
+    @property
+    def mode(self):
+        return self.calc_mode()
+
+    @property
+    def var(self):
+        return self.calc_var()
+
+    @property
+    def std(self):
+        return self.calc_std()
+
+    @property
+    def skew(self):
+        return self.calc_skew()
+
+    @property
+    def kurt(self):
+        return self.calc_kurt()
+
+    @property
     def scipy(self):
         return self._scipy(self.loc, self.scale)
 
