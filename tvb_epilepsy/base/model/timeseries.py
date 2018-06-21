@@ -269,7 +269,7 @@ class Timeseries(object):
                 y2_ts = self.get_state_variable(PossibleVariables.X2.value)
                 source_data = y2_ts.data - y0_ts.data
             else:
-                self.logger.warn("%s is computed using %sstate variable!" % (
+                self.logger.warn("%s is computed using %s state variable!" % (
                     PossibleVariables.SOURCE.value, PossibleVariables.X1.value))
                 source_data = -y0_ts.data
             source_dim_labels = OrderedDict(
