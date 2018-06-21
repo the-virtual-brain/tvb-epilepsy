@@ -138,7 +138,7 @@ def prepare_simulated_seeg_observable(data, sensor, seizure_length=SEIZURE_LENGT
                                 special_idx=[], title='Bipolar Time Series', offset=0.1,
                                 figure_name=title_prefix + 'BipolarTimeSeries', labels=data.space_labels)
     return prepare_signal_observable(data, seizure_length, on_off_set, rois, preprocessing, low_freq, high_freq,
-                                   win_len_ratio, plotter, title_prefix)
+                                     win_len_ratio, plotter, title_prefix)
 
 
 def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, seizure_length=SEIZURE_LENGTH,

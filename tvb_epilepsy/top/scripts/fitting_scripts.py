@@ -94,8 +94,8 @@ def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis
                               preprocessing=TARGET_DATA_PREPROCESSING, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
                               bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
     signals, simulator = from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
-                                                                sim_type=sim_type, ts_file=ts_file,
-                                                                config=config, plotter=plotter)
+                                                               sim_type=sim_type, ts_file=ts_file,
+                                                               config=config, plotter=plotter)
     try:
         probabilistic_model.ground_truth.update({"tau1": np.mean(simulator.model.tau1),
                                                  "tau0": np.mean(simulator.model.tau0),
@@ -109,7 +109,7 @@ def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis
     if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
         log_flag = probabilistic_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
         signals = prepare_simulated_seeg_observable(signals, head.get_sensors_id(sensor_ids=sensor_id),
-                                                    probabilistic_model.time_length, times_on_off, [],
+                                                    probabilistic_model.time_length, log_flag, times_on_off, [],
                                                     preprocessing, low_freq, high_freq, bipolar,
                                                     win_len_ratio, plotter, title_prefix)
     else:
