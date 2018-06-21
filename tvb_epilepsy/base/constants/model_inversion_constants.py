@@ -51,9 +51,11 @@ MC_SCALE = 6.0
 # ODE model inversion constants
 X1_MIN = -2.5
 X1_MAX = 1.0
+Z_MIN = 2.0
+Z_MAX = 6.0
 X1_INIT_MIN = -2.0
 X1_INIT_MAX = 0.0
-Z_INIT_MIN = 2.0
+Z_INIT_MIN = 2.5
 Z_INIT_MAX = 5.0
 
 
@@ -95,10 +97,6 @@ class SDE_MODES(Enum):
 SIGMA_DEF = 0.05
 SIGMA_SCALE = 2.0
 SIGMA_MAX = 0.15
-X1_MIN = -2.0
-X1_MAX = 1.0
-Z_MIN = 0.0
-Z_MAX = 6.0
 
 X1_LOGSIGMA_DEF = 0.14
 X1_LOGMU_DEF = np.log(0.58)
