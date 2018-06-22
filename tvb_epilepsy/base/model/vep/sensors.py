@@ -97,8 +97,8 @@ class Sensors(object):
             sensors_inds += self.elec_inds[ind]
         return np.unique(sensors_inds)
 
-    def compute_gain_matrix(self, connectivity):
-        return compute_gain_matrix(self.locations, connectivity.centres, normalize=95, ceil=1.0)
+    def compute_gain_matrix(self, connectivity, normalize=95, ceil=False):
+        return compute_gain_matrix(self.locations, connectivity.centres, normalize=normalize, ceil=ceil)
 
     def get_inds_labels_from_needles(self):
         channel_inds = []

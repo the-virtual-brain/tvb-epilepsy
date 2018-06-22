@@ -46,7 +46,7 @@ def compute_in_degree(weights):
     return np.expand_dims(np.sum(weights, axis=1), 1).T
 
 
-def compute_gain_matrix(locations1, locations2, normalize=95, ceil=1.0):
+def compute_gain_matrix(locations1, locations2, normalize=False, ceil=False):
     n1 = locations1.shape[0]
     n2 = locations2.shape[0]
     projection = np.zeros((n1, n2))
