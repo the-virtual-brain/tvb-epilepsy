@@ -281,11 +281,13 @@ class ModelInversionPlotter(TimeseriesPlotter):
                                         labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
             dWt = {}
             subtitles = []
-            if sample.get("dX1t", None):
-                dWt.update({"dX1t": sample["dX1t"].data[:, :, :, skip_samples:].squeeze()})
+            dX1t = sample.get("dX1t_star", sample.get("dX1t", None))
+            if dX1t:
+                dWt.update({"dX1t": dX1t.data[:, :, :, skip_samples:].squeeze()})
                 subtitles.append("dX1t")
-            if sample.get("dZt", None):
-                dWt.update({"dZt": sample["dZt"].data[:, :, :, skip_samples:].squeeze()})
+            dZt = sample.get("dZt_star", sample.get("dZt", None))
+            if sample.get("dZt_star", None):
+                dWt.update({"dZt": dZt.data[:, :, :, skip_samples:].squeeze()})
                 subtitles.append("dZt")
             if len(dWt) > 0:
                 subtitles[-1] += "\ndynamic noise" + sig_prior_str + ", sig_post = " + str(est["sigma"])
@@ -311,8 +313,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
                                          title=title_prefix + "Observation target vs fit time series: "
                                                + stats_string["fit_target_data"],
                                          figure_name=title_prefix + "ObservationTarget_VS_FitTimeSeries",
-                                         offset=1.0, labels=target_data.space_labels,
-                                         figsize=FiguresConfig.VERY_LARGE_SIZE))
+                                         labels=target_data.space_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
         return tuple(figs)
 
     def plot_fit_connectivity(self, ests, samples, stats=None, probabilistic_model=None,

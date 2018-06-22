@@ -150,7 +150,7 @@ def samples_to_timeseries(samples, model_data, target_data=None, regions_labels=
         regions_labels = regions_labels[active_regions]
 
     for sample in ensure_list(samples):
-        for x in ["x1", "z", "dX1t", "dZt"]:
+        for x in ["x1", "z", "x1_star", "z_star", "dX1t", "dZt", "dX1t_star", "dZt_star"]:
             try:
                 sample[x] = Timeseries(np.expand_dims(sample[x].T, 2), {TimeseriesDimensions.SPACE.value: regions_labels,
                                                      TimeseriesDimensions.VARIABLES.value: [x]},
