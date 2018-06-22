@@ -197,7 +197,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        n_chains_or_runs = 4
+        n_chains_or_runs = 3
         output_samples = max(int(np.round(1000.0 / n_chains_or_runs)), 500)
         # Sampling (HMC)
         num_samples = output_samples
@@ -212,7 +212,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         else:
             skip_samples = 0
         prob_model_name = probabilistic_model.name.split(".")[0]
-        if fit_flag:
+        if False:
             estimates, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, refresh=1,
                                                            n_chains_or_runs=n_chains_or_runs,
                                                            iter=iter, tol_rel_obj=tol_rel_obj,
