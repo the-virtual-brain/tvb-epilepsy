@@ -328,7 +328,7 @@ class BasePlotter(object):
                                 diag_line_plot = confirm_y_coordinate(diag_line_plot, y_max)
                             else:
                                 diag_line_plot[1] = diag_line_plot[1]/numpy.max(diag_line_plot[1])*y_max
-                            if len(diag_line_plot[0]) == 1:
+                            if len(ensure_list(diag_line_plot[0])) == 1:
                                 axes[i, j].plot(diag_line_plot[0], diag_line_plot[1], "o", mfc="k", mec="k",
                                                 markersize=10)
                             else:
