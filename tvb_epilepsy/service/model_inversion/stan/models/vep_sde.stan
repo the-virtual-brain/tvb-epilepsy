@@ -235,7 +235,7 @@ transformed parameters {
     row_vector[n_active_regions] x0 = x0_hi - standard_normal_to_lognormal_row(x0_star, x0_logmu, x0_sigma);
     row_vector<lower=x1_lo, upper=x1_hi>[n_active_regions] x1_init = x1_init_mu + x1_init_star * x1_init_std;
     row_vector[n_active_regions] z_init = z_init_mu + z_init_star * z_init_std;
-    row_vector<lower=x1_lo, upper=x1_hi>[n_active_regions] x1[n_times];
+    row_vector[n_active_regions] x1[n_times];  // <lower=x1_lo, upper=x1_hi>
     row_vector[n_active_regions] z[n_times];
     row_vector[n_target_data] fit_target_data[n_times];
 
