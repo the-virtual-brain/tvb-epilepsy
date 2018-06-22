@@ -267,18 +267,28 @@ class ModelInversionPlotter(TimeseriesPlotter):
             stats_string = dict(zip(["fit_target_data", "x1", "z"], 3*[""]))
         observation_dict = OrderedDict({'observation time series': target_data.squeezed})
         time = target_data.time_line
-        figs=[]
+        figs = []
+        # x1_pair_plot_samples = []
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), samples)):
             name = title_prefix + "_chain" + str(id_est + 1)
             observation_dict.update({"fit chain " + str(id_est + 1):
                                          sample["fit_target_data"].data[:, :, :, skip_samples:].squeeze()})
-            figs.append(self.plot_raster(sort_dict({"x1": sample["x1"].data[:, :, :, skip_samples:].squeeze(),
-                                         'z': sample["z"].data[:, :, :, skip_samples:].squeeze()}),
+            x1 = sample["x1"].data[:, :, :, skip_samples:].squeeze()
+            z = sample["z"].data[:, :, :, skip_samples:].squeeze()
+            figs.append(self.plot_raster(sort_dict({"x1": x1, 'z': z}),
                                          time, special_idx=seizure_indices, time_units=target_data.time_unit,
                                          title=name + ": Hidden states fit rasterplot",
                                          subtitles=['hidden state ' + "x1" + stats_string["x1"],
                                          'hidden state z' + stats_string["z"]], offset=1.0,
-                                        labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
+                                         labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
+            # TODO: add time series probability distribution plots per region
+            # x1 = x1.T
+            # z = z.T
+            # x1_pair_plot_samples.append({})
+        # figs.append(self._parameters_pair_plots(x1_pair_plot_samples, region_labels,
+        #                                         None, None, None, skip_samples,
+        #                                         title=name + ": x1 pair plot per region"))
+
             dWt = {}
             subtitles = []
             dX1t = sample.get("dX1t_star", sample.get("dX1t", None))
