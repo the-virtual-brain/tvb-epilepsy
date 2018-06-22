@@ -192,7 +192,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        n_chains_or_runs = 4
+        n_chains_or_runs = 2
         output_samples = max(int(np.round(1000.0 / n_chains_or_runs)), 500)
         # Sampling (HMC)
         num_samples = output_samples
@@ -244,7 +244,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         # from tvb_epilepsy.service.model_inversion.vep_stan_dict_builder import convert_params_names_from_ins
         # estimates, samples, Rhat, model_data = \
         #     convert_params_names_from_ins([estimates, samples, Rhat, model_data])
-        if fitmethod.find("opt") < 0:
+        if fitmethod.find("opt") < 0 and Rhat is not None:
             stats = {"Rhat": Rhat}
         else:
             stats = None
@@ -309,7 +309,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_test")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_x1prior2")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
