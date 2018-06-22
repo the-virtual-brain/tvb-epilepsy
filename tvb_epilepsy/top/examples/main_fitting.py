@@ -155,7 +155,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
             # -------------------------- Select and set target data from signals ---------------------------------------
             if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
-                model_inversion.auto_selection = "correlation-power"
+                model_inversion.auto_selection = "correlation-power"  #-rois
                 model_inversion.sensors_per_electrode = 2
             target_data, probabilistic_model, gain_matrix = \
                 model_inversion.set_target_data_and_time(signals, probabilistic_model, head=head, sensors=sensors)
@@ -167,6 +167,11 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                     time_units=target_data.time_unit,
                                     title=hyp.name + ' Target Signals', labels=target_data.space_labels)
             writer.write_timeseries(target_data, target_data_file)
+
+            # #--------------Optionally add more active regions that are close to the selected seeg contacts--------------
+            # probabilistic_model = \
+            #     model_inversion.update_active_regions_seeg(target_data, probabilistic_model, sensors, reset=False)
+
 
             #---------------------------------Finally set priors for the parameters-------------------------------------
             probabilistic_model.parameters.update(
