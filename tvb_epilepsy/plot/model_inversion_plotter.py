@@ -304,9 +304,15 @@ class ModelInversionPlotter(TimeseriesPlotter):
         figs.append(self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
                                       title=title_prefix + "Observation target vs fit time series: "
                                             + stats_string["fit_target_data"],
-                                      figure_name=title_prefix + "ObservationTarget_VS_FitTimeSeries",
+                                      figure_name=title_prefix + "ObservationTarget_VS_FitRasterPlot",
                                       offset=1.0, labels=target_data.space_labels,
                                      figsize=FiguresConfig.VERY_LARGE_SIZE))
+        figs.append(self.plot_timeseries(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
+                                         title=title_prefix + "Observation target vs fit time series: "
+                                               + stats_string["fit_target_data"],
+                                         figure_name=title_prefix + "ObservationTarget_VS_FitTimeSeries",
+                                         offset=1.0, labels=target_data.space_labels,
+                                         figsize=FiguresConfig.VERY_LARGE_SIZE))
         return tuple(figs)
 
     def plot_fit_connectivity(self, ests, samples, stats=None, probabilistic_model=None,
