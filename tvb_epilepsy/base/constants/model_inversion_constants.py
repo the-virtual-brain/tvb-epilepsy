@@ -49,8 +49,8 @@ MC_MAX_MIN_RATIO = 1000.0
 MC_SCALE = 6.0
 
 # ODE model inversion constants
-X1_MIN = -2.5
-X1_MAX = 1.0
+X1_MIN = -5.0
+X1_MAX = 2.0
 Z_MIN = 2.0
 Z_MAX = 6.0
 X1_INIT_MIN = -2.0
