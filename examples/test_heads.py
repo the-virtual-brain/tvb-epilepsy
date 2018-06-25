@@ -2,10 +2,10 @@ import os
 from collections import OrderedDict
 import numpy as np
 
-from tvb_epilepsy.base.constants.config import Config
-from tvb_epilepsy.base.utils.log_error_utils import initialize_logger
-from tvb_epilepsy.io.h5_reader import H5Reader
-from tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_infer.tvb_epilepsy.base.constants.config import Config
+from tvb_infer.base.utils.log_error_utils import initialize_logger
+from tvb_infer.io.h5_reader import H5Reader
+from tvb_infer.io.h5_writer import H5Writer
 
 
 NUMBER_OF_REGIONS = 87
