@@ -19,9 +19,6 @@ H5_TYPES_ATTRUBUTES = [H5_TYPE_ATTRIBUTE, H5_SUBTYPE_ATTRIBUTE]
 class H5Reader(H5ReaderBase):
     logger = initialize_logger(__name__)
 
-    def __init__(self, config=None):
-        super(H5Reader, self).__init__(config)
-
     def read_epileptogenicity(self, root_folder, name="ep"):
         """
         :param

@@ -13,9 +13,6 @@ from tvb_infer.io.h5_writer import H5Writer as H5WriterBase
 
 class H5Writer(H5WriterBase):
 
-    def __init__(self, config=None):
-        super(H5Writer, self).__init__(config)
-
     def write_hypothesis(self, hypothesis, path):
         """
         :param hypothesis: DiseaseHypothesis object to write in H5

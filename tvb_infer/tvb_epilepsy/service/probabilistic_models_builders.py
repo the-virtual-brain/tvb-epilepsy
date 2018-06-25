@@ -12,8 +12,8 @@ from tvb_infer.tvb_epilepsy.base.computation_utils.equilibrium_computation impor
 from tvb_infer.base.model.probability_distributions import ProbabilityDistributionTypes
 from tvb_infer.tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_infer.base.model.timeseries import Timeseries
-from tvb_infer.base.model.probabilistic_models.epileptor_probabilistic_models \
-                                                import EpiProbabilisticModel, ODEEpiProbabilisticModel, SDEEpiProbabilisticModel
+from tvb_infer.tvb_epilepsy.base.model.epileptor_probabilistic_models \
+    import EpiProbabilisticModel, ODEEpiProbabilisticModel, SDEEpiProbabilisticModel
 from tvb_infer.service.timeseries_service import compute_seeg_exp, compute_seeg_lin
 from tvb_infer.service.probabilistic_parameter_builder import generate_probabilistic_parameter
 from tvb_infer.service.probabilistic_params_factory \
@@ -209,8 +209,8 @@ class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
             parameters = self.generate_parameters(params_names)
         else:
             parameters = {}
-        self.model = EpiProbabilisticModel(self.name, self.number_of_regions, target_data_type, self.xmode,
-                                           self.priors_mode, parameters, ground_truth, self.model_config,
+        self.model = EpiProbabilisticModel(self.name, self.number_of_regions, target_data_type, self.priors_mode,
+                                           parameters, ground_truth, self.xmode, self.model_config,
                                            self.K, self.sigma_x) # , self.MC_direction_split
         self.logger.info(self.__class__.__name__ + " took " +
                          str( time.time() - tic) + ' sec for model generation')
@@ -440,8 +440,8 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             parameters = self.generate_parameters(params_names, target_data, sim_signals, gain_matrix)
         else:
             parameters = {}
-        self.model = ODEEpiProbabilisticModel(self.name, self.number_of_regions, target_data_type, self.xmode,
-                                              self.priors_mode, parameters, ground_truth, self.model_config,
+        self.model = ODEEpiProbabilisticModel(self.name, self.number_of_regions, target_data_type, self.priors_mode,
+                                              parameters, ground_truth, self.xmode, self.model_config,
                                               self.observation_model, self.K, self.sigma_x, self.sigma_init,
                                               self.tau1, self.tau0, self.scale, self.offset, self.epsilon,
                                               self.number_of_target_data, self.time_length, self.dt, self.active_regions)
@@ -536,8 +536,8 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
             parameters = self.generate_parameters(params_names, target_data, sim_signals, gain_matrix)
         else:
             parameters = {}
-        self.model = SDEEpiProbabilisticModel(self.name, self.number_of_regions, target_data_type, self.xmode,
-                                              self.priors_mode, parameters, ground_truth, self.model_config,
+        self.model = SDEEpiProbabilisticModel(self.name, self.number_of_regions, target_data_type, self.priors_mode,
+                                              parameters, ground_truth, self.xmode, self.model_config,
                                               self.observation_model, self.K, self.sigma_x, self.sigma_init, self.sigma,
                                               self.tau1, self.tau0, self.scale, self.offset, self.epsilon,
                                               self.number_of_target_data, self.time_length, self.dt, self.active_regions,

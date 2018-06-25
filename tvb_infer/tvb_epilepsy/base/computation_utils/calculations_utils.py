@@ -1,7 +1,7 @@
 # coding=utf-8
 
 from scipy.optimize import root
-from tvb_infer.base.utils.data_structures_utils import shape_to_size
+from tvb_infer.base.utils.data_structures_utils import assert_arrays, shape_to_size
 from tvb_infer.base.utils.log_error_utils import initialize_logger, raise_import_error, raise_value_error
 from tvb_infer.tvb_epilepsy.base.constants.model_constants import *
 from tvb_infer.tvb_epilepsy.base.computation_utils.equations_utils import *
@@ -12,7 +12,7 @@ logger = initialize_logger(__name__)
 try:
     from sympy import Matrix, lambdify, reshape
     from tvb_infer.tvb_epilepsy.base.computation_utils.symbolic_utils \
-        import assert_arrays, symbol_eqtn_coupling, symbol_eqtn_x0, \
+        import symbol_eqtn_coupling, symbol_eqtn_x0, \
         symbol_eqtn_fx1, symbol_eqtn_fy1, symbol_eqtn_fz, symbol_calc_fz_jac_square_taylor, symbol_calc_x0cr_r, \
         symbol_calc_fx1y1_6d_diff_x1, symbol_calc_fx1z_2d_x1neg_zpos_jac, symbol_eqtn_fx1z_diff, symbol_eqtn_x0cr_r, \
         symbol_eqtn_fx1z, symbol_calc_2d_taylor, symbol_calc_coupling_diff, symbol_eqtn_fx2, symbol_eqtn_fy2, \

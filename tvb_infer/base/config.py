@@ -8,7 +8,7 @@ import tvb_infer
 
 class GenericConfig(object):
     _module_path = os.path.dirname(tvb_infer.__file__)
-    PROBLSTC_MODELS_PATH = os.path.join(_module_path, "service", "model_inversion", "stan", "models")
+    PROBLSTC_MODELS_PATH = os.path.join(_module_path, "samplers", "stan", "models")
     CMDSTAN_PATH = os.path.join(os.path.expanduser("~"), "ScientificSoftware/git/cmdstan")
     MODEL_COMPARISON_PATH = os.path.join(os.path.dirname(_module_path), "extern")
     C_COMPILER = "clang++"

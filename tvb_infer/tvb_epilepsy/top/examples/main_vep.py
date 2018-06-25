@@ -3,12 +3,12 @@ Entry point for working with VEP
 """
 import os
 import numpy as np
-from tvb_infer.tvb_epilepsy.base.constants.config import Config
-from tvb_infer.tvb_epilepsy.base.constants.model_constants import COLORED_NOISE, K_DEF, TAU0_DEF, TAU1_DEF
+
 from tvb_infer.base.utils.data_structures_utils import assert_equal_objects, isequal_string, ensure_list
 from tvb_infer.base.utils.log_error_utils import initialize_logger
-from tvb_infer.io.h5_writer import H5Writer
-from tvb_infer.plot.plotter import Plotter
+from tvb_infer.io.tvb_data_reader import TVBReader
+from tvb_infer.tvb_epilepsy.base.constants.config import Config
+from tvb_infer.tvb_epilepsy.base.constants.model_constants import COLORED_NOISE, K_DEF, TAU0_DEF, TAU1_DEF
 from tvb_infer.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_infer.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_infer.tvb_epilepsy.service.simulator.simulator_builder import SimulatorBuilder
@@ -17,8 +17,9 @@ from tvb_infer.tvb_epilepsy.top.scripts.sensitivity_analysis_sripts import sensi
 from tvb_infer.tvb_epilepsy.top.scripts.simulation_scripts import compute_seeg_and_write_ts_to_h5
 from tvb_infer.tvb_epilepsy.plot.plotter import Plotter
 from tvb_infer.tvb_lsa.lsa_service import LSAService
-from tvb_infer.io.h5_reader import H5Reader
-from tvb_infer.io.tvb_data_reader import TVBReader
+from tvb_infer.tvb_epilepsy.io.h5_reader import H5Reader
+from tvb_infer.tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_infer.tvb_epilepsy.plot.plotter import Plotter
 
 PSE_FLAG = True
 SA_PSE_FLAG = False
@@ -27,7 +28,7 @@ EP_NAME = "clinical_hypothesis_preseeg"
 
 
 def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], hyp_norm=0.99, manual_hypos=[],
-             sim_type="paper", pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG, n_samples=1000,
+             sim_type="paper", pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG, n_samples=100,
              test_write_read=False):
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
     # -------------------------------Reading data-----------------------------------
@@ -86,9 +87,9 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_DEF, ep_indices=[], 
                                                  reader.read_model_configuration(reader.logger, mc_path),
                                                  logger=logger)))
         # Plot nullclines and equilibria of model configuration
-        plotter.plot_state_space(plotter.config, model_configuration, "6d", head.connectivity.region_labels,
-                                     special_idx=hyp.regions_disease_indices, zmode="lin",
-                                     figure_name=hyp.name + "_StateSpace")
+        plotter.plot_state_space(model_configuration, "6d", head.connectivity.region_labels,
+                                 special_idx=hyp.regions_disease_indices, zmode="lin",
+                                 figure_name=hyp.name + "_StateSpace")
 
         logger.info("\n\nRunning LSA...")
         lsa_service = LSAService(eigen_vectors_number=1)

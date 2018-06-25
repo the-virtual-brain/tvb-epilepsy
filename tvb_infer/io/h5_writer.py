@@ -255,6 +255,6 @@ class H5Writer(H5WriterBase):
         :param path: H5 path to be written
         """
         from tvb_infer.tvb_lsa.lsa_writer import LSAH5Writer
-        LSAH5Writer(self.conf).write_lsa_service(lsa_service, path, nr_regions)
+        LSAH5Writer().write_lsa_service(lsa_service, path, nr_regions)
 
 

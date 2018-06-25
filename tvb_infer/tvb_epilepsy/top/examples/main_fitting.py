@@ -114,7 +114,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
             # ...or generate a new probabilistic model and model data
             probabilistic_model = \
-                SDEProbabilisticModelBuilder(model_name="vep_sde_ins.stan", model_config=model_configuration,
+                SDEProbabilisticModelBuilder(model_name="vep_sde", model_config=model_configuration,
                                              xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                                              sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,
                                              K=model_configuration.K).generate_model(generate_parameters=False)
@@ -199,13 +199,13 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        n_chains_or_runs = 2  # 4
-        output_samples = 20  # max(int(np.round(1000.0 / n_chains_or_runs)), 500)
+        n_chains_or_runs = 4
+        output_samples = max(int(np.round(1000.0 / n_chains_or_runs)), 500)
         # Sampling (HMC)
         num_samples = output_samples
-        num_warmup = 30  # 1000
-        max_depth = 7  # 12
-        delta = 0.8  # 0.9
+        num_warmup = 1000
+        max_depth = 12
+        delta = 0.9
         # ADVI or optimization:
         iter = 1000000
         tol_rel_obj = 1e-6
@@ -214,7 +214,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         else:
             skip_samples = 0
         prob_model_name = probabilistic_model.name.split(".")[0]
-        if fit_flag:
+        if False:
             estimates, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, refresh=1,
                                                            n_chains_or_runs=n_chains_or_runs,
                                                            iter=iter, tol_rel_obj=tol_rel_obj,
@@ -291,10 +291,9 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_model_configuration(model_configuration_fit, path("ModelConfig"))
 
             # Plot nullclines and equilibria of model configuration
-            plotter.plot_state_space(plotter.config, model_configuration_fit,
-                                         region_labels=head.connectivity.region_labels,
-                                         special_idx=probabilistic_model.active_regions, model="6d", zmode="lin",
-                                         figure_name=hyp_fit.name + "_Nullclines and equilibria")
+            plotter.plot_state_space(model_configuration_fit, region_labels=head.connectivity.region_labels,
+                                     special_idx=probabilistic_model.active_regions, model="6d", zmode="lin",
+                                     figure_name=hyp_fit.name + "_Nullclines and equilibria")
         logger.info("Done!")
 
 

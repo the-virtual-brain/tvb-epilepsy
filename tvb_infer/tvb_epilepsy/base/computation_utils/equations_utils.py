@@ -93,7 +93,7 @@ def eqtn_x0(x1, z, zmode=np.array("lin"), z_pos=True, K=None, w=None, coupl=None
         if np.all(K == 0.0) or np.all(w == 0.0) or (K is None) or (w is None):
             coupl = 0.0
         else:
-            from tvb_infer.tvb_epilepsy.base.computation_utils import calc_coupling
+            from tvb_infer.tvb_epilepsy.base.computation_utils.calculations_utils import calc_coupling
             coupl = calc_coupling(x1, K, w)
     if  isequal_string(str(zmode), 'lin'):
         return x1 - (z + np.where(z_pos, 0.0, 0.1 * np.power(z, 7.0)) + coupl) / 4.0
@@ -167,7 +167,7 @@ def eqtn_fz(x1, z, x0, tau1, tau0, zmode=np.array("lin"), z_pos=True, K=None, w=
         if np.all(K == 0.0) or np.all(w == 0.0) or (K is None) or (w is None):
             coupl = 0.0
         else:
-            from tvb_infer.tvb_epilepsy.base.computation_utils import calc_coupling
+            from tvb_infer.tvb_epilepsy.base.computation_utils.calculations_utils import calc_coupling
             coupl = calc_coupling(x1, K, w)
     tau = np.divide(tau1, tau0)
     if isequal_string(str(zmode), 'lin'):
@@ -270,7 +270,7 @@ def eqtn_fK(K_var, K, tau1, tau0):
 def eqtn_fparams_vars(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope, Iext1, Iext2, K, tau1, tau0,
                       pmode="z", z=None, g=None):
     fx0 = eqtn_fx0(x0_var, x0, tau1)
-    from tvb_infer.tvb_epilepsy.base.model import EpileptorDPrealistic
+    from tvb_infer.tvb_epilepsy.base.model.epileptor_models import EpileptorDPrealistic
     slope_eq, Iext2_eq = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, slope, Iext2)
     fslope = eqtn_fslope(slope_var, slope_eq, tau1)
     fIext1 = eqtn_fIext1(Iext1_var, Iext1, tau1, tau0)
