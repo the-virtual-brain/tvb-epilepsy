@@ -214,7 +214,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         else:
             skip_samples = 0
         prob_model_name = probabilistic_model.name.split(".")[0]
-        if False:
+        if fit_flag:
             estimates, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, refresh=1,
                                                            n_chains_or_runs=n_chains_or_runs,
                                                            iter=iter, tol_rel_obj=tol_rel_obj,
@@ -317,7 +317,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_test")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_fit_nox1prior3_SZ2")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
@@ -352,8 +352,9 @@ if __name__ == "__main__":
     sim_times_on_off = [80.0, 120.0]  # for "fitting" simulations with tau0=30.0
     EMPIRICAL = True
     if EMPIRICAL:
-        seizure = 'SZ1_0001.edf'
-        times_on_off = (np.array([15.0, 30.0]) * 1000.0).tolist() #(np.array([15.0, 35.0]) * 1000.0).tolist()
+        seizure = 'SZ2_0001.edf'  # 'SZ1_0001.edf'
+        # times_on_off = (np.array([15.0, 30.0]) * 1000.0).tolist() # for SZ1
+        times_on_off = (np.array([15.0, 38.0]) * 1000.0).tolist()  # for SZ2
         # sensors_filename = "SensorsSEEG_116.h5"
         # # TVB4 preselection:
         # sensors_lbls = [u"D5", u"D6", u"D7",  u"D8", u"D9", u"D10", u"Z9", u"Z10", u"Z11", u"Z12", u"Z13", u"Z14",
