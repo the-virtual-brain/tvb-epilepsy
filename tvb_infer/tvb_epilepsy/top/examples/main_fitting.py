@@ -6,7 +6,8 @@ import numpy as np
 
 from tvb_infer.tvb_epilepsy.base.constants.config import Config
 from tvb_infer.tvb_epilepsy.base.constants.model_constants import K_DEF, TAU1_DEF, TAU0_DEF
-from tvb_infer.tvb_epilepsy.base.constants.model_inversion_constants import XModes, SDE_MODES, OBSERVATION_MODELS, TARGET_DATA_PREPROCESSING
+from tvb_infer.tvb_epilepsy.base.constants.model_inversion_constants import XModes, SDE_MODES, \
+    OBSERVATION_MODELS, TARGET_DATA_PREPROCESSING
 from tvb_infer.base.constants import PriorsModes, Target_Data_Type
 from tvb_infer.base.utils.log_error_utils import initialize_logger
 from tvb_infer.base.utils.data_structures_utils import ensure_list
@@ -198,13 +199,13 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        n_chains_or_runs = 3
-        output_samples = max(int(np.round(1000.0 / n_chains_or_runs)), 500)
+        n_chains_or_runs = 2  # 4
+        output_samples = 20  # max(int(np.round(1000.0 / n_chains_or_runs)), 500)
         # Sampling (HMC)
         num_samples = output_samples
-        num_warmup = 1000
-        max_depth = 12
-        delta = 0.9
+        num_warmup = 30  # 1000
+        max_depth = 7  # 12
+        delta = 0.8  # 0.9
         # ADVI or optimization:
         iter = 1000000
         tol_rel_obj = 1e-6
@@ -317,7 +318,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_nox1prior2")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_test")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
