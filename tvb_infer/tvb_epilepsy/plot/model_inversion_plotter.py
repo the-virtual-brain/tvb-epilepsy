@@ -166,7 +166,13 @@ class ModelInversionPlotter(TimeseriesPlotter):
         truth = {}
         if probabilistic_model is not None:
             for p in params:
-                priors.update({p: probabilistic_model.get_prior_pdf(p)})
+                pdf = probabilistic_model.get_prior_pdf(p)
+                # TODO: a better hack than the following for when pdf returns p_mean, nan and p_mean is not a scalar
+                if pdf[1] is numpy.nan:
+                    pdf = list(pdf)
+                    pdf[0] = numpy.mean(pdf[0])
+                    pdf = tuple(pdf)
+                priors.update({p: pdf})
                 truth.update({p: numpy.nanmean(probabilistic_model.get_truth(p))})
         return self._parameters_pair_plots(samples, params, stats, priors, truth, skip_samples, title=title)
 
@@ -191,11 +197,9 @@ class ModelInversionPlotter(TimeseriesPlotter):
             for param in params:
                 pdf = ensure_list(probabilistic_model.get_prior_pdf(param))
                 for ip, p in enumerate(pdf):
-                    pdf[ip] = ((p.T * I)[regions_inds])
+                    pdf[ip] = ((numpy.array(p).T * I)[regions_inds])
                 priors.update({param: (pdf[0].squeeze(), pdf[1].squeeze())})
                 truth.update({param: ((probabilistic_model.get_truth(param) * I[:, 0])[regions_inds]).squeeze()})
-        else:
-            regions_inds = range(samples[0]["x0"].shape[2])
         # plot region-wise parameters
         f1 = self._region_parameters_violin_plots(samples, truth, priors, stats, params, skip_samples,
                                                   per_chain_or_run=per_chain_or_run, labels=region_labels,
@@ -208,7 +212,13 @@ class ModelInversionPlotter(TimeseriesPlotter):
                 x0_K_pair_plot_params = ["K"]
                 x0_K_pair_plot_samples = [{"K": s["K"]} for s in samples]
                 if probabilistic_model is not None:
-                    priors.update({"K": probabilistic_model.get_prior_pdf("K")})
+                    pdf = probabilistic_model.get_prior_pdf("K")
+                    # TODO: a better hack than the following for when pdf returns p_mean, nan and p_mean is not a scalar
+                    if pdf[1] is numpy.nan:
+                        pdf = list(pdf)
+                        pdf[0] = numpy.mean(pdf[0])
+                        pdf = tuple(pdf)
+                    priors.update({"K": pdf})
                     truth.update({"K": probabilistic_model.get_truth("K")})
             for inode, label in enumerate(region_labels):
                 temp_name = "x0[" + label + "]"
