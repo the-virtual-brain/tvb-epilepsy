@@ -1,7 +1,7 @@
 
 import numpy as np
 
-from tvb_infer.tvb_epilepsy.base.constants.model_inversion_constants import OBSERVATION_MODELS, X1_MIN, X1_MAX, \
+from tvb_infer.tvb_epilepsy.base.constants.model_inversion_constants import XModes, OBSERVATION_MODELS, X1_MIN, X1_MAX, \
     X1_LOGMU_DEF, X1_LOGSIGMA_DEF, X1_LOGLOC_DEF
 from tvb_infer.base.utils.log_error_utils import warning
 from tvb_infer.base.utils.data_structures_utils import ensure_list
@@ -112,20 +112,22 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
     nonactive_regions = probabilistic_model.nonactive_regions
     if time is None:
         time = np.arange(0, probabilistic_model.dt, probabilistic_model.time_length)
+    x = probabilistic_model.xmode
     vep_data = {"n_active_regions": probabilistic_model.number_of_active_regions,
                 "n_times": probabilistic_model.time_length,
                 "n_target_data": probabilistic_model.number_of_target_data,
                 "dt": probabilistic_model.dt,
                 "Iext1": probabilistic_model.model_config.Iext1,
-                "x0_star_mu": probabilistic_model.parameters["x0"].star_mean[active_regions],
-                "x0_star_std": probabilistic_model.parameters["x0"].star_std[active_regions],
-                "x0_lo": probabilistic_model.parameters["x0"].low,
-                "x0_hi": probabilistic_model.parameters["x0"].high,
-                "x1_init_lo": np.mean(probabilistic_model.parameters["x1_init"].low),
-                "x1_init_hi": np.mean(probabilistic_model.parameters["x1_init"].high),
+                "XMODE": int(probabilistic_model.xmode == XModes.X1EQMODE.value),
+                "x_star_mu": probabilistic_model.parameters[x].star_mean[active_regions],
+                "x_star_std": probabilistic_model.parameters[x].star_std[active_regions],
+                "x_lo": probabilistic_model.parameters[x].low,
+                "x_hi": probabilistic_model.parameters[x].high,
+                "x1_init_lo": np.min(probabilistic_model.parameters["x1_init"].low),
+                "x1_init_hi": np.max(probabilistic_model.parameters["x1_init"].high),
                 "x1_init_mu": probabilistic_model.parameters["x1_init"].mean[active_regions],
-                "z_init_lo": np.mean(probabilistic_model.parameters["z_init"].low),
-                "z_init_hi": np.mean(probabilistic_model.parameters["z_init"].high),
+                "z_init_lo": np.min(probabilistic_model.parameters["z_init"].low),
+                "z_init_hi": np.max(probabilistic_model.parameters["z_init"].high),
                 "x1_init_std": np.mean(probabilistic_model.parameters["x1_init"].std),
                 "z_init_mu": probabilistic_model.parameters["z_init"].mean[active_regions],
                 "z_init_std": np.mean(probabilistic_model.parameters["z_init"].std),

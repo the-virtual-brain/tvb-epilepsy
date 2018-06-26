@@ -115,7 +115,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             # ...or generate a new probabilistic model and model data
             probabilistic_model = \
                 SDEProbabilisticModelBuilder(model_name="vep_sde", model_config=model_configuration,
-                                             xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
+                                             xmode=XModes.X1EQMODE.value, priors_mode=PriorsModes.INFORMATIVE.value,
                                              sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,
                                              K=model_configuration.K).generate_model(generate_parameters=False)
 
@@ -200,7 +200,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         n_chains_or_runs = 4
-        output_samples = max(int(np.round(1000.0 / n_chains_or_runs)), 500)
+        output_samples = 20  # max(int(np.round(1000.0 / n_chains_or_runs)), 500)
         # Sampling (HMC)
         num_samples = output_samples
         num_warmup = 1000
@@ -258,10 +258,14 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
         # -------------------------- Plot fitting results: ------------------------------------------------------------
         # if stan_service.fitmethod.find("opt") < 0:
+        if "x1eq" in samples[0].keys():
+            region_violin_params = ["x0", "x1eq", "x1_init", "zeq", "z_init"]
+        else:
+            region_violin_params = ["x0", "x1_init", "z_init"]
         plotter.plot_fit_results(estimates, samples, model_data, target_data, probabilistic_model, info_crit,
                                  stats=stats,
                                  pair_plot_params=["tau1", "tau0", "K", "sigma", "epsilon", "scale", "offset"],  #
-                                 region_violin_params=["x0", "x1_init", "z_init"],
+                                 region_violin_params=region_violin_params,
                                  regions_labels=head.connectivity.region_labels, skip_samples=skip_samples,
                                  title_prefix=hyp.name + "-" + prob_model_name)
 
@@ -317,7 +321,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_fit_nox1prior3_SZ2")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_x1eq_SZ1")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
@@ -352,9 +356,9 @@ if __name__ == "__main__":
     sim_times_on_off = [80.0, 120.0]  # for "fitting" simulations with tau0=30.0
     EMPIRICAL = True
     if EMPIRICAL:
-        seizure = 'SZ2_0001.edf'  # 'SZ1_0001.edf'
-        # times_on_off = (np.array([15.0, 30.0]) * 1000.0).tolist() # for SZ1
-        times_on_off = (np.array([15.0, 38.0]) * 1000.0).tolist()  # for SZ2
+        seizure = 'SZ1_0001.edf'  # 'SZ2_0001.edf'
+        times_on_off = (np.array([15.0, 30.0]) * 1000.0).tolist() # for SZ1
+        # times_on_off = (np.array([15.0, 38.0]) * 1000.0).tolist()  # for SZ2
         # sensors_filename = "SensorsSEEG_116.h5"
         # # TVB4 preselection:
         # sensors_lbls = [u"D5", u"D6", u"D7",  u"D8", u"D9", u"D10", u"Z9", u"Z10", u"Z11", u"Z12", u"Z13", u"Z14",

@@ -80,4 +80,4 @@ class ProbabilisticModelBase(object):
             return parameter.scipy_method("pdf")
         else:
             warning("No parameter " + parameter_name + " was found!\nReturning true value instead of pdf!")
-            return mean_or_truth
+            return mean_or_truth, np.nan

@@ -8,26 +8,52 @@ functions {
         return D;
     }
 
-    row_vector x1_step(row_vector x1, row_vector z, real Iext1, real tau1) { //, row_vector dX1t, real sigma
+    row_vector fx1(row_vector x1, row_vector z, real Iext1, real tau1) {
         int n_active_regions = num_elements(x1);
         row_vector[n_active_regions] x1_next;
         row_vector[n_active_regions] Iext1_vec = rep_row_vector(Iext1 + 1.0, n_active_regions);
         row_vector[n_active_regions] dx1 = Iext1_vec - (x1 .* x1 .* x1) - 2.0 * (x1 .* x1) - z;
-        x1_next = x1 + (tau1 * dx1); # + dX1t * sigma;
+        dx1 = tau1 * dx1;
+        return dx1;
+    }
+
+    row_vector x1_step(row_vector x1, row_vector z, real Iext1, real tau1) { //, row_vector dX1t, real sigma
+        int n_active_regions = num_elements(x1);
+        row_vector[n_active_regions] dx1 = fx1(x1, z, Iext1, tau1);
+        row_vector[n_active_regions]  x1_next = x1 + dx1; # + dX1t * sigma;
         return x1_next;
     }
 
-    row_vector z_step(row_vector x1, row_vector z, row_vector x0, matrix FC, vector Ic, real x1_eq_def, real tau1,
-                      row_vector dZt, real sigma, real tau0) {
+    row_vector calc_zeq(row_vector x1eq, real Iext1, real tau1) {
+        int n_active_regions = num_elements(x1eq);
+        row_vector[n_active_regions] zeq = fx1(x1eq, 0*x1eq, Iext1, 1.0);
+        return zeq;
+    }
+
+    row_vector fz(row_vector x1, row_vector z, row_vector x0, matrix FC, vector Ic, real x1_eq_def,
+                  real tau1, real tau0) {
         int n_active_regions = num_elements(z);
-        row_vector[n_active_regions] z_next;
         matrix[n_active_regions, n_active_regions] D = vector_differencing(x1);
         // Ic = Ic_i = sum_{j in nonactive regions} [w_ij]
         // gx(nonactive->active) = Ic * (x1_j - x1_i) = Ic * (x1_eq_def - x1)
         row_vector[n_active_regions] gx = to_row_vector(rows_dot_product(FC, D) + Ic .* to_vector(x1_eq_def - x1));
         row_vector[n_active_regions] dz = inv(tau0) * (4 * (x1 - x0) - z - gx);
-        z_next = z + (tau1 * dz) + dZt * sigma;
+        dz = tau1 * dz;
+        return dz;
+    }
+
+    row_vector z_step(row_vector x1, row_vector z, row_vector x0, matrix FC, vector Ic, real x1_eq_def, real tau1,
+                      row_vector dZt, real sigma, real tau0) {
+        int n_active_regions = num_elements(z);
+        row_vector[n_active_regions] dz = fz(x1, z, x0, FC, Ic, x1_eq_def, tau1, tau0);
+        row_vector[n_active_regions] z_next = z + (tau1 * dz) + dZt * sigma;
         return z_next;
+    }
+
+    row_vector calc_x0(row_vector x1eq, row_vector zeq, matrix FC, vector Ic, real x1_eq_def) {
+        int n_active_regions = num_elements(zeq);
+        row_vector[n_active_regions] x0 = fz(x1eq, zeq, 0*x1eq, FC, Ic, x1_eq_def, 1.0, 1.0)/4;
+        return x0;
     }
 
     real[] normal_mean_std_to_lognorm_mu_sigma(real mean_, real std_) {
@@ -76,12 +102,13 @@ data {
     int n_target_data;
     real Iext1; //=3.1
     real dt; //~= 0.1 (used 0.0976562)
-    real x0_hi; // 2.5
-    // real x0_std; // ~0.5
-    // real x0_lo;  // 0.0
-    row_vector [n_active_regions] x0_star_mu; // x0_hi - x0_mean = 2.5 - ~[-2.5 to 0.0] = ~[2.5 to 5]
-    row_vector [n_active_regions] x0_star_std; // minimum((x0_mean - x0_lo)/2.0) ~= 1.0
-    // row_vector [n_active_regions] x0_mu;  // healthy: -2.5, sick ~=-2.0, max = [-3.0, -4.0], min = -1.0
+    int XMODE;
+    real x_lo;
+    real x_hi;
+    // real x_std;
+    row_vector [n_active_regions] x_star_mu;
+    row_vector [n_active_regions] x_star_std;
+    // row_vector [n_active_regions] x1eq_mu;  // healthy: -5.0/3 , sick ~=-1.333, max = 1.8, min = -1.1
     real x1_eq_def; // = -5.0/3 the value of all healhty non-active node
     real x1_lo;
     real x1_hi;
@@ -148,11 +175,19 @@ transformed data {
     real K_star_lo = -1.0;
     real K_star_hi = 1.0;
     real K_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(K_mu, K_std);
-    row_vector[n_active_regions] x0_logmu = normal_mean_std_to_lognorm_mu(x0_star_mu, x0_star_std);
-    row_vector[n_active_regions] x0_sigma = normal_mean_std_to_lognorm_sigma(x0_star_mu, x0_star_std);
+    row_vector[n_active_regions] x_logmu = normal_mean_std_to_lognorm_mu(x_star_mu, x_star_std);
+    row_vector[n_active_regions] x_logsigma = normal_mean_std_to_lognorm_sigma(x_star_mu, x_star_std);
+    real x_star_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(max(x_star_mu), max(x_star_std));
+    real x_star_hi = lognormal_to_standard_normal(x_hi - x_lo, x_star_mu_sigma[1], x_star_mu_sigma[2]);
+    real x1_init_star_lo = (x1_init_lo - max(x1_init_mu))/x1_init_std;
+    real x1_init_star_hi = (x1_init_hi - min(x1_init_mu))/x1_init_std;
+    real z_init_star_lo = (z_init_lo - max(z_init_mu))/z_init_std;
+    real z_init_star_hi = (z_init_hi - min(z_init_mu))/z_init_std;
     matrix [n_active_regions, n_active_regions] SC_ = SC;
     for (i in 1:n_active_regions) SC_[i, i] = 0;
     SC_ = SC_ / max(SC_) * rows(SC_);
+
+
 
     if (SDE>0) {
         if (sigma_lo>0) {
@@ -199,14 +234,14 @@ transformed data {
             print("sigma_mu_sigma=", sigma_mu_sigma,
                   ", sigma=", standard_normal_to_lognormal(0.0, sigma_mu_sigma[1], sigma_mu_sigma[2]));
         }
-        print("x0_logmu=", x0_logmu, ", x0_sigma=", x0_sigma);
+        print("x_logmu=", x_logmu, ", x_logsigma=", x_logsigma);
     }
 }
 
 
 parameters {
     // integrate and predict
-    row_vector [n_active_regions] x0_star;
+    row_vector<upper=x_star_hi>[n_active_regions] x_star;
     real epsilon_star;
     real scale_star;
     real offset_star;
@@ -216,8 +251,8 @@ parameters {
     real<lower=K_star_lo, upper=K_star_hi> K_star;
 
     // time-series state non-centering:
-    row_vector<lower=x1_init_lo-max(x1_init_mu), upper=x1_init_hi-min(x1_init_mu)>[n_active_regions] x1_init_star;
-    row_vector<lower=z_init_lo-max(z_init_mu), upper=z_init_hi-min(z_init_mu)>[n_active_regions] z_init_star;
+    row_vector<lower=x1_init_star_lo, upper=x1_init_star_hi>[n_active_regions] x1_init_star;
+    row_vector<lower=z_init_star_lo, upper=z_init_star_hi>[n_active_regions] z_init_star;
     // row_vector[n_active_regions] dX1t_star[n_times - 1];
     row_vector[n_active_regions] dZt_star[n_times - 1];
 
@@ -232,12 +267,29 @@ transformed parameters {
     real tau1;
     real tau0;
     real K;
-    row_vector[n_active_regions] x0 = x0_hi - standard_normal_to_lognormal_row(x0_star, x0_logmu, x0_sigma);
-    row_vector<lower=x1_lo, upper=x1_hi>[n_active_regions] x1_init = x1_init_mu + x1_init_star * x1_init_std;
-    row_vector[n_active_regions] z_init = z_init_mu + z_init_star * z_init_std;
+    row_vector[n_active_regions] x = x_hi - standard_normal_to_lognormal_row(x_star, x_logmu, x_logsigma);
+    row_vector[n_active_regions] x1eq;
+    row_vector[n_active_regions] zeq;
+    row_vector[n_active_regions] x0;
+    row_vector[n_active_regions] x1_init;
+    row_vector[n_active_regions] z_init;
     row_vector[n_active_regions] x1[n_times];  // <lower=x1_lo, upper=x1_hi>
     row_vector[n_active_regions] z[n_times];
     row_vector[n_target_data] fit_target_data[n_times];
+
+    if (XMODE > 0) {
+        x1eq = x;
+        zeq = calc_zeq(x1eq, Iext1, tau1);
+        x0 = calc_x0(x1eq, zeq, SC, Ic, x1_eq_def);
+        x1_init= x1eq + x1_init_star * x1_init_std;
+        z_init= zeq + z_init_star * z_init_std;
+    } else {
+        x0 = x;
+        x1_init= x1_init_mu + x1_init_star * x1_init_std;
+        z_init= z_init_mu + z_init_star * z_init_std;
+        x1eq = x1_init;
+        zeq = z_init;
+    }
 
     if (SDE>0) {
         sigma = standard_normal_to_lognormal(sigma_star, sigma_mu_sigma[1], sigma_mu_sigma[2]);
@@ -287,6 +339,10 @@ transformed parameters {
         print("tau1=", tau1);
         print("tau0=", tau0);
         print("x0=", x0);
+        print("x1eq=", x1eq);
+        print("zeq=", zeq);
+        print("x1_init=", x1_init);
+        print("z_init=", z_init);
     }
 }
 
@@ -299,9 +355,9 @@ model {
     tau1_star ~ normal(0.0, 1.0);
     tau0_star ~ normal(0.0, 1.0);
     K_star ~ normal(0.0, 1.0);
-    to_row_vector(x0_star) ~ normal(0.0, 1.0);
-    x1_init_star ~ normal(0.0, 1.0);
-    z_init_star ~ normal(0.0, 1.0);
+    to_row_vector(x_star) ~ normal(0.0, 1.0);
+    to_row_vector(x1_init_star) ~ normal(0.0, 1.0);
+    to_row_vector(z_init_star) ~ normal(0.0, 1.0);
 
     for (t in 1:(n_times - 1)) {
         // to_vector(dX1t_star[t]) ~ normal(0.0, 1.0);

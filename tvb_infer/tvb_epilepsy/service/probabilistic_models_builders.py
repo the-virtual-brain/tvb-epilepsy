@@ -22,7 +22,7 @@ from tvb_infer.service.probabilistic_params_factory \
 x0_def = {"def": X0_DEF, "min": X0_MIN, "max": X0_MAX, }
 x1eq_def = {"def": X1EQ_DEF, "min": X1EQ_MIN, "max": X1EQ_MAX}
 
-x_def = {"x0": x0_def, "x1eq": x0_def}
+x_def = {"x0": x0_def, "x1eq": x1eq_def}
 
 DEFAULT_PARAMETERS = [XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "K"]
 ODE_DEFAULT_PARAMETERS = DEFAULT_PARAMETERS + ["x1_init", "z_init", "epsilon", "scale", "offset"]
@@ -361,22 +361,22 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         else:
             x1_init = X1_REST * np.ones((self.number_of_regions,))
             z_init = calc_eq_z(x1_init, self.model_config.yc, self.model_config.Iext1, "2d", x2=0.0,
-                              slope=self.model_config.slope, a=self.model_config.a, b=self.model_config.b,
-                              d=self.model_config.d, x1_neg=True)
+                               slope=self.model_config.slope, a=self.model_config.a, b=self.model_config.b,
+                               d=self.model_config.d, x1_neg=True)
         self.logger.info("...x1_init...")
         parameters.update(
             {"x1_init": generate_probabilistic_parameter("x1_init", X1_INIT_MIN, X1_INIT_MAX,
-                                                        p_shape=(self.number_of_regions,),
-                                                        probability_distribution=ProbabilityDistributionTypes.NORMAL,
-                                                        optimize_pdf=False, use="scipy",
-                                                        **{"mu": x1_init, "sigma": self.sigma_init})})
+                                                         p_shape=(self.number_of_regions,),
+                                                         probability_distribution=ProbabilityDistributionTypes.NORMAL,
+                                                         optimize_pdf=False, use="scipy",
+                                                         **{"mu": x1_init, "sigma": self.sigma_init})})
         self.logger.info("...z_init...")
         parameters.update(
             {"z_init": generate_probabilistic_parameter("z_init", Z_INIT_MIN, Z_INIT_MAX,
-                                                       p_shape=(self.number_of_regions,),
-                                                       probability_distribution=ProbabilityDistributionTypes.NORMAL,
-                                                       optimize_pdf=False, use="scipy",
-                                                       **{"mu": z_init, "sigma": self.sigma_init/2})})
+                                                        p_shape=(self.number_of_regions,),
+                                                        probability_distribution=ProbabilityDistributionTypes.NORMAL,
+                                                        optimize_pdf=False, use="scipy",
+                                                        **{"mu": z_init, "sigma": self.sigma_init/2})})
 
         # Time scales
         if "tau1" in params_names:
