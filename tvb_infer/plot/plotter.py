@@ -4,7 +4,6 @@ from tvb_infer.plot.head_plotter import HeadPlotter
 from tvb_infer.plot.timeseries_plotter import TimeseriesPlotter
 from tvb_infer.plot.probabilistic_plotter import ProbabilisticPlotter
 from tvb_infer.plot.stan_plotter import STANplotter
-from tvb_infer.tvb_lsa.lsa_plotter import LSAPlotter
 
 
 class Plotter(object):
@@ -37,10 +36,4 @@ class Plotter(object):
         return ProbabilisticPlotter(self.config).plot_probabilistic_model(*args, **kwargs)
 
     def plot_HMC(self, *args, **kwargs):
-        STANplotter(self.config).plot_HMC(*args, **kwargs)
-
-    def plot_lsa_eigen_vals_vectors(self, *args, **kwargs):
-        LSAPlotter(self.config).plot_lsa(*args, **kwargs)
-
-    def plot_lsa(self, *args, **kwargs):
-        LSAPlotter(self.config).plot_lsa(*args, **kwargs)
+        return STANplotter(self.config).plot_HMC(*args, **kwargs)

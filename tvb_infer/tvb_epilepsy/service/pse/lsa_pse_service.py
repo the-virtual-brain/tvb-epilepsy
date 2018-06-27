@@ -1,11 +1,11 @@
 import numpy
 from copy import deepcopy
-from tvb_infer.tvb_lsa.lsa_config import CalculusConfig
+from tvb_infer.tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_infer.tvb_epilepsy.base.constants.model_constants import *
 from tvb_infer.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_infer.base.utils.data_structures_utils import formal_repr
 from tvb_infer.tvb_epilepsy.service.pse.pse_service import ABCPSEService
-from tvb_infer.tvb_lsa.lsa_service import LSAService
+from tvb_infer.tvb_epilepsy.service.lsa_service import LSAService
 
 
 class LSAPSEService(ABCPSEService):

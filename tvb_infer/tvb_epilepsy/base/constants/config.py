@@ -17,6 +17,11 @@ class HypothesisConfig(object):
 
 class CalculusConfig(CalculusConfigBase):
     SYMBOLIC_CALCULATIONS_FLAG = False
+    # Options: "auto_eigenvals",  "auto_disease", "auto_epileptogenicity", "auto_excitability",
+    # or "user_defined", in which case we expect a number equal to from 1 to hypothesis.n_regions
+    LSA_METHOD = "1D"  # other options: "2D", "auto"
+    EIGENVECTORS_NUMBER_SELECTION = "auto_eigenvals"
+    WEIGHTED_EIGENVECTOR_SUM = True
 
 
 class Config(object):

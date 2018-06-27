@@ -4,7 +4,7 @@ from tvb_infer.base.utils.log_error_utils import initialize_logger
 from tvb_infer.base.model.parameter import Parameter
 from tvb_infer.tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_infer.tvb_epilepsy.base.model.simulation_settings import SimulationSettings
-
+from tvb_infer.tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_infer.tvb_epilepsy.service.probabilistic_models_builders import *
 from tvb_infer.service.probabilistic_parameter_builder import generate_probabilistic_parameter
 from tvb_infer.io.h5_writer import H5Writer
@@ -105,6 +105,25 @@ class H5Reader(H5ReaderBase):
         h5_file.close()
         return model_configuration
 
+    def read_lsa_service(self, path):
+        """
+        :param path: Path towards a LSAService H5 file
+        :return: LSAService object
+        """
+        self.logger.info("Starting to read LSAService from: %s" % path)
+        h5_file = h5py.File(path, 'r', libver='latest')
+        from tvb_infer.tvb_epilepsy.service.lsa_service import LSAService
+        lsa_service = LSAService()
+
+        for dataset in h5_file.keys():
+            lsa_service.set_attribute(dataset, h5_file["/" + dataset][()])
+
+        for attr in h5_file.attrs.keys():
+            lsa_service.set_attribute(attr, h5_file.attrs[attr])
+
+        h5_file.close()
+        return lsa_service
+
     def read_simulation_settings(self, path):
         """
         :param path: Path towards a SimulationSettings H5 file
@@ -135,8 +154,6 @@ class H5Reader(H5ReaderBase):
         return model_inversion_service
 
     def read_probabilistic_model(self, path):
-
-        from tvb_infer.tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 
         def strip_key_name(key):
             if key != "star":

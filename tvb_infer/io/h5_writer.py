@@ -248,13 +248,3 @@ class H5Writer(H5WriterBase):
                 group, _ = self._prepare_object_for_group(group, getattr(probabilistic_model, group_key), nr_regions)
 
         h5_file.close()
-
-    def write_lsa_service(self, lsa_service, path, nr_regions=None):
-        """
-        :param lsa_service: LSAService object to write in H5
-        :param path: H5 path to be written
-        """
-        from tvb_infer.tvb_lsa.lsa_writer import LSAH5Writer
-        LSAH5Writer().write_lsa_service(lsa_service, path, nr_regions)
-
-

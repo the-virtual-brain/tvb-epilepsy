@@ -1,13 +1,13 @@
 # coding=utf-8
 
-from tvb_infer.tvb_lsa.lsa_config import FiguresConfig
+from tvb_infer.base.config import FiguresConfig
 import matplotlib
 matplotlib.use(FiguresConfig().MATPLOTLIB_BACKEND)
 
 import numpy
 
 from tvb_infer.base.utils.data_structures_utils import dicts_of_lists_to_lists_of_dicts
-from tvb_infer.tvb_lsa.lsa_service import LSAService
+from tvb_infer.tvb_epilepsy.service.lsa_service import LSAService
 from tvb_infer.plot.base_plotter import BasePlotter
 
 

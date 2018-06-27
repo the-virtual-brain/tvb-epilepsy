@@ -15,8 +15,7 @@ from tvb_infer.tvb_epilepsy.service.simulator.simulator_builder import Simulator
 from tvb_infer.tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
 from tvb_infer.tvb_epilepsy.top.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
 from tvb_infer.tvb_epilepsy.top.scripts.simulation_scripts import compute_seeg_and_write_ts_to_h5
-from tvb_infer.tvb_epilepsy.plot.plotter import Plotter
-from tvb_infer.tvb_lsa.lsa_service import LSAService
+from tvb_infer.tvb_epilepsy.service.lsa_service import LSAService
 from tvb_infer.tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_infer.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_infer.tvb_epilepsy.plot.plotter import Plotter

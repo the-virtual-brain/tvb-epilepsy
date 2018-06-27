@@ -7,7 +7,7 @@ from tvb_infer.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_infer.tvb_epilepsy.plot.plotter import Plotter
 from tvb_infer.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_infer.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
-from tvb_infer.tvb_lsa.lsa_service import LSAService
+from tvb_infer.tvb_epilepsy.service.lsa_service import LSAService
 
 
 logger = initialize_logger(__name__)

@@ -54,6 +54,13 @@ class H5Writer(H5WriterBase):
         """
         self.write_object_to_file(path, model_configuration, "HypothesisModel", nr_regions)
 
+    def write_lsa_service(self, lsa_service, path, nr_regions=None):
+        """
+        :param lsa_service: LSAService object to write in H5
+        :param path: H5 path to be written
+        """
+        self.write_object_to_file(path, lsa_service, "HypothesisModel", nr_regions)
+
     # TODO: can this be visualized? should we keep groups?
     def write_simulation_settings(self, simulation_settings, path, nr_regions=None):
         """

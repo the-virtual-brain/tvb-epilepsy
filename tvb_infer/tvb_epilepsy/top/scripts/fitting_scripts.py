@@ -15,7 +15,7 @@ from tvb_infer.tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothes
 from tvb_infer.tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration_to_simulation
 from tvb_infer.tvb_epilepsy.top.scripts.fitting_data_scripts import prepare_seeg_observable_from_mne_file, \
     prepare_simulated_seeg_observable, prepare_signal_observable
-from tvb_infer.tvb_lsa.lsa_service import LSAService
+from tvb_infer.tvb_epilepsy.service.lsa_service import LSAService
 from tvb_infer.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_infer.tvb_epilepsy.io.h5_reader import H5Reader
 

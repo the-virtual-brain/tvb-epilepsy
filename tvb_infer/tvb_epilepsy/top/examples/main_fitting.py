@@ -179,7 +179,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             probabilistic_model.parameters.update(
                 SDEProbabilisticModelBuilder(probabilistic_model). \
                     generate_parameters([XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value,
-                                         "x1", "x1_init", "z_init", "tau1",  # "tau0", "K", "x1",
+                                         "x1_init", "z_init", "tau1",  # "tau0", "K", "x1",
                                          "sigma", "dZt", "epsilon", "scale", "offset"],
                                         target_data, source_ts, gain_matrix))
             plotter.plot_probabilistic_model(probabilistic_model, hyp.name + " Probabilistic Model")

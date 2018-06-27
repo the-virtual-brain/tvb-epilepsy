@@ -366,7 +366,3 @@ class H5Reader(object):
 
     def read_generic(self, path, obj=None, output_shape=None):
         return read_h5_model(path).convert_from_h5_model(obj, output_shape)
-
-    def read_lsa_service(self, path):
-        from tvb_infer.tvb_lsa.lsa_reader import LSAH5Reader
-        return LSAH5Reader().read_lsa_service(path)

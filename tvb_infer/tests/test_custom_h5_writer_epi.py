@@ -4,9 +4,9 @@ from tvb_infer.tvb_epilepsy.base.model.model_configuration import ModelConfigura
 from tvb_infer.tvb_epilepsy.base.model.simulation_settings import SimulationSettings
 from tvb_infer.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_infer.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
-from tvb_infer.tvb_lsa.lsa_service import LSAService
 from tvb_infer.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_infer.tvb_epilepsy.service.model_inversion_services import ModelInversionService
+from tvb_infer.tvb_epilepsy.service.lsa_service import LSAService
 from tvb_infer.tvb_epilepsy.service.pse.lsa_pse_service import LSAPSEService
 from tvb_infer.service.sensitivity_analysis_service import SensitivityAnalysisService
 from tvb_infer.tests.base import BaseTest
@@ -44,6 +44,16 @@ class TestCustomH5writer(BaseTest):
         assert not os.path.exists(test_file)
 
         self.writer.write_model_configuration_builder(dummy_mc_service, test_file)
+
+        assert os.path.exists(test_file)
+
+    def test_write_lsa_service(self):
+        test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestLSAService.h5")
+        dummy_lsa_service = LSAService()
+
+        assert not os.path.exists(test_file)
+
+        self.writer.write_lsa_service(dummy_lsa_service, test_file)
 
         assert os.path.exists(test_file)
 
