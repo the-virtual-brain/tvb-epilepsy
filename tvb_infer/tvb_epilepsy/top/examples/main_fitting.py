@@ -88,9 +88,9 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
     # ------------------------------Stan model and service--------------------------------------
     model_code_path = os.path.join(config.generic.PROBLSTC_MODELS_PATH, stan_model_name + ".stan")
-    stan_service = CmdStanInterface(model_name=stan_model_name, model_code_path=model_code_path, fitmethod=fitmethod,
+    stan_interface = CmdStanInterface(model_name=stan_model_name, model_code_path=model_code_path, fitmethod=fitmethod,
                                     config=config)
-    stan_service.set_or_compile_model()
+    stan_interface.set_or_compile_model()
 
     for hyp in hypotheses[:1]:
         base_path = os.path.join(config.out.FOLDER_RES, hyp.name)
@@ -107,7 +107,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         if os.path.isfile(problstc_model_file) and os.path.isfile(model_data_file) and os.path.isfile(target_data_file):
             # Read existing probabilistic model and model data...
             probabilistic_model = reader.read_probabilistic_model(problstc_model_file)
-            model_data = stan_service.load_model_data_from_file(model_data_path=model_data_file)
+            model_data = stan_interface.load_model_data_from_file(model_data_path=model_data_file)
             target_data = reader.read_timeseries(target_data_file)
         else:
             model_inversion = SDEModelInversionService()
@@ -179,7 +179,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             probabilistic_model.parameters.update(
                 SDEProbabilisticModelBuilder(probabilistic_model). \
                     generate_parameters([XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value,
-                                         "x1_init", "z_init", "tau1",  # "tau0", "K", "x1",
+                                         "x1", "x1_init", "z_init", "tau1",  # "tau0", "K", "x1",
                                          "sigma", "dZt", "epsilon", "scale", "offset"],
                                         target_data, source_ts, gain_matrix))
             plotter.plot_probabilistic_model(probabilistic_model, hyp.name + " Probabilistic Model")
@@ -215,7 +215,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             skip_samples = 0
         prob_model_name = probabilistic_model.name.split(".")[0]
         if fit_flag:
-            estimates, samples, summary = stan_service.fit(debug=0, simulate=0, model_data=model_data, refresh=1,
+            estimates, samples, summary = stan_interface.fit(debug=0, simulate=0, model_data=model_data, refresh=1,
                                                            n_chains_or_runs=n_chains_or_runs,
                                                            iter=iter, tol_rel_obj=tol_rel_obj,
                                                            num_warmup=num_warmup, num_samples=num_samples,
@@ -226,7 +226,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             if summary is not None:
                 writer.write_generic(summary, path(prob_model_name + "_FitSummary"))
         else:
-            estimates, samples, summary = stan_service.read_output()
+            estimates, samples, summary = stan_interface.read_output()
             if fitmethod.find("sampl") >= 0:
                 plotter.plot_HMC(samples, figure_name=hyp.name + "-" + prob_model_name + " HMC NUTS trace")
 
@@ -238,7 +238,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         number_of_total_params =\
             5 + probabilistic_model.number_of_active_regions * (3 + (probabilistic_model.time_length-1))
         info_crit = \
-            stan_service.compute_information_criteria(samples, number_of_total_params, skip_samples=skip_samples,
+            stan_interface.compute_information_criteria(samples, number_of_total_params, skip_samples=skip_samples,
                                                       # parameters=["amplitude_star", "offset_star", "epsilon_star",
                                                       #                  "sigma_star", "time_scale_star", "x0_star",
                                                       #                  "x_init_star", "z_init_star", "z_eta_star"],
@@ -246,7 +246,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
         writer.write_generic(info_crit, path(prob_model_name + "_InfoCrit"))
 
-        Rhat = stan_service.get_Rhat(summary)
+        Rhat = stan_interface.get_Rhat(summary)
         # Interface backwards with INS stan models
         # from tvb_infer.service.model_inversion.vep_stan_dict_builder import convert_params_names_from_ins
         # estimates, samples, Rhat, model_data = \
@@ -258,7 +258,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
         # -------------------------- Plot fitting results: ------------------------------------------------------------
         # if stan_service.fitmethod.find("opt") < 0:
-        if "x1eq" in samples[0].keys():
+        if "x1eq" in probabilistic_model.parameters.keys():
             region_violin_params = ["x0", "x1eq", "x1_init", "zeq", "z_init"]
         else:
             region_violin_params = ["x0", "x1_init", "z_init"]
@@ -321,7 +321,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_x1eq_SZ1")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_x1eq_SZ1_x1prior")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
