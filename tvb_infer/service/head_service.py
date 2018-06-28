@@ -89,6 +89,6 @@ class HeadService(object):
             self.logger.warning("Number of sensors' left < 2!\n" + "Skipping clustering and returning all of them!")
             return initial_selection
 
-    def compute_gain_matrix(self, head, sensors, normalize=95, ceil=False):
+    def compute_gain_matrix(self, head, sensors, normalize=100, ceil=False):
         return compute_gain_matrix(sensors.locations, head.connectivity.centres, normalize=normalize, ceil=ceil)
 
