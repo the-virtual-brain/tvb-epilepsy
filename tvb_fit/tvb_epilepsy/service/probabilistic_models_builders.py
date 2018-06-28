@@ -12,7 +12,7 @@ from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import 
 from tvb_fit.base.model.probability_distributions import ProbabilityDistributionTypes
 from tvb_fit.tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_fit.base.model.timeseries import Timeseries
-from tvb_fit.base.model.probabilistic_models.epileptor_probabilistic_models \
+from tvb_fit.tvb_epilepsy.base.model.epileptor_probabilistic_models \
     import EpiProbabilisticModel, ODEEpiProbabilisticModel, SDEEpiProbabilisticModel
 from tvb_fit.service.timeseries_service import compute_seeg_exp, compute_seeg_lin
 from tvb_fit.service.probabilistic_parameter_builder import generate_probabilistic_parameter
@@ -221,8 +221,8 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
     sigma_init = SIGMA_INIT_DEF
     epsilon = EPSILON_DEF
-    scale = 1.0
-    offset = 0.0
+    scale = SCALE_DEF
+    offset = OFFSET_DEF
     observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
     number_of_target_data = 0
     active_regions = []
@@ -234,7 +234,8 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
     def __init__(self, model=None, model_name="vep_ode", model_config=ModelConfiguration(),
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                  K=K_DEF, sigma_x=None, sigma_x_scale=3,  # MC_direction_split=0.5,
-                 sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF,
+                 sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
+                 epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF,
                  observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  number_of_target_data=0, active_regions=[]):
         super(ODEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode,
@@ -243,15 +244,8 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         self.tau1 = tau1
         self.tau0 = tau0
         self.epsilon = epsilon
-        if observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
-            self.scale = 1.0  # TODO: find those!
-            self.offset = -2.5  # TODO: find those!
-        elif observation_model == OBSERVATION_MODELS.SEEG_POWER.value:
-            self.scale = 0.25
-            self.offset = 0.0
-        else:
-            self.scale = 0.5
-            self.offset = 0.2
+        self.scale = scale
+        self.offset = offset
         self.observation_model = observation_model
         self.number_of_target_data = number_of_target_data
         self.time_length = self.compute_seizure_length()
@@ -458,13 +452,14 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
     def __init__(self, model=None, model_name="vep_sde", model_config=ModelConfiguration(),
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                  K=K_DEF, sigma_x=None, sigma_x_scale=3,  # MC_direction_split=0.5,
-                 sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF, sigma=SIGMA_DEF,
+                 sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
+                 epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF, sigma=SIGMA_DEF,
                  sde_mode=SDE_MODES.NONCENTERED.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  number_of_signals=0, active_regions=[]):
         super(SDEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode, priors_mode,
                                                            K, sigma_x, sigma_x_scale, # MC_direction_split,
-                                                           sigma_init, tau1, tau0, epsilon, observation_model,
-                                                           number_of_signals, active_regions)
+                                                           sigma_init, tau1, tau0, epsilon, scale, offset,
+                                                           observation_model, number_of_signals, active_regions)
         self.sigma_init = sigma_init
         self.sde_mode = sde_mode
         self.sigma = sigma

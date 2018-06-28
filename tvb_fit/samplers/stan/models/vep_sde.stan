@@ -140,17 +140,19 @@ data {
     real K_lo;
     real K_hi;
     int SDE;
-    real sigma_mu; // =0.05
-    real sigma_std; // =0.01/3
+    real sigma_mu; // =0.1
+    real sigma_std; // =0.1/2
     real sigma_lo; //0
     real sigma_hi; // 0.15
     real epsilon_mu; //=0.1
     real epsilon_std; //=0.1/3
     real offset_mu;  //=0.0
     real offset_std; //=1.0
-    real scale_mu; //=1.0
-    real scale_std; //=1.0/6
-    real scale_lo; // =0.3
+    real offset_lo; //=offset_mu-1.0
+    real offset_hi; //=offset_mu+1.0
+    real scale_mu; //=0.5
+    real scale_std; //=0.5/3
+    real scale_lo; // =0.1
     int log_target_data; // 1 for log, 0 for linear obervation function
     matrix[n_target_data, n_active_regions] gain;
     row_vector[n_target_data] target_data[n_times];
@@ -161,7 +163,10 @@ data {
 
 transformed data {
     real sqrtdt = sqrt(dt);
+    real offset_star_lo = (offset_lo - offset_mu)/offset_std;
+    real offset_star_hi = (offset_hi - offset_mu)/offset_std;
     real scale_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(scale_mu, scale_std);
+    real scale_star_lo = lognormal_to_standard_normal(scale_lo, scale_mu_sigma[1], scale_mu_sigma[2]);
     real epsilon_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(epsilon_mu, epsilon_std);
     real sigma_star_lo = -1.0;
     real sigma_star_hi = 1.0;
@@ -243,8 +248,8 @@ parameters {
     // integrate and predict
     row_vector<upper=x_star_hi>[n_active_regions] x_star;
     real epsilon_star;
-    real scale_star;
-    real offset_star;
+    real<lower=scale_star_lo> scale_star;
+    real<lower=offset_star_lo, upper=offset_star_hi> offset_star;
     real<lower=sigma_star_lo, upper=sigma_star_hi> sigma_star;
     real<lower=tau1_star_lo, upper=tau1_star_hi> tau1_star;
     real<lower=tau0_star_lo, upper=tau0_star_hi> tau0_star;

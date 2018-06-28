@@ -17,8 +17,8 @@ static int current_statement_begin__;
 
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
-    reader.add_event(0, 0, "start", "/Users/dionperd/VEPtools/git/tvb-epilepsy/tvb_infer/samplers/stan/models/vep_sde.stan");
-    reader.add_event(385, 385, "end", "/Users/dionperd/VEPtools/git/tvb-epilepsy/tvb_infer/samplers/stan/models/vep_sde.stan");
+    reader.add_event(0, 0, "start", "/Users/dionperd/VEPtools/software/git/tvb-epilepsy/tvb_fit/samplers/stan/models/vep_sde.stan");
+    reader.add_event(390, 390, "end", "/Users/dionperd/VEPtools/software/git/tvb-epilepsy/tvb_fit/samplers/stan/models/vep_sde.stan");
     return reader;
 }
 
@@ -782,6 +782,8 @@ private:
     double epsilon_std;
     double offset_mu;
     double offset_std;
+    double offset_lo;
+    double offset_hi;
     double scale_mu;
     double scale_std;
     double scale_lo;
@@ -791,7 +793,10 @@ private:
     vector_d Ic;
     matrix_d SC;
     double sqrtdt;
+    double offset_star_lo;
+    double offset_star_hi;
     vector<double> scale_mu_sigma;
+    double scale_star_lo;
     vector<double> epsilon_mu_sigma;
     double sigma_star_lo;
     double sigma_star_hi;
@@ -1192,30 +1197,42 @@ public:
             pos__ = 0;
             offset_std = vals_r__[pos__++];
             current_statement_begin__ = 151;
+            context__.validate_dims("data initialization", "offset_lo", "double", context__.to_vec());
+            offset_lo = double(0);
+            vals_r__ = context__.vals_r("offset_lo");
+            pos__ = 0;
+            offset_lo = vals_r__[pos__++];
+            current_statement_begin__ = 152;
+            context__.validate_dims("data initialization", "offset_hi", "double", context__.to_vec());
+            offset_hi = double(0);
+            vals_r__ = context__.vals_r("offset_hi");
+            pos__ = 0;
+            offset_hi = vals_r__[pos__++];
+            current_statement_begin__ = 153;
             context__.validate_dims("data initialization", "scale_mu", "double", context__.to_vec());
             scale_mu = double(0);
             vals_r__ = context__.vals_r("scale_mu");
             pos__ = 0;
             scale_mu = vals_r__[pos__++];
-            current_statement_begin__ = 152;
+            current_statement_begin__ = 154;
             context__.validate_dims("data initialization", "scale_std", "double", context__.to_vec());
             scale_std = double(0);
             vals_r__ = context__.vals_r("scale_std");
             pos__ = 0;
             scale_std = vals_r__[pos__++];
-            current_statement_begin__ = 153;
+            current_statement_begin__ = 155;
             context__.validate_dims("data initialization", "scale_lo", "double", context__.to_vec());
             scale_lo = double(0);
             vals_r__ = context__.vals_r("scale_lo");
             pos__ = 0;
             scale_lo = vals_r__[pos__++];
-            current_statement_begin__ = 154;
+            current_statement_begin__ = 156;
             context__.validate_dims("data initialization", "log_target_data", "int", context__.to_vec());
             log_target_data = int(0);
             vals_i__ = context__.vals_i("log_target_data");
             pos__ = 0;
             log_target_data = vals_i__[pos__++];
-            current_statement_begin__ = 155;
+            current_statement_begin__ = 157;
             validate_non_negative_index("gain", "n_target_data", n_target_data);
             validate_non_negative_index("gain", "n_active_regions", n_active_regions);
             context__.validate_dims("data initialization", "gain", "matrix_d", context__.to_vec(n_target_data,n_active_regions));
@@ -1231,7 +1248,7 @@ public:
                     gain(m_mat__,n_mat__) = vals_r__[pos__++];
                 }
             }
-            current_statement_begin__ = 156;
+            current_statement_begin__ = 158;
             validate_non_negative_index("target_data", "n_times", n_times);
             validate_non_negative_index("target_data", "n_target_data", n_target_data);
             context__.validate_dims("data initialization", "target_data", "row_vector_d", context__.to_vec(n_times,n_target_data));
@@ -1247,7 +1264,7 @@ public:
                     target_data[i_0__][i_vec__] = vals_r__[pos__++];
             }
             }
-            current_statement_begin__ = 157;
+            current_statement_begin__ = 159;
             validate_non_negative_index("Ic", "n_active_regions", n_active_regions);
             context__.validate_dims("data initialization", "Ic", "vector_d", context__.to_vec(n_active_regions));
             validate_non_negative_index("Ic", "n_active_regions", n_active_regions);
@@ -1258,7 +1275,7 @@ public:
             for (size_t i_vec__ = 0; i_vec__ < Ic_i_vec_lim__; ++i_vec__) {
                 Ic[i_vec__] = vals_r__[pos__++];
             }
-            current_statement_begin__ = 158;
+            current_statement_begin__ = 160;
             validate_non_negative_index("SC", "n_active_regions", n_active_regions);
             validate_non_negative_index("SC", "n_active_regions", n_active_regions);
             context__.validate_dims("data initialization", "SC", "matrix_d", context__.to_vec(n_active_regions,n_active_regions));
@@ -1335,168 +1352,182 @@ public:
             current_statement_begin__ = 156;
             current_statement_begin__ = 157;
             current_statement_begin__ = 158;
+            current_statement_begin__ = 159;
+            current_statement_begin__ = 160;
             check_greater_or_equal(function__,"SC",SC,0.0);
             check_less_or_equal(function__,"SC",SC,1.0);
             // initialize data variables
-            current_statement_begin__ = 163;
+            current_statement_begin__ = 165;
             sqrtdt = double(0);
             stan::math::fill(sqrtdt,DUMMY_VAR__);
             stan::math::assign(sqrtdt,stan::math::sqrt(dt));
-            current_statement_begin__ = 164;
+            current_statement_begin__ = 166;
+            offset_star_lo = double(0);
+            stan::math::fill(offset_star_lo,DUMMY_VAR__);
+            stan::math::assign(offset_star_lo,((offset_lo - offset_mu) / offset_std));
+            current_statement_begin__ = 167;
+            offset_star_hi = double(0);
+            stan::math::fill(offset_star_hi,DUMMY_VAR__);
+            stan::math::assign(offset_star_hi,((offset_hi - offset_mu) / offset_std));
+            current_statement_begin__ = 168;
             validate_non_negative_index("scale_mu_sigma", "2", 2);
             scale_mu_sigma = std::vector<double>(2,double(0));
             stan::math::fill(scale_mu_sigma,DUMMY_VAR__);
             stan::math::assign(scale_mu_sigma,normal_mean_std_to_lognorm_mu_sigma(scale_mu,scale_std, pstream__));
-            current_statement_begin__ = 165;
+            current_statement_begin__ = 169;
+            scale_star_lo = double(0);
+            stan::math::fill(scale_star_lo,DUMMY_VAR__);
+            stan::math::assign(scale_star_lo,lognormal_to_standard_normal(scale_lo,get_base1(scale_mu_sigma,1,"scale_mu_sigma",1),get_base1(scale_mu_sigma,2,"scale_mu_sigma",1), pstream__));
+            current_statement_begin__ = 170;
             validate_non_negative_index("epsilon_mu_sigma", "2", 2);
             epsilon_mu_sigma = std::vector<double>(2,double(0));
             stan::math::fill(epsilon_mu_sigma,DUMMY_VAR__);
             stan::math::assign(epsilon_mu_sigma,normal_mean_std_to_lognorm_mu_sigma(epsilon_mu,epsilon_std, pstream__));
-            current_statement_begin__ = 166;
+            current_statement_begin__ = 171;
             sigma_star_lo = double(0);
             stan::math::fill(sigma_star_lo,DUMMY_VAR__);
             stan::math::assign(sigma_star_lo,-(1.0));
-            current_statement_begin__ = 167;
+            current_statement_begin__ = 172;
             sigma_star_hi = double(0);
             stan::math::fill(sigma_star_hi,DUMMY_VAR__);
             stan::math::assign(sigma_star_hi,1.0);
-            current_statement_begin__ = 168;
+            current_statement_begin__ = 173;
             validate_non_negative_index("sigma_mu_sigma", "2", 2);
             sigma_mu_sigma = std::vector<double>(2,double(0));
             stan::math::fill(sigma_mu_sigma,DUMMY_VAR__);
             stan::math::assign(sigma_mu_sigma,normal_mean_std_to_lognorm_mu_sigma(sigma_mu,sigma_std, pstream__));
-            current_statement_begin__ = 169;
+            current_statement_begin__ = 174;
             tau1_star_lo = double(0);
             stan::math::fill(tau1_star_lo,DUMMY_VAR__);
             stan::math::assign(tau1_star_lo,-(1.0));
-            current_statement_begin__ = 170;
+            current_statement_begin__ = 175;
             tau1_star_hi = double(0);
             stan::math::fill(tau1_star_hi,DUMMY_VAR__);
             stan::math::assign(tau1_star_hi,1.0);
-            current_statement_begin__ = 171;
+            current_statement_begin__ = 176;
             validate_non_negative_index("tau1_mu_sigma", "2", 2);
             tau1_mu_sigma = std::vector<double>(2,double(0));
             stan::math::fill(tau1_mu_sigma,DUMMY_VAR__);
             stan::math::assign(tau1_mu_sigma,normal_mean_std_to_lognorm_mu_sigma(tau1_mu,tau1_std, pstream__));
-            current_statement_begin__ = 172;
+            current_statement_begin__ = 177;
             tau0_star_lo = double(0);
             stan::math::fill(tau0_star_lo,DUMMY_VAR__);
             stan::math::assign(tau0_star_lo,-(1.0));
-            current_statement_begin__ = 173;
+            current_statement_begin__ = 178;
             tau0_star_hi = double(0);
             stan::math::fill(tau0_star_hi,DUMMY_VAR__);
             stan::math::assign(tau0_star_hi,1.0);
-            current_statement_begin__ = 174;
+            current_statement_begin__ = 179;
             validate_non_negative_index("tau0_mu_sigma", "2", 2);
             tau0_mu_sigma = std::vector<double>(2,double(0));
             stan::math::fill(tau0_mu_sigma,DUMMY_VAR__);
             stan::math::assign(tau0_mu_sigma,normal_mean_std_to_lognorm_mu_sigma(tau0_mu,tau0_std, pstream__));
-            current_statement_begin__ = 175;
+            current_statement_begin__ = 180;
             K_star_lo = double(0);
             stan::math::fill(K_star_lo,DUMMY_VAR__);
             stan::math::assign(K_star_lo,-(1.0));
-            current_statement_begin__ = 176;
+            current_statement_begin__ = 181;
             K_star_hi = double(0);
             stan::math::fill(K_star_hi,DUMMY_VAR__);
             stan::math::assign(K_star_hi,1.0);
-            current_statement_begin__ = 177;
+            current_statement_begin__ = 182;
             validate_non_negative_index("K_mu_sigma", "2", 2);
             K_mu_sigma = std::vector<double>(2,double(0));
             stan::math::fill(K_mu_sigma,DUMMY_VAR__);
             stan::math::assign(K_mu_sigma,normal_mean_std_to_lognorm_mu_sigma(K_mu,K_std, pstream__));
-            current_statement_begin__ = 178;
+            current_statement_begin__ = 183;
             validate_non_negative_index("x_logmu", "n_active_regions", n_active_regions);
             x_logmu = row_vector_d(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             stan::math::fill(x_logmu,DUMMY_VAR__);
             stan::math::assign(x_logmu,normal_mean_std_to_lognorm_mu(x_star_mu,x_star_std, pstream__));
-            current_statement_begin__ = 179;
+            current_statement_begin__ = 184;
             validate_non_negative_index("x_logsigma", "n_active_regions", n_active_regions);
             x_logsigma = row_vector_d(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             stan::math::fill(x_logsigma,DUMMY_VAR__);
             stan::math::assign(x_logsigma,normal_mean_std_to_lognorm_sigma(x_star_mu,x_star_std, pstream__));
-            current_statement_begin__ = 180;
+            current_statement_begin__ = 185;
             validate_non_negative_index("x_star_mu_sigma", "2", 2);
             x_star_mu_sigma = std::vector<double>(2,double(0));
             stan::math::fill(x_star_mu_sigma,DUMMY_VAR__);
             stan::math::assign(x_star_mu_sigma,normal_mean_std_to_lognorm_mu_sigma(max(x_star_mu),max(x_star_std), pstream__));
-            current_statement_begin__ = 181;
+            current_statement_begin__ = 186;
             x_star_hi = double(0);
             stan::math::fill(x_star_hi,DUMMY_VAR__);
             stan::math::assign(x_star_hi,lognormal_to_standard_normal((x_hi - x_lo),get_base1(x_star_mu_sigma,1,"x_star_mu_sigma",1),get_base1(x_star_mu_sigma,2,"x_star_mu_sigma",1), pstream__));
-            current_statement_begin__ = 182;
+            current_statement_begin__ = 187;
             x1_init_star_lo = double(0);
             stan::math::fill(x1_init_star_lo,DUMMY_VAR__);
             stan::math::assign(x1_init_star_lo,((x1_init_lo - max(x1_init_mu)) / x1_init_std));
-            current_statement_begin__ = 183;
+            current_statement_begin__ = 188;
             x1_init_star_hi = double(0);
             stan::math::fill(x1_init_star_hi,DUMMY_VAR__);
             stan::math::assign(x1_init_star_hi,((x1_init_hi - min(x1_init_mu)) / x1_init_std));
-            current_statement_begin__ = 184;
+            current_statement_begin__ = 189;
             z_init_star_lo = double(0);
             stan::math::fill(z_init_star_lo,DUMMY_VAR__);
             stan::math::assign(z_init_star_lo,((z_init_lo - max(z_init_mu)) / z_init_std));
-            current_statement_begin__ = 185;
+            current_statement_begin__ = 190;
             z_init_star_hi = double(0);
             stan::math::fill(z_init_star_hi,DUMMY_VAR__);
             stan::math::assign(z_init_star_hi,((z_init_hi - min(z_init_mu)) / z_init_std));
-            current_statement_begin__ = 186;
+            current_statement_begin__ = 191;
             validate_non_negative_index("SC_", "n_active_regions", n_active_regions);
             validate_non_negative_index("SC_", "n_active_regions", n_active_regions);
             SC_ = matrix_d(static_cast<Eigen::VectorXd::Index>(n_active_regions),static_cast<Eigen::VectorXd::Index>(n_active_regions));
             stan::math::fill(SC_,DUMMY_VAR__);
             stan::math::assign(SC_,SC);
 
-            current_statement_begin__ = 187;
+            current_statement_begin__ = 192;
             for (int i = 1; i <= n_active_regions; ++i) {
-                current_statement_begin__ = 187;
+                current_statement_begin__ = 192;
                 stan::math::assign(get_base1_lhs(SC_,i,i,"SC_",1), 0);
             }
-            current_statement_begin__ = 188;
+            current_statement_begin__ = 193;
             stan::math::assign(SC_, multiply(divide(SC_,max(SC_)),rows(SC_)));
-            current_statement_begin__ = 192;
+            current_statement_begin__ = 197;
             if (as_bool(logical_gt(SDE,0))) {
 
-                current_statement_begin__ = 193;
+                current_statement_begin__ = 198;
                 if (as_bool(logical_gt(sigma_lo,0))) {
 
-                    current_statement_begin__ = 194;
+                    current_statement_begin__ = 199;
                     stan::math::assign(sigma_star_lo, lognormal_to_standard_normal(sigma_lo,get_base1(sigma_mu_sigma,1,"sigma_mu_sigma",1),get_base1(sigma_mu_sigma,2,"sigma_mu_sigma",1), pstream__));
                 } else {
 
-                    current_statement_begin__ = 196;
+                    current_statement_begin__ = 201;
                     stan::math::assign(sigma_star_lo, -(1000.0));
                 }
-                current_statement_begin__ = 198;
+                current_statement_begin__ = 203;
                 stan::math::assign(sigma_star_hi, lognormal_to_standard_normal(sigma_hi,get_base1(sigma_mu_sigma,1,"sigma_mu_sigma",1),get_base1(sigma_mu_sigma,2,"sigma_mu_sigma",1), pstream__));
             }
-            current_statement_begin__ = 201;
+            current_statement_begin__ = 206;
             if (as_bool(logical_gt(TAU1_PRIOR,0))) {
 
-                current_statement_begin__ = 202;
+                current_statement_begin__ = 207;
                 stan::math::assign(tau1_star_lo, lognormal_to_standard_normal(tau1_lo,get_base1(tau1_mu_sigma,1,"tau1_mu_sigma",1),get_base1(tau1_mu_sigma,2,"tau1_mu_sigma",1), pstream__));
-                current_statement_begin__ = 203;
+                current_statement_begin__ = 208;
                 stan::math::assign(tau1_star_hi, lognormal_to_standard_normal(tau1_hi,get_base1(tau1_mu_sigma,1,"tau1_mu_sigma",1),get_base1(tau1_mu_sigma,2,"tau1_mu_sigma",1), pstream__));
             }
-            current_statement_begin__ = 206;
+            current_statement_begin__ = 211;
             if (as_bool(logical_gt(TAU0_PRIOR,0))) {
 
-                current_statement_begin__ = 207;
+                current_statement_begin__ = 212;
                 stan::math::assign(tau0_star_lo, lognormal_to_standard_normal(tau0_lo,get_base1(tau0_mu_sigma,1,"tau0_mu_sigma",1),get_base1(tau0_mu_sigma,2,"tau0_mu_sigma",1), pstream__));
-                current_statement_begin__ = 208;
+                current_statement_begin__ = 213;
                 stan::math::assign(tau0_star_hi, lognormal_to_standard_normal(tau0_hi,get_base1(tau0_mu_sigma,1,"tau0_mu_sigma",1),get_base1(tau0_mu_sigma,2,"tau0_mu_sigma",1), pstream__));
             }
-            current_statement_begin__ = 211;
+            current_statement_begin__ = 216;
             if (as_bool(logical_gt(K_PRIOR,0))) {
 
-                current_statement_begin__ = 212;
+                current_statement_begin__ = 217;
                 stan::math::assign(K_star_lo, lognormal_to_standard_normal(K_lo,get_base1(K_mu_sigma,1,"K_mu_sigma",1),get_base1(K_mu_sigma,2,"K_mu_sigma",1), pstream__));
-                current_statement_begin__ = 213;
+                current_statement_begin__ = 218;
                 stan::math::assign(K_star_hi, lognormal_to_standard_normal(K_hi,get_base1(K_mu_sigma,1,"K_mu_sigma",1),get_base1(K_mu_sigma,2,"K_mu_sigma",1), pstream__));
             }
-            current_statement_begin__ = 216;
+            current_statement_begin__ = 221;
             if (as_bool(logical_gt(DEBUG,0))) {
 
-                current_statement_begin__ = 217;
+                current_statement_begin__ = 222;
                 if (pstream__) {
                     stan_print(pstream__,"scale_mu_sigma=");
                     stan_print(pstream__,scale_mu_sigma);
@@ -1504,7 +1535,7 @@ public:
                     stan_print(pstream__,standard_normal_to_lognormal(0.0,get_base1(scale_mu_sigma,1,"scale_mu_sigma",1),get_base1(scale_mu_sigma,2,"scale_mu_sigma",1), pstream__));
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 219;
+                current_statement_begin__ = 224;
                 if (pstream__) {
                     stan_print(pstream__,"epsilon_mu_sigma=");
                     stan_print(pstream__,epsilon_mu_sigma);
@@ -1512,10 +1543,10 @@ public:
                     stan_print(pstream__,standard_normal_to_lognormal(0.0,get_base1(epsilon_mu_sigma,1,"epsilon_mu_sigma",1),get_base1(epsilon_mu_sigma,2,"epsilon_mu_sigma",1), pstream__));
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 221;
+                current_statement_begin__ = 226;
                 if (as_bool(logical_gt(TAU1_PRIOR,0))) {
 
-                    current_statement_begin__ = 222;
+                    current_statement_begin__ = 227;
                     if (pstream__) {
                         stan_print(pstream__,"tau1_mu_sigma=");
                         stan_print(pstream__,tau1_mu_sigma);
@@ -1524,10 +1555,10 @@ public:
                         *pstream__ << std::endl;
                     }
                 }
-                current_statement_begin__ = 225;
+                current_statement_begin__ = 230;
                 if (as_bool(logical_gt(TAU0_PRIOR,0))) {
 
-                    current_statement_begin__ = 226;
+                    current_statement_begin__ = 231;
                     if (pstream__) {
                         stan_print(pstream__,"tau0_mu_sigma=");
                         stan_print(pstream__,tau1_mu_sigma);
@@ -1536,10 +1567,10 @@ public:
                         *pstream__ << std::endl;
                     }
                 }
-                current_statement_begin__ = 229;
+                current_statement_begin__ = 234;
                 if (as_bool(logical_gt(K_PRIOR,0))) {
 
-                    current_statement_begin__ = 230;
+                    current_statement_begin__ = 235;
                     if (pstream__) {
                         stan_print(pstream__,"K_mu_sigma=");
                         stan_print(pstream__,K_mu_sigma);
@@ -1548,10 +1579,10 @@ public:
                         *pstream__ << std::endl;
                     }
                 }
-                current_statement_begin__ = 233;
+                current_statement_begin__ = 238;
                 if (as_bool(logical_gt(SDE,0))) {
 
-                    current_statement_begin__ = 234;
+                    current_statement_begin__ = 239;
                     if (pstream__) {
                         stan_print(pstream__,"sigma_mu_sigma=");
                         stan_print(pstream__,sigma_mu_sigma);
@@ -1560,7 +1591,7 @@ public:
                         *pstream__ << std::endl;
                     }
                 }
-                current_statement_begin__ = 237;
+                current_statement_begin__ = 242;
                 if (pstream__) {
                     stan_print(pstream__,"x_logmu=");
                     stan_print(pstream__,x_logmu);
@@ -1571,8 +1602,6 @@ public:
             }
 
             // validate transformed data
-            current_statement_begin__ = 163;
-            current_statement_begin__ = 164;
             current_statement_begin__ = 165;
             current_statement_begin__ = 166;
             current_statement_begin__ = 167;
@@ -1595,34 +1624,39 @@ public:
             current_statement_begin__ = 184;
             current_statement_begin__ = 185;
             current_statement_begin__ = 186;
+            current_statement_begin__ = 187;
+            current_statement_begin__ = 188;
+            current_statement_begin__ = 189;
+            current_statement_begin__ = 190;
+            current_statement_begin__ = 191;
 
             // validate, set parameter ranges
             num_params_r__ = 0U;
             param_ranges_i__.clear();
-            current_statement_begin__ = 244;
+            current_statement_begin__ = 249;
         validate_non_negative_index("x_star", "n_active_regions", n_active_regions);
             num_params_r__ += n_active_regions;
-            current_statement_begin__ = 245;
-            ++num_params_r__;
-            current_statement_begin__ = 246;
-            ++num_params_r__;
-            current_statement_begin__ = 247;
-            ++num_params_r__;
-            current_statement_begin__ = 248;
-            ++num_params_r__;
-            current_statement_begin__ = 249;
-            ++num_params_r__;
             current_statement_begin__ = 250;
             ++num_params_r__;
             current_statement_begin__ = 251;
             ++num_params_r__;
+            current_statement_begin__ = 252;
+            ++num_params_r__;
+            current_statement_begin__ = 253;
+            ++num_params_r__;
             current_statement_begin__ = 254;
+            ++num_params_r__;
+            current_statement_begin__ = 255;
+            ++num_params_r__;
+            current_statement_begin__ = 256;
+            ++num_params_r__;
+            current_statement_begin__ = 259;
         validate_non_negative_index("x1_init_star", "n_active_regions", n_active_regions);
             num_params_r__ += n_active_regions;
-            current_statement_begin__ = 255;
+            current_statement_begin__ = 260;
         validate_non_negative_index("z_init_star", "n_active_regions", n_active_regions);
             num_params_r__ += n_active_regions;
-            current_statement_begin__ = 257;
+            current_statement_begin__ = 262;
         validate_non_negative_index("dZt_star", "n_active_regions", n_active_regions);
             validate_non_negative_index("dZt_star", "(n_times - 1)", (n_times - 1));
             num_params_r__ += n_active_regions * (n_times - 1);
@@ -1682,7 +1716,7 @@ public:
         double scale_star(0);
         scale_star = vals_r__[pos__++];
         try {
-            writer__.scalar_unconstrain(scale_star);
+            writer__.scalar_lb_unconstrain(scale_star_lo,scale_star);
         } catch (const std::exception& e) { 
             throw std::runtime_error(std::string("Error transforming variable scale_star: ") + e.what());
         }
@@ -1695,7 +1729,7 @@ public:
         double offset_star(0);
         offset_star = vals_r__[pos__++];
         try {
-            writer__.scalar_unconstrain(offset_star);
+            writer__.scalar_lub_unconstrain(offset_star_lo,offset_star_hi,offset_star);
         } catch (const std::exception& e) { 
             throw std::runtime_error(std::string("Error transforming variable offset_star: ") + e.what());
         }
@@ -1850,16 +1884,16 @@ public:
             local_scalar_t__ scale_star;
             (void) scale_star;  // dummy to suppress unused var warning
             if (jacobian__)
-                scale_star = in__.scalar_constrain(lp__);
+                scale_star = in__.scalar_lb_constrain(scale_star_lo,lp__);
             else
-                scale_star = in__.scalar_constrain();
+                scale_star = in__.scalar_lb_constrain(scale_star_lo);
 
             local_scalar_t__ offset_star;
             (void) offset_star;  // dummy to suppress unused var warning
             if (jacobian__)
-                offset_star = in__.scalar_constrain(lp__);
+                offset_star = in__.scalar_lub_constrain(offset_star_lo,offset_star_hi,lp__);
             else
-                offset_star = in__.scalar_constrain();
+                offset_star = in__.scalar_lub_constrain(offset_star_lo,offset_star_hi);
 
             local_scalar_t__ sigma_star;
             (void) sigma_star;  // dummy to suppress unused var warning
@@ -1915,52 +1949,52 @@ public:
 
 
             // transformed parameters
-            current_statement_begin__ = 263;
+            current_statement_begin__ = 268;
             local_scalar_t__ offset;
             (void) offset;  // dummy to suppress unused var warning
 
             stan::math::initialize(offset, DUMMY_VAR__);
             stan::math::fill(offset,DUMMY_VAR__);
             stan::math::assign(offset,(offset_mu + (offset_star * offset_std)));
-            current_statement_begin__ = 264;
+            current_statement_begin__ = 269;
             local_scalar_t__ scale;
             (void) scale;  // dummy to suppress unused var warning
 
             stan::math::initialize(scale, DUMMY_VAR__);
             stan::math::fill(scale,DUMMY_VAR__);
             stan::math::assign(scale,standard_normal_to_lognormal(scale_star,get_base1(scale_mu_sigma,1,"scale_mu_sigma",1),get_base1(scale_mu_sigma,2,"scale_mu_sigma",1), pstream__));
-            current_statement_begin__ = 265;
+            current_statement_begin__ = 270;
             local_scalar_t__ epsilon;
             (void) epsilon;  // dummy to suppress unused var warning
 
             stan::math::initialize(epsilon, DUMMY_VAR__);
             stan::math::fill(epsilon,DUMMY_VAR__);
             stan::math::assign(epsilon,standard_normal_to_lognormal(epsilon_star,get_base1(epsilon_mu_sigma,1,"epsilon_mu_sigma",1),get_base1(epsilon_mu_sigma,2,"epsilon_mu_sigma",1), pstream__));
-            current_statement_begin__ = 266;
+            current_statement_begin__ = 271;
             local_scalar_t__ sigma;
             (void) sigma;  // dummy to suppress unused var warning
 
             stan::math::initialize(sigma, DUMMY_VAR__);
             stan::math::fill(sigma,DUMMY_VAR__);
-            current_statement_begin__ = 267;
+            current_statement_begin__ = 272;
             local_scalar_t__ tau1;
             (void) tau1;  // dummy to suppress unused var warning
 
             stan::math::initialize(tau1, DUMMY_VAR__);
             stan::math::fill(tau1,DUMMY_VAR__);
-            current_statement_begin__ = 268;
+            current_statement_begin__ = 273;
             local_scalar_t__ tau0;
             (void) tau0;  // dummy to suppress unused var warning
 
             stan::math::initialize(tau0, DUMMY_VAR__);
             stan::math::fill(tau0,DUMMY_VAR__);
-            current_statement_begin__ = 269;
+            current_statement_begin__ = 274;
             local_scalar_t__ K;
             (void) K;  // dummy to suppress unused var warning
 
             stan::math::initialize(K, DUMMY_VAR__);
             stan::math::fill(K,DUMMY_VAR__);
-            current_statement_begin__ = 270;
+            current_statement_begin__ = 275;
             validate_non_negative_index("x", "n_active_regions", n_active_regions);
             Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             (void) x;  // dummy to suppress unused var warning
@@ -1968,54 +2002,54 @@ public:
             stan::math::initialize(x, DUMMY_VAR__);
             stan::math::fill(x,DUMMY_VAR__);
             stan::math::assign(x,subtract(x_hi,standard_normal_to_lognormal_row(x_star,x_logmu,x_logsigma, pstream__)));
-            current_statement_begin__ = 271;
+            current_statement_begin__ = 276;
             validate_non_negative_index("x1eq", "n_active_regions", n_active_regions);
             Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x1eq(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             (void) x1eq;  // dummy to suppress unused var warning
 
             stan::math::initialize(x1eq, DUMMY_VAR__);
             stan::math::fill(x1eq,DUMMY_VAR__);
-            current_statement_begin__ = 272;
+            current_statement_begin__ = 277;
             validate_non_negative_index("zeq", "n_active_regions", n_active_regions);
             Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  zeq(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             (void) zeq;  // dummy to suppress unused var warning
 
             stan::math::initialize(zeq, DUMMY_VAR__);
             stan::math::fill(zeq,DUMMY_VAR__);
-            current_statement_begin__ = 273;
+            current_statement_begin__ = 278;
             validate_non_negative_index("x0", "n_active_regions", n_active_regions);
             Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x0(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             (void) x0;  // dummy to suppress unused var warning
 
             stan::math::initialize(x0, DUMMY_VAR__);
             stan::math::fill(x0,DUMMY_VAR__);
-            current_statement_begin__ = 274;
+            current_statement_begin__ = 279;
             validate_non_negative_index("x1_init", "n_active_regions", n_active_regions);
             Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x1_init(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             (void) x1_init;  // dummy to suppress unused var warning
 
             stan::math::initialize(x1_init, DUMMY_VAR__);
             stan::math::fill(x1_init,DUMMY_VAR__);
-            current_statement_begin__ = 275;
+            current_statement_begin__ = 280;
             validate_non_negative_index("z_init", "n_active_regions", n_active_regions);
             Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  z_init(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             (void) z_init;  // dummy to suppress unused var warning
 
             stan::math::initialize(z_init, DUMMY_VAR__);
             stan::math::fill(z_init,DUMMY_VAR__);
-            current_statement_begin__ = 276;
+            current_statement_begin__ = 281;
             validate_non_negative_index("x1", "n_active_regions", n_active_regions);
             validate_non_negative_index("x1", "n_times", n_times);
             vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > x1(n_times, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(n_active_regions))));
             stan::math::initialize(x1, DUMMY_VAR__);
             stan::math::fill(x1,DUMMY_VAR__);
-            current_statement_begin__ = 277;
+            current_statement_begin__ = 282;
             validate_non_negative_index("z", "n_active_regions", n_active_regions);
             validate_non_negative_index("z", "n_times", n_times);
             vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > z(n_times, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(n_active_regions))));
             stan::math::initialize(z, DUMMY_VAR__);
             stan::math::fill(z,DUMMY_VAR__);
-            current_statement_begin__ = 278;
+            current_statement_begin__ = 283;
             validate_non_negative_index("fit_target_data", "n_target_data", n_target_data);
             validate_non_negative_index("fit_target_data", "n_times", n_times);
             vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > fit_target_data(n_times, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(n_target_data))));
@@ -2023,170 +2057,170 @@ public:
             stan::math::fill(fit_target_data,DUMMY_VAR__);
 
 
-            current_statement_begin__ = 280;
+            current_statement_begin__ = 285;
             if (as_bool(logical_gt(XMODE,0))) {
 
-                current_statement_begin__ = 281;
+                current_statement_begin__ = 286;
                 stan::math::assign(x1eq, x);
-                current_statement_begin__ = 282;
+                current_statement_begin__ = 287;
                 stan::math::assign(zeq, calc_zeq(x1eq,Iext1,tau1, pstream__));
-                current_statement_begin__ = 283;
+                current_statement_begin__ = 288;
                 stan::math::assign(x0, calc_x0(x1eq,zeq,SC,Ic,x1_eq_def, pstream__));
-                current_statement_begin__ = 284;
+                current_statement_begin__ = 289;
                 stan::math::assign(x1_init, add(x1eq,multiply(x1_init_star,x1_init_std)));
-                current_statement_begin__ = 285;
+                current_statement_begin__ = 290;
                 stan::math::assign(z_init, add(zeq,multiply(z_init_star,z_init_std)));
             } else {
 
-                current_statement_begin__ = 287;
+                current_statement_begin__ = 292;
                 stan::math::assign(x0, x);
-                current_statement_begin__ = 288;
+                current_statement_begin__ = 293;
                 stan::math::assign(x1_init, add(x1_init_mu,multiply(x1_init_star,x1_init_std)));
-                current_statement_begin__ = 289;
+                current_statement_begin__ = 294;
                 stan::math::assign(z_init, add(z_init_mu,multiply(z_init_star,z_init_std)));
-                current_statement_begin__ = 290;
+                current_statement_begin__ = 295;
                 stan::math::assign(x1eq, x1_init);
-                current_statement_begin__ = 291;
+                current_statement_begin__ = 296;
                 stan::math::assign(zeq, z_init);
             }
-            current_statement_begin__ = 294;
+            current_statement_begin__ = 299;
             if (as_bool(logical_gt(SDE,0))) {
 
-                current_statement_begin__ = 295;
+                current_statement_begin__ = 300;
                 stan::math::assign(sigma, standard_normal_to_lognormal(sigma_star,get_base1(sigma_mu_sigma,1,"sigma_mu_sigma",1),get_base1(sigma_mu_sigma,2,"sigma_mu_sigma",1), pstream__));
             } else {
 
-                current_statement_begin__ = 297;
+                current_statement_begin__ = 302;
                 stan::math::assign(sigma, (sigma_mu + (sigma_std * sigma_star)));
             }
-            current_statement_begin__ = 300;
+            current_statement_begin__ = 305;
             if (as_bool(logical_gt(TAU1_PRIOR,0))) {
 
-                current_statement_begin__ = 301;
+                current_statement_begin__ = 306;
                 stan::math::assign(tau1, standard_normal_to_lognormal(tau1_star,get_base1(tau1_mu_sigma,1,"tau1_mu_sigma",1),get_base1(tau1_mu_sigma,2,"tau1_mu_sigma",1), pstream__));
             } else {
 
-                current_statement_begin__ = 303;
+                current_statement_begin__ = 308;
                 stan::math::assign(tau1, (tau1_mu + (tau1_std * tau1_star)));
             }
-            current_statement_begin__ = 306;
+            current_statement_begin__ = 311;
             if (as_bool(logical_gt(TAU0_PRIOR,0))) {
 
-                current_statement_begin__ = 307;
+                current_statement_begin__ = 312;
                 stan::math::assign(tau0, standard_normal_to_lognormal(tau0_star,get_base1(tau0_mu_sigma,1,"tau0_mu_sigma",1),get_base1(tau0_mu_sigma,2,"tau0_mu_sigma",1), pstream__));
             } else {
 
-                current_statement_begin__ = 309;
+                current_statement_begin__ = 314;
                 stan::math::assign(tau0, (tau0_mu + (tau0_std * tau0_star)));
             }
-            current_statement_begin__ = 312;
+            current_statement_begin__ = 317;
             if (as_bool(logical_gt(K_PRIOR,0))) {
 
-                current_statement_begin__ = 313;
+                current_statement_begin__ = 318;
                 stan::math::assign(K, standard_normal_to_lognormal(K_star,get_base1(K_mu_sigma,1,"K_mu_sigma",1),get_base1(K_mu_sigma,2,"K_mu_sigma",1), pstream__));
             } else {
 
-                current_statement_begin__ = 315;
+                current_statement_begin__ = 320;
                 stan::math::assign(K, (K_mu + (K_std * K_star)));
             }
-            current_statement_begin__ = 318;
+            current_statement_begin__ = 323;
             stan::math::assign(get_base1_lhs(x1,1,"x1",1), x1_init);
-            current_statement_begin__ = 319;
+            current_statement_begin__ = 324;
             stan::math::assign(get_base1_lhs(z,1,"z",1), z_init);
-            current_statement_begin__ = 320;
+            current_statement_begin__ = 325;
             for (int t = 1; t <= (n_times - 1); ++t) {
 
-                current_statement_begin__ = 321;
+                current_statement_begin__ = 326;
                 stan::math::assign(get_base1_lhs(x1,(t + 1),"x1",1), x1_step(get_base1(x1,t,"x1",1),get_base1(z,t,"z",1),Iext1,(dt * tau1), pstream__));
-                current_statement_begin__ = 322;
+                current_statement_begin__ = 327;
                 stan::math::assign(get_base1_lhs(z,(t + 1),"z",1), z_step(get_base1(x1,t,"x1",1),get_base1(z,t,"z",1),x0,multiply(K,SC),Ic,x1_eq_def,(dt * tau1),get_base1(dZt_star,t,"dZt_star",1),(sqrtdt * sigma),tau0, pstream__));
             }
-            current_statement_begin__ = 325;
+            current_statement_begin__ = 330;
             if (as_bool(logical_gt(log_target_data,0))) {
 
-                current_statement_begin__ = 326;
+                current_statement_begin__ = 331;
                 for (int t = 1; t <= n_times; ++t) {
-                    current_statement_begin__ = 327;
+                    current_statement_begin__ = 332;
                     stan::math::assign(get_base1_lhs(fit_target_data,t,"fit_target_data",1), multiply(scale,transpose(add(stan::math::log(multiply(gain,stan::math::exp(subtract(transpose(get_base1(x1,t,"x1",1)),x1_eq_def)))),offset))));
                 }
             } else {
 
-                current_statement_begin__ = 329;
+                current_statement_begin__ = 334;
                 for (int t = 1; t <= n_times; ++t) {
-                    current_statement_begin__ = 330;
+                    current_statement_begin__ = 335;
                     stan::math::assign(get_base1_lhs(fit_target_data,t,"fit_target_data",1), multiply(scale,transpose(add(multiply(gain,subtract(transpose(get_base1(x1,t,"x1",1)),x1_eq_def)),offset))));
                 }
             }
-            current_statement_begin__ = 333;
+            current_statement_begin__ = 338;
             if (as_bool(logical_gt(DEBUG,0))) {
 
-                current_statement_begin__ = 334;
+                current_statement_begin__ = 339;
                 if (pstream__) {
                     stan_print(pstream__,"offset=");
                     stan_print(pstream__,offset);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 335;
+                current_statement_begin__ = 340;
                 if (pstream__) {
                     stan_print(pstream__,"scale=");
                     stan_print(pstream__,scale);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 336;
+                current_statement_begin__ = 341;
                 if (pstream__) {
                     stan_print(pstream__,"epsilon=");
                     stan_print(pstream__,epsilon);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 337;
+                current_statement_begin__ = 342;
                 if (pstream__) {
                     stan_print(pstream__,"K=");
                     stan_print(pstream__,K);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 338;
+                current_statement_begin__ = 343;
                 if (pstream__) {
                     stan_print(pstream__,"sigma=");
                     stan_print(pstream__,sigma);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 339;
+                current_statement_begin__ = 344;
                 if (pstream__) {
                     stan_print(pstream__,"tau1=");
                     stan_print(pstream__,tau1);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 340;
+                current_statement_begin__ = 345;
                 if (pstream__) {
                     stan_print(pstream__,"tau0=");
                     stan_print(pstream__,tau0);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 341;
+                current_statement_begin__ = 346;
                 if (pstream__) {
                     stan_print(pstream__,"x0=");
                     stan_print(pstream__,x0);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 342;
+                current_statement_begin__ = 347;
                 if (pstream__) {
                     stan_print(pstream__,"x1eq=");
                     stan_print(pstream__,x1eq);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 343;
+                current_statement_begin__ = 348;
                 if (pstream__) {
                     stan_print(pstream__,"zeq=");
                     stan_print(pstream__,zeq);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 344;
+                current_statement_begin__ = 349;
                 if (pstream__) {
                     stan_print(pstream__,"x1_init=");
                     stan_print(pstream__,x1_init);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 345;
+                current_statement_begin__ = 350;
                 if (pstream__) {
                     stan_print(pstream__,"z_init=");
                     stan_print(pstream__,z_init);
@@ -2302,11 +2336,6 @@ public:
 
             const char* function__ = "validate transformed params";
             (void) function__;  // dummy to suppress unused var warning
-            current_statement_begin__ = 263;
-            current_statement_begin__ = 264;
-            current_statement_begin__ = 265;
-            current_statement_begin__ = 266;
-            current_statement_begin__ = 267;
             current_statement_begin__ = 268;
             current_statement_begin__ = 269;
             current_statement_begin__ = 270;
@@ -2318,49 +2347,54 @@ public:
             current_statement_begin__ = 276;
             current_statement_begin__ = 277;
             current_statement_begin__ = 278;
+            current_statement_begin__ = 279;
+            current_statement_begin__ = 280;
+            current_statement_begin__ = 281;
+            current_statement_begin__ = 282;
+            current_statement_begin__ = 283;
 
             // model body
 
-            current_statement_begin__ = 351;
-            lp_accum__.add(normal_log<propto__>(offset_star, 0.0, 1.0));
-            current_statement_begin__ = 352;
-            lp_accum__.add(normal_log<propto__>(scale_star, 0.0, 1.0));
-            current_statement_begin__ = 353;
-            lp_accum__.add(normal_log<propto__>(epsilon_star, 0.0, 1.0));
-            current_statement_begin__ = 354;
-            lp_accum__.add(normal_log<propto__>(sigma_star, 0.0, 1.0));
-            current_statement_begin__ = 355;
-            lp_accum__.add(normal_log<propto__>(tau1_star, 0.0, 1.0));
             current_statement_begin__ = 356;
-            lp_accum__.add(normal_log<propto__>(tau0_star, 0.0, 1.0));
+            lp_accum__.add(normal_log<propto__>(offset_star, 0.0, 1.0));
             current_statement_begin__ = 357;
-            lp_accum__.add(normal_log<propto__>(K_star, 0.0, 1.0));
+            lp_accum__.add(normal_log<propto__>(scale_star, 0.0, 1.0));
             current_statement_begin__ = 358;
-            lp_accum__.add(normal_log<propto__>(to_row_vector(x_star), 0.0, 1.0));
+            lp_accum__.add(normal_log<propto__>(epsilon_star, 0.0, 1.0));
             current_statement_begin__ = 359;
-            lp_accum__.add(normal_log<propto__>(to_row_vector(x1_init_star), 0.0, 1.0));
+            lp_accum__.add(normal_log<propto__>(sigma_star, 0.0, 1.0));
             current_statement_begin__ = 360;
-            lp_accum__.add(normal_log<propto__>(to_row_vector(z_init_star), 0.0, 1.0));
+            lp_accum__.add(normal_log<propto__>(tau1_star, 0.0, 1.0));
+            current_statement_begin__ = 361;
+            lp_accum__.add(normal_log<propto__>(tau0_star, 0.0, 1.0));
             current_statement_begin__ = 362;
+            lp_accum__.add(normal_log<propto__>(K_star, 0.0, 1.0));
+            current_statement_begin__ = 363;
+            lp_accum__.add(normal_log<propto__>(to_row_vector(x_star), 0.0, 1.0));
+            current_statement_begin__ = 364;
+            lp_accum__.add(normal_log<propto__>(to_row_vector(x1_init_star), 0.0, 1.0));
+            current_statement_begin__ = 365;
+            lp_accum__.add(normal_log<propto__>(to_row_vector(z_init_star), 0.0, 1.0));
+            current_statement_begin__ = 367;
             for (int t = 1; t <= (n_times - 1); ++t) {
 
-                current_statement_begin__ = 364;
+                current_statement_begin__ = 369;
                 lp_accum__.add(normal_log<propto__>(to_vector(get_base1(dZt_star,t,"dZt_star",1)), 0.0, 1.0));
             }
-            current_statement_begin__ = 367;
+            current_statement_begin__ = 372;
             if (as_bool(logical_gt(X1_PRIOR,0))) {
 
-                current_statement_begin__ = 368;
+                current_statement_begin__ = 373;
                 for (int t = 1; t <= (n_times - 1); ++t) {
-                    current_statement_begin__ = 369;
+                    current_statement_begin__ = 374;
                     lp_accum__.add(lognormal_log<propto__>(to_vector(subtract(get_base1(x1,t,"x1",1),x1_loc)), x1_mu, x1_sigma));
                 }
             }
-            current_statement_begin__ = 372;
+            current_statement_begin__ = 377;
             if (as_bool(logical_lt(SIMULATE,1))) {
-                current_statement_begin__ = 373;
+                current_statement_begin__ = 378;
                 for (int t = 1; t <= n_times; ++t) {
-                    current_statement_begin__ = 374;
+                    current_statement_begin__ = 379;
                     lp_accum__.add(normal_log<propto__>(get_base1(target_data,t,"target_data",1), get_base1(fit_target_data,t,"fit_target_data",1), epsilon));
                 }
             }
@@ -2518,8 +2552,8 @@ public:
         // read-transform, write parameters
         row_vector_d x_star = in__.row_vector_ub_constrain(x_star_hi,n_active_regions);
         double epsilon_star = in__.scalar_constrain();
-        double scale_star = in__.scalar_constrain();
-        double offset_star = in__.scalar_constrain();
+        double scale_star = in__.scalar_lb_constrain(scale_star_lo);
+        double offset_star = in__.scalar_lub_constrain(offset_star_lo,offset_star_hi);
         double sigma_star = in__.scalar_lub_constrain(sigma_star_lo,sigma_star_hi);
         double tau1_star = in__.scalar_lub_constrain(tau1_star_lo,tau1_star_hi);
         double tau0_star = in__.scalar_lub_constrain(tau0_star_lo,tau0_star_hi);
@@ -2562,52 +2596,52 @@ public:
         (void) DUMMY_VAR__;  // suppress unused var warning
 
         try {
-            current_statement_begin__ = 263;
+            current_statement_begin__ = 268;
             local_scalar_t__ offset;
             (void) offset;  // dummy to suppress unused var warning
 
             stan::math::initialize(offset, DUMMY_VAR__);
             stan::math::fill(offset,DUMMY_VAR__);
             stan::math::assign(offset,(offset_mu + (offset_star * offset_std)));
-            current_statement_begin__ = 264;
+            current_statement_begin__ = 269;
             local_scalar_t__ scale;
             (void) scale;  // dummy to suppress unused var warning
 
             stan::math::initialize(scale, DUMMY_VAR__);
             stan::math::fill(scale,DUMMY_VAR__);
             stan::math::assign(scale,standard_normal_to_lognormal(scale_star,get_base1(scale_mu_sigma,1,"scale_mu_sigma",1),get_base1(scale_mu_sigma,2,"scale_mu_sigma",1), pstream__));
-            current_statement_begin__ = 265;
+            current_statement_begin__ = 270;
             local_scalar_t__ epsilon;
             (void) epsilon;  // dummy to suppress unused var warning
 
             stan::math::initialize(epsilon, DUMMY_VAR__);
             stan::math::fill(epsilon,DUMMY_VAR__);
             stan::math::assign(epsilon,standard_normal_to_lognormal(epsilon_star,get_base1(epsilon_mu_sigma,1,"epsilon_mu_sigma",1),get_base1(epsilon_mu_sigma,2,"epsilon_mu_sigma",1), pstream__));
-            current_statement_begin__ = 266;
+            current_statement_begin__ = 271;
             local_scalar_t__ sigma;
             (void) sigma;  // dummy to suppress unused var warning
 
             stan::math::initialize(sigma, DUMMY_VAR__);
             stan::math::fill(sigma,DUMMY_VAR__);
-            current_statement_begin__ = 267;
+            current_statement_begin__ = 272;
             local_scalar_t__ tau1;
             (void) tau1;  // dummy to suppress unused var warning
 
             stan::math::initialize(tau1, DUMMY_VAR__);
             stan::math::fill(tau1,DUMMY_VAR__);
-            current_statement_begin__ = 268;
+            current_statement_begin__ = 273;
             local_scalar_t__ tau0;
             (void) tau0;  // dummy to suppress unused var warning
 
             stan::math::initialize(tau0, DUMMY_VAR__);
             stan::math::fill(tau0,DUMMY_VAR__);
-            current_statement_begin__ = 269;
+            current_statement_begin__ = 274;
             local_scalar_t__ K;
             (void) K;  // dummy to suppress unused var warning
 
             stan::math::initialize(K, DUMMY_VAR__);
             stan::math::fill(K,DUMMY_VAR__);
-            current_statement_begin__ = 270;
+            current_statement_begin__ = 275;
             validate_non_negative_index("x", "n_active_regions", n_active_regions);
             Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             (void) x;  // dummy to suppress unused var warning
@@ -2615,54 +2649,54 @@ public:
             stan::math::initialize(x, DUMMY_VAR__);
             stan::math::fill(x,DUMMY_VAR__);
             stan::math::assign(x,subtract(x_hi,standard_normal_to_lognormal_row(x_star,x_logmu,x_logsigma, pstream__)));
-            current_statement_begin__ = 271;
+            current_statement_begin__ = 276;
             validate_non_negative_index("x1eq", "n_active_regions", n_active_regions);
             Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x1eq(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             (void) x1eq;  // dummy to suppress unused var warning
 
             stan::math::initialize(x1eq, DUMMY_VAR__);
             stan::math::fill(x1eq,DUMMY_VAR__);
-            current_statement_begin__ = 272;
+            current_statement_begin__ = 277;
             validate_non_negative_index("zeq", "n_active_regions", n_active_regions);
             Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  zeq(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             (void) zeq;  // dummy to suppress unused var warning
 
             stan::math::initialize(zeq, DUMMY_VAR__);
             stan::math::fill(zeq,DUMMY_VAR__);
-            current_statement_begin__ = 273;
+            current_statement_begin__ = 278;
             validate_non_negative_index("x0", "n_active_regions", n_active_regions);
             Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x0(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             (void) x0;  // dummy to suppress unused var warning
 
             stan::math::initialize(x0, DUMMY_VAR__);
             stan::math::fill(x0,DUMMY_VAR__);
-            current_statement_begin__ = 274;
+            current_statement_begin__ = 279;
             validate_non_negative_index("x1_init", "n_active_regions", n_active_regions);
             Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  x1_init(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             (void) x1_init;  // dummy to suppress unused var warning
 
             stan::math::initialize(x1_init, DUMMY_VAR__);
             stan::math::fill(x1_init,DUMMY_VAR__);
-            current_statement_begin__ = 275;
+            current_statement_begin__ = 280;
             validate_non_negative_index("z_init", "n_active_regions", n_active_regions);
             Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic>  z_init(static_cast<Eigen::VectorXd::Index>(n_active_regions));
             (void) z_init;  // dummy to suppress unused var warning
 
             stan::math::initialize(z_init, DUMMY_VAR__);
             stan::math::fill(z_init,DUMMY_VAR__);
-            current_statement_begin__ = 276;
+            current_statement_begin__ = 281;
             validate_non_negative_index("x1", "n_active_regions", n_active_regions);
             validate_non_negative_index("x1", "n_times", n_times);
             vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > x1(n_times, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(n_active_regions))));
             stan::math::initialize(x1, DUMMY_VAR__);
             stan::math::fill(x1,DUMMY_VAR__);
-            current_statement_begin__ = 277;
+            current_statement_begin__ = 282;
             validate_non_negative_index("z", "n_active_regions", n_active_regions);
             validate_non_negative_index("z", "n_times", n_times);
             vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > z(n_times, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(n_active_regions))));
             stan::math::initialize(z, DUMMY_VAR__);
             stan::math::fill(z,DUMMY_VAR__);
-            current_statement_begin__ = 278;
+            current_statement_begin__ = 283;
             validate_non_negative_index("fit_target_data", "n_target_data", n_target_data);
             validate_non_negative_index("fit_target_data", "n_times", n_times);
             vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > fit_target_data(n_times, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(n_target_data))));
@@ -2670,170 +2704,170 @@ public:
             stan::math::fill(fit_target_data,DUMMY_VAR__);
 
 
-            current_statement_begin__ = 280;
+            current_statement_begin__ = 285;
             if (as_bool(logical_gt(XMODE,0))) {
 
-                current_statement_begin__ = 281;
+                current_statement_begin__ = 286;
                 stan::math::assign(x1eq, x);
-                current_statement_begin__ = 282;
+                current_statement_begin__ = 287;
                 stan::math::assign(zeq, calc_zeq(x1eq,Iext1,tau1, pstream__));
-                current_statement_begin__ = 283;
+                current_statement_begin__ = 288;
                 stan::math::assign(x0, calc_x0(x1eq,zeq,SC,Ic,x1_eq_def, pstream__));
-                current_statement_begin__ = 284;
+                current_statement_begin__ = 289;
                 stan::math::assign(x1_init, add(x1eq,multiply(x1_init_star,x1_init_std)));
-                current_statement_begin__ = 285;
+                current_statement_begin__ = 290;
                 stan::math::assign(z_init, add(zeq,multiply(z_init_star,z_init_std)));
             } else {
 
-                current_statement_begin__ = 287;
+                current_statement_begin__ = 292;
                 stan::math::assign(x0, x);
-                current_statement_begin__ = 288;
+                current_statement_begin__ = 293;
                 stan::math::assign(x1_init, add(x1_init_mu,multiply(x1_init_star,x1_init_std)));
-                current_statement_begin__ = 289;
+                current_statement_begin__ = 294;
                 stan::math::assign(z_init, add(z_init_mu,multiply(z_init_star,z_init_std)));
-                current_statement_begin__ = 290;
+                current_statement_begin__ = 295;
                 stan::math::assign(x1eq, x1_init);
-                current_statement_begin__ = 291;
+                current_statement_begin__ = 296;
                 stan::math::assign(zeq, z_init);
             }
-            current_statement_begin__ = 294;
+            current_statement_begin__ = 299;
             if (as_bool(logical_gt(SDE,0))) {
 
-                current_statement_begin__ = 295;
+                current_statement_begin__ = 300;
                 stan::math::assign(sigma, standard_normal_to_lognormal(sigma_star,get_base1(sigma_mu_sigma,1,"sigma_mu_sigma",1),get_base1(sigma_mu_sigma,2,"sigma_mu_sigma",1), pstream__));
             } else {
 
-                current_statement_begin__ = 297;
+                current_statement_begin__ = 302;
                 stan::math::assign(sigma, (sigma_mu + (sigma_std * sigma_star)));
             }
-            current_statement_begin__ = 300;
+            current_statement_begin__ = 305;
             if (as_bool(logical_gt(TAU1_PRIOR,0))) {
 
-                current_statement_begin__ = 301;
+                current_statement_begin__ = 306;
                 stan::math::assign(tau1, standard_normal_to_lognormal(tau1_star,get_base1(tau1_mu_sigma,1,"tau1_mu_sigma",1),get_base1(tau1_mu_sigma,2,"tau1_mu_sigma",1), pstream__));
             } else {
 
-                current_statement_begin__ = 303;
+                current_statement_begin__ = 308;
                 stan::math::assign(tau1, (tau1_mu + (tau1_std * tau1_star)));
             }
-            current_statement_begin__ = 306;
+            current_statement_begin__ = 311;
             if (as_bool(logical_gt(TAU0_PRIOR,0))) {
 
-                current_statement_begin__ = 307;
+                current_statement_begin__ = 312;
                 stan::math::assign(tau0, standard_normal_to_lognormal(tau0_star,get_base1(tau0_mu_sigma,1,"tau0_mu_sigma",1),get_base1(tau0_mu_sigma,2,"tau0_mu_sigma",1), pstream__));
             } else {
 
-                current_statement_begin__ = 309;
+                current_statement_begin__ = 314;
                 stan::math::assign(tau0, (tau0_mu + (tau0_std * tau0_star)));
             }
-            current_statement_begin__ = 312;
+            current_statement_begin__ = 317;
             if (as_bool(logical_gt(K_PRIOR,0))) {
 
-                current_statement_begin__ = 313;
+                current_statement_begin__ = 318;
                 stan::math::assign(K, standard_normal_to_lognormal(K_star,get_base1(K_mu_sigma,1,"K_mu_sigma",1),get_base1(K_mu_sigma,2,"K_mu_sigma",1), pstream__));
             } else {
 
-                current_statement_begin__ = 315;
+                current_statement_begin__ = 320;
                 stan::math::assign(K, (K_mu + (K_std * K_star)));
             }
-            current_statement_begin__ = 318;
+            current_statement_begin__ = 323;
             stan::math::assign(get_base1_lhs(x1,1,"x1",1), x1_init);
-            current_statement_begin__ = 319;
+            current_statement_begin__ = 324;
             stan::math::assign(get_base1_lhs(z,1,"z",1), z_init);
-            current_statement_begin__ = 320;
+            current_statement_begin__ = 325;
             for (int t = 1; t <= (n_times - 1); ++t) {
 
-                current_statement_begin__ = 321;
+                current_statement_begin__ = 326;
                 stan::math::assign(get_base1_lhs(x1,(t + 1),"x1",1), x1_step(get_base1(x1,t,"x1",1),get_base1(z,t,"z",1),Iext1,(dt * tau1), pstream__));
-                current_statement_begin__ = 322;
+                current_statement_begin__ = 327;
                 stan::math::assign(get_base1_lhs(z,(t + 1),"z",1), z_step(get_base1(x1,t,"x1",1),get_base1(z,t,"z",1),x0,multiply(K,SC),Ic,x1_eq_def,(dt * tau1),get_base1(dZt_star,t,"dZt_star",1),(sqrtdt * sigma),tau0, pstream__));
             }
-            current_statement_begin__ = 325;
+            current_statement_begin__ = 330;
             if (as_bool(logical_gt(log_target_data,0))) {
 
-                current_statement_begin__ = 326;
+                current_statement_begin__ = 331;
                 for (int t = 1; t <= n_times; ++t) {
-                    current_statement_begin__ = 327;
+                    current_statement_begin__ = 332;
                     stan::math::assign(get_base1_lhs(fit_target_data,t,"fit_target_data",1), multiply(scale,transpose(add(stan::math::log(multiply(gain,stan::math::exp(subtract(transpose(get_base1(x1,t,"x1",1)),x1_eq_def)))),offset))));
                 }
             } else {
 
-                current_statement_begin__ = 329;
+                current_statement_begin__ = 334;
                 for (int t = 1; t <= n_times; ++t) {
-                    current_statement_begin__ = 330;
+                    current_statement_begin__ = 335;
                     stan::math::assign(get_base1_lhs(fit_target_data,t,"fit_target_data",1), multiply(scale,transpose(add(multiply(gain,subtract(transpose(get_base1(x1,t,"x1",1)),x1_eq_def)),offset))));
                 }
             }
-            current_statement_begin__ = 333;
+            current_statement_begin__ = 338;
             if (as_bool(logical_gt(DEBUG,0))) {
 
-                current_statement_begin__ = 334;
+                current_statement_begin__ = 339;
                 if (pstream__) {
                     stan_print(pstream__,"offset=");
                     stan_print(pstream__,offset);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 335;
+                current_statement_begin__ = 340;
                 if (pstream__) {
                     stan_print(pstream__,"scale=");
                     stan_print(pstream__,scale);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 336;
+                current_statement_begin__ = 341;
                 if (pstream__) {
                     stan_print(pstream__,"epsilon=");
                     stan_print(pstream__,epsilon);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 337;
+                current_statement_begin__ = 342;
                 if (pstream__) {
                     stan_print(pstream__,"K=");
                     stan_print(pstream__,K);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 338;
+                current_statement_begin__ = 343;
                 if (pstream__) {
                     stan_print(pstream__,"sigma=");
                     stan_print(pstream__,sigma);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 339;
+                current_statement_begin__ = 344;
                 if (pstream__) {
                     stan_print(pstream__,"tau1=");
                     stan_print(pstream__,tau1);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 340;
+                current_statement_begin__ = 345;
                 if (pstream__) {
                     stan_print(pstream__,"tau0=");
                     stan_print(pstream__,tau0);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 341;
+                current_statement_begin__ = 346;
                 if (pstream__) {
                     stan_print(pstream__,"x0=");
                     stan_print(pstream__,x0);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 342;
+                current_statement_begin__ = 347;
                 if (pstream__) {
                     stan_print(pstream__,"x1eq=");
                     stan_print(pstream__,x1eq);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 343;
+                current_statement_begin__ = 348;
                 if (pstream__) {
                     stan_print(pstream__,"zeq=");
                     stan_print(pstream__,zeq);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 344;
+                current_statement_begin__ = 349;
                 if (pstream__) {
                     stan_print(pstream__,"x1_init=");
                     stan_print(pstream__,x1_init);
                     *pstream__ << std::endl;
                 }
-                current_statement_begin__ = 345;
+                current_statement_begin__ = 350;
                 if (pstream__) {
                     stan_print(pstream__,"z_init=");
                     stan_print(pstream__,z_init);
@@ -2842,11 +2876,6 @@ public:
             }
 
             // validate transformed parameters
-            current_statement_begin__ = 263;
-            current_statement_begin__ = 264;
-            current_statement_begin__ = 265;
-            current_statement_begin__ = 266;
-            current_statement_begin__ = 267;
             current_statement_begin__ = 268;
             current_statement_begin__ = 269;
             current_statement_begin__ = 270;
@@ -2858,6 +2887,11 @@ public:
             current_statement_begin__ = 276;
             current_statement_begin__ = 277;
             current_statement_begin__ = 278;
+            current_statement_begin__ = 279;
+            current_statement_begin__ = 280;
+            current_statement_begin__ = 281;
+            current_statement_begin__ = 282;
+            current_statement_begin__ = 283;
 
             // write transformed parameters
             if (include_tparams__) {
@@ -2904,7 +2938,7 @@ public:
             }
             if (!include_gqs__) return;
             // declare and define generated quantities
-            current_statement_begin__ = 379;
+            current_statement_begin__ = 384;
             validate_non_negative_index("log_likelihood", "n_target_data", n_target_data);
             validate_non_negative_index("log_likelihood", "n_times", n_times);
             vector<Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> > log_likelihood(n_times, (Eigen::Matrix<local_scalar_t__,1,Eigen::Dynamic> (static_cast<Eigen::VectorXd::Index>(n_target_data))));
@@ -2912,19 +2946,19 @@ public:
             stan::math::fill(log_likelihood,DUMMY_VAR__);
 
 
-            current_statement_begin__ = 380;
+            current_statement_begin__ = 385;
             for (int t = 1; t <= n_times; ++t) {
 
-                current_statement_begin__ = 381;
+                current_statement_begin__ = 386;
                 for (int s = 1; s <= n_target_data; ++s) {
 
-                    current_statement_begin__ = 382;
+                    current_statement_begin__ = 387;
                     stan::math::assign(get_base1_lhs(get_base1_lhs(log_likelihood,t,"log_likelihood",1),s,"log_likelihood",2), normal_log(get_base1(get_base1(target_data,t,"target_data",1),s,"target_data",2),get_base1(get_base1(fit_target_data,t,"fit_target_data",1),s,"fit_target_data",2),epsilon));
                 }
             }
 
             // validate generated quantities
-            current_statement_begin__ = 379;
+            current_statement_begin__ = 384;
 
             // write generated quantities
             for (int k_1__ = 0; k_1__ < n_target_data; ++k_1__) {
