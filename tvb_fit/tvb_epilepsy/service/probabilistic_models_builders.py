@@ -12,7 +12,7 @@ from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import 
 from tvb_fit.base.model.probability_distributions import ProbabilityDistributionTypes
 from tvb_fit.tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_fit.base.model.timeseries import Timeseries
-from tvb_fit.tvb_epilepsy.base.model.epileptor_probabilistic_models \
+from tvb_fit.base.model.probabilistic_models.epileptor_probabilistic_models \
     import EpiProbabilisticModel, ODEEpiProbabilisticModel, SDEEpiProbabilisticModel
 from tvb_fit.service.timeseries_service import compute_seeg_exp, compute_seeg_lin
 from tvb_fit.service.probabilistic_parameter_builder import generate_probabilistic_parameter
@@ -425,7 +425,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             self.logger.info("...offset...")
             parameters.update(
                 {"offset":
-                     generate_probabilistic_parameter("offset", self.offset - 3.0, self.offset + 3.0, p_shape=(),
+                     generate_probabilistic_parameter("offset", self.offset - 1.0, self.offset + 1.0, p_shape=(),
                                                       probability_distribution=ProbabilityDistributionTypes.NORMAL,
                                                       optimize_pdf=False, use="scipy",
                                                       **{"mu": self.offset, "sigma": 1.0})})
