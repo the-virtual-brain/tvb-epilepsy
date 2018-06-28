@@ -3,7 +3,7 @@ import numpy as np
 from tvb_infer.base.model.vep.sensors import Sensors
 from tvb_infer.base.utils.data_structures_utils import ensure_list
 from tvb_infer.base.utils.log_error_utils import raise_value_error, initialize_logger
-from tvb_infer.base.computations.math_utils import select_greater_values_array_inds, \
+from tvb_infer.base.computations.math_utils import select_greater_values_array_inds, compute_gain_matrix, \
                                                       select_by_hierarchical_group_metric_clustering
 
 
@@ -88,3 +88,7 @@ class HeadService(object):
         else:
             self.logger.warning("Number of sensors' left < 2!\n" + "Skipping clustering and returning all of them!")
             return initial_selection
+
+    def compute_gain_matrix(self, head, sensors, normalize=95, ceil=False):
+        return compute_gain_matrix(head.connectivity.centres, sensors.locations, normalize=normalize, ceil=ceil)
+
