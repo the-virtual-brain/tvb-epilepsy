@@ -1,10 +1,10 @@
 import os
-from tvb_infer.tvb_epilepsy.base.constants.config import Config
-from tvb_infer.base.utils.log_error_utils import initialize_logger
-from tvb_infer.io.tvb_data_reader import TVBReader
-from tvb_infer.io.h5_reader import H5Reader
-from tvb_infer.io.h5_writer import H5Writer
-from tvb_infer.plot.plotter import Plotter
+from tvb_fit.tvb_epilepsy.base.constants.config import Config
+from tvb_fit.base.utils.log_error_utils import initialize_logger
+from tvb_fit.io.tvb_data_reader import TVBReader
+from tvb_fit.io.h5_reader import H5Reader
+from tvb_fit.io.h5_writer import H5Writer
+from tvb_fit.plot.plotter import Plotter
 # input_folder = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "tvb")
 # head_folder = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
 input_folder = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INS", "JUNCH", "tvb")
