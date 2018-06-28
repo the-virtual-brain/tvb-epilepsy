@@ -2,12 +2,15 @@ from enum import Enum
 
 from collections import OrderedDict
 
+import numpy as np
+
 from tvb_infer.base.constants import PriorsModes, Target_Data_Type
 from tvb_infer.base.utils.log_error_utils import warning, raise_not_implemented_error
 from tvb_infer.base.utils.data_structures_utils import formal_repr
 from tvb_infer.base.model.probabilistic_models.parameters.transformed_parameters import \
     TransformedProbabilisticParameterBase
 from tvb_infer.base.model.probabilistic_models.parameters.base import ProbabilisticParameterBase
+
 
 class ProbabilisticModelBase(object):
 
@@ -84,4 +87,5 @@ class ProbabilisticModelBase(object):
 
 
 class ProbabilisticModels(Enum):
-    raise_not_implemented_error("No probabilitic models available yet!")
+    PROBABILISTIC_MODEL = {"name": "None",
+                           "instance": None}
