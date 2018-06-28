@@ -202,12 +202,12 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
         n_chains_or_runs = 4
-        output_samples = 20 # max(int(np.round(1000.0 / n_chains_or_runs)), 500)
+        output_samples = max(int(np.round(1000.0 / n_chains_or_runs)), 500)
         # Sampling (HMC)
         num_samples = output_samples
-        num_warmup = 30  # 1000
-        max_depth = 7  # 12
-        delta = 0.8  # 0.9
+        num_warmup = 1000
+        max_depth = 12
+        delta = 0.9
         # ADVI or optimization:
         iter = 1000000
         tol_rel_obj = 1e-6
