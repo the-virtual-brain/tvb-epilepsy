@@ -484,7 +484,7 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
         if "sigma" in params_names:
             self.logger.info("...sigma...")
             parameters.update(
-                {"sigma": generate_lognormal_parameter("sigma", self.sigma, 0.0, SIGMA_MAX,
+                {"sigma": generate_lognormal_parameter("sigma", self.sigma, SIGMA_MIN, SIGMA_MAX,
                                                        sigma=None, sigma_scale=SIGMA_SCALE, p_shape=(), use="scipy")})
         names = []
         mins = []

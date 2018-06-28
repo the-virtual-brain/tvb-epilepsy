@@ -142,7 +142,7 @@ data {
     int SDE;
     real sigma_mu; // =0.1
     real sigma_std; // =0.1/2
-    real sigma_lo; //0
+    real sigma_lo; //0.05
     real sigma_hi; // 0.15
     real epsilon_mu; //=0.1
     real epsilon_std; //=0.1/3
@@ -200,6 +200,7 @@ transformed data {
         } else {
             sigma_star_lo = -1000.0;
         }
+        sigma_star_lo = lognormal_to_standard_normal(sigma_lo, sigma_mu_sigma[1], sigma_mu_sigma[2]);
         sigma_star_hi = lognormal_to_standard_normal(sigma_hi, sigma_mu_sigma[1], sigma_mu_sigma[2]);
     }
 
