@@ -33,6 +33,11 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
                    np.minimum(data.time_line[-1], on_off_set[1] + 2 * duration/win_len_ratio)]
     data = data.get_time_window_by_units(temp_on_off[0], temp_on_off[1])
 
+    if plotter:
+        plotter.plot_raster({"SelectedTimeInterval": data.squeezed}, data.time_line, time_units=data.time_unit,
+                            special_idx=[], title='Selected time interval time series', offset=0.1,
+                            figure_name=title_prefix + '_SelectedTimeSeries', labels=data.space_labels)
+
     for preproc in preprocessing:
 
         # Now filter, if needed, before decimation introduces any artifacts
