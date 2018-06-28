@@ -4,7 +4,7 @@ from collections import OrderedDict
 from tvb_fit.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_fit.base.utils.data_structures_utils import ensure_list
 from tvb_fit.base.model.parameter import Parameter
-from tvb_fit.base.model.probabilistic_models.epileptor_probabilistic_models import EpileptorProbabilisticModels
+from tvb_fit.tvb_epilepsy.base.model.epileptor_probabilistic_models import EpileptorProbabilisticModels
 from tvb_fit.tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_fit.tvb_epilepsy.base.model.simulation_settings import SimulationSettings
 from tvb_fit.tvb_epilepsy.base.model.model_configuration import ModelConfiguration

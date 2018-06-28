@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 import numpy as np
-from enum import Enum
 
 from tvb_fit.base.constants import PriorsModes, Target_Data_Type
 from tvb_fit.base.utils.data_structures_utils import formal_repr
@@ -9,8 +8,8 @@ from tvb_fit.base.utils.log_error_utils import warning
 from tvb_fit.base.model.probabilistic_models.parameters.base import ProbabilisticParameterBase
 from tvb_fit.base.model.probabilistic_models.parameters.transformed_parameters import \
     TransformedProbabilisticParameterBase
-from tvb_fit.base.model.probabilistic_models.epileptor_probabilistic_models \
-    import EpiProbabilisticModel, ODEEpiProbabilisticModel, SDEEpiProbabilisticModel
+
+
 
 class ProbabilisticModelBase(object):
 
@@ -25,7 +24,7 @@ class ProbabilisticModelBase(object):
     def number_of_parameters(self):
         return len(self.parameters)
 
-    def __init__(self, name='vep', number_of_regions=0, target_data_type=Target_Data_Type.EMPIRICAL.value,
+    def __init__(self, name='tvb', number_of_regions=0, target_data_type=Target_Data_Type.EMPIRICAL.value,
                  priors_mode=PriorsModes.NONINFORMATIVE.value, parameters={}, ground_truth={}):
         self.number_of_regions = number_of_regions
         self.target_data_type = target_data_type
@@ -84,12 +83,3 @@ class ProbabilisticModelBase(object):
         else:
             warning("No parameter " + parameter_name + " was found!\nReturning true value instead of pdf!")
             return mean_or_truth, np.nan
-
-
-class ProbabilisticModels(Enum):
-    EPI_PROBABILISTIC_MODEL = {"name": EpiProbabilisticModel().__class__.__name__,
-                               "instance": EpiProbabilisticModel()}
-    ODE_EPI_PROBABILISTIC_MODEL = {"name": ODEEpiProbabilisticModel().__class__.__name__,
-                                   "instance": ODEEpiProbabilisticModel()}
-    SDE_EPI_PROBABILISTIC_MODEL = {"name": SDEEpiProbabilisticModel().__class__.__name__,
-                                   "instance": SDEEpiProbabilisticModel()}

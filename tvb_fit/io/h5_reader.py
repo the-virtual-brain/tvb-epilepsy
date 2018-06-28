@@ -11,7 +11,7 @@ from tvb_fit.base.model.vep.sensors import Sensors, SensorsH5Field
 from tvb_fit.base.model.vep.surface import Surface, SurfaceH5Field
 from tvb_fit.base.model.timeseries import TimeseriesDimensions, Timeseries
 from tvb_fit.base.model.parameter import Parameter
-from tvb_fit.base.model.probabilistic_models.probabilistic_model_base import ProbabilisticModels
+from tvb_fit.base.model.probabilistic_models.probabilistic_models import ProbabilisticModels
 from tvb_fit.service.probabilistic_parameter_builder import generate_probabilistic_parameter
 from tvb_fit.service.probabilistic_params_factory import generate_negative_lognormal_parameter
 from tvb_fit.io.h5_model import read_h5_model
