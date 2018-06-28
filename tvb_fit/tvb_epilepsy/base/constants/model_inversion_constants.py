@@ -86,7 +86,7 @@ class SDE_MODES(Enum):
     CENTERED = "centered"
     NONCENTERED = "noncentered"
 
-SIGMA_DEF = 0.05
+SIGMA_DEF = 0.1
 SIGMA_SCALE = 2.0
 SIGMA_MAX = 0.15
 
