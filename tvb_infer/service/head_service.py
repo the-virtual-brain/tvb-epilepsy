@@ -90,5 +90,5 @@ class HeadService(object):
             return initial_selection
 
     def compute_gain_matrix(self, head, sensors, normalize=95, ceil=False):
-        return compute_gain_matrix(head.connectivity.centres, sensors.locations, normalize=normalize, ceil=ceil)
+        return compute_gain_matrix(sensors.locations, head.connectivity.centres, normalize=normalize, ceil=ceil)
 
