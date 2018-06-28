@@ -1,12 +1,15 @@
 import os
 import h5py
-from tvb_infer.base.utils.log_error_utils import initialize_logger
+from collections import OrderedDict
+from tvb_infer.base.utils.log_error_utils import initialize_logger, raise_value_error
+from tvb_infer.base.utils.data_structures_utils import ensure_list
 from tvb_infer.base.model.parameter import Parameter
 from tvb_infer.tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_infer.tvb_epilepsy.base.model.simulation_settings import SimulationSettings
 from tvb_infer.tvb_epilepsy.base.model.model_configuration import ModelConfiguration
-from tvb_infer.tvb_epilepsy.service.probabilistic_models_builders import *
+from tvb_infer.tvb_epilepsy.base.model.epileptor_probabilistic_models import EpileptorProbabilisticModels
 from tvb_infer.service.probabilistic_parameter_builder import generate_probabilistic_parameter
+from tvb_infer.service.probabilistic_params_factory import generate_negative_lognormal_parameter
 from tvb_infer.io.h5_writer import H5Writer
 from tvb_infer.io.h5_reader import H5Reader as H5ReaderBase
 
@@ -192,12 +195,15 @@ class H5Reader(H5ReaderBase):
         probabilistic_model = None
         epi_subtype = h5_file.attrs[H5_SUBTYPE_ATTRIBUTE]
 
-        if H5_SUBTYPE_ATTRIBUTE == EpiProbabilisticModel.__name__:
-            probabilistic_model = EpiProbabilisticModel()
-        if epi_subtype == ODEEpiProbabilisticModel.__name__:
-            probabilistic_model = ODEEpiProbabilisticModel()
-        if epi_subtype == SDEEpiProbabilisticModel.__name__:
-            probabilistic_model = SDEEpiProbabilisticModel()
+        for model in EpileptorProbabilisticModels:
+            if epi_subtype == model.value["name"]:
+                probabilistic_model = model.value["instance"]
+                break
+
+        if probabilistic_model is None:
+            raise_value_error(epi_subtype +
+                              "does not correspond to one of the available epileptor probabilistic models!:\n" +
+                              str(EpileptorProbabilisticModels))
 
         for attr in h5_file.attrs.keys():
             if attr not in H5_TYPES_ATTRUBUTES:

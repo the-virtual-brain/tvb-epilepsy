@@ -1,13 +1,13 @@
+from enum import Enum
+
 from collections import OrderedDict
 
 from tvb_infer.base.constants import PriorsModes, Target_Data_Type
-from tvb_infer.base.utils.log_error_utils import warning
+from tvb_infer.base.utils.log_error_utils import warning, raise_not_implemented_error
 from tvb_infer.base.utils.data_structures_utils import formal_repr
 from tvb_infer.base.model.probabilistic_models.parameters.transformed_parameters import \
     TransformedProbabilisticParameterBase
 from tvb_infer.base.model.probabilistic_models.parameters.base import ProbabilisticParameterBase
-from tvb_infer.tvb_epilepsy.base.constants.model_inversion_constants import *
-
 
 class ProbabilisticModelBase(object):
 
@@ -81,3 +81,7 @@ class ProbabilisticModelBase(object):
         else:
             warning("No parameter " + parameter_name + " was found!\nReturning true value instead of pdf!")
             return mean_or_truth, np.nan
+
+
+class ProbabilisticModels(Enum):
+    raise_not_implemented_error("No probabilitic models available yet!")

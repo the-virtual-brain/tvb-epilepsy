@@ -1,3 +1,5 @@
+from enum import Enum
+import numpy as np
 from tvb_infer.base.constants import PriorsModes, Target_Data_Type
 from tvb_infer.base.utils.log_error_utils import raise_value_error, warning
 from tvb_infer.base.utils.data_structures_utils import ensure_list
@@ -146,6 +148,9 @@ class SDEEpiProbabilisticModel(ODEEpiProbabilisticModel):
 
 
 class EpileptorProbabilisticModels(Enum):
-    EPI_PROBABILISTIC_MODEL = EpiProbabilisticModel().__class__.__name__
-    ODE_EPI_PROBABILISTIC_MODEL = ODEEpiProbabilisticModel().__class__.__name__
-    SDE_EPI_PROBABILISTIC_MODEL = SDEEpiProbabilisticModel().__class__.__name__
+    EPI_PROBABILISTIC_MODEL = {"name": EpiProbabilisticModel().__class__.__name__,
+                               "instance": EpiProbabilisticModel()}
+    ODE_EPI_PROBABILISTIC_MODEL = {"name": ODEEpiProbabilisticModel().__class__.__name__,
+                                   "instance": ODEEpiProbabilisticModel()}
+    SDE_EPI_PROBABILISTIC_MODEL = {"name": SDEEpiProbabilisticModel().__class__.__name__,
+                                   "instance": SDEEpiProbabilisticModel()}
