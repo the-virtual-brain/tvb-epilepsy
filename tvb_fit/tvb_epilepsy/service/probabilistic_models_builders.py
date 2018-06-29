@@ -314,40 +314,40 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             active_regions = []
         if len(active_regions) == 0:
             active_regions = list(range(self.number_of_regions))
-        n_active_regions = len(active_regions)
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
-        if "x1" in params_names:
-            self.logger.info("...x1...")
-            if isinstance(source_ts, Timeseries) and isinstance(getattr(source_ts, "x1", None), Timeseries):
-                x1_sim_ts = source_ts.x1.squeezed
-                mu_prior = np.zeros(n_active_regions, )
-                sigma_prior = np.zeros(n_active_regions, )
-                loc_prior = np.zeros(n_active_regions, )
-                if self.priors_mode == PriorsModes.INFORMATIVE.value:
-                    for ii, iR in enumerate(active_regions):
-                        fit = ss.lognorm.fit(x1_sim_ts[:, iR] - X1_MIN)
-                        sigma_prior[ii] = fit[0]
-                        mu_prior[ii] = np.log(fit[2]) # mu = exp(scale)
-                        loc_prior[ii] = fit[1] + X1_MIN
-                else:
-                    fit = ss.lognorm.fit(x1_sim_ts[:, active_regions].flatten() - X1_MIN)
-                    sigma_prior += fit[0]
-                    mu_prior += np.log(fit[2])  # mu = exp(scale)
-                    loc_prior += fit[1] + X1_MIN
-            else:
-                sigma_prior = X1_LOGSIGMA_DEF * np.ones(n_active_regions, )
-                mu_prior = X1_LOGMU_DEF * np.ones(n_active_regions, )
-                loc_prior = X1_LOGLOC_DEF * np.ones(n_active_regions, ) + X1_MIN
-                if self.priors_mode == PriorsModes.INFORMATIVE.value:
-                    sigma_prior[self.active_regions] = X1_LOGSIGMA_ACTIVE
-                    mu_prior[self.active_regions] = X1_LOGMU_ACTIVE
-                    loc_prior[self.active_regions] = X1_LOGLOC_ACTIVE + X1_MIN
-            parameters.update(
-                {"x1":
-                     generate_probabilistic_parameter("x1", X1_MIN, X1_MAX, p_shape=(n_active_regions, ),
-                                                      probability_distribution=ProbabilityDistributionTypes.LOGNORMAL,
-                                                      optimize_pdf=False, use="scipy", loc=loc_prior,
-                                                      **{"mu": mu_prior, "sigma": sigma_prior})})
+        # if "x1" in params_names:
+        #     self.logger.info("...x1...")
+        #     n_active_regions = len(active_regions)
+        #     if isinstance(source_ts, Timeseries) and isinstance(getattr(source_ts, "x1", None), Timeseries):
+        #         x1_sim_ts = source_ts.x1.squeezed
+        #         mu_prior = np.zeros(n_active_regions, )
+        #         sigma_prior = np.zeros(n_active_regions, )
+        #         loc_prior = np.zeros(n_active_regions, )
+        #         if self.priors_mode == PriorsModes.INFORMATIVE.value:
+        #             for ii, iR in enumerate(active_regions):
+        #                 fit = ss.lognorm.fit(x1_sim_ts[:, iR] - X1_MIN)
+        #                 sigma_prior[ii] = fit[0]
+        #                 mu_prior[ii] = np.log(fit[2]) # mu = exp(scale)
+        #                 loc_prior[ii] = fit[1] + X1_MIN
+        #         else:
+        #             fit = ss.lognorm.fit(x1_sim_ts[:, active_regions].flatten() - X1_MIN)
+        #             sigma_prior += fit[0]
+        #             mu_prior += np.log(fit[2])  # mu = exp(scale)
+        #             loc_prior += fit[1] + X1_MIN
+        #     else:
+        #         sigma_prior = X1_LOGSIGMA_DEF * np.ones(n_active_regions, )
+        #         mu_prior = X1_LOGMU_DEF * np.ones(n_active_regions, )
+        #         loc_prior = X1_LOGLOC_DEF * np.ones(n_active_regions, ) + X1_MIN
+        #         if self.priors_mode == PriorsModes.INFORMATIVE.value:
+        #             sigma_prior[self.active_regions] = X1_LOGSIGMA_ACTIVE
+        #             mu_prior[self.active_regions] = X1_LOGMU_ACTIVE
+        #             loc_prior[self.active_regions] = X1_LOGLOC_ACTIVE + X1_MIN
+        #     parameters.update(
+        #         {"x1":
+        #              generate_probabilistic_parameter("x1", X1_MIN, X1_MAX, p_shape=(n_active_regions, ),
+        #                                               probability_distribution=ProbabilityDistributionTypes.LOGNORMAL,
+        #                                               optimize_pdf=False, use="scipy", loc=loc_prior,
+        #                                               **{"mu": mu_prior, "sigma": sigma_prior})})
         self.logger.info("...initial conditions' parameters...")
         if self.priors_mode == PriorsModes.INFORMATIVE.value:
             x1_init = self.model_config.x1eq

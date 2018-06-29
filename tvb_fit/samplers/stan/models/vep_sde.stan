@@ -110,12 +110,9 @@ data {
     row_vector [n_active_regions] x_star_std;
     // row_vector [n_active_regions] x1eq_mu;  // healthy: -5.0/3 , sick ~=-1.333, max = 1.8, min = -1.1
     real x1_eq_def; // = -5.0/3 the value of all healhty non-active node
-    real x1_lo;
-    real x1_hi;
+    // real x1_lo;
+    // real x1_hi;
     int X1_PRIOR;
-    row_vector[n_active_regions] x1_loc;
-    row_vector[n_active_regions] x1_mu;
-    row_vector[n_active_regions] x1_sigma;
     row_vector [n_active_regions] x1_init_mu; // in [-2.0, -1.0], used -1.566
     row_vector [n_active_regions] z_init_mu; // in [2.9, 4.5], used 3.060
     real x1_init_lo;
@@ -188,6 +185,9 @@ transformed data {
     real x1_init_star_hi = (x1_init_hi - min(x1_init_mu))/x1_init_std;
     real z_init_star_lo = (z_init_lo - max(z_init_mu))/z_init_std;
     real z_init_star_hi = (z_init_hi - min(z_init_mu))/z_init_std;
+    real x1_middle = -0.665;
+    real x1_seiz = 2*x1_middle - x1_eq_def;
+    real x1_std = (x1_middle - x1_eq_def) / 6;
     matrix [n_active_regions, n_active_regions] SC_ = SC;
     for (i in 1:n_active_regions) SC_[i, i] = 0;
     SC_ = SC_ / max(SC_) * rows(SC_);
@@ -371,8 +371,22 @@ model {
     }
 
     if (X1_PRIOR>0) {
-         for (t in 1:(n_times - 1))
-            to_vector(x1[t] - x1_loc) ~ lognormal(x1_mu, x1_sigma);
+        for (t in 1:(n_times - 1)) {
+            for (iR in 1:n_active_regions) {
+                // TODO: Find how to set the weights here...
+                target += log_sum_exp(log(0.5) + normal_lpdf(x1[t][iR] | x1_eq_def, x1_std),
+                                      log(0.5) + normal_lpdf(x1[t][iR] | x1_seiz, x1_std));
+                /*
+                // This version will cause a discontinuity to the gradient of the loglikelihood...
+                if (x1[t][iR] <= x1_middle) {
+                    x1[t][iR] ~ normal(x1_eq_def, x1_std);
+                } else {
+                    x1[t][iR] ~ normal(x1_seiz, x1_std);
+                }
+                */
+            }
+
+        }
     }
 
     if (SIMULATE<1)

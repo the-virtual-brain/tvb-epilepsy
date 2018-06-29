@@ -102,7 +102,8 @@ def build_stan_model_data_dict_to_interface_ins(probabilistic_model, signals, co
     return vep_data
 
 
-def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix, gain_matrix, time=None):
+def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix, gain_matrix,
+                               time=None, X1_PRIOR=False):
     """
     Usually takes as input the model_data created with <build_stan_model_dict> and adds fields that are needed to
     interface the ins stan model.
@@ -123,6 +124,7 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "x_star_std": probabilistic_model.parameters[x].star_std[active_regions],
                 "x_lo": probabilistic_model.parameters[x].low,
                 "x_hi": probabilistic_model.parameters[x].high,
+                "X1_PRIOR": int(X1_PRIOR),
                 "x1_init_lo": np.min(probabilistic_model.parameters["x1_init"].low),
                 "x1_init_hi": np.max(probabilistic_model.parameters["x1_init"].high),
                 "x1_init_mu": probabilistic_model.parameters["x1_init"].mean[active_regions],
@@ -159,14 +161,6 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
         else:
             vep_data.update({pflag: int(1), pkey+"_mu": np.mean(param.mean), pkey + "_std": np.mean(param.std),
                              pkey + "_lo": np.min(param.low), pkey + "_hi": np.max(param.high)})
-    i1 = np.ones((probabilistic_model.number_of_active_regions,))
-    param = probabilistic_model.parameters.get("x1", None)
-    if param is None:
-        vep_data.update({"X1_PRIOR": int(0), "x1_lo": X1_MIN, "x1_hi": X1_MAX,
-                         "x1_mu": X1_LOGMU_DEF * i1, "x1_sigma": X1_LOGSIGMA_DEF * i1, "x1_loc": X1_LOGLOC_DEF * i1})
-    else:
-        vep_data.update({"X1_PRIOR": int(1), "x1_lo": np.min(param.low), "x1_hi": np.max(param.high),
-                         "x1_mu": param.mu * i1, "x1_sigma": param.sigma * i1, "x1_loc": param.loc * i1})
     return vep_data
 
 
