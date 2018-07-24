@@ -1,5 +1,5 @@
-# coding=utf-8
-import os
+# -*- coding: utf-8 -*-
+
 import numpy as np
 from copy import deepcopy
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
@@ -11,7 +11,6 @@ from tvb_fit.service.probabilistic_parameter_builder import set_parameter, set_p
 from tvb_fit.samplers.deterministic_sampler import DeterministicSampler
 from tvb_fit.samplers.salib_sampler_interface import SalibSamplerInterface
 from tvb_fit.samplers.probabilistic_sampler import ProbabilisticSampler
-from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 
 
 def main_sampling_service(config=Config()):
@@ -24,8 +23,6 @@ def main_sampling_service(config=Config()):
     for key, value in stats.items():
         logger.info("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
-    writer = H5Writer()
-    writer.write_generic(sampler, os.path.join(config.out.FOLDER_RES, "test_Stochastic_Sampler.h5"))
 
     logger.info("\nStochastic uniform sampling with numpy:")
     sampler = ProbabilisticSampler(n_samples=n_samples, sampling_module="numpy")
@@ -37,7 +34,6 @@ def main_sampling_service(config=Config()):
         logger.info("\n" + key + ": " + str(value))
 
     logger.info(sampler.__repr__())
-    writer.write_generic(sampler, os.path.join(config.out.FOLDER_RES, "test1_Stochastic_Sampler.h5"))
 
     logger.info("\nStochastic truncated normal sampling with scipy:")
     sampler = ProbabilisticSampler(n_samples=n_samples)
@@ -47,7 +43,6 @@ def main_sampling_service(config=Config()):
     for key, value in stats.items():
         logger.info("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
-    writer.write_generic(sampler, os.path.join(config.out.FOLDER_RES, "test2_Stochastic_Sampler.h5"))
 
     logger.info("\nSensitivity analysis sampling:")
     sampler = SalibSamplerInterface(n_samples=n_samples, sampler="latin")
@@ -55,7 +50,6 @@ def main_sampling_service(config=Config()):
     for key, value in stats.items():
         logger.info("\n" + key + ": " + str(value))
     logger.info(sampler.__repr__())
-    writer.write_generic(sampler, os.path.join(config.out.FOLDER_RES, "test3_Stochastic_Sampler.h5"))
 
     logger.info("\nTesting distribution class and conversions...")
     sampler = ProbabilisticSampler(n_samples=n_samples)
