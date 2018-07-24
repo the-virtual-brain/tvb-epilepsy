@@ -4,15 +4,15 @@ from collections import OrderedDict
 from tvb_fit.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_fit.base.utils.data_structures_utils import ensure_list
 from tvb_fit.base.model.parameter import Parameter
-from tvb_fit.tvb_epilepsy.base.model.epileptor_probabilistic_models import EpileptorProbabilisticModels
+from tvb_fit.tvb_epilepsy.base.model.epileptor_probabilistic_models import EpileptorProbabilisticModels, \
+    EpiProbabilisticModel, ODEEpiProbabilisticModel, SDEEpiProbabilisticModel
 from tvb_fit.tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_fit.tvb_epilepsy.base.model.simulation_settings import SimulationSettings
 from tvb_fit.tvb_epilepsy.base.model.model_configuration import ModelConfiguration
 from tvb_fit.service.probabilistic_parameter_builder import generate_probabilistic_parameter
 from tvb_fit.service.probabilistic_params_factory import generate_negative_lognormal_parameter
 from tvb_fit.io.h5_writer import H5Writer
-from tvb_fit.io.h5_reader import H5Reader as H5ReaderBase
-
+from tvb_fit.io.h5_reader import H5Reader as H5ReaderBase, H5GroupHandlers
 
 H5_TYPE_ATTRIBUTE = H5Writer().H5_TYPE_ATTRIBUTE
 H5_SUBTYPE_ATTRIBUTE = H5Writer().H5_SUBTYPE_ATTRIBUTE
@@ -36,7 +36,7 @@ class H5Reader(H5ReaderBase):
         values = h5_file['/values'][()]
 
         h5_file.close()
-        self.logger.info("Successfully read epileptogenicity values!") #: %s" % values)
+        self.logger.info("Successfully read epileptogenicity values!")  #: %s" % values)
 
         return values
 
@@ -157,48 +157,16 @@ class H5Reader(H5ReaderBase):
         return model_inversion_service
 
     def read_probabilistic_model(self, path):
-
-        def strip_key_name(key):
-            if key != "star":
-                if key.find("_ProbabilityDistribution_") >= 0:
-                    key_name = key.split("_ProbabilityDistribution_")[-1]
-                elif key.find("_Parameter_") >= 0:
-                    key_name = key.split("_Parameter_")[-1]
-                else:
-                    key_name = key
-            return key_name
-
-        def setattr_param(param, key, key_name, value):
-            param.__setattr__(key_name, value)
-            if key != key_name:
-                try:
-                    param.__setattr__(key, value)
-                except:
-                    pass
-
-        def set_parameter_datasets(param, h5location):
-            for key in h5location.keys():
-                if key != "star":
-                    key_name = strip_key_name(key)
-                    if key.find("p_shape") >= 0:
-                        setattr_param(param, key, key_name, tuple(h5location[key][()]))
-                    else:
-                        setattr_param(param, key, key_name, h5location[key][()])
-
-        def set_parameter_attributes(param, h5location):
-            for key in h5location.attrs.keys():
-                if key not in H5_TYPES_ATTRUBUTES:
-                    setattr_param(param, key, strip_key_name(key), h5location.attrs[key])
-
         h5_file = h5py.File(path, 'r', libver='latest')
-
-        probabilistic_model = None
         epi_subtype = h5_file.attrs[H5_SUBTYPE_ATTRIBUTE]
+        probabilistic_model = None
 
-        for model in EpileptorProbabilisticModels:
-            if epi_subtype == model.value["name"]:
-                probabilistic_model = model.value["instance"]
-                break
+        if epi_subtype == EpiProbabilisticModel.__class__:
+            probabilistic_model = EpiProbabilisticModel()
+        if epi_subtype == ODEEpiProbabilisticModel.__class__:
+            probabilistic_model = ODEEpiProbabilisticModel()
+        if epi_subtype == SDEEpiProbabilisticModel.__class__:
+            probabilistic_model = SDEEpiProbabilisticModel()
 
         if probabilistic_model is None:
             raise_value_error(epi_subtype +
@@ -225,33 +193,14 @@ class H5Reader(H5ReaderBase):
 
                     probabilistic_model.__setattr__(key, model_config)
 
+                h5_group_handler = H5GroupHandlers()
+
                 if key == "parameters":  # and value.attrs[epi_subtype_key] == OrderedDict.__name__:
-                    parameters = OrderedDict()
-                    for group_key, group_value in value.iteritems():
-                        param_epi_subtype = group_value.attrs[H5_SUBTYPE_ATTRIBUTE]
-                        if param_epi_subtype == "ProbabilisticParameter":
-                            parameter = generate_probabilistic_parameter(
-                                probability_distribution=group_value.attrs["type"])
-                        elif param_epi_subtype == "NegativeLognormal":
-                            parameter = generate_negative_lognormal_parameter("", 1.0, 0.0, 2.0)
-                            set_parameter_datasets(parameter.star, group_value["star"])
-                            set_parameter_attributes(parameter.star, group_value["star"])
-                        else:
-                            parameter = Parameter()
-
-                        set_parameter_datasets(parameter, group_value)
-                        set_parameter_attributes(parameter, group_value)
-
-                        parameters.update({group_key: parameter})
-
+                    parameters = h5_group_handler.handle_group_parameters(value)
                     probabilistic_model.__setattr__(key, parameters)
 
                 if key == "ground_truth":
-                    for dataset in value.keys():
-                        probabilistic_model.ground_truth[dataset] = value[dataset]
-                    for attr in value.attrs.keys():
-                        if attr not in H5_TYPES_ATTRUBUTES:
-                            probabilistic_model.ground_truth[attr] = value.attrs[attr]
+                    h5_group_handler.handle_group_ground_truth(value, probabilistic_model)
 
                 if key == "active_regions":
                     probabilistic_model.active_regions = ensure_list(value)

@@ -3,6 +3,7 @@ import h5py
 from collections import OrderedDict
 import numpy
 from tvb_fit.base.datatypes.dot_dicts import DictDot, OrderedDictDot
+from tvb_fit.base.model.probabilistic_models.probabilistic_model_base import ProbabilisticModelBase
 from tvb_fit.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_fit.base.utils.data_structures_utils import isequal_string, ensure_list
 from tvb_fit.base.model.vep.connectivity import Connectivity, ConnectivityH5Field
@@ -16,7 +17,6 @@ from tvb_fit.service.probabilistic_parameter_builder import generate_probabilist
 from tvb_fit.service.probabilistic_params_factory import generate_negative_lognormal_parameter
 from tvb_fit.io.h5_model import read_h5_model
 from tvb_fit.io.h5_writer import H5Writer
-
 
 H5_TYPE_ATTRIBUTE = H5Writer().H5_TYPE_ATTRIBUTE
 H5_SUBTYPE_ATTRIBUTE = H5Writer().H5_SUBTYPE_ATTRIBUTE
@@ -156,7 +156,7 @@ class H5Reader(object):
         data = h5_file['/data'][()]
 
         h5_file.close()
-        self.logger.info("Successfully read volume mapping!") #: %s" % data)
+        self.logger.info("Successfully read volume mapping!")  #: %s" % data)
 
         return data
 
@@ -175,7 +175,7 @@ class H5Reader(object):
         data = h5_file['/data'][()]
 
         h5_file.close()
-        self.logger.info("Successfully read region mapping!") #: %s" % data)
+        self.logger.info("Successfully read region mapping!")  #: %s" % data)
 
         return data
 
@@ -231,7 +231,7 @@ class H5Reader(object):
         time = numpy.linspace(start_time, total_time, nr_of_steps)
 
         self.logger.info("First Channel sv sum: " + str(numpy.sum(data[:, 0])))
-        self.logger.info("Successfully read timeseries!") #: %s" % data)
+        self.logger.info("Successfully read timeseries!")  #: %s" % data)
         h5_file.close()
 
         return time, data
@@ -250,7 +250,7 @@ class H5Reader(object):
         variables = ensure_list(h5_file['/variables'][()])
         time_unit = h5_file.attrs["time_unit"]
         self.logger.info("First Channel sv sum: " + str(numpy.sum(data[:, 0])))
-        self.logger.info("Successfully read Timeseries!") #: %s" % data)
+        self.logger.info("Successfully read Timeseries!")  #: %s" % data)
         h5_file.close()
 
         return Timeseries(data, {TimeseriesDimensions.SPACE.value: labels,
@@ -281,7 +281,44 @@ class H5Reader(object):
             return dictionary
 
     def read_probabilistic_model(self, path):
+        h5_file = h5py.File(path, 'r', libver='latest')
+        epi_subtype = h5_file.attrs[H5_SUBTYPE_ATTRIBUTE]
 
+        probabilistic_model = None
+        if epi_subtype == ProbabilisticModelBase.__class__:
+            probabilistic_model = ProbabilisticModelBase()
+        else:
+            raise_value_error(epi_subtype +
+                              "does not correspond to the available probabilistic model!:\n" +
+                              ProbabilisticModelBase.__class__)
+
+        for attr in h5_file.attrs.keys():
+            if attr not in H5_TYPES_ATTRUBUTES:
+                probabilistic_model.__setattr__(attr, h5_file.attrs[attr])
+
+        for key, value in h5_file.items():
+            if isinstance(value, h5py.Dataset):
+                probabilistic_model.__setattr__(key, value[()])
+            if isinstance(value, h5py.Group):
+                h5_group_handlers = H5GroupHandlers()
+                if key == "parameters":  # and value.attrs[epi_subtype_key] == OrderedDict.__name__:
+                    parameters = h5_group_handlers.handle_group_parameters(value)
+
+                    probabilistic_model.__setattr__(key, parameters)
+
+                if key == "ground_truth":
+                    h5_group_handlers.handle_group_ground_truth(value, probabilistic_model)
+
+        h5_file.close()
+        return probabilistic_model
+
+    def read_generic(self, path, obj=None, output_shape=None):
+        return read_h5_model(path).convert_from_h5_model(obj, output_shape)
+
+
+class H5GroupHandlers(object):
+
+    def handle_group_parameters(self, h5_group_value):
         def strip_key_name(key):
             if key != "star":
                 if key.find("_ProbabilityDistribution_") >= 0:
@@ -314,60 +351,27 @@ class H5Reader(object):
                 if key not in H5_TYPES_ATTRUBUTES:
                     setattr_param(param, key, strip_key_name(key), h5location.attrs[key])
 
-        h5_file = h5py.File(path, 'r', libver='latest')
+        parameters = OrderedDict()
+        for group_key, group_value in h5_group_value.iteritems():
+            param_epi_subtype = group_value.attrs[H5_SUBTYPE_ATTRIBUTE]
+            if param_epi_subtype == "ProbabilisticParameter":
+                parameter = generate_probabilistic_parameter(
+                    probability_distribution=group_value.attrs["type"])
+            elif param_epi_subtype == "NegativeLognormal":
+                parameter = generate_negative_lognormal_parameter("", 1.0, 0.0, 2.0)
+                set_parameter_datasets(parameter.star, group_value["star"])
+                set_parameter_attributes(parameter.star, group_value["star"])
+            else:
+                parameter = Parameter()
 
-        probabilistic_model = None
-        epi_subtype = h5_file.attrs[H5_SUBTYPE_ATTRIBUTE]
+            set_parameter_datasets(parameter, group_value)
+            set_parameter_attributes(parameter, group_value)
 
-        for model in ProbabilisticModels:
-            if epi_subtype == model.value["name"]:
-                probabilistic_model = model.value["instance"]
-                break
+            parameters.update({group_key: parameter})
 
-        if probabilistic_model is None:
-            raise_value_error(epi_subtype +
-                              "does not correspond to one of the available epileptor probabilistic models!:\n" +
-                              str(ProbabilisticModels))
-
-        for attr in h5_file.attrs.keys():
+    def handle_group_ground_truth(self, h5_group_value, probabilistic_model):
+        for dataset in h5_group_value.keys():
+            probabilistic_model.ground_truth[dataset] = h5_group_value[dataset]
+        for attr in h5_group_value.attrs.keys():
             if attr not in H5_TYPES_ATTRUBUTES:
-                probabilistic_model.__setattr__(attr, h5_file.attrs[attr])
-
-        for key, value in h5_file.items():
-            if isinstance(value, h5py.Dataset):
-                probabilistic_model.__setattr__(key, value[()])
-            if isinstance(value, h5py.Group):
-
-                if key == "parameters":  # and value.attrs[epi_subtype_key] == OrderedDict.__name__:
-                    parameters = OrderedDict()
-                    for group_key, group_value in value.items():
-                        param_epi_subtype = group_value.attrs[H5_SUBTYPE_ATTRIBUTE]
-                        if param_epi_subtype == "ProbabilisticParameter":
-                            parameter = generate_probabilistic_parameter(
-                                    probability_distribution=group_value.attrs["type"])
-                        elif param_epi_subtype == "NegativeLognormal":
-                            parameter = generate_negative_lognormal_parameter("", 1.0, 0.0, 2.0)
-                            set_parameter_datasets(parameter.star, group_value["star"])
-                            set_parameter_attributes(parameter.star, group_value["star"])
-                        else:
-                            parameter = Parameter()
-
-                        set_parameter_datasets(parameter, group_value)
-                        set_parameter_attributes(parameter, group_value)
-
-                        parameters.update({group_key: parameter})
-
-                    probabilistic_model.__setattr__(key, parameters)
-
-                if key == "ground_truth":
-                    for dataset in value.keys():
-                        probabilistic_model.ground_truth[dataset] = value[dataset]
-                    for attr in value.attrs.keys():
-                        if attr not in H5_TYPES_ATTRUBUTES:
-                            probabilistic_model.ground_truth[attr] = value.attrs[attr]
-
-        h5_file.close()
-        return probabilistic_model
-
-    def read_generic(self, path, obj=None, output_shape=None):
-        return read_h5_model(path).convert_from_h5_model(obj, output_shape)
+                probabilistic_model.ground_truth[attr] = h5_group_value.attrs[attr]
