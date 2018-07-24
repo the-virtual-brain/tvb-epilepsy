@@ -258,6 +258,7 @@ class BasePlotter(object):
         self._check_show()
         return fig
 
+    #TODO: name is too generic
     def plots(self, data_dict, shape=None, transpose=False, skip=0, xlabels={}, xscales={}, yscales={}, title='Plots',
               lgnd={}, figure_name=None, figsize=FiguresConfig.VERY_LARGE_SIZE):
         if shape is None:

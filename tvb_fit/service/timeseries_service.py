@@ -44,6 +44,7 @@ def normalize_signals(signals, normalization=None):
 
     return signals
 
+#TODO: this will conflict with gitlab infer, please rewrite it in case you decide to use it
 #TODO: Decide upon this commented method
 # def compute_envelope(data, time, samp_rate, hp_freq=5.0, lp_freq=0.1, benv_cut=100, cut_tails=None, order=3):
 #     if cut_tails is not None:
