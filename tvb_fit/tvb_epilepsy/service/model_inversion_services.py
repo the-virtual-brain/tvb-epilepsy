@@ -7,9 +7,8 @@ from tvb_fit.base.utils.data_structures_utils import formal_repr, ensure_list, i
 from tvb_fit.base.computations.math_utils import select_greater_values_array_inds
 from tvb_fit.service.head_service import HeadService
 from tvb_fit.service.timeseries_service import TimeseriesService
-from tvb_fit.plot.plotter import Plotter
 
-
+#TODO: Would it make sense to have this in tvb_fit?
 class ModelInversionService(object):
 
     logger = initialize_logger(__name__)
