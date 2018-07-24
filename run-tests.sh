@@ -9,4 +9,4 @@ cov=""
 if [[ $COV == "yes" ]]; then cov="--cov=tvb_epilepsy"; fi
 
 # run tests
-py.test --cov-config .coveragec $cov $ignores tvb_infer
+py.test --cov-config .coveragec $cov $ignores tvb_fit
