@@ -4,6 +4,9 @@ from numpy import array, empty_like, reshape
 from sympy import Symbol, solve, solveset, lambdify, series, Matrix  # diff, ArraySymbol
 from sympy.tensor.array import Array
 from tvb_fit.base.utils.data_structures_utils import shape_to_size
+from tvb_fit.base.utils.log_error_utils import raise_value_error
+from tvb_fit.tvb_epilepsy.base.computation_utils.equations_utils import eqtn_x0cr_r, eqtn_coupling, eqtn_x0, eqtn_fx1, \
+    eqtn_fy1, eqtn_fz, eqtn_fx2, eqtn_fy2, eqtn_fg, eqtn_fx0, eqtn_fslope, eqtn_fIext1, eqtn_fIext2, eqtn_fK
 
 
 def symbol_vars(n_regions, vars_str, dims=1, ind_str="_", shape=None, output_flag="numpy_array"):
@@ -145,7 +148,7 @@ def symbol_eqtn_fx0(n, shape=None):
 
 def symbol_eqtn_fslope(n, pmode=array("const"), shape=None):
     slope_var, z, g, slope, tau1, vars_dict = symbol_vars(n, ["slope_var", "z", "g", "slope", "tau1"], shape=shape)
-    from tvb_fit.tvb_epilepsy.base.model import EpileptorDPrealistic
+    from tvb_fit.tvb_epilepsy.base.model.epileptor_models import EpileptorDPrealistic
     slope_eq = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, slope, 0.0)[0]
     fslope = Array(eqtn_fslope(slope_var, slope_eq, tau1))
     vars_dict["pmode"] = pmode
@@ -168,7 +171,7 @@ def symbol_eqtn_fIext1(n, shape=None):
 
 def symbol_eqtn_fIext2(n, pmode=array("const"), shape=None):
     Iext2_var, z, g, Iext2, tau1, vars_dict = symbol_vars(n, ["Iext2_var", "z", "g", "Iext2", "tau1"], shape=shape)
-    from tvb_fit.tvb_epilepsy.base.model import EpileptorDPrealistic
+    from tvb_fit.tvb_epilepsy.base.model.epileptor_models import EpileptorDPrealistic
     Iext2_eq = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, 0.0, Iext2)[1]
     fIext2 = Array(eqtn_fIext2(Iext2_var, Iext2_eq, tau1))
     vars_dict["pmode"] = pmode
