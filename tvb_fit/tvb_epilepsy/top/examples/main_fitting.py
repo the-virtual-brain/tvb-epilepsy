@@ -1,5 +1,4 @@
-# encoding=utf8
-
+# -*- coding: utf-8 -*-
 import os
 
 import numpy as np
@@ -223,10 +222,11 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                                            num_warmup=num_warmup, num_samples=num_samples,
                                                            max_depth=max_depth, delta=delta,
                                                            save_warmup=1, plot_warmup=1, **kwargs)
-            writer.write_generic(estimates, path(prob_model_name + "_FitEst"))
-            writer.write_generic(samples, path(prob_model_name + "_FitSamples"))
+            #TODO: check if write_dictionary is enough for estimates, samples, summary and info_crit
+            writer.write_dictionary(estimates, path(prob_model_name + "_FitEst"))
+            writer.write_dictionary(samples, path(prob_model_name + "_FitSamples"))
             if summary is not None:
-                writer.write_generic(summary, path(prob_model_name + "_FitSummary"))
+                writer.write_dictionary(summary, path(prob_model_name + "_FitSummary"))
         else:
             estimates, samples, summary = stan_interface.read_output()
             if fitmethod.find("sampl") >= 0:
@@ -246,7 +246,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                                                       #                  "x_init_star", "z_init_star", "z_eta_star"],
                                                       merge_chains_or_runs_flag=False)
 
-        writer.write_generic(info_crit, path(prob_model_name + "_InfoCrit"))
+        writer.write_dictionary(info_crit, path(prob_model_name + "_InfoCrit"))
 
         Rhat = stan_interface.get_Rhat(summary)
         # Interface backwards with INS stan models
