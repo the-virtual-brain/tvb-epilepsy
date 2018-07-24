@@ -92,8 +92,7 @@ class ODEModelInversionService(ModelInversionService):
     n_electrodes = 10
     sensors_per_electrode = 1
     group_electrodes = True
-    plotter = Plotter()
-    
+
     def __init__(self):
         super(ODEModelInversionService, self).__init__()
         self.ts_service = TimeseriesService()
