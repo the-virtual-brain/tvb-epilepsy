@@ -1,9 +1,9 @@
+# -*- coding: utf-8 -*-
+
 import h5py
 import numpy
-
 from tvb_fit.base.utils.log_error_utils import initialize_logger, warning
 from tvb_fit.base.utils.file_utils import change_filename_or_overwrite
-from tvb_fit.io.h5_model import convert_to_h5_model
 
 
 class H5WriterBase(object):
@@ -65,16 +65,3 @@ class H5WriterBase(object):
         h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
         h5_file, _ = self._prepare_object_for_group(h5_file, object, h5_type_attribute, nr_regions)
         h5_file.close()
-
-    # TODO: this should be deprecated when/if _determine_datasets_and_attributes becomes recursive into groups
-    def write_generic(self, object, path):
-        """
-        :param object:
-        :param path:H5 path to be written
-        """
-        h5_model = convert_to_h5_model(object)
-
-        h5_model.add_or_update_metadata_attribute(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
-        h5_model.add_or_update_metadata_attribute(self.H5_SUBTYPE_ATTRIBUTE, object.__class__.__name__)
-
-        h5_model.write_to_h5(path)

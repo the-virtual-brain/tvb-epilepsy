@@ -3,7 +3,6 @@ from tvb_fit.tests.base import BaseTest
 from tvb_fit.tvb_epilepsy.top.examples.vep_study import vep_study
 from tvb_fit.tvb_epilepsy.top.examples.main_vep import main_vep
 from tvb_fit.tvb_epilepsy.top.examples.main_sensitivity_analysis import main_sensitivity_analysis
-from tvb_fit.tests.test_h5_model_epi import test_h5_model
 
 
 class TestExamples(BaseTest):
@@ -13,9 +12,6 @@ class TestExamples(BaseTest):
 
     # def test_main_pse(self):
     #     main_pse(self.config)
-
-    def test_h5_model(self):
-        test_h5_model(self.config)
 
     # def test_main_sampling_service(self):
     #     main_sampling_service(self.config)

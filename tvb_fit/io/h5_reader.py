@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 import h5py
 from collections import OrderedDict
@@ -12,10 +14,8 @@ from tvb_fit.base.model.vep.sensors import Sensors, SensorsH5Field
 from tvb_fit.base.model.vep.surface import Surface, SurfaceH5Field
 from tvb_fit.base.model.timeseries import TimeseriesDimensions, Timeseries
 from tvb_fit.base.model.parameter import Parameter
-from tvb_fit.base.model.probabilistic_models.probabilistic_models import ProbabilisticModels
 from tvb_fit.service.probabilistic_parameter_builder import generate_probabilistic_parameter
 from tvb_fit.service.probabilistic_params_factory import generate_negative_lognormal_parameter
-from tvb_fit.io.h5_model import read_h5_model
 from tvb_fit.io.h5_writer import H5Writer
 
 H5_TYPE_ATTRIBUTE = H5Writer().H5_TYPE_ATTRIBUTE
@@ -311,9 +311,6 @@ class H5Reader(object):
 
         h5_file.close()
         return probabilistic_model
-
-    def read_generic(self, path, obj=None, output_shape=None):
-        return read_h5_model(path).convert_from_h5_model(obj, output_shape)
 
 
 class H5GroupHandlers(object):

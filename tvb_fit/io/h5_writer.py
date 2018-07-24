@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 import h5py
 import numpy
@@ -8,7 +10,6 @@ from tvb_fit.base.model.vep.sensors import SensorsH5Field
 from tvb_fit.base.model.vep.surface import SurfaceH5Field
 from tvb_fit.base.model.timeseries import Timeseries
 from tvb_fit.io.h5_writer_base import H5WriterBase
-
 
 KEY_TYPE = "EPI_Type"
 KEY_VERSION = "EPI_Version"
@@ -187,7 +188,7 @@ class H5Writer(H5WriterBase):
                                        data=numpy.array([numpy.string_(var) for var in raw_data.variables_labels]))
                 h5_file.attrs.create("time_unit", raw_data.time_unit)
                 write_metadata({KEY_MAX: raw_data.data.max(), KEY_MIN: raw_data.data.min(),
-                                KEY_STEPS: raw_data.data.shape[0],KEY_CHANNELS: raw_data.data.shape[1],
+                                KEY_STEPS: raw_data.data.shape[0], KEY_CHANNELS: raw_data.data.shape[1],
                                 KEY_SV: 1, KEY_SAMPLING: raw_data.time_step,
                                 KEY_START: raw_data.time_start}, h5_file, KEY_DATE, KEY_VERSION, "/data")
             else:
@@ -240,11 +241,12 @@ class H5Writer(H5WriterBase):
                 group = h5_file.create_group(group_key)
                 group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, probabilistic_model.parameters.__class__.__name__)
                 for param_key, param_value in probabilistic_model.parameters.items():
-                    group, param_group =_set_parameter_to_group(group, param_value, nr_regions, param_key)
+                    group, param_group = _set_parameter_to_group(group, param_value, nr_regions, param_key)
 
             else:
                 group = h5_file.create_group(group_key)
-                group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, getattr(probabilistic_model, group_key).__class__.__name__)
+                group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE,
+                                   getattr(probabilistic_model, group_key).__class__.__name__)
                 group, _ = self._prepare_object_for_group(group, getattr(probabilistic_model, group_key), nr_regions)
 
         h5_file.close()
