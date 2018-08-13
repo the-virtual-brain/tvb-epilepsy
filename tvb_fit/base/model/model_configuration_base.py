@@ -1,9 +1,7 @@
-from abc import ABCMeta, abstractmethod
-
-import numpy
+from abc import ABCMeta  # , abstractmethod
 
 
-class ModelConfiguration(object):
+class ModelConfigurationBase(object):
     __metaclass__ = ABCMeta
 
     model = None

@@ -8,7 +8,7 @@ from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.base.utils.data_structures_utils import formal_repr
 
 
-class ModelConfigurationBuilder(object):
+class ModelConfigurationBuilderBase(object):
     __metaclass__ = ABCMeta
 
     logger = initialize_logger(__name__)
@@ -25,7 +25,7 @@ class ModelConfigurationBuilder(object):
         return self.__repr__()
 
     @abstractmethod
-    def build_model_simulator(self, simulator):
+    def build_model_config_from_simulator(self, simulator):
       pass
 
     def set_attribute(self, attr_name, data):
