@@ -3,7 +3,7 @@ import numpy as np
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.base.utils.data_structures_utils import isequal_string
-from tvb_fit.base.model.vep.sensors import Sensors
+from tvb_fit.base.model.virtual_patient.sensors import Sensors
 from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_fit.tvb_epilepsy.plot.plotter import Plotter
