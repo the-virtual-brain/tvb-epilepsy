@@ -9,10 +9,10 @@ TvbProfile.set_profile(TvbProfile.LIBRARY_PROFILE)
 
 from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.base.utils.data_structures_utils import ensure_list
-from tvb_fit.base.model.vep.surface import Surface
-from tvb_fit.base.model.vep.sensors import Sensors
-from tvb_fit.base.model.vep.connectivity import Connectivity
-from tvb_fit.base.model.vep.head import Head
+from tvb_fit.base.model.virtual_patient.surface import Surface
+from tvb_fit.base.model.virtual_patient.sensors import Sensors
+from tvb_fit.base.model.virtual_patient.connectivity import Connectivity
+from tvb_fit.base.model.virtual_patient.head import Head
 
 from tvb.datatypes import connectivity, surfaces, region_mapping, sensors, structural, projections
 

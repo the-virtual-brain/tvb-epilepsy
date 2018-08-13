@@ -10,7 +10,7 @@ import numpy
 
 from tvb_fit.base.utils.data_structures_utils import ensure_list, generate_region_labels
 from tvb_fit.base.computations.math_utils import compute_in_degree
-from tvb_fit.base.model.vep.sensors import Sensors, SensorTypes
+from tvb_fit.base.model.virtual_patient.sensors import Sensors, SensorTypes
 from tvb_fit.plot.base_plotter import BasePlotter
 
 

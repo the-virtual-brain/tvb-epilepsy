@@ -1,7 +1,7 @@
 import os
 import numpy
 from tvb_fit.base.config import InputConfig
-from tvb_fit.base.model.vep.sensors import Sensors
+from tvb_fit.base.model.virtual_patient.sensors import Sensors
 from tvb_fit.io.h5_reader import H5Reader
 from tvb_fit.io.h5_writer import H5Writer
 from tvb_fit.tests.base import BaseTest

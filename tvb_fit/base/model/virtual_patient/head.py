@@ -3,7 +3,7 @@
 import numpy as np
 from tvb_fit.base.utils.log_error_utils import raise_value_error, initialize_logger
 from tvb_fit.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list
-from tvb_fit.base.model.vep.sensors import Sensors, SensorTypes
+from tvb_fit.base.model.virtual_patient.sensors import Sensors, SensorTypes
 
 
 class Head(object):

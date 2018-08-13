@@ -1,6 +1,6 @@
 import numpy as np
 
-from tvb_fit.base.model.vep.sensors import Sensors
+from tvb_fit.base.model.virtual_patient.sensors import Sensors
 from tvb_fit.base.utils.data_structures_utils import ensure_list
 from tvb_fit.base.utils.log_error_utils import raise_value_error, initialize_logger
 from tvb_fit.base.computations.math_utils import select_greater_values_array_inds, compute_gain_matrix, \

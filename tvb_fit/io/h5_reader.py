@@ -8,10 +8,10 @@ from tvb_fit.base.datatypes.dot_dicts import DictDot, OrderedDictDot
 from tvb_fit.base.model.probabilistic_models.probabilistic_model_base import ProbabilisticModelBase
 from tvb_fit.base.utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_fit.base.utils.data_structures_utils import isequal_string, ensure_list
-from tvb_fit.base.model.vep.connectivity import Connectivity, ConnectivityH5Field
-from tvb_fit.base.model.vep.head import Head
-from tvb_fit.base.model.vep.sensors import Sensors, SensorsH5Field
-from tvb_fit.base.model.vep.surface import Surface, SurfaceH5Field
+from tvb_fit.base.model.virtual_patient.connectivity import Connectivity, ConnectivityH5Field
+from tvb_fit.base.model.virtual_patient.head import Head
+from tvb_fit.base.model.virtual_patient.sensors import Sensors, SensorsH5Field
+from tvb_fit.base.model.virtual_patient.surface import Surface, SurfaceH5Field
 from tvb_fit.base.model.timeseries import TimeseriesDimensions, Timeseries
 from tvb_fit.base.model.parameter import Parameter
 from tvb_fit.service.probabilistic_parameter_builder import generate_probabilistic_parameter

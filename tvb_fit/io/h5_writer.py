@@ -5,9 +5,9 @@ import h5py
 import numpy
 from tvb_fit.base.utils.log_error_utils import raise_value_error
 from tvb_fit.base.utils.file_utils import change_filename_or_overwrite, write_metadata
-from tvb_fit.base.model.vep.connectivity import ConnectivityH5Field
-from tvb_fit.base.model.vep.sensors import SensorsH5Field
-from tvb_fit.base.model.vep.surface import SurfaceH5Field
+from tvb_fit.base.model.virtual_patient.connectivity import ConnectivityH5Field
+from tvb_fit.base.model.virtual_patient.sensors import SensorsH5Field
+from tvb_fit.base.model.virtual_patient.surface import SurfaceH5Field
 from tvb_fit.base.model.timeseries import Timeseries
 from tvb_fit.io.h5_writer_base import H5WriterBase
 

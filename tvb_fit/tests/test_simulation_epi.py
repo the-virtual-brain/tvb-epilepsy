@@ -44,7 +44,7 @@ class TestSimulationRun(BaseTest):
     #     model_configuration = self._prepare_model_for_simulation(conn)
     #
     #     builder = SimulatorBuilder("java").set_simulated_period(self.time_length)
-    #     simulator, _, _ = builder.build_simulator_java_from_model_configuration(model_configuration, conn,
+    #     model_config, _, _ = builder.build_simulator_java_from_model_configuration(model_configuration, conn,
     #                                                                             noise_intensity=1e-6
     #                                                                             # noise_intensity=np.array(
     #                                                                             #     [0., 0., 5e-6, 0.0, 5e-6, 0.])
@@ -52,8 +52,8 @@ class TestSimulationRun(BaseTest):
     #                                                                             #     conn.number_of_regions * 6, )
     #                                                                             )
     #
-    #     simulator.config_simulation()
-    #     ttavg, tavg_data, status = simulator.launch_simulation()
+    #     model_config.config_simulation()
+    #     ttavg, tavg_data, status = model_config.launch_simulation()
     #
     #     assert status == 0
     #
