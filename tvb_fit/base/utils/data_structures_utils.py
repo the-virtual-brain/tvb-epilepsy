@@ -4,11 +4,16 @@ import re
 import numpy as np
 from collections import OrderedDict
 from copy import deepcopy
-from tvb_fit.base.utils.log_error_utils import raise_value_error, raise_import_error, initialize_logger
+from tvb_fit.base.utils.log_error_utils import warning, raise_value_error, raise_import_error, initialize_logger
 from tvb_fit.base.config import CalculusConfig
 
 logger = initialize_logger(__name__)
 
+def is_numeric(value):
+    return isinstance(value, (float, np.float, np.float64, np.float32, np.float16, np.float128,
+                              int, np.int, np.int0, np.int8, np.int16, np.int32, np.int64,
+                              complex, np.complex, np.complex64, np.complex128, np.complex256,
+                              long, np.long, np.number))
 
 def vector2scalar(x):
     if not (isinstance(x, np.ndarray)):
@@ -335,9 +340,9 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
     def print_not_equal_message(attr, field1, field2, logger):
         # logger.error("\n\nValueError: Original and read object field "+ attr + " not equal!")
         # raise_value_error("\n\nOriginal and read object field " + attr + " not equal!")
-        logger.warning("Original and read object field " + attr + " not equal!" +
-                       "\nOriginal field:\n" + str(field1) +
-                       "\nRead object field:\n" + str(field2), logger)
+        warning("Original and read object field " + attr + " not equal!" +
+                "\nOriginal field:\n" + str(field1) +
+                "\nRead object field:\n" + str(field2), logger)
 
     if isinstance(obj1, dict):
         get_field1 = lambda obj, key: obj[key]
@@ -385,7 +390,7 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
                     print_not_equal_message(attributes_dict[attribute], field1, field2, logger)
                     equal = False
             # For numeric scalar types
-            elif isinstance(field1, (int, float, long, complex, np.number)):
+            elif is_numeric(field1):
                 if np.float32(field1) - np.float32(field2) > 0:
                     print_not_equal_message(attributes_dict[attribute], field1, field2, logger)
                     equal = False
@@ -393,14 +398,14 @@ def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
                 equal = assert_equal_objects(field1, field2, logger=logger)
         except:
             try:
-                logger.warning("Comparing str(objects) for field "
-                               + attributes_dict[attribute] + " because there was an error!", logger)
+                warning("Comparing str(objects) for field "
+                        + str(attributes_dict[attribute]) + " because there was an error!", logger)
                 if np.any(str(field1) != str(field2)):
                     print_not_equal_message(attributes_dict[attribute], field1, field2, logger)
                     equal = False
             except:
                 raise_value_error("ValueError: Something went wrong when trying to compare "
-                                  + attributes_dict[attribute] + " !", logger)
+                                  + str(attributes_dict[attribute]) + " !", logger)
 
     if equal:
         return True
@@ -462,7 +467,7 @@ def assert_arrays(params, shape=None, transpose=False):
         elif isinstance(params[ip], (list, tuple)):
             # assuming a list or tuple of symbols...
             params[ip] = np.array(params[ip]).astype(type(params[ip][0]))
-        elif isinstance(params[ip], (float, int, long, complex, np.number)):
+        elif is_numeric(params[ip]):
             params[ip] = np.array(params[ip])
         else:
             try:
@@ -522,7 +527,7 @@ def assert_arrays(params, shape=None, transpose=False):
                     params[ip] = np.reshape(params[ip], shape)
         except:
             # TODO: maybe make this an explicit message
-            logger.info("\n\nwhat the fuck??")
+            logger.info("\n\nWTF?")
 
     if len(params) == 1:
         return params[0]
