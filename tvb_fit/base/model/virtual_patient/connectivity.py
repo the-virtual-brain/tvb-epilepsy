@@ -26,7 +26,7 @@ class Connectivity(object):
     areas = None
 
     def __init__(self, file_path, weights, tract_lengths, labels=np.array([]), centres=np.array([]),
-                 hemispheres=np.array([]), orientation=np.array([]), areas=np.array([]),
+                 hemispheres=np.array([]), orientations=np.array([]), areas=np.array([]),
                  normalized_weights=np.array([])):
         self.file_path = file_path
         self.weights = weights
@@ -37,7 +37,7 @@ class Connectivity(object):
         self.region_labels = labels
         self.centres = centres
         self.hemispheres = hemispheres
-        self.orientations = orientation
+        self.orientations = orientations
         self.areas = areas
 
     @property
