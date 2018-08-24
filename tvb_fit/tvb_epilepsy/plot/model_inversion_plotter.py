@@ -382,6 +382,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
         self._check_show()
         return fig, axes
 
+    # TODO: refactor to not have the plot commands here
     def plot_array_model_comparison(self, model_comps, title_prefix="", metrics=["loos", "ks"],  labels=[],
                                     xdata=None, xlabel="", figsize=FiguresConfig.VERY_LARGE_SIZE, figure_name=None):
 

@@ -180,6 +180,7 @@ class TimeseriesPlotter(BasePlotter):
         return data_fun, plot_lines, projection, n_rows, n_cols, def_alpha, loopfun, \
                subtitle, subtitle_col, axlabels, axlimits
 
+    # TODO: refactor to not have the plot commands here
     def plot_timeseries(self, data_dict, time=None, mode="ts", subplots=None, special_idx=[], subtitles=[],
                         offset=1.0, time_units="ms", title='Time series', figure_name=None, labels=[],
                         figsize=FiguresConfig.LARGE_SIZE):
@@ -261,6 +262,7 @@ class TimeseriesPlotter(BasePlotter):
         return self.plot_timeseries(data_dict, [], "traj", subtitles, special_idx, title=title, figure_name=figure_name,
                                     labels=labels, figsize=figsize)
 
+    # TODO: refactor to not have the plot commands here
     def plot_spectral_analysis_raster(self, time, data, time_units="ms", freq=None, spectral_options={},
                                       special_idx=[], title='Spectral Analysis', figure_name=None, labels=[],
                                       figsize=FiguresConfig.VERY_LARGE_SIZE):

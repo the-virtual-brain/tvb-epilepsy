@@ -50,36 +50,13 @@ class HeadPlotter(BasePlotter):
         count += 1
         return count, figure, ax, cax
 
-    def _plot_gain_matrix(self, sensors, region_labels, figure=None, title="Projection", y_labels=1, x_labels=1,
-                          x_ticks=numpy.array([]), y_ticks=numpy.array([]), figsize=FiguresConfig.VERY_LARGE_SIZE):
+    def _plot_gain_matrix(self, sensors, region_labels, figure=None, title="Projection",
+                          show_x_labels=True, show_y_labels=True, x_ticks=numpy.array([]), y_ticks=numpy.array([]),
+                          figsize=FiguresConfig.VERY_LARGE_SIZE):
         if not (isinstance(figure, pyplot.Figure)):
             figure = pyplot.figure(title, figsize=figsize)
-        n_sensors = sensors.number_of_sensors
-        number_of_regions = len(region_labels)
-        if len(x_ticks) == 0:
-            x_ticks = numpy.array(range(n_sensors), dtype=numpy.int32)
-        if len(y_ticks) == 0:
-            y_ticks = numpy.array(range(number_of_regions), dtype=numpy.int32)
-        cmap = pyplot.set_cmap('autumn_r')
-        img = pyplot.imshow(sensors.gain_matrix[x_ticks][:, y_ticks].T, cmap=cmap, interpolation='none')
-        pyplot.grid(True, color='black')
-        if y_labels > 0:
-            # region_labels = numpy.array(["%d. %s" % l for l in zip(range(number_of_regions), region_labels)])
-            region_labels = generate_region_labels(number_of_regions, region_labels, ". ")
-            pyplot.yticks(y_ticks, region_labels[y_ticks])
-        else:
-            pyplot.yticks(y_ticks)
-        if x_labels > 0:
-            sensor_labels = numpy.array(["%d. %s" % l for l in zip(range(n_sensors), sensors.labels)])
-            pyplot.xticks(x_ticks, sensor_labels[x_ticks], rotation=90)
-        else:
-            pyplot.xticks(x_ticks)
-        ax = figure.get_axes()[0]
-        ax.autoscale(tight=True)
-        pyplot.title(title)
-        divider = make_axes_locatable(ax)
-        cax1 = divider.append_axes("right", size="5%", pad=0.05)
-        pyplot.colorbar(img, cax=cax1)  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
+        ax, cax1 = self._plot_matrix(sensors.gain_matrix, sensors.labels, region_labels, 111, title,
+                                     show_x_labels, show_y_labels, x_ticks, y_ticks)
         self._save_figure(None, title)
         self._check_show()
         return figure, ax, cax1

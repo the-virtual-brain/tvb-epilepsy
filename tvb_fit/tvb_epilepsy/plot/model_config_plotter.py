@@ -30,6 +30,7 @@ class ModelConfigPlotter(BasePlotter):
             self.logger.warning("Noninteractive matplotlib backend! No highlighting functionality in plots!")
             self.config.figures.MOUSE_HOOVER = False
 
+    # TODO: refactor to not have the plot commands here, although this is a very hard and special case...
     def plot_state_space(self, model_config, region_labels=[], special_idx=[],
                          figure_name="", approximations=False):
         if model_config.model_name == "Epileptor2D":

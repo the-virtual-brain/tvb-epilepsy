@@ -155,46 +155,48 @@ class BasePlotter(object):
         return ax
 
     @staticmethod
-    def plot_regions2regions(adj, labels, subplot, title, show_y_labels=True, show_x_labels=True,
-                             indices_red_x=None, sharey=None):
-        ax = pyplot.subplot(subplot, sharey=sharey)
+    def _plot_matrix(matrix, xlabels, ylabels, subplot=111, title="", show_x_labels=True, show_y_labels=True,
+                     x_ticks=numpy.array([]), y_ticks=numpy.array([]), indices_red_x=None, indices_red_y=None,
+                     sharex=None, sharey=None):
+        ax = pyplot.subplot(subplot, sharex=sharex, sharey=sharey)
         pyplot.title(title)
-        y_color = 'k'
-        adj_size = adj.shape[0]
-        y_ticks = numpy.array(range(adj_size), dtype=numpy.int32)
-        if indices_red_x is None:
-            indices_red_x = y_ticks
-            x_ticks = indices_red_x
-            x_color = y_color
-        else:
-            x_color = 'r'
-            x_ticks = range(len(indices_red_x))
-        region_labels = numpy.array(["%d. %s" % l for l in zip(range(adj_size), labels)])
+        (nx, ny) = matrix.shape
+        indices_red = [indices_red_x, indices_red_y]
+        ticks = [x_ticks, y_ticks]
+        labels = [xlabels, ylabels]
+        for ii, (n, tick) in enumerate(zip([nx, ny], ticks)):
+            if len(tick) == 0:
+                ticks[ii] = numpy.array(range(n), dtype=numpy.int32)
         cmap = pyplot.set_cmap('autumn_r')
-        img = ax.imshow(adj[indices_red_x, :].T, cmap=cmap, interpolation='none')
-        ax.set_xticks(x_ticks)
-        ax.grid(True, color='grey')
-        if show_y_labels:
-            region_labels = numpy.array(["%d. %s" % l for l in zip(range(adj_size), labels)])
-            ax.set_yticks(y_ticks)
-            ax.set_yticklabels(region_labels)
-            if not (x_color == y_color):
-                labels = ax.yaxis.get_ticklabels()
-                for idx in indices_red_x:
-                    labels[idx].set_color('r')
-                ax.yaxis.set_ticklabels(labels)
-        else:
-            ax.set_yticklabels([])
-        if show_x_labels:
-            ax.set_xticklabels(region_labels[indices_red_x], rotation=270, color=x_color)
-        else:
-            ax.set_xticklabels([])
+        img = pyplot.imshow(matrix[ticks[0]][:, ticks[1]].T, cmap=cmap, interpolation='none')
+        pyplot.grid(True, color='black')
+        for ii, (n, xy, tick, ind_red, show, lbls, rot) in enumerate(zip([nx, ny], ["x", "y"], ticks, indices_red,
+                                                                      [show_x_labels, show_y_labels], labels, [90, 0])):
+            if show:
+                labels[ii] = numpy.array(["%d. %s" % l for l in zip(range(n), lbls)])
+                getattr(pyplot, xy + "ticks")(tick, labels[ii][tick], rotation=rot)
+            else:
+                getattr(pyplot, xy + "ticks")(tick)
+            if ind_red is not None:
+                tck = tick.tolist()
+                ticklabels = getattr(ax, xy + "axis").get_ticklabels()
+                for iidx, indr in enumerate(ind_red):
+                    try:
+                        ticklabels[tck.index(indr)].set_color('r')
+                    except:
+                        pass
+                getattr(ax, xy + "axis").set_ticklabels(ticklabels)
         ax.autoscale(tight=True)
-        # make a color bar
         divider = make_axes_locatable(ax)
         cax1 = divider.append_axes("right", size="5%", pad=0.05)
         pyplot.colorbar(img, cax=cax1)  # fraction=0.046, pad=0.04) #fraction=0.15, shrink=1.0
-        return ax
+        return ax, cax1
+
+    def plot_regions2regions(self, adj, labels, subplot, title, show_x_labels=True, show_y_labels=True,
+                             x_ticks=numpy.array([]), y_ticks=numpy.array([]), indices_red_x=None, indices_red_y=None,
+                             sharex=None, sharey=None):
+        return self._plot_matrix(adj, labels, labels, subplot, title, show_x_labels, show_y_labels,
+                     x_ticks, y_ticks, indices_red_x, indices_red_y, sharex, sharey)
 
     @staticmethod
     def _set_axis_labels(fig, sub, n_regions, region_labels, indices2emphasize, color='k', position='left'):
@@ -248,8 +250,8 @@ class BasePlotter(object):
                                              colormap=kwargs.get("colormap", "YlOrRd"), show_y_labels=False,
                                              indices_red=focus_indices, sharey=ax0)
             elif data_dict.get("plot_type") == "regions2regions":
-                ax = self.plot_regions2regions(data, labels, subplot_ind, data_dict["name"], show_y_labels=False,
-                                               show_x_labels=True, indices_red_x=focus_indices, sharey=ax0)
+                ax = self.plot_regions2regions(data, labels, subplot_ind, data_dict["name"], show_x_labels=True,
+                                               show_y_labels=False, indices_red_x=focus_indices, sharey=ax0)
             else:
                 ax = self.plot_vector(data, labels, subplot_ind, data_dict["name"], show_y_labels=False,
                                       indices_red=focus_indices, sharey=ax0)
