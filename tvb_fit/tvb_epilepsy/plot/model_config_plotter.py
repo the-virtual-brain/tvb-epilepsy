@@ -30,9 +30,13 @@ class ModelConfigPlotter(BasePlotter):
             self.logger.warning("Noninteractive matplotlib backend! No highlighting functionality in plots!")
             self.config.figures.MOUSE_HOOVER = False
 
-    def plot_state_space(self, model_config, model="6D", region_labels=[], special_idx=[], zmode="lin", figure_name="",
-                         approximations=False):
-        add_name = " " + "Epileptor " + model + " z-" + str(zmode)
+    def plot_state_space(self, model_config, region_labels=[], special_idx=[],
+                         figure_name="", approximations=False):
+        if model_config.model_name == "Epileptor2D":
+            model = "2d"
+        else:
+            model = "6d"
+        add_name = " " + "Epileptor " + model + " z-" + str(numpy.where(model_config.zmode[0], "exp", "lin"))
         figure_name = figure_name + add_name
 
         region_labels = generate_region_labels(model_config.number_of_regions, region_labels, ". ")
@@ -45,8 +49,8 @@ class ModelConfigPlotter(BasePlotter):
         # Fixed parameters for all regions:
         x1eq = model_config.x1eq
         zeq = model_config.zeq
-        x0 = a = b = d = yc = slope = Iext1 = Iext2 = s = 0.0
-        for p in ["x0", "a", "b", "d", "yc", "slope", "Iext1", "Iext2", "s"]:
+        x0 = a = b = d = yc = slope = Iext1 = Iext2 = s = tau1 = tau0 = zmode = 0.0
+        for p in ["x0", "a", "b", "d", "yc", "slope", "Iext1", "Iext2", "s", "tau1", "tau0", "zmode"]:
             exec (p + " = numpy.mean(model_config." + p + ")")
 
         fig = pyplot.figure(figure_name, figsize=FiguresConfig.SMALL_SIZE)
@@ -66,10 +70,10 @@ class ModelConfigPlotter(BasePlotter):
         # z nullcines
         # center point (critical equilibrium point) without approximation:
         # zsq0 = yc + Iext1 - x1sq0 ** 3 - 2.0 * x1sq0 ** 2
-        x0e = calc_x0_val_to_model_x0(X0_CR_DEF, yc, Iext1, a=a, b=b, d=d, zmode=zmode)
-        x0ne = calc_x0_val_to_model_x0(X0_DEF, yc, Iext1, a=a, b=b, d=d, zmode=zmode)
-        zZe = calc_fz(x1, z=0.0, x0=x0e, tau1=1.0, tau0=1.0, zmode=zmode)  # for epileptogenic regions
-        zZne = calc_fz(x1, z=0.0, x0=x0ne, tau1=1.0, tau0=1.0, zmode=zmode)  # for non-epileptogenic regions
+        x0e = calc_x0_val_to_model_x0(X0_CR_DEF, yc, Iext1, a=a, b=b, d=d, zmode=model_config.zmode)
+        x0ne = calc_x0_val_to_model_x0(X0_DEF, yc, Iext1, a=a, b=b, d=d, zmode=model_config.zmode)
+        zZe = calc_fz(x1, z=0.0, x0=x0e, tau1=1.0, tau0=1.0, zmode=model_config.zmode)  # for epileptogenic regions
+        zZne = calc_fz(x1, z=0.0, x0=x0ne, tau1=1.0, tau0=1.0, zmode=model_config.zmode)  # for non-epileptogenic regions
         zE1null, = pyplot.plot(x1, zZe, 'g-', label='z nullcline at critical point (e_values=1)', linewidth=1)
         zE2null, = pyplot.plot(x1, zZne, 'g--', label='z nullcline for e_values=0', linewidth=1)
         if approximations:
@@ -134,9 +138,9 @@ class ModelConfigPlotter(BasePlotter):
             y1 = calc_eq_y1(X1, yc, d=d)
             x2 = 0.0  # as a simplification for faster computation without important consequences
             # x2 = calc_eq_x2(Iext2, y2eq=None, zeq=X1, x1eq=Z, s=s)[0]
-        fx1 = calc_fx1(X1, Z, y1=y1, Iext1=Iext1, slope=slope, a=a, b=b, d=d, tau1=model_config.tau1, x1_neg=None, model=model,
-                       x2=x2)
-        fz = calc_fz(X1, Z, x0=x0, tau1=model_config.tau1, tau0=model_config.tau0, zmode=zmode)
+        fx1 = calc_fx1(X1, Z, y1=y1, Iext1=Iext1, slope=slope, a=a, b=b, d=d, tau1=tau1, x1_neg=None,
+                       model=model, x2=x2)
+        fz = calc_fz(X1, Z, x0=x0, tau1=tau1, tau0=tau0, zmode=zmode)
         C = numpy.abs(fx1) + numpy.abs(fz)
         pyplot.quiver(X1, Z, fx1, fz, C, edgecolor='k', alpha=.5, linewidth=.5)
         pyplot.contour(X1, Z, fx1, 0, colors='b', linestyles="dashed")

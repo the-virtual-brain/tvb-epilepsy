@@ -1,4 +1,3 @@
-# coding=utf-8
 
 from tvb_fit.tvb_epilepsy.base.constants.config import FiguresConfig
 import matplotlib
@@ -190,16 +189,16 @@ class ModelInversionPlotter(TimeseriesPlotter):
         truth = {}
         if probabilistic_model is not None:
             if regions_mode == "active":
-                regions_inds = probabilistic_model.active_regions
+                regions_inds = ensure_list(probabilistic_model.active_regions)
             else:
                 regions_inds = range(probabilistic_model.number_of_regions)
-            I = numpy.ones((probabilistic_model.number_of_regions, 1))
+            I = numpy.ones((probabilistic_model.number_of_regions, )) #, 1
             for param in params:
                 pdf = ensure_list(probabilistic_model.get_prior_pdf(param))
                 for ip, p in enumerate(pdf):
-                    pdf[ip] = ((numpy.array(p).T * I)[regions_inds])
+                    pdf[ip] = ((numpy.array(p) * I).T[regions_inds])
                 priors.update({param: (pdf[0].squeeze(), pdf[1].squeeze())})
-                truth.update({param: ((probabilistic_model.get_truth(param) * I[:, 0])[regions_inds]).squeeze()})
+                truth.update({param: ((probabilistic_model.get_truth(param) * I)[regions_inds]).squeeze()}) #[:, 0]
         # plot region-wise parameters
         f1 = self._region_parameters_violin_plots(samples, truth, priors, stats, params, skip_samples,
                                                   per_chain_or_run=per_chain_or_run, labels=region_labels,
@@ -486,9 +485,9 @@ class ModelInversionPlotter(TimeseriesPlotter):
                          regions_labels=[], regions_mode="active", n_regions=1,
                          trajectories_plot=True, connectivity_plot=False, skip_samples=0, title_prefix=""):
         if probabilistic_model is not None:
-            active_regions = probabilistic_model.active_regions
+            active_regions = ensure_list(probabilistic_model.active_regions)
         else:
-            active_regions = model_data.get("active_regions", range(n_regions))
+            active_regions = ensure_list(model_data.get("active_regions", range(n_regions)))
             regions_labels = generate_region_labels(n_regions, regions_labels, ". ", False)
         if isequal_string(regions_mode, "all"):
             seizure_indices = active_regions

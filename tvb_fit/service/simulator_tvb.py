@@ -1,65 +1,73 @@
 """
-Mechanism for launching TVB simulations.
+Service for launching TVB simulations.
 """
-from abc import ABCMeta, abstractmethod
-
+from copy import deepcopy
 import sys
 import time
 import numpy
-from tvb.datatypes import connectivity
-from tvb.simulator.simulator import Simulator
-# from tvb.model_config import coupling, integrators, model_config
+from tvb.simulator import integrators, simulator, coupling, noise, monitors
 from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.model.timeseries import Timeseries, TimeseriesDimensions
-from tvb_fit.tvb_epilepsy.service.simulator.simulator import ABCSimulator
+from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
+from tvb_fit.service.head_service import HeadService
+from tvb_fit.service.simulator import ABCSimulator
 
 
 class SimulatorTVB(ABCSimulator):
-    __metaclass__ = ABCMeta
-
     """
     This class is used as a Wrapper over the TVB Simulator.
     It keeps attributes needed in order to create and configure a TVB Simulator object.
     """
     logger = initialize_logger(__name__)
 
-    simTVB = Simulator()  # A tvb model_config
-    model_configuration = None
+    simTVB = None
 
-    def __init__(self, model_configuration, simulatorTVB=Simulator()):
-        self.simTVB = simulatorTVB
-        self.model_configuration = model_configuration
+    def __init__(self, model_configuration, connectivity, settings):
+        super(SimulatorTVB, self).__init__(model_configuration, connectivity, settings)
+        self.simTVB = None
 
-    @staticmethod
-    def _vp2tvb_connectivity(vp_conn, model_connectivity=None):
-        if model_connectivity is None:
-            model_connectivity = vp_conn.normalized_weights
-        return connectivity.Connectivity(use_storage=False, weights=model_connectivity,
-                                         tract_lengths=vp_conn.tract_lengths,
-                                         region_labels=vp_conn.region_labels,
-                                         centres=vp_conn.centres, hemispheres=vp_conn.hemispheres,
-                                         orientations=vp_conn.orientations, areas=vp_conn.areas)
+    def _vp2tvb_connectivity(self, time_delays_flag=True):
+        return HeadService().vp2tvb_connectivity(self.connectivity, self.model_configuration.connectivity,
+                                                 time_delays_flag)
 
-    def get_vois(self):
-        # TODO: Confirm the path monitor.expression
-        return [monitor.expression.replace('x2 - x1', 'source') for monitor in self.simTVB.monitors]
+    def get_vois(self, model_vois=None):
+        if model_vois is None:
+            model_vois = self.simTVB.model.variables_of_interest
+        return self.settings.monitor_expressions(model_vois)
 
-    def configure_initial_conditions(self, history_length=1, **kwargs):
-        if isinstance(self.model_configuration.initial_conditions, numpy.ndarray):
-            initial_conditions = numpy.expand_dims(self.model_configuration.initial_conditions, 2)
-            self.simTVB.initial_conditions = numpy.tile(initial_conditions, (history_length, 1, 1, 1))
+    @property
+    def model(self):
+        return self.simTVB.model
 
-    def config_simulation(self, **kwargs):
+    # General choices are made here to be used as an example.
+    def config_simulation(self, model):
+        # TODO: generate model from self.model_configuration for every specific implementation
+        tvb_connectivity = self._vp2tvb_connectivity()
 
-        self.simTVB.connectivity = self._vp2tvb_connectivity(self.model_configuration.connectivity)
+        tvb_coupling = coupling.Difference(a=1.0)
 
-        #
-        # self.simTVB = model_config.Simulator(model=self.model, connectivity=tvb_connectivity, coupling=tvb_coupling,
-        #                                   integrator=integrator, monitors=monitors,
-        #                                   simulation_length=self.simulation_settings.simulated_period)
+        noise_instance = noise.Additive(nsig=self.settings.noise_intensity,
+                                        random_stream=numpy.random.RandomState(seed=self.settings.noise_seed))
+
+        integrator = getattr(integrators, self.settings.integrator_type) \
+                                (dt=self.settings.integration_step, noise=noise_instance)
+
+        monitor = monitors.TemporalAverage()
+        monitor.period = self.settings.monitor_sampling_period
+
+        self.simTVB = simulator.Simulator(model=model, connectivity=tvb_connectivity,
+                                          coupling=tvb_coupling, integrator=integrator,
+                                          monitors=[monitor], simulation_length=self.settings.simulation_length)
         self.simTVB.configure()
 
-        self.configure_initial_conditions(**kwargs)
+        self.configure_initial_conditions()
+
+    def config_simulation_from_tvb_simulator(self, tvb_simulator):
+        # Ignore simulation settings and use the input tvb_simulator
+        self.simTVB = deepcopy(tvb_simulator)
+        self.simTVB.model = tvb_simulator.model  # TODO: compare this with self.model_configuration
+        self.simTVB.connectivity = self._vp2tvb_connectivity()
+        self.simTVB.configure()
+        self.configure_initial_conditions()
 
     def launch_simulation(self, report_every_n_monitor_steps=None):
         if report_every_n_monitor_steps >= 1:
@@ -71,17 +79,14 @@ class SimulatorTVB(ABCSimulator):
         self.simTVB._configure_history(initial_conditions=self.simTVB.initial_conditions)
 
         status = True
-
         if n_report_blocks < 2:
             try:
                 tavg_time, tavg_data = self.simTVB.run()[0]
 
             except Exception, error_message:
                 status = False
-                self.logger.warning("Something went wrong with this simulation...:" + "\n" + error_message)
-                return None, None, status
-
-            return tavg_time, tavg_data, status
+                self.logger.warning("Something went wrong with this simulation...:" + "\n" + str(error_message))
+                return None, status
 
         else:
 
@@ -115,14 +120,13 @@ class SimulatorTVB(ABCSimulator):
             except Exception, error_message:
                 status = False
                 self.logger.warning("Something went wrong with this simulation...:" + "\n" + str(error_message))
-                return None, None, status
+                return None, status
 
-            tavg_time = numpy.array(tavg_time).flatten().astype('f')
-            tavg_data = numpy.swapaxes(tavg_data, 1, 2).astype('f')
-            # Variables of interest in a dictionary:
-            sim_output = \
-                Timeseries(tavg_data,
-                           {TimeseriesDimensions.SPACE.value: self.model_configuration.connectivity.region_labels,
-                            TimeseriesDimensions.VARIABLES.value: self.get_vois()},
-                           tavg_time[0], numpy.diff(tavg_time).mean(), "ms")
-            return sim_output, status
+        tavg_time = numpy.array(tavg_time).flatten().astype('f')
+        tavg_data = numpy.swapaxes(tavg_data, 1, 2).astype('f')
+        # Variables of interest in a dictionary:
+        sim_output = Timeseries(tavg_data, {TimeseriesDimensions.SPACE.value: self.connectivity.region_labels,
+                                            TimeseriesDimensions.VARIABLES.value: self.get_vois()},
+                                tavg_time[0], numpy.diff(tavg_time).mean(), "ms")
+        return sim_output, status
+

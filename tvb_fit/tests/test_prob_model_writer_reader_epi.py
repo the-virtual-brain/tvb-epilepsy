@@ -1,7 +1,7 @@
 import os
-from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.io.h5_writer import H5Writer
 from tvb_fit.io.h5_reader import H5Reader
+from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_fit.tvb_epilepsy.service.probabilistic_models_builders import SDEProbabilisticModelBuilder
@@ -32,8 +32,8 @@ if __name__ == "__main__":
     hypothesis = hyp_builder.build_hypothesis_from_file("clinical_hypothesis_postseeg", e_indices)
 
     model_configuration = \
-        ModelConfigurationBuilder(head.connectivity.number_of_regions).\
-            build_model_from_E_hypothesis(hypothesis, head.connectivity.normalized_weights)
+        ModelConfigurationBuilder("Epileptor", head.connectivity.normalized_weights).\
+            build_model_from_E_hypothesis(hypothesis)
 
     probabilistic_model = SDEProbabilisticModelBuilder(model_config=model_configuration).generate_model()
     H5Writer().write_probabilistic_model(probabilistic_model, config.out.FOLDER_RES, "TestProbModelorig.h5")

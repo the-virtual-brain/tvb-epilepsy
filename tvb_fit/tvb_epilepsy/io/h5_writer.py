@@ -3,7 +3,7 @@ import h5py
 
 import numpy
 
-from tvb_fit.base.model.timeseries import Timeseries
+from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_fit.base.utils.log_error_utils import raise_value_error, raise_error
 from tvb_fit.base.utils.file_utils import change_filename_or_overwrite, write_metadata
 from tvb_fit.io.h5_writer import KEY_TYPE, KEY_DATE, KEY_VERSION, KEY_MAX, KEY_MIN, KEY_STEPS, \
@@ -40,37 +40,12 @@ class H5Writer(H5WriterBase):
 
         h5_file.close()
 
-    def write_model_configuration_builder(self, model_configuration_builder, path, nr_regions=None):
-        """
-        :param model_configuration_builder: ModelConfigurationService object to write in H5
-        :param path: H5 path to be written
-        """
-        self.write_object_to_file(path, model_configuration_builder, "HypothesisModel", nr_regions)
-
-    def write_model_configuration(self, model_configuration, path, nr_regions=None):
-        """
-        :param model_configuration: ModelConfiguration object to write in H5
-        :param path: H5 path to be written
-        """
-        self.write_object_to_file(path, model_configuration, "HypothesisModel", nr_regions)
-
     def write_lsa_service(self, lsa_service, path, nr_regions=None):
         """
         :param lsa_service: LSAService object to write in H5
         :param path: H5 path to be written
         """
         self.write_object_to_file(path, lsa_service, "HypothesisModel", nr_regions)
-
-    # TODO: can this be visualized? should we keep groups?
-    def write_simulation_settings(self, simulation_settings, path, nr_regions=None):
-        """
-        :param simulation_settings: SimulationSettings object to write in H5
-        :param path: H5 path to be written
-        """
-        self.write_object_to_file(path, simulation_settings, "HypothesisModel", nr_regions)
-
-    def write_simulator_model(self, simulator_model, nr_regions, path):
-        self.write_object_to_file(path, simulator_model, "HypothesisModel", nr_regions)
 
     def write_ts_epi(self, raw_ts, sampling_period, path, source_ts=None):
         path = change_filename_or_overwrite(os.path.join(path))
@@ -96,7 +71,7 @@ class H5Writer(H5WriterBase):
 
     def write_ts_seeg_epi(self, seeg_data, sampling_period, path):
         if not os.path.exists(path):
-            raise_error("TS file %s does not exist. First define the raw data!" + path, logger)
+            raise_error("TS file %s does not exist. First define the raw data!" + path, self.logger)
             return
         sensors_name = "SeegSensors-" + str(seeg_data.shape[1])
 
@@ -112,24 +87,6 @@ class H5Writer(H5WriterBase):
             h5_file.close()
         except Exception, e:
             raise_error(str(e) + "\nSeeg dataset already written as " + sensors_name, self.logger)
-
-    def write_pse_service(self, pse_service, path):
-        """
-        :param pse_service: PSEService object to write in H5
-        :param path: H5 path to be written
-        """
-        if "params_vals" not in dir(pse_service):
-            params_samples = pse_service.pse_params.T
-        else:
-            params_samples = pse_service.params_vals
-
-        pse_dict = {"task": pse_service.task,
-                    "params_names": pse_service.params_names,
-                    "params_paths": pse_service.params_paths,
-                    "params_indices": numpy.array([str(inds) for inds in pse_service.params_indices], dtype="S"),
-                    "params_samples": params_samples}
-
-        self.write_dictionary(pse_dict, path)
 
     def write_model_inversion_service(self, model_inversion_service, path, nr_regions=None):
         """
@@ -152,8 +109,9 @@ class H5Writer(H5WriterBase):
                 this_param_group = parent_group.create_group(parameter.name)
             else:
                 this_param_group = parent_group.create_group(param_name)
-            this_param_group, parameter_subgroups = \
-                self._prepare_object_for_group(this_param_group, parameter, nr_regions=nr_regions)
+            this_param_group, parameter_subgroups = self._prepare_object_for_group(this_param_group, parameter,
+                                                                                   nr_regions=nr_regions,
+                                                                                   regress_subgroups=False)
             for param_subgroup_key in parameter_subgroups:
                 if param_subgroup_key.find("p_shape") >= 0:
                     this_param_group[param_subgroup_key] = numpy.array(getattr(param_value, param_subgroup_key))
@@ -161,10 +119,10 @@ class H5Writer(H5WriterBase):
                     this_param_group, parameter_subgroup = \
                         _set_parameter_to_group(this_param_group, parameter.star, nr_regions, "star")
                 else:
-                    parameter_subgroup = param_group.create_group(param_subgroup_key)
-                    parameter_subgroup, _ = self._prepare_object_for_group(parameter_subgroup,
-                                                                           getattr(param_value, param_subgroup_key),
-                                                                           nr_regions)
+                    this_param_group.create_group(param_subgroup_key)
+                    this_param_group[param_subgroup_key] =\
+                        self._prepare_object_for_group(this_param_group[param_subgroup_key],
+                                                      getattr(param_value, param_subgroup_key), nr_regions)
             return parent_group, this_param_group
 
         h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
@@ -188,7 +146,8 @@ class H5Writer(H5WriterBase):
 
             else:
                 group = h5_file.create_group(group_key)
-                group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, getattr(probabilistic_model, group_key).__class__.__name__)
-                group, _ = self._prepare_object_for_group(group, getattr(probabilistic_model, group_key), nr_regions)
+                group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE,
+                                   getattr(probabilistic_model, group_key).__class__.__name__)
+                group = self._prepare_object_for_group(group, getattr(probabilistic_model, group_key), nr_regions)
 
         h5_file.close()

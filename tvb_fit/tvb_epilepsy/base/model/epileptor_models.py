@@ -8,8 +8,8 @@ import tvb.basic.traits.types_basic as basic
 import tvb.datatypes.arrays as arrays
 from tvb.simulator.common import get_logger
 from tvb.simulator.models import Model
-from tvb_fit.base.utils.log_error_utils import raise_value_error, raise_not_implemented_error
-from tvb_fit.base.utils.data_structures_utils import isequal_string
+from tvb_fit.base.utils.log_error_utils import raise_not_implemented_error
+from tvb_fit.tvb_epilepsy.base.constants.model_constants import *
 
 LOG = get_logger(__name__)
 
@@ -114,72 +114,72 @@ class EpileptorDP(Model):
 
     zmode = arrays.FloatArray(
         label="zmode",
-        default=numpy.array("lin"),
-        doc="zmode = numpy.array(""lin"") for linear and numpy.array(""sig"") for sigmoidal z dynamics",
+        default=numpy.array([ZMODE_DEF]),
+        doc="zmode = numpy.array([0]) for linear and numpy.array([1]) for sigmoidal z dynamics",
         order=-1)
 
     a = arrays.FloatArray(
        label="a",
-       default=numpy.array([1]),
+       default=numpy.array([A_DEF]),
        doc="Coefficient of the cubic term in the first state variable",
        order=-1)
 
     b = arrays.FloatArray(
        label="b",
-       default=numpy.array([3]),
+       default=numpy.array([B_DEF]),
        doc="Coefficient of the squared term in the first state variabel",
        order=-1)
 
     yc = arrays.FloatArray(
         label="yc",
-        default=numpy.array([1]),
+        default=numpy.array([YC_DEF]),
         doc="Additive coefficient for the second state variable",
         order=-1)
 
     d = arrays.FloatArray(
        label="d",
-       default=numpy.array([5]),
+       default=numpy.array([D_DEF]),
        doc="Coefficient of the squared term in the second state variable",
        order=-1)
 
     s = arrays.FloatArray(
        label="s",
-       default=numpy.array([6]),
+       default=numpy.array([S_DEF]),
        doc="Linear coefficient in the third state variable",
        order=-1)
 
     x0 = arrays.FloatArray(
         label="x0",
         range=basic.Range(lo=-4.0, hi=1, step=0.1),
-        default=numpy.array([-2.0]),
+        default=numpy.array([X0_DEF]),
         doc="Excitability parameter",
         order=3)
 
     Iext1 = arrays.FloatArray(
         label="Iext1",
         range=basic.Range(lo=1.5, hi=5.0, step=0.1),
-        default=numpy.array([3.1]),
+        default=numpy.array([I_EXT1_DEF]),
         doc="External input current to the first population",
         order=1)
 
     slope = arrays.FloatArray(
         label="slope",
         range=basic.Range(lo=-16.0, hi=6.0, step=0.1),
-        default=numpy.array([0.]),
+        default=numpy.array([SLOPE_DEF]),
         doc="Linear coefficient in the first state variable",
         order=5)
 
     gamma = arrays.FloatArray(
         label="gamma",
         range=basic.Range(lo=0.01, hi=0.2, step=0.01),
-        default=numpy.array([0.1]),
+        default=numpy.array([GAMMA_DEF]),
         doc="Linear coefficient in the sixth state variable",
         order=5)
 
     Iext2 = arrays.FloatArray(
         label="Iext2",
         range=basic.Range(lo=0.0, hi=1.0, step=0.05),
-        default=numpy.array([0.45]),
+        default=numpy.array([I_EXT2_DEF]),
         doc="External input current to the second population",
         order=2)
 
@@ -199,14 +199,14 @@ class EpileptorDP(Model):
 
     K = arrays.FloatArray(
         label="K",
-        default=numpy.array([0.0]),
+        default=numpy.array([-K_DEF]),
         range=basic.Range(lo=-4.0, hi=4.0, step=0.1),
         doc="Permitau1ivity coupling, that is from the fast time scale toward the slow time scale",
         order=8)
 
     tau1 = arrays.FloatArray(
         label="tau1",
-        default=numpy.array([1.0]),
+        default=numpy.array([TAU1_DEF]),
         range=basic.Range(lo=0.1, hi=2.0, step=0.1),
         doc="Time scaling of the whole system",
         order=9)
@@ -214,13 +214,13 @@ class EpileptorDP(Model):
     tau0 = arrays.FloatArray(
         label="r",
         range=basic.Range(lo=3.0, hi=30000, step=100),
-        default=numpy.array([2857.0]),
+        default=numpy.array([TAU0_DEF]),
         doc="Temporal scaling in the third state variable",
         order=4)
 
     tau2 = arrays.FloatArray(
         label="tau2",
-        default=numpy.array([10]),
+        default=numpy.array([TAU2_DEF]),
         doc="Temporal scaling coefficient in fifth state variable",
         order=-1)
 
@@ -320,21 +320,13 @@ class EpileptorDP(Model):
         ydot[1] = self.tau1 * (self.yc - self.d * y[0] ** 2 - y[1])  # self.d=5
 
         # energy
+        # self.r * (4 * (y[0] - self.x0_values) - y[2]      + where(y[2] < 0., if_ydot2, else_ydot2)
         # if_ydot2 = - 0.1 * y[2] ** 7
         if_ydot2 = - 0.1 * y[2] ** 7
         # else_ydot2 = 0
         else_ydot2 = 0
-
-        if isequal_string(str(self.zmode), 'lin'):
-            # self.r * (4 * (y[0] - self.x0_values) - y[2]      + where(y[2] < 0., if_ydot2, else_ydot2)
-            fz = 4 * (y[0] - self.x0) + where(y[2] < 0., if_ydot2, else_ydot2)
-
-        elif isequal_string(str(self.zmode), 'sig'):
-            fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.x0
-
-        else:
-            raise_value_error("zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), " +
-                             "respectively")
+        fz = where(self.zmode, 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.x0, 4 * (y[0] - self.x0)) + \
+             where(y[2] < 0., if_ydot2, else_ydot2)
 
         # ydot[2] = self.tt * (        ...+ self.Ks * c_pop1))
         ydot[2] = self.tau1 * ((fz - y[2] + self.K * c_pop1) / self.tau0)
@@ -461,90 +453,83 @@ class EpileptorDPrealistic(Model):
     _ui_name = "EpileptorDPrealistic"
     ui_configurable_parameters = ["Iext1", "Iext2", "tau0", "x0_values", "slope"]
 
-    zmode = arrays.FloatArray(
-        label="zmode",
-        default=numpy.array("lin"),
-        doc="zmode = np.array(""lin"") for linear and numpy.array(""sig"") for sigmoidal z dynamics",
-        order=-1)
-
     pmode = arrays.FloatArray(
         label="pmode",
-        default=numpy.array("const"),
-        doc="pmode = numpy.array(""g""), numpy.array(""z""), numpy.array(""z*g"") or numpy.array(""const"") " +
-            "parameters following the g, z, z*g dynamics or staying constamt, respectively",
+        default=numpy.array([PMODE_DEF]),
+        doc="pmode = numpy.array([0]), numpy.array([1]), numpy.array([2]), numpy.array([3) or  " +
+            "parameters staying constant or following the z,g, z*g dynamics, respectively",
+        order=-1)
+
+    zmode = arrays.FloatArray(
+        label="zmode",
+        default=numpy.array([ZMODE_DEF]),
+        doc="zmode = numpy.array([0]) for linear and numpy.array([1]) for sigmoidal z dynamics",
         order=-1)
 
     a = arrays.FloatArray(
-       label="a",
-       default=numpy.array([1]),
-       doc="Coefficient of the cubic term in the first state variable",
-       order=-1)
+        label="a",
+        default=numpy.array([A_DEF]),
+        doc="Coefficient of the cubic term in the first state variable",
+        order=-1)
 
     b = arrays.FloatArray(
-       label="b",
-       default=numpy.array([3]),
-       doc="Coefficient of the squared term in the first state variabel",
-       order=-1)
+        label="b",
+        default=numpy.array([B_DEF]),
+        doc="Coefficient of the squared term in the first state variabel",
+        order=-1)
 
     yc = arrays.FloatArray(
         label="yc",
-        default=numpy.array([1]),
+        default=numpy.array([YC_DEF]),
         doc="Additive coefficient for the second state variable",
         order=-1)
 
     d = arrays.FloatArray(
-       label="d",
-       default=numpy.array([5]),
-       doc="Coefficient of the squared term in the second state variable",
-       order=-1)
+        label="d",
+        default=numpy.array([D_DEF]),
+        doc="Coefficient of the squared term in the second state variable",
+        order=-1)
 
     s = arrays.FloatArray(
-       label="s",
-       default=numpy.array([6]),
-       doc="Linear coefficient in the third state variable",
-       order=-1)
+        label="s",
+        default=numpy.array([S_DEF]),
+        doc="Linear coefficient in the third state variable",
+        order=-1)
 
     x0 = arrays.FloatArray(
         label="x0",
         range=basic.Range(lo=-4.0, hi=1, step=0.1),
-        default=numpy.array([-2.0]),
+        default=numpy.array([X0_DEF]),
         doc="Excitability parameter",
         order=3)
 
     Iext1 = arrays.FloatArray(
         label="Iext1",
         range=basic.Range(lo=1.5, hi=5.0, step=0.1),
-        default=numpy.array([3.1]),
+        default=numpy.array([I_EXT1_DEF]),
         doc="External input current to the first population",
         order=1)
 
     slope = arrays.FloatArray(
         label="slope",
         range=basic.Range(lo=-16.0, hi=6.0, step=0.1),
-        default=numpy.array([0.]),
+        default=numpy.array([SLOPE_DEF]),
         doc="Linear coefficient in the first state variable",
         order=5)
 
     gamma = arrays.FloatArray(
         label="gamma",
         range=basic.Range(lo=0.01, hi=0.2, step=0.01),
-        default=numpy.array([0.1]),
+        default=numpy.array([GAMMA_DEF]),
         doc="Linear coefficient in the sixth state variable",
         order=5)
 
     Iext2 = arrays.FloatArray(
         label="Iext2",
         range=basic.Range(lo=0.0, hi=1.0, step=0.05),
-        default=numpy.array([0.45]),
+        default=numpy.array([I_EXT2_DEF]),
         doc="External input current to the second population",
         order=2)
-
-    tau1 = arrays.FloatArray(
-        label="tau1",
-        default=numpy.array([1.0]),
-        range=basic.Range(lo=0.01, hi=2.0, step=0.01),
-        doc="Time scaling of the whole system",
-        order=9)
 
     Kvf = arrays.FloatArray(
         label="K_vf",
@@ -562,21 +547,28 @@ class EpileptorDPrealistic(Model):
 
     K = arrays.FloatArray(
         label="K",
-        default=numpy.array([0.0]),
+        default=numpy.array([-K_DEF]),
         range=basic.Range(lo=-4.0, hi=4.0, step=0.1),
         doc="Permitau1ivity coupling, that is from the fast time scale toward the slow time scale",
         order=8)
 
+    tau1 = arrays.FloatArray(
+        label="tau1",
+        default=numpy.array([TAU1_DEF]),
+        range=basic.Range(lo=0.1, hi=2.0, step=0.1),
+        doc="Time scaling of the whole system",
+        order=9)
+
     tau0 = arrays.FloatArray(
         label="r",
         range=basic.Range(lo=3.0, hi=30000, step=100),
-        default=numpy.array([2857.0]),
+        default=numpy.array([TAU0_DEF]),
         doc="Temporal scaling in the third state variable",
         order=4)
 
     tau2 = arrays.FloatArray(
         label="tau2",
-        default=numpy.array([10]),
+        default=numpy.array([TAU2_DEF]),
         doc="Temporal scaling coefficient in fifth state variable",
         order=-1)
 
@@ -599,8 +591,8 @@ class EpileptorDPrealistic(Model):
 
     variables_of_interest = basic.Enumerate(
         label="Variables watched by Monitors",
-        options=['x1', 'y1', 'z', 'x2', 'y2', 'g', 'x2 - x1', 'x0_t', 'slope_t', 'Iext1_t', 'Iext2_t', 'K_t'],
-        default=['x1', 'y1', 'z', 'x2', 'y2', 'g', 'x2 - x1', 'x0_t', 'slope_t', 'Iext1_t', 'Iext2_t', 'K_t'],
+        options=['x1', 'y1', 'z', 'x2', 'y2', 'g', 'x0_t', 'slope_t', 'Iext1_t', 'Iext2_t', 'K_t'],
+        default=['x1', 'y1', 'z', 'x2', 'y2', 'g', 'x0_t', 'slope_t', 'Iext1_t', 'Iext2_t', 'K_t'],
         select_multiple=True,
         doc="Quantities of the Epileptor available to monitor.",
         order=-1)
@@ -615,31 +607,35 @@ class EpileptorDPrealistic(Model):
 
         from tvb_fit.base.computations.analyzers_utils import interval_scaling
 
-        if (pmode == numpy.array(['g', 'z', 'z*g'])).any():
+        iz = numpy.ones(z.shape)
+        pmode = numpy.array(pmode) * iz
+        slope = numpy.array(slope) * iz
+        Iext2 = numpy.array(Iext2) * iz
+        slope_eq = numpy.array(slope) * iz
+        Iext2_eq = numpy.array(Iext2) * iz
 
-            if pmode == 'g':
-                xp = 1.0 / (1.0 + numpy.exp(1) ** (-10 * (g + 0.0)))
-                xp1 = 0  # -0.175
-                xp2 = 1  # 0.025
+        for iv in range(z.size):
 
-            elif pmode == 'z':
-                xp = 1.0 / (1.0 + numpy.exp(1) ** (-10 * (z - 3.00)))
-                xp1 = 0
-                xp2 = 1
+            if pmode[iv] > 0:
 
-            elif pmode == 'z*g':
-                xp = z * g
-                xp1 = -0.7
-                xp2 = 0.1
-            #                             targ min,max orig min,max
-            slope_eq = interval_scaling(xp, 1.0, slope, xp1, xp2)
-            # slope_eq = slope * numpy.ones(z.shape)
-            Iext2_eq = interval_scaling(xp, 0.0, Iext2, xp1, xp2)
+                if pmode[iv] == 1:
+                    xp = 1.0 / (1.0 + numpy.exp(1) ** (-10 * (z[iv] - 3.00)))
+                    xp1 = 0
+                    xp2 = 1
 
-        else:
-            i1 = numpy.ones(z.shape)
-            slope_eq = slope * i1
-            Iext2_eq = Iext2 * i1
+                elif pmode[iv] ==2:
+                    xp = 1.0 / (1.0 + numpy.exp(1) ** (-10 * (g[iv] + 0.0)))
+                    xp1 = 0  # -0.175
+                    xp2 = 1  # 0.025
+
+                elif pmode[iv] == 3:
+                    xp = z[iv] * g[iv]
+                    xp1 = -0.7
+                    xp2 = 0.1
+                #                           targ min,max  orig      min,max
+                slope_eq[iv] = interval_scaling(xp, 1.0, slope[iv], xp1, xp2)
+                # slope_eq = slope * numpy.ones(z.shape)
+                Iext2_eq[iv] = interval_scaling(xp, 0.0, Iext2[iv], xp1, xp2)
 
         return slope_eq, Iext2_eq
 
@@ -704,28 +700,23 @@ class EpileptorDPrealistic(Model):
         Iext2 = y[9]
         K = y[10]
 
-        Iext1 = self.Iext1 + local_coupling * y[0]
+        Iext1_local_coupling = Iext1 + local_coupling * y[0]
         c_pop1 = coupling[0, :]
         c_pop2 = coupling[1, :]
 
         # population 1
         if_ydot0 = -self.a * y[0] ** 2 + self.b * y[0]  # self.a=1.0, self.b=3.0
         else_ydot0 = slope - y[3] + 0.6 * (y[2] - 4.0) ** 2
-        ydot[0] = self.tau1 * (y[1] - y[2] + Iext1 + self.Kvf * c_pop1 + where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
+        ydot[0] = self.tau1 * (y[1] - y[2] + Iext1_local_coupling + self.Kvf * c_pop1 + where(y[0] < 0.0, if_ydot0, else_ydot0) * y[0])
         ydot[1] = self.tau1 * (self.yc - self.d * y[0] ** 2 - y[1])  # self.d=5
 
         # energy
         if_ydot2 = - 0.1 * y[2] ** 7
         else_ydot2 = 0
 
-        if isequal_string(str(self.zmode), 'lin'):
-            fz = 4 * (y[0] - x0) + where(y[2] < 0., if_ydot2, else_ydot2)
+        fz = where(self.zmode, 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - x0, 4 * (y[0] - x0)) + \
+             where(y[2] < 0., if_ydot2, else_ydot2)
 
-        elif isequal_string(str(self.zmode), 'sig'):
-            fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - x0
-
-        else:
-            raise_value_error("zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively")
         ydot[2] = self.tau1 * ((fz - y[2] + K * c_pop1) / self.tau0)
 
         # population 2
@@ -737,7 +728,7 @@ class EpileptorDPrealistic(Model):
         # filter
         ydot[5] = self.tau1 * (-0.01 * (y[5] - self.gamma * y[0]))
 
-        feedback = (self.pmode == numpy.array(['g', 'z', 'z*g'])).any()
+        feedback = numpy.any(self.pmode > 0)
         slope_eq, Iext2_eq = self.fun_slope_Iext2(y[2], y[5], self.pmode, self.slope, self.Iext2)
         tau0_feedback = numpy.where(feedback, 1.0, self.tau0/100)
 
@@ -848,58 +839,58 @@ class EpileptorDP2D(Model):
 
     zmode = arrays.FloatArray(
         label="zmode",
-        default=numpy.array("lin"),
-        doc="zmode = numpy.array(""lin"") for linear and numpy.array(""sig"") for sigmoidal z dynamics",
+        default=numpy.array([ZMODE_DEF]),
+        doc="zmode = numpy.array([0]) for linear and numpy.array([1]) for sigmoidal z dynamics",
         order=-1)
 
     a = arrays.FloatArray(
        label="a",
-       default=numpy.array([1]),
+       default=numpy.array([A_DEF]),
        doc="Coefficient of the cubic term in the first state variable",
        order=-1)
 
     b = arrays.FloatArray(
        label="b",
-       default=numpy.array([3]),
+       default=numpy.array([B_DEF]),
        doc="Coefficient of the squared term in the first state variabel",
        order=-1)
 
     yc = arrays.FloatArray(
         label="yc",
-        default=numpy.array([1]),
+        default=numpy.array([YC_DEF]),
         doc="Additive coefficient for the second state variable",
         order=-1)
 
     d = arrays.FloatArray(
        label="d",
-       default=numpy.array([5]),
+       default=numpy.array([D_DEF]),
        doc="Coefficient of the squared term in the second state variable",
        order=-1)
 
     # s = arrays.FloatArray(
     #    label="s",
-    #    default=numpy.array([6]),
+    #    default=numpy.array([S_DEF]),
     #    doc="Linear coefficient in the third state variable",
     #    order=-1)
 
     x0 = arrays.FloatArray(
         label="x0",
         range=basic.Range(lo=-4.0, hi=1, step=0.1),
-        default=numpy.array([-2.0]),
+        default=numpy.array([X0_DEF]),
         doc="Excitability parameter",
         order=3)
 
     Iext1 = arrays.FloatArray(
         label="Iext1",
         range=basic.Range(lo=1.5, hi=5.0, step=0.1),
-        default=numpy.array([3.1]),
+        default=numpy.array([I_EXT1_DEF]),
         doc="External input current to the first population",
         order=1)
 
     slope = arrays.FloatArray(
         label="slope",
         range=basic.Range(lo=-16.0, hi=6.0, step=0.1),
-        default=numpy.array([0.]),
+        default=numpy.array([SLOPE_DEF]),
         doc="Linear coefficient in the first state variable",
         order=5)
 
@@ -912,14 +903,14 @@ class EpileptorDP2D(Model):
 
     K = arrays.FloatArray(
         label="K",
-        default=numpy.array([0.0]),
+        default=numpy.array([-K_DEF]),
         range=basic.Range(lo=-4.0, hi=4.0, step=0.1),
         doc="Permittivity coupling, that is from the fast time scale toward the slow time scale",
         order=8)
 
     tau1 = arrays.FloatArray(
         label="tau1",
-        default=numpy.array([1.0]),
+        default=numpy.array([TAU1_DEF]),
         range=basic.Range(lo=0.1, hi=2.0, step=0.1),
         doc="Time scaling of the whole system",
         order=9)
@@ -927,7 +918,7 @@ class EpileptorDP2D(Model):
     tau0 = arrays.FloatArray(
         label="r",
         range=basic.Range(lo=3.0, hi=30000, step=100),
-        default=numpy.array([2857.0]),
+        default=numpy.array([TAU0_DEF]),
         doc="Temporal scaling in the third state variable",
         order=4)
 
@@ -1009,14 +1000,8 @@ class EpileptorDP2D(Model):
         if_ydot1 = - 0.1 * y[1] ** 7
         else_ydot1 = 0
 
-        if isequal_string(str(self.zmode), 'lin'):
-            fz = 4 * (y[0] - self.x0) + where(y[1] < 0.0, if_ydot1, else_ydot1)
-
-        elif isequal_string(str(self.zmode), 'sig'):
-            fz = 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.x0
-
-        else:
-            raise_value_error('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
+        fz = where(self.zmode, 3.0 / (1.0 + numpy.exp(-10 * (y[0] + 0.5))) - self.x0, 4 * (y[0] - self.x0)) + \
+             where(y[1] < 0., if_ydot1, else_ydot1)
 
         ydot[1] = self.tau1 * (fz - y[1] + self.K * c_pop1) / self.tau0
 
@@ -1077,13 +1062,13 @@ class EpileptorDP2D(Model):
     #     if_fz = - 0.1 * y[1] ** 7
     #     else_fz = 0
     #     jac_zz = -numpy.diag(numpy.ones((n_ep,)), dtype=y.dtype) / self.tau0
-    #     if isequal_string(str(self.zmode), 'lin'):
+    #     if np.any(zmode == 0):
     #         jac_zx = numpy.diag(4.0) / self.tau0
     #         jac_zz -= numpy.diag(where(y[1] < 0.0, if_fz, else_fz))
-    #     elif isequal_string(str(self.zmode), 'sig'):
+    #     elif np.any(zmoode == 1):
     #         exp_fun = numpy.exp(-10.0 * (y[0] + 0.5))
     #         jac_zx = numpy.diag(30.0 * exp_fun / (1.0 + exp_fun) ** 2)/ self.tau0
     #     else:
-    #         raise_value_error('zmode has to be either ""lin"" or ""sig"" for linear and sigmoidal fz(), respectively')
+    #         raise_value_error('zmode has to be either 0 or 1 for linear and sigmoidal fz(), respectively')
     #
     #     return concat([numpy.hstack([jac_xx, jac_xz]),numpy.hstack([jac_zx, jac_zz])],axis=0)

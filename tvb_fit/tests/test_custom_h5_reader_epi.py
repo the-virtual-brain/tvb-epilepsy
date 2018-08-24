@@ -1,14 +1,17 @@
 import os
 import numpy
+
 from tvb_fit.base.config import InputConfig
-from tvb_fit.tvb_epilepsy.base.model.model_configuration import ModelConfiguration
-from tvb_fit.tvb_epilepsy.base.model.simulation_settings import SimulationSettings
-from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
-from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
+from tvb_fit.base.model.simulation_settings import SimulationSettings
+from tvb_fit.tests.base import BaseTest
+
+from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration \
+    import EpileptorModelConfiguration as ModelConfiguration
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_fit.tvb_epilepsy.service.lsa_service import LSAService
-from tvb_fit.tests.base import BaseTest
+from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
+from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 
 
 class TestCustomH5Reader(BaseTest):
@@ -41,7 +44,7 @@ class TestCustomH5Reader(BaseTest):
     def test_read_model_configuration(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestModelConfiguration.h5")
         dummy_mc = ModelConfiguration(x1eq=numpy.array([2.0, 3.0, 1.0]), zmode=None, zeq=numpy.array([3.0, 2.0, 1.0]),
-                                      model_connectivity=numpy.array(
+                                      connectivity=numpy.array(
                                           [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0], [2.0, 2.0, 2.0]]),
                                       Ceq=numpy.array([1.0, 2.0, 3.0]))
         self.writer.write_model_configuration(dummy_mc, test_file)
@@ -50,7 +53,7 @@ class TestCustomH5Reader(BaseTest):
         assert numpy.array_equal(dummy_mc.x1eq, mc.x1eq)
         assert numpy.array_equal(dummy_mc.zeq, mc.zeq)
         assert numpy.array_equal(dummy_mc.Ceq, mc.Ceq)
-        assert numpy.array_equal(dummy_mc.model_connectivity, mc.model_connectivity)
+        assert numpy.array_equal(dummy_mc.connectivity, mc.model_connectivity)
 
     def test_read_model_configuration_builder(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestModelConfigService.h5")
@@ -102,7 +105,7 @@ class TestCustomH5Reader(BaseTest):
         sim_settings = self.reader.read_simulation_settings(test_file)
 
         assert dummy_sim_settings.integration_step == sim_settings.integration_step
-        assert dummy_sim_settings.simulated_period == sim_settings.simulated_period
+        assert dummy_sim_settings.simulation_length == sim_settings.simulated_period
         assert dummy_sim_settings.integrator_type == sim_settings.integrator_type
         assert dummy_sim_settings.noise_type == sim_settings.noise_type
         assert dummy_sim_settings.noise_ntau == sim_settings.noise_ntau
@@ -110,5 +113,5 @@ class TestCustomH5Reader(BaseTest):
         assert dummy_sim_settings.noise_seed == sim_settings.noise_seed
         assert dummy_sim_settings.monitor_type == sim_settings.monitor_type
         assert dummy_sim_settings.monitor_sampling_period == sim_settings.monitor_sampling_period
-        assert dummy_sim_settings.monitor_expressions == sim_settings.monitor_expressions
+        assert dummy_sim_settings.monitor_vois == sim_settings.monitor_vois
         assert numpy.array_equal(dummy_sim_settings.initial_conditions, sim_settings.initial_conditions)

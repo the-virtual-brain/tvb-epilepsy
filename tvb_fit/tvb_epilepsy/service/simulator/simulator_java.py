@@ -12,15 +12,16 @@ from copy import copy
 from tvb_fit.base.config import GenericConfig
 from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.base.utils.data_structures_utils import obj_to_dict, assert_arrays
-from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import calc_x0_val_to_model_x0
 from tvb_fit.io.h5_reader import H5Reader
-from tvb_fit.tvb_epilepsy.service.simulator.simulator import ABCSimulator
+from tvb_fit.service.simulator import ABCSimulator
+from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import calc_x0_val_to_model_x0
+from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import compute_initial_conditions_from_eq_point
 
 
 class Settings(object):
 
-    def __init__(self, integration_step=0.01220703125, noise_seed=42, noise_intensity=10 ** -6, simulated_period=5000,
-                 downsampling_period=0.9765625):
+    def __init__(self, integration_step=1000.0/16384.0, noise_seed=42, noise_intensity=10 ** -6, simulated_period=2000,
+                 downsampling_period=1000.0/1024.0):
         self.simulated_period = simulated_period
         self.integration_step = integration_step
 
@@ -43,7 +44,8 @@ class Settings(object):
 
 class EpileptorParams(object):
 
-    def __init__(self, a=1.0, b=3.0, c=1.0, d=5.0, aa=6.0, r=0.00035, kvf=0.0, kf=0.0, ks=1.5, tau=10.0, iext=3.1,
+    # TODO: Figure out the correct sign for ks (negative for TVB, positive for tvb-epilepsy, for the JAVA simulator???)
+    def __init__(self, a=1.0, b=3.0, c=1.0, d=5.0, aa=6.0, r=0.00035, kvf=0.0, kf=0.0, ks=-1.5, tau=10.0, iext=3.1,
                  iext2=0.45, slope=0.0, x0=-2.2, tt=1.0):
         self.a = a
         self.b = b
@@ -134,17 +136,19 @@ class SimulatorJava(ABCSimulator):
     reader = H5Reader()
     json_custom_config_file = "SimulationConfiguration.json"
 
-    def __init__(self, connectivity, model_configuration, simulation_settings):
+    def __init__(self, model_configuration, connectivity, settings):
+        super(SimulatorJava, self).__init__(model_configuration, connectivity, settings)
         self.model = None
-        self.simulation_settings = simulation_settings
-        self.model_configuration = model_configuration
-        self.connectivity = connectivity
         self.head_path = os.path.dirname(self.connectivity.file_path)
         self.json_config_path = os.path.join(self.head_path, self.json_custom_config_file)
         self.configure_model()
 
     def get_vois(self):
         return self.model.vois
+
+    @property
+    def connectivity(self):
+        return self.model_configuration.connectivity
 
     @staticmethod
     def _save_serialized(ep_full_config, result_path):
@@ -155,22 +159,22 @@ class SimulatorJava(ABCSimulator):
 
     def config_simulation(self):
 
-        ep_settings = Settings(integration_step=self.simulation_settings.integration_step,
-                               noise_seed=self.simulation_settings.noise_seed,
-                               simulated_period=self.simulation_settings.simulated_period,
-                               downsampling_period=self.simulation_settings.monitor_sampling_period)
-        if isinstance(self.simulation_settings.noise_intensity, (float, int)):
-            self.logger.info("Using uniform noise %s" % self.simulation_settings.noise_intensity)
-            ep_settings.noise_intensity = self.simulation_settings.noise_intensity
-        elif len(self.simulation_settings.noise_intensity) == JavaEpileptor._nvar:
-            self.logger.info("Using noise/voi %s" % self.simulation_settings.noise_intensity)
-            ep_settings.set_voi_noise_dispersions(self.simulation_settings.noise_intensity,
+        ep_settings = Settings(integration_step=self.settings.integration_step,
+                               noise_seed=self.settings.noise_seed,
+                               simulated_period=self.settings.simulated_period,
+                               downsampling_period=self.settings.monitor_sampling_period)
+        if isinstance(self.settings.noise_intensity, (float, int)):
+            self.logger.info("Using uniform noise %s" % self.settings.noise_intensity)
+            ep_settings.noise_intensity = self.settings.noise_intensity
+        elif len(self.settings.noise_intensity) == JavaEpileptor._nvar:
+            self.logger.info("Using noise/voi %s" % self.settings.noise_intensity)
+            ep_settings.set_voi_noise_dispersions(self.settings.noise_intensity,
                                                   self.connectivity.number_of_regions)
-        elif len(self.simulation_settings.noise_intensity) == JavaEpileptor._nvar * self.connectivity.number_of_regions:
-            self.logger.info("Using node noise %s" % self.simulation_settings.noise_intensity)
-            ep_settings.set_node_noise_dispersions(self.simulation_settings.noise_intensity)
+        elif len(self.settings.noise_intensity) == JavaEpileptor._nvar * self.connectivity.number_of_regions:
+            self.logger.info("Using node noise %s" % self.settings.noise_intensity)
+            ep_settings.set_node_noise_dispersions(self.settings.noise_intensity)
         else:
-            self.logger.warning("Could not set noise %s" % self.simulation_settings.noise_intensity)
+            self.logger.warning("Could not set noise %s" % self.settings.noise_intensity)
 
         json_model = self.prepare_epileptor_model_for_json(self.connectivity.number_of_regions)
         # TODO: history length has to be computed given the time delays (i.e., the tract lengths...)
@@ -215,14 +219,20 @@ class SimulatorJava(ABCSimulator):
         x0 = calc_x0_val_to_model_x0(self.model_configuration.x0_values, self.model_configuration.yc,
                                      self.model_configuration.Iext1, self.model_configuration.a,
                                      self.model_configuration.b - self.model_configuration.d)
+    # TODO: Figure out the correct sign for ks (negative for TVB, positive for tvb-epilepsy, for the JAVA simulator???)
         self.model = JavaEpileptor(a=self.model_configuration.a, b=self.model_configuration.b,
                                    d=self.model_configuration.d, x0=x0, iext=self.model_configuration.Iext1,
-                                   ks=self.model_configuration.K, c=self.model_configuration.yc,
+                                   ks=-self.model_configuration.K, c=self.model_configuration.yc,
                                    tt=self.model_configuration.tau1, r=1.0/self.model_configuration.tau0)
 
-    def configure_initial_conditions(self, initial_conditions=None):
+    def configure_initial_conditions(self):
+        initial_conditions = self.model_configuration.initial_conditions
         if isinstance(initial_conditions, numpy.ndarray):
+            if len(initial_conditions.shape) < 4:
+                initial_conditions = numpy.expand_dims(initial_conditions, 2)
+                initial_conditions = numpy.tile(initial_conditions, (1, 1, 1, 1))
             self.initial_conditions = initial_conditions
         else:
-            # TODO: have a function to calculate the correct history length when we have time delays
-            self.initial_conditions = self.prepare_initial_conditions(history_length=1)
+            self.initial_conditions = compute_initial_conditions_from_eq_point(self.model_configuration,
+                                                                               history_length=1,
+                                                                               simulation_shape=True)

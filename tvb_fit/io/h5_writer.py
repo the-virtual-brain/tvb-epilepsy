@@ -100,7 +100,7 @@ class H5Writer(H5WriterBase):
         :param head: Head object to be written
         :param path: path to head folder
         """
-        self.logger.info("Starting to write Head folder: %s" % head)
+        self.logger.info("Starting to write Head folder: %s" % path)
 
         if not (os.path.isdir(path)):
             os.mkdir(path)
@@ -112,6 +112,49 @@ class H5Writer(H5WriterBase):
                                    os.path.join(path, "Sensors%s_%s.h5" % (sensors.s_type, sensors.number_of_sensors)))
 
         self.logger.info("Successfully wrote Head folder at: %s" % path)
+
+    def write_model_configuration_builder(self, model_configuration_builder, path, nr_regions=None):
+        """
+        :param model_configuration_builder: ModelConfigurationService object to write in H5
+        :param path: H5 path to be written
+        """
+        self.write_object_to_file(path, model_configuration_builder, "HypothesisModel", nr_regions)
+
+    def write_model_configuration(self, model_configuration, path, nr_regions=None):
+        """
+        :param model_configuration: EpileptorModelConfiguration object to write in H5
+        :param path: H5 path to be written
+        """
+        self.write_object_to_file(path, model_configuration, "HypothesisModel", nr_regions)
+
+    # TODO: can this be visualized? should we keep groups?
+    def write_simulation_settings(self, simulation_settings, path, nr_regions=None):
+        """
+        :param simulation_settings: SimulationSettings object to write in H5
+        :param path: H5 path to be written
+        """
+        self.write_object_to_file(path, simulation_settings, "HypothesisModel", nr_regions)
+
+    def write_simulator_model(self, simulator_model, path, nr_regions=None):
+        self.write_object_to_file(path, simulator_model, "HypothesisModel", nr_regions)
+
+    def write_pse_service(self, pse_service, path):
+        """
+        :param pse_service: PSEService object to write in H5
+        :param path: H5 path to be written
+        """
+        if "params_vals" not in dir(pse_service):
+            params_samples = pse_service.pse_params.T
+        else:
+            params_samples = pse_service.params_vals
+
+        pse_dict = {"task": pse_service.task,
+                    "params_names": pse_service.params_names,
+                    "params_paths": pse_service.params_paths,
+                    "params_indices": numpy.array([str(inds) for inds in pse_service.params_indices], dtype="S"),
+                    "params_samples": params_samples}
+
+        self.write_dictionary(pse_dict, path)
 
     def write_sensitivity_analysis_service(self, sensitivity_service, path):
         """
@@ -130,28 +173,42 @@ class H5Writer(H5WriterBase):
 
         self.write_dictionary(sensitivity_service_dict, path)
 
+    def write_dictionary_to_group(self, dictionary, group):
+        group.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
+        group.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, dictionary.__class__.__name__)
+        for key, value in dictionary.items():
+            try:
+                if isinstance(value, numpy.ndarray) and value.size > 0:
+                    group.create_dataset(key, data=value)
+                else:
+                    if isinstance(value, list) and len(value) > 0:
+                        group.create_dataset(key, data=value)
+                    else:
+                        group.attrs.create(key, value)
+            except:
+                self.logger.warning("Did not manage to write " + key + " to h5 file " + str(group) + " !")
+
     def write_dictionary(self, dictionary, path):
         """
         :param dictionary: dictionary to write in H5
         :param path: H5 path to be written
         """
+        self.logger.info("Writing a dictionary at:\n" + path)
         h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
-
-        for key, value in dictionary.items():
-            try:
-                if isinstance(value, numpy.ndarray) and value.size > 0:
-                    h5_file.create_dataset(key, data=value)
-                else:
-                    if isinstance(value, list) and len(value) > 0:
-                        h5_file.create_dataset(key, data=value)
-                    else:
-                        h5_file.attrs.create(key, value)
-            except:
-                self.logger.warning("Did not manage to write " + key + " to h5 file " + path + " !")
-
+        self.write_dictionary_to_group(dictionary, h5_file)
         h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
         h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, dictionary.__class__.__name__)
+        h5_file.close()
 
+    def write_list_of_dictionaries(self, list_of_dicts, path):
+        self.logger.info("Writing a list of dictionaries at:\n" + path)
+        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
+        for idict, dictionary in enumerate(list_of_dicts):
+            idict_str = str(idict)
+            h5_file.create_group(idict_str)
+            self.write_dictionary_to_group(dictionary, h5_file[idict_str])
+        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "HypothesisModel")
+        h5_file.attrs.create(self.H5_SUBTYPE_ATTRIBUTE, "list")
         h5_file.close()
 
     def write_ts(self, raw_data, sampling_period, path):

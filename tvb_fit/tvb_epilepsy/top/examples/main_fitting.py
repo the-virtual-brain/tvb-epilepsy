@@ -3,18 +3,19 @@ import os
 
 import numpy as np
 
-from tvb_fit.tvb_epilepsy.base.constants.config import Config
-from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_DEF, TAU1_DEF, TAU0_DEF
-from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import XModes, SDE_MODES, \
-    OBSERVATION_MODELS, TARGET_DATA_PREPROCESSING
 from tvb_fit.base.constants import PriorsModes, Target_Data_Type
 from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.base.utils.data_structures_utils import ensure_list
+from tvb_fit.samplers.stan.cmdstan_interface import CmdStanInterface
+
+from tvb_fit.tvb_epilepsy.base.constants.config import Config
+from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU1_DEF, TAU0_DEF
+from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import XModes, SDE_MODES, \
+    OBSERVATION_MODELS, TARGET_DATA_PREPROCESSING
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_fit.tvb_epilepsy.service.probabilistic_models_builders import SDEProbabilisticModelBuilder
 from tvb_fit.tvb_epilepsy.service.model_inversion_services import SDEModelInversionService
-from tvb_fit.samplers.stan.cmdstan_interface import CmdStanInterface
 from tvb_fit.tvb_epilepsy.service.vep_stan_dict_builder import build_stan_model_data_dict
 from tvb_fit.tvb_epilepsy.top.scripts.simulation_scripts import from_model_configuration_to_simulation
 from tvb_fit.tvb_epilepsy.top.scripts.fitting_scripts import set_model_config_LSA, set_empirical_data, \
@@ -59,10 +60,10 @@ def set_hypotheses(head, config):
     return (hypothesis1, hypothesis2)
 
 
-def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
+def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_flag=True,
                         observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, sensors_lbls=[], sensor_id=0,
                         times_on_off=[], sim_times_on_off=[80.0, 120.0], preprocessing_sequence=TARGET_DATA_PREPROCESSING,
-                        fitmethod="optimizing", pse_flag=True, fit_flag=True, config=Config(), **kwargs):
+                        fitmethod="optimizing", pse_flag=True, fit_flag=True, config=Config(), test_flag=False, **kwargs):
 
     def path(name):
         if len(name) > 0:
@@ -90,14 +91,14 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
     # ------------------------------Stan model and service--------------------------------------
     model_code_path = os.path.join(config.generic.PROBLSTC_MODELS_PATH, stan_model_name + ".stan")
     stan_interface = CmdStanInterface(model_name=stan_model_name, model_code_path=model_code_path, fitmethod=fitmethod,
-                                    config=config)
+                                      config=config)
     stan_interface.set_or_compile_model()
 
     for hyp in hypotheses[:1]:
         base_path = os.path.join(config.out.FOLDER_RES, hyp.name)
         # Set model configuration and compute LSA
         model_configuration, lsa_hypothesis, pse_results = \
-            set_model_config_LSA(head, hyp, reader, config, K_unscaled=3*K_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
+            set_model_config_LSA(head, hyp, reader, config, K_unscaled=3 * K_UNSCALED_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                                  pse_flag=pse_flag, plotter=plotter, writer=writer)
 
         # -------------------------- Get model_data and observation signals: -------------------------------------------
@@ -118,7 +119,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
                 SDEProbabilisticModelBuilder(model_name="vep_sde", model_config=model_configuration,
                                              xmode=XModes.X1EQMODE.value, priors_mode=PriorsModes.INFORMATIVE.value,
                                              sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,
-                                             K=model_configuration.K).generate_model(generate_parameters=False)
+                                             K=np.mean(model_configuration.K), normal_flag=normal_flag). \
+                    generate_model(generate_parameters=False)
 
             # Update active model's active region nodes
             e_values = pse_results.get("e_values_mean", model_configuration.e_values)
@@ -178,7 +180,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
             #---------------------------------Finally set priors for the parameters-------------------------------------
             probabilistic_model.parameters.update(
-                SDEProbabilisticModelBuilder(probabilistic_model). \
+                SDEProbabilisticModelBuilder(probabilistic_model, normal_flag=normal_flag). \
                     generate_parameters([XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value,
                                          "x1_init", "z_init", "tau1",  # "tau0", "K", "x1",
                                          "sigma", "dZt", "epsilon", "scale", "offset"],
@@ -189,24 +191,24 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
             # Construct the stan model data dict:
             model_data = build_stan_model_data_dict(probabilistic_model, target_data.squeezed,
-                                                    model_configuration.model_connectivity, gain_matrix,
+                                                    model_configuration.connectivity, gain_matrix,
                                                     time=target_data.time_line)
             # # ...or interface with INS stan models
             # from tvb_fit.service.model_inversion.vep_stan_dict_builder import \
             #   build_stan_model_data_dict_to_interface_ins
             # model_data = build_stan_model_data_dict_to_interface_ins(probabilistic_model, target_data.squeezed,
-            #                                                          model_configuration.model_connectivity, gain_matrix,
+            #                                                          model_configuration.connectivity, gain_matrix,
             #                                                          time=target_data.time_line)
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        n_chains_or_runs = 4
-        output_samples = max(int(np.round(1000.0 / n_chains_or_runs)), 500)
+        n_chains_or_runs = np.where(test_flag, 2, 4)
+        output_samples = np.where(test_flag, 20, max(int(np.round(1000.0 / n_chains_or_runs)), 500))
         # Sampling (HMC)
         num_samples = output_samples
-        num_warmup = 1000
-        max_depth = 12
-        delta = 0.9
+        num_warmup = np.where(test_flag, 30, 1000)
+        max_depth = np.where(test_flag, 7, 12)
+        delta = np.where(test_flag, 0.8, 0.9)
         # ADVI or optimization:
         iter = 1000000
         tol_rel_obj = 1e-6
@@ -217,14 +219,14 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
         prob_model_name = probabilistic_model.name.split(".")[0]
         if fit_flag:
             estimates, samples, summary = stan_interface.fit(debug=0, simulate=0, model_data=model_data, refresh=1,
-                                                           n_chains_or_runs=n_chains_or_runs,
-                                                           iter=iter, tol_rel_obj=tol_rel_obj,
-                                                           num_warmup=num_warmup, num_samples=num_samples,
-                                                           max_depth=max_depth, delta=delta,
-                                                           save_warmup=1, plot_warmup=1, **kwargs)
+                                                             n_chains_or_runs=n_chains_or_runs,
+                                                             iter=iter, tol_rel_obj=tol_rel_obj,
+                                                             num_warmup=num_warmup, num_samples=num_samples,
+                                                             max_depth=max_depth, delta=delta,
+                                                             save_warmup=1, plot_warmup=1, **kwargs)
             #TODO: check if write_dictionary is enough for estimates, samples, summary and info_crit
-            writer.write_dictionary(estimates, path(prob_model_name + "_FitEst"))
-            writer.write_dictionary(samples, path(prob_model_name + "_FitSamples"))
+            writer.write_list_of_dictionaries(estimates, path(prob_model_name + "_FitEst"))
+            writer.write_list_of_dictionaries(samples, path(prob_model_name + "_FitSamples"))
             if summary is not None:
                 writer.write_dictionary(summary, path(prob_model_name + "_FitSummary"))
         else:
@@ -274,14 +276,16 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
 
         # -------------------------- Reconfigure model after fitting:---------------------------------------------------
         for id_est, est in enumerate(ensure_list(estimates)):
-            K = est.get("K", model_configuration.K)
-            tau1 = est.get("tau1", model_configuration.tau1)
-            tau0 = est.get("tau0", model_configuration.tau0)
+            K = est.get("K", np.mean(model_configuration.K))
+            tau1 = est.get("tau1", np.mean(model_configuration.tau1))
+            tau0 = est.get("tau0", np.mean(model_configuration.tau0))
+            fit_conn = est.get("MC", model_configuration.connectivity)
             fit_model_configuration_builder = \
-                ModelConfigurationBuilder(hyp.number_of_regions, K=K * hyp.number_of_regions, tau1=tau1, tau0=tau0)
-            x0_values_fit = model_configuration.x0_values
-            x0_values_fit[probabilistic_model.active_regions] = \
-                fit_model_configuration_builder._compute_x0_values_from_x0_model(est['x0'])
+              ModelConfigurationBuilder(model_configuration.model_name, fit_conn, K_unscaled=K*hyp.number_of_regions). \
+                  set_parameter("tau1", tau1).set_parameter("tau0", tau0)
+            x0 = model_configuration.x0
+            x0[probabilistic_model.active_regions] = est["x0"]
+            x0_values_fit = fit_model_configuration_builder._compute_x0_values_from_x0_model(x0)
             hyp_fit = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions).\
                                           set_name('fit' + str(id_est+1) + "_" + hyp.name).\
                                           set_x0_hypothesis(list(probabilistic_model.active_regions),
@@ -291,14 +295,13 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="",
             writer.write_hypothesis( hyp_fit, path(""))
 
             model_configuration_fit = \
-                fit_model_configuration_builder.build_model_from_hypothesis(hyp_fit,  # est["MC"]
-                                                                            model_configuration.model_connectivity)
+                fit_model_configuration_builder.build_model_from_hypothesis(hyp_fit)
 
             writer.write_model_configuration(model_configuration_fit, path("ModelConfig"))
 
             # Plot nullclines and equilibria of model configuration
             plotter.plot_state_space(model_configuration_fit, region_labels=head.connectivity.region_labels,
-                                     special_idx=probabilistic_model.active_regions, model="6d", zmode="lin",
+                                     special_idx=probabilistic_model.active_regions,
                                      figure_name=hyp_fit.name + "_Nullclines and equilibria")
         logger.info("Done!")
 
@@ -323,7 +326,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit_x1eq_sensor_synthetic")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit/tests/empirical") # "fit_x1eq_sensor_synthetic")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
@@ -356,7 +359,7 @@ if __name__ == "__main__":
     # sensors_inds = [28, 29, 38, 39, 64, 65, 48, 49]
     # Simulation times_on_off
     sim_times_on_off = [80.0, 120.0]  # for "fitting" simulations with tau0=30.0
-    EMPIRICAL = False
+    EMPIRICAL = True
     if EMPIRICAL:
         seizure = 'SZ1_0001.edf'  # 'SZ2_0001.edf'
         times_on_off = (np.array([15.0, 30.0]) * 1000.0).tolist() # for SZ1
@@ -374,6 +377,7 @@ if __name__ == "__main__":
         # times_on_off = sim_times_on_off # for "fitting" simulations with tau0=30.0
         times_on_off = [50.0, 350.0]  # for "paper" simulations
         # times_on_off = [1100.0, 1300.0]  # for "fitting" simulations with tau0=300.0
+    normal_flag = False
     stan_model_name = "vep_sde"
     fitmethod = "sample"  # "sample"  # "advi" or "opt"
     observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value  # OBSERVATION_MODELS.SOURCE_POWER.value  #
@@ -384,14 +388,15 @@ if __name__ == "__main__":
     preprocessing.append("decimate")
     pse_flag = True
     fit_flag = True
+    test_flag = True
     if EMPIRICAL:
-        main_fit_sim_hyplsa(stan_model_name=stan_model_name, observation_model=observation_model,
+        main_fit_sim_hyplsa(stan_model_name=stan_model_name, normal_flag=normal_flag, observation_model=observation_model,
                             empirical_file=os.path.join(config.input.RAW_DATA_FOLDER, seizure),
                             sensors_lbls=sensors_lbls, times_on_off=times_on_off, sim_times_on_off=sim_times_on_off,
                             preprocessing_sequence=preprocessing, fitmethod=fitmethod,
-                            pse_flag=pse_flag, fit_flag=fit_flag, config=config)
+                            pse_flag=pse_flag, fit_flag=fit_flag, config=config, test_flag=test_flag)
     else:
-        main_fit_sim_hyplsa(stan_model_name=stan_model_name, observation_model=observation_model,
+        main_fit_sim_hyplsa(stan_model_name=stan_model_name, normal_flag=normal_flag, observation_model=observation_model,
                             sensors_lbls=sensors_lbls, times_on_off=times_on_off, sim_times_on_off=sim_times_on_off,
                             preprocessing_sequence=preprocessing, fitmethod=fitmethod,
-                            pse_flag=pse_flag, fit_flag=fit_flag, config=config)
+                            pse_flag=pse_flag, fit_flag=fit_flag, config=config, test_flag=test_flag)

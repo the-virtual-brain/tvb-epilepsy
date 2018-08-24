@@ -8,6 +8,7 @@ from tvb_fit.base.computations.math_utils import select_greater_values_array_ind
 from tvb_fit.service.head_service import HeadService
 from tvb_fit.service.timeseries_service import TimeseriesService
 
+
 #TODO: Would it make sense to have this in tvb_fit?
 class ModelInversionService(object):
 
@@ -33,36 +34,38 @@ class ModelInversionService(object):
         return self.__repr__()
 
     def update_active_regions_e_values(self, probabilistic_model, e_values, reset=False):
+        active_regions = probabilistic_model.active_regions.tolist()
         if reset:
-            probabilistic_model.update_active_regions([])
+            active_regions = []
         if len(e_values) > 0:
-            probabilistic_model.update_active_regions(probabilistic_model.active_regions +
-                                              select_greater_values_array_inds(e_values, self.active_e_th).tolist())
+            active_regions += select_greater_values_array_inds(e_values, self.active_e_th).tolist()
         else:
             warning("Skipping active regions setting by E values because no such values were provided!")
+        probabilistic_model.update_active_regions(active_regions)
         return probabilistic_model
 
     def update_active_regions_x0_values(self, probabilistic_model, x0_values, reset=False):
+        active_regions = probabilistic_model.active_regions.tolist()
         if reset:
-            probabilistic_model.update_active_regions([])
+            active_regions = []
         if len(x0_values) > 0:
-            probabilistic_model.update_active_regions(probabilistic_model.active_regions +
-                                          select_greater_values_array_inds(x0_values, self.active_x0_th).tolist())
+            active_regions += select_greater_values_array_inds(x0_values, self.active_x0_th).tolist()
         else:
             warning("Skipping active regions setting by x0 values because no such values were provided!")
+        probabilistic_model.update_active_regions(active_regions)
         return probabilistic_model
 
     def update_active_regions_lsa(self, probabilistic_model, lsa_propagation_strengths, reset=False):
+        active_regions = probabilistic_model.active_regions.tolist()
         if reset:
-            probabilistic_model.update_active_regions([])
+            active_regions = []
         if len(lsa_propagation_strengths) > 0:
             ps_strengths = lsa_propagation_strengths / np.max(lsa_propagation_strengths)
-            probabilistic_model.update_active_regions(probabilistic_model.active_regions +
-                                              select_greater_values_array_inds(ps_strengths,
-                                                                               self.active_lsa_th).tolist())
+            active_regions += select_greater_values_array_inds(ps_strengths,self.active_lsa_th).tolist()
         else:
             self.logger.warning("No LSA results found (empty propagations_strengths vector)!" +
                                 "\nSkipping of setting active regions according to LSA!")
+        probabilistic_model.update_active_regions(active_regions)
         return probabilistic_model
 
     def update_active_regions(self, probabilistic_model, e_values=[], x0_values=[], lsa_propagation_strengths=[], reset=False):
@@ -74,7 +77,8 @@ class ModelInversionService(object):
             elif isequal_string(m, "x0"):
                 probabilistic_model = self.update_active_regions_x0_values(probabilistic_model, x0_values, reset=False)
             elif isequal_string(m, "LSA"):
-                probabilistic_model = self.update_active_regions_lsa(probabilistic_model, lsa_propagation_strengths, reset=False)
+                probabilistic_model = self.update_active_regions_lsa(probabilistic_model, lsa_propagation_strengths,
+                                                                     reset=False)
         return probabilistic_model
 
 
@@ -101,7 +105,7 @@ class ODEModelInversionService(ModelInversionService):
         if reset:
             probabilistic_model.update_active_regions([])
         if target_data:
-            active_regions = probabilistic_model.active_regions
+            active_regions = probabilistic_model.active_regions.tolist()
             gain_matrix = np.array(sensors.gain_matrix)
             seeg_inds = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
             if len(seeg_inds) != 0:
@@ -162,7 +166,8 @@ class ODEModelInversionService(ModelInversionService):
             target_data = target_data.get_subspace_by_index(self.manual_selection)
         if self.auto_selection:
             if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
-                target_data = self.select_target_data_seeg(target_data, sensors, probabilistic_model.active_regions, power)
+                target_data = self.select_target_data_seeg(target_data, sensors,
+                                                           probabilistic_model.active_regions, power)
             else:
                 target_data = target_data.get_subspace_by_index(probabilistic_model.active_regions)
         if self.decim_ratio > 1:

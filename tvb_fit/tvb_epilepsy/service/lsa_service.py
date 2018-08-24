@@ -81,7 +81,7 @@ class LSAService(object):
         if self.lsa_method == "2D":
             fz_jacobian = calc_jac(model_configuration.x1eq, model_configuration.zeq, model_configuration.yc,
                                    model_configuration.Iext1, model_configuration.x0, model_configuration.K,
-                                   model_configuration.model_connectivity, model_vars=2, zmode="lin",
+                                   model_configuration.connectivity, model_vars=2, zmode=model_configuration.zmode,
                                    a=model_configuration.a, b=model_configuration.b, d=model_configuration.d,
                                    tau1= model_configuration.tau1, tau0=model_configuration.tau0)
         else:
@@ -94,14 +94,13 @@ class LSAService(object):
                                     + str(correction_value) + " to be sub-critical!")
                 model_configuration.x1eq[temp] = correction_value
                 i_temp = numpy.ones(model_configuration.x1eq.shape)
-                zeq[temp] = calc_eq_z(model_configuration.x1eq[temp], model_configuration.yc * i_temp[temp],
-                                      model_configuration.Iext1 * i_temp[temp], "2d", 0.0,
-                                      model_configuration.slope * i_temp[temp],
-                                      model_configuration.a * i_temp[temp], model_configuration.b * i_temp[temp],
-                                      model_configuration.d * i_temp[temp])
+                zeq[temp] = calc_eq_z(model_configuration.x1eq[temp], model_configuration.yc[temp],
+                                      model_configuration.Iext1[temp], "2d", numpy.zeros(model_configuration.x1eq.shape),
+                                      model_configuration.slope[temp], model_configuration.a[temp],
+                                      model_configuration.b[temp], model_configuration.d[temp])
             fz_jacobian = calc_fz_jac_square_taylor(model_configuration.zeq, model_configuration.yc,
                                                     model_configuration.Iext1, model_configuration.K,
-                                                    model_configuration.model_connectivity,
+                                                    model_configuration.connectivity,
                                                     model_configuration.a, model_configuration.b, model_configuration.d)
 
         if numpy.any([numpy.any(numpy.isnan(fz_jacobian.flatten())), numpy.any(numpy.isinf(fz_jacobian.flatten()))]):

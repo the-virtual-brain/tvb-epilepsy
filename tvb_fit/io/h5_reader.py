@@ -12,11 +12,15 @@ from tvb_fit.base.model.virtual_patient.connectivity import Connectivity, Connec
 from tvb_fit.base.model.virtual_patient.head import Head
 from tvb_fit.base.model.virtual_patient.sensors import Sensors, SensorsH5Field
 from tvb_fit.base.model.virtual_patient.surface import Surface, SurfaceH5Field
+from tvb_fit.base.model.model_configuration import ModelConfiguration
 from tvb_fit.base.model.timeseries import TimeseriesDimensions, Timeseries
+from tvb_fit.base.model.simulation_settings import SimulationSettings
 from tvb_fit.base.model.parameter import Parameter
-from tvb_fit.service.probabilistic_parameter_builder import generate_probabilistic_parameter
-from tvb_fit.service.probabilistic_params_factory import generate_negative_lognormal_parameter
+from tvb_fit.service.model_configuration_builder import ModelConfigurationBuilder
+from tvb_fit.service.probabilistic_parameter_builder import generate_probabilistic_parameter, \
+    generate_negative_lognormal_parameter
 from tvb_fit.io.h5_writer import H5Writer
+
 
 H5_TYPE_ATTRIBUTE = H5Writer().H5_TYPE_ATTRIBUTE
 H5_SUBTYPE_ATTRIBUTE = H5Writer().H5_SUBTYPE_ATTRIBUTE
@@ -33,6 +37,21 @@ class H5Reader(object):
     structural_mri_filename = "StructuralMRI.h5"
     sensors_filename_prefix = "Sensors"
     sensors_filename_separator = "_"
+
+    def read_simulator_model(self, path, model_builder_fun):
+        """
+        :param path: Path towards a TVB model H5 file
+        :return: TVB model object
+        """
+        self.logger.info("Starting to read epileptor model from: %s" % path)
+        h5_file = h5py.File(path, 'r', libver='latest')
+        try:
+            model_name = h5_file["/"].attrs[H5_SUBTYPE_ATTRIBUTE]
+            model = model_builder_fun(model_name)
+        except:
+            raise_value_error("No model read from model configuration file!: %s" % str(path))
+
+        return H5GroupHandlers().read_simulator_model_group(h5_file, model, "/")
 
     def read_connectivity(self, path):
         """
@@ -216,6 +235,78 @@ class H5Reader(object):
 
         return head
 
+    def read_model_configuration_builder(self, path, default_model="Epileptor",
+                                         model_configuration_builder=ModelConfigurationBuilder):
+        """
+        :param path: Path towards a ModelConfigurationService H5 file
+        :return: ModelConfigurationService object
+        """
+        self.logger.info("Starting to read ModelConfigurationService from: %s" % path)
+        h5_file = h5py.File(path, 'r', libver='latest')
+
+        try:
+            model_name = h5_file.attrs["model_name"]
+        except:
+            self.logger.warning("No model_name read from model configuration builder file!: %s" % str(path))
+            self.logger.warning("Setting default model!: %s" % default_model)
+            model_name = default_model
+
+        mc_service = model_configuration_builder(model_name)
+
+        for dataset in h5_file.keys():
+            if dataset != "model":
+                mc_service.set_attribute(dataset, h5_file["/" + dataset][()])
+
+        for attr in h5_file.attrs.keys():
+            mc_service.set_attribute(attr, h5_file.attrs[attr])
+
+        h5_file.close()
+        return mc_service
+
+    def read_model_configuration(self, path, default_model="Epileptor", model_configuration=ModelConfiguration):
+        """
+        :param path: Path towards a EpileptorModelConfiguration H5 file
+        :return: EpileptorModelConfiguration object
+        """
+        self.logger.info("Starting to read ModelConfiguration from: %s" % path)
+        h5_file = h5py.File(path, 'r', libver='latest')
+
+        try:
+            model_name = h5_file.attrs["model_name"]
+        except:
+            self.logger.warning("No model_name read from model configuration file!: %s" % str(path))
+            self.logger.warning("Setting default model!: %s" % default_model)
+            model_name =default_model
+
+        model_configuration = model_configuration(model_name)
+        for dataset in h5_file.keys():
+            if dataset != "model":
+                model_configuration.set_attribute(dataset, h5_file["/" + dataset][()])
+
+        for attr in h5_file.attrs.keys():
+            model_configuration.set_attribute(attr, h5_file.attrs[attr])
+
+        h5_file.close()
+        return model_configuration
+
+    def read_simulation_settings(self, path):
+        """
+        :param path: Path towards a SimulationSettings H5 file
+        :return: SimulationSettings
+        """
+        self.logger.info("Starting to read SimulationSettings from: %s" % path)
+        h5_file = h5py.File(path, 'r', libver='latest')
+
+        sim_settings = SimulationSettings()
+        for dataset in h5_file.keys():
+            sim_settings.set_attribute(dataset, h5_file["/" + dataset][()])
+
+        for attr in h5_file.attrs.keys():
+            sim_settings.set_attribute(attr, h5_file.attrs[attr])
+
+        h5_file.close()
+        return sim_settings
+
     def read_ts(self, path):
         """
         :param path: Path towards a valid TimeSeries H5 file
@@ -236,7 +327,7 @@ class H5Reader(object):
 
         return time, data
 
-    def read_timeseries(self, path):
+    def read_timeseries(self, path, timeseries=Timeseries):
         """
         :param path: Path towards a valid TimeSeries H5 file
         :return: Timeseries data and time in 2 numpy arrays
@@ -246,46 +337,50 @@ class H5Reader(object):
 
         data = h5_file['/data'][()]
         time = h5_file['/time'][()]
-        labels = ensure_list(h5_file['/labels'][()])
-        variables = ensure_list(h5_file['/variables'][()])
+        labels = h5_file['/labels'][()]
+        variables = h5_file['/variables'][()]
         time_unit = h5_file.attrs["time_unit"]
         self.logger.info("First Channel sv sum: " + str(numpy.sum(data[:, 0])))
         self.logger.info("Successfully read Timeseries!")  #: %s" % data)
         h5_file.close()
 
-        return Timeseries(data, {TimeseriesDimensions.SPACE.value: labels,
+        return timeseries(data, {TimeseriesDimensions.SPACE.value: labels,
                                  TimeseriesDimensions.VARIABLES.value: variables},
                           time[0], numpy.mean(numpy.diff(time)), time_unit)
 
-    def read_dictionary(self, path, type="dict"):
+    def read_dictionary(self, path, type=None):
         """
         :param path: Path towards a dictionary H5 file
         :return: dict
         """
         self.logger.info("Starting to read a dictionary from: %s" % path)
         h5_file = h5py.File(path, 'r', libver='latest')
-
-        dictionary = dict()
-        for dataset in h5_file.keys():
-            dictionary.update({dataset: h5_file["/" + dataset][()]})
-
-        for attr in h5_file.attrs.keys():
-            dictionary.update({attr: h5_file.attrs[attr]})
-
+        dictionary = H5GroupHandlers().read_dictionary_from_group(h5_file, type)
         h5_file.close()
-        if isequal_string(type, "DictDot"):
-            return DictDot(dictionary)
-        elif isequal_string(type, "OrderedDictDot"):
-            return OrderedDictDot(dictionary)
-        else:
-            return dictionary
+        return dictionary
+
+    def read_list_of_dicts(self, path, type=None):
+        self.logger.info("Starting to read a list of dictionaries from: %s" % path)
+        h5_file = h5py.File(path, 'r', libver='latest')
+        list_of_dicts = []
+        id = 0
+        h5_group_handlers = H5GroupHandlers()
+        while 1:
+            try:
+                dict_group = h5_file[str(id)]
+            except:
+                break
+            list_of_dicts.append(h5_group_handlers.read_dictionary_from_group(dict_group, type))
+            id += 1
+        h5_file.close()
+        return list_of_dicts
 
     def read_probabilistic_model(self, path):
         h5_file = h5py.File(path, 'r', libver='latest')
         epi_subtype = h5_file.attrs[H5_SUBTYPE_ATTRIBUTE]
 
         probabilistic_model = None
-        if epi_subtype == ProbabilisticModelBase.__class__:
+        if ProbabilisticModelBase.__class__.find(epi_subtype) >= 0:
             probabilistic_model = ProbabilisticModelBase()
         else:
             raise_value_error(epi_subtype +
@@ -314,6 +409,50 @@ class H5Reader(object):
 
 
 class H5GroupHandlers(object):
+
+    def read_dictionary_from_group(self, group, type=None):
+        dictionary = dict()
+        for dataset in group.keys():
+            dictionary.update({dataset: group[dataset][()]})
+        for attr in group.attrs.keys():
+            dictionary.update({attr: group.attrs[attr]})
+        if type is None:
+            type = group.attrs[H5_SUBTYPE_ATTRIBUTE]
+        if isequal_string(type, "DictDot"):
+            return DictDot(dictionary)
+        elif isequal_string(type, "OrderedDictDot"):
+            return OrderedDictDot(dictionary)
+        else:
+            return dictionary
+
+    def read_simulator_model_group(self, h5_file, model, group):
+        for dataset in h5_file[group].keys():
+            if dataset == "variables_of_interest":
+                setattr(model, dataset, ensure_list(h5_file[group][dataset][()]))
+            else:
+                setattr(model, dataset, h5_file[group][dataset][()])
+
+        for attr in h5_file[group].attrs.keys():
+            setattr(model, attr, h5_file[group].attrs[attr])
+
+        return model
+
+    def read_model_configuration_from_group(self, h5_file, group_name, default_model_name="Epileptor"):
+        model_name = h5_file[group_name].attrs.get("model_name", h5_file.attrs.get("model_name", None))
+        if model_name is None:
+            self.logger.warning("No model_name read from model configuration file!: %s" % str(h5_file))
+            self.logger.warning("Setting default model!: %s" + default_model_name)
+            model_name = default_model_name
+
+        model_configuration = ModelConfiguration(model_name)
+        for dataset in h5_file[group_name].keys():
+            if dataset != "model":
+                model_configuration.set_attribute(dataset, h5_file[group_name + "/" + dataset][()])
+
+        for attr in h5_file[group_name].attrs.keys():
+            model_configuration.set_attribute(attr, h5_file[group_name].attrs[attr])
+
+        return model_configuration
 
     def handle_group_parameters(self, h5_group_value):
         def strip_key_name(key):
@@ -366,9 +505,11 @@ class H5GroupHandlers(object):
 
             parameters.update({group_key: parameter})
 
+        return parameters
+
     def handle_group_ground_truth(self, h5_group_value, probabilistic_model):
         for dataset in h5_group_value.keys():
-            probabilistic_model.ground_truth[dataset] = h5_group_value[dataset]
+            probabilistic_model.ground_truth[dataset] = h5_group_value[dataset][()]
         for attr in h5_group_value.attrs.keys():
             if attr not in H5_TYPES_ATTRUBUTES:
                 probabilistic_model.ground_truth[attr] = h5_group_value.attrs[attr]

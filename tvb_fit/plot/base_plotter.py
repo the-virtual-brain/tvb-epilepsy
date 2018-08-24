@@ -133,7 +133,10 @@ class BasePlotter(object):
                 ax.plot(vector[ii], y_ticks[ii], '*', mfc=colors[ii], mec=colors[ii], ms=10)
         if len(lines) == 2 and lines[0].shape[0] == n_violins and lines[1].shape[0] == n_violins:
             for ii in range(n_violins):
-                ax.plot(lines[0][ii],  y_ticks[ii] - 0.45*lines[1][ii]/numpy.max(lines[1][ii]), '--', color=colors[ii])
+                yy = (y_ticks[ii] - 0.45*lines[1][ii]/numpy.max(lines[1][ii]))\
+                     * numpy.ones(numpy.array(lines[0][ii]).shape)
+                ax.plot(lines[0][ii],  yy, '--', color=colors[ii])
+
         ax.grid(True, color='grey')
         ax.set_yticks(y_ticks)
         if show_y_labels:

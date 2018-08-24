@@ -61,7 +61,7 @@ class LSAPlotter(BasePlotter):
             if weighted_eigenvector_sum is None:
                 weighted_eigenvector_sum = self.config.calcul.WEIGHTED_EIGENVECTOR_SUM
 
-        hyp_dict_list = lsa_hypothesis.prepare_for_plot(model_configuration.model_connectivity)
+        hyp_dict_list = lsa_hypothesis.prepare_for_plot(model_configuration.connectivity)
         model_config_dict_list = model_configuration.prepare_for_plot()[:2]
 
         model_config_dict_list += hyp_dict_list

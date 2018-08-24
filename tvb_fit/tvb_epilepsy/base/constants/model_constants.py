@@ -1,7 +1,5 @@
 # coding=utf-8
 
-import numpy as np
-
 # Default model parameters
 X0_DEF = 0.0
 X0_CR_DEF = 1.0
@@ -12,19 +10,18 @@ D_DEF = 5.0
 SLOPE_DEF = 0.0
 S_DEF = 6.0
 GAMMA_DEF = 0.1
-K_DEF = 100.0
+K_DEF = 1.0
+K_UNSCALED_DEF = 100.0
 I_EXT1_DEF = 3.1
 I_EXT2_DEF = 0.45
 YC_DEF = 1.0
 TAU1_DEF = 1.0
 TAU2_DEF = 10.0
 TAU0_DEF = 2857.0
+ZMODE_DEF = 0
+PMODE_DEF = 1
 X1_DEF = -5.0 / 3.0 # -1.6666
 X1EQ_CR_DEF = -4.0 / 3.0 # -1.3333
-
-WHITE_NOISE = "White"
-COLORED_NOISE = "Colored"
-NOISE_SEED = 42
 
 TIME_DELAYS_FLAG = 0.0
 

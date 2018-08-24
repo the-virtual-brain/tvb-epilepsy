@@ -1,13 +1,16 @@
 import numpy as np
 from tvb_fit.base.config import CalculusConfig
-from tvb_fit.base.model.probabilistic_models.parameters.base import ProbabilisticParameterBase
+from tvb_fit.base.utils.log_error_utils import raise_value_error
 from tvb_fit.base.utils.data_structures_utils import extract_dict_stringkeys, \
     get_val_key_for_first_keymatch_in_dict
-from tvb_fit.base.utils.log_error_utils import raise_value_error
-from tvb_fit.service.probability_distribution_factory import compute_pdf_params, probability_distribution_factory
 from tvb_fit.base.model.probability_distributions import ProbabilityDistributionTypes
+from tvb_fit.base.model.probabilistic_models.parameters.base import ProbabilisticParameterBase
+from tvb_fit.base.model.probabilistic_models.parameters.transformed_parameters import NegativeLognormal
+from tvb_fit.service.probability_distribution_factory import compute_pdf_params, probability_distribution_factory
+
 
 #TODO: This could be turned into a builder once it is stable
+
 
 # This function takes position or keyword arguments of the form "param" or "name_param" and sets the default parameters
 # of a stochastic parameter in the form "name_param" if name_flag = True, or "param" otherwise,
@@ -15,6 +18,7 @@ from tvb_fit.base.model.probability_distributions import ProbabilityDistribution
 # The argument pdf_params targets the distribution "side"of a stochastic parameter instance, whereas,
 # the rest of the parameters target the loc and scale of the stochastic parameter.
 # The values for std, lo and hi can be callables of mean.
+
 def set_parameter_defaults(name, _pdf="normal", _shape=(), _lo=CalculusConfig.MIN_SINGLE_VALUE,
                            _hi=CalculusConfig.MAX_SINGLE_VALUE, _mean=None,
                            _std=None, pdf_params={}, remove_name=False, **kwargs):
@@ -121,3 +125,29 @@ def generate_probabilistic_parameter(name="Parameter", low=-CalculusConfig.MAX_S
                 self._update_params(use=use)
 
     return ProbabilisticParameter(name, low, high, loc, scale, p_shape, use, **target_params)
+
+
+def generate_normal_parameter(name, mean, low, high, sigma=None, sigma_scale=2, p_shape=(), use="scipy"):
+    if sigma is None:
+        sigma = np.abs(mean - low) / sigma_scale
+    return generate_probabilistic_parameter(name, low, high, loc=0.0, scale=1.0, p_shape=p_shape,
+                                            probability_distribution=ProbabilityDistributionTypes.NORMAL,
+                                            optimize_pdf=False, use=use, **{"mu": mean, "sigma": sigma})
+
+
+def generate_lognormal_parameter(name, mean, low, high, sigma=None, sigma_scale=2, p_shape=(), use="scipy"):
+    if sigma is None:
+        sigma = np.abs(mean - low) / sigma_scale
+    logsm21 = np.log((sigma / mean) ** 2 + 1)
+    mu = np.log(mean) - 0.5 * logsm21
+    sigma = np.sqrt(logsm21)
+    return generate_probabilistic_parameter(name, low, high, loc=0.0, scale=1.0, p_shape=p_shape,
+                                            probability_distribution=ProbabilityDistributionTypes.LOGNORMAL,
+                                            optimize_pdf=False, use=use, **{"mu": mu, "sigma": sigma})
+
+
+def generate_negative_lognormal_parameter(name, mean, low, high, sigma=None, sigma_scale=2, p_shape=(), use="scipy"):
+    parameter = generate_lognormal_parameter(name.split("_star")[0]+"_star", high - mean, 0.0, high - low,
+                                             sigma, sigma_scale, p_shape, use)
+
+    return NegativeLognormal(parameter.name.split("_star")[0], "NegativeLognormal", parameter, high)

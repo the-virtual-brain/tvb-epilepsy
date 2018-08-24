@@ -3,12 +3,12 @@ import os
 import numpy as np
 
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
-from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_DEF, TAU1_DEF, TAU0_DEF
+from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU1_DEF, TAU0_DEF
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import OBSERVATION_MODELS, SEIZURE_LENGTH, \
     HIGH_FREQ, LOW_FREQ, WIN_LEN_RATIO, BIPOLAR, TARGET_DATA_PREPROCESSING
 from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.base.utils.data_structures_utils import ensure_list, generate_region_labels
-from tvb_fit.base.model.timeseries import TimeseriesDimensions, Timeseries
+from tvb_fit.tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, Timeseries
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_fit.tvb_epilepsy.top.scripts.hypothesis_scripts import from_hypothesis_to_model_config_lsa
 from tvb_fit.tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
@@ -22,7 +22,7 @@ from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
 logger = initialize_logger(__name__)
 
 
-def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, pse_flag=True,
+def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_UNSCALED_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, pse_flag=True,
                          plotter=None, writer=None):
     model_configuration_builder = None
     lsa_service = None
@@ -37,7 +37,7 @@ def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, tau1=TAU1_
         # ...or generate new ones
         model_configuration, lsa_hypothesis, model_configuration_builder, lsa_service = \
             from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, weighted_eigenvector_sum=True,
-                                                config=config, K=K_unscaled, tau1=tau1, tau0=tau0,
+                                                config=config, K_unscaled=K_unscaled, tau1=tau1, tau0=tau0,
                                                 save_flag=True, plot_flag=True)
         # --------------Parameter Search Exploration (PSE)-------------------------------
     if pse_flag:
@@ -51,7 +51,8 @@ def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_DEF, tau1=TAU1_
             disease_indices = lsa_hypothesis.regions_disease_indices
             healthy_indices = np.delete(all_regions_indices, disease_indices).tolist()
             if model_configuration_builder is None:
-                model_configuration_builder = ModelConfigurationBuilder(hyp.number_of_regions, K=K_unscaled)
+                model_configuration_builder = \
+                    ModelConfigurationBuilder("EpileptorDP2D", head.connectivity, K_unscaled=K_unscaled)
             if lsa_service is None:
                 lsa_service =  LSAService(eigen_vectors_number=None, weighted_eigenvector_sum=True)
             pse_results = \
@@ -93,16 +94,22 @@ def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis
                               preprocessing=TARGET_DATA_PREPROCESSING, low_freq=LOW_FREQ, high_freq=HIGH_FREQ,
                               bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
     signals, simulator = from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
-                                                               sim_type=sim_type, ts_file=ts_file,
-                                                               config=config, plotter=plotter)
+                                                                sim_type=sim_type, ts_file=ts_file,
+                                                                config=config, plotter=plotter)
     try:
         probabilistic_model.ground_truth.update({"tau1": np.mean(simulator.model.tau1),
                                                  "tau0": np.mean(simulator.model.tau0),
-                                                 "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
+                                                 "sigma": np.mean(simulator.settings.noise_intensity)})
     except:
         probabilistic_model.ground_truth.update({"tau1": np.mean(simulator.model.tt),
                                                  "tau0": 1.0 / np.mean(simulator.model.r),
-                                                 "sigma": np.mean(simulator.simulation_settings.noise_intensity)})
+                                                 "sigma": np.mean(simulator.settings.noise_intensity)})
+    x1z = signals["source"].get_time_window_by_units(times_on_off[0], times_on_off[1])
+    x1 = x1z.x1.squeezed
+    z = x1z.z.squeezed
+    del x1z
+    probabilistic_model.ground_truth.update({"x1_init": x1[0].squeeze(), "z_init": z[0].squeeze(),})
+    del x1, z
     signals = signals["source"].get_source()
     signals.data = -signals.data  # change sign to fit x1
     if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
@@ -143,7 +150,7 @@ def samples_to_timeseries(samples, model_data, target_data=None, regions_labels=
                                   time_start=time_start, time_step=time_step)
 
     (n_times, n_regions, n_samples) = samples[0]["x1"].T.shape
-    active_regions = model_data.get("active_regions", range(n_regions))
+    active_regions = model_data.get("active_regions", np.array(range(n_regions)))
     regions_labels = generate_region_labels(np.maximum(n_regions, len(regions_labels)), regions_labels, ". ", False)
     if len(regions_labels) > len(active_regions):
         regions_labels = regions_labels[active_regions]

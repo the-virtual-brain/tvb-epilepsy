@@ -10,26 +10,30 @@ from tvb_fit.base.model.probabilistic_models.parameters.transformed_parameters i
     TransformedProbabilisticParameterBase
 
 
-
 class ProbabilisticModelBase(object):
 
     model_config = None
     name = "probabilistic_model"
-    number_of_regions = 0
     target_data_type = Target_Data_Type.EMPIRICAL.value
     priors_mode = PriorsModes.NONINFORMATIVE.value
     parameters = {}
     ground_truth = {}  # a dictionary of parameters'names (keys) to true values or functions to read them from the model_config
 
     @property
+    def number_of_regions(self):
+        if self.model_config is not None:
+            return self.model_config.number_of_regions
+        else:
+            return 1
+
+    @property
     def number_of_parameters(self):
         return len(self.parameters)
 
-    def __init__(self, model_configuration, name='tvb', number_of_regions=0,
+    def __init__(self, model_configuration, name='tvb',
                  target_data_type=Target_Data_Type.EMPIRICAL.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                  parameters={}, ground_truth={}):
         self.model_config = model_configuration
-        self.number_of_regions = number_of_regions
         self.target_data_type = target_data_type
         self.priors_mode = priors_mode
         self.parameters = parameters
@@ -60,26 +64,33 @@ class ProbabilisticModelBase(object):
         return parameter
 
     def get_truth(self, parameter_name):
-        if self.target_data_type == Target_Data_Type.SYNTHETIC.value:
-            truth = self.ground_truth.get(parameter_name, np.nan)
-            if truth is np.nan:
-                warning("Ground truth value for parameter " + parameter_name + " was not found!")
-            return truth
-        return np.nan
+        truth = self.ground_truth.get(parameter_name, np.nan)
+        if truth is np.nan and self.target_data_type == Target_Data_Type.SYNTHETIC.value:
+            truth = getattr(self.model_config, parameter_name, np.nan)
+        if truth is np.nan:
+            warning("Ground truth value for parameter " + parameter_name + " was not found!")
+        return truth
 
     # Prior is a parameter
     def get_prior(self, parameter_name):
         parameter = self.get_parameter(parameter_name)
         if parameter is None:
-            # TODO: decide if it is a good idea to return this kind of modeler's fixed "prior"...
-            return getattr(self, parameter_name, np.nan), None
+            warning("No probabilistic prior for parameter " + parameter_name + " was found!")
+            # TODO: decide if it is a good idea to return this kind of modeler's fixed "prior"...:
+            pmean = getattr(self, parameter_name, np.nan)
+            if pmean is np.nan:
+                pmean = getattr(self.model_config, parameter_name, np.nan)
+            if pmean is np.nan:
+                warning("No prior value for parameter " + parameter_name + " was found!")
+            return pmean, parameter
         else:
             return parameter.mean, parameter
 
     def get_prior_pdf(self, parameter_name):
-        mean_or_truth, parameter = self.get_prior(parameter_name)
+        parameter_mean, parameter = self.get_prior(parameter_name)
         if isinstance(parameter, (ProbabilisticParameterBase, TransformedProbabilisticParameterBase)):
             return parameter.scipy_method("pdf")
         else:
-            warning("No parameter " + parameter_name + " was found!\nReturning true value instead of pdf!")
-            return mean_or_truth, np.nan
+            warning("No probabilistic parameter " + parameter_name + " was found!"
+                    "\nReturning prior value, if available, instead of pdf!")
+            return parameter_mean, np.nan

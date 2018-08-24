@@ -15,8 +15,8 @@ logger = initialize_logger(__name__)
 
 def start_lsa_run(hypothesis, model_connectivity, config=Config(), model_config_args={}):
     logger.info("creating model configuration...")
-    model_configuration_builder = ModelConfigurationBuilder(hypothesis.number_of_regions, **model_config_args)
-    model_configuration = model_configuration_builder.build_model_from_hypothesis(hypothesis, model_connectivity)
+    model_configuration_builder = ModelConfigurationBuilder("EpileptorDP2D", model_connectivity, **model_config_args)
+    model_configuration = model_configuration_builder.build_model_from_hypothesis(hypothesis)
 
     logger.info("running LSA...")
     lsa_service = LSAService(eigen_vectors_number_selection=config.calcul.EIGENVECTORS_NUMBER_SELECTION,
@@ -74,11 +74,11 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
         save_flag = config.figures.SAVE_FLAG
     if plot_flag is None:
         plot_flag = config.figures.SHOW_FLAG
-    builder = ModelConfigurationBuilder(hyp.number_of_regions, **kwargs)
+    builder = ModelConfigurationBuilder("EpileptorDP2D", head.connectivity.normalized_weights, **kwargs)
     if hyp.type == "Epileptogenicity":
-        model_configuration = builder.build_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
+        model_configuration = builder.build_model_from_E_hypothesis(hyp)
     else:
-        model_configuration = builder.build_model_from_hypothesis(hyp, head.connectivity.normalized_weights)
+        model_configuration = builder.build_model_from_hypothesis(hyp)
     logger.info("\n\nRunning LSA...")
     lsa_service = LSAService(eigen_vectors_number=eigen_vectors_number,
                              weighted_eigenvector_sum=weighted_eigenvector_sum)
@@ -91,8 +91,8 @@ def from_hypothesis_to_model_config_lsa(hyp, head, eigen_vectors_number=None, we
     if plot_flag:
         # Plot nullclines and equilibria of model configuration
         plotter = Plotter(config)
-        plotter.plot_state_space(model_configuration, "6d", head.connectivity.region_labels,
-                                            special_idx=hyp.regions_disease_indices, zmode="lin",
+        plotter.plot_state_space(model_configuration, head.connectivity.region_labels,
+                                            special_idx=hyp.regions_disease_indices,
                                             figure_name=hyp.name + "_StateSpace")
         plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
                          lsa_service.eigen_vectors_number, head.connectivity.region_labels, None,

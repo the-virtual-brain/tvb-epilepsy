@@ -8,7 +8,6 @@ from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_fit.tvb_epilepsy.plot.plotter import Plotter
 from tvb_fit.tvb_epilepsy.base.model.epileptor_models import EpileptorDP2D
-from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_fit.tvb_epilepsy.service.simulator.simulator_builder import build_simulator_TVB_realistic, \
     build_simulator_TVB_fitting, build_simulator_TVB_default, build_simulator_TVB_paper
 from tvb_fit.service.timeseries_service import TimeseriesService
@@ -75,19 +74,19 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     hypname = lsa_hypothesis.name.replace("_LSA", "")
     logger.info("\n\nConfiguring simulation...")
     if isequal_string(sim_type, "realistic"):
-        sim, sim_settings, dynamical_model = build_simulator_TVB_realistic(model_configuration, head.connectivity)
+        sim, sim_settings= build_simulator_TVB_realistic(model_configuration, head.connectivity)
     elif isequal_string(sim_type, "fitting"):
-        sim, sim_settings, dynamical_model = build_simulator_TVB_fitting(model_configuration, head.connectivity)
+        sim, sim_settings = build_simulator_TVB_fitting(model_configuration, head.connectivity)
     elif isequal_string(sim_type, "paper"):
-        sim, sim_settings, dynamical_model = build_simulator_TVB_paper(model_configuration, head.connectivity)
+        sim, sim_settings = build_simulator_TVB_paper(model_configuration, head.connectivity)
     else:
-        sim, sim_settings, dynamical_model = build_simulator_TVB_default(model_configuration, head.connectivity)
-
+        sim, sim_settings = build_simulator_TVB_default(model_configuration, head.connectivity)
+    dynamical_model = sim.model
     writer = H5Writer()
-    writer.write_simulator_model(sim.model, sim.connectivity.number_of_regions,
-                                 os.path.join(config.out.FOLDER_RES,
-                                              hypname + dynamical_model._ui_name + "_model.h5"))
-    sim_output = []
+    writer.write_simulator_model(sim.model, os.path.join(config.out.FOLDER_RES,
+                                              hypname + dynamical_model._ui_name + "_model.h5"),
+                                 sim.connectivity.number_of_regions)
+
     seeg=[]
     if ts_file is not None and os.path.isfile(ts_file):
         logger.info("\n\nLoading previously simulated time series from file: " + ts_file)

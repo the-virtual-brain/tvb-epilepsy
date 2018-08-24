@@ -1,7 +1,7 @@
 import h5py
 from collections import OrderedDict
 from tvb_fit.io.h5_reader import H5Reader
-from tvb_fit.base.model.timeseries import Timeseries, TimeseriesDimensions, PossibleVariables
+from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions, PossibleVariables
 
 
 def read_ts(path):
@@ -55,7 +55,7 @@ def prepare_data_for_structured_array(data):
 if __name__ == "__main__":
     data, total_time, nr_of_steps, start_time = read_ts("/WORK/Episense/trunk/demo-data/Head_TREC/epHH/ts.h5")
     conn = H5Reader().read_connectivity("/WORK/Episense/trunk/demo-data/Head_TREC/Connectivity.h5")
-    signal = Timeseries(data, OrderedDict({TimeseriesDimensions.SPACE.value: list(conn.region_labels),
+    signal = Timeseries(data, OrderedDict({TimeseriesDimensions.SPACE.value: conn.region_labels,
                                            TimeseriesDimensions.VARIABLES.value: [PossibleVariables.X1.value,
                                                                                   PossibleVariables.X2.value,
                                                                                         "c"]}),

@@ -1,15 +1,18 @@
 import os
 import numpy
-from tvb_fit.tvb_epilepsy.base.model.model_configuration import ModelConfiguration
-from tvb_fit.tvb_epilepsy.base.model.simulation_settings import SimulationSettings
-from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
+
+from tvb_fit.tests.base import BaseTest
+from tvb_fit.base.model.simulation_settings import SimulationSettings
+from tvb_fit.service.sensitivity_analysis_service import SensitivityAnalysisService
+
+from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration \
+    import EpileptorModelConfiguration as ModelConfiguration
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_fit.tvb_epilepsy.service.model_inversion_services import ModelInversionService
 from tvb_fit.tvb_epilepsy.service.lsa_service import LSAService
 from tvb_fit.tvb_epilepsy.service.pse.lsa_pse_service import LSAPSEService
-from tvb_fit.service.sensitivity_analysis_service import SensitivityAnalysisService
-from tvb_fit.tests.base import BaseTest
+from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 
 
 class TestCustomH5writer(BaseTest):
@@ -29,7 +32,7 @@ class TestCustomH5writer(BaseTest):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestModelConfiguration.h5")
         dummy_mc = ModelConfiguration(x1eq=numpy.array([2.0, 3.0, 1.0]), zmode=None,
                                       zeq=numpy.array([3.0, 2.0, 1.0]), Ceq=numpy.array([1.0, 2.0, 3.0]),
-                                      model_connectivity=self.dummy_connectivity.normalized_weights)
+                                      connectivity=self.dummy_connectivity.normalized_weights)
 
         assert not os.path.exists(test_file)
 

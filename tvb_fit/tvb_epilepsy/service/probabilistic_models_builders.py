@@ -2,22 +2,20 @@ import time
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from copy import deepcopy
-import scipy.stats as ss
 
 from tvb_fit.base.constants import PriorsModes, Target_Data_Type
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import *
 from tvb_fit.base.utils.log_error_utils import initialize_logger, warning
 from tvb_fit.base.utils.data_structures_utils import formal_repr, ensure_list
+from tvb_fit.service.timeseries_service import compute_seeg_exp, compute_seeg_lin
+from tvb_fit.service.probabilistic_parameter_builder\
+    import  generate_lognormal_parameter, generate_negative_lognormal_parameter, generate_normal_parameter
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import calc_eq_z
-from tvb_fit.base.model.probability_distributions import ProbabilityDistributionTypes
-from tvb_fit.tvb_epilepsy.base.model.model_configuration import ModelConfiguration
-from tvb_fit.base.model.timeseries import Timeseries
+from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration import EpileptorModelConfiguration
+from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_fit.tvb_epilepsy.base.model.epileptor_probabilistic_models \
     import EpiProbabilisticModel, ODEEpiProbabilisticModel, SDEEpiProbabilisticModel
-from tvb_fit.service.timeseries_service import compute_seeg_exp, compute_seeg_lin
-from tvb_fit.service.probabilistic_parameter_builder import generate_probabilistic_parameter
-from tvb_fit.service.probabilistic_params_factory \
-    import generate_lognormal_parameter, generate_negative_lognormal_parameter
+
 
 x0_def = {"def": X0_DEF, "min": X0_MIN, "max": X0_MAX, }
 x1eq_def = {"def": X1EQ_DEF, "min": X1EQ_MIN, "max": X1EQ_MAX}
@@ -35,19 +33,23 @@ class ProbabilisticModelBuilderBase(object):
 
     logger = initialize_logger(__name__)
 
-    name = "vep"
-    model_config = ModelConfiguration()
+    model_name = "vep"
+    model_config = EpileptorModelConfiguration("EpileptorDP2D")
     xmode = XModes.X0MODE.value
     priors_mode = PriorsModes.NONINFORMATIVE.value
     model = None
+    normal_flag = True
 
-    def __init__(self, model=None, model_name="vep", model_config=ModelConfiguration(), xmode=XModes.X0MODE.value,
-                 priors_mode=PriorsModes.NONINFORMATIVE.value):
+    def __init__(self, model=None, model_name="vep", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
+                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True):
         self.model = deepcopy(model)
-        self.name = model_name
+        self.model_name = model_name
         self.model_config = model_config
         self.xmode = xmode
         self.priors_mode = priors_mode
+        self.normal_flag = normal_flag
+        if self.normal_flag:
+            self.model_name += "_normal"
         if isinstance(self.model, EpiProbabilisticModel):
             self.model_name = self.model.name
             self.model_config = getattr(self.model, "model_config", self.model_config)
@@ -68,7 +70,7 @@ class ProbabilisticModelBuilderBase(object):
             return self.model_config.number_of_regions
 
     def _repr(self, d=OrderedDict()):
-        for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
+        for ikey, (key, val) in enumerate(self.__dict__.items()):
             d.update({str(ikey) + ". " + key: val})
         return d
 
@@ -80,7 +82,7 @@ class ProbabilisticModelBuilderBase(object):
     def _set_attributes_from_dict(self, attributes_dict):
         if not isinstance(attributes_dict, dict):
             attributes_dict = attributes_dict.__dict__
-        for attr, value in attributes_dict.iteritems():
+        for attr, value in attributes_dict.items():
             if not attr in ["model_config", "parameters", "number_of_regions", "number_of_parameters"]:
                 value = attributes_dict.get(attr, None)
                 if value is None:
@@ -89,6 +91,16 @@ class ProbabilisticModelBuilderBase(object):
                 if value is not None:
                     setattr(self, attr, value)
         return attributes_dict
+
+    def generate_normal_or_lognormal_parameter(self, name, mean, low, high, sigma=None,
+                                               sigma_scale=2, p_shape=(), use="scipy", negative_log=False):
+        if self.normal_flag:
+            return generate_normal_parameter(name, mean, low, high, sigma, sigma_scale, p_shape, use)
+        else:
+            if negative_log:
+                return generate_negative_lognormal_parameter(name, mean, low, high, sigma, sigma_scale, p_shape, use)
+            else:
+                return generate_lognormal_parameter(name, mean, low, high, sigma, sigma_scale, p_shape, use)
 
     @abstractmethod
     def generate_parameters(self):
@@ -105,12 +117,12 @@ class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
     sigma_x_scale = 3
     K = K_DEF
     # MC_direction_split = 0.5
-    model_config = ModelConfiguration()
 
-    def __init__(self, model=None, model_name="vep", model_config=ModelConfiguration(),
-                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
+    def __init__(self, model=None, model_name="vep", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
+                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True,
                  K=K_DEF, sigma_x=None, sigma_x_scale=3): #
-        super(ProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode, priors_mode)
+        super(ProbabilisticModelBuilder, self).__init__(model, model_name, model_config,
+                                                        xmode, priors_mode, normal_flag)
         self.K = K
         # self.MC_direction_split = MC_direction_split
         if sigma_x is None:
@@ -129,13 +141,13 @@ class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
     def _repr(self, d=OrderedDict()):
         d.update(super(ProbabilisticModelBuilder, self)._repr(d))
         nKeys = len(d)
-        for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
+        for ikey, (key, val) in enumerate(self.__dict__.items()):
             d.update({str(nKeys+ikey) + ". " + key: str(val)})
         return d
 
     def get_SC(self, model_connectivity):
         # Set symmetric connectivity to be in the interval [MC_MAX / MAX_MIN_RATIO, MC_MAX],
-        # where self.MC_MAX corresponds to the 95th percentile of model_connectivity
+        # where self.MC_MAX corresponds to the 95th percentile of connectivity
         p95 = np.percentile(model_connectivity.flatten(), 95)
         SC = np.array(model_connectivity)
         if p95 != MC_MAX:
@@ -170,34 +182,34 @@ class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
             xprior = x_def[self.xmode]["def"] * np.ones((self.number_of_regions,))
             sigma_x = self.sigma_x
         x_param_name = self.xmode
-        parameters.update(
-            {self.xmode: generate_negative_lognormal_parameter(x_param_name, xprior,
-                                                               x_def[self.xmode]["min"],
-                                                               x_def[self.xmode]["max"],
-                                                               sigma=sigma_x, sigma_scale=self.sigma_x_scale,
-                                                               p_shape=(self.number_of_regions,), use="scipy")})
+        parameters.update({self.xmode: self.generate_normal_or_lognormal_parameter(x_param_name, xprior,
+                                                                                   x_def[self.xmode]["min"],
+                                                                                   x_def[self.xmode]["max"],
+                                                                                   sigma=sigma_x,
+                                                                                   p_shape=(self.number_of_regions,),
+                                                                                   negative_log=True)})
+
         # Update sigma_x value and name
         self.sigma_x = parameters[self.xmode].std
         sigma_x_name = "sigma_" + self.xmode
-        if sigma_x in params_names:
-            self.logger.info("..." + sigma_x + "...")
-            parameters.update(
-                {sigma_x: generate_lognormal_parameter(sigma_x_name, self.sigma_x, 0.0, 10*self.sigma_x,
-                                                       sigma_scale=self.sigma_x, p_shape=(), use="scipy")})
+        if "sigma_x" in params_names:
+            self.logger.info("...sigma_x...")
+            parameters.update({"sigma_x": self.generate_normal_or_lognormal_parameter(sigma_x_name, self.sigma_x,
+                                                                                      0.0, 10 * self.sigma_x,
+                                                                                      sigma_scale=self.sigma_x_scale)})
+
 
         # Coupling
         if "MC" in params_names:
             self.logger.info("...MC...")
-            parameters.update(
-                {"MC": generate_lognormal_parameter("MC", self.get_MC_prior(self.model_config.model_connectivity),
-                                                    MC_MIN, MC_MAX, sigma=None, sigma_scale=MC_SCALE,
-                                                    p_shape=(), use="scipy")})
+            parameters.update({"MC": self.generate_normal_or_lognormal_parameter("MC",
+                                                                      self.get_MC_prior(self.model_config.connectivity),
+                                                                                 MC_MIN, MC_MAX, sigma_scale=MC_SCALE)})
 
         if "K" in params_names:
             self.logger.info("...K...")
-            parameters.update(
-                {"K": generate_lognormal_parameter("K", self.K, K_MIN, K_MAX, sigma=None,
-                                                   sigma_scale=K_SCALE, p_shape=(), use="scipy")})
+            parameters.update({"K": self.generate_normal_or_lognormal_parameter("K", self.K, K_MIN, K_MAX,
+                                                                                sigma_scale=K_SCALE)})
 
         return parameters
 
@@ -209,8 +221,8 @@ class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
             parameters = self.generate_parameters(params_names)
         else:
             parameters = {}
-        self.model = EpiProbabilisticModel(self.name, self.number_of_regions, target_data_type, self.priors_mode,
-                                           parameters, ground_truth, self.xmode, self.model_config,
+        self.model = EpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
+                                           parameters, ground_truth, self.xmode,
                                            self.K, self.sigma_x) # , self.MC_direction_split
         self.logger.info(self.__class__.__name__ + " took " +
                          str( time.time() - tic) + ' sec for model generation')
@@ -225,21 +237,21 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
     offset = OFFSET_DEF
     observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
     number_of_target_data = 0
-    active_regions = []
+    active_regions = np.array([])
     tau1 = TAU1_DEF
     tau0 = TAU0_DEF
     time_length = SEIZURE_LENGTH
     dt = DT_DEF
 
-    def __init__(self, model=None, model_name="vep_ode", model_config=ModelConfiguration(),
-                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
+    def __init__(self, model=None, model_name="vep_ode", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
+                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True,
                  K=K_DEF, sigma_x=None, sigma_x_scale=3,  # MC_direction_split=0.5,
                  sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                  epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF,
                  observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
-                 number_of_target_data=0, active_regions=[]):
-        super(ODEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode,
-                                                           priors_mode, K, sigma_x, sigma_x_scale) # MC_direction_split
+                 number_of_target_data=0, active_regions=np.array([])):
+        super(ODEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode, priors_mode,
+                                                           normal_flag, K, sigma_x, sigma_x_scale) # MC_direction_split
         self.sigma_init = sigma_init
         self.tau1 = tau1
         self.tau0 = tau0
@@ -267,7 +279,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
     def _repr(self, d=OrderedDict()):
         d.update(super(ODEProbabilisticModelBuilder, self)._repr(d))
         nKeys = len(d)
-        for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
+        for ikey, (key, val) in enumerate(self.__dict__.items()):
             d.update({str(nKeys+ikey) + ". " + key: str(val)})
         return d
 
@@ -311,9 +323,9 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         if isinstance(self.model, ODEEpiProbabilisticModel):
             active_regions = self.model.active_regions
         else:
-            active_regions = []
+            active_regions =  np.array([])
         if len(active_regions) == 0:
-            active_regions = list(range(self.number_of_regions))
+            active_regions = np.array(range(self.number_of_regions))
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
         # if "x1" in params_names:
         #     self.logger.info("...x1...")
@@ -359,44 +371,38 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                                d=self.model_config.d, x1_neg=True)
         self.logger.info("...x1_init...")
         parameters.update(
-            {"x1_init": generate_probabilistic_parameter("x1_init", X1_INIT_MIN, X1_INIT_MAX,
-                                                         p_shape=(self.number_of_regions,),
-                                                         probability_distribution=ProbabilityDistributionTypes.NORMAL,
-                                                         optimize_pdf=False, use="scipy",
-                                                         **{"mu": x1_init, "sigma": self.sigma_init})})
+            {"x1_init": generate_normal_parameter("x1_init", x1_init, X1_INIT_MIN, X1_INIT_MAX,
+                                                  sigma=self.sigma_init, p_shape=(self.number_of_regions,))})
         self.logger.info("...z_init...")
         parameters.update(
-            {"z_init": generate_probabilistic_parameter("z_init", Z_INIT_MIN, Z_INIT_MAX,
-                                                        p_shape=(self.number_of_regions,),
-                                                        probability_distribution=ProbabilityDistributionTypes.NORMAL,
-                                                        optimize_pdf=False, use="scipy",
-                                                        **{"mu": z_init, "sigma": self.sigma_init/2})})
+            {"z_init": generate_normal_parameter("z_init", z_init, Z_INIT_MIN, Z_INIT_MAX,
+                                                  sigma=self.sigma_init/2.0, p_shape=(self.number_of_regions,))})
 
         # Time scales
         if "tau1" in params_names:
             self.logger.info("...tau1...")
-            parameters.update(
-                {"tau1": generate_lognormal_parameter("tau1", self.tau1, TAU1_MIN, TAU1_MAX, sigma=None,
-                                                      sigma_scale=TAU1_SCALE, p_shape=(), use="scipy")})
+            parameters.update({"tau1": self.generate_normal_or_lognormal_parameter("tau1", self.tau1,
+                                                                                   TAU1_MIN, TAU1_MAX,
+                                                                                   sigma_scale=TAU1_SCALE)})
 
         if "tau0" in params_names:
             self.logger.info("...tau0...")
-            parameters.update(
-                {"tau0": generate_lognormal_parameter("tau0", self.tau0, TAU0_MIN, TAU0_MAX, sigma=None,
-                                                      sigma_scale=TAU0_SCALE, p_shape=(), use="scipy")})
+            parameters.update({"tau0": self.generate_normal_or_lognormal_parameter("tau0", self.tau0,
+                                                                                   TAU0_MIN, TAU0_MAX,
+                                                                                   sigma_scale=TAU0_SCALE)})
 
         if "sigma_init" in params_names:
             self.logger.info("...sigma_init...")
-            parameters.update(
-                {"sigma_init": generate_lognormal_parameter("sigma_init", self.sigma_init, 0.0, 10*self.sigma_init,
-                                                            sigma=self.sigma_init, p_shape=(), use="scipy")})
+            parameters.update({"sigma_init": self.generate_normal_or_lognormal_parameter("sigma_init", self.sigma_init,
+                                                                                         0.0, 10.0 * self.sigma_init,
+                                                                                         sigma=self.sigma_init)})
 
         self.logger.info("...observation's model parameters...")
         if "epsilon" in params_names:
             self.logger.info("...epsilon...")
-            parameters.update(
-                {"epsilon": generate_lognormal_parameter("epsilon", self.epsilon, 0.0, 10*self.epsilon,
-                                                         sigma=self.epsilon, p_shape=(), use="scipy")})
+            parameters.update({"epsilon": self.generate_normal_or_lognormal_parameter("epsilon", self.epsilon,
+                                                                                      0.0, 10.0 * self.epsilon,
+                                                                                      sigma=self.epsilon)})
 
         if isinstance(source_ts, Timeseries) and isinstance(getattr(source_ts, "x1", None), Timeseries) and \
             isinstance(target_data, Timeseries):
@@ -411,18 +417,15 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
         if "scale" in params_names:
             self.logger.info("...scale...")
-            parameters.update(
-                {"scale": generate_lognormal_parameter("scale", self.scale, 0.1, 2*self.scale,
-                                                       sigma=self.scale, p_shape=(), use="scipy")})
+            parameters.update({"scale": self.generate_normal_or_lognormal_parameter("scale", self.scale,
+                                                                                    0.1, 2.0 * self.scale,
+                                                                                    sigma=self.scale)})
             
         if "offset" in params_names:
             self.logger.info("...offset...")
-            parameters.update(
-                {"offset":
-                     generate_probabilistic_parameter("offset", self.offset - 1.0, self.offset + 1.0, p_shape=(),
-                                                      probability_distribution=ProbabilityDistributionTypes.NORMAL,
-                                                      optimize_pdf=False, use="scipy",
-                                                      **{"mu": self.offset, "sigma": 1.0})})
+            parameters.update({"offset": generate_normal_parameter("offset", self.offset,
+                                                                   self.offset-1.0, self.offset + 1.0, sigma=1.0)})
+
         return parameters
 
     def generate_model(self, target_data_type=Target_Data_Type.SYNTHETIC.value, ground_truth={},
@@ -434,11 +437,11 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             parameters = self.generate_parameters(params_names, target_data, sim_signals, gain_matrix)
         else:
             parameters = {}
-        self.model = ODEEpiProbabilisticModel(self.name, self.number_of_regions, target_data_type, self.priors_mode,
-                                              parameters, ground_truth, self.xmode, self.model_config,
-                                              self.observation_model, self.K, self.sigma_x, self.sigma_init,
-                                              self.tau1, self.tau0, self.scale, self.offset, self.epsilon,
-                                              self.number_of_target_data, self.time_length, self.dt, self.active_regions)
+        self.model = ODEEpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
+                                              parameters, ground_truth, self.xmode, self.observation_model,
+                                              self.K, self.sigma_x, self.sigma_init, self.tau1, self.tau0,
+                                              self.epsilon, self.scale, self.offset, self.number_of_target_data,
+                                              self.time_length, self.dt, self.active_regions)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
         return self.model
@@ -449,15 +452,15 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
     sigma = SIGMA_DEF
     sde_mode = SDE_MODES.NONCENTERED.value
 
-    def __init__(self, model=None, model_name="vep_sde", model_config=ModelConfiguration(),
-                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
+    def __init__(self, model=None, model_name="vep_sde", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
+                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True,
                  K=K_DEF, sigma_x=None, sigma_x_scale=3,  # MC_direction_split=0.5,
                  sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                  epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF, sigma=SIGMA_DEF,
                  sde_mode=SDE_MODES.NONCENTERED.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
-                 number_of_signals=0, active_regions=[]):
+                 number_of_signals=0, active_regions=np.array([])):
         super(SDEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode, priors_mode,
-                                                           K, sigma_x, sigma_x_scale, # MC_direction_split,
+                                                           normal_flag, K, sigma_x, sigma_x_scale, # MC_direction_split,
                                                            sigma_init, tau1, tau0, epsilon, scale, offset,
                                                            observation_model, number_of_signals, active_regions)
         self.sigma_init = sigma_init
@@ -471,7 +474,7 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
     def _repr(self, d=OrderedDict()):
         d.update(super(SDEProbabilisticModelBuilder, self)._repr(d))
         nKeys = len(d)
-        for ikey, (key, val) in enumerate(self.__dict__.iteritems()):
+        for ikey, (key, val) in enumerate(self.__dict__.items()):
             d.update({str(nKeys+ikey) + ". " + key: str(val)})
         return d
 
@@ -483,9 +486,10 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
         if "sigma" in params_names:
             self.logger.info("...sigma...")
-            parameters.update(
-                {"sigma": generate_lognormal_parameter("sigma", self.sigma, SIGMA_MIN, SIGMA_MAX,
-                                                       sigma=None, sigma_scale=SIGMA_SCALE, p_shape=(), use="scipy")})
+            parameters.update({"sigma": self.generate_normal_or_lognormal_parameter("sigma", self.sigma,
+                                                                                    SIGMA_MIN, SIGMA_MAX,
+                                                                                    sigma_scale=SIGMA_SCALE)})
+
         names = []
         mins = []
         maxs = []
@@ -515,11 +519,9 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
         for iV in range(n_xp):
             self.logger.info("..." + names[iV] + "...")
             parameters.update(
-                {names[iV]: generate_probabilistic_parameter(names[iV], mins[iV], maxs[iV],
-                                                             p_shape=(self.time_length, self.number_of_regions),
-                                                             probability_distribution=ProbabilityDistributionTypes.NORMAL,
-                                                             optimize_pdf=False, use="scipy",
-                                                             **{"mu": means[iV], "sigma": self.sigma})})
+                {names[iV]: generate_normal_parameter(names[iV], means[iV],
+                                                      mins[iV], maxs[iV], sigma=self.sigma)})
+
         return parameters
 
     def generate_model(self, target_data_type=Target_Data_Type.SYNTHETIC.value, ground_truth={},
@@ -531,12 +533,11 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
             parameters = self.generate_parameters(params_names, target_data, sim_signals, gain_matrix)
         else:
             parameters = {}
-        self.model = SDEEpiProbabilisticModel(self.name, self.number_of_regions, target_data_type, self.priors_mode,
-                                              parameters, ground_truth, self.xmode, self.model_config,
-                                              self.observation_model, self.K, self.sigma_x, self.sigma_init, self.sigma,
-                                              self.tau1, self.tau0, self.scale, self.offset, self.epsilon,
-                                              self.number_of_target_data, self.time_length, self.dt, self.active_regions,
-                                              self.sde_mode)
+        self.model = SDEEpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
+                                              parameters, ground_truth, self.xmode,self.observation_model, self.K,
+                                              self.sigma_x, self.sigma_init, self.sigma, self.tau1, self.tau0,
+                                              self.epsilon, self.scale, self.offset,self.number_of_target_data,
+                                              self.time_length, self.dt, self.active_regions, self.sde_mode)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
         return self.model

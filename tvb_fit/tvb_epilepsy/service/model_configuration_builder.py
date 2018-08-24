@@ -1,104 +1,227 @@
 # coding=utf-8
 """
-Service to do X0/e_values Hypothesis configuration.
-
-NOTES:
-In the future all the related to model configuration parameters might be part of the disease hypothesis:
-yc=YC_DEF, Iext1=I_EXT1_DEF, K=K_DEF, a=A_DEF, b=B_DEF
-For now, we assume default values, or externally set
+Service to create a model configuration, starting from a disease hypothesis and/or a configured TVB simulator
 """
-from tvb_fit.base.utils.log_error_utils import initialize_logger, warning
+
+import numpy as np
+
+from tvb.simulator.models.base import Model
+from tvb.simulator.simulator import Simulator
+from tvb.datatypes.connectivity import Connectivity as TVBConnectivity
+
+from tvb_fit.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
 from tvb_fit.base.utils.data_structures_utils import formal_repr, ensure_list
+from tvb_fit.base.computations.math_utils import normalize_weights
+from tvb_fit.base.model.virtual_patient.connectivity import Connectivity
+from tvb_fit.service.model_configuration_builder import ModelConfigurationBuilder as ModelConfigurationBuilderBase
+from tvb_fit.tvb_epilepsy.base.constants.model_constants import *
 from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import calc_x0cr_r, calc_coupling, calc_x0, \
     calc_x0_val_to_model_x0, calc_model_x0_to_x0_val
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import calc_eq_z, eq_x1_hypo_x0_linTaylor, \
-    eq_x1_hypo_x0_optimize
-from tvb_fit.tvb_epilepsy.base.constants.model_constants import *
-from tvb_fit.tvb_epilepsy.base.model.model_configuration import ModelConfiguration
+    eq_x1_hypo_x0_optimize, compute_initial_conditions_from_eq_point
+from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration \
+    import EpileptorModelConfiguration as ModelConfiguration
+from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration import EPILEPTOR_PARAMS
+from tvb_fit.tvb_epilepsy.service.simulator.epileptor_model_factory import EPILEPTOR_MODEL_NVARS
 
 
-class ModelConfigurationBuilder(object):
+class ModelConfigurationBuilder(ModelConfigurationBuilderBase):
     logger = initialize_logger(__name__)
 
-    x1eq_cr = X1EQ_CR_DEF
+    # For the momdent coupling, monitor, and noise are left to be None.
+    # If in the future they are targeted for probabilistic modeling they will obtain contents
 
-    def __init__(self, number_of_regions=1, x0_values=X0_DEF, e_values=E_DEF, yc=YC_DEF, Iext1=I_EXT1_DEF,
-                 Iext2=I_EXT2_DEF, K=K_DEF, a=A_DEF, b=B_DEF, d=D_DEF, slope=SLOPE_DEF, s=S_DEF, gamma=GAMMA_DEF,
-                 tau1=TAU1_DEF, tau0=TAU0_DEF, zmode=np.array("lin"), x1eq_mode="optimize"):
-        self.number_of_regions = number_of_regions
+    x0 = np.array([-2.0])
+    a = np.array([A_DEF])
+    b = np.array([B_DEF])
+    yc = np.array([YC_DEF])
+    d = np.array([D_DEF])
+    Iext1 = np.array([I_EXT1_DEF])
+    Iext2 = np.array([I_EXT2_DEF])
+    slope = np.array([SLOPE_DEF])
+    s = np.array([S_DEF])
+    gamma = np.array([GAMMA_DEF])
+    tau1 = np.array([TAU1_DEF])
+    tau0 = np.array([TAU0_DEF])
+    tau2 = np.array([TAU2_DEF])
+    zmode = np.array([ZMODE_DEF])
+    pmode = np.array([PMODE_DEF])
+    K = np.array([K_DEF])
+    Kvf = np.array([0.0])
+    Kf = np.array([0.0])
+
+    def __init__(self, input="EpileptorDP", connectivity=None, K_unscaled=np.array([K_UNSCALED_DEF]),
+                 x0_values=X0_DEF, e_values=E_DEF, x1eq_mode="optimize", **kwargs):
+        if isinstance(input, Simulator):
+            # TODO: make this more specific once we clarify the model configuration representation compared to simTVB
+            self.model_name = input.model._ui_name
+            self.set_params_from_tvb_model(input.model)
+            self.connectivity = normalize_weights(input.connectivity.weights)
+            # self.coupling = input.coupling
+            self.initial_conditions = np.squeeze(input.initial_conditions)  # initial conditions in a reduced form
+            # self.noise = input.integrator.noise
+            # self.monitor = ensure_list(input.monitors)[0]
+        else:
+            if isinstance(input, Model):
+                self.model_name = input._ui_name
+                self.set_params_from_tvb_model(input)
+            elif isinstance(input, basestring):
+                self.model_name = input
+            else:
+                raise_value_error("Input (%s) is not a TVB simulator, an epileptor model, "
+                                  "\nor a string of an epileptor model!")
+        if isinstance(connectivity, Connectivity):
+            self.connectivity = connectivity.normalized_weights
+        elif isinstance(connectivity, TVBConnectivity):
+            self.connectivity = normalize_weights(connectivity.weights)
+        elif isinstance(connectivity, np.ndarray):
+            self.connectivity = normalize_weights(connectivity)
+        else:
+            if not(isinstance(input, Simulator)):
+                warning("Input connectivity (%s) is not a virtual patient connectivity, a TVB connectivity, "
+                        "\nor a numpy.array!" % str(connectivity))
         self.x0_values = x0_values * np.ones((self.number_of_regions,), dtype=np.float32)
-        self.yc = yc
-        self.Iext1 = Iext1
-        self.Iext2 = Iext2
-        self.a = a
-        self.b = b
-        self.d = d
-        self.slope = slope
-        self.s = s
-        self.gamma = gamma
-        self.tau1 = tau1
-        self.tau0 = tau0
-        self.zmode = zmode
         self.x1eq_mode = x1eq_mode
-        if len(ensure_list(K)) == 1:
-            self.K_unscaled = np.array(K) * np.ones((self.number_of_regions,), dtype=np.float32)
-        elif len(ensure_list(K)) == self.number_of_regions:
-            self.K_unscaled = np.array(K)
+        if len(ensure_list(K_unscaled)) == 1:
+            K_unscaled = np.array(K_unscaled) * np.ones((self.number_of_regions,), dtype=np.float32)
+        elif len(ensure_list(K_unscaled)) == self.number_of_regions:
+            K_unscaled = np.array(K_unscaled)
         else:
             self.logger.warning(
-                "The length of input global coupling K is neither 1 nor equal to the number of regions!" +
-                "\nSetting model_configuration_builder.K_unscaled = K_DEF for all regions")
-        self.K = None
-        self._normalize_global_coupling()
+                "The length of input global coupling K_unscaled is neither 1 nor equal to the number of regions!" +
+                "\nSetting model_configuration_builder.K_unscaled = K_UNSCALED_DEF for all regions")
+        self.set_K_unscaled(K_unscaled)
+        for pname in EPILEPTOR_PARAMS:
+            self.set_parameter(pname, kwargs.get(pname, getattr(self, pname)))
+        # Update K_unscaled
         self.e_values = e_values * np.ones((self.number_of_regions,), dtype=np.float32)
         self.x0cr = 0.0
         self.rx0 = 0.0
         self._compute_critical_x0_scaling()
 
     def __repr__(self):
-        d = {"01. Number of regions": self.number_of_regions,
-             "02. x0_values": self.x0_values,
-             "03. e_values": self.e_values,
-             "04. K_unscaled": self.K_unscaled,
+        d = {"01. model": self.model,
+             "02. Number of regions": self.number_of_regions,
+             "03. x0_values": self.x0_values,
+             "04. e_values": self.e_values,
              "05. K": self.K,
-             "06. yc": self.yc,
-             "07. Iext1": self.Iext1,
-             "08. Iext2": self.Iext2,
-             "09. K": self.K,
-             "10. a": self.a,
-             "11. b": self.b,
-             "12. d": self.d,
-             "13. s": self.s,
-             "14. slope": self.slope,
-             "15. gamma": self.gamma,
-             "16. tau1": self.tau1,
-             "17. tau0": self.tau0,
-             "18. zmode": self.zmode,
-             "19. x1eq_mode": self.x1eq_mode
+             "06. x1eq_mode": self.x1eq_mode,
+             "07. connectivity": self.connectivity,
+             "08. coupling": self.coupling,
+             "09. monitor": self.monitor,
+             "10. initial_conditions": self.initial_conditions,
+             "11. noise": self.noise
+
              }
         return formal_repr(self, d)
 
-    def __str__(self):
-        return self.__repr__()
+    def set_params_from_tvb_model(self, model):
+        for pname in ["x0", "a", "b", "d", "Iext2", "slope", "gamma", "tt", "r", "tau2", "Kvf", "Kf"]:
+            self.set_parameter(pname, getattr(model, pname))
 
-    def build_model_from_model_config_dict(self, model_config_dict):
-        if not isinstance(model_config_dict, dict):
-            model_config_dict = model_config_dict.__dict__
+        if model._ui_name == "Epileptor":
+            for pname in ["c","Iext", "aa", "tt", "Ks"]:
+                self.set_parameter(pname, getattr(model, pname))
+        else:
+            for pname in ["yc","Iext1", "s", "tau1", "K"]:
+                self.set_parameter(pname, getattr(model, pname))
+            if model._ui_name == "EpileptorDPrealistic":
+                for pname in ["zmode", "pmode"]:
+                    self.set_parameter(pname, getattr(model, pname))
+        return self
+
+    def set_parameter(self, pname, pval):
+        if pname == "tt":
+            self.tau1 = pval * np.ones((self.number_of_regions,), dtype=np.float32)
+        elif pname == "r":
+            self.tau0 = 1.0 / pval
+        elif pname == "c":
+            self.yc = pval * np.ones((self.number_of_regions,), dtype=np.float32)
+        elif pname == "Iext":
+            self.Iext1 = pval * np.ones((self.number_of_regions,), dtype=np.float32)
+        elif pname == "s":
+            self.s = pval * np.ones((self.number_of_regions,), dtype=np.float32)
+        elif pname == "Ks":
+            self.K = -pval * np.ones((self.number_of_regions,), dtype=np.float32)
+        else:
+            setattr(self, pname, pval * np.ones((self.number_of_regions,), dtype=np.float32))
+        return self
+
+    def build_model_config_from_tvb(self):
+        model = self.model
+        del model["model_name"]
+        model_config = ModelConfiguration(self.model_name, self.connectivity, self.coupling,
+                                          self.monitor, self.initial_conditions, self.noise,
+                                          self.x0_values, self.e_values, x1eq=None, zeq=None, Ceq=None, **model)
+        if model_config.initial_conditions is None:
+            model_config.initial_conditions = compute_initial_conditions_from_eq_point(model_config)
+        return model_config
+
+    def build_model_config_from_model_config(self, model_config):
+        if not isinstance(model_config, dict):
+            model_config_dict = model_config.__dict__
+        else:
+            model_config_dict = model_config
         model_configuration = ModelConfiguration()
-        for attr, value in model_configuration.__dict__.iteritems():
+        for attr, value in model_configuration.__dict__.items():
             value = model_config_dict.get(attr, None)
             if value is None:
-                warning(attr + " not found in the input model configuraiton dictionary!" +
+                warning(attr + " not found in the input model configuration dictionary!" +
                         "\nLeaving default " + attr + ": " + str(getattr(model_configuration, attr)))
             if value is not None:
                 setattr(model_configuration, attr, value)
         return model_configuration
 
-    def set_attribute(self, attr_name, data):
-        setattr(self, attr_name, data)
+    def set_K_unscaled(self, K_unscaled):
+        self._normalize_global_coupling(K_unscaled)
 
-    def _compute_model_x0(self, x0_values):
-        return calc_x0_val_to_model_x0(x0_values, self.yc, self.Iext1, self.a, self.b, self.d, self.zmode)
+    def update_K(self):
+        self.set_K_unscaled(self.K * self.number_of_regions)
+        return self
+
+    @property
+    def K_unscaled(self):
+        # !!Very important to correct here for the sign of K!!
+        return self.K * self.number_of_regions
+
+    @property
+    def model_K(self):
+        return -self.K
+
+    @property
+    def Ks(self):
+        # !!Very important to correct here for the sign of K!!
+        return -self.K
+
+    @property
+    def c(self):
+        return self.yc
+
+    @property
+    def Iext(self):
+        return self.Iext1
+
+    @property
+    def aa(self):
+        return self.s
+
+    @property
+    def tt(self):
+        return self.tau1
+
+    @property
+    def model(self):
+        return {pname: getattr(self, pname) for pname in ["model_name"] + EPILEPTOR_PARAMS}
+
+    @property
+    def nvar(self):
+        return EPILEPTOR_MODEL_NVARS[self.model_name]
+
+    def _compute_model_x0(self, x0_values, x0_indices=None):
+        if x0_indices is None:
+            x0_indices = np.array(range(self.number_of_regions))
+        return calc_x0_val_to_model_x0(x0_values, self.yc[x0_indices], self.Iext1[x0_indices], self.a[x0_indices],
+                                       self.b[x0_indices], self.d[x0_indices], self.zmode[x0_indices])
 
     def _ensure_equilibrum(self, x1eq, zeq):
         temp = x1eq > self.x1eq_cr - 10 ** (-3)
@@ -146,8 +269,8 @@ class ModelConfigurationBuilder(object):
 
     def _compute_x1_equilibrium(self, e_indices, x1eq, zeq, x0_values, model_connectivity):
         self._compute_critical_x0_scaling()
-        x0 = self._compute_model_x0(x0_values)
         x0_indices = np.delete(np.array(range(self.number_of_regions)), e_indices)
+        x0 = self._compute_model_x0(x0_values, x0_indices)
         if self.x1eq_mode == "linTaylor":
             x1eq = \
                 eq_x1_hypo_x0_linTaylor(x0_indices, e_indices, x1eq, zeq, x0, self.K,
@@ -158,21 +281,27 @@ class ModelConfigurationBuilder(object):
                                        model_connectivity, self.yc, self.Iext1, self.a, self.b, self.d)[0]
         return x1eq
 
-    def _normalize_global_coupling(self):
-        self.K = self.K_unscaled / self.number_of_regions
+    def _normalize_global_coupling(self, K_unscaled):
+        self.K = K_unscaled / self.number_of_regions
 
     def _configure_model_from_equilibrium(self, x1eq, zeq, model_connectivity):
         # x1eq, zeq = self._ensure_equilibrum(x1eq, zeq) # We don't this by default anymore
         x0, Ceq, x0_values, e_values = self._compute_params_after_equilibration(x1eq, zeq, model_connectivity)
-        return ModelConfiguration(self.yc, self.Iext1, self.Iext2, self.K, self.a, self.b, self.d,
-                                  self.slope, self.s, self.gamma, self.tau1, self.tau0, x1eq, zeq, Ceq, x0, x0_values,
-                                  e_values, self.zmode, model_connectivity)
+        self.x0 = x0
+        model = self.model
+        del model["model_name"]
+        model_config = ModelConfiguration(self.model_name, model_connectivity, self.coupling,
+                                          self.monitor, self.initial_conditions, self.noise,
+                                          x0_values, e_values, x1eq, zeq, Ceq, **model)
+        if model_config.initial_conditions is None:
+            model_config.initial_conditions = compute_initial_conditions_from_eq_point(model_config)
+        return model_config
 
-    def build_model_from_E_hypothesis(self, disease_hypothesis, model_connectivity):
+    def build_model_from_E_hypothesis(self, disease_hypothesis):
+
         # This function sets healthy regions to the default epileptogenicity.
 
-        # Always normalize K first
-        self._normalize_global_coupling()
+        model_connectivity = np.array(self.connectivity)
 
         # Then apply connectivity disease hypothesis scaling if any:
         if len(disease_hypothesis.w_indices) > 0:
@@ -196,11 +325,10 @@ class ModelConfigurationBuilder(object):
 
         return self._configure_model_from_equilibrium(x1eq, zeq, model_connectivity)
 
-    def build_model_from_hypothesis(self, disease_hypothesis, model_connectivity):
+    def build_model_from_hypothesis(self, disease_hypothesis):
         # This function sets healthy regions to the default excitability.
 
-        # Always normalize K first
-        self._normalize_global_coupling()
+        model_connectivity = np.array(self.connectivity)
 
         # Then apply connectivity disease hypothesis scaling if any:
         if len(disease_hypothesis.w_indices) > 0:
@@ -234,4 +362,12 @@ class ModelConfigurationBuilder(object):
         for i, val in enumerate(paths):
             vals = val.split(".")
             if vals[0] == "model_configuration_builder":
-                getattr(self, vals[1])[indices[i]] = values[i]
+                if vals[1] == "K_unscaled":
+                    temp = self.K_unscaled
+                    temp[indices[i]] = values[i]
+                    self.set_K_unscaled(temp)
+                else:
+                    getattr(self, vals[1])[indices[i]] = values[i]
+
+
+

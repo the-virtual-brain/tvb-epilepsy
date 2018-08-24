@@ -4,7 +4,7 @@ import os
 import numpy as np
 from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.service.sensitivity_analysis_service import METHODS
-from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_DEF
+from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_fit.tvb_epilepsy.plot.plotter import Plotter
@@ -48,7 +48,7 @@ def main_sensitivity_analysis(config=Config()):
                                                          head.connectivity.region_labels,
                                                          n_samples, method=m, param_range=0.1,
                                                          global_coupling=[{"indices": all_regions_indices,
-                                                                           "low": 0.0, "high": 2 * K_DEF}],
+                                                                           "low": 0.0, "high": 2 * K_UNSCALED_DEF}],
                                                          healthy_regions_parameters=[
                                                              {"name": "x0_values", "indices": healthy_indices}],
                                                          config=config, save_services=True)

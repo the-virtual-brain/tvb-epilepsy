@@ -66,7 +66,7 @@ def build_stan_model_data_dict_to_interface_ins(probabilistic_model, signals, co
                 "nt": probabilistic_model.time_length,
                 "ns": probabilistic_model.number_of_target_data,
                 "dt": probabilistic_model.dt,
-                "I1": probabilistic_model.model_config.Iext1,
+                "I1": np.mean(probabilistic_model.model_config.Iext1),
                 "x0_star_mu": probabilistic_model.parameters["x0"].star_mean[active_regions],
                 "x0_star_std": probabilistic_model.parameters["x0"].star_std[active_regions],
                 "x0_lo": probabilistic_model.parameters["x0"].low,
@@ -118,7 +118,7 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "n_times": probabilistic_model.time_length,
                 "n_target_data": probabilistic_model.number_of_target_data,
                 "dt": probabilistic_model.dt,
-                "Iext1": probabilistic_model.model_config.Iext1,
+                "Iext1": np.mean(probabilistic_model.model_config.Iext1),
                 "XMODE": int(probabilistic_model.xmode == XModes.X1EQMODE.value),
                 "x_star_mu": probabilistic_model.parameters[x].star_mean[active_regions],
                 "x_star_std": probabilistic_model.parameters[x].star_std[active_regions],
@@ -162,5 +162,4 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
             vep_data.update({pflag: int(1), pkey+"_mu": np.mean(param.mean), pkey + "_std": np.mean(param.std),
                              pkey + "_lo": np.min(param.low), pkey + "_hi": np.max(param.high)})
     return vep_data
-
 
