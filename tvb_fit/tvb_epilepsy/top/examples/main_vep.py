@@ -212,9 +212,9 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_UNSCALED_DEF, ep_ind
                 sim, sim_settings = \
                     sim_builder.build_simulator_TVB_from_model_sim_settings(head.connectivity, sim_settings)
                 sim_path = os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_"
-                                        + sim.model._ui_name + "_sim_settings.h5")
+                                        + sim_type + "_sim_settings.h5")
                 model_path = os.path.join(config.out.FOLDER_RES,
-                                          lsa_hypothesis.name + sim.model._ui_name + "_model.h5")
+                                          lsa_hypothesis.name + sim_type + "_model.h5")
                 writer.write_simulation_settings(sim.settings, sim_path)
                 writer.write_simulator_model(sim.model, model_path, sim.connectivity.number_of_regions)
                 if test_write_read:
@@ -226,7 +226,7 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_UNSCALED_DEF, ep_ind
                     #             str(assert_equal_objects(sim.model,
                     #                                      reader.read_epileptor_model(model_path), logger=logger)))
 
-                logger.info("\n\nSimulating...")
+                logger.info("\n\nSimulating %s..." % sim_type)
                 sim_output, status = sim.launch_simulation(report_every_n_monitor_steps=100)
                 if not status:
                     logger.warning("\nSimulation failed!")
@@ -240,7 +240,7 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_UNSCALED_DEF, ep_ind
                     else:
                         sim_output, seeg = compute_seeg_and_write_ts_to_h5(sim_output, sim.model, head.sensorsSEEG,
                                                                            os.path.join(config.out.FOLDER_RES,
-                                                                                        sim.model._ui_name + "_ts.h5"),
+                                                                                        sim_type + "_ts.h5"),
                                                                            seeg_gain_mode="lin", hpf_flag=True,
                                                                            hpf_low=10.0, hpf_high=512.0)
 
