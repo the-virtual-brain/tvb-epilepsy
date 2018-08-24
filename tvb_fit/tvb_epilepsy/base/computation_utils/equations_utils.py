@@ -1,3 +1,4 @@
+import numpy as np
 
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import *
 from tvb_fit.base.utils.data_structures_utils import assert_arrays, isequal_string
@@ -51,17 +52,18 @@ def eqtn_coupling_diff(K, w, ix, jx):
     return dcoupl_dx1
 
 
-def eqtn_x0cr_r(Iext1, yc, a, b, d, x1_rest, x1_cr, x0_rest, x0_cr, zmode=np.array("lin")):
+def eqtn_x0cr_r(Iext1, yc, a, b, d, x1_rest, x1_cr, x0_rest, x0_cr, zmode=np.array([ZMODE_DEF])):
     # Correspondence with EpileptorDP2D
     b = b - d
-    if isequal_string(str(zmode), 'lin'):
+    # TODO: work on an element by element basis here...
+    if np.any(zmode == 0):
         return 0.25 * (x0_rest * (a * x1_cr ** 3 - a * x1_rest ** 3 - b * x1_cr ** 2 +
                                   b * x1_rest ** 2 + 4.0 * x1_cr - 4.0 * x1_rest) +
                        (x0_cr - x0_rest) * (Iext1 - a * x1_rest ** 3 + b * x1_rest ** 2 -
                                             4.0 * x1_rest + yc)) / (x0_cr - x0_rest), \
                0.25 * (a * x1_cr ** 3 - a * x1_rest ** 3 - b * x1_cr ** 2 + b * x1_rest ** 2 + 4.0 * x1_cr -
                        4.0 * x1_rest) / (x0_cr - x0_rest)
-    elif isequal_string(str(zmode), 'sig'):
+    elif np.any(zmode == 1):
         return (-x0_cr*(3.2e+66*20000000000000.0**(10*x1_cr) + 4.74922109128249e+68*54365636569181.0**(10*x1_cr))
                 *(3.2e+66*1.024e+133**x1_rest*(Iext1 - a*x1_rest**3 + b*x1_rest**2 + yc)
                 + 4.74922109128249e+68*2.25551009738825e+137**x1_rest*(Iext1 - a*x1_rest**3 + b*x1_rest**2 + yc - 3.0))
@@ -85,22 +87,23 @@ def eqtn_x0cr_r(Iext1, yc, a, b, d, x1_rest, x1_cr, x0_rest, x0_cr, zmode=np.arr
                                          4.74922109128249e+68 * 54365636569181.0 ** (10.0 * x1_rest)) *
                 (-x0_cr + x0_rest))
     else:
-        raise_value_error('zmode is neither "lin" nor "sig"')
+        raise_value_error('zmode is neither [0] nor [1]')
 
 
-def eqtn_x0(x1, z, zmode=np.array("lin"), z_pos=True, K=None, w=None, coupl=None):
+def eqtn_x0(x1, z, zmode=np.array([ZMODE_DEF]), z_pos=True, K=None, w=None, coupl=None):
     if coupl is None:
         if np.all(K == 0.0) or np.all(w == 0.0) or (K is None) or (w is None):
             coupl = 0.0
         else:
             from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import calc_coupling
             coupl = calc_coupling(x1, K, w)
-    if  isequal_string(str(zmode), 'lin'):
+    # TODO: work on an element by element basis here...
+    if np.any(zmode == 0):
         return x1 - (z + np.where(z_pos, 0.0, 0.1 * np.power(z, 7.0)) + coupl) / 4.0
-    elif  isequal_string(str(zmode), 'sig'):
+    elif np.any(zmode == 1):
         return np.divide(3.0, 1.0 + np.power(np.exp(1), -10.0 * (x1 + 0.5))) - z - coupl
     else:
-        raise_value_error('zmode is neither "lin" nor "sig"')
+        raise_value_error('zmode is neither [0] nor [1]')
 
 
 def eqtn_fx1(x1, z, y1, Iext1, slope, a, b, d, tau1, x1_neg=True, model="2d", x2=0.0):
@@ -134,19 +137,20 @@ def eqtn_jac_x1_2d(x1, z, slope, a, b, d, tau1, x1_neg=True):
     return np.concatenate([jac_x1, jac_z], axis=1)
 
 
-def eqtn_fx1z_diff(x1, K, w, ix, jx, a, b, d, tau1, tau0, zmode=np.array("lin")):  # , z_pos=True
+def eqtn_fx1z_diff(x1, K, w, ix, jx, a, b, d, tau1, tau0, zmode=np.array([ZMODE_DEF])):  # , z_pos=True
     # TODO: for the extreme z_pos = False case where we have terms like 0.1 * z ** 7. See below eqtn_fz()
     # TODO: for the extreme x1_neg = False case where we have to solve for x2 as well
     x1, K, ix, jx, a, b, d, tau1, tau0 = assert_arrays([x1, K, ix, jx, a, b, d, tau1, tau0], (x1.size,))
     tau = np.divide(tau1, tau0)
     dcoupl_dx = eqtn_coupling_diff(K, w, ix, jx)
-    if isequal_string(str(zmode), 'lin'):
+    # TODO: work on an element by element basis here...
+    if np.any(zmode == 0):
         dfx1_1_dx1 = 4.0 * np.ones(x1[ix].shape)
-    elif isequal_string(str(zmode), 'sig'):
+    elif np.any(zmode == 1):
         dfx1_1_dx1 = np.divide(30 * np.power(np.exp(1), (-10.0 * (x1[ix] + 0.5))),
                                np.power(1 + np.power(np.exp(1), (-10.0 * (x1[ix] + 0.5))), 2))
     else:
-        raise_value_error('zmode is neither "lin" nor "sig"')
+        raise_value_error('zmode is neither [0] nor [1]')
     dfx1_3_dx1 = 3 * np.multiply(np.power(x1[ix], 2.0), a[ix]) + 2 * np.multiply(x1[ix], d[ix] - b[ix])
     fx1z_diff = np.empty_like(dcoupl_dx, dtype=dcoupl_dx.dtype)
     for xi in ix:
@@ -162,7 +166,7 @@ def eqtn_fy1(x1, yc, y1, d, tau1):
     return np.multiply((yc - np.multiply(pow(x1, 2), d) - y1), tau1)
 
 
-def eqtn_fz(x1, z, x0, tau1, tau0, zmode=np.array("lin"), z_pos=True, K=None, w=None, coupl=None):
+def eqtn_fz(x1, z, x0, tau1, tau0, zmode=np.array([ZMODE_DEF]), z_pos=True, K=None, w=None, coupl=None):
     if coupl is None:
         if np.all(K == 0.0) or np.all(w == 0.0) or (K is None) or (w is None):
             coupl = 0.0
@@ -170,26 +174,28 @@ def eqtn_fz(x1, z, x0, tau1, tau0, zmode=np.array("lin"), z_pos=True, K=None, w=
             from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import calc_coupling
             coupl = calc_coupling(x1, K, w)
     tau = np.divide(tau1, tau0)
-    if isequal_string(str(zmode), 'lin'):
+    # TODO: work on an element by element basis here...
+    if np.any(zmode == 0):
         return np.multiply((4 * (x1 - x0) - np.where(z_pos, z, z + 0.1 * np.power(z, 7.0)) - coupl), tau)
-    elif isequal_string(str(zmode), 'sig'):
+    elif np.any(zmode == 1):
         return np.multiply(np.divide(3.0, (1 + np.power(np.exp(1), (-10.0 * (x1 + 0.5))))) - x0 - z - coupl, tau)
     else:
-        raise_value_error('zmode is neither "lin" nor "sig"')
+        raise_value_error('zmode is neither [0] nor [1]')
 
 
-def eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode=np.array("lin"), z_pos=True, K=None, w=None):
+def eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode=np.array([ZMODE_DEF]), z_pos=True, K=None, w=None):
     tau = np.divide(tau1, tau0)
     jac_z = - np.ones(z.shape, dtype=z.dtype)
-    if isequal_string(str(zmode), 'lin'):
+    # TODO: work on an element by element basis here...
+    if np.any(zmode == 0):
         jac_x1 = 4.0 * np.ones(z.shape, dtype=z.dtype)
         if not (z_pos):
             jac_z -= 0.7 * np.power(z, 6.0)
-    elif isequal_string(str(zmode), 'sig'):
+    elif np.any(zmode == 1):
         jac_x1 = np.divide(30 * np.power(np.exp(1), (-10.0 * (x1 + 0.5))),
                            1 + np.power(np.exp(1), (-10.0 * (x1 + 0.5))))
     else:
-        raise_value_error('zmode is neither "lin" nor "sig"')
+        raise_value_error('zmode is neither [0] nor [1]')
     # Assuming that wii = 0
     jac_x1 += np.multiply(K, np.sum(w, 1))
     jac_x1 = np.diag(jac_x1.flatten()) - np.multiply(np.repeat(np.reshape(K, (x1.size, 1)), x1.size, axis=1), w)
@@ -268,7 +274,7 @@ def eqtn_fK(K_var, K, tau1, tau0):
 
 
 def eqtn_fparams_vars(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope, Iext1, Iext2, K, tau1, tau0,
-                      pmode="z", z=None, g=None):
+                      pmode=np.array([PMODE_DEF]), z=None, g=None):
     fx0 = eqtn_fx0(x0_var, x0, tau1)
     from tvb_fit.tvb_epilepsy.base.model.epileptor_models import EpileptorDPrealistic
     slope_eq, Iext2_eq = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, slope, Iext2)
@@ -279,8 +285,8 @@ def eqtn_fparams_vars(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope,
     return fx0, fslope, fIext1, fIext2, fK
 
 
-def eqtn_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, zmode="lin", pmode="z", x1_neg=True,
-              y1=None, x2=None, y2=None, g=None, x2_neg=False,
+def eqtn_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, zmode=np.array([ZMODE_DEF]), pmode=np.array([PMODE_DEF]),
+              x1_neg=True, y1=None, x2=None, y2=None, g=None, x2_neg=False,
               x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
               slope=SLOPE_DEF, Iext2=I_EXT2_DEF, a=A_DEF, b=B_DEF, d=D_DEF, s=S_DEF, gamma=GAMMA_DEF,
               tau1=TAU1_DEF, tau0=TAU0_DEF, tau2=TAU2_DEF):
@@ -309,7 +315,7 @@ def eqtn_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2, zmode="lin", pmode="z", 
         return fx1, fy1, fz, fx2, fy2, fg, fx0, fslope, fIext1, fIext2, fK
 
 
-def eqtn_jac_2d(x1, z, K, w, slope, a, b, d, tau1, tau0, zmode=np.array("lin"), x1_neg=True, z_pos=True):
+def eqtn_jac_2d(x1, z, K, w, slope, a, b, d, tau1, tau0, zmode=np.array([ZMODE_DEF]), x1_neg=True, z_pos=True):
     jac_fx1 = eqtn_jac_x1_2d(x1, z, slope, a, b, d, tau1, x1_neg)
     jac_fz = eqtn_jac_fz_2d(x1, z, tau1, tau0, zmode, z_pos, K, w)
     return jac_fx1, jac_fz
