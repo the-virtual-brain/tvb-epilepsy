@@ -1,5 +1,7 @@
 import numpy as np
 
+from tvb.datatypes.connectivity import Connectivity as TVB_Connectivity
+from tvb_fit.base.model.virtual_patient.connectivity import Connectivity
 from tvb_fit.base.model.virtual_patient.sensors import Sensors
 from tvb_fit.base.utils.data_structures_utils import ensure_list
 from tvb_fit.base.utils.log_error_utils import raise_value_error, initialize_logger
@@ -91,4 +93,20 @@ class HeadService(object):
 
     def compute_gain_matrix(self, head, sensors, normalize=100.0, ceil=False):
         return compute_gain_matrix(sensors.locations, head.connectivity.centres, normalize=normalize, ceil=ceil)
+
+    def vp2tvb_connectivity(self, vp_conn, model_connectivity=None, time_delay_flag=1):
+        if model_connectivity is None:
+            model_connectivity = vp_conn.normalized_weights
+        return TVB_Connectivity(use_storage=False, weights=model_connectivity,
+                                tract_lengths=time_delay_flag * vp_conn.tract_lengths,
+                                region_labels=vp_conn.region_labels, centres=vp_conn.centres,
+                                hemispheres=vp_conn.hemispheres, orientations=vp_conn.orientations, areas=vp_conn.areas)
+
+    def tvb2vp_connectivity(self, tvb_conn, model_connectivity=None, time_delay_flag=1):
+        if model_connectivity is None:
+            model_connectivity = tvb_conn.weights
+        return Connectivity("", model_connectivity, time_delay_flag * tvb_conn.tract_lengths,
+                            labels=tvb_conn.region_labels, centres=tvb_conn.centres, hemispheres=tvb_conn.hemispheres,
+                            orientations=tvb_conn.orientations, areas=tvb_conn.areas, normalized_weights=np.array([]))
+
 
