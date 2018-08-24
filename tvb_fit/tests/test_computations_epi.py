@@ -1,5 +1,11 @@
 import numpy
 from sympy import Matrix
+
+from tvb_fit.base.utils.log_error_utils import initialize_logger
+from tvb_fit.base.utils.data_structures_utils import assert_arrays
+from tvb_fit.tests.base import BaseTest
+
+from tvb_fit.tvb_epilepsy.base.constants.model_constants import *
 from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import \
     calc_x0cr_r, calc_x0, calc_model_x0_to_x0_val, calc_dfun, \
     calc_jac, calc_coupling, calc_coupling_diff, calc_fx1z, calc_fx1z_diff, calc_fx1_2d_taylor, calc_fx1y1_6d_diff_x1, \
@@ -10,14 +16,12 @@ from tvb_fit.tvb_epilepsy.base.computation_utils.symbolic_utils import \
     symbol_vars, symbol_eqtn_x0cr_r, symbol_eqtn_coupling, \
     symbol_calc_coupling_diff, symbol_eqtn_fx1z, symbol_eqtn_fx1z_diff, symbol_eqtn_fx2y2, symbol_calc_2d_taylor, \
     symbol_calc_fx1y1_6d_diff_x1, symbol_calc_fz_jac_square_taylor
-from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_DEF, YC_DEF, I_EXT1_DEF, SLOPE_DEF, I_EXT2_DEF, A_DEF, B_DEF, \
-    D_DEF, S_DEF, GAMMA_DEF, TAU1_DEF, TAU2_DEF, TAU0_DEF, X1_DEF, X1EQ_CR_DEF, X0_DEF, X0_CR_DEF
-from tvb_fit.base.utils.data_structures_utils import assert_arrays
-from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.tvb_epilepsy.base.model.epileptor_models import EpileptorDPrealistic
-from tvb_fit.tests.base import BaseTest
+
 
 #TODO: Left some commented asserts that need corrections in order to work
+
+
 class TestComputations(BaseTest):
     def test_computations(self):
         logger = initialize_logger(__name__, self.config.out.FOLDER_LOGS)
@@ -26,7 +30,7 @@ class TestComputations(BaseTest):
         x1 = numpy.array([-4.1 / 3, -4.9 / 3, -5.0 / 3], dtype="float32")
         w = numpy.array([[0, 0.1, 0.9], [0.1, 0, 0.0], [0.9, 0.0, 0]])
         n = x1.size
-        K = 0.0 * K_DEF * numpy.ones(x1.shape, dtype=x1.dtype)
+        K = 0.0 * K_UNSCALED_DEF * numpy.ones(x1.shape, dtype=x1.dtype)
         yc = YC_DEF * numpy.ones(x1.shape, dtype=x1.dtype)
         Iext1 = I_EXT1_DEF * numpy.ones(x1.shape, dtype=x1.dtype)
         slope = SLOPE_DEF * numpy.ones(x1.shape, dtype=x1.dtype)
@@ -41,8 +45,8 @@ class TestComputations(BaseTest):
         tau0 = TAU0_DEF
         x1, K = assert_arrays([x1, K])
         w = assert_arrays([w])  # , (x1.size, x1.size)
-        zmode = numpy.array("lin")
-        pmode = numpy.array("const")
+        zmode = numpy.array([ZMODE_DEF])
+        pmode = numpy.array([0])
         model = "EpileptorDPrealistic"
         x1eq = x1
 
@@ -54,7 +58,7 @@ class TestComputations(BaseTest):
 
         x0 = calc_x0(x1, z, K, w, zmode=zmode, z_pos=True)
 
-        calc_model_x0_to_x0_val(x0, yc, Iext1, a, b, d, zmode=numpy.array("lin"))
+        calc_model_x0_to_x0_val(x0, yc, Iext1, a, b, d, zmode=numpy.array([ZMODE_DEF]))
 
         if model == "EpileptorDP2D":
             eq = numpy.c_[x1eq, zeq].T.astype('float32')
