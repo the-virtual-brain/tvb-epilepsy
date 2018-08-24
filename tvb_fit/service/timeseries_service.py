@@ -8,7 +8,7 @@ from tvb_fit.base.utils.data_structures_utils import isequal_string, ensure_list
 from tvb_fit.base.computations.math_utils import select_greater_values_array_inds, \
                                                       select_by_hierarchical_group_metric_clustering
 from tvb_fit.base.computations.analyzers_utils import filter_data
-from tvb_fit.base.model.timeseries import Timeseries, TimeseriesDimensions, PossibleVariables
+from tvb_fit.base.model.timeseries import TimeseriesDimensions, PossibleVariables
 
 
 def decimate_signals(signals, time, decim_ratio):
@@ -55,8 +55,9 @@ class TimeseriesService(object):
 
     def decimate(self, timeseries, decim_ratio):
         if decim_ratio > 1:
-            return Timeseries(timeseries.data[0:timeseries.time_length:decim_ratio], timeseries.dimension_labels,
-                              timeseries.time_start, decim_ratio*timeseries.time_step, timeseries.time_unit)
+            return timeseries.__class__(timeseries.data[0:timeseries.time_length:decim_ratio],
+                                        timeseries.dimension_labels, timeseries.time_start,
+                                        decim_ratio*timeseries.time_step, timeseries.time_unit)
         else:
             return timeseries
 
@@ -64,8 +65,8 @@ class TimeseriesService(object):
         if decim_ratio > 1:
             decim_data, decim_time, decim_dt, decim_n_times = decimate_signals(timeseries.squeezed,
                                                                                timeseries.time_line, decim_ratio)
-            return Timeseries(decim_data, timeseries.dimension_labels,
-                              decim_time[0], decim_dt, timeseries.time_unit)
+            return timeseries.__class__(decim_data, timeseries.dimension_labels,
+                                        decim_time[0], decim_dt, timeseries.time_unit)
         else:
             return timeseries
 
@@ -74,43 +75,43 @@ class TimeseriesService(object):
             kernel = np.ones((np.int(np.round(win_len)), 1, 1, 1))
         else:
             kernel = kernel * np.ones((np.int(np.round(win_len)), 1, 1, 1))
-        return Timeseries(convolve(timeseries.data, kernel, mode='same'), timeseries.dimension_labels,
-                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+        return timeseries.__class__(convolve(timeseries.data, kernel, mode='same'), timeseries.dimension_labels,
+                                    timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def hilbert_envelope(self, timeseries):
-        return Timeseries(np.abs(hilbert(timeseries.data, axis=0)), timeseries.dimension_labels,
-                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+        return timeseries.__class__(np.abs(hilbert(timeseries.data, axis=0)), timeseries.dimension_labels,
+                                    timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def detrend(self, timeseries, type='linear'):
-        return Timeseries(detrend(timeseries.data, axis=0, type=type), timeseries.dimension_labels,
-                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+        return timeseries.__class__(detrend(timeseries.data, axis=0, type=type), timeseries.dimension_labels,
+                                    timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def normalize(self, timeseries, normalization=None):
-        return Timeseries(normalize_signals(timeseries.data, normalization), timeseries.dimension_labels,
-                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+        return timeseries.__class__(normalize_signals(timeseries.data, normalization), timeseries.dimension_labels,
+                                    timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def filter(self, timeseries, lowcut=None, highcut=None, mode='bandpass', order=3):
-        return Timeseries(filter_data(timeseries.data, timeseries.sampling_frequency, lowcut, highcut, mode, order),
-                         timeseries.dimension_labels, timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+        return timeseries.__class__(filter_data(timeseries.data, timeseries.sampling_frequency, lowcut, highcut, mode, order),
+                                    timeseries.dimension_labels, timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def log(self, timeseries):
-        return Timeseries(np.log(timeseries.data), timeseries.dimension_labels,
-                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+        return timeseries.__class__(np.log(timeseries.data), timeseries.dimension_labels,
+                                    timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def exp(self, timeseries):
-        return Timeseries(np.exp(timeseries.data), timeseries.dimension_labels,
-                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+        return timeseries.__class__(np.exp(timeseries.data), timeseries.dimension_labels,
+                                    timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def abs(self, timeseries):
-        return Timeseries(np.abs(timeseries.data), timeseries.dimension_labels,
-                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+        return timeseries.__class__(np.abs(timeseries.data), timeseries.dimension_labels,
+                                    timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def power(self, timeseries):
         return np.sum(self.square(timeseries).squeezed, axis=0)
 
     def square(self, timeseries):
-        return Timeseries(timeseries.data ** 2, timeseries.dimension_labels,
-                          timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+        return timeseries.__class__(timeseries.data ** 2, timeseries.dimension_labels,
+                                   timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def correlation(self, timeseries):
         return np.corrcoef(timeseries.squeezed.T)
@@ -159,12 +160,12 @@ class TimeseriesService(object):
             seeg_fun = lambda source, gain_matrix: compute_seeg_lin(source.squeezed, gain_matrix)
         seeg = []
         for id, sensor in enumerate(ensure_list(sensors)):
-            seeg.append(Timeseries(seeg_fun(source_timeseries, sensor.gain_matrix),
-                                   {TimeseriesDimensions.SPACE.value: sensor.labels,
-                                    TimeseriesDimensions.VARIABLES.value:
-                                        PossibleVariables.SEEG.value + str(id)},
-                                   source_timeseries.time_start, source_timeseries.time_step,
-                                   source_timeseries.time_unit))
+            seeg.append(source_timeseries.__class__(seeg_fun(source_timeseries, sensor.gain_matrix),
+                                                    {TimeseriesDimensions.SPACE.value: sensor.labels,
+                                                     TimeseriesDimensions.VARIABLES.value:
+                                                        PossibleVariables.SEEG.value + str(id)},
+                                                    source_timeseries.time_start, source_timeseries.time_step,
+                                                    source_timeseries.time_unit))
         return seeg
 
 
