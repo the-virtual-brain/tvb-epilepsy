@@ -121,6 +121,7 @@ class FiguresConfig(object):
     MOUSE_HOOVER = False
     MATPLOTLIB_BACKEND = "Qt4Agg"  # "Agg" # ,
 
+
 class CalculusConfig(object):
     SYMBOLIC_CALCULATIONS_FLAG = False
 
@@ -138,6 +139,7 @@ class CalculusConfig(object):
     MAX_SINGLE_VALUE = np.finfo("single").max
     MAX_INT_VALUE = np.iinfo(np.int64).max
     MIN_INT_VALUE = np.iinfo(np.int64).max
+
 
 class Config(object):
     generic = GenericConfig()
