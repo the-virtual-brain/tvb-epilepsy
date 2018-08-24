@@ -85,7 +85,7 @@ class H5Writer(H5WriterBase):
                             KEY_CHANNELS: seeg_ts.shape[1], KEY_SV: 1, KEY_SAMPLING: sampling_period, KEY_START: 0.0},
                            h5_file, KEY_DATE, KEY_VERSION, "/" + sensors_name)
             h5_file.close()
-        except Exception, e:
+        except Exception as e:
             raise_error(str(e) + "\nSeeg dataset already written as " + sensors_name, self.logger)
 
     def write_model_inversion_service(self, model_inversion_service, path, nr_regions=None):

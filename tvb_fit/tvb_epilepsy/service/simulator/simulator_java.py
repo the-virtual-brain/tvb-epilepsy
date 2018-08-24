@@ -206,7 +206,7 @@ class SimulatorJava(ABCSimulator):
     def prepare_epileptor_model_for_json(self, no_regions=88):
         epileptor_params_list = []
         self.logger.warning("No of regions is " + str(no_regions))
-        for idx in xrange(no_regions):
+        for idx in range(no_regions):
             epileptor_params_list.append(
                 EpileptorParams(self.model.a[idx], self.model.b[idx], self.model.c[idx], self.model.d[idx],
                                 self.model.aa[idx], self.model.r[idx], self.model.Kvf[idx], self.model.Kf[idx],

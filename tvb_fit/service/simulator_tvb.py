@@ -83,7 +83,7 @@ class SimulatorTVB(ABCSimulator):
             try:
                 tavg_time, tavg_data = self.simTVB.run()[0]
 
-            except Exception, error_message:
+            except Exception as error_message:
                 status = False
                 self.logger.warning("Something went wrong with this simulation...:" + "\n" + str(error_message))
                 return None, status
