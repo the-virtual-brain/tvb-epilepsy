@@ -52,14 +52,15 @@ def calc_coupling(x1, K, w, ix=None, jx=None, shape=None, calc_mode="non_symbol"
         return eqtn_coupling(x1, K, w, ix, jx)
 
 
-def calc_x0(x1, z, K=0.0, w=0.0, zmode=np.array("lin"), z_pos=True, shape=None, calc_mode="non_symbol"):
+def calc_x0(x1, z, K=0.0, w=0.0, zmode=np.array([ZMODE_DEF]), z_pos=True, shape=None, calc_mode="non_symbol"):
     calc_mode = confirm_calc_mode(calc_mode)
     x1, z, K = assert_arrays([x1, z, K], shape)
     w = assert_arrays([w], (z.size, z.size))
     if np.all(calc_mode == "symbol"):
         return np.array(symbol_eqtn_x0(z.size, zmode, z_pos, "K", z.shape)[0](x1, z, K, w))
     else:
-        if zmode == np.array("lin") and z_pos is None:
+        # TODO: work element by element here...
+        if np.any(zmode == np.array([0])) and z_pos is None:
             z_pos = z > 0.0
         return eqtn_x0(x1, z, zmode, z_pos, K, w)
 
@@ -95,7 +96,7 @@ def calc_fy1(x1, yc, y1=0, d=D_DEF, tau1=TAU1_DEF, shape=None, calc_mode="non_sy
         return eqtn_fy1(x1, yc, y1, d, tau1)
 
 
-def calc_fz(x1=0.0, z=0, x0=0.0, K=0.0, w=0.0, tau1=TAU1_DEF, tau0=TAU0_DEF, zmode=np.array("lin"), z_pos=True,
+def calc_fz(x1=0.0, z=0, x0=0.0, K=0.0, w=0.0, tau1=TAU1_DEF, tau0=TAU0_DEF, zmode=np.array([ZMODE_DEF]), z_pos=True,
             shape=None, calc_mode="non_symbol"):
     calc_mode = confirm_calc_mode(calc_mode)
     x1, z, x0, K, tau1, tau0 = assert_arrays([x1, z, x0, K, tau1, tau0], shape)
@@ -105,7 +106,8 @@ def calc_fz(x1=0.0, z=0, x0=0.0, K=0.0, w=0.0, tau1=TAU1_DEF, tau0=TAU0_DEF, zmo
                                                                                                       K, w, tau1,
                                                                                                       tau0))
     else:
-        if zmode == np.array("lin") and z_pos is None:
+        # TODO: work element by element here...
+        if np.any(zmode == np.array([0])) and z_pos is None:
             z_pos = z > 0.0
         return eqtn_fz(x1, z, x0, tau1, tau0, zmode, z_pos, K, w, coupl=None)
 
@@ -153,25 +155,27 @@ def calc_fx0(x0_var, x0, tau1=TAU1_DEF, shape=None, calc_mode="non_symbol"):
         return eqtn_fx0(x0_var, x0, tau1)
 
 
-def calc_fslope(slope_var, slope, z=0.0, g=0.0, tau1=TAU1_DEF, pmode=np.array("const"), shape=None,
+def calc_fslope(slope_var, slope, z=0.0, g=0.0, tau1=TAU1_DEF, pmode=np.array([PMODE_DEF]), shape=None,
                 calc_mode="non_symbol"):
     calc_mode = confirm_calc_mode(calc_mode)
     slope_var, slope, tau1 = assert_arrays([slope_var, slope, tau1], shape)
     if np.all(calc_mode == "symbol"):
-        if pmode == "z":
+        # TODO: work element by element here...
+        if np.any(pmode == 1):
             z = assert_arrays([z], slope.shape)
             return np.array(symbol_eqtn_fslope(slope.size, pmode, shape)[0](slope_var, z, tau1))
-        elif pmode == "g":
+        elif np.any(pmode == 2):
             g = assert_arrays([g], slope.shape)
             return np.array(symbol_eqtn_fslope(slope.size, pmode, shape)[0](slope_var, g, tau1))
-        elif pmode == "z*g":
+        elif np.any(pmode == 3):
             z = assert_arrays([z], slope.shape)
             g = assert_arrays([g], slope.shape)
             return np.array(symbol_eqtn_fslope(slope.size, pmode, shape)[0](slope_var, z, g, tau1))
         else:
             return np.array(symbol_eqtn_fslope(slope.size, pmode, shape)[0](slope_var, slope, tau1))
     else:
-        if pmode == "z" or pmode == "g" or pmode == "z*g":
+        # TODO: work element by element here...
+        if np.any(pmode > 0):
             z, g = assert_arrays([z, g], slope.shape)
             from tvb_fit.tvb_epilepsy.base.model import EpileptorDPrealistic
             slope = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, slope, 0.0)[0]
@@ -187,25 +191,27 @@ def calc_fIext1(Iext1_var, Iext1, tau1=TAU1_DEF, tau0=TAU0_DEF, shape=None, calc
         return eqtn_fIext1(Iext1_var, Iext1, tau1, tau0)
 
 
-def calc_fIext2(Iext2_var, Iext2, z=0.0, g=0.0, tau1=TAU1_DEF, pmode=np.array("const"), shape=None,
+def calc_fIext2(Iext2_var, Iext2, z=0.0, g=0.0, tau1=TAU1_DEF, pmode=np.array([PMODE_DEF]), shape=None,
                 calc_mode="non_symbol"):
     calc_mode = confirm_calc_mode(calc_mode)
     Iext2_var, Iext2, tau1 = assert_arrays([Iext2_var, Iext2, tau1], shape)
     if np.all(calc_mode == "symbol"):
-        if pmode == "z":
+        # TODO: work element by element here...
+        if np.any(pmode == 1):
             z = assert_arrays([z], Iext2.shape)
             return np.array(symbol_eqtn_fIext2(Iext2.size, pmode, shape)[0](Iext2_var, z, tau1))
-        elif pmode == "g":
+        elif np.any(pmode == 2):
             g = assert_arrays([g], Iext2.shape)
             return np.array(symbol_eqtn_fIext2(Iext2.size, pmode, shape)[0](Iext2_var, g, tau1))
-        elif pmode == "z*g":
+        elif np.any(pmode == 3):
             z = assert_arrays([z], Iext2.shape)
             g = assert_arrays([g], Iext2.shape)
             return np.array(symbol_eqtn_fIext2(Iext2.size, pmode, shape)[0](Iext2_var, z, g, tau1))
         else:
             return np.array(symbol_eqtn_fIext2(Iext2.size, pmode, shape)[0](Iext2_var, Iext2, tau1))
     else:
-        if pmode == "z" or pmode == "g" or pmode == "z*g":
+        # TODO: work element by element here...
+        if np.any(pmode > 0):
             z, g = assert_arrays([z, g], Iext2.shape)
             from tvb_fit.tvb_epilepsy.base.model import EpileptorDPrealistic
             Iext2 = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, 0.0, Iext2)[1]
@@ -222,7 +228,7 @@ def calc_fK(K_var, K, tau1=TAU1_DEF, tau0=TAU0_DEF, shape=None, calc_mode="non_s
 
 
 def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2,
-              zmode="lin", pmode="z", x1_neg=True, z_pos=True, x2_neg=None,
+              zmode=np.array([ZMODE_DEF]), pmode=np.array([PMODE_DEF]), x1_neg=True, z_pos=True, x2_neg=None,
               y1=None, x2=None, y2=None, g=None,
               x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
               slope=SLOPE_DEF, a=A_DEF, b=B_DEF, d=D_DEF, s=S_DEF, Iext2=I_EXT2_DEF, gamma=GAMMA_DEF,
@@ -266,13 +272,14 @@ def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2,
                         dfun_sym[4](x2, y2, s, tau1, tau2),
                         dfun_sym[5](x1, g, gamma, tau1),
                         dfun_sym[6](x0_var, x0, tau1)]
-                if pmode == "z":
+                # TODO: work element by element here...
+                if np.any(pmode == 1):
                     dfun7 = dfun_sym[7](slope_var, z, tau1)
                     dfun9 = dfun_sym[9](Iext2_var, z, tau1)
-                elif pmode == "g":
+                elif np.any(pmode == 2):
                     dfun7 = dfun_sym[7](slope_var, g, tau1)
                     dfun9 = dfun_sym[9](Iext2_var, g, tau1)
-                elif pmode == "z*g":
+                elif np.any(pmode == 3):
                     dfun7 = dfun_sym[7](slope_var, z, g, tau1)
                     dfun9 = dfun_sym[9](Iext2_var, z, g, tau1)
                 else:
@@ -286,7 +293,8 @@ def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2,
         else:
             if x1_neg is None:
                 x1_neg = x1 < 0.0
-            if zmode == np.array("lin") and z_pos is None:
+            # TODO: work element by element here...
+            if np.any(zmode == np.array([0])) and z_pos is None:
                 z_pos = z > 0.0
             x1, z, yc, Iext1, x0, K, slope, a, b, d, tau1, tau0 = \
                 assert_arrays([x1, z, yc, Iext1, x0, K, slope, a, b, d, tau1, tau0], shape)
@@ -309,7 +317,8 @@ def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2,
                         eqtn_fy2(x2, y2, s, tau1, tau2, x2_neg),
                         eqtn_fg(x1, g, gamma, tau1),
                         eqtn_fx0(x0_var, x0, tau1))
-                if pmode == "z" or pmode == "g" or pmode == "z*g":
+                # TODO: work element by element here...
+                if np.any(pmode > 0):
                     from tvb_fit.tvb_epilepsy.base.model import EpileptorDPrealistic
                     slope, Iext2 = EpileptorDPrealistic.fun_slope_Iext2(z, g, pmode, slope, Iext2)[1]
                 dfun += (eqtn_fslope(slope_var, slope, tau1),
@@ -320,7 +329,7 @@ def calc_dfun(x1, z, yc, Iext1, x0, K, w, model_vars=2,
 
 
 def calc_jac(x1, z, yc, Iext1, x0, K, w, model_vars=2,
-             zmode="lin", pmode="z", x1_neg=True, z_pos=True, x2_neg=None,
+             zmode=np.array([ZMODE_DEF]), pmode=np.array([PMODE_DEF]), x1_neg=True, z_pos=True, x2_neg=None,
              y1=None, x2=None, y2=None, g=None,
              x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
              slope=SLOPE_DEF, a=A_DEF, b=B_DEF, d=D_DEF, s=S_DEF, Iext2=I_EXT2_DEF, gamma=GAMMA_DEF,
@@ -475,7 +484,7 @@ def calc_fx1_2d_taylor(x1, x_taylor, z=0, y1=0.0, Iext1=I_EXT1_DEF, slope=SLOPE_
 
 
 def calc_fx1z(x1, x0, K, w, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
-              model="6d", zmode=np.array("lin"), shape=None, calc_mode="non_symbol"):
+              model="6d", zmode=np.array([ZMODE_DEF]), shape=None, calc_mode="non_symbol"):
     # TODO: for the extreme x1_neg = False case where we have to solve for x2 as well
     # slope=SLOPE_DEF, x2=0.0, z_pos=True, x1_neg=True,
     calc_mode = confirm_calc_mode(calc_mode)
@@ -499,7 +508,7 @@ def calc_fx1z(x1, x0, K, w, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, tau1=TAU1_DEF,
             return eqtn_fz(x1, z, x0, tau1, tau0, zmode, z_pos=True, K=K, w=w, coupl=None)
 
 
-def calc_fx1z_diff(x1, K, w, a=A_DEF, b=B_DEF, d=D_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, model="6d", zmode=np.array("lin"),
+def calc_fx1z_diff(x1, K, w, a=A_DEF, b=B_DEF, d=D_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, model="6d", zmode=np.array([ZMODE_DEF]),
                    calc_mode="non_symbol"):  # , yc=0.0, Iext1=I_EXT1_DEF, z_pos=True, slope=SLOPE_DEF, x2=0.0, x1_neg=True,
     # TODO: for the extreme x1_neg = False case where we have to solve for x2 as well
     calc_mode = confirm_calc_mode(calc_mode)
@@ -562,7 +571,7 @@ def calc_fx1y1_6d_diff_x1(x1, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, tau1=TAU1_DE
         return np.multiply(np.multiply(-3 * np.multiply(x1, a) + 2 * b, x1), tau1)
 
 
-def calc_x0cr_r(yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), x1_rest=X1_DEF, x1_cr=X1EQ_CR_DEF,
+def calc_x0cr_r(yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array([ZMODE_DEF]), x1_rest=X1_DEF, x1_cr=X1EQ_CR_DEF,
                 x0def=X0_DEF, x0cr_def=X0_CR_DEF, test=False, shape=None,
                 calc_mode="non_symbol"):  # epileptor_model="2d",
     calc_mode = confirm_calc_mode(calc_mode)
@@ -594,14 +603,15 @@ def calc_x0cr_r(yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), x1_
                                 x1_neg=True)
             zeq_cr = calc_fx1(x1_cr, z=0.0, y1=yc, Iext1=Iext1, a=a, b=b, d=d, tau1=1.0, x2=0.0, model="2d",
                               x1_neg=True)
-            if zmode == np.array("lin"):
+            # TODO: work element by element here...
+            if np.any(zmode == np.array([0])):
                 xinit = np.array([2.460, 0.398])
             else:
                 xinit = np.array([3.174, 0.260])
             # else:
             #     zeq_rest = calc_fx1(x1_rest, z=0.0, y1=calc_fy1(x1_rest, yc), Iext1=Iext1, x1_neg=True)
             #     zeq_cr = calc_fx1(x1_cr, z=0.0, y1=calc_fy1(x1_cr, yc), Iext1=Iext1, x1_neg=True)
-            #     if zmode == np.array("lin"):
+            #     if np.any(zmode == np.array([0])):
             #         xinit = np.array([5.9320, 1.648])
             #     else:
             #         xinit = np.array([17.063, 5.260])
@@ -652,7 +662,7 @@ def calc_fpop2(x2, y2=0.0, z=0.0, g=0.0, Iext2=I_EXT2_DEF, s=S_DEF, tau1=TAU1_DE
 
 
 def calc_fparams_var(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope, Iext1, Iext2, K, z=0.0, g=0.0,
-                     tau1=TAU1_DEF, tau0=1.0, pmode=np.array("const"), shape=None, calc_mode="non_symbol"):
+                     tau1=TAU1_DEF, tau0=1.0, pmode=np.array([PMODE_DEF]), shape=None, calc_mode="non_symbol"):
     return calc_fx0(x0_var, x0, tau1, shape, calc_mode), \
            calc_fslope(slope_var, slope, z, g, tau1, pmode, shape, calc_mode), \
            calc_fIext1(Iext1_var, Iext1, tau1, tau0, shape, calc_mode), \
@@ -661,7 +671,7 @@ def calc_fparams_var(x0_var, slope_var, Iext1_var, Iext2_var, K_var, x0, slope, 
 
 
 def calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars=2,
-                    zmode="lin", pmode="z", x1_neg=None, z_pos=None, x2_neg=None,
+                    zmode=np.array([ZMODE_DEF]), pmode=np.array([PMODE_DEF]), x1_neg=None, z_pos=None, x2_neg=None,
                     y1=None, x2=None, y2=None, g=None,
                     x0_var=None, slope_var=None, Iext1_var=None, Iext2_var=None, K_var=None,
                     slope=SLOPE_DEF, a=A_DEF, b=B_DEF, d=D_DEF, s=S_DEF, Iext2=I_EXT2_DEF, gamma=GAMMA_DEF,
@@ -697,15 +707,14 @@ def calc_dfun_array(x1, z, yc, Iext1, x0, K, w, model_vars=2,
     return f
 
 
-def calc_x0_val_to_model_x0(x0_values, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), shape=None,
+def calc_x0_val_to_model_x0(x0_values, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array([ZMODE_DEF]), shape=None,
                             calc_mode="non_symbol"):
-    hyp_x0, yc, Iext1, a, b, d = \
-        assert_arrays([x0_values, yc, Iext1, a, b, d], shape)
+    hyp_x0, yc, Iext1, a, b, d = assert_arrays([x0_values, yc, Iext1, a, b, d], shape)
     x0cr, r = calc_x0cr_r(yc, Iext1, a, b, d, zmode=zmode, calc_mode=calc_mode)  # epileptor_model="6d",
     return np.multiply(r, x0_values) - x0cr
 
 
-def calc_model_x0_to_x0_val(x0, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array("lin"), shape=None,
+def calc_model_x0_to_x0_val(x0, yc, Iext1, a=A_DEF, b=B_DEF, d=D_DEF, zmode=np.array([ZMODE_DEF]), shape=None,
                             calc_mode="non_symbol"):
     x0, yc, Iext1, a, b, d = assert_arrays([x0, yc, Iext1, a, b, d], shape)
     x0cr, r = calc_x0cr_r(yc, Iext1, a, b, d, zmode=zmode, calc_mode=calc_mode)  # epileptor_model="6d",
