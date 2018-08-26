@@ -152,7 +152,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
                 signals, simulator = \
                     set_simulated_target_data(path("ts_fit"), model_configuration, head, lsa_hypothesis,
                                               probabilistic_model,
-                                              sensor_id, sim_type="paper", times_on_off=times_on_off,
+                                              sensor_id, sim_type="fitting", times_on_off=times_on_off,
                                               config=config,
                                               # Maybe change some of those for Epileptor 6D simulations:
                                               bipolar=False, preprocessing=preprocessing_sequence,
@@ -326,7 +326,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit/tests/empirical") # "fit_x1eq_sensor_synthetic")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit/tests/sim_source") # "fit_x1eq_sensor_synthetic")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
@@ -358,8 +358,8 @@ if __name__ == "__main__":
     # sensors_lbls = [u"G'1", u"G'2", u"G'11", u"G'12", u"M'7", u"M'8", u"L'5", u"L'6"]
     # sensors_inds = [28, 29, 38, 39, 64, 65, 48, 49]
     # Simulation times_on_off
-    sim_times_on_off = [80.0, 120.0]  # for "fitting" simulations with tau0=30.0
-    EMPIRICAL = True
+    sim_times_on_off = [80.0, 105.0]  # for "fitting" simulations with tau0=30.0
+    EMPIRICAL = False
     if EMPIRICAL:
         seizure = 'SZ1_0001.edf'  # 'SZ2_0001.edf'
         times_on_off = (np.array([15.0, 30.0]) * 1000.0).tolist() # for SZ1
@@ -374,21 +374,21 @@ if __name__ == "__main__":
         # sensors_filename = "SensorsSEEG_210.h5"
         # times_on_off = [20.0, 100.0]
     else:
-        # times_on_off = sim_times_on_off # for "fitting" simulations with tau0=30.0
-        times_on_off = [50.0, 350.0]  # for "paper" simulations
+        times_on_off = sim_times_on_off # for "fitting" simulations with tau0=30.0
+        # times_on_off = [50.0, 350.0]  # for "paper" simulations
         # times_on_off = [1100.0, 1300.0]  # for "fitting" simulations with tau0=300.0
     normal_flag = False
     stan_model_name = "vep_sde"
     fitmethod = "sample"  # "sample"  # "advi" or "opt"
-    observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value  # OBSERVATION_MODELS.SOURCE_POWER.value  #
-    preprocessing = ["filter", "abs", "convolve"]
+    observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  #OBSERVATION_MODELS.SEEG_LOGPOWER.value  #
+    preprocessing = [] # ["filter", "abs", "convolve"]
     log_flag = observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
     if log_flag:
         preprocessing.append("log")
     preprocessing.append("decimate")
     pse_flag = True
     fit_flag = True
-    test_flag = True
+    test_flag = False
     if EMPIRICAL:
         main_fit_sim_hyplsa(stan_model_name=stan_model_name, normal_flag=normal_flag, observation_model=observation_model,
                             empirical_file=os.path.join(config.input.RAW_DATA_FOLDER, seizure),
