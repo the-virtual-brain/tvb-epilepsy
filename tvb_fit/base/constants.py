@@ -14,3 +14,5 @@ class Target_Data_Type(Enum):
 WHITE_NOISE = "White"
 COLORED_NOISE = "Colored"
 NOISE_SEED = 42
+
+TIME_DELAYS_FLAG = 0
