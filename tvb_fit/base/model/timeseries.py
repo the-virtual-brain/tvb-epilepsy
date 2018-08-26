@@ -113,7 +113,7 @@ class Timeseries(object):
 
     def _get_index_of_state_variable(self, sv_label):
         try:
-            sv_index = numpy.where(self.dimension_labels[TimeseriesDimensions.VARIABLES.value] == sv_label)
+            sv_index = numpy.where(self.dimension_labels[TimeseriesDimensions.VARIABLES.value] == sv_label)[0]
         except KeyError:
             self.logger.error("There are no state variables defined for this instance. Its shape is: %s",
                               self.data.shape)
@@ -185,8 +185,10 @@ class Timeseries(object):
         sv_data = self.data[:, :, self._get_index_of_state_variable(sv_label), :]
         subspace_dimension_labels = deepcopy(self.dimension_labels)
         subspace_dimension_labels[TimeseriesDimensions.VARIABLES.value] = numpy.array([sv_label])
-        return self.__class__(numpy.expand_dims(sv_data, 2), subspace_dimension_labels,
-                             self.time_start, self.time_step, self.time_unit)
+        if sv_data.ndim == 3:
+            sv_data = numpy.expand_dims(sv_data, 2)
+        return self.__class__(sv_data, subspace_dimension_labels,
+                              self.time_start, self.time_step, self.time_unit)
 
     def get_subspace_by_labels(self, list_of_labels):
         list_of_indices_for_labels = self._get_indices_for_labels(list_of_labels)
