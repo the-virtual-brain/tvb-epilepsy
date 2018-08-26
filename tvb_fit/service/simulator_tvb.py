@@ -7,7 +7,8 @@ import time
 import numpy
 from tvb.simulator import integrators, simulator, coupling, noise, monitors
 from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions
+from tvb_fit.base.constants import TIME_DELAYS_FLAG
+from tvb_fit.base.model.timeseries import Timeseries, TimeseriesDimensions
 from tvb_fit.service.head_service import HeadService
 from tvb_fit.service.simulator import ABCSimulator
 
@@ -41,7 +42,7 @@ class SimulatorTVB(ABCSimulator):
     # General choices are made here to be used as an example.
     def config_simulation(self, model):
         # TODO: generate model from self.model_configuration for every specific implementation
-        tvb_connectivity = self._vp2tvb_connectivity()
+        tvb_connectivity = self._vp2tvb_connectivity(TIME_DELAYS_FLAG)
 
         tvb_coupling = coupling.Difference(a=1.0)
 
@@ -65,11 +66,11 @@ class SimulatorTVB(ABCSimulator):
         # Ignore simulation settings and use the input tvb_simulator
         self.simTVB = deepcopy(tvb_simulator)
         self.simTVB.model = tvb_simulator.model  # TODO: compare this with self.model_configuration
-        self.simTVB.connectivity = self._vp2tvb_connectivity()
+        self.simTVB.connectivity = self._vp2tvb_connectivity(TIME_DELAYS_FLAG)
         self.simTVB.configure()
         self.configure_initial_conditions()
 
-    def launch_simulation(self, report_every_n_monitor_steps=None):
+    def launch_simulation(self, report_every_n_monitor_steps=None, timeseries=Timeseries):
         if report_every_n_monitor_steps >= 1:
             time_length_avg = numpy.round(self.simTVB.simulation_length / self.simTVB.monitors[0].period)
             n_report_blocks = max(report_every_n_monitor_steps * numpy.round(time_length_avg / 100), 1.0)
@@ -125,7 +126,7 @@ class SimulatorTVB(ABCSimulator):
         tavg_time = numpy.array(tavg_time).flatten().astype('f')
         tavg_data = numpy.swapaxes(tavg_data, 1, 2).astype('f')
         # Variables of interest in a dictionary:
-        sim_output = Timeseries(tavg_data, {TimeseriesDimensions.SPACE.value: self.connectivity.region_labels,
+        sim_output = timeseries(tavg_data, {TimeseriesDimensions.SPACE.value: self.connectivity.region_labels,
                                             TimeseriesDimensions.VARIABLES.value: self.get_vois()},
                                 tavg_time[0], numpy.diff(tavg_time).mean(), "ms")
         return sim_output, status

@@ -11,6 +11,7 @@ from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU0_DEF, TAU1_DEF
 from tvb_fit.base.constants import COLORED_NOISE
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import PMODE_DEF
+from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_fit.tvb_epilepsy.service.simulator.simulator_builder import SimulatorBuilder
@@ -227,7 +228,7 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_UNSCALED_DEF, ep_ind
                     #                                      reader.read_epileptor_model(model_path), logger=logger)))
 
                 logger.info("\n\nSimulating %s..." % sim_type)
-                sim_output, status = sim.launch_simulation(report_every_n_monitor_steps=100)
+                sim_output, status = sim.launch_simulation(report_every_n_monitor_steps=100, timeseries=Timeseries)
                 if not status:
                     logger.warning("\nSimulation failed!")
                 else:

@@ -1,13 +1,14 @@
 import os
 import numpy as np
-from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.base.utils.data_structures_utils import isequal_string
 from tvb_fit.base.model.virtual_patient.sensors import Sensors
+from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_fit.tvb_epilepsy.plot.plotter import Plotter
 from tvb_fit.tvb_epilepsy.base.model.epileptor_models import EpileptorDP2D
+from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_fit.tvb_epilepsy.service.simulator.simulator_builder import build_simulator_TVB_realistic, \
     build_simulator_TVB_fitting, build_simulator_TVB_default, build_simulator_TVB_paper
 from tvb_fit.service.timeseries_service import TimeseriesService
@@ -93,8 +94,8 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
         sim_output = H5Reader().read_timeseries(ts_file)
         seeg = TimeseriesService().compute_seeg(sim_output.get_source(), head.sensorsSEEG, sum_mode=seeg_gain_mode)
     else:
-        logger.info("\n\nSimulating...")
-        sim_output, status = sim.launch_simulation(report_every_n_monitor_steps=100)
+        logger.info("\n\nSimulating %s..." % sim_type)
+        sim_output, status = sim.launch_simulation(report_every_n_monitor_steps=100, timeseries=Timeseries)
         if not status:
             logger.warning("\nSimulation failed!")
         else:
