@@ -374,6 +374,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
             else:
                 metric_data = model_comps[metric]
                 group_names = [""]
+            metric_data[numpy.abs(metric_data) == numpy.inf] = numpy.nan
             isb, jsb = numpy.unravel_index(imetric, subplot_shape)
             axes[isb, jsb] = self.plot_bars(metric_data, ax=axes[isb, jsb], fig=fig, title=metric,
                                             group_names=group_names, legend_prefix="chain/run ")[1]
@@ -498,10 +499,6 @@ class ModelInversionPlotter(TimeseriesPlotter):
             regions_labels = regions_labels[region_inds]
 
         figs = []
-        if info_crit is not None:
-            figs.append(self.plot_scalar_model_comparison(info_crit, title_prefix))
-            figs.append(self.plot_array_model_comparison(info_crit, title_prefix, labels=target_data.space_labels,
-                                                         xdata=target_data.time_line, xlabel="Time"))
 
         figs.append(self.plot_fit_scalar_params(samples, stats, probabilistic_model, pair_plot_params,
                                                 skip_samples, title_prefix))
@@ -522,6 +519,11 @@ class ModelInversionPlotter(TimeseriesPlotter):
         samples, target_data = samples_to_timeseries(samples, model_data, target_data, regions_labels)
         figs.append(self.plot_fit_timeseries(target_data, samples, ests, stats, probabilistic_model,
                                              seizure_indices, skip_samples, trajectories_plot, title_prefix))
+
+        if info_crit is not None:
+            figs.append(self.plot_scalar_model_comparison(info_crit, title_prefix))
+            figs.append(self.plot_array_model_comparison(info_crit, title_prefix, labels=target_data.space_labels,
+                                                         xdata=target_data.time_line, xlabel="Time"))
 
         if connectivity_plot:
             figs.append(self.plot_fit_connectivity(ests, stats, probabilistic_model, regions_labels, title_prefix))

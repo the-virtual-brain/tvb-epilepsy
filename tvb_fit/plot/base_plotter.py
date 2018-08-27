@@ -397,8 +397,8 @@ class BasePlotter(object):
         elif data.ndim == 1: # This is the case where there is only one group...
             data = numpy.expand_dims(data, axis=1).T
         n_groups, n_elements = data.shape
-        posmax = data.max()
-        negmax = -(-data).max()
+        posmax = numpy.nanmax(data)
+        negmax = numpy.nanmax(-(-data))
         n_groups_names = len(group_names)
         if n_groups_names != n_groups:
             if n_groups_names != 0:
@@ -412,7 +412,8 @@ class BasePlotter(object):
         elements = []
         for iE in range(n_elements):
             elements.append(ax.bar(x_inds + iE*width, data[:, iE], width, color=colorcycle[iE % n_colors]))
-            positions = [negmax if d < 0 else posmax for d in data[:, iE]]
+            positions = numpy.array([negmax if d < 0 else posmax for d in data[:, iE]])
+            positions[numpy.logical_or(numpy.isnan(positions) or numpy.isinf(numpy.abs(positions)))] = 0.0
             barlabel(ax, elements[-1], positions)
         if n_elements > 1:
             legend = [legend_prefix+str(ii) for ii in range(1, n_elements+1)]
