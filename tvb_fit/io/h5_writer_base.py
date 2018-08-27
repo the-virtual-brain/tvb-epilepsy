@@ -25,15 +25,19 @@ class H5WriterBase(object):
                 dict_object = vars(object)
             for key, value in dict_object.items():
                 if isinstance(value, numpy.ndarray):
-                    if datasets_size is not None and value.size == datasets_size:
-                        datasets_dict.update({key: value})
+                    if value.size == 1:
+                        metadata_dict.update({key: value})
                     else:
-                        if datasets_size is None and value.size > 0:
-                            datasets_dict.update({key: value})
-                        else:
-                            metadata_dict.update({key: value})
-                            # TODO: check how this works! Be carefull not to include lists and tuples if possible in tvb_fit classes!
-                elif isinstance(object, (list, tuple)):
+                        datasets_dict.update({key: value})
+                    # if datasets_size is not None and value.size == datasets_size:
+                    #     datasets_dict.update({key: value})
+                    # else:
+                    #     if datasets_size is None and value.size > 0:
+                    #         datasets_dict.update({key: value})
+                    #     else:
+                    #         metadata_dict.update({key: value})
+                # TODO: check how this works! Be carefull not to include lists and tuples if possible in tvb_fit classes!
+                elif isinstance(value, (list, tuple)):
                     warning("Writing %s %s to h5 file as a numpy array dataset !" % (value.__class__, key), self.logger)
                     datasets_dict.update({key: numpy.array(value)})
                 else:

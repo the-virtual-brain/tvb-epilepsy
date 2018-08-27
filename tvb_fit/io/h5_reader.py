@@ -427,7 +427,7 @@ class H5GroupHandlers(object):
 
     def read_simulator_model_group(self, h5_file, model, group):
         for dataset in h5_file[group].keys():
-            if dataset == "variables_of_interest":
+            if dataset in ["variables_of_interest", "state_variables"] :
                 setattr(model, dataset, ensure_list(h5_file[group][dataset][()]))
             else:
                 setattr(model, dataset, h5_file[group][dataset][()])

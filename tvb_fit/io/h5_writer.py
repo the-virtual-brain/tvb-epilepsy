@@ -136,6 +136,8 @@ class H5Writer(H5WriterBase):
         self.write_object_to_file(path, simulation_settings, "HypothesisModel", nr_regions)
 
     def write_simulator_model(self, simulator_model, path, nr_regions=None):
+        # simulator_model.variables_of_interest = numpy.array(simulator_model.variables_of_interest)
+        # simulator_model.state_variables = numpy.array(simulator_model.state_variables)
         self.write_object_to_file(path, simulator_model, "HypothesisModel", nr_regions)
 
     def write_pse_service(self, pse_service, path):
