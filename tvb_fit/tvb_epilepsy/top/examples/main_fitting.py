@@ -207,8 +207,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
         # Sampling (HMC)
         num_samples = output_samples
         num_warmup = np.where(test_flag, 30, 1000)
-        max_depth = np.where(test_flag, 7, 12)
-        delta = np.where(test_flag, 0.8, 0.9)
+        max_depth = 15 # np.where(test_flag, 7, 12)
+        delta = 0.95  # np.where(test_flag, 0.8, 0.9)
         # ADVI or optimization:
         iter = 1000000
         tol_rel_obj = 1e-6
@@ -326,7 +326,7 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit/tests/sim_source") # "fit_x1eq_sensor_synthetic")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit/tests/sim_source_depth15_delta095") # "fit_x1eq_sensor_synthetic")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
