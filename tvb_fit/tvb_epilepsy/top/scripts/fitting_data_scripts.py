@@ -44,7 +44,7 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
 
     for i_preproc, preproc in enumerate(preprocessing):
 
-        stri_preproc = str(i_preproc)
+        stri_preproc = str(i_preproc+1)
 
         # Now filter, if needed, before decimation introduces any artifacts
         if isequal_string(preproc, "hpf"):
@@ -136,12 +136,10 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
     if plotter:
         plotter.plot_raster({"ObservationRaster": data.squeezed}, data.time_line, time_units=data.time_unit,
                             special_idx=[], offset=0.1, title='Observation Raster Plot',
-                            figure_name=title_prefix + '_%sObservationRasterPlot' % stri_preproc,
-                            labels=data.space_labels)
+                            figure_name=title_prefix + 'ObservationRasterPlot', labels=data.space_labels)
         plotter.plot_timeseries({"Observation": data.squeezed}, data.time_line, time_units=data.time_unit,
                                 special_idx=[], title='Observation Time Series',
-                                figure_name=title_prefix + '_%sObservationTimeSeries' % stri_preproc,
-                                labels=data.space_labels)
+                                figure_name=title_prefix + 'ObservationTimeSeries', labels=data.space_labels)
     return data
 
 
