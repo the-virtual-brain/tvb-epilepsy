@@ -141,6 +141,8 @@ data {
     real sigma_std; // =0.1/2
     real sigma_lo; //0.05
     real sigma_hi; // 0.15
+    real epsilon_lo; //0.0
+    real epsilon_hi; // 1.0
     real epsilon_mu; //=0.1
     real epsilon_std; //=0.1/3
     real offset_mu;  //=0.0
@@ -164,6 +166,8 @@ transformed data {
     real offset_star_hi = (offset_hi - offset_mu)/offset_std;
     real scale_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(scale_mu, scale_std);
     real scale_star_lo = lognormal_to_standard_normal(scale_lo, scale_mu_sigma[1], scale_mu_sigma[2]);
+    real epsilon_star_lo = -1.0;
+    real epsilon_star_hi = 1.0;
     real epsilon_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(epsilon_mu, epsilon_std);
     real sigma_star_lo = -1.0;
     real sigma_star_hi = 1.0;
@@ -192,7 +196,12 @@ transformed data {
     for (i in 1:n_active_regions) SC_[i, i] = 0;
     SC_ = SC_ / max(SC_) * rows(SC_);
 
-
+    if (epsilon_lo>0) {
+        epsilon_star_lo = lognormal_to_standard_normal(epsilon_lo, epsilon_mu_sigma[1], epsilon_mu_sigma[2]);
+    } else {
+        epsilon_star_lo = -1000.0;
+    }
+    epsilon_star_hi = lognormal_to_standard_normal(epsilon_hi, epsilon_mu_sigma[1], epsilon_mu_sigma[2]);
 
     if (SDE>0) {
         if (sigma_lo>0) {
@@ -200,7 +209,6 @@ transformed data {
         } else {
             sigma_star_lo = -1000.0;
         }
-        sigma_star_lo = lognormal_to_standard_normal(sigma_lo, sigma_mu_sigma[1], sigma_mu_sigma[2]);
         sigma_star_hi = lognormal_to_standard_normal(sigma_hi, sigma_mu_sigma[1], sigma_mu_sigma[2]);
     }
 
@@ -248,9 +256,9 @@ transformed data {
 parameters {
     // integrate and predict
     row_vector<upper=x_star_hi>[n_active_regions] x_star;
-    real epsilon_star;
     real<lower=scale_star_lo> scale_star;
     real<lower=offset_star_lo, upper=offset_star_hi> offset_star;
+    real<lower=epsilon_star_lo, upper=epsilon_star_hi>epsilon_star;
     real<lower=sigma_star_lo, upper=sigma_star_hi> sigma_star;
     real<lower=tau1_star_lo, upper=tau1_star_hi> tau1_star;
     real<lower=tau0_star_lo, upper=tau0_star_hi> tau0_star;

@@ -1,8 +1,8 @@
 
 import numpy as np
 
-from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import XModes, OBSERVATION_MODELS, X1_MIN, X1_MAX, \
-    X1_LOGMU_DEF, X1_LOGSIGMA_DEF, X1_LOGLOC_DEF
+from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import XModes, OBSERVATION_MODELS #, \
+   # X1_MIN, X1_MAX, X1_LOGMU_DEF, X1_LOGSIGMA_DEF, X1_LOGLOC_DEF
 from tvb_fit.base.utils.log_error_utils import warning
 from tvb_fit.base.utils.data_structures_utils import ensure_list
 
@@ -136,6 +136,8 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "x1_eq_def": probabilistic_model.model_config.x1eq[nonactive_regions].mean(),
                 "SC": connectivity_matrix[active_regions][:, active_regions],
                 "Ic": np.sum(connectivity_matrix[active_regions][:, nonactive_regions], axis=1),
+                "epsilon_lo": probabilistic_model.parameters["epsilon"].low,
+                "epsilon_hi": probabilistic_model.parameters["epsilon"].high,
                 "epsilon_mu": probabilistic_model.parameters["epsilon"].mean,
                 "epsilon_std": probabilistic_model.parameters["epsilon"].std,
                 "scale_mu": probabilistic_model.parameters["scale"].mean,
