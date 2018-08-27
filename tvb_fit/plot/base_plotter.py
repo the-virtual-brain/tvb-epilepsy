@@ -413,7 +413,7 @@ class BasePlotter(object):
         for iE in range(n_elements):
             elements.append(ax.bar(x_inds + iE*width, data[:, iE], width, color=colorcycle[iE % n_colors]))
             positions = numpy.array([negmax if d < 0 else posmax for d in data[:, iE]])
-            positions[numpy.logical_or(numpy.isnan(positions) or numpy.isinf(numpy.abs(positions)))] = 0.0
+            positions[numpy.logical_or(numpy.isnan(positions), numpy.isinf(numpy.abs(positions)))] = 0.0
             barlabel(ax, elements[-1], positions)
         if n_elements > 1:
             legend = [legend_prefix+str(ii) for ii in range(1, n_elements+1)]
