@@ -152,7 +152,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
                 signals, simulator = \
                     set_simulated_target_data(path("ts_fit"), model_configuration, head, lsa_hypothesis,
                                               probabilistic_model,
-                                              sensor_id, sim_type="fitting", times_on_off=times_on_off,
+                                              sensor_id, sim_type="paper", times_on_off=times_on_off,
                                               config=config,
                                               # Maybe change some of those for Epileptor 6D simulations:
                                               bipolar=False, preprocessing=preprocessing_sequence,
@@ -326,7 +326,8 @@ if __name__ == "__main__":
         config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "fit/tests/sim_source_depth15_delta095") # "fit_x1eq_sensor_synthetic")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
+                              "fit/tests/sim_source_6D__lpfsmooth_advi") # "fit_x1eq_sensor_synthetic")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
@@ -374,14 +375,14 @@ if __name__ == "__main__":
         # sensors_filename = "SensorsSEEG_210.h5"
         # times_on_off = [20.0, 100.0]
     else:
-        times_on_off = sim_times_on_off # for "fitting" simulations with tau0=30.0
-        # times_on_off = [50.0, 350.0]  # for "paper" simulations
+        # times_on_off = sim_times_on_off # for "fitting" simulations with tau0=30.0
+        times_on_off = [50.0, 350.0]  # for "paper" simulations
         # times_on_off = [1100.0, 1300.0]  # for "fitting" simulations with tau0=300.0
     normal_flag = False
     stan_model_name = "vep_sde"
-    fitmethod = "sample"  # "sample"  # "advi" or "opt"
+    fitmethod = "advi" # "sample"  # "sample"  # "advi" or "opt"
     observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  #OBSERVATION_MODELS.SEEG_LOGPOWER.value  #
-    preprocessing = [] # ["filter", "abs", "convolve"]
+    preprocessing = ["lpf", "abs"] #"hpf", "convolve"
     log_flag = observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
     if log_flag:
         preprocessing.append("log")
