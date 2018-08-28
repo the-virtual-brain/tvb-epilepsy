@@ -418,7 +418,8 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         if "scale" in params_names:
             self.logger.info("...scale...")
             parameters.update({"scale": self.generate_normal_or_lognormal_parameter("scale", self.scale,
-                                                                                    0.1, 2.0 * self.scale,
+                                                                                    np.minimum(0.1, self.scale/3),
+                                                                                    3.0 * self.scale,
                                                                                     sigma=self.scale)})
             
         if "offset" in params_names:
