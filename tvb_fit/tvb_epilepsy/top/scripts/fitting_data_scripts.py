@@ -40,7 +40,10 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
     if plotter:
         plotter.plot_raster({"SelectedTimeInterval": data.squeezed}, data.time_line, time_units=data.time_unit,
                             special_idx=[], title='Selected time interval time series', offset=0.1,
-                            figure_name=title_prefix + '_SelectedTimeSeries', labels=data.space_labels)
+                            figure_name=title_prefix + '_SelectedTimeSeriesRaster', labels=data.space_labels)
+        plotter.plot_timeseries({"SelectedTimeInterval": data.squeezed}, data.time_line, time_units=data.time_unit,
+                                special_idx=[], title='Selected time interval time series',
+                                figure_name=title_prefix + '_SelectedTimeSeries', labels=data.space_labels)
 
     for i_preproc, preproc in enumerate(preprocessing):
 
