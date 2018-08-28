@@ -60,6 +60,15 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
                                     figure_name=title_prefix + '_%sHpfTimeSeries' % stri_preproc,
                                     labels=data.space_labels)
 
+        if isequal_string(preproc, "invert"):
+            logger.info("Invert signals' sign...")
+            data.data = - data.data
+            if plotter:
+                plotter.plot_raster({"Sign inverted signals": data.squeezed}, data.time_line, time_units=data.time_unit,
+                                    special_idx=[], title='Sign inverted Time Series',  offset=1.0,
+                                    figure_name=title_prefix + '_%sSignInversion' % stri_preproc,
+                                    labels=data.space_labels)
+
         plot_envelope = ""
         if isequal_string(preproc, "square"):
             # Square data to get positive "power like" timeseries (introducing though higher frequencies)
