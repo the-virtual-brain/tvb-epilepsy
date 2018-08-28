@@ -132,7 +132,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
                                                       lsa_propagation_strengths=lsa_propagation_strength, reset=True)
 
             # --------------------- Get prototypical simulated data (simulate if necessary) ----------------------------
-            source_ts = from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
+            source2D_ts = from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
                                                                sim_type="fitting", ts_file=path("ts"),
                                                                config=config, plotter=plotter)[0]["source"]. \
                         get_time_window_by_units(sim_times_on_off[0], sim_times_on_off[1])
@@ -183,7 +183,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
                     generate_parameters([XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value,
                                          "x1_init", "z_init", "tau1",  # "tau0", "K", "x1",
                                          "sigma", "dZt", "epsilon", "scale", "offset"],
-                                        target_data, source_ts, gain_matrix))
+                                        target_data, source2D_ts, gain_matrix))
             plotter.plot_probabilistic_model(probabilistic_model, hyp.name + " Probabilistic Model")
             writer.\
               write_probabilistic_model(probabilistic_model, model_configuration.number_of_regions, problstc_model_file)
@@ -327,7 +327,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/sim_sensor_2D_advi") # "fit_x1eq_sensor_synthetic")
+                              "fit/tests/sim_source6D_conv_hmc") # "fit_x1eq_sensor_synthetic")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
@@ -361,8 +361,8 @@ if __name__ == "__main__":
     # Simulation times_on_off
     sim_times_on_off = [80.0, 105.0]  # for "fitting" simulations with tau0=30.0
     EMPIRICAL = False
-    sim_source_type = "fitting"
-    observation_model = OBSERVATION_MODELS.SEEG_POWER.value  # OBSERVATION_MODELS.SEEG_LOGPOWER.value  #OBSERVATION_MODELS.SOURCE_POWER.value  #
+    sim_source_type = "paper"
+    observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  # OBSERVATION_MODELS.SEEG_POWER.value  # OBSERVATION_MODELS.SEEG_LOGPOWER.value  #
     log_flag = observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
     if EMPIRICAL:
         seizure = 'SZ1_0001.edf'  # 'SZ2_0001.edf'
@@ -380,7 +380,7 @@ if __name__ == "__main__":
         preprocessing = ["hpf", "convolve"]
     else:
         if sim_source_type == "paper":
-            times_on_off = [50.0, 350.0]  # for "paper" simulations
+            times_on_off = [40.0, 400.0]  # for "paper" simulations
             preprocessing = ["convolve"] # ["lpf", "abs"] #"hpf", "convolve"
         else:
             times_on_off = sim_times_on_off # for "fitting" simulations with tau0=30.0
@@ -391,7 +391,7 @@ if __name__ == "__main__":
     preprocessing.append("decimate")
     normal_flag = False
     stan_model_name = "vep_sde"
-    fitmethod = "advi" # "sample"  # "sample"  # "advi" or "opt"
+    fitmethod = "sample" # ""  # "sample"  # "advi" or "opt"
     pse_flag = True
     fit_flag = True
     test_flag = False
