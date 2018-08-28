@@ -47,18 +47,18 @@ class ModelInversionPlotter(TimeseriesPlotter):
         return subtitles
 
     def _parameters_pair_plots(self, samples_all, params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
-                               stats=None, priors={}, truth={}, skip_samples=0, title='Parameters samples', figure_name=None,
-                               figsize=FiguresConfig.VERY_LARGE_SIZE):
+                               stats=None, priors={}, truth={}, skip_samples=0, title='Parameters samples',
+                               figure_name=None, figsize=FiguresConfig.VERY_LARGE_SIZE):
         subtitles = list(self._params_stats_subtitles(params, stats))
         samples = []
         samples_all = ensure_list(samples_all)
         params = [param for param in params if param in samples_all[0].keys()]
         for sample in samples_all:
             samples.append(extract_dict_stringkeys(sample, params, modefun="equal"))
-        if len(samples_all) > 1:
+        if len(samples) > 1:
             samples = merge_samples(samples)
         else:
-            samples = samples_all[0]
+            samples = samples[0]
             n_samples = (samples.values()[0]).shape[0]
             for p_key, p_val in samples.items():
                 samples[p_key] = numpy.reshape(p_val, (1, n_samples))
@@ -227,8 +227,8 @@ class ModelInversionPlotter(TimeseriesPlotter):
                     if probabilistic_model is not None:
                         priors.update({temp_name: (priors["x0"][0][inode], priors["x0"][1][inode])})
                         truth.update({temp_name: truth["x0"][inode]})
-            f2 = self._parameters_pair_plots(x0_K_pair_plot_samples, x0_K_pair_plot_params, None, priors, truth, skip_samples,
-                                             title=title_pair_plot)
+            f2 = self._parameters_pair_plots(x0_K_pair_plot_samples, x0_K_pair_plot_params, None, priors, truth,
+                                             skip_samples, title=title_pair_plot)
             return f1, f2
         else:
             return f1
