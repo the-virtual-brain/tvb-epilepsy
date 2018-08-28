@@ -318,7 +318,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         return compute_dt(self.tau1)
 
     def generate_parameters(self, params_names=ODE_DEFAULT_PARAMETERS,
-                            target_data=None, source_ts=None, gain_matrix=None):
+                            target_data=None, model_source_ts=None, gain_matrix=None):
         parameters = super(ODEProbabilisticModelBuilder, self).generate_parameters(params_names)
         if isinstance(self.model, ODEEpiProbabilisticModel):
             active_regions = self.model.active_regions
@@ -330,8 +330,8 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         # if "x1" in params_names:
         #     self.logger.info("...x1...")
         #     n_active_regions = len(active_regions)
-        #     if isinstance(source_ts, Timeseries) and isinstance(getattr(source_ts, "x1", None), Timeseries):
-        #         x1_sim_ts = source_ts.x1.squeezed
+        #     if isinstance(model_source_ts, Timeseries) and isinstance(getattr(model_source_ts, "x1", None), Timeseries):
+        #         x1_sim_ts = model_source_ts.x1.squeezed
         #         mu_prior = np.zeros(n_active_regions, )
         #         sigma_prior = np.zeros(n_active_regions, )
         #         loc_prior = np.zeros(n_active_regions, )
@@ -404,16 +404,18 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                                                                                       0.0, 10.0 * self.epsilon,
                                                                                       sigma=self.epsilon)})
 
-        if isinstance(source_ts, Timeseries) and isinstance(getattr(source_ts, "x1", None), Timeseries) and \
-            isinstance(target_data, Timeseries):
-            sim_seeg = source_ts.x1.squeezed[:, active_regions] - self.model_config.x1eq.mean()
-            if isinstance(gain_matrix, np.ndarray):
+        if isinstance(model_source_ts, Timeseries) and \
+           isinstance(getattr(model_source_ts, "x1", None), Timeseries) and \
+           isinstance(target_data, Timeseries):
+            model_out_ts = model_source_ts.x1.squeezed[:, active_regions] - self.model_config.x1eq.mean()
+            if self.observation_model in OBSERVATION_MODELS.SEEG.value and isinstance(gain_matrix, np.ndarray):
                 if self.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
-                    sim_seeg = compute_seeg_exp(sim_seeg, gain_matrix)
+                    model_out_ts = compute_seeg_exp(model_out_ts, gain_matrix)
                 else:
-                    sim_seeg = compute_seeg_lin(sim_seeg, gain_matrix)
-            self.scale = target_data.data.std() / sim_seeg.std()
-            self.offset = np.median(target_data.data) - np.median(self.scale*sim_seeg)
+                    model_out_ts = compute_seeg_lin(model_out_ts, gain_matrix)
+            self.scale = np.max(target_data.data.max(axis=0) - target_data.data.min(axis=0)) / \
+                         np.max(model_out_ts.max(axis=0) - model_out_ts.min(axis=0))
+            self.offset = np.median(target_data.data) - np.median(self.scale*model_out_ts)
 
         if "scale" in params_names:
             self.logger.info("...scale...")
@@ -479,11 +481,11 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
             d.update({str(nKeys+ikey) + ". " + key: str(val)})
         return d
 
-    def generate_parameters(self, params_names=SDE_DEFAULT_PARAMETERS, 
-                            target_data=None, source_ts=None, gain_matrix=None):
+    def generate_parameters(self, params_names=SDE_DEFAULT_PARAMETERS,
+                            target_data=None, model_source_ts=None, gain_matrix=None):
         parameters = \
             super(SDEProbabilisticModelBuilder, self).generate_parameters(params_names,
-                                                                          target_data, source_ts, gain_matrix)
+                                                                          target_data, model_source_ts, gain_matrix)
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
         if "sigma" in params_names:
             self.logger.info("...sigma...")
