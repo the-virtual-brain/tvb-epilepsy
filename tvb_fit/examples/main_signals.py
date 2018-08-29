@@ -70,9 +70,6 @@ if __name__ == "__main__":
     timewindow = signal.get_time_window(10, 100)
     timewindowUnits = signal.get_time_window_by_units(timeline[10], timeline[100])
 
-    print signal.lfp.data.shape
-    print signal.lfp.dimension_labels
-
     print signal.x1.data.shape
     print signal.data.shape
     print signal[1:10, 10, :, :].shape
