@@ -1,7 +1,10 @@
 import h5py
 from collections import OrderedDict
 from tvb_fit.io.h5_reader import H5Reader
-from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries, TimeseriesDimensions, PossibleVariables
+from tvb_fit.base.model.timeseries import Timeseries, TimeseriesDimensions
+
+
+# This is an example of complex uses of Timeseries
 
 
 def read_ts(path):
@@ -56,9 +59,7 @@ if __name__ == "__main__":
     data, total_time, nr_of_steps, start_time = read_ts("/WORK/Episense/trunk/demo-data/Head_TREC/epHH/ts.h5")
     conn = H5Reader().read_connectivity("/WORK/Episense/trunk/demo-data/Head_TREC/Connectivity.h5")
     signal = Timeseries(data, OrderedDict({TimeseriesDimensions.SPACE.value: conn.region_labels,
-                                           TimeseriesDimensions.VARIABLES.value: [PossibleVariables.X1.value,
-                                                                                  PossibleVariables.X2.value,
-                                                                                        "c"]}),
+                                           TimeseriesDimensions.VARIABLES.value: ["x1", "x2", "c"]}),
                         start_time, total_time / float(nr_of_steps))
 
     timeline = signal.time_line
