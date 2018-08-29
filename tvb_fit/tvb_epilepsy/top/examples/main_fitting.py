@@ -327,7 +327,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/sim_source6D_conv_hmc") # "fit_x1eq_sensor_synthetic")
+                              "fit/tests/sim_sensor2D_advi_newoffset") # "fit_x1eq_sensor_synthetic")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
@@ -361,8 +361,8 @@ if __name__ == "__main__":
     # Simulation times_on_off
     sim_times_on_off = [80.0, 105.0]  # for "fitting" simulations with tau0=30.0
     EMPIRICAL = False
-    sim_source_type = "paper"
-    observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  # OBSERVATION_MODELS.SEEG_POWER.value  # OBSERVATION_MODELS.SEEG_LOGPOWER.value  #
+    sim_source_type = "fitting"
+    observation_model = OBSERVATION_MODELS.SEEG_POWER.value  # OBSERVATION_MODELS.SOURCE_POWER.value  #OBSERVATION_MODELS.SEEG_LOGPOWER.value  #
     log_flag = observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
     if EMPIRICAL:
         seizure = 'SZ1_0001.edf'  # 'SZ2_0001.edf'
@@ -391,7 +391,7 @@ if __name__ == "__main__":
     preprocessing.append("decimate")
     normal_flag = False
     stan_model_name = "vep_sde"
-    fitmethod = "sample" # ""  # "sample"  # "advi" or "opt"
+    fitmethod = "advi" # ""  # "sample"  # "advi" or "opt"
     pse_flag = True
     fit_flag = True
     test_flag = False
