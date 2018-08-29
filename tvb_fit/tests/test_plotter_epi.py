@@ -15,7 +15,8 @@ class TestPlotter(BaseTest):
 
     def test_plot_state_space(self):
         lsa_hypothesis = HypothesisBuilder(config=self.config).build_lsa_hypothesis()
-        mc = ModelConfigurationBuilder("EpileptorDP", numpy.array([1])).build_model_from_E_hypothesis(lsa_hypothesis)
+        mc = ModelConfigurationBuilder("EpileptorDP", numpy.array([1.0, 0.0], [0.0, 1.0])). \
+                                                        build_model_from_E_hypothesis(lsa_hypothesis)
 
         model = "6d"
         zmode = "lin"
@@ -24,7 +25,7 @@ class TestPlotter(BaseTest):
         file_name = os.path.join(self.config.out.FOLDER_FIGURES, figure_name + ".png")
         assert not os.path.exists(file_name)
 
-        self.plotter.plot_state_space(mc, region_labels=numpy.array(["a"]), special_idx=[0],
+        self.plotter.plot_state_space(mc, region_labels=numpy.array(["a", "b"]), special_idx=[0],
                                     model=model, zmode=zmode,figure_name="")
 
         assert os.path.exists(file_name)
@@ -33,18 +34,20 @@ class TestPlotter(BaseTest):
         figure_name = "LSAPlot"
         hypo_builder = HypothesisBuilder(config=self.config).set_name(figure_name)
         lsa_hypothesis = hypo_builder.build_lsa_hypothesis()
-        mc = ModelConfigurationBuilder("EpileptorDP", numpy.array([1])).build_model_from_E_hypothesis(lsa_hypothesis)
+        mc = ModelConfigurationBuilder("EpileptorDP", numpy.array([1.0, 0.0], [0.0, 1.0])). \
+            build_model_from_E_hypothesis(lsa_hypothesis)
 
         figure_file = os.path.join(self.config.out.FOLDER_FIGURES, figure_name + ".png")
         assert not os.path.exists(figure_file)
 
-        self.plotter.plot_lsa(lsa_hypothesis, mc, True, None, region_labels=numpy.array(["a"]), title="")
+        self.plotter.plot_lsa(lsa_hypothesis, mc, True, None, region_labels=numpy.array(["a" "b"]), title="")
 
         assert not os.path.exists(figure_file)
 
     def test_plot_sim_results(self):
         lsa_hypothesis = HypothesisBuilder(config=self.config).build_lsa_hypothesis()
-        mc = ModelConfigurationBuilder("EpileptorDP", numpy.array([1])).build_model_from_E_hypothesis(lsa_hypothesis)
+        mc = ModelConfigurationBuilder("EpileptorDP", numpy.array([1.0, 0.0], [0.0, 1.0])). \
+            build_model_from_E_hypothesis(lsa_hypothesis)
         model = build_EpileptorDP2D_from_model_config(mc)
 
         # TODO: this figure_name is constructed inside plot method, so it can change

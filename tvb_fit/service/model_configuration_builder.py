@@ -60,7 +60,10 @@ class ModelConfigurationBuilder(object):
         return self.model["nvar"]
 
     def set_parameter(self, pname, pval):
-        setattr(self, pname, pval * numpy.ones((self.number_of_regions,)))
+        if pval is not None:
+            setattr(self, pname, pval * numpy.ones((self.number_of_regions,)))
+        else:
+            setattr(self, pname, pval)
 
     def set_params_from_tvb_model(self, model, params):
         for pname in params:

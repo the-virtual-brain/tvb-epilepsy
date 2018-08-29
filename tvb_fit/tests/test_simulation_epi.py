@@ -23,8 +23,8 @@ class TestSimulationRun(BaseTest):
 
     @staticmethod
     def _prepare_model_for_simulation(connectivity):
-        hypothesis = HypothesisBuilder(connectivity.number_of_regions).set_e_hypothesis([1, 1],
-                                                                                        [0, 10]).build_hypothesis()
+        hypothesis = HypothesisBuilder(connectivity.number_of_regions).set_e_hypothesis([1.0, 1.0],
+                                                                                        [0.0, 10.0]).build_hypothesis()
         model_configuration_builder = ModelConfigurationBuilder("Epileptor", connectivity.normalized_weights)
         model_configuration = model_configuration_builder.build_model_from_hypothesis(hypothesis)
         return model_configuration
@@ -35,7 +35,7 @@ class TestSimulationRun(BaseTest):
         model_configuration = self._prepare_model_for_simulation(connectivity)
 
         simulator_builder = SimulatorBuilder(model_configuration)
-        simulator, _, _ = simulator_builder.build_simulator(connectivity)
+        simulator, _ = simulator_builder.build_simulator(connectivity)
         ts, status = simulator.launch_simulation(100)
         assert status
 

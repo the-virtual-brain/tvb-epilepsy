@@ -2,6 +2,7 @@ import os
 import numpy
 from tvb_fit.base.config import InputConfig
 from tvb_fit.base.model.virtual_patient.sensors import Sensors
+from tvb_fit.base.model.simulation_settings import SimulationSettings
 from tvb_fit.io.h5_reader import H5Reader
 from tvb_fit.io.h5_writer import H5Writer
 from tvb_fit.tests.base import BaseTest
@@ -75,3 +76,21 @@ class TestCustomH5Reader(BaseTest):
         assert len(sensors_meg) == 0
         assert sensors_seeg[0] is not None
         assert sensors_seeg[0].number_of_sensors == 20
+
+    def test_read_simulation_settings(self):
+        test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestSimSettings.h5")
+        dummy_sim_settings = SimulationSettings()
+        self.writer.write_simulation_settings(dummy_sim_settings, test_file)
+
+        sim_settings = self.reader.read_simulation_settings(test_file)
+
+        assert dummy_sim_settings.integration_step == sim_settings.integration_step
+        assert dummy_sim_settings.simulation_length == sim_settings.simulated_period
+        assert dummy_sim_settings.integrator_type == sim_settings.integrator_type
+        assert dummy_sim_settings.noise_type == sim_settings.noise_type
+        assert dummy_sim_settings.noise_ntau == sim_settings.noise_ntau
+        assert dummy_sim_settings.noise_intensity == sim_settings.noise_intensity
+        assert dummy_sim_settings.noise_seed == sim_settings.noise_seed
+        assert dummy_sim_settings.monitor_type == sim_settings.monitor_type
+        assert dummy_sim_settings.monitor_sampling_period == sim_settings.monitor_sampling_period
+        assert dummy_sim_settings.monitor_vois == sim_settings.monitor_vois

@@ -134,7 +134,7 @@ class Timeseries(object):
         list_of_indices_for_labels = []
         for label in list_of_labels:
             try:
-                space_index = self.dimension_labels[TimeseriesDimensions.SPACE.value].index(label)
+                space_index = numpy.where(self.dimension_labels[TimeseriesDimensions.SPACE.value] == label)[0]
             except ValueError:
                 self.logger.error("Cannot access index of space label: %s. Existing space labels: %s" % (
                     label, self.dimension_labels[TimeseriesDimensions.SPACE.value]))

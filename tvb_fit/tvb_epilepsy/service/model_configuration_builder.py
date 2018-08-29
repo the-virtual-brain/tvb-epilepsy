@@ -143,8 +143,10 @@ class ModelConfigurationBuilder(ModelConfigurationBuilderBase):
             self.s = pval * np.ones((self.number_of_regions,), dtype=np.float32)
         elif pname == "Ks":
             self.K = -pval * np.ones((self.number_of_regions,), dtype=np.float32)
-        else:
+        elif pval is not None:
             setattr(self, pname, pval * np.ones((self.number_of_regions,), dtype=np.float32))
+        else:
+            setattr(self, pname, pval)
         return self
 
     def build_model_config_from_tvb(self):

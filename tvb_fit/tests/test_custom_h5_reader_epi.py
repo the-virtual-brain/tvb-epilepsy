@@ -2,7 +2,6 @@ import os
 import numpy
 
 from tvb_fit.base.config import InputConfig
-from tvb_fit.base.model.simulation_settings import SimulationSettings
 from tvb_fit.tests.base import BaseTest
 
 from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration \
@@ -57,7 +56,8 @@ class TestCustomH5Reader(BaseTest):
 
     def test_read_model_configuration_builder(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestModelConfigService.h5")
-        dummy_mc_service = ModelConfigurationBuilder(3)
+        dummy_mc_service = ModelConfigurationBuilder("Epileptor", connectivity=numpy.array(
+                                                        [[1.0, 2.0, 3.0], [1.0, 2.0, 3.0], [2.0, 2.0, 2.0]]))
         self.writer.write_model_configuration_builder(dummy_mc_service, test_file)
 
         mc_service = self.reader.read_model_configuration_builder(test_file)
@@ -97,21 +97,4 @@ class TestCustomH5Reader(BaseTest):
         assert dummy_lsa_service.weighted_eigenvector_sum == lsa_service.weighted_eigenvector_sum
         assert dummy_lsa_service.normalize_propagation_strength == lsa_service.normalize_propagation_strength
 
-    def test_read_simulation_settigs(self):
-        test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestSimSettings.h5")
-        dummy_sim_settings = SimulationSettings()
-        self.writer.write_simulation_settings(dummy_sim_settings, test_file)
 
-        sim_settings = self.reader.read_simulation_settings(test_file)
-
-        assert dummy_sim_settings.integration_step == sim_settings.integration_step
-        assert dummy_sim_settings.simulation_length == sim_settings.simulated_period
-        assert dummy_sim_settings.integrator_type == sim_settings.integrator_type
-        assert dummy_sim_settings.noise_type == sim_settings.noise_type
-        assert dummy_sim_settings.noise_ntau == sim_settings.noise_ntau
-        assert dummy_sim_settings.noise_intensity == sim_settings.noise_intensity
-        assert dummy_sim_settings.noise_seed == sim_settings.noise_seed
-        assert dummy_sim_settings.monitor_type == sim_settings.monitor_type
-        assert dummy_sim_settings.monitor_sampling_period == sim_settings.monitor_sampling_period
-        assert dummy_sim_settings.monitor_vois == sim_settings.monitor_vois
-        assert numpy.array_equal(dummy_sim_settings.initial_conditions, sim_settings.initial_conditions)

@@ -30,23 +30,24 @@ class TestComputations(BaseTest):
         x1 = numpy.array([-4.1 / 3, -4.9 / 3, -5.0 / 3], dtype="float32")
         w = numpy.array([[0, 0.1, 0.9], [0.1, 0, 0.0], [0.9, 0.0, 0]])
         n = x1.size
-        K = 0.0 * K_UNSCALED_DEF * numpy.ones(x1.shape, dtype=x1.dtype)
-        yc = YC_DEF * numpy.ones(x1.shape, dtype=x1.dtype)
-        Iext1 = I_EXT1_DEF * numpy.ones(x1.shape, dtype=x1.dtype)
-        slope = SLOPE_DEF * numpy.ones(x1.shape, dtype=x1.dtype)
-        Iext2 = I_EXT2_DEF * numpy.ones(x1.shape, dtype=x1.dtype)
-        a = A_DEF
-        b = B_DEF
-        d = D_DEF
-        s = S_DEF
-        gamma = GAMMA_DEF
-        tau1 = TAU1_DEF
-        tau2 = TAU2_DEF
-        tau0 = TAU0_DEF
+        i1 = numpy.ones(x1.shape, dtype=x1.dtype)
+        K = 0.0 * K_UNSCALED_DEF * i1
+        yc = YC_DEF * i1
+        Iext1 = I_EXT1_DEF * i1
+        slope = SLOPE_DEF * i1
+        Iext2 = I_EXT2_DEF * i1
+        a = A_DEF * i1
+        b = B_DEF *i1
+        d = D_DEF * i1
+        s = S_DEF * i1
+        gamma = GAMMA_DEF * i1
+        tau1 = TAU1_DEF * i1
+        tau2 = TAU2_DEF * i1
+        tau0 = TAU0_DEF * i1
         x1, K = assert_arrays([x1, K])
         w = assert_arrays([w])  # , (x1.size, x1.size)
-        zmode = numpy.array([ZMODE_DEF])
-        pmode = numpy.array([0])
+        zmode = numpy.array([ZMODE_DEF]) * i1
+        pmode = numpy.array([0]) * i1
         model = "EpileptorDPrealistic"
         x1eq = x1
 

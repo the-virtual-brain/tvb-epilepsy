@@ -34,7 +34,8 @@ class TestTimeseries(object):
             Timeseries(data=self.data_1D, dimension_labels={}, time_start=0, time_step=0.01, time_unit="ms")
 
     def test_timeseries_2D(self):
-        ts_from_2D = Timeseries(self.data_2D, dimension_labels={TimeseriesDimensions.SPACE.value: ["r1", "r2", "r3"]},
+        ts_from_2D = Timeseries(self.data_2D, dimension_labels={TimeseriesDimensions.SPACE.value:
+                                                                    numpy.array(["r1", "r2", "r3"])},
                                 time_start=self.time_start, time_step=self.time_step, time_unit=self.time_unit)
         assert ts_from_2D.data.ndim == 4
         assert ts_from_2D.data.shape[2] == ts_from_2D.data.shape[3] == 1
@@ -53,8 +54,9 @@ class TestTimeseries(object):
         ts_r2 = ts_from_2D.get_subspace_by_labels(["r2"])
         assert ts_r2.data.ndim == 4
         assert ts_r2.data.shape == (3, 1, 1, 1)
-        assert ts_r2.dimension_labels[TimeseriesDimensions.SPACE.value] == ["r2"]
-        assert ts_r2.get_subspace_by_labels(["r2"]).dimension_labels[TimeseriesDimensions.SPACE.value] == ["r2"]
+        assert ts_r2.dimension_labels[TimeseriesDimensions.SPACE.value] == numpy.array(["r2"])
+        assert ts_r2.get_subspace_by_labels(["r2"]).dimension_labels[TimeseriesDimensions.SPACE.value] == \
+               numpy.array(["r2"])
 
         with pytest.raises(ValueError):
             ts_r2.get_subspace_by_labels(["r1"])
@@ -66,8 +68,9 @@ class TestTimeseries(object):
         ts_r2_idx = ts_r2r3_idx.get_subspace_by_index([0])
         assert ts_r2_idx.data.ndim == 4
         assert ts_r2_idx.data.shape == (3, 1, 1, 1)
-        assert ts_r2_idx.dimension_labels[TimeseriesDimensions.SPACE.value] == ["r2"]
-        assert ts_r2_idx.get_subspace_by_index([0]).dimension_labels[TimeseriesDimensions.SPACE.value] == ["r2"]
+        assert ts_r2_idx.dimension_labels[TimeseriesDimensions.SPACE.value] ==  numpy.array(["r2"])
+        assert ts_r2_idx.get_subspace_by_index([0]).dimension_labels[TimeseriesDimensions.SPACE.value] == \
+               numpy.array(["r2"])
 
         with pytest.raises(IndexError):
             ts_r2_idx.get_subspace_by_index([2])
@@ -78,13 +81,14 @@ class TestTimeseries(object):
         ts_time_window = ts_from_2D.get_time_window(1, 2)
         assert ts_time_window.data.ndim == 4
         assert ts_time_window.data.shape == (1, 3, 1, 1)
-        assert ts_time_window.dimension_labels[TimeseriesDimensions.SPACE.value] == ["r1", "r2", "r3"]
+        assert ts_time_window.dimension_labels[TimeseriesDimensions.SPACE.value] == numpy.array(["r1", "r2", "r3"])
         assert ts_time_window.time_start == 0.01
 
         ts_time_window_units = ts_from_2D.get_time_window_by_units(0.01, 0.02)
         assert ts_time_window_units.data.ndim == 4
         assert ts_time_window_units.data.shape == (1, 3, 1, 1)
-        assert ts_time_window_units.dimension_labels[TimeseriesDimensions.SPACE.value] == ["r1", "r2", "r3"]
+        assert ts_time_window_units.dimension_labels[TimeseriesDimensions.SPACE.value] == \
+               numpy.array(["r1", "r2", "r3"])
         assert ts_time_window_units.time_start == 0.01
 
         with pytest.raises(IndexError):

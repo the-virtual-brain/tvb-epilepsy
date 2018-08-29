@@ -24,8 +24,8 @@ class LSAService(object):
                  eigen_vectors_number=None, weighted_eigenvector_sum=CalculusConfig.WEIGHTED_EIGENVECTOR_SUM,
                  normalize_propagation_strength=False):
         self.eigen_vectors_number_selection = eigen_vectors_number_selection
-        self.eigen_values = []
-        self.eigen_vectors = []
+        self.eigen_values = numpy.array([])
+        self.eigen_vectors = numpy.array([])
         self.eigen_vectors_number = eigen_vectors_number
         self.weighted_eigenvector_sum = weighted_eigenvector_sum
         self.normalize_propagation_strength = normalize_propagation_strength

@@ -30,7 +30,7 @@ def normalize_weights(weights, percentile=CalculusConfig.WEIGHTS_NORM_PERCENT, r
         if remove_diagonal:
             # Remove diagonal elements
             n_regions = normalized_w.shape[0]
-            normalized_w *= 1 - np.eye(n_regions)
+            normalized_w *= (1.0 - np.eye(n_regions))
         # Normalize with the 95th percentile
         normalized_w = np.array(normalized_w / np.percentile(normalized_w, percentile))
         if ceil:
