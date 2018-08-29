@@ -143,7 +143,6 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "scale_mu": probabilistic_model.parameters["scale"].mean,
                 "scale_std": probabilistic_model.parameters["scale"].std,
                 "scale_lo": probabilistic_model.parameters["scale"].low,
-                "scale_hi": probabilistic_model.parameters["scale"].high,
                 "offset_mu": probabilistic_model.parameters["offset"].mean,
                 "offset_std": probabilistic_model.parameters["offset"].std,
                 "offset_lo": probabilistic_model.parameters["offset"].low,
