@@ -77,7 +77,7 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_UNSCALED_DEF, ep_ind
                                                  reader.read_model_configuration_builder(mcs_file), logger=logger)))
         # Fix healthy regions to default equilibria:
         # model_configuration = \
-        #        model_config_builder.build_model_from_E_hypothesis(hyp, head.connectivity.normalized_weights)
+        #        model_config_builder.build_model_from_E_hypothesis(hyp)
         # Fix healthy regions to default x0s:
         model_configuration = model_config_builder.build_model_from_hypothesis(hyp)
         mc_path = os.path.join(config.out.FOLDER_RES, hyp.name + "_ModelConfig.h5")
