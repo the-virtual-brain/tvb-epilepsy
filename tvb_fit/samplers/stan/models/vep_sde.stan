@@ -338,10 +338,10 @@ transformed parameters {
 
     if (log_target_data>0) {
         for (t in 1:n_times)
-            fit_target_data[t] = scale * (log(gain * exp(x1[t]'-x1_eq_def)) + offset)';
+            fit_target_data[t] = scale * (log(gain * exp(x1[t]'-x1_eq_def)))' + offset;
     } else {
         for (t in 1:n_times)
-            fit_target_data[t] = scale * (gain * (x1[t]'-x1_eq_def) + offset)';
+            fit_target_data[t] = scale * (gain * (x1[t]'-x1_eq_def))' + offset;
     }
 
     if (DEBUG > 0) {
