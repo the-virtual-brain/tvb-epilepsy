@@ -97,6 +97,7 @@ functions {
 data {
     int DEBUG;
     int SIMULATE;
+    int UPSAMPLE;
     int n_active_regions;
     int n_times; // 1012
     int n_target_data;
@@ -162,7 +163,17 @@ data {
 
 
 transformed data {
-    real sqrtdt = sqrt(dt);
+    // Effective time step
+    real dtt = dt/UPSAMPLE;
+    real sqrtdt = sqrt(dtt);
+
+    // Calculate x1 priors' related quantities
+    real x1_middle = -0.665;  // The approximate middle x1 point of a seizure cycle
+    real x1_seiz = 2*x1_middle - x1_eq_def; // The x1 seizure manifold
+    real x1_std = (x1_middle - x1_eq_def) / 6;
+
+    // Transformations from standard normal to normal or lognormal distributions,
+    // as well as of their upper ane lower limits
     real offset_star_lo = (offset_lo - offset_mu)/offset_std;
     real offset_star_hi = (offset_hi - offset_mu)/offset_std;
     real scale_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(scale_mu, scale_std);
@@ -191,13 +202,13 @@ transformed data {
     real x1_init_star_hi = (x1_init_hi - min(x1_init_mu))/x1_init_std;
     real z_init_star_lo = (z_init_lo - max(z_init_mu))/z_init_std;
     real z_init_star_hi = (z_init_hi - min(z_init_mu))/z_init_std;
-    real x1_middle = -0.665;
-    real x1_seiz = 2*x1_middle - x1_eq_def;
-    real x1_std = (x1_middle - x1_eq_def) / 6;
+
+    // The model connnectivity prior
     matrix [n_active_regions, n_active_regions] SC_ = SC;
     for (i in 1:n_active_regions) SC_[i, i] = 0;
     SC_ = SC_ / max(SC_) * rows(SC_);
 
+    // More transformations like above...
     if (epsilon_lo>0) {
         epsilon_star_lo = lognormal_to_standard_normal(epsilon_lo, epsilon_mu_sigma[1], epsilon_mu_sigma[2]);
         print("epsilon_star_lo = ", epsilon_star_lo)
@@ -291,6 +302,7 @@ transformed parameters {
     row_vector[n_active_regions] z[n_times];
     row_vector[n_target_data] fit_target_data[n_times];
 
+    // Selection of x1eq or x0 for fitting
     if (XMODE > 0) {
         x1eq = x;
         zeq = calc_zeq(x1eq, Iext1, tau1);
@@ -305,11 +317,14 @@ transformed parameters {
         zeq = z_init;
     }
 
+    // ODE or SDE selection
     if (SDE>0) {
         sigma = standard_normal_to_lognormal(sigma_star, sigma_mu_sigma[1], sigma_mu_sigma[2]);
     } else {
         sigma = sigma_mu + sigma_std * sigma_star;
     }
+
+    // Set or fix some priors
 
     if (TAU1_PRIOR>0) {
         tau1 = standard_normal_to_lognormal(tau1_star, tau1_mu_sigma[1], tau1_mu_sigma[2]);
@@ -329,13 +344,30 @@ transformed parameters {
         K = K_mu + K_std * K_star;
     }
 
+    // Initial conditions
     x1[1] = x1_init; // - 1.5;
     z[1] = z_init; // 3.0;
-    for (t in 1:(n_times-1)) {
-        x1[t+1] = x1_step(x1[t], z[t], Iext1, dt*tau1); //, dX1t_star[t], sqrtdt*sigma
-        z[t+1] = z_step(x1[t], z[t], x0, K*SC, Ic, x1_eq_def, dt*tau1, dZt_star[t], sqrtdt*sigma, tau0);
-    }
 
+    // Integration
+    if (UPSAMPLE>1) {
+        for (t in 1:(n_times-1)) {
+            row_vector[n_active_regions] x1t = x1[t];
+            row_vector[n_active_regions] zt = z[t];
+            for (tt in 1:UPSAMPLE) {
+                x1[t+1] = x1_step(x1t, zt, Iext1, dtt*tau1); //, dX1t_star[t], sqrtdt*sigma
+                z[t+1] = z_step(x1t, zt, x0, K*SC, Ic, x1_eq_def, dtt*tau1, dZt_star[t], sqrtdt*sigma, tau0);
+                x1t = x1[t+1];
+                zt = z[t+1];
+            }
+        }
+    } else {
+        for (t in 1:(n_times-1)) {
+            x1[t+1] = x1_step(x1[t], z[t], Iext1, dtt*tau1); //, dX1t_star[t], sqrtdt*sigma
+            z[t+1] = z_step(x1[t], z[t], x0, K*SC, Ic, x1_eq_def, dtt*tau1, dZt_star[t], sqrtdt*sigma, tau0);
+        }
+     }
+
+    // Predicted output
     if (log_target_data>0) {
         for (t in 1:n_times)
             fit_target_data[t] = scale * (log(gain * exp(x1[t]'-x1_eq_def)))' + offset;
@@ -345,6 +377,7 @@ transformed parameters {
     }
 
     if (DEBUG > 0) {
+        print("upsample=", UPSAMPLE, "effective dt = dt/USPAMPLE = ", dtt);
         print("offset=", offset);
         print("scale=", scale);
         print("epsilon=", epsilon);
@@ -397,6 +430,7 @@ model {
         }
     }
 
+    // Fit or forward simulation
     if (SIMULATE<1)
         for (t in 1:n_times)
             target_data[t] ~ normal(fit_target_data[t], epsilon);
@@ -404,6 +438,7 @@ model {
 
 
 generated quantities {
+    // Log-likelihood computation for information criteria metrics
     row_vector[n_target_data] log_likelihood[n_times];
     for (t in 1:n_times) {
         for (s in 1:n_target_data) {

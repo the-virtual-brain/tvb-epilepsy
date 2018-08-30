@@ -242,6 +242,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
     tau0 = TAU0_DEF
     time_length = SEIZURE_LENGTH
     dt = DT_DEF
+    upsample = UPSAMPLE
 
     def __init__(self, model=None, model_name="vep_ode", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True,
@@ -249,7 +250,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                  sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                  epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF,
                  observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
-                 number_of_target_data=0, active_regions=np.array([])):
+                 number_of_target_data=0, upsample=UPSAMPLE, active_regions=np.array([])):
         super(ODEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode, priors_mode,
                                                            normal_flag, K, sigma_x, sigma_x_scale) # MC_direction_split
         self.sigma_init = sigma_init
@@ -444,7 +445,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                                               parameters, ground_truth, self.xmode, self.observation_model,
                                               self.K, self.sigma_x, self.sigma_init, self.tau1, self.tau0,
                                               self.epsilon, self.scale, self.offset, self.number_of_target_data,
-                                              self.time_length, self.dt, self.active_regions)
+                                              self.time_length, self.dt, self.upsample, self.active_regions)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
         return self.model
@@ -461,11 +462,12 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
                  sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                  epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF, sigma=SIGMA_DEF,
                  sde_mode=SDE_MODES.NONCENTERED.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
-                 number_of_signals=0, active_regions=np.array([])):
+                 number_of_signals=0, upsample=UPSAMPLE, active_regions=np.array([])):
         super(SDEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode, priors_mode,
                                                            normal_flag, K, sigma_x, sigma_x_scale, # MC_direction_split,
                                                            sigma_init, tau1, tau0, epsilon, scale, offset,
-                                                           observation_model, number_of_signals, active_regions)
+                                                           observation_model, number_of_signals, upsample,
+                                                           active_regions)
         self.sigma_init = sigma_init
         self.sde_mode = sde_mode
         self.sigma = sigma
@@ -540,7 +542,8 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
                                               parameters, ground_truth, self.xmode,self.observation_model, self.K,
                                               self.sigma_x, self.sigma_init, self.sigma, self.tau1, self.tau0,
                                               self.epsilon, self.scale, self.offset,self.number_of_target_data,
-                                              self.time_length, self.dt, self.active_regions, self.sde_mode)
+                                              self.time_length, self.dt, self.upsample,
+                                              self.active_regions, self.sde_mode)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
         return self.model

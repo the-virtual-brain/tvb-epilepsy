@@ -54,6 +54,7 @@ class ODEEpiProbabilisticModel(EpiProbabilisticModel):
     number_of_target_data = 0
     time_length = SEIZURE_LENGTH
     dt = DT_DEF
+    upsample = UPSAMPLE
     active_regions = np.array([])
 
     @property
@@ -73,7 +74,8 @@ class ODEEpiProbabilisticModel(EpiProbabilisticModel):
                  parameters={}, ground_truth={}, xmode=XModes.X0MODE.value,
                  observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, K=K_DEF,
                  sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,  epsilon=EPSILON_DEF,
-                 scale=1.0, offset=0.0, number_of_target_data=0, time_length=0, dt=DT_DEF, active_regions=np.array([])):
+                 scale=1.0, offset=0.0, number_of_target_data=0, time_length=0, dt=DT_DEF, upsample=UPSAMPLE,
+                 active_regions=np.array([])):
         super(ODEEpiProbabilisticModel, self).__init__(model_config, name,  target_data_type, priors_mode,
                                                        parameters, ground_truth, xmode, K, sigma_x)
         if np.all(np.in1d(active_regions, range(self.number_of_regions))):
@@ -130,11 +132,11 @@ class SDEEpiProbabilisticModel(ODEEpiProbabilisticModel):
                  observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, K=K_DEF,
                  sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, sigma=SIGMA_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                  epsilon=EPSILON_DEF, scale=1.0, offset=0.0, number_of_target_data=0, time_length=0, dt=DT_DEF,
-                 active_regions=np.array([]), sde_mode=SDE_MODES.NONCENTERED.value):
+                 upsample=UPSAMPLE, active_regions=np.array([]), sde_mode=SDE_MODES.NONCENTERED.value):
         super(SDEEpiProbabilisticModel, self).__init__(model_config, name, target_data_type, priors_mode,
                                                        parameters, ground_truth, xmode, observation_model,
                                                        K, sigma_x, sigma_init, tau1, tau0, epsilon, scale, offset,
-                                                       number_of_target_data, time_length, dt, active_regions)
+                                                       number_of_target_data, time_length, dt, upsample, active_regions)
         self.sigma = sigma
         self.sde_mode = sde_mode
 

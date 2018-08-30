@@ -114,7 +114,8 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
     if time is None:
         time = np.arange(0, probabilistic_model.dt, probabilistic_model.time_length)
     x = probabilistic_model.xmode
-    vep_data = {"n_active_regions": probabilistic_model.number_of_active_regions,
+    vep_data = {"UPSAMPLE": probabilistic_model.upsample,
+                "n_active_regions": probabilistic_model.number_of_active_regions,
                 "n_times": probabilistic_model.time_length,
                 "n_target_data": probabilistic_model.number_of_target_data,
                 "dt": probabilistic_model.dt,
