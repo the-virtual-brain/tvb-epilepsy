@@ -110,7 +110,7 @@ data {
     row_vector [n_active_regions] x_star_mu;
     row_vector [n_active_regions] x_star_std;
     // row_vector [n_active_regions] x1eq_mu;  // healthy: -5.0/3 , sick ~=-1.333, max = 1.8, min = -1.1
-    real x1_eq_def; // = -5.0/3 the value of all healhty non-active node
+    real x1_eq_def; // = -5.0/3 the value of all healhty non-active nodes, i.e. the resting manifold
     // real x1_lo;
     // real x1_hi;
     int X1_PRIOR;
