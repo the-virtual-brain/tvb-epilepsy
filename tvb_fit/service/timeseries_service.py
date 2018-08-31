@@ -4,8 +4,8 @@ from scipy.signal import decimate, convolve, detrend, hilbert
 from scipy.stats import zscore
 
 from tvb_fit.base.utils.log_error_utils import raise_value_error, initialize_logger
-from tvb_fit.base.utils.data_structures_utils import isequal_string, ensure_list
-from tvb_fit.base.computations.math_utils import select_greater_values_array_inds, \
+from tvb_fit.base.utils.data_structures_utils import isequal_string, ensure_list, is_integer
+from tvb_fit.base.computations.math_utils import select_greater_values_array_inds, get_greater_values_array_inds, \
                                                       select_by_hierarchical_group_metric_clustering
 from tvb_fit.base.computations.analyzers_utils import filter_data
 from tvb_fit.base.model.timeseries import TimeseriesDimensions, PossibleVariables
@@ -116,8 +116,9 @@ class TimeseriesService(object):
     def correlation(self, timeseries):
         return np.corrcoef(timeseries.squeezed.T)
 
-    def select_by_metric(self, timeseries, metric, metric_th=None):
-        return timeseries.get_subspace_by_index(select_greater_values_array_inds(metric, metric_th))
+    def select_by_metric(self, timeseries, metric, metric_th=None, metric_percentile=None, nvals=None):
+        return timeseries.get_subspace_by_index(select_greater_values_array_inds(metric, metric_th,
+                                                                                 metric_percentile, nvals))
 
     def select_by_power(self, timeseries, power=np.array([]), power_th=None):
         if len(power) != timeseries.number_of_labels:
@@ -139,12 +140,21 @@ class TimeseriesService(object):
         return self.select_by_hierarchical_group_metric_clustering(timeseries, 1-correlation,
                                                                    disconnectivity, power, n_groups, members_per_group)
 
-    def select_by_rois_proximity(self, timeseries, proximity, proximity_th=None):
+    def select_by_gain_matrix_power(self, timeseries, gain_matrix=np.array([]),
+                                    disconnectivity=np.array([]), power=np.array([]),
+                                    n_groups=10, members_per_group=1):
+        if len(power) != timeseries.number_of_labels:
+            power = self.power(timeseries)
+        return self.select_by_hierarchical_group_metric_clustering(timeseries, 1-np.corrcoef(gain_matrix),
+                                                                   disconnectivity, power, n_groups, members_per_group)
+
+    def select_by_rois_proximity(self, timeseries, proximity, proximity_th=None, percentile=None, n_signals=None):
         initial_selection = range(timeseries.number_of_labels)
         selection = []
         for prox in proximity:
-                selection += (
-                    np.array(initial_selection)[select_greater_values_array_inds(prox, proximity_th)]).tolist()
+            selection += (
+                np.array(initial_selection)[select_greater_values_array_inds(prox, proximity_th,
+                                                                             percentile, n_signals)]).tolist()
         return timeseries.get_subspace_by_index(np.unique(selection).tolist())
 
     def select_by_rois(self, timeseries, rois, all_labels):
