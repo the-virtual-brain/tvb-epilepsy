@@ -6,7 +6,7 @@ import numpy as np
 
 from tvb_fit.base.config import FiguresConfig, CalculusConfig
 from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.utils.data_structures_utils import ensure_list
+from tvb_fit.base.utils.data_structures_utils import is_integer
 
 
 logger = initialize_logger(__name__)
@@ -67,20 +67,31 @@ def get_greater_values_array_inds(values, n_vals=1):
     return np.argsort(values)[::-1][:n_vals]
 
 
-def select_greater_values_array_inds(values, threshold=None, verbose=False):
+def select_greater_values_array_inds(values, threshold=None, percentile=None, nvals=None, verbose=False):
+    if threshold is None and percentile is not None:
+        threshold = np.percentile(values, percentile)
     if threshold is not None:
         return np.where(values > threshold)[0]
     else:
+        if is_integer(nvals):
+            return get_greater_values_array_inds(values, nvals)
         if verbose:
             logger.warning("Switching to curve elbow point method since threshold=" + str(threshold))
         elbow_point = curve_elbow_point(values)
         return get_greater_values_array_inds(values, elbow_point + 1)
 
 
+def select_greater_values_2Darray_inds(values, threshold=None, percentile=None, nvals=None, verbose=False):
+    return np.unravel_index(
+                select_greater_values_array_inds(values.flatten(), threshold, percentile, nvals, verbose), values.shape)
+
+
+
 def select_by_hierarchical_group_metric_clustering(distance, disconnectivity=np.array([]), metric=None,
-                                                  n_groups=10, members_per_group=1):
+                                                   n_groups=10, members_per_group=1):
     if disconnectivity.shape == distance.shape:
-        distance = distance * disconnectivity
+        distance += disconnectivity * distance.max()
+
     n_groups = np.minimum(np.maximum(n_groups, 3), n_groups // members_per_group)
     clustering = AgglomerativeClustering(n_groups, affinity="precomputed", linkage="average")
     clusters_labels = clustering.fit_predict(distance)
@@ -90,7 +101,7 @@ def select_by_hierarchical_group_metric_clustering(distance, disconnectivity=np.
         cluster_inds = np.where(clusters_labels == cluster_id)[0]
         # ... at least members_per_group elements...
         n_select = np.minimum(members_per_group, len(cluster_inds))
-        if metric is not None and len(ensure_list(metric)) == n_groups:
+        if metric is not None and len(metric) == distance.shape[0]:
             #...optionally according to some metric
             inds_select = np.argsort(metric[cluster_inds])[-n_select:]
         else:
