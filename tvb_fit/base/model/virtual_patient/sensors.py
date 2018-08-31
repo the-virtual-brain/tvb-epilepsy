@@ -5,7 +5,7 @@ import numpy as np
 from tvb_fit.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list, \
                                                                                     labels_to_inds, monopolar_to_bipolar
 from tvb_fit.base.utils.data_structures_utils import split_string_text_numbers
-from tvb_fit.base.computations.math_utils import compute_gain_matrix
+from tvb_fit.base.computations.math_utils import compute_gain_matrix, select_greater_values_2Darray_inds
 
 
 # SDE model inversion constants
@@ -57,6 +57,10 @@ class Sensors(object):
     def number_of_sensors(self):
         return self.locations.shape[0]
 
+    @property
+    def number_of_electrodes(self):
+        return self.group_sensors_to_electrodes()[0].size
+
     def __repr__(self):
         d = {"1. sensors' type": self.s_type,
              "2. number of sensors": self.number_of_sensors,
@@ -69,14 +73,10 @@ class Sensors(object):
     def __str__(self):
         return self.__repr__()
 
-    # TODO: verify this try and change message
     def sensor_label_to_index(self, labels):
         indexes = []
         for label in labels:
-            try:
-                indexes.append(np.where([np.array(lbl) == np.array(label) for lbl in self.labels])[0][0])
-            except:
-                print("WTF")
+            indexes.append(np.where([np.array(lbl) == np.array(label) for lbl in self.labels])[0][0])
         if len(indexes) == 1:
             return indexes[0]
         else:
@@ -142,3 +142,6 @@ class Sensors(object):
             elecs_inds = self.get_elecs_inds_by_elecs_labels(elecs)
             bipolar_sensors_inds, bipolar_sensors_lbls = self.get_bipolar_elecs(elecs_inds)
         return bipolar_sensors_inds, bipolar_sensors_lbls
+
+    def get_stronger_gain_matrix_inds(self, threshold=None, percentile=None, nvals=None):
+        return select_greater_values_2Darray_inds(self.gain_matrix, threshold, percentile, nvals)
