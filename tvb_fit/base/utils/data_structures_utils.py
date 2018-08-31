@@ -15,6 +15,14 @@ def is_numeric(value):
                               complex, np.complex, np.complex64, np.complex128, np.complex256,
                               long, np.long, np.number))
 
+def is_integer(value):
+    return isinstance(value, (int, np.int, np.int0, np.int8, np.int16, np.int32, np.int64))
+
+
+def is_float(value):
+    return isinstance(value, (float, np.float, np.float64, np.float32, np.float16, np.float128))
+
+
 def vector2scalar(x):
     if not (isinstance(x, np.ndarray)):
         return x
