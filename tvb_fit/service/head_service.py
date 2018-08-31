@@ -13,7 +13,8 @@ class HeadService(object):
     logger = initialize_logger(__name__)
 
     def compute_nearest_regions_to_sensors(self, head, sensors=None, target_contacts=None, s_type=Sensors.TYPE_SEEG,
-                                           sensors_id=0, n_regions=None, gain_matrix_th=None):
+                                           sensors_id=0, n_regions=None, gain_matrix_th=None,
+                                           gain_matrix_percentile=None):
         if not (isinstance(sensors, Sensors)):
             sensors = head.get_sensors_id(s_type=s_type, sensor_ids=sensors_id)
         n_contacts = sensors.labels.shape[0]
@@ -29,27 +30,26 @@ class HeadService(object):
                                       "is neither an integer nor a string!")
         else:
             target_contacts = range(n_contacts)
-        auto_flag = False
         if n_regions is "all":
             n_regions = head.connectivity.number_of_regions
-        elif not (isinstance(n_regions, int)):
-            auto_flag = True
         nearest_regions = []
         for tc in target_contacts:
             projs = sensors.gain_matrix[tc]
             inds = np.argsort(projs)[::-1]
-            if auto_flag:
-                n_regions = select_greater_values_array_inds(projs[inds], threshold=gain_matrix_th)
+            n_regions = select_greater_values_array_inds(projs[inds], threshold=gain_matrix_th,
+                                                         percentile=gain_matrix_percentile, n_regions=n_regions)
             inds = inds[:n_regions]
             nearest_regions.append((inds, head.connectivity.region_labels[inds], projs[inds]))
         return nearest_regions
 
-    def select_sensors_power(self, sensors, power, selection=[], power_th=0.5):
+    def select_sensors_power(self, sensors, power, selection=[], power_th=None, power_percentile=None, n_sensors=None):
         if len(selection) == 0:
             selection = range(sensors.number_of_sensors)
-        return (np.array(selection)[select_greater_values_array_inds(power, power_th)]).tolist()
+        return (np.array(selection)[select_greater_values_array_inds(power, power_th, power_percentile,
+                                                                     n_sensors)]).tolist()
 
-    def select_sensors_rois(self, sensors, rois=None, initial_selection=[], gain_matrix_th=0.5):
+    def select_sensors_rois(self, sensors, rois=None, initial_selection=[], gain_matrix_th=0.5,
+                            gain_matrix_percentile=None, n_rois=None):
         if len(initial_selection) == 0:
             initial_selection = range(sensors.number_of_sensors)
         selection = []
@@ -57,8 +57,8 @@ class HeadService(object):
             raise_value_error("Projection matrix is not set!")
         else:
             for proj in sensors.gain_matrix[initial_selection].T[rois]:
-                selection += (
-                    np.array(initial_selection)[select_greater_values_array_inds(proj, gain_matrix_th)]).tolist()
+                selection += (np.array(initial_selection)
+                [select_greater_values_array_inds(proj, gain_matrix_th, gain_matrix_percentile, n_rois)]).tolist()
         return np.unique(selection).tolist()
 
     def sensors_in_electrodes_disconnectivity(self, sensors, sensors_labels=[]):
