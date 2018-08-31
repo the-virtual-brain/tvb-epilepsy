@@ -164,19 +164,22 @@ class BasePlotter(object):
         indices_red = [indices_red_x, indices_red_y]
         ticks = [x_ticks, y_ticks]
         labels = [xlabels, ylabels]
+        nticks = []
         for ii, (n, tick) in enumerate(zip([nx, ny], ticks)):
             if len(tick) == 0:
                 ticks[ii] = numpy.array(range(n), dtype=numpy.int32)
+            nticks.append(len(ticks[ii]))
         cmap = pyplot.set_cmap('autumn_r')
         img = pyplot.imshow(matrix[ticks[0]][:, ticks[1]].T, cmap=cmap, interpolation='none')
         pyplot.grid(True, color='black')
-        for ii, (n, xy, tick, ind_red, show, lbls, rot) in enumerate(zip([nx, ny], ["x", "y"], ticks, indices_red,
+        for ii, (xy, tick, ntick, ind_red, show, lbls, rot) in enumerate(zip(["x", "y"], ticks, nticks, indices_red,
                                                                       [show_x_labels, show_y_labels], labels, [90, 0])):
             if show:
-                labels[ii] = numpy.array(["%d. %s" % l for l in zip(range(n), lbls)])
-                getattr(pyplot, xy + "ticks")(tick, labels[ii][tick], rotation=rot)
+                labels[ii] = numpy.array(["%d. %s" % l for l in zip(tick, lbls[tick])])
+                getattr(pyplot, xy + "ticks")(numpy.array(range(ntick)), labels[ii], rotation=rot)
             else:
-                getattr(pyplot, xy + "ticks")(tick)
+                labels[ii] = numpy.array(["%d." % l for l in tick])
+                getattr(pyplot, xy + "ticks")(numpy.array(range(ntick)), labels[ii])
             if ind_red is not None:
                 tck = tick.tolist()
                 ticklabels = getattr(ax, xy + "axis").get_ticklabels()
