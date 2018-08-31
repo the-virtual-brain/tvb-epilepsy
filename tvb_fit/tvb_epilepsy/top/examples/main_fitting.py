@@ -7,6 +7,7 @@ from tvb_fit.base.constants import PriorsModes, Target_Data_Type
 from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.base.utils.data_structures_utils import ensure_list
 from tvb_fit.samplers.stan.cmdstan_interface import CmdStanInterface
+from tvb_fit.plot.head_plotter import HeadPlotter
 
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU1_DEF, TAU0_DEF
@@ -126,9 +127,9 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
             e_values = pse_results.get("e_values_mean", model_configuration.e_values)
             lsa_propagation_strength = pse_results.get("lsa_propagation_strengths_mean",
                                                            lsa_hypothesis.lsa_propagation_strengths)
-            model_inversion.active_e_th = 0.2
-            probabilistic_model = \
-                model_inversion.update_active_regions(probabilistic_model, e_values=e_values,
+            model_inversion.active_e_th = 0.05
+            probabilistic_model, gain_matrix = \
+                model_inversion.update_active_regions(probabilistic_model, sensors=sensors, e_values=e_values,
                                                       lsa_propagation_strengths=lsa_propagation_strength, reset=True)
 
             # --------------------- Get prototypical simulated data (simulate if necessary) ----------------------------
@@ -159,7 +160,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
 
             # -------------------------- Select and set target data from signals ---------------------------------------
             if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
-                model_inversion.auto_selection = "correlation-power"  #-rois
+                model_inversion.auto_selection = "rois-power"  #-rois
                 model_inversion.sensors_per_electrode = 2
             target_data, probabilistic_model, gain_matrix = \
                 model_inversion.set_target_data_and_time(signals, probabilistic_model, head=head, sensors=sensors)
@@ -172,10 +173,16 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
                                     title=hyp.name + ' Target Signals', labels=target_data.space_labels)
             writer.write_timeseries(target_data, target_data_file)
 
-            # #--------------Optionally add more active regions that are close to the selected seeg contacts--------------
-            # probabilistic_model = \
-            #     model_inversion.update_active_regions_seeg(target_data, probabilistic_model, sensors, reset=False)
+            #--------------Optionally add more active regions that are close to the selected seeg contacts--------------
+            # probabilistic_model, gain_matrix = \
+            #     model_inversion.update_active_regions_target_data(target_data, probabilistic_model, sensors, reset=False)
 
+            HeadPlotter(config)._plot_gain_matrix(sensors, head.connectivity.region_labels,
+                                                  title=hyp.name + " Active regions -> target data projection",
+                                                  show_x_labels=True, show_y_labels=True,
+                                                  x_ticks=
+                                                    sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels),
+                                                  y_ticks=probabilistic_model.active_regions)
 
             #---------------------------------Finally set priors for the parameters-------------------------------------
             probabilistic_model.parameters.update(
@@ -327,7 +334,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/sim_sensor2D_advi_newoffset") # "fit_x1eq_sensor_synthetic")
+                              "fit/tests/sim_sensor2D_advi_newoffset_upsample2_newselect") # "fit_x1eq_sensor_synthetic")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
@@ -359,10 +366,10 @@ if __name__ == "__main__":
     # sensors_lbls = [u"G'1", u"G'2", u"G'11", u"G'12", u"M'7", u"M'8", u"L'5", u"L'6"]
     # sensors_inds = [28, 29, 38, 39, 64, 65, 48, 49]
     # Simulation times_on_off
-    sim_times_on_off = [80.0, 105.0]  # for "fitting" simulations with tau0=30.0
+    sim_times_on_off = [80.0, 110.0]  # for "fitting" simulations with tau0=30.0
     EMPIRICAL = False
     sim_source_type = "fitting"
-    observation_model = OBSERVATION_MODELS.SEEG_POWER.value  # OBSERVATION_MODELS.SOURCE_POWER.value  #OBSERVATION_MODELS.SEEG_LOGPOWER.value  #
+    observation_model = OBSERVATION_MODELS.SEEG_POWER.value  #OBSERVATION_MODELS.SOURCE_POWER.value  # OBSERVATION_MODELS.SEEG_LOGPOWER.value  #
     log_flag = observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
     if EMPIRICAL:
         seizure = 'SZ1_0001.edf'  # 'SZ2_0001.edf'
@@ -380,7 +387,7 @@ if __name__ == "__main__":
         preprocessing = ["hpf", "convolve"]
     else:
         if sim_source_type == "paper":
-            times_on_off = [40.0, 400.0]  # for "paper" simulations
+            times_on_off = [750.0, 1500.0] # [40.0, 400.0]  # for "paper" simulations
             preprocessing = ["convolve"] # ["lpf", "abs"] #"hpf", "convolve"
         else:
             times_on_off = sim_times_on_off # for "fitting" simulations with tau0=30.0
