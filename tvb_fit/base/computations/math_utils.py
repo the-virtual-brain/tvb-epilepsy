@@ -112,6 +112,8 @@ def select_by_hierarchical_group_metric_clustering(distance, disconnectivity=np.
 
 
 def curve_elbow_point(vals, interactive=CalculusConfig.INTERACTIVE_ELBOW_POINT):
+    # Solution found in
+    # https://www.analyticbridge.datasciencecentral.com/profiles/blogs/identifying-the-number-of-clusters-finally-a-solution
     vals = np.array(vals).flatten()
     if np.any(vals[0:-1] - vals[1:] < 0):
         vals = np.sort(vals)
@@ -119,6 +121,9 @@ def curve_elbow_point(vals, interactive=CalculusConfig.INTERACTIVE_ELBOW_POINT):
     cumsum_vals = np.cumsum(vals)
     grad = np.gradient(np.gradient(np.gradient(cumsum_vals)))
     elbow = np.argmax(grad)
+    # alternatively:
+    # dif = np.diff(np.diff(np.diff(cumsum_vals)))
+    # elbow = np.argmax(dif) + 2
     if interactive:
         import matplotlib
         matplotlib.use(FiguresConfig.MATPLOTLIB_BACKEND)
