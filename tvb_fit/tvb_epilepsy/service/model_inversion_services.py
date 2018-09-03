@@ -123,9 +123,9 @@ class ODEModelInversionService(ModelInversionService):
         if target_data:
             active_regions = probabilistic_model.active_regions.tolist()
             gain_matrix = np.array(sensors.gain_matrix)
-            sensors_ids = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
-            if len(sensors_ids) != 0:
-                gain_matrix = gain_matrix[sensors_ids]
+            signals_inds = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
+            if len(signals_inds) != 0:
+                gain_matrix = gain_matrix[signals_inds]
                 for proj in gain_matrix:
                     active_regions += select_greater_values_array_inds(proj, self.gain_matrix_th,
                                                                        self.n_signals_per_roi).tolist()
@@ -134,7 +134,7 @@ class ODEModelInversionService(ModelInversionService):
                 warning("Skipping active regions setting by seeg power because no data were assigned to sensors!")
         else:
             warning("Skipping active regions setting by seeg power because no target data were provided!")
-        return probabilistic_model, sensors.gain_matrix[sensors_ids][:, probabilistic_model.active_regions]
+        return probabilistic_model, sensors.gain_matrix[signals_inds][:, probabilistic_model.active_regions]
 
     def update_active_regions(self, probabilistic_model, sensors=None, target_data=None, e_values=[], x0_values=[],
                               lsa_propagation_strengths=[], reset=False):
@@ -150,8 +150,8 @@ class ODEModelInversionService(ModelInversionService):
                 probabilistic_model = self.update_active_regions_sensors(probabilistic_model, sensors, reset=False)
             gain_matrix = sensors.gain_matrix[:, probabilistic_model.active_regions]
             if target_data is not None:
-                sensors_ids = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
-                gain_matrix = gain_matrix[sensors_ids]
+                signals_inds = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
+                gain_matrix = gain_matrix[signals_inds]
                 if "target_data" in self.active_regions_selection_methods:
                     probabilistic_model, gain_matrix = \
                         self.update_active_regions_target_data(target_data, probabilistic_model, sensors, reset=False)
@@ -167,26 +167,32 @@ class ODEModelInversionService(ModelInversionService):
             else:
                 members_per_group = self.sensors_per_electrode
         if self.auto_selection.find("rois") >= 0:
+            signals_inds = []
+            if self.auto_selection.find("power"):
+                self.auto_selection = self.auto_selection.replace("power", "")
+                signals_inds = self.ts_service.select_by_power(target_data, power, self.power_th)[1].tolist()
             if sensors.gain_matrix is not None:
-                target_data = self.ts_service.select_by_rois_proximity(target_data, sensors.gain_matrix.T[rois],
-                                                                       self.gain_matrix_th,
-                                                                       n_signals=self.n_signals_per_roi)
+                signals_inds += \
+                    self.ts_service.select_by_rois_proximity(target_data, sensors.gain_matrix.T[rois],
+                                                             self.gain_matrix_th, n_signals=self.n_signals_per_roi)[1].\
+                        tolist()
+            target_data = target_data.get_subspace_by_index(np.unique(signals_inds))
         if self.auto_selection.find("correlation-power") >= 0 and target_data.number_of_labels > 1:
             if self.group_electrodes:
                 disconnectivity = HeadService().sensors_in_electrodes_disconnectivity(sensors, target_data.space_labels)
-            target_data = self.ts_service.select_by_correlation_power(target_data, disconnectivity=disconnectivity,
-                                                                      n_groups=n_groups,
-                                                                      members_per_group=members_per_group)
+            target_data, _ = self.ts_service.select_by_correlation_power(target_data, disconnectivity=disconnectivity,
+                                                                         n_groups=n_groups,
+                                                                         members_per_group=members_per_group)
         elif self.auto_selection.find("gain-power") >= 0 and target_data.number_of_labels > 1:
             if self.group_electrodes:
                 disconnectivity = HeadService().sensors_in_electrodes_disconnectivity(sensors, target_data.space_labels)
-            sensors_ids = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
-            target_data = \
-                self.ts_service.select_by_gain_matrix_power(target_data, sensors.gain_matrix[sensors_ids],
+            signals_inds = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
+            target_data, _ = \
+                self.ts_service.select_by_gain_matrix_power(target_data, sensors.gain_matrix[signals_inds],
                                                             disconnectivity=disconnectivity, n_groups=n_groups,
                                                             members_per_group=members_per_group)
         elif self.auto_selection.find("power") >= 0:
-            target_data = self.ts_service.select_by_power(target_data, power, self.power_th)
+            target_data, _ = self.ts_service.select_by_power(target_data, power, self.power_th)
         return target_data
 
     def set_gain_matrix(self, target_data, probabilistic_model, sensors=None):

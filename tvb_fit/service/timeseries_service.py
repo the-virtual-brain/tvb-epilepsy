@@ -31,6 +31,8 @@ def normalize_signals(signals, normalization=None):
     if isinstance(normalization, basestring):
         if isequal_string(normalization, "zscore"):
             signals = zscore(signals, axis=None) / 3.0
+        elif isequal_string(normalization, "mean"):
+            signals -= (signals.mean(axis=0) * np.ones(signals.shape[1:]))
         elif isequal_string(normalization, "minmax"):
             signals -= signals.min()
             signals /= signals.max()
@@ -107,7 +109,7 @@ class TimeseriesService(object):
                                     timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def power(self, timeseries):
-        return np.sum(self.square(timeseries).squeezed, axis=0)
+        return np.sum(self.square(self.normalize(timeseries, "mean")).squeezed, axis=0)
 
     def square(self, timeseries):
         return timeseries.__class__(timeseries.data ** 2, timeseries.dimension_labels,
@@ -117,8 +119,8 @@ class TimeseriesService(object):
         return np.corrcoef(timeseries.squeezed.T)
 
     def select_by_metric(self, timeseries, metric, metric_th=None, metric_percentile=None, nvals=None):
-        return timeseries.get_subspace_by_index(select_greater_values_array_inds(metric, metric_th,
-                                                                                 metric_percentile, nvals))
+        selection = np.unique(select_greater_values_array_inds(metric, metric_th, metric_percentile, nvals))
+        return timeseries.get_subspace_by_index(selection), selection
 
     def select_by_power(self, timeseries, power=np.array([]), power_th=None):
         if len(power) != timeseries.number_of_labels:
@@ -127,9 +129,9 @@ class TimeseriesService(object):
 
     def select_by_hierarchical_group_metric_clustering(self, timeseries, distance, disconnectivity=np.array([]),
                                                        metric=None, n_groups=10, members_per_group=1):
-        selection = select_by_hierarchical_group_metric_clustering(distance, disconnectivity, metric,
-                                                                   n_groups, members_per_group)
-        return timeseries.get_subspace_by_index(selection)
+        selection = np.unique(select_by_hierarchical_group_metric_clustering(distance, disconnectivity, metric,
+                                                                             n_groups, members_per_group))
+        return timeseries.get_subspace_by_index(selection), selection
 
     def select_by_correlation_power(self, timeseries, correlation=np.array([]), disconnectivity=np.array([]),
                                     power=np.array([]), n_groups=10, members_per_group=1):
@@ -155,13 +157,14 @@ class TimeseriesService(object):
             selection += (
                 np.array(initial_selection)[select_greater_values_array_inds(prox, proximity_th,
                                                                              percentile, n_signals)]).tolist()
-        return timeseries.get_subspace_by_index(np.unique(selection).tolist())
+        selection = np.unique(selection)
+        return timeseries.get_subspace_by_index(selection), selection
 
     def select_by_rois(self, timeseries, rois, all_labels):
         for ir, roi in rois:
             if not(isinstance(roi, basestring)):
                 rois[ir] = all_labels[roi]
-        return timeseries.get_subspace_by_labels(rois)
+        return timeseries.get_subspace_by_labels(rois), rois
 
     def compute_seeg(self, source_timeseries, sensors, sum_mode="lin"):
         if np.all(sum_mode == "exp"):
