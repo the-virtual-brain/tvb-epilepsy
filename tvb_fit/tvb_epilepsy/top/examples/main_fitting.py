@@ -5,7 +5,7 @@ import numpy as np
 
 from tvb_fit.base.constants import PriorsModes, Target_Data_Type
 from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.utils.data_structures_utils import ensure_list
+from tvb_fit.base.utils.data_structures_utils import ensure_list, find_labels_inds
 from tvb_fit.samplers.stan.cmdstan_interface import CmdStanInterface
 from tvb_fit.plot.head_plotter import HeadPlotter
 
@@ -115,6 +115,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
             target_data = reader.read_timeseries(target_data_file)
         else:
             model_inversion = SDEModelInversionService()
+            # Exclude ctx-l/rh-unknown regions from fitting
+            model_inversion.active_regions_exlude = find_labels_inds(head.connectivity.region_labels, ["unknown"])
 
             # ...or generate a new probabilistic model and model data
             probabilistic_model_builder = \
