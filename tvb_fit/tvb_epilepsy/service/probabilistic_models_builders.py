@@ -250,7 +250,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                  sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                  epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF,
                  observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
-                 number_of_target_data=0, upsample=UPSAMPLE, active_regions=np.array([])):
+                 number_of_target_data=0, active_regions=np.array([])):
         super(ODEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode, priors_mode,
                                                            normal_flag, K, sigma_x, sigma_x_scale) # MC_direction_split
         self.sigma_init = sigma_init
@@ -264,6 +264,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         self.time_length = self.compute_seizure_length()
         self.dt = self.compute_dt()
         self.active_regions = active_regions
+        self.upsample = self.compute_upsample()
         if isinstance(self.model, EpiProbabilisticModel):
             self.sigma_init = getattr(self.model, "sigma_init", self.sigma_init)
             self.tau1 = getattr(self.model, "tau1", self.tau1)
@@ -276,6 +277,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             self.time_length = getattr(self.model, "time_length", self.time_length)
             self.dt = getattr(self.model, "dt", self.dt)
             self.active_regions = getattr(self.model, "active_regions", self.active_regions)
+            self.upsample = getattr(self.model, "upsample", self.upsample)
 
     def _repr(self, d=OrderedDict()):
         d.update(super(ODEProbabilisticModelBuilder, self)._repr(d))
@@ -317,6 +319,9 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
     def compute_dt(self):
         return compute_dt(self.tau1)
+
+    def compute_upsample(self, default_seizure_length=SEIZURE_LENGTH):
+        return compute_upsample(self.time_length, default_seizure_length, tau0=self.tau0)
 
     def generate_parameters(self, params_names=ODE_DEFAULT_PARAMETERS,
                             target_data=None, model_source_ts=None, gain_matrix=None):
@@ -462,12 +467,11 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
                  sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                  epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF, sigma=SIGMA_DEF,
                  sde_mode=SDE_MODES.NONCENTERED.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
-                 number_of_signals=0, upsample=UPSAMPLE, active_regions=np.array([])):
+                 number_of_signals=0, active_regions=np.array([])):
         super(SDEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode, priors_mode,
                                                            normal_flag, K, sigma_x, sigma_x_scale, # MC_direction_split,
                                                            sigma_init, tau1, tau0, epsilon, scale, offset,
-                                                           observation_model, number_of_signals, upsample,
-                                                           active_regions)
+                                                           observation_model, number_of_signals, active_regions)
         self.sigma_init = sigma_init
         self.sde_mode = sde_mode
         self.sigma = sigma

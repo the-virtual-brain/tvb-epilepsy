@@ -12,7 +12,7 @@ from tvb_fit.plot.head_plotter import HeadPlotter
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU1_DEF, TAU0_DEF
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import XModes, SDE_MODES, \
-    OBSERVATION_MODELS, TARGET_DATA_PREPROCESSING
+    OBSERVATION_MODELS, TARGET_DATA_PREPROCESSING, SEIZURE_LENGTH
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_fit.tvb_epilepsy.service.probabilistic_models_builders import SDEProbabilisticModelBuilder
@@ -63,8 +63,9 @@ def set_hypotheses(head, config):
 
 def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_flag=True, sim_source_type="fitting",
                         observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, sensors_lbls=[], sensor_id=0,
-                        times_on_off=[], sim_times_on_off=[80.0, 120.0], preprocessing_sequence=TARGET_DATA_PREPROCESSING,
-                        fitmethod="optimizing", pse_flag=True, fit_flag=True, config=Config(), test_flag=False, **kwargs):
+                        times_on_off=[], sim_times_on_off=[80.0, 120.0], downsampling = 4,
+                        preprocessing_sequence=TARGET_DATA_PREPROCESSING, fitmethod="optimizing",
+                        pse_flag=True, fit_flag=True, config=Config(), test_flag=False, **kwargs):
 
     def path(name):
         if len(name) > 0:
@@ -116,12 +117,18 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
             model_inversion = SDEModelInversionService()
 
             # ...or generate a new probabilistic model and model data
-            probabilistic_model = \
+            probabilistic_model_builder = \
                 SDEProbabilisticModelBuilder(model_name="vep_sde", model_config=model_configuration,
                                              xmode=XModes.X1EQMODE.value, priors_mode=PriorsModes.INFORMATIVE.value,
                                              sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,
-                                             K=np.mean(model_configuration.K), normal_flag=normal_flag). \
-                    generate_model(generate_parameters=False)
+                                             K=np.mean(model_configuration.K), normal_flag=normal_flag)
+            # Downsample target data from the default seizure length in time points
+            probabilistic_model_builder = \
+                probabilistic_model_builder.set_attributes("time_length", int(np.round(SEIZURE_LENGTH / downsampling)))
+            probabilistic_model_builder = \
+                probabilistic_model_builder.set_attributes("upsample", probabilistic_model_builder.compute_upsample())
+
+            probabilistic_model = probabilistic_model_builder.generate_model(generate_parameters=False)
 
             # Update active model's active region nodes
             e_values = pse_results.get("e_values_mean", model_configuration.e_values)
@@ -334,7 +341,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/sim_sensor2D_advi_newoffset_upsample2_newselect_activergnsthr_005_iters1000000") # "fit_x1eq_sensor_synthetic")
+                              "fit/tests/sim_sensor2D_advi_newoffset_upsample2_newselect_activergnsthr_005_decim4") # "fit_x1eq_sensor_synthetic")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
@@ -396,6 +403,7 @@ if __name__ == "__main__":
     if log_flag:
         preprocessing.append("log")
     preprocessing.append("decimate")
+    downsampling = 4
     normal_flag = False
     stan_model_name = "vep_sde"
     fitmethod = "advi" # ""  # "sample"  # "advi" or "opt"
@@ -407,11 +415,11 @@ if __name__ == "__main__":
                             observation_model=observation_model,
                             empirical_file=os.path.join(config.input.RAW_DATA_FOLDER, seizure),
                             sensors_lbls=sensors_lbls, times_on_off=times_on_off, sim_times_on_off=sim_times_on_off,
-                            preprocessing_sequence=preprocessing, fitmethod=fitmethod,
+                            downsampling=downsampling, preprocessing_sequence=preprocessing, fitmethod=fitmethod,
                             pse_flag=pse_flag, fit_flag=fit_flag, config=config, test_flag=test_flag)
     else:
         main_fit_sim_hyplsa(stan_model_name=stan_model_name, normal_flag=normal_flag,
                             observation_model=observation_model, sim_source_type=sim_source_type,
                             sensors_lbls=sensors_lbls, times_on_off=times_on_off, sim_times_on_off=sim_times_on_off,
-                            preprocessing_sequence=preprocessing, fitmethod=fitmethod,
+                            downsampling=downsampling, preprocessing_sequence=preprocessing, fitmethod=fitmethod,
                             pse_flag=pse_flag, fit_flag=fit_flag, config=config, test_flag=test_flag)

@@ -64,9 +64,15 @@ def compute_dt(tau1,):
     return (1000.0 / 2048.0) * (0.5 / tau1)
 
 
+def compute_upsample(seizure_length, default_seizure_length=None, tau0=None):
+    if default_seizure_length is None:
+        default_seizure_length = compute_seizure_length(tau0)
+    return np.maximum(int(np.round(default_seizure_length / seizure_length)), 1)
+
+
 SEIZURE_LENGTH = compute_seizure_length(TAU0_DEF)
 DT_DEF = compute_dt(TAU1_DEF)
-UPSAMPLE = 2
+UPSAMPLE = compute_upsample(SEIZURE_LENGTH, default_seizure_length=SEIZURE_LENGTH, tau0=TAU0_DEF)
 
 SIGMA_INIT_DEF = 0.1*SIGMA_EQ_DEF
 EPSILON_DEF = 0.1

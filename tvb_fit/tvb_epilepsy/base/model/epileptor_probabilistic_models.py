@@ -98,6 +98,7 @@ class ODEEpiProbabilisticModel(EpiProbabilisticModel):
         self.number_of_target_data = number_of_target_data
         self.time_length = time_length
         self.dt = dt
+        self.upsample = upsample
 
     def update_active_regions(self, active_regions):
         if np.all(np.in1d(ensure_list(active_regions), range(self.number_of_regions))):
