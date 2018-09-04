@@ -265,8 +265,7 @@ def linear_index_to_coordinate_tuples(linear_index, shape):
         return []
 
 
-def extract_dict_stringkeys(d, keys, modefun="find", two_way_search=False,
-                            break_after=CalculusConfig.MAX_INT_VALUE, remove=False):
+def find_labels_inds(labels, keys, modefun="find", two_way_search=False, break_after=np.iinfo(np.int64).max):
     if isequal_string(modefun, "equal"):
         modefun = lambda x, y: isequal_string(x, y)
     else:
@@ -274,23 +273,34 @@ def extract_dict_stringkeys(d, keys, modefun="find", two_way_search=False,
             modefun = lambda x, y: (x.find(y) >= 0) or (y.find(x) >= 0)
         else:
             modefun = lambda x, y: x.find(y) >= 0
+    inds = []
+    keys = ensure_list(keys)
+    labels = ensure_list(labels)
+    counts = 0
+    for key in keys:
+        for label in labels:
+            if modefun(label, key):
+               inds.append(labels.index(label))
+               counts += 1
+            if counts >= break_after:
+                return inds
+    return inds
+
+
+def extract_dict_stringkeys(d, keys, modefun="find", two_way_search=False,
+                            break_after=CalculusConfig.MAX_INT_VALUE, remove=False):
+    # TODO: test that it works after modifying with find_labels_inds
     if remove:
         out_dict = deepcopy(d)
     else:
         out_dict = {}
-    keys = ensure_list(keys)
-    counts = 0
-    for key, value in d.items():
-        for k in keys:
-            if modefun(key, k):
-                if remove:
-                    del out_dict[key]
-                    counts += 1
-                else:
-                    out_dict.update({key: value})
-                    counts += 1
-            if counts >= break_after:
-                return out_dict
+    inds_found = find_labels_inds(d.keys(), keys, modefun, two_way_search, break_after)
+    for ikey, (key, value) in enumerate(d.items()):
+        if ikey in inds_found:
+            if remove:
+                del out_dict[key]
+            else:
+                out_dict.update({key: value})
     return out_dict
 
 
