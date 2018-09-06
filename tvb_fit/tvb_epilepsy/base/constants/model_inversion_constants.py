@@ -67,7 +67,7 @@ def compute_dt(tau1,):
 def compute_upsample(seizure_length, default_seizure_length=None, tau0=None):
     if default_seizure_length is None:
         default_seizure_length = compute_seizure_length(tau0)
-    return np.maximum(int(np.round(default_seizure_length / seizure_length)), 1)
+    return np.maximum(int(np.round(1.0*default_seizure_length / seizure_length)), 1)
 
 
 SEIZURE_LENGTH = compute_seizure_length(TAU0_DEF)
@@ -77,7 +77,7 @@ UPSAMPLE = compute_upsample(SEIZURE_LENGTH, default_seizure_length=SEIZURE_LENGT
 SIGMA_INIT_DEF = 0.1*SIGMA_EQ_DEF
 EPSILON_DEF = 0.1
 
-SCALE_DEF = 0.25
+SCALE_DEF = 1.0
 OFFSET_DEF = 0.0
 
 class OBSERVATION_MODELS(Enum):

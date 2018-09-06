@@ -12,7 +12,7 @@ from tvb_fit.plot.head_plotter import HeadPlotter
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU1_DEF, TAU0_DEF
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import XModes, SDE_MODES, \
-    OBSERVATION_MODELS, TARGET_DATA_PREPROCESSING, SEIZURE_LENGTH
+    OBSERVATION_MODELS, TARGET_DATA_PREPROCESSING, SEIZURE_LENGTH, compute_upsample
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_fit.tvb_epilepsy.service.probabilistic_models_builders import SDEProbabilisticModelBuilder
@@ -115,22 +115,19 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
             target_data = reader.read_timeseries(target_data_file)
         else:
             model_inversion = SDEModelInversionService()
+            model_inversion.decim_ratio = downsampling
+            model_inversion.cut_target_times_on_off = times_on_off
+            model_inversion.normalization = False
             # Exclude ctx-l/rh-unknown regions from fitting
             model_inversion.active_regions_exlude = find_labels_inds(head.connectivity.region_labels, ["unknown"])
 
             # ...or generate a new probabilistic model and model data
-            probabilistic_model_builder = \
+            probabilistic_model = \
                 SDEProbabilisticModelBuilder(model_name="vep_sde", model_config=model_configuration,
                                              xmode=XModes.X1EQMODE.value, priors_mode=PriorsModes.INFORMATIVE.value,
                                              sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,
-                                             K=np.mean(model_configuration.K), normal_flag=normal_flag)
-            # Downsample target data from the default seizure length in time points
-            probabilistic_model_builder = \
-                probabilistic_model_builder.set_attributes("time_length", int(np.round(SEIZURE_LENGTH / downsampling)))
-            probabilistic_model_builder = \
-                probabilistic_model_builder.set_attributes("upsample", probabilistic_model_builder.compute_upsample())
-
-            probabilistic_model = probabilistic_model_builder.generate_model(generate_parameters=False)
+                                             K=np.mean(model_configuration.K), normal_flag=normal_flag). \
+                        generate_model(generate_parameters=False)
 
             # Update active model's active region nodes
             e_values = pse_results.get("e_values_mean", model_configuration.e_values)
@@ -194,6 +191,9 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
                                                   y_ticks=probabilistic_model.active_regions)
 
             #---------------------------------Finally set priors for the parameters-------------------------------------
+            probabilistic_model.time_length = target_data.time_length
+            probabilistic_model.upsample = compute_upsample(probabilistic_model.time_length,
+                                                            SEIZURE_LENGTH, probabilistic_model.tau0)
             probabilistic_model.parameters.update(
                 SDEProbabilisticModelBuilder(probabilistic_model, normal_flag=normal_flag). \
                     generate_parameters([XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value,
@@ -343,7 +343,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/sim_sensor2D_advi_newoffset_upsample2_newselect_activergnsthr_005_decim4") # "fit_x1eq_sensor_synthetic")
+                              "fit/tests/sim_sensor2D_advi_newoffset_upsample2_newselect_activergnsthr_005_decim8") # "fit_x1eq_sensor_synthetic")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 

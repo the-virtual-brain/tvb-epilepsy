@@ -433,7 +433,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         if "offset" in params_names:
             self.logger.info("...offset...")
             parameters.update({"offset": generate_normal_parameter("offset", self.offset,
-                                                                   self.offset-0.1, self.offset + 0.1, sigma=1.0)})
+                                                                   self.offset-1.0, self.offset + 1.0, sigma=1.0)})
 
         return parameters
 

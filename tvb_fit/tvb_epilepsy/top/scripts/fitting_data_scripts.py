@@ -2,9 +2,9 @@ import numpy as np
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import \
     SEIZURE_LENGTH, HIGH_HPF, LOW_HPF, LOW_LPF, HIGH_LPF, WIN_LEN_RATIO, BIPOLAR, TARGET_DATA_PREPROCESSING
 from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.utils.data_structures_utils import isequal_string
+from tvb_fit.base.utils.data_structures_utils import isequal_string, find_labels_inds
 from tvb_fit.io.edf import read_edf_to_Timeseries
-from tvb_fit.service.timeseries_service import TimeseriesService
+from tvb_fit.service.timeseries_service import TimeseriesService, NORMALIZATION_METHODS
 
 
 logger = initialize_logger(__name__)
@@ -124,34 +124,36 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
                                     figure_name=title_prefix + '_%sLpfTimeSeries' % stri_preproc,
                                     labels=data.space_labels)
 
-    # Now decimate to get close to seizure_length points
-    temp_duration = temp_on_off[1] - temp_on_off[0]
-    decim_ratio = np.maximum(1, int(np.round((1.0*data.time_length/seizure_length) * (duration/temp_duration))))
-    if decim_ratio > 1:
-        str_decim_ratio = str(decim_ratio)
-        logger.info("Decimating signals " + str_decim_ratio + " times...")
-        data = ts_service.decimate(data, decim_ratio)
+    if "decimate" in preprocessing:
+        # Now decimate to get close to seizure_length points
+        temp_duration = temp_on_off[1] - temp_on_off[0]
+        decim_ratio = np.maximum(1, int(np.round((1.0*data.time_length/seizure_length) * (duration/temp_duration))))
+        if decim_ratio > 1:
+            str_decim_ratio = str(decim_ratio)
+            logger.info("Decimating signals " + str_decim_ratio + " times...")
+            data = ts_service.decimate(data, decim_ratio)
+            if plotter:
+                plotter.plot_raster({str_decim_ratio + " wise Decimation": data.squeezed}, data.time_line,
+                                        time_units=data.time_unit, special_idx=[],
+                                        title=str_decim_ratio + " wise Decimation", offset=0.1,
+                                        figure_name=
+                                            title_prefix + "_%s_%sxDecimatedTimeSeries" % (stri_preproc, str_decim_ratio),
+                                        labels=data.space_labels)
+
+    # # Cut to the desired interval
+    # data = data.get_time_window_by_units(on_off_set[0], on_off_set[1])
+
+    if len(find_labels_inds(preprocessing, NORMALIZATION_METHODS, modefun="equal")) >0:
+        # Finally, normalize signals
+        logger.info("Normalizing signals...")
+        data = ts_service.normalize(data, "baseline-std")  #  or  "baseline-amplitude" or"zscore"
         if plotter:
-            plotter.plot_raster({str_decim_ratio + " wise Decimation": data.squeezed}, data.time_line,
-                                    time_units=data.time_unit, special_idx=[],
-                                    title=str_decim_ratio + " wise Decimation", offset=0.1,
-                                    figure_name=
-                                        title_prefix + "_%s_%sxDecimatedTimeSeries" % (stri_preproc, str_decim_ratio),
-                                    labels=data.space_labels)
-
-    # Cut to the desired interval
-    data = data.get_time_window_by_units(on_off_set[0], on_off_set[1])
-
-    # Finally, normalize signals
-    logger.info("Normalizing signals...")
-    data = ts_service.normalize(data, "baseline-amplitude")  #  or "zscore"
-    if plotter:
-        plotter.plot_raster({"ObservationRaster": data.squeezed}, data.time_line, time_units=data.time_unit,
-                            special_idx=[], offset=0.1, title='Observation Raster Plot',
-                            figure_name=title_prefix + 'ObservationRasterPlot', labels=data.space_labels)
-        plotter.plot_timeseries({"Observation": data.squeezed}, data.time_line, time_units=data.time_unit,
-                                special_idx=[], title='Observation Time Series',
-                                figure_name=title_prefix + 'ObservationTimeSeries', labels=data.space_labels)
+            plotter.plot_raster({"ObservationRaster": data.squeezed}, data.time_line, time_units=data.time_unit,
+                                special_idx=[], offset=0.1, title='Observation Raster Plot',
+                                figure_name=title_prefix + 'ObservationRasterPlot', labels=data.space_labels)
+            plotter.plot_timeseries({"Observation": data.squeezed}, data.time_line, time_units=data.time_unit,
+                                    special_idx=[], title='Observation Time Series',
+                                    figure_name=title_prefix + 'ObservationTimeSeries', labels=data.space_labels)
     return data
 
 
