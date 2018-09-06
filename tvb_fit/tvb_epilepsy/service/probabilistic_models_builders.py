@@ -400,14 +400,14 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         if "sigma_init" in params_names:
             self.logger.info("...sigma_init...")
             parameters.update({"sigma_init": self.generate_normal_or_lognormal_parameter("sigma_init", self.sigma_init,
-                                                                                         0.0, 10.0 * self.sigma_init,
+                                                                                         0.0, 5.0 * self.sigma_init,
                                                                                          sigma=self.sigma_init)})
 
         self.logger.info("...observation's model parameters...")
         if "epsilon" in params_names:
             self.logger.info("...epsilon...")
             parameters.update({"epsilon": self.generate_normal_or_lognormal_parameter("epsilon", self.epsilon,
-                                                                                      0.0, 10.0 * self.epsilon,
+                                                                                      0.0, 5.0 * self.epsilon,
                                                                                       sigma=self.epsilon)})
 
         if isinstance(model_source_ts, Timeseries) and \
@@ -425,15 +425,17 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
         if "scale" in params_names:
             self.logger.info("...scale...")
+            scale_scale = self.scale / SCALE_SCALE_DEF
             parameters.update({"scale": self.generate_normal_or_lognormal_parameter("scale", self.scale,
-                                                                                    np.minimum(0.1, self.scale/3),
-                                                                                    3.0 * self.scale,
-                                                                                    sigma=self.scale)})
+                                                                                    np.maximum(0.1, self.scale-3*scale_scale),
+                                                                                    self.scale + 3*scale_scale,
+                                                                                    sigma=scale_scale)})
             
         if "offset" in params_names:
             self.logger.info("...offset...")
-            parameters.update({"offset": generate_normal_parameter("offset", self.offset,
-                                                                   self.offset-1.0, self.offset + 1.0, sigma=1.0)})
+            offset_scale = np.abs(self.offset) / OFFSET_SCALE_DEF
+            parameters.update({"offset": generate_normal_parameter("offset", self.offset, self.offset-3*offset_scale,
+                                                                   self.offset+3*offset_scale, sigma=offset_scale)})
 
         return parameters
 
