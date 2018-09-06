@@ -30,7 +30,7 @@ def cut_signals_tails(signals, time, cut_tails):
 def normalize_signals(signals, normalization=None):
     if isinstance(normalization, basestring):
         if isequal_string(normalization, "zscore"):
-            signals = zscore(signals, axis=None) / 3.0
+            signals = zscore(signals, axis=None)  # / 3.0
         elif isequal_string(normalization, "mean"):
             signals -= (signals.mean(axis=0) * np.ones(signals.shape[1:]))
         elif isequal_string(normalization, "minmax"):
