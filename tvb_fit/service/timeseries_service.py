@@ -47,8 +47,12 @@ def normalize_signals(signals, normalization=None):
             signals /= signals.std()
         elif normalization.find("baseline") == 0:
             signals -= np.percentile(np.percentile(signals, 1, axis=0), 1)
-            signals /= np.percentile(np.percentile(signals, 99, axis=0), 99)
-            signals *= float(normalization.split("baseline-")[1])
+            try:
+                amplitude = float(normalization.split("baseline-")[1])
+                signals /= np.percentile(np.percentile(signals, 99, axis=0), 99)
+                signals *= amplitude
+            except:
+                pass
         else:
             raise_value_error("Ignoring signals' normalization " + normalization +
                              ",\nwhich is not one of the currently available " + str(NORMALIZATION_METHODS) + "!")
