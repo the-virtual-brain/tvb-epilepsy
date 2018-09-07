@@ -225,7 +225,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
         max_depth = 15 # np.where(test_flag, 7, 12)
         delta = 0.95  # np.where(test_flag, 0.8, 0.9)
         # ADVI or optimization:
-        iter = 1000000
+        iter = 500000
         tol_rel_obj = 1e-6
         if fitmethod.find("sampl") >= 0:
             skip_samples = num_warmup
@@ -343,7 +343,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/sim_sensor2D_advi_newoffset_upsample2_newselect_activergnsthr_005_decim8") # "fit_x1eq_sensor_synthetic")
+                              "fit/tests/sim_sensor6D_advi_newoffset_newselect_activergnsthr_005_decim2") # "fit_x1eq_sensor_synthetic")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
@@ -375,10 +375,10 @@ if __name__ == "__main__":
     # sensors_lbls = [u"G'1", u"G'2", u"G'11", u"G'12", u"M'7", u"M'8", u"L'5", u"L'6"]
     # sensors_inds = [28, 29, 38, 39, 64, 65, 48, 49]
     # Simulation times_on_off
-    sim_times_on_off = [80.0, 110.0]  # for "fitting" simulations with tau0=30.0
+    sim_times_on_off = [80.0, 115.0]  # for "fitting" simulations with tau0=30.0
     EMPIRICAL = False
-    sim_source_type = "fitting"
-    observation_model = OBSERVATION_MODELS.SEEG_POWER.value  #OBSERVATION_MODELS.SOURCE_POWER.value  # OBSERVATION_MODELS.SEEG_LOGPOWER.value  #
+    sim_source_type = "paper"
+    observation_model = OBSERVATION_MODELS.SEEG_POWER.value  # OBSERVATION_MODELS.SOURCE_POWER.value  #BSERVATION_MODELS.SEEG_LOGPOWER.value  #
     log_flag = observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
     if EMPIRICAL:
         seizure = 'SZ1_0001.edf'  # 'SZ2_0001.edf'
@@ -405,7 +405,7 @@ if __name__ == "__main__":
     if log_flag:
         preprocessing.append("log")
     preprocessing.append("decimate")
-    downsampling = 4
+    downsampling = 2
     normal_flag = False
     stan_model_name = "vep_sde"
     fitmethod = "advi" # ""  # "sample"  # "advi" or "opt"
