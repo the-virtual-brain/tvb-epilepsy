@@ -403,13 +403,6 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                                                                                          0.0, 5.0 * self.sigma_init,
                                                                                          sigma=self.sigma_init)})
 
-        self.logger.info("...observation's model parameters...")
-        if "epsilon" in params_names:
-            self.logger.info("...epsilon...")
-            parameters.update({"epsilon": self.generate_normal_or_lognormal_parameter("epsilon", self.epsilon,
-                                                                                      0.0, 5.0 * self.epsilon,
-                                                                                      sigma=self.epsilon)})
-
         if isinstance(model_source_ts, Timeseries) and \
            isinstance(getattr(model_source_ts, "x1", None), Timeseries) and \
            isinstance(target_data, Timeseries):
@@ -422,6 +415,14 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             self.scale = np.max(target_data.data.max(axis=0) - target_data.data.min(axis=0)) / \
                          np.max(model_out_ts.max(axis=0) - model_out_ts.min(axis=0))
             self.offset = np.median(target_data.data) - np.median(self.scale*model_out_ts)
+            self.epsilon = np.max(target_data.data.max(axis=0) - target_data.data.min(axis=0))/10
+
+        self.logger.info("...observation's model parameters...")
+        if "epsilon" in params_names:
+            self.logger.info("...epsilon...")
+            parameters.update({"epsilon": self.generate_normal_or_lognormal_parameter("epsilon", self.epsilon,
+                                                                                      0.0, 5.0 * self.epsilon,
+                                                                                      sigma=self.epsilon)})
 
         if "scale" in params_names:
             self.logger.info("...scale...")
