@@ -63,7 +63,7 @@ def set_hypotheses(head, config):
 
 def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_flag=True, sim_source_type="fitting",
                         observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, sensors_lbls=[], sensor_id=0,
-                        times_on_off=[], sim_times_on_off=[80.0, 120.0], downsampling = 4,
+                        times_on_off=[], sim_times_on_off=[80.0, 120.0], downsampling = 4, normalization=False,
                         preprocessing_sequence=TARGET_DATA_PREPROCESSING, fitmethod="optimizing",
                         pse_flag=True, fit_flag=True, config=Config(), test_flag=False, **kwargs):
 
@@ -117,7 +117,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
             model_inversion = SDEModelInversionService()
             model_inversion.decim_ratio = downsampling
             model_inversion.cut_target_times_on_off = times_on_off
-            model_inversion.normalization = False
+            model_inversion.normalization = normalization
             # Exclude ctx-l/rh-unknown regions from fitting
             model_inversion.active_regions_exlude = find_labels_inds(head.connectivity.region_labels, ["unknown"])
 
@@ -217,7 +217,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        n_chains_or_runs = np.where(test_flag, 2, 4)
+        n_chains_or_runs = 2 # np.where(test_flag, 2, 4)
         output_samples = np.where(test_flag, 20, max(int(np.round(1000.0 / n_chains_or_runs)), 500))
         # Sampling (HMC)
         num_samples = output_samples
@@ -343,7 +343,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/sim_sensor6D_advi_newoffset_newselect_activergnsthr_005_decim2") # "fit_x1eq_sensor_synthetic")
+                              "fit/tests/sim_source6D_advi_newoffset_newselect_activergnsthr_005_decim2") # "fit_x1eq_sensor_synthetic")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
@@ -378,7 +378,7 @@ if __name__ == "__main__":
     sim_times_on_off = [80.0, 115.0]  # for "fitting" simulations with tau0=30.0
     EMPIRICAL = False
     sim_source_type = "paper"
-    observation_model = OBSERVATION_MODELS.SEEG_POWER.value  # OBSERVATION_MODELS.SOURCE_POWER.value  #BSERVATION_MODELS.SEEG_LOGPOWER.value  #
+    observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  #OBSERVATION_MODELS.SEEG_POWER.value  # OBSERVATION_MODELS.SEEG_LOGPOWER.value  #
     log_flag = observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
     if EMPIRICAL:
         seizure = 'SZ1_0001.edf'  # 'SZ2_0001.edf'
@@ -394,14 +394,22 @@ if __name__ == "__main__":
         # sensors_filename = "SensorsSEEG_210.h5"
         # times_on_off = [20.0, 100.0]
         preprocessing = ["hpf", "convolve"]
+        normalization = "baseline-std"
     else:
         if sim_source_type == "paper":
             times_on_off = [750.0, 1500.0] # [40.0, 400.0]  # for "paper" simulations
             preprocessing = ["convolve"] # ["lpf", "abs"] #"hpf", "convolve"
+            if observation_model == OBSERVATION_MODELS.SEEG_POWER.value:
+                normalization = "baseline-100"
+            elif observation_model == OBSERVATION_MODELS.SOURCE_POWER.value:
+                normalization = "baseline-2"
+            else:
+                normalization = "baseline-std"
         else:
             times_on_off = sim_times_on_off # for "fitting" simulations with tau0=30.0
             # times_on_off = [1100.0, 1300.0]  # for "fitting" simulations with tau0=300.0
             preprocessing = []
+            normalization = False
     if log_flag:
         preprocessing.append("log")
     preprocessing.append("decimate")
@@ -417,11 +425,11 @@ if __name__ == "__main__":
                             observation_model=observation_model,
                             empirical_file=os.path.join(config.input.RAW_DATA_FOLDER, seizure),
                             sensors_lbls=sensors_lbls, times_on_off=times_on_off, sim_times_on_off=sim_times_on_off,
-                            downsampling=downsampling, preprocessing_sequence=preprocessing, fitmethod=fitmethod,
-                            pse_flag=pse_flag, fit_flag=fit_flag, config=config, test_flag=test_flag)
+                            downsampling=downsampling, preprocessing_sequence=preprocessing, normalization=normalization,
+                            fitmethod=fitmethod, pse_flag=pse_flag, fit_flag=fit_flag, config=config, test_flag=test_flag)
     else:
         main_fit_sim_hyplsa(stan_model_name=stan_model_name, normal_flag=normal_flag,
                             observation_model=observation_model, sim_source_type=sim_source_type,
                             sensors_lbls=sensors_lbls, times_on_off=times_on_off, sim_times_on_off=sim_times_on_off,
-                            downsampling=downsampling, preprocessing_sequence=preprocessing, fitmethod=fitmethod,
-                            pse_flag=pse_flag, fit_flag=fit_flag, config=config, test_flag=test_flag)
+                            downsampling=downsampling, preprocessing_sequence=preprocessing, normalization=normalization,
+                            fitmethod=fitmethod, pse_flag=pse_flag, fit_flag=fit_flag, config=config, test_flag=test_flag)
