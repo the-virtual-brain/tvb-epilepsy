@@ -129,15 +129,6 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
                                              K=np.mean(model_configuration.K), normal_flag=normal_flag). \
                         generate_model(generate_parameters=False)
 
-            # Update active model's active region nodes
-            e_values = pse_results.get("e_values_mean", model_configuration.e_values)
-            lsa_propagation_strength = pse_results.get("lsa_propagation_strengths_mean",
-                                                           lsa_hypothesis.lsa_propagation_strengths)
-            model_inversion.active_e_th = 0.05
-            probabilistic_model, gain_matrix = \
-                model_inversion.update_active_regions(probabilistic_model, sensors=sensors, e_values=e_values,
-                                                      lsa_propagation_strengths=lsa_propagation_strength, reset=True)
-
             # --------------------- Get prototypical simulated data (simulate if necessary) ----------------------------
             source2D_ts = from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
                                                                sim_type="fitting", ts_file=path("ts"),
@@ -163,6 +154,15 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
                                               # Maybe change some of those for Epileptor 6D simulations:
                                               bipolar=False, preprocessing=preprocessing_sequence,
                                               plotter=plotter, title_prefix=hyp.name)
+
+            # Update active model's active region nodes
+            e_values = pse_results.get("e_values_mean", model_configuration.e_values)
+            lsa_propagation_strength = pse_results.get("lsa_propagation_strengths_mean",
+                                                           lsa_hypothesis.lsa_propagation_strengths)
+            model_inversion.active_e_th = 0.05
+            probabilistic_model, gain_matrix = \
+                model_inversion.update_active_regions(probabilistic_model, sensors=sensors, e_values=e_values,
+                                                      lsa_propagation_strengths=lsa_propagation_strength, reset=True)
 
             # -------------------------- Select and set target data from signals ---------------------------------------
             if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
@@ -225,7 +225,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
         max_depth = 15 # np.where(test_flag, 7, 12)
         delta = 0.95  # np.where(test_flag, 0.8, 0.9)
         # ADVI or optimization:
-        iter = 500000
+        iter = np.where(test_flag, 1000, 500000)
         tol_rel_obj = 1e-6
         if fitmethod.find("sampl") >= 0:
             skip_samples = num_warmup
@@ -343,7 +343,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/sim_source6D_advi_newoffset_newselect_activergnsthr_005_decim2") # "fit_x1eq_sensor_synthetic")
+                              "fit/tests/test") # "fit_x1eq_sensor_synthetic")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
@@ -419,7 +419,7 @@ if __name__ == "__main__":
     fitmethod = "advi" # ""  # "sample"  # "advi" or "opt"
     pse_flag = True
     fit_flag = True
-    test_flag = False
+    test_flag = True
     if EMPIRICAL:
         main_fit_sim_hyplsa(stan_model_name=stan_model_name, normal_flag=normal_flag,
                             observation_model=observation_model,
