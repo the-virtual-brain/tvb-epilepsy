@@ -399,14 +399,14 @@ if __name__ == "__main__":
             if observation_model == OBSERVATION_MODELS.SEEG_POWER.value:
                 normalization = "baseline-100"
             elif observation_model == OBSERVATION_MODELS.SOURCE_POWER.value:
-                normalization = "baseline-2"
+                normalization = "baseline"
             else:
                 normalization = "baseline-std"
         else:
             times_on_off = sim_times_on_off # for "fitting" simulations with tau0=30.0
             # times_on_off = [1100.0, 1300.0]  # for "fitting" simulations with tau0=300.0
             preprocessing = []
-            normalization = False
+            normalization = "baseline"
     if log_flag:
         preprocessing.append("log")
     preprocessing.append("decimate")
