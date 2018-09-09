@@ -177,11 +177,6 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
             plotter.plot_timeseries({'Target Signals': target_data.squeezed}, target_data.time_line,
                                     time_units=target_data.time_unit,
                                     title=hyp.name + ' Target Signals', labels=target_data.space_labels)
-            writer.write_timeseries(target_data, target_data_file)
-
-            #--------------Optionally add more active regions that are close to the selected seeg contacts--------------
-            # probabilistic_model, gain_matrix = \
-            #     model_inversion.update_active_regions_target_data(target_data, probabilistic_model, sensors, reset=False)
 
             HeadPlotter(config)._plot_gain_matrix(sensors, head.connectivity.region_labels,
                                                   title=hyp.name + " Active regions -> target data projection",
@@ -189,6 +184,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
                                                   x_ticks=
                                                     sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels),
                                                   y_ticks=probabilistic_model.active_regions)
+
+            writer.write_timeseries(target_data, target_data_file)
 
             #---------------------------------Finally set priors for the parameters-------------------------------------
             probabilistic_model.time_length = target_data.time_length
