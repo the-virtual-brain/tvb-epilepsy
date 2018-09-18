@@ -17,13 +17,6 @@ functions {
         return dx1;
     }
 
-    row_vector x1_step(row_vector x1, row_vector z, real Iext1, real tau1) { //, row_vector dX1t, real sigma
-        int n_active_regions = num_elements(x1);
-        row_vector[n_active_regions] dx1 = fx1(x1, z, Iext1, tau1);
-        row_vector[n_active_regions]  x1_next = x1 + dx1; # + dX1t * sigma;
-        return x1_next;
-    }
-
     row_vector calc_zeq(row_vector x1eq, real Iext1, real tau1) {
         int n_active_regions = num_elements(x1eq);
         row_vector[n_active_regions] zeq = fx1(x1eq, 0*x1eq, Iext1, 1.0);
@@ -113,11 +106,8 @@ data {
     real x1_eq_def; // = -5.0/3 the value of all healhty non-active nodes, i.e. the resting manifold
     // real x1_lo;
     // real x1_hi;
-    row_vector [n_active_regions] x1_init_mu; // in [-2.0, -1.0], used -1.566
+    int X1_PRIOR;
     row_vector [n_active_regions] z_init_mu; // in [2.9, 4.5], used 3.060
-    real x1_init_lo;
-    real x1_init_hi;
-    real x1_init_std; // 0.0333
     real z_init_lo;
     real z_init_hi;
     real z_init_std; // 0.0333/2
@@ -162,6 +152,12 @@ data {
 
 
 transformed data {
+    // x1 priors' related quantities
+    real x1_cr = -4.0/3;  // The approximate middle x1 point of a seizure cycle
+    real x1_seiz = 0.0; // The x1 seizure manifold
+    real z_cr = 1 + Iext1 - (x1_cr .* x1_cr .* x1_cr) - 2.0 * (x1_cr .* x1_cr);
+    real z_seiz = 1 + Iext1 - (x1_seiz .* x1_seiz .* x1_seiz) - 2.0 * (x1_seiz .* x1_seiz);
+
     // Effective time step
     real dtt = dt/UPSAMPLE;
     real sqrtdt = sqrt(dtt);
@@ -389,6 +385,7 @@ transformed parameters {
 
 
 model {
+
     offset_star ~ normal(0.0, 1.0);
     scale_star ~ normal(0.0, 1.0);
     epsilon_star ~ normal(0.0, 1.0);
@@ -403,6 +400,26 @@ model {
     for (t in 1:(n_times - 1)) {
         // to_vector(dX1t_star[t]) ~ normal(0.0, 1.0);
         to_vector(dZt_star[t]) ~ normal(0.0, 1.0);
+    }
+
+    for (t in 1:(n_times - 1)) {
+        for (iR in 1:n_active_regions) {
+            if (z[t][iR] > z_cr) and (z[t][iR] < z_seiz) {
+                // TODO: Find how to set the weights here...
+                target += log_sum_exp(log(0.5) + normal_lpdf(x1[t][iR] | x1_eq_def, x1_std),
+                                      log(0.5) + normal_lpdf(x1[t][iR] | x1_seiz, x1_std));
+            }
+                /*
+                // This version will cause a discontinuity to the gradient of the loglikelihood...
+                if (x1[t][iR] <= x1_middle) {
+                    x1[t][iR] ~ normal(x1_eq_def, x1_std);
+                } else {
+                    x1[t][iR] ~ normal(x1_seiz, x1_std);
+                }
+                */
+            }
+
+        }
     }
 
     // Fit or forward simulation
