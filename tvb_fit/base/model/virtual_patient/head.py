@@ -12,17 +12,20 @@ class Head(object):
     """
     logger = initialize_logger(__name__)
 
-    def __init__(self, connectivity, cortical_surface, rm={}, vm={}, t1={}, name='', **kwargs):
+    def __init__(self, connectivity, cortical_surface=None, subcortical_surface=None,
+                 cortical_region_mapping={}, subcortical_region_mapping={}, vm={}, t1={}, name='', **kwargs):
         self.connectivity = connectivity
         self.cortical_surface = cortical_surface
-        self.region_mapping = rm
+        self.subcortical_surface = subcortical_surface
+        self.cortical_region_mapping = cortical_region_mapping
+        self.subcortical_region_mapping = subcortical_region_mapping
         self.volume_mapping = vm
         self.t1_background = t1
         self.sensorsSEEG = []
         self.sensorsEEG = []
         self.sensorsMEG = []
         for s_type in SensorTypes:
-            self.set_sensors(kwargs.get("sensors" + s_type.value), s_type=s_type.value)
+            self.set_sensors(kwargs.get("sensors" + s_type.value), s_type=s_type)
         if len(name) == 0:
             self.name = 'Head' + str(self.number_of_regions)
         else:
@@ -38,21 +41,24 @@ class Head(object):
     def __repr__(self):
         d = {"1. name": self.name,
              "2. connectivity": self.connectivity,
-             "3. RM": reg_dict(self.region_mapping, self.connectivity.region_labels),
-             "4. VM": reg_dict(self.volume_mapping, self.connectivity.region_labels),
-             "5. surface": self.cortical_surface,
-             "6. T1": self.t1_background,
-             "7. SEEG": self.sensorsSEEG,
-             "8. EEG": self.sensorsEEG,
-             "9. MEG": self.sensorsMEG}
+             "3. cortical region mapping": reg_dict(self.cortical_region_mapping, self.connectivity.region_labels),
+             "4. subcortical region mapping": reg_dict(self.subcortical_region_mapping,
+                                                       self.connectivity.region_labels),
+             "5. VM": reg_dict(self.volume_mapping, self.connectivity.region_labels),
+             "6. cortical surface": self.cortical_surface,
+             "7. subcortical surface": self.cortical_surface,
+             "8. T1": self.t1_background,
+             "9. SEEG": self.sensorsSEEG,
+             "10. EEG": self.sensorsEEG,
+             "11. MEG": self.sensorsMEG}
         return formal_repr(self, sort_dict(d))
 
     def __str__(self):
         return self.__repr__()
 
     def get_sensors(self, s_type=Sensors.TYPE_SEEG):
-        if np.in1d(s_type, [stype.value for stype in SensorTypes]):
-            return getattr(self, "sensors" + s_type)
+        if np.in1d(s_type, [stype for stype in SensorTypes]):
+            return getattr(self, "sensors" + s_type.value)
         else:
             raise_value_error("Invalid input sensor type " + str(s_type))
 
@@ -63,22 +69,18 @@ class Head(object):
         if reset is False or len(sensors) == 0:
             sensors = []
         for s in ensure_list(input_sensors):
-            if isinstance(s, Sensors) and (s.s_type == s_type):
+            if isinstance(s, Sensors) and (s.s_type == s_type.value):
                 if s.gain_matrix is None or s.gain_matrix.shape != (s.number_of_sensors, self.number_of_regions):
-                    self.logger.warning("No correctly sized gain matrix found in sensors! "
-                                        "Computing and adding gain matrix!")
-                    s.gain_matrix = s.compute_gain_matrix(self.connectivity)
-                # if s.orientations == None or s.orientations.shape != (s.number_of_sensors, 3):
-                #     self.logger.warning("No orientations found in sensors!")
+                    self.logger.warning("No correctly sized gain matrix found in sensors!")
                 sensors.append(s)
             else:
                 if s is not None:
                     raise_value_error("Input sensors:\n" + str(s) +
-                                      "\nis not a valid Sensors object of type " + str(s_type.value) + "!")
+                                      "\nis not a valid Sensors object of type " + str(s_type) + "!")
         if len(sensors) == 0:
-            setattr(self, "sensors" + s_type, [])
+            setattr(self, "sensors" + s_type.value, [])
         else:
-            setattr(self, "sensors" + s_type, sensors)
+            setattr(self, "sensors" + s_type.value, sensors)
 
     def get_sensors_id(self, s_type=Sensors.TYPE_SEEG, sensor_ids=0):
         sensors = self.get_sensors(s_type)
