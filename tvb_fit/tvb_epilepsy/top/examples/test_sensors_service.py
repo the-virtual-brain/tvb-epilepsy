@@ -26,7 +26,7 @@ if __name__ == "__main__":
     respath = "/Users/dionperd/Dropbox/Work/VBtech/VEP/results/CC"
     gain_figs_path = os.path.join(respath, 'testing_heads/figs/seeg_gains')
     subjects = (np.array(range(1, 30)) + 1).tolist()
-    del subjects[14]
+    # del subjects[14]
     subjects = ["TVB%s" % subject for subject in subjects]
     subjects += ["TVB4_mrielec", "TVB10_mrielec"]
 
