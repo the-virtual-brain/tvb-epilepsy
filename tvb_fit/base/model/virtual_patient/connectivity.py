@@ -69,3 +69,7 @@ class Connectivity(object):
 
     def get_regions_inds_by_labels(self, lbls):
         return labels_to_inds(self.region_labels, lbls)
+
+    @property
+    def centers(self):
+        return self.centres
