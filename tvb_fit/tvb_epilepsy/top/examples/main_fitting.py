@@ -84,7 +84,8 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
     head = reader.read_head(config.input.HEAD)
     sensors = head.get_sensors_id(sensor_ids=sensor_id)
     from tvb_fit.service.head_service import HeadService
-    sensors.gain_matrix = HeadService().compute_gain_matrix(head, sensors, normalize=95, ceil=False)
+    sensors.gain_matrix = HeadService().compute_gain_matrix(head, sensors, method="distance",
+                                                            normalize=95, ceil=False)
     plotter.plot_head(head)
 
     # Set hypotheses:
