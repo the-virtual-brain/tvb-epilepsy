@@ -5,7 +5,7 @@ import numpy as np
 from tvb_fit.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list, \
                                                                                     labels_to_inds, monopolar_to_bipolar
 from tvb_fit.base.utils.data_structures_utils import split_string_text_numbers
-from tvb_fit.base.computations.math_utils import compute_gain_matrix, select_greater_values_2Darray_inds
+from tvb_fit.base.computations.math_utils import select_greater_values_2Darray_inds
 
 
 # SDE model inversion constants
@@ -30,17 +30,15 @@ class Sensors(object):
     labels = np.array([])
     locations = np.array([])
     needles = np.array([])
-    orientations = np.array([])
     gain_matrix = np.array([])
     s_type = TYPE_SEEG
 
-    def __init__(self, labels, locations, needles=np.array([]), orientations=np.array([]), gain_matrix=np.array([]),
+    def __init__(self, labels, locations, needles=np.array([]), gain_matrix=np.array([]),
                  s_type=TYPE_SEEG):
         self.labels = labels
         self.locations = locations
         self.needles = needles
         self.channel_labels = np.array([])
-        self.orientations = orientations
         self.gain_matrix = gain_matrix
         self.s_type = s_type
         self.elec_labels = np.array([])
@@ -66,8 +64,7 @@ class Sensors(object):
              "2. number of sensors": self.number_of_sensors,
              "3. labels": reg_dict(self.labels),
              "4. locations": reg_dict(self.locations, self.labels),
-             "5. orientations": reg_dict(self.orientations, self.labels),
-             "6. gain_matrix": self.gain_matrix}
+             "5. gain_matrix": self.gain_matrix}
         return formal_repr(self, sort_dict(d))
 
     def __str__(self):
@@ -96,9 +93,6 @@ class Sensors(object):
         for ind in elec_inds:
             sensors_inds += self.elec_inds[ind]
         return np.unique(sensors_inds)
-
-    def compute_gain_matrix(self, connectivity, normalize=95, ceil=False):
-        return compute_gain_matrix(self.locations, connectivity.centres, normalize=normalize, ceil=ceil)
 
     def get_inds_labels_from_needles(self):
         channel_inds = []
