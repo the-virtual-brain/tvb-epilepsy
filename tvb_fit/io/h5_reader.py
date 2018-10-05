@@ -32,7 +32,9 @@ class H5Reader(object):
 
     connectivity_filename = "Connectivity.h5"
     cortical_surface_filename = "CorticalSurface.h5"
-    region_mapping_filename = "RegionMapping.h5"
+    subcortical_surface_filename = "SubcorticalSurface.h5"
+    cortical_region_mapping_filename = "RegionMapping.h5"
+    subcortical_region_mapping_filename = "RegionMappingSubcortical.h5"
     volume_mapping_filename = "VolumeMapping.h5"
     structural_mri_filename = "StructuralMRI.h5"
     sensors_filename_prefix = "Sensors"
@@ -117,11 +119,11 @@ class H5Reader(object):
 
             type = str_head_file[len(self.sensors_filename_prefix):str_head_file.index(self.sensors_filename_separator)]
             if type.upper() == Sensors.TYPE_SEEG:
-                sensors_seeg.append(self.read_sensors_of_type(os.path.join(path, head_file), Sensors.TYPE_SEEG))
+                sensors_seeg += self.read_sensors_of_type(os.path.join(path, head_file), Sensors.TYPE_SEEG)
             if type.upper() == Sensors.TYPE_EEG:
-                sensors_eeg.append(self.read_sensors_of_type(os.path.join(path, head_file), Sensors.TYPE_EEG))
+                sensors_eeg += self.read_sensors_of_type(os.path.join(path, head_file), Sensors.TYPE_EEG)
             if type.upper() == Sensors.TYPE_MEG:
-                sensors_meg.append(self.read_sensors_of_type(os.path.join(path, head_file), Sensors.TYPE_MEG))
+                sensors_meg += self.read_sensors_of_type(os.path.join(path, head_file), Sensors.TYPE_MEG)
 
         self.logger.info("Successfuly read all sensors from: %s" % path)
 
@@ -136,7 +138,7 @@ class H5Reader(object):
         """
         if not os.path.exists(sensors_file):
             self.logger.warning("Senors file %s does not exist!" % sensors_file)
-            return None
+            return []
 
         self.logger.info("Starting to read sensors of type %s from: %s" % (type, sensors_file))
         h5_file = h5py.File(sensors_file, 'r', libver='latest')
@@ -144,10 +146,6 @@ class H5Reader(object):
         labels = h5_file['/' + SensorsH5Field.LABELS][()]
         locations = h5_file['/' + SensorsH5Field.LOCATIONS][()]
 
-        if '/orientations' in h5_file:
-            orientations = h5_file['/orientations'][()]
-        else:
-            orientations = None
         if '/' + SensorsH5Field.GAIN_MATRIX in h5_file:
             gain_matrix = h5_file['/' + SensorsH5Field.GAIN_MATRIX][()]
         else:
@@ -155,10 +153,10 @@ class H5Reader(object):
 
         h5_file.close()
 
-        sensors = Sensors(labels, locations, orientations=orientations, gain_matrix=gain_matrix, s_type=type)
+        sensors = Sensors(labels, locations, gain_matrix=gain_matrix, s_type=type)
         self.logger.info("Successfully read sensors from: %s" % sensors_file)
 
-        return sensors
+        return [sensors]
 
     def read_volume_mapping(self, path):
         """
@@ -217,20 +215,27 @@ class H5Reader(object):
 
         return data
 
-    def read_head(self, path):
+    def read_head(self, path, atlas="default"):
         """
         :param path: Path towards a custom head folder
         :return: Head object
         """
         self.logger.info("Starting to read Head from: %s" % path)
         conn = self.read_connectivity(os.path.join(path, self.connectivity_filename))
-        srf = self.read_surface(os.path.join(path, self.cortical_surface_filename))
-        rm = self.read_region_mapping(os.path.join(path, self.region_mapping_filename))
+        cort_srf = self.read_surface(os.path.join(path, self.cortical_surface_filename))
+        subcort_srf = self.read_surface(os.path.join(path, self.subcortical_surface_filename))
+        cort_rm = self.read_region_mapping(os.path.join(path, self.cortical_region_mapping_filename))
+        subcort_rm = self.read_region_mapping(os.path.join(path, self.subcortical_region_mapping_filename))
         vm = self.read_volume_mapping(os.path.join(path, self.volume_mapping_filename))
         t1 = self.read_t1(os.path.join(path, self.structural_mri_filename))
         sensorsSEEG, sensorsEEG, sensorsMEG = self.read_sensors(path)
 
-        head = Head(conn, srf, rm, vm, t1, path, sensorsSEEG=sensorsSEEG, sensorsEEG=sensorsEEG, sensorsMEG=sensorsMEG)
+        if len(atlas) > 0:
+            name = atlas
+        else:
+            name = path
+        head = Head(conn, cort_srf, subcort_srf, cort_rm, subcort_rm, vm, t1, name,
+                    sensorsSEEG=sensorsSEEG, sensorsEEG=sensorsEEG, sensorsMEG=sensorsMEG)
         self.logger.info("Successfully read Head from: %s" % path)
 
         return head

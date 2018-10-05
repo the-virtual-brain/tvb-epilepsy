@@ -59,7 +59,7 @@ class TVBReader(object):
             self.logger.warning("\nNo Structural MRI file found at path " + path + "!")
             return []
 
-    def read_sensors(self, filename, root_folder, s_type):
+    def read_sensors(self, filename, root_folder, s_type, atlas=""):
         filename = ensure_list(filename)
         path = os.path.join(root_folder, filename[0])
         if os.path.isfile(path):
@@ -70,14 +70,14 @@ class TVBReader(object):
             else:
                 tvb_sensors = sensors.SensorsInternal.from_file(path)
             if len(filename) > 1:
-                gain_matrix = self.read_gain_matrix(os.path.join(root_folder, filename[1]), s_type)
+                gain_matrix = self.read_gain_matrix(os.path.join(root_folder, atlas, filename[1]), s_type, atlas)
             else:
                 gain_matrix = np.array([])
             return Sensors(tvb_sensors.labels, tvb_sensors.locations,
                            orientations=tvb_sensors.orientations, gain_matrix=gain_matrix, s_type=s_type)
         else:
             self.logger.warning("\nNo Sensor file found at path " + path + "!")
-            return None
+            return []
 
     def read_gain_matrix(self, path, s_type):
         if os.path.isfile(path):
@@ -92,26 +92,37 @@ class TVBReader(object):
             self.logger.warning("\nNo Projection Matrix file found at path " + path + "!")
             return None
 
-    def read_head(self, root_folder, name='',
+    def read_head(self, root_folder, name='', atlas="default",
                   connectivity_file="connectivity.zip",
-                  surface_file="surface.zip",
-                  region_mapping_file="region_mapping.txt",
+                  cortical_surface_file="surface_cort.zip",
+                  subcortical_surface_file="surface_subcort.zip",
+                  cortical_region_mapping_file="region_mapping_cort.txt",
+                  subcortical_region_mapping_file="region_mapping_subcort.txt",
                   eeg_sensors_files=[("eeg_brainstorm_65.txt", "gain_matrix_eeg_65_surface_16k.npy")],
                   meg_sensors_files=[("meg_brainstorm_276.txt", "gain_matrix_meg_276_surface_16k.npy")],
-                  seeg_sensors_files=[("seeg_588.txt", "gain_matrix_seeg_588_surface_16k.npy")],
+                  seeg_sensors_files=[("seeg_xyz.txt", "seeg_dipole_gain.txt"),
+                                      ("seeg_xyz.txt", "seeg_distance_gain.txt"),
+                                      ("seeg_xyz.txt", "seeg_regions_distance_gain.txt"),
+                                      ("seeg_588.txt", "gain_matrix_seeg_588_surface_16k.npy")],
+                  vm_file="aparc+aseg.nii.gz", t1_file="T1.nii.gz",
                   ):
-        conn = self.read_connectivity(os.path.join(root_folder, connectivity_file))
-        srf = self.read_cortical_surface(os.path.join(root_folder, surface_file))
-        rm = self.read_region_mapping(os.path.join(root_folder, region_mapping_file))
-        vm = None
-        t1 = None
+        conn = self.read_connectivity(os.path.join(root_folder, atlas, connectivity_file))
+        cort_srf = self.read_cortical_surface(os.path.join(root_folder, cortical_surface_file))
+        subcort_srf = self.read_cortical_surface(os.path.join(root_folder, subcortical_surface_file))
+        cort_rm = self.read_region_mapping(os.path.join(root_folder, atlas, cortical_region_mapping_file))
+        subcort_rm = self.read_region_mapping(os.path.join(root_folder, atlas, subcortical_region_mapping_file))
+        vm = self.read_volume_mapping(os.path.join(root_folder, atlas, vm_file))
+        t1 = self.read_t1(os.path.join(root_folder, t1_file))
         sensorsSEEG = []
         for s_files in ensure_list(seeg_sensors_files):
-            sensorsSEEG.append(self.read_sensors(s_files, root_folder, Sensors.TYPE_SEEG))
+            sensorsSEEG += self.read_sensors(s_files, root_folder, Sensors.TYPE_SEEG, atlas)
         sensorsEEG = []
         for s_files in ensure_list(eeg_sensors_files):
-            sensorsEEG.append(self.read_sensors(s_files, root_folder, Sensors.TYPE_EEG))
+            sensorsEEG += self.read_sensors(s_files, root_folder, Sensors.TYPE_EEG, atlas)
         sensorsMEG = []
         for s_files in ensure_list(meg_sensors_files):
-            sensorsMEG.append(self.read_sensors(s_files, root_folder, Sensors.TYPE_MEG))
-        return Head(conn, srf, rm, vm, t1, name, sensorsSEEG=sensorsSEEG, sensorsEEG=sensorsEEG, sensorsMEG=sensorsMEG)
+            sensorsMEG += self.read_sensors(s_files, root_folder, Sensors.TYPE_MEG, atlas)
+        if len(name) == 0:
+            name = atlas
+        return Head(conn, cort_srf, subcort_srf, cort_rm, subcort_rm, vm, t1, name,
+                    sensorsSEEG=sensorsSEEG, sensorsEEG=sensorsEEG, sensorsMEG=sensorsMEG)
