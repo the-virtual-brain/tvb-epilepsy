@@ -5,7 +5,7 @@ import numpy
 import matplotlib
 from matplotlib import pyplot
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from tvb_fit.tvb_epilepsy.base.constants.config import Config
+from tvb_fit.base.config import Config
 from tvb_fit.base.config import FiguresConfig
 from tvb_fit.base.utils.log_error_utils import initialize_logger, warning
 from tvb_fit.base.utils.data_structures_utils import ensure_list
