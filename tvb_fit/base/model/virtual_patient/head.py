@@ -56,13 +56,13 @@ class Head(object):
     def __str__(self):
         return self.__repr__()
 
-    def get_sensors(self, s_type=Sensors.TYPE_SEEG):
+    def get_sensors(self, s_type=SensorTypes.TYPE_SEEG):
         if np.in1d(s_type, [stype for stype in SensorTypes]):
             return getattr(self, "sensors" + s_type.value)
         else:
             raise_value_error("Invalid input sensor type " + str(s_type))
 
-    def set_sensors(self, input_sensors, s_type=Sensors.TYPE_SEEG, reset=False):
+    def set_sensors(self, input_sensors, s_type=SensorTypes.TYPE_SEEG, reset=False):
         if input_sensors is None:
             return
         sensors = ensure_list(self.get_sensors(s_type))
@@ -82,7 +82,7 @@ class Head(object):
         else:
             setattr(self, "sensors" + s_type.value, sensors)
 
-    def get_sensors_id(self, s_type=Sensors.TYPE_SEEG, sensor_ids=0):
+    def get_sensors_id(self, s_type=SensorTypes.TYPE_SEEG, sensor_ids=0):
         sensors = self.get_sensors(s_type)
         if sensors is None:
             return sensors
