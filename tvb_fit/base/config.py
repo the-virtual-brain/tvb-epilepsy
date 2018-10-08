@@ -126,7 +126,7 @@ class CalculusConfig(object):
     SYMBOLIC_CALCULATIONS_FLAG = False
 
     # Normalization configuration
-    WEIGHTS_NORM_PERCENT = 95
+    WEIGHTS_NORM_PERCENT = 99
 
     # Options: "auto_eigenvals",  "auto_disease", "auto_epileptogenicity", "auto_excitability",
     # or "user_defined", in which case we expect a number equal to from 1 to hypothesis.n_regions
