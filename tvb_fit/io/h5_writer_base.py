@@ -94,7 +94,10 @@ class H5WriterBase(object):
             # Continue recursively going deeper in the object
             if regress_subgroups:
                 for subgroup in subgroups:
-                    child_object = getattr(object, subgroup, None)
+                    if isinstance(object, dict):
+                        child_object = object.get(subgroup, None)
+                    else:
+                        child_object = getattr(object, subgroup, None)
                     if child_object is not None:
                         group.create_group(subgroup)
                         temp = self._prepare_object_for_group(group[subgroup], child_object,
