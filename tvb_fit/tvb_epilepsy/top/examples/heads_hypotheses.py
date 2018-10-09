@@ -5,7 +5,6 @@ import glob
 import h5py
 import numpy as np
 from matplotlib import pyplot as plt
-from tvb_fit.base.utils.log_error_utils import warning
 from tvb_fit.io.h5_reader import H5Reader
 from tvb_fit.io.h5_writer_base import H5WriterBase as H5Writer
 from tvb_fit.plot.base_plotter import BasePlotter
@@ -24,6 +23,50 @@ def unzip_folder(zippath, outdir=None):
     zip_ref = zipfile.ZipFile(zippath+".zip", 'r')
     zip_ref.extractall(outdir)
     zip_ref.close()
+
+
+def correct_TVB28(hypopath="/Users/dionperd/Dropbox/Work/VBtech/VEP/results/CC/TVB28/HeadDK",
+                  oldHeadPath="/Users/dionperd/Dropbox/Work/VBtech/VEP/results/CC/old/TVB28/Head",
+                  newConnPath="/Users/dionperd/Dropbox/Work/VBtech/VEP/results/CC/TVB28/tvb/default/connectivity"):
+    # Old TVB20 hypothesis is defined on a DK parcellation with only 74 regions.
+    # This scipt is meant to map it to the normal one with all 87 regions.
+    # The mapping will happen via the region labels
+    old_conn = h5py.File(os.path.join(oldHeadPath, "Connectivity.h5"), "r")
+    old_regions = old_conn["region_labels"][()]
+    old_conn.close()
+    unzip_folder(newConnPath)
+    new_regions = np.loadtxt(os.path.join(newConnPath, "centers.txt"), usecols=0, dtype="str")
+    rmtree(newConnPath)
+    for hypo in ["preseeg", "postseeg"]:
+        print(hypo)
+        hypofile = h5py.File(os.path.join(hypopath, hypo, hypo+".h5"), "r+")
+        old_values = hypofile["values"][()]
+        old_comments = hypofile["comments"][()]
+        del hypofile["values"]
+        del hypofile["comments"]
+        old_reg_inds = np.where(old_values > 0)[0]
+        old_values = old_values[old_reg_inds]
+        new_values = np.zeros((new_regions.shape[0], ), dtype=old_values.dtype)
+        new_comments = np.zeros((new_regions.shape[0], 2), dtype=old_comments.dtype)
+        for iregion in range(new_regions.shape[0]):
+            new_comments[iregion, 0] = new_regions[iregion]
+        for ihyp, (old_reg_ind, value) in enumerate(zip(old_reg_inds, old_values)):
+            print(ihyp)
+            region = old_regions[old_reg_ind]
+            print("old: %s. %s: %s" % (str(old_reg_ind), region, str(value)))
+            new_reg_ind = np.where(region == new_regions)[0][0]
+            new_values[new_reg_ind] = value
+            print("new: %s. %s: %s" % (str(new_reg_ind), region, str(value)))
+            old_comment_ind = np.where(region == old_comments[:, 0])[0][0]
+            print("old: %s. %s: %s" %
+                    (str(old_comment_ind), old_comments[old_comment_ind, 0], old_comments[old_comment_ind, 1]))
+            new_comments[new_reg_ind, 1] = old_comments[old_comment_ind, 1]
+            print("new: %s. %s: %s" %
+                  (str(new_reg_ind), new_comments[new_reg_ind, 0], new_comments[new_reg_ind, 1]))
+        hypofile.create_dataset("values", data=new_values)
+        hypofile.create_dataset("comments", data=new_comments)
+        hypofile.attrs["Number_of_nodes"] = new_regions.shape[0]
+        hypofile.close()
 
 
 def hypo2hypo(orig_hypos_path, orig_head, new_head, orig_gain, new_gain):
@@ -311,11 +354,13 @@ if __name__ == "__main__":
                 axes[0] = plotter.plot_regions2regions(head_stats[head_suffix]["connectomes_zscore"][isubject].squeeze(),
                                                        heads[head_suffix].connectivity.region_labels, 121,
                                                        "weights zscore", show_x_labels=True, show_y_labels=True,
-                                                       x_ticks=regions_ticks, y_ticks=regions_ticks, cmap="jet")[0]
+                                                       x_ticks=regions_ticks, y_ticks=regions_ticks,
+                                                       cmap="jet", vmin=-3, vmax=+3)[0]
                 axes[1] = plotter.plot_regions2regions(head_stats[head_suffix]["tracts_zscore"][isubject].squeeze(),
                                                        heads[head_suffix].connectivity.region_labels, 122,
                                                        "tracts zscore", show_x_labels=True, show_y_labels=True,
-                                                       x_ticks=regions_ticks, y_ticks=regions_ticks, cmap="jet")[0]
+                                                       x_ticks=regions_ticks, y_ticks=regions_ticks,
+                                                       cmap="jet", vmin=-3, vmax=+3)[0]
 
                 plt.savefig(os.path.join(conn_figs_path, subject + "_" + head_suffix + "_conn_zscore.png"),
                             orientation='landscape')
