@@ -157,7 +157,7 @@ class BasePlotter(object):
     @staticmethod
     def _plot_matrix(matrix, xlabels, ylabels, subplot=111, title="", show_x_labels=True, show_y_labels=True,
                      x_ticks=numpy.array([]), y_ticks=numpy.array([]), indices_red_x=None, indices_red_y=None,
-                     sharex=None, sharey=None, cmap='autumn_r'):
+                     sharex=None, sharey=None, cmap='autumn_r', vmin=None, vmax=None):
         ax = pyplot.subplot(subplot, sharex=sharex, sharey=sharey)
         pyplot.title(title)
         nx, ny = matrix.shape
@@ -170,7 +170,7 @@ class BasePlotter(object):
                 ticks[ii] = numpy.array(range(n), dtype=numpy.int32)
             nticks.append(len(ticks[ii]))
         cmap = pyplot.set_cmap(cmap)
-        img = pyplot.imshow(matrix[ticks[0]][:, ticks[1]].T, cmap=cmap, interpolation='none')
+        img = pyplot.imshow(matrix[ticks[0]][:, ticks[1]].T, cmap=cmap, vmin=vmin, vmax=vmax, interpolation='none')
         pyplot.grid(True, color='black')
         for ii, (xy, tick, ntick, ind_red, show, lbls, rot) in enumerate(zip(["x", "y"], ticks, nticks, indices_red,
                                                                       [show_x_labels, show_y_labels], labels, [90, 0])):
@@ -197,9 +197,9 @@ class BasePlotter(object):
 
     def plot_regions2regions(self, adj, labels, subplot, title, show_x_labels=True, show_y_labels=True,
                              x_ticks=numpy.array([]), y_ticks=numpy.array([]), indices_red_x=None, indices_red_y=None,
-                             sharex=None, sharey=None, cmap='autumn_r'):
+                             sharex=None, sharey=None, cmap='autumn_r', vmin=None, vmax=None):
         return self._plot_matrix(adj, labels, labels, subplot, title, show_x_labels, show_y_labels,
-                     x_ticks, y_ticks, indices_red_x, indices_red_y, sharex, sharey, cmap)
+                     x_ticks, y_ticks, indices_red_x, indices_red_y, sharex, sharey, cmap, vmin, vmax)
 
     @staticmethod
     def _set_axis_labels(fig, sub, n_regions, region_labels, indices2emphasize, color='k', position='left'):
