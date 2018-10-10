@@ -459,93 +459,93 @@ if __name__ == "__main__":
             print(this_hypos_string)
             hypos_string += this_hypos_string
 
-    with open(os.path.join(testheads_path, "hypos.txt"), "w") as text_file:
-        text_file.write(hypos_string)
+    # with open(os.path.join(testheads_path, "hypos.txt"), "w") as text_file:
+    #     text_file.write(hypos_string)
     if not(READ_HYPOS_FLAG):
         h5_writer.write_object_to_file(os.path.join(testheads_path, "hypos.h5"), hypos)
 
-    if not READ_HEAD_STATS_FLAG :
-        for head_suffix in ["DK", "D"]:
-            head_stats[head_suffix] = {"connectomes_mean": np.nanmean(connectomes[head_suffix], axis=0)}
-            head_stats[head_suffix].update({"tracts_mean": np.nanmean(tracts[head_suffix], axis=0)})
-            head_stats[head_suffix].update({"areas_mean": np.nanmean(areas[head_suffix], axis=0)})
-            # head_stats[head_suffix].update({"orientations_mean": np.nanmean(orientations[head_suffix], axis=0)})
-            head_stats[head_suffix].update({"connectomes_std": np.nanstd(connectomes[head_suffix], axis=0)})
-            head_stats[head_suffix].update({"tracts_std": np.nanstd(tracts[head_suffix], axis=0)})
-            head_stats[head_suffix].update({"areas_std": np.nanstd(areas[head_suffix], axis=0)})
-            # head_stats[head_suffix].update({"orientations_std": np.nanstd(orientations[head_suffix], axis=0)})
-
-            head_stats[head_suffix].update({"connectomes_zscore": np.zeros(connectomes[head_suffix].shape)})
-            head_stats[head_suffix].update({"tracts_zscore": np.zeros(tracts[head_suffix].shape)})
-            head_stats[head_suffix].update({"areas_zscore": np.zeros(areas[head_suffix].shape)})
-        # head_stats[head_suffix].update({"orientations_zscore": np.zeros(orientations[head_suffix].shape)})
-
-    for isubject, subject in enumerate(subjects):
-        print(subject)
-
-        subject_path = os.path.join(respath, subject)
-        for head_suffix, def_nregions in zip(head_suffixes, atlas_def_nregions):
-            print(head_suffix)
-            if not READ_HEAD_STATS_FLAG:
-                head_stats[head_suffix]["connectomes_zscore"][isubject] = \
-                                (connectomes[head_suffix][isubject] - head_stats[head_suffix]["connectomes_mean"]) / \
-                                        head_stats[head_suffix]["connectomes_std"]
-                head_stats[head_suffix]["tracts_zscore"][isubject] = \
-                                        (tracts[head_suffix][isubject] - head_stats[head_suffix][ "tracts_mean"]) / \
-                                                    head_stats[head_suffix]["tracts_std"]
-                head_stats[head_suffix]["areas_zscore"][isubject] = \
-                                            (areas[head_suffix][isubject] - head_stats[head_suffix]["areas_mean"]) / \
-                                                        head_stats[head_suffix]["areas_std"]
-                # head_stats[head_suffix]["orientations_zscore"][isubject] = \
-                #              (orientations[head_suffix][isubject] - head_stats[head_suffix]["orientations_mean"]) / \
-                #                                     head_stats[head_suffix]["orientations_std"]
-
-            head_path = os.path.join(subject_path, "Head" + head_suffix)
-            if head_stats[head_suffix]["connectomes_zscore"][isubject].squeeze().shape[0] == def_nregions:
-                regions_ticks = np.array(range(def_nregions))
-                fig, axes = plt.subplots(1, 2, figsize=(60, 30))
-                axes = np.reshape(axes, (axes.size,))
-                axes[0] = plotter.plot_regions2regions(head_stats[head_suffix]["connectomes_zscore"][isubject].squeeze(),
-                                                       region_labels[head_suffix], 121,
-                                                       "weights zscore", show_x_labels=True, show_y_labels=True,
-                                                       x_ticks=regions_ticks, y_ticks=regions_ticks,
-                                                       cmap="jet", vmin=-3, vmax=+3)[0]
-                axes[1] = plotter.plot_regions2regions(head_stats[head_suffix]["tracts_zscore"][isubject].squeeze(),
-                                                       region_labels[head_suffix], 122,
-                                                       "tracts zscore", show_x_labels=True, show_y_labels=True,
-                                                       x_ticks=regions_ticks, y_ticks=regions_ticks,
-                                                       cmap="jet", vmin=-3, vmax=+3)[0]
-
-                plt.savefig(os.path.join(conn_figs_path, subject + "_" + head_suffix + "_conn_zscore.png"),
-                            orientation='landscape')
-            else:
-                print("WTF?")
-
-    if not READ_HEAD_STATS_FLAG :
-        h5_writer.write_object_to_file(os.path.join(testheads_path, "head_stats.h5"), head_stats)
-
-    for head_suffix, def_nregions in zip(head_suffixes, atlas_def_nregions):
-        this_areas_zscore = np.array(head_stats[head_suffix]["areas_zscore"])
-        this_areas_zscore[np.isnan(this_areas_zscore)] = 0.0
-        fig, axes = plt.subplots(1, 1, figsize=(60, 30))
-        for isubject, subject in enumerate(subjects):
-            subj_id = isubject+1
-            for reg_ind in range(def_nregions):
-                axes.text(float(reg_ind), float(this_areas_zscore[isubject, reg_ind]), str(subj_id))
-        x = np.array(range(def_nregions))
-        axes.plot(x, 3 * np.ones(x.shape), 'r')
-        axes.plot(x, -3 * np.ones(x.shape), 'r')
-        axes.set_ylim(-6, 6)
-        axes.set_xticks(x )
-        axes.set_xticklabels(region_labels[head_suffix], rotation=90)
-        plt.savefig(os.path.join(figspath, "areas_zscore_%s.png" % head_suffix), orientation='landscape')
-
-        # for isubject, subject in enumerate(subjects):
-        #     fig, axes = plt.subplots(1, 1, figsize=(60, 30))
-        #     img = axes.imshow(head_stats[head_suffix]["orientations_zscore"][isubject].squeeze().T,
-        #                       cmap="jet", vmin=-3, vmax=3)
-        #     axes.set_xticks(np.array(range(def_nregions)))
-        #     axes.set_xticklabels(region_labels[head_suffix], rotation=90)
-        #     plt.colorbar(img)
-        #     plt.savefig(os.path.join(orientations_figs_path, "%s_%s_orientations_zscore.png" % (subject, head_suffix)),
-        #                 orientation='landscape')
+    # if not READ_HEAD_STATS_FLAG :
+    #     for head_suffix in ["DK", "D"]:
+    #         head_stats[head_suffix] = {"connectomes_mean": np.nanmean(connectomes[head_suffix], axis=0)}
+    #         head_stats[head_suffix].update({"tracts_mean": np.nanmean(tracts[head_suffix], axis=0)})
+    #         head_stats[head_suffix].update({"areas_mean": np.nanmean(areas[head_suffix], axis=0)})
+    #         # head_stats[head_suffix].update({"orientations_mean": np.nanmean(orientations[head_suffix], axis=0)})
+    #         head_stats[head_suffix].update({"connectomes_std": np.nanstd(connectomes[head_suffix], axis=0)})
+    #         head_stats[head_suffix].update({"tracts_std": np.nanstd(tracts[head_suffix], axis=0)})
+    #         head_stats[head_suffix].update({"areas_std": np.nanstd(areas[head_suffix], axis=0)})
+    #         # head_stats[head_suffix].update({"orientations_std": np.nanstd(orientations[head_suffix], axis=0)})
+    #
+    #         head_stats[head_suffix].update({"connectomes_zscore": np.zeros(connectomes[head_suffix].shape)})
+    #         head_stats[head_suffix].update({"tracts_zscore": np.zeros(tracts[head_suffix].shape)})
+    #         head_stats[head_suffix].update({"areas_zscore": np.zeros(areas[head_suffix].shape)})
+    #     # head_stats[head_suffix].update({"orientations_zscore": np.zeros(orientations[head_suffix].shape)})
+    #
+    # for isubject, subject in enumerate(subjects):
+    #     print(subject)
+    #
+    #     subject_path = os.path.join(respath, subject)
+    #     for head_suffix, def_nregions in zip(head_suffixes, atlas_def_nregions):
+    #         print(head_suffix)
+    #         if not READ_HEAD_STATS_FLAG:
+    #             head_stats[head_suffix]["connectomes_zscore"][isubject] = \
+    #                             (connectomes[head_suffix][isubject] - head_stats[head_suffix]["connectomes_mean"]) / \
+    #                                     head_stats[head_suffix]["connectomes_std"]
+    #             head_stats[head_suffix]["tracts_zscore"][isubject] = \
+    #                                     (tracts[head_suffix][isubject] - head_stats[head_suffix][ "tracts_mean"]) / \
+    #                                                 head_stats[head_suffix]["tracts_std"]
+    #             head_stats[head_suffix]["areas_zscore"][isubject] = \
+    #                                         (areas[head_suffix][isubject] - head_stats[head_suffix]["areas_mean"]) / \
+    #                                                     head_stats[head_suffix]["areas_std"]
+    #             # head_stats[head_suffix]["orientations_zscore"][isubject] = \
+    #             #              (orientations[head_suffix][isubject] - head_stats[head_suffix]["orientations_mean"]) / \
+    #             #                                     head_stats[head_suffix]["orientations_std"]
+    #
+    #         head_path = os.path.join(subject_path, "Head" + head_suffix)
+    #         if head_stats[head_suffix]["connectomes_zscore"][isubject].squeeze().shape[0] == def_nregions:
+    #             regions_ticks = np.array(range(def_nregions))
+    #             fig, axes = plt.subplots(1, 2, figsize=(60, 30))
+    #             axes = np.reshape(axes, (axes.size,))
+    #             axes[0] = plotter.plot_regions2regions(head_stats[head_suffix]["connectomes_zscore"][isubject].squeeze(),
+    #                                                    region_labels[head_suffix], 121,
+    #                                                    "weights zscore", show_x_labels=True, show_y_labels=True,
+    #                                                    x_ticks=regions_ticks, y_ticks=regions_ticks,
+    #                                                    cmap="jet", vmin=-3, vmax=+3)[0]
+    #             axes[1] = plotter.plot_regions2regions(head_stats[head_suffix]["tracts_zscore"][isubject].squeeze(),
+    #                                                    region_labels[head_suffix], 122,
+    #                                                    "tracts zscore", show_x_labels=True, show_y_labels=True,
+    #                                                    x_ticks=regions_ticks, y_ticks=regions_ticks,
+    #                                                    cmap="jet", vmin=-3, vmax=+3)[0]
+    #
+    #             plt.savefig(os.path.join(conn_figs_path, subject + "_" + head_suffix + "_conn_zscore.png"),
+    #                         orientation='landscape')
+    #         else:
+    #             print("WTF?")
+    #
+    # if not READ_HEAD_STATS_FLAG :
+    #     h5_writer.write_object_to_file(os.path.join(testheads_path, "head_stats.h5"), head_stats)
+    #
+    # for head_suffix, def_nregions in zip(head_suffixes, atlas_def_nregions):
+    #     this_areas_zscore = np.array(head_stats[head_suffix]["areas_zscore"])
+    #     this_areas_zscore[np.isnan(this_areas_zscore)] = 0.0
+    #     fig, axes = plt.subplots(1, 1, figsize=(60, 30))
+    #     for isubject, subject in enumerate(subjects):
+    #         subj_id = isubject+1
+    #         for reg_ind in range(def_nregions):
+    #             axes.text(float(reg_ind), float(this_areas_zscore[isubject, reg_ind]), str(subj_id))
+    #     x = np.array(range(def_nregions))
+    #     axes.plot(x, 3 * np.ones(x.shape), 'r')
+    #     axes.plot(x, -3 * np.ones(x.shape), 'r')
+    #     axes.set_ylim(-6, 6)
+    #     axes.set_xticks(x )
+    #     axes.set_xticklabels(region_labels[head_suffix], rotation=90)
+    #     plt.savefig(os.path.join(figspath, "areas_zscore_%s.png" % head_suffix), orientation='landscape')
+    #
+    #     # for isubject, subject in enumerate(subjects):
+    #     #     fig, axes = plt.subplots(1, 1, figsize=(60, 30))
+    #     #     img = axes.imshow(head_stats[head_suffix]["orientations_zscore"][isubject].squeeze().T,
+    #     #                       cmap="jet", vmin=-3, vmax=3)
+    #     #     axes.set_xticks(np.array(range(def_nregions)))
+    #     #     axes.set_xticklabels(region_labels[head_suffix], rotation=90)
+    #     #     plt.colorbar(img)
+    #     #     plt.savefig(os.path.join(orientations_figs_path, "%s_%s_orientations_zscore.png" % (subject, head_suffix)),
+    #     #                 orientation='landscape')
