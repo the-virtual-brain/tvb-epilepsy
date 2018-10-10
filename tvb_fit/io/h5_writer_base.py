@@ -25,10 +25,10 @@ class H5WriterBase(object):
                 dict_object = vars(object)
             for key, value in dict_object.items():
                 if isinstance(value, numpy.ndarray):
-                    if value.size == 1:
-                        metadata_dict.update({key: value})
-                    else:
-                        datasets_dict.update({key: value})
+                    # if value.size == 1:
+                    #     metadata_dict.update({key: value})
+                    # else:
+                    datasets_dict.update({key: value})
                     # if datasets_size is not None and value.size == datasets_size:
                     #     datasets_dict.update({key: value})
                     # else:
