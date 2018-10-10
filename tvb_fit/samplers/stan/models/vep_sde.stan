@@ -43,10 +43,10 @@ functions {
     }
 
     row_vector z_step(row_vector x1, row_vector z, row_vector x0, matrix FC, vector Ic, real x1_eq_def, real tau1,
-                      row_vector dZt, real sigma, real tau0) {
+                      row_vector dWt, real sigma, real tau0) {
         int n_active_regions = num_elements(z);
         row_vector[n_active_regions] dz = fz(x1, z, x0, FC, Ic, x1_eq_def, tau1, tau0);
-        row_vector[n_active_regions] z_next = z + (tau1 * dz) + dZt * sigma;
+        row_vector[n_active_regions] z_next = z + (tau1 * dz) + dWt * sigma;
         return z_next;
     }
 
@@ -95,24 +95,36 @@ functions {
 
 
 data {
-    int DEBUG;
-    int SIMULATE;
-    int UPSAMPLE;
-    int n_active_regions;
-    int n_times; // 1012
-    int n_target_data;
+    int DEBUG; // flag to print debugging messages once (DEBUG > 0) or at every iteration (DEBUG > 1)
+    int SIMULATE; // flag to fit data (SIMULATE < 1) or just generate data
+    int UPSAMPLE; // flag and integer upsampling ratio for UPSAMPLE > 1
+
+    int n_active_regions; // number of active regions
+    int n_times; // 1012 // number of time points
+    int n_target_data;   // number of target time series
+
+    real dt; // integration time step, ~= 0.1 (used 0.0976562)
+    row_vector[n_target_data] target_data[n_times]; // data to fit
+    int LOG_TARGET_DATA; // flag, 1 for log, 0 for linear obervation function
+    matrix[n_target_data, n_active_regions] gain; // source to sensor gain matrix
+
+    // Constant dynamic model parameters
     real Iext1; //=3.1
-    real dt; //~= 0.1 (used 0.0976562)
-    int XMODE;
+    vector[n_active_regions] Ic; // Total input from non active regions
+    matrix<lower=0.0, upper=1.0>[n_active_regions, n_active_regions] SC; // Structural connectivity input
+
+    // Priors related data:
+
+    // Epileptogenicity or Excitability
+    int XMODE; // flag to sample x1eq (XMODE > 0) or x0
     real x_lo;
     real x_hi;
     // real x_std;
     row_vector [n_active_regions] x_star_mu;
     row_vector [n_active_regions] x_star_std;
-    // row_vector [n_active_regions] x1eq_mu;  // healthy: -5.0/3 , sick ~=-1.333, max = 1.8, min = -1.1
     real x1_eq_def; // = -5.0/3 the value of all healhty non-active nodes, i.e. the resting manifold
-    // real x1_lo;
-    // real x1_hi;
+
+    // Initial conditions
     row_vector [n_active_regions] x1_init_mu; // in [-2.0, -1.0], used -1.566
     row_vector [n_active_regions] z_init_mu; // in [2.9, 4.5], used 3.060
     real x1_init_lo;
@@ -121,43 +133,53 @@ data {
     real z_init_lo;
     real z_init_hi;
     real z_init_std; // 0.0333/2
-    int TAU1_PRIOR;
+
+    // Dynamic model hyperparameters
+
+    // General time scale parameter
+    int TAU1_PRIOR; // flag to fit tau1 (>0) or just dummy-sample it
     real tau1_mu; // 0.5
     real tau1_std; // 0.0667
     real tau1_lo;
     real tau1_hi;
-    int TAU0_PRIOR;
+
+    // Time scale separation parameter
+    int TAU0_PRIOR; // flag to fit tau0 (>0) or just dummy-sample it
     real tau0_mu; // 0.5
     real tau0_std; // 0.0667
     real tau0_lo;
     real tau0_hi;
-    int K_PRIOR;
+
+    // Global coupling scaling
+    int K_PRIOR; // flag to fit K (>0) or just dummy-sample it
     real K_mu; // 3.448 = 3 * 100 / n_regions(=87)
     real K_std; // 0.575 = K_mu/6
     real K_lo;
     real K_hi;
-    int SDE;
+
+    // Integration parameters
+    int SDE; // flag to fit tau1 (>0) or just dummy-sample it
     real sigma_mu; // =0.1
     real sigma_std; // =0.1/2
     real sigma_lo; //0.05
     real sigma_hi; // 0.15
+
+    // Observation model hyperparameters
     real epsilon_lo; //0.0
     real epsilon_hi; // 1.0
     real epsilon_mu; //=0.1
     real epsilon_std; //=0.1/3
+
     real offset_mu;  //=0.0
     real offset_std; //=1.0
     real offset_lo; //=offset_mu-1.0
     real offset_hi; //=offset_mu+1.0
+
     real scale_mu; //=0.5
     real scale_std; //=0.5/3
     real scale_lo; // =0.1
     real scale_hi; // =1.0
-    int log_target_data; // 1 for log, 0 for linear obervation function
-    matrix[n_target_data, n_active_regions] gain;
-    row_vector[n_target_data] target_data[n_times];
-    vector[n_active_regions] Ic;
-    matrix<lower=0.0, upper=1.0>[n_active_regions, n_active_regions] SC;
+
 }
 
 
@@ -168,17 +190,20 @@ transformed data {
 
     // Transformations from standard normal to normal or lognormal distributions,
     // as well as of their upper ane lower limits
-    real offset_star_lo = (offset_lo - offset_mu)/offset_std;
-    real offset_star_hi = (offset_hi - offset_mu)/offset_std;
-    real scale_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(scale_mu, scale_std);
-    real scale_star_lo = lognormal_to_standard_normal(scale_lo, scale_mu_sigma[1], scale_mu_sigma[2]);
-    real scale_star_hi = lognormal_to_standard_normal(scale_hi, scale_mu_sigma[1], scale_mu_sigma[2]);
-    real epsilon_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(epsilon_mu, epsilon_std);
-    real epsilon_star_lo = -1.000;
-    real epsilon_star_hi = lognormal_to_standard_normal(epsilon_hi, epsilon_mu_sigma[1], epsilon_mu_sigma[2]);
-    real sigma_star_lo = -1.0;
-    real sigma_star_hi = 1.0;
-    real sigma_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(sigma_mu, sigma_std);
+
+    // Epileptogenicity or Excitability
+    row_vector[n_active_regions] x_logmu = normal_mean_std_to_lognorm_mu(x_star_mu, x_star_std);
+    row_vector[n_active_regions] x_logsigma = normal_mean_std_to_lognorm_sigma(x_star_mu, x_star_std);
+    real x_star_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(max(x_star_mu), max(x_star_std));
+    real x_star_hi = lognormal_to_standard_normal(x_hi - x_lo, x_star_mu_sigma[1], x_star_mu_sigma[2]);
+
+    // Initial conditions
+    real x1_init_star_lo = (x1_init_lo - max(x1_init_mu))/x1_init_std;
+    real x1_init_star_hi = (x1_init_hi - min(x1_init_mu))/x1_init_std;
+    real z_init_star_lo = (z_init_lo - max(z_init_mu))/z_init_std;
+    real z_init_star_hi = (z_init_hi - min(z_init_mu))/z_init_std;
+
+    // Dynamic model hyperparameters
     real tau1_star_lo = -1.0;
     real tau1_star_hi = 1.0;
     real tau1_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(tau1_mu, tau1_std);
@@ -188,34 +213,28 @@ transformed data {
     real K_star_lo = -1.0;
     real K_star_hi = 1.0;
     real K_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(K_mu, K_std);
-    row_vector[n_active_regions] x_logmu = normal_mean_std_to_lognorm_mu(x_star_mu, x_star_std);
-    row_vector[n_active_regions] x_logsigma = normal_mean_std_to_lognorm_sigma(x_star_mu, x_star_std);
-    real x_star_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(max(x_star_mu), max(x_star_std));
-    real x_star_hi = lognormal_to_standard_normal(x_hi - x_lo, x_star_mu_sigma[1], x_star_mu_sigma[2]);
-    real x1_init_star_lo = (x1_init_lo - max(x1_init_mu))/x1_init_std;
-    real x1_init_star_hi = (x1_init_hi - min(x1_init_mu))/x1_init_std;
-    real z_init_star_lo = (z_init_lo - max(z_init_mu))/z_init_std;
-    real z_init_star_hi = (z_init_hi - min(z_init_mu))/z_init_std;
 
-    // The model connnectivity prior
+    // Integration parameters
+    real sigma_star_lo = -1.0;
+    real sigma_star_hi = 1.0;
+    real sigma_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(sigma_mu, sigma_std);
+
+    // Observation model hyperparameters
+    real epsilon_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(epsilon_mu, epsilon_std);
+    real epsilon_star_lo = -1.000;
+    real epsilon_star_hi = lognormal_to_standard_normal(epsilon_hi, epsilon_mu_sigma[1], epsilon_mu_sigma[2]);
+    real offset_star_lo = (offset_lo - offset_mu)/offset_std;
+    real offset_star_hi = (offset_hi - offset_mu)/offset_std;
+    real scale_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(scale_mu, scale_std);
+    real scale_star_lo = lognormal_to_standard_normal(scale_lo, scale_mu_sigma[1], scale_mu_sigma[2]);
+    real scale_star_hi = lognormal_to_standard_normal(scale_hi, scale_mu_sigma[1], scale_mu_sigma[2]);
+
+    // Model connectivity constant
     matrix [n_active_regions, n_active_regions] SC_ = SC;
     for (i in 1:n_active_regions) SC_[i, i] = 0;
     SC_ = SC_ / max(SC_) * rows(SC_);
 
-    // More transformations like above...
-    if (epsilon_lo>0) {
-        epsilon_star_lo = lognormal_to_standard_normal(epsilon_lo, epsilon_mu_sigma[1], epsilon_mu_sigma[2]);
-        print("epsilon_star_lo = ", epsilon_star_lo)
-    }
-
-    if (SDE>0) {
-        if (sigma_lo>0) {
-            sigma_star_lo = lognormal_to_standard_normal(sigma_lo, sigma_mu_sigma[1], sigma_mu_sigma[2]);
-        } else {
-            sigma_star_lo = -1000.0;
-        }
-        sigma_star_hi = lognormal_to_standard_normal(sigma_hi, sigma_mu_sigma[1], sigma_mu_sigma[2]);
-    }
+    // Dynamic model hyperparameters
 
     if (TAU1_PRIOR>0) {
         tau1_star_lo = lognormal_to_standard_normal(tau1_lo, tau1_mu_sigma[1], tau1_mu_sigma[2]);
@@ -232,10 +251,25 @@ transformed data {
         K_star_hi = lognormal_to_standard_normal(K_hi, K_mu_sigma[1], K_mu_sigma[2]);
     }
 
+    // Observation model hyperparameters
+    if (epsilon_lo>0) {
+        epsilon_star_lo = lognormal_to_standard_normal(epsilon_lo, epsilon_mu_sigma[1], epsilon_mu_sigma[2]);
+    }
+
+    // Integration parameters
+    if (SDE>0) {
+        if (sigma_lo>0) {
+            sigma_star_lo = lognormal_to_standard_normal(sigma_lo, sigma_mu_sigma[1], sigma_mu_sigma[2]);
+        } else {
+            sigma_star_lo = -1000.0;
+        }
+        sigma_star_hi = lognormal_to_standard_normal(sigma_hi, sigma_mu_sigma[1], sigma_mu_sigma[2]);
+    }
+
     if (DEBUG > 0) {
         print("scale_mu_sigma=", scale_mu_sigma,
               ", scale=", standard_normal_to_lognormal(0.0, scale_mu_sigma[1], scale_mu_sigma[2]));
-        print("epsilon_mu_sigma=", epsilon_mu_sigma,
+        print("epsilon_star_lo = ", epsilon_star_lo, "epsilon_mu_sigma=", epsilon_mu_sigma,
               ", epsilon=", standard_normal_to_lognormal(0.0, epsilon_mu_sigma[1], epsilon_mu_sigma[2]));
         if (TAU1_PRIOR>0) {
             print("tau1_mu_sigma=", tau1_mu_sigma,
@@ -259,51 +293,71 @@ transformed data {
 
 
 parameters {
-    // integrate and predict
+    // Epileptogenicity or Excitability
     row_vector<upper=x_star_hi>[n_active_regions] x_star;
-    real<lower=epsilon_star_lo, upper=epsilon_star_hi>epsilon_star;
-    real<lower=scale_star_lo, upper=scale_star_hi> scale_star;
-    real<lower=offset_star_lo, upper=offset_star_hi> offset_star;
-    real<lower=sigma_star_lo, upper=sigma_star_hi> sigma_star;
+
+    // Initial conditions
+    row_vector<lower=x1_init_star_lo, upper=x1_init_star_hi>[n_active_regions] x1_init_star;
+    row_vector<lower=z_init_star_lo, upper=z_init_star_hi>[n_active_regions] z_init_star;
+
+    // Dynamic model hyperparameters
     real<lower=tau1_star_lo, upper=tau1_star_hi> tau1_star;
     real<lower=tau0_star_lo, upper=tau0_star_hi> tau0_star;
     real<lower=K_star_lo, upper=K_star_hi> K_star;
 
-    // time-series state non-centering:
-    row_vector<lower=x1_init_star_lo, upper=x1_init_star_hi>[n_active_regions] x1_init_star;
-    row_vector<lower=z_init_star_lo, upper=z_init_star_hi>[n_active_regions] z_init_star;
-    // row_vector[n_active_regions] dX1t_star[n_times - 1];
-    row_vector[n_active_regions] dZt_star[n_times - 1];
+    // Integration parameters
+    real<lower=sigma_star_lo, upper=sigma_star_hi> sigma_star;
+    row_vector[n_active_regions] dWt_star[n_times - 1];
+
+    // Observation model hyperparameters
+    real<lower=epsilon_star_lo, upper=epsilon_star_hi>epsilon_star;
+    real<lower=scale_star_lo, upper=scale_star_hi> scale_star;
+    real<lower=offset_star_lo, upper=offset_star_hi> offset_star;
 
 }
 
 
 transformed parameters {
-    real offset = offset_mu + offset_star * offset_std;
-    real scale = standard_normal_to_lognormal(scale_star, scale_mu_sigma[1], scale_mu_sigma[2]);
-    real epsilon = standard_normal_to_lognormal(epsilon_star, epsilon_mu_sigma[1], epsilon_mu_sigma[2]);
-    real sigma;
+
+    // Epileptogenicity or Excitability
+    row_vector[n_active_regions] x = x_hi - standard_normal_to_lognormal_row(x_star, x_logmu, x_logsigma);
+    row_vector[n_active_regions] x1eq; //x1 equilibrium point
+    row_vector[n_active_regions] zeq; //z equilibrium point
+    row_vector[n_active_regions] x0; // Excitability
+
+    // Initial conditions
+    row_vector[n_active_regions] x1_init;
+    row_vector[n_active_regions] z_init;
+
+    row_vector[n_active_regions] x1[n_times];  // <lower=x1_lo, upper=x1_hi>
+    row_vector[n_active_regions] z[n_times];
+
+    // Dynamic model hyperparameters
     real tau1;
     real tau0;
     real K;
-    row_vector[n_active_regions] x = x_hi - standard_normal_to_lognormal_row(x_star, x_logmu, x_logsigma);
-    row_vector[n_active_regions] x1eq;
-    row_vector[n_active_regions] zeq;
-    row_vector[n_active_regions] x0;
-    row_vector[n_active_regions] x1_init;
-    row_vector[n_active_regions] z_init;
-    row_vector[n_active_regions] x1[n_times];  // <lower=x1_lo, upper=x1_hi>
-    row_vector[n_active_regions] z[n_times];
+
+    // Integration parameters
+    real sigma;
+
+    // Observation model hyperparameters
+    real epsilon = standard_normal_to_lognormal(epsilon_star, epsilon_mu_sigma[1], epsilon_mu_sigma[2]);
+    real offset = offset_mu + offset_star * offset_std;
+    real scale = standard_normal_to_lognormal(scale_star, scale_mu_sigma[1], scale_mu_sigma[2]);
+
+    // Predicted target data
     row_vector[n_target_data] fit_target_data[n_times];
 
     // Selection of x1eq or x0 for fitting
     if (XMODE > 0) {
+        // Sample x1eq, compute zeq, x0, and set initial conditions' priors around equilibria
         x1eq = x;
         zeq = calc_zeq(x1eq, Iext1, tau1);
         x0 = calc_x0(x1eq, zeq, SC, Ic, x1_eq_def);
         x1_init= x1eq + x1_init_star * x1_init_std;
         z_init= zeq + z_init_star * z_init_std;
     } else {
+        // Sample x0, set initial conditions'priors and equilibria following input data
         x0 = x;
         x1_init= x1_init_mu + x1_init_star * x1_init_std;
         z_init= z_init_mu + z_init_star * z_init_std;
@@ -311,31 +365,32 @@ transformed parameters {
         zeq = z_init;
     }
 
+    // Integration parameters
     // ODE or SDE selection
     if (SDE>0) {
         sigma = standard_normal_to_lognormal(sigma_star, sigma_mu_sigma[1], sigma_mu_sigma[2]);
     } else {
-        sigma = sigma_mu + sigma_std * sigma_star;
+        sigma = sigma_star;
     }
 
-    // Set or fix some priors
+    // Dynamic model hyperparameters
 
     if (TAU1_PRIOR>0) {
         tau1 = standard_normal_to_lognormal(tau1_star, tau1_mu_sigma[1], tau1_mu_sigma[2]);
     } else {
-        tau1 = tau1_mu + tau1_std * tau1_star;
+        tau1 = tau1_mu + tau1_star;
     }
 
     if (TAU0_PRIOR>0) {
         tau0 = standard_normal_to_lognormal(tau0_star, tau0_mu_sigma[1], tau0_mu_sigma[2]);
     } else {
-        tau0 = tau0_mu + tau0_std * tau0_star;
+        tau0 = tau0_mu + tau0_star;
     }
 
     if (K_PRIOR>0) {
         K = standard_normal_to_lognormal(K_star, K_mu_sigma[1], K_mu_sigma[2]);
     } else {
-        K = K_mu + K_std * K_star;
+        K = K_mu + K_star;
     }
 
     // Initial conditions
@@ -348,8 +403,8 @@ transformed parameters {
             row_vector[n_active_regions] x1t = x1[t];
             row_vector[n_active_regions] zt = z[t];
             for (tt in 1:UPSAMPLE) {
-                x1[t+1] = x1_step(x1t, zt, Iext1, dtt*tau1); //, dX1t_star[t], sqrtdt*sigma
-                z[t+1] = z_step(x1t, zt, x0, K*SC, Ic, x1_eq_def, dtt*tau1, dZt_star[t], sqrtdt*sigma, tau0);
+                x1[t+1] = x1_step(x1t, zt, Iext1, dtt*tau1);
+                z[t+1] = z_step(x1t, zt, x0, K*SC, Ic, x1_eq_def, dtt*tau1, dWt_star[t], sqrtdt*sigma, tau0);
                 x1t = x1[t+1];
                 zt = z[t+1];
             }
@@ -357,12 +412,12 @@ transformed parameters {
     } else {
         for (t in 1:(n_times-1)) {
             x1[t+1] = x1_step(x1[t], z[t], Iext1, dtt*tau1); //, dX1t_star[t], sqrtdt*sigma
-            z[t+1] = z_step(x1[t], z[t], x0, K*SC, Ic, x1_eq_def, dtt*tau1, dZt_star[t], sqrtdt*sigma, tau0);
+            z[t+1] = z_step(x1[t], z[t], x0, K*SC, Ic, x1_eq_def, dtt*tau1, dWt_star[t], sqrtdt*sigma, tau0);
         }
      }
 
-    // Predicted output
-    if (log_target_data>0) {
+    // Target data prediction
+    if (LOG_TARGET_DATA>0) {
         for (t in 1:n_times)
             fit_target_data[t] = scale * (log(gain * exp(x1[t]'-x1_eq_def)))' + offset;
     } else {
@@ -370,7 +425,7 @@ transformed parameters {
             fit_target_data[t] = scale * (gain * (x1[t]'-x1_eq_def))' + offset;
     }
 
-    if (DEBUG > 0) {
+    if (DEBUG > 1) {
         print("upsample=", UPSAMPLE, "effective dt = dt/USPAMPLE = ", dtt);
         print("offset=", offset);
         print("scale=", scale);
@@ -389,21 +444,48 @@ transformed parameters {
 
 
 model {
-    offset_star ~ normal(0.0, 1.0);
-    scale_star ~ normal(0.0, 1.0);
-    epsilon_star ~ normal(0.0, 1.0);
-    sigma_star ~ normal(0.0, 1.0);
-    tau1_star ~ normal(0.0, 1.0);
-    tau0_star ~ normal(0.0, 1.0);
-    K_star ~ normal(0.0, 1.0);
+
+    // Epileptogenicity or Excitability
     to_row_vector(x_star) ~ normal(0.0, 1.0);
+
+    // Initial conditions
     to_row_vector(x1_init_star) ~ normal(0.0, 1.0);
     to_row_vector(z_init_star) ~ normal(0.0, 1.0);
 
-    for (t in 1:(n_times - 1)) {
-        // to_vector(dX1t_star[t]) ~ normal(0.0, 1.0);
-        to_vector(dZt_star[t]) ~ normal(0.0, 1.0);
+    // Dynamic model hyperparameters
+    if (TAU1_PRIOR>0) {
+        tau1_star ~ normal(0.0, 1.0);
+    } else {
+        tau1_star ~ normal(0.0, 0.001*tau1_mu);
     }
+    if (TAU0_PRIOR>0) {
+        tau0_star ~ normal(0.0, 1.0);
+    } else {
+        tau0_star ~ normal(0.0, 0.001*tau0_mu);
+    }
+    if (K_PRIOR>0) {
+        K_star ~ normal(0.0, 1.0);
+    } else {
+        K_star ~ normal(0.0, 0.001*K_mu);
+    }
+
+    // Integration parameters
+    if (SDE>0) {
+        sigma_star ~ normal(0.0, 1.0);
+        for (t in 1:(n_times - 1)) {
+            to_vector(dWt_star[t]) ~ normal(0.0, 1.0);
+        }
+    } else {
+        sigma_star ~ normal(0.0, 0.001**sigma_mu);
+        for (t in 1:(n_times - 1)) {
+            to_vector(dWt_star[t]) ~ normal(0.0, 0.001);
+        }
+    }
+
+    // Observation model hyperparameters
+    epsilon_star ~ normal(0.0, 1.0);
+    offset_star ~ normal(0.0, 1.0);
+    scale_star ~ normal(0.0, 1.0);
 
     // Fit or forward simulation
     if (SIMULATE<1)
