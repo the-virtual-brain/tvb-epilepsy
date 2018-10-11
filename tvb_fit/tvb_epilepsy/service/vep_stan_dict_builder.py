@@ -149,7 +149,7 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "offset_std": probabilistic_model.parameters["offset"].std,
                 "offset_lo": probabilistic_model.parameters["offset"].low,
                 "offset_hi": probabilistic_model.parameters["offset"].high,
-                "log_target_data": int(probabilistic_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value),
+                "LOG_TARGET_DATA": int(probabilistic_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value),
                 "target_data": signals,
                 "gain": gain_matrix,
                 "time": set_time(probabilistic_model, time),

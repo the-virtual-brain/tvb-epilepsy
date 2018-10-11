@@ -204,17 +204,22 @@ transformed data {
     real z_init_star_hi = (z_init_hi - min(z_init_mu))/z_init_std;
 
     // Dynamic model hyperparameters
+    real tau1_star_std = 0.001*tau1_mu;
     real tau1_star_lo = -1.0;
     real tau1_star_hi = 1.0;
     real tau1_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(tau1_mu, tau1_std);
+    real tau0_star_std = 0.001*tau0_mu;
     real tau0_star_lo = -1.0;
     real tau0_star_hi = 1.0;
     real tau0_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(tau0_mu, tau0_std);
+    real K_star_std = 0.001*K_mu;
     real K_star_lo = -1.0;
     real K_star_hi = 1.0;
     real K_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(K_mu, K_std);
 
     // Integration parameters
+    real dWt_star_std = 0.001;
+    real sigma_star_std = 0.001;
     real sigma_star_lo = -1.0;
     real sigma_star_hi = 1.0;
     real sigma_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(sigma_mu, sigma_std);
@@ -237,16 +242,19 @@ transformed data {
     // Dynamic model hyperparameters
 
     if (TAU1_PRIOR>0) {
+        tau1_star_std = 1.0;
         tau1_star_lo = lognormal_to_standard_normal(tau1_lo, tau1_mu_sigma[1], tau1_mu_sigma[2]);
         tau1_star_hi = lognormal_to_standard_normal(tau1_hi, tau1_mu_sigma[1], tau1_mu_sigma[2]);
     }
 
     if (TAU0_PRIOR>0) {
+        tau0_star_std = 1.0;
         tau0_star_lo = lognormal_to_standard_normal(tau0_lo, tau0_mu_sigma[1], tau0_mu_sigma[2]);
         tau0_star_hi = lognormal_to_standard_normal(tau0_hi, tau0_mu_sigma[1], tau0_mu_sigma[2]);
     }
 
     if (K_PRIOR>0) {
+        K_star_std = 1.0;
         K_star_lo = lognormal_to_standard_normal(K_lo, K_mu_sigma[1], K_mu_sigma[2]);
         K_star_hi = lognormal_to_standard_normal(K_hi, K_mu_sigma[1], K_mu_sigma[2]);
     }
@@ -258,6 +266,8 @@ transformed data {
 
     // Integration parameters
     if (SDE>0) {
+        sigma_star_std = 1.0;
+        dWt_star_std = 1.0;
         if (sigma_lo>0) {
             sigma_star_lo = lognormal_to_standard_normal(sigma_lo, sigma_mu_sigma[1], sigma_mu_sigma[2]);
         } else {
@@ -267,27 +277,40 @@ transformed data {
     }
 
     if (DEBUG > 0) {
+        print("x_logmu=", x_logmu, ", x_logsigma=", x_logsigma);
+        if (TAU1_PRIOR>0) {
+            print("tau1_mu_sigma=", tau1_mu_sigma,
+                  ", tau1=", standard_normal_to_lognormal(0.0, tau1_mu_sigma[1], tau1_mu_sigma[2]));
+        } else {
+            print("tau1=", tau1_mu);
+        }
+        print("tau1_star_std=", tau1_star_std);
+        if (TAU0_PRIOR>0) {
+            print("tau0_mu_sigma=", tau0_mu_sigma,
+                  ", tau0=", standard_normal_to_lognormal(0.0, tau0_mu_sigma[1], tau0_mu_sigma[2]));
+        } else {
+            print("tau0=", tau0_mu);
+        }
+        print("tau0_star_std=", tau0_star_std);
+        if (K_PRIOR>0) {
+            print("K_mu_sigma=", K_mu_sigma,
+                  ", K=", standard_normal_to_lognormal(0.0, K_mu_sigma[1], K_mu_sigma[2]));
+        } else {
+            print("K=", K_mu);
+        }
+        print("K_star_std=", K_star_std);
+        if (SDE>0) {
+            print("sigma_mu_sigma=", sigma_mu_sigma,
+                  ", sigma=", standard_normal_to_lognormal(0.0, sigma_mu_sigma[1], sigma_mu_sigma[2]));
+        } else {
+            print("sigma=", sigma_mu);
+        }
+        print("sigma_star_std=", sigma_star_std);
+        print("dWt_star_std=", dWt_star_std);
         print("scale_mu_sigma=", scale_mu_sigma,
               ", scale=", standard_normal_to_lognormal(0.0, scale_mu_sigma[1], scale_mu_sigma[2]));
         print("epsilon_star_lo = ", epsilon_star_lo, "epsilon_mu_sigma=", epsilon_mu_sigma,
               ", epsilon=", standard_normal_to_lognormal(0.0, epsilon_mu_sigma[1], epsilon_mu_sigma[2]));
-        if (TAU1_PRIOR>0) {
-            print("tau1_mu_sigma=", tau1_mu_sigma,
-                  ", tau1=", standard_normal_to_lognormal(0.0, tau1_mu_sigma[1], tau1_mu_sigma[2]));
-        }
-        if (TAU0_PRIOR>0) {
-            print("tau0_mu_sigma=", tau1_mu_sigma,
-                  ", tau0=", standard_normal_to_lognormal(0.0, tau0_mu_sigma[1], tau0_mu_sigma[2]));
-        }
-        if (K_PRIOR>0) {
-            print("K_mu_sigma=", K_mu_sigma,
-                  ", k=", standard_normal_to_lognormal(0.0, K_mu_sigma[1], K_mu_sigma[2]));
-        }
-        if (SDE>0) {
-            print("sigma_mu_sigma=", sigma_mu_sigma,
-                  ", sigma=", standard_normal_to_lognormal(0.0, sigma_mu_sigma[1], sigma_mu_sigma[2]));
-        }
-        print("x_logmu=", x_logmu, ", x_logsigma=", x_logsigma);
     }
 }
 
@@ -365,14 +388,6 @@ transformed parameters {
         zeq = z_init;
     }
 
-    // Integration parameters
-    // ODE or SDE selection
-    if (SDE>0) {
-        sigma = standard_normal_to_lognormal(sigma_star, sigma_mu_sigma[1], sigma_mu_sigma[2]);
-    } else {
-        sigma = sigma_star;
-    }
-
     // Dynamic model hyperparameters
 
     if (TAU1_PRIOR>0) {
@@ -391,6 +406,14 @@ transformed parameters {
         K = standard_normal_to_lognormal(K_star, K_mu_sigma[1], K_mu_sigma[2]);
     } else {
         K = K_mu + K_star;
+    }
+
+     // Integration parameters
+    // ODE or SDE selection
+    if (SDE>0) {
+        sigma = standard_normal_to_lognormal(sigma_star, sigma_mu_sigma[1], sigma_mu_sigma[2]);
+    } else {
+        sigma = sigma_star;
     }
 
     // Initial conditions
@@ -453,33 +476,14 @@ model {
     to_row_vector(z_init_star) ~ normal(0.0, 1.0);
 
     // Dynamic model hyperparameters
-    if (TAU1_PRIOR>0) {
-        tau1_star ~ normal(0.0, 1.0);
-    } else {
-        tau1_star ~ normal(0.0, 0.001*tau1_mu);
-    }
-    if (TAU0_PRIOR>0) {
-        tau0_star ~ normal(0.0, 1.0);
-    } else {
-        tau0_star ~ normal(0.0, 0.001*tau0_mu);
-    }
-    if (K_PRIOR>0) {
-        K_star ~ normal(0.0, 1.0);
-    } else {
-        K_star ~ normal(0.0, 0.001*K_mu);
-    }
+    tau1_star ~ normal(0.0, tau1_star_std);
+    tau0_star ~ normal(0.0, tau0_star_std);
+    K_star ~ normal(0.0, K_star_std);
 
     // Integration parameters
-    if (SDE>0) {
-        sigma_star ~ normal(0.0, 1.0);
-        for (t in 1:(n_times - 1)) {
-            to_vector(dWt_star[t]) ~ normal(0.0, 1.0);
-        }
-    } else {
-        sigma_star ~ normal(0.0, 0.001**sigma_mu);
-        for (t in 1:(n_times - 1)) {
-            to_vector(dWt_star[t]) ~ normal(0.0, 0.001);
-        }
+    sigma_star ~ normal(0.0, sigma_star_std);
+    for (t in 1:(n_times - 1)) {
+        to_vector(dWt_star[t]) ~ normal(0.0, dWt_star_std);
     }
 
     // Observation model hyperparameters
