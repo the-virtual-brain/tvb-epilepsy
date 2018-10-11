@@ -87,13 +87,57 @@ class H5Writer(H5WriterBase):
         h5_file.create_dataset(SurfaceH5Field.VERTEX_NORMALS, data=surface.vertex_normals)
 
         h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "Surface")
-        h5_file.attrs.create("Surface_subtype", surface.surface_subtype)
+        h5_file.attrs.create("Surface_subtype", surface.surface_subtype.upper())
         h5_file.attrs.create("Number_of_triangles", surface.triangles.shape[0])
         h5_file.attrs.create("Number_of_vertices", surface.vertices.shape[0])
         h5_file.attrs.create("Voxel_to_ras_matrix", str(surface.vox2ras.flatten().tolist())[1:-1].replace(",", ""))
 
         self.logger.info("Surface has been written to file: %s" % path)
         h5_file.close()
+
+    def write_region_mapping(self, region_mapping, path, n_regions, subtype="Cortical"):
+        """
+            :param region_mapping: region_mapping array to write in H5
+            :param path: H5 path to be written
+        """
+        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
+
+        h5_file.create_dataset("data", data=region_mapping)
+
+        data_length = len(region_mapping)
+        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "RegionMapping")
+        h5_file.attrs.create("Connectivity_parcel", "Connectivity-%d" % n_regions)
+        h5_file.attrs.create("Surface_parcel", "Surface-%s-%d" % (subtype.capitalize(), data_length))
+        h5_file.attrs.create("Length_data", data_length)
+
+        self.logger.info("Region mapping has been written to file: %s" % path)
+        h5_file.close()
+
+    def write_volume(self, volume_data, path, type, n_regions):
+        """
+            :param t1: t1 array to write in H5
+            :param path: H5 path to be written
+        """
+        shape = volume_data.shape
+        if len(shape) < 3:
+            shape = (0, 0, 0)
+        h5_file = h5py.File(change_filename_or_overwrite(path), 'a', libver='latest')
+        h5_file.create_dataset("data", data=volume_data)
+        h5_file.attrs.create("Connectivity_parcel", "Connectivity-%d" % n_regions)
+        h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "VolumeData")
+        h5_file.attrs.create("Length_x", str(shape[0]))
+        h5_file.attrs.create("Length_y", str(shape[1]))
+        h5_file.attrs.create("Length_z", str(shape[2]))
+        h5_file.attrs.create("Type", type.upper())
+
+        self.logger.info("%s volume has been written to file: %s" % (type, path))
+        h5_file.close()
+
+    def write_t1(self, t1_data, path, n_regions):
+        self.write_volume(t1_data, path, "STRUCTURAL", n_regions)
+
+    def write_volume_mapping(self, volume_mapping_data, path, n_regions):
+        self.write_volume(volume_mapping_data, path, "MAPPING", n_regions)
 
     def write_head(self, head, path):
         """
@@ -104,12 +148,20 @@ class H5Writer(H5WriterBase):
 
         if not (os.path.isdir(path)):
             os.mkdir(path)
+        n_regions = head.connectivity.number_of_regions
         self.write_connectivity(head.connectivity, os.path.join(path, "Connectivity.h5"))
         self.write_surface(head.cortical_surface, os.path.join(path, "CorticalSurface.h5"))
+        self.write_surface(head.subcortical_surface, os.path.join(path, "SubcorticalSurface.h5"))
+        self.write_region_mapping(head.cortical_region_mapping, os.path.join(path, "CorticalRegionMapping.h5"),
+                                  n_regions= head.connnectivity.number_of_regions, subtype="Cortical")
+        self.write_region_mapping(head.subcortical_region_mapping, os.path.join(path, "SubcorticalRegionMapping.h5"),
+                                  n_regions, "Subcortical")
+        self.write_volume_mapping(self, head.volume_mapping, os.path.join(path, "VolumeMapping.h5"), n_regions)
+        self.write_t1(self, head.t1_background, os.path.join(path, "StructuralMRI.h5"), n_regions)
         for sensor_list in (head.sensorsSEEG, head.sensorsEEG, head.sensorsMEG):
             for sensors in sensor_list:
-                self.write_sensors(sensors,
-                                   os.path.join(path, "Sensors%s_%s.h5" % (sensors.s_type, sensors.number_of_sensors)))
+                self.write_sensors(sensors, os.path.join(path, "Sensors%s_%s.h5" %
+                                                         (sensors.s_type.value, sensors.number_of_sensors)))
 
         self.logger.info("Successfully wrote Head folder at: %s" % path)
 
