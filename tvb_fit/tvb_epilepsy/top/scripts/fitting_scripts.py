@@ -80,8 +80,8 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
     except:
         # ... or preprocess empirical data for the first time:
         if len(sensors_lbls) == 0:
-            sensors_lbls = head.get_sensors_id(sensor_ids=sensor_id).labels
-        signals = prepare_seeg_observable_from_mne_file(empirical_file, head.get_sensors_id(sensor_ids=sensor_id),
+            sensors_lbls = head.get_sensors_by_index(sensor_ids=sensor_id).labels
+        signals = prepare_seeg_observable_from_mne_file(empirical_file, head.get_sensors_by_index(sensor_ids=sensor_id),
                                                         sensors_lbls, seizure_length, times_on_off, time_units,
                                                         label_strip_fun, preprocessing,
                                                         low_hpf, high_hpf, low_lpf, high_lpf,
@@ -116,7 +116,7 @@ def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis
     signals.data = -signals.data  # change sign to fit x1
     if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
         log_flag = probabilistic_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
-        signals = prepare_simulated_seeg_observable(signals, head.get_sensors_id(sensor_ids=sensor_id),
+        signals = prepare_simulated_seeg_observable(signals, head.get_sensors_by_index(sensor_ids=sensor_id),
                                                     probabilistic_model.time_length, log_flag, times_on_off, [],
                                                     preprocessing, low_hpf, high_hpf, low_lpf, high_lpf, bipolar,
                                                     win_len_ratio, plotter, title_prefix)

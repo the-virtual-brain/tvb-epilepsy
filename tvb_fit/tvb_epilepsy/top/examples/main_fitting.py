@@ -54,7 +54,7 @@ def set_hypotheses(head, config):
     hypothesis1 = hyp_builder.build_hypothesis()
 
     e_indices = [1, 26]  # [1, 2, 25, 26]
-    hypothesis2 = hyp_builder.build_hypothesis_from_file("clinical_hypothesis_postseeg", e_indices)
+    hypothesis2 = hyp_builder.build_hypothesis_from_file("postseeg", e_indices)
     # Change something manually if necessary
     # hypothesis2.x0_values = [0.01, 0.01]
 
@@ -82,10 +82,11 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
     # Read head
     logger.info("Reading from: " + config.input.HEAD)
     head = reader.read_head(config.input.HEAD)
-    sensors = head.get_sensors_id(sensor_ids=sensor_id)
-    from tvb_fit.service.head_service import HeadService
-    sensors.gain_matrix = HeadService().compute_gain_matrix(head, sensors, method="distance",
-                                                            normalize=95, ceil=False)
+    sensors = ensure_list(head.get_sensors_by_name("distance"))[0]
+    if isinstance(sensors, dict):
+        sensors = sensors.values()[0]
+    elif sensors is None:
+        sensors = head.get_sensors_by_index()
     plotter.plot_head(head)
 
     # Set hypotheses:
@@ -215,13 +216,13 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
             writer.write_dictionary(model_data, model_data_file)
 
         # -------------------------- Fit and get estimates: ------------------------------------------------------------
-        n_chains_or_runs = 2 # np.where(test_flag, 2, 4)
+        n_chains_or_runs = np.where(test_flag, 2, 4)
         output_samples = np.where(test_flag, 20, max(int(np.round(1000.0 / n_chains_or_runs)), 500))
         # Sampling (HMC)
         num_samples = output_samples
         num_warmup = np.where(test_flag, 30, 1000)
-        max_depth = 15 # np.where(test_flag, 7, 12)
-        delta = 0.95  # np.where(test_flag, 0.8, 0.9)
+        max_depth = np.where(test_flag, 7, 12)
+        delta = np.where(test_flag, 0.8, 0.9)
         # ADVI or optimization:
         iter = np.where(test_flag, 1000, 500000)
         tol_rel_obj = 1e-6
@@ -323,7 +324,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
 if __name__ == "__main__":
 
     user_home = os.path.expanduser("~")
-    head_folder = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
+    head_folder = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "HeadDK")
     SEEG_data = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "data/CC", "TVB3",
                              "raw/seeg/ts_seizure")
 
@@ -414,7 +415,7 @@ if __name__ == "__main__":
     downsampling = 2
     normal_flag = False
     stan_model_name = "vep_sde"
-    fitmethod = "advi" # ""  # "sample"  # "advi" or "opt"
+    fitmethod = "sample" # ""  # "sample"  # "advi" or "opt"
     pse_flag = True
     fit_flag = True
     test_flag = True

@@ -23,18 +23,17 @@ class SensorsH5Field(object):
 
 
 class Sensors(object):
-    TYPE_EEG = SensorTypes.TYPE_EEG.value
-    TYPE_MEG = SensorTypes.TYPE_MEG.value
-    TYPE_SEEG = SensorTypes.TYPE_SEEG.value
 
+    s_type = SensorTypes.TYPE_SEEG
+    name = s_type.value
     labels = np.array([])
     locations = np.array([])
     needles = np.array([])
     gain_matrix = np.array([])
-    s_type = TYPE_SEEG
 
     def __init__(self, labels, locations, needles=np.array([]), gain_matrix=np.array([]),
-                 s_type=TYPE_SEEG):
+                 s_type=SensorTypes.TYPE_SEEG, name=SensorTypes.TYPE_SEEG.value):
+        self.name = name
         self.labels = labels
         self.locations = locations
         self.needles = needles

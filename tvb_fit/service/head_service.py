@@ -4,7 +4,7 @@ from tvb.datatypes.connectivity import Connectivity as TVB_Connectivity
 from tvb_fit.base.constants import SEEG_DIPOLE_SIGMA
 from tvb_fit.base.model.virtual_patient.connectivity import Connectivity
 from tvb_fit.base.model.virtual_patient.surface import Surface
-from tvb_fit.base.model.virtual_patient.sensors import Sensors
+from tvb_fit.base.model.virtual_patient.sensors import Sensors, SensorTypes
 from tvb_fit.base.utils.data_structures_utils import ensure_list
 from tvb_fit.base.utils.log_error_utils import warning, raise_value_error, initialize_logger
 from tvb_fit.base.computations.math_utils import select_greater_values_array_inds, \
@@ -17,11 +17,11 @@ SIGMA = SEEG_DIPOLE_SIGMA
 class HeadService(object):
     logger = initialize_logger(__name__)
 
-    def compute_nearest_regions_to_sensors(self, head, sensors=None, target_contacts=None, s_type=Sensors.TYPE_SEEG,
+    def compute_nearest_regions_to_sensors(self, head, sensors=None, target_contacts=None, s_type=SensorTypes.TYPE_SEEG,
                                            sensors_id=0, n_regions=None, gain_matrix_th=None,
                                            gain_matrix_percentile=None):
         if not (isinstance(sensors, Sensors)):
-            sensors = head.get_sensors_id(s_type=s_type, sensor_ids=sensors_id)
+            sensors = head.get_sensors_by_index(s_type=s_type, sensor_ids=sensors_id)
         n_contacts = sensors.labels.shape[0]
         if isinstance(target_contacts, (list, tuple, np.ndarray)):
             target_contacts = ensure_list(target_contacts)
@@ -42,7 +42,7 @@ class HeadService(object):
             projs = np.abs(sensors.gain_matrix[tc])
             inds = np.argsort(projs)[::-1]
             n_regions = select_greater_values_array_inds(projs[inds], threshold=gain_matrix_th,
-                                                         percentile=gain_matrix_percentile, n_regions=n_regions)
+                                                         percentile=gain_matrix_percentile, nvals=n_regions)
             inds = inds[:n_regions]
             nearest_regions.append((inds, head.connectivity.region_labels[inds], projs[inds]))
         return nearest_regions
@@ -85,6 +85,7 @@ class HeadService(object):
         if n_sensors > 2:
             initial_selection = np.array(initial_selection)
             distance = 1.0 - distance
+            disconnectivity = np.zeros(distance.shape)
             if group_electrodes:
                 disconnectivity = self.sensors_in_electrodes_disconnectivity(sensors, sensors.labels[initial_selection])
             selection = \

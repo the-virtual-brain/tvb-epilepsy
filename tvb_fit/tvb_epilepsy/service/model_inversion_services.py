@@ -219,7 +219,7 @@ class ODEModelInversionService(ModelInversionService):
                                  power=np.array([])):
         if sensors is None and head is not None:
             try:
-                sensors = sensors.head.get_sensors_id(sensor_ids=sensor_id)
+                sensors = sensors.head.get_sensors_by_index(sensor_ids=sensor_id)
             except:
                 if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
                     raise_error("No sensors instance! Needed for gain_matrix computation!")

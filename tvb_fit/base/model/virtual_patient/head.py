@@ -1,5 +1,5 @@
 # coding=utf-8
-
+from collections import OrderedDict
 import numpy as np
 from tvb_fit.base.utils.log_error_utils import raise_value_error, initialize_logger
 from tvb_fit.base.utils.data_structures_utils import reg_dict, formal_repr, sort_dict, ensure_list
@@ -13,7 +13,8 @@ class Head(object):
     logger = initialize_logger(__name__)
 
     def __init__(self, connectivity, cortical_surface=None, subcortical_surface=None,
-                 cortical_region_mapping={}, subcortical_region_mapping={}, vm={}, t1={}, name='', **kwargs):
+                 cortical_region_mapping=np.array([]), subcortical_region_mapping=np.array([]),
+                 vm=np.array([]), t1=np.array([]), name='', **kwargs):
         self.connectivity = connectivity
         self.cortical_surface = cortical_surface
         self.subcortical_surface = subcortical_surface
@@ -21,9 +22,9 @@ class Head(object):
         self.subcortical_region_mapping = subcortical_region_mapping
         self.volume_mapping = vm
         self.t1_background = t1
-        self.sensorsSEEG = []
-        self.sensorsEEG = []
-        self.sensorsMEG = []
+        self.sensorsSEEG = OrderedDict()
+        self.sensorsEEG = OrderedDict()
+        self.sensorsMEG = OrderedDict()
         for s_type in SensorTypes:
             self.set_sensors(kwargs.get("sensors" + s_type.value), s_type=s_type)
         if len(name) == 0:
@@ -65,28 +66,42 @@ class Head(object):
     def set_sensors(self, input_sensors, s_type=SensorTypes.TYPE_SEEG, reset=False):
         if input_sensors is None:
             return
-        sensors = ensure_list(self.get_sensors(s_type))
+        sensors = self.get_sensors(s_type)
         if reset is False or len(sensors) == 0:
-            sensors = []
-        for s in ensure_list(input_sensors):
-            if isinstance(s, Sensors) and (s.s_type == s_type.value):
+            sensors = OrderedDict()
+        for s_name, s in input_sensors.items():
+            if isinstance(s, Sensors) and (s.s_type == s_type):
                 if s.gain_matrix is None or s.gain_matrix.shape != (s.number_of_sensors, self.number_of_regions):
                     self.logger.warning("No correctly sized gain matrix found in sensors!")
-                sensors.append(s)
+                sensors[s_name] = s
             else:
                 if s is not None:
                     raise_value_error("Input sensors:\n" + str(s) +
                                       "\nis not a valid Sensors object of type " + str(s_type) + "!")
-        if len(sensors) == 0:
-            setattr(self, "sensors" + s_type.value, [])
-        else:
-            setattr(self, "sensors" + s_type.value, sensors)
+        setattr(self, "sensors" + s_type.value, sensors)
 
-    def get_sensors_id(self, s_type=SensorTypes.TYPE_SEEG, sensor_ids=0):
+    def get_sensors_by_name(self, name, s_type=SensorTypes.TYPE_SEEG):
         sensors = self.get_sensors(s_type)
         if sensors is None:
             return sensors
         else:
+            out_sensors = OrderedDict()
+            for s_name, s in sensors.items():
+                if s_name.lower().find(name.lower()) >= 0:
+                    out_sensors[s.name] = s
+            if len(out_sensors) == 0:
+                return None
+            elif len(out_sensors) == 1:
+                return out_sensors.values()[0]
+            else:
+                return out_sensors
+
+    def get_sensors_by_index(self, s_type=SensorTypes.TYPE_SEEG, sensor_ids=0):
+        sensors = self.get_sensors(s_type)
+        if sensors is None:
+            return sensors
+        else:
+            sensors = sensors.values()
             out_sensors = []
             sensors = ensure_list(sensors)
             for iS, s in enumerate(sensors):

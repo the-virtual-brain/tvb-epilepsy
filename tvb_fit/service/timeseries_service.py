@@ -185,7 +185,7 @@ class TimeseriesService(object):
         else:
             seeg_fun = lambda source, gain_matrix: compute_seeg_lin(source.squeezed, gain_matrix)
         seeg = []
-        for id, sensor in enumerate(ensure_list(sensors)):
+        for id, sensor in enumerate(sensors.values()):
             seeg.append(source_timeseries.__class__(seeg_fun(source_timeseries, sensor.gain_matrix),
                                                     {TimeseriesDimensions.SPACE.value: sensor.labels,
                                                      TimeseriesDimensions.VARIABLES.value:

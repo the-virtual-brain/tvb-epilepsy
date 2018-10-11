@@ -1,7 +1,7 @@
 import os
 import numpy
 from tvb_fit.base.config import InputConfig
-from tvb_fit.base.model.virtual_patient.sensors import Sensors
+from tvb_fit.base.model.virtual_patient.sensors import SensorTypes
 from tvb_fit.base.model.simulation_settings import SimulationSettings
 from tvb_fit.io.h5_reader import H5Reader
 from tvb_fit.io.h5_writer import H5Writer
@@ -57,14 +57,14 @@ class TestCustomH5Reader(BaseTest):
 
     def test_sensors_of_type(self):
         sensors_file = os.path.join(self.in_head, "SensorsSEEG_20.h5")
-        sensors = self.reader.read_sensors_of_type(sensors_file, Sensors.TYPE_SEEG)
+        sensors = self.reader.read_sensors_of_type(sensors_file, SensorTypes.TYPE_SEEG)
 
         assert sensors is not None
         assert sensors.number_of_sensors == 20
 
     def test_sensors_of_type_not_existent_file(self):
         sensors_file = os.path.join(self.in_head, self.not_existent_file)
-        sensors = self.reader.read_sensors_of_type(sensors_file, Sensors.TYPE_SEEG)
+        sensors = self.reader.read_sensors_of_type(sensors_file, SensorTypes.TYPE_SEEG)
 
         assert sensors is None
 

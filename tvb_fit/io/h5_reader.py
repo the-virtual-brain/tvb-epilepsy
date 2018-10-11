@@ -10,7 +10,7 @@ from tvb_fit.base.utils.log_error_utils import initialize_logger, raise_value_er
 from tvb_fit.base.utils.data_structures_utils import isequal_string, ensure_list
 from tvb_fit.base.model.virtual_patient.connectivity import Connectivity, ConnectivityH5Field
 from tvb_fit.base.model.virtual_patient.head import Head
-from tvb_fit.base.model.virtual_patient.sensors import Sensors, SensorsH5Field
+from tvb_fit.base.model.virtual_patient.sensors import Sensors, SensorTypes, SensorsH5Field
 from tvb_fit.base.model.virtual_patient.surface import Surface, SurfaceH5Field
 from tvb_fit.base.model.model_configuration import ModelConfiguration
 from tvb_fit.base.model.timeseries import TimeseriesDimensions, Timeseries
@@ -105,9 +105,9 @@ class H5Reader(object):
         :param path: Path towards a custom head folder
         :return: 3 lists with all sensors from Path by type
         """
-        sensors_seeg = []
-        sensors_eeg = []
-        sensors_meg = []
+        sensors_seeg = OrderedDict()
+        sensors_eeg = OrderedDict()
+        sensors_meg = OrderedDict()
 
         self.logger.info("Starting to read all Sensors from: %s" % path)
 
@@ -116,20 +116,23 @@ class H5Reader(object):
             str_head_file = str(head_file)
             if not str_head_file.startswith(self.sensors_filename_prefix):
                 continue
-
+            name = str_head_file.split(".")[0]
             type = str_head_file[len(self.sensors_filename_prefix):str_head_file.index(self.sensors_filename_separator)]
-            if type.upper() == Sensors.TYPE_SEEG:
-                sensors_seeg += self.read_sensors_of_type(os.path.join(path, head_file), Sensors.TYPE_SEEG)
-            if type.upper() == Sensors.TYPE_EEG:
-                sensors_eeg += self.read_sensors_of_type(os.path.join(path, head_file), Sensors.TYPE_EEG)
-            if type.upper() == Sensors.TYPE_MEG:
-                sensors_meg += self.read_sensors_of_type(os.path.join(path, head_file), Sensors.TYPE_MEG)
+            if type.upper() == SensorTypes.TYPE_SEEG.value:
+                sensors_seeg[name] = \
+                    self.read_sensors_of_type(os.path.join(path, head_file), SensorTypes.TYPE_SEEG, name)
+            if type.upper() == SensorTypes.TYPE_EEG.value:
+                sensors_eeg[name] = \
+                    self.read_sensors_of_type(os.path.join(path, head_file), SensorTypes.TYPE_EEG, name)
+            if type.upper() == SensorTypes.TYPE_MEG.value:
+                sensors_meg[name] = \
+                    self.read_sensors_of_type(os.path.join(path, head_file), SensorTypes.TYPE_MEG, name)
 
         self.logger.info("Successfuly read all sensors from: %s" % path)
 
         return sensors_seeg, sensors_eeg, sensors_meg
 
-    def read_sensors_of_type(self, sensors_file, type):
+    def read_sensors_of_type(self, sensors_file, type, name):
         """
         :param
             sensors_file: Path towards a custom Sensors H5 file
@@ -140,7 +143,7 @@ class H5Reader(object):
             self.logger.warning("Senors file %s does not exist!" % sensors_file)
             return []
 
-        self.logger.info("Starting to read sensors of type %s from: %s" % (type, sensors_file))
+        self.logger.info("Starting to read sensors of type %s from: %s" % (type.value, sensors_file))
         h5_file = h5py.File(sensors_file, 'r', libver='latest')
 
         labels = h5_file['/' + SensorsH5Field.LABELS][()]
@@ -153,10 +156,10 @@ class H5Reader(object):
 
         h5_file.close()
 
-        sensors = Sensors(labels, locations, gain_matrix=gain_matrix, s_type=type)
+        sensors = Sensors(labels, locations, gain_matrix=gain_matrix, s_type=type, name=name)
         self.logger.info("Successfully read sensors from: %s" % sensors_file)
 
-        return [sensors]
+        return sensors
 
     def read_volume_mapping(self, path):
         """
