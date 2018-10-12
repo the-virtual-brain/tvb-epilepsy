@@ -120,8 +120,8 @@ data {
     real x_lo;
     real x_hi;
     // real x_std;
-    row_vector [n_active_regions] x_star_mu;
-    row_vector [n_active_regions] x_star_std;
+    row_vector [n_active_regions] x_mu;
+    row_vector [n_active_regions] x_std;
     real x1_eq_def; // = -5.0/3 the value of all healhty non-active nodes, i.e. the resting manifold
 
     // Initial conditions
@@ -192,36 +192,39 @@ transformed data {
     // as well as of their upper ane lower limits
 
     // Epileptogenicity or Excitability
-    row_vector[n_active_regions] x_logmu = normal_mean_std_to_lognorm_mu(x_star_mu, x_star_std);
-    row_vector[n_active_regions] x_logsigma = normal_mean_std_to_lognorm_sigma(x_star_mu, x_star_std);
-    real x_star_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(max(x_star_mu), max(x_star_std));
-    real x_star_hi = lognormal_to_standard_normal(x_hi - x_lo, x_star_mu_sigma[1], x_star_mu_sigma[2]);
+    row_vector[n_active_regions] x_logmu = normal_mean_std_to_lognorm_mu(x_hi - x_mu, x_std);
+    row_vector[n_active_regions] x_logsigma = normal_mean_std_to_lognorm_sigma(x_hi - x_mu, x_std);
+    // Find the faster growing distribution...
+    int indexes[n_active_regions] =
+        sort_indices_desc(standard_normal_to_lognormal_row(rep_row_vector(1.0, n_active_regions), x_logmu, x_logsigma));
+    // ...and use it to compute the minimum x_star_hi
+    real x_star_hi = lognormal_to_standard_normal(x_hi - x_lo, x_logmu[indexes[1]], x_logsigma[indexes[1]]);
 
     // Initial conditions
-    real x1_init_star_lo = (x1_init_lo - max(x1_init_mu))/x1_init_std;
-    real x1_init_star_hi = (x1_init_hi - min(x1_init_mu))/x1_init_std;
-    real z_init_star_lo = (z_init_lo - max(z_init_mu))/z_init_std;
-    real z_init_star_hi = (z_init_hi - min(z_init_mu))/z_init_std;
+    real x1_init_star_lo = max((x1_init_lo - x1_init_mu)./x1_init_std);
+    real x1_init_star_hi = min((x1_init_hi - x1_init_mu)./x1_init_std);
+    real z_init_star_lo = max((z_init_lo - z_init_mu)./z_init_std);
+    real z_init_star_hi = min((z_init_hi - z_init_mu)./z_init_std);
 
     // Dynamic model hyperparameters
-    real tau1_star_std = 0.001*tau1_mu;
-    real tau1_star_lo = -1.0;
-    real tau1_star_hi = 1.0;
+    real tau1_star_std = 0.0001*(tau1_hi - tau1_lo);
+    real tau1_star_lo = tau1_mu - 0.001;
+    real tau1_star_hi = tau1_mu + 0.001;
     real tau1_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(tau1_mu, tau1_std);
-    real tau0_star_std = 0.001*tau0_mu;
-    real tau0_star_lo = -1.0;
-    real tau0_star_hi = 1.0;
+    real tau0_star_std = 0.0001*(tau0_hi - tau0_lo);
+    real tau0_star_lo = tau0_mu - 0.001;
+    real tau0_star_hi = tau0_mu + 0.001;
     real tau0_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(tau0_mu, tau0_std);
-    real K_star_std = 0.001*K_mu;
-    real K_star_lo = -1.0;
-    real K_star_hi = 1.0;
+    real K_star_std = 0.0001*(K_hi - K_lo);
+    real K_star_lo = K_mu - 0.001;
+    real K_star_hi = K_mu + 0.001;
     real K_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(K_mu, K_std);
 
     // Integration parameters
-    real dWt_star_std = 0.001;
-    real sigma_star_std = 0.001;
-    real sigma_star_lo = -1.0;
-    real sigma_star_hi = 1.0;
+    real dWt_star_std = 0.0001;
+    real sigma_star_std = 0.0001;
+    real sigma_star_lo = -0.001;
+    real sigma_star_hi = 0.001;
     real sigma_mu_sigma[2] = normal_mean_std_to_lognorm_mu_sigma(sigma_mu, sigma_std);
 
     // Observation model hyperparameters
@@ -277,6 +280,7 @@ transformed data {
     }
 
     if (DEBUG > 0) {
+        print("upsample=", UPSAMPLE, ", effective dt = dt/USPAMPLE = ", dtt);
         print("x_logmu=", x_logmu, ", x_logsigma=", x_logsigma);
         if (TAU1_PRIOR>0) {
             print("tau1_mu_sigma=", tau1_mu_sigma,
@@ -309,7 +313,7 @@ transformed data {
         print("dWt_star_std=", dWt_star_std);
         print("scale_mu_sigma=", scale_mu_sigma,
               ", scale=", standard_normal_to_lognormal(0.0, scale_mu_sigma[1], scale_mu_sigma[2]));
-        print("epsilon_star_lo = ", epsilon_star_lo, "epsilon_mu_sigma=", epsilon_mu_sigma,
+        print("epsilon_star_lo = ", epsilon_star_lo, ", epsilon_mu_sigma=", epsilon_mu_sigma,
               ", epsilon=", standard_normal_to_lognormal(0.0, epsilon_mu_sigma[1], epsilon_mu_sigma[2]));
     }
 }
@@ -449,7 +453,6 @@ transformed parameters {
     }
 
     if (DEBUG > 1) {
-        print("upsample=", UPSAMPLE, "effective dt = dt/USPAMPLE = ", dtt);
         print("offset=", offset);
         print("scale=", scale);
         print("epsilon=", epsilon);
