@@ -22,7 +22,7 @@ class SimulatorBuilder(object):
     def __init__(self, model_configuration, simulator="tvb"):
         self.model_config = deepcopy(model_configuration)
         self.simulator = simulator
-        self.simulation_length = 2000
+        self.simulation_length = 2500
         self.fs = 16384.0
         self.fs_monitor = 1024.0
 
