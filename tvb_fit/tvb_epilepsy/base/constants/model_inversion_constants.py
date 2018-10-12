@@ -13,13 +13,13 @@ class XModes(Enum):
 
 X1_REST = X1_DEF
 X1EQ_CR = X1EQ_CR_DEF
-X1EQ_MIN = -1.8
+X1EQ_MIN = -2.0
 X1EQ_MAX = -1.0  # X1EQ_CR_DEF
 X1EQ_DEF = X1_DEF
 X1EQ_SCALE = 3.0
 SIGMA_EQ_DEF = 0.25*(X1EQ_MAX - X1EQ_MIN)
 
-X0_MIN = -4.0
+X0_MIN = -7.5
 X0_MAX = 2.5
 X0_DEF = -2.5
 X0_SCALE = 3.0
@@ -46,7 +46,7 @@ MC_MAX_MIN_RATIO = 1000.0
 MC_SCALE = 6.0
 
 # ODE model inversion constants
-X1_MIN = -5.0
+X1_MIN = -2.0
 X1_MAX = 2.0
 Z_MIN = 2.0
 Z_MAX = 6.0
