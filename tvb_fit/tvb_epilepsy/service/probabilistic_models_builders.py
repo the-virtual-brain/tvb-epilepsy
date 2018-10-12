@@ -24,7 +24,7 @@ x_def = {"x0": x0_def, "x1eq": x1eq_def}
 
 DEFAULT_PARAMETERS = [XModes.X0MODE.value, "sigma_"+XModes.X0MODE.value, "K"]
 ODE_DEFAULT_PARAMETERS = DEFAULT_PARAMETERS + ["x1_init", "z_init", "epsilon", "scale", "offset"]
-SDE_DEFAULT_PARAMETERS =  ODE_DEFAULT_PARAMETERS + ["dX1t", "dZt", "sigma"]
+SDE_DEFAULT_PARAMETERS = ODE_DEFAULT_PARAMETERS + ["dWt", "sigma"]  # "dX1t", "dZt",
 
 
 class ProbabilisticModelBuilderBase(object):
@@ -222,7 +222,7 @@ class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
         else:
             parameters = {}
         self.model = EpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
-                                           parameters, ground_truth, self.xmode,
+                                           int(self.normal_flag), parameters, ground_truth, self.xmode,
                                            self.K, self.sigma_x) # , self.MC_direction_split
         self.logger.info(self.__class__.__name__ + " took " +
                          str( time.time() - tic) + ' sec for model generation')
@@ -450,10 +450,11 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         else:
             parameters = {}
         self.model = ODEEpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
-                                              parameters, ground_truth, self.xmode, self.observation_model,
-                                              self.K, self.sigma_x, self.sigma_init, self.tau1, self.tau0,
-                                              self.epsilon, self.scale, self.offset, self.number_of_target_data,
-                                              self.time_length, self.dt, self.upsample, self.active_regions)
+                                              int(self.normal_flag), parameters, ground_truth, self.xmode,
+                                              self.observation_model, self.K, self.sigma_x, self.sigma_init,
+                                              self.tau1, self.tau0, self.epsilon, self.scale, self.offset,
+                                              self.number_of_target_data, self.time_length, self.dt, self.upsample,
+                                              self.active_regions)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
         return self.model
@@ -523,11 +524,10 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
             n_xp =len(names)
         else:
             self.logger.info("...autoregression noncentered time series parameters...")
-            names = list(set(["dX1t", "dZt"]) & set(params_names))
+            names = list(set(["dWt"]) & set(params_names))  # "dX1t", "dZt"
             n_xp = len(names)
             mins = n_xp*[-1.0]
             maxs = n_xp*[1.0]
-            means = n_xp*[0.0]
         for iV in range(n_xp):
             self.logger.info("..." + names[iV] + "...")
             parameters.update(
@@ -546,10 +546,10 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
         else:
             parameters = {}
         self.model = SDEEpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
-                                              parameters, ground_truth, self.xmode,self.observation_model, self.K,
-                                              self.sigma_x, self.sigma_init, self.sigma, self.tau1, self.tau0,
-                                              self.epsilon, self.scale, self.offset,self.number_of_target_data,
-                                              self.time_length, self.dt, self.upsample,
+                                              int(self.normal_flag), parameters, ground_truth, self.xmode,
+                                              self.observation_model, self.K, self.sigma_x, self.sigma_init, self.sigma,
+                                              self.tau1, self.tau0, self.epsilon, self.scale, self.offset,
+                                              self.number_of_target_data, self.time_length, self.dt, self.upsample,
                                               self.active_regions, self.sde_mode)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
