@@ -285,14 +285,18 @@ class ModelInversionPlotter(TimeseriesPlotter):
 
             dWt = {}
             subtitles = []
-            dX1t = sample.get("dX1t_star", sample.get("dX1t", None))
-            if dX1t:
+            dX1t = sample.get("dX1t_star", sample.get("dX1t", False))
+            if numpy.any(dX1t):
                 dWt.update({"dX1t": dX1t.data[:, :, :, skip_samples:].squeeze()})
                 subtitles.append("dX1t")
-            dZt = sample.get("dZt_star", sample.get("dZt", None))
-            if dZt:
+            dZt = sample.get("dZt_star", sample.get("dZt", False))
+            if numpy.any(dZt):
                 dWt.update({"dZt": dZt.data[:, :, :, skip_samples:].squeeze()})
                 subtitles.append("dZt")
+            dWt_star = sample.get("dWt_star", sample.get("dWt", False))
+            if numpy.any(dWt):
+                dWt.update({"dWt": dWt_star.data[:, :, :, skip_samples:].squeeze()})
+                subtitles.append("dWt")
             if len(dWt) > 0:
                 subtitles[-1] += "\ndynamic noise" + sig_prior_str + ", sig_post = " + str(est["sigma"])
                 figs.append(self.plot_raster(sort_dict(dWt), time[:-1], time_units=target_data.time_unit,
