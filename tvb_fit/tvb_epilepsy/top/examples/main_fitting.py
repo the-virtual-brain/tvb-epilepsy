@@ -232,7 +232,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
             skip_samples = 0
         prob_model_name = probabilistic_model.name.split(".")[0]
         if fit_flag:
-            estimates, samples, summary = stan_interface.fit(debug=0, simulate=0, model_data=model_data, refresh=1,
+            estimates, samples, summary = stan_interface.fit(debug=1, simulate=0, model_data=model_data, refresh=1,
                                                              n_chains_or_runs=n_chains_or_runs,
                                                              iter=iter, tol_rel_obj=tol_rel_obj,
                                                              output_samples=output_samples,
@@ -342,7 +342,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/test") # "fit_x1eq_sensor_synthetic")
+                              "fit/tests/test_fit_lognormal") # "fit_x1eq_sensor_synthetic")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
@@ -396,7 +396,7 @@ if __name__ == "__main__":
         normalization = "baseline-std"
     else:
         if sim_source_type == "paper":
-            times_on_off = [750.0, 1500.0] # [40.0, 400.0]  # for "paper" simulations
+            times_on_off = [1400.0, 2200.0] # [40.0, 400.0]  # for "paper" simulations
             preprocessing = ["convolve"] # ["lpf", "abs"] #"hpf", "convolve"
             if observation_model == OBSERVATION_MODELS.SEEG_POWER.value:
                 normalization = "baseline-100"
@@ -414,11 +414,11 @@ if __name__ == "__main__":
     preprocessing.append("decimate")
     downsampling = 2
     normal_flag = False
-    stan_model_name = "vep_sde"
-    fitmethod = "sample" # ""  # "sample"  # "advi" or "opt"
+    stan_model_name = "vep_sde_normal"
+    fitmethod = "sample"  # ""  # "sample"  # "advi" or "opt"
     pse_flag = True
     fit_flag = True
-    test_flag = True
+    test_flag = False
     if EMPIRICAL:
         main_fit_sim_hyplsa(stan_model_name=stan_model_name, normal_flag=normal_flag,
                             observation_model=observation_model,
