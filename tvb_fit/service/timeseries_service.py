@@ -1,4 +1,6 @@
 
+from collections import OrderedDict
+
 import numpy as np
 from scipy.signal import decimate, convolve, detrend, hilbert
 from scipy.stats import zscore
@@ -184,14 +186,14 @@ class TimeseriesService(object):
             seeg_fun = lambda source, gain_matrix: compute_seeg_exp(source.squeezed, gain_matrix)
         else:
             seeg_fun = lambda source, gain_matrix: compute_seeg_lin(source.squeezed, gain_matrix)
-        seeg = []
-        for id, sensor in enumerate(sensors.values()):
-            seeg.append(source_timeseries.__class__(seeg_fun(source_timeseries, sensor.gain_matrix),
-                                                    {TimeseriesDimensions.SPACE.value: sensor.labels,
-                                                     TimeseriesDimensions.VARIABLES.value:
-                                                        PossibleVariables.SEEG.value + str(id)},
-                                                    source_timeseries.time_start, source_timeseries.time_step,
-                                                    source_timeseries.time_unit))
+        seeg = OrderedDict()
+        for sensor_name, sensor in sensors.items():
+            seeg[sensor_name] = source_timeseries.__class__(seeg_fun(source_timeseries, sensor.gain_matrix),
+                                                            {TimeseriesDimensions.SPACE.value: sensor.labels,
+                                                             TimeseriesDimensions.VARIABLES.value:
+                                                                PossibleVariables.SEEG.value + str(id)},
+                                                             source_timeseries.time_start, source_timeseries.time_step,
+                                                             source_timeseries.time_unit)
         return seeg
 
 

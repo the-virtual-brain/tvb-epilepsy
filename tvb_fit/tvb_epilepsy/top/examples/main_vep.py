@@ -247,8 +247,8 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_UNSCALED_DEF, ep_ind
 
                         # Plot results
                         plotter.plot_simulated_timeseries(sim_output, sim.model, lsa_hypothesis.lsa_propagation_indices,
-                                                          seeg_list=seeg, spectral_raster_plot=False, title_prefix=hyp.name,
-                                                          spectral_options={"log_scale": True})
+                                                          seeg_dict=seeg, spectral_raster_plot=False,
+                                                          title_prefix=hyp.name, spectral_options={"log_scale": True})
 
 
 if __name__ == "__main__":

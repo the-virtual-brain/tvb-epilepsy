@@ -17,16 +17,16 @@ class SimulationPlotter(TimeseriesPlotter):
     def __init__(self, config=None):
         super(SimulationPlotter, self).__init__(config)
 
-    def plot_simulated_seeg_timeseries(self, seeg_list, title_prefix="Ep"):
+    def plot_simulated_seeg_timeseries(self, seeg_dict, title_prefix="Ep"):
         figs = []
-        for seeg in ensure_list(seeg_list):
-            title = title_prefix + "Simulated SEEG" + str(len(seeg.space_labels)) + " raster plot"
+        for sensors_name, seeg in seeg_dict.items():
+            title = title_prefix + sensors_name + " raster plot"
             figs.append(self.plot_raster({'SEEG': seeg.squeezed}, seeg.time_line,
-                                         time_units=seeg.time_unit, title=title, offset=1.0, labels=seeg.space_labels,
+                                         time_units=seeg.time_unit, title=title, offset=0.1, labels=seeg.space_labels,
                                          figsize=FiguresConfig.VERY_LARGE_SIZE))
         return tuple(figs)
 
-    def plot_simulated_timeseries(self, timeseries, model, seizure_indices, seeg_list=[],
+    def plot_simulated_timeseries(self, timeseries, model, seizure_indices, seeg_dict={},
                                   spectral_raster_plot=False, title_prefix="", spectral_options={}):
         figs = []
         if len(title_prefix) > 0:
@@ -103,6 +103,6 @@ class SimulationPlotter(TimeseriesPlotter):
                                                      title=title_prefix + "Simulated parameters",
                                                      labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
 
-        figs.append(self.plot_simulated_seeg_timeseries(seeg_list, title_prefix=title_prefix))
+        figs.append(self.plot_simulated_seeg_timeseries(seeg_dict, title_prefix=title_prefix))
 
         return tuple(figs)

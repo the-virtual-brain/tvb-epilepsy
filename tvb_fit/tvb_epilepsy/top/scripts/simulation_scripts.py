@@ -17,7 +17,7 @@ from tvb_fit.service.timeseries_service import TimeseriesService
 logger = initialize_logger(__name__)
 
 
-def _compute_and_write_seeg(source_timeseries, sensors_list, filename, hpf_flag=False, hpf_low=10.0,
+def _compute_and_write_seeg(source_timeseries, sensors_dict, filename, hpf_flag=False, hpf_low=10.0,
                             hpf_high=256.0, seeg_gain_mode="lin", h5_writer=H5Writer()):
     ts_service = TimeseriesService()
     fsAVG = 1000.0 / source_timeseries.time_step
@@ -26,25 +26,20 @@ def _compute_and_write_seeg(source_timeseries, sensors_list, filename, hpf_flag=
         hpf_low = max(hpf_low, 1000.0 / (source_timeseries.end_time - source_timeseries.time_start))
         hpf_high = min(fsAVG / 2.0 - 10.0, hpf_high)
 
-    idx_proj = -1
-    seeg_data = []
-    for sensor in sensors_list:
-        if isinstance(sensor, Sensors):
-            idx_proj += 1
-            seeg = ts_service.compute_seeg(source_timeseries, [sensor], sum_mode=seeg_gain_mode)[0]
-
-            if hpf_flag:
-                seeg = ts_service.filter(seeg, hpf_low, hpf_high, mode='bandpass', order=3)
-
-            # TODO: test the case where we save subsequent seeg data from different sensors
-            h5_writer.write_ts_seeg_epi(seeg, source_timeseries.time_step, filename)
-            seeg_data.append(seeg)
+    seeg_data = ts_service.compute_seeg(source_timeseries, sensors_dict, sum_mode=seeg_gain_mode)
+    for s_name, seeg in seeg_data.items():
+        if hpf_flag:
+            seeg_to_write = ts_service.filter(seeg, hpf_low, hpf_high, mode='bandpass', order=3)
+        else:
+            seeg_to_write = seeg
+        # TODO: test the case where we save subsequent seeg data from different sensors
+        h5_writer.write_ts_seeg_epi(seeg_to_write, source_timeseries.time_step, filename, sensors_name=s_name)
 
     return seeg_data
 
 
 # TODO: simplify and separate flow steps
-def compute_seeg_and_write_ts_to_h5(timeseries, model, sensors_list, filename, seeg_gain_mode="lin",
+def compute_seeg_and_write_ts_to_h5(timeseries, model, sensors_dict, filename, seeg_gain_mode="lin",
                                     hpf_flag=False, hpf_low=10.0, hpf_high=256.0, h5_writer=H5Writer()):
     filename_epi = os.path.splitext(filename)[0] + "_epi.h5"
     h5_writer.write_ts(timeseries, timeseries.time_step, filename)
@@ -52,7 +47,7 @@ def compute_seeg_and_write_ts_to_h5(timeseries, model, sensors_list, filename, s
     h5_writer.write_ts_epi(timeseries, timeseries.time_step, filename_epi, source_timeseries)
     if isinstance(model, EpileptorDP2D):
         hpf_flag = False
-    seeg_ts_all = _compute_and_write_seeg(source_timeseries, sensors_list, filename_epi, hpf_flag, hpf_low, hpf_high,
+    seeg_ts_all = _compute_and_write_seeg(source_timeseries, sensors_dict, filename_epi, hpf_flag, hpf_low, hpf_high,
                                           seeg_gain_mode, h5_writer=h5_writer)
 
     return timeseries, seeg_ts_all
@@ -110,7 +105,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
         if not isinstance(plotter, Plotter):
             plotter = Plotter(config)
         # Plot results
-        plotter.plot_simulated_timeseries(sim_output, sim.model, lsa_hypothesis.lsa_propagation_indices, seeg_list=seeg,
+        plotter.plot_simulated_timeseries(sim_output, sim.model, lsa_hypothesis.lsa_propagation_indices, seeg_dict=seeg,
                                           spectral_raster_plot=False, title_prefix=hypname,
                                           spectral_options={"log_scale": True})
 

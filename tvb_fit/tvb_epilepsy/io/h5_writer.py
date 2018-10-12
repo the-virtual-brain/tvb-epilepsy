@@ -69,11 +69,12 @@ class H5Writer(H5WriterBase):
                        KEY_VERSION, "/lfpdata")
         h5_file.close()
 
-    def write_ts_seeg_epi(self, seeg_data, sampling_period, path):
+    def write_ts_seeg_epi(self, seeg_data, sampling_period, path, sensors_name=""):
         if not os.path.exists(path):
             raise_error("TS file %s does not exist. First define the raw data!" + path, self.logger)
             return
-        sensors_name = "SeegSensors-" + str(seeg_data.shape[1])
+        if len(sensors_name) == 0:
+            sensors_name = "SeegSensors-" + str(seeg_data.shape[1])
 
         self.logger.info("Writing a TS at:\n" + path + ", " + sensors_name)
         try:
