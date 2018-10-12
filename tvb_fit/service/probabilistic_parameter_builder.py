@@ -129,7 +129,7 @@ def generate_probabilistic_parameter(name="Parameter", low=-CalculusConfig.MAX_S
 
 def generate_normal_parameter(name, mean, low, high, sigma=None, sigma_scale=2, p_shape=(), use="scipy"):
     if sigma is None:
-        sigma = np.abs(mean - low) / sigma_scale
+        sigma = np.minimum(np.abs(mean - low), np.abs(high - mean)) / sigma_scale
     return generate_probabilistic_parameter(name, low, high, loc=0.0, scale=1.0, p_shape=p_shape,
                                             probability_distribution=ProbabilityDistributionTypes.NORMAL,
                                             optimize_pdf=False, use=use, **{"mu": mean, "sigma": sigma})
