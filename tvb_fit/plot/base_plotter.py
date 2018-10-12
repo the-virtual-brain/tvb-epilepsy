@@ -253,8 +253,10 @@ class BasePlotter(object):
                                              colormap=kwargs.get("colormap", "YlOrRd"), show_y_labels=False,
                                              indices_red=focus_indices, sharey=ax0)
             elif data_dict.get("plot_type") == "regions2regions":
-                ax = self.plot_regions2regions(data, labels, subplot_ind, data_dict["name"], show_x_labels=True,
-                                               show_y_labels=False, indices_red_x=focus_indices, sharey=ax0)
+                # TODO: find a more general solution, in case we don't want to apply focus indices to x_ticks
+                ax = self.plot_regions2regions(data, labels, subplot_ind, data_dict["name"], x_ticks=focus_indices,
+                                               show_x_labels=True, show_y_labels=False, indices_red_x=focus_indices,
+                                               sharey=ax0)
             else:
                 ax = self.plot_vector(data, labels, subplot_ind, data_dict["name"], show_y_labels=False,
                                       indices_red=focus_indices, sharey=ax0)
