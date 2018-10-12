@@ -16,6 +16,7 @@ class ProbabilisticModelBase(object):
     name = "probabilistic_model"
     target_data_type = Target_Data_Type.EMPIRICAL.value
     priors_mode = PriorsModes.NONINFORMATIVE.value
+    normal_flag = 1
     parameters = {}
     ground_truth = {}  # a dictionary of parameters'names (keys) to true values or functions to read them from the model_config
 
@@ -30,12 +31,14 @@ class ProbabilisticModelBase(object):
     def number_of_parameters(self):
         return len(self.parameters)
 
-    def __init__(self, model_configuration, name='tvb',
+    def __init__(self, model_configuration, name='probabilistic_model',
                  target_data_type=Target_Data_Type.EMPIRICAL.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
-                 parameters={}, ground_truth={}):
+                 normal_flag=1, parameters={}, ground_truth={}):
+        self.name = name
         self.model_config = model_configuration
         self.target_data_type = target_data_type
         self.priors_mode = priors_mode
+        self.normal_flag = normal_flag
         self.parameters = parameters
         self.ground_truth = ground_truth
 
