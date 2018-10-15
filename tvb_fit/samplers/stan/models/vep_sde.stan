@@ -353,8 +353,8 @@ transformed parameters {
     row_vector[n_active_regions] x0; // Excitability
 
     // Initial conditions
-    row_vector[n_active_regions] x1_init;
-    row_vector[n_active_regions] z_init;
+    row_vector[n_active_regions] x1_init = x1_init_mu + x1_init_star * x1_init_std;
+    row_vector[n_active_regions] z_init = z_init_mu + z_init_star * z_init_std;
 
     row_vector[n_active_regions] x1[n_times];  // <lower=x1_lo, upper=x1_hi>
     row_vector[n_active_regions] z[n_times];
@@ -381,13 +381,11 @@ transformed parameters {
         x1eq = x;
         zeq = calc_zeq(x1eq, Iext1, tau1);
         x0 = calc_x0(x1eq, zeq, SC, Ic, x1_eq_def);
-        x1_init= x1eq + x1_init_star * x1_init_std;
-        z_init= zeq + z_init_star * z_init_std;
+//        x1_init= x1eq + x1_init_star * x1_init_std;
+//        z_init= zeq + z_init_star * z_init_std;
     } else {
         // Sample x0, set initial conditions'priors and equilibria following input data
         x0 = x;
-        x1_init= x1_init_mu + x1_init_star * x1_init_std;
-        z_init= z_init_mu + z_init_star * z_init_std;
         x1eq = x1_init;
         zeq = z_init;
     }
