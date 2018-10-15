@@ -46,6 +46,7 @@ class EpiProbabilisticModel(ProbabilisticModelBase):
 class ODEEpiProbabilisticModel(EpiProbabilisticModel):
 
     observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
+    x1_prior_weight = 0.0
     sigma_init = SIGMA_INIT_DEF
     tau1 = TAU1_DEF
     tau0 = TAU0_DEF
@@ -72,7 +73,7 @@ class ODEEpiProbabilisticModel(EpiProbabilisticModel):
 
     def __init__(self, model_config=ModelConfiguration(), name='vep_ode',
                  target_data_type=Target_Data_Type.EMPIRICAL.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
-                 normal_flag=1, parameters={}, ground_truth={}, xmode=XModes.X0MODE.value,
+                 normal_flag=1, x1_prior_weight=0.0, parameters={}, ground_truth={}, xmode=XModes.X0MODE.value,
                  observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, K=K_DEF,
                  sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,  epsilon=EPSILON_DEF,
                  scale=1.0, offset=0.0, number_of_target_data=0, time_length=0, dt=DT_DEF, upsample=UPSAMPLE,
@@ -90,6 +91,7 @@ class ODEEpiProbabilisticModel(EpiProbabilisticModel):
         else:
             raise_value_error("Statistical model's observation model " + str(observation_model) +
                               " is not one of the valid ones: " + str([_.value for _ in OBSERVATION_MODELS]) + "!")
+        self.x1_prior_weight = x1_prior_weight
         self.sigma_init = sigma_init
         self.tau1 = tau1
         self.tau0 = tau0
@@ -130,13 +132,13 @@ class SDEEpiProbabilisticModel(ODEEpiProbabilisticModel):
 
     def __init__(self, model_config=ModelConfiguration(), name='vep_ode',
                  target_data_type=Target_Data_Type.EMPIRICAL.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
-                 normal_flag=1, parameters={}, ground_truth={}, xmode=XModes.X0MODE.value,
+                 normal_flag=1, x1_prior_weight=0.0, parameters={}, ground_truth={}, xmode=XModes.X0MODE.value,
                  observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, K=K_DEF,
                  sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, sigma=SIGMA_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                  epsilon=EPSILON_DEF, scale=1.0, offset=0.0, number_of_target_data=0, time_length=0, dt=DT_DEF,
                  upsample=UPSAMPLE, active_regions=np.array([]), sde_mode=SDE_MODES.NONCENTERED.value):
         super(SDEEpiProbabilisticModel, self).__init__(model_config, name, target_data_type, priors_mode, normal_flag,
-                                                       parameters, ground_truth, xmode, observation_model,
+                                                       x1_prior_weight, parameters, ground_truth, xmode, observation_model,
                                                        K, sigma_x, sigma_init, tau1, tau0, epsilon, scale, offset,
                                                        number_of_target_data, time_length, dt, upsample, active_regions)
         self.sigma = sigma

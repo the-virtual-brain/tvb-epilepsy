@@ -5,7 +5,7 @@ from copy import deepcopy
 
 from tvb_fit.base.constants import PriorsModes, Target_Data_Type
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import *
-from tvb_fit.base.utils.log_error_utils import initialize_logger, warning
+from tvb_fit.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
 from tvb_fit.base.utils.data_structures_utils import formal_repr, ensure_list
 from tvb_fit.service.timeseries_service import compute_seeg_exp, compute_seeg_lin
 from tvb_fit.service.probabilistic_parameter_builder\
@@ -231,10 +231,13 @@ class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
 
 class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
+    x1_prior_weight = 0.0
     sigma_init = SIGMA_INIT_DEF
     epsilon = EPSILON_DEF
     scale = SCALE_DEF
     offset = OFFSET_DEF
+    x1_scale = 1.0
+    x1_offset = 0.0
     observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
     number_of_target_data = 0
     active_regions = np.array([])
@@ -246,9 +249,9 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
     def __init__(self, model=None, model_name="vep_ode", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True,
-                 K=K_DEF, sigma_x=None, sigma_x_scale=3,  # MC_direction_split=0.5,
+                 x1_prior_weight=0.0, K=K_DEF, sigma_x=None, sigma_x_scale=3,  # MC_direction_split=0.5,
                  sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
-                 epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF,
+                 epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF, x1_scale=1.0, x1_offset=0.0,
                  observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  number_of_target_data=0, active_regions=np.array([])):
         super(ODEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode, priors_mode,
@@ -265,6 +268,12 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         self.dt = self.compute_dt()
         self.active_regions = active_regions
         self.upsample = self.compute_upsample()
+        if (x1_prior_weight >= 0.0 and x1_prior_weight < 1.0):
+            self.x1_prior_weight = x1_prior_weight
+        else:
+            raise_value_error("x1_prior_weight (%s) is not one inside the interval [0.0, 1.0)!" % str(x1_prior_weight))
+        self.x1_scale = x1_scale
+        self.x1_offset = x1_offset
         if isinstance(self.model, EpiProbabilisticModel):
             self.sigma_init = getattr(self.model, "sigma_init", self.sigma_init)
             self.tau1 = getattr(self.model, "tau1", self.tau1)
@@ -278,6 +287,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             self.dt = getattr(self.model, "dt", self.dt)
             self.active_regions = getattr(self.model, "active_regions", self.active_regions)
             self.upsample = getattr(self.model, "upsample", self.upsample)
+            self.x1_prior_weight = getattr(self.model, "x1_prior_weight", self.x1_prior_weight)
 
     def _repr(self, d=OrderedDict()):
         d.update(super(ODEProbabilisticModelBuilder, self)._repr(d))
@@ -324,7 +334,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         return compute_upsample(self.time_length, default_seizure_length, tau0=self.tau0)
 
     def generate_parameters(self, params_names=ODE_DEFAULT_PARAMETERS,
-                            target_data=None, model_source_ts=None, gain_matrix=None):
+                            target_data=None, model_source_ts=None, gain_matrix=None, x1prior_ts=None):
         parameters = super(ODEProbabilisticModelBuilder, self).generate_parameters(params_names)
         if isinstance(self.model, ODEEpiProbabilisticModel):
             active_regions = self.model.active_regions
@@ -417,6 +427,30 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             self.offset = np.median(target_data.data) - np.median(self.scale*model_out_ts)
             self.epsilon = np.max(target_data.data.max(axis=0) - target_data.data.min(axis=0))/10
 
+        if (self.x1_prior_weight > 0.0):
+            if isinstance(x1prior_ts, Timeseries) and \
+                    isinstance(model_source_ts, Timeseries) and \
+                            isinstance(getattr(model_source_ts, "x1", Timeseries)):
+                model_out_ts = model_source_ts.x1.squeezed[:, active_regions] - self.model_config.x1eq.mean()
+                self.x1_scale = np.max(x1prior_ts.data.max(axis=0) - x1prior_ts.data.min(axis=0)) / \
+                             np.max(model_out_ts.max(axis=0) - model_out_ts.min(axis=0))
+                self.x1_offset = np.median(x1prior_ts.data) - np.median(self.x1_scale * model_out_ts)
+            self.logger.info("...x1_scale...")
+            x1_scale_scale = self.x1_scale / SCALE_SCALE_DEF
+            parameters.update({"x1_scale": self.generate_normal_or_lognormal_parameter("x1_scale", self.x1_scale,
+                                                                                       np.maximum(0.1, self.x1_scale -
+                                                                                                    3 * x1_scale_scale),
+                                                                                     self.x1_scale + 3 * x1_scale_scale,
+                                                                                      sigma=x1_scale_scale)})
+
+            self.logger.info("...x1_offset...")
+            x1_offset_scale = np.abs(self.x1_offset) / OFFSET_SCALE_DEF
+            parameters.update(
+                    {"x1_offset": generate_normal_parameter("x1_offset", self.x1_offset,
+                                                            self.x1_offset - 3 * x1_offset_scale,
+                                                            self.x1_offset + 3 * x1_offset_scale,
+                                                            sigma=x1_offset_scale)})
+
         self.logger.info("...observation's model parameters...")
         if "epsilon" in params_names:
             self.logger.info("...epsilon...")
@@ -450,8 +484,8 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         else:
             parameters = {}
         self.model = ODEEpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
-                                              int(self.normal_flag), parameters, ground_truth, self.xmode,
-                                              self.observation_model, self.K, self.sigma_x, self.sigma_init,
+                                              int(self.normal_flag), self.x1_prior_weight, parameters, ground_truth,
+                                              self.xmode, self.observation_model, self.K, self.sigma_x, self.sigma_init,
                                               self.tau1, self.tau0, self.epsilon, self.scale, self.offset,
                                               self.number_of_target_data, self.time_length, self.dt, self.upsample,
                                               self.active_regions)
@@ -467,15 +501,17 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
 
     def __init__(self, model=None, model_name="vep_sde", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True,
-                 K=K_DEF, sigma_x=None, sigma_x_scale=3,  # MC_direction_split=0.5,
+                 x1_prior_weight=0.0, K=K_DEF, sigma_x=None, sigma_x_scale=3,  # MC_direction_split=0.5,
                  sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
-                 epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF, sigma=SIGMA_DEF,
+                 epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF, x1_scale=1.0, x1_offset=0.0, sigma=SIGMA_DEF,
                  sde_mode=SDE_MODES.NONCENTERED.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  number_of_signals=0, active_regions=np.array([])):
         super(SDEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode, priors_mode,
-                                                           normal_flag, K, sigma_x, sigma_x_scale, # MC_direction_split,
-                                                           sigma_init, tau1, tau0, epsilon, scale, offset,
+                                                           normal_flag, x1_prior_weight, K, sigma_x, sigma_x_scale,
+                                                           sigma_init, tau1, tau0, epsilon,
+                                                           scale, offset, x1_scale, x1_offset,
                                                            observation_model, number_of_signals, active_regions)
+                                                                                                # MC_direction_split,
         self.sigma_init = sigma_init
         self.sde_mode = sde_mode
         self.sigma = sigma
@@ -538,7 +574,7 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
 
     def generate_model(self, target_data_type=Target_Data_Type.SYNTHETIC.value, ground_truth={},
                        generate_parameters=True, params_names=SDE_DEFAULT_PARAMETERS,
-                       target_data=None, sim_signals=None, gain_matrix=None):
+                       target_data=None, sim_signals=None, gain_matrix=None, x1prior_ts=None):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
         if generate_parameters:
@@ -546,9 +582,9 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
         else:
             parameters = {}
         self.model = SDEEpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
-                                              int(self.normal_flag), parameters, ground_truth, self.xmode,
-                                              self.observation_model, self.K, self.sigma_x, self.sigma_init, self.sigma,
-                                              self.tau1, self.tau0, self.epsilon, self.scale, self.offset,
+                                              int(self.normal_flag), self.x1_prior_weight, parameters, ground_truth,
+                                              self.xmode, self.observation_model, self.K, self.sigma_x, self.sigma_init,
+                                              self.sigma, self.tau1, self.tau0, self.epsilon, self.scale, self.offset,
                                               self.number_of_target_data, self.time_length, self.dt, self.upsample,
                                               self.active_regions, self.sde_mode)
         self.logger.info(self.__class__.__name__  + " took " +

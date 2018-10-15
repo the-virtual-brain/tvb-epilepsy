@@ -488,19 +488,19 @@ class ModelInversionPlotter(TimeseriesPlotter):
     def plot_fit_results(self, ests, samples, model_data, target_data, probabilistic_model=None, info_crit=None,
                          stats=None, pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
                          region_violin_params=["x0", "x1_init", "z_init"],
-                         regions_labels=[], regions_mode="active", n_regions=1,
+                         region_labels=[], regions_mode="active", n_regions=1,
                          trajectories_plot=True, connectivity_plot=False, skip_samples=0, title_prefix=""):
         if probabilistic_model is not None:
             active_regions = ensure_list(probabilistic_model.active_regions)
         else:
             active_regions = ensure_list(model_data.get("active_regions", range(n_regions)))
-            regions_labels = generate_region_labels(n_regions, regions_labels, ". ", False)
+            region_labels = generate_region_labels(n_regions, region_labels, ". ", False)
         if isequal_string(regions_mode, "all"):
             seizure_indices = active_regions
         else:
             region_inds = active_regions
             seizure_indices = None
-            regions_labels = regions_labels[region_inds]
+            region_labels = region_labels[region_inds]
 
         figs = []
 
@@ -512,15 +512,15 @@ class ModelInversionPlotter(TimeseriesPlotter):
 
         figs.append(
             self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
-                                        regions_labels, regions_mode, False, skip_samples, title_prefix))
+                                        region_labels, regions_mode, False, skip_samples, title_prefix))
 
         figs.append(
             self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
-                                        regions_labels, regions_mode, True, skip_samples, title_prefix))
+                                        region_labels, regions_mode, True, skip_samples, title_prefix))
 
         # Pack fit samples time series into timeseries objects:
         from tvb_fit.tvb_epilepsy.top.scripts.fitting_scripts import samples_to_timeseries
-        samples, target_data = samples_to_timeseries(samples, model_data, target_data, regions_labels)
+        samples, target_data, x1prior, x1eps = samples_to_timeseries(samples, model_data, target_data, region_labels)
         figs.append(self.plot_fit_timeseries(target_data, samples, ests, stats, probabilistic_model,
                                              seizure_indices, skip_samples, trajectories_plot, title_prefix))
 
@@ -530,6 +530,6 @@ class ModelInversionPlotter(TimeseriesPlotter):
                                                          xdata=target_data.time_line, xlabel="Time"))
 
         if connectivity_plot:
-            figs.append(self.plot_fit_connectivity(ests, stats, probabilistic_model, regions_labels, title_prefix))
+            figs.append(self.plot_fit_connectivity(ests, stats, probabilistic_model, region_labels, title_prefix))
 
         return tuple(figs)

@@ -103,7 +103,7 @@ def build_stan_model_data_dict_to_interface_ins(probabilistic_model, signals, co
 
 
 def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix, gain_matrix,
-                               time=None, X1_PRIOR=False):
+                               x1prior=None, x1eps=None, time=None):
     """
     Usually takes as input the model_data created with <build_stan_model_dict> and adds fields that are needed to
     interface the ins stan model.
@@ -114,6 +114,7 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
     if time is None:
         time = np.arange(0, probabilistic_model.dt, probabilistic_model.time_length)
     x = probabilistic_model.xmode
+    x1_prior_weight = probabilistic_model.get("x1_prior_weight", 0.0)
     vep_data = {"NORMAL": probabilistic_model.normal_flag,
                 "UPSAMPLE": probabilistic_model.upsample,
                 "n_active_regions": probabilistic_model.number_of_active_regions,
@@ -126,7 +127,7 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "x_std": probabilistic_model.parameters[x].std[active_regions],
                 "x_lo": probabilistic_model.parameters[x].low,
                 "x_hi": probabilistic_model.parameters[x].high,
-                "X1_PRIOR": int(X1_PRIOR),
+                "X1_PRIOR": x1_prior_weight,
                 "x1_init_lo": np.min(probabilistic_model.parameters["x1_init"].low),
                 "x1_init_hi": np.max(probabilistic_model.parameters["x1_init"].high),
                 "x1_init_mu": probabilistic_model.parameters["x1_init"].mean[active_regions],
@@ -157,7 +158,8 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "active_regions": np.array(probabilistic_model.active_regions),
                 }
     NO_PRIOR_CONST = 0.001
-    for pkey, pflag in zip(["sigma", "tau1", "tau0", "K"], ["SDE", "TAU1_PRIOR", "TAU0_PRIOR", "K_PRIOR"]):
+    for pkey, pflag in zip(["sigma", "tau1", "tau0", "K", "x1_scale", "x1_offset"], ["SDE", "TAU1_PRIOR", "TAU0_PRIOR",
+                                                                                     "X1_PRIOR", "X1_PRIOR"]):
         param = probabilistic_model.parameters.get(pkey, None)
         if param is None:
             mean = np.mean(getattr(probabilistic_model,pkey, NO_PRIOR_CONST))
@@ -166,5 +168,14 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
         else:
             vep_data.update({pflag: int(1), pkey+"_mu": np.mean(param.mean), pkey + "_std": np.mean(param.std),
                              pkey + "_lo": np.min(param.low), pkey + "_hi": np.max(param.high)})
+    if probabilistic_model.get("x1_prior_weight", False):
+        for pkey in ["x1_scale", "x1_offset"]:
+            param = probabilistic_model.parameters.get(pkey)
+            vep_data.update({pkey+"_mu": np.mean(param.mean), pkey + "_std": np.mean(param.std),
+                             pkey + "_lo": np.min(param.low), pkey + "_hi": np.max(param.high)})
+        vep_data.update({"x1prior": x1prior, "x1eps": x1eps})
+    else:
+        x1_shape = (probabilistic_model.time_length, probabilistic_model.active_regions)
+        vep_data.update({"x1prior": np.zeros(x1_shape), "x1eps": np.ones(x1_shape)})
     return vep_data
 
