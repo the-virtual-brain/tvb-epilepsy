@@ -342,7 +342,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/test_fit_lognormal") # "fit_x1eq_sensor_synthetic")
+                              "fit/tests/test_fit_normal") # "fit_x1eq_sensor_synthetic")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
@@ -413,11 +413,11 @@ if __name__ == "__main__":
         preprocessing.append("log")
     preprocessing.append("decimate")
     downsampling = 2
-    normal_flag = False
+    normal_flag = True
     stan_model_name = "vep_sde_normal"
     fitmethod = "sample"  # ""  # "sample"  # "advi" or "opt"
     pse_flag = True
-    fit_flag = True
+    fit_flag = False
     test_flag = False
     if EMPIRICAL:
         main_fit_sim_hyplsa(stan_model_name=stan_model_name, normal_flag=normal_flag,
