@@ -207,20 +207,19 @@ transformed data {
 
     // Dynamic model hyperparameters
     // Initializing to constant values
-    real tau1_star_mu = tau1_mu;
+    // Dynamic model hyperparameters
+    // Initializing to constant values
     real tau1_star_std = 0.0001*(tau1_hi - tau1_lo);
-    real tau1_star_lo = tau1_star_mu - 0.001;
-    real tau1_star_hi = tau1_star_mu + 0.001;
+    real tau1_star_lo = tau1_mu - 0.001;
+    real tau1_star_hi = tau1_mu + 0.001;
     real tau1_mu_sigma[2];
-    real tau0_star_mu = tau0_mu;
     real tau0_star_std = 0.0001*(tau0_hi - tau0_lo);
-    real tau0_star_lo = tau0_star_mu - 0.001;
-    real tau0_star_hi = tau0_star_mu + 0.001;
+    real tau0_star_lo = tau0_mu - 0.001;
+    real tau0_star_hi = tau0_mu + 0.001;
     real tau0_mu_sigma[2];
-    real K_star_mu = K_mu;
     real K_star_std = 0.0001*(K_hi - K_lo);
-    real K_star_lo = K_star_mu - 0.001;
-    real K_star_hi = K_star_mu + 0.001;
+    real K_star_lo = K_mu - 0.001;
+    real K_star_hi = K_mu + 0.001;
     real K_mu_sigma[2];
 
     // Integration parameters
@@ -532,13 +531,13 @@ transformed parameters {
     }
 
     if (DEBUG > 1) {
+        print("K=", K);
+        print("tau1=", tau1);
+        print("tau0=", tau0);
+        print("sigma=", sigma);
         print("offset=", offset);
         print("scale=", scale);
         print("epsilon=", epsilon);
-        print("K=", K);
-        print("sigma=", sigma);
-        print("tau1=", tau1);
-        print("tau0=", tau0);
         print("x0=", x0);
         print("x1eq=", x1eq);
         print("zeq=", zeq);
@@ -558,8 +557,6 @@ transformed parameters {
             }
         }
     }
-
-
 }
 
 
