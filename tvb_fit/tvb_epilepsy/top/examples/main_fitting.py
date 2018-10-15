@@ -285,7 +285,7 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
                                  stats=stats,
                                  pair_plot_params=["tau1", "tau0", "K", "sigma", "epsilon", "scale", "offset"],  #
                                  region_violin_params=region_violin_params,
-                                 regions_labels=head.connectivity.region_labels, skip_samples=skip_samples,
+                                 region_labels=head.connectivity.region_labels, skip_samples=skip_samples,
                                  title_prefix=hyp.name + "-" + prob_model_name)
 
 
