@@ -451,13 +451,13 @@ transformed parameters {
     }
 
     if (DEBUG > 1) {
+        print("K=", K);
+        print("tau1=", tau1);
+        print("tau0=", tau0);
+        print("sigma=", sigma);
         print("offset=", offset);
         print("scale=", scale);
         print("epsilon=", epsilon);
-        print("K=", K);
-        print("sigma=", sigma);
-        print("tau1=", tau1);
-        print("tau0=", tau0);
         print("x0=", x0);
         print("x1eq=", x1eq);
         print("zeq=", zeq);
