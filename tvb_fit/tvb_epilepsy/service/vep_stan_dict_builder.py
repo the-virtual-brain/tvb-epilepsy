@@ -44,7 +44,7 @@ def convert_params_names_to_ins(dicts_list, parameter_names=INS_PARAMS_NAMES_DIC
     return tuple(output)
 
 
-def build_stan_model_data_dict_to_interface_ins(probabilistic_model, signals, connectivity_matrix, gain_matrix,
+def build_stan_model_data_dict_to_interface_ins(probabilistic_model, signals, connectivity_matrix,
                                                 time=None, parameter_names=INS_PARAMS_NAMES_DICT):
     """
     Usually takes as input the model_data created with <build_stan_model_dict> and adds fields that are needed to
@@ -95,14 +95,14 @@ def build_stan_model_data_dict_to_interface_ins(probabilistic_model, signals, co
                 "offset_mu": probabilistic_model.parameters["offset"].mean,
                 "offset_std": probabilistic_model.parameters["offset"].std,
                 "seeg_log_power": signals,
-                "gain": gain_matrix,
+                "gain": probabilistic_model.gain_matrix,
                 "time": set_time(probabilistic_model, time),
                 "active_regions": np.array(probabilistic_model.active_regions),
                 }
     return vep_data
 
 
-def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix, gain_matrix,
+def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix,
                                x1prior=None, x1eps=None, time=None):
     """
     Usually takes as input the model_data created with <build_stan_model_dict> and adds fields that are needed to
@@ -114,7 +114,7 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
     if time is None:
         time = np.arange(0, probabilistic_model.dt, probabilistic_model.time_length)
     x = probabilistic_model.xmode
-    x1_prior_weight = probabilistic_model.get("x1_prior_weight", 0.0)
+    x1_prior_weight = getattr(probabilistic_model, "x1_prior_weight", 0.0)
     vep_data = {"NORMAL": probabilistic_model.normal_flag,
                 "UPSAMPLE": probabilistic_model.upsample,
                 "n_active_regions": probabilistic_model.number_of_active_regions,
@@ -153,29 +153,34 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "offset_hi": probabilistic_model.parameters["offset"].high,
                 "LOG_TARGET_DATA": int(probabilistic_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value),
                 "target_data": signals,
-                "gain": gain_matrix,
+                "gain": probabilistic_model.gain_matrix,
                 "time": set_time(probabilistic_model, time),
                 "active_regions": np.array(probabilistic_model.active_regions),
                 }
     NO_PRIOR_CONST = 0.001
-    for pkey, pflag in zip(["sigma", "tau1", "tau0", "K", "x1_scale", "x1_offset"], ["SDE", "TAU1_PRIOR", "TAU0_PRIOR",
-                                                                                     "X1_PRIOR", "X1_PRIOR"]):
+    for pkey, pflag in zip(["sigma", "tau1", "tau0", "K"], ["SDE", "TAU1_PRIOR", "TAU0_PRIOR", "K_PRIOR"]):
         param = probabilistic_model.parameters.get(pkey, None)
         if param is None:
-            mean = np.mean(getattr(probabilistic_model,pkey, NO_PRIOR_CONST))
+            mean = np.mean(getattr(probabilistic_model, pkey, NO_PRIOR_CONST))
             vep_data.update({pflag: int(0), pkey+"_mu": mean, pkey + "_std": NO_PRIOR_CONST,
                              pkey + "_lo": mean-NO_PRIOR_CONST, pkey + "_hi": mean+NO_PRIOR_CONST})
         else:
             vep_data.update({pflag: int(1), pkey+"_mu": np.mean(param.mean), pkey + "_std": np.mean(param.std),
                              pkey + "_lo": np.min(param.low), pkey + "_hi": np.max(param.high)})
-    if probabilistic_model.get("x1_prior_weight", False):
-        for pkey in ["x1_scale", "x1_offset"]:
-            param = probabilistic_model.parameters.get(pkey)
-            vep_data.update({pkey+"_mu": np.mean(param.mean), pkey + "_std": np.mean(param.std),
-                             pkey + "_lo": np.min(param.low), pkey + "_hi": np.max(param.high)})
+    for pkey in ["x1_scale", "x1_offset"]:
+        param = probabilistic_model.parameters.get(pkey, None)
+        if param is not None:
+            vep_data.update({pkey+"_mu": param.mean, pkey + "_std": param.std,
+                             pkey + "_lo": param.low, pkey + "_hi": param.high})
+
+        else:
+            mean = np.mean(getattr(probabilistic_model, pkey, NO_PRIOR_CONST))
+            vep_data.update({pkey + "_mu": mean, pkey + "_std": NO_PRIOR_CONST,
+                             pkey + "_lo": mean-NO_PRIOR_CONST, pkey + "_hi": mean+NO_PRIOR_CONST})
+    if x1_prior_weight > 0:
         vep_data.update({"x1prior": x1prior, "x1eps": x1eps})
     else:
-        x1_shape = (probabilistic_model.time_length, probabilistic_model.active_regions)
+        x1_shape = (probabilistic_model.time_length, probabilistic_model.number_of_active_regions)
         vep_data.update({"x1prior": np.zeros(x1_shape), "x1eps": np.ones(x1_shape)})
     return vep_data
 
