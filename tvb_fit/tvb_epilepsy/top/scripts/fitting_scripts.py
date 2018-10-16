@@ -188,12 +188,18 @@ def get_x1_estimates_from_samples(samples, model_data, region_labels=[], time_un
     else:
         time_start = 0
         time_step = 1
-    (n_times, n_regions, n_samples) = samples[0]["x1"].T.shape
+    if isinstance(samples[0]["x1"], np.ndarray):
+        get_x1 = lambda x1: x1.T
+    else:
+        get_x1 = lambda x1: x1.squeezed
+    (n_times, n_regions, n_samples) = get_x1(samples[0]["x1"]).shape
     active_regions = model_data.get("active_regions", np.array(range(n_regions)))
     region_labels = generate_region_labels(np.maximum(n_regions, len(region_labels)), region_labels, ". ", False)
+    if len(region_labels) > len(active_regions):
+        region_labels = region_labels[active_regions]
     x1 = np.empty((n_times, n_regions, 0))
     for sample in ensure_list(samples):
-        x1 = np.concatenate([x1, sample["x1"].T], axis=2)
+        x1 = np.concatenate([x1, get_x1(sample["x1"])], axis=2)
     x1_mean = Timeseries(np.nanmean(x1, axis=2).squeeze(), {TimeseriesDimensions.SPACE.value: region_labels,
                                                       TimeseriesDimensions.VARIABLES.value: ["x1"]},
                          time_start=time_start, time_step=time_step, time_unit=time_unit)
