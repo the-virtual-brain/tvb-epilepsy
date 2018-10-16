@@ -8,7 +8,7 @@ import numpy as np
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.base.utils.log_error_utils import initialize_logger, warning, \
                                                     raise_value_error, raise_not_implemented_error
-from tvb_fit.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict,  \
+from tvb_fit.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, \
                                                     list_of_dicts_to_dicts_of_ndarrays, switch_levels_of_dicts_of_dicts
 from tvb_fit.io.r_file_io import rdump, rload
 from tvb_fit.io.csv import parse_csv
@@ -89,9 +89,6 @@ class StanInterface(object):
         else:
             raise_not_implemented_error("model_data file (" + model_data_path +
                                         ") that are not one of (.R, .npy, .mat, .pkl) cannot be read!")
-        for key in model_data.keys():
-            if key[:3] == "EPI":
-                del model_data[key]
         return model_data
 
     def set_model_data(self, debug=0, simulate=0, **kwargs):
@@ -99,6 +96,9 @@ class StanInterface(object):
         model_data = kwargs.pop("model_data", None)
         if not(isinstance(model_data, dict)):
             model_data = self.load_model_data_from_file(self.model_data_path)
+        for key, val in model_data.items():
+            if isinstance(val, basestring):
+                del model_data[key]
         # -1 for no debugging at all
         # 0 for printing only scalar parameters
         # 1 for printing scalar and vector parameters
