@@ -90,12 +90,13 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
         return signals
 
 
-def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis, probabilistic_model, sensor_id=0,
+def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model, sensor_id=0,
                               sim_type="paper", times_on_off=[], config=Config(),
                               preprocessing=TARGET_DATA_PREPROCESSING,
                               low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF, high_lpf=HIGH_LPF,
                               bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
-    signals, simulator = from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
+    signals, simulator = from_model_configuration_to_simulation(probabilistic_model.model_config,
+                                                                head, lsa_hypothesis,
                                                                 sim_type=sim_type, ts_file=ts_file,
                                                                 config=config, plotter=plotter)
     try:
@@ -179,7 +180,7 @@ def samples_to_timeseries(samples, model_data, target_data=None, region_labels=[
     return samples, target_data, np.nanmean(x1, axis=2).squeeze(), np.nanstd(x1, axis=2).squeeze()
 
 
-def get_x1_estimates(samples, model_data, region_labels=[], time_unit="ms"):
+def get_x1_estimates_from_samples(samples, model_data, region_labels=[], time_unit="ms"):
     time = model_data.get("time", False)
     if time is not False:
         time_start = time[0]
