@@ -19,8 +19,8 @@ class CmdStanInterface(StanInterface):
         if not os.path.isfile(os.path.join(self.config.generic.CMDSTAN_PATH, 'runCmdStanTests.py')):
             raise_value_error('Please provide CmdStan path, e.g. lib.cmdstan_path("/path/to/")!')
         self.path = self.config.generic.CMDSTAN_PATH
-        self.output_filepath, self.diagnostic_filepath, self.summary_filepath, self.command_filepath = \
-            self.set_output_files(output_filepath, diagnostic_filepath, summary_filepath, command_filepath, False)
+        self.set_output_files(output_filepath, diagnostic_filepath, summary_filepath, command_filepath,
+                              base_path="", check_files=False)
         self.assert_fitmethod()
         self.command = ""
         self.options = {"init": init, "random_seed": random_seed}
@@ -42,26 +42,31 @@ class CmdStanInterface(StanInterface):
                               "sample, variational, optimize, diagnose")
 
     def set_output_files(self, output_filepath=None, diagnostic_filepath=None, summary_filepath=None,
-                         command_filepath=None, check_files=False, overwrite_output_files=False):
-        if output_filepath is None:
-            output_filepath = os.path.join(self.config.out.FOLDER_RES, STAN_OUTPUT_OPTIONS["file"])
-        if diagnostic_filepath is None:
-            diagnostic_filepath = os.path.join(self.config.out.FOLDER_RES, STAN_OUTPUT_OPTIONS["diagnostic_file"])
-        if summary_filepath is None:
-            summary_filepath = os.path.join(self.config.out.FOLDER_RES, "stan_summary.csv")
-        if command_filepath is None:
-            command_filepath = os.path.join(self.config.out.FOLDER_RES, "command.txt")
+                         command_filepath=None, base_path="",  check_files=False, overwrite_output_files=False,
+                         update=False):
+        if not os.path.isdir(base_path):
+            base_path = self.config.out.FOLDER_RES
+        if output_filepath is None or update:
+            output_filepath = os.path.join(base_path, STAN_OUTPUT_OPTIONS["file"])
+        if diagnostic_filepath is None or update:
+            diagnostic_filepath = os.path.join(base_path, STAN_OUTPUT_OPTIONS["diagnostic_file"])
+        if summary_filepath is None or update:
+            summary_filepath = os.path.join(base_path, "stan_summary.csv")
+        if command_filepath is None or update:
+            command_filepath = os.path.join(base_path, "command.txt")
         if check_files:
-            return change_filename_or_overwrite_with_wildcard(output_filepath.split(".csv")[0],
-                                                              overwrite_output_files) + ".csv", \
-                   change_filename_or_overwrite_with_wildcard(diagnostic_filepath.split(".csv")[0],
-                                                              overwrite_output_files) + ".csv", \
-                   change_filename_or_overwrite_with_wildcard(summary_filepath.split(".csv")[0],
-                                                              overwrite_output_files) + ".csv", \
-                   change_filename_or_overwrite_with_wildcard(command_filepath.split(".txt")[0],
-                                                               overwrite_output_files) + ".txt"
-        else:
-            return output_filepath, diagnostic_filepath, summary_filepath, command_filepath
+            output_filepath = change_filename_or_overwrite_with_wildcard(output_filepath.split(".csv")[0],
+                                                                              overwrite_output_files) + ".csv"
+            diagnostic_filepath = change_filename_or_overwrite_with_wildcard(diagnostic_filepath.split(".csv")[0],
+                                                                             overwrite_output_files) + ".csv"
+            summary_filepath = change_filename_or_overwrite_with_wildcard(summary_filepath.split(".csv")[0],
+                                                                          overwrite_output_files) + ".csv"
+            command_filepath = change_filename_or_overwrite_with_wildcard(command_filepath.split(".txt")[0],
+                                                                          overwrite_output_files) + ".txt"
+        self.output_filepath = output_filepath
+        self.diagnostic_filepath = diagnostic_filepath
+        self.summary_filepath = summary_filepath
+        self.command_filepath = command_filepath
 
     def set_model_data(self, debug=0, simulate=0, **kwargs):
         model_data = super(CmdStanInterface, self).set_model_data(debug, simulate, **kwargs)
@@ -116,12 +121,11 @@ class CmdStanInterface(StanInterface):
             **kwargs):
         num_warmup = kwargs.get("num_warmup", 0)
         # Confirm output files and check if overwriting is necessary
-        self.output_filepath, self.diagnostic_filepath, self.summary_filepath, self.command_filepath = \
-            self.set_output_files(kwargs.pop("output_filepath", self.output_filepath),
-                                  kwargs.pop("diagnostic_filepath", self.diagnostic_filepath),
-                                  kwargs.pop("summary_filepath", self.summary_filepath),
-                                  kwargs.pop("command_path", self.command_filepath),
-                                  True, overwrite_output_files)
+        self.set_output_files(kwargs.pop("output_filepath", self.output_filepath),
+                              kwargs.pop("diagnostic_filepath", self.diagnostic_filepath),
+                              kwargs.pop("summary_filepath", self.summary_filepath),
+                              kwargs.pop("command_path", self.command_filepath),
+                              kwargs.pop("base_path", ""), True, overwrite_output_files, True)
         self.model_path = kwargs.pop("model_path", self.model_path)
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
         self.fitmethod = kwargs.pop("method", self.fitmethod)

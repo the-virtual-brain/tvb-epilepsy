@@ -146,7 +146,8 @@ class ODEModelInversionService(ModelInversionService):
                 warning("Skipping active regions setting by seeg power because no data were assigned to sensors!")
         else:
             warning("Skipping active regions setting by seeg power because no target data were provided!")
-        return probabilistic_model, sensors.gain_matrix[signals_inds][:, probabilistic_model.active_regions]
+        probabilistic_model.gain_matrix = sensors.gain_matrix[signals_inds][:, probabilistic_model.active_regions]
+        return probabilistic_model
 
     def update_active_regions(self, probabilistic_model, sensors=None, target_data=None, e_values=[], x0_values=[],
                               lsa_propagation_strengths=[], reset=False):
@@ -165,9 +166,9 @@ class ODEModelInversionService(ModelInversionService):
                 signals_inds = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
                 gain_matrix = gain_matrix[signals_inds]
                 if "target_data" in self.active_regions_selection_methods:
-                    probabilistic_model, gain_matrix = \
+                    probabilistic_model = \
                         self.update_active_regions_target_data(target_data, probabilistic_model, sensors, reset=False)
-        return probabilistic_model, gain_matrix
+        return probabilistic_model
 
     def select_target_data_sensors(self, target_data, sensors, rois, power=np.array([]),
                                    n_groups=None, members_per_group=None):
@@ -246,7 +247,8 @@ class ODEModelInversionService(ModelInversionService):
         probabilistic_model.time = target_data.time_line
         probabilistic_model.time_length = len(probabilistic_model.time)
         probabilistic_model.number_of_target_data = target_data.number_of_labels
-        return target_data, probabilistic_model, self.set_gain_matrix(target_data, probabilistic_model, sensors)
+        probabilistic_model.gain_matrix = self.set_gain_matrix(target_data, probabilistic_model, sensors)
+        return target_data, probabilistic_model
 
 
 class SDEModelInversionService(ODEModelInversionService):

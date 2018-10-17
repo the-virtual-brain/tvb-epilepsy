@@ -218,8 +218,10 @@ class TimeseriesPlotter(BasePlotter):
         alpha_ratio = 1.0 / nSamples
         colors = numpy.array(['k'] * nTS)
         alphas = numpy.maximum(numpy.array([def_alpha] * nTS) * alpha_ratio, 0.1)
-        colors[special_idx] = 'r'
-        alphas[special_idx] = numpy.maximum(alpha_ratio, 0.1)
+        if special_idx is not None:
+            if len(special_idx) > 0:
+                colors[special_idx] = 'r'
+                alphas[special_idx] = numpy.maximum(alpha_ratio, 0.1)
         lines = []
         pyplot.figure(title, figsize=figsize)
         pyplot.hold(True)

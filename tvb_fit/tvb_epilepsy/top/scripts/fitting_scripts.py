@@ -90,12 +90,13 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
         return signals
 
 
-def set_simulated_target_data(ts_file, model_configuration, head, lsa_hypothesis, probabilistic_model, sensor_id=0,
+def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model, sensor_id=0,
                               sim_type="paper", times_on_off=[], config=Config(),
                               preprocessing=TARGET_DATA_PREPROCESSING,
                               low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF, high_lpf=HIGH_LPF,
                               bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
-    signals, simulator = from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
+    signals, simulator = from_model_configuration_to_simulation(probabilistic_model.model_config,
+                                                                head, lsa_hypothesis,
                                                                 sim_type=sim_type, ts_file=ts_file,
                                                                 config=config, plotter=plotter)
     try:
@@ -179,7 +180,7 @@ def samples_to_timeseries(samples, model_data, target_data=None, region_labels=[
     return samples, target_data, np.nanmean(x1, axis=2).squeeze(), np.nanstd(x1, axis=2).squeeze()
 
 
-def get_x1_estimates(samples, model_data, region_labels=[], time_unit="ms"):
+def get_x1_estimates_from_samples(samples, model_data, region_labels=[], time_unit="ms"):
     time = model_data.get("time", False)
     if time is not False:
         time_start = time[0]
@@ -187,12 +188,18 @@ def get_x1_estimates(samples, model_data, region_labels=[], time_unit="ms"):
     else:
         time_start = 0
         time_step = 1
-    (n_times, n_regions, n_samples) = samples[0]["x1"].T.shape
+    if isinstance(samples[0]["x1"], np.ndarray):
+        get_x1 = lambda x1: x1.T
+    else:
+        get_x1 = lambda x1: x1.squeezed
+    (n_times, n_regions, n_samples) = get_x1(samples[0]["x1"]).shape
     active_regions = model_data.get("active_regions", np.array(range(n_regions)))
     region_labels = generate_region_labels(np.maximum(n_regions, len(region_labels)), region_labels, ". ", False)
+    if len(region_labels) > len(active_regions):
+        region_labels = region_labels[active_regions]
     x1 = np.empty((n_times, n_regions, 0))
     for sample in ensure_list(samples):
-        x1 = np.concatenate([x1, sample["x1"].T], axis=2)
+        x1 = np.concatenate([x1, get_x1(sample["x1"])], axis=2)
     x1_mean = Timeseries(np.nanmean(x1, axis=2).squeeze(), {TimeseriesDimensions.SPACE.value: region_labels,
                                                       TimeseriesDimensions.VARIABLES.value: ["x1"]},
                          time_start=time_start, time_step=time_step, time_unit=time_unit)
