@@ -11,16 +11,16 @@ from tvb_fit.samplers.stan.stan_factory import *
 
 class CmdStanInterface(StanInterface):
 
-    def __init__(self, model_name=None, model=None, model_code=None, model_code_path="", model_data_path="",
+    def __init__(self, model_name=None, model=None, model_code=None, model_dir="", model_code_path="", model_data_path="",
                  output_filepath=None, diagnostic_filepath=None, summary_filepath=None, command_filepath=None,
                  fitmethod="sample", random_seed=12345, init="random", config=None, **options):
-        super(CmdStanInterface, self).__init__(model_name, model, model_code, model_code_path, model_data_path,
-                                               fitmethod, config)
+        super(CmdStanInterface, self).__init__(model_name, model, model_code, model_dir, model_code_path,
+                                               model_data_path, fitmethod, config)
         if not os.path.isfile(os.path.join(self.config.generic.CMDSTAN_PATH, 'runCmdStanTests.py')):
             raise_value_error('Please provide CmdStan path, e.g. lib.cmdstan_path("/path/to/")!')
         self.path = self.config.generic.CMDSTAN_PATH
         self.set_output_files(output_filepath, diagnostic_filepath, summary_filepath, command_filepath,
-                              base_path="", check_files=False)
+                              base_path=model_dir, check_files=False)
         self.assert_fitmethod()
         self.command = ""
         self.options = {"init": init, "random_seed": random_seed}
@@ -125,7 +125,7 @@ class CmdStanInterface(StanInterface):
                               kwargs.pop("diagnostic_filepath", self.diagnostic_filepath),
                               kwargs.pop("summary_filepath", self.summary_filepath),
                               kwargs.pop("command_path", self.command_filepath),
-                              kwargs.pop("base_path", ""), True, overwrite_output_files, True)
+                              kwargs.pop("output_path", ""), True, overwrite_output_files, True)
         self.model_path = kwargs.pop("model_path", self.model_path)
         self.fitmethod = kwargs.pop("fitmethod", self.fitmethod)
         self.fitmethod = kwargs.pop("method", self.fitmethod)

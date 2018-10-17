@@ -21,13 +21,14 @@ class StanInterface(object):
 
     logger = initialize_logger(__name__)
 
-    def __init__(self, model_name="", model=None, model_code=None, model_code_path="",
+    def __init__(self, model_name="", model=None, model_code=None, model_dir="", model_code_path="",
                  model_data_path="", fitmethod="sampling", config=None):
         self.fitmethod = fitmethod
         self.model_name = model_name
         self.model = model
         self.config = config or Config()
-        model_dir = config.out.FOLDER_RES
+        if not os.path.isdir(model_dir):
+            model_dir = config.out.FOLDER_RES
         if not (os.path.isdir(model_dir)):
             os.mkdir(model_dir)
         self.model_path = os.path.join(model_dir, self.model_name)

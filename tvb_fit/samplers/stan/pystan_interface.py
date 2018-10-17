@@ -11,10 +11,10 @@ from tvb_fit.samplers.stan.stan_factory import STAN_OUTPUT_OPTIONS
 
 class PyStanInterface(StanInterface):
 
-    def __init__(self, model_name=None, model=None, model_code=None, model_code_path="", model_data_path="",
+    def __init__(self, model_name=None, model=None, model_code=None, model_dir="", model_code_path="", model_data_path="",
                  fitmethod="sampling", random_seed=12345, init="random", config=None, **options):
-        super(PyStanInterface, self).__init__(model_name, model, model_code, model_code_path, model_data_path,
-                                              fitmethod, config)
+        super(PyStanInterface, self).__init__(model_name, model, model_code, model_dir, model_code_path,
+                                              model_data_path, fitmethod, config)
         self.assert_fitmethod()
         self.options = {"init": init, "seed": random_seed, "verbose": True}
         self.options.update(options)
