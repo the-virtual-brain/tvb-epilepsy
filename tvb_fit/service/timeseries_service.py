@@ -108,8 +108,10 @@ class TimeseriesService(object):
                                     timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def filter(self, timeseries, lowcut=None, highcut=None, mode='bandpass', order=3):
-        return timeseries.__class__(filter_data(timeseries.data, timeseries.sampling_frequency, lowcut, highcut, mode, order),
-                                    timeseries.dimension_labels, timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+        return timeseries.__class__(filter_data(timeseries.data, timeseries.sampling_frequency,
+                                                lowcut, highcut, mode, order),
+                                    timeseries.dimension_labels, timeseries.time_start, timeseries.time_step,
+                                    timeseries.time_unit)
 
     def log(self, timeseries):
         return timeseries.__class__(np.log(timeseries.data), timeseries.dimension_labels,
@@ -186,15 +188,22 @@ class TimeseriesService(object):
             seeg_fun = lambda source, gain_matrix: compute_seeg_exp(source.squeezed, gain_matrix)
         else:
             seeg_fun = lambda source, gain_matrix: compute_seeg_lin(source.squeezed, gain_matrix)
-        seeg = OrderedDict()
-        for sensor_name, sensor in sensors.items():
-            seeg[sensor_name] = source_timeseries.__class__(seeg_fun(source_timeseries, sensor.gain_matrix),
-                                                            {TimeseriesDimensions.SPACE.value: sensor.labels,
-                                                             TimeseriesDimensions.VARIABLES.value:
-                                                                PossibleVariables.SEEG.value + str(id)},
-                                                             source_timeseries.time_start, source_timeseries.time_step,
-                                                             source_timeseries.time_unit)
-        return seeg
+        if isinstance(sensors, dict):
+            seeg = OrderedDict()
+            for sensor_name, sensor in sensors.items():
+                seeg[sensor_name] = source_timeseries.__class__(seeg_fun(source_timeseries, sensor.gain_matrix),
+                                                                {TimeseriesDimensions.SPACE.value: sensor.labels,
+                                                                 TimeseriesDimensions.VARIABLES.value: [sensor.name]},
+                                                                source_timeseries.time_start,
+                                                                source_timeseries.time_step,
+                                                                source_timeseries.time_unit)
+            return seeg
+        else:
+            return source_timeseries.__class__(seeg_fun(source_timeseries, sensors.gain_matrix),
+                                                {TimeseriesDimensions.SPACE.value: sensors.labels,
+                                                 TimeseriesDimensions.VARIABLES.value: [sensors.name]},
+                                                source_timeseries.time_start, source_timeseries.time_step,
+                                                source_timeseries.time_unit)
 
 
 def compute_seeg_lin(source_timeseries, gain_matrix):
