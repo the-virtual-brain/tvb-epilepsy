@@ -491,11 +491,11 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
     def generate_model(self, target_data_type=Target_Data_Type.SYNTHETIC.value, ground_truth={},
                        generate_parameters=True, parameters=OrderedDict(), params_names=ODE_DEFAULT_PARAMETERS,
-                       target_data=None, sim_signals=None, x1prior_ts=None):
+                       target_data=None, model_source_ts=None, x1prior_ts=None):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
         if generate_parameters:
-            parameters = self.generate_parameters(params_names, parameters, target_data, sim_signals, x1prior_ts)
+            parameters = self.generate_parameters(params_names, parameters, target_data, model_source_ts, x1prior_ts)
         self.model = ODEEpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
                                               int(self.normal_flag), int(self.linear_flag), self.x1eq_cr, self.x1eq_def,
                                               self.x1_prior_weight, parameters, ground_truth, self.xmode,
@@ -590,11 +590,11 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
 
     def generate_model(self, target_data_type=Target_Data_Type.SYNTHETIC.value, ground_truth={},
                        generate_parameters=True, parameters=OrderedDict(), params_names=SDE_DEFAULT_PARAMETERS,
-                       target_data=None, sim_signals=None, x1prior_ts=None):
+                       target_data=None, model_source_ts=None, x1prior_ts=None):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
         if generate_parameters:
-            parameters = self.generate_parameters(params_names, parameters, target_data, sim_signals, x1prior_ts)
+            parameters = self.generate_parameters(params_names, parameters, target_data, model_source_ts, x1prior_ts)
         self.model = SDEEpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
                                               int(self.normal_flag), int(self.linear_flag), self.x1eq_cr, self.x1eq_def,
                                               self.x1_prior_weight, parameters, ground_truth, self.xmode,
