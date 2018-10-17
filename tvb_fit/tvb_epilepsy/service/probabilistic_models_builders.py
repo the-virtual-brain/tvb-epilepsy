@@ -36,24 +36,36 @@ class ProbabilisticModelBuilderBase(object):
     model_name = "vep"
     model_config = EpileptorModelConfiguration("EpileptorDP2D")
     xmode = XModes.X0MODE.value
+    linear_flag = False
     priors_mode = PriorsModes.NONINFORMATIVE.value
     model = None
     normal_flag = True
-
+    x1eq_cr = X1EQ_CR
+    x1eq_def = X1EQ_DEF
     def __init__(self, model=None, model_name="vep", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
-                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True):
+                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True,
+                 linear_flag=False, x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF):
         self.model = deepcopy(model)
         self.model_name = model_name
         self.model_config = model_config
         self.xmode = xmode
+        self.x1eq_cr = x1eq_cr
+        self.x1eq_def = x1eq_def
         self.priors_mode = priors_mode
         self.normal_flag = normal_flag
+        self.linear_flag = linear_flag
         if self.normal_flag:
             self.model_name += "_normal"
+        if self.linear_flag:
+            self.model_name += "_lin"
         if isinstance(self.model, EpiProbabilisticModel):
             self.model_name = self.model.name
             self.model_config = getattr(self.model, "model_config", self.model_config)
+            self.normal_flag = getattr(self.model, "normal_flag", self.normal_flag)
+            self.linear_flag = getattr(self.model, "linear_flag", self.linear_flag)
             self.xmode = getattr(self.model, "xmode", self.xmode)
+            self.x1eq_cr = getattr(self.model, "x1eq_cr", self.x1eq_cr)
+            self.x1eq_def = getattr(self.model, "x1eq_def", self.x1eq_def)
             self.priors_mode = getattr(self.model, "priors_mode", self.priors_mode)
 
     def __repr__(self, d=OrderedDict()):
@@ -120,9 +132,9 @@ class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
 
     def __init__(self, model=None, model_name="vep", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True,
-                 K=K_DEF, sigma_x=None, sigma_x_scale=3): #
-        super(ProbabilisticModelBuilder, self).__init__(model, model_name, model_config,
-                                                        xmode, priors_mode, normal_flag)
+                 linear_flag=False, x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF, K=K_DEF, sigma_x=None, sigma_x_scale=3): #
+        super(ProbabilisticModelBuilder, self).__init__(model, model_name, model_config,  xmode, priors_mode,
+                                                        normal_flag, linear_flag, x1eq_cr, x1eq_def)
         self.K = K
         # self.MC_direction_split = MC_direction_split
         if sigma_x is None:
@@ -222,8 +234,8 @@ class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
         else:
             parameters = {}
         self.model = EpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
-                                           int(self.normal_flag), parameters, ground_truth, self.xmode,
-                                           self.K, self.sigma_x) # , self.MC_direction_split
+                                           int(self.normal_flag), int(self.linear_flag), self.x1eq_cr, self.x1eq_def,
+                                           parameters, ground_truth, self.xmode, self.K, self.sigma_x) # , self.MC_direction_split
         self.logger.info(self.__class__.__name__ + " took " +
                          str( time.time() - tic) + ' sec for model generation')
         return self.model
@@ -249,13 +261,14 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
     def __init__(self, model=None, model_name="vep_ode", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True,
-                 x1_prior_weight=0.0, K=K_DEF, sigma_x=None, sigma_x_scale=3,  # MC_direction_split=0.5,
-                 sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
+                 linear_flag=False, x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF, x1_prior_weight=0.0, K=K_DEF,   # MC_direction_split=0.5,
+                 sigma_x=None, sigma_x_scale=3, sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                  epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF, x1_scale=1.0, x1_offset=0.0,
                  observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  number_of_target_data=0, active_regions=np.array([])):
         super(ODEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode, priors_mode,
-                                                           normal_flag, K, sigma_x, sigma_x_scale) # MC_direction_split
+                                                           normal_flag, linear_flag, x1eq_cr, x1eq_def,
+                                                           K, sigma_x, sigma_x_scale) # MC_direction_split
         self.sigma_init = sigma_init
         self.tau1 = tau1
         self.tau0 = tau0
@@ -484,8 +497,9 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         else:
             parameters = {}
         self.model = ODEEpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
-                                              int(self.normal_flag), self.x1_prior_weight, parameters, ground_truth,
-                                              self.xmode, self.observation_model, self.K, self.sigma_x, self.sigma_init,
+                                              int(self.normal_flag), int(self.linear_flag), self.x1eq_cr, self.x1eq_def,
+                                              self.x1_prior_weight, parameters, ground_truth, self.xmode,
+                                              self.observation_model, self.K, self.sigma_x, self.sigma_init,
                                               self.tau1, self.tau0, self.epsilon, self.scale, self.offset,
                                               self.number_of_target_data, self.time_length, self.dt, self.upsample,
                                               self.active_regions)
@@ -501,14 +515,14 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
 
     def __init__(self, model=None, model_name="vep_sde", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True,
-                 x1_prior_weight=0.0, K=K_DEF, sigma_x=None, sigma_x_scale=3,  # MC_direction_split=0.5,
-                 sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
+                 linear_flag=False, x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF, x1_prior_weight=0.0, K=K_DEF,  # MC_direction_split=0.5,
+                 sigma_x=None, sigma_x_scale=3, sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                  epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF, x1_scale=1.0, x1_offset=0.0, sigma=SIGMA_DEF,
                  sde_mode=SDE_MODES.NONCENTERED.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
                  number_of_signals=0, active_regions=np.array([])):
         super(SDEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode, priors_mode,
-                                                           normal_flag, x1_prior_weight, K, sigma_x, sigma_x_scale,
-                                                           sigma_init, tau1, tau0, epsilon,
+                                                           normal_flag, linear_flag, x1eq_cr, x1eq_def, x1_prior_weight,
+                                                           K, sigma_x, sigma_x_scale, sigma_init, tau1, tau0, epsilon,
                                                            scale, offset, x1_scale, x1_offset,
                                                            observation_model, number_of_signals, active_regions)
                                                                                                 # MC_direction_split,
@@ -582,8 +596,9 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
         else:
             parameters = {}
         self.model = SDEEpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
-                                              int(self.normal_flag), self.x1_prior_weight, parameters, ground_truth,
-                                              self.xmode, self.observation_model, self.K, self.sigma_x, self.sigma_init,
+                                              int(self.normal_flag), int(self.linear_flag), self.x1eq_cr, self.x1eq_def,
+                                              self.x1_prior_weight, parameters, ground_truth, self.xmode,
+                                              self.observation_model,  self.K, self.sigma_x, self.sigma_init,
                                               self.sigma, self.tau1, self.tau0, self.epsilon, self.scale, self.offset,
                                               self.number_of_target_data, self.time_length, self.dt, self.upsample,
                                               self.active_regions, self.sde_mode)

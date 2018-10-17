@@ -13,18 +13,25 @@ class EpiProbabilisticModel(ProbabilisticModelBase):
 
     name = "vep"
     model_config = ModelConfiguration()
+    linear_flag = 0
     normal_flag = 1
     xmode = XModes.X0MODE.value
+    x1eq_cr = X1EQ_CR
+    x1eq_def = X1EQ_DEF
     sigma_x = SIGMA_X0_DEF
     K = K_DEF
     # MC_direction_split = 0.5
 
     def __init__(self, model_config=ModelConfiguration(), name='vep', target_data_type=Target_Data_Type.EMPIRICAL.value,
-                 priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=1, parameters={}, ground_truth={},
-                 xmode=XModes.X0MODE.value, K=K_DEF, sigma_x=SIGMA_X0_DEF):  #, MC_direction_split=0.5
+                 priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=1, linear_flag=0,
+                 parameters={}, ground_truth={}, xmode=XModes.X0MODE.value,
+                 x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF, K=K_DEF, sigma_x=SIGMA_X0_DEF):  #, MC_direction_split=0.5
         super(EpiProbabilisticModel, self).__init__(model_config, name, target_data_type, priors_mode, normal_flag,
                                                     parameters, ground_truth)
         self.xmode = xmode
+        self.linear_flag = linear_flag
+        self.x1eq_cr = x1eq_cr
+        self.x1eq_def = x1eq_def
         self.sigma_x = sigma_x
         self.model_config = model_config
         self.K = K
@@ -73,13 +80,14 @@ class ODEEpiProbabilisticModel(EpiProbabilisticModel):
 
     def __init__(self, model_config=ModelConfiguration(), name='vep_ode',
                  target_data_type=Target_Data_Type.EMPIRICAL.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
-                 normal_flag=1, x1_prior_weight=0.0, parameters={}, ground_truth={}, xmode=XModes.X0MODE.value,
-                 observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, K=K_DEF,
-                 sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,  epsilon=EPSILON_DEF,
-                 scale=1.0, offset=0.0, number_of_target_data=0, time_length=0, dt=DT_DEF, upsample=UPSAMPLE,
-                 active_regions=np.array([])):
+                 normal_flag=1, linear_flag=0, x1_prior_weight=0.0, parameters={}, ground_truth={},
+                 xmode=XModes.X0MODE.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
+                 x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF, K=K_DEF, sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF,
+                 tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF, scale=1.0, offset=0.0,
+                 number_of_target_data=0, time_length=0, dt=DT_DEF, upsample=UPSAMPLE, active_regions=np.array([])):
         super(ODEEpiProbabilisticModel, self).__init__(model_config, name,  target_data_type, priors_mode, normal_flag,
-                                                       parameters, ground_truth, xmode, K, sigma_x)
+                                                       linear_flag, parameters, ground_truth,
+                                                       xmode, x1eq_cr, x1eq_def, K, sigma_x)
         if np.all(np.in1d(active_regions, range(self.number_of_regions))):
             self.active_regions = np.unique(active_regions)
         else:
@@ -132,14 +140,16 @@ class SDEEpiProbabilisticModel(ODEEpiProbabilisticModel):
 
     def __init__(self, model_config=ModelConfiguration(), name='vep_ode',
                  target_data_type=Target_Data_Type.EMPIRICAL.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
-                 normal_flag=1, x1_prior_weight=0.0, parameters={}, ground_truth={}, xmode=XModes.X0MODE.value,
-                 observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, K=K_DEF,
-                 sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF, sigma=SIGMA_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
-                 epsilon=EPSILON_DEF, scale=1.0, offset=0.0, number_of_target_data=0, time_length=0, dt=DT_DEF,
-                 upsample=UPSAMPLE, active_regions=np.array([]), sde_mode=SDE_MODES.NONCENTERED.value):
+                 normal_flag=1, linear_flag=0, x1_prior_weight=0.0, parameters={}, ground_truth={},
+                 xmode=XModes.X0MODE.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
+                 x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF, K=K_DEF, sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF,
+                 sigma=SIGMA_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF, scale=1.0, offset=0.0,
+                 number_of_target_data=0, time_length=0, dt=DT_DEF, upsample=UPSAMPLE, active_regions=np.array([]),
+                 sde_mode=SDE_MODES.NONCENTERED.value):
         super(SDEEpiProbabilisticModel, self).__init__(model_config, name, target_data_type, priors_mode, normal_flag,
-                                                       x1_prior_weight, parameters, ground_truth, xmode, observation_model,
-                                                       K, sigma_x, sigma_init, tau1, tau0, epsilon, scale, offset,
+                                                       linear_flag, x1_prior_weight, parameters, ground_truth,
+                                                       xmode, observation_model, x1eq_cr, x1eq_def, K,
+                                                       sigma_x, sigma_init, tau1, tau0, epsilon, scale, offset,
                                                        number_of_target_data, time_length, dt, upsample, active_regions)
         self.sigma = sigma
         self.sde_mode = sde_mode

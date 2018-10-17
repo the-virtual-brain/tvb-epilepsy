@@ -1,7 +1,7 @@
 
 import numpy as np
 
-from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import XModes, OBSERVATION_MODELS #, \
+from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import XModes, OBSERVATION_MODELS, X1EQ_CR, X1EQ_DEF #, \
    # X1_MIN, X1_MAX, X1_LOGMU_DEF, X1_LOGSIGMA_DEF, X1_LOGLOC_DEF
 from tvb_fit.base.utils.log_error_utils import warning
 from tvb_fit.base.utils.data_structures_utils import ensure_list
@@ -115,14 +115,18 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
         time = np.arange(0, probabilistic_model.dt, probabilistic_model.time_length)
     x = probabilistic_model.xmode
     x1_prior_weight = probabilistic_model.get("x1_prior_weight", 0.0)
-    vep_data = {"NORMAL": probabilistic_model.normal_flag,
+    vep_data = {"LINEAR": int(getattr(probabilistic_model, "linear_flag", 0)),
+                "NORMAL": probabilistic_model.normal_flag,
                 "UPSAMPLE": probabilistic_model.upsample,
                 "n_active_regions": probabilistic_model.number_of_active_regions,
                 "n_times": probabilistic_model.time_length,
                 "n_target_data": probabilistic_model.number_of_target_data,
                 "dt": probabilistic_model.dt,
+                "yc": np.mean(probabilistic_model.model_config.yc),
                 "Iext1": np.mean(probabilistic_model.model_config.Iext1),
                 "XMODE": int(probabilistic_model.xmode == XModes.X1EQMODE.value),
+                "x1eq_cr": getattr(probabilistic_model, "x1eq_cr", X1EQ_CR),
+                "x1eq_def": getattr(probabilistic_model, "x1eq_def", X1EQ_DEF),
                 "x_mu": probabilistic_model.parameters[x].mean[active_regions],
                 "x_std": probabilistic_model.parameters[x].std[active_regions],
                 "x_lo": probabilistic_model.parameters[x].low,
