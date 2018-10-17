@@ -60,13 +60,8 @@ class ProbabilisticModelBuilderBase(object):
             self.model_name += "_lin"
         if isinstance(self.model, EpiProbabilisticModel):
             self.model_name = self.model.name
-            self.model_config = getattr(self.model, "model_config", self.model_config)
-            self.normal_flag = getattr(self.model, "normal_flag", self.normal_flag)
-            self.linear_flag = getattr(self.model, "linear_flag", self.linear_flag)
-            self.xmode = getattr(self.model, "xmode", self.xmode)
-            self.x1eq_cr = getattr(self.model, "x1eq_cr", self.x1eq_cr)
-            self.x1eq_def = getattr(self.model, "x1eq_def", self.x1eq_def)
-            self.priors_mode = getattr(self.model, "priors_mode", self.priors_mode)
+            for attr in ["model_config", "normal_flag", "linear_flag", "xmode", "x1eq_cr", "x1eq_def", "priors_mode"]:
+                    setattr(self, attr, getattr(self.model, attr))
 
     def __repr__(self, d=OrderedDict()):
         return formal_repr(self, self._repr(d))
@@ -256,7 +251,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
     time_length = SEIZURE_LENGTH
     dt = DT_DEF
     upsample = UPSAMPLE
-    gain_matrix = None
+    gain_matrix = np.eye(len(active_regions))
 
     def __init__(self, model=None, model_name="vep_ode", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True,
@@ -287,21 +282,13 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         self.x1_scale = x1_scale
         self.x1_offset = x1_offset
         self.gain_matrix = gain_matrix
-        if isinstance(self.model, EpiProbabilisticModel):
-            self.sigma_init = getattr(self.model, "sigma_init", self.sigma_init)
-            self.tau1 = getattr(self.model, "tau1", self.tau1)
-            self.tau0 = getattr(self.model, "tau0", self.tau0)
-            self.scale = getattr(self.model, "scale", self.scale)
-            self.offset = getattr(self.model, "offset", self.offset)
-            self.epsilon = getattr(self.model, "epsilon", self.epsilon)
-            self.observation_model = getattr(self.model, "observation_model", self.observation_model)
-            self.number_of_target_data = getattr(self.model, "number_of_target_data", self.number_of_target_data)
-            self.time_length = getattr(self.model, "time_length", self.time_length)
-            self.dt = getattr(self.model, "dt", self.dt)
-            self.active_regions = getattr(self.model, "active_regions", self.active_regions)
-            self.upsample = getattr(self.model, "upsample", self.upsample)
-            self.x1_prior_weight = getattr(self.model, "x1_prior_weight", self.x1_prior_weight)
-            self.gain_matrix = getattr(self.gain_matrix, "gain_matrix", self.gain_matrix)
+        if self.gain_matrix is None:
+            self.gain_matrix = np.eye(self.number_of_active_regions)
+        if isinstance(self.model, ODEEpiProbabilisticModel):
+            for attr in ["sigma_init", "tau1", "tau0", "scale", "offset", "epsilon", "x1_scale", "x1_offset",
+                         "observation_model", "number_of_target_data", "time_length", "dt", "active_regions",
+                         "upsample", "x1_prior_weight", "gain_matrix"]:
+                setattr(self, attr, getattr(self.model, attr))
 
     def _repr(self, d=OrderedDict()):
         d.update(super(ODEProbabilisticModelBuilder, self)._repr(d))
@@ -459,7 +446,8 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                 scale_scale = self.scale / SCALE_SCALE_DEF
                 parameters.update({"scale": self.generate_normal_or_lognormal_parameter("scale", self.scale,
                                                                                         np.maximum(0.1,
-                                                                                                   self.scale - 3 * scale_scale),
+                                                                                                   self.scale -
+                                                                                                   3 * scale_scale),
                                                                                         self.scale + 3 * scale_scale,
                                                                                         sigma=scale_scale)})
 
@@ -512,9 +500,10 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                                               int(self.normal_flag), int(self.linear_flag), self.x1eq_cr, self.x1eq_def,
                                               self.x1_prior_weight, parameters, ground_truth, self.xmode,
                                               self.observation_model, self.K, self.sigma_x, self.sigma_init,
-                                              self.tau1, self.tau0, self.epsilon, self.scale, self.offset,
+                                              self.tau1, self.tau0,
+                                              self.epsilon, self.scale, self.offset, self.x1_scale, self.x1_offset,
                                               self.number_of_target_data, self.time_length, self.dt, self.upsample,
-                                              self.active_regions)
+                                              self.active_regions, self.gain_matrix)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
         return self.model
@@ -542,9 +531,8 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
         self.sde_mode = sde_mode
         self.sigma = sigma
         if isinstance(self.model, SDEEpiProbabilisticModel):
-            self.sigma_init = getattr(self.model, "sigma_init", self.sigma_init)
-            self.sde_mode = getattr(self.model, "sde_mode", self.sde_mode)
-            self.sigma = getattr(self.model, "sigma", self.sigma)
+            for attr in ["sigma_init", "sde_mode", "sigma"]:
+                setattr(self, attr, getattr(self.model, attr))
 
     def _repr(self, d=OrderedDict()):
         d.update(super(SDEProbabilisticModelBuilder, self)._repr(d))
@@ -610,10 +598,11 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
         self.model = SDEEpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
                                               int(self.normal_flag), int(self.linear_flag), self.x1eq_cr, self.x1eq_def,
                                               self.x1_prior_weight, parameters, ground_truth, self.xmode,
-                                              self.observation_model,  self.K, self.sigma_x, self.sigma_init,
-                                              self.sigma, self.tau1, self.tau0, self.epsilon, self.scale, self.offset,
+                                              self.observation_model, self.K, self.sigma_x, self.sigma_init, self.sigma,
+                                              self.tau1, self.tau0,
+                                              self.epsilon, self.scale, self.offset, self.x1_scale, self.x1_offset,
                                               self.number_of_target_data, self.time_length, self.dt, self.upsample,
-                                              self.active_regions, self.sde_mode, self.gain_matrix)
+                                              self.active_regions, self.gain_matrix, self.sde_mode)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
         return self.model

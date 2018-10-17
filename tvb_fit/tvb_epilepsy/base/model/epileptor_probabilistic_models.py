@@ -23,9 +23,10 @@ class EpiProbabilisticModel(ProbabilisticModelBase):
     # MC_direction_split = 0.5
 
     def __init__(self, model_config=ModelConfiguration(), name='vep', target_data_type=Target_Data_Type.EMPIRICAL.value,
-                 priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=1, linear_flag=0,
+                 priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=1,
+                 linear_flag=0, x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF,
                  parameters={}, ground_truth={}, xmode=XModes.X0MODE.value,
-                 x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF, K=K_DEF, sigma_x=SIGMA_X0_DEF):  #, MC_direction_split=0.5
+                 K=K_DEF, sigma_x=SIGMA_X0_DEF):  #, MC_direction_split=0.5
         super(EpiProbabilisticModel, self).__init__(model_config, name, target_data_type, priors_mode, normal_flag,
                                                     parameters, ground_truth)
         self.xmode = xmode
@@ -60,11 +61,14 @@ class ODEEpiProbabilisticModel(EpiProbabilisticModel):
     scale = 1.0
     offset = 0.0
     epsilon = EPSILON_DEF
+    x1_scale = 1.0
+    x1_offset = 0.0
     number_of_target_data = 0
     time_length = SEIZURE_LENGTH
     dt = DT_DEF
     upsample = UPSAMPLE
     active_regions = np.array([])
+    gain_matrix = np.eye(len(active_regions))
 
     @property
     def nonactive_regions(self):
@@ -80,14 +84,16 @@ class ODEEpiProbabilisticModel(EpiProbabilisticModel):
 
     def __init__(self, model_config=ModelConfiguration(), name='vep_ode',
                  target_data_type=Target_Data_Type.EMPIRICAL.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
-                 normal_flag=1, linear_flag=0, x1_prior_weight=0.0, parameters={}, ground_truth={},
-                 xmode=XModes.X0MODE.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
-                 x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF, K=K_DEF, sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF,
-                 tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF, scale=1.0, offset=0.0,
-                 number_of_target_data=0, time_length=0, dt=DT_DEF, upsample=UPSAMPLE, active_regions=np.array([])):
+                 normal_flag=1, linear_flag=0, x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF, x1_prior_weight=0.0,
+                 parameters={}, ground_truth={}, xmode=XModes.X0MODE.value,
+                 observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
+                 K=K_DEF, sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF,
+                 tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF, scale=1.0, offset=0.0, x1_scale=1.0, x1_offset=0.0,
+                 number_of_target_data=0, time_length=0, dt=DT_DEF, upsample=UPSAMPLE,
+                 active_regions=np.array([]), gain_matrix=None):
         super(ODEEpiProbabilisticModel, self).__init__(model_config, name,  target_data_type, priors_mode, normal_flag,
-                                                       linear_flag, parameters, ground_truth,
-                                                       xmode, x1eq_cr, x1eq_def, K, sigma_x)
+                                                       linear_flag, x1eq_cr, x1eq_def, parameters, ground_truth,
+                                                       xmode, K, sigma_x)
         if np.all(np.in1d(active_regions, range(self.number_of_regions))):
             self.active_regions = np.unique(active_regions)
         else:
@@ -106,11 +112,15 @@ class ODEEpiProbabilisticModel(EpiProbabilisticModel):
         self.scale = scale
         self.offset = offset
         self.epsilon = epsilon
+        self.x1_scale = x1_scale
+        self.x1_offset = x1_offset
         self.number_of_target_data = number_of_target_data
         self.time_length = time_length
         self.dt = dt
         self.upsample = upsample
-
+        self.gain_matrix = gain_matrix
+        if self.gain_matrix is None:
+            self.gain_matrix = np.eye(self.number_of_active_regions)
     def update_active_regions(self, active_regions):
         if np.all(np.in1d(ensure_list(active_regions), range(self.number_of_regions))):
             self.active_regions = np.unique(ensure_list(active_regions) + self.active_regions.tolist())
@@ -140,17 +150,22 @@ class SDEEpiProbabilisticModel(ODEEpiProbabilisticModel):
 
     def __init__(self, model_config=ModelConfiguration(), name='vep_ode',
                  target_data_type=Target_Data_Type.EMPIRICAL.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
-                 normal_flag=1, linear_flag=0, x1_prior_weight=0.0, parameters={}, ground_truth={},
-                 xmode=XModes.X0MODE.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
-                 x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF, K=K_DEF, sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF,
-                 sigma=SIGMA_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF, scale=1.0, offset=0.0,
+                 normal_flag=1, linear_flag=0, x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF, x1_prior_weight=0.0,
+                 parameters={}, ground_truth={}, xmode=XModes.X0MODE.value,
+                 observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value, K=K_DEF,
+                 sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF,
+                 sigma=SIGMA_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF,
+                 scale=1.0, offset=0.0, x1_scale=1.0, x1_offset=0.0,
                  number_of_target_data=0, time_length=0, dt=DT_DEF, upsample=UPSAMPLE, active_regions=np.array([]),
-                 sde_mode=SDE_MODES.NONCENTERED.value):
+                 gain_matrix=None, sde_mode=SDE_MODES.NONCENTERED.value):
         super(SDEEpiProbabilisticModel, self).__init__(model_config, name, target_data_type, priors_mode, normal_flag,
-                                                       linear_flag, x1_prior_weight, parameters, ground_truth,
-                                                       xmode, observation_model, x1eq_cr, x1eq_def, K,
-                                                       sigma_x, sigma_init, tau1, tau0, epsilon, scale, offset,
-                                                       number_of_target_data, time_length, dt, upsample, active_regions)
+                                                       linear_flag, x1eq_cr, x1eq_def, x1_prior_weight,
+                                                       parameters, ground_truth,
+                                                       xmode, observation_model, K,
+                                                       sigma_x, sigma_init, tau1, tau0,
+                                                       epsilon, scale, offset, x1_scale, x1_offset,
+                                                       number_of_target_data, time_length, dt, upsample,
+                                                       active_regions, gain_matrix)
         self.sigma = sigma
         self.sde_mode = sde_mode
 
