@@ -163,7 +163,7 @@ def prepare_simulated_seeg_observable(data, sensor, seizure_length=SEIZURE_LENGT
                                       bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
 
     logger.info("Computing SEEG signals...")
-    data = TimeseriesService().compute_seeg(data, sensor, sum_mode=np.where(log_flag, "exp", "lin"))[0]
+    data = TimeseriesService().compute_seeg(data, sensor, sum_mode=np.where(log_flag, "exp", "lin"))
     if plotter:
         plotter.plot_raster({"SEEGData": data.squeezed}, data.time_line, time_units=data.time_unit,
                             special_idx=[], title='SEEG Time Series', offset=0.1,
