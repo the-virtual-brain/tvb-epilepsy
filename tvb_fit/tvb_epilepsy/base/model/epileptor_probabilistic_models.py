@@ -69,6 +69,7 @@ class ODEEpiProbabilisticModel(EpiProbabilisticModel):
     upsample = UPSAMPLE
     active_regions = np.array([])
     gain_matrix = np.eye(len(active_regions))
+    number_of_seizures = 1
 
     @property
     def nonactive_regions(self):
@@ -90,7 +91,7 @@ class ODEEpiProbabilisticModel(EpiProbabilisticModel):
                  K=K_DEF, sigma_x=SIGMA_X0_DEF, sigma_init=SIGMA_INIT_DEF,
                  tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF, scale=1.0, offset=0.0, x1_scale=1.0, x1_offset=0.0,
                  number_of_target_data=0, time_length=0, dt=DT_DEF, upsample=UPSAMPLE,
-                 active_regions=np.array([]), gain_matrix=None):
+                 active_regions=np.array([]), gain_matrix=None, number_of_seizures=1):
         super(ODEEpiProbabilisticModel, self).__init__(model_config, name,  target_data_type, priors_mode, normal_flag,
                                                        linear_flag, x1eq_cr, x1eq_def, parameters, ground_truth,
                                                        xmode, K, sigma_x)
@@ -121,6 +122,7 @@ class ODEEpiProbabilisticModel(EpiProbabilisticModel):
         self.gain_matrix = gain_matrix
         if self.gain_matrix is None:
             self.gain_matrix = np.eye(self.number_of_active_regions)
+        self.number_of_seizures =number_of_seizures
     def update_active_regions(self, active_regions):
         if np.all(np.in1d(ensure_list(active_regions), range(self.number_of_regions))):
             self.active_regions = np.unique(ensure_list(active_regions) + self.active_regions.tolist())
@@ -157,7 +159,7 @@ class SDEEpiProbabilisticModel(ODEEpiProbabilisticModel):
                  sigma=SIGMA_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF, epsilon=EPSILON_DEF,
                  scale=1.0, offset=0.0, x1_scale=1.0, x1_offset=0.0,
                  number_of_target_data=0, time_length=0, dt=DT_DEF, upsample=UPSAMPLE, active_regions=np.array([]),
-                 gain_matrix=None, sde_mode=SDE_MODES.NONCENTERED.value):
+                 gain_matrix=None, number_of_seizures=1, sde_mode=SDE_MODES.NONCENTERED.value):
         super(SDEEpiProbabilisticModel, self).__init__(model_config, name, target_data_type, priors_mode, normal_flag,
                                                        linear_flag, x1eq_cr, x1eq_def, x1_prior_weight,
                                                        parameters, ground_truth,
@@ -165,7 +167,7 @@ class SDEEpiProbabilisticModel(ODEEpiProbabilisticModel):
                                                        sigma_x, sigma_init, tau1, tau0,
                                                        epsilon, scale, offset, x1_scale, x1_offset,
                                                        number_of_target_data, time_length, dt, upsample,
-                                                       active_regions, gain_matrix)
+                                                       active_regions, gain_matrix, number_of_seizures)
         self.sigma = sigma
         self.sde_mode = sde_mode
 

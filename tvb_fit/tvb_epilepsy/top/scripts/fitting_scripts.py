@@ -8,6 +8,7 @@ from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import OBSERV
     HIGH_HPF, LOW_HPF, LOW_LPF, HIGH_LPF, WIN_LEN_RATIO, BIPOLAR, TARGET_DATA_PREPROCESSING
 from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.base.utils.data_structures_utils import ensure_list, generate_region_labels
+from tvb_fit.service.timeseries_service import TimeseriesService
 from tvb_fit.tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, Timeseries
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_fit.tvb_epilepsy.top.scripts.hypothesis_scripts import from_hypothesis_to_model_config_lsa
@@ -72,9 +73,10 @@ def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_UNSCALED_DEF, t
 
 
 def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0, seizure_length=SEIZURE_LENGTH,
-                       times_on_off=[], time_units="ms", label_strip_fun=None, preprocessing=TARGET_DATA_PREPROCESSING,
-                       low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF, high_lpf=HIGH_LPF,
-                       bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
+                       times_on_off=[], time_units="ms", label_strip_fun=None,
+                       preprocessing=TARGET_DATA_PREPROCESSING, low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF,
+                       high_lpf=HIGH_LPF, bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO,
+                       plotter=None, title_prefix="", write_flag=True):
     try:
         return H5Reader().read_timeseries(ts_file)
     except:
@@ -86,8 +88,37 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
                                                         label_strip_fun, preprocessing,
                                                         low_hpf, high_hpf, low_lpf, high_lpf,
                                                         bipolar, win_len_ratio, plotter, title_prefix)
-        H5Writer().write_timeseries(signals, ts_file)
+        if write_flag:
+            H5Writer().write_timeseries(signals, ts_file)
         return signals
+
+
+def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, sensor_id=0,
+                                seizure_length=SEIZURE_LENGTH, times_on=[], time_length=25600, time_units="ms",
+                                label_strip_fun=None, preprocessing=TARGET_DATA_PREPROCESSING,
+                                low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF, high_lpf=HIGH_LPF,
+                                bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
+    try:
+        return H5Reader().read_timeseries(ts_file)
+    except:
+        empirical_files = ensure_list(ensure_list(empirical_files))
+        times_on = ensure_list(times_on)
+        n_seizures = len(empirical_files)
+        if n_seizures > 1:
+            signals = []
+            for id, (empirical_file, time_on) in enumerate(zip(empirical_files, times_on)):
+                signals.append(set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id, seizure_length,
+                                                  [time_on, time_on + time_length], time_units,
+                                                  label_strip_fun,preprocessing, low_hpf, high_hpf, low_lpf, high_lpf,
+                                                  bipolar, win_len_ratio, plotter, title_prefix + str(id+1)), False)
+            signals = TimeseriesService().concatenate_in_time(signals)
+            H5Writer().write_timeseries(signals, ts_file)
+            return signals, n_seizures
+        else:
+            return set_empirical_data(empirical_files[0], ts_file, head, sensors_lbls, sensor_id, seizure_length,
+                                      [times_on[0], times_on[0] + time_length], time_units, label_strip_fun,
+                                      preprocessing, low_hpf, high_hpf, low_lpf, high_lpf, bipolar, win_len_ratio,
+                                      plotter, title_prefix, True)
 
 
 def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model, sensor_id=0,

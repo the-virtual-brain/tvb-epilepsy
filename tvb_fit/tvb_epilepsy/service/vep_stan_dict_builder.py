@@ -121,6 +121,7 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "n_active_regions": probabilistic_model.number_of_active_regions,
                 "n_times": probabilistic_model.time_length,
                 "n_target_data": probabilistic_model.number_of_target_data,
+                "n_seizures": getattr(probabilistic_model, "number_of_seizures", 1),
                 "dt": probabilistic_model.dt,
                 "yc": np.mean(probabilistic_model.model_config.yc),
                 "Iext1": np.mean(probabilistic_model.model_config.Iext1),

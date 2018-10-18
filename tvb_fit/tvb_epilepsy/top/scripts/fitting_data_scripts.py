@@ -141,19 +141,19 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
                                         labels=data.space_labels)
 
     # # Cut to the desired interval
-    # data = data.get_time_window_by_units(on_off_set[0], on_off_set[1])
+    data = data.get_time_window_by_units(on_off_set[0], on_off_set[1])
 
     if len(find_labels_inds(preprocessing, NORMALIZATION_METHODS, modefun="equal")) >0:
         # Finally, normalize signals
         logger.info("Normalizing signals...")
         data = ts_service.normalize(data, "baseline-std")  #  or  "baseline-amplitude" or"zscore"
-        if plotter:
-            plotter.plot_raster({"ObservationRaster": data.squeezed}, data.time_line, time_units=data.time_unit,
-                                special_idx=[], offset=0.1, title='Observation Raster Plot',
-                                figure_name=title_prefix + 'ObservationRasterPlot', labels=data.space_labels)
-            plotter.plot_timeseries({"Observation": data.squeezed}, data.time_line, time_units=data.time_unit,
-                                    special_idx=[], title='Observation Time Series',
-                                    figure_name=title_prefix + 'ObservationTimeSeries', labels=data.space_labels)
+    if plotter:
+        plotter.plot_raster({"ObservationRaster": data.squeezed}, data.time_line, time_units=data.time_unit,
+                            special_idx=[], offset=0.1, title='Observation Raster Plot',
+                            figure_name=title_prefix + 'ObservationRasterPlot', labels=data.space_labels)
+        plotter.plot_timeseries({"Observation": data.squeezed}, data.time_line, time_units=data.time_unit,
+                                special_idx=[], title='Observation Time Series',
+                                figure_name=title_prefix + 'ObservationTimeSeries', labels=data.space_labels)
     return data
 
 

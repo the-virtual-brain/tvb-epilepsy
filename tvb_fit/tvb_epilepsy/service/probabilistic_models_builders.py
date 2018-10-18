@@ -252,6 +252,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
     dt = DT_DEF
     upsample = UPSAMPLE
     gain_matrix = np.eye(len(active_regions))
+    number_of_seizures = 1
 
     def __init__(self, model=None, model_name="vep_ode", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
                  xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True,
@@ -259,7 +260,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                  sigma_x=None, sigma_x_scale=3, sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                  epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF, x1_scale=1.0, x1_offset=0.0,
                  observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
-                 number_of_target_data=0, active_regions=np.array([]), gain_matrix=None):
+                 number_of_target_data=0, active_regions=np.array([]), gain_matrix=None, number_of_seizures=1):
         super(ODEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode, priors_mode,
                                                            normal_flag, linear_flag, x1eq_cr, x1eq_def,
                                                            K, sigma_x, sigma_x_scale) # MC_direction_split
@@ -284,10 +285,11 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         self.gain_matrix = gain_matrix
         if self.gain_matrix is None:
             self.gain_matrix = np.eye(self.number_of_active_regions)
+        self.number_of_seizures = number_of_seizures
         if isinstance(self.model, ODEEpiProbabilisticModel):
             for attr in ["sigma_init", "tau1", "tau0", "scale", "offset", "epsilon", "x1_scale", "x1_offset",
                          "observation_model", "number_of_target_data", "time_length", "dt", "active_regions",
-                         "upsample", "x1_prior_weight", "gain_matrix"]:
+                         "upsample", "x1_prior_weight", "gain_matrix", "number_of_seizures"]:
                 setattr(self, attr, getattr(self.model, attr))
 
     def _repr(self, d=OrderedDict()):
@@ -503,7 +505,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                                               self.tau1, self.tau0,
                                               self.epsilon, self.scale, self.offset, self.x1_scale, self.x1_offset,
                                               self.number_of_target_data, self.time_length, self.dt, self.upsample,
-                                              self.active_regions, self.gain_matrix)
+                                              self.active_regions, self.gain_matrix, self.number_of_seizures)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
         return self.model
@@ -520,13 +522,13 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
                  sigma_x=None, sigma_x_scale=3, sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
                  epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF, x1_scale=1.0, x1_offset=0.0, sigma=SIGMA_DEF,
                  sde_mode=SDE_MODES.NONCENTERED.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
-                 number_of_signals=0, active_regions=np.array([]), gain_matrix=None):
+                 number_of_signals=0, active_regions=np.array([]), gain_matrix=None, number_of_seizures=1):
         super(SDEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode, priors_mode,
                                                            normal_flag, linear_flag, x1eq_cr, x1eq_def, x1_prior_weight,
                                                            K, sigma_x, sigma_x_scale, sigma_init, tau1, tau0, epsilon,
                                                            scale, offset, x1_scale, x1_offset,
                                                            observation_model, number_of_signals,
-                                                           active_regions, gain_matrix) # MC_direction_split,
+                                                           active_regions, gain_matrix, number_of_seizures) # MC_direction_split,
         self.sigma_init = sigma_init
         self.sde_mode = sde_mode
         self.sigma = sigma
@@ -602,7 +604,8 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
                                               self.tau1, self.tau0,
                                               self.epsilon, self.scale, self.offset, self.x1_scale, self.x1_offset,
                                               self.number_of_target_data, self.time_length, self.dt, self.upsample,
-                                              self.active_regions, self.gain_matrix, self.sde_mode)
+                                              self.active_regions, self.gain_matrix, self.number_of_seizures,
+                                              self.sde_mode)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
         return self.model
