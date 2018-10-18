@@ -9,7 +9,7 @@ from tvb_fit.base.utils.log_error_utils import initialize_logger, warning, raise
 from tvb_fit.base.utils.data_structures_utils import formal_repr, ensure_list
 from tvb_fit.service.timeseries_service import compute_seeg_exp, compute_seeg_lin
 from tvb_fit.service.probabilistic_parameter_builder\
-    import  generate_lognormal_parameter, generate_negative_lognormal_parameter, generate_normal_parameter
+    import generate_lognormal_parameter, generate_negative_lognormal_parameter, generate_normal_parameter
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import calc_eq_z
 from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration import EpileptorModelConfiguration
 from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
