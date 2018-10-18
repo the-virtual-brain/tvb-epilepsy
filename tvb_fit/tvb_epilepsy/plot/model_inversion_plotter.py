@@ -507,8 +507,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
         figs.append(self.plot_fit_scalar_params(samples, stats, probabilistic_model, pair_plot_params,
                                                 skip_samples, title_prefix))
 
-        figs.append(self.plot_fit_scalar_params_iters(samples, pair_plot_params,
-                                                      skip_samples, title_prefix, subplot_shape=None))
+        figs.append(self.plot_fit_scalar_params_iters(samples, pair_plot_params, 0, title_prefix, subplot_shape=None))
 
         figs.append(
             self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
