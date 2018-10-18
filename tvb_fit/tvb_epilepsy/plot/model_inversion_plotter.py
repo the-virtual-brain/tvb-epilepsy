@@ -294,7 +294,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
                 dWt.update({"dZt": dZt.data[:, :, :, skip_samples:].squeeze()})
                 subtitles.append("dZt")
             dWt_star = sample.get("dWt_star", sample.get("dWt", False))
-            if numpy.any(dWt):
+            if numpy.any(dWt_star):
                 dWt.update({"dWt": dWt_star.data[:, :, :, skip_samples:].squeeze()})
                 subtitles.append("dWt")
             if len(dWt) > 0:
