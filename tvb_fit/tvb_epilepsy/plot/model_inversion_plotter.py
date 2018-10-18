@@ -271,7 +271,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
             z = sample["z"].data[:, :, :, skip_samples:].squeeze()
             figs.append(self.plot_raster(sort_dict({"x1": x1, 'z': z}),
                                          time, special_idx=seizure_indices, time_units=target_data.time_unit,
-                                         title=name + ": Hidden states fit rasterplot",
+                                         title=name + ": Hidden states fit rasterplot", linestyle="-o",
                                          subtitles=['hidden state ' + "x1" + stats_string["x1"],
                                          'hidden state z' + stats_string["z"]], offset=1.0,
                                          labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
@@ -300,7 +300,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
             if len(dWt) > 0:
                 subtitles[-1] += "\ndynamic noise" + sig_prior_str + ", sig_post = " + str(est["sigma"])
                 figs.append(self.plot_raster(sort_dict(dWt), time[:-1], time_units=target_data.time_unit,
-                                             special_idx=seizure_indices,
+                                             special_idx=seizure_indices, linestyle="-o",
                                              title=name + ": Hidden states random walk rasterplot",
                                              subtitles=subtitles, offset=1.0, labels=region_labels,
                                              figsize=FiguresConfig.VERY_LARGE_SIZE))
@@ -309,17 +309,17 @@ class ModelInversionPlotter(TimeseriesPlotter):
                 figs.append(self.plot_trajectories({"x1": sample["x1"].data[:, :, :, skip_samples:].squeeze(),
                                                     'z': sample['z'].data[:, :, :, skip_samples:].squeeze()},
                                                    special_idx=seizure_indices, title=title,
-                                                   labels=stats_region_labels,
+                                                   labels=stats_region_labels, linestyle="-o",
                                                    figsize=FiguresConfig.SUPER_LARGE_SIZE))
         figs.append(self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
                                       title=title_prefix + "Observation target vs fit time series: "
-                                            + stats_string["fit_target_data"],
+                                            + stats_string["fit_target_data"], linestyle="-o",
                                       figure_name=title_prefix + "ObservationTarget_VS_FitRasterPlot",
                                       offset=1.0, labels=target_data.space_labels,
                                      figsize=FiguresConfig.VERY_LARGE_SIZE))
         figs.append(self.plot_timeseries(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
                                          title=title_prefix + "Observation target vs fit time series: "
-                                               + stats_string["fit_target_data"],
+                                               + stats_string["fit_target_data"], linestyle="-o",
                                          figure_name=title_prefix + "ObservationTarget_VS_FitTimeSeries",
                                          labels=target_data.space_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
         return tuple(figs)
