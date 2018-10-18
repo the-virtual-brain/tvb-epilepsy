@@ -11,8 +11,8 @@ class TimeseriesDimensions(Enum):
     SPACE = "space"
     VARIABLES = "variables"
     SAMPLES = "samples"
-"" \
-""
+
+
 class PossibleVariables(Enum):
     LFP = "lfp"
     SOURCE = "source"

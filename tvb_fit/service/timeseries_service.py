@@ -135,6 +135,18 @@ class TimeseriesService(object):
     def correlation(self, timeseries):
         return np.corrcoef(timeseries.squeezed.T)
 
+    def concatenate_in_time(self, timeseries_list):
+        timeseries_list = ensure_list(timeseries_list)
+        out_timeseries = timeseries_list[0]
+        for id, timeseries in enumerate(timeseries_list[1:]):
+            if out_timeseries.time_step == timeseries_list.time_step:
+                out_timeseries.data = np.concatenate([out_timeseries, timeseries], axis=0)
+            else:
+                raise_value_error("Timeseries concatenation in time failed!\n"
+                                  "Timeseries %d have a different time step (%s) than the ones before(%s)!" \
+                                  % (id, str(timeseries_list.time_step), str(out_timeseries.time_step)))
+        return out_timeseries
+
     def select_by_metric(self, timeseries, metric, metric_th=None, metric_percentile=None, nvals=None):
         selection = np.unique(select_greater_values_array_inds(metric, metric_th, metric_percentile, nvals))
         return timeseries.get_subspace_by_index(selection), selection
