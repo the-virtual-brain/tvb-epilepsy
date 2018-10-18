@@ -79,9 +79,13 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
         sim, sim_settings = build_simulator_TVB_default(model_configuration, head.connectivity)
     dynamical_model = sim.model
     writer = H5Writer()
-    writer.write_simulator_model(sim.model, os.path.join(config.out.FOLDER_RES,
-                                              hypname + dynamical_model._ui_name + "_model.h5"),
-                                 sim.connectivity.number_of_regions)
+    if config.out.FOLDER_RES.find(hypname) >= 0:
+        model_path = os.path.join(config.out.FOLDER_RES, dynamical_model._ui_name + "_model.h5")
+        title_prefix = ""
+    else:
+        model_path = os.path.join(config.out.FOLDER_RES, hypname + dynamical_model._ui_name + "_model.h5")
+        title_prefix = hypname
+    writer.write_simulator_model(sim.model, model_path, sim.connectivity.number_of_regions)
 
     seeg=[]
     if ts_file is not None and os.path.isfile(ts_file):
@@ -106,7 +110,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
             plotter = Plotter(config)
         # Plot results
         plotter.plot_simulated_timeseries(sim_output, sim.model, lsa_hypothesis.lsa_propagation_indices, seeg_dict=seeg,
-                                          spectral_raster_plot=False, title_prefix=hypname,
+                                          spectral_raster_plot=False, title_prefix=title_prefix,
                                           spectral_options={"log_scale": True})
 
     return {"source": sim_output, "seeg": seeg}, sim
