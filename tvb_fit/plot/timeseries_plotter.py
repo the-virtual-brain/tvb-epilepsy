@@ -44,23 +44,23 @@ class TimeseriesPlotter(BasePlotter):
         time_units = ensure_string(time_units)
         data_fun = lambda data, time, icol: (data[icol], time, icol)
 
-        def plot_ts(x, iTS, colors, alphas, labels):
+        def plot_ts(x, iTS, colors, labels, linestyle):
             x, time, ivar = x
             try:
-                return pyplot.plot(time, x[:, iTS], colors[iTS], label=labels[iTS], alpha=alphas[iTS])
+                return pyplot.plot(time, x[:, iTS], color=colors[iTS], label=labels[iTS], linestyle=linestyle)
             except:
                 self.logger.warning("Cannot convert labels' strings for line labels!")
-                return pyplot.plot(time, x[:, iTS], colors[iTS], label=str(iTS), alpha=alphas[iTS])
+                return pyplot.plot(time, x[:, iTS], color=colors[iTS], label=str(iTS), linestyle=linestyle)
 
-        def plot_ts_raster(x, iTS, colors, alphas, labels, offset):
+        def plot_ts_raster(x, iTS, colors, labels, offset, linestyle):
             x, time, ivar = x
             try:
-                return pyplot.plot(time, -x[:, iTS] + (offset * iTS + x[:, iTS].mean()), colors[iTS], label=labels[iTS],
-                                   alpha=alphas[iTS])
+                return pyplot.plot(time, -x[:, iTS] + (offset * iTS + x[:, iTS].mean()), color=colors[iTS],
+                                   label=labels[iTS], linestyle=linestyle)
             except:
                 self.logger.warning("Cannot convert labels' strings for line labels!")
-                return pyplot.plot(time, -x[:, iTS] + offset * iTS, colors[iTS], label=str(iTS),
-                                   alpha=alphas[iTS])
+                return pyplot.plot(time, -x[:, iTS] + offset * iTS, color=colors[iTS],
+                                   label=str(iTS), linestyle=linestyle)
 
         def axlabels_ts(labels, n_rows, irow, iTS):
             if irow == n_rows:
@@ -88,9 +88,11 @@ class TimeseriesPlotter(BasePlotter):
                 self.logger.warning("Cannot convert region labels' strings for y axis ticks!")
 
         if offset > 0.0:
-            plot_lines = lambda x, iTS, colors, alphas, labels: plot_ts_raster(x, iTS, colors, alphas, labels, offset)
+            plot_lines = lambda x, iTS, colors, labels, linestyle: \
+                 plot_ts_raster(x, iTS, colors,  labels, offset, linestyle)
         else:
-            plot_lines = lambda x, iTS, colors, alphas, labels: plot_ts(x, iTS, colors, alphas, labels)
+            plot_lines = lambda x, iTS, colors, labels, linestyle: \
+                        plot_ts(x, iTS, colors, labels, linestyle)
         this_axYticks = lambda labels, nTS, ivar: axYticks(labels, nTS, offset)
         if subplots:
             n_rows = nTS
@@ -110,21 +112,23 @@ class TimeseriesPlotter(BasePlotter):
     def _trajectories_plot(self, n_dims, nTS, nSamples, subplots):
         data_fun = lambda data, time, icol: data
 
-        def plot_traj_2D(x, iTS, colors, alphas, labels):
+        def plot_traj_2D(x, iTS, colors, labels, linestyle):
             x, y = x
             try:
-                return pyplot.plot(x[:, iTS], y[:, iTS], colors[iTS], label=labels[iTS], alpha=alphas[iTS])
+                return pyplot.plot(x[:, iTS], y[:, iTS], color=colors[iTS], label=labels[iTS], linestyle=linestyle)
             except:
                 self.logger.warning("Cannot convert labels' strings for line labels!")
-                return pyplot.plot(x[:, iTS], y[:, iTS], colors[iTS], label=str(iTS), alpha=alphas[iTS])
+                return pyplot.plot(x[:, iTS], y[:, iTS], color=colors[iTS], label=str(iTS), linestyle=linestyle)
 
-        def plot_traj_3D(x, iTS, colors, alphas, labels):
+        def plot_traj_3D(x, iTS, colors, labels, linestyle):
             x, y, z = x
             try:
-                return pyplot.plot(x[:, iTS], y[:, iTS], z[:, iTS], colors[iTS], label=labels[iTS], alpha=alphas[iTS])
+                return pyplot.plot(x[:, iTS], y[:, iTS], z[:, iTS], color=colors[iTS],
+                                   label=labels[iTS], linestyle=linestyle)
             except:
                 self.logger.warning("Cannot convert labels' strings for line labels!")
-                return pyplot.plot(x[:, iTS], y[:, iTS], z[:, iTS], colors[iTS], label=str(iTS), alpha=alphas[iTS])
+                return pyplot.plot(x[:, iTS], y[:, iTS], z[:, iTS], color=colors[iTS],
+                                   label=str(iTS), linestyle=linestyle)
 
         def subtitle_traj(labels, iTS):
             try:
@@ -146,10 +150,12 @@ class TimeseriesPlotter(BasePlotter):
                 pyplot.gca().set_zlim([data_lims[2][0], data_lims[2][1]])
 
         if n_dims == 2:
-            plot_lines = lambda x, iTS, colors, labels, alphas: plot_traj_2D(x, iTS, colors, labels, alphas)
+            plot_lines = lambda x, iTS, colors, labels, linestyle: \
+                   plot_traj_2D(x, iTS, colors, labels, linestyle)
             projection = None
         elif n_dims == 3:
-            plot_lines = lambda x, iTS, colors, labels, alphas: plot_traj_3D(x, iTS, colors, labels, alphas)
+            plot_lines = lambda x, iTS, colors, labels, linestyle: \
+                   plot_traj_3D(x, iTS, colors, labels, linestyle)
             projection = '3d'
         else:
             raise_value_error("Data dimensions are neigher 2D nor 3D!, but " + str(n_dims) + "D!")
@@ -181,8 +187,8 @@ class TimeseriesPlotter(BasePlotter):
                subtitle, subtitle_col, axlabels, axlimits
 
     # TODO: refactor to not have the plot commands here
-    def plot_timeseries(self, data_dict, time=None, mode="ts", subplots=None, special_idx=[], subtitles=[],
-                        offset=1.0, time_units="ms", title='Time series', figure_name=None, labels=[],
+    def plot_timeseries(self, data_dict, time=None, mode="ts", subplots=None, special_idx=[], subtitles=[], labels=[],
+                        offset=1.0, time_units="ms", title='Time series', linestyle="-", figure_name=None,
                         figsize=FiguresConfig.LARGE_SIZE):
         n_vars = len(data_dict)
         vars = data_dict.keys()
@@ -204,7 +210,8 @@ class TimeseriesPlotter(BasePlotter):
         labels = generate_region_labels(nTS, labels)
         if isequal_string(mode, "traj"):
             data_fun, plot_lines, projection, n_rows, n_cols, def_alpha, loopfun, \
-            subtitle, subtitle_col, axlabels, axlimits = self._trajectories_plot(n_vars, nTS, nSamples, subplots)
+            subtitle, subtitle_col, axlabels, axlimits = \
+                self._trajectories_plot(n_vars, nTS, nSamples, subplots)
         else:
             if isequal_string(mode, "raster"):
                 data_fun, time, plot_lines, projection, n_rows, n_cols, def_alpha, loopfun, \
@@ -216,12 +223,15 @@ class TimeseriesPlotter(BasePlotter):
                 subtitle, subtitle_col, axlabels, axlimits, axYticks = \
                     self._timeseries_plot(time, n_vars, nTS, n_times, time_units, ensure_list(subplots)[0])
         alpha_ratio = 1.0 / nSamples
-        colors = numpy.array(['k'] * nTS)
+        cmap = matplotlib.cm.get_cmap('jet')
+        colors = numpy.array([cmap(0.8*ii/nTS) for ii in range(nTS)])
         alphas = numpy.maximum(numpy.array([def_alpha] * nTS) * alpha_ratio, 0.1)
         if special_idx is not None:
-            if len(special_idx) > 0:
-                colors[special_idx] = 'r'
+            n_special_idx = len(special_idx)
+            if n_special_idx > 0:
+                colors[special_idx] = numpy.array([cmap(1.0 - 0.2*ii/nTS) for ii in range(n_special_idx)])
                 alphas[special_idx] = numpy.maximum(alpha_ratio, 0.1)
+        colors[:, 3] = alphas
         lines = []
         pyplot.figure(title, figsize=figsize)
         pyplot.hold(True)
@@ -240,7 +250,7 @@ class TimeseriesPlotter(BasePlotter):
                     subtitle(labels, iTS)
                     axlimits(data_lims, time, n_vars, icol)
                     axlabels(labels, vars, n_vars, n_rows, (iTS % n_rows) + 1, iTS)
-                lines += ensure_list(plot_lines(data_fun(data, time, icol), iTS, colors, alphas, labels))
+                lines += ensure_list(plot_lines(data_fun(data, time, icol), iTS, colors, labels, linestyle))
             if isequal_string(mode, "raster"):  # set yticks as labels if this is a raster plot
                 axYticks(labels, nTS, icol)
                 pyplot.gca().invert_yaxis()
@@ -255,18 +265,18 @@ class TimeseriesPlotter(BasePlotter):
         return pyplot.gcf(), axes, lines
 
     def plot_raster(self, data_dict, time, time_units="ms", special_idx=[], title='Raster plot', subtitles=[],
-                    offset=1.0, figure_name=None, labels=[], figsize=FiguresConfig.VERY_LARGE_SIZE):
-        return self.plot_timeseries(data_dict, time, "raster", None, special_idx, subtitles, offset, time_units, title,
-                                    figure_name, labels, figsize)
+                    labels=[], offset=1.0, linestyle="-", figure_name=None, figsize=FiguresConfig.VERY_LARGE_SIZE):
+        return self.plot_timeseries(data_dict, time, "raster", None, special_idx, subtitles, labels, offset, time_units,
+                                    title, linestyle, figure_name, figsize)
 
-    def plot_trajectories(self, data_dict, subtitles=None, special_idx=[], title='State space trajectories',
-                          figure_name=None, labels=[], figsize=FiguresConfig.LARGE_SIZE):
-        return self.plot_timeseries(data_dict, [], "traj", subtitles, special_idx, title=title, figure_name=figure_name,
-                                    labels=labels, figsize=figsize)
+    def plot_trajectories(self, data_dict, subtitles=None, special_idx=[], labels=[], title='State space trajectories',
+                          linestyle="-", figure_name=None, figsize=FiguresConfig.LARGE_SIZE):
+        return self.plot_timeseries(data_dict, [], "traj", subtitles, special_idx, labels=labels, title=title,
+                                    linestyle=linestyle, figure_name=figure_name, figsize=figsize)
 
     # TODO: refactor to not have the plot commands here
     def plot_spectral_analysis_raster(self, time, data, time_units="ms", freq=None, spectral_options={},
-                                      special_idx=[], title='Spectral Analysis', figure_name=None, labels=[],
+                                      special_idx=[], labels=[], title='Spectral Analysis', figure_name=None,
                                       figsize=FiguresConfig.VERY_LARGE_SIZE):
         nS = data.shape[1]
         n_special_idx = len(special_idx)
