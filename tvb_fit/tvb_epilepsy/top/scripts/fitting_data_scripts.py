@@ -80,10 +80,12 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
             data = ts_service.hilbert_envelope(data)
             plot_envelope = "Hilbert transform envelope"
             # or
-        elif isequal_string(preproc, "abs"):
+        elif isequal_string(preproc, "abs") or isequal_string(preproc, "abs-mean"):
+            if isequal_string(preproc, "abs-mean"):
+                data = ts_service.normalize(data, "mean")
             #...the absolute value...
             data = ts_service.abs(data)
-            plot_envelope = "abs envelope"
+            plot_envelope = preproc + " envelope"
         if plot_envelope and plotter:
             plot_envelop_ = plot_envelope.replace(" ", "_")
             plotter.plot_raster({plot_envelop_: data.squeezed}, data.time_line,
@@ -187,6 +189,7 @@ def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, se
     logger.info("Reading empirical dataset from edf file...")
     data = read_edf_to_Timeseries(seeg_path, sensors, rois_selection,
                                   label_strip_fun=label_strip_fun, time_units=time_units)
+    data.data = np.array(data.data).astype("float32")
     if plotter:
         plotter.plot_raster({"OriginalData": data.squeezed}, data.time_line, time_units=data.time_unit,
                             special_idx=[], title='Original Empirical Time Series', offset=1.0,

@@ -139,8 +139,8 @@ class TimeseriesService(object):
         timeseries_list = ensure_list(timeseries_list)
         out_timeseries = timeseries_list[0]
         for id, timeseries in enumerate(timeseries_list[1:]):
-            if out_timeseries.time_step == timeseries_list.time_step:
-                out_timeseries.data = np.concatenate([out_timeseries, timeseries], axis=0)
+            if out_timeseries.time_step == timeseries.time_step:
+                out_timeseries.data = np.concatenate([out_timeseries.data, timeseries.data], axis=0)
             else:
                 raise_value_error("Timeseries concatenation in time failed!\n"
                                   "Timeseries %d have a different time step (%s) than the ones before(%s)!" \

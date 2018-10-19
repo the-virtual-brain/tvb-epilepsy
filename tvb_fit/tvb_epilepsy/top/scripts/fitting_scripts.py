@@ -107,14 +107,16 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
         if n_seizures > 1:
             signals = []
             for id, (empirical_file, time_on) in enumerate(zip(empirical_files, times_on)):
+                this_title_prefix = title_prefix + os.path.basename(empirical_file).split(".")[0]
                 signals.append(set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id, seizure_length,
                                                   [time_on, time_on + time_length], time_units,
                                                   label_strip_fun,preprocessing, low_hpf, high_hpf, low_lpf, high_lpf,
-                                                  bipolar, win_len_ratio, plotter, title_prefix + str(id+1), False))
+                                                  bipolar, win_len_ratio, plotter, this_title_prefix, False))
             signals = TimeseriesService().concatenate_in_time(signals)
             H5Writer().write_timeseries(signals, ts_file)
             return signals, n_seizures
         else:
+            title_prefix = title_prefix + os.path.basename(empirical_files[0]).split(".")[0]
             return set_empirical_data(empirical_files[0], ts_file, head, sensors_lbls, sensor_id, seizure_length,
                                       [times_on[0], times_on[0] + time_length], time_units, label_strip_fun,
                                       preprocessing, low_hpf, high_hpf, low_lpf, high_lpf, bipolar, win_len_ratio,
