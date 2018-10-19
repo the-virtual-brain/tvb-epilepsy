@@ -19,6 +19,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
 
     def __init__(self, config=None):
         super(ModelInversionPlotter, self).__init__(config)
+        self.marker = "o"
 
     def _params_stats_subtitles(self, params, stats):
         subtitles = list(params)
@@ -87,7 +88,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
         samples = []
         for sample in samples_all:
             samples.append(extract_dict_stringkeys(sample, params, modefun="equal"))
-        labels = generate_region_labels(samples[0].values()[0].shape[-1], labels)
+        labels = generate_region_labels(samples[0].values()[0].shape[-1], labels, numbering=False)
         n_chains = len(samples_all)
         n_samples = samples[0].values()[0].shape[0]
         if n_samples > 1:
@@ -244,84 +245,92 @@ class ModelInversionPlotter(TimeseriesPlotter):
         else:
             sig_prior_str = ""
         stats_region_labels = region_labels
+        n_labels = len(region_labels)
         if stats is not None:
             stats_string = {"fit_target_data": "\n", "x1": "\n", "z": "\n", "MC": ""}
             if isinstance(stats, dict):
                 for skey, sval in stats.items():
+                    p_str_means = {}
                     for p_str in ["fit_target_data", "x1", "z"]:
-                        stats_string[p_str] \
-                            = stats_string[p_str] + skey + "_mean=" + str(numpy.mean(sval[p_str])) + ", "
-                    stats_region_labels = [stats_region_labels[ip] + ", " +
-                                           skey + "_" + "x1" + "_mean=" + str(sval["x1"][:, ip].mean()) + ", " +
-                                           skey + "_z_mean=" + str(sval["z"][:, ip].mean())
-                                           for ip in range(len(region_labels))]
+                        try:
+                            stats_string[p_str] \
+                                = stats_string[p_str] + skey + "_mean=" + str(numpy.mean(sval[p_str])) + ", "
+                            p_str_means[p_str] = [", " + skey + "_" + p_str + "_mean=" + str(sval[p_str][:, ip].mean())
+                                                  for ip in range(n_labels)]
+                        except:
+                            p_str_means[p_str] = ["" for ip in range(n_labels)]
+                            pass
+                    stats_region_labels = [stats_region_labels[ip] +
+                                           p_str_means["x1"][ip] + p_str_means["z"][ip]
+                                            for ip in range(n_labels)]
                 for p_str in ["fit_target_data", "x1", "z"]:
                     stats_string[p_str] = stats_string[p_str][:-2]
         else:
             stats_string = dict(zip(["fit_target_data", "x1", "z"], 3*[""]))
+
         observation_dict = OrderedDict({'observation time series': target_data.squeezed})
         time = target_data.time_line
         figs = []
         # x1_pair_plot_samples = []
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), samples)):
             name = title_prefix + "_chain" + str(id_est + 1)
-            observation_dict.update({"fit chain " + str(id_est + 1):
+            try:
+                observation_dict.update({"fit chain " + str(id_est + 1):
                                          sample["fit_target_data"].data[:, :, :, skip_samples:].squeeze()})
-            x1 = sample["x1"].data[:, :, :, skip_samples:].squeeze()
-            z = sample["z"].data[:, :, :, skip_samples:].squeeze()
-            figs.append(self.plot_raster(sort_dict({"x1": x1, 'z': z}),
-                                         time, special_idx=seizure_indices, time_units=target_data.time_unit,
-                                         title=name + ": Hidden states fit rasterplot", linestyle="-o",
-                                         subtitles=['hidden state ' + "x1" + stats_string["x1"],
-                                         'hidden state z' + stats_string["z"]], offset=1.0,
-                                         labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
-            # TODO: add time series probability distribution plots per region
-            # x1 = x1.T
-            # z = z.T
-            # x1_pair_plot_samples.append({})
-        # figs.append(self._parameters_pair_plots(x1_pair_plot_samples, region_labels,
-        #                                         None, None, None, skip_samples,
-        #                                         title=name + ": x1 pair plot per region"))
+            except:
+                pass
 
-            dWt = {}
+            x = OrderedDict()
+            subtitles = ""
+            for x_str in ["x1", "z"]:
+                try:
+                    x[x_str] = sample[x_str].data[:, :, :, skip_samples:].squeeze()
+                    subtitles += 'hidden state ' + x_str + stats_string[x_str]
+                except:
+                    pass
+            if len(x) > 0:
+                figs.append(self.plot_raster(x, time, special_idx=seizure_indices, time_units=target_data.time_unit,
+                                             title=name + ": Hidden states fit rasterplot", subtitles=subtitles, offset=1.0,
+                                             labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
+                if trajectories_plot:
+                    title = name + ' Fit hidden state space trajectories'
+                    figs.append(self.plot_trajectories(x, special_idx=seizure_indices, title=title,
+                                                       labels=stats_region_labels, figsize=FiguresConfig.SUPER_LARGE_SIZE))
+                # TODO: add time series probability distribution plots per region
+                # x1 = x1.T
+                # z = z.T
+                # x1_pair_plot_samples.append({})
+                # figs.append(self._parameters_pair_plots(x1_pair_plot_samples, region_labels,
+                #                                         None, None, None, skip_samples,
+                #                                         title=name + ": x1 pair plot per region"))
+
+            dWt = OrderedDict()
             subtitles = []
-            dX1t = sample.get("dX1t_star", sample.get("dX1t", False))
-            if numpy.any(dX1t):
-                dWt.update({"dX1t": dX1t.data[:, :, :, skip_samples:].squeeze()})
-                subtitles.append("dX1t")
-            dZt = sample.get("dZt_star", sample.get("dZt", False))
-            if numpy.any(dZt):
-                dWt.update({"dZt": dZt.data[:, :, :, skip_samples:].squeeze()})
-                subtitles.append("dZt")
-            dWt_star = sample.get("dWt_star", sample.get("dWt", False))
-            if numpy.any(dWt_star):
-                dWt.update({"dWt": dWt_star.data[:, :, :, skip_samples:].squeeze()})
-                subtitles.append("dWt")
+            for d_str in ["dX1t", "dZt", "dWt"]:
+                try:
+                    dWt[d_str] = sample.get(d_str+"_star", sample.get(d_str)).data[:, :, :, skip_samples:].squeeze()
+                    subtitles.append(d_str)
+                except:
+                    pass
             if len(dWt) > 0:
                 subtitles[-1] += "\ndynamic noise" + sig_prior_str + ", sig_post = " + str(est["sigma"])
-                figs.append(self.plot_raster(sort_dict(dWt), time[:-1], time_units=target_data.time_unit,
-                                             special_idx=seizure_indices, linestyle="-o",
+                figs.append(self.plot_raster(dWt, time[:-1], time_units=target_data.time_unit,
+                                             special_idx=seizure_indices,
                                              title=name + ": Hidden states random walk rasterplot",
                                              subtitles=subtitles, offset=1.0, labels=region_labels,
                                              figsize=FiguresConfig.VERY_LARGE_SIZE))
-            if trajectories_plot:
-                title = name + ' Fit hidden state space trajectories'
-                figs.append(self.plot_trajectories({"x1": sample["x1"].data[:, :, :, skip_samples:].squeeze(),
-                                                    'z': sample['z'].data[:, :, :, skip_samples:].squeeze()},
-                                                   special_idx=seizure_indices, title=title,
-                                                   labels=stats_region_labels, linestyle="-o",
-                                                   figsize=FiguresConfig.SUPER_LARGE_SIZE))
-        figs.append(self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
-                                      title=title_prefix + "Observation target vs fit time series: "
-                                            + stats_string["fit_target_data"], linestyle="-o",
-                                      figure_name=title_prefix + "ObservationTarget_VS_FitRasterPlot",
-                                      offset=1.0, labels=target_data.space_labels,
-                                     figsize=FiguresConfig.VERY_LARGE_SIZE))
-        figs.append(self.plot_timeseries(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
-                                         title=title_prefix + "Observation target vs fit time series: "
-                                               + stats_string["fit_target_data"], linestyle="-o",
-                                         figure_name=title_prefix + "ObservationTarget_VS_FitTimeSeries",
-                                         labels=target_data.space_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
+        if len(observation_dict) > 1:
+            figs.append(self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
+                                          title=title_prefix + "Observation target vs fit time series: "
+                                                + stats_string["fit_target_data"],
+                                          figure_name=title_prefix + "ObservationTarget_VS_FitRasterPlot",
+                                          offset=1.0, labels=target_data.space_labels,
+                                         figsize=FiguresConfig.VERY_LARGE_SIZE))
+            figs.append(self.plot_timeseries(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
+                                             title=title_prefix + "Observation target vs fit time series: "
+                                                   + stats_string["fit_target_data"],
+                                             figure_name=title_prefix + "ObservationTarget_VS_FitTimeSeries",
+                                             labels=target_data.space_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
         return tuple(figs)
 
     def plot_fit_connectivity(self, ests, samples, stats=None, probabilistic_model=None,
@@ -488,26 +497,28 @@ class ModelInversionPlotter(TimeseriesPlotter):
     def plot_fit_results(self, ests, samples, model_data, target_data, probabilistic_model=None, info_crit=None,
                          stats=None, pair_plot_params=["tau1", "K", "sigma", "epsilon", "scale", "offset"],
                          region_violin_params=["x0", "x1_init", "z_init"],
-                         region_labels=[], regions_mode="active", n_regions=1,
+                         region_labels=[], regions_mode="active", n_regions=1, seizure_indices=[],
                          trajectories_plot=True, connectivity_plot=False, skip_samples=0, title_prefix=""):
         if probabilistic_model is not None:
             active_regions = ensure_list(probabilistic_model.active_regions)
         else:
             active_regions = ensure_list(model_data.get("active_regions", range(n_regions)))
             region_labels = generate_region_labels(n_regions, region_labels, ". ", False)
-        if isequal_string(regions_mode, "all"):
-            seizure_indices = active_regions
-        else:
-            region_inds = active_regions
-            seizure_indices = None
-            region_labels = region_labels[region_inds]
+        if len(seizure_indices) == 0:
+            if isequal_string(regions_mode, "all"):
+                seizure_indices = active_regions
+            else:
+                region_inds = active_regions
+                seizure_indices = []
+                region_labels = region_labels[region_inds]
 
         figs = []
 
-        figs.append(self.plot_fit_scalar_params(samples, stats, probabilistic_model, pair_plot_params,
-                                                skip_samples, title_prefix))
-
-        figs.append(self.plot_fit_scalar_params_iters(samples, pair_plot_params, 0, title_prefix, subplot_shape=None))
+        # Pack fit samples time series into timeseries objects:
+        from tvb_fit.tvb_epilepsy.top.scripts.fitting_scripts import samples_to_timeseries
+        samples, target_data, x1prior, x1eps = samples_to_timeseries(samples, model_data, target_data, region_labels)
+        figs.append(self.plot_fit_timeseries(target_data, samples, ests, stats, probabilistic_model,
+                                             seizure_indices, skip_samples, trajectories_plot, title_prefix))
 
         figs.append(
             self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
@@ -517,11 +528,11 @@ class ModelInversionPlotter(TimeseriesPlotter):
             self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
                                         region_labels, regions_mode, True, skip_samples, title_prefix))
 
-        # Pack fit samples time series into timeseries objects:
-        from tvb_fit.tvb_epilepsy.top.scripts.fitting_scripts import samples_to_timeseries
-        samples, target_data, x1prior, x1eps = samples_to_timeseries(samples, model_data, target_data, region_labels)
-        figs.append(self.plot_fit_timeseries(target_data, samples, ests, stats, probabilistic_model,
-                                             seizure_indices, skip_samples, trajectories_plot, title_prefix))
+        figs.append(self.plot_fit_scalar_params(samples, stats, probabilistic_model, pair_plot_params,
+                                                skip_samples, title_prefix))
+
+        figs.append(self.plot_fit_scalar_params_iters(samples, pair_plot_params, 0, title_prefix, subplot_shape=None))
+
 
         if info_crit is not None:
             figs.append(self.plot_scalar_model_comparison(info_crit, title_prefix))
