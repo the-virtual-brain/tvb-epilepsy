@@ -120,7 +120,7 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
             return set_empirical_data(empirical_files[0], ts_file, head, sensors_lbls, sensor_id, seizure_length,
                                       [times_on[0], times_on[0] + time_length], time_units, label_strip_fun,
                                       preprocessing, low_hpf, high_hpf, low_lpf, high_lpf, bipolar, win_len_ratio,
-                                      plotter, title_prefix, True)
+                                      plotter, title_prefix, True), 1
 
 
 def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model, sensor_id=0,
