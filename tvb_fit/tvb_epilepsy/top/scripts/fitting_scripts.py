@@ -110,7 +110,7 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
                 signals.append(set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id, seizure_length,
                                                   [time_on, time_on + time_length], time_units,
                                                   label_strip_fun,preprocessing, low_hpf, high_hpf, low_lpf, high_lpf,
-                                                  bipolar, win_len_ratio, plotter, title_prefix + str(id+1)), False)
+                                                  bipolar, win_len_ratio, plotter, title_prefix + str(id+1), False))
             signals = TimeseriesService().concatenate_in_time(signals)
             H5Writer().write_timeseries(signals, ts_file)
             return signals, n_seizures
@@ -192,7 +192,7 @@ def samples_to_timeseries(samples, model_data, target_data=None, region_labels=[
 
     x1 = np.empty((n_times, n_regions, 0))
     for sample in ensure_list(samples):
-        for x in ["x1", "z", "x1_star", "z_star", "dX1t", "dZt", "dX1t_star", "dZt_star"]:
+        for x in ["x1", "z", "x1_star", "z_star", "dX1t", "dZt", "dWt", "dX1t_star", "dZt_star", "dWt_star"]:
             try:
                 if x == "x1":
                     x1 = np.concatenate([x1, sample[x].T], axis=2)

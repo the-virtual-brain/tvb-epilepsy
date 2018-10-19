@@ -51,7 +51,7 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
 
         # Now filter, if needed, before decimation introduces any artifacts
         if isequal_string(preproc, "hpf"):
-            high_hpf = np.minimum(high_hpf, 512.0)
+            high_hpf = np.minimum(high_hpf, 256.0)
             logger.info("High-pass filtering signals...")
             data = ts_service.filter(data, low_hpf, high_hpf, "bandpass", order=3)
             if plotter:
@@ -109,7 +109,7 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
             logger.info("Convolving signals with a square window of " + str_win_len + " points...")
             if plotter:
                 plotter.plot_raster({"ConvolutionSmoothing": data.squeezed}, data.time_line,
-                                    time_units=data.time_unit, special_idx=[], offset=0.1,
+                                    time_units=data.time_unit, special_idx=[], offset=1,
                                     title='Convolved Time Series with a window of ' + str_win_len + " points",
                                     figure_name=
                                        title_prefix + '_%s_%spointWinConvolvedTimeSeries' % (stri_preproc, str_win_len),
