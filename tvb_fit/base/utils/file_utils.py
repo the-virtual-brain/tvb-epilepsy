@@ -3,6 +3,8 @@
 import os
 from datetime import datetime
 import glob
+import shutil
+
 
 def ensure_unique_file(parent_folder, filename):
     final_path = os.path.join(parent_folder, filename)
@@ -56,6 +58,14 @@ def change_filename_or_overwrite_with_wildcard(path, overwrite=True):
                 return change_filename_or_overwrite_with_wildcard(path, overwrite)
     else:
         return path
+
+
+def move_overwrite_files_to_folder_with_wildcard(folder, path_wildcard):
+    if not os.path.isdir(folder):
+        os.mkdir(folder)
+    for file in glob.glob(path_wildcard):
+        filename = os.path.join(folder, os.path.basename(file))
+        shutil.move(file, filename)
 
 
 def write_metadata(meta_dict, h5_file, key_date, key_version, path="/"):
