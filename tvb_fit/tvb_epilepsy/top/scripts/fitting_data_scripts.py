@@ -69,28 +69,26 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
                                     figure_name=title_prefix + '_%sSignInversion' % stri_preproc,
                                     labels=data.space_labels)
 
-        plot_envelope = ""
-        if isequal_string(preproc, "square"):
-            # Square data to get positive "power like" timeseries (introducing though higher frequencies)
-            data = ts_service.square(data)
-            plot_envelope = "Square envelope"
-        elif isequal_string(preproc, "hilbert"):
+        plot_rectify = ""
+        if isequal_string(preproc, "hilbert"):
             # or
             # ...get the signals' envelope via Hilbert transform
             data = ts_service.hilbert_envelope(data)
-            plot_envelope = "Hilbert transform envelope"
+            plot_rectify = "Hilbert transform amplitude"
             # or
+        # elif isequal_string(preproc, "square"):
+        #     # Square data to get positive "power like" timeseries (introducing though higher frequencies)
+        #     data = ts_service.square(data)
         elif isequal_string(preproc, "abs") or isequal_string(preproc, "abs-mean"):
             if isequal_string(preproc, "abs-mean"):
                 data = ts_service.normalize(data, "mean")
             #...the absolute value...
             data = ts_service.abs(data)
-            plot_envelope = preproc + " envelope"
-        if plot_envelope and plotter:
-            plot_envelop_ = plot_envelope.replace(" ", "_")
+        if plotter:
+            plot_envelop_ = plot_rectify.replace(" ", "_")
             plotter.plot_raster({plot_envelop_: data.squeezed}, data.time_line,
                                 time_units=data.time_unit, special_idx=[],
-                                title=plot_envelope, offset=1.0,
+                                title=plot_rectify, offset=1.0,
                                 figure_name=title_prefix + "_%s" % stri_preproc + plot_envelop_ + "TimeSeries",
                                 labels=data.space_labels)
 
@@ -116,6 +114,7 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
                                     figure_name=
                                        title_prefix + '_%s_%spointWinConvolvedTimeSeries' % (stri_preproc, str_win_len),
                                     labels=data.space_labels)
+
         elif isequal_string(preproc, "lpf"):
             high_lpf = np.minimum(high_lpf, 512.0)
             logger.info("Low-pass filtering signals...")
@@ -139,16 +138,17 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
                                         time_units=data.time_unit, special_idx=[],
                                         title=str_decim_ratio + " wise Decimation", offset=0.1,
                                         figure_name=
-                                            title_prefix + "_%s_%sxDecimatedTimeSeries" % (stri_preproc, str_decim_ratio),
+                                          title_prefix + "_%s_%sxDecimatedTimeSeries" % (stri_preproc, str_decim_ratio),
                                         labels=data.space_labels)
 
     # # Cut to the desired interval
     data = data.get_time_window_by_units(on_off_set[0], on_off_set[1])
 
-    if len(find_labels_inds(preprocessing, NORMALIZATION_METHODS, modefun="equal")) >0:
-        # Finally, normalize signals
-        logger.info("Normalizing signals...")
-        data = ts_service.normalize(data, "baseline-std")  #  or  "baseline-amplitude" or"zscore"
+    for preproc in preprocessing:
+        if preproc in NORMALIZATION_METHODS:
+            # Finally, normalize signals
+            logger.info("Normalizing signals...")
+            data = ts_service.normalize(data, preproc)  # "baseline", "baseline-std", "baseline-amplitude" or "zscore
     if plotter:
         plotter.plot_raster({"ObservationRaster": data.squeezed}, data.time_line, time_units=data.time_unit,
                             special_idx=[], offset=0.1, title='Observation Raster Plot',
@@ -193,12 +193,12 @@ def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, se
     if plotter:
         plotter.plot_raster({"OriginalData": data.squeezed}, data.time_line, time_units=data.time_unit,
                             special_idx=[], title='Original Empirical Time Series', offset=1.0,
-                            figure_name=title_prefix + 'OriginalTimeSeries', labels=data.space_labels)
+                            figure_name=title_prefix + '_empirical_OriginalTimeSeries', labels=data.space_labels)
     data = TimeseriesService().detrend(data)
     if plotter:
         plotter.plot_raster({"Detrended": data.squeezed}, data.time_line, time_units=data.time_unit,
                             special_idx=[], title='Detrended Time Series', offset=1.0,
-                            figure_name=title_prefix + 'DetrendedTimeSeries', labels=data.space_labels)
+                            figure_name=title_prefix + '_empirical_DetrendedTimeSeries', labels=data.space_labels)
     if bipolar:
         logger.info("Computing bipolar signals...")
         data = data.get_bipolar()
