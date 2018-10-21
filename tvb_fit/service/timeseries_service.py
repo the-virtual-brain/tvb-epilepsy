@@ -29,7 +29,7 @@ def cut_signals_tails(signals, time, cut_tails):
     return signals, time, n_times
 
 
-NORMALIZATION_METHODS = ["zscore", "mean", "minmax", "baseline-amplitude", "baseline-std"]
+NORMALIZATION_METHODS = ["zscore", "mean", "minmax", "baseline", "baseline-amplitude", "baseline-std"]
 
 
 def normalize_signals(signals, normalization=None):
@@ -41,6 +41,8 @@ def normalize_signals(signals, normalization=None):
         elif isequal_string(normalization, "minmax"):
             signals -= signals.min()
             signals /= signals.max()
+        elif isequal_string(normalization, "baseline"):
+            signals -= np.percentile(np.percentile(signals, 1, axis=0), 1)
         elif isequal_string(normalization, "baseline-amplitude"):
             signals -= np.percentile(np.percentile(signals, 1, axis=0), 1)
             signals /= np.percentile(np.percentile(signals, 99, axis=0), 99)
