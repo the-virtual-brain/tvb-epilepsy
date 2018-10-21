@@ -20,7 +20,7 @@ class SimulationPlotter(TimeseriesPlotter):
     def plot_simulated_seeg_timeseries(self, seeg_dict, title_prefix="Ep"):
         figs = []
         for sensors_name, seeg in seeg_dict.items():
-            title = title_prefix + sensors_name + " raster plot"
+            title = title_prefix + "Simulated " +  sensors_name + " raster plot"
             figs.append(self.plot_raster({'SEEG': seeg.squeezed}, seeg.time_line,
                                          time_units=seeg.time_unit, title=title, offset=0.1, labels=seeg.space_labels,
                                          figsize=FiguresConfig.VERY_LARGE_SIZE))
@@ -50,7 +50,8 @@ class SimulationPlotter(TimeseriesPlotter):
                                  labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
 
             figs.append(self.plot_trajectories(sv_dict, special_idx=seizure_indices,
-                                               title=title_prefix + 'State space trajectories', labels=region_labels,
+                                               title=title_prefix + 'Simulated state space trajectories',
+                                               labels=region_labels,
                                                figsize=FiguresConfig.LARGE_SIZE))
         else:
             # We assume that at least source and z are available in res
@@ -80,7 +81,7 @@ class SimulationPlotter(TimeseriesPlotter):
                                                                time_units=timeseries.time_unit, freq=None,
                                                                spectral_options=spectral_options,
                                                                special_idx=seizure_indices,
-                                                               title=title_prefix + "Spectral Analysis",
+                                                               title=title_prefix + "Simulated Spectral Analysis",
                                                                labels=region_labels, figsize=FiguresConfig.LARGE_SIZE))
 
             if isinstance(model, EpileptorDPrealistic):
