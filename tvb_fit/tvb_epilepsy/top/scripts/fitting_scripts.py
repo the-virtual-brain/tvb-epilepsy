@@ -8,6 +8,7 @@ from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import OBSERV
     HIGH_HPF, LOW_HPF, LOW_LPF, HIGH_LPF, WIN_LEN_RATIO, BIPOLAR, TARGET_DATA_PREPROCESSING
 from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.base.utils.data_structures_utils import ensure_list, generate_region_labels
+from tvb_fit.base.utils.file_utils import move_overwrite_files_to_folder_with_wildcard
 from tvb_fit.service.timeseries_service import TimeseriesService
 from tvb_fit.tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, Timeseries
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
@@ -76,10 +77,13 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
                        times_on_off=[], time_units="ms", label_strip_fun=None,
                        preprocessing=TARGET_DATA_PREPROCESSING, low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF,
                        high_lpf=HIGH_LPF, bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO,
-                       plotter=None, title_prefix="", write_flag=True):
+                       plotter=None, title_prefix=""):
     try:
         return H5Reader().read_timeseries(ts_file)
     except:
+        seizure_name = os.path.basename(empirical_file).split(".")[0]
+        if title_prefix.find(seizure_name) < 0:
+            title_prefix = title_prefix + seizure_name
         # ... or preprocess empirical data for the first time:
         if len(sensors_lbls) == 0:
             sensors_lbls = head.get_sensors_by_index(sensor_ids=sensor_id).labels
@@ -88,9 +92,12 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
                                                         label_strip_fun, preprocessing,
                                                         low_hpf, high_hpf, low_lpf, high_lpf,
                                                         bipolar, win_len_ratio, plotter, title_prefix)
-        if write_flag:
-            H5Writer().write_timeseries(signals, ts_file)
-        return signals
+        H5Writer().write_timeseries(signals, ts_file)
+    move_overwrite_files_to_folder_with_wildcard(os.path.join(plotter.config.out.FOLDER_FIGURES,
+                                                              "fitData_EmpiricalSEEG"),
+                                                 os.path.join(plotter.config.out.FOLDER_FIGURES,
+                                                              title_prefix.replace(" ", "_")) + "*")
+    return signals
 
 
 def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, sensor_id=0,
@@ -98,29 +105,35 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
                                 label_strip_fun=None, preprocessing=TARGET_DATA_PREPROCESSING,
                                 low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF, high_lpf=HIGH_LPF,
                                 bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
-    try:
-        return H5Reader().read_timeseries(ts_file)
-    except:
-        empirical_files = ensure_list(ensure_list(empirical_files))
-        times_on = ensure_list(times_on)
-        n_seizures = len(empirical_files)
-        if n_seizures > 1:
-            signals = []
-            for id, (empirical_file, time_on) in enumerate(zip(empirical_files, times_on)):
-                this_title_prefix = title_prefix + os.path.basename(empirical_file).split(".")[0]
-                signals.append(set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id, seizure_length,
-                                                  [time_on, time_on + time_length], time_units,
-                                                  label_strip_fun,preprocessing, low_hpf, high_hpf, low_lpf, high_lpf,
-                                                  bipolar, win_len_ratio, plotter, this_title_prefix, False))
-            signals = TimeseriesService().concatenate_in_time(signals)
-            H5Writer().write_timeseries(signals, ts_file)
-            return signals, n_seizures
-        else:
-            title_prefix = title_prefix + os.path.basename(empirical_files[0]).split(".")[0]
-            return set_empirical_data(empirical_files[0], ts_file, head, sensors_lbls, sensor_id, seizure_length,
-                                      [times_on[0], times_on[0] + time_length], time_units, label_strip_fun,
-                                      preprocessing, low_hpf, high_hpf, low_lpf, high_lpf, bipolar, win_len_ratio,
-                                      plotter, title_prefix, True), 1
+    empirical_files = ensure_list(ensure_list(empirical_files))
+    n_seizures = len(empirical_files)
+    times_on = ensure_list(times_on)
+    signals = []
+    ts_filename = ts_file.split(".h5")[0]
+    for empirical_file, time_on in zip(empirical_files, times_on):
+        seizure_name = os.path.basename(empirical_file).split(".")[0]
+        signals.append(set_empirical_data(empirical_file, "_".join([ts_filename, seizure_name]) + ".h5",
+                                          head, sensors_lbls, sensor_id, seizure_length,
+                                          [time_on, time_on + time_length], time_units,
+                                          label_strip_fun,preprocessing, low_hpf, high_hpf, low_lpf, high_lpf,
+                                          bipolar, win_len_ratio, plotter, title_prefix))
+    if n_seizures > 1:
+        signals = TimeseriesService().concatenate_in_time(signals)
+    else:
+        signals = signals[0]
+    if plotter:
+        title_prefix = title_prefix + "MultiseizureEmpiricalSEEG"
+        plotter.plot_raster({"ObservationRaster": signals.squeezed}, signals.time_line, time_units=signals.time_unit,
+                            special_idx=[], offset=0.1, title='Multiseizure Observation Raster Plot',
+                            figure_name=title_prefix + 'ObservationRasterPlot', labels=signals.space_labels)
+        plotter.plot_timeseries({"Observation": signals.squeezed}, signals.time_line, time_units=signals.time_unit,
+                                special_idx=[], title='Observation Time Series',
+                                figure_name=title_prefix + 'ObservationTimeSeries', labels=signals.space_labels)
+    move_overwrite_files_to_folder_with_wildcard(os.path.join(plotter.config.out.FOLDER_FIGURES,
+                                                              "fitData_EmpiricalSEEG"),
+                                                 os.path.join(plotter.config.out.FOLDER_FIGURES,
+                                                              title_prefix.replace(" ", "_")) + "*")
+    return signals, n_seizures
 
 
 def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model, sensor_id=0,
@@ -148,16 +161,24 @@ def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model
     del x1, z
     signals = signals["source"].get_source()
     signals.data = -signals.data  # change sign to fit x1
+
     if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
         log_flag = probabilistic_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
+        title_prefix = title_prefix + "SimSEEG"
         signals = prepare_simulated_seeg_observable(signals, head.get_sensors_by_index(sensor_ids=sensor_id),
                                                     probabilistic_model.time_length, log_flag, times_on_off, [],
                                                     preprocessing, low_hpf, high_hpf, low_lpf, high_lpf, bipolar,
                                                     win_len_ratio, plotter, title_prefix)
+
     else:
+        title_prefix = title_prefix + "SimSource"
         signals = prepare_signal_observable(signals, probabilistic_model.time_length, times_on_off, [],
                                             preprocessing, low_hpf, high_hpf, low_lpf, high_lpf,
                                             win_len_ratio, plotter, title_prefix)
+    move_overwrite_files_to_folder_with_wildcard(os.path.join(plotter.config.out.FOLDER_FIGURES,
+                                                              "fitData_" + title_prefix),
+                                                 os.path.join(plotter.config.out.FOLDER_FIGURES,
+                                                              title_prefix.replace(" ", "_")) + "*")
     return signals, simulator
 
 
