@@ -239,15 +239,15 @@ class TimeseriesPlotter(BasePlotter):
         alpha_ratio = 1.0 / nSamples
         alphas = numpy.maximum(numpy.array([def_alpha] * nTS) * alpha_ratio, 0.1)
         alphas[special_idx] = numpy.maximum(alpha_ratio, 0.1)
-        if (n_vars / (n_cols*n_rows) == 1) or not isequal_string(mode, "raster"): # (isequal_string(mode, "raster") and n_special_idx == 0):
-            cmap = matplotlib.cm.get_cmap('jet')
-            colors = numpy.array([cmap(0.8 * iTS / nTS) for iTS in range(nTS)])
-            colors[special_idx] = \
-                numpy.array([cmap(1.0 - 0.2 * iTS / nTS) for iTS in range(n_special_idx)]).reshape((n_special_idx, 4))
-        else:
+        if isequal_string(mode, "traj") and (n_cols * n_rows > 1):
             colors = numpy.zeros((nTS, 4))
             colors[special_idx] = \
                 numpy.array([numpy.array([1.0, 0, 0, 1.0]) for _ in range(n_special_idx)]).reshape((n_special_idx, 4))
+        else:
+            cmap = matplotlib.cm.get_cmap('jet')
+            colors = numpy.array([cmap(0.5 * iTS / nTS) for iTS in range(nTS)])
+            colors[special_idx] = \
+                numpy.array([cmap(1.0 - 0.25 * iTS / nTS) for iTS in range(n_special_idx)]).reshape((n_special_idx, 4))
         colors[:, 3] = alphas
         lines = []
         pyplot.figure(title, figsize=figsize)
