@@ -445,20 +445,20 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
             if "scale" in params_names:
                 self.logger.info("...scale...")
-                scale_scale = self.scale / SCALE_SCALE_DEF
+                scale_sigma = self.scale / SCALE_SCALE_DEF
                 parameters.update({"scale": self.generate_normal_or_lognormal_parameter("scale", self.scale,
                                                                                         np.maximum(0.1,
                                                                                                    self.scale -
-                                                                                                   3 * scale_scale),
-                                                                                        self.scale + 3 * scale_scale,
-                                                                                        sigma=scale_scale)})
+                                                                                                   3 * scale_sigma),
+                                                                                        self.scale + 3 * scale_sigma,
+                                                                                        sigma=scale_sigma)})
 
             if "offset" in params_names:
                 self.logger.info("...offset...")
-                offset_scale = np.abs(self.offset) / OFFSET_SCALE_DEF
+                offset_sigma = np.abs(self.offset) / OFFSET_SCALE_DEF
                 parameters.update(
-                    {"offset": generate_normal_parameter("offset", self.offset, self.offset - 3 * offset_scale,
-                                                         self.offset + 3 * offset_scale, sigma=offset_scale)})
+                    {"offset": generate_normal_parameter("offset", self.offset, self.offset - 3 * offset_sigma,
+                                                         self.offset + 3 * offset_sigma, sigma=offset_sigma)})
 
         if self.x1_prior_weight > 0.0:
 
@@ -482,12 +482,12 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                                                                                           sigma=x1_scale_scale)})
             if "x1_offset" in params_names:
                 self.logger.info("...x1_offset...")
-                x1_offset_scale = np.abs(self.x1_offset) / OFFSET_SCALE_DEF
+                x1_offset_sigma= np.abs(self.x1_offset) / OFFSET_SCALE_DEF
                 parameters.update(
                         {"x1_offset": generate_normal_parameter("x1_offset", self.x1_offset,
-                                                                self.x1_offset - 3 * x1_offset_scale,
-                                                                self.x1_offset + 3 * x1_offset_scale,
-                                                                sigma=x1_offset_scale)})
+                                                                self.x1_offset - 3 * x1_offset_sigma,
+                                                                self.x1_offset + 3 * x1_offset_sigma,
+                                                                sigma=x1_offset_sigma)})
 
         return parameters
 
