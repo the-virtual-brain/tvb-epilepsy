@@ -167,7 +167,7 @@ transformed parameters {
     z[1] = z_init; // 3.0;
     for (t in 1:(nt-1)) {
         x[t+1] = x_step(x[t], z[t], I1, dt*time_scale); //, x_eta_star[t], sqrtdt*sigma
-        z[t+1] = z_step(x[t], z[t], x0, k*SC, Ic, x_eq_def, dt*time_scale, z_eta_star[t], sqrtdt*sigma, tau0);
+        z[t+1] = z_step(x[t], z[t], x0, k*SC, k*Ic, x_eq_def, dt*time_scale, z_eta_star[t], sqrtdt*sigma, tau0);
     }
 
     for (t in 1:nt)

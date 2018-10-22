@@ -380,7 +380,7 @@ transformed parameters {
         // Sample x1eq, compute zeq, x0, and set initial conditions' priors around equilibria
         x1eq = x;
         zeq = calc_zeq(x1eq, Iext1, tau1);
-        x0 = calc_x0(x1eq, zeq, SC, Ic, x1_eq_def);
+        x0 = calc_x0(x1eq, zeq, K*SC, K*Ic, x1_eq_def);
 //        x1_init= x1eq + x1_init_star * x1_init_std;
 //        z_init= zeq + z_init_star * z_init_std;
     } else {
@@ -429,7 +429,7 @@ transformed parameters {
             row_vector[n_active_regions] zt = z[t];
             for (tt in 1:UPSAMPLE) {
                 x1[t+1] = x1_step(x1t, zt, Iext1, dtt*tau1);
-                z[t+1] = z_step(x1t, zt, x0, K*SC, Ic, x1_eq_def, dtt*tau1, dWt_star[t], sqrtdt*sigma, tau0);
+                z[t+1] = z_step(x1t, zt, x0, K*SC, K*Ic, x1_eq_def, dtt*tau1, dWt_star[t], sqrtdt*sigma, tau0);
                 x1t = x1[t+1];
                 zt = z[t+1];
             }
@@ -437,7 +437,7 @@ transformed parameters {
     } else {
         for (t in 1:(n_times-1)) {
             x1[t+1] = x1_step(x1[t], z[t], Iext1, dtt*tau1); //, dX1t_star[t], sqrtdt*sigma
-            z[t+1] = z_step(x1[t], z[t], x0, K*SC, Ic, x1_eq_def, dtt*tau1, dWt_star[t], sqrtdt*sigma, tau0);
+            z[t+1] = z_step(x1[t], z[t], x0, K*SC, K*Ic, x1_eq_def, dtt*tau1, dWt_star[t], sqrtdt*sigma, tau0);
         }
      }
 
