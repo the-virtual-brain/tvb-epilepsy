@@ -179,6 +179,9 @@ def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model
                                                               "fitData_" + title_prefix),
                                                  os.path.join(plotter.config.out.FOLDER_FIGURES,
                                                               title_prefix.replace(" ", "_")) + "*")
+    move_overwrite_files_to_folder_with_wildcard(os.path.join(plotter.config.out.FOLDER_FIGURES,
+                                                              "Simulation"),
+                                                 os.path.join(plotter.config.out.FOLDER_FIGURES, "Simulated*"))
     return signals, simulator
 
 
