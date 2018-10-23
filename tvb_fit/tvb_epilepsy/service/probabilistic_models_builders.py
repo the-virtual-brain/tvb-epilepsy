@@ -580,6 +580,7 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
             n_xp = len(names)
             mins = n_xp*[-1.0]
             maxs = n_xp*[1.0]
+            means = n_xp*[0.0]
 
         for iV in range(n_xp):
             self.logger.info("..." + names[iV] + "...")
