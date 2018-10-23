@@ -38,9 +38,14 @@ def normalize_signals(signals, normalization=None):
             signals = zscore(signals, axis=None)  # / 3.0
         elif isequal_string(normalization, "mean"):
             signals -= (signals.mean(axis=0) * np.ones(signals.shape[1:]))
+        elif isequal_string(normalization, "baseline-maxstd"):
+            signals -= np.percentile(np.percentile(signals, 1, axis=0), 1)
+            signals /= np.max(np.std(signals, axis=0))
         elif isequal_string(normalization, "minmax"):
             signals -= signals.min()
             signals /= signals.max()
+        elif isequal_string(normalization, "min"):
+            signals -= signals.min()
         elif isequal_string(normalization, "baseline"):
             signals -= np.percentile(np.percentile(signals, 1, axis=0), 1)
         elif isequal_string(normalization, "baseline-amplitude"):
