@@ -1,5 +1,5 @@
 from shutil import copyfile
-from tvb_fit.base.utils.log_error_utils import raise_value_error
+from tvb_fit.base.utils.log_error_utils import raise_value_error, warning
 from tvb_fit.base.utils.data_structures_utils import construct_import_path
 from tvb_fit.base.utils.command_line_utils import execute_command
 from tvb_fit.base.utils.file_utils import change_filename_or_overwrite_with_wildcard
@@ -101,7 +101,11 @@ class CmdStanInterface(StanInterface):
         samples = self.read_output_samples(self.output_filepath)
         est = self.compute_estimates_from_samples(samples)
         if os.path.isfile(self.summary_filepath):
-            summary = parse_csv_in_cols(self.summary_filepath)
+            try:
+                summary = parse_csv_in_cols(self.summary_filepath)
+            except:
+                summary = None
+                warning("Reading stan summary failed!")
         else:
             summary = None
         return est, samples, summary
