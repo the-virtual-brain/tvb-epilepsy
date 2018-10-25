@@ -10,6 +10,7 @@ from tvb_fit.base.config import CalculusConfig
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import X1EQ_CR_DEF
 from tvb_fit.base.utils.log_error_utils import initialize_logger, raise_value_error, warning
 from tvb_fit.base.utils.data_structures_utils import formal_repr
+from tvb_fit.base.computations.analyzers_utils import interval_scaling
 from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import calc_fz_jac_square_taylor, calc_jac
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import calc_eq_z
 from tvb_fit.base.computations.math_utils import weighted_vector_sum, curve_elbow_point
@@ -75,9 +76,6 @@ class LSAService(object):
 
     def _compute_jacobian(self, model_configuration):
 
-        # Check if any of the equilibria are in the supercritical regime (beyond the separatrix) and set it right before
-        # the bifurcation.
-        zeq = model_configuration.zeq
         if self.lsa_method == "2D":
             fz_jacobian = calc_jac(model_configuration.x1eq, model_configuration.zeq, model_configuration.yc,
                                    model_configuration.Iext1, model_configuration.x0, model_configuration.K,
@@ -85,22 +83,23 @@ class LSAService(object):
                                    a=model_configuration.a, b=model_configuration.b, d=model_configuration.d,
                                    tau1= model_configuration.tau1, tau0=model_configuration.tau0)
         else:
-            temp = model_configuration.x1eq > X1EQ_CR_DEF - 10 ** (-3)
-            if temp.any():
-                correction_value = X1EQ_CR_DEF - 10 ** (-3)
-                self.logger.warning("Equilibria x1eq[" + str(numpy.where(temp)[0]) + "]  = "
-                                    + str(model_configuration.x1eq[temp]) +
-                                    "\nwere corrected for LSA to value: X1EQ_CR_DEF - 10 ** (-3) = "
+            # Check if any of the equilibria are in the supercritical regime (beyond the separatrix)
+            # and set it right before the bifurcation.
+            x1eq = numpy.array(model_configuration.x1eq)
+            zeq = numpy.array(model_configuration.zeq)
+            correction_value = X1EQ_CR_DEF - 10 ** (-3)
+            if numpy.any(x1eq > correction_value):
+                x1eq_min = numpy.min(x1eq)
+                x1eq = interval_scaling(x1eq, min_targ=x1eq_min, max_targ=correction_value,
+                                              min_orig=x1eq_min, max_orig=numpy.max(x1eq))
+                self.logger.warning("Equilibria x1eq are rescaled for LSA to value: X1EQ_CR_DEF - 10 ** (-3) = "
                                     + str(correction_value) + " to be sub-critical!")
-                model_configuration.x1eq[temp] = correction_value
-                i_temp = numpy.ones(model_configuration.x1eq.shape)
-                zeq[temp] = calc_eq_z(model_configuration.x1eq[temp], model_configuration.yc[temp],
-                                      model_configuration.Iext1[temp], "2d", numpy.zeros(model_configuration.x1eq.shape),
-                                      model_configuration.slope[temp], model_configuration.a[temp],
-                                      model_configuration.b[temp], model_configuration.d[temp])
-            fz_jacobian = calc_fz_jac_square_taylor(model_configuration.zeq, model_configuration.yc,
-                                                    model_configuration.Iext1, model_configuration.K,
-                                                    model_configuration.connectivity,
+                zeq = calc_eq_z(x1eq, model_configuration.yc, model_configuration.Iext1,
+                                      "2d", numpy.zeros(model_configuration.x1eq.shape),
+                                      model_configuration.slope, model_configuration.a,
+                                      model_configuration.b, model_configuration.d)
+            fz_jacobian = calc_fz_jac_square_taylor(zeq, model_configuration.yc, model_configuration.Iext1,
+                                                    model_configuration.K, model_configuration.connectivity,
                                                     model_configuration.a, model_configuration.b, model_configuration.d)
 
         if numpy.any([numpy.any(numpy.isnan(fz_jacobian.flatten())), numpy.any(numpy.isinf(fz_jacobian.flatten()))]):
