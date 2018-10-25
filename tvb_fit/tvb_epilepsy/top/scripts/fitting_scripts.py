@@ -137,12 +137,12 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
 
 
 def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model, sensor_id=0,
-                              sim_type="paper", times_on_off=[], config=Config(),
+                              rescale_x1eq=None, sim_type="paper", times_on_off=[], config=Config(),
                               preprocessing=TARGET_DATA_PREPROCESSING,
                               low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF, high_lpf=HIGH_LPF,
                               bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
     signals, simulator = from_model_configuration_to_simulation(probabilistic_model.model_config,
-                                                                head, lsa_hypothesis,
+                                                                head, lsa_hypothesis, rescale_x1eq=rescale_x1eq,
                                                                 sim_type=sim_type, ts_file=ts_file,
                                                                 config=config, plotter=plotter)
     try:
