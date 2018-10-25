@@ -22,6 +22,7 @@ class TimeseriesPlotter(BasePlotter):
     marker = None
     markersize = 2
     markerfacecolor = None
+    tick_font_size = 12
 
     def __init__(self, config=None):
         super(TimeseriesPlotter, self).__init__(config)
@@ -199,7 +200,7 @@ class TimeseriesPlotter(BasePlotter):
 
     # TODO: refactor to not have the plot commands here
     def plot_timeseries(self, data_dict, time=None, mode="ts", subplots=None, special_idx=[], subtitles=[], labels=[],
-                        offset=1.0, time_units="ms", title='Time series', figure_name=None,
+                        offset=0.5, time_units="ms", title='Time series', figure_name=None,
                         figsize=FiguresConfig.LARGE_SIZE):
         n_vars = len(data_dict)
         vars = data_dict.keys()
@@ -207,8 +208,9 @@ class TimeseriesPlotter(BasePlotter):
         data_lims = []
         for id, d in enumerate(data):
             if isequal_string(mode, "raster"):
-                drange = numpy.percentile(d.flatten(), 95) - numpy.percentile(d.flatten(), 5)
-                data[id] = d / drange # zscore(d, axis=None)
+                data[id] = (d - d.mean(axis=0))
+                drange = numpy.max(data[id].max(axis=0) - data[id].min(axis=0))
+                data[id] = data[id] / drange # zscore(d, axis=None)
             data_lims.append([d.min(), d.max()])
         data_shape = data[0].shape
         n_times, nTS = data_shape[:2]
@@ -270,11 +272,14 @@ class TimeseriesPlotter(BasePlotter):
                 lines += ensure_list(plot_lines(data_fun(data, time, icol), iTS, colors, labels))
             if isequal_string(mode, "raster"):  # set yticks as labels if this is a raster plot
                 axYticks(labels, nTS, icol)
-                if n_special_idx > 0:
-                    yticklabels = pyplot.gca().yaxis.get_ticklabels()
-                    for special_id in special_idx:
-                        yticklabels[special_id].set_color(colors[special_id, :3].tolist() + [1])
-                    pyplot.gca().yaxis.set_ticklabels(yticklabels)
+                yticklabels = pyplot.gca().yaxis.get_ticklabels()
+                self.tick_font_size = numpy.minimum(self.tick_font_size,
+                                                    int(numpy.round(self.tick_font_size * 100.0 / nTS)))
+                for iTS in range(nTS):
+                    yticklabels[iTS].set_fontsize(self.tick_font_size)
+                    if iTS in special_idx:
+                        yticklabels[iTS].set_color(colors[iTS, :3].tolist() + [1])
+                pyplot.gca().yaxis.set_ticklabels(yticklabels)
                 pyplot.gca().invert_yaxis()
 
         if self.config.figures.MOUSE_HOOVER:
@@ -287,7 +292,7 @@ class TimeseriesPlotter(BasePlotter):
         return pyplot.gcf(), axes, lines
 
     def plot_raster(self, data_dict, time, time_units="ms", special_idx=[], title='Raster plot', subtitles=[],
-                    labels=[], offset=1.0, figure_name=None, figsize=FiguresConfig.VERY_LARGE_SIZE):
+                    labels=[], offset=0.5, figure_name=None, figsize=FiguresConfig.VERY_LARGE_SIZE):
         return self.plot_timeseries(data_dict, time, "raster", None, special_idx, subtitles, labels, offset, time_units,
                                     title, figure_name, figsize)
 

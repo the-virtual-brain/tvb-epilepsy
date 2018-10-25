@@ -38,7 +38,7 @@ class SimulationPlotter(TimeseriesPlotter):
         figs.append(self.plot_raster({'source(t)': source_ts.squeezed[start_plot:, :]},
                                      timeseries.time_line.flatten()[start_plot:],
                                      time_units=timeseries.time_unit, special_idx=seizure_indices,
-                                     title=title_prefix + "Simulated source rasterplot", offset=2.0,
+                                     title=title_prefix + "Simulated source rasterplot", offset=0.1,
                                      labels=region_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
 
         if isinstance(model, EpileptorDP2D):
