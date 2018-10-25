@@ -9,38 +9,6 @@ from scipy.interpolate import interp1d, griddata
 # Pointwise analyzers:
 
 
-def center(x, cntr=0.0):
-    return (x.T-np.array(cntr)).T
-
-
-def scale(x, sc=1.0):
-    return (x.T / np.array(sc)).T
-
-
-def mean_center(x, axis=0):
-    return center(x, np.mean(x, axis=axis))
-
-
-def median_center(x, axis=0):
-    return center(x, np.median(x, axis=axis))
-
-
-def zscore(x):
-    return std_norm(mean_center(x))
-
-
-def max_norm(x, axis=0):
-    return scale(x, np.max(x, axis=axis))
-
-
-def maxabs_norm(x, axis=0):
-    return scale(x, np.max(np.abs(x), axis=axis))
-
-
-def std_norm(x, axis=0):
-    return scale(x, np.std(x, axis=axis))
-
-
 def interval_scaling(x, min_targ=0.0, max_targ=1.0, min_orig=None, max_orig=None):
     if min_orig is None:
         min_orig = np.min(x, axis=0)
@@ -50,67 +18,11 @@ def interval_scaling(x, min_targ=0.0, max_targ=1.0, min_orig=None, max_orig=None
     return min_targ + (x - min_orig) * scale_factor
 
 
-def threshold(x, th=0.0, out=None):
-    if out is None:
-        out = th
-    x[x < th] = out
-    return x
-
-
-def subthreshold(x, th=0.0, out=None):
-    if out is None:
-        out = th
-    x[x > th] = out
-    return x
-
-
-def sigmoid(x, sc=1.0):
-    return 1.0 / (1 + np.exp(-sc * x))
-
-
-def sigmoidal_scaling(x, cntr=0.0, sc=10.0, min_targ=0.0, max_targ=1.0):
-    return min_targ + max_targ * sigmoid(maxabs_norm(center(x, cntr)), sc)
-
-
-def rectify(x):
-    return np.abs(x)
-
-
-def point_power(x, p=2.0):
-    return np.power(x, p)
-
-
-def log(x, base="natural"):
-    if base == 10:
-        return np.log10(x)
-    elif base == 2:
-        return np.log2(x)
-    else:
-        return np.log(x)
-
 # Across points analyzers:
 
 # Univariate:
 
 # Time domain:
-
-
-def sum_points(x, ratio=True):
-    sum = np.sum(x, axis=0)
-    if ratio:
-        return sum / x.shape[0]
-    else:
-        return sum
-
-
-def energy(x):
-    return np.sum(x ** 2, axis=0)
-
-
-def power(x, n=None):
-    if n is None:
-        n = np.min(x.shape[0], 1)
-    return energy(x) / n
 
 
 # Frequency domain:
@@ -204,18 +116,3 @@ def time_spectral_analysis(x, fs, freq=None, mode="psd", nfft=None, window='hann
     else:
         return stf, t, freq
 
-
-# Bivariate
-
-def corrcoef(x):
-    n, m = x.shape
-    return np.corrcoef(x.T)[np.triu_indices(n, 1, m)].flatten()
-
-
-def covariance(x):
-    n, m = x.shape
-    return np.cov(x.T)[np.triu_indices(n, 1, m)].flatten()
-
-# TODO: a function to return a matrix of pairwise lags...
-
-# TODO: multivariate, like PCA, ICA, SVD if needed...
