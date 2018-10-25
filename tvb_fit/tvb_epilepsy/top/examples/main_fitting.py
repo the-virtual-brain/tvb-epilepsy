@@ -133,8 +133,9 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
 
             # --------------------- Get prototypical simulated data (simulate if necessary) ----------------------------
             source2D_ts = from_model_configuration_to_simulation(model_configuration, head, lsa_hypothesis,
-                                                               sim_type="fitting", ts_file=path("ts"),
-                                                               config=config, plotter=plotter)[0]["source"]. \
+                                                                 rescale_x1eq=-1.0, sim_type="fitting",
+                                                                 ts_file=path("ts"), config=config,
+                                                                 plotter=plotter)[0]["source"]. \
                         get_time_window_by_units(sim_times_on_off[0], sim_times_on_off[1])
 
 
@@ -149,10 +150,13 @@ def main_fit_sim_hyplsa(stan_model_name="vep_sde", empirical_file="", normal_fla
             else:
                 # --------------------- Get fitting target simulated data (simulate if necessary) ----------------------
                 probabilistic_model.target_data_type = Target_Data_Type.SYNTHETIC.value
+                rescale_x1eq = -1.0,
+                if np.max(model_configuration.x1eq) > rescale_x1eq:
+                    rescale_x1eq = False
                 signals, simulator = \
                     set_simulated_target_data(path("ts_fit"), model_configuration, head, lsa_hypothesis,
-                                              probabilistic_model, sensor_id, sim_type=sim_source_type,
-                                              times_on_off=times_on_off, config=config,
+                                              probabilistic_model, sensor_id, rescale_x1eq=rescale_x1eq,
+                                              sim_type=sim_source_type, times_on_off=times_on_off, config=config,
                                               # Maybe change some of those for Epileptor 6D simulations:
                                               bipolar=False, preprocessing=preprocessing_sequence,
                                               plotter=plotter, title_prefix=hyp.name)
