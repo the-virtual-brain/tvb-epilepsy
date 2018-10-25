@@ -71,7 +71,7 @@ class DiseaseHypothesis(object):
     def _sort_disease_indices_values(self, disease_dict):
         indices = []
         values = []
-        for key, value in disease_dict.iteritems():
+        for key, value in disease_dict.items():
             value = ensure_list(value)
             key = ensure_list(key)
             n = len(key)
@@ -105,19 +105,19 @@ class DiseaseHypothesis(object):
 
     @property
     def x0_disease_indices(self):
-        return np.intersect1d(self.regions_disease_indices, self.x0_indices).tolist()
+        return np.intersect1d(self.regions_disease_indices, self.x0_indices).astype("i").tolist()
 
     @property
     def x0_disease_values(self):
-        return self.regions_disease[np.intersect1d(self.regions_disease_indices, self.x0_indices)].tolist()
+        return self.regions_disease[np.intersect1d(self.regions_disease_indices, self.x0_indices).astype("i")].tolist()
 
     @property
     def e_disease_indices(self):
-        return np.intersect1d(self.regions_disease_indices, self.e_indices).tolist()
+        return np.intersect1d(self.regions_disease_indices, self.e_indices).astype("i").tolist()
 
     @property
     def e_disease_values(self):
-        return self.regions_disease[np.intersect1d(self.regions_disease_indices, self.e_indices)].tolist()
+        return self.regions_disease[np.intersect1d(self.regions_disease_indices, self.e_indices).astype("i")].tolist()
 
     @property
     def regions_disease_values(self):
@@ -129,7 +129,6 @@ class DiseaseHypothesis(object):
             return np.array(self.w_indices)[self.w_values != 1.0]
         else:
             return []
-
 
     @property
     def connectivity_disease_values(self):
