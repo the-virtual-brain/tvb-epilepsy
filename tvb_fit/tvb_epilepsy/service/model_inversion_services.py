@@ -3,7 +3,7 @@ from collections import OrderedDict
 import numpy as np
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import BIPOLAR, OBSERVATION_MODELS
 from tvb_fit.base.utils.log_error_utils import initialize_logger, warning, raise_error
-from tvb_fit.base.utils.data_structures_utils import formal_repr, ensure_list, isequal_string, find_labels_inds
+from tvb_fit.base.utils.data_structures_utils import formal_repr, ensure_list, isequal_string, generate_region_labels
 from tvb_fit.base.computations.math_utils import select_greater_values_array_inds
 from tvb_fit.service.head_service import HeadService
 from tvb_fit.service.timeseries_service import TimeseriesService
@@ -203,6 +203,9 @@ class ODEModelInversionService(ModelInversionService):
                                                             n_groups=n_groups, members_per_group=members_per_group)
         elif self.auto_selection.find("power") >= 0:
             target_data, _ = self.ts_service.select_by_power(target_data, power, self.power_th)
+        signals_inds_by_label = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
+        target_data.space_labels = generate_region_labels(target_data.number_of_labels, target_data.space_labels,
+                                                          ". ", True, signals_inds_by_label)
         return target_data
 
     def set_gain_matrix(self, target_data, probabilistic_model, sensors=None):
