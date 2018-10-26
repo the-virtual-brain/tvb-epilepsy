@@ -322,14 +322,16 @@ def labels_to_inds(labels, lbls):
     return np.unique(idx)
 
 
-def generate_region_labels(n_regions, labels=[], str=". ", numbering=True):
+def generate_region_labels(n_regions, labels=[], str=". ", numbering=True, numbers=[]):
+    if len(numbers) != n_regions:
+        numbers = list(range(n_regions))
     if len(labels) == n_regions:
         if numbering:
-            return np.array([str.join(["%d", "%s"]) % tuple(l) for l in zip(range(n_regions), labels)])
+            return np.array([str.join(["%d", "%s"]) % tuple(l) for l in zip(numbers, labels)])
         else:
             return labels
     else:
-        return np.array(["%d" % l for l in range(n_regions)])
+        return np.array(["%d" % l for l in numbers])
 
 
 def monopolar_to_bipolar(labels, indices=None, data=None):
