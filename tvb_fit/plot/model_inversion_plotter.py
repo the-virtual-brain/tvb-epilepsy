@@ -19,6 +19,8 @@ class ModelInversionPlotter(TimeseriesPlotter):
     def __init__(self, config=None):
         super(ModelInversionPlotter, self).__init__(config)
         self.marker = "o"
+        self.print_ts_indices = False
+        self.print_regions_indices = False
 
     def _params_stats_subtitles(self, params, stats):
         subtitles = list(params)
@@ -236,8 +238,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
         stats_region_labels = region_labels
         if len(stats_region_labels) != n_regions:
             stats_region_labels = n_regions * [""]
-        target_data_labels = target_data.space_labels
-        stats_target_data_labels = target_data_labels
+        stats_target_data_labels = target_data.space_labels
         n_target_data = target_data.number_of_labels
         if len(stats_target_data_labels) != n_target_data:
             stats_target_data_labels = n_target_data * [""]

@@ -518,6 +518,9 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
                 if len(region_labels) > 0:
                     region_labels = region_labels[active_regions]
 
+        if len(region_labels) == 0:
+            self.print_regions_indices = True
+            self.print_ts_indices = True
 
         figs = []
 

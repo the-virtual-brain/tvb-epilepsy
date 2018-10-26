@@ -8,7 +8,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tvb_fit.base.config import Config
 from tvb_fit.base.config import FiguresConfig
 from tvb_fit.base.utils.log_error_utils import initialize_logger, warning
-from tvb_fit.base.utils.data_structures_utils import ensure_list
+from tvb_fit.base.utils.data_structures_utils import ensure_list, generate_region_labels
 
 
 class BasePlotter(object):
@@ -16,6 +16,7 @@ class BasePlotter(object):
     def __init__(self, config=None):
         self.config = config or Config()
         self.logger = initialize_logger(self.__class__.__name__, self.config.out.FOLDER_LOGS)
+        self.print_regions_indices = True
 
     def _check_show(self):
         if self.config.figures.SHOW_FLAG:
@@ -54,8 +55,7 @@ class BasePlotter(object):
         else:
             return ni, nj
 
-    @staticmethod
-    def plot_vector(vector, labels, subplot, title, show_y_labels=True, indices_red=None, sharey=None):
+    def plot_vector(self, vector, labels, subplot, title, show_y_labels=True, indices_red=None, sharey=None):
         ax = pyplot.subplot(subplot, sharey=sharey)
         pyplot.title(title)
         n_vector = labels.shape[0]
@@ -74,7 +74,7 @@ class BasePlotter(object):
         ax.grid(True, color='grey')
         ax.set_yticks(y_ticks)
         if show_y_labels:
-            region_labels = numpy.array(["%d. %s" % l for l in zip(range(n_vector), labels)])
+            region_labels = generate_region_labels(n_vector, labels, ". ", self.print_regions_indices)
             ax.set_yticklabels(region_labels)
             if coldif:
                 labels = ax.yaxis.get_ticklabels()
@@ -88,8 +88,7 @@ class BasePlotter(object):
             ax.invert_yaxis()
         return ax
 
-    @staticmethod
-    def plot_vector_violin(dataset, vector=[], lines=[], labels=[], subplot=111, title="", violin_flag=True,
+    def plot_vector_violin(self, dataset, vector=[], lines=[], labels=[], subplot=111, title="", violin_flag=True,
                            colormap="YlOrRd", show_y_labels=True, indices_red=None, sharey=None):
         ax = pyplot.subplot(subplot, sharey=sharey)
         # ax.hold(True)
@@ -140,7 +139,7 @@ class BasePlotter(object):
         ax.grid(True, color='grey')
         ax.set_yticks(y_ticks)
         if show_y_labels:
-            region_labels = numpy.array(["%d. %s" % l for l in zip(range(n_violins), labels)])
+            region_labels = generate_region_labels(n_violins, labels, ". ", self.print_regions_indices)
             ax.set_yticklabels(region_labels)
             if coldif:
                 labels = ax.yaxis.get_ticklabels()
@@ -154,8 +153,7 @@ class BasePlotter(object):
         ax.autoscale()
         return ax
 
-    @staticmethod
-    def _plot_matrix(matrix, xlabels, ylabels, subplot=111, title="", show_x_labels=True, show_y_labels=True,
+    def _plot_matrix(self, matrix, xlabels, ylabels, subplot=111, title="", show_x_labels=True, show_y_labels=True,
                      x_ticks=numpy.array([]), y_ticks=numpy.array([]), indices_red_x=None, indices_red_y=None,
                      sharex=None, sharey=None, cmap='autumn_r', vmin=None, vmax=None):
         ax = pyplot.subplot(subplot, sharex=sharex, sharey=sharey)
@@ -175,7 +173,8 @@ class BasePlotter(object):
         for ii, (xy, tick, ntick, ind_red, show, lbls, rot) in enumerate(zip(["x", "y"], ticks, nticks, indices_red,
                                                                       [show_x_labels, show_y_labels], labels, [90, 0])):
             if show:
-                labels[ii] = numpy.array(["%d. %s" % l for l in zip(tick, lbls[tick])])
+                labels[ii] = generate_region_labels(len(tick), numpy.array(lbls)[tick], ". ", self.print_regions_indices, tick)
+                # labels[ii] = numpy.array(["%d. %s" % l for l in zip(tick, lbls[tick])])
                 getattr(pyplot, xy + "ticks")(numpy.array(range(ntick)), labels[ii], rotation=rot)
             else:
                 labels[ii] = numpy.array(["%d." % l for l in tick])
@@ -201,10 +200,10 @@ class BasePlotter(object):
         return self._plot_matrix(adj, labels, labels, subplot, title, show_x_labels, show_y_labels,
                      x_ticks, y_ticks, indices_red_x, indices_red_y, sharex, sharey, cmap, vmin, vmax)
 
-    @staticmethod
-    def _set_axis_labels(fig, sub, n_regions, region_labels, indices2emphasize, color='k', position='left'):
+    def _set_axis_labels(self, fig, sub, n_regions, region_labels, indices2emphasize, color='k', position='left'):
         y_ticks = range(n_regions)
-        region_labels = numpy.array(["%d. %s" % l for l in zip(y_ticks, region_labels)])
+        # region_labels = numpy.array(["%d. %s" % l for l in zip(y_ticks, region_labels)])
+        region_labels = generate_region_labels(len(y_ticks), region_labels, ". ", self.print_regions_indices, y_ticks)
         big_ax = fig.add_subplot(sub, frameon=False)
         if position == 'right':
             big_ax.yaxis.tick_right()

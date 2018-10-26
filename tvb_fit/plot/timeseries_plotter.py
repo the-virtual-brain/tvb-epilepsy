@@ -23,9 +23,11 @@ class TimeseriesPlotter(BasePlotter):
     markersize = 2
     markerfacecolor = None
     tick_font_size = 12
+    print_ts_indices = True
 
     def __init__(self, config=None):
         super(TimeseriesPlotter, self).__init__(config)
+        self.print_ts_indices = self.print_regions_indices
         self.HighlightingDataCursor = lambda *args, **kwargs: None
         if matplotlib.get_backend() in matplotlib.rcsetup.interactive_bk and self.config.figures.MOUSE_HOOVER:
             try:
@@ -96,7 +98,7 @@ class TimeseriesPlotter(BasePlotter):
             try:
                 pyplot.gca().set_yticklabels(labels.flatten().tolist())
             except:
-                labels = generate_region_labels(nTS, [], "")
+                labels = generate_region_labels(nTS, [], "", self.print_ts_indices)
                 self.logger.warning("Cannot convert region labels' strings for y axis ticks!")
 
         if offset > 0.0:
@@ -144,7 +146,10 @@ class TimeseriesPlotter(BasePlotter):
 
         def subtitle_traj(labels, iTS):
             try:
-                pyplot.gca().set_title(str(iTS) + "." + labels[iTS])
+                if self.print_ts_indices:
+                    pyplot.gca().set_title(str(iTS) + "." + labels[iTS])
+                else:
+                    pyplot.gca().set_title(labels[iTS])
             except:
                 self.logger.warning("Cannot convert labels' strings for subplot titles!")
                 pyplot.gca().set_title(str(iTS))
@@ -223,7 +228,7 @@ class TimeseriesPlotter(BasePlotter):
         n_special_idx = len(special_idx)
         if len(subtitles) == 0:
             subtitles = vars
-        labels = generate_region_labels(nTS, labels)
+        labels = generate_region_labels(nTS, labels, ". ", self.print_ts_indices)
         if isequal_string(mode, "traj"):
             data_fun, plot_lines, projection, n_rows, n_cols, def_alpha, loopfun, \
             subtitle, subtitle_col, axlabels, axlimits = \
