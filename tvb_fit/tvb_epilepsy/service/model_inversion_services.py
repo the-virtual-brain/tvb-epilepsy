@@ -203,9 +203,6 @@ class ODEModelInversionService(ModelInversionService):
                                                             n_groups=n_groups, members_per_group=members_per_group)
         elif self.auto_selection.find("power") >= 0:
             target_data, _ = self.ts_service.select_by_power(target_data, power, self.power_th)
-        signals_inds_by_label = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
-        target_data.space_labels = generate_region_labels(target_data.number_of_labels, target_data.space_labels,
-                                                          ". ", True, signals_inds_by_label)
         return target_data
 
     def set_gain_matrix(self, target_data, probabilistic_model, sensors=None):
@@ -247,6 +244,11 @@ class ODEModelInversionService(ModelInversionService):
         probabilistic_model.time_length = len(probabilistic_model.time)
         probabilistic_model.number_of_target_data = target_data.number_of_labels
         probabilistic_model.gain_matrix = self.set_gain_matrix(target_data, probabilistic_model, sensors)
+        # if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
+        #     signals_inds_by_label = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
+        #     target_data.dimension_labels["space"] = generate_region_labels(target_data.number_of_labels,
+        #                                                                    target_data.space_labels,
+        #                                                                    ". ", True, signals_inds_by_label)
         return target_data, probabilistic_model
 
 
