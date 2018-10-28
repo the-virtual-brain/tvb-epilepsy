@@ -46,7 +46,7 @@ functions {
                       row_vector dWt, real sigma, real tau0) {
         int n_active_regions = num_elements(z);
         row_vector[n_active_regions] dz = fz(x1, z, x0, FC, Ic, x1_eq_def, tau1, tau0);
-        row_vector[n_active_regions] z_next = z + (tau1 * dz) + dWt * sigma;
+        row_vector[n_active_regions] z_next = z + dz + dWt * sigma;
         return z_next;
     }
 
