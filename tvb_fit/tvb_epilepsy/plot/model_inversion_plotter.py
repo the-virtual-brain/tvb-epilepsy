@@ -527,8 +527,8 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
         # Pack fit samples time series into timeseries objects:
         from tvb_fit.tvb_epilepsy.top.scripts.fitting_scripts import samples_to_timeseries
         samples, target_data, x1prior, x1eps = samples_to_timeseries(samples, model_data, target_data, region_labels)
-        figs.append(self.plot_fit_timeseries(target_data, samples, ests, stats, probabilistic_model,
-                                             "fit_target_data", ["x1", "z"], ["dWt", "dX1t", "dZt"], sigma, seizure_indices,
+        figs.append(self.plot_fit_timeseries(target_data, samples, ests, stats, probabilistic_model, "fit_target_data",
+                                             ["x1", "z"], ["dWt", "dX1t", "dZt"], sigma, seizure_indices,
                                              skip_samples, trajectories_plot, region_labels, title_prefix))
 
         figs.append(
