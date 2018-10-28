@@ -189,12 +189,16 @@ class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
                 xprior = x_def[self.xmode]["def"] * np.ones((self.number_of_regions,))
                 sigma_x = self.sigma_x
             x_param_name = self.xmode
-            parameters.update({self.xmode: self.generate_normal_or_lognormal_parameter(x_param_name, xprior,
-                                                                                       x_def[self.xmode]["min"],
-                                                                                       x_def[self.xmode]["max"],
-                                                                                       sigma=sigma_x,
-                                                                                       p_shape=(self.number_of_regions,),
-                                                                                       negative_log=True)})
+            parameters.update({self.xmode:
+                                   generate_normal_parameter(x_param_name, xprior,
+                                                             x_def[self.xmode]["min"], x_def[self.xmode]["max"],
+                                                             sigma_x, None, (self.number_of_regions,))})
+            # parameters.update({self.xmode: self.generate_normal_or_lognormal_parameter(x_param_name, xprior,
+            #                                                                            x_def[self.xmode]["min"],
+            #                                                                            x_def[self.xmode]["max"],
+            #                                                                            sigma=sigma_x,
+            #                                                                            p_shape=(self.number_of_regions,),
+            #                                                                            negative_log=True)})
 
         # Update sigma_x value and name
         self.sigma_x = parameters[self.xmode].std
