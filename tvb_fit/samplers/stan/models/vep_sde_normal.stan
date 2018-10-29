@@ -593,11 +593,18 @@ model {
 
 
 generated quantities {
+    // PZ metric
+    row_vector[n_active_regions] PZ = rep_row_vector(0.0, n_active_regions);
     // Log-likelihood computation for information criteria metrics
     row_vector[n_target_data] log_likelihood[n_times];
+
     for (t in 1:n_times) {
-        for (s in 1:n_target_data) {
+        for (iR in 1:n_active_regions)
+            PZ[iR] = PZ[iR]  + x1[t][iR] - x1eq[iR];
+
+        for (s in 1:n_target_data)
             log_likelihood[t][s] = normal_lpdf(target_data[t][s] |  fit_target_data[t][s], epsilon);
-        }
     }
+
+    PZ = PZ/n_times;
 }
