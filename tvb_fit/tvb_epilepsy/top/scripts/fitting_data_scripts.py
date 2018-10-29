@@ -1,10 +1,12 @@
 import numpy as np
+
+from tvb_fit.base.utils.log_error_utils import initialize_logger
+from tvb_fit.base.utils.data_structures_utils import isequal_string
+from tvb_fit.service.timeseries_service import TimeseriesService, NORMALIZATION_METHODS
+from tvb_fit.io.edf import read_edf_to_Timeseries
+
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import \
     SEIZURE_LENGTH, HIGH_HPF, LOW_HPF, LOW_LPF, HIGH_LPF, WIN_LEN_RATIO, BIPOLAR, TARGET_DATA_PREPROCESSING
-from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.utils.data_structures_utils import isequal_string, find_labels_inds
-from tvb_fit.io.edf import read_edf_to_Timeseries
-from tvb_fit.service.timeseries_service import TimeseriesService, NORMALIZATION_METHODS
 
 
 logger = initialize_logger(__name__)
@@ -213,4 +215,5 @@ def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, se
     return prepare_signal_observable(data, seizure_length, on_off_set, range(data.number_of_labels),
                                      preprocessing, low_hpf, high_hpf, low_lpf, high_lpf,
                                      win_len_ratio, plotter, title_prefix)
+
 
