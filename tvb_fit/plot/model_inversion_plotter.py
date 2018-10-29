@@ -238,6 +238,9 @@ class ModelInversionPlotter(TimeseriesPlotter):
         stats_region_labels = region_labels
         if len(stats_region_labels) != n_regions:
             stats_region_labels = n_regions * [""]
+        stats_region_labels_x = stats_region_labels
+        stats_region_labels_dWt = stats_region_labels
+        stats_region_titles = stats_region_labels
         stats_target_data_labels = target_data.space_labels
         n_target_data = target_data.number_of_labels
         if len(stats_target_data_labels) != n_target_data:
@@ -253,44 +256,41 @@ class ModelInversionPlotter(TimeseriesPlotter):
             stats_string = dict(zip(ts_strings, len(ts_strings)*["\n"]))
             if isinstance(stats, dict):
                 for skey, sval in stats.items():
-                    p_str_means = {}
+                    x_p_str_means = {}
+                    dWt_p_str_means = {}
+                    targ_p_str_means = {}
                     for p_str in ts_strings:
                         try:
                             stats_string[p_str] \
                                 = stats_string[p_str] + skey + "_mean=" + str(numpy.mean(sval[p_str])) + ", "
                             if p_str in state_variables_str:
-                                p_str_means[p_str] = [skey + "_" + p_str + "_mean=" + str(sval[p_str][:, ip].mean())
+                                x_p_str_means[p_str] = [skey + "_" + p_str + "_mean=" + str(sval[p_str][:, ip].mean())
                                                       for ip in range(n_regions)]
                             elif p_str in dWt_star:
-                                p_str_means[p_str] = [(skey + "_" + p_str + "_mean=" +
+                                dWt_p_str_means[p_str] = [(skey + "_" + p_str + "_mean=" +
                                                        str(sval[p_str][:, ip].mean())).replace("_star", "")
-                                                      for ip in range(n_target_data)]
+                                                      for ip in range(n_regions)]
                             else:
-                                p_str_means[p_str] = [skey + "_" + p_str + "_mean=" + str(sval[p_str][:, ip].mean())
+                                targ_p_str_means[p_str] = [skey + "_" + p_str + "_mean=" + str(sval[p_str][:, ip].mean())
                                                       for ip in range(n_target_data)]
                         except:
-                            if p_str in state_variables_str:
-                                p_str_means[p_str] = ["" for ip in range(n_regions)]
-                            else:
-                                p_str_means[p_str] = ["" for ip in range(n_target_data)]
                             pass
-                    if len(p_str_means[target_data_str][0]) > 0:
+                    if len(targ_p_str_means) > 0:
                         stats_target_data_labels = [", ".join([stats_target_data_labels[ip],
-                                                              p_str_means[target_data_str][ip]])
-                                                    for ip in range(n_target_data)]
+                                                               targ_p_str_means[target_data_str][ip]])
+                                                        for ip in range(n_target_data)]
                     stats_region_labels_x = [", ".join([stats_region_labels[ip],
-                                                        ", ".join([p_str_means[p_str][ip]
-                                                                   for p_str in state_variables_str])])
+                                                        ", ".join([x_p_str_means[p_str][ip]
+                                                                   for p_str in x_p_str_means.keys()])])
                                            for ip in range(n_regions)]
                     stats_region_labels_dWt = [", ".join([stats_region_labels[ip],
-                                                          ", ".join([p_str_means[p_str][ip] for p_str in dWt_star])])
+                                                          ", ".join([dWt_p_str_means[p_str][ip]
+                                                                     for p_str in dWt_p_str_means.keys()])])
                                            for ip in range(n_regions)]
                 if len(state_variables_str) > 0:
                     stats_region_titles = [label.replace(", " + skey + "_" + state_variables_str[0],
                                                          "\n" + skey + "_" + state_variables_str[0])
                                            for skey in stats.keys() for label in stats_region_labels_x]
-                else:
-                    stats_region_titles = stats_region_labels
                 for p_str in ts_strings:
                     stats_string[p_str] = stats_string[p_str][:-2]
         else:
@@ -326,11 +326,11 @@ class ModelInversionPlotter(TimeseriesPlotter):
             for d_str in dWt_str:
                 try:
                     dWt[d_str] = sample.get(d_str+"_star", sample.get(d_str)).data[:, :, :, skip_samples:].squeeze()
-                    subtitles.append(d_str)
+                    subtitles.append(d_str + stats_string[x_str])
                 except:
                     pass
             if len(dWt) > 0:
-                subtitles[-1] += " dynamic noise "
+                subtitles[-1] = ", ".join([subtitles[-1], "dynamic noise "])
                 for p_str in scalar_params_str:
                     p_est = est.get("sigma", None)
                     if p_est is not None:
@@ -361,18 +361,18 @@ class ModelInversionPlotter(TimeseriesPlotter):
             except:
                 pass
 
-        # if len(observation_dict) > 1:
-        #     figs.append(self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
-        #                                  title=title_prefix + "Observation target vs fit time series: "
-        #                                         + stats_string[target_data_str],
-        #                                  figure_name=title_prefix + "ObservationTarget_VS_FitRasterPlot",
-        #                                  offset=0.25, labels=stats_target_data_labels,
-        #                                  figsize=FiguresConfig.VERY_LARGE_SIZE))
-        #     figs.append(self.plot_timeseries(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
-        #                                      title=title_prefix + "Observation target vs fit time series: "
-        #                                            + stats_string[target_data_str], subplots=(len(observation_dict), 1),
-        #                                      figure_name=title_prefix + "ObservationTarget_VS_FitTimeSeries",
-        #                                      labels=stats_target_data_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
+        if len(observation_dict) > 1:
+            figs.append(self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
+                                         title=title_prefix + "Observation target vs fit time series: "
+                                                + stats_string[target_data_str],
+                                         figure_name=title_prefix + "ObservationTarget_VS_FitRasterPlot",
+                                         offset=0.25, labels=stats_target_data_labels,
+                                         figsize=FiguresConfig.VERY_LARGE_SIZE))
+            figs.append(self.plot_timeseries(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
+                                             title=title_prefix + "Observation target vs fit time series: "
+                                                   + stats_string[target_data_str], subplots=(len(observation_dict), 1),
+                                             figure_name=title_prefix + "ObservationTarget_VS_FitTimeSeries",
+                                             labels=stats_target_data_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
         return tuple(figs)
 
     def plot_fit_connectivity(self, ests, samples, stats=None, probabilistic_model=None, model_conn_str="MC",
