@@ -93,7 +93,7 @@ class TimeseriesPlotter(BasePlotter):
             else:
                 pyplot.autoscale(enable=True, axis='y', tight=True)
 
-        def axYticks(labels, nTS, ivar, offsets=offset):
+        def axYticks(labels, nTS, offsets=offset):
             pyplot.gca().set_yticks((offset * numpy.array([range(nTS)]).flatten()).tolist())
             try:
                 pyplot.gca().set_yticklabels(labels.flatten().tolist())
@@ -107,7 +107,7 @@ class TimeseriesPlotter(BasePlotter):
         else:
             plot_lines = lambda x, iTS, colors, labels: \
                         plot_ts(x, iTS, colors, labels)
-        this_axYticks = lambda labels, nTS, ivar: axYticks(labels, nTS, offset)
+        this_axYticks = lambda labels, nTS: axYticks(labels, nTS, offset)
         if subplots:
             n_rows = nTS
             def_alpha = 1.0
@@ -195,7 +195,7 @@ class TimeseriesPlotter(BasePlotter):
             subtitle_col = lambda subtitles, icol: None
         else:
             def_alpha = 1.0
-            subtitle = lambda: None
+            subtitle = lambda labels, iTS: None
             subtitle_col = lambda subtitles, icol: pyplot.gca().set_title(pyplot.gcf().title)
         axlabels = lambda labels, vars, n_vars, n_rows, irow, iTS: axlabels_traj(vars, n_vars)
         axlimits = lambda data_lims, time, n_vars, icol: axlimits_traj(data_lims, n_vars)
@@ -228,7 +228,10 @@ class TimeseriesPlotter(BasePlotter):
         n_special_idx = len(special_idx)
         if len(subtitles) == 0:
             subtitles = vars
-        labels = generate_region_labels(nTS, labels, ". ", self.print_ts_indices)
+        if isinstance(labels, list) and len(labels) == n_vars:
+            labels = [generate_region_labels(nTS, label, ". ", self.print_ts_indices) for label in labels]
+        else:
+            labels = [generate_region_labels(nTS, labels, ". ", self.print_ts_indices) for _ in range(n_vars)]
         if isequal_string(mode, "traj"):
             data_fun, plot_lines, projection, n_rows, n_cols, def_alpha, loopfun, \
             subtitle, subtitle_col, axlabels, axlimits = \
@@ -265,18 +268,18 @@ class TimeseriesPlotter(BasePlotter):
                 # If there are no more rows, create axis, and set its limits, labels and possible subtitle
                 axes += ensure_list(pyplot.subplot(n_rows, n_cols, icol + 1, projection=projection))
                 axlimits(data_lims, time, n_vars, icol)
-                axlabels(labels, vars, n_vars, n_rows, 1, 0)
+                axlabels(labels[icol % n_vars], vars, n_vars, n_rows, 1, 0)
                 pyplot.gca().set_title(subtitles[icol])
             for iTS in loopfun(nTS, n_rows, icol):
                 if n_rows > 1:
                     # If there are more rows, create axes, and set their limits, labels and possible subtitles
                     axes += ensure_list(pyplot.subplot(n_rows, n_cols, iTS + 1, projection=projection))
-                    subtitle(labels, iTS)
                     axlimits(data_lims, time, n_vars, icol)
-                    axlabels(labels, vars, n_vars, n_rows, (iTS % n_rows) + 1, iTS)
-                lines += ensure_list(plot_lines(data_fun(data, time, icol), iTS, colors, labels))
+                    subtitle(labels[icol % n_vars], iTS)
+                    axlabels(labels[icol % n_vars], vars, n_vars, n_rows, (iTS % n_rows) + 1, iTS)
+                lines += ensure_list(plot_lines(data_fun(data, time, icol), iTS, colors, labels[icol % n_vars]))
             if isequal_string(mode, "raster"):  # set yticks as labels if this is a raster plot
-                axYticks(labels, nTS, icol)
+                axYticks(labels[icol % n_vars], nTS)
                 yticklabels = pyplot.gca().yaxis.get_ticklabels()
                 self.tick_font_size = numpy.minimum(self.tick_font_size,
                                                     int(numpy.round(self.tick_font_size * 100.0 / nTS)))
