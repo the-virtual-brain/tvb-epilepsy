@@ -35,9 +35,9 @@ class TimeseriesPlotter(BasePlotter):
                 self.HighlightingDataCursor = HighlightingDataCursor
             except ImportError:
                 self.config.figures.MOUSE_HOOVER = False
-                self.logger.warning("Importing mpldatacursor failed! No highlighting functionality in plots!")
+                # self.logger.warning("Importing mpldatacursor failed! No highlighting functionality in plots!")
         else:
-            self.logger.warning("Noninteractive matplotlib backend! No highlighting functionality in plots!")
+            # self.logger.warning("Noninteractive matplotlib backend! No highlighting functionality in plots!")
             self.config.figures.MOUSE_HOOVER = False
 
     @property
