@@ -9,7 +9,7 @@ from tvb_fit.base.utils.log_error_utils import raise_value_error, initialize_log
 from tvb_fit.base.utils.data_structures_utils import isequal_string, ensure_list, is_integer
 from tvb_fit.base.computations.math_utils import select_greater_values_array_inds, get_greater_values_array_inds, \
                                                       select_by_hierarchical_group_metric_clustering
-from tvb_fit.base.computations.analyzers_utils import filter_data
+from tvb_fit.base.computations.analyzers_utils import abs_envelope, filter_data
 from tvb_fit.base.model.timeseries import TimeseriesDimensions, PossibleVariables
 
 
@@ -104,6 +104,10 @@ class TimeseriesService(object):
 
     def hilbert_envelope(self, timeseries):
         return timeseries.__class__(np.abs(hilbert(timeseries.data, axis=0)), timeseries.dimension_labels,
+                                    timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+
+    def abs_envelope(self, timeseries):
+        return timeseries.__class__(abs_envelope(timeseries.data), timeseries.dimension_labels,
                                     timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
     def detrend(self, timeseries, type='linear'):
