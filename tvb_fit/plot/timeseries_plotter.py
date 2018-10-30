@@ -98,7 +98,7 @@ class TimeseriesPlotter(BasePlotter):
             try:
                 pyplot.gca().set_yticklabels(labels.flatten().tolist())
             except:
-                labels = generate_region_labels(nTS, [], "", self.print_ts_indices)
+                labels = generate_region_labels(nTS, [], "", True)
                 self.logger.warning("Cannot convert region labels' strings for y axis ticks!")
 
         if offset > 0.0:
