@@ -329,7 +329,7 @@ def generate_region_labels(n_regions, labels=[], str=". ", numbering=True, numbe
         if numbering:
             return np.array([str.join(["%d", "%s"]) % tuple(l) for l in zip(numbers, labels)])
         else:
-            return labels
+            return np.array(labels)
     else:
         return np.array(["%d" % l for l in numbers])
 
