@@ -28,7 +28,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
             for ip, param in enumerate(params):
                 subtitles[ip] = subtitles[ip] + ": "
                 for skey, sval in stats.items():
-                    subtitles[ip] = subtitles[ip] + skey + "=%.1f" % sval[param] + ", "
+                    subtitles[ip] = subtitles[ip] + skey + "=%.2f" % sval[param] + ", "
                 subtitles[ip] = subtitles[ip][:-2]
         return subtitles
 
@@ -44,7 +44,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
                 if len(subtitles[ip]) > 0:
                     subtitles[ip] = subtitles[ip] + ": "
                 for skey, sval in stats.items():
-                    subtitles[ip] = subtitles[ip] + skey + "=%.1f" % sval[param][ip] + ", "
+                    subtitles[ip] = subtitles[ip] + skey + "=%.2f" % sval[param][ip] + ", "
                     subtitles[ip] = subtitles[ip][:-2]
         return subtitles
 
@@ -260,15 +260,15 @@ class ModelInversionPlotter(TimeseriesPlotter):
             targ_p_str_means = OrderedDict()
             for p_str in ts_strings:
                 try:
-                    stats_string[p_str] = stats_string[p_str] + "Rhat=%.1f" % Rhat[p_str].mean()
+                    stats_string[p_str] = stats_string[p_str] + "Rhat=%.2f" % Rhat[p_str].mean()
                     if p_str in state_variables_str:
-                        x_p_str_means[p_str] = ["Rhat=%.1f" % Rhat[p_str][:, ip].mean()
+                        x_p_str_means[p_str] = ["Rhat=%.2f" % Rhat[p_str][:, ip].mean()
                                                 for ip in range(n_regions)]
                     elif p_str in dWt_star.keys():
-                        dWt_p_str_means[p_str] = ["Rhat=%.1f" % Rhat[p_str][:, ip].mean()
+                        dWt_p_str_means[p_str] = ["Rhat=%.2f" % Rhat[p_str][:, ip].mean()
                                                   for ip in range(n_regions)]
                     else:
-                        targ_p_str_means[p_str] = ["Rhat=%.1f" % Rhat[p_str][:, ip].mean()
+                        targ_p_str_means[p_str] = ["Rhat=%.2f" % Rhat[p_str][:, ip].mean()
                                                    for ip in range(n_target_data)]
                 except:
                     pass
@@ -285,8 +285,9 @@ class ModelInversionPlotter(TimeseriesPlotter):
                     stats_region_labels_x[p_str] = region_labels
             if len(state_variables_str) in [2,3]:
                 stats_region_titles = numpy.array(["\n".join([stats_region_titles[ip],
-                                                              ", ".join([x_p_str_mean[ip]
-                                                                         for x_p_str_mean in x_p_str_means.values()])])
+                                                              ", ".join([x_p_str_mean[ip].replace("Rhat=",
+                                                                                                  "Rhat(%s)=" % x_p_str)
+                                                                         for x_p_str, x_p_str_mean in x_p_str_means.items()])])
                                                    for ip in range(n_regions)])
 
             for p_star, p_str in dWt_star.items():
@@ -361,13 +362,13 @@ class ModelInversionPlotter(TimeseriesPlotter):
                     self.plot_raster(chain_observation_dict, time, special_idx=[], time_units=target_data.time_unit,
                                      title=name + " Observation target vs fit time series",
                                      figure_name=name + "ObservationTarget_VS_FitRasterPlot",
-                                     offset=0.25, labels=stats_target_data_labels,
+                                     offset=0.25, labels=this_stats_target_data_labels,
                                      figsize=FiguresConfig.VERY_LARGE_SIZE))
                 figs.append(
                     self.plot_timeseries(chain_observation_dict, time, special_idx=[], time_units=target_data.time_unit,
                                          title=name + " Observation target vs fit time series",
                                          figure_name=name + "ObservationTarget_VS_FitTimeSeries",
-                                         labels=this_stats_target_data_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
+                                         labels=stats_target_data_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
             except:
                 pass
 
@@ -383,7 +384,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
                                          figsize=FiguresConfig.VERY_LARGE_SIZE))
             figs.append(self.plot_timeseries(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
                                              title=title_prefix + "Observation target vs mean fit time series: "
-                                                   + stats_string[target_data_str], subplots=(len(observation_dict), 1),
+                                                   + stats_string[target_data_str],
                                              figure_name=title_prefix + "ObservationTarget_VS_MeanFitTimeSeries",
                                              labels=stats_target_data_labels,
                                              figsize=FiguresConfig.VERY_LARGE_SIZE))
