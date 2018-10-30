@@ -229,7 +229,7 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
     empirical_files = ensure_list(empirical_files)
     times_on = ensure_list(times_on)
     if len(empirical_files) > 0:
-        preprocessing = ["hpf", "abs-mean"]
+        preprocessing = ["hpf", "abs-envelope"]
         if log_flag:
             preprocessing.append("log")
         preprocessing += ["convolve", "decimate", "baseline"]
