@@ -120,7 +120,6 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
     else:
         # Create model inversion service (stateless)
         model_inversion = SDEModelInversionService()
-        model_inversion.decim_ratio = downsampling
         model_inversion.normalization = normalization
         # Exclude ctx-l/rh-unknown regions from fitting
         model_inversion.active_regions_exlude = find_labels_inds(head.connectivity.region_labels, ["unknown"])
@@ -138,7 +137,7 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         signals, probabilistic_model, simulator = \
            get_target_timeseries(probabilistic_model, head, lsa_hypothesis, times_on, time_length,
                                  sensors_lbls, sensor_id, observation_model, sim_target_file,
-                                 empirical_target_file, sim_source_type, empirical_files, config, plotter)
+                                 empirical_target_file, sim_source_type, downsampling, empirical_files, config, plotter)
 
         # Update active model's active region nodes
         e_values = pse_results.get("e_values_mean", model_configuration.e_values)
@@ -163,14 +162,14 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
 
         # Construct the stan model data dict:
         model_data = build_stan_model_data_dict(probabilistic_model, target_data.squeezed,
-                                                model_configuration.connectivity, time=target_data.time_line)
+                                                model_configuration.connectivity, time=target_data.time)
 
         # # ...or interface with INS stan models
         # from tvb_fit.service.model_inversion.vep_stan_dict_builder import \
         #   build_stan_model_data_dict_to_interface_ins
         # model_data = build_stan_model_data_dict_to_interface_ins(probabilistic_model, target_data.squeezed,
         #                                                          model_configuration.connectivity, gain_matrix,
-        #                                                          time=target_data.time_line)
+        #                                                          time=target_data.time)
         writer.write_dictionary(model_data, model_data_file)
 
     # -------------------------- Fit or load results from previous fitting: -------------------------------------------

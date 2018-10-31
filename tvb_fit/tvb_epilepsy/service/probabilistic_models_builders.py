@@ -7,9 +7,11 @@ from tvb_fit.base.constants import PriorsModes, Target_Data_Type
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import *
 from tvb_fit.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
 from tvb_fit.base.utils.data_structures_utils import formal_repr, ensure_list
+from tvb_fit.base.model.timeseries import Timeseries as TargetDataTimeseries
 from tvb_fit.service.timeseries_service import compute_seeg_exp, compute_seeg_lin
 from tvb_fit.service.probabilistic_parameter_builder\
     import generate_lognormal_parameter, generate_negative_lognormal_parameter, generate_normal_parameter
+
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import calc_eq_z
 from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration import EpileptorModelConfiguration
 from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
@@ -427,7 +429,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         if "epsilon" in params_names or "scale" in params_names or "offset" in params_names:
             if isinstance(model_source_ts, Timeseries) and \
                isinstance(getattr(model_source_ts, "x1", None), Timeseries) and \
-               isinstance(target_data, Timeseries):
+               isinstance(target_data, TargetDataTimeseries):
                 model_out_ts = model_source_ts.x1.squeezed[:, active_regions] - self.model_config.x1eq.mean()
                 if self.observation_model in OBSERVATION_MODELS.SEEG.value and isinstance(self.gain_matrix, np.ndarray):
                     if self.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
@@ -461,7 +463,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                 self.logger.info("...offset...")
                 offset_sigma = np.abs(self.offset) / OFFSET_SCALE_DEF
                 parameters.update(
-                    {"offset": generate_normal_parameter("offset", self.offset, self.offset - 3 * offset_sigma,
+                        {"offset": generate_normal_parameter("offset", self.offset, self.offset - 3 * offset_sigma,
                                                          self.offset + 3 * offset_sigma, sigma=offset_sigma)})
 
         if self.x1_prior_weight > 0.0:

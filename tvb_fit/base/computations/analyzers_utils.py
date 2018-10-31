@@ -25,6 +25,19 @@ def abs_envelope(x):
     return np.abs(x) + x_mean
 
 
+def spectrogram_envelope(x, fs, lpf=None, hpf=None, nperseg=None):
+    envelope = []
+    for xx in x.T:
+        F, T, C = spectrogram(xx, fs, nperseg=nperseg)
+        fmask = np.ones(F.shape, 'bool')
+        if hpf:
+            fmask *= F > hpf
+        if lpf:
+            fmask *= F < lpf
+        envelope.append(C[fmask].sum(axis=0))
+    return np.array(envelope).T, T
+
+
 # Across points analyzers:
 
 # Univariate:
