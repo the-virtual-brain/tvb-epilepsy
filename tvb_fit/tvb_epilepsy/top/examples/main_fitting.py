@@ -127,7 +127,7 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
 
         # Generate probabilistic model and model data
         probabilistic_model = \
-            SDEProbabilisticModelBuilder(model_name="vep_sde", model_config=model_configuration,
+            SDEProbabilisticModelBuilder(model_name=stan_model_name, model_config=model_configuration,
                                          xmode=XModes.X1EQMODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
                                          sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,
                                          normal_flag=normal_flag,  K=np.mean(model_configuration.K),
