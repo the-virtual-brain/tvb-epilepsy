@@ -232,10 +232,8 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
     if len(empirical_files) > 0:
         preprocessing = ["spectrogram"]  # ["hpf", "mean_center", "abs-envelope"]
         if log_flag:
-            preprocessing += ["log", "convolve"]
-        else:
-            preprocessing += ["convolve"]
-        preprocessing += ["decimate", "baseline"]
+            preprocessing += ["log"] #
+        preprocessing += ["convolve", "decimate", "baseline"]
         # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
         signals, probabilistic_model.number_of_seizures = \
             set_multiple_empirical_data(empirical_files, empirical_target_file, head, sensors_lbls, sensor_id,
@@ -248,9 +246,8 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
         probabilistic_model.target_data_type = Target_Data_Type.SYNTHETIC.value
         if sim_source_type == "paper":
             if log_flag:
-                preprocessing = ["spectrogram", "log", "convolve"]  # ["hpf", "mean_center", "abs_envelope", "log"]
-            else:
-                preprocessing = ["convolve"]
+                preprocessing = ["spectrogram", "log"]  #, "convolve" # ["hpf", "mean_center", "abs_envelope", "log"]
+            preprocessing = ["convolve"]
         else:
             if log_flag:
                 preprocessing = ["log"]
