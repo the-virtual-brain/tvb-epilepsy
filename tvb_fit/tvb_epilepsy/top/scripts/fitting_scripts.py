@@ -232,7 +232,9 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
         preprocessing = ["hpf", "abs-envelope"]
         if log_flag:
             preprocessing.append("log")
-        preprocessing += ["convolve", "decimate", "baseline"]
+        else:
+            preprocessing += ["convolve"]
+        preprocessing += ["decimate", "baseline"]
         # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
         signals, probabilistic_model.number_of_seizures = \
             set_multiple_empirical_data(empirical_files, empirical_target_file, head, sensors_lbls, sensor_id,
@@ -244,12 +246,16 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
         # --------------------- Get fitting target simulated data (simulate if necessary) ----------------------
         probabilistic_model.target_data_type = Target_Data_Type.SYNTHETIC.value
         if sim_source_type == "paper":
-            preprocessing = ["convolve"]  # ["lpf", "abs"] #"hpf", "convolve"
+            if log_flag:
+                preprocessing = ["hpf", "abs_envelope", "log"]
+            else:
+                preprocessing = ["convolve"]
         else:
-            preprocessing = []
-        if log_flag:
-            preprocessing.append(["min", "log"])
-        preprocessing.append("decimate")
+            if log_flag:
+                preprocessing = ["log"]
+            else:
+                preprocessing = []
+        preprocessing += ["decimate", "baseline"]
         rescale_x1eq = -1.225
         if np.max(probabilistic_model.model_config.x1eq) > rescale_x1eq:
             rescale_x1eq = False
