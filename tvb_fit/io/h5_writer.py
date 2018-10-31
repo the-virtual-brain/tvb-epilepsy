@@ -292,7 +292,7 @@ class H5Writer(H5WriterBase):
         elif isinstance(raw_data, Timeseries):
             if len(raw_data.shape) == 4 and str(raw_data.data.dtype)[0] == "f":
                 h5_file.create_dataset("/data", data=raw_data.data)
-                h5_file.create_dataset("/time", data=raw_data.time_line)
+                h5_file.create_dataset("/time", data=raw_data.time)
                 h5_file.create_dataset("/labels",
                                        data=numpy.array([numpy.string_(label) for label in raw_data.space_labels]))
                 h5_file.create_dataset("/variables",

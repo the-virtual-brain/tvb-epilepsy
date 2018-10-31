@@ -127,7 +127,7 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
         if info_crit is not None:
             figs.append(self.plot_scalar_model_comparison(info_crit, title_prefix))
             figs.append(self.plot_array_model_comparison(info_crit, title_prefix, labels=target_data.space_labels,
-                                                         xdata=target_data.time_line, xlabel="Time"))
+                                                         xdata=target_data.time, xlabel="Time"))
 
         if connectivity_plot:
             figs.append(self.plot_fit_connectivity(ests, stats, probabilistic_model, "MC", region_labels, title_prefix))

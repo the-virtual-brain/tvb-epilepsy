@@ -25,7 +25,7 @@ def _compute_and_write_seeg(source_timeseries, sensors_dict, filename, hpf_flag=
     fsAVG = 1000.0 / source_timeseries.time_step
 
     if hpf_flag:
-        hpf_low = max(hpf_low, 1000.0 / (source_timeseries.end_time - source_timeseries.time_start))
+        hpf_low = max(hpf_low, 1000.0 / (source_timeseries.time_end - source_timeseries.time_start))
         hpf_high = min(fsAVG / 2.0 - 10.0, hpf_high)
 
     seeg_data = ts_service.compute_seeg(source_timeseries, sensors_dict, sum_mode=seeg_gain_mode)
@@ -114,7 +114,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
         if not status:
             logger.warning("\nSimulation failed!")
         else:
-            time = np.array(sim_output.time_line).astype("f")
+            time = np.array(sim_output.time).astype("f")
             logger.info("\n\nSimulated signal return shape: %s", sim_output.shape)
             logger.info("Time: %s - %s", time[0], time[-1])
             sim_output, seeg = compute_seeg_and_write_ts_to_h5(sim_output, sim.model, head.sensorsSEEG,

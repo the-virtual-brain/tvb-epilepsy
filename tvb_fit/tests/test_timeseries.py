@@ -41,8 +41,8 @@ class TestTimeseries(object):
         assert ts_from_2D.data.shape[2] == ts_from_2D.data.shape[3] == 1
         assert ts_from_2D.data.shape == (3, 3, 1, 1)
 
-        assert ts_from_2D.end_time == 0.02
-        assert all(ts_from_2D.time_line == numpy.array([0, 0.01, 0.02]))
+        assert ts_from_2D.time_end == 0.02
+        assert all(ts_from_2D.time == numpy.array([0, 0.01, 0.02]))
 
         with pytest.raises(KeyError):
             ts_from_2D.get_state_variable("")

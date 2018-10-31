@@ -62,7 +62,7 @@ if __name__ == "__main__":
                                            TimeseriesDimensions.VARIABLES.value: ["x1", "x2", "c"]}),
                         start_time, total_time / float(nr_of_steps))
 
-    timeline = signal.time_line
+    timeline = signal.time
 
     sv = signal.get_state_variable("x1")
 

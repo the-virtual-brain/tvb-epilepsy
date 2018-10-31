@@ -301,7 +301,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
             stats_string = dict(zip(ts_strings, len(ts_strings)*[""]))
 
         observation_dict = OrderedDict({'observation time series': target_data.squeezed})
-        time = target_data.time_line
+        time = target_data.time
         figs = []
         # x1_pair_plot_samples = []
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), samples)):

@@ -232,7 +232,7 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_UNSCALED_DEF, ep_ind
                 if not status:
                     logger.warning("\nSimulation failed!")
                 else:
-                    time = np.array(sim_output.time_line).astype("f")
+                    time = np.array(sim_output.time).astype("f")
                     logger.info("\n\nSimulated signal return shape: %s", sim_output.shape)
                     logger.info("Time: %s - %s", time[0], time[-1])
                     logger.info("Values: %s - %s", sim_output.data.min(), sim_output.data.max())
