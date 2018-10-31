@@ -60,7 +60,7 @@ def compute_seizure_length(tau0):
     return int(np.ceil(64 * (1 + 2*np.log10(tau0 / 30.0))))
 
 
-def compute_dt(tau1,):
+def compute_dt(tau1):
     return (1000.0 / 2048.0) * (0.5 / tau1)
 
 
