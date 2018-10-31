@@ -96,6 +96,17 @@ class Head(object):
             else:
                 return out_sensors
 
+    def sensors_name_to_id(self, name, s_type=SensorTypes.TYPE_SEEG):
+        sensors = self.get_sensors(s_type)
+        if sensors is None:
+            return None
+        else:
+            out_sensor_id = None
+            for sensor_id, (s_name, s) in enumerate(sensors.items()):
+                if s_name.lower() == name.lower():
+                    return sensor_id
+            return out_sensor_id
+
     def get_sensors_by_index(self, s_type=SensorTypes.TYPE_SEEG, sensor_ids=0):
         sensors = self.get_sensors(s_type)
         if sensors is None:

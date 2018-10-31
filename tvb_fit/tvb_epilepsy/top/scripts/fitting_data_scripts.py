@@ -1,10 +1,12 @@
 import numpy as np
+
+from tvb_fit.base.utils.log_error_utils import initialize_logger
+from tvb_fit.base.utils.data_structures_utils import isequal_string
+from tvb_fit.service.timeseries_service import TimeseriesService, NORMALIZATION_METHODS
+from tvb_fit.io.edf import read_edf_to_Timeseries
+
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import \
     SEIZURE_LENGTH, HIGH_HPF, LOW_HPF, LOW_LPF, HIGH_LPF, WIN_LEN_RATIO, BIPOLAR, TARGET_DATA_PREPROCESSING
-from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.utils.data_structures_utils import isequal_string, find_labels_inds
-from tvb_fit.io.edf import read_edf_to_Timeseries
-from tvb_fit.service.timeseries_service import TimeseriesService, NORMALIZATION_METHODS
 
 
 logger = initialize_logger(__name__)
@@ -56,7 +58,7 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
             data = ts_service.filter(data, low_hpf, high_hpf, "bandpass", order=3)
             if plotter:
                 plotter.plot_raster({"High-pass filtering": data.squeezed}, data.time_line, time_units=data.time_unit,
-                                    special_idx=[], title='High-pass filtered Time Series',  offset=1.0,
+                                    special_idx=[], title='High-pass filtered Time Series',  offset=0.1,
                                     figure_name=title_prefix + '_%sHpfTimeSeries' % stri_preproc,
                                     labels=data.space_labels)
 
@@ -65,38 +67,44 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
             data.data = - data.data
             if plotter:
                 plotter.plot_raster({"Sign inverted signals": data.squeezed}, data.time_line, time_units=data.time_unit,
-                                    special_idx=[], title='Sign inverted Time Series',  offset=1.0,
+                                    special_idx=[], title='Sign inverted Time Series',  offset=0.1,
                                     figure_name=title_prefix + '_%sSignInversion' % stri_preproc,
                                     labels=data.space_labels)
 
-        plot_rectify = ""
-        if isequal_string(preproc, "hilbert") or isequal_string(preproc, "abs") or isequal_string(preproc, "abs-mean"):
-            if isequal_string(preproc, "hilbert"):
-                plot_rectify = preproc
+        if isequal_string(preproc, "mean-center"):
+            logger.info("Mean center data...")
+            data = ts_service.normalize(data, "mean")
+            if plotter:
+                plotter.plot_raster({"Mean centered signals": data.squeezed}, data.time_line, time_units=data.time_unit,
+                                    special_idx=[], title='Mean centered Time Series', offset=0.1,
+                                    figure_name=title_prefix + '_%sMeanCentered' % stri_preproc,
+                                    labels=data.space_labels)
+
+        plot_envelope = ""
+        if preproc.lower().find("envelope") >= 0: # isequal_string(preproc, "hilbert_envelope") or isequal_string(preproc, "abs_envelope"):
+            plot_envelope = preproc
+            if isequal_string(preproc, "hilbert_envelope"):
                 # or
                 # ...get the signals' envelope via Hilbert transform
                 data = ts_service.hilbert_envelope(data)
-                plot_rectify = "Hilbert transform amplitude"
                 # or
             # elif isequal_string(preproc, "square"):
             #     # Square data to get positive "power like" timeseries (introducing though higher frequencies)
             #     data = ts_service.square(data)
-            elif isequal_string(preproc, "abs") or isequal_string(preproc, "abs-mean"):
-                plot_rectify = preproc
-                if isequal_string(preproc, "abs-mean"):
-                    data = ts_service.normalize(data, "mean")
-                #...the absolute value...
-                data = ts_service.abs(data)
+            else: # isequal_string(preproc, "abs_envelope"): # "abs_envelope"
+                data = ts_service.abs_envelope(data)
             if plotter:
-                plot_envelop_ = plot_rectify.replace(" ", "_")
+                plot_envelop_ = plot_envelope.replace(" ", "_")
                 plotter.plot_raster({plot_envelop_: data.squeezed}, data.time_line,
                                     time_units=data.time_unit, special_idx=[],
-                                    title=plot_rectify, offset=1.0,
+                                    title=plot_envelope, offset=0.1,
                                     figure_name=title_prefix + "_%s" % stri_preproc + plot_envelop_ + "TimeSeries",
                                     labels=data.space_labels)
 
         if isequal_string(preproc, "log"):
             logger.info("Computing log of signals...")
+            data.data -= data.data.min()
+            data.data += 1.0
             data = TimeseriesService().log(data)
             if plotter:
                 plotter.plot_raster({"LogTimeSeries": data.squeezed}, data.time_line, time_units=data.time_unit,
@@ -213,4 +221,5 @@ def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, se
     return prepare_signal_observable(data, seizure_length, on_off_set, range(data.number_of_labels),
                                      preprocessing, low_hpf, high_hpf, low_lpf, high_lpf,
                                      win_len_ratio, plotter, title_prefix)
+
 

@@ -8,7 +8,6 @@ from scipy.interpolate import interp1d, griddata
 
 # Pointwise analyzers:
 
-
 def interval_scaling(x, min_targ=0.0, max_targ=1.0, min_orig=None, max_orig=None):
     if min_orig is None:
         min_orig = np.min(x, axis=0)
@@ -16,6 +15,14 @@ def interval_scaling(x, min_targ=0.0, max_targ=1.0, min_orig=None, max_orig=None
         max_orig = np.max(x, axis=0)
     scale_factor = (max_targ - min_targ) / (max_orig - min_orig)
     return min_targ + (x - min_orig) * scale_factor
+
+
+def abs_envelope(x):
+    x_mean = x.mean(axis=0) * np.ones(x.shape[1:])
+    # Mean center each signal
+    x -= x_mean
+    # Compute the absolute value and add back the mean
+    return np.abs(x) + x_mean
 
 
 # Across points analyzers:

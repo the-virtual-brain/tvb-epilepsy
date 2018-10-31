@@ -80,12 +80,12 @@ class Timeseries(object):
         return self.dimension_labels.get(TimeseriesDimensions.VARIABLES.value, numpy.array([]))
 
     @property
-    def end_time(self):
+    def time_end(self):
         return self.time_start + (self.data.shape[0] - 1) * self.time_step
 
     @property
-    def time_line(self):
-        return numpy.arange(self.time_start, self.end_time + self.time_step, self.time_step)
+    def time(self):
+        return numpy.arange(self.time_start, self.time_end + self.time_step, self.time_step)
 
     @property
     def squeezed(self):
@@ -220,7 +220,7 @@ class Timeseries(object):
                              self._get_time_unit_for_index(index_start), self.time_step, self.time_unit)
 
     def get_time_window_by_units(self, unit_start, unit_end):
-        end_time = self.end_time
+        end_time = self.time_end
         if unit_start < self.time_start or unit_end > end_time:
             self.logger.error("The time units are outside time series interval: [%s, %s]" % (self.time_start, end_time))
             raise ValueError
