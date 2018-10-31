@@ -69,8 +69,8 @@ class Surface(object):
         for i, fi in enumerate(vf):
             fni = fn[list(fi)]
             norm = fni.sum(axis=0)
-            norm /= np.sqrt((norm ** 2).sum())
-            vn[i] = norm
+            norm2 = norm / np.sqrt((norm ** 2).sum())
+            vn[i] = norm2
         return vn
 
     def get_vertex_normals(self):
