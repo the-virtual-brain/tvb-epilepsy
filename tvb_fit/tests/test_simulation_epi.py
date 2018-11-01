@@ -23,7 +23,7 @@ class TestSimulationRun(BaseTest):
 
     @staticmethod
     def _prepare_model_for_simulation(connectivity):
-        hypothesis = HypothesisBuilder(connectivity.number_of_regions).set_e_hypothesis([1.0, 1.0],
+        hypothesis = HypothesisBuilder(connectivity.number_of_regions).set_e_hypothesis([0, 1],
                                                                                         [0.0, 10.0]).build_hypothesis()
         model_configuration_builder = ModelConfigurationBuilder("Epileptor", connectivity.normalized_weights)
         model_configuration = model_configuration_builder.build_model_from_hypothesis(hypothesis)
