@@ -125,8 +125,6 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
 
         if isequal_string(preproc, "log"):
             logger.info("Computing log of signals...")
-            data.data -= data.data.min()
-            data.data += 1.0
             data = ts_service.log(data)
             if plotter:
                 plotter.plot_raster({"LogTimeSeries": data.squeezed}, data.time, time_units=data.time_unit,
