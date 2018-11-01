@@ -45,7 +45,7 @@ class HeadPlotter(BasePlotter):
         if sensors.gain_matrix is None:
             return count
         figure, ax, cax = self._plot_gain_matrix(sensors, region_labels,
-                                                  title=str(count) + " - " + sensors.s_type + " - Projection")
+                                                  title=str(count) + " - " + sensors.s_type.value + " - Projection")
         count += 1
         return count, figure, ax, cax
 
