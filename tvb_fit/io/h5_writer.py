@@ -70,7 +70,7 @@ class H5Writer(H5WriterBase):
 
         h5_file.attrs.create(self.H5_TYPE_ATTRIBUTE, "Sensors")
         h5_file.attrs.create("Number_of_sensors", str(sensors.number_of_sensors))
-        h5_file.attrs.create("Sensors_subtype", sensors.s_type)
+        h5_file.attrs.create("Sensors_subtype", str(sensors.s_type))
 
         self.logger.info("Sensors have been written to file: %s" % path)
         h5_file.close()
