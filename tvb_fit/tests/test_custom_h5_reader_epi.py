@@ -92,8 +92,8 @@ class TestCustomH5Reader(BaseTest):
 
         assert dummy_lsa_service.eigen_vectors_number_selection == lsa_service.eigen_vectors_number_selection
         assert dummy_lsa_service.eigen_vectors_number == lsa_service.eigen_vectors_number
-        assert dummy_lsa_service.eigen_values == lsa_service.eigen_values
-        assert dummy_lsa_service.eigen_vectors == lsa_service.eigen_vectors
+        assert dummy_lsa_service.eigen_values.size == lsa_service.eigen_values.size
+        assert dummy_lsa_service.eigen_vectors.size == lsa_service.eigen_vectors.size
         assert dummy_lsa_service.weighted_eigenvector_sum == lsa_service.weighted_eigenvector_sum
         assert dummy_lsa_service.normalize_propagation_strength == lsa_service.normalize_propagation_strength
 
