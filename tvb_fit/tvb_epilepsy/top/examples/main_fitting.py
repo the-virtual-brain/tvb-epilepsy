@@ -36,13 +36,13 @@ def set_hypotheses(head, config):
     # # Regions of Pathological Excitability hypothesis:
     # x0_indices = [6, 15, 52, 53] # [1, 26] #
     # x0_values = 2.5*np.array([0.9, 0.9, 0.5, 0.5])
-    x0_indices = [6, 15] # [1, 26] #
+    x0_indices = [1, 26] # DK, D: [6, 15] #
     x0_values = 2.5*np.array([0.9, 0.9])
     hyp_builder.set_x0_hypothesis(x0_indices, x0_values)
 
     # Regions of Model Epileptogenicity hypothesis:
     # e_indices = [6, 15, 52, 53]  # DK: [2, 25]
-    e_indices = [52, 53] #  DK: [2, 25]
+    e_indices =  [2, 25] # DK, D: [52, 53] #
     # e_values = np.array([0.9, 0.9, 0.5, 0.5])  # np.array([0.99] * 2)
     e_values = np.array([0.5, 0.5])  # np.array([0.99] * 2)
     hyp_builder.set_e_hypothesis(e_indices, e_values)
@@ -120,7 +120,6 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
     else:
         # Create model inversion service (stateless)
         model_inversion = SDEModelInversionService()
-        model_inversion.decim_ratio = downsampling
         model_inversion.normalization = normalization
         # Exclude ctx-l/rh-unknown regions from fitting
         model_inversion.active_regions_exlude = find_labels_inds(head.connectivity.region_labels, ["unknown"])
@@ -138,7 +137,7 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         signals, probabilistic_model, simulator = \
            get_target_timeseries(probabilistic_model, head, lsa_hypothesis, times_on, time_length,
                                  sensors_lbls, sensor_id, observation_model, sim_target_file,
-                                 empirical_target_file, sim_source_type, empirical_files, config, plotter)
+                                 empirical_target_file, sim_source_type, downsampling, empirical_files, config, plotter)
 
         # Update active model's active region nodes
         e_values = pse_results.get("e_values_mean", model_configuration.e_values)
@@ -163,14 +162,14 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
 
         # Construct the stan model data dict:
         model_data = build_stan_model_data_dict(probabilistic_model, target_data.squeezed,
-                                                model_configuration.connectivity, time=target_data.time_line)
+                                                model_configuration.connectivity, time=target_data.time)
 
         # # ...or interface with INS stan models
         # from tvb_fit.service.model_inversion.vep_stan_dict_builder import \
         #   build_stan_model_data_dict_to_interface_ins
         # model_data = build_stan_model_data_dict_to_interface_ins(probabilistic_model, target_data.squeezed,
         #                                                          model_configuration.connectivity, gain_matrix,
-        #                                                          time=target_data.time_line)
+        #                                                          time=target_data.time)
         writer.write_dictionary(model_data, model_data_file)
 
     # -------------------------- Fit or load results from previous fitting: -------------------------------------------
@@ -194,7 +193,7 @@ if __name__ == "__main__":
 
     user_home = os.path.expanduser("~")
     SUBJECT = "TVB3"
-    head_folder = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", SUBJECT, "HeadD")
+    head_folder = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", SUBJECT, "HeadDK")
     SEEG_data = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "data/CC", "seeg", SUBJECT)
 
     if user_home == "/home/denis":
@@ -209,7 +208,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/empirical_log_1step")
+                              "fit/tests/empirical_DK")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
 
@@ -231,7 +230,7 @@ if __name__ == "__main__":
     sim_times_on_off = [70.0, 120.0] # e_hypo, [100, 130] for x0_hypo, and e_x0_hypo
     EMPIRICAL = True
     sim_source_type = "paper"
-    observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value  #OBSERVATION_MODELS.SOURCE_POWER.value  #OBSERVATION_MODELS.SEEG_POWER.value  #
+    observation_model = OBSERVATION_MODELS.SEEG_POWER.value  #OBSERVATION_MODELS.SEEG_LOGPOWER.value  #OBSERVATION_MODELS.SOURCE_POWER.value  #
     if EMPIRICAL:
         seizures_files = ['SZ1_0001.edf', 'SZ2_0001.edf']  # 'SZ2_0001.edf'
         times_on = [9700.0, 13700.0] # (np.array([15.0, 30.0]) * 1000.0).tolist() # for SZ1
@@ -265,7 +264,7 @@ if __name__ == "__main__":
     fitmethod = "sample"
     pse_flag = True
     fit_flag = True
-    test_flag = True
+    test_flag = False
     if EMPIRICAL:
         main_fit_sim_hyplsa(stan_model_name,
                             [os.path.join(config.input.RAW_DATA_FOLDER, seizure_file)

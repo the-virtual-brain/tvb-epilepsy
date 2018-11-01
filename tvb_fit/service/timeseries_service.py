@@ -6,11 +6,11 @@ from scipy.signal import decimate, convolve, detrend, hilbert
 from scipy.stats import zscore
 
 from tvb_fit.base.utils.log_error_utils import raise_value_error, initialize_logger
-from tvb_fit.base.utils.data_structures_utils import isequal_string, ensure_list, is_integer
-from tvb_fit.base.computations.math_utils import select_greater_values_array_inds, get_greater_values_array_inds, \
+from tvb_fit.base.utils.data_structures_utils import isequal_string, ensure_list
+from tvb_fit.base.computations.math_utils import select_greater_values_array_inds,\
                                                       select_by_hierarchical_group_metric_clustering
-from tvb_fit.base.computations.analyzers_utils import abs_envelope, filter_data
-from tvb_fit.base.model.timeseries import TimeseriesDimensions, PossibleVariables
+from tvb_fit.base.computations.analyzers_utils import abs_envelope, spectrogram_envelope, filter_data
+from tvb_fit.base.model.timeseries import TimeseriesDimensions
 
 
 def decimate_signals(signals, time, decim_ratio):
@@ -88,7 +88,7 @@ class TimeseriesService(object):
     def decimate_by_filtering(self, timeseries, decim_ratio):
         if decim_ratio > 1:
             decim_data, decim_time, decim_dt, decim_n_times = decimate_signals(timeseries.squeezed,
-                                                                               timeseries.time_line, decim_ratio)
+                                                                               timeseries.time, decim_ratio)
             return timeseries.__class__(decim_data, timeseries.dimension_labels,
                                         decim_time[0], decim_dt, timeseries.time_unit)
         else:
@@ -105,6 +105,14 @@ class TimeseriesService(object):
     def hilbert_envelope(self, timeseries):
         return timeseries.__class__(np.abs(hilbert(timeseries.data, axis=0)), timeseries.dimension_labels,
                                     timeseries.time_start, timeseries.time_step, timeseries.time_unit)
+
+    def spectrogram_envelope(self, timeseries, lpf=None, hpf=None, nperseg=None):
+        data, time = spectrogram_envelope(timeseries.squeezed, timeseries.sampling_frequency, lpf, hpf, nperseg)
+        if len(timeseries.time_unit) > 0 and timeseries.time_unit[0] == "m":
+            time *= 1000
+        return timeseries.__class__(data,
+                                    timeseries.dimension_labels, timeseries.time_start+time[0],
+                                    np.diff(time).mean(), timeseries.time_unit)
 
     def abs_envelope(self, timeseries):
         return timeseries.__class__(abs_envelope(timeseries.data), timeseries.dimension_labels,

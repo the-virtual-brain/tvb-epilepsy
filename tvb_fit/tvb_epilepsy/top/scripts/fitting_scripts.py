@@ -157,10 +157,10 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
         signals = signals[0]
     if plotter:
         title_prefix = title_prefix + "MultiseizureEmpiricalSEEG"
-        plotter.plot_raster({"ObservationRaster": signals.squeezed}, signals.time_line, time_units=signals.time_unit,
+        plotter.plot_raster({"ObservationRaster": signals.squeezed}, signals.time, time_units=signals.time_unit,
                             special_idx=[], offset=0.1, title='Multiseizure Observation Raster Plot',
                             figure_name=title_prefix + 'ObservationRasterPlot', labels=signals.space_labels)
-        plotter.plot_timeseries({"Observation": signals.squeezed}, signals.time_line, time_units=signals.time_unit,
+        plotter.plot_timeseries({"Observation": signals.squeezed}, signals.time, time_units=signals.time_unit,
                                 special_idx=[], title='Observation Time Series',
                                 figure_name=title_prefix + 'ObservationTimeSeries', labels=signals.space_labels)
     move_overwrite_files_to_folder_with_wildcard(os.path.join(plotter.config.out.FOLDER_FIGURES,
@@ -171,10 +171,10 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
 
 
 def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model, sensor_id=0,
-                              rescale_x1eq=None, sim_type="paper", times_on_off=[], config=Config(),
-                              preprocessing=TARGET_DATA_PREPROCESSING,
-                              low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF, high_lpf=HIGH_LPF,
-                              bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
+                              rescale_x1eq=None, sim_type="paper", times_on_off=[], seizure_length=SEIZURE_LENGTH,
+                              preprocessing=TARGET_DATA_PREPROCESSING,low_hpf=LOW_HPF, high_hpf=HIGH_HPF,
+                              low_lpf=LOW_LPF, high_lpf=HIGH_LPF, bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO,
+                              plotter=None, config=Config(), title_prefix=""):
     signals, simulator = from_model_configuration_to_simulation(probabilistic_model.model_config,
                                                                 head, lsa_hypothesis, rescale_x1eq=rescale_x1eq,
                                                                 sim_type=sim_type, ts_file=ts_file,
@@ -200,7 +200,7 @@ def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model
         log_flag = probabilistic_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
         title_prefix = title_prefix + "SimSEEG"
         signals = prepare_simulated_seeg_observable(signals, head.get_sensors_by_index(sensor_ids=sensor_id),
-                                                    probabilistic_model.time_length, log_flag, times_on_off, [],
+                                                    seizure_length, log_flag, times_on_off, [],
                                                     preprocessing, low_hpf, high_hpf, low_lpf, high_lpf, bipolar,
                                                     win_len_ratio, plotter, title_prefix)
 
@@ -221,24 +221,23 @@ def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model
 
 def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_length, sensors_lbls, sensor_id,
                           observation_model, sim_target_file, empirical_target_file, sim_source_type="paper",
-                          empirical_files=[], config=Config(), plotter=None):
+                          downsampling=1, empirical_files=[], config=Config(), plotter=None):
 
     # Some scripts for settting and preprocessing target signals:
     simulator = None
     log_flag = observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
     empirical_files = ensure_list(empirical_files)
     times_on = ensure_list(times_on)
+    seizure_length = int(np.ceil(compute_seizure_length(probabilistic_model.tau0) / downsampling))
     if len(empirical_files) > 0:
-        preprocessing = ["hpf", "abs-envelope"]
+        preprocessing = ["spectrogram"]  # ["hpf", "mean_center", "abs-envelope"]
         if log_flag:
-            preprocessing.append("log")
-        else:
-            preprocessing += ["convolve"]
-        preprocessing += ["decimate", "baseline"]
+            preprocessing += ["log"] #
+        preprocessing += ["convolve", "decimate", "baseline"]
         # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
         signals, probabilistic_model.number_of_seizures = \
             set_multiple_empirical_data(empirical_files, empirical_target_file, head, sensors_lbls, sensor_id,
-                                        probabilistic_model.time_length, times_on, time_length,
+                                        seizure_length, times_on, time_length,
                                         label_strip_fun=lambda s: s.split("POL ")[-1], preprocessing=preprocessing,
                                         plotter=plotter, title_prefix="")
     else:
@@ -247,9 +246,8 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
         probabilistic_model.target_data_type = Target_Data_Type.SYNTHETIC.value
         if sim_source_type == "paper":
             if log_flag:
-                preprocessing = ["hpf", "abs_envelope", "log"]
-            else:
-                preprocessing = ["convolve"]
+                preprocessing = ["spectrogram", "log"]  #, "convolve" # ["hpf", "mean_center", "abs_envelope", "log"]
+            preprocessing = ["convolve"]
         else:
             if log_flag:
                 preprocessing = ["log"]
@@ -262,10 +260,11 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
         signals, simulator = \
             set_simulated_target_data(sim_target_file, head, hypothesis, probabilistic_model, sensor_id,
                                       rescale_x1eq=rescale_x1eq, sim_type=sim_source_type,
-                                      times_on_off=[times_on[0], times_on[0] + time_length], config=config,
+                                      times_on_off=[times_on[0], times_on[0] + time_length],
+                                      seizure_length=seizure_length,
                                       # Maybe change some of those for Epileptor 6D simulations:
-                                      bipolar=False, preprocessing=preprocessing, plotter=plotter, title_prefix="")
-
+                                      bipolar=False, preprocessing=preprocessing,
+                                      plotter=plotter, config=config, title_prefix="")
     return signals, probabilistic_model, simulator
 
 
@@ -280,10 +279,10 @@ def set_target_timeseries(probabilistic_model, model_inversion, signals, sensors
         model_inversion.set_target_data_and_time(signals, probabilistic_model, head=head, sensors=sensors)
 
     if plotter:
-        plotter.plot_raster({'Target Signals': target_data.squeezed}, target_data.time_line,
+        plotter.plot_raster({'Target Signals': target_data.squeezed}, target_data.time,
                             time_units=target_data.time_unit, title='Fit-Target Signals raster',
                             offset=0.1, labels=target_data.space_labels)
-        plotter.plot_timeseries({'Target Signals': target_data.squeezed}, target_data.time_line,
+        plotter.plot_timeseries({'Target Signals': target_data.squeezed}, target_data.time,
                                 time_units=target_data.time_unit,
                                 title='Fit-Target Signals', labels=target_data.space_labels)
 
@@ -424,7 +423,7 @@ def samples_to_timeseries(samples, model_data, target_data=None, region_labels=[
     samples = ensure_list(samples)
 
     if isinstance(target_data, Timeseries):
-        time = target_data.time_line
+        time = target_data.time
         n_target_data = target_data.number_of_labels
         target_data_labels = target_data.space_labels
     else:

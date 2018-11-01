@@ -105,7 +105,6 @@ class ODEModelInversionService(ModelInversionService):
     gain_matrix_percentile = 99.0
     n_signals_per_roi = 1
     normalization = False  # "baseline-amplitude"
-    decim_ratio = 1
     cut_target_times_on_off = [0, 0]
     sensors_per_electrode = 2
     group_electrodes = True
@@ -222,8 +221,6 @@ class ODEModelInversionService(ModelInversionService):
                     raise_error("No sensors instance! Needed for gain_matrix computation!")
                 else:
                     pass
-        if self.decim_ratio > 1:
-            target_data = self.ts_service.decimate(target_data, self.decim_ratio)
         if np.any(np.array(self.cut_target_times_on_off)):
             target_data = target_data.get_time_window_by_units(self.cut_target_times_on_off[0],
                                                                self.cut_target_times_on_off[1])
@@ -240,7 +237,7 @@ class ODEModelInversionService(ModelInversionService):
                                                               probabilistic_model.active_regions, power)
             else:
                 target_data = target_data.get_subspace_by_index(probabilistic_model.active_regions)
-        probabilistic_model.time = target_data.time_line
+        probabilistic_model.time = target_data.time
         probabilistic_model.time_length = len(probabilistic_model.time)
         probabilistic_model.number_of_target_data = target_data.number_of_labels
         probabilistic_model.gain_matrix = self.set_gain_matrix(target_data, probabilistic_model, sensors)
