@@ -113,7 +113,7 @@ class Timeseries(object):
 
     def _get_index_of_state_variable(self, sv_label):
         try:
-            sv_index = numpy.where(self.dimension_labels[TimeseriesDimensions.VARIABLES.value] == sv_label)[0]
+            sv_index = numpy.where(self.dimension_labels[TimeseriesDimensions.VARIABLES.value] == sv_label)[0][0]
         except KeyError:
             self.logger.error("There are no state variables defined for this instance. Its shape is: %s",
                               self.data.shape)
@@ -134,7 +134,7 @@ class Timeseries(object):
         list_of_indices_for_labels = []
         for label in list_of_labels:
             try:
-                space_index = numpy.where(self.dimension_labels[TimeseriesDimensions.SPACE.value] == label)[0]
+                space_index = numpy.where(self.dimension_labels[TimeseriesDimensions.SPACE.value] == label)[0][0]
             except ValueError:
                 self.logger.error("Cannot access index of space label: %s. Existing space labels: %s" % (
                     label, self.dimension_labels[TimeseriesDimensions.SPACE.value]))

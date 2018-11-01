@@ -173,10 +173,11 @@ class TestTimeseries(object):
         assert ts[2, "r3", "sv2", :].all() == ts.data[2, 2, 1, :].all()
         assert ts[2, "r3", "sv2", 0] == ts.data[2, 2, 1, 0]
 
-        with pytest.raises(ValueError):
+        #IndexError because of [0][0] on numpy array in TS._get_index_of_state_variable
+        with pytest.raises(IndexError):
             ts[:, :, "sv0", :]
 
-        with pytest.raises(ValueError):
+        with pytest.raises(IndexError):
             ts[0, "r1":"r5", :, :]
 
         with pytest.raises(IndexError):
