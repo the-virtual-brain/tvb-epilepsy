@@ -151,17 +151,19 @@ class H5Writer(H5WriterBase):
         n_regions = head.connectivity.number_of_regions
         self.write_connectivity(head.connectivity, os.path.join(path, "Connectivity.h5"))
         self.write_surface(head.cortical_surface, os.path.join(path, "CorticalSurface.h5"))
-        self.write_surface(head.subcortical_surface, os.path.join(path, "SubcorticalSurface.h5"))
         self.write_region_mapping(head.cortical_region_mapping, os.path.join(path, "CorticalRegionMapping.h5"),
-                                  n_regions= head.connnectivity.number_of_regions, subtype="Cortical")
-        self.write_region_mapping(head.subcortical_region_mapping, os.path.join(path, "SubcorticalRegionMapping.h5"),
-                                  n_regions, "Subcortical")
-        self.write_volume_mapping(self, head.volume_mapping, os.path.join(path, "VolumeMapping.h5"), n_regions)
-        self.write_t1(self, head.t1_background, os.path.join(path, "StructuralMRI.h5"), n_regions)
+                                  n_regions=n_regions, subtype="Cortical")
+        if head.subcortical_surface is not None:
+            self.write_surface(head.subcortical_surface, os.path.join(path, "SubcorticalSurface.h5"))
+            self.write_region_mapping(head.subcortical_region_mapping,
+                                      os.path.join(path, "SubcorticalRegionMapping.h5"),
+                                      n_regions, "Subcortical")
+        self.write_volume_mapping(head.volume_mapping, os.path.join(path, "VolumeMapping.h5"), n_regions)
+        self.write_t1(head.t1_background, os.path.join(path, "StructuralMRI.h5"), n_regions)
         for sensor_list in (head.sensorsSEEG, head.sensorsEEG, head.sensorsMEG):
-            for sensors in sensor_list:
+            for key, sensors in sensor_list.items():
                 self.write_sensors(sensors, os.path.join(path, "Sensors%s_%s.h5" %
-                                                         (sensors.s_type.value, sensors.number_of_sensors)))
+                                                      (sensors.s_type.value, sensors.number_of_sensors)))
 
         self.logger.info("Successfully wrote Head folder at: %s" % path)
 
