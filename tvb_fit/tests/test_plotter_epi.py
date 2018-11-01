@@ -15,7 +15,7 @@ class TestPlotter(BaseTest):
 
     def test_plot_state_space(self):
         lsa_hypothesis = HypothesisBuilder(config=self.config).build_lsa_hypothesis()
-        mc = ModelConfigurationBuilder("EpileptorDP", numpy.array([1.0, 0.0], [0.0, 1.0])). \
+        mc = ModelConfigurationBuilder("EpileptorDP", numpy.array([[1.0, 0.0], [0.0, 1.0]])). \
                                                         build_model_from_E_hypothesis(lsa_hypothesis)
 
         model = "6d"
@@ -34,7 +34,7 @@ class TestPlotter(BaseTest):
         figure_name = "LSAPlot"
         hypo_builder = HypothesisBuilder(config=self.config).set_name(figure_name)
         lsa_hypothesis = hypo_builder.build_lsa_hypothesis()
-        mc = ModelConfigurationBuilder("EpileptorDP", numpy.array([1.0, 0.0], [0.0, 1.0])). \
+        mc = ModelConfigurationBuilder("EpileptorDP", numpy.array([[1.0, 0.0], [0.0, 1.0]])). \
             build_model_from_E_hypothesis(lsa_hypothesis)
 
         figure_file = os.path.join(self.config.out.FOLDER_FIGURES, figure_name + ".png")
@@ -46,7 +46,7 @@ class TestPlotter(BaseTest):
 
     def test_plot_sim_results(self):
         lsa_hypothesis = HypothesisBuilder(config=self.config).build_lsa_hypothesis()
-        mc = ModelConfigurationBuilder("EpileptorDP", numpy.array([1.0, 0.0], [0.0, 1.0])). \
+        mc = ModelConfigurationBuilder("EpileptorDP", numpy.array([[1.0, 0.0], [0.0, 1.0]])). \
             build_model_from_E_hypothesis(lsa_hypothesis)
         model = build_EpileptorDP2D_from_model_config(mc)
 
