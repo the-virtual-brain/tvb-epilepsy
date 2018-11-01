@@ -87,11 +87,11 @@ class TestComputations(BaseTest):
                                  slope=slope, a=a, b=b, d=d, s=s, Iext2=Iext2, gamma=gamma, tau1=tau1, tau0=tau0,
                                  tau2=tau2,
                                  output_mode="array")
-                jac = calc_jac(eq[0].T, eq[2].T, yc, Iext1, x0, K, w, model_vars, zmode, pmode,
-                               x1_neg=True, z_pos=True, x2_neg=False, y1=eq[1].T, x2=eq[3].T, y2=eq[4].T, g=eq[5].T,
-                               x0_var=eq[6].T, slope_var=eq[7].T, Iext1_var=eq[8].T, Iext2_var=eq[9].T, K_var=eq[10].T,
-                               slope=slope, a=a, b=b, d=d, s=s, Iext2=Iext2, gamma=gamma, tau1=tau1, tau0=tau0,
-                               tau2=tau2)
+                # jac = calc_jac(eq[0].T, eq[2].T, yc, Iext1, x0, K, w, model_vars, zmode, pmode,
+                #                x1_neg=True, z_pos=True, x2_neg=False, y1=eq[1].T, x2=eq[3].T, y2=eq[4].T, g=eq[5].T,
+                #                x0_var=eq[6].T, slope_var=eq[7].T, Iext1_var=eq[8].T, Iext2_var=eq[9].T, K_var=eq[10].T,
+                #                slope=slope, a=a, b=b, d=d, s=s, Iext2=Iext2, gamma=gamma, tau1=tau1, tau0=tau0,
+                #                tau2=tau2)
             else:
                 # all >=6D models
                 eq = calc_eq_6d(x0, K, w, yc, Iext1, Iext2, x1, a=a, b=b, d=d, zmode=zmode)
