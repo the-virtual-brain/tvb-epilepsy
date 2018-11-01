@@ -118,7 +118,7 @@ class Timeseries(object):
             self.logger.error("There are no state variables defined for this instance. Its shape is: %s",
                               self.data.shape)
             raise
-        except ValueError:
+        except IndexError:
             self.logger.error("Cannot access index of state variable label: %s. Existing state variables: %s" % (
                 sv_label, self.dimension_labels[TimeseriesDimensions.VARIABLES.value]))
             raise
