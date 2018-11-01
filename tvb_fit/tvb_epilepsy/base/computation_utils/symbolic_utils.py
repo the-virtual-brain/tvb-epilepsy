@@ -509,7 +509,7 @@ def symbol_eqtn_fx1z(n, model="6d", zmode=np.array([ZMODE_DEF]), shape=None):  #
         else:
             fx1z = fx1z.reshape(shape[0], )
     fx1z_lambda = lambdify([v["x1"], v["x0"], v["K"], v["w"], v["y1"], v["Iext1"], v["a"], v["b"], v["d"], v["tau1"],
-                            v["tau0"]], fx1z, 'np')
+                            v["tau0"]], fx1z, 'numpy')
     return fx1z_lambda, fx1z, v
 
 
@@ -520,7 +520,7 @@ def symbol_eqtn_fx1z_diff(n, model, zmode=np.array([ZMODE_DEF])):  # x1_neg=True
     # fx1z = Array(Array(fx1z)[:])
     dfx1z_dx1 = Array(Matrix(fx1z).jacobian(Matrix([v["x1"]])))
     dfx1z_dx1_lambda = lambdify([v["x1"], v["K"], v["w"], v["a"], v["b"], v["d"], v["tau1"], v["tau0"]],
-                                dfx1z_dx1, 'np')
+                                dfx1z_dx1, 'numpy')
     return dfx1z_dx1_lambda, dfx1z_dx1, v
 
 
@@ -541,7 +541,7 @@ def symbol_eqtn_fx2y2(n, x2_neg=False, shape=None):
             fx2 = fx2.reshape(shape[0], shape[1])
         else:
             fx2 = fx2.reshape(shape[0], )
-    return lambdify([v["x2"], v["z"], v["g"], v["Iext2"], v["s"], v["tau1"]], fx2, 'np'), fx2, v
+    return lambdify([v["x2"], v["z"], v["g"], v["Iext2"], v["s"], v["tau1"]], fx2, 'numpy'), fx2, v
 
 
 def symbol_calc_fz_jac_square_taylor(n):
@@ -565,5 +565,5 @@ def symbol_calc_fz_jac_square_taylor(n):
     #         fz_jac[iv, jv].simplify().collect(dfx1z[jv])
     fz_jac = Array(fz_jac)
     fz_jac_lambda = lambdify([v["z"], v["y1"], v["Iext1"], v["K"], v["w"], v["a"], v["b"], v["d"], v["tau1"], v["tau0"],
-                              v["x_taylor"]], fz_jac, 'np')
+                              v["x_taylor"]], fz_jac, 'numpy')
     return fz_jac_lambda, fz_jac, v
