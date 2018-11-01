@@ -52,7 +52,7 @@ class TestCustomH5Reader(BaseTest):
         assert numpy.array_equal(dummy_mc.x1eq, mc.x1eq)
         assert numpy.array_equal(dummy_mc.zeq, mc.zeq)
         assert numpy.array_equal(dummy_mc.Ceq, mc.Ceq)
-        assert numpy.array_equal(dummy_mc.connectivity, mc.model_connectivity)
+        assert numpy.array_equal(dummy_mc.connectivity, mc.connectivity)
 
     def test_read_model_configuration_builder(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestModelConfigService.h5")
@@ -66,22 +66,22 @@ class TestCustomH5Reader(BaseTest):
         assert numpy.array_equal(dummy_mc_service.x0_values, mc_service.x0_values)
         assert numpy.array_equal(dummy_mc_service.K_unscaled, mc_service.K_unscaled)
         assert numpy.array_equal(dummy_mc_service.e_values, mc_service.e_values)
-        assert dummy_mc_service.yc == mc_service.yc
-        assert dummy_mc_service.Iext1 == mc_service.Iext1
-        assert dummy_mc_service.Iext2 == mc_service.Iext2
-        assert dummy_mc_service.a == mc_service.a
-        assert dummy_mc_service.b == mc_service.b
-        assert dummy_mc_service.d == mc_service.d
-        assert dummy_mc_service.slope == mc_service.slope
-        assert dummy_mc_service.s == mc_service.s
-        assert dummy_mc_service.gamma == mc_service.gamma
-        assert dummy_mc_service.tau1 == mc_service.tau1
-        assert dummy_mc_service.tau0 == mc_service.tau0
-        assert dummy_mc_service.zmode == mc_service.zmode
+        assert numpy.array_equal(dummy_mc_service.yc, mc_service.yc)
+        assert numpy.array_equal(dummy_mc_service.Iext1, mc_service.Iext1)
+        assert numpy.array_equal(dummy_mc_service.Iext2, mc_service.Iext2)
+        assert numpy.array_equal(dummy_mc_service.a, mc_service.a)
+        assert numpy.array_equal(dummy_mc_service.b, mc_service.b)
+        assert numpy.array_equal(dummy_mc_service.d, mc_service.d)
+        assert numpy.array_equal(dummy_mc_service.slope, mc_service.slope)
+        assert numpy.array_equal(dummy_mc_service.s, mc_service.s)
+        assert numpy.array_equal(dummy_mc_service.gamma, mc_service.gamma)
+        assert numpy.array_equal(dummy_mc_service.tau1, mc_service.tau1)
+        assert numpy.array_equal(dummy_mc_service.tau0, mc_service.tau0)
+        assert numpy.array_equal(dummy_mc_service.zmode, mc_service.zmode)
         assert dummy_mc_service.x1eq_mode == mc_service.x1eq_mode
         assert dummy_mc_service.K.all() == mc_service.K.all()
-        assert dummy_mc_service.x0cr == mc_service.x0cr
-        assert dummy_mc_service.rx0 == mc_service.rx0
+        assert numpy.array_equal(dummy_mc_service.x0cr, mc_service.x0cr)
+        assert numpy.array_equal(dummy_mc_service.rx0, mc_service.rx0)
 
     def test_read_lsa_service(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestLSAService.h5")
