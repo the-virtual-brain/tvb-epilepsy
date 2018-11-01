@@ -57,16 +57,16 @@ class TestCustomH5Reader(BaseTest):
 
     def test_sensors_of_type(self):
         sensors_file = os.path.join(self.in_head, "SensorsSEEG_20.h5")
-        sensors = self.reader.read_sensors_of_type(sensors_file, SensorTypes.TYPE_SEEG)
+        sensors = self.reader.read_sensors_of_type(sensors_file, SensorTypes.TYPE_SEEG, "SEEG")
 
         assert sensors is not None
         assert sensors.number_of_sensors == 20
 
     def test_sensors_of_type_not_existent_file(self):
         sensors_file = os.path.join(self.in_head, self.not_existent_file)
-        sensors = self.reader.read_sensors_of_type(sensors_file, SensorTypes.TYPE_SEEG)
+        sensors = self.reader.read_sensors_of_type(sensors_file, SensorTypes.TYPE_SEEG, "SEEG")
 
-        assert sensors is None
+        assert len(sensors) is 0
 
     def test_read_sensors(self):
         sensors_seeg, sensors_eeg, sensors_meg = self.reader.read_sensors(self.in_head)
@@ -85,7 +85,7 @@ class TestCustomH5Reader(BaseTest):
         sim_settings = self.reader.read_simulation_settings(test_file)
 
         assert dummy_sim_settings.integration_step == sim_settings.integration_step
-        assert dummy_sim_settings.simulation_length == sim_settings.simulated_period
+        assert dummy_sim_settings.simulation_length == sim_settings.simulation_length
         assert dummy_sim_settings.integrator_type == sim_settings.integrator_type
         assert dummy_sim_settings.noise_type == sim_settings.noise_type
         assert dummy_sim_settings.noise_ntau == sim_settings.noise_ntau
@@ -93,4 +93,4 @@ class TestCustomH5Reader(BaseTest):
         assert dummy_sim_settings.noise_seed == sim_settings.noise_seed
         assert dummy_sim_settings.monitor_type == sim_settings.monitor_type
         assert dummy_sim_settings.monitor_sampling_period == sim_settings.monitor_sampling_period
-        assert dummy_sim_settings.monitor_vois == sim_settings.monitor_vois
+        assert dummy_sim_settings.monitor_vois.size == sim_settings.monitor_vois.size
