@@ -25,8 +25,7 @@ class TestPlotter(BaseTest):
         file_name = os.path.join(self.config.out.FOLDER_FIGURES, figure_name + ".png")
         assert not os.path.exists(file_name)
 
-        self.plotter.plot_state_space(mc, region_labels=numpy.array(["a", "b"]), special_idx=[0],
-                                    model=model, figure_name="")
+        self.plotter.plot_state_space(mc, region_labels=numpy.array(["a", "b"]), special_idx=[0], figure_name="")
 
         assert os.path.exists(file_name)
 
