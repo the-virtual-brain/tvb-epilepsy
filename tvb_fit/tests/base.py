@@ -22,14 +22,14 @@ class BaseTest(object):
                             gain_matrix=numpy.array([[1, 2, 3], [2, 3, 4]]))
 
     def _prepare_dummy_head_from_dummy_attrs(self):
-        return Head(self.dummy_connectivity, self.dummy_surface, sensorsSEEG=[self.dummy_sensors])
+        return Head(self.dummy_connectivity, self.dummy_surface, sensorsSEEG={"SensorsSEEG": self.dummy_sensors})
 
     def _prepare_dummy_head(self):
         reader = H5Reader()
         connectivity = reader.read_connectivity(os.path.join(self.config.input.HEAD, "Connectivity.h5"))
-        cort_surface = Surface([], [])
+        cort_surface = Surface(numpy.array([]), numpy.array([]))
         seeg_sensors = Sensors(numpy.array(["sens1", "sens2"]), numpy.array([[0, 0, 0], [0, 1, 0]]))
-        head = Head(connectivity, cort_surface, sensorsSEEG=seeg_sensors)
+        head = Head(connectivity, cort_surface, sensorsSEEG={"SensorsSEEG": seeg_sensors})
 
         return head
 
