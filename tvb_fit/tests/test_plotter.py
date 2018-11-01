@@ -21,7 +21,8 @@ class TestPlotter(BaseTest):
 
         assert os.path.exists(os.path.join(self.config.out.FOLDER_FIGURES, filename1))
         assert os.path.exists(os.path.join(self.config.out.FOLDER_FIGURES, filename2))
-        assert os.path.exists(os.path.join(self.config.out.FOLDER_FIGURES, filename3))
+        # Because there is no gain matrix
+        assert not os.path.exists(os.path.join(self.config.out.FOLDER_FIGURES, filename3))
 
     #TODO: check TypeError: unique() got an unexpected keyword argument 'axis' in prepare_target_stats()
     # def test_plot_probabilistic_parameter(self):
