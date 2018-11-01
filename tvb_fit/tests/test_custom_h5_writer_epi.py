@@ -42,7 +42,7 @@ class TestCustomH5writer(BaseTest):
 
     def test_write_model_configuration_builder(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestModelConfigurationService.h5")
-        dummy_mc_service = ModelConfigurationBuilder(3)
+        dummy_mc_service = ModelConfigurationBuilder()
 
         assert not os.path.exists(test_file)
 
