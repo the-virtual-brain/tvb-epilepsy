@@ -39,7 +39,7 @@ class TestPlotter(BaseTest):
         figure_file = os.path.join(self.config.out.FOLDER_FIGURES, figure_name + ".png")
         assert not os.path.exists(figure_file)
 
-        self.plotter.plot_lsa(lsa_hypothesis, mc, True, None, region_labels=numpy.array(["a" "b"]), title="")
+        self.plotter.plot_lsa(lsa_hypothesis, mc, True, None, region_labels=numpy.array(["a", "b"]), title="")
 
         assert not os.path.exists(figure_file)
 
