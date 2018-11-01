@@ -74,8 +74,8 @@ class TestCustomH5Reader(BaseTest):
         assert len(sensors_seeg) > 0
         assert len(sensors_eeg) == 0
         assert len(sensors_meg) == 0
-        assert sensors_seeg[0] is not None
-        assert sensors_seeg[0].number_of_sensors == 20
+        assert sensors_seeg["SensorsSEEG_20"] is not None
+        assert sensors_seeg["SensorsSEEG_20"].number_of_sensors == 20
 
     def test_read_simulation_settings(self):
         test_file = os.path.join(self.config.out.FOLDER_TEMP, "TestSimSettings.h5")
