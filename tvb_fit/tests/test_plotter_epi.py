@@ -26,7 +26,7 @@ class TestPlotter(BaseTest):
         assert not os.path.exists(file_name)
 
         self.plotter.plot_state_space(mc, region_labels=numpy.array(["a", "b"]), special_idx=[0],
-                                    model=model, zmode=zmode,figure_name="")
+                                    model=model, figure_name="")
 
         assert os.path.exists(file_name)
 
