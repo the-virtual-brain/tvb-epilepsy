@@ -230,10 +230,10 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
     times_on = ensure_list(times_on)
     seizure_length = int(np.ceil(compute_seizure_length(probabilistic_model.tau0) / downsampling))
     if len(empirical_files) > 0:
-        preprocessing = ["spectrogram"]  # ["hpf", "mean_center", "abs-envelope"]
         if log_flag:
-            preprocessing += ["log"] #
-        preprocessing += ["convolve", "decimate", "baseline"]
+            preprocessing = ["spectrogram", "log"] #
+        else:
+            preprocessing  = ["hpf", "mean_center", "abs-envelope", "convolve", "decimate", "baseline"]
         # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
         signals, probabilistic_model.number_of_seizures = \
             set_multiple_empirical_data(empirical_files, empirical_target_file, head, sensors_lbls, sensor_id,
@@ -247,13 +247,13 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
         if sim_source_type == "paper":
             if log_flag:
                 preprocessing = ["spectrogram", "log"]  #, "convolve" # ["hpf", "mean_center", "abs_envelope", "log"]
-            preprocessing = ["convolve"]
+            else:
+                preprocessing = ["convolve", "decimate", "baseline"]
         else:
             if log_flag:
                 preprocessing = ["log"]
             else:
-                preprocessing = []
-        preprocessing += ["decimate", "baseline"]
+                preprocessing = ["decimate", "baseline"]
         rescale_x1eq = -1.225
         if np.max(probabilistic_model.model_config.x1eq) > rescale_x1eq:
             rescale_x1eq = False
