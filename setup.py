@@ -2,14 +2,14 @@
 
 import setuptools
 
-setuptools.setup(name='tvb_epilepsy',
+setuptools.setup(name='tvb_fit',
                  version='0.2',
-                 description='TVB epilepsy applications',
-                 author='Denis Perdikis, Paula Popa, Lia Domide, Marmaduke Woodman',
+                 description='TVB inference package and epilepsy applications',
+                 author='Dionysios Perdikis, Paula Popa, Lia Domide, Marmaduke Woodman',
                  author_email='<insert here>',
                  license="GPL v3",
                  url='https://github.com/the-virtual-brain/tvb-epilepsy',
-                 packages=['tvb_epilepsy'],
+                 packages=['tvb_fit'],
                  requires=["h5py", "mne", "mpldatacursor", "mpmath", "numpy", "psutil",
                            "pystan", "pytest", "SALib", "sympy"]
                  )
