@@ -6,8 +6,8 @@ Project architecture
 ====================
 
 The project is split in 2 packages:
-    - tvb-fit intended as a base package, stand-alone library
-    - tvb-epilepsy is dependent on tvb-fit for models and algorithms, but specialised on the Epilepsy use-case
+- tvb-fit intended as a base package, stand-alone library
+- tvb-epilepsy is dependent on tvb-fit for models and algorithms, but specialised on the Epilepsy use-case
 
 Both package follow the followig structure:
 - base
