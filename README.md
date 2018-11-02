@@ -5,7 +5,11 @@ This project contains prototype code for epilepsy applications of TVB.
 Project architecture
 ====================
 
-This project contains the following packages:
+The project is split in 2 packages:
+    - tvb-fit intended as a base package, stand-alone library
+    - tvb-epilepsy is dependent on tvb-fit for models and algorithms, but specialised on the Epilepsy use-case
+
+Both package follow the followig structure:
 - base
     <br>This package is independent and used by the other packages in tvb-epilepsy. It is holding sub-packages that define models, configurations, logger, computations, symbolic computations etc.
 
