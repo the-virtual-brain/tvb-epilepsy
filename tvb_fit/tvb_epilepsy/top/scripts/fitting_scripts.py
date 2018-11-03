@@ -331,7 +331,6 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
                 iter=500000, tol_rel_obj=1e-6, debug=1, simulate=0,
                 step_prefix='', writer=None, plotter=None, **kwargs):
 
-
     # ------------------------------Stan model and service--------------------------------------
     model_code_path = os.path.join(config.generic.PROBLSTC_MODELS_PATH, stan_model_name + ".stan")
     stan_interface = CmdStanInterface(model_name=stan_model_name, model_dir=base_path,
@@ -339,24 +338,25 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
     stan_interface.set_or_compile_model()
     stan_interface.model_data_path = os.path.join(base_path, "ModelData.h5")
 
-    # -------------------------- Fit and get estimates: ------------------------------------------------------------
-    n_chains_or_runs = np.where(test_flag, 2, n_chains_or_runs)
-    output_samples = np.where(test_flag, 20, max(int(np.round(output_samples *1.0 / n_chains_or_runs)),
-                                                 min_samples_per_chain))
-
-    # Sampling (HMC)
-    num_samples = output_samples
-    num_warmup = np.where(test_flag, 30, num_warmup)
-    max_depth = np.where(test_flag, 7, max_depth)
-    delta = np.where(test_flag, 0.8, delta)
-    # ADVI or optimization:
-    iter = np.where(test_flag, 1000, iter)
-    if fitmethod.find("sampl") >= 0:
-        skip_samples = num_warmup
-    else:
-        skip_samples = 0
-    prob_model_name = probabilistic_model.name.split(".")[0]
     if fit_flag:
+
+        # -------------------------- Fit and get estimates: ------------------------------------------------------------
+        n_chains_or_runs = np.where(test_flag, 2, n_chains_or_runs)
+        output_samples = np.where(test_flag, 20, max(int(np.round(output_samples * 1.0 / n_chains_or_runs)),
+                                                     min_samples_per_chain))
+
+        # Sampling (HMC)
+        num_samples = output_samples
+        num_warmup = np.where(test_flag, 30, num_warmup)
+        max_depth = np.where(test_flag, 7, max_depth)
+        delta = np.where(test_flag, 0.8, delta)
+        # ADVI or optimization:
+        iter = np.where(test_flag, 1000, iter)
+        if fitmethod.find("sampl") >= 0:
+            skip_samples = num_warmup
+        else:
+            skip_samples = 0
+        prob_model_name = probabilistic_model.name.split(".")[0]
         estimates, samples, summary = stan_interface.fit(debug=debug, simulate=simulate, model_data=model_data,
                                                          n_chains_or_runs=n_chains_or_runs, refresh=1,
                                                          iter=iter, tol_rel_obj=tol_rel_obj,
