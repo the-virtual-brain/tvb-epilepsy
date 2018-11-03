@@ -245,19 +245,19 @@ def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, se
     data.data = np.array(data.data).astype("float32")
     if plotter:
         plotter.plot_raster({"OriginalData": data.squeezed}, data.time, time_units=data.time_unit,
-                            special_idx=[], title='Original Empirical Time Series', offset=1.0,
+                            special_idx=[], title='Original Empirical Time Series', offset=0.1,
                             figure_name=title_prefix + '_empirical_OriginalRaster', labels=data.space_labels)
     data = TimeseriesService().detrend(data)
     if plotter:
         plotter.plot_raster({"Detrended": data.squeezed}, data.time, time_units=data.time_unit,
-                            special_idx=[], title='Detrended Time Series', offset=1.0,
+                            special_idx=[], title='Detrended Time Series', offset=0.1,
                             figure_name=title_prefix + '_empirical_DetrendRaster', labels=data.space_labels)
     if bipolar:
         logger.info("Computing bipolar signals...")
         data = data.get_bipolar()
         if plotter:
             plotter.plot_raster({"BipolarData": data.squeezed}, data.time, time_units=data.time_unit,
-                                special_idx=[], title='Bipolar Time Series', offset=1.0,
+                                special_idx=[], title='Bipolar Time Series', offset=0.1,
                                 figure_name=title_prefix + 'BipolarRaster', labels=data.space_labels)
 
     return prepare_signal_observable(data, seizure_length, on_off_set, range(data.number_of_labels),
