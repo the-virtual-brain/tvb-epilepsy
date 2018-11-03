@@ -233,7 +233,7 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
         if log_flag:
             preprocessing = ["spectrogram", "log"] #
         else:
-            preprocessing  = ["hpf", "mean_center", "abs-envelope", "convolve", "decimate", "baseline"]
+            preprocessing  = ["hpf", "mean_center", "abs-envelope", "convolve", "decimate"]
         # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
         signals, probabilistic_model.number_of_seizures = \
             set_multiple_empirical_data(empirical_files, empirical_target_file, head, sensors_lbls, sensor_id,
@@ -248,12 +248,12 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
             if log_flag:
                 preprocessing = ["spectrogram", "log"]  #, "convolve" # ["hpf", "mean_center", "abs_envelope", "log"]
             else:
-                preprocessing = ["convolve", "decimate", "baseline"]
+                preprocessing = ["convolve", "decimate"]
         else:
             if log_flag:
                 preprocessing = ["log"]
             else:
-                preprocessing = ["decimate", "baseline"]
+                preprocessing = ["decimate"]
         rescale_x1eq = -1.225
         if np.max(probabilistic_model.model_config.x1eq) > rescale_x1eq:
             rescale_x1eq = False
