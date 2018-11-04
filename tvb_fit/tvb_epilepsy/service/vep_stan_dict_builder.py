@@ -4,7 +4,8 @@ import numpy as np
 from tvb_fit.base.utils.log_error_utils import warning
 from tvb_fit.base.utils.data_structures_utils import ensure_list
 
-from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import XModes, OBSERVATION_MODELS, X1EQ_CR, X1EQ_DEF
+from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants\
+    import XModes, SDE_MODES, OBSERVATION_MODELS, X1EQ_CR, X1EQ_DEF
 
 
 def set_time(probabilistic_model, time=None):
@@ -73,6 +74,11 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "time": set_time(probabilistic_model, time),
                 "active_regions": np.array(probabilistic_model.active_regions),
                 }
+    if probabilistic_model.sde_mode == SDE_MODES.CENTERED.value:
+        for p in ["x1", "z"]:
+            if p in probabilistic_model.parameters.keys():
+                vep_data.update({p + "_lo": np.min(probabilistic_model.parameters[p].low),
+                                 p + "_hi": np.max(probabilistic_model.parameters[p].high)})
     NO_PRIOR_CONST = 0.001
     for pkey, pflag in zip(["sigma", "tau1", "tau0", "K"], ["SDE", "TAU1_PRIOR", "TAU0_PRIOR", "K_PRIOR"]):
         param = probabilistic_model.parameters.get(pkey, None)
