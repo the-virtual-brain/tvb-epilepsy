@@ -430,7 +430,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             if isinstance(model_source_ts, Timeseries) and \
                isinstance(getattr(model_source_ts, "x1", None), Timeseries) and \
                isinstance(target_data, TargetDataTimeseries):
-                model_out_ts = model_source_ts.x1.squeezed[:, active_regions] - self.model_config.x1eq.mean()
+                model_out_ts = model_source_ts.x1.squeezed[:, active_regions]  # - self.model_config.x1eq.mean()
                 if self.observation_model in OBSERVATION_MODELS.SEEG.value and isinstance(self.gain_matrix, np.ndarray):
                     if self.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
                         model_out_ts = compute_seeg_exp(model_out_ts, self.gain_matrix)
@@ -471,7 +471,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             if isinstance(x1prior_ts, Timeseries) and \
                     isinstance(model_source_ts, Timeseries) and \
                             isinstance(getattr(model_source_ts, "x1", None), Timeseries):
-                model_out_ts = model_source_ts.x1.squeezed[:, active_regions] - self.model_config.x1eq.mean()
+                model_out_ts = model_source_ts.x1.squeezed[:, active_regions]  # - self.model_config.x1eq.mean()
                 self.x1_scale = np.max(x1prior_ts.data.max(axis=0) - x1prior_ts.data.min(axis=0)) / \
                                 np.max(model_out_ts.max(axis=0) - model_out_ts.min(axis=0))
                 self.x1_offset = np.median(x1prior_ts.data) - np.median(self.x1_scale * model_out_ts)
