@@ -9,11 +9,13 @@ from tvb_fit.base.config import CalculusConfig
 
 logger = initialize_logger(__name__)
 
+
 def is_numeric(value):
     return isinstance(value, (float, np.float, np.float64, np.float32, np.float16, np.float128,
                               int, np.int, np.int0, np.int8, np.int16, np.int32, np.int64,
                               complex, np.complex, np.complex64, np.complex128, np.complex256,
                               long, np.long, np.number))
+
 
 def is_integer(value):
     return isinstance(value, (int, np.int, np.int0, np.int8, np.int16, np.int32, np.int64))
@@ -67,6 +69,14 @@ def split_string_text_numbers(ls):
         if match:
             items.append(tuple(match[:2]))
     return items
+
+
+def join_labels_indices_dict(d):
+    out_list = []
+    for label, ind_list in sort_dict(d).items():
+        for ind in ind_list:
+            out_list.append(label + "%d" % ind)
+    return out_list
 
 
 def construct_import_path(path, package="tvb_fit"):
