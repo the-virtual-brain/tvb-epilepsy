@@ -37,13 +37,13 @@ def set_hypotheses(head, config):
     # # Regions of Pathological Excitability hypothesis:
     # x0_indices = [6, 15, 52, 53] # [1, 26] #
     # x0_values = 2.5*np.array([0.9, 0.9, 0.5, 0.5])
-    x0_indices = [1, 26] # DK, D: [6, 15] #
+    x0_indices = [6, 15]  # D, DK,: [1, 26] #
     x0_values = 2.5*np.array([0.9, 0.9])
     hyp_builder.set_x0_hypothesis(x0_indices, x0_values)
 
     # Regions of Model Epileptogenicity hypothesis:
     # e_indices = [6, 15, 52, 53]  # DK: [2, 25]
-    e_indices =  [2, 25] # DK, D: [52, 53] #
+    e_indices = [52, 53]  # D, DK: [2, 25] #
     # e_values = np.array([0.9, 0.9, 0.5, 0.5])  # np.array([0.99] * 2)
     e_values = np.array([0.5, 0.5])  # np.array([0.99] * 2)
     hyp_builder.set_e_hypothesis(e_indices, e_values)
