@@ -11,6 +11,7 @@ from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU1_DEF, TAU0_DEF
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import XModes, SDE_MODES, \
     OBSERVATION_MODELS, SIGMA_DEF
+from tvb_fit.tvb_epilepsy.base.constants.model_constants import TAU0_DEF as TAU0_FIT_DEF
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.probabilistic_models_builders import SDEProbabilisticModelBuilder
 from tvb_fit.tvb_epilepsy.service.model_inversion_services import SDEModelInversionService
@@ -65,7 +66,7 @@ def set_hypotheses(head, config):
 def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length, sim_times_on_off, sensors_lbls,
                         normal_flag=False, sim_source_type="fitting",
                         observation_model=OBSERVATION_MODELS.SEEG_POWER.value,
-                        downsampling=2, normalization="baseline-maxstd", fitmethod="sample",
+                        downsampling=2, preprocessing=[], normalization="baseline-maxstd", fitmethod="sample",
                         pse_flag=True, fit_flag=True, test_flag=False,  config=Config(), **kwargs):
 
     # Prepare necessary services:
@@ -127,7 +128,7 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         # Generate probabilistic model and model data
         probabilistic_model = \
             SDEProbabilisticModelBuilder(model_name=stan_model_name, model_config=model_configuration,
-                                         xmode=XModes.X1EQMODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
+                                         xmode=XModes.X1EQMODE.value, priors_mode=PriorsModes.INFORMATIVE.value,
                                          sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,
                                          normal_flag=normal_flag,  K=np.mean(model_configuration.K),
                                          sigma=SIGMA_DEF).generate_model(generate_parameters=False)
@@ -136,8 +137,8 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         # time series for fitting
         signals, probabilistic_model, simulator = \
            get_target_timeseries(probabilistic_model, head, lsa_hypothesis, times_on, time_length,
-                                 sensors_lbls, sensor_id, observation_model, sim_target_file,
-                                 empirical_target_file, sim_source_type, downsampling, empirical_files, config, plotter)
+                                 sensors_lbls, sensor_id, observation_model, sim_target_file, empirical_target_file,
+                                 sim_source_type, downsampling, preprocessing, empirical_files, config, plotter)
 
         # Update active model's active region nodes
         e_values = pse_results.get("e_values_mean", model_configuration.e_values)
@@ -178,8 +179,8 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         run_fitting(probabilistic_model, stan_model_name, model_data, target_data, config, head,
                     hyp.all_disease_indices, ["tau1", "sigma", "epsilon", "scale", "offset"], ["x0", "PZ", "x1eq", "zeq"],
                     fit_flag, test_flag, base_path, fitmethod, n_chains_or_runs=2,
-                    output_samples=200, num_warmup=100, min_samples_per_chain=200, max_depth=15, delta=0.95,
-                    iter=500000, tol_rel_obj=1e-6, debug=1, simulate=0, writer=writer, plotter=plotter, **kwargs)
+                    output_samples=50, num_warmup=50, min_samples_per_chain=50, max_depth=15, delta=0.95,
+                    iter=500000, tol_rel_obj=1e-6, debug=1, simulate=1, writer=writer, plotter=plotter, **kwargs)
 
 
     # -------------------------- Reconfigure model after fitting:---------------------------------------------------
@@ -193,7 +194,7 @@ if __name__ == "__main__":
 
     user_home = os.path.expanduser("~")
     SUBJECT = "TVB3"
-    head_folder = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", SUBJECT, "HeadDK")
+    head_folder = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", SUBJECT, "HeadD")
     SEEG_data = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "data/CC", "seeg", SUBJECT)
 
     if user_home == "/home/denis":
@@ -208,9 +209,10 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/empirical_DK")
+                              "fit/tests/simsensor_singlestep")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
+    config.generic.PROBLSTC_MODELS_PATH = os.path.join(user_home, "VEPlocal/CC/tvb-epilepsy-cc-study/stan")
 
     # TVB3 larger preselection:
     sensors_lbls = \
@@ -228,7 +230,7 @@ if __name__ == "__main__":
     # Simulation times_on_off
     #  for "fitting" simulations with tau0=30.0
     sim_times_on_off = [70.0, 120.0] # e_hypo, [100, 130] for x0_hypo, and e_x0_hypo
-    EMPIRICAL = True
+    EMPIRICAL = False
     sim_source_type = "paper"
     observation_model = OBSERVATION_MODELS.SEEG_POWER.value  #OBSERVATION_MODELS.SEEG_LOGPOWER.value  #OBSERVATION_MODELS.SOURCE_POWER.value  #
     if EMPIRICAL:
@@ -257,6 +259,7 @@ if __name__ == "__main__":
             times_on = sim_times_on_off[0]
             time_length = sim_times_on_off[1] - sim_times_on_off[0]
             normalization = "baseline"
+    preprocessing = []
     downsampling = 2
     normal_flag = False
   # ""  # "sample"  # "advi" or "opt"
@@ -271,9 +274,9 @@ if __name__ == "__main__":
                                              for seizure_file in seizures_files],
                             times_on, time_length, sim_times_on_off, sensors_lbls,
                             normal_flag, sim_source_type, observation_model,
-                            downsampling, normalization, fitmethod, pse_flag, fit_flag, test_flag, config)
+                            downsampling, preprocessing, normalization, fitmethod, pse_flag, fit_flag, test_flag, config)
     else:
         main_fit_sim_hyplsa(stan_model_name, [], times_on, time_length, sim_times_on_off, sensors_lbls,
                             normal_flag, sim_source_type, observation_model,
-                            downsampling, normalization, fitmethod, pse_flag, fit_flag, test_flag, config)
+                            downsampling, preprocessing, normalization, fitmethod, pse_flag, fit_flag, test_flag, config)
 

@@ -221,7 +221,7 @@ def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model
 
 def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_length, sensors_lbls, sensor_id,
                           observation_model, sim_target_file, empirical_target_file, sim_source_type="paper",
-                          downsampling=1, empirical_files=[], config=Config(), plotter=None):
+                          downsampling=1, preprocessing=[], empirical_files=[], config=Config(), plotter=None):
 
     # Some scripts for settting and preprocessing target signals:
     simulator = None
@@ -230,10 +230,11 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
     times_on = ensure_list(times_on)
     seizure_length = int(np.ceil(compute_seizure_length(probabilistic_model.tau0) / downsampling))
     if len(empirical_files) > 0:
-        if log_flag:
-            preprocessing = ["spectrogram", "log"] #
-        else:
-            preprocessing  = ["hpf", "mean_center", "abs-envelope", "convolve", "decimate"]
+        if len(preprocessing) == 0:
+            if log_flag:
+                preprocessing = ["spectrogram", "log"] #
+            else:
+                preprocessing  = ["hpf", "mean_center", "abs-envelope", "convolve", "decimate"]
         # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
         signals, probabilistic_model.number_of_seizures = \
             set_multiple_empirical_data(empirical_files, empirical_target_file, head, sensors_lbls, sensor_id,
@@ -244,16 +245,17 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
         probabilistic_model.number_of_seizures = 1
         # --------------------- Get fitting target simulated data (simulate if necessary) ----------------------
         probabilistic_model.target_data_type = Target_Data_Type.SYNTHETIC.value
-        if sim_source_type == "paper":
-            if log_flag:
-                preprocessing = ["spectrogram", "log"]  #, "convolve" # ["hpf", "mean_center", "abs_envelope", "log"]
+        if len(preprocessing) == 0:
+            if sim_source_type == "paper":
+                if log_flag:
+                    preprocessing = ["spectrogram", "log"]  #, "convolve" # ["hpf", "mean_center", "abs_envelope", "log"]
+                else:
+                    preprocessing = ["convolve", "decimate"]
             else:
-                preprocessing = ["convolve", "decimate"]
-        else:
-            if log_flag:
-                preprocessing = ["log"]
-            else:
-                preprocessing = ["decimate"]
+                if log_flag:
+                    preprocessing = ["log"]
+                else:
+                    preprocessing = ["decimate"]
         rescale_x1eq = -1.225
         if np.max(probabilistic_model.model_config.x1eq) > rescale_x1eq:
             rescale_x1eq = False
