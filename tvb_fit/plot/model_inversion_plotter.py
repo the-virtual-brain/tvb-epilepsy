@@ -422,7 +422,8 @@ class ModelInversionPlotter(TimeseriesPlotter):
             return fig
 
     def plot_scalar_model_comparison(self, model_comps, title_prefix="",
-                                     metrics=["aic", "aicc", "bic", "dic", "waic", "p_waic", "elpd_waic", "loo"],
+                                     metrics=["mean_log_likelihood", "aic", "aicc", "bic", "dic",
+                                              "waic", "p_waic", "elpd_waic", "loo"],
                                      subplot_shape=None, figsize=FiguresConfig.VERY_LARGE_SIZE, figure_name=None):
         metrics = [metric for metric in metrics if metric in model_comps.keys()]
         if subplot_shape is None:

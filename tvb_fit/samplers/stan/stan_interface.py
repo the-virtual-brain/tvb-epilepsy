@@ -205,6 +205,8 @@ class StanInterface(object):
 
             result = maxlike(log_likelihood)
 
+            result["mean_log_likelihood"] = np.mean(log_likelihood)
+
             if len(parameters) == 0:
                 parameters = [param for param in sample.keys() if param.find("_star") >= 0]
             if len(parameters) > 0:
