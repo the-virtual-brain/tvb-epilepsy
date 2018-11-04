@@ -209,7 +209,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/simsensor_singlestep")
+                              "fit/tests/empirical_singlestep")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
     config.generic.PROBLSTC_MODELS_PATH = os.path.join(user_home, "VEPlocal/CC/tvb-epilepsy-cc-study/stan")
@@ -230,7 +230,7 @@ if __name__ == "__main__":
     # Simulation times_on_off
     #  for "fitting" simulations with tau0=30.0
     sim_times_on_off = [70.0, 120.0] # e_hypo, [100, 130] for x0_hypo, and e_x0_hypo
-    EMPIRICAL = False
+    EMPIRICAL = True
     sim_source_type = "paper"
     observation_model = OBSERVATION_MODELS.SEEG_POWER.value  #OBSERVATION_MODELS.SEEG_LOGPOWER.value  #OBSERVATION_MODELS.SOURCE_POWER.value  #
     if EMPIRICAL:
