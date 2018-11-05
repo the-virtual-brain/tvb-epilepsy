@@ -74,11 +74,10 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "time": set_time(probabilistic_model, time),
                 "active_regions": np.array(probabilistic_model.active_regions),
                 }
-    if probabilistic_model.sde_mode == SDE_MODES.CENTERED.value:
-        for p in ["x1", "z"]:
-            if p in probabilistic_model.parameters.keys():
-                vep_data.update({p + "_lo": np.min(probabilistic_model.parameters[p].low),
-                                 p + "_hi": np.max(probabilistic_model.parameters[p].high)})
+    for p in ["x1", "z"]:
+        if p in probabilistic_model.parameters.keys():
+            vep_data.update({p + "_lo": np.min(probabilistic_model.parameters[p].low),
+                             p + "_hi": np.max(probabilistic_model.parameters[p].high)})
     NO_PRIOR_CONST = 0.001
     for pkey, pflag in zip(["sigma", "tau1", "tau0", "K"], ["SDE", "TAU1_PRIOR", "TAU0_PRIOR", "K_PRIOR"]):
         param = probabilistic_model.parameters.get(pkey, None)

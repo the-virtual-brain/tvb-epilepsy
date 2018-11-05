@@ -565,7 +565,7 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
         mins = []
         maxs = []
         means = []
-        if self.sde_mode == SDE_MODES.CENTERED.value:
+        if self.sde_mode == SDE_MODES.CENTERED.value or np.any([x in params_names for x in ["x1", "z"]]):
             self.logger.info("...autoregression centered time series parameters...")
             if "x1" in params_names:
                 names.append("x1")
@@ -579,16 +579,18 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
                 means.append(calc_eq_z(X1_REST, self.model_config.yc, self.model_config.Iext1, "2d", x2=0.0,
                                slope=self.model_config.slope, a=self.model_config.a, b=self.model_config.b,
                                d=self.model_config.d, x1_neg=True))
-            n_xp =len(names)
-        else:
-            self.logger.info("...autoregression noncentered time series parameters...")
-            names = list(set(["dWt"]) & set(params_names))  # "dX1t", "dZt"
-            n_xp = len(names)
-            mins = n_xp*[-1.0]
-            maxs = n_xp*[1.0]
-            means = n_xp*[0.0]
 
-        for iV in range(n_xp):
+        if self.sde_mode == SDE_MODES.NONCENTERED.value or \
+                np.any([dWt in params_names for dWt in ["dWt", "dX1t", "dZt"]]):
+            self.logger.info("...autoregression noncentered time series parameters...")
+            names_dWt = list(set(["dWt", "dX1t", "dZt"]) & set(params_names))  #
+            n_xp = len(names_dWt)
+            mins += n_xp*[-1.0]
+            maxs += n_xp*[1.0]
+            means += n_xp*[0.0]
+            names += names_dWt
+
+        for iV in range(len(names)):
             self.logger.info("..." + names[iV] + "...")
             if parameters.get(names[iV]) is False or names[iV] in params_names:
                 parameters.update(
