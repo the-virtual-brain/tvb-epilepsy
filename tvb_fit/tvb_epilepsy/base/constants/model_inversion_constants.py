@@ -96,6 +96,7 @@ OBSERVATION_MODEL_DEF = "seeg_logpower"
 class SDE_MODES(Enum):
     CENTERED = "centered"
     NONCENTERED = "noncentered"
+    MIXED = "mixed"
 
 SIGMA_DEF = 0.05  # from 0.1
 SIGMA_SCALE = 5.0  # from 2.0

@@ -5,7 +5,7 @@ from tvb_fit.base.utils.log_error_utils import warning
 from tvb_fit.base.utils.data_structures_utils import ensure_list
 
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants\
-    import XModes, SDE_MODES, OBSERVATION_MODELS, X1EQ_CR, X1EQ_DEF
+    import XModes, OBSERVATION_MODELS, X1EQ_CR, X1EQ_DEF
 
 
 def set_time(probabilistic_model, time=None):
