@@ -128,10 +128,10 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         # Generate probabilistic model and model data
         probabilistic_model = \
             SDEProbabilisticModelBuilder(model_name=stan_model_name, model_config=model_configuration,
-                                         xmode=XModes.X1EQMODE.value, priors_mode=PriorsModes.INFORMATIVE.value,
-                                         sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,
+                                         xmode=XModes.X1EQMODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value,
+                                         sde_mode=SDE_MODES.CENTERED.value, observation_model=observation_model,
                                          normal_flag=normal_flag,  K=np.mean(model_configuration.K),
-                                         sigma=SIGMA_DEF).generate_model(generate_parameters=False)
+                                         sigma=SIGMA_DEF, tau0=30.0).generate_model(generate_parameters=False)
 
         # Get by simulation and/or loading prototypical source 2D timeseries and the target (simulater or empirical)
         # time series for fitting
@@ -157,9 +157,9 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         #---------------------------------Finally set priors for the parameters-------------------------------------
         probabilistic_model = \
                 set_prior_parameters(probabilistic_model, target_data, source2D_ts, None, problstc_model_file,
-                                     [XModes.X0MODE.value, "x1_init", "z_init", "tau1",  # "tau0", "K", "x1",
-                                      "sigma", "dWt", "epsilon", "scale", "offset"], normal_flag,
-                                     writer=writer, plotter=plotter)
+                                     [XModes.X0MODE.value, "x1_init", "z_init", "tau1",  # "tau0", "K", "x1", "dWt
+                                      "sigma", "x1", "epsilon", "scale", "offset"], normal_flag,
+                                      writer=writer, plotter=plotter)
 
         # Construct the stan model data dict:
         model_data = build_stan_model_data_dict(probabilistic_model, target_data.squeezed,
@@ -209,7 +209,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/empirical_singlestep")
+                              "fit/tests/simsensor_x1cntrd")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
     config.generic.PROBLSTC_MODELS_PATH = os.path.join(user_home, "VEPlocal/CC/tvb-epilepsy-cc-study/stan")
@@ -230,7 +230,7 @@ if __name__ == "__main__":
     # Simulation times_on_off
     #  for "fitting" simulations with tau0=30.0
     sim_times_on_off = [70.0, 120.0] # e_hypo, [100, 130] for x0_hypo, and e_x0_hypo
-    EMPIRICAL = True
+    EMPIRICAL = False
     sim_source_type = "paper"
     observation_model = OBSERVATION_MODELS.SEEG_POWER.value  #OBSERVATION_MODELS.SEEG_LOGPOWER.value  #OBSERVATION_MODELS.SOURCE_POWER.value  #
     if EMPIRICAL:
@@ -263,7 +263,7 @@ if __name__ == "__main__":
     downsampling = 2
     normal_flag = False
   # ""  # "sample"  # "advi" or "opt"
-    stan_model_name = "vep_sde_cc"
+    stan_model_name = "vep_sde_cc_x1cntrd"
     fitmethod = "sample"
     pse_flag = True
     fit_flag = True
