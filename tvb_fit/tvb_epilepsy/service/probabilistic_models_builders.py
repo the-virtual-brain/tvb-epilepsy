@@ -436,6 +436,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                         model_out_ts = compute_seeg_exp(model_out_ts, self.gain_matrix)
                     else:
                         model_out_ts = compute_seeg_lin(model_out_ts, self.gain_matrix)
+                model_out_ts -= np.mean(model_source_ts, axis=0)
                 self.offset = np.percentile(target_data.data, 50) - np.percentile(model_out_ts, 50)  # np.median(self.scale*model_out_ts)
                 model_out_ts += self.offset
                 self.scale = np.median(np.percentile(target_data.data, 99, axis=0) -
@@ -476,6 +477,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                     isinstance(model_source_ts, Timeseries) and \
                             isinstance(getattr(model_source_ts, "x1", None), Timeseries):
                 model_out_ts = model_source_ts.x1.squeezed[:, active_regions] # - self.model_config.x1eq.mean() #- X1_MIN #
+                model_out_ts -= np.mean(model_out_ts, axis=0)
                 self.offset = np.percentile(x1prior_ts.data, 50) - np.percentile(model_out_ts, 50)   # np.median(self.scale*model_out_ts)
                 model_out_ts += self.offset
                 self.scale = np.median(np.percentile(x1prior_ts.data, 99, axis=0) -
