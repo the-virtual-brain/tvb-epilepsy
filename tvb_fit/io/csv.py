@@ -1,8 +1,9 @@
 # encoding=utf8
 
 import numpy as np
+
+from tvb_fit.base.utils.log_error_utils import initialize_logger, warning
 from tvb_fit.io.r_file_io import rdump
-from tvb_fit.base.utils.log_error_utils import initialize_logger
 
 
 def merge_csv_data(*csvs):
@@ -24,57 +25,63 @@ def parse_csv(fname, merge=True):
         import glob
         return parse_csv(glob.glob(fname), merge=merge)
     if isinstance(fname, (list, tuple)):
-        csv = [parse_csv(_) for _ in fname]
+        csv = []
+        for csv_dict in [parse_csv(_) for _ in fname]:
+            if len(csv_dict) > 0:
+                csv.append(csv_dict)
         if merge:
             csv = merge_csv_data(*csv)
         return csv
 
-    lines = []
-    with open(fname, 'r') as fd:
-        for line in fd.readlines():
-            if not line.startswith('#'):
-                lines.append(line.strip().split(','))
-    names = [field.split('.') for field in lines[0]]
-    data = []
-    for id_line, line in enumerate(lines[1:]):
-        append_data = True
-        for iline in range(len(line)):
-            try:
-                line[iline] = float(line[iline])
-            except:
-                logger = initialize_logger(__name__)
-                logger.warn("Failed to convert string " + line[iline] + " to float!" +
-                            "\nSkipping line " + str(id_line) + ":  " + str(line) + "!")
-                append_data = False
-                break
-        if append_data:
-            data.append(line)
-    data = np.array(data)
+    try:
+        lines = []
+        with open(fname, 'r') as fd:
+            for line in fd.readlines():
+                if not line.startswith('#'):
+                    lines.append(line.strip().split(','))
+        names = [field.split('.') for field in lines[0]]
+        data = []
+        for id_line, line in enumerate(lines[1:]):
+            append_data = True
+            for iline in range(len(line)):
+                try:
+                    line[iline] = float(line[iline])
+                except:
+                    logger = initialize_logger(__name__)
+                    logger.warn("Failed to convert string " + line[iline] + " to float!" +
+                                "\nSkipping line " + str(id_line) + ":  " + str(line) + "!")
+                    append_data = False
+                    break
+            if append_data:
+                data.append(line)
+        data = np.array(data)
 
-    namemap = {}
-    maxdims = {}
-    for i, name in enumerate(names):
-        if name[0] not in namemap:
-            namemap[name[0]] = []
-        namemap[name[0]].append(i)
-        if len(name) > 1:
-            maxdims[name[0]] = name[1:]
+        namemap = {}
+        maxdims = {}
+        for i, name in enumerate(names):
+            if name[0] not in namemap:
+                namemap[name[0]] = []
+            namemap[name[0]].append(i)
+            if len(name) > 1:
+                maxdims[name[0]] = name[1:]
 
-    for name in maxdims.keys():
-        dims = []
-        for dim in maxdims[name]:
-            dims.append(int(dim))
-        maxdims[name] = tuple(reversed(dims))
+        for name in maxdims.keys():
+            dims = []
+            for dim in maxdims[name]:
+                dims.append(int(dim))
+            maxdims[name] = tuple(reversed(dims))
 
-    # data in linear order per Stan, e.g. mat is col maj
-    # TODO array is row maj, how to distinguish matrix vs array[,]?
-    data_ = {}
-    for name, idx in namemap.items():
-        new_shape = (-1,) + maxdims.get(name, ())
-        data_[name] = data[:, idx].reshape(new_shape)
+        # data in linear order per Stan, e.g. mat is col maj
+        # TODO array is row maj, how to distinguish matrix vs array[,]?
+        data_ = {}
+        for name, idx in namemap.items():
+            new_shape = (-1,) + maxdims.get(name, ())
+            data_[name] = data[:, idx].reshape(new_shape)
 
-    return data_
-
+        return data_
+    except:
+        warning("Failed to read %s!" % fname)
+        return {}
 
 def parse_csv_in_cols(fname):
     names = []
