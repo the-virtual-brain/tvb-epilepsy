@@ -217,7 +217,7 @@ if __name__ == "__main__":
                                              u"G'": np.arange(1, 5).tolist() + np.arange(9, 16).tolist(),
                                              u"L'": np.arange(1, 14).tolist(),
                                              u"M'": np.arange(1, 4).tolist() + np.arange(7, 16).tolist(),
-                                             u"O'": np.arange(1, 4).tolist() + np.arange(6, 14).tolist(),
+                                             u"O'": np.arange(1, 4).tolist() + np.arange(6, 13).tolist(),
                                              u"P'": np.arange(1, 4).tolist() + [8] + np.arange(10, 17).tolist(),
                                              u"R'": np.arange(1, 5).tolist() + np.arange(7, 10).tolist()})
 
