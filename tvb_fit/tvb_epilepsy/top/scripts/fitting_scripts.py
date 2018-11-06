@@ -249,8 +249,8 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
             preprocessin = []
             if sim_source_type == "paper":
                 preprocessing = ["convolve"] # ["spectrogram", "log"]  #, "convolve" # ["hpf", "mean_center", "abs_envelope", "log"]
-        if observation_model in OBSERVATION_MODELS.SEEG.value:
-            preprocessing += ["mean_center"]
+        # if observation_model in OBSERVATION_MODELS.SEEG.value:
+        preprocessing += ["mean_center"]
         preprocessing += ["decimate"]
         rescale_x1eq = -1.225
         if np.max(probabilistic_model.model_config.x1eq) > rescale_x1eq:
@@ -511,7 +511,7 @@ def reconfigure_model_with_fit_estimates(head, model_configuration, probabilisti
                                       K_unscaled=K * model_configuration.number_of_regions). \
                 set_parameter("tau1", tau1).set_parameter("tau0", tau0)
         x0 = model_configuration.x0
-        x0[probabilistic_model.active_regions] = est["x0"]
+        x0[probabilistic_model.active_regions] = est["x0"].squeezed()
         x0_values_fit = fit_model_configuration_builder._compute_x0_values_from_x0_model(x0)
         hyp_fit = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions). \
             set_name('fit' + str(id_est + 1)). \
