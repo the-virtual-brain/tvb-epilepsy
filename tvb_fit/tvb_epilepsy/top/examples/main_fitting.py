@@ -263,8 +263,8 @@ if __name__ == "__main__":
     stan_model_name = "vep_sde_cc"
     fitmethod = "sample"
     pse_flag = True
-    fit_flag = False
-    test_flag = True
+    fit_flag = True
+    test_flag = False
     if EMPIRICAL:
         main_fit_sim_hyplsa(stan_model_name,
                             [os.path.join(config.input.RAW_DATA_FOLDER, seizure_file)
