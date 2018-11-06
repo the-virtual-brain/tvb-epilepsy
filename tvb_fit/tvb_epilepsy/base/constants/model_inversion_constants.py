@@ -38,7 +38,7 @@ TAU0_SCALE = 2.0
 K_DEF = 3.0
 K_MIN = 0.0
 K_MAX = 15.0
-K_SCALE = 3.0
+K_SCALE = 1.0
 
 MC_MIN = 0.0
 MC_MAX = 2.0
@@ -80,7 +80,7 @@ EPSILON_DEF = 0.1
 SCALE_DEF = 1.0
 SCALE_SCALE_DEF = 3.0
 OFFSET_DEF = 0.0
-OFFSET_SCALE_DEF = 3.0
+OFFSET_SCALE_DEF = 1.0
 
 class OBSERVATION_MODELS(Enum):
     SEEG_LOGPOWER = 0
@@ -99,7 +99,7 @@ class SDE_MODES(Enum):
     MIXED = "mixed"
 
 SIGMA_DEF = 0.05  # from 0.1
-SIGMA_SCALE = 5.0  # from 2.0
+SIGMA_SCALE = 2.0  # from 2.0
 SIGMA_MAX = 0.15  # from 0.5
 SIGMA_MIN = 0.01  # from 0.05
 
