@@ -5,12 +5,11 @@ import numpy as np
 
 from tvb_fit.base.constants import PriorsModes
 from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.utils.data_structures_utils import ensure_list, find_labels_inds
-
+from tvb_fit.base.utils.data_structures_utils import ensure_list, find_labels_inds, join_labels_indices_dict
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU1_DEF, TAU0_DEF
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import XModes, SDE_MODES, \
-    OBSERVATION_MODELS, SIGMA_DEF
+    OBSERVATION_MODELS, OBSERVATION_MODEL_DEF, SIGMA_DEF
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.probabilistic_models_builders import SDEProbabilisticModelBuilder
 from tvb_fit.tvb_epilepsy.service.model_inversion_services import SDEModelInversionService
@@ -64,9 +63,8 @@ def set_hypotheses(head, config):
 
 def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length, sim_times_on_off, sensors_lbls,
                         normal_flag=False, sim_source_type="fitting",
-                        observation_model=OBSERVATION_MODELS.SEEG_POWER.value,
-                        downsampling=2, preprocessing=[], normalization="baseline-maxstd", fitmethod="sample",
-                        pse_flag=True, fit_flag=True, test_flag=False,  config=Config(), **kwargs):
+                        observation_model=OBSERVATION_MODEL_DEF, downsampling=2, preprocessing=[], normalization=None,
+                        fitmethod="sample", pse_flag=True, fit_flag=True, test_flag=False,  config=Config(), **kwargs):
 
     # Prepare necessary services:
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
@@ -214,17 +212,14 @@ if __name__ == "__main__":
     config.generic.PROBLSTC_MODELS_PATH = os.path.join(user_home, "VEPlocal/CC/tvb-epilepsy-cc-study/stan")
 
     # TVB3 larger preselection:
-    sensors_lbls = \
-        [u"B'1", u"B'2", u"B'3", u"B'4",
-         u"F'1", u"F'2", u"F'3", u"F'4", u"F'5", u"F'6", u"F'7", u"F'8", u"F'9", u"F'10", u"F'11",
-         u"G'1", u"G'2", u"G'3", u"G'4", u"G'8", u"G'9", u"G'10", u"G'11", u"G'12", u"G'13", u"G'14", u"G'15",
-         u"L'1", u"L'2", u"L'3", u"L'4", u"L'5", u"L'6", u"L'7", u"L'8", u"L'9", u"L'10", u"L'11", u"L'12", u"L'13",
-         u"M'1", u"M'2", u"M'3", u"M'7", u"M'8", u"M'9", u"M'10", u"M'11", u"M'12", u"M'13", u"M'14", u"M'15",
-         u"O'1", u"O'2", u"O'3", u"O'6", u"O'7", u"O'8", u"O'9", u"O'10", u"O'11", u"O'12", # u"O'13"
-         u"P'1", u"P'2", u"P'3", u"P'8", u"P'10", u"P'11", u"P'12", u"P'13", u"P'14", u"P'15", u"P'16",
-         u"R'1", u"R'2", u"R'3", u"R'4", u"R'7", u"R'8", u"R'9",
-         ]
-
+    sensors_lbls = join_labels_indices_dict({u"B'": np.arange(1, 5).tolist() + np.arange(12, 15).tolist(),
+                                             u"F'": np.arange(1, 12).tolist(),
+                                             u"G'": np.arange(1, 5).tolist() + np.arange(9, 16).tolist(),
+                                             u"L'": np.arange(1, 14).tolist(),
+                                             u"M'": np.arange(1, 4).tolist() + np.arange(7, 16).tolist(),
+                                             u"O'": np.arange(1, 4).tolist() + np.arange(6, 14).tolist(),
+                                             u"P'": np.arange(1, 4).tolist() + [8] + np.arange(10, 17).tolist(),
+                                             u"R'": np.arange(1, 5).tolist() + np.arange(7, 10).tolist()})
 
     # Simulation times_on_off
     #  for "fitting" simulations with tau0=30.0
@@ -259,9 +254,8 @@ if __name__ == "__main__":
     preprocessing = []
     downsampling = 2
     normal_flag = False
-  # ""  # "sample"  # "advi" or "opt"
     stan_model_name = "vep_sde_cc"
-    fitmethod = "sample"
+    fitmethod = "sample"   # ""  # "sample"  # "advi" or "opt"
     pse_flag = True
     fit_flag = True
     test_flag = False
