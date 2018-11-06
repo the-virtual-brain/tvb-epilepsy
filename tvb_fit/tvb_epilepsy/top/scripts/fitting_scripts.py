@@ -195,9 +195,9 @@ def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model
     del x1, z
     signals = signals["source"].get_source()
     signals.data = -signals.data  # change sign to fit x1
-
     if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
         log_flag = probabilistic_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
+        # get timeseries to be positive
         title_prefix = title_prefix + "SimSEEG"
         signals = prepare_simulated_seeg_observable(signals, head.get_sensors_by_index(sensor_ids=sensor_id),
                                                     seizure_length, log_flag, times_on_off, [],
@@ -232,7 +232,7 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
     if len(empirical_files) > 0:
         if len(preprocessing) == 0:
             if log_flag:
-                preprocessing = ["spectrogram", "log"] #
+                preprocessing = ["hpf", "abs-envelope", "convolve", "log", "decimate"]# ["spectrogram", "log"] #
             else:
                 preprocessing  = ["hpf", "mean_center", "abs-envelope", "convolve", "decimate"]
         # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
@@ -247,15 +247,9 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
         probabilistic_model.target_data_type = Target_Data_Type.SYNTHETIC.value
         if len(preprocessing) == 0:
             if sim_source_type == "paper":
-                if log_flag:
-                    preprocessing = ["spectrogram", "log"]  #, "convolve" # ["hpf", "mean_center", "abs_envelope", "log"]
-                else:
-                    preprocessing = ["convolve", "decimate"]
+                preprocessing = ["convolve", "decimate"] # ["spectrogram", "log"]  #, "convolve" # ["hpf", "mean_center", "abs_envelope", "log"]
             else:
-                if log_flag:
-                    preprocessing = ["log"]
-                else:
-                    preprocessing = ["decimate"]
+                preprocessing = ["decimate"]
         rescale_x1eq = -1.225
         if np.max(probabilistic_model.model_config.x1eq) > rescale_x1eq:
             rescale_x1eq = False

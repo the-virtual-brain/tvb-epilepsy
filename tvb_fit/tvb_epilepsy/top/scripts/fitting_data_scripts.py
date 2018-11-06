@@ -90,7 +90,7 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
             data.data = np.array(data.data).astype("float32")
             temp_on_off = [data.time_start, data.time_end]
             if plotter:
-                plotter.plot_raster({"Spetrogram signals": data.squeezed}, data.time, time_units=data.time_unit,
+                plotter.plot_raster({"Spectrogram signals": data.squeezed}, data.time, time_units=data.time_unit,
                                     special_idx=[], title='Spectrogram Time Series', offset=0.1,
                                     figure_name=title_prefix + '_%sSpectrogramRaster' % stri_preproc,
                                     labels=data.space_labels)

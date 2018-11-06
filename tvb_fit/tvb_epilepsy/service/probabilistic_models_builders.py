@@ -430,15 +430,21 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             if isinstance(model_source_ts, Timeseries) and \
                isinstance(getattr(model_source_ts, "x1", None), Timeseries) and \
                isinstance(target_data, TargetDataTimeseries):
-                model_out_ts = model_source_ts.x1.squeezed[:, active_regions]  # - self.model_config.x1eq.mean()
+                model_out_ts = model_source_ts.x1.squeezed[:, active_regions] # - self.model_config.x1eq.mean() # - X1_MIN #
                 if self.observation_model in OBSERVATION_MODELS.SEEG.value and isinstance(self.gain_matrix, np.ndarray):
                     if self.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
                         model_out_ts = compute_seeg_exp(model_out_ts, self.gain_matrix)
                     else:
                         model_out_ts = compute_seeg_lin(model_out_ts, self.gain_matrix)
-                self.scale = np.max(target_data.data.max(axis=0) - target_data.data.min(axis=0)) / \
-                             np.max(model_out_ts.max(axis=0) - model_out_ts.min(axis=0))
-                self.offset = np.median(target_data.data) - np.median(self.scale*model_out_ts)
+                self.offset = np.percentile(target_data.data, 50) - np.percentile(model_out_ts, 50)  # np.median(self.scale*model_out_ts)
+                model_out_ts += self.offset
+                self.scale = np.median(np.percentile(target_data.data, 99, axis=0) -
+                                       np.percentile(target_data.data, 1, axis=0)) / \
+                             np.median(np.percentile(model_out_ts, 99, axis=0) -
+                                       np.percentile(model_out_ts, 1, axis=0))
+                # self.scale = np.max(target_data.data.max(axis=0) - target_data.data.min(axis=0)) / \
+                #              np.max(model_out_ts.max(axis=0) - model_out_ts.min(axis=0))
+                # self.offset = np.median(target_data.data) - np.median(self.scale*model_out_ts)
                 self.epsilon = np.max(target_data.data.max(axis=0) - target_data.data.min(axis=0))/10
 
             self.logger.info("...observation's model parameters...")
@@ -453,9 +459,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                 self.logger.info("...scale...")
                 scale_sigma = self.scale / SCALE_SCALE_DEF
                 parameters.update({"scale": self.generate_normal_or_lognormal_parameter("scale", self.scale,
-                                                                                        np.maximum(0.1,
-                                                                                                   self.scale -
-                                                                                                   3 * scale_sigma),
+                                                                                        scale_sigma,
                                                                                         self.scale + 3 * scale_sigma,
                                                                                         sigma=scale_sigma)})
 
@@ -471,10 +475,16 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             if isinstance(x1prior_ts, Timeseries) and \
                     isinstance(model_source_ts, Timeseries) and \
                             isinstance(getattr(model_source_ts, "x1", None), Timeseries):
-                model_out_ts = model_source_ts.x1.squeezed[:, active_regions]  # - self.model_config.x1eq.mean()
-                self.x1_scale = np.max(x1prior_ts.data.max(axis=0) - x1prior_ts.data.min(axis=0)) / \
-                                np.max(model_out_ts.max(axis=0) - model_out_ts.min(axis=0))
-                self.x1_offset = np.median(x1prior_ts.data) - np.median(self.x1_scale * model_out_ts)
+                model_out_ts = model_source_ts.x1.squeezed[:, active_regions] # - self.model_config.x1eq.mean() #- X1_MIN #
+                self.offset = np.percentile(x1prior_ts.data, 50) - np.percentile(model_out_ts, 50)   # np.median(self.scale*model_out_ts)
+                model_out_ts += self.offset
+                self.scale = np.median(np.percentile(x1prior_ts.data, 99, axis=0) -
+                                       np.percentile(x1prior_ts.data, 1, axis=0)) / \
+                             np.median(np.percentile(model_out_ts, 99, axis=0) -
+                                       np.percentile(model_out_ts, 1, axis=0))
+                # self.x1_scale = np.max(x1prior_ts.data.max(axis=0) - x1prior_ts.data.min(axis=0)) / \
+                #                 np.max(model_out_ts.max(axis=0) - model_out_ts.min(axis=0))
+                # self.x1_offset = np.median(x1prior_ts.data) - np.median(self.x1_scale * model_out_ts)
 
             if "x1_scale" in params_names:
                 self.logger.info("...x1_scale...")
