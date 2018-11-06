@@ -127,8 +127,8 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
             SDEProbabilisticModelBuilder(model_name=stan_model_name, model_config=model_configuration,
                                          xmode=XModes.X1EQMODE.value, priors_mode=PriorsModes.INFORMATIVE.value,
                                          sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,
-                                         normal_flag=normal_flag,  K=np.mean(model_configuration.K),
-                                         sigma=SIGMA_DEF, tau0=30.0).generate_model(generate_parameters=False)
+                                         normal_flag=normal_flag,  K=np.mean(model_configuration.K)).\
+                generate_model(generate_parameters=False)
 
         # Get by simulation and/or loading prototypical source 2D timeseries and the target (simulater or empirical)
         # time series for fitting
