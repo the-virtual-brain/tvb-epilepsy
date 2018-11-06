@@ -459,7 +459,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                 self.logger.info("...scale...")
                 scale_sigma = self.scale / SCALE_SCALE_DEF
                 parameters.update({"scale": self.generate_normal_or_lognormal_parameter("scale", self.scale,
-                                                                                        scale_sigma,
+                                                                                        0.1*self.scale,
                                                                                         self.scale + 3 * scale_sigma,
                                                                                         sigma=scale_sigma)})
 
