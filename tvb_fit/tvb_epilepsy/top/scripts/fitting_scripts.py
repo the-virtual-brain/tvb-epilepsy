@@ -232,7 +232,7 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
     if len(empirical_files) > 0:
         if len(preprocessing) == 0:
             if log_flag:
-                preprocessing = ["hpf", "abs-envelope", "convolve", "log", "decimate"]# ["spectrogram", "log"] #
+                preprocessing = ["hpf", "abs-envelope", "convolve", "decimate", "log"]# ["spectrogram", "log"] #
             else:
                 preprocessing  = ["hpf", "mean_center", "abs-envelope", "convolve", "decimate"]
         # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
