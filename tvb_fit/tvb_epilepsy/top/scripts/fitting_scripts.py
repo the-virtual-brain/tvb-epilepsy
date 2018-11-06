@@ -246,10 +246,12 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
         # --------------------- Get fitting target simulated data (simulate if necessary) ----------------------
         probabilistic_model.target_data_type = Target_Data_Type.SYNTHETIC.value
         if len(preprocessing) == 0:
+            preprocessin = []
             if sim_source_type == "paper":
-                preprocessing = ["convolve", "decimate"] # ["spectrogram", "log"]  #, "convolve" # ["hpf", "mean_center", "abs_envelope", "log"]
-            else:
-                preprocessing = ["decimate"]
+                preprocessing = ["convolve"] # ["spectrogram", "log"]  #, "convolve" # ["hpf", "mean_center", "abs_envelope", "log"]
+        if observation_model in OBSERVATION_MODELS.SEEG.value:
+            preprocessing += ["mean_center"]
+        preprocessing += ["decimate"]
         rescale_x1eq = -1.225
         if np.max(probabilistic_model.model_config.x1eq) > rescale_x1eq:
             rescale_x1eq = False
