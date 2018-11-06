@@ -95,10 +95,11 @@ class TimeseriesService(object):
             return timeseries
 
     def convolve(self, timeseries, win_len=None, kernel=None):
+        n_kernel_points = np.int(np.round(win_len))
         if kernel is None:
-            kernel = np.ones((np.int(np.round(win_len)), 1, 1, 1))
+            kernel = np.ones((n_kernel_points, 1, 1, 1)) / n_kernel_points
         else:
-            kernel = kernel * np.ones((np.int(np.round(win_len)), 1, 1, 1))
+            kernel = kernel * np.ones((n_kernel_points, 1, 1, 1))
         return timeseries.__class__(convolve(timeseries.data, kernel, mode='same'), timeseries.dimension_labels,
                                     timeseries.time_start, timeseries.time_step, timeseries.time_unit)
 
