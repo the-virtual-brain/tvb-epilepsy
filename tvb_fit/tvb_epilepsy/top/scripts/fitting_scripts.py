@@ -511,7 +511,7 @@ def reconfigure_model_with_fit_estimates(head, model_configuration, probabilisti
                                       K_unscaled=K * model_configuration.number_of_regions). \
                 set_parameter("tau1", tau1).set_parameter("tau0", tau0)
         x0 = model_configuration.x0
-        x0[probabilistic_model.active_regions] = est["x0"].squeezed()
+        x0[probabilistic_model.active_regions] = est["x0"].squeeze()
         x0_values_fit = fit_model_configuration_builder._compute_x0_values_from_x0_model(x0)
         hyp_fit = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions). \
             set_name('fit' + str(id_est + 1)). \
