@@ -209,7 +209,8 @@ if __name__ == "__main__":
                               "fit/tests/empirical_singlestep_meancntrd_advi")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
-    config.generic.PROBLSTC_MODELS_PATH = os.path.join(user_home, "VEPlocal/CC/tvb-epilepsy-cc-study/stan")
+    study_repo_path = os.path.join(user_home, "VEPlocal/CC/tvb-epilepsy-cc-study")
+    config.generic.PROBLSTC_MODELS_PATH = os.path.join(study_repo_path, "tvb_epilepsy/stan")
 
     # TVB3 larger preselection:
     sensors_lbls = join_labels_indices_dict({u"B'": np.arange(1, 5).tolist() + np.arange(12, 15).tolist(),
