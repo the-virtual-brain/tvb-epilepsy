@@ -505,7 +505,12 @@ def reconfigure_model_with_fit_estimates(head, model_configuration, probabilisti
         K = est.get("K", np.mean(model_configuration.K))
         tau1 = est.get("tau1", np.mean(model_configuration.tau1))
         tau0 = est.get("tau0", np.mean(model_configuration.tau0))
-        fit_conn = est.get("MC", model_configuration.connectivity)
+        # fit_conn = est.get("MC", model_configuration.connectivity)
+        # if fit_conn.shape != model_configuration.connectivity.shape:
+        #     temp_conn = model_configuration.connectivity
+        #     temp_conn[probabilistic_model.active_regions][:, probabilistic_model.active_regions] = fit_conn
+        #     fit_conn = temp_conn
+        fit_conn = model_configuration.connectivity
         fit_model_configuration_builder = \
             ModelConfigurationBuilder(model_configuration.model_name, fit_conn,
                                       K_unscaled=K * model_configuration.number_of_regions). \
