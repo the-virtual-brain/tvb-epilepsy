@@ -6,12 +6,13 @@ from tvb_fit.base.constants import Target_Data_Type
 from tvb_fit.base.utils.log_error_utils import initialize_logger, warning
 from tvb_fit.base.utils.data_structures_utils import ensure_list, generate_region_labels
 from tvb_fit.base.utils.file_utils import move_overwrite_files_to_folder_with_wildcard
+from tvb_fit.base.computations.math_utils import select_greater_values_array_inds
 from tvb_fit.service.timeseries_service import TimeseriesService
 from tvb_fit.samplers.stan.cmdstan_interface import CmdStanInterface
 from tvb_fit.plot.head_plotter import HeadPlotter
 
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
-from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU1_DEF, TAU0_DEF
+from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU1_DEF, TAU0_DEF, X1EQ_CR_DEF
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import OBSERVATION_MODELS, SEIZURE_LENGTH, \
     HIGH_HPF, LOW_HPF, LOW_LPF, HIGH_LPF, WIN_LEN_RATIO, BIPOLAR, TARGET_DATA_PREPROCESSING, XModes, compute_upsample, \
     compute_seizure_length
@@ -534,8 +535,8 @@ def reconfigure_model_with_fit_estimates(head, model_configuration, probabilisti
         # Plot nullclines and equilibria of model configuration
         if plotter:
             plotter.plot_state_space(model_configuration_fit, region_labels=head.connectivity.region_labels,
-                                     special_idx=probabilistic_model.active_regions,
-                                     figure_name="fit_Nullclines and equilibria")
+                                     special_idx=select_greater_values_array_inds(model_configuration_fit.x0),
+                                     figure_name="fit_Nullclines and equilibria")  # threshold=X1EQ_CR_DEF),
         return model_configuration_fit
 
 
