@@ -348,7 +348,7 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
     max_depth = np.where(test_flag, 7, max_depth)
     delta = np.where(test_flag, 0.8, delta)
     # ADVI or optimization:
-    iter = np.where(test_flag, 1000, iter)
+    iter = np.where(test_flag, 10000, iter)
     if fitmethod.find("sampl") >= 0:
         skip_samples = num_warmup
     else:
