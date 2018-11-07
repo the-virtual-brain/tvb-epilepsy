@@ -57,7 +57,7 @@ Z_INIT_MAX = 5.0
 
 
 def compute_seizure_length(tau0):
-    return int(np.ceil(64 * (1 + 2*np.log10(tau0 / 30.0))))
+    return np.maximum(32, int(np.ceil(64 * (1 + 2*np.log10(tau0 / 30.0)))))
 
 
 def compute_dt(tau1):
