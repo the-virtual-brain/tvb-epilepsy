@@ -27,7 +27,7 @@ SIGMA_X0_DEF = 0.25*(X0_MAX - X0_MIN)
 
 TAU1_DEF = 0.5
 TAU1_MIN = 0.25  # from 0.1
-TAU1_MAX = 1.0
+TAU1_MAX = 0.75
 TAU1_SCALE = 10.0  # from 5.0
 
 TAU0_DEF = 30.0
