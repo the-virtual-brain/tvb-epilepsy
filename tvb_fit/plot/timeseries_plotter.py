@@ -218,7 +218,7 @@ class TimeseriesPlotter(BasePlotter):
                 data[id] = data[id] / drange # zscore(d, axis=None)
             data_lims.append([d.min(), d.max()])
         data_shape = data[0].shape
-        if len(data_shape==1):
+        if len(data_shape) == 1:
             n_times = data_shape[0]
             nTS = 1
         else:
