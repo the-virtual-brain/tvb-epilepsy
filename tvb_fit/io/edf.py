@@ -16,6 +16,8 @@ def read_edf(path, sensors, rois_selection=None, label_strip_fun=None, time_unit
     if not callable(label_strip_fun):
         label_strip_fun = lambda label: label
 
+    channel_names = [label_strip_fun(s) for s in raw_data.ch_names]
+
     rois = []
     rois_inds = []
     rois_lbls = []
@@ -23,24 +25,22 @@ def read_edf(path, sensors, rois_selection=None, label_strip_fun=None, time_unit
         rois_selection = sensors.labels
 
     logger.info("Selecting target signals from dataset...")
-    for iR, s in enumerate(raw_data.ch_names):
-        this_label = label_strip_fun(s)
-        this_index = sensors.get_sensors_inds_by_sensors_labels(this_label)
-        if this_label in rois_selection or (len(this_index) == 1 and this_index[0] in rois_selection):
-            rois.append(iR)
-            rois_inds.append(this_index[0])
-            rois_lbls.append(this_label)
+    for sensor_ind, sensor_label in enumerate(sensors.labels):
+        if sensor_label in rois_selection and sensor_label in channel_names:
+            rois.append(channel_names.index(sensor_label))
+            rois_inds.append(sensor_ind)
+            rois_lbls.append(sensor_label)
 
     data, times = raw_data[:, :]
     data = data[rois].T
     # Assuming that edf file time units is "sec"
     if ensure_string(time_units).find("ms") == 0:
         times = 1000 * times
-    sort_inds = np.argsort(rois_lbls)
-    rois = np.array(rois)[sort_inds]
-    rois_inds = np.array(rois_inds)[sort_inds]
-    rois_lbls = np.array(rois_lbls)[sort_inds]
-    data = data[:, sort_inds]
+    # sort_inds = np.argsort(rois_lbls)
+    rois = np.array(rois) # [sort_inds]
+    rois_inds = np.array(rois_inds) # [sort_inds]
+    rois_lbls = np.array(rois_lbls) # [sort_inds]
+    # data = data[:, sort_inds]
 
     return data, times, rois, rois_inds, rois_lbls
 
