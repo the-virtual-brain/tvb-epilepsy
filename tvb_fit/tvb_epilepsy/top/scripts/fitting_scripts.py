@@ -12,10 +12,10 @@ from tvb_fit.samplers.stan.cmdstan_interface import CmdStanInterface
 from tvb_fit.plot.head_plotter import HeadPlotter
 
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
-from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU1_DEF, TAU0_DEF, X1EQ_CR_DEF
+from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU1_DEF, TAU0_DEF
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import OBSERVATION_MODELS, SEIZURE_LENGTH, \
-    HIGH_HPF, LOW_HPF, LOW_LPF, HIGH_LPF, WIN_LEN, BIPOLAR, TARGET_DATA_PREPROCESSING, XModes, compute_upsample, \
-    compute_seizure_length
+    HIGH_HPF, LOW_HPF, LOW_LPF, HIGH_LPF, WIN_LEN_RATIO, BIPOLAR, TARGET_DATA_PREPROCESSING, XModes, \
+    compute_upsample, compute_seizure_length
 from tvb_fit.tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, Timeseries
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
@@ -111,7 +111,7 @@ def get_2D_simulation(model_configuration, head, lsa_hypothesis, source2D_file, 
 def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0, seizure_length=SEIZURE_LENGTH,
                        times_on_off=[], time_units="ms", label_strip_fun=None,
                        preprocessing=TARGET_DATA_PREPROCESSING, low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF,
-                       high_lpf=HIGH_LPF, bipolar=BIPOLAR, win_len=WIN_LEN,
+                       high_lpf=HIGH_LPF, bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO,
                        plotter=None, title_prefix=""):
     try:
         return H5Reader().read_timeseries(ts_file)
@@ -122,11 +122,16 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
         # ... or preprocess empirical data for the first time:
         if len(sensors_lbls) == 0:
             sensors_lbls = head.get_sensors_by_index(sensor_ids=sensor_id).labels
+        if len(times_on_off) == 2:
+            seizure_duration = np.diff(times_on_off)
+        else:
+            seizure_duration = times_on_off[0]
         signals = prepare_seeg_observable_from_mne_file(empirical_file, head.get_sensors_by_index(sensor_ids=sensor_id),
                                                         sensors_lbls, seizure_length, times_on_off, time_units,
                                                         label_strip_fun, preprocessing,
                                                         low_hpf, high_hpf, low_lpf, high_lpf,
-                                                        bipolar, win_len, plotter, title_prefix)
+                                                        bipolar, seizure_duration / win_len_ratio,
+                                                        plotter, title_prefix)
         H5Writer().write_timeseries(signals, ts_file)
     move_overwrite_files_to_folder_with_wildcard(os.path.join(plotter.config.out.FOLDER_FIGURES,
                                                               "fitData_EmpiricalSEEG"),
@@ -139,7 +144,7 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
                                 seizure_length=SEIZURE_LENGTH, times_on=[], time_length=32000.0, time_units="ms",
                                 label_strip_fun=None, preprocessing=TARGET_DATA_PREPROCESSING,
                                 low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF, high_lpf=HIGH_LPF,
-                                bipolar=BIPOLAR, win_len=WIN_LEN, plotter=None, title_prefix=""):
+                                bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
     empirical_files = ensure_list(ensure_list(empirical_files))
     n_seizures = len(empirical_files)
     times_on = ensure_list(times_on)
@@ -156,7 +161,7 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
         signals.append(set_empirical_data(empirical_file, "_".join([ts_filename, seizure_name]) + ".h5",
                                           head, sensors_lbls, sensor_id, seizure_length, time_on_off, time_units,
                                           label_strip_fun,preprocessing, low_hpf, high_hpf, low_lpf, high_lpf,
-                                          bipolar, win_len, plotter, title_prefix))
+                                          bipolar, win_len_ratio, plotter, title_prefix))
     if n_seizures > 1:
         # Concatenate only the labels that exist in all signals:
         labels = signals[0].space_labels
@@ -183,7 +188,7 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
 def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model, sensor_id=0,
                               rescale_x1eq=None, sim_type="paper", times_on_off=[], seizure_length=SEIZURE_LENGTH,
                               preprocessing=TARGET_DATA_PREPROCESSING, low_hpf=LOW_HPF, high_hpf=HIGH_HPF,
-                              low_lpf=LOW_LPF, high_lpf=HIGH_LPF, bipolar=BIPOLAR, win_len=WIN_LEN,
+                              low_lpf=LOW_LPF, high_lpf=HIGH_LPF, bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO,
                               plotter=None, config=Config(), title_prefix=""):
     signals, simulator = from_model_configuration_to_simulation(probabilistic_model.model_config,
                                                                 head, lsa_hypothesis, rescale_x1eq=rescale_x1eq,
@@ -205,6 +210,7 @@ def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model
     del x1, z
     signals = signals["source"].get_source()
     signals.data = -signals.data  # change sign to fit x1
+    win_len = np.diff(times_on_off)[0]/win_len_ratio
     if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
         log_flag = probabilistic_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
         # get timeseries to be positive
