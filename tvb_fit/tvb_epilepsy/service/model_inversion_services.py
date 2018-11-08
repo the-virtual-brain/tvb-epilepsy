@@ -202,7 +202,7 @@ class ODEModelInversionService(ModelInversionService):
                                                             n_groups=n_groups, members_per_group=members_per_group)
         elif self.auto_selection.find("power") >= 0:
             target_data, _ = self.ts_service.select_by_power(target_data, power, self.power_th)
-        sensors_inds = np.sort(sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels))
+        sensors_inds = np.argsort(sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels))
         target_data = target_data.get_subspace_by_index(sensors_inds)
         return target_data
 
