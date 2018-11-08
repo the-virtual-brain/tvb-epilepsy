@@ -8,6 +8,7 @@ from matplotlib import pyplot, gridspec
 import numpy
 from collections import OrderedDict
 
+from tvb_fit.base.constants import Target_Data_Type
 from tvb_fit.base.utils.log_error_utils import warning
 from tvb_fit.base.utils.data_structures_utils import ensure_list, generate_region_labels, extract_dict_stringkeys
 from tvb_fit.samplers.stan.stan_interface import merge_samples
@@ -173,7 +174,8 @@ class ModelInversionPlotter(TimeseriesPlotter):
                     pdf[0] = numpy.mean(pdf[0])
                     pdf = tuple(pdf)
                 priors.update({p: pdf})
-                truth.update({p: numpy.nanmean(probabilistic_model.get_truth(p))})
+                if probabilistic_model.target_data_type == Target_Data_Type.SYNTHETIC.value:
+                    truth.update({p: numpy.nanmean(probabilistic_model.get_truth(p))})
         return self._parameters_pair_plots(samples, params, stats, priors, truth, skip_samples, title=title)
 
     def plot_fit_region_params(self, samples, stats=None, probabilistic_model=None,
@@ -199,7 +201,8 @@ class ModelInversionPlotter(TimeseriesPlotter):
                 for ip, p in enumerate(pdf):
                     pdf[ip] = ((numpy.array(p) * I).T[regions_inds])
                 priors.update({param: (pdf[0].squeeze(), pdf[1].squeeze())})
-                truth.update({param: ((probabilistic_model.get_truth(param) * I)[regions_inds]).squeeze()}) #[:, 0]
+                if probabilistic_model.target_data_type == Target_Data_Type.SYNTHETIC.value:
+                    truth.update({param: ((probabilistic_model.get_truth(param) * I)[regions_inds]).squeeze()}) #[:, 0]
         # plot region-wise parameters
         f1 = self._region_parameters_violin_plots(samples, truth, priors, stats, params, skip_samples,
                                                   per_chain_or_run=per_chain_or_run, labels=region_labels,
@@ -217,7 +220,8 @@ class ModelInversionPlotter(TimeseriesPlotter):
                         inode[ichain].update({temp_name: s[p][:, inode]})
                         if probabilistic_model is not None:
                             priors.update({temp_name: (priors[p][0][inode], priors[p][1][inode])})
-                            truth.update({temp_name: truth[p][inode]})
+                            if probabilistic_model.target_data_type == Target_Data_Type.SYNTHETIC.value:
+                                truth.update({temp_name: truth[p][inode]})
                 f2.append(self._parameters_pair_plots(p_pair_plot_samples, p_pair_plot_params, None, priors, truth,
                                                  skip_samples, title=p_title_pair_plot))
         return f1, f2

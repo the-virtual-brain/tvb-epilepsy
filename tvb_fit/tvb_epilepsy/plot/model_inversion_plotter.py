@@ -5,6 +5,7 @@ from tvb_fit.tvb_epilepsy.base.constants.config import FiguresConfig
 import matplotlib
 matplotlib.use(FiguresConfig().MATPLOTLIB_BACKEND)
 
+from tvb_fit.base.constants import Target_Data_Type
 from tvb_fit.base.utils.data_structures_utils import ensure_list, isequal_string, generate_region_labels
 from tvb_fit.plot.model_inversion_plotter import ModelInversionPlotter as ModelInversionPlotterBase
 
@@ -37,7 +38,8 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
                 for ip, p in enumerate(pdf):
                     pdf[ip] = ((numpy.array(p) * I).T[regions_inds])
                 priors.update({param: (pdf[0].squeeze(), pdf[1].squeeze())})
-                truth.update({param: ((probabilistic_model.get_truth(param) * I)[regions_inds]).squeeze()}) #[:, 0]
+                if probabilistic_model.target_data_type == Target_Data_Type.SYNTHETIC.value:
+                    truth.update({param: ((probabilistic_model.get_truth(param) * I)[regions_inds]).squeeze()}) #[:, 0]
         # plot region-wise parameters
         f1 = self._region_parameters_violin_plots(samples, truth, priors, stats, params, skip_samples,
                                                   per_chain_or_run=per_chain_or_run, labels=region_labels,
@@ -57,7 +59,8 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
                         pdf[0] = numpy.mean(pdf[0])
                         pdf = tuple(pdf)
                     priors.update({"K": pdf})
-                    truth.update({"K": probabilistic_model.get_truth("K")})
+                    if probabilistic_model.target_data_type == Target_Data_Type.SYNTHETIC.value:
+                        truth.update({"K": probabilistic_model.get_truth("K")})
             for inode, label in enumerate(region_labels):
                 temp_name = "x0[" + label + "]"
                 x0_K_pair_plot_params.append(temp_name)
@@ -65,7 +68,8 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
                     x0_K_pair_plot_samples[ichain].update({temp_name: s["x0"][:, inode]})
                     if probabilistic_model is not None:
                         priors.update({temp_name: (priors["x0"][0][inode], priors["x0"][1][inode])})
-                        truth.update({temp_name: truth["x0"][inode]})
+                        if probabilistic_model.target_data_type == Target_Data_Type.SYNTHETIC.value:
+                            truth.update({temp_name: truth["x0"][inode]})
             f2 = self._parameters_pair_plots(x0_K_pair_plot_samples, x0_K_pair_plot_params, None, priors, truth,
                                              skip_samples, title=title_pair_plot)
             return f1, f2
