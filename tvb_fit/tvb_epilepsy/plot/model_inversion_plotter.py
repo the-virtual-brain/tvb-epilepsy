@@ -16,7 +16,7 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
 
     def plot_fit_region_params(self, samples, stats=None, probabilistic_model=None,
                                params=["x0", "PZ", "x1eq", "zeq"], special_idx=[], region_labels=[],
-                               regions_mode="all", per_chain_or_run=False, skip_samples=0, title_prefix=""):
+                               regions_mode="all", per_chain_or_run=False, pair_plot=True, skip_samples=0, title_prefix=""):
         if len(title_prefix) > 0:
             title_prefix = title_prefix + " "
         title_pair_plot = title_prefix + "Global coupling vs x0 pair plot"
@@ -42,7 +42,7 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
         f1 = self._region_parameters_violin_plots(samples, truth, priors, stats, params, skip_samples,
                                                   per_chain_or_run=per_chain_or_run, labels=region_labels,
                                                   special_idx=special_idx, figure_name=title_violin_plot)
-        if not(per_chain_or_run) and "x0" in params and samples[0]["x0"].shape[1] < 10:
+        if pair_plot and not(per_chain_or_run) and "x0" in params and samples[0]["x0"].shape[1] < 10:
             x0_K_pair_plot_params = []
             x0_K_pair_plot_samples = [{} for _ in range(len(samples))]
             if samples[0].get("K", None) is not None:
@@ -72,6 +72,37 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
         else:
             return f1
 
+    # def plot_fit_sorted_region_params(self, samples, stats=None, probabilistic_model=None,
+    #                                   params=["x0", "PZ", "x1eq", "zeq"], special_idx=[], region_labels=[],
+    #                                   regions_mode="all", per_chain_or_run=False, skip_samples=0, title_prefix=""):
+    #     if len(title_prefix) > 0:
+    #         title_prefix = title_prefix + " "
+    #     figs = []
+    #     for p in params:
+    #         title_violin_plot = title_prefix + "Regions parameters samples"
+    #         # We assume in this function that regions_inds run for all regions for the statistical model,
+    #         # and either among all or only among active regions for samples, ests and stats, depending on regions_mode
+    #         samples = ensure_list(samples)
+    #         priors = {}
+    #         truth = {}
+    #         if probabilistic_model is not None:
+    #             if regions_mode == "active":
+    #                 regions_inds = ensure_list(probabilistic_model.active_regions)
+    #             else:
+    #                 regions_inds = range(probabilistic_model.number_of_regions)
+    #             I = numpy.ones((probabilistic_model.number_of_regions,))  # , 1
+    #             for param in params:
+    #                 pdf = ensure_list(probabilistic_model.get_prior_pdf(param))
+    #                 for ip, p in enumerate(pdf):
+    #                     pdf[ip] = ((numpy.array(p) * I).T[regions_inds])
+    #                 priors.update({param: (pdf[0].squeeze(), pdf[1].squeeze())})
+    #                 truth.update(
+    #                     {param: ((probabilistic_model.get_truth(param) * I)[regions_inds]).squeeze()})  # [:, 0]
+    #         # plot region-wise parameters
+    #         figs.append(self._region_parameters_violin_plots(samples, truth, priors, stats, params, skip_samples,
+    #                                                          per_chain_or_run=per_chain_or_run, labels=region_labels,
+    #                                                          special_idx=special_idx, figure_name=title_violin_plot))
+    #     return figs
 
     def plot_fit_results(self, ests, samples, model_data, target_data, probabilistic_model=None, info_crit=None,
                          stats=None, pair_plot_params=["tau1", "sigma", "epsilon", "scale", "offset"],
@@ -112,11 +143,11 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
 
         figs.append(
             self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
-                                        region_labels, regions_mode, False, skip_samples, title_prefix))
+                                        region_labels, regions_mode, False, False, skip_samples, title_prefix))
 
         figs.append(
             self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
-                                        region_labels, regions_mode, True, skip_samples, title_prefix))
+                                        region_labels, regions_mode, True, False, skip_samples, title_prefix))
 
         figs.append(self.plot_fit_scalar_params(samples, stats, probabilistic_model, pair_plot_params,
                                                 skip_samples, title_prefix))
