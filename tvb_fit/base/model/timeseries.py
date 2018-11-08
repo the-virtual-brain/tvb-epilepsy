@@ -88,6 +88,10 @@ class Timeseries(object):
         return numpy.arange(self.time_start, self.time_end + self.time_step, self.time_step)
 
     @property
+    def duration(self):
+        return self.time_end - self.time_start
+
+    @property
     def squeezed(self):
         return numpy.squeeze(self.data)
 
