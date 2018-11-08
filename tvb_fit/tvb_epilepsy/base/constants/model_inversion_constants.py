@@ -37,7 +37,7 @@ TAU0_SCALE = 2.0
 
 K_DEF = 3.0
 K_MIN = 1.0
-K_MAX = 15.0
+K_MAX = 5.0
 K_SCALE = 1.0
 
 MC_MIN = 0.0
