@@ -99,6 +99,7 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
         temp_on_off = [data.time_start, data.time_end]
         duration = temp_on_off[1] - temp_on_off[0]
 
+    i_preproc = 0
     for i_preproc, preproc in enumerate(preprocessing):
 
         stri_preproc = str(i_preproc+1)
@@ -235,7 +236,10 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
     temp_on_off = on_off_set
     duration = on_off_set[1] - on_off_set[0]
 
+
     if "decimate" in preprocessing:
+        i_preproc += 1
+        stri_preproc = str(i_preproc + 1)
         # Now decimate to get close to seizure_length points
         temp_duration = temp_on_off[1] - temp_on_off[0]
         decim_ratio = np.maximum(1, int(np.round((1.0*data.time_length/seizure_length) * (duration/temp_duration))))
