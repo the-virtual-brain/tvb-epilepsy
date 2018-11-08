@@ -202,12 +202,14 @@ class ODEModelInversionService(ModelInversionService):
                                                             n_groups=n_groups, members_per_group=members_per_group)
         elif self.auto_selection.find("power") >= 0:
             target_data, _ = self.ts_service.select_by_power(target_data, power, self.power_th)
+        sensors_inds = np.sort(sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels))
+        target_data = target_data.get_subspace_by_index(sensors_inds)
         return target_data
 
     def set_gain_matrix(self, target_data, probabilistic_model, sensors=None):
         if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
-            sensors_in_electrodes_disconnectivity = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
-            return sensors.gain_matrix[sensors_in_electrodes_disconnectivity][:, probabilistic_model.active_regions]
+            sensors_inds = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
+            return sensors.gain_matrix[sensors_inds][:, probabilistic_model.active_regions]
         else:
             return np.eye(target_data.number_of_labels)
 
@@ -230,7 +232,7 @@ class ODEModelInversionService(ModelInversionService):
         if self.normalization:
             target_data = self.ts_service.normalize(target_data, self.normalization)
         if len(self.manual_selection) > 0:
-            target_data = target_data.get_subspace_by_index(self.manual_selection)
+            target_data = target_data.get_subspace_by_index(np.unique(self.manual_selection))
         if self.auto_selection:
             if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
                 target_data = self.select_target_data_sensors(target_data, sensors,
