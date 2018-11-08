@@ -158,7 +158,11 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
                                           label_strip_fun,preprocessing, low_hpf, high_hpf, low_lpf, high_lpf,
                                           bipolar, win_len, plotter, title_prefix))
     if n_seizures > 1:
-        signals = TimeseriesService().concatenate_in_time(signals)
+        # Concatenate only the labels that exist in all signals:
+        labels = signals[0].space_labels
+        for signal in signals[1:]:
+            labels = np.intersect1d(labels, signal.space_labels)
+        signals = TimeseriesService().concatenate_in_time(signals, labels)
     else:
         signals = signals[0]
     if plotter:
