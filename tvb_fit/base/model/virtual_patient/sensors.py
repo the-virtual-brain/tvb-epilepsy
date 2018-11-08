@@ -49,6 +49,7 @@ class Sensors(object):
             else:
                 self.channel_labels, self.channel_inds = self.group_sensors_to_electrodes()
                 self.get_needles_from_inds_labels()
+        self.remove_leading_zeros_from_labels()
 
     @property
     def number_of_sensors(self):
@@ -117,6 +118,13 @@ class Sensors(object):
         for chlbl in elec_labels:
             elec_inds.append(np.where(sensor_names[:, 0] == chlbl)[0])
         return elec_labels, elec_inds
+
+    def remove_leading_zeros_from_labels(self):
+        labels = []
+        for label in self.labels:
+            elec_name, sensor_ind = split_string_text_numbers(label)[0]
+            labels.append(elec_name + sensor_ind.lstrip("0"))
+        self.labels = np.array(labels)
 
     def get_bipolar_sensors(self, sensors_inds=None):
         if sensors_inds is None:
