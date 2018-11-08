@@ -221,6 +221,8 @@ class TimeseriesPlotter(BasePlotter):
         if len(data_shape) == 1:
             n_times = data_shape[0]
             nTS = 1
+            for iV in range(n_vars):
+                data[iV] = data[iV][:, numpy.newaxis]
         else:
             n_times, nTS = data_shape[:2]
         if len(data_shape) > 2:
