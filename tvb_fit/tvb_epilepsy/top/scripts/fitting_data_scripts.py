@@ -37,7 +37,7 @@ def find_interval_of_interest(data, target_time_length, win_len=WIN_LEN, title_p
     max_time = data.time_end - win_len
     _, _, off_time_index = \
         tuple([ind+n_kernel_len for ind in find_min_max_min_inds(power_sum_ts[n_kernel_len:-n_kernel_len])])
-    off_time = np.minimum(data.time[off_time_index] + win_len, max_time)
+    off_time = np.minimum(data.time[off_time_index] + win_len/2, max_time)
     on_time = np.maximum(min_time, off_time - target_time_length)
     off_time = on_time + target_time_length
     # on_time_margin = on_time - win_len
