@@ -71,12 +71,12 @@ class Sensors(object):
 
     def sensor_label_to_index(self, labels):
         indexes = []
-        for label in labels:
+        for label in ensure_list(labels):
             indexes.append(np.where([np.array(lbl) == np.array(label) for lbl in self.labels])[0][0])
-        if len(indexes) == 1:
-            return indexes[0]
-        else:
+        if isinstance(labels, (list, tuple)) or len(indexes) > 1:
             return indexes
+        else:
+            return indexes[0]
 
     def get_sensors_inds_by_sensors_labels(self, lbls):
         # Make sure that the labels are not bipolar:
