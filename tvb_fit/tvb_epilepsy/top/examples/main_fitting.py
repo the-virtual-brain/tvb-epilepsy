@@ -206,7 +206,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/empirical_singlestep_meancntrd_advi")
+                              "fit/tests/empirical_test")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
     study_repo_path = os.path.join(user_home, "VEPlocal/CC/tvb-epilepsy-cc-study")
@@ -230,7 +230,7 @@ if __name__ == "__main__":
     observation_model = OBSERVATION_MODELS.SEEG_POWER.value  #OBSERVATION_MODELS.SEEG_LOGPOWER.value  #OBSERVATION_MODELS.SOURCE_POWER.value  #
     if EMPIRICAL:
         seizures_files = ['SZ1_0001.edf', 'SZ2_0001.edf']  # 'SZ2_0001.edf'
-        times_on = [9700.0, 13700.0] # (np.array([15.0, 30.0]) * 1000.0).tolist() # for SZ1
+        times_on = []# [9700.0, 13700.0] # (np.array([15.0, 30.0]) * 1000.0).tolist() # for SZ1
         time_length = 25600.0
         # times_on_off = (np.array([15.0, 38.0]) * 1000.0).tolist()  # for SZ2
         # sensors_filename = "SensorsSEEG_116.h5"
