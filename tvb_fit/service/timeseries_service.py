@@ -155,12 +155,17 @@ class TimeseriesService(object):
     def correlation(self, timeseries):
         return np.corrcoef(timeseries.squeezed.T)
 
-    def concatenate_in_time(self, timeseries_list):
+    def concatenate_in_time(self, timeseries_list, labels=None):
         timeseries_list = ensure_list(timeseries_list)
         out_timeseries = timeseries_list[0]
+        if labels is None:
+            labels = out_timeseries.space_labels
+        else:
+            out_timeseries = out_timeseries.get_subspace_by_labels(labels)
         for id, timeseries in enumerate(timeseries_list[1:]):
             if out_timeseries.time_step == timeseries.time_step:
-                out_timeseries.data = np.concatenate([out_timeseries.data, timeseries.data], axis=0)
+                out_timeseries.data = np.concatenate([out_timeseries.data,
+                                                      timeseries.get_subspace_by_labels(labels).data], axis=0)
             else:
                 raise_value_error("Timeseries concatenation in time failed!\n"
                                   "Timeseries %d have a different time step (%s) than the ones before(%s)!" \
