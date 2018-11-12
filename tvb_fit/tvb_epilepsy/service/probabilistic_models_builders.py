@@ -35,35 +35,36 @@ class ProbabilisticModelBuilderBase(object):
 
     logger = initialize_logger(__name__)
 
+    model=None
     model_name = "vep"
     model_config = EpileptorModelConfiguration("EpileptorDP2D")
     xmode = XModes.X0MODE.value
-    linear_flag = False
     priors_mode = PriorsModes.NONINFORMATIVE.value
-    model = None
-    normal_flag = True
+    normal_flag = False
+    linear_flag = False
     x1eq_cr = X1EQ_CR
     x1eq_def = X1EQ_DEF
-    def __init__(self, model=None, model_name="vep", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
-                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True,
-                 linear_flag=False, x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF):
-        self.model = deepcopy(model)
-        self.model_name = model_name
-        self.model_config = model_config
-        self.xmode = xmode
-        self.x1eq_cr = x1eq_cr
-        self.x1eq_def = x1eq_def
-        self.priors_mode = priors_mode
-        self.normal_flag = normal_flag
-        self.linear_flag = linear_flag
-        if self.normal_flag:
-            self.model_name += "_normal"
-        if self.linear_flag:
-            self.model_name += "_lin"
-        if isinstance(self.model, EpiProbabilisticModel):
+
+    def __init__(self, model=None, model_config=EpileptorModelConfiguration("EpileptorDP2D")):
+        if isinstance(model, EpiProbabilisticModel):
+            self.model = deepcopy(model)
             self.model_name = self.model.name
             for attr in ["model_config", "normal_flag", "linear_flag", "xmode", "x1eq_cr", "x1eq_def", "priors_mode"]:
                     setattr(self, attr, getattr(self.model, attr))
+        else:
+            self.model = None
+            self.model_name = "vep"
+            self.model_config = model_config
+            self.xmode = XModes.X1EQMODE.value
+            self.priors_mode = PriorsModes.NONINFORMATIVE.value
+            self.normal_flag = False
+            self.linear_flag = False
+            if self.normal_flag:
+                self.model_name += "_normal"
+            if self.linear_flag:
+                self.model_name += "_lin"
+            self.x1eq_cr = X1EQ_CR
+            self.x1eq_def = X1EQ_DEF
 
     def __repr__(self, d=OrderedDict()):
         return formal_repr(self, self._repr(d))
@@ -83,9 +84,13 @@ class ProbabilisticModelBuilderBase(object):
             d.update({str(ikey) + ". " + key: val})
         return d
 
+    def set_attribute(self, attribute, value):
+        setattr(self, attribute, value)
+        return self
+
     def set_attributes(self, attributes_names, attribute_values):
         for attribute_name, attribute_value in zip(ensure_list(attributes_names), ensure_list(attribute_values)):
-            setattr(self, attribute_name, attribute_value)
+            self = self.set_attribute(attribute_name, attribute_value)
         return self
 
     def _set_attributes_from_dict(self, attributes_dict):
@@ -122,30 +127,22 @@ class ProbabilisticModelBuilderBase(object):
 
 class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
 
-    sigma_x = SIGMA_X0_DEF
-    sigma_x_scale = 3
     K = K_DEF
     # MC_direction_split = 0.5
+    sigma_x = SIGMA_X0_DEF
+    sigma_x_scale = SIGMA_X_SCALE_DEF
 
-    def __init__(self, model=None, model_name="vep", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
-                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True,
-                 linear_flag=False, x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF, K=K_DEF, sigma_x=None, sigma_x_scale=3): #
-        super(ProbabilisticModelBuilder, self).__init__(model, model_name, model_config,  xmode, priors_mode,
-                                                        normal_flag, linear_flag, x1eq_cr, x1eq_def)
-        self.K = K
-        # self.MC_direction_split = MC_direction_split
-        if sigma_x is None:
-            if self.xmode == XModes.X0MODE.value:
-                self.sigma_x = SIGMA_X0_DEF
-            else:
-                self.sigma_x = SIGMA_EQ_DEF
-        else:
-            self.sigma_x = sigma_x
-        self.sigma_x_scale = sigma_x_scale
-        if isinstance(self.model, EpiProbabilisticModel):
+    def __init__(self, model=None, model_config=EpileptorModelConfiguration("EpileptorDP2D")): #
+        super(ProbabilisticModelBuilder, self).__init__(model,model_config)
+        if isinstance(model, EpiProbabilisticModel):
             # self.MC_direction_split = getattr(self.model, "MC_direction_split", self.MC_direction_split)
             self.K = getattr(self.model, "K", self.K)
             self.sigma_x = getattr(self.model, "sigma_x", self.sigma_x)
+        else:
+            self.K = K_DEF
+            # self.MC_direction_split = 0.5
+            self.sigma_x = SIGMA_X0_DEF
+            self.sigma_x_scale = SIGMA_X_SCALE_DEF
 
     def _repr(self, d=OrderedDict()):
         d.update(super(ProbabilisticModelBuilder, self)._repr(d))
@@ -242,61 +239,51 @@ class ProbabilisticModelBuilder(ProbabilisticModelBuilderBase):
 
 class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
-    x1_prior_weight = 0.0
+    active_regions = np.array([])
+    tau1 = TAU1_DEF
+    tau0 = TAU0_DEF
     sigma_init = SIGMA_INIT_DEF
     epsilon = EPSILON_DEF
     scale = SCALE_DEF
     offset = OFFSET_DEF
-    x1_scale = 1.0
-    x1_offset = 0.0
     observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
-    number_of_target_data = 0
-    active_regions = np.array([])
-    tau1 = TAU1_DEF
-    tau0 = TAU0_DEF
+    gain_matrix = np.eye(len(active_regions))
+    number_of_target_data = 1
+    number_of_seizures = 1
     time_length = SEIZURE_LENGTH
     dt = DT_DEF
     upsample = UPSAMPLE
-    gain_matrix = np.eye(len(active_regions))
-    number_of_seizures = 1
-
-    def __init__(self, model=None, model_name="vep_ode", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
-                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True,
-                 linear_flag=False, x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF, x1_prior_weight=0.0, K=K_DEF,   # MC_direction_split=0.5,
-                 sigma_x=None, sigma_x_scale=3, sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
-                 epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF, x1_scale=1.0, x1_offset=0.0,
-                 observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
-                 number_of_target_data=0, active_regions=np.array([]), gain_matrix=None, number_of_seizures=1):
-        super(ODEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode, priors_mode,
-                                                           normal_flag, linear_flag, x1eq_cr, x1eq_def,
-                                                           K, sigma_x, sigma_x_scale) # MC_direction_split
-        self.sigma_init = sigma_init
-        self.tau1 = tau1
-        self.tau0 = tau0
-        self.epsilon = epsilon
-        self.scale = scale
-        self.offset = offset
-        self.observation_model = observation_model
-        self.number_of_target_data = number_of_target_data
-        self.time_length = self.compute_seizure_length()
-        self.dt = self.compute_dt()
-        self.active_regions = active_regions
-        self.upsample = self.compute_upsample()
-        if (x1_prior_weight >= 0.0 and x1_prior_weight < 1.0):
-            self.x1_prior_weight = x1_prior_weight
-        else:
-            raise_value_error("x1_prior_weight (%s) is not one inside the interval [0.0, 1.0)!" % str(x1_prior_weight))
-        self.x1_scale = x1_scale
-        self.x1_offset = x1_offset
-        self.gain_matrix = gain_matrix
-        if self.gain_matrix is None:
-            self.gain_matrix = np.eye(self.number_of_active_regions)
-        self.number_of_seizures = number_of_seizures
-        if isinstance(self.model, ODEEpiProbabilisticModel):
+    x1_prior_weight = 0.0
+    x1_scale = 1.0
+    x1_offset = 0.0
+    def __init__(self, model=None, model_config=EpileptorModelConfiguration("EpileptorDP2D"),
+                 number_of_target_data=1, number_of_seizures=1, gain_matrix=None):
+        super(ODEProbabilisticModelBuilder, self).__init__(model, model_config) # MC_direction_split
+        if isinstance(model, ODEEpiProbabilisticModel):
             for attr in ["sigma_init", "tau1", "tau0", "scale", "offset", "epsilon", "x1_scale", "x1_offset",
                          "observation_model", "number_of_target_data", "time_length", "dt", "active_regions",
                          "upsample", "x1_prior_weight", "gain_matrix", "number_of_seizures"]:
                 setattr(self, attr, getattr(self.model, attr))
+        else:
+            self.active_regions = np.array(range(self.number_of_regions))
+            self.tau1 = TAU1_DEF
+            self.tau0 = TAU0_DEF
+            self.sigma_init = SIGMA_INIT_DEF
+            self.epsilon = EPSILON_DEF
+            self.scale = SCALE_DEF
+            self.offset = OFFSET_DEF
+            self.observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
+            self.gain_matrix = gain_matrix
+            if self.gain_matrix is None:
+                self.gain_matrix = np.eye(self.number_of_active_regions)
+            self.number_of_target_data = number_of_target_data
+            self.number_of_seizures = number_of_seizures
+            self.time_length = self.compute_seizure_length()
+            self.dt = self.compute_dt()
+            self.upsample = self.compute_upsample()
+            self.x1_prior_weight = 0.0
+            self.x1_scale = 1.0
+            self.x1_offset = 0.0
 
     def _repr(self, d=OrderedDict()):
         d.update(super(ODEProbabilisticModelBuilder, self)._repr(d))
@@ -333,6 +320,19 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
         else:
             return self.time_length
 
+    def set_x1_prior_weight(self, x1_prior_weight):
+        if (x1_prior_weight >= 0.0 and x1_prior_weight < 1.0):
+            self.x1_prior_weight = x1_prior_weight
+            return self
+        else:
+            raise_value_error("x1_prior_weight (%s) is not one inside the interval [0.0, 1.0)!" % str(x1_prior_weight))
+
+    def set_attribute(self, attribute, value):
+        if attribute == "x1_prior_weight":
+            return self.set_x1_prior_weight(value)
+        else:
+            return super(ODEProbabilisticModelBuilder, self).set_attribute(attribute, value)
+
     def compute_seizure_length(self):
         return compute_seizure_length(self.tau0)
 
@@ -342,15 +342,19 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
     def compute_upsample(self, default_seizure_length=SEIZURE_LENGTH):
         return compute_upsample(self.time_length, default_seizure_length, tau0=self.tau0)
 
+    def update_from_timeseries(self, target_data, model_source_ts, x1prior_ts):
+        if isinstance(target_data, Timeseries):
+            self.number_of_target_data = target_data.number_of_labels
+        if isinstance(model_source_ts, Timeseries):
+            if self.number_of_active_regions != model_source_ts.number_of_labels:
+                warning("Number of active regions doesn't match the number of labels of model's source timeseries!")
+        if isinstance(x1prior_ts, Timeseries):
+            if self.number_of_active_regions != x1prior_ts.number_of_labels:
+                warning("Number of active regions doesn't match the number of labels of x1 source prior timeseries!")
+
     def generate_parameters(self, params_names=ODE_DEFAULT_PARAMETERS, parameters=OrderedDict(),
                             target_data=None, model_source_ts=None, x1prior_ts=None):
         parameters = super(ODEProbabilisticModelBuilder, self).generate_parameters(params_names, parameters)
-        if isinstance(self.model, ODEEpiProbabilisticModel):
-            active_regions = self.model.active_regions
-        else:
-            active_regions = np.array([])
-        if len(active_regions) == 0:
-            active_regions = np.array(range(self.number_of_regions))
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
         # if "x1" in params_names:
         #     self.logger.info("...x1...")
@@ -430,7 +434,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             if isinstance(model_source_ts, Timeseries) and \
                isinstance(getattr(model_source_ts, "x1", None), Timeseries) and \
                isinstance(target_data, TargetDataTimeseries):
-                model_out_ts = model_source_ts.x1.squeezed[:, active_regions] # - self.model_config.x1eq.mean() # - X1_MIN #
+                model_out_ts = model_source_ts.x1.squeezed[:, self.active_regions] # - self.model_config.x1eq.mean() # - X1_MIN #
                 if self.observation_model in OBSERVATION_MODELS.SEEG.value and isinstance(self.gain_matrix, np.ndarray):
                     if self.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
                         model_out_ts = compute_seeg_exp(model_out_ts, self.gain_matrix)
@@ -476,7 +480,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             if isinstance(x1prior_ts, Timeseries) and \
                     isinstance(model_source_ts, Timeseries) and \
                             isinstance(getattr(model_source_ts, "x1", None), Timeseries):
-                model_out_ts = model_source_ts.x1.squeezed[:, active_regions] # - self.model_config.x1eq.mean() #- X1_MIN #
+                model_out_ts = model_source_ts.x1.squeezed[:, self.active_regions] # - self.model_config.x1eq.mean() #- X1_MIN #
                 model_out_ts -= np.mean(model_out_ts, axis=0)
                 self.offset = np.percentile(x1prior_ts.data, 50) - np.percentile(model_out_ts, 50)   # np.median(self.scale*model_out_ts)
                 model_out_ts += self.offset
@@ -514,6 +518,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                        target_data=None, model_source_ts=None, x1prior_ts=None):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
+        self.update_from_timeseries(target_data, model_source_ts, x1prior_ts)
         if generate_parameters:
             parameters = self.generate_parameters(params_names, parameters, target_data, model_source_ts, x1prior_ts)
         self.model = ODEEpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
@@ -531,28 +536,21 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
 class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
 
-    sigma = SIGMA_DEF
     sde_mode = SDE_MODES.NONCENTERED.value
+    sigma = SIGMA_DEF
+    sigma_init=SIGMA_DEF
 
-    def __init__(self, model=None, model_name="vep_sde", model_config=EpileptorModelConfiguration("EpileptorDP2D"),
-                 xmode=XModes.X0MODE.value, priors_mode=PriorsModes.NONINFORMATIVE.value, normal_flag=True,
-                 linear_flag=False, x1eq_cr=X1EQ_CR, x1eq_def=X1EQ_DEF, x1_prior_weight=0.0, K=K_DEF,  # MC_direction_split=0.5,
-                 sigma_x=None, sigma_x_scale=3, sigma_init=SIGMA_INIT_DEF, tau1=TAU1_DEF, tau0=TAU0_DEF,
-                 epsilon=EPSILON_DEF, scale=SCALE_DEF, offset=OFFSET_DEF, x1_scale=1.0, x1_offset=0.0, sigma=SIGMA_DEF,
-                 sde_mode=SDE_MODES.NONCENTERED.value, observation_model=OBSERVATION_MODELS.SEEG_LOGPOWER.value,
-                 number_of_signals=0, active_regions=np.array([]), gain_matrix=None, number_of_seizures=1):
-        super(SDEProbabilisticModelBuilder, self).__init__(model, model_name, model_config, xmode, priors_mode,
-                                                           normal_flag, linear_flag, x1eq_cr, x1eq_def, x1_prior_weight,
-                                                           K, sigma_x, sigma_x_scale, sigma_init, tau1, tau0, epsilon,
-                                                           scale, offset, x1_scale, x1_offset,
-                                                           observation_model, number_of_signals,
-                                                           active_regions, gain_matrix, number_of_seizures) # MC_direction_split,
-        self.sigma_init = sigma_init
-        self.sde_mode = sde_mode
-        self.sigma = sigma
-        if isinstance(self.model, SDEEpiProbabilisticModel):
+    def __init__(self, model=None, model_config=EpileptorModelConfiguration("EpileptorDP2D"),
+                 number_of_target_data=1, number_of_seizures=1, gain_matrix=None):
+        super(SDEProbabilisticModelBuilder, self).__init__(model, model_config, number_of_target_data,
+                                                           number_of_seizures, gain_matrix)
+        if isinstance(model, SDEEpiProbabilisticModel):
             for attr in ["sigma_init", "sde_mode", "sigma"]:
                 setattr(self, attr, getattr(self.model, attr))
+        else:
+            self.sde_mode = SDE_MODES.NONCENTERED.value
+            self.sigma = SIGMA_DEF
+            self.sigma_init = self.sigma
 
     def _repr(self, d=OrderedDict()):
         d.update(super(SDEProbabilisticModelBuilder, self)._repr(d))
@@ -617,6 +615,7 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
                        target_data=None, model_source_ts=None, x1prior_ts=None):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
+        self.update_from_timeseries(target_data, model_source_ts, x1prior_ts)
         if generate_parameters:
             parameters = self.generate_parameters(params_names, parameters, target_data, model_source_ts, x1prior_ts)
         self.model = SDEEpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,

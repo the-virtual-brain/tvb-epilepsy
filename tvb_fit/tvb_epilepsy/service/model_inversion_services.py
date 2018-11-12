@@ -42,9 +42,9 @@ class ModelInversionService(object):
         return new_active_regions
 
     def update_active_regions_e_values(self, probabilistic_model, e_values, reset=False):
-        active_regions = probabilistic_model.active_regions.tolist()
         if reset:
-            active_regions = []
+            probabilistic_model.active_regions = np.array([])
+        active_regions = probabilistic_model.active_regions.tolist()
         if len(e_values) > 0:
             active_regions += select_greater_values_array_inds(e_values, self.active_e_th).tolist()
             active_regions = self.exclude_regions(active_regions)
@@ -54,9 +54,9 @@ class ModelInversionService(object):
         return probabilistic_model
 
     def update_active_regions_x0_values(self, probabilistic_model, x0_values, reset=False):
-        active_regions = probabilistic_model.active_regions.tolist()
         if reset:
-            active_regions = []
+            probabilistic_model.active_regions = np.array([])
+        active_regions = probabilistic_model.active_regions.tolist()
         if len(x0_values) > 0:
             active_regions += select_greater_values_array_inds(x0_values, self.active_x0_th).tolist()
             active_regions = self.exclude_regions(active_regions)
@@ -66,9 +66,9 @@ class ModelInversionService(object):
         return probabilistic_model
 
     def update_active_regions_lsa(self, probabilistic_model, lsa_propagation_strengths, reset=False):
-        active_regions = probabilistic_model.active_regions.tolist()
         if reset:
-            active_regions = []
+            probabilistic_model.active_regions = np.array([])
+        active_regions = probabilistic_model.active_regions.tolist()
         if len(lsa_propagation_strengths) > 0:
             ps_strengths = lsa_propagation_strengths / np.max(lsa_propagation_strengths)
             active_regions += select_greater_values_array_inds(ps_strengths,self.active_lsa_th).tolist()
@@ -82,7 +82,7 @@ class ModelInversionService(object):
     def update_active_regions(self, probabilistic_model, e_values=[], x0_values=[],
                               lsa_propagation_strengths=[], reset=False):
         if reset:
-            probabilistic_model.update_active_regions([])
+            probabilistic_model.active_regions = np.array([])
         for m in ensure_list(self.active_regions_selection_methods):
             if isequal_string(m, "E"):
                 probabilistic_model = self.update_active_regions_e_values(probabilistic_model, e_values, reset=False)
@@ -114,9 +114,9 @@ class ODEModelInversionService(ModelInversionService):
         self.ts_service = TimeseriesService()
 
     def update_active_regions_sensors(self, probabilistic_model, sensors, reset=False):
-        active_regions = probabilistic_model.active_regions.tolist()
         if reset:
-            active_regions = []
+            probabilistic_model.active_regions = np.array([])
+        active_regions = probabilistic_model.active_regions.tolist()
         if sensors is not None:
             active_regions += sensors.get_stronger_gain_matrix_inds(self.gain_matrix_th,
                                                                     self.gain_matrix_percentile)[1].tolist()
@@ -130,7 +130,7 @@ class ODEModelInversionService(ModelInversionService):
 
     def update_active_regions_target_data(self, target_data, probabilistic_model, sensors, reset=False):
         if reset:
-            probabilistic_model.update_active_regions([])
+            probabilistic_model.active_regions = np.array([])
         if target_data:
             active_regions = probabilistic_model.active_regions.tolist()
             gain_matrix = np.array(sensors.gain_matrix)
@@ -152,7 +152,7 @@ class ODEModelInversionService(ModelInversionService):
     def update_active_regions(self, probabilistic_model, sensors=None, target_data=None, e_values=[], x0_values=[],
                               lsa_propagation_strengths=[], reset=False):
         if reset:
-            probabilistic_model.update_active_regions([])
+            probabilistic_model.active_regions = np.array([])
         probabilistic_model = \
             super(ODEModelInversionService, self).update_active_regions(probabilistic_model, e_values, x0_values,
                                                                         lsa_propagation_strengths, reset=False)

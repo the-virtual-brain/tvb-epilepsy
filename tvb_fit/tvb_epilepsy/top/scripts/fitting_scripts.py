@@ -153,7 +153,7 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
         for time_on in times_on:
             times_on_off.append([time_on, time_on + time_length])
     else:
-        times_on_off = n_seizures * [time_length]
+        times_on_off = n_seizures * [[time_length]]
     signals = []
     ts_filename = ts_file.split(".h5")[0]
     for empirical_file, time_on_off in zip(empirical_files, times_on_off):
@@ -325,9 +325,9 @@ def set_prior_parameters(probabilistic_model, target_data, source2D_ts, x1prior_
         compute_upsample(probabilistic_model.time_length / probabilistic_model.number_of_seizures,
                          compute_seizure_length(probabilistic_model.tau0), probabilistic_model.tau0)
 
-    probabilistic_model.parameters = SDEProbabilisticModelBuilder(probabilistic_model, normal_flag=normal_flag). \
-                                        generate_parameters(params_names, probabilistic_model.parameters,
-                                                            target_data, source2D_ts, x1prior_ts)
+    probabilistic_model.parameters = SDEProbabilisticModelBuilder(probabilistic_model). \
+        generate_parameters(params_names, probabilistic_model.parameters, target_data, source2D_ts, x1prior_ts)
+
     if plotter:
         plotter.plot_probabilistic_model(probabilistic_model, step_prefix + "Probabilistic Model")
     if writer:

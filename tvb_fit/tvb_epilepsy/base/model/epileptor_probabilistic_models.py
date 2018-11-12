@@ -123,6 +123,7 @@ class ODEEpiProbabilisticModel(EpiProbabilisticModel):
         if self.gain_matrix is None:
             self.gain_matrix = np.eye(self.number_of_active_regions)
         self.number_of_seizures =number_of_seizures
+
     def update_active_regions(self, active_regions):
         if np.all(np.in1d(ensure_list(active_regions), range(self.number_of_regions))):
             self.active_regions = np.unique(ensure_list(active_regions) + self.active_regions.tolist())
