@@ -123,12 +123,13 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         model_inversion.active_regions_exlude = find_labels_inds(head.connectivity.region_labels, ["unknown"])
 
         # Generate probabilistic model and model data
-        probabilistic_model = \
-            SDEProbabilisticModelBuilder(model_name=stan_model_name, model_config=model_configuration,
-                                         xmode=XModes.X1EQMODE.value, priors_mode=PriorsModes.INFORMATIVE.value,
-                                         sde_mode=SDE_MODES.NONCENTERED.value, observation_model=observation_model,
-                                         normal_flag=normal_flag,  K=np.mean(model_configuration.K)).\
-                generate_model(generate_parameters=False)
+        probabilistic_model_builder = SDEProbabilisticModelBuilder(model_config=model_configuration)
+        probabilistic_model_builder = \
+            probabilistic_model_builder.set_attributes(["model_name", "xmode", "priors_mode", "observation_model", "K"],
+                                                       [stan_model_name, XModes.X1EQMODE.value,
+                                                        PriorsModes.NONINFORMATIVE.value, observation_model,
+                                                        np.mean(model_configuration.K)])
+        probabilistic_model = probabilistic_model_builder.generate_model(generate_parameters=False)
 
         # Get by simulation and/or loading prototypical source 2D timeseries and the target (simulater or empirical)
         # time series for fitting
