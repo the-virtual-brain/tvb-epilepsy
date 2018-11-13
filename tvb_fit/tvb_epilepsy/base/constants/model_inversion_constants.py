@@ -40,6 +40,7 @@ TAU0_SCALE = 2.0
 K_DEF = 3.0
 K_MIN = 1.0
 K_MAX = 5.0
+
 K_SCALE = 1.0
 
 MC_MIN = 0.0
@@ -84,6 +85,7 @@ SCALE_SCALE_DEF = 2.0
 OFFSET_DEF = 0.0
 OFFSET_SCALE_DEF = 1.0
 
+
 class OBSERVATION_MODELS(Enum):
     SEEG_LOGPOWER = 0
     SEEG_POWER = 1
@@ -100,10 +102,11 @@ class SDE_MODES(Enum):
     NONCENTERED = "noncentered"
     MIXED = "mixed"
 
-SIGMA_DEF = 0.05  # from 0.1
-SIGMA_SCALE = 2.0  # from 2.0
-SIGMA_MAX = 0.15  # from 0.5
-SIGMA_MIN = 0.01  # from 0.05
+
+SIGMA_DEF = 0.05
+SIGMA_SCALE = 2.0
+SIGMA_MAX = 0.3
+SIGMA_MIN = 0.001
 
 X1_LOGSIGMA_DEF = 0.14
 X1_LOGMU_DEF = np.log(0.58)
