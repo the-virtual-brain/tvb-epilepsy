@@ -571,7 +571,10 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
         if "sigma" in params_names:
             self.logger.info("...sigma...")
             parameters.update({"sigma": self.generate_normal_or_lognormal_parameter("sigma", self.sigma,
-                                                                                    SIGMA_MIN, SIGMA_MAX,
+                                                                                    np.maximum(0.1*self.sigma,
+                                                                                               SIGMA_MIN),
+                                                                                    np.minimum(SIGMA_SCALE*self.sigma,
+                                                                                               SIGMA_MAX),
                                                                                     sigma_scale=SIGMA_SCALE)})
 
         names = []
