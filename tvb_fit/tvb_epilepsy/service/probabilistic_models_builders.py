@@ -570,7 +570,7 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
             parameters.update({"sigma": self.generate_normal_or_lognormal_parameter("sigma", self.sigma,
                                                                                     np.maximum(0.1*self.sigma,
                                                                                                SIGMA_MIN),
-                                                                                    np.minimum(SIGMA_SCALE*self.sigma,
+                                                                                    np.minimum(5*SIGMA_SCALE*self.sigma,
                                                                                                SIGMA_MAX),
                                                                                     sigma_scale=SIGMA_SCALE)})
 
