@@ -6,6 +6,7 @@ from tvb_fit.base.utils.data_structures_utils import ensure_list
 
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants\
     import XModes, OBSERVATION_MODELS, X1EQ_CR, X1EQ_DEF
+from tvb_fit.tvb_epilepsy.base.model.epileptor_probabilistic_models import SDEEpiProbabilisticModel
 
 
 def set_time(probabilistic_model, time=None):
@@ -79,12 +80,21 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
             vep_data.update({p + "_lo": np.min(probabilistic_model.parameters[p].low),
                              p + "_hi": np.max(probabilistic_model.parameters[p].high)})
     NO_PRIOR_CONST = 0.001
-    for pkey, pflag in zip(["sigma", "tau1", "tau0", "K"], ["SDE", "TAU1_PRIOR", "TAU0_PRIOR", "K_PRIOR"]):
+    p_names = ["tau1", "tau0", "K"]
+    p_flags = ["TAU1_PRIOR", "TAU0_PRIOR", "K_PRIOR"]
+    if isinstance(probabilistic_model, SDEEpiProbabilisticModel):
+        p_names += ["sigma"]
+        p_flags += ["SDE"]
+    else:
+        vep_data["SDE"] = int(0)
+    for pkey, pflag in zip(p_names, p_flags):
         param = probabilistic_model.parameters.get(pkey, None)
         if param is None:
             mean = np.mean(getattr(probabilistic_model,pkey, NO_PRIOR_CONST))
             vep_data.update({pflag: int(0), pkey+"_mu": mean, pkey + "_std": NO_PRIOR_CONST,
                              pkey + "_lo": mean-NO_PRIOR_CONST, pkey + "_hi": mean+NO_PRIOR_CONST})
+            if pflag == "SDE":
+                vep_data["SDE"] = int(1)
         else:
             vep_data.update({pflag: int(1), pkey+"_mu": np.mean(param.mean), pkey + "_std": np.mean(param.std),
                              pkey + "_lo": np.min(param.low), pkey + "_hi": np.max(param.high)})

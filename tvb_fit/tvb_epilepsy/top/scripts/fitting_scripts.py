@@ -314,6 +314,7 @@ def set_target_timeseries(probabilistic_model, model_inversion, signals, sensors
 
 
 def set_prior_parameters(probabilistic_model, target_data, source2D_ts, x1prior_ts, problstc_model_file,
+                        probabilistic_model_builder=SDEProbabilisticModelBuilder,
                          params_names=[XModes.X0MODE.value, "sigma_" + XModes.X0MODE.value,
                                        "x1_init", "z_init", "tau1",  # "tau0", "K", "x1",
                                      "sigma", "dWt", "epsilon", "scale", "offset"], normal_flag=False,
@@ -325,7 +326,7 @@ def set_prior_parameters(probabilistic_model, target_data, source2D_ts, x1prior_
         compute_upsample(probabilistic_model.time_length / probabilistic_model.number_of_seizures,
                          compute_seizure_length(probabilistic_model.tau0), probabilistic_model.tau0)
 
-    probabilistic_model.parameters = SDEProbabilisticModelBuilder(probabilistic_model). \
+    probabilistic_model.parameters = probabilistic_model_builder(probabilistic_model). \
         generate_parameters(params_names, probabilistic_model.parameters, target_data, source2D_ts, x1prior_ts)
 
     if plotter:

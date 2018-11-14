@@ -11,7 +11,8 @@ from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, 
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import XModes, SDE_MODES, \
     OBSERVATION_MODELS, OBSERVATION_MODEL_DEF
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
-from tvb_fit.tvb_epilepsy.service.probabilistic_models_builders import SDEProbabilisticModelBuilder
+from tvb_fit.tvb_epilepsy.service.probabilistic_models_builders import SDEProbabilisticModelBuilder, \
+    ODEProbabilisticModelBuilder
 from tvb_fit.tvb_epilepsy.service.model_inversion_services import SDEModelInversionService
 from tvb_fit.tvb_epilepsy.service.vep_stan_dict_builder import build_stan_model_data_dict
 from tvb_fit.tvb_epilepsy.top.scripts.fitting_scripts import set_model_config_LSA, get_2D_simulation, \
@@ -24,6 +25,9 @@ from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 
 def path(name, base_path):
     return os.path.join(base_path , name + ".h5")
+
+
+ProbabilisticModelBuilder = ODEProbabilisticModelBuilder
 
 
 def set_hypotheses(head, config):
@@ -123,7 +127,7 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         model_inversion.active_regions_exlude = find_labels_inds(head.connectivity.region_labels, ["unknown"])
 
         # Generate probabilistic model and model data
-        probabilistic_model_builder = SDEProbabilisticModelBuilder(model_config=model_configuration)
+        probabilistic_model_builder = ProbabilisticModelBuilder(model_config=model_configuration)
         probabilistic_model_builder = \
             probabilistic_model_builder.set_attributes(["model_name", "xmode", "priors_mode", "observation_model", "K"],
                                                        [stan_model_name, XModes.X1EQMODE.value,
@@ -155,8 +159,9 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         #---------------------------------Finally set priors for the parameters-------------------------------------
         probabilistic_model = \
                 set_prior_parameters(probabilistic_model, target_data, source2D_ts, None, problstc_model_file,
-                                     [XModes.X0MODE.value, "x1_init", "z_init", "K", "tau1", "tau0", # "x1", "z"
-                                      "sigma", "dWt", "epsilon", "scale", "offset"], normal_flag,
+                                     ProbabilisticModelBuilder,
+                                     [XModes.X0MODE.value, "x1_init", "z_init", "K", "tau1", "tau0", # "x1", "z" "sigma", "dWt",
+                                       "epsilon", "scale", "offset"], normal_flag,
                                       writer=writer, plotter=plotter)
 
         # Construct the stan model data dict:
@@ -175,10 +180,10 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
 
     estimates, samples, summary, info_crit = \
         run_fitting(probabilistic_model, stan_model_name, model_data, target_data, config, head,
-                    hyp.all_disease_indices, ["K", "tau1", "tau0", "sigma", "epsilon", "scale", "offset"],
+                    hyp.all_disease_indices, ["K", "tau1", "tau0",  "epsilon", "scale", "offset"], # "sigma",
                     ["x0", "PZ", "x1eq", "zeq"], fit_flag, test_flag, base_path, fitmethod, n_chains_or_runs=10,
                     output_samples=100, num_warmup=100, min_samples_per_chain=100, max_depth=15, delta=0.95,
-                    iter=100000, tol_rel_obj=1e-6, debug=1, simulate=0, writer=writer, plotter=plotter, **kwargs)
+                    iter=200000, tol_rel_obj=1e-6, debug=1, simulate=0, writer=writer, plotter=plotter, **kwargs)
 
 
     # -------------------------- Reconfigure model after fitting:---------------------------------------------------
@@ -207,11 +212,11 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/empirical_test")
+                              "fit/tests/empirical_singlestep_meancntrd_advi_ode")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
     study_repo_path = os.path.join(user_home, "VEPlocal/CC/tvb-epilepsy-cc-study")
-    config.generic.PROBLSTC_MODELS_PATH = os.path.join(study_repo_path, "tvb_epilepsy/stan")
+    config.generic.PROBLSTC_MODELS_PATH = os.path.join(study_repo_path, "tvb_epilepsy/study")
 
     # TVB3 larger preselection:
     sensors_lbls = join_labels_indices_dict({u"B'": np.arange(1, 5).tolist() + np.arange(12, 15).tolist(),
@@ -256,7 +261,7 @@ if __name__ == "__main__":
     preprocessing = []
     downsampling = 2
     normal_flag = False
-    stan_model_name = "vep_sde_cc_meancntrd"
+    stan_model_name = "vep_sde_cc_ode"
     fitmethod = "advi"   # ""  # "sample"  # "advi" or "opt"
     pse_flag = True
     fit_flag = True
