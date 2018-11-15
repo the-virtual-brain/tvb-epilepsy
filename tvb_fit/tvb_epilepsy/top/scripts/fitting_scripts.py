@@ -340,10 +340,10 @@ def set_prior_parameters(probabilistic_model, target_data, source2D_ts, x1prior_
 
 def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, config, head=None, seizure_indices=[],
                 pair_plot_params=["tau1", "tau0", "K", "sigma", "epsilon", "scale", "offset"],
-                region_violin_params=["x0", "PZ", "x1eq", "zeq"],
-                fit_flag=True, test_flag=False, base_path="", fitmethod="sample", n_chains_or_runs=2,
-                output_samples=200, num_warmup=100, min_samples_per_chain=200, max_depth=15, delta=0.95,
-                iter=500000, tol_rel_obj=1e-6, debug=1, simulate=0,
+                region_violin_params=["x0", "PZ", "x1eq", "zeq"], state_variables=["x1", "z"],
+                state_noise_variables=["dWt", "dX1t", "dZt"], fit_flag=True, test_flag=False, base_path="",
+                fitmethod="sample", n_chains_or_runs=2, output_samples=200, num_warmup=100, min_samples_per_chain=200,
+                max_depth=15, delta=0.95, iter=500000, tol_rel_obj=1e-6, debug=1, simulate=0,
                 step_prefix='', writer=None, plotter=None, **kwargs):
 
 
@@ -424,8 +424,8 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
 
             plotter.plot_fit_results(estimates, samples, model_data, target_data, probabilistic_model, info_crit,
                                     stats=stats,  seizure_indices=seizure_indices,
-                                    pair_plot_params=pair_plot_params,  #
-                                    region_violin_params=region_violin_params,
+                                    pair_plot_params=pair_plot_params,  region_violin_params=region_violin_params,
+                                    state_variables=state_variables, state_noise_variables=state_noise_variables,
                                     region_labels=head.connectivity.region_labels, skip_samples=skip_samples,
                                     title_prefix=step_prefix + prob_model_name)
         except:

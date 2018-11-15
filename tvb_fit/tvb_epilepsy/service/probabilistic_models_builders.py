@@ -3,6 +3,8 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from copy import deepcopy
 
+from scipy.stats import zscore
+
 from tvb_fit.base.constants import PriorsModes, Target_Data_Type
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import *
 from tvb_fit.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
@@ -353,7 +355,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                 warning("Number of active regions doesn't match the number of labels of x1 source prior timeseries!")
 
     def generate_parameters(self, params_names=ODE_DEFAULT_PARAMETERS, parameters=OrderedDict(),
-                            target_data=None, model_source_ts=None, x1prior_ts=None):
+                            target_data=None, model_source_ts=None, x1prior_ts=None, x1eps_ts=None):
         parameters = super(ODEProbabilisticModelBuilder, self).generate_parameters(params_names, parameters)
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
         # if "x1" in params_names:
@@ -430,6 +432,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                                                                                          0.0, 5.0 * self.sigma_init,
                                                                                          sigma=self.sigma_init)})
 
+        epsilon_p_shape = ()
         if "epsilon" in params_names or "scale" in params_names or "offset" in params_names:
             if isinstance(model_source_ts, Timeseries) and \
                isinstance(getattr(model_source_ts, "x1", None), Timeseries) and \
@@ -451,14 +454,18 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                 #              np.max(model_out_ts.max(axis=0) - model_out_ts.min(axis=0))
                 # self.offset = np.median(target_data.data) - np.median(self.scale*model_out_ts)
                 self.epsilon = np.max(target_data.data.max(axis=0) - target_data.data.min(axis=0))/10
+                if isinstance(x1eps_ts, Timeseries) and np.all(x1eps_ts.squeezed.shape == target_data.squeezed.shape):
+                    epsilon_p_shape = target_data.shape
+                    self.epsilon *= (1 + zscore(x1eps_ts.squeezed))
 
             self.logger.info("...observation's model parameters...")
 
             if "epsilon" in params_names:
                 self.logger.info("...epsilon...")
                 parameters.update({"epsilon": self.generate_normal_or_lognormal_parameter("epsilon", self.epsilon,
-                                                                                          0, 6.0 * self.epsilon,
-                                                                                          sigma=self.epsilon)})
+                                                                                          0, np.max(6.0 * self.epsilon),
+                                                                                          sigma=self.epsilon,
+                                                                                          p_shape=epsilon_p_shape)})
 
             if "scale" in params_names:
                 self.logger.info("...scale...")
@@ -515,10 +522,10 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
     def generate_model(self, target_data_type=Target_Data_Type.SYNTHETIC.value, ground_truth={},
                        generate_parameters=True, parameters=OrderedDict(), params_names=ODE_DEFAULT_PARAMETERS,
-                       target_data=None, model_source_ts=None, x1prior_ts=None):
+                       target_data=None, model_source_ts=None, x1prior_ts=None, x1eps_ts=None):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
-        self.update_from_timeseries(target_data, model_source_ts, x1prior_ts)
+        self.update_from_timeseries(target_data, model_source_ts, x1prior_ts, x1eps_ts)
         if generate_parameters:
             parameters = self.generate_parameters(params_names, parameters, target_data, model_source_ts, x1prior_ts)
         self.model = ODEEpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
@@ -560,10 +567,11 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
         return d
 
     def generate_parameters(self, params_names=SDE_DEFAULT_PARAMETERS, parameters=OrderedDict(),
-                            target_data=None, model_source_ts=None, x1prior_ts=None):
+                            target_data=None, model_source_ts=None, x1prior_ts=None, x1eps_ts=None):
         parameters = \
             super(SDEProbabilisticModelBuilder, self).generate_parameters(params_names, parameters,
-                                                                          target_data, model_source_ts, x1prior_ts)
+                                                                          target_data, model_source_ts,
+                                                                          x1prior_ts, x1eps_ts)
         self.logger.info("Generating model parameters by " + self.__class__.__name__ + "...")
         if "sigma" in params_names:
             self.logger.info("...sigma...")
@@ -615,12 +623,13 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
 
     def generate_model(self, target_data_type=Target_Data_Type.SYNTHETIC.value, ground_truth={},
                        generate_parameters=True, parameters=OrderedDict(), params_names=SDE_DEFAULT_PARAMETERS,
-                       target_data=None, model_source_ts=None, x1prior_ts=None):
+                       target_data=None, model_source_ts=None, x1prior_ts=None, x1eps_ts=None):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
         self.update_from_timeseries(target_data, model_source_ts, x1prior_ts)
         if generate_parameters:
-            parameters = self.generate_parameters(params_names, parameters, target_data, model_source_ts, x1prior_ts)
+            parameters = self.generate_parameters(params_names, parameters, target_data, model_source_ts,
+                                                  x1prior_ts, x1eps_ts)
         self.model = SDEEpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
                                               int(self.normal_flag), int(self.linear_flag), self.x1eq_cr, self.x1eq_def,
                                               self.x1_prior_weight, parameters, ground_truth, self.xmode,

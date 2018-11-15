@@ -110,9 +110,10 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
 
     def plot_fit_results(self, ests, samples, model_data, target_data, probabilistic_model=None, info_crit=None,
                          stats=None, pair_plot_params=["tau1", "sigma", "epsilon", "scale", "offset"],
-                         region_violin_params=["x0", "PZ", "x1eq", "zeq"],
-                         region_labels=[], regions_mode="active", seizure_indices=[],
-                         trajectories_plot=True, connectivity_plot=False, skip_samples=0, title_prefix=""):
+                         region_violin_params=["x0", "PZ", "x1eq", "zeq"], state_variables=["x1", "z"],
+                         state_noise_variables=["dWt", "dX1t", "dZt"], region_labels=[], regions_mode="active",
+                         seizure_indices=[], trajectories_plot=True, connectivity_plot=False, skip_samples=0,
+                         title_prefix=""):
         sigma = []
         if probabilistic_model is not None:
             n_regions = probabilistic_model.number_of_regions
@@ -142,7 +143,7 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
         from tvb_fit.tvb_epilepsy.top.scripts.fitting_scripts import samples_to_timeseries
         samples, target_data, x1prior, x1eps = samples_to_timeseries(samples, model_data, target_data, region_labels)
         figs.append(self.plot_fit_timeseries(target_data, samples, ests, stats, probabilistic_model, "fit_target_data",
-                                             ["x1", "z"], ["dWt", "dX1t", "dZt"], sigma, seizure_indices,
+                                             state_variables, state_noise_variables, sigma, seizure_indices,
                                              skip_samples, trajectories_plot, region_labels, title_prefix))
 
         figs.append(

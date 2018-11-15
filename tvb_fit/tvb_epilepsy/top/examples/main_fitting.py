@@ -181,9 +181,10 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
     estimates, samples, summary, info_crit = \
         run_fitting(probabilistic_model, stan_model_name, model_data, target_data, config, head,
                     hyp.all_disease_indices, ["K", "tau1", "tau0",  "epsilon", "scale", "offset"], # "sigma",
-                    ["x0", "PZ", "x1eq", "zeq"], fit_flag, test_flag, base_path, fitmethod, n_chains_or_runs=10,
-                    output_samples=100, num_warmup=100, min_samples_per_chain=100, max_depth=15, delta=0.95,
-                    iter=200000, tol_rel_obj=1e-6, debug=1, simulate=0, writer=writer, plotter=plotter, **kwargs)
+                    ["x0", "PZ", "x1eq", "zeq"], ["x1", "z"], ["dWt"], fit_flag, test_flag, base_path, fitmethod,
+                    n_chains_or_runs=10, output_samples=100, num_warmup=100, min_samples_per_chain=100, max_depth=15,
+                    delta=0.95, iter=200000, tol_rel_obj=1e-6, debug=1, simulate=0, writer=writer, plotter=plotter,
+                    **kwargs)
 
 
     # -------------------------- Reconfigure model after fitting:---------------------------------------------------
@@ -212,7 +213,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/empirical_singlestep_meancntrd_advi_ode")
+                              "fit/tests/simsensor_singlestep_meancntrd_advi_ode")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
     study_repo_path = os.path.join(user_home, "VEPlocal/CC/tvb-epilepsy-cc-study")
@@ -231,7 +232,7 @@ if __name__ == "__main__":
     # Simulation times_on_off
     #  for "fitting" simulations with tau0=30.0
     sim_times_on_off = [70.0, 120.0] # e_hypo, [100, 130] for x0_hypo, and e_x0_hypo
-    EMPIRICAL = True
+    EMPIRICAL = False
     sim_source_type = "paper"
     observation_model = OBSERVATION_MODELS.SEEG_POWER.value  #OBSERVATION_MODELS.SEEG_LOGPOWER.value  #OBSERVATION_MODELS.SOURCE_POWER.value  #
     if EMPIRICAL:
@@ -264,7 +265,7 @@ if __name__ == "__main__":
     stan_model_name = "vep_sde_cc_ode"
     fitmethod = "advi"   # ""  # "sample"  # "advi" or "opt"
     pse_flag = True
-    fit_flag = True
+    fit_flag = False
     test_flag = False
     if EMPIRICAL:
         main_fit_sim_hyplsa(stan_model_name,

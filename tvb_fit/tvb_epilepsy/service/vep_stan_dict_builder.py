@@ -1,6 +1,8 @@
 
 import numpy as np
 
+from scipy.stats import zscore
+
 from tvb_fit.base.utils.log_error_utils import warning
 from tvb_fit.base.utils.data_structures_utils import ensure_list
 
@@ -57,8 +59,8 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "x1_eq_def": probabilistic_model.model_config.x1eq[nonactive_regions].mean(),
                 "SC": connectivity_matrix[active_regions][:, active_regions],
                 "Ic": np.sum(connectivity_matrix[active_regions][:, nonactive_regions], axis=1),
-                "epsilon_lo": probabilistic_model.parameters["epsilon"].low,
-                "epsilon_hi": probabilistic_model.parameters["epsilon"].high,
+                "epsilon_lo": np.min(probabilistic_model.parameters["epsilon"].low),
+                "epsilon_hi": np.max(probabilistic_model.parameters["epsilon"].high),
                 "epsilon_mu": probabilistic_model.parameters["epsilon"].mean,
                 "epsilon_std": probabilistic_model.parameters["epsilon"].std,
                 "scale_mu": probabilistic_model.parameters["scale"].mean,
@@ -112,6 +114,13 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
     else:
         x1_shape = (probabilistic_model.time_length, probabilistic_model.number_of_active_regions)
         vep_data.update({"x1prior": np.zeros(x1_shape), "x1eps": np.ones(x1_shape)})
+        # if isinstance(x1eps, np.ndarray):
+        #     x1eps = zscore(x1eps)
+        #     x1eps /= np.max(np.abs(x1eps))
+        #     vep_data["epsilon_mu"] = vep_data["epsilon_mu"] * (1.01 + x1eps)
+        #     vep_data["epsilon_std"] = vep_data["epsilon_mu"]
+        #     vep_data["epsilon_lo"] = 0.0
+        #     vep_data["epsilon_hi"] = np.max(vep_data["epsilon_mu"] + 6*vep_data["epsilon_std"])
     return vep_data
 
 
