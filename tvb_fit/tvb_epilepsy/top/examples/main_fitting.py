@@ -181,7 +181,7 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
     estimates, samples, summary, info_crit = \
         run_fitting(probabilistic_model, stan_model_name, model_data, target_data, config, head,
                     hyp.all_disease_indices, ["K", "tau1", "tau0",  "epsilon", "scale", "offset"], # "sigma",
-                    ["x0", "PZ", "x1eq", "zeq"], ["x1", "z"], ["dWt"], fit_flag, test_flag, base_path, fitmethod,
+                    ["x0", "PZ", "x1eq", "zeq"], ["x1"], ["dWt"], fit_flag, test_flag, base_path, fitmethod, # , "z"
                     n_chains_or_runs=10, output_samples=100, num_warmup=100, min_samples_per_chain=100, max_depth=15,
                     delta=0.95, iter=200000, tol_rel_obj=1e-6, debug=1, simulate=0, writer=writer, plotter=plotter,
                     **kwargs)
