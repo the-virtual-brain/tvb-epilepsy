@@ -394,10 +394,10 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
     # x0[active] -> probabilistic_model.model.number_of_active_regions
     # x1init[active], zinit[active] -> 2 * probabilistic_model.number_of_active_regions
     # dZt[active, t] -> probabilistic_model.number_of_active_regions * (probabilistic_model.time_length-1)
-    number_of_total_params = \
-        5 + probabilistic_model.number_of_active_regions * (3 + (probabilistic_model.time_length - 1))
+    # number_of_total_params = \
+    #     5 + probabilistic_model.number_of_active_regions * (3 + (probabilistic_model.time_length - 1))
     info_crit = \
-        stan_interface.compute_information_criteria(samples, number_of_total_params, skip_samples=skip_samples,
+        stan_interface.compute_information_criteria(samples, None, skip_samples=skip_samples,
                                                     # parameters=["amplitude_star", "offset_star", "epsilon_star",
                                                     #                  "sigma_star", "time_scale_star", "x0_star",
                                                     #                  "x_init_star", "z_init_star", "z_eta_star"],
