@@ -94,7 +94,7 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
         if param is None:
             mean = np.mean(getattr(probabilistic_model,pkey, NO_PRIOR_CONST))
             vep_data.update({pflag: int(0), pkey+"_mu": mean, pkey + "_std": NO_PRIOR_CONST,
-                             pkey + "_lo": mean-NO_PRIOR_CONST, pkey + "_hi": mean+NO_PRIOR_CONST})
+                             pkey + "_lo": mean-3*NO_PRIOR_CONST, pkey + "_hi": mean+3*NO_PRIOR_CONST})
             if pflag == "SDE":
                 vep_data["SDE"] = int(1)
         else:
