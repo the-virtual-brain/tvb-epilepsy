@@ -453,7 +453,8 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                 # self.scale = np.max(target_data.data.max(axis=0) - target_data.data.min(axis=0)) / \
                 #              np.max(model_out_ts.max(axis=0) - model_out_ts.min(axis=0))
                 # self.offset = np.median(target_data.data) - np.median(self.scale*model_out_ts)
-                self.epsilon = np.max(target_data.data.max(axis=0) - target_data.data.min(axis=0))/10
+                self.epsilon = np.max(np.percentile(target_data.data, 99, axis=0) -
+                                      np.percentile(target_data.data, 1, axis=0))/25
                 if isinstance(x1eps_ts, Timeseries) and np.all(x1eps_ts.squeezed.shape == target_data.squeezed.shape):
                     epsilon_p_shape = target_data.shape
                     self.epsilon *= (1 + zscore(x1eps_ts.squeezed))
@@ -463,7 +464,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             if "epsilon" in params_names:
                 self.logger.info("...epsilon...")
                 parameters.update({"epsilon": self.generate_normal_or_lognormal_parameter("epsilon", self.epsilon,
-                                                                                          0, np.max(6.0 * self.epsilon),
+                                                                                          0, np.max(5.0 * self.epsilon),
                                                                                           sigma=self.epsilon,
                                                                                           p_shape=epsilon_p_shape)})
 
@@ -525,7 +526,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                        target_data=None, model_source_ts=None, x1prior_ts=None, x1eps_ts=None):
         tic = time.time()
         self.logger.info("Generating model by " + self.__class__.__name__ + "...")
-        self.update_from_timeseries(target_data, model_source_ts, x1prior_ts, x1eps_ts)
+        self.update_from_timeseries(target_data, model_source_ts, x1prior_ts)
         if generate_parameters:
             parameters = self.generate_parameters(params_names, parameters, target_data, model_source_ts, x1prior_ts)
         self.model = ODEEpiProbabilisticModel(self.model_config, self.model_name, target_data_type, self.priors_mode,
