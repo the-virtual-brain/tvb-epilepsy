@@ -8,6 +8,8 @@ from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.base.utils.data_structures_utils import ensure_list, find_labels_inds, join_labels_indices_dict
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU1_DEF, TAU0_DEF
+from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import TAU1_DEF as TAU1_FIT_DEF
+from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import TAU0_DEF as TAU0_FIT_DEF
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import XModes, SDE_MODES, \
     OBSERVATION_MODELS, OBSERVATION_MODEL_DEF
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
@@ -27,7 +29,7 @@ def path(name, base_path):
     return os.path.join(base_path , name + ".h5")
 
 
-ProbabilisticModelBuilder = ODEProbabilisticModelBuilder
+ProbabilisticModelBuilder = SDEProbabilisticModelBuilder
 
 
 def set_hypotheses(head, config):
@@ -127,6 +129,8 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         model_inversion.active_regions_exlude = find_labels_inds(head.connectivity.region_labels, ["unknown"])
 
         # Generate probabilistic model and model data
+        model_configuration.tau1 = TAU1_FIT_DEF
+        model_configuration.tau0 = TAU0_FIT_DEF
         probabilistic_model_builder = ProbabilisticModelBuilder(model_config=model_configuration)
         probabilistic_model_builder = \
             probabilistic_model_builder.set_attributes(["model_name", "xmode", "priors_mode", "observation_model", "K",
@@ -136,7 +140,7 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
                                                         np.mean(model_configuration.K), 0.05])
         probabilistic_model = probabilistic_model_builder.generate_model(generate_parameters=False)
 
-        # Get by simulation and/or loading prototypical source 2D timeseries and the target (simulater or empirical)
+        # Get by simulation and/or loading prototypical source 2D timeseries and the target (simulated or empirical)
         # time series for fitting
         signals, probabilistic_model, simulator = \
            get_target_timeseries(probabilistic_model, head, lsa_hypothesis, times_on, time_length,
@@ -161,8 +165,8 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         probabilistic_model = \
                 set_prior_parameters(probabilistic_model, target_data, source2D_ts, None, problstc_model_file,
                                      ProbabilisticModelBuilder,
-                                     [XModes.X0MODE.value, "x1_init", "z_init", "K", "tau1", "tau0", # "x1", "z"
-                                       "epsilon", "scale", "offset", "sigma", "dWt"], normal_flag,
+                                     [XModes.X0MODE.value, "x1_init", "z_init", "tau1",  #  "K", "tau0, ""x1", "z"
+                                      "epsilon", "scale", "offset", "sigma", "dWt"], normal_flag,
                                       writer=writer, plotter=plotter)
 
         # Construct the stan model data dict:
@@ -184,7 +188,7 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
                     hyp.all_disease_indices, ["K", "tau1", "tau0", "sigma", "epsilon", "scale", "offset"], #
                     ["x0", "PZ", "x1eq", "zeq"], ["x1", "z"], ["dWt"], fit_flag, test_flag, base_path, fitmethod,
                     n_chains_or_runs=4, output_samples=100, num_warmup=100, min_samples_per_chain=100, max_depth=15,
-                    delta=0.95, iter=200000, tol_rel_obj=1e-6, debug=1, simulate=0, writer=writer, plotter=plotter,
+                    delta=0.95, iter=100000, tol_rel_obj=1e-6, debug=1, simulate=0, writer=writer, plotter=plotter,
                     init=0, **kwargs)
 
 
@@ -259,14 +263,14 @@ if __name__ == "__main__":
             # times_on_off = [1100.0, 1300.0]  # for "fitting" simulations with tau0=300.0
             times_on = sim_times_on_off[0]
             time_length = sim_times_on_off[1] - sim_times_on_off[0]
-    normalization = "baseline-maxstd"  # "zscore"
+    normalization = "baseline-amplitude"
     preprocessing = []
-    downsampling = 2
+    downsampling = 1
     normal_flag = False
     stan_model_name = "vep_sde_s2"
     fitmethod = "advi"   # ""  # "sample"  # "advi" or "opt"
     pse_flag = True
-    fit_flag = False
+    fit_flag = True
     test_flag = False
     if EMPIRICAL:
         main_fit_sim_hyplsa(stan_model_name,
