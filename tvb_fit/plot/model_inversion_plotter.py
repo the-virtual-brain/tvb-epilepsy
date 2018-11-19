@@ -230,9 +230,26 @@ class ModelInversionPlotter(TimeseriesPlotter):
                             target_data_str="fit_target_data", state_variables_str=["x1", "x2"], dWt_str=["dWt"],
                             scalar_params_str=["sigma"], special_idx=[], skip_samples=0, trajectories_plot=False,
                             region_labels=[], title_prefix=""):
+
+        def discard_star_parameters(params, samples_params):
+            # Function to discard _star params if the non _star parameter also exists
+            params_out = []
+            for p_star in params:
+                if p_star.find("_star") > 0:
+                    p = p_star.split("_star")[0]
+                    if p not in samples_params:
+                        params_out.append(p_star)
+                else:
+                    params_out.append(p_star)
+            return params_out
+
         if len(title_prefix) > 0:
             title_prefix = title_prefix + ": "
         samples = ensure_list(samples)
+        state_variables_str = discard_star_parameters(state_variables_str, samples[0].keys())
+        dWt_str += [(dWt + "_star").replace("_star_star", "_star") for dWt in dWt_str]
+        dWt_str = discard_star_parameters(dWt_str, samples[0].keys())
+        ts_strings = [target_data_str] + state_variables_str + dWt_str
         if len(state_variables_str) > 0:
             if len(region_labels) == 0:
                 region_labels = samples[0][state_variables_str[0]].space_labels
@@ -249,8 +266,6 @@ class ModelInversionPlotter(TimeseriesPlotter):
         n_target_data = target_data.number_of_labels
         if len(stats_target_data_labels) != n_target_data:
             stats_target_data_labels = n_target_data * [""]
-        dWt_star = OrderedDict(zip([(dWt+"_star").replace("_star_star", "_star") for dWt in dWt_str], dWt_str))
-        ts_strings = [target_data_str] + state_variables_str + dWt_star.keys()
         scalar_str = []
         for p_str in scalar_params_str:
             if probabilistic_model is not None:
@@ -268,9 +283,9 @@ class ModelInversionPlotter(TimeseriesPlotter):
                     if p_str in state_variables_str:
                         x_p_str_means[p_str] = ["Rhat=%.2f" % Rhat[p_str][:, ip].mean()
                                                 for ip in range(n_regions)]
-                    elif p_str in dWt_star.keys():
+                    elif p_str in dWt_str:
                         dWt_p_str_means[p_str] = ["Rhat=%.2f" % Rhat[p_str][:, ip].mean()
-                                                  for ip in range(n_regions)]
+                                                            for ip in range(n_regions)]
                     else:
                         targ_p_str_means[p_str] = ["Rhat=%.2f" % Rhat[p_str][:, ip].mean()
                                                    for ip in range(n_target_data)]
@@ -294,7 +309,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
                                                                          for x_p_str, x_p_str_mean in x_p_str_means.items()])])
                                                    for ip in range(n_regions)])
 
-            for p_star, p_str in dWt_star.items():
+            for p_star, p_str in dWt_str:
                 if p_star in dWt_p_str_means.keys():
                     stats_region_labels_dWt[p_str] = numpy.array([", ".join([region_labels[ip],
                                                                              dWt_p_str_means[p_star][ip]])
@@ -337,7 +352,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
                 p_est = est.get("sigma", None)
                 if p_est is not None:
                     scalar_str += ", " + p_str + " post = " + str(p_est)
-            for d_star, d_str in dWt_star.items():
+            for d_star, d_str in dWt_str:
                 dWt = OrderedDict()
                 try:
                     dWt[d_str] = sample.get(d_star, sample.get(d_str)).data[:, :, :, skip_samples:].squeeze()
