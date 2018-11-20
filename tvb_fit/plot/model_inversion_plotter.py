@@ -309,10 +309,10 @@ class ModelInversionPlotter(TimeseriesPlotter):
                                                                          for x_p_str, x_p_str_mean in x_p_str_means.items()])])
                                                    for ip in range(n_regions)])
 
-            for p_star, p_str in dWt_str:
-                if p_star in dWt_p_str_means.keys():
+            for p_str in dWt_str:
+                if p_str in dWt_p_str_means.keys():
                     stats_region_labels_dWt[p_str] = numpy.array([", ".join([region_labels[ip],
-                                                                             dWt_p_str_means[p_star][ip]])
+                                                                             dWt_p_str_means[p_str][ip]])
                                                                   for ip in range(n_regions)])
                 else:
                     stats_region_labels_dWt[p_str] = numpy.array(region_labels)
@@ -352,11 +352,11 @@ class ModelInversionPlotter(TimeseriesPlotter):
                 p_est = est.get("sigma", None)
                 if p_est is not None:
                     scalar_str += ", " + p_str + " post = " + str(p_est)
-            for d_star, d_str in dWt_str:
+            for d_str in dWt_str:
                 dWt = OrderedDict()
                 try:
-                    dWt[d_str] = sample.get(d_star, sample.get(d_str)).data[:, :, :, skip_samples:].squeeze()
-                    subtitle = d_str + stats_string[d_star] + \
+                    dWt[d_str] = sample.get(d_str, sample.get(d_str)).data[:, :, :, skip_samples:].squeeze()
+                    subtitle = d_str + stats_string[d_str] + \
                                str(numpy.where(len(scalar_str) > 0, "\n" + scalar_str, ""))
                     figs.append(self.plot_raster(dWt, time[:-1], time_units=target_data.time_unit,
                                                  special_idx=special_idx,
