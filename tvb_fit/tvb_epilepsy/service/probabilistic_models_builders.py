@@ -453,8 +453,8 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                 # self.scale = np.max(target_data.data.max(axis=0) - target_data.data.min(axis=0)) / \
                 #              np.max(model_out_ts.max(axis=0) - model_out_ts.min(axis=0))
                 # self.offset = np.median(target_data.data) - np.median(self.scale*model_out_ts)
-                self.epsilon = np.max(np.percentile(target_data.data, 99, axis=0) -
-                                      np.percentile(target_data.data, 1, axis=0))/25
+                self.epsilon *= np.max(np.percentile(target_data.data, 99, axis=0) -
+                                       np.percentile(target_data.data, 1, axis=0))
                 if isinstance(x1eps_ts, Timeseries) and np.all(x1eps_ts.squeezed.shape == target_data.squeezed.shape):
                     epsilon_p_shape = target_data.shape
                     self.epsilon *= (1 + zscore(x1eps_ts.squeezed))
@@ -579,9 +579,8 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
             parameters.update({"sigma": self.generate_normal_or_lognormal_parameter("sigma", self.sigma,
                                                                                     np.maximum(0.1*self.sigma,
                                                                                                SIGMA_MIN),
-                                                                                    np.minimum(5*SIGMA_SCALE*self.sigma,
-                                                                                               SIGMA_MAX),
-                                                                                    sigma_scale=SIGMA_SCALE)})
+                                                                                    np.minimum(3*self.sigma, SIGMA_MAX),
+                                                                                    sigma_scale=self.sigma/SIGMA_SCALE)})
 
         names = []
         mins = []
