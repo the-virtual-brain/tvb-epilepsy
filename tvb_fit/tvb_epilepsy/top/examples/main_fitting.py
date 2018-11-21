@@ -236,7 +236,7 @@ if __name__ == "__main__":
 
     # Simulation times_on_off
     #  for "fitting" simulations with tau0=30.0
-    sim_times_on_off = [70.0, 120.0] # e_hypo, [100, 130] for x0_hypo, and e_x0_hypo
+    sim_times_on_off = [70.0, 100.0] # e_hypo, [100, 130] for x0_hypo, and e_x0_hypo
     EMPIRICAL = False
     sim_source_type = "paper"
     observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  #OBSERVATION_MODELS.SEEG_POWER.value  #OBSERVATION_MODELS.SEEG_LOGPOWER.value  #
