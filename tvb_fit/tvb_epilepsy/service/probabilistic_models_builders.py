@@ -449,7 +449,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                              np.max(np.percentile(model_out_ts, 99, axis=0) -
                                     np.percentile(model_out_ts, 1, axis=0))
                 model_out_ts *= self.scale
-                self.offset = np.percentile(target_data.data, 50) - np.percentile(model_out_ts, 50)  # np.median(self.scale*model_out_ts)
+                self.offset = np.percentile(target_data.data, 50) - np.percentile(model_out_ts, 50)
                 # self.scale = np.max(target_data.data.max(axis=0) - target_data.data.min(axis=0)) / \
                 #              np.max(model_out_ts.max(axis=0) - model_out_ts.min(axis=0))
                 # self.offset = np.median(target_data.data) - np.median(self.scale*model_out_ts)
