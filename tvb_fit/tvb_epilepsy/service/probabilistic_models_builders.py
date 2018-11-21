@@ -443,13 +443,13 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                         model_out_ts = compute_seeg_exp(model_out_ts, self.gain_matrix)
                     else:
                         model_out_ts = compute_seeg_lin(model_out_ts, self.gain_matrix)
-                model_out_ts -= np.mean(model_out_ts, axis=0)
-                self.offset = np.percentile(target_data.data, 50) - np.percentile(model_out_ts, 50)  # np.median(self.scale*model_out_ts)
-                model_out_ts += self.offset
+                model_out_ts -= x1eq_def  # TODO: to test if this is really needed
                 self.scale = np.max(np.percentile(target_data.data, 99, axis=0) -
                                     np.percentile(target_data.data, 1, axis=0)) / \
                              np.max(np.percentile(model_out_ts, 99, axis=0) -
                                     np.percentile(model_out_ts, 1, axis=0))
+                model_out_ts *= self.scale
+                self.offset = np.percentile(target_data.data, 50) - np.percentile(model_out_ts, 50)  # np.median(self.scale*model_out_ts)
                 # self.scale = np.max(target_data.data.max(axis=0) - target_data.data.min(axis=0)) / \
                 #              np.max(model_out_ts.max(axis=0) - model_out_ts.min(axis=0))
                 # self.offset = np.median(target_data.data) - np.median(self.scale*model_out_ts)
