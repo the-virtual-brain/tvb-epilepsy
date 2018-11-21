@@ -134,10 +134,10 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         probabilistic_model_builder = ProbabilisticModelBuilder(model_config=model_configuration)
         probabilistic_model_builder = \
             probabilistic_model_builder.set_attributes(["model_name", "xmode", "priors_mode", "observation_model", "K",
-                                                        "sigma"],
+                                                        "sigma", "epsilon"],
                                                        [stan_model_name, XModes.X1EQMODE.value,
                                                         PriorsModes.NONINFORMATIVE.value, observation_model,
-                                                        np.mean(model_configuration.K), 0.05])
+                                                        np.mean(model_configuration.K), 0.05, 0.1])
         probabilistic_model = probabilistic_model_builder.generate_model(generate_parameters=False)
 
         # Get by simulation and/or loading prototypical source 2D timeseries and the target (simulated or empirical)
@@ -218,7 +218,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/source6D")
+                              "fit/tests/source6D_s2")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
     study_repo_path = os.path.join(user_home, "VEPlocal/CC/tvb-epilepsy-cc-study")
