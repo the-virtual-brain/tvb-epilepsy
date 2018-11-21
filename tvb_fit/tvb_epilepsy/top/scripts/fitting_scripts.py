@@ -265,8 +265,7 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
             preprocessin = []
             if sim_source_type == "paper":
                 preprocessing = ["convolve"] # ["spectrogram", "log"]  #, "convolve" # ["hpf", "mean_center", "abs_envelope", "log"]
-        if observation_model in OBSERVATION_MODELS.SEEG.value:
-            preprocessing += ["mean_center"]
+        preprocessing += ["mean_center"]
         preprocessing += ["decimate"]
         rescale_x1eq = -1.225
         if np.max(probabilistic_model.model_config.x1eq) > rescale_x1eq:
