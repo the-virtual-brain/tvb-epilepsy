@@ -137,7 +137,7 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
                                                         "sigma", "epsilon"],
                                                        [stan_model_name, XModes.X1EQMODE.value,
                                                         PriorsModes.NONINFORMATIVE.value, observation_model,
-                                                        np.mean(model_configuration.K), 0.05, 0.1])
+                                                        np.mean(model_configuration.K), 0.05, 0.04])
         probabilistic_model = probabilistic_model_builder.generate_model(generate_parameters=False)
 
         # Get by simulation and/or loading prototypical source 2D timeseries and the target (simulated or empirical)
