@@ -165,7 +165,7 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         probabilistic_model = \
                 set_prior_parameters(probabilistic_model, target_data, source2D_ts, None, problstc_model_file,
                                      ProbabilisticModelBuilder,
-                                     [XModes.X0MODE.value, "x1_init", "z_init", "tau1",  #  "K", "tau0, ""x1", "z"
+                                     [XModes.X0MODE.value, "x1_init", "z_init", "K", "tau1", "tau0",  #    "x1", "z"
                                       "epsilon", "scale", "offset", "sigma", "dWt"], normal_flag,
                                       writer=writer, plotter=plotter)
 
@@ -185,11 +185,11 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
 
     estimates, samples, summary, info_crit = \
         run_fitting(probabilistic_model, stan_model_name, model_data, target_data, config, head,
-                    hyp.all_disease_indices, ["tau1", "sigma", "epsilon", "scale", "offset"], # "K", "tau0",
+                    hyp.all_disease_indices, ["K", "tau1", "tau0", "sigma", "epsilon", "scale", "offset"], #
                     ["x0", "PZ", "x1eq", "zeq"], ["x1", "z"], ["dWt"], fit_flag, test_flag, base_path, fitmethod,
                     n_chains_or_runs=4, output_samples=100, num_warmup=100, min_samples_per_chain=100, max_depth=15,
-                    delta=0.95, iter=100000, tol_rel_obj=1e-6, debug=1, simulate=0, writer=writer, plotter=plotter,
-                    init=0, **kwargs)
+                    delta=0.95, iter=200000, tol_rel_obj=1e-6, debug=1, simulate=0, writer=writer, plotter=plotter,
+                    init=0, **kwargs)  #
 
 
     # -------------------------- Reconfigure model after fitting:---------------------------------------------------
@@ -218,7 +218,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/source6D_s2")
+                              "fit/tests/simsensor_meancntrd_x1eq_def_hierarchHyper")
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
     study_repo_path = os.path.join(user_home, "VEPlocal/CC/tvb-epilepsy-cc-study")
@@ -239,7 +239,7 @@ if __name__ == "__main__":
     sim_times_on_off = [70.0, 100.0] # e_hypo, [100, 130] for x0_hypo, and e_x0_hypo
     EMPIRICAL = False
     sim_source_type = "paper"
-    observation_model = OBSERVATION_MODELS.SOURCE_POWER.value  #OBSERVATION_MODELS.SEEG_POWER.value  #OBSERVATION_MODELS.SEEG_LOGPOWER.value  #
+    observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value  #OBSERVATION_MODELS.SOURCE_POWER.value  #OBSERVATION_MODELS.SEEG_POWER.value  #
     if EMPIRICAL:
         seizures_files = ['SZ1_0001.edf']  # 'SZ2_0001.edf'
         times_on = []# [9700.0, 13700.0] # (np.array([15.0, 30.0]) * 1000.0).tolist() # for SZ1
@@ -265,9 +265,9 @@ if __name__ == "__main__":
             time_length = sim_times_on_off[1] - sim_times_on_off[0]
     normalization = "baseline-amplitude"
     preprocessing = []
-    downsampling = 1
+    downsampling = 2
     normal_flag = False
-    stan_model_name = "vep_sde_s2"
+    stan_model_name = "vep_sde_hierarchHyper"
     fitmethod = "advi"   # ""  # "sample"  # "advi" or "opt"
     pse_flag = True
     fit_flag = True
