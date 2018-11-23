@@ -439,7 +439,6 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                isinstance(target_data, TargetDataTimeseries):
                 model_out_ts = model_source_ts.x1.squeezed[:, self.active_regions] # - self.model_config.x1eq.mean() # - X1_MIN #
                 if self.observation_model in OBSERVATION_MODELS.SEEG.value and isinstance(self.gain_matrix, np.ndarray):
-                    model_out_ts -= self.x1eq_def  # TODO: to test if this is really needed
                     if self.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
                         model_out_ts = compute_seeg_exp(model_out_ts, self.gain_matrix)
                     else:
@@ -457,9 +456,9 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                 # self.offset = np.median(target_data.data) - np.median(self.scale*model_out_ts)
                 self.epsilon *= np.max(np.percentile(target_data.data, 99, axis=0) -
                                        np.percentile(target_data.data, 1, axis=0))
-                if isinstance(x1eps_ts, Timeseries) and np.all(x1eps_ts.squeezed.shape == target_data.squeezed.shape):
-                    epsilon_p_shape = target_data.shape
-                    self.epsilon *= (1 + zscore(x1eps_ts.squeezed))
+                # if isinstance(x1eps_ts, Timeseries) and np.all(x1eps_ts.squeezed.shape == target_data.squeezed.shape):
+                #     epsilon_p_shape = target_data.shape
+                #     self.epsilon *= (1 + zscore(x1eps_ts.squeezed))
 
             self.logger.info("...observation's model parameters...")
 
@@ -485,41 +484,41 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                         {"offset": generate_normal_parameter("offset", self.offset, self.offset - 3 * offset_sigma,
                                                          self.offset + 3 * offset_sigma, sigma=offset_sigma)})
 
-        if self.x1_prior_weight > 0.0:
-
-            if isinstance(x1prior_ts, Timeseries) and \
-                    isinstance(model_source_ts, Timeseries) and \
-                            isinstance(getattr(model_source_ts, "x1", None), Timeseries):
-                model_out_ts = model_source_ts.x1.squeezed[:, self.active_regions] # - self.model_config.x1eq.mean() #- X1_MIN #
-                model_out_ts -= np.mean(model_out_ts, axis=0)
-                self.offset = np.percentile(x1prior_ts.data, 50) - np.percentile(model_out_ts, 50)   # np.median(self.scale*model_out_ts)
-                model_out_ts += self.offset
-                self.scale = np.median(np.percentile(x1prior_ts.data, 99, axis=0) -
-                                       np.percentile(x1prior_ts.data, 1, axis=0)) / \
-                             np.median(np.percentile(model_out_ts, 99, axis=0) -
-                                       np.percentile(model_out_ts, 1, axis=0))
-                # self.x1_scale = np.max(x1prior_ts.data.max(axis=0) - x1prior_ts.data.min(axis=0)) / \
-                #                 np.max(model_out_ts.max(axis=0) - model_out_ts.min(axis=0))
-                # self.x1_offset = np.median(x1prior_ts.data) - np.median(self.x1_scale * model_out_ts)
-
-            if "x1_scale" in params_names:
-                self.logger.info("...x1_scale...")
-                x1_scale_scale = self.x1_scale / SCALE_SCALE_DEF
-                parameters.update({"x1_scale": self.generate_normal_or_lognormal_parameter("x1_scale", self.x1_scale,
-                                                                                           np.maximum(0.1,
-                                                                                                      self.x1_scale -
-                                                                                                    3 * x1_scale_scale),
-                                                                                         self.x1_scale +
-                                                                                           3 * x1_scale_scale,
-                                                                                          sigma=x1_scale_scale)})
-            if "x1_offset" in params_names:
-                self.logger.info("...x1_offset...")
-                x1_offset_sigma= np.abs(self.x1_offset) / OFFSET_SCALE_DEF
-                parameters.update(
-                        {"x1_offset": generate_normal_parameter("x1_offset", self.x1_offset,
-                                                                self.x1_offset - 3 * x1_offset_sigma,
-                                                                self.x1_offset + 3 * x1_offset_sigma,
-                                                                sigma=x1_offset_sigma)})
+        # if self.x1_prior_weight > 0.0:
+        #
+        #     if isinstance(x1prior_ts, Timeseries) and \
+        #             isinstance(model_source_ts, Timeseries) and \
+        #                     isinstance(getattr(model_source_ts, "x1", None), Timeseries):
+        #         model_out_ts = model_source_ts.x1.squeezed[:, self.active_regions] # - self.model_config.x1eq.mean() #- X1_MIN #
+        #         model_out_ts -= np.mean(model_out_ts, axis=0)
+        #         self.offset = np.percentile(x1prior_ts.data, 50) - np.percentile(model_out_ts, 50)   # np.median(self.scale*model_out_ts)
+        #         model_out_ts += self.offset
+        #         self.scale = np.median(np.percentile(x1prior_ts.data, 99, axis=0) -
+        #                                np.percentile(x1prior_ts.data, 1, axis=0)) / \
+        #                      np.median(np.percentile(model_out_ts, 99, axis=0) -
+        #                                np.percentile(model_out_ts, 1, axis=0))
+        #         # self.x1_scale = np.max(x1prior_ts.data.max(axis=0) - x1prior_ts.data.min(axis=0)) / \
+        #         #                 np.max(model_out_ts.max(axis=0) - model_out_ts.min(axis=0))
+        #         # self.x1_offset = np.median(x1prior_ts.data) - np.median(self.x1_scale * model_out_ts)
+        #
+        #     if "x1_scale" in params_names:
+        #         self.logger.info("...x1_scale...")
+        #         x1_scale_scale = self.x1_scale / SCALE_SCALE_DEF
+        #         parameters.update({"x1_scale": self.generate_normal_or_lognormal_parameter("x1_scale", self.x1_scale,
+        #                                                                                    np.maximum(0.1,
+        #                                                                                               self.x1_scale -
+        #                                                                                             3 * x1_scale_scale),
+        #                                                                                  self.x1_scale +
+        #                                                                                    3 * x1_scale_scale,
+        #                                                                                   sigma=x1_scale_scale)})
+        #     if "x1_offset" in params_names:
+        #         self.logger.info("...x1_offset...")
+        #         x1_offset_sigma= np.abs(self.x1_offset) / OFFSET_SCALE_DEF
+        #         parameters.update(
+        #                 {"x1_offset": generate_normal_parameter("x1_offset", self.x1_offset,
+        #                                                         self.x1_offset - 3 * x1_offset_sigma,
+        #                                                         self.x1_offset + 3 * x1_offset_sigma,
+        #                                                         sigma=x1_offset_sigma)})
 
         return parameters
 
