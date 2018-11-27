@@ -218,7 +218,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/splitHyper/empirical/split")
+                              "fit/tests/empirical_test/empirical_K_tau0_params")  # _hierarchHyper, _splitHyper, _realsplitHyper, _K_tau0_fixed
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
     study_repo_path = os.path.join(user_home, "VEPlocal/CC/tvb-epilepsy-cc-study")
@@ -239,7 +239,7 @@ if __name__ == "__main__":
     sim_times_on_off = [70.0, 100.0] # e_hypo, [100, 130] for x0_hypo, and e_x0_hypo
     EMPIRICAL = True
     sim_source_type = "paper"
-    observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value  #OBSERVATION_MODELS.SOURCE_POWER.value  # OBSERVATION_MODELS.SEEG_POWER.value  #
+    observation_model =  OBSERVATION_MODELS.SEEG_POWER.value  #OBSERVATION_MODELS.SEEG_LOGPOWER.value  #OBSERVATION_MODELS.SOURCE_POWER.value  #
     if EMPIRICAL:
         seizures_files = ['SZ1_0001.edf']  # 'SZ2_0001.edf'
         times_on = []# [9700.0, 13700.0] # (np.array([15.0, 30.0]) * 1000.0).tolist() # for SZ1
@@ -267,10 +267,10 @@ if __name__ == "__main__":
     preprocessing = []
     downsampling = 2
     normal_flag = False
-    stan_model_name = "vep_sde_splitHyper"
+    stan_model_name = "vep_sde"  # _limloghierarchHyper, _mulimlogsplitHyper, _mulimlogrealsplitHyper
     fitmethod = "advi"   # ""  # "sample"  # "advi" or "opt"
     pse_flag = True
-    fit_flag = True
+    fit_flag = False
     test_flag = False
     if EMPIRICAL:
         main_fit_sim_hyplsa(stan_model_name,
