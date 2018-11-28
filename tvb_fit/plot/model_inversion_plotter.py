@@ -229,7 +229,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
     def plot_fit_timeseries(self, target_data, samples, ests, stats=None, probabilistic_model=None,
                             target_data_str="fit_target_data", state_variables_str=["x1", "x2"], dWt_str=["dWt"],
                             scalar_params_str=["sigma"], special_idx=[], skip_samples=0, trajectories_plot=False,
-                            region_labels=[], title_prefix=""):
+                            region_labels=[], merge=False, title_prefix=""):
 
         def discard_star_parameters(params, samples_params):
             # Function to discard _star params if the non _star parameter also exists
@@ -242,6 +242,84 @@ class ModelInversionPlotter(TimeseriesPlotter):
                 else:
                     params_out.append(p_star)
             return params_out
+
+
+        def plot_fit_timeseries_chain(chain_str, sample, est, state_variables_str, dWt_str, scalar_params_str, scalar_str,
+                                      stats_string, stats_region_labels_x, stats_region_labels_dWt, stats_region_titles,
+                                      region_labels, title_prefix):
+
+            if len(chain_str) > 0:
+                chain_name = "chain" + chain_str
+                name = title_prefix + chain_name
+            else:
+                chain_name = "all chains"
+                name = title_prefix
+
+            # Hidden states posterior per state variable and chain
+            x = OrderedDict()
+            for x_str in state_variables_str:
+                try:
+                    this_x = {x_str: sample[x_str].data[:, :, :, skip_samples:].squeeze()}
+                    x.update(this_x)
+                    subtitles = ['hidden state ' + x_str + stats_string[x_str]]
+                    figs.append(
+                        self.plot_raster(this_x, time, special_idx=special_idx, time_units=target_data.time_unit,
+                                         title=name + ": Hidden states fit rasterplot " + x_str,
+                                         subtitles=subtitles, offset=0.25,
+                                         labels=stats_region_labels_x.get(x_str, region_labels),
+                                         figsize=FiguresConfig.VERY_LARGE_SIZE))
+                except:
+                    pass
+
+                if trajectories_plot and (len(x) in [2, 3]):
+                    title = name + ' Fit hidden state space trajectories'
+                    figs.append(self.plot_trajectories(x, special_idx=special_idx, title=title,
+                                                       labels=stats_region_titles,
+                                                       figsize=FiguresConfig.SUPER_LARGE_SIZE))
+
+            # SDE dWt dynamic noise plots per chain and dWt
+            for p_str in scalar_params_str:
+                p_est = est.get("sigma", None)
+                if p_est is not None:
+                    scalar_str += ", " + p_str + " post = " + str(p_est)
+            for d_str in dWt_str:
+                dWt = OrderedDict()
+                try:
+                    dWt[d_str] = sample.get(d_str, sample.get(d_str)).data[:, :, :, skip_samples:].squeeze()
+                    subtitle = d_str + stats_string[d_str] + \
+                               str(numpy.where(len(scalar_str) > 0, "\n" + scalar_str, ""))
+                    figs.append(self.plot_raster(dWt, time[:-1], time_units=target_data.time_unit,
+                                                 special_idx=special_idx,
+                                                 title=name + ": Hidden states random walk rasterplot " + d_str,
+                                                 subtitles=[subtitle], offset=0.25,
+                                                 labels=stats_region_labels_dWt.get(d_str, region_labels),
+                                                 figsize=FiguresConfig.VERY_LARGE_SIZE))
+                except:
+                    pass
+
+            this_stats_target_data_labels = \
+                [stats_target_data_labels] + [numpy.array(["" for _ in range(n_target_data)])]
+            try:
+                # Comparison of observation target data and its posterior fit per chain
+                chain_key = "fit " + chain_name
+                chain_observation_dict = OrderedDict({'observation time series': target_data.squeezed})
+                chain_observation_dict.update({chain_key:
+                                                   sample[target_data_str].data[:, :, :, skip_samples:].squeeze()})
+                observation_dict.update({"fit %s mean" % chain_name:
+                                             chain_observation_dict[chain_key].mean(axis=-1)})
+                figs.append(
+                    self.plot_raster(chain_observation_dict, time, special_idx=[], time_units=target_data.time_unit,
+                                     title=name + " Observation target vs fit time series",
+                                     figure_name=name + "ObservationTarget_VS_FitRasterPlot",
+                                     offset=0.25, labels=this_stats_target_data_labels,
+                                     figsize=FiguresConfig.VERY_LARGE_SIZE))
+                figs.append(
+                    self.plot_timeseries(chain_observation_dict, time, special_idx=[], time_units=target_data.time_unit,
+                                         title=name + " Observation target vs fit time series",
+                                         figure_name=name + "ObservationTarget_VS_FitTimeSeries",
+                                         labels=stats_target_data_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
+            except:
+                pass
 
         if len(title_prefix) > 0:
             title_prefix = title_prefix + ": "
@@ -324,77 +402,20 @@ class ModelInversionPlotter(TimeseriesPlotter):
         figs = []
         # x1_pair_plot_samples = []
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), samples)):
-            name = title_prefix + "chain" + str(id_est + 1)
-
-            # Hidden states posterior per state variable and chain
-            x = OrderedDict()
-            for x_str in state_variables_str:
-                try:
-                    this_x = {x_str: sample[x_str].data[:, :, :, skip_samples:].squeeze()}
-                    x.update(this_x)
-                    subtitles = ['hidden state ' + x_str + stats_string[x_str]]
-                    figs.append(self.plot_raster(this_x, time, special_idx=special_idx, time_units=target_data.time_unit,
-                                                 title=name + ": Hidden states fit rasterplot " + x_str,
-                                                 subtitles=subtitles, offset=0.25,
-                                                 labels=stats_region_labels_x.get(x_str, region_labels),
-                                                 figsize=FiguresConfig.VERY_LARGE_SIZE))
-                except:
-                    pass
-
-                if trajectories_plot and (len(x) in [2, 3]):
-                    title = name + ' Fit hidden state space trajectories'
-                    figs.append(self.plot_trajectories(x, special_idx=special_idx, title=title,
-                                                       labels=stats_region_titles,
-                                                       figsize=FiguresConfig.SUPER_LARGE_SIZE))
-
-            # SDE dWt dynamic noise plots per chain and dWt
-            for p_str in scalar_params_str:
-                p_est = est.get("sigma", None)
-                if p_est is not None:
-                    scalar_str += ", " + p_str + " post = " + str(p_est)
-            for d_str in dWt_str:
-                dWt = OrderedDict()
-                try:
-                    dWt[d_str] = sample.get(d_str, sample.get(d_str)).data[:, :, :, skip_samples:].squeeze()
-                    subtitle = d_str + stats_string[d_str] + \
-                               str(numpy.where(len(scalar_str) > 0, "\n" + scalar_str, ""))
-                    figs.append(self.plot_raster(dWt, time[:-1], time_units=target_data.time_unit,
-                                                 special_idx=special_idx,
-                                                 title=name + ": Hidden states random walk rasterplot " + d_str,
-                                                 subtitles=[subtitle], offset=0.25,
-                                                 labels=stats_region_labels_dWt.get(d_str, region_labels),
-                                                 figsize=FiguresConfig.VERY_LARGE_SIZE))
-                except:
-                    pass
-
-            this_stats_target_data_labels = \
-                [stats_target_data_labels] + [numpy.array(["" for _ in range(n_target_data)])]
-            try:
-                # Comparison of observation target data and its posterior fit per chain
-                chain_key = "fit chain " + str(id_est + 1)
-                chain_observation_dict = OrderedDict({'observation time series': target_data.squeezed})
-                chain_observation_dict.update({chain_key:
-                                                   sample[target_data_str].data[:, :, :, skip_samples:].squeeze()})
-                observation_dict.update({"fit chain %s mean" % str(id_est + 1):
-                                             chain_observation_dict[chain_key].mean(axis=-1)})
-                figs.append(
-                    self.plot_raster(chain_observation_dict, time, special_idx=[], time_units=target_data.time_unit,
-                                     title=name + " Observation target vs fit time series",
-                                     figure_name=name + "ObservationTarget_VS_FitRasterPlot",
-                                     offset=0.25, labels=this_stats_target_data_labels,
-                                     figsize=FiguresConfig.VERY_LARGE_SIZE))
-                figs.append(
-                    self.plot_timeseries(chain_observation_dict, time, special_idx=[], time_units=target_data.time_unit,
-                                         title=name + " Observation target vs fit time series",
-                                         figure_name=name + "ObservationTarget_VS_FitTimeSeries",
-                                         labels=stats_target_data_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))
-            except:
-                pass
+            if len(samples) == 1 and merge:
+                chain_str = ""
+            else:
+                chain_str = str(id_est + 1)
+            plot_fit_timeseries_chain(chain_str, sample, est, state_variables_str, dWt_str, scalar_params_str,
+                                      scalar_str, stats_string, stats_region_labels_x, stats_region_labels_dWt,
+                                      stats_region_titles, region_labels, title_prefix)
 
         try:
             this_stats_target_data_labels =\
                 [stats_target_data_labels] + [numpy.array(["" for _ in range(n_target_data)])] * len(samples)
             # Comparison of observation target data and its posterior fit mean all chains together
+            if merge and len(samples) > 1:
+                title_prefix = title_prefix + " all chains"
             figs.append(self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
                                          title=title_prefix + "Observation target vs mean fit time series: "
                                                 + stats_string[target_data_str],

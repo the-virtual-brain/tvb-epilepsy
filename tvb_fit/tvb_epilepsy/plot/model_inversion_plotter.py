@@ -7,6 +7,7 @@ matplotlib.use(FiguresConfig().MATPLOTLIB_BACKEND)
 
 from tvb_fit.base.constants import Target_Data_Type
 from tvb_fit.base.utils.data_structures_utils import ensure_list, isequal_string, generate_region_labels
+from tvb_fit.samplers.stan.stan_interface import merge_samples
 from tvb_fit.plot.model_inversion_plotter import ModelInversionPlotter as ModelInversionPlotterBase
 
 
@@ -141,10 +142,18 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
 
         # Pack fit samples time series into timeseries objects:
         from tvb_fit.tvb_epilepsy.top.scripts.fitting_scripts import samples_to_timeseries
+        if len(samples) > 1:
+            samples1 = merge_samples(samples, skip_samples=skip_samples)
+            samples1, target_data, x1prior, x1eps = samples_to_timeseries(samples1, model_data, target_data,
+                                                                         region_labels)
+            figs.append(
+                self.plot_fit_timeseries(target_data, samples1, ests, stats, probabilistic_model, "fit_target_data",
+                                         state_variables, state_noise_variables, sigma, seizure_indices,
+                                         0, trajectories_plot, region_labels, True, title_prefix))
         samples, target_data, x1prior, x1eps = samples_to_timeseries(samples, model_data, target_data, region_labels)
         figs.append(self.plot_fit_timeseries(target_data, samples, ests, stats, probabilistic_model, "fit_target_data",
-                                             state_variables, state_noise_variables, sigma, seizure_indices,
-                                             skip_samples, trajectories_plot, region_labels, title_prefix))
+                                                 state_variables, state_noise_variables, sigma, seizure_indices,
+                                                 skip_samples, trajectories_plot, region_labels, False, title_prefix))
 
         figs.append(
             self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
