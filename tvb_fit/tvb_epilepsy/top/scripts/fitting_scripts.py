@@ -406,13 +406,12 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
     if writer:
         writer.write_dictionary(info_crit, path(prob_model_name + "_InfoCrit", base_path))
 
-    Rhat = stan_interface.get_Rhat(summary)
     # Interface backwards with INS stan models
     # from tvb_fit.service.model_inversion.vep_stan_dict_builder import convert_params_names_from_ins
     # estimates, samples, Rhat, model_data = \
     #     convert_params_names_from_ins([estimates, samples, Rhat, model_data])
-    if fitmethod.find("opt") < 0 and Rhat is not None:
-        stats = {"Rhat": Rhat}
+    if fitmethod.find("opt") < 0:
+        stats = stan_interface.get_summary_stats(summary, ["Rhat", "Neff/s"])
     else:
         stats = None
 

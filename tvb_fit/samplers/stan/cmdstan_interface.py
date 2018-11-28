@@ -1,6 +1,6 @@
 from shutil import copyfile
 from tvb_fit.base.utils.log_error_utils import raise_value_error, warning
-from tvb_fit.base.utils.data_structures_utils import construct_import_path
+from tvb_fit.base.utils.data_structures_utils import construct_import_path, ensure_list
 from tvb_fit.base.utils.command_line_utils import execute_command
 from tvb_fit.base.utils.file_utils import change_filename_or_overwrite_with_wildcard
 from tvb_fit.io.csv import parse_csv_in_cols
@@ -115,11 +115,17 @@ class CmdStanInterface(StanInterface):
                   + self.summary_filepath
         execute_command(command, cwd=self.path, shell=True)
 
-    def get_Rhat(self, summary):
+    def get_summary_stats(self, summary, stats):
         if isinstance(summary, dict):
-            return summary.get("R_hat", None)
+            out_stats = {}
+            for stat in ensure_list(stats):
+                out_stats[stat] = summary.get(stat, None)
+            return out_stats
         else:
             return None
+
+    def get_Rhat(self, summary):
+        return self.get_summary_stats(summary, "Rhat")
 
     def fit(self, debug=0, simulate=0, return_output=True, plot_HMC=True, overwrite_output_files=False, plot_warmup=1,
             **kwargs):
