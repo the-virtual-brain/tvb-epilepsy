@@ -382,7 +382,7 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
         # TODO: check if write_dictionary is enough for estimates, samples, summary and info_crit
         if writer:
             writer.write_list_of_dictionaries(estimates, path(prob_model_name + "_FitEst", base_path))
-            writer.write_list_of_dictionaries(samples, path(prob_model_name + "_FitSamples", base_path))
+            # writer.write_list_of_dictionaries(samples, path(prob_model_name + "_FitSamples", base_path))
             if summary is not None:
                 writer.write_dictionary(summary, path(prob_model_name + "_FitSummary", base_path))
     else:
@@ -411,7 +411,7 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
     # estimates, samples, Rhat, model_data = \
     #     convert_params_names_from_ins([estimates, samples, Rhat, model_data])
     if fitmethod.find("opt") < 0:
-        stats = stan_interface.get_summary_stats(summary, ["Rhat", "Neff/s"])
+        stats = stan_interface.get_summary_stats(summary, ["R_hat", "N_Eff/s"])
     else:
         stats = None
 
@@ -422,11 +422,11 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
                 plotter.plot_HMC(samples, figure_name=step_prefix + prob_model_name + " HMC NUTS trace")
 
             plotter.plot_fit_results(estimates, samples, model_data, target_data, probabilistic_model, info_crit,
-                                    stats=stats,  seizure_indices=seizure_indices,
-                                    pair_plot_params=pair_plot_params,  region_violin_params=region_violin_params,
-                                    state_variables=state_variables, state_noise_variables=state_noise_variables,
-                                    region_labels=head.connectivity.region_labels, skip_samples=skip_samples,
-                                    title_prefix=step_prefix + prob_model_name)
+                                     stats=stats,  seizure_indices=seizure_indices,
+                                     pair_plot_params=pair_plot_params,  region_violin_params=region_violin_params,
+                                     state_variables=state_variables, state_noise_variables=state_noise_variables,
+                                     region_labels=head.connectivity.region_labels, skip_samples=skip_samples,
+                                     title_prefix=step_prefix + prob_model_name)
         except:
             warning("Fitting plotting failed for step %s" % step_prefix)
 
