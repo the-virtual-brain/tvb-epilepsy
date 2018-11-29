@@ -29,7 +29,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
             for ip, param in enumerate(params):
                 subtitles[ip] = subtitles[ip] + ": "
                 for skey, sval in stats.items():
-                    subtitles[ip] = subtitles[ip] + skey + "=%.2f" % sval[param] + ", "
+                    subtitles[ip] = subtitles[ip] + skey + "=%.3f" % sval[param] + ", "
                 subtitles[ip] = subtitles[ip][:-2]
         return subtitles
 
@@ -45,7 +45,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
                 if len(subtitles[ip]) > 0:
                     subtitles[ip] = subtitles[ip] + ": "
                 for skey, sval in stats.items():
-                    subtitles[ip] = subtitles[ip] + skey + "=%.2f" % sval[param][ip] + ", "
+                    subtitles[ip] = subtitles[ip] + skey + "=%.3f" % sval[param][ip] + ", "
                     subtitles[ip] = subtitles[ip][:-2]
         return subtitles
 
@@ -111,7 +111,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
             if ip == 0:
                 params_labels[p] = self._params_stats_labels(p, stats, labels)
             else:
-                params_labels[p] = self._params_stats_labels(p, stats, "")
+                params_labels[p] = []  # self._params_stats_labels(p, stats, "")
         n_params = len(params)
         if n_params > 9:
             warning("Number of subplots in column wise vector-violin-plots cannot be > 9 and it is "
@@ -244,16 +244,20 @@ class ModelInversionPlotter(TimeseriesPlotter):
             return params_out
 
 
-        def plot_fit_timeseries_chain(chain_str, sample, est, state_variables_str, dWt_str, scalar_params_str, scalar_str,
+        def plot_fit_timeseries_chain(chain_str, sample, est,
+                                      state_variables_str, dWt_str, scalar_params_str, scalar_str,
                                       stats_string, stats_region_labels_x, stats_region_labels_dWt, stats_region_titles,
                                       region_labels, title_prefix):
-
+            # if len(title_prefix):
+            #     name = title_prefix + " "
+            # else:
+            #     name = ""
+            name = title_prefix
             if len(chain_str) > 0:
                 chain_name = "chain" + chain_str
-                name = title_prefix + chain_name
             else:
                 chain_name = "all chains"
-                name = title_prefix
+            name += chain_name
 
             # Hidden states posterior per state variable and chain
             x = OrderedDict()
@@ -266,14 +270,14 @@ class ModelInversionPlotter(TimeseriesPlotter):
                         self.plot_raster(this_x, time, special_idx=special_idx, time_units=target_data.time_unit,
                                          title=name + ": Hidden states fit rasterplot " + x_str,
                                          subtitles=subtitles, offset=0.25,
-                                         labels=stats_region_labels_x.get(x_str, region_labels),
+                                         labels=region_labels,  #stats_region_labels_x.get(x_str, region_labels),
                                          figsize=FiguresConfig.VERY_LARGE_SIZE))
                 except:
                     pass
 
-                if trajectories_plot and (len(x) in [2, 3]):
-                    title = name + ' Fit hidden state space trajectories'
-                    figs.append(self.plot_trajectories(x, special_idx=special_idx, title=title,
+            if trajectories_plot and (len(x) in [2, 3]):
+                title = name + ' Fit hidden state space trajectories'
+                figs.append(self.plot_trajectories(x, special_idx=special_idx, title=title,
                                                        labels=stats_region_titles,
                                                        figsize=FiguresConfig.SUPER_LARGE_SIZE))
 
@@ -288,30 +292,29 @@ class ModelInversionPlotter(TimeseriesPlotter):
                     dWt[d_str] = sample.get(d_str, sample.get(d_str)).data[:, :, :, skip_samples:].squeeze()
                     subtitle = d_str + stats_string[d_str] + \
                                str(numpy.where(len(scalar_str) > 0, "\n" + scalar_str, ""))
+                    temp = self.tick_font_size
+                    self.tick_font_size = 10
                     figs.append(self.plot_raster(dWt, time[:-1], time_units=target_data.time_unit,
                                                  special_idx=special_idx,
                                                  title=name + ": Hidden states random walk rasterplot " + d_str,
-                                                 subtitles=[subtitle], offset=0.25,
+                                                 subtitles=[subtitle], offset=1.0,
                                                  labels=stats_region_labels_dWt.get(d_str, region_labels),
                                                  figsize=FiguresConfig.VERY_LARGE_SIZE))
+                    self.tick_font_size = temp
                 except:
                     pass
 
-            this_stats_target_data_labels = \
-                [stats_target_data_labels] + [numpy.array(["" for _ in range(n_target_data)])]
             try:
                 # Comparison of observation target data and its posterior fit per chain
                 chain_key = "fit " + chain_name
                 chain_observation_dict = OrderedDict({'observation time series': target_data.squeezed})
                 chain_observation_dict.update({chain_key:
                                                    sample[target_data_str].data[:, :, :, skip_samples:].squeeze()})
-                observation_dict.update({"fit %s mean" % chain_name:
-                                             chain_observation_dict[chain_key].mean(axis=-1)})
                 figs.append(
                     self.plot_raster(chain_observation_dict, time, special_idx=[], time_units=target_data.time_unit,
                                      title=name + " Observation target vs fit time series",
                                      figure_name=name + "ObservationTarget_VS_FitRasterPlot",
-                                     offset=0.25, labels=this_stats_target_data_labels,
+                                     offset=0.25, labels=[stats_target_data_labels, target_data_labels],
                                      figsize=FiguresConfig.VERY_LARGE_SIZE))
                 figs.append(
                     self.plot_timeseries(chain_observation_dict, time, special_idx=[], time_units=target_data.time_unit,
@@ -349,23 +352,26 @@ class ModelInversionPlotter(TimeseriesPlotter):
             if probabilistic_model is not None:
                 scalar_str.append(p_str + " prior = " + str(probabilistic_model.get_prior(p_str)[0]))
         scalar_str = ", ".join(scalar_str)
-        if isinstance(stats, dict) and stats.get("Rhat", None) is not None:
-            Rhat = stats.get("Rhat")
+        if isinstance(stats, dict):
             stats_string = dict(zip(ts_strings, len(ts_strings)*["\n"]))
             x_p_str_means = OrderedDict()
             dWt_p_str_means = OrderedDict()
             targ_p_str_means = OrderedDict()
             for p_str in ts_strings:
                 try:
-                    stats_string[p_str] = stats_string[p_str] + "Rhat=%.2f" % Rhat[p_str].mean()
+                    stats_string[p_str] = stats_string[p_str] + ", ".join(["%s=%.3f" % (s_name, s_value[p_str].mean())
+                                                                           for s_name, s_value in stats.items()])
                     if p_str in state_variables_str:
-                        x_p_str_means[p_str] = ["Rhat=%.2f" % Rhat[p_str][:, ip].mean()
+                        x_p_str_means[p_str] = [", ".join(["%s=%.3f" % (s_name, s_value[p_str][:, ip].mean())
+                                                           for s_name, s_value in stats.items()])
                                                 for ip in range(n_regions)]
                     elif p_str in dWt_str:
-                        dWt_p_str_means[p_str] = ["Rhat=%.2f" % Rhat[p_str][:, ip].mean()
-                                                            for ip in range(n_regions)]
+                        dWt_p_str_means[p_str] = [", ".join(["%s=%.3f" % (s_name, s_value[p_str][:, ip].mean())
+                                                           for s_name, s_value in stats.items()])
+                                                  for ip in range(n_regions)]
                     else:
-                        targ_p_str_means[p_str] = ["Rhat=%.2f" % Rhat[p_str][:, ip].mean()
+                        targ_p_str_means[p_str] = [", ".join(["%s=%.3f" % (s_name, s_value[p_str][:, ip].mean())
+                                                           for s_name, s_value in stats.items()])
                                                    for ip in range(n_target_data)]
                 except:
                     pass
@@ -381,10 +387,10 @@ class ModelInversionPlotter(TimeseriesPlotter):
                 else:
                     stats_region_labels_x[p_str] = region_labels
             if len(state_variables_str) in [2,3]:
-                stats_region_titles = numpy.array(["\n".join([stats_region_titles[ip],
-                                                              ", ".join([x_p_str_mean[ip].replace("Rhat=",
-                                                                                                  "Rhat(%s)=" % x_p_str)
-                                                                         for x_p_str, x_p_str_mean in x_p_str_means.items()])])
+                stats_region_titles = \
+                    numpy.array(["\n".join([stats_region_titles[ip],
+                                                    "\n".join([": ".join([x_p_str, x_p_str_mean[ip]])
+                                                                for x_p_str, x_p_str_mean in x_p_str_means.items()])])
                                                    for ip in range(n_regions)])
 
             for p_str in dWt_str:
@@ -404,11 +410,16 @@ class ModelInversionPlotter(TimeseriesPlotter):
         for id_est, (est, sample) in enumerate(zip(ensure_list(ests), samples)):
             if len(samples) == 1 and merge:
                 chain_str = ""
+                chain_name = ""
             else:
                 chain_str = str(id_est + 1)
-            plot_fit_timeseries_chain(chain_str, sample, est, state_variables_str, dWt_str, scalar_params_str,
-                                      scalar_str, stats_string, stats_region_labels_x, stats_region_labels_dWt,
-                                      stats_region_titles, region_labels, title_prefix)
+                chain_name = "chain " + chain_str
+            observation_dict.update({"fit %s mean" % "fit " + chain_name:
+                                         sample[target_data_str].data[:, :, :, skip_samples:].squeeze()})
+            plot_fit_timeseries_chain(chain_str, sample, est,
+                                      state_variables_str, dWt_str, scalar_params_str, scalar_str,
+                                      stats_string, stats_region_labels_x, stats_region_labels_dWt, stats_region_titles,
+                                      region_labels, title_prefix)
 
         try:
             this_stats_target_data_labels =\
