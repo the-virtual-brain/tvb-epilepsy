@@ -414,7 +414,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
             else:
                 chain_str = str(id_est + 1)
                 chain_name = "chain " + chain_str
-            observation_dict.update({"fit %s mean" % "fit " + chain_name:
+            observation_dict.update({"fit mean " + chain_name:
                                          sample[target_data_str].data[:, :, :, skip_samples:].squeeze()})
             plot_fit_timeseries_chain(chain_str, sample, est,
                                       state_variables_str, dWt_str, scalar_params_str, scalar_str,
@@ -428,15 +428,15 @@ class ModelInversionPlotter(TimeseriesPlotter):
             if merge and len(samples) > 1:
                 title_prefix = title_prefix + " all chains"
             figs.append(self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
-                                         title=title_prefix + "Observation target vs mean fit time series: "
+                                         title=title_prefix + " Observation target vs mean fit time series: "
                                                 + stats_string[target_data_str],
-                                         figure_name=title_prefix + "ObservationTarget_VS_MeanFitRasterPlot",
+                                         figure_name=title_prefix + " ObservationTarget_VS_MeanFitRasterPlot",
                                          offset=0.25, labels=this_stats_target_data_labels,
                                          figsize=FiguresConfig.VERY_LARGE_SIZE))
             figs.append(self.plot_timeseries(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
-                                             title=title_prefix + "Observation target vs mean fit time series: "
+                                             title=title_prefix + " Observation target vs mean fit time series: "
                                                    + stats_string[target_data_str],
-                                             figure_name=title_prefix + "ObservationTarget_VS_MeanFitTimeSeries",
+                                             figure_name=title_prefix + " ObservationTarget_VS_MeanFitTimeSeries",
                                              labels=stats_target_data_labels,
                                              figsize=FiguresConfig.VERY_LARGE_SIZE))
         except:
