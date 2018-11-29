@@ -142,25 +142,28 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
 
         # Pack fit samples time series into timeseries objects:
         from tvb_fit.tvb_epilepsy.top.scripts.fitting_scripts import samples_to_timeseries
+        stats_per_chain = stats
         if len(samples) > 1:
-            samples1 = merge_samples(samples, skip_samples=skip_samples)
+            samples1 = merge_samples(samples, skip_samples=skip_samples, flatten=True)
             samples1, target_data, x1prior, x1eps = samples_to_timeseries(samples1, model_data, target_data,
                                                                          region_labels)
             figs.append(
                 self.plot_fit_timeseries(target_data, samples1, ests, stats, probabilistic_model, "fit_target_data",
                                          state_variables, state_noise_variables, sigma, seizure_indices,
                                          0, trajectories_plot, region_labels, True, title_prefix))
+            stats_per_chain = None
         samples, target_data, x1prior, x1eps = samples_to_timeseries(samples, model_data, target_data, region_labels)
-        figs.append(self.plot_fit_timeseries(target_data, samples, ests, stats, probabilistic_model, "fit_target_data",
-                                                 state_variables, state_noise_variables, sigma, seizure_indices,
-                                                 skip_samples, trajectories_plot, region_labels, False, title_prefix))
+        figs.append(self.plot_fit_timeseries(target_data, samples, ests, stats_per_chain, probabilistic_model,
+                                             "fit_target_data", state_variables, state_noise_variables, sigma,
+                                             seizure_indices, skip_samples, trajectories_plot, region_labels, False,
+                                             title_prefix))
 
         figs.append(
             self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
                                         region_labels, regions_mode, False, False, skip_samples, title_prefix))
 
         figs.append(
-            self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
+            self.plot_fit_region_params(samples, None, probabilistic_model, region_violin_params, seizure_indices,
                                         region_labels, regions_mode, True, False, skip_samples, title_prefix))
 
         figs.append(self.plot_fit_scalar_params(samples, stats, probabilistic_model, pair_plot_params,
