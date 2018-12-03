@@ -4,7 +4,7 @@ import matplotlib
 matplotlib.use(FiguresConfig().MATPLOTLIB_BACKEND)
 from matplotlib import pyplot, gridspec
 
-
+import re
 import numpy
 from collections import OrderedDict
 
@@ -111,7 +111,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
             if ip == 0:
                 params_labels[p] = self._params_stats_labels(p, stats, labels)
             else:
-                params_labels[p] = []  # self._params_stats_labels(p, stats, "")
+                params_labels[p] = generate_region_labels([re.search(r'\d+.', lbl).group() for lbl in labels])
         n_params = len(params)
         if n_params > 9:
             warning("Number of subplots in column wise vector-violin-plots cannot be > 9 and it is "
@@ -415,7 +415,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
                 chain_str = str(id_est + 1)
                 chain_name = "chain " + chain_str
             observation_dict.update({"fit mean " + chain_name:
-                                         sample[target_data_str].data[:, :, :, skip_samples:].squeeze()})
+                                         sample[target_data_str].data[:, :, :, skip_samples:].mean(axis=-1).squeeze()})
             plot_fit_timeseries_chain(chain_str, sample, est,
                                       state_variables_str, dWt_str, scalar_params_str, scalar_str,
                                       stats_string, stats_region_labels_x, stats_region_labels_dWt, stats_region_titles,
