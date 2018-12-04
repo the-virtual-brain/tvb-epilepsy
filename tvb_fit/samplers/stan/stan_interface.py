@@ -122,10 +122,7 @@ class StanInterface(object):
             copyfile(self.model_code_path, destination)
 
     def read_output_samples(self, output_filepath, **kwargs):
-        samples = ensure_list(parse_csv(output_filepath.replace(".csv", "*"), merge=kwargs.pop("merge_outputs", False)))
-        if len(samples) == 1:
-            return samples[0]
-        return samples
+        return read_output_samples(output_filepath, **kwargs)
 
     def compute_estimates_from_samples(self, samples):
         ests = []
@@ -312,6 +309,13 @@ class StanInterface(object):
 
         # Return result into a dictionary with metrics at the upper level and models at the lower one
         return switch_levels_of_dicts_of_dicts(results)
+
+
+def read_output_samples(output_filepath, **kwargs):
+    samples = ensure_list(parse_csv(output_filepath.replace(".csv", "*"), merge=kwargs.pop("merge_outputs", False)))
+    if len(samples) == 1:
+        return samples[0]
+    return samples
 
 
 def merge_samples(samples, skip_samples=0, flatten=False):
