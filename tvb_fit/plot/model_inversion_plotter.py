@@ -111,7 +111,8 @@ class ModelInversionPlotter(TimeseriesPlotter):
             if ip == 0:
                 params_labels[p] = self._params_stats_labels(p, stats, labels)
             else:
-                params_labels[p] = generate_region_labels([re.search(r'\d+.', lbl).group() for lbl in labels])
+                params_labels[p] = generate_region_labels(len(labels), str="", numbering=False, numbers=[],
+                                                          labels=[re.search(r'\d+.', lbl).group() for lbl in labels])
         n_params = len(params)
         if n_params > 9:
             warning("Number of subplots in column wise vector-violin-plots cannot be > 9 and it is "
@@ -430,13 +431,13 @@ class ModelInversionPlotter(TimeseriesPlotter):
             figs.append(self.plot_raster(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
                                          title=title_prefix + " Observation target vs mean fit time series: "
                                                 + stats_string[target_data_str],
-                                         figure_name=title_prefix + " ObservationTarget_VS_MeanFitRasterPlot",
+                                         figure_name=title_prefix + "ObservationTarget_VS_MeanFitRasterPlot",
                                          offset=0.25, labels=this_stats_target_data_labels,
                                          figsize=FiguresConfig.VERY_LARGE_SIZE))
             figs.append(self.plot_timeseries(observation_dict, time, special_idx=[], time_units=target_data.time_unit,
                                              title=title_prefix + " Observation target vs mean fit time series: "
                                                    + stats_string[target_data_str],
-                                             figure_name=title_prefix + " ObservationTarget_VS_MeanFitTimeSeries",
+                                             figure_name=title_prefix + "ObservationTarget_VS_MeanFitTimeSeries",
                                              labels=stats_target_data_labels,
                                              figsize=FiguresConfig.VERY_LARGE_SIZE))
         except:
