@@ -485,8 +485,7 @@ def samples_to_timeseries(samples, model_data, target_data=None, region_labels=[
     return samples, target_data, np.nanmean(x1, axis=2).squeeze(), np.nanstd(x1, axis=2).squeeze()
 
 
-def get_x1_estimates_from_samples(samples, model_data, region_labels=[], time_unit="ms"):
-    time = model_data.get("time", False)
+def get_x1_estimates_from_samples(samples, time, active_regions, region_labels=[], time_unit="ms"):
     if time is not False:
         time_start = time[0]
         time_step = np.diff(time).mean()
@@ -498,7 +497,6 @@ def get_x1_estimates_from_samples(samples, model_data, region_labels=[], time_un
     else:
         get_x1 = lambda x1: x1.squeezed
     (n_times, n_regions, n_samples) = get_x1(samples[0]["x1"]).shape
-    active_regions = model_data.get("active_regions", np.array(range(n_regions)))
     region_labels = generate_region_labels(np.maximum(n_regions, len(region_labels)), region_labels, ". ", False)
     if len(region_labels) > len(active_regions):
         region_labels = region_labels[active_regions]
