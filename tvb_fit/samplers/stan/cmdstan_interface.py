@@ -127,9 +127,7 @@ class CmdStanInterface(StanInterface):
     def get_Rhat(self, summary):
         return self.get_summary_stats(summary, "Rhat")
 
-    def fit(self, debug=0, simulate=0, return_output=True, plot_HMC=True, overwrite_output_files=False, plot_warmup=1,
-            **kwargs):
-        num_warmup = kwargs.get("num_warmup", 0)
+    def prepare_fit(self, debug=0, simulate=0, overwrite_output_files=False, **kwargs):
         # Confirm output files and check if overwriting is necessary
         self.set_output_files(kwargs.pop("output_filepath", self.output_filepath),
                               kwargs.pop("diagnostic_filepath", self.diagnostic_filepath),
@@ -148,6 +146,11 @@ class CmdStanInterface(StanInterface):
                          " method of model: " + self.model_path + "...")
         with open(self.command_filepath, "w") as text_file:
             text_file.write(self.command)
+
+    def fit(self, debug=0, simulate=0, return_output=True, plot_HMC=True, overwrite_output_files=False, plot_warmup=1,
+            **kwargs):
+        num_warmup = kwargs.get("num_warmup", 0)
+        self.prepare_fit(debug, simulate, overwrite_output_files, **kwargs)
         self.fitting_time = execute_command(self.command.replace("\t", ""), shell=True)[1]
         self.logger.info(str(self.fitting_time) + ' sec required to ' + self.fitmethod + "!")
         self.logger.info("Computing stan summary...")

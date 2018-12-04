@@ -345,8 +345,6 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
                 fitmethod="sample", n_chains_or_runs=2, output_samples=200, num_warmup=100, min_samples_per_chain=200,
                 max_depth=15, delta=0.95, iter=500000, tol_rel_obj=1e-6, debug=1, simulate=0,
                 step_prefix='', writer=None, plotter=None, **kwargs):
-
-
     # ------------------------------Stan model and service--------------------------------------
     model_code_path = os.path.join(config.generic.PROBLSTC_MODELS_PATH, stan_model_name + ".stan")
     stan_interface = CmdStanInterface(model_name=stan_model_name, model_dir=base_path,
@@ -356,7 +354,7 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
 
     # -------------------------- Fit and get estimates: ------------------------------------------------------------
     n_chains_or_runs = np.where(test_flag, 2, n_chains_or_runs)
-    output_samples = np.where(test_flag, 20, max(int(np.round(output_samples *1.0 / n_chains_or_runs)),
+    output_samples = np.where(test_flag, 20, max(int(np.round(output_samples * 1.0 / n_chains_or_runs)),
                                                  min_samples_per_chain))
 
     # Sampling (HMC)
@@ -371,66 +369,68 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
     else:
         skip_samples = 0
     prob_model_name = probabilistic_model.name.split(".")[0]
-    if fit_flag:
-        estimates, samples, summary = stan_interface.fit(debug=debug, simulate=simulate, model_data=model_data,
-                                                         n_chains_or_runs=n_chains_or_runs, refresh=1,
-                                                         iter=iter, tol_rel_obj=tol_rel_obj,
-                                                         output_samples=output_samples,
-                                                         num_warmup=num_warmup, num_samples=num_samples,
-                                                         max_depth=max_depth, delta=delta,
-                                                         save_warmup=1, plot_warmup=1, output_path=base_path, **kwargs)
-        # TODO: check if write_dictionary is enough for estimates, samples, summary and info_crit
+    if fit_flag == "prepare":
+        stan_interface.prepare_fit(debug=debug, simulate=simulate, model_data=model_data,
+                                   n_chains_or_runs=n_chains_or_runs, refresh=1, iter=iter, tol_rel_obj=tol_rel_obj,
+                                   output_samples=output_samples, num_warmup=num_warmup, num_samples=num_samples,
+                                   max_depth=max_depth, delta=delta, save_warmup=1, output_path=base_path,
+                                   **kwargs)
+    else:
+        if fit_flag == "fit":
+            estimates, samples, summary = stan_interface.fit(debug=debug, simulate=simulate, model_data=model_data,
+                                                             n_chains_or_runs=n_chains_or_runs, refresh=1,
+                                                             iter=iter, tol_rel_obj=tol_rel_obj,
+                                                             output_samples=output_samples,
+                                                             num_warmup=num_warmup, num_samples=num_samples,
+                                                             max_depth=max_depth, delta=delta,
+                                                             save_warmup=1, plot_warmup=1, output_path=base_path,
+                                                             **kwargs)
+            # TODO: check if write_dictionary is enough for estimates, samples, summary and info_crit
+            if writer:
+                writer.write_list_of_dictionaries(estimates, path(prob_model_name + "_FitEst", base_path))
+                # writer.write_list_of_dictionaries(samples, path(prob_model_name + "_FitSamples", base_path))
+                if summary is not None:
+                    writer.write_dictionary(summary, path(prob_model_name + "_FitSummary", base_path))
+        else:
+            stan_interface.set_output_files(base_path=base_path, update=True)
+            estimates, samples, summary = stan_interface.read_output()
+
+        # Model comparison:
+        info_crit = \
+            stan_interface.compute_information_criteria(samples, None, skip_samples=skip_samples,
+                                                        # parameters=["amplitude_star", "offset_star", "epsilon_star",
+                                                        #                  "sigma_star", "time_scale_star", "x0_star",
+                                                        #                  "x_init_star", "z_init_star", "z_eta_star"],
+                                                        merge_chains_or_runs_flag=False)
+
         if writer:
-            writer.write_list_of_dictionaries(estimates, path(prob_model_name + "_FitEst", base_path))
-            # writer.write_list_of_dictionaries(samples, path(prob_model_name + "_FitSamples", base_path))
-            if summary is not None:
-                writer.write_dictionary(summary, path(prob_model_name + "_FitSummary", base_path))
-    else:
-        stan_interface.set_output_files(base_path=base_path, update=True)
-        estimates, samples, summary = stan_interface.read_output()
+            writer.write_dictionary(info_crit, path(prob_model_name + "_InfoCrit", base_path))
 
-    # Model comparison:
-    # scale_signal, offset_signal, time_scale, epsilon, sigma -> 5 (+ K = 6)
-    # x0[active] -> probabilistic_model.model.number_of_active_regions
-    # x1init[active], zinit[active] -> 2 * probabilistic_model.number_of_active_regions
-    # dZt[active, t] -> probabilistic_model.number_of_active_regions * (probabilistic_model.time_length-1)
-    # number_of_total_params = \
-    #     5 + probabilistic_model.number_of_active_regions * (3 + (probabilistic_model.time_length - 1))
-    info_crit = \
-        stan_interface.compute_information_criteria(samples, None, skip_samples=skip_samples,
-                                                    # parameters=["amplitude_star", "offset_star", "epsilon_star",
-                                                    #                  "sigma_star", "time_scale_star", "x0_star",
-                                                    #                  "x_init_star", "z_init_star", "z_eta_star"],
-                                                    merge_chains_or_runs_flag=False)
+        # Interface backwards with INS stan models
+        # from tvb_fit.service.model_inversion.vep_stan_dict_builder import convert_params_names_from_ins
+        # estimates, samples, Rhat, model_data = \
+        #     convert_params_names_from_ins([estimates, samples, Rhat, model_data])
+        if fitmethod.find("opt") < 0:
+            stats = stan_interface.get_summary_stats(summary, ["R_hat", "N_Eff/s"])
+        else:
+            stats = None
 
-    if writer:
-        writer.write_dictionary(info_crit, path(prob_model_name + "_InfoCrit", base_path))
+        if plotter:
+            # -------------------------- Plot fitting results: ------------------------------------------------------------
+            try:
+                if fitmethod.find("sampl") >= 0:
+                    plotter.plot_HMC(samples, figure_name=step_prefix + prob_model_name + " HMC NUTS trace")
 
-    # Interface backwards with INS stan models
-    # from tvb_fit.service.model_inversion.vep_stan_dict_builder import convert_params_names_from_ins
-    # estimates, samples, Rhat, model_data = \
-    #     convert_params_names_from_ins([estimates, samples, Rhat, model_data])
-    if fitmethod.find("opt") < 0:
-        stats = stan_interface.get_summary_stats(summary, ["R_hat", "N_Eff/s"])
-    else:
-        stats = None
+                plotter.plot_fit_results(estimates, samples, model_data, target_data, probabilistic_model, info_crit,
+                                         stats=stats, seizure_indices=seizure_indices,
+                                         pair_plot_params=pair_plot_params, region_violin_params=region_violin_params,
+                                         state_variables=state_variables, state_noise_variables=state_noise_variables,
+                                         region_labels=head.connectivity.region_labels, skip_samples=skip_samples,
+                                         title_prefix=step_prefix + prob_model_name)
+            except:
+                warning("Fitting plotting failed for step %s" % step_prefix)
 
-    if plotter:
-        # -------------------------- Plot fitting results: ------------------------------------------------------------
-        try:
-            if fitmethod.find("sampl") >= 0:
-                plotter.plot_HMC(samples, figure_name=step_prefix + prob_model_name + " HMC NUTS trace")
-
-            plotter.plot_fit_results(estimates, samples, model_data, target_data, probabilistic_model, info_crit,
-                                     stats=stats,  seizure_indices=seizure_indices,
-                                     pair_plot_params=pair_plot_params,  region_violin_params=region_violin_params,
-                                     state_variables=state_variables, state_noise_variables=state_noise_variables,
-                                     region_labels=head.connectivity.region_labels, skip_samples=skip_samples,
-                                     title_prefix=step_prefix + prob_model_name)
-        except:
-            warning("Fitting plotting failed for step %s" % step_prefix)
-
-    return estimates, samples, summary, info_crit
+        return estimates, samples, summary, info_crit
 
 
 def samples_to_timeseries(samples, model_data, target_data=None, region_labels=[]):
