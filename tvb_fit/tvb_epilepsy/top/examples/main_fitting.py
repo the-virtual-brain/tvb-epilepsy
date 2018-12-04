@@ -165,7 +165,7 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         probabilistic_model = \
                 set_prior_parameters(probabilistic_model, target_data, source2D_ts, None, problstc_model_file,
                                      ProbabilisticModelBuilder,
-                                     [XModes.X0MODE.value, "x1_init", "z_init", "tau1", "tau0", "K",  # "x1", "z"
+                                     [XModes.X0MODE.value, "x1_init", "z_init", "tau1",  "tau0", "K",  # "x1", "z"
                                       "epsilon", "scale", "offset", "sigma", "dWt"], normal_flag,
                                       writer=writer, plotter=plotter)
 
@@ -184,12 +184,12 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
     # -------------------------- Fit or load results from previous fitting: -------------------------------------------
 
     estimates, samples, summary, info_crit = \
-        run_fitting(probabilistic_model, stan_model_name, model_data, target_data, config, head,
-                    hyp.all_disease_indices, ["K", "tau1", "tau0", "tau1tau0", "Ktau1tau0", "sigma", "epsilon", "scale", "offset"],  #
-                    ["x0", "PZ", "x1eq", "zeq"], ["x1", "z"], ["dWt"], fit_flag, test_flag, base_path, fitmethod,
-                    n_chains_or_runs=6, output_samples=100, num_warmup=100, min_samples_per_chain=100, max_depth=15,
-                    delta=0.95, iter=200000, tol_rel_obj=1e-6, debug=1, simulate=0, writer=writer, plotter=plotter,
-                    **kwargs)  # init=0,
+       run_fitting(probabilistic_model, stan_model_name, model_data, target_data, config, head, hyp.all_disease_indices,
+                   ["K", "tau1", "tau0", "tau1tau0", "Ktau1tau0", "sigma", "epsilon", "scale", "offset"],  #
+                   ["x0", "PZ", "x1eq", "zeq"], ["x1", "z"], ["dWt"], fit_flag, test_flag, base_path, fitmethod,
+                   n_chains_or_runs=6, output_samples=100, num_warmup=100, min_samples_per_chain=100, max_depth=15,
+                   delta=0.95, iter=200000, tol_rel_obj=1e-6, debug=1, simulate=0, writer=writer, plotter=plotter,
+                   **kwargs)  # init=0,
 
 
     # -------------------------- Reconfigure model after fitting:---------------------------------------------------
@@ -218,7 +218,7 @@ if __name__ == "__main__":
 
     else:
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/tests/empirical_tests/empirical_hierarchHyper")
+                              "fit/hmc/simsensor_tests/split")
         # _splitHyper, , , _hierarchHyper, _realsplitHyper, _K_tau0_fixed, _K_tau0_params
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
         config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
@@ -238,13 +238,13 @@ if __name__ == "__main__":
     # Simulation times_on_off
     #  for "fitting" simulations with tau0=30.0
     sim_times_on_off = [70.0, 100.0] # e_hypo, [100, 130] for x0_hypo, and e_x0_hypo
-    EMPIRICAL = True
+    EMPIRICAL = False
     sim_source_type = "paper"
-    observation_model =  OBSERVATION_MODELS.SEEG_POWER.value
-    #OBSERVATION_MODELS.SEEG_LOGPOWER.value  #OBSERVATION_MODELS.SOURCE_POWER.value  #
+    observation_model =  OBSERVATION_MODELS.SEEG_LOGPOWER.value  #OBSERVATION_MODELS.SEEG_POWER.value
+    #OBSERVATION_MODELS.SOURCE_POWER.value  #
     if EMPIRICAL:
-        seizures_files = ['SZ1_0001.edf']  # 'SZ2_0001.edf'
-        times_on = []# [9700.0, 13700.0] # (np.array([15.0, 30.0]) * 1000.0).tolist() # for SZ1
+        seizures_files = ['SZ1_0001.edf', 'SZ2_0001.edf']  #
+        times_on = [9700.0, 13700.0] # (np.array([15.0, 30.0]) * 1000.0).tolist() # for SZ1
         time_length = 25600.0
         # times_on_off = (np.array([15.0, 38.0]) * 1000.0).tolist()  # for SZ2
         # sensors_filename = "SensorsSEEG_116.h5"
@@ -269,10 +269,10 @@ if __name__ == "__main__":
     preprocessing = []
     downsampling = 2
     normal_flag = False
-    stan_model_name = "vep_sde_limloghierarchHyper"  # _log, _mulimlogrealsplitHyper, _mulimlogsplitHyper
+    stan_model_name = "vep_sde_logsplitHyper"  # _log, _mulimlogrealsplitHyper, _mulimlogsplitHyper
     fitmethod = "sample"   # ""  # "sample"  # "advi" or "opt"
     pse_flag = True
-    fit_flag = True
+    fit_flag = "fit"
     test_flag = False
     if EMPIRICAL:
         main_fit_sim_hyplsa(stan_model_name,
