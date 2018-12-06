@@ -349,7 +349,6 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
     model_code_path = os.path.join(config.generic.PROBLSTC_MODELS_PATH, stan_model_name + ".stan")
     stan_interface = CmdStanInterface(model_name=stan_model_name, model_dir=base_path,
                                       model_code_path=model_code_path, fitmethod=fitmethod, config=config)
-    stan_interface.set_or_compile_model()
     stan_interface.model_data_path = os.path.join(base_path, "ModelData.h5")
 
     # -------------------------- Fit and get estimates: ------------------------------------------------------------
@@ -377,6 +376,7 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
                                    **kwargs)
     else:
         if fit_flag == "fit":
+            stan_interface.set_or_compile_model()
             estimates, samples, summary = stan_interface.fit(debug=debug, simulate=simulate, model_data=model_data,
                                                              n_chains_or_runs=n_chains_or_runs, refresh=1,
                                                              iter=iter, tol_rel_obj=tol_rel_obj,
