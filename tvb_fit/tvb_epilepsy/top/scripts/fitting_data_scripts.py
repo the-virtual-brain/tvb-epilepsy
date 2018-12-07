@@ -80,7 +80,6 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
             else:
                 data = data.get_subspace_by_index(rois)
 
-    win_len = np.minimum(win_len, data.duration/10)
     on_off_set = ensure_list(on_off_set)
     if len(on_off_set) == 2:
         # First cut data close to the desired interval
@@ -279,7 +278,7 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
 def prepare_simulated_seeg_observable(data, sensors, seizure_length=SEIZURE_LENGTH, log_flag=True, on_off_set=[],
                                       rois=[], preprocessing=TARGET_DATA_PREPROCESSING,
                                       low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF, high_lpf=HIGH_LPF,
-                                      bipolar=BIPOLAR, win_len_ratio=WIN_LEN, plotter=None, title_prefix=""):
+                                      bipolar=BIPOLAR, win_len=WIN_LEN, plotter=None, title_prefix=""):
 
     logger.info("Computing SEEG signals...")
     data = TimeseriesService().compute_seeg(data, sensors, sum_mode=np.where(log_flag, "exp", "lin"))
@@ -295,14 +294,14 @@ def prepare_simulated_seeg_observable(data, sensors, seizure_length=SEIZURE_LENG
                                 special_idx=[], title='Bipolar Time Series', offset=0.1,
                                 figure_name=title_prefix + 'BipolarRaster', labels=data.space_labels)
     return prepare_signal_observable(data, seizure_length, on_off_set, rois, preprocessing, low_hpf, high_hpf,
-                                     low_lpf, high_lpf, win_len_ratio, plotter, title_prefix)
+                                     low_lpf, high_lpf, win_len, plotter, title_prefix)
 
 
 def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, seizure_length=SEIZURE_LENGTH,
                                           on_off_set=[], time_units="ms", label_strip_fun=None,
                                           preprocessing=TARGET_DATA_PREPROCESSING,
                                           low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF, high_lpf=HIGH_LPF,
-                                          bipolar=BIPOLAR, win_len_ratio=WIN_LEN, plotter=None, title_prefix=""):
+                                          bipolar=BIPOLAR, win_len=WIN_LEN, plotter=None, title_prefix=""):
     logger.info("Reading empirical dataset from edf file...")
     data = read_edf_to_Timeseries(seeg_path, sensors, rois_selection,
                                   label_strip_fun=label_strip_fun, time_units=time_units)
@@ -326,6 +325,6 @@ def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, se
 
     return prepare_signal_observable(data, seizure_length, on_off_set, range(data.number_of_labels),
                                      preprocessing, low_hpf, high_hpf, low_lpf, high_lpf,
-                                     win_len_ratio, plotter, title_prefix)
+                                     win_len, plotter, title_prefix)
 
 

@@ -14,7 +14,7 @@ from tvb_fit.plot.head_plotter import HeadPlotter
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU1_DEF, TAU0_DEF
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import OBSERVATION_MODELS, SEIZURE_LENGTH, \
-    HIGH_HPF, LOW_HPF, LOW_LPF, HIGH_LPF, WIN_LEN_RATIO, BIPOLAR, TARGET_DATA_PREPROCESSING, XModes, \
+    HIGH_HPF, LOW_HPF, LOW_LPF, HIGH_LPF, WIN_LEN, WIN_LEN_RATIO, BIPOLAR, TARGET_DATA_PREPROCESSING, XModes, \
     compute_upsample, compute_seizure_length
 from tvb_fit.tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, Timeseries
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
@@ -111,8 +111,7 @@ def get_2D_simulation(model_configuration, head, lsa_hypothesis, source2D_file, 
 def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0, seizure_length=SEIZURE_LENGTH,
                        times_on_off=[], time_units="ms", label_strip_fun=None,
                        preprocessing=TARGET_DATA_PREPROCESSING, low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF,
-                       high_lpf=HIGH_LPF, bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO,
-                       plotter=None, title_prefix=""):
+                       high_lpf=HIGH_LPF, bipolar=BIPOLAR, win_len=WIN_LEN, plotter=None, title_prefix=""):
     try:
         return H5Reader().read_timeseries(ts_file)
     except:
@@ -129,8 +128,7 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
         signals = prepare_seeg_observable_from_mne_file(empirical_file, head.get_sensors_by_index(sensor_ids=sensor_id),
                                                         sensors_lbls, seizure_length, times_on_off, time_units,
                                                         label_strip_fun, preprocessing,
-                                                        low_hpf, high_hpf, low_lpf, high_lpf,
-                                                        bipolar, seizure_duration / win_len_ratio,
+                                                        low_hpf, high_hpf, low_lpf, high_lpf, bipolar, win_len,
                                                         plotter, title_prefix)
         H5Writer().write_timeseries(signals, ts_file)
     move_overwrite_files_to_folder_with_wildcard(os.path.join(plotter.config.out.FOLDER_FIGURES,
@@ -144,7 +142,7 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
                                 seizure_length=SEIZURE_LENGTH, times_on=[], time_length=32000.0, time_units="ms",
                                 label_strip_fun=None, preprocessing=TARGET_DATA_PREPROCESSING,
                                 low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF, high_lpf=HIGH_LPF,
-                                bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO, plotter=None, title_prefix=""):
+                                bipolar=BIPOLAR, win_len=WIN_LEN, plotter=None, title_prefix=""):
     empirical_files = ensure_list(ensure_list(empirical_files))
     n_seizures = len(empirical_files)
     times_on = ensure_list(times_on)
@@ -161,7 +159,7 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
         signals.append(set_empirical_data(empirical_file, "_".join([ts_filename, seizure_name]) + ".h5",
                                           head, sensors_lbls, sensor_id, seizure_length, time_on_off, time_units,
                                           label_strip_fun,preprocessing, low_hpf, high_hpf, low_lpf, high_lpf,
-                                          bipolar, win_len_ratio, plotter, title_prefix))
+                                          bipolar, win_len, plotter, title_prefix))
     if n_seizures > 1:
         # Concatenate only the labels that exist in all signals:
         labels = signals[0].space_labels
@@ -248,9 +246,9 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
     if len(empirical_files) > 0:
         if len(preprocessing) == 0:
             if log_flag:
-                preprocessing = ["hpf", "abs-envelope", "convolve", "decimate", "log"]# ["spectrogram", "log"] #
+                preprocessing = ["hpf", "abs-envelope", "convolve", "decimate", "log"]  # ["spectrogram", "log"] #
             else:
-                preprocessing  = ["hpf", "mean_center", "abs-envelope", "convolve", "decimate"]
+                preprocessing = ["hpf", "abs-envelope", "convolve", "decimate"]
         # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
         signals, probabilistic_model.number_of_seizures = \
             set_multiple_empirical_data(empirical_files, empirical_target_file, head, sensors_lbls, sensor_id,
