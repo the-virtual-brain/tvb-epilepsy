@@ -64,8 +64,9 @@ def move_overwrite_files_to_folder_with_wildcard(folder, path_wildcard):
     if not os.path.isdir(folder):
         os.mkdir(folder)
     for file in glob.glob(path_wildcard):
-        filename = os.path.join(folder, os.path.basename(file))
-        shutil.move(file, filename)
+        if os.path.isfile(file):
+            filepath = os.path.join(folder, os.path.basename(file))
+            shutil.move(file, filepath)
 
 
 def write_metadata(meta_dict, h5_file, key_date, key_version, path="/"):
