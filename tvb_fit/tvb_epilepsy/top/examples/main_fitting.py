@@ -69,8 +69,9 @@ def set_hypotheses(head, config):
 
 def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length, sim_times_on_off, sensors_lbls,
                         normal_flag=False, sim_source_type="fitting",
-                        observation_model=OBSERVATION_MODEL_DEF, downsampling=2, preprocessing=[], normalization=None,
-                        fitmethod="sample", pse_flag=True, fit_flag=True, test_flag=False,  config=Config(), **kwargs):
+                        observation_model=OBSERVATION_MODEL_DEF, downsampling=2, exclude_channels=[],
+                        preprocessing=[], normalization=None, fitmethod="sample",
+                        pse_flag=True, fit_flag=True, test_flag=False, config=Config(), **kwargs):
 
     # Prepare necessary services:
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
@@ -145,7 +146,8 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         signals, probabilistic_model, simulator = \
            get_target_timeseries(probabilistic_model, head, lsa_hypothesis, times_on, time_length,
                                  sensors_lbls, sensor_id, observation_model, sim_target_file, empirical_target_file,
-                                 sim_source_type, downsampling, preprocessing, empirical_files, config, plotter)
+                                 exclude_channels, sim_source_type, downsampling, preprocessing, empirical_files,
+                                 config, plotter)
 
         # Update active model's active region nodes
         e_values = pse_results.get("e_values_mean", model_configuration.e_values)
@@ -234,6 +236,7 @@ if __name__ == "__main__":
                                              u"O'": np.arange(1, 4).tolist() + np.arange(6, 13).tolist(),
                                              u"P'": np.arange(1, 4).tolist() + [8] + np.arange(10, 17).tolist(),
                                              u"R'": np.arange(1, 5).tolist() + np.arange(7, 10).tolist()})
+    exclude_channels = []
 
     # Simulation times_on_off
     #  for "fitting" simulations with tau0=30.0
@@ -280,9 +283,11 @@ if __name__ == "__main__":
                                              for seizure_file in seizures_files],
                             times_on, time_length, sim_times_on_off, sensors_lbls,
                             normal_flag, sim_source_type, observation_model,
-                            downsampling, preprocessing, normalization, fitmethod, pse_flag, fit_flag, test_flag, config)
+                            downsampling, exclude_channels, preprocessing, normalization,
+                            fitmethod, pse_flag, fit_flag, test_flag, config)
     else:
         main_fit_sim_hyplsa(stan_model_name, [], times_on, time_length, sim_times_on_off, sensors_lbls,
                             normal_flag, sim_source_type, observation_model,
-                            downsampling, preprocessing, normalization, fitmethod, pse_flag, fit_flag, test_flag, config)
+                            downsampling, exclude_channels, preprocessing, normalization,
+                            fitmethod, pse_flag, fit_flag, test_flag, config)
 

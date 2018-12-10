@@ -109,7 +109,7 @@ def get_2D_simulation(model_configuration, head, lsa_hypothesis, source2D_file, 
 
 
 def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0, seizure_length=SEIZURE_LENGTH,
-                       times_on_off=[], time_units="ms", label_strip_fun=None,
+                       times_on_off=[], time_units="ms", label_strip_fun=None, exclude_seeg=[],
                        preprocessing=TARGET_DATA_PREPROCESSING, low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF,
                        high_lpf=HIGH_LPF, bipolar=BIPOLAR, win_len=WIN_LEN, plotter=None, title_prefix=""):
     try:
@@ -127,7 +127,7 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
             seizure_duration = times_on_off[0]
         signals = prepare_seeg_observable_from_mne_file(empirical_file, head.get_sensors_by_index(sensor_ids=sensor_id),
                                                         sensors_lbls, seizure_length, times_on_off, time_units,
-                                                        label_strip_fun, preprocessing,
+                                                        label_strip_fun, exclude_seeg, preprocessing,
                                                         low_hpf, high_hpf, low_lpf, high_lpf, bipolar, win_len,
                                                         plotter, title_prefix)
         H5Writer().write_timeseries(signals, ts_file)
@@ -140,7 +140,7 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
 
 def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, sensor_id=0,
                                 seizure_length=SEIZURE_LENGTH, times_on=[], time_length=32000.0, time_units="ms",
-                                label_strip_fun=None, preprocessing=TARGET_DATA_PREPROCESSING,
+                                label_strip_fun=None, exclude_seeg=[], preprocessing=TARGET_DATA_PREPROCESSING,
                                 low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF, high_lpf=HIGH_LPF,
                                 bipolar=BIPOLAR, win_len=WIN_LEN, plotter=None, title_prefix=""):
     empirical_files = ensure_list(ensure_list(empirical_files))
@@ -158,8 +158,9 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
         seizure_name = os.path.basename(empirical_file).split(".")[0]
         signals.append(set_empirical_data(empirical_file, "_".join([ts_filename, seizure_name]) + ".h5",
                                           head, sensors_lbls, sensor_id, seizure_length, time_on_off, time_units,
-                                          label_strip_fun,preprocessing, low_hpf, high_hpf, low_lpf, high_lpf,
-                                          bipolar, win_len, plotter, title_prefix))
+                                          label_strip_fun, exclude_seeg, preprocessing,
+                                          low_hpf, high_hpf, low_lpf, high_lpf, bipolar, win_len,
+                                          plotter, title_prefix))
     if n_seizures > 1:
         # Concatenate only the labels that exist in all signals:
         labels = signals[0].space_labels
@@ -234,7 +235,7 @@ def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model
 
 
 def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_length, sensors_lbls, sensor_id,
-                          observation_model, sim_target_file, empirical_target_file, sim_source_type="paper",
+                          observation_model, sim_target_file, empirical_target_file, exclude_seeg=[], sim_source_type="paper",
                           downsampling=1, preprocessing=[], empirical_files=[], config=Config(), plotter=None):
 
     # Some scripts for settting and preprocessing target signals:
@@ -253,8 +254,8 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
         signals, probabilistic_model.number_of_seizures = \
             set_multiple_empirical_data(empirical_files, empirical_target_file, head, sensors_lbls, sensor_id,
                                         seizure_length, times_on, time_length,
-                                        label_strip_fun=lambda s: s.split("POL ")[-1], preprocessing=preprocessing,
-                                        plotter=plotter, title_prefix="")
+                                        label_strip_fun=lambda s: s.split("POL ")[-1], exclude_seeg=exclude_seeg,
+                                        preprocessing=preprocessing, plotter=plotter, title_prefix="")
     else:
         probabilistic_model.number_of_seizures = 1
         # --------------------- Get fitting target simulated data (simulate if necessary) ----------------------

@@ -299,12 +299,12 @@ def prepare_simulated_seeg_observable(data, sensors, seizure_length=SEIZURE_LENG
 
 def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, seizure_length=SEIZURE_LENGTH,
                                           on_off_set=[], time_units="ms", label_strip_fun=None,
-                                          preprocessing=TARGET_DATA_PREPROCESSING,
+                                          exclude_channels=[], preprocessing=TARGET_DATA_PREPROCESSING,
                                           low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF, high_lpf=HIGH_LPF,
                                           bipolar=BIPOLAR, win_len=WIN_LEN, plotter=None, title_prefix=""):
     logger.info("Reading empirical dataset from edf file...")
-    data = read_edf_to_Timeseries(seeg_path, sensors, rois_selection,
-                                  label_strip_fun=label_strip_fun, time_units=time_units)
+    data = read_edf_to_Timeseries(seeg_path, sensors, rois_selection, label_strip_fun=label_strip_fun,
+                                  time_units=time_units, exclude_channels=exclude_channels)
     data.data = np.array(data.data).astype("float32")
     if plotter:
         plotter.plot_raster({"OriginalData": data.squeezed}, data.time, time_units=data.time_unit,

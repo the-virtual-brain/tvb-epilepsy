@@ -7,11 +7,11 @@ from tvb_fit.base.utils.data_structures_utils import ensure_string
 from tvb_fit.base.model.timeseries import Timeseries, TimeseriesDimensions
 
 
-def read_edf(path, sensors, rois_selection=None, label_strip_fun=None, time_units="ms"):
+def read_edf(path, sensors, rois_selection=None, label_strip_fun=None, time_units="ms", exclude_channels=[]):
     logger = initialize_logger(__name__)
 
     logger.info("Reading empirical dataset from mne file...")
-    raw_data = read_raw_edf(path, preload=True)
+    raw_data = read_raw_edf(path, preload=True, exclude=exclude_channels)
 
     if not callable(label_strip_fun):
         label_strip_fun = lambda label: label
@@ -45,9 +45,10 @@ def read_edf(path, sensors, rois_selection=None, label_strip_fun=None, time_unit
     return data, times, rois, rois_inds, rois_lbls
 
 
-def read_edf_to_Timeseries(path, sensors, rois_selection=None, label_strip_fun=None, time_units="ms"):
+def read_edf_to_Timeseries(path, sensors, rois_selection=None, label_strip_fun=None,
+                           time_units="ms", exclude_channels=[]):
     data, times, rois, rois_inds, rois_lbls = \
-        read_edf(path, sensors, rois_selection, label_strip_fun, time_units)
+        read_edf(path, sensors, rois_selection, label_strip_fun, time_units, exclude_channels)
 
     return Timeseries(data, {TimeseriesDimensions.SPACE.value: rois_lbls},
                       times[0], np.mean(np.diff(times)), time_units)
