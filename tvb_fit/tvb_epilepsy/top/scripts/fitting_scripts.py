@@ -374,6 +374,8 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
                                    max_depth=max_depth, delta=delta, save_warmup=1, output_path=base_path,
                                    **kwargs)
     else:
+        summary = None
+        stats = None
         if fit_flag == "fit":
             stan_interface.set_or_compile_model()
             estimates, samples, summary = stan_interface.fit(debug=debug, simulate=simulate, model_data=model_data,
@@ -384,17 +386,16 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
                                                              max_depth=max_depth, delta=delta,
                                                              save_warmup=1, plot_warmup=1, output_path=base_path,
                                                              **kwargs)
-            # TODO: check if write_dictionary is enough for estimates, samples, summary and info_crit
-            if writer:
-                writer.write_list_of_dictionaries(estimates, path(prob_model_name + "_FitEst", base_path))
-                # writer.write_list_of_dictionaries(samples, path(prob_model_name + "_FitSamples", base_path))
-                if summary is not None:
-                    writer.write_dictionary(summary, path(prob_model_name + "_FitSummary", base_path))
+
         else:
             stan_interface.set_output_files(base_path=base_path, update=True)
             estimates, samples, summary = stan_interface.read_output()
-            if writer:
-                writer.write_list_of_dictionaries(estimates, path(prob_model_name + "_FitEst", base_path))
+
+        if writer:
+            writer.write_list_of_dictionaries(estimates, path(prob_model_name + "_FitEst", base_path))
+            # writer.write_list_of_dictionaries(samples, path(prob_model_name + "_FitSamples", base_path))
+            if summary is not None:
+                writer.write_dictionary(summary, path(prob_model_name + "_FitSummary", base_path))
 
         # Model comparison:
         info_crit = \
@@ -412,9 +413,7 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
         # estimates, samples, Rhat, model_data = \
         #     convert_params_names_from_ins([estimates, samples, Rhat, model_data])
         if fitmethod.find("opt") < 0:
-            stats = stan_interface.get_summary_stats(summary, ["R_hat", "N_Eff/s"])
-        else:
-            stats = None
+            stats = stan_interface.get_summary_stats(["R_hat", "N_Eff/s"], summary)
 
         if plotter:
             # -------------------------- Plot fitting results: ------------------------------------------------------------

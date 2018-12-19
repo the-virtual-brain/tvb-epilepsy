@@ -100,14 +100,7 @@ class CmdStanInterface(StanInterface):
     def read_output(self):
         samples = self.read_output_samples(self.output_filepath)
         est = self.compute_estimates_from_samples(samples)
-        if os.path.isfile(self.summary_filepath):
-            try:
-                summary = parse_csv_in_cols(self.summary_filepath)
-            except:
-                summary = None
-                warning("Reading stan summary failed!")
-        else:
-            summary = None
+        summary = self.get_summary()
         return est, samples, summary
 
     def stan_summary(self):
@@ -115,7 +108,9 @@ class CmdStanInterface(StanInterface):
                   + self.summary_filepath
         execute_command(command, cwd=self.path, shell=True)
 
-    def get_summary_stats(self, summary, stats):
+    def get_summary_stats(self, stats, summary=None):
+        if summary is None:
+            summary = self.get_summary()
         if isinstance(summary, dict):
             out_stats = {}
             for stat in ensure_list(stats):
@@ -124,8 +119,20 @@ class CmdStanInterface(StanInterface):
         else:
             return None
 
-    def get_Rhat(self, summary):
-        return self.get_summary_stats(summary, "Rhat")
+    def get_summary(self):
+        if os.path.isfile(self.summary_filepath):
+            return parse_csv_in_cols(self.summary_filepath)
+        else:
+            warning("No summary csv file! Making an effort to compute summary!")
+            try:
+                self.stan_summary()
+                return parse_csv_in_cols(self.summary_filepath)
+            except:
+                warning("Failed to compute summary!")
+                return None
+
+    def get_Rhat(self, summary=None):
+        return self.get_summary_stats("Rhat", summary)
 
     def prepare_fit(self, debug=0, simulate=0, overwrite_output_files=False, **kwargs):
         # Confirm output files and check if overwriting is necessary
