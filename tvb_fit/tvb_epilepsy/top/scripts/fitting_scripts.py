@@ -393,6 +393,8 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
         else:
             stan_interface.set_output_files(base_path=base_path, update=True)
             estimates, samples, summary = stan_interface.read_output()
+            if writer:
+                writer.write_list_of_dictionaries(estimates, path(prob_model_name + "_FitEst", base_path))
 
         # Model comparison:
         info_crit = \
