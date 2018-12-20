@@ -295,8 +295,8 @@ class ModelInversionPlotter(TimeseriesPlotter):
                                str(numpy.where(len(scalar_str) > 0, "\n" + scalar_str, ""))
                     temp = self.tick_font_size
                     self.tick_font_size = 10
-                    figs.append(self.plot_raster(dWt, time[:-1], time_units=target_data.time_unit,
-                                                 special_idx=special_idx,
+                    figs.append(self.plot_raster(dWt, time[:-(target_data.time_length - dWt[d_str].shape[0])],
+                                                 time_units=target_data.time_unit, special_idx=special_idx,
                                                  title=name + ": Hidden states random walk rasterplot " + d_str,
                                                  subtitles=[subtitle], offset=1.0,
                                                  labels=stats_region_labels_dWt.get(d_str, region_labels),
