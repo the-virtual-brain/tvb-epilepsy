@@ -85,6 +85,30 @@ def construct_import_path(path, package="tvb_fit"):
     return path[start:].replace("/", ".")
 
 
+def format_all_numbers_in_strings(input_strings, num_integers=7, num_decimals=6):
+    numeric_const_pattern = '[-+]? (?: (?: \d* \. \d+ ) | (?: \d+ \.? ) )(?: [Ee] [+-]? \d+ ) ?'
+    rx = re.compile(numeric_const_pattern, re.VERBOSE)
+    integer_format = "%0" + str(num_integers) + "d"
+    num_total = num_integers + num_decimals + 1
+    float_format = "%0" + str(num_total) + "." + str(num_decimals) + "f"
+    output_strings = []
+    for inp_str in ensure_list(input_strings):
+        number_strings = rx.findall(inp_str)
+        string_parts = rx.split(inp_str)
+        out_str = ""
+        for string_part, num_str in zip(string_parts, number_strings):
+            try:
+                out_str += string_part + integer_format % int(num_str)
+            except:
+                out_str += string_part + float_format % float(num_str)
+        if len(string_parts) > len(number_strings):
+            out_str += string_parts[-1]
+        output_strings.append(out_str)
+    if len(output_strings) == 1:
+        return output_strings[0]
+    return output_strings
+
+
 def formal_repr(instance, attr_dict, sort_dict_flag=False):
     """ A formal string representation for an object.
     :param attr_dict: dictionary attribute_name: attribute_value
@@ -617,3 +641,5 @@ def copy_object_attributes(obj1, obj2, attr1, attr2=None, deep_copy=False, check
         for a1, a2 in zip(attr1, attr2):
             fcopy(a1, a2)
     return obj2
+
+
