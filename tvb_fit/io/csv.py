@@ -23,18 +23,7 @@ def merge_csv_data(*csvs):
 def parse_csv(fname, merge=True):
     if '*' in fname:
         import glob
-        csv_files_list = glob.glob(fname)
-        if len(csv_files_list) > 1:
-            files_ids = []
-            for this_fname in csv_files_list:
-                file_id = this_fname.split(fname[:-1])[1].split(".csv")[0]
-                if file_id.isdigit():
-                    files_ids.append("%04d" % int(file_id))
-                else:
-                    files_ids.append(file_id)
-            sort_inds = np.argsort(files_ids)
-            csv_files_list = np.array(csv_files_list)[sort_inds].tolist()
-        return parse_csv(csv_files_list, merge=merge)
+        return parse_csv( glob.glob(fname), merge=merge)
     if isinstance(fname, (list, tuple)):
         csv = []
         for csv_dict in [parse_csv(_) for _ in fname]:
