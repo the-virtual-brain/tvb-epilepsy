@@ -97,10 +97,10 @@ class CmdStanInterface(StanInterface):
             if self.model_path != self.model_code_path.split(".stan", 1)[0]:
                 copyfile(self.model_code_path.split(".stan", 1)[0], self.model_path)
 
-    def read_output(self, output_filepath=None):
+    def read_output(self, output_filepath=None, **kwargs):
         if not isinstance(output_filepath, basestring):
             output_filepath = self.output_filepath
-        samples = self.read_output_samples(output_filepath)
+        samples = self.read_output_samples(output_filepath, kwargs)
         est = self.compute_estimates_from_samples(samples)
         summary = self.get_summary(output_filepath=output_filepath)
         return est, samples, summary
@@ -166,7 +166,7 @@ class CmdStanInterface(StanInterface):
         self.logger.info("Computing stan summary...")
         self.stan_summary()
         if return_output:
-            est, samples, summary = self.read_output()
+            est, samples, summary = self.read_output(kwargs)
             if plot_HMC and self.fitmethod.find("sampl") >= 0 and \
                 isequal_string(self.options.get("algorithm", "None"), "HMC"):
                 Plotter(self.config).plot_HMC(samples, skip_samples=kwargs.pop("skip_samples", num_warmup *
