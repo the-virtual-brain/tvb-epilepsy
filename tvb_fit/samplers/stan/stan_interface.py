@@ -1,4 +1,5 @@
 import os
+import glob
 import pickle
 from shutil import copyfile
 from abc import ABCMeta, abstractmethod
@@ -9,7 +10,7 @@ from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.base.utils.log_error_utils import initialize_logger, warning, \
                                                     raise_value_error, raise_not_implemented_error
 from tvb_fit.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, \
-                                                    list_of_dicts_to_dicts_of_ndarrays, switch_levels_of_dicts_of_dicts
+    format_all_numbers_in_strings, list_of_dicts_to_dicts_of_ndarrays, switch_levels_of_dicts_of_dicts
 from tvb_fit.io.r_file_io import rdump, rload
 from tvb_fit.io.csv import parse_csv
 from tvb_fit.io.h5_reader import H5Reader
@@ -121,8 +122,8 @@ class StanInterface(object):
         if self.model_code_path != destination:
             copyfile(self.model_code_path, destination)
 
-    def read_output_samples(self, output_filepath, **kwargs):
-        return read_output_samples(output_filepath, **kwargs)
+    def read_output_samples(self, output_filepath, all_outputs=True):
+        return read_output_samples(output_filepath,all_outputs)
 
     def compute_estimates_from_samples(self, samples):
         ests = []
@@ -311,8 +312,16 @@ class StanInterface(object):
         return switch_levels_of_dicts_of_dicts(results)
 
 
-def read_output_samples(output_filepath, **kwargs):
-    samples = ensure_list(parse_csv(output_filepath.replace(".csv", "*"), merge=kwargs.pop("merge_outputs", False)))
+def read_output_samples(output_filepath, all_outputs=True):
+    if all_outputs:
+        if output_filepath.split(".csv")[0][-1] != "*":
+            output_filepath.replace(".csv", "*") + ".csv"
+    csv_files_list = glob.glob(output_filepath)
+    if len(csv_files_list) > 1:
+        files_list = [filepath.split(".csv") for filepath in csv_files_list]
+        sort_inds = np.array(format_all_numbers_in_strings(files_list)).sort()
+        csv_files_list = np.array(csv_files_list)[sort_inds].tolist()
+    samples = ensure_list(parse_csv(csv_files_list, merge=kwargs.pop("merge_outputs", False)))
     if len(samples) == 1:
         return samples[0]
     return samples

@@ -97,20 +97,35 @@ class CmdStanInterface(StanInterface):
             if self.model_path != self.model_code_path.split(".stan", 1)[0]:
                 copyfile(self.model_code_path.split(".stan", 1)[0], self.model_path)
 
-    def read_output(self):
-        samples = self.read_output_samples(self.output_filepath)
+    def read_output(self, output_filepath=None):
+        if not isinstance(output_filepath, basestring):
+            output_filepath = self.output_filepath
+        samples = self.read_output_samples(output_filepath)
         est = self.compute_estimates_from_samples(samples)
-        summary = self.get_summary()
+        summary = self.get_summary(output_filepath=output_filepath)
         return est, samples, summary
 
-    def stan_summary(self):
-        command = "bin/stansummary " + self.output_filepath.split(".csv")[0] + "*.csv" + " --csv_file=" \
-                  + self.summary_filepath
+    def stan_summary(self, output_filepath=None):
+        if not isinstance(output_filepath, basestring):
+            output_filepath = self.output_filepath.split(".csv")[0] + "*.csv"
+        command = "bin/stansummary " + output_filepath + " --csv_file=" + self.summary_filepath
         execute_command(command, cwd=self.path, shell=True)
 
-    def get_summary_stats(self, stats, summary=None):
+    def get_summary(self, output_filepath=None):
+        if os.path.isfile(self.summary_filepath):
+            return parse_csv_in_cols(self.summary_filepath)
+        else:
+            warning("No summary csv file! Making an effort to compute summary!")
+            try:
+                self.stan_summary(output_filepath=output_filepath)
+                return parse_csv_in_cols(self.summary_filepath)
+            except:
+                warning("Failed to compute summary!")
+                return None
+
+    def get_summary_stats(self, stats, summary=None,  output_filepath=None):
         if summary is None:
-            summary = self.get_summary()
+            summary = self.get_summary(output_filepath=output_filepath)
         if isinstance(summary, dict):
             out_stats = {}
             for stat in ensure_list(stats):
@@ -119,20 +134,8 @@ class CmdStanInterface(StanInterface):
         else:
             return None
 
-    def get_summary(self):
-        if os.path.isfile(self.summary_filepath):
-            return parse_csv_in_cols(self.summary_filepath)
-        else:
-            warning("No summary csv file! Making an effort to compute summary!")
-            try:
-                self.stan_summary()
-                return parse_csv_in_cols(self.summary_filepath)
-            except:
-                warning("Failed to compute summary!")
-                return None
-
-    def get_Rhat(self, summary=None):
-        return self.get_summary_stats("Rhat", summary)
+    def get_Rhat(self, summary=None, output_filepath=None):
+        return self.get_summary_stats("Rhat", summary, output_filepath=output_filepath)
 
     def prepare_fit(self, debug=0, simulate=0, overwrite_output_files=False, **kwargs):
         # Confirm output files and check if overwriting is necessary
