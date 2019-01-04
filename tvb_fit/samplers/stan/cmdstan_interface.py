@@ -105,11 +105,13 @@ class CmdStanInterface(StanInterface):
         summary = self.get_summary(output_filepath=output_filepath)
         return est, samples, summary
 
-    def stan_summary(self, output_filepath=None):
+    def stan_summary(self, output_filepath=None, all_outputs=True):
         if not isinstance(output_filepath, basestring):
-            output_filepath = self.output_filepath.split(".csv")[0] + "*.csv"
-        command = "bin/stansummary " + output_filepath + " --csv_file=" + self.summary_filepath
-        execute_command(command, cwd=self.path, shell=True)
+            output_filepath = self.output_filepath
+        if all_outputs:
+            if output_filepath.split(".csv")[0][-1] != "*":
+                output_filepath.replace(".csv", "*") + ".csv"
+        compute_stan_summary(output_filepath, self.summary_filepath, self.path)
 
     def get_summary(self, output_filepath=None):
         if os.path.isfile(self.summary_filepath):
@@ -174,3 +176,8 @@ class CmdStanInterface(StanInterface):
             return est, samples, summary
         else:
             return None, None, None
+
+
+def compute_stan_summary(output_filepath, summary_filepath, cwd_path):
+    command = "bin/stansummary " + output_filepath + " --csv_file=" + summary_filepath
+    execute_command(command, cwd=cwd_path, shell=True)
