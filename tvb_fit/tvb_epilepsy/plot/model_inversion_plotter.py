@@ -145,16 +145,19 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
         stats_per_chain = stats
         if len(samples) > 1:
             samples1 = merge_samples(samples, skip_samples=skip_samples, flatten=True)
-            samples1, target_data, x1prior, x1eps = samples_to_timeseries(samples1, model_data, target_data,
-                                                                         region_labels)
+            samples1, target_data, x1prior, x1eps = \
+                samples_to_timeseries(samples1, active_regions=active_regions, target_data=target_data,
+                                      region_labels=region_labels)
             figs.append(
-                self.plot_fit_timeseries(target_data, samples1, ests, stats, probabilistic_model, "fit_target_data",
+                self.plot_fit_timeseries(target_data, samples1, ests, stats, probabilistic_model, ["fit_target_data"],
                                          state_variables, state_noise_variables, sigma, seizure_indices,
                                          0, trajectories_plot, region_labels, True, title_prefix))
             stats_per_chain = None
-        samples, target_data, x1prior, x1eps = samples_to_timeseries(samples, model_data, target_data, region_labels)
+        samples, target_data, x1prior, x1eps = \
+            samples_to_timeseries(samples, active_regions=active_regions, target_data=target_data,
+                                  region_labels=region_labels)
         figs.append(self.plot_fit_timeseries(target_data, samples, ests, stats_per_chain, probabilistic_model,
-                                             "fit_target_data", state_variables, state_noise_variables, sigma,
+                                             ["fit_target_data"], state_variables, state_noise_variables, sigma,
                                              seizure_indices, skip_samples, trajectories_plot, region_labels, False,
                                              title_prefix))
 
