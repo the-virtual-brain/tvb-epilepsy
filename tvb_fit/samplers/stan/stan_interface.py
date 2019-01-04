@@ -126,25 +126,7 @@ class StanInterface(object):
         return read_output_samples(output_filepath,all_outputs, kwargs)
 
     def compute_estimates_from_samples(self, samples):
-        ests = []
-        for chain_or_run_samples in ensure_list(samples):
-            est = {}
-            for pkey, pval in chain_or_run_samples.items():
-                try:
-                    est[pkey + "_low"], est[pkey], est[pkey + "_std"] = describe(chain_or_run_samples[pkey])[1:4]
-                    est[pkey + "_high"] = est[pkey + "_low"][1]
-                    est[pkey + "_low"] = est[pkey + "_low"][0]
-                    est[pkey + "_std"] = np.sqrt(est[pkey + "_std"])
-                    for skey in [pkey, pkey + "_low", pkey + "_high", pkey + "_std"]:
-                        est[skey] = np.squeeze(est[skey])
-                except:
-                    est[pkey] = chain_or_run_samples[pkey]
-            ests.append(sort_dict(est))
-        if len(ests) == 1:
-            return ests[0]
-        else:
-            return ests
-
+        return compute_estimates_from_samples(samples)
 
     def compute_information_criteria(self, samples, nparams=None, nsamples=None, ndata=None, parameters=[],
                                      skip_samples=0, merge_chains_or_runs_flag=False, log_like_str='log_likelihood'):
@@ -344,4 +326,25 @@ def merge_samples(samples, skip_samples=0, flatten=False):
         return samples
     else:
         return samples[0]
+
+
+def compute_estimates_from_samples(samples):
+    ests = []
+    for chain_or_run_samples in ensure_list(samples):
+        est = {}
+        for pkey, pval in chain_or_run_samples.items():
+            try:
+                est[pkey + "_low"], est[pkey], est[pkey + "_std"] = describe(chain_or_run_samples[pkey])[1:4]
+                est[pkey + "_high"] = est[pkey + "_low"][1]
+                est[pkey + "_low"] = est[pkey + "_low"][0]
+                est[pkey + "_std"] = np.sqrt(est[pkey + "_std"])
+                for skey in [pkey, pkey + "_low", pkey + "_high", pkey + "_std"]:
+                    est[skey] = np.squeeze(est[skey])
+            except:
+                est[pkey] = chain_or_run_samples[pkey]
+        ests.append(sort_dict(est))
+    if len(ests) == 1:
+        return ests[0]
+    else:
+        return ests
 
