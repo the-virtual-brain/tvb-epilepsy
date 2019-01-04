@@ -433,59 +433,64 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
         return estimates, samples, summary, info_crit
 
 
-def samples_to_timeseries(samples, model_data, target_data=None, region_labels=[]):
+def samples_to_timeseries(samples, time=None, active_regions=None, target_data=None, region_labels=[],
+                          params=["x1", "z", "x1_star", "z_star",
+                                  "dX1t", "dZt", "dWt", "dX1t_star", "dZt_star", "dWt_star"]):
     samples = ensure_list(samples)
-
     if isinstance(target_data, Timeseries):
         time = target_data.time
-        n_target_data = target_data.number_of_labels
+        time_unit = target_data.time_unit
         target_data_labels = target_data.space_labels
     else:
-        time = model_data.get("time", False)
         n_target_data = samples[0]["fit_target_data"]
         target_data_labels = generate_region_labels(n_target_data, [], ". ", False)
+        time_unit = "ms"
 
-    if time is not False:
+    if time is not None:
         time_start = time[0]
         time_step = np.diff(time).mean()
     else:
         time_start = 0
         time_step = 1
 
-    if not isinstance(target_data, Timeseries):
+    if isinstance(target_data, np.ndarray):
         target_data = Timeseries(target_data,
                                  {TimeseriesDimensions.SPACE.value: target_data_labels,
                                   TimeseriesDimensions.VARIABLES.value: ["target_data"]},
                                   time_start=time_start, time_step=time_step)
 
     (n_times, n_regions, n_samples) = samples[0]["x1"].T.shape
-    active_regions = model_data.get("active_regions", np.array(range(n_regions)))
+    if active_regions is None:
+        active_regions = np.array(range(n_regions))
     region_labels = generate_region_labels(np.maximum(n_regions, len(region_labels)), region_labels, ". ", False)
     if len(region_labels) > len(active_regions):
         region_labels = region_labels[active_regions]
 
     x1 = np.empty((n_times, n_regions, 0))
     for sample in ensure_list(samples):
-        for x in ["x1", "z", "x1_star", "z_star", "dX1t", "dZt", "dWt", "dX1t_star", "dZt_star", "dWt_star"]:
+        for x in params:
             try:
                 if x == "x1":
                     x1 = np.concatenate([x1, sample[x].T], axis=2)
                 sample[x] = Timeseries(np.expand_dims(sample[x].T, 2), {TimeseriesDimensions.SPACE.value: region_labels,
                                                      TimeseriesDimensions.VARIABLES.value: [x]},
-                                       time_start=time_start, time_step=time_step, time_unit=target_data.time_unit)
+                                       time_start=time_start, time_step=time_step, time_unit=time_unit)
 
             except:
                 pass
-
-        sample["fit_target_data"] = Timeseries(np.expand_dims(sample["fit_target_data"].T, 2),
-                                               {TimeseriesDimensions.SPACE.value: target_data_labels,
-                                                TimeseriesDimensions.VARIABLES.value: ["fit_target_data"]},
-                               time_start=time_start, time_step=time_step)
+        try:
+            sample["fit_target_data"] = Timeseries(np.expand_dims(sample["fit_target_data"].T, 2),
+                                                   {TimeseriesDimensions.SPACE.value: target_data_labels,
+                                                    TimeseriesDimensions.VARIABLES.value: ["fit_target_data"]},
+                                                   time_start=time_start, time_step=time_step)
+        except:
+            pass
 
     return samples, target_data, np.nanmean(x1, axis=2).squeeze(), np.nanstd(x1, axis=2).squeeze()
 
 
-def get_x1_estimates_from_samples(samples, time=None, active_regions=[], region_labels=[], time_unit="ms"):
+def get_x1_estimates_from_samples(samples, time=None, active_regions=[], region_labels=[], time_unit="ms",
+                                  skip_samples=0):
     if time is not None:
         time_start = time[0]
         time_step = np.diff(time).mean()
@@ -493,9 +498,9 @@ def get_x1_estimates_from_samples(samples, time=None, active_regions=[], region_
         time_start = 0
         time_step = 1
     if isinstance(samples[0]["x1"], np.ndarray):
-        get_x1 = lambda x1: x1.T
+        get_x1 = lambda x1: x1.T[:, :, skip_samples:]
     else:
-        get_x1 = lambda x1: x1.squeezed
+        get_x1 = lambda x1: x1.squeezed[:, :, skip_samples:]
     (n_times, n_regions, n_samples) = get_x1(samples[0]["x1"]).shape
     if len(active_regions) == 0:
         active_regions = np.array(range(n_regions))
