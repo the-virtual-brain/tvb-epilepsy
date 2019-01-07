@@ -417,18 +417,18 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
 
         if plotter:
             # -------------------------- Plot fitting results: ------------------------------------------------------------
-            try:
-                if fitmethod.find("sampl") >= 0:
-                    plotter.plot_HMC(samples, figure_name=step_prefix + prob_model_name + " HMC NUTS trace")
+            # try:
+            if fitmethod.find("sampl") >= 0:
+                plotter.plot_HMC(samples, figure_name=step_prefix + prob_model_name + " HMC NUTS trace")
 
-                plotter.plot_fit_results(estimates, samples, model_data, target_data, probabilistic_model, info_crit,
-                                         stats=stats, seizure_indices=seizure_indices,
-                                         pair_plot_params=pair_plot_params, region_violin_params=region_violin_params,
-                                         state_variables=state_variables, state_noise_variables=state_noise_variables,
-                                         region_labels=head.connectivity.region_labels, skip_samples=skip_samples,
-                                         title_prefix=step_prefix + prob_model_name)
-            except:
-                warning("Fitting plotting failed for step %s" % step_prefix)
+            plotter.plot_fit_results(estimates, samples, model_data, target_data, probabilistic_model, info_crit,
+                                     stats=stats, seizure_indices=seizure_indices,
+                                     pair_plot_params=pair_plot_params, region_violin_params=region_violin_params,
+                                     state_variables=state_variables, state_noise_variables=state_noise_variables,
+                                     region_labels=head.connectivity.region_labels, skip_samples=skip_samples,
+                                     title_prefix=step_prefix + prob_model_name)
+        # except:
+        #  warning("Fitting plotting failed for step %s" % step_prefix)
 
         return estimates, samples, summary, info_crit
 

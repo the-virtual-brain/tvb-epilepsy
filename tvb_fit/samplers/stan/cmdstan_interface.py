@@ -100,7 +100,7 @@ class CmdStanInterface(StanInterface):
     def read_output(self, output_filepath=None, **kwargs):
         if not isinstance(output_filepath, basestring):
             output_filepath = self.output_filepath
-        samples = self.read_output_samples(output_filepath, kwargs)
+        samples = self.read_output_samples(output_filepath, all_outputs=True, **kwargs)
         est = self.compute_estimates_from_samples(samples)
         summary = self.get_summary(output_filepath=output_filepath)
         return est, samples, summary
@@ -110,7 +110,7 @@ class CmdStanInterface(StanInterface):
             output_filepath = self.output_filepath
         if all_outputs:
             if output_filepath.split(".csv")[0][-1] != "*":
-                output_filepath.replace(".csv", "*") + ".csv"
+                output_filepath = output_filepath.replace(".csv", "*.csv")
         compute_stan_summary(output_filepath, self.summary_filepath, self.path)
 
     def get_summary(self, output_filepath=None):

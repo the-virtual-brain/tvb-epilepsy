@@ -123,7 +123,7 @@ class StanInterface(object):
             copyfile(self.model_code_path, destination)
 
     def read_output_samples(self, output_filepath, all_outputs=True, **kwargs):
-        return read_output_samples(output_filepath,all_outputs, kwargs)
+        return read_output_samples(output_filepath, all_outputs, **kwargs)
 
     def compute_estimates_from_samples(self, samples):
         return compute_estimates_from_samples(samples)
@@ -297,11 +297,11 @@ class StanInterface(object):
 def read_output_samples(output_filepath, all_outputs=True, **kwargs):
     if all_outputs:
         if output_filepath.split(".csv")[0][-1] != "*":
-            output_filepath.replace(".csv", "*") + ".csv"
+            output_filepath = output_filepath.replace(".csv", "*.csv")
     csv_files_list = glob.glob(output_filepath)
     if len(csv_files_list) > 1:
-        files_list = [filepath.split(".csv") for filepath in csv_files_list]
-        sort_inds = np.array(format_all_numbers_in_strings(files_list)).sort()
+        files_list = [filepath.split(".csv")[0] for filepath in csv_files_list]
+        sort_inds = np.array(format_all_numbers_in_strings(files_list)).argsort()
         csv_files_list = np.array(csv_files_list)[sort_inds].tolist()
     samples = ensure_list(parse_csv(csv_files_list, merge=kwargs.pop("merge_outputs", False)))
     if len(samples) == 1:
