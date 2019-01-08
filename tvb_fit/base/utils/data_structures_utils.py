@@ -291,6 +291,22 @@ def get_list_or_tuple_item_safely(obj, key):
         return None
 
 
+def delete_list_items_by_indices(lin, inds, start_ind=0):
+    lout = []
+    for ind, l in enumerate(lin):
+        if ind+start_ind not in inds:
+            lout.append(l)
+    return lout
+
+
+def delete_list_items_by_values(lin, values):
+    lout = []
+    for l in lin:
+        if l not in values:
+            lout.append(l)
+    return lout
+
+
 def linear_index_to_coordinate_tuples(linear_index, shape):
     if len(linear_index) > 0:
         coordinates_tuple = np.unravel_index(linear_index, shape)
