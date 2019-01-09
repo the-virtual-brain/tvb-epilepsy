@@ -229,9 +229,9 @@ class ModelInversionPlotter(TimeseriesPlotter):
         return f1, f2
 
     def plot_fit_timeseries(self, target_data, samples, ests, stats=None, probabilistic_model=None,
-                            target_data_str=["fit_target_data"], state_variables_str=["x1", "x2"], dWt_str=["dWt"],
-                            scalar_params_str=["sigma"], special_idx=[], skip_samples=0, trajectories_plot=False,
-                            region_labels=[], merge=False, title_prefix=""):
+                            target_data_str="fit_target_data", state_variables_str=["x1", "x2"], dWt_str=["dWt"],
+                            scalar_params_str=["sigma"], special_idx=[], skip_samples=0, thin_samples=1,
+                            trajectories_plot=False, region_labels=[], merge=False, title_prefix=""):
 
         def discard_star_parameters(params, samples_params):
             # Function to discard _star params if the non _star parameter also exists
@@ -245,6 +245,11 @@ class ModelInversionPlotter(TimeseriesPlotter):
                     params_out.append(p_star)
             return params_out
 
+        def thin_ts_samples(data):
+            if thin_samples > 1:
+                return data[:, :, :, 0::thin_samples]
+            else:
+                return data
 
         def plot_fit_timeseries_chain(chain_str, sample, est,
                                       state_variables_str, dWt_str, scalar_params_str, scalar_str,
@@ -266,13 +271,13 @@ class ModelInversionPlotter(TimeseriesPlotter):
             for x_str in state_variables_str:
                 try:
                     ts = sample[x_str]
-                    this_x = {x_str: ts.data[:, :, :, skip_samples:].squeeze()}
+                    this_x = {x_str: thin_ts_samples(ts.data[:, :, :, skip_samples:]).squeeze()}
                     x.update(this_x)
                     subtitles = ['hidden state ' + x_str + stats_string[x_str]]
                     figs.append(
                         self.plot_raster(this_x, ts.time, special_idx=special_idx, time_units=ts.time_unit,
                                          title=name + ": Hidden states fit rasterplot " + x_str,
-                                         subtitles=subtitles, offset=0.25,
+                                         subtitles=subtitles, offset=0.5,
                                          labels=region_labels,  #stats_region_labels_x.get(x_str, region_labels),
                                          figsize=FiguresConfig.VERY_LARGE_SIZE))
                 except:
@@ -293,7 +298,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
                 dWt = OrderedDict()
                 try:
                     ts = sample.get(d_str)
-                    dWt[d_str] = ts.data[:, :, :, skip_samples:].squeeze()
+                    dWt[d_str] = thin_ts_samples(ts.data[:, :, :, skip_samples:]).squeeze()
                     subtitle = d_str + stats_string[d_str] + \
                                str(numpy.where(len(scalar_str) > 0, "\n" + scalar_str, ""))
                     temp = self.tick_font_size
@@ -312,12 +317,12 @@ class ModelInversionPlotter(TimeseriesPlotter):
                 chain_key = "fit " + chain_name
                 chain_observation_dict = OrderedDict({'observation time series': target_data.squeezed})
                 ts = sample[target_data_str]
-                chain_observation_dict.update({chain_key: ts.data[:, :, :, skip_samples:].squeeze()})
+                chain_observation_dict.update({chain_key: thin_ts_samples(ts.data[:, :, :, skip_samples:]).squeeze()})
                 figs.append(
                     self.plot_raster(chain_observation_dict, ts.time, special_idx=[], time_units=ts.time_unit,
                                      title=name + " Observation target vs fit time series",
                                      figure_name=name + "ObservationTarget_VS_FitRasterPlot",
-                                     offset=0.25, labels=[stats_target_data_labels, target_data_labels],
+                                     offset=0.5, labels=[stats_target_data_labels, target_data_labels],
                                      figsize=FiguresConfig.VERY_LARGE_SIZE))
                 figs.append(
                     self.plot_timeseries(chain_observation_dict, ts.time, special_idx=[], time_units=ts.time_unit,
@@ -333,7 +338,9 @@ class ModelInversionPlotter(TimeseriesPlotter):
         state_variables_str = discard_star_parameters(state_variables_str, samples[0].keys())
         dWt_str += [(dWt + "_star").replace("_star_star", "_star") for dWt in dWt_str]
         dWt_str = discard_star_parameters(dWt_str, samples[0].keys())
-        ts_strings = target_data_str + state_variables_str + dWt_str
+        ts_strings = state_variables_str + dWt_str
+        if len(target_data_str) > 0:
+            ts_strings = [target_data_str] + ts_strings
         if len(state_variables_str) > 0:
             if len(region_labels) == 0:
                 region_labels = samples[0][state_variables_str[0]].space_labels
@@ -345,6 +352,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
         stats_region_labels_x = {}
         stats_region_labels_dWt = {}
         stats_region_titles = region_labels
+        plot_target_data = False
         if isinstance(target_data, Timeseries):
             plot_target_data = True
             target_data_labels = target_data.space_labels
