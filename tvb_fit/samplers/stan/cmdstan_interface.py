@@ -100,17 +100,18 @@ class CmdStanInterface(StanInterface):
     def read_output(self, output_filepath=None, **kwargs):
         if not isinstance(output_filepath, basestring):
             output_filepath = self.output_filepath
-        samples = self.read_output_samples(output_filepath, all_outputs=True, **kwargs)
+        samples = self.read_output_samples(output_filepath, add_wildcard=True, **kwargs)
         est = self.compute_estimates_from_samples(samples)
         summary = self.get_summary(output_filepath=output_filepath)
         return est, samples, summary
 
-    def stan_summary(self, output_filepath=None, all_outputs=True):
-        if not isinstance(output_filepath, basestring):
-            output_filepath = self.output_filepath
-        if all_outputs:
-            if output_filepath.split(".csv")[0][-1] != "*":
-                output_filepath = output_filepath.replace(".csv", "*.csv")
+    def stan_summary(self, output_filepath=None, add_wildcard=True):
+        if not isinstance(output_filepath, (list, tuple)):  # if not a list of files
+            if not isinstance(output_filepath, basestring):  # if neither a path
+                output_filepath = self.output_filepath       # set the default path
+            if add_wildcard:  # add wildcard if flag
+                if output_filepath.split(".csv")[0][-1] != "*":
+                    output_filepath = output_filepath.replace(".csv", "*.csv")
         compute_stan_summary(output_filepath, self.summary_filepath, self.path)
 
     def get_summary(self, output_filepath=None):
@@ -178,6 +179,12 @@ class CmdStanInterface(StanInterface):
             return None, None, None
 
 
-def compute_stan_summary(output_filepath, summary_filepath, cwd_path):
+def compute_stan_summary(output_filepath, summary_filepath, cwd_path, overwrite_summary_file=False):
+    summary_filepath = change_filename_or_overwrite_with_wildcard(summary_filepath.split(".csv")[0],
+                                                                  overwrite_summary_file) + ".csv"
     command = "bin/stansummary " + output_filepath + " --csv_file=" + summary_filepath
     execute_command(command, cwd=cwd_path, shell=True)
+
+def stan_summary(output_filepath, summary_filepath, cwd_path):
+    compute_stan_summary(output_filepath, summary_filepath, cwd_path)
+    return parse_csv_in_cols(summary_filepath)
