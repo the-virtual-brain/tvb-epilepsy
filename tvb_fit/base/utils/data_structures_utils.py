@@ -405,6 +405,13 @@ def monopolar_to_bipolar(labels, indices=None, data=None):
         return bipolar_lbls, bipolar_inds
 
 
+def where(condition, one, two):
+    if np.any(condition):
+        return one
+    else:
+        return two
+
+
 # This function is meant to confirm that two objects assumingly of the same type are equal, i.e., identical
 def assert_equal_objects(obj1, obj2, attributes_dict=None, logger=None):
     def print_not_equal_message(attr, field1, field2, logger):
