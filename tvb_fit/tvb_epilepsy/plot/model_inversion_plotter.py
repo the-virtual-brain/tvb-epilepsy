@@ -114,7 +114,7 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
                          region_violin_params=["x0", "PZ", "x1eq", "zeq"], state_variables=["x1", "z"],
                          state_noise_variables=["dWt", "dX1t", "dZt"], region_labels=[], regions_mode="active",
                          seizure_indices=[], trajectories_plot=True, connectivity_plot=False, skip_samples=0,
-                         title_prefix=""):
+                         thin_ts_samples=1, title_prefix=""):
         sigma = []
         if probabilistic_model is not None:
             n_regions = probabilistic_model.number_of_regions
@@ -132,7 +132,7 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
             if len(active_regions) > 0:
                 seizure_indices = [active_regions.index(ind) for ind in seizure_indices]
                 if len(region_labels) > 0:
-                    region_labels = region_labels[active_regions]
+                    region_labels = numpy.array(region_labels[active_regions])
 
         if len(region_labels) == 0:
             self.print_regions_indices = True
@@ -148,18 +148,19 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
             samples1, target_data, x1prior, x1eps = \
                 samples_to_timeseries(samples1, active_regions=active_regions, target_data=target_data,
                                       region_labels=region_labels)
+
             figs.append(
-                self.plot_fit_timeseries(target_data, samples1, ests, stats, probabilistic_model, ["fit_target_data"],
+                self.plot_fit_timeseries(target_data, samples1, ests, stats, probabilistic_model, "fit_target_data",
                                          state_variables, state_noise_variables, sigma, seizure_indices,
-                                         0, trajectories_plot, region_labels, True, title_prefix))
+                                         0, thin_ts_samples, trajectories_plot, region_labels, True, title_prefix))
             stats_per_chain = None
         samples, target_data, x1prior, x1eps = \
             samples_to_timeseries(samples, active_regions=active_regions, target_data=target_data,
                                   region_labels=region_labels)
         figs.append(self.plot_fit_timeseries(target_data, samples, ests, stats_per_chain, probabilistic_model,
-                                             ["fit_target_data"], state_variables, state_noise_variables, sigma,
-                                             seizure_indices, skip_samples, trajectories_plot, region_labels, False,
-                                             title_prefix))
+                                             "fit_target_data", state_variables, state_noise_variables, sigma,
+                                             seizure_indices, skip_samples, thin_ts_samples, trajectories_plot,
+                                             region_labels, False, title_prefix))
 
         figs.append(
             self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
