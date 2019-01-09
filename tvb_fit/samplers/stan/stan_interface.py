@@ -122,8 +122,8 @@ class StanInterface(object):
         if self.model_code_path != destination:
             copyfile(self.model_code_path, destination)
 
-    def read_output_samples(self, output_filepath, all_outputs=True, **kwargs):
-        return read_output_samples(output_filepath, all_outputs, **kwargs)
+    def read_output_samples(self, output_filepath, add_wildcard=True, **kwargs):
+        return read_output_samples(output_filepath, add_wildcard, **kwargs)
 
     def compute_estimates_from_samples(self, samples):
         return compute_estimates_from_samples(samples)
@@ -294,11 +294,14 @@ class StanInterface(object):
         return switch_levels_of_dicts_of_dicts(results)
 
 
-def read_output_samples(output_filepath, all_outputs=True, **kwargs):
-    if all_outputs:
-        if output_filepath.split(".csv")[0][-1] != "*":
-            output_filepath = output_filepath.replace(".csv", "*.csv")
-    csv_files_list = glob.glob(output_filepath)
+def read_output_samples(output_filepath, add_wildcard=True, **kwargs):
+    if isinstance(output_filepath, (list, tuple)):
+        csv_files_list = output_filepath
+    else:
+        if add_wildcard:
+            if output_filepath.split(".csv")[0][-1] != "*":
+                output_filepath = output_filepath.replace(".csv", "*.csv")
+        csv_files_list = glob.glob(output_filepath)
     if len(csv_files_list) > 1:
         files_list = [filepath.split(".csv")[0] for filepath in csv_files_list]
         sort_inds = np.array(format_all_numbers_in_strings(files_list)).argsort()
