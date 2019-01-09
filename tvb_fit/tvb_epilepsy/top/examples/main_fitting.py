@@ -18,7 +18,7 @@ from tvb_fit.tvb_epilepsy.service.probabilistic_models_builders import SDEProbab
 from tvb_fit.tvb_epilepsy.service.model_inversion_services import SDEModelInversionService
 from tvb_fit.tvb_epilepsy.service.vep_stan_dict_builder import build_stan_model_data_dict
 from tvb_fit.tvb_epilepsy.top.scripts.fitting_scripts import set_model_config_LSA, get_2D_simulation, \
-    get_target_timeseries, set_target_timeseries, reconfigure_model_with_fit_estimates, run_fitting, \
+    get_target_timeseries, set_target_timeseries, reconfigure_model_from_fit_estimates, run_fitting, \
     set_prior_parameters
 from tvb_fit.tvb_epilepsy.plot.plotter import Plotter
 from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
@@ -195,7 +195,7 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
 
 
     # -------------------------- Reconfigure model after fitting:---------------------------------------------------
-    model_configuration_fit = reconfigure_model_with_fit_estimates(head, model_configuration, probabilistic_model,
+    model_configuration_fit = reconfigure_model_from_fit_estimates(head, model_configuration, probabilistic_model,
                                                                    estimates, base_path, writer, plotter)
 
     logger.info("Done!")
