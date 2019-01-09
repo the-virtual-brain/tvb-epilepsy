@@ -343,7 +343,7 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
                 state_noise_variables=["dWt", "dX1t", "dZt"], fit_flag=True, test_flag=False, base_path="",
                 fitmethod="sample", n_chains_or_runs=2, output_samples=200, num_warmup=100, min_samples_per_chain=200,
                 max_depth=15, delta=0.95, iter=500000, tol_rel_obj=1e-6, debug=1, simulate=0,
-                step_prefix='', writer=None, plotter=None, **kwargs):
+                thin_ts_samples=1, step_prefix='', writer=None, plotter=None, **kwargs):
     # ------------------------------Stan model and service--------------------------------------
     model_code_path = os.path.join(config.generic.PROBLSTC_MODELS_PATH, stan_model_name + ".stan")
     stan_interface = CmdStanInterface(model_name=stan_model_name, model_dir=base_path,
@@ -426,7 +426,7 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
                                      pair_plot_params=pair_plot_params, region_violin_params=region_violin_params,
                                      state_variables=state_variables, state_noise_variables=state_noise_variables,
                                      region_labels=head.connectivity.region_labels, skip_samples=skip_samples,
-                                     title_prefix=step_prefix + prob_model_name)
+                                     thin_ts_samples=thin_ts_samples, title_prefix=step_prefix + prob_model_name)
         # except:
         #  warning("Fitting plotting failed for step %s" % step_prefix)
 
@@ -442,7 +442,7 @@ def samples_to_timeseries(samples, time=None, active_regions=None, target_data=N
         time_unit = target_data.time_unit
         target_data_labels = target_data.space_labels
     else:
-        n_target_data = samples[0]["fit_target_data"]
+        n_target_data = samples[0]["fit_target_data"].shape[1]
         target_data_labels = generate_region_labels(n_target_data, [], ". ", False)
         time_unit = "ms"
 
@@ -506,7 +506,7 @@ def get_x1_estimates_from_samples(samples, time=None, active_regions=[], region_
         active_regions = np.array(range(n_regions))
     region_labels = generate_region_labels(np.maximum(n_regions, len(region_labels)), region_labels, ". ", False)
     if len(region_labels) > len(active_regions):
-        region_labels = region_labels[active_regions]
+        region_labels = np.array(region_labels[active_regions])
     x1 = np.empty((n_times, n_regions, 0))
     for sample in ensure_list(samples):
         x1 = np.concatenate([x1, get_x1(sample["x1"])], axis=2)
@@ -519,7 +519,7 @@ def get_x1_estimates_from_samples(samples, time=None, active_regions=[], region_
     return x1_mean, x1_std
 
 
-def reconfigure_model_with_fit_estimates(head, model_configuration, probabilistic_model, estimates,
+def reconfigure_model_from_fit_estimates(head, model_configuration, probabilistic_model, estimates,
                                          base_path, writer=None, plotter=None):
     # -------------------------- Reconfigure model after fitting:---------------------------------------------------
     for id_est, est in enumerate(ensure_list(estimates)):
@@ -558,5 +558,3 @@ def reconfigure_model_with_fit_estimates(head, model_configuration, probabilisti
                                      special_idx=select_greater_values_array_inds(model_configuration_fit.x0),
                                      figure_name="fit_Nullclines and equilibria")  # threshold=X1EQ_CR_DEF),
         return model_configuration_fit
-
-
