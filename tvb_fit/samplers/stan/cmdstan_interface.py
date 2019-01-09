@@ -17,7 +17,8 @@ class CmdStanInterface(StanInterface):
         super(CmdStanInterface, self).__init__(model_name, model, model_code, model_dir, model_code_path,
                                                model_data_path, fitmethod, config)
         if not os.path.isfile(os.path.join(self.config.generic.CMDSTAN_PATH, 'runCmdStanTests.py')):
-            raise_value_error('Please provide CmdStan path, e.g. lib.cmdstan_path("/path/to/")!')
+            raise_value_error('Please provide CmdStan path in config.generic.CMDSTAN_PATH!'
+                              '\nCurrent config.generic.CMDSTAN_PATH is wrong!: %s' % self.config.generic.CMDSTAN_PATH)
         self.path = self.config.generic.CMDSTAN_PATH
         self.set_output_files(output_filepath, diagnostic_filepath, summary_filepath, command_filepath,
                               base_path=model_dir, check_files=False)
