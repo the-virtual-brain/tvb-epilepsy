@@ -140,6 +140,27 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
 
         figs = []
 
+        figs.append(
+            self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
+                                        region_labels, regions_mode, False, False, skip_samples, title_prefix))
+
+        figs.append(
+            self.plot_fit_region_params(samples, None, probabilistic_model, region_violin_params, seizure_indices,
+                                        region_labels, regions_mode, True, False, skip_samples, title_prefix))
+
+        figs.append(self.plot_fit_scalar_params(samples, stats, probabilistic_model, pair_plot_params,
+                                                skip_samples, title_prefix))
+
+        figs.append(self.plot_fit_scalar_params_iters(samples, pair_plot_params, 0, title_prefix, subplot_shape=None))
+
+        if info_crit is not None:
+            figs.append(self.plot_scalar_model_comparison(info_crit, title_prefix))
+            figs.append(self.plot_array_model_comparison(info_crit, title_prefix, labels=target_data.space_labels,
+                                                         xdata=target_data.time, xlabel="Time"))
+
+        if connectivity_plot:
+            figs.append(self.plot_fit_connectivity(ests, stats, probabilistic_model, "MC", region_labels, title_prefix))
+
         # Pack fit samples time series into timeseries objects:
         from tvb_fit.tvb_epilepsy.top.scripts.fitting_scripts import samples_to_timeseries
         stats_per_chain = stats
@@ -161,27 +182,5 @@ class ModelInversionPlotter(ModelInversionPlotterBase):
                                              "fit_target_data", state_variables, state_noise_variables, sigma,
                                              seizure_indices, skip_samples, thin_ts_samples, trajectories_plot,
                                              region_labels, False, title_prefix))
-
-        figs.append(
-            self.plot_fit_region_params(samples, stats, probabilistic_model, region_violin_params, seizure_indices,
-                                        region_labels, regions_mode, False, False, skip_samples, title_prefix))
-
-        figs.append(
-            self.plot_fit_region_params(samples, None, probabilistic_model, region_violin_params, seizure_indices,
-                                        region_labels, regions_mode, True, False, skip_samples, title_prefix))
-
-        figs.append(self.plot_fit_scalar_params(samples, stats, probabilistic_model, pair_plot_params,
-                                                skip_samples, title_prefix))
-
-        figs.append(self.plot_fit_scalar_params_iters(samples, pair_plot_params, 0, title_prefix, subplot_shape=None))
-
-
-        if info_crit is not None:
-            figs.append(self.plot_scalar_model_comparison(info_crit, title_prefix))
-            figs.append(self.plot_array_model_comparison(info_crit, title_prefix, labels=target_data.space_labels,
-                                                         xdata=target_data.time, xlabel="Time"))
-
-        if connectivity_plot:
-            figs.append(self.plot_fit_connectivity(ests, stats, probabilistic_model, "MC", region_labels, title_prefix))
 
         return tuple(figs)
