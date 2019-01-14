@@ -163,7 +163,7 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
             set_target_timeseries(probabilistic_model, model_inversion, signals, sensors, head,
                                   target_data_file, writer, plotter)
 
-        #---------------------------------Finally set priors for the parameters-------------------------------------
+        #------------------------------------Finally set priors for the parameters--------------------------------------
         probabilistic_model = \
                 set_prior_parameters(probabilistic_model, target_data, source2D_ts, None, problstc_model_file,
                                      ProbabilisticModelBuilder,
@@ -183,7 +183,7 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         #                                                          time=target_data.time)
         writer.write_dictionary(model_data, model_data_file)
 
-    # -------------------------- Fit or load results from previous fitting: -------------------------------------------
+    # ----------------------------- Fit or load results from previous fitting: -----------------------------------------
 
     estimates, samples, summary, info_crit = \
        run_fitting(probabilistic_model, stan_model_name, model_data, target_data, config, head, hyp.all_disease_indices,
@@ -194,9 +194,12 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
                    **kwargs)  # init=0,
 
 
-    # -------------------------- Reconfigure model after fitting:---------------------------------------------------
-    model_configuration_fit = reconfigure_model_from_fit_estimates(head, model_configuration, probabilistic_model,
-                                                                   estimates, base_path, writer, plotter)
+    # ------------------------------ Reconfigure model after fitting:---------------------------------------------------
+    model_configuration_fit = \
+        reconfigure_model_from_fit_estimates(head, probabilistic_model, base_path, estimates, samples=None,
+                                             skip_samples=0, writer=writer, plotter=plotter)
+
+    return estimates, samples, summary, info_crit, probabilistic_model, model_configuration_fit
 
     logger.info("Done!")
 
