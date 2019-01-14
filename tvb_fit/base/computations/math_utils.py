@@ -78,7 +78,7 @@ def select_greater_values_array_inds(values, threshold=None, percentile=None, nv
         if verbose:
             logger.warning("Switching to curve elbow point method since threshold=" + str(threshold))
         elbow_point = curve_elbow_point(values)
-        return get_greater_values_array_inds(values, elbow_point + 1)
+        return get_greater_values_array_inds(values, elbow_point)
 
 
 def select_greater_values_2Darray_inds(values, threshold=None, percentile=None, nvals=None, verbose=False):
