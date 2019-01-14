@@ -71,7 +71,7 @@ class ModelInversionService(object):
         active_regions = probabilistic_model.active_regions.tolist()
         if len(lsa_propagation_strengths) > 0:
             ps_strengths = lsa_propagation_strengths / np.max(lsa_propagation_strengths)
-            active_regions += select_greater_values_array_inds(ps_strengths,self.active_lsa_th).tolist()
+            active_regions += select_greater_values_array_inds(ps_strengths, self.active_lsa_th).tolist()
             active_regions = self.exclude_regions(active_regions)
             probabilistic_model.update_active_regions(active_regions)
         else:
