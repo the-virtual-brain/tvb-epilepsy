@@ -9,6 +9,7 @@ from tvb_fit.base.utils.file_utils import move_overwrite_files_to_folder_with_wi
 from tvb_fit.base.computations.math_utils import select_greater_values_array_inds
 from tvb_fit.service.timeseries_service import TimeseriesService
 from tvb_fit.samplers.stan.cmdstan_interface import CmdStanInterface
+from tvb_fit.samplers.stan.stan_interface import merge_samples
 from tvb_fit.plot.head_plotter import HeadPlotter
 
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
@@ -519,24 +520,47 @@ def get_x1_estimates_from_samples(samples, time=None, active_regions=[], region_
     return x1_mean, x1_std
 
 
-def reconfigure_model_from_fit_estimates(head, model_configuration, probabilistic_model, estimates,
-                                         base_path, writer=None, plotter=None):
+def reconfigure_model_from_fit_estimates(head, probabilistic_model, base_path, estimates=None,
+                                         samples=None, merge_chains=True, skip_samples=0, writer=None, plotter=None):
+
     # -------------------------- Reconfigure model after fitting:---------------------------------------------------
-    for id_est, est in enumerate(ensure_list(estimates)):
-        K = est.get("K", np.mean(model_configuration.K))
-        tau1 = est.get("tau1", np.mean(model_configuration.tau1))
-        tau0 = est.get("tau0", np.mean(model_configuration.tau0))
+
+    if estimates is None:
+        if isinstance(samples, list):
+            if len(samples) > 1 and merge_chains:
+                samples = merge_samples(samples, skip_samples, flatten=True)
+        estimates = []
+        for sample in ensure_list(samples):
+            estimates.append({})
+            for p_key in ["K", "tau1", "tau0"]:
+                p = sample.get(p_key, None)
+                if p is not None:
+                    estimates[-1][p_key] = np.mean(p)
+            if sample.get("x0", None) is not None:
+                estimates[-1]["x0"] = np.mean(sample["x0"], axis=0)
+            # if samples.get("MC", None) is not None:
+            #     estimates[-1]["MC"] = np.mean(sample["MC"], axis=2)
+    else:
+        estimates = ensure_list(estimates)
+        if len(estimates) > 1 and merge_chains:
+            estimates = merge_samples(estimates, 0, flatten=True)
+
+    model_configuration_fit = []
+    for id_est, est in enumerate(estimates):
+        K = est.get("K", np.mean(probabilistic_model.model_config.K))
+        tau1 = est.get("tau1", np.mean(probabilistic_model.model_config.tau1))
+        tau0 = est.get("tau0", np.mean(probabilistic_model.model_config.tau0))
         # fit_conn = est.get("MC", model_configuration.connectivity)
         # if fit_conn.shape != model_configuration.connectivity.shape:
         #     temp_conn = model_configuration.connectivity
         #     temp_conn[probabilistic_model.active_regions][:, probabilistic_model.active_regions] = fit_conn
         #     fit_conn = temp_conn
-        fit_conn = model_configuration.connectivity
+        fit_conn = probabilistic_model.model_config.connectivity
         fit_model_configuration_builder = \
-            ModelConfigurationBuilder(model_configuration.model_name, fit_conn,
-                                      K_unscaled=K * model_configuration.number_of_regions). \
+            ModelConfigurationBuilder(probabilistic_model.model_config.model_name, fit_conn,
+                                      K_unscaled=K * probabilistic_model.model_config.number_of_regions). \
                 set_parameter("tau1", tau1).set_parameter("tau0", tau0)
-        x0 = model_configuration.x0
+        x0 = probabilistic_model.model_config.x0
         x0[probabilistic_model.active_regions] = est["x0"].squeeze()
         x0_values_fit = fit_model_configuration_builder._compute_x0_values_from_x0_model(x0)
         hyp_fit = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions). \
@@ -545,16 +569,24 @@ def reconfigure_model_from_fit_estimates(head, model_configuration, probabilisti
                               x0_values_fit[probabilistic_model.active_regions]). \
             build_hypothesis()
 
-        model_configuration_fit = \
-            fit_model_configuration_builder.build_model_from_hypothesis(hyp_fit)
+        model_configuration_fit.append(fit_model_configuration_builder.build_model_from_hypothesis(hyp_fit))
+
+        if id_est > 0:
+            chain_suffix = str(id_est)
+        else:
+            chain_suffix = ""
 
         if writer:
-            writer.write_hypothesis(hyp_fit, path("fit_Hypothesis", base_path))
-            writer.write_model_configuration(model_configuration_fit, path("fit_ModelConfig", base_path))
+            writer.write_hypothesis(hyp_fit, path("fit%s_Hypothesis" % chain_suffix, base_path))
+            writer.write_model_configuration(model_configuration_fit[-1], path("fit_ModelConfig"+chain_suffix, base_path))
 
         # Plot nullclines and equilibria of model configuration
         if plotter:
-            plotter.plot_state_space(model_configuration_fit, region_labels=head.connectivity.region_labels,
-                                     special_idx=select_greater_values_array_inds(model_configuration_fit.x0),
-                                     figure_name="fit_Nullclines and equilibria")  # threshold=X1EQ_CR_DEF),
-        return model_configuration_fit
+            plotter.plot_state_space(model_configuration_fit[-1], region_labels=head.connectivity.region_labels,
+                                     special_idx=select_greater_values_array_inds(model_configuration_fit[-1].x0),
+                                     figure_name="fit%s_Nullclines and equilibria" % chain_suffix)  # threshold=X1EQ_CR_DEF),
+
+    if len(model_configuration_fit) == 1:
+        model_configuration_fit = model_configuration_fit[0]
+
+    return model_configuration_fit
