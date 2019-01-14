@@ -106,7 +106,10 @@ class ModelInversionPlotter(TimeseriesPlotter):
             plot_figure_name = lambda ichain: figure_name
         else:
             plot_samples = lambda s: s[skip_samples:]
-            plot_figure_name = lambda ichain: figure_name + ": chain " + str(ichain + 1)
+            if n_chains > 1:
+                plot_figure_name = lambda ichain: figure_name + ": chain " + str(ichain + 1)
+            else:
+                plot_figure_name = lambda ichain: figure_name
         params_labels = {}
         for ip, p in enumerate(params):
             if ip == 0:
