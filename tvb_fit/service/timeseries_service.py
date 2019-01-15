@@ -163,13 +163,14 @@ class TimeseriesService(object):
         else:
             out_timeseries = out_timeseries.get_subspace_by_labels(labels)
         for id, timeseries in enumerate(timeseries_list[1:]):
-            if out_timeseries.time_step == timeseries.time_step:
+            if np.float32(out_timeseries.time_step) == np.float32(timeseries.time_step):
                 out_timeseries.data = np.concatenate([out_timeseries.data,
                                                       timeseries.get_subspace_by_labels(labels).data], axis=0)
             else:
                 raise_value_error("Timeseries concatenation in time failed!\n"
                                   "Timeseries %d have a different time step (%s) than the ones before(%s)!" \
-                                  % (id, str(timeseries.time_step), str(out_timeseries.time_step)))
+                                  % (id, str(np.float32(timeseries.time_step)),
+                                     str(np.float32(out_timeseries.time_step))))
         return out_timeseries
 
     def select_by_metric(self, timeseries, metric, metric_th=None, metric_percentile=None, nvals=None):
