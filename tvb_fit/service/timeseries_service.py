@@ -169,7 +169,7 @@ class TimeseriesService(object):
             else:
                 raise_value_error("Timeseries concatenation in time failed!\n"
                                   "Timeseries %d have a different time step (%s) than the ones before(%s)!" \
-                                  % (id, str(timeseries_list.time_step), str(out_timeseries.time_step)))
+                                  % (id, str(timeseries.time_step), str(out_timeseries.time_step)))
         return out_timeseries
 
     def select_by_metric(self, timeseries, metric, metric_th=None, metric_percentile=None, nvals=None):
