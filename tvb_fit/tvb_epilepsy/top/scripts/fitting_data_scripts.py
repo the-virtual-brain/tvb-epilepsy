@@ -217,12 +217,11 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
                                     special_idx=[], title='Low-pass filtered Time Series', offset=0.1,
                                     figure_name=title_prefix + '_%sLpfRaster' % stri_preproc,
                                     labels=data.space_labels)
-                if plotter:
-                    plotter.plot_timeseries({"Low-pass filtering": data.squeezed}, data.time,
-                                            time_units=data.time_unit,
-                                            special_idx=[], title='Low-pass filtered Time Series',
-                                            figure_name=title_prefix + '_%sLpfTS' % stri_preproc,
-                                            labels=data.space_labels)
+                plotter.plot_timeseries({"Low-pass filtering": data.squeezed}, data.time,
+                                        time_units=data.time_unit,
+                                        special_idx=[], title='Low-pass filtered Time Series',
+                                        figure_name=title_prefix + '_%sLpfTS' % stri_preproc,
+                                        labels=data.space_labels)
 
    # Find the desired time interval
     if len(on_off_set) != 2:
