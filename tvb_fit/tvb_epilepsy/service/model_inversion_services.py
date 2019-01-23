@@ -35,11 +35,10 @@ class ModelInversionService(object):
         return self.__repr__()
 
     def exclude_regions(self, active_regions):
-        new_active_regions = []
-        for region in active_regions:
-            if region not in self.active_regions_exlude:
-                new_active_regions.append(region)
-        return new_active_regions
+        active_regions = ensure_list(active_regions)
+        for region in self.active_regions_exlude:
+            active_regions.remove(region)
+        return active_regions
 
     def update_active_regions_e_values(self, probabilistic_model, e_values, reset=False):
         if reset:
