@@ -99,7 +99,7 @@ class ODEModelInversionService(ModelInversionService):
     active_seeg_th = None
     bipolar = BIPOLAR
     manual_selection = []
-    auto_selection = "power"  # auto_selection=False,
+    auto_selection = None  #"power"  # auto_selection=False,
     power_th = None
     gain_matrix_th = None
     gain_matrix_percentile = 99.0
