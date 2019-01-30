@@ -77,7 +77,8 @@ DT_DEF = compute_dt(TAU1_DEF)
 UPSAMPLE = compute_upsample(SEIZURE_LENGTH, default_seizure_length=SEIZURE_LENGTH, tau0=TAU0_DEF)
 
 SIGMA_INIT_DEF = 0.1*SIGMA_EQ_DEF
-EPSILON_DEF = 0.04
+EPSILON_DEF = 0.02
+EPSILON_MAX_RATIO = 5.0
 
 SCALE_DEF = 1.0
 SCALE_SCALE_DEF = 2.0
@@ -120,6 +121,6 @@ LOW_HPF = 10.0
 HIGH_HPF = 256.0
 LOW_LPF = 1.0
 HIGH_LPF = 10.0
-BIPOLAR = False
+BIPOLAR = True
 
 TARGET_DATA_PREPROCESSING = ["filter", "abs", "convolve", "log"]
