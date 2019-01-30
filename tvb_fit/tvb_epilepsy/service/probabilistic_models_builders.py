@@ -464,10 +464,11 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
 
             if "epsilon" in params_names:
                 self.logger.info("...epsilon...")
-                parameters.update({"epsilon": self.generate_normal_or_lognormal_parameter("epsilon", self.epsilon,
-                                                                                          0, np.max(5.0 * self.epsilon),
-                                                                                          sigma=self.epsilon,
-                                                                                          p_shape=epsilon_p_shape)})
+                parameters.update({"epsilon":
+                                       self.generate_normal_or_lognormal_parameter("epsilon", self.epsilon,
+                                                                                   0, EPSILON_MAX_RATIO * self.epsilon,
+                                                                                   sigma=self.epsilon,
+                                                                                   p_shape=epsilon_p_shape)})
 
             if "scale" in params_names:
                 self.logger.info("...scale...")
