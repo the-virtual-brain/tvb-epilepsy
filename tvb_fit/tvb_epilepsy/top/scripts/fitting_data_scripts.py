@@ -320,7 +320,7 @@ def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, se
         if plotter:
             plotter.plot_raster({"BipolarData": data.squeezed}, data.time, time_units=data.time_unit,
                                 special_idx=[], title='Bipolar Time Series', offset=0.1,
-                                figure_name=title_prefix + 'BipolarRaster', labels=data.space_labels)
+                                figure_name=title_prefix + '_BipolarRaster', labels=data.space_labels)
 
     return prepare_signal_observable(data, seizure_length, on_off_set, range(data.number_of_labels),
                                      preprocessing, low_hpf, high_hpf, low_lpf, high_lpf,
