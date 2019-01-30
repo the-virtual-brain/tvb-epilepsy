@@ -16,9 +16,9 @@ class ModelInversionService(object):
 
     active_regions_selection_methods = ["E", "LSA", "sensors"]
     active_regions_exlude = []
-    active_e_th = 0.01
-    active_x0_th = 0.01
-    active_lsa_th = 0.01
+    active_e_th = 0.1
+    active_x0_th = 0.1
+    active_lsa_th = 0.1
 
     def __init__(self):
         self.logger.info("Model Inversion Service instance created!")
