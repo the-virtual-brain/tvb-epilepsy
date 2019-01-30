@@ -16,9 +16,9 @@ class ModelInversionService(object):
 
     active_regions_selection_methods = ["E", "LSA", "sensors"]
     active_regions_exlude = []
-    active_e_th = 0.1
-    active_x0_th = 0.1
-    active_lsa_th = None
+    active_e_th = 0.01
+    active_x0_th = 0.01
+    active_lsa_th = 0.01
 
     def __init__(self):
         self.logger.info("Model Inversion Service instance created!")
@@ -37,7 +37,10 @@ class ModelInversionService(object):
     def exclude_regions(self, active_regions):
         active_regions = ensure_list(active_regions)
         for region in self.active_regions_exlude:
-            active_regions.remove(region)
+            try:
+                active_regions.remove(region)
+            except:
+                pass
         return active_regions
 
     def update_active_regions_e_values(self, probabilistic_model, e_values, reset=False):
@@ -119,6 +122,7 @@ class ODEModelInversionService(ModelInversionService):
         if sensors is not None:
             active_regions += sensors.get_stronger_gain_matrix_inds(self.gain_matrix_th,
                                                                     self.gain_matrix_percentile)[1].tolist()
+            active_regions = np.unique(active_regions)
             active_regions = self.exclude_regions(active_regions)
             probabilistic_model.update_active_regions(active_regions)
             probabilistic_model.gain_matrix = sensors.gain_matrix[:, probabilistic_model.active_regions]
@@ -139,6 +143,7 @@ class ODEModelInversionService(ModelInversionService):
                 for proj in gain_matrix:
                     active_regions += select_greater_values_array_inds(proj, self.gain_matrix_th,
                                                                        self.n_signals_per_roi).tolist()
+                active_regions = np.unique(active_regions)
                 active_regions = self.exclude_regions(active_regions)
                 probabilistic_model.update_active_regions(active_regions)
             else:
