@@ -99,7 +99,7 @@ class ModelInversionService(object):
 class ODEModelInversionService(ModelInversionService):
 
     active_seeg_th = None
-    bipolar = BIPOLAR
+    transform_to_bipolar = False
     manual_selection = []
     auto_selection = None  #"power"  # auto_selection=False,
     power_th = None
@@ -230,7 +230,7 @@ class ODEModelInversionService(ModelInversionService):
         if np.any(np.array(self.cut_target_times_on_off)):
             target_data = target_data.get_time_window_by_units(self.cut_target_times_on_off[0],
                                                                self.cut_target_times_on_off[1])
-        if self.bipolar:
+        if self.transform_to_bipolar:
             target_data = target_data.get_bipolar()
             # TODO: decide about target_data' normalization for the different (sensors', sources' cases)
         if self.normalization:
