@@ -46,20 +46,38 @@ class TimeseriesPlotter(BasePlotter):
                 "marker": self.marker, "markersize": self.markersize, "markerfacecolor": self.markerfacecolor}
 
     def _timeseries_plot(self, time, n_vars, nTS, n_times, time_units, subplots, offset=0.0, data_lims=[]):
-        def_time = range(n_times)
-        try:
-            time = numpy.array(time).flatten()
-            if len(time) != n_times:
-                self.logger.warning("Input time doesn't match data! Setting a default time step vector!")
-                time = def_time
-        except:
-            self.logger.warning("Setting a default time step vector manually! Input time: " + str(time))
-            time = def_time
+
+        def assert_time(time, n_times):
+            if time_units.find("ms"):
+                dt = 0.001
+            else:
+                dt = 1.0
+            try:
+                time = numpy.array(time).flatten()
+                n_time = len(time)
+                if n_time > n_times:
+                    # self.logger.warning("Input time longer than data time points! Removing redundant tail time points!")
+                    time = time[:n_times]
+                elif n_time < n_times:
+                    # self.logger.warning("Input time shorter than data time points! "
+                    #                     "Extending tail time points with the same average time step!")
+                    if n_time > 1:
+                        dt = numpy.mean(numpy.diff(time))
+                    n_extra_points = n_times - n_time
+                    start_time_point = time[-1] + dt
+                    end_time_point = start_time_point + n_extra_points * dt
+                    time = numpy.concatenate([time, numpy.arange(start_time_point, end_time_point, dt)])
+            except:
+                self.logger.warning("Setting a default time step vector manually! Input time: " + str(time))
+                time = numpy.arange(0, n_times*dt, dt)
+            return time
+
         time_units = ensure_string(time_units)
         data_fun = lambda data, time, icol: (data[icol], time, icol)
 
         def plot_ts(x, iTS, colors, labels):
             x, time, ivar = x
+            time = assert_time(time, len(x[:, iTS]))
             try:
                 return pyplot.plot(time, x[:, iTS], color=colors[iTS], label=labels[iTS], **self.line_format)
             except:
@@ -68,6 +86,7 @@ class TimeseriesPlotter(BasePlotter):
 
         def plot_ts_raster(x, iTS, colors, labels, offset):
             x, time, ivar = x
+            time = assert_time(time, len(x[:, iTS]))
             try:
                 return pyplot.plot(time, -x[:, iTS] + (offset * iTS + x[:, iTS].mean()), color=colors[iTS],
                                    label=labels[iTS], **self.line_format)
