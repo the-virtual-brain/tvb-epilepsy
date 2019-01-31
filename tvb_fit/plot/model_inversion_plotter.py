@@ -234,7 +234,8 @@ class ModelInversionPlotter(TimeseriesPlotter):
     def plot_fit_timeseries(self, target_data, samples, ests, stats=None, probabilistic_model=None,
                             target_data_str="fit_target_data", state_variables_str=["x1", "x2"], dWt_str=["dWt"],
                             scalar_params_str=["sigma"], special_idx=[], skip_samples=0, thin_samples=1,
-                            trajectories_plot=False, region_labels=[], merge=False, title_prefix=""):
+                            mean_per_chain=True, trajectories_plot=False, region_labels=[], merge=False,
+                            title_prefix=""):
 
         def discard_star_parameters(params, samples_params):
             # Function to discard _star params if the non _star parameter also exists
@@ -254,6 +255,11 @@ class ModelInversionPlotter(TimeseriesPlotter):
             else:
                 return data
 
+        def cut_labels_to_index(labels):
+            for ilbl, lbl in enumerate(labels):
+                labels[ilbl] = re.search(r'\d+', lbl).group() + "."
+            return labels
+
         def plot_fit_timeseries_chain(chain_str, sample, est,
                                       state_variables_str, dWt_str, scalar_params_str, scalar_str,
                                       stats_string, stats_region_labels_x, stats_region_labels_dWt, stats_region_titles,
@@ -269,58 +275,89 @@ class ModelInversionPlotter(TimeseriesPlotter):
                 chain_name = "all chains"
             name += chain_name
 
+            # SDE dWt dynamic noise plots per chain and dWt
+            for p_str in scalar_params_str:
+                p_est = est.get("sigma", None)
+                if p_est is not None:
+                    scalar_str += ", " + p_str + " post = " + str(p_est)
+            temp = self.tick_font_size
+            self.tick_font_size = 10
+            subtitles_dWt = []
+            labels_dWt = []
+            for d_str in dWt_str:
+                dWt = OrderedDict()
+                try:
+                    ts = sample.get(d_str)
+                    if mean_per_chain:
+                        dWt[d_str] = numpy.mean(ts.data[:, :, :, skip_samples:], axis=-1).squeeze()
+                    else:
+                        dWt[d_str] = thin_ts_samples(ts.data[:, :, :, skip_samples:]).squeeze()
+                    # subtitle = d_str + stats_string[d_str] + \
+                    #            str(numpy.where(len(scalar_str) > 0, "\n" + scalar_str, ""))
+                    subtitles_dWt += [d_str + stats_string[d_str] + \
+                                      str(numpy.where(len(scalar_str) > 0, "\n" + scalar_str, ""))]
+                    labels_dWt.append(stats_region_labels_dWt.get(d_str, region_labels))
+
+                    # figs.append(self.plot_raster(dWt, ts.time, time_units=ts.time_unit, special_idx=special_idx,
+                    #                              title=name + ": Hidden states random walk rasterplot " + d_str,
+                    #                              subtitles=[subtitle], offset=1.0,
+                    #                              labels=stats_region_labels_dWt.get(d_str, region_labels),
+                    #                              figsize=FiguresConfig.VERY_LARGE_SIZE))
+
+                except:
+                    pass
+
             # Hidden states posterior per state variable and chain
             x = OrderedDict()
+            subtitles = []
+            labels = []
             for x_str in state_variables_str:
                 try:
                     ts = sample[x_str]
-                    this_x = {x_str: thin_ts_samples(ts.data[:, :, :, skip_samples:]).squeeze()}
+                    if mean_per_chain:
+                        this_x = {x_str: numpy.mean(ts.data[:, :, :, skip_samples:], axis=-1).squeeze()}
+                    else:
+                        this_x = {x_str: thin_ts_samples(ts.data[:, :, :, skip_samples:]).squeeze()}
                     x.update(this_x)
-                    subtitles = ['hidden state ' + x_str + stats_string[x_str]]
-                    figs.append(
-                        self.plot_raster(this_x, ts.time, special_idx=special_idx, time_units=ts.time_unit,
-                                         title=name + ": Hidden states fit rasterplot " + x_str,
-                                         subtitles=subtitles, offset=0.5,
-                                         labels=region_labels,  #stats_region_labels_x.get(x_str, region_labels),
-                                         figsize=FiguresConfig.VERY_LARGE_SIZE))
+                    # subtitles = ['hidden state ' + x_str + stats_string[x_str]]
+                    subtitles += ['hidden state ' + x_str + stats_string[x_str]]
+                    labels.append(region_labels)
+                    # figs.append(
+                    #     self.plot_raster(this_x, ts.time, special_idx=special_idx, time_units=ts.time_unit,
+                    #                      title=name + ": Hidden states fit rasterplot " + x_str,
+                    #                      subtitles=subtitles, offset=0.5,
+                    #                      labels=region_labels,  #stats_region_labels_x.get(x_str, region_labels),
+                    #                      figsize=FiguresConfig.VERY_LARGE_SIZE))
                 except:
                     pass
 
             if trajectories_plot and (len(x) in [2, 3]):
                 title = name + ' Fit hidden state space trajectories'
                 figs.append(self.plot_trajectories(x, special_idx=special_idx, title=title,
-                                                       labels=stats_region_titles,
-                                                       figsize=FiguresConfig.SUPER_LARGE_SIZE))
+                                                   labels=stats_region_titles, figsize=FiguresConfig.SUPER_LARGE_SIZE))
 
-            # SDE dWt dynamic noise plots per chain and dWt
-            for p_str in scalar_params_str:
-                p_est = est.get("sigma", None)
-                if p_est is not None:
-                    scalar_str += ", " + p_str + " post = " + str(p_est)
-            for d_str in dWt_str:
-                dWt = OrderedDict()
-                try:
-                    ts = sample.get(d_str)
-                    dWt[d_str] = thin_ts_samples(ts.data[:, :, :, skip_samples:]).squeeze()
-                    subtitle = d_str + stats_string[d_str] + \
-                               str(numpy.where(len(scalar_str) > 0, "\n" + scalar_str, ""))
-                    temp = self.tick_font_size
-                    self.tick_font_size = 10
-                    figs.append(self.plot_raster(dWt, ts.time, time_units=ts.time_unit, special_idx=special_idx,
-                                                 title=name + ": Hidden states random walk rasterplot " + d_str,
-                                                 subtitles=[subtitle], offset=1.0,
-                                                 labels=stats_region_labels_dWt.get(d_str, region_labels),
-                                                 figsize=FiguresConfig.VERY_LARGE_SIZE))
-                    self.tick_font_size = temp
-                except:
-                    pass
+            dWt.update(x)
+            x = dWt
+            subtitles = subtitles_dWt + subtitles
+            labels = labels_dWt + [cut_labels_to_index(lbls) for lbls in labels]
+            figs.append(self.plot_raster(x, ts.time, time_units=ts.time_unit, special_idx=special_idx,
+                                         title=name + ": Fit hidden states and random walk rasterplots",
+                                         subtitles=subtitles, offset=0.5, labels=labels,
+                                         figsize=FiguresConfig.VERY_LARGE_SIZE))
+
+            self.tick_font_size = temp
 
             try:
                 # Comparison of observation target data and its posterior fit per chain
                 chain_key = "fit " + chain_name
                 chain_observation_dict = OrderedDict({'observation time series': target_data.squeezed})
                 ts = sample[target_data_str]
-                chain_observation_dict.update({chain_key: thin_ts_samples(ts.data[:, :, :, skip_samples:]).squeeze()})
+                if mean_per_chain:
+                    chain_observation_dict.update(
+                        {chain_key: numpy.mean(ts.data[:, :, :, skip_samples:], axis=-1).squeeze()})
+                else:
+                    chain_observation_dict.update(
+                        {chain_key: thin_ts_samples(ts.data[:, :, :, skip_samples:]).squeeze()})
                 figs.append(
                     self.plot_raster(chain_observation_dict, ts.time, special_idx=[], time_units=ts.time_unit,
                                      title=name + " Observation target vs fit time series",

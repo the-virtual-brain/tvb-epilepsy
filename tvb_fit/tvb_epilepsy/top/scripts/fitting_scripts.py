@@ -344,7 +344,7 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
                 state_noise_variables=["dWt", "dX1t", "dZt"], fit_flag=True, test_flag=False, base_path="",
                 fitmethod="sample", n_chains_or_runs=2, output_samples=200, num_warmup=100, min_samples_per_chain=200,
                 max_depth=15, delta=0.95, iter=500000, tol_rel_obj=1e-6, debug=1, simulate=0,
-                thin_ts_samples=1, step_prefix='', writer=None, plotter=None, **kwargs):
+                thin_ts_samples=1, ts_mean_per_chain=True, step_prefix='', writer=None, plotter=None, **kwargs):
     # ------------------------------Stan model and service--------------------------------------
     model_code_path = os.path.join(config.generic.PROBLSTC_MODELS_PATH, stan_model_name + ".stan")
     stan_interface = CmdStanInterface(model_name=stan_model_name, model_dir=base_path,
@@ -427,7 +427,8 @@ def run_fitting(probabilistic_model, stan_model_name, model_data, target_data, c
                                      pair_plot_params=pair_plot_params, region_violin_params=region_violin_params,
                                      state_variables=state_variables, state_noise_variables=state_noise_variables,
                                      region_labels=head.connectivity.region_labels, skip_samples=skip_samples,
-                                     thin_ts_samples=thin_ts_samples, title_prefix=step_prefix + prob_model_name)
+                                     thin_ts_samples=thin_ts_samples, ts_mean_per_chain=ts_mean_per_chain,
+                                     title_prefix=step_prefix + prob_model_name)
         # except:
         #  warning("Fitting plotting failed for step %s" % step_prefix)
 
