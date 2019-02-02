@@ -198,9 +198,9 @@ class TimeseriesPlotter(BasePlotter):
         n_rows = 1
         n_cols = 1
         if subplots is None:
-            if nSamples > 1:
-                n_rows = int(numpy.floor(numpy.sqrt(nTS)))
-                n_cols = int(numpy.ceil((1.0 * nTS) / n_rows))
+            # if nSamples > 1:
+            n_rows = int(numpy.floor(numpy.sqrt(nTS)))
+            n_cols = int(numpy.ceil((1.0 * nTS) / n_rows))
         elif isinstance(subplots, (list, tuple)):
             n_rows = subplots[0]
             n_cols = subplots[1]
