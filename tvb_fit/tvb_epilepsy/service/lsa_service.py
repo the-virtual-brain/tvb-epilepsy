@@ -137,10 +137,13 @@ class LSAService(object):
 
         if self.eigen_vectors_number == disease_hypothesis.number_of_regions:
             # Calculate the propagation strength index by summing all eigenvectors
-            lsa_propagation_strength = numpy.abs(numpy.sum(self.eigen_vectors, axis=1))
+            if self.weighted_eigenvector_sum:
+                lsa_propagation_strength = \
+                    numpy.abs(weighted_vector_sum(self.eigen_values, self.eigen_vectors, normalize=True))
+            else:
+                lsa_propagation_strength = numpy.abs(numpy.sum(self.eigen_vectors, axis=1))
 
         else:
-            sorted_indices = max(self.eigen_vectors_number, 1)
             # Calculate the propagation strength index by summing the first n eigenvectors (minimum 1)
             if self.weighted_eigenvector_sum:
                 lsa_propagation_strength = \
