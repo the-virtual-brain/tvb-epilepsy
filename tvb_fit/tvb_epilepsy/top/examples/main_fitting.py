@@ -70,7 +70,7 @@ def set_hypotheses(head, config):
 def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length, sim_times_on_off, sensors_lbls,
                         normal_flag=False, sim_source_type="fitting",
                         observation_model=OBSERVATION_MODEL_DEF, downsampling=2, exclude_channels=[],
-                        preprocessing=[], normalization=None, fitmethod="sample",
+                        preprocessing=[], normalization=None, normalization_args={}, fitmethod="sample",
                         pse_flag=True, fit_flag=True, test_flag=False, config=Config(), **kwargs):
 
     # Prepare necessary services:
@@ -126,6 +126,7 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         # Create model inversion service (stateless)
         model_inversion = SDEModelInversionService()
         model_inversion.normalization = normalization
+        model_inversion.normalization_args = normalization_args
         # Exclude ctx-l/rh-unknown regions from fitting
         model_inversion.active_regions_exlude = find_labels_inds(head.connectivity.region_labels, ["unknown"])
 
@@ -262,7 +263,15 @@ if __name__ == "__main__":
         # seizure = 'SZ3_0001.edf'
         # sensors_filename = "SensorsSEEG_210.h5"
         # times_on_off = [20.0, 100.0]
+        normalization = "baseline-maxamplitude"
+        normalization_args = {"axis": [1, None], "percent": [1, [1, 99]]}
     else:
+        if observation_model in OBSERVATION_MODELS.SEEG.value:
+            normalization = "baseline-maxamplitude"
+            normalization_args = {"axis": [1, None], "percent": [1, [1, 99]]}
+        else:
+            normalization = "baseline-maxamplitude"
+            normalization_args = {"axis": [None, None], "percent": [1, [1, 99]]}
         if sim_source_type == "paper":
             times_on = [1500.0] # fot e_x0_hypo # [1500.0] # for x0_hypo # [1200.0] # for e_hypo #
             time_length = 700.0 # for x0_hypo, and e_x0_hypo # 500.0 # for e_hypo #
@@ -271,7 +280,6 @@ if __name__ == "__main__":
             # times_on_off = [1100.0, 1300.0]  # for "fitting" simulations with tau0=300.0
             times_on = sim_times_on_off[0]
             time_length = sim_times_on_off[1] - sim_times_on_off[0]
-    normalization = "baseline-amplitude"
     preprocessing = []
     downsampling = 2
     normal_flag = False
@@ -286,11 +294,11 @@ if __name__ == "__main__":
                                              for seizure_file in seizures_files],
                             times_on, time_length, sim_times_on_off, sensors_lbls,
                             normal_flag, sim_source_type, observation_model,
-                            downsampling, exclude_channels, preprocessing, normalization,
+                            downsampling, exclude_channels, preprocessing, normalization, normalization_args,
                             fitmethod, pse_flag, fit_flag, test_flag, config)
     else:
         main_fit_sim_hyplsa(stan_model_name, [], times_on, time_length, sim_times_on_off, sensors_lbls,
                             normal_flag, sim_source_type, observation_model,
-                            downsampling, exclude_channels, preprocessing, normalization,
+                            downsampling, exclude_channels, preprocessing, normalization, normalization_args,
                             fitmethod, pse_flag, fit_flag, test_flag, config)
 

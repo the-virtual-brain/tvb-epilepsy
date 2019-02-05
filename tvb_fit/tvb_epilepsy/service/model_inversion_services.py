@@ -106,7 +106,8 @@ class ODEModelInversionService(ModelInversionService):
     gain_matrix_th = None
     gain_matrix_percentile = 99.0
     n_signals_per_roi = 1
-    normalization = False  # "baseline-amplitude"
+    normalization = None  # "baseline-maxamplitude"
+    normalization_args = {}
     cut_target_times_on_off = [0, 0]
     sensors_per_electrode = 2
     group_electrodes = True
@@ -234,7 +235,7 @@ class ODEModelInversionService(ModelInversionService):
             target_data = target_data.get_bipolar()
             # TODO: decide about target_data' normalization for the different (sensors', sources' cases)
         if self.normalization:
-            target_data = self.ts_service.normalize(target_data, self.normalization)
+            target_data = self.ts_service.normalize(target_data, self.normalization, **self.normalization_args)
         if len(self.manual_selection) > 0:
             target_data = target_data.get_subspace_by_index(np.unique(self.manual_selection))
         if self.auto_selection:
