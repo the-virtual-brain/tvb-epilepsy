@@ -169,7 +169,7 @@ class HypothesisBuilder(object):
                                  lsa_propagation_indices=self.lsa_propagation_indices,
                                  lsa_propagation_strenghts=self.lsa_propagation_strengths, name=self.name)
 
-    def build_hypothesis_from_file(self, hyp_file, e_indices=None):
+    def build_hypothesis_from_file(self, hyp_file, e_indices=[]):
         self.set_diseased_regions_values(
             H5Reader().read_epileptogenicity(self.config.input.HEAD, name=hyp_file))
         if e_indices:
