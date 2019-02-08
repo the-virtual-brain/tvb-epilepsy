@@ -496,7 +496,7 @@ class H5GroupHandlers(object):
                     setattr_param(param, key, strip_key_name(key), h5location.attrs[key])
 
         parameters = OrderedDict()
-        for group_key, group_value in h5_group_value.iteritems():
+        for group_key, group_value in h5_group_value.items():
             param_epi_subtype = group_value.attrs[H5_SUBTYPE_ATTRIBUTE]
             if param_epi_subtype == "ProbabilisticParameter":
                 parameter = generate_probabilistic_parameter(
