@@ -75,7 +75,7 @@ def set_model_config_LSA(head, hyp, reader, config, K_unscaled=K_UNSCALED_DEF, t
                 pse_from_lsa_hypothesis(n_samples, lsa_hypothesis, head.connectivity.normalized_weights,
                                         model_configuration_builder, lsa_service, head.connectivity.region_labels,
                                         param_range=0.1, global_coupling=[{"indices": all_regions_indices}],
-                                        healthy_regions_parameters=[ {"name": "x0_values", "indices": healthy_indices}],
+                                        healthy_regions_parameters=[{"name": "x0_values", "indices": healthy_indices}],
                                         logger=logger, save_flag=False)[0]
             if plotter:
                 plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
@@ -285,10 +285,6 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
 def set_target_timeseries(probabilistic_model, model_inversion, signals, sensors, head,
                           target_data_file="", writer=None, plotter=None):
 
-    # -------------------------- Select and set target data from signals ---------------------------------------
-    if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
-        model_inversion.auto_selection = "rois-power"  # -rois
-        model_inversion.sensors_per_electrode = 2
     target_data, probabilistic_model = \
         model_inversion.set_target_data_and_time(signals, probabilistic_model, head=head, sensors=sensors)
 
