@@ -20,23 +20,13 @@ class DiseaseHypothesis(object):
     def __init__(self, number_of_regions=0, excitability_hypothesis={}, epileptogenicity_hypothesis={},
                  connectivity_hypothesis={}, lsa_propagation_indices=[], lsa_propagation_strenghts=[], name=""):
         self.number_of_regions = number_of_regions
-        self.type = []
-        default_name = "Hypothesis"
         self.x0_indices, self.x0_values = self._sort_disease_indices_values(excitability_hypothesis)
-        if len(self.x0_indices) > 0:
-            self.type.append("Excitability")
-            default_name = "x0_" + default_name
         self.e_indices, self.e_values = self._sort_disease_indices_values(epileptogenicity_hypothesis)
-        if len(self.e_indices) > 0:
-            self.type.append("Epileptogenicity")
-            default_name = "e_" + default_name
         self.w_indices, self.w_values = self._sort_disease_indices_values(connectivity_hypothesis)
-        if len(self.w_indices) > 0:
-            self.type.append("Connectivity")
-            default_name = "w_" + default_name
-        self.type = '_'.join(self.type)
+        self._type = []
+        self._update_type()
         if name == "":
-            self.name = default_name
+            self.name = "_".join(self._type + ["Hypothesis"])
         else:
             self.name = name
         self.lsa_propagation_indices = np.array(lsa_propagation_indices)
@@ -67,6 +57,20 @@ class DiseaseHypothesis(object):
 
     def set_attribute(self, attr_name, data):
         setattr(self, attr_name, data)
+
+    def _update_type(self):
+        self._type = []
+        if len(self.x0_indices) > 0:
+            self._type.append("x0")
+        if len(self.e_indices) > 0:
+            self._type.append("e")
+        if len(self.w_indices) > 0:
+            self._type.append("w")
+
+    @property
+    def type(self):
+        self._update_type()
+        return '_'.join(self._type)
 
     def _sort_disease_indices_values(self, disease_dict):
         indices = []
@@ -170,21 +174,21 @@ class DiseaseHypothesis(object):
         return self.lsa_propagation_indices, self.disease_propagation_strengths
 
     def update(self, name=""):
-        self.type = []
+        self._type = []
         default_name = "Hypothesis"
         self.x0_indices, self.x0_values = self._sort_disease_indices_values({tuple(self.x0_indices): self.x0_values})
         if len(self.x0_indices) > 0:
-            self.type.append("Excitability")
+            self._type.append("Excitability")
             default_name = "x0_" + default_name
         self.e_indices, self.e_values = self._sort_disease_indices_values({tuple(self.e_indices): self.e_values})
         if len(self.e_indices) > 0:
-            self.type.append("Epileptogenicity")
+            self._type.append("Epileptogenicity")
             default_name = "e_" + default_name
         self.w_indices, self.w_values = self._sort_disease_indices_values({tuple(self.w_indices): self.w_values})
         if len(self.w_indices) > 0:
-            self.type.append("Connectivity")
+            self._type.append("Connectivity")
             default_name = "w_" + default_name
-        self.type = '_'.join(self.type)
+        self._type = '_'.join(self._type)
         if name == "":
             self.name = default_name
         else:
