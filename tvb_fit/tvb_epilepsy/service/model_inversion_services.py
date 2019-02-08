@@ -16,9 +16,9 @@ class ModelInversionService(object):
 
     active_regions_selection_methods = ["E", "LSA", "sensors"]
     active_regions_exlude = []
-    active_e_th = 0.1
-    active_x0_th = 0.1
-    active_lsa_th = 0.1
+    active_e_th = 0.05
+    active_x0_th = 0.05
+    active_lsa_th = 0.05
 
     def __init__(self):
         self.logger.info("Model Inversion Service instance created!")
@@ -101,15 +101,15 @@ class ODEModelInversionService(ModelInversionService):
     active_seeg_th = None
     transform_to_bipolar = False
     manual_selection = []
-    auto_selection = None  #"power"  # auto_selection=False,
+    auto_selection = None  #"rois-power"
     power_th = None
     gain_matrix_th = None
     gain_matrix_percentile = 99.0
-    n_signals_per_roi = 1
+    n_signals_per_roi = None
     normalization = None  # "baseline-maxamplitude"
     normalization_args = {}
     cut_target_times_on_off = [0, 0]
-    sensors_per_electrode = 2
+    sensors_per_electrode = 3
     group_electrodes = True
 
     def __init__(self):
