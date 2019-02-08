@@ -31,6 +31,12 @@ class ModelConfigurationBuilder(ModelConfigurationBuilderBase):
     # For the momdent coupling, monitor, and noise are left to be None.
     # If in the future they are targeted for probabilistic modeling they will obtain contents
 
+    connectivity = None
+    x0_values = np.array([X0_DEF])
+    e_values = np.array([E_DEF])
+    x0cr = 0.0
+    rx0 = 0.0
+    x1eq_mode = "optimize"
     x0 = np.array([-2.0])
     a = np.array([A_DEF])
     b = np.array([B_DEF])
@@ -52,36 +58,46 @@ class ModelConfigurationBuilder(ModelConfigurationBuilderBase):
 
     def __init__(self, input="EpileptorDP", connectivity=None, K_unscaled=np.array([K_UNSCALED_DEF]),
                  x0_values=X0_DEF, e_values=E_DEF, x1eq_mode="optimize", **kwargs):
-        if isinstance(input, Simulator):
-            # TODO: make this more specific once we clarify the model configuration representation compared to simTVB
-            self.model_name = input.model._ui_name
-            self.set_params_from_tvb_model(input.model)
-            self.connectivity = normalize_weights(input.connectivity.weights)
-            # self.coupling = input.coupling
-            self.initial_conditions = np.squeeze(input.initial_conditions)  # initial conditions in a reduced form
-            # self.noise = input.integrator.noise
-            # self.monitor = ensure_list(input.monitors)[0]
-        else:
-            if isinstance(input, Model):
-                self.model_name = input._ui_name
-                self.set_params_from_tvb_model(input)
-            elif isinstance(input, basestring):
-                self.model_name = input
-            else:
-                raise_value_error("Input (%s) is not a TVB simulator, an epileptor model, "
-                                  "\nor a string of an epileptor model!")
-        if isinstance(connectivity, Connectivity):
-            self.connectivity = connectivity.normalized_weights
-        elif isinstance(connectivity, TVBConnectivity):
-            self.connectivity = normalize_weights(connectivity.weights)
-        elif isinstance(connectivity, np.ndarray):
-            self.connectivity = normalize_weights(connectivity)
-        else:
-            if not(isinstance(input, Simulator)):
-                warning("Input connectivity (%s) is not a virtual patient connectivity, a TVB connectivity, "
-                        "\nor a numpy.array!" % str(connectivity))
-        self.x0_values = x0_values * np.ones((self.number_of_regions,), dtype=np.float32)
         self.x1eq_mode = x1eq_mode
+        self.x0cr = 0.0
+        self.rx0 = 0.0
+        if isinstance(input, ModelConfiguration):
+            for attr, value in input.__dict__.items():
+                try:
+                    setattr(self, attr, value)
+                except:
+                    pass
+        else:
+            if isinstance(input, Simulator):
+                # TODO: make this more specific once we clarify the model configuration representation compared to simTVB
+                self.model_name = input.model._ui_name
+                self.set_params_from_tvb_model(input.model)
+                self.connectivity = normalize_weights(input.connectivity.weights)
+                # self.coupling = input.coupling
+                self.initial_conditions = np.squeeze(input.initial_conditions)  # initial conditions in a reduced form
+                # self.noise = input.integrator.noise
+                # self.monitor = ensure_list(input.monitors)[0]
+            else:
+                if isinstance(input, Model):
+                    self.model_name = input._ui_name
+                    self.set_params_from_tvb_model(input)
+                elif isinstance(input, basestring):
+                    self.model_name = input
+                else:
+                    raise_value_error("Input (%s) is not a TVB simulator, an epileptor model, "
+                                      "\nor a string of an epileptor model!")
+            if isinstance(connectivity, Connectivity):
+                self.connectivity = connectivity.normalized_weights
+            elif isinstance(connectivity, TVBConnectivity):
+                self.connectivity = normalize_weights(connectivity.weights)
+            elif isinstance(connectivity, np.ndarray):
+                self.connectivity = normalize_weights(connectivity)
+            else:
+                if not(isinstance(input, Simulator)):
+                    warning("Input connectivity (%s) is not a virtual patient connectivity, a TVB connectivity, "
+                            "\nor a numpy.array!" % str(connectivity))
+            self.x0_values = x0_values * np.ones((self.number_of_regions,), dtype=np.float32)
+            self.e_values = e_values * np.ones((self.number_of_regions,), dtype=np.float32)
         if len(ensure_list(K_unscaled)) == 1:
             K_unscaled = np.array(K_unscaled) * np.ones((self.number_of_regions,), dtype=np.float32)
         elif len(ensure_list(K_unscaled)) == self.number_of_regions:
@@ -90,13 +106,10 @@ class ModelConfigurationBuilder(ModelConfigurationBuilderBase):
             self.logger.warning(
                 "The length of input global coupling K_unscaled is neither 1 nor equal to the number of regions!" +
                 "\nSetting model_configuration_builder.K_unscaled = K_UNSCALED_DEF for all regions")
+        # Update K_unscaled
         self.set_K_unscaled(K_unscaled)
         for pname in EPILEPTOR_PARAMS:
             self.set_parameter(pname, kwargs.get(pname, getattr(self, pname)))
-        # Update K_unscaled
-        self.e_values = e_values * np.ones((self.number_of_regions,), dtype=np.float32)
-        self.x0cr = 0.0
-        self.rx0 = 0.0
         self._compute_critical_x0_scaling()
 
     def __repr__(self):
