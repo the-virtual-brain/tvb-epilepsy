@@ -1,4 +1,4 @@
-from tvb_fit.plot.plotter import Plotter as PlotterBase
+from tvb_fit.plot.plotter import Plotter as PlotterBase, HeadPlotter
 from tvb_fit.tvb_epilepsy.plot.model_config_plotter import ModelConfigPlotter
 from tvb_fit.tvb_epilepsy.plot.lsa_plotter import LSAPlotter
 from tvb_fit.tvb_epilepsy.plot.model_inversion_plotter import ModelInversionPlotter
@@ -27,6 +27,9 @@ class Plotter(PlotterBase):
 
     def plot_simulated_timeseries(self, *args, **kwargs):
         return SimulationPlotter(self.config).plot_simulated_timeseries(*args, **kwargs)
+
+    def plot_active_regions_gain_matrix(self, *args, **kwargs):
+        return HeadPlotter()._plot_gain_matrix(*args, **kwargs)
 
     def plot_fit_scalar_params_iters(self, *args, **kwargs):
         return ModelInversionPlotter(self.config).plot_fit_scalar_params_iters(*args, **kwargs)
