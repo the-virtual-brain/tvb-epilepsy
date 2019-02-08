@@ -58,6 +58,8 @@ class H5Reader(H5ReaderBase):
         for attr in h5_file.attrs.keys():
             if attr in ["x0_indices", "e_indices", "w_indices"]:
                 hypothesis.set_attribute(attr, h5_file.attrs[attr].tolist())
+            elif attr == "type" or attr == "_type":
+                hypothesis._type = h5_file.attrs[attr]
             else:
                 hypothesis.set_attribute(attr, h5_file.attrs[attr])
 
