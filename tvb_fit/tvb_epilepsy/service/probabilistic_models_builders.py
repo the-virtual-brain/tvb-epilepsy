@@ -450,7 +450,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                              np.max(np.percentile(model_out_ts, 99, axis=0) -
                                     np.percentile(model_out_ts, 1, axis=0))
                 model_out_ts *= self.scale
-                self.offset = np.percentile(target_data.data, 50) - np.percentile(model_out_ts, 50)
+                self.offset = np.percentile(target_data.data, 1) - np.percentile(model_out_ts, 1)
                 # self.scale = np.max(target_data.data.max(axis=0) - target_data.data.min(axis=0)) / \
                 #              np.max(model_out_ts.max(axis=0) - model_out_ts.min(axis=0))
                 # self.offset = np.median(target_data.data) - np.median(self.scale*model_out_ts)
@@ -475,12 +475,12 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                 scale_sigma = self.scale / SCALE_SCALE_DEF
                 parameters.update({"scale": self.generate_normal_or_lognormal_parameter("scale", self.scale,
                                                                                         0.5 * self.scale,
-                                                                                        self.scale + 2 * scale_sigma,
+                                                                                        1.5 * self.scale,
                                                                                         sigma=scale_sigma)})
 
             if "offset" in params_names:
                 self.logger.info("...offset...")
-                offset_sigma = np.abs(self.offset) / OFFSET_SCALE_DEF
+                offset_sigma = np.maximum(0.1, np.abs(self.offset)) / OFFSET_SCALE_DEF
                 parameters.update(
                         {"offset": generate_normal_parameter("offset", self.offset, self.offset - 3 * offset_sigma,
                                                          self.offset + 3 * offset_sigma, sigma=offset_sigma)})
