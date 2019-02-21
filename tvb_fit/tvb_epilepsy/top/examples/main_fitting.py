@@ -271,8 +271,9 @@ if __name__ == "__main__":
             normalization_args = {"axis": [1, None]}  # "percent": [1, [1, 99]]
         else:
             # TODO: clarify normalization for source fitting
-            normalization = "baseline-maxamplitude"
-            normalization_args = {"axis": [None, None], "percent": [1, [1, 99]]}
+            normalization = None
+            # normalization = "baseline-maxamplitude"
+            # normalization_args = {"axis": [None, None], "percent": [1, [1, 99]]}
         if sim_source_type == "paper":
             times_on = [1500.0] # fot e_x0_hypo # [1500.0] # for x0_hypo # [1200.0] # for e_hypo #
             time_length = 700.0 # for x0_hypo, and e_x0_hypo # 500.0 # for e_hypo #
