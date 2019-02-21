@@ -263,13 +263,14 @@ if __name__ == "__main__":
         # seizure = 'SZ3_0001.edf'
         # sensors_filename = "SensorsSEEG_210.h5"
         # times_on_off = [20.0, 100.0]
-        normalization = "baseline-maxamplitude"
-        normalization_args = {"axis": [1, None], "percent": [1, [1, 99]]}
+        normalization = ["mean",  "std"]
+        normalization_args = {"axis": [1, None]}  # "percent": [1, [1, 99]]
     else:
         if observation_model in OBSERVATION_MODELS.SEEG.value:
-            normalization = "baseline-maxamplitude"
-            normalization_args = {"axis": [1, None], "percent": [1, [1, 99]]}
+            normalization = ["mean", "std"]
+            normalization_args = {"axis": [1, None]}  # "percent": [1, [1, 99]]
         else:
+            # TODO: clarify normalization for source fitting
             normalization = "baseline-maxamplitude"
             normalization_args = {"axis": [None, None], "percent": [1, [1, 99]]}
         if sim_source_type == "paper":
