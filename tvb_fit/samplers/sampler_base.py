@@ -65,8 +65,9 @@ class SamplerBase(object):
         return low, high, n_params, parameter_shape
 
     def compute_stats(self, samples):
+        naxis = len(samples.shape)-1
         return OrderedDict([("mean", samples.mean(axis=-1)), ("median", scp.median(samples, axis=-1)),
-                            ("mode", scp.stats.mode(samples, axis=-1)[0]),
+                            ("mode", ss.mode(samples, axis=naxis)[0]),
                             ("std", samples.std(axis=-1)), ("var", samples.var(axis=-1)),
                             ("kurt", ss.kurtosis(samples, axis=-1)), ("skew", ss.skew(samples, axis=-1)),
                             ("min", samples.min(axis=-1)), ("max", samples.max(axis=-1)),
