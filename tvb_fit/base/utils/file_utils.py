@@ -36,6 +36,20 @@ def change_filename_or_overwrite(path, overwrite=True):
     return path
 
 
+def wildcardit(name, front=True, back=True):
+    out = str(name)
+    if front:
+        out = "*" + out
+    if back:
+        out = out + "*"
+    return out
+
+
+def ensure_folder(folderpath):
+    if not os.path.isdir(folderpath):
+        os.makedirs(folderpath)
+
+
 def change_filename_or_overwrite_with_wildcard(path, overwrite=True):
     wild_path = path + "*"
     existing_files = glob.glob(path + "*")
@@ -62,7 +76,7 @@ def change_filename_or_overwrite_with_wildcard(path, overwrite=True):
 
 def move_overwrite_files_to_folder_with_wildcard(folder, path_wildcard):
     if not os.path.isdir(folder):
-        os.mkdir(folder)
+        os.makedirs(folder)
     for file in glob.glob(path_wildcard):
         if os.path.isfile(file):
             filepath = os.path.join(folder, os.path.basename(file))
