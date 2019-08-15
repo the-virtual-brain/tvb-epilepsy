@@ -1,16 +1,18 @@
 import os
 import numpy as np
+
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import MAX_DISEASE_VALUE
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
-from tvb_fit.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
-    dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
-from tvb_fit.base.utils.log_error_utils import initialize_logger, raise_value_error
-from tvb_fit.io.h5_writer import H5Writer
 from tvb_fit.tvb_epilepsy.service.pse.lsa_pse_service import LSAPSEService
 from tvb_fit.samplers.salib_sampler_interface import SalibSamplerInterface
 from tvb_fit.samplers.probabilistic_sampler import ProbabilisticSampler
 from tvb_fit.service.sensitivity_analysis_service import SensitivityAnalysisService, METHODS
 from tvb_fit.tvb_epilepsy.top.scripts.hypothesis_scripts import start_lsa_run
+
+from tvb_utils.log_error_utils import initialize_logger, raise_value_error
+from tvb_utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
+    dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
+from tvb_io.h5_writer import H5Writer
 
 
 # These functions are helper functions to run sensitivity analysis parameter search exploration (pse)

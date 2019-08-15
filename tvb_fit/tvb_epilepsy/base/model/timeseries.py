@@ -1,8 +1,9 @@
 
 from enum import Enum
 from collections import OrderedDict
-from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.model.timeseries import Timeseries as TimeseriesBase, TimeseriesDimensions
+
+from tvb_utils.log_error_utils import initialize_logger
+from tvb_timeseries.model.timeseries import Timeseries as TimeseriesBase, TimeseriesDimensions
 
 
 class PossibleVariables(Enum):

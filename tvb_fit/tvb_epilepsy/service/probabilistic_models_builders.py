@@ -3,14 +3,8 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from copy import deepcopy
 
-from scipy.stats import zscore
-
 from tvb_fit.base.constants import PriorsModes, Target_Data_Type
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import *
-from tvb_fit.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
-from tvb_fit.base.utils.data_structures_utils import formal_repr, ensure_list
-from tvb_fit.base.model.timeseries import Timeseries as TargetDataTimeseries
-from tvb_fit.service.timeseries_service import compute_seeg_exp, compute_seeg_lin
 from tvb_fit.service.probabilistic_parameter_builder\
     import generate_lognormal_parameter, generate_negative_lognormal_parameter, generate_normal_parameter
 
@@ -19,6 +13,11 @@ from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration import Epilep
 from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_fit.tvb_epilepsy.base.model.epileptor_probabilistic_models \
     import EpiProbabilisticModel, ODEEpiProbabilisticModel, SDEEpiProbabilisticModel
+
+from tvb_utils.log_error_utils import initialize_logger, warning, raise_value_error
+from tvb_utils.data_structures_utils import formal_repr, ensure_list
+from tvb_timeseries.model.timeseries import Timeseries as TargetDataTimeseries
+from tvb_timeseries.service.timeseries_service import compute_seeg_exp, compute_seeg_lin
 
 
 x0_def = {"def": X0_DEF, "min": X0_MIN, "max": X0_MAX, }

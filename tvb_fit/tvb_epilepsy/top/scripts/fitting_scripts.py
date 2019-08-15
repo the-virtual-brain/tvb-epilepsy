@@ -3,14 +3,8 @@ import os
 import numpy as np
 
 from tvb_fit.base.constants import Target_Data_Type
-from tvb_fit.base.utils.log_error_utils import initialize_logger, warning
-from tvb_fit.base.utils.data_structures_utils import ensure_list, generate_region_labels
-from tvb_fit.base.utils.file_utils import move_overwrite_files_to_folder_with_wildcard
-from tvb_fit.base.computations.math_utils import select_greater_values_array_inds
-from tvb_fit.service.timeseries_service import TimeseriesService
 from tvb_fit.samplers.stan.cmdstan_interface import CmdStanInterface
 from tvb_fit.samplers.stan.stan_interface import merge_samples
-from tvb_fit.plot.head_plotter import HeadPlotter
 
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU1_DEF, TAU0_DEF
@@ -29,6 +23,13 @@ from tvb_fit.tvb_epilepsy.top.scripts.fitting_data_scripts import prepare_seeg_o
     prepare_simulated_seeg_observable, prepare_signal_observable
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
+
+from tvb_utils.log_error_utils import initialize_logger, warning
+from tvb_utils.data_structures_utils import ensure_list, generate_region_labels
+from tvb_utils.file_utils import move_overwrite_files_to_folder_with_wildcard
+from tvb_utils.computations_utils import select_greater_values_array_inds
+from tvb_timeseries.service.timeseries_service import TimeseriesService
+from tvb_plot.head_plotter import HeadPlotter
 
 
 logger = initialize_logger(__name__)

@@ -1,11 +1,13 @@
 # coding=utf-8
 
 import numpy
+
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_fit.base.utils.log_error_utils import initialize_logger, raise_value_error
-from tvb_fit.base.utils.data_structures_utils import ensure_list
-from tvb_fit.base.computations.analyzers_utils import interval_scaling
+
+from tvb_utils.log_error_utils import initialize_logger, raise_value_error
+from tvb_utils.data_structures_utils import ensure_list
+from tvb_utils.analyzers_utils import interval_scaling
 
 # TODO: In the future we should allow for various not 0 healthy values.
 # In this case x0 could take any value, and only knowing e_indices would make some difference

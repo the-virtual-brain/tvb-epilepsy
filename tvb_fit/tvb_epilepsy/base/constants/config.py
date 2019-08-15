@@ -1,12 +1,22 @@
 # coding=utf-8
 
-from tvb_fit.base.config import GenericConfig, InputConfig, OutputConfig, FiguresConfig
+from tvb_fit.base.config import Config as ConfigBase
+from tvb_fit.base.config import GenericConfig as GenericConfigBase
 from tvb_fit.base.config import CalculusConfig as CalculusConfigBase
+from tvb_fit.base.config import InputConfig, OutputConfig, FiguresConfig
+
+
+class GenericConfig(GenericConfigBase):
+    # Information needed for the Java simulation
+    HDF5_LIB = "libjhdf5.dylib"
+    LIB_PATH = "/Applications/Episense.app/Contents/Java"
+    JAR_PATH = "/Applications/Episense.app/Contents/Java/episense-fx-app.jar"
+    JAVA_MAIN_SIM = "de.codebox.episense.fx.StartSimulation"
 
 
 class SimulatorConfig(object):
     USE_TIME_DELAYS_FLAG = True
-    MODE = GenericConfig.MODE_TVB
+    MODE_JAVA = "java"
 
 
 class HypothesisConfig(object):
@@ -24,15 +34,13 @@ class CalculusConfig(CalculusConfigBase):
     WEIGHTED_EIGENVECTOR_SUM = True
 
 
-class Config(object):
+class Config(ConfigBase):
     generic = GenericConfig()
-    figures = FiguresConfig()
     calcul = CalculusConfig()
     simulator = SimulatorConfig()
 
-    def __init__(self, head_folder=None, data_mode=GenericConfig.MODE_JAVA,
-                 raw_data_folder=None,
-                 output_base=None, separate_by_run=False):
-        self.input = InputConfig(head_folder, data_mode, raw_data_folder)
-        self.out = OutputConfig(output_base, separate_by_run)
+    def __init__(self, head_folder=None, data_mode=GenericConfig.MODE_TVB,
+                 raw_data_folder=None, output_base=None, separate_by_run=False):
+        super(Config, self).__init__(head_folder, data_mode,
+                                     raw_data_folder, output_base, separate_by_run)
         self.hypothesis = HypothesisConfig(head_folder)

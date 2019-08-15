@@ -6,12 +6,12 @@ from matplotlib import pyplot
 import numpy
 
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import X1EQ_CR_DEF, X1_DEF, X0_CR_DEF, X0_DEF
-from tvb_fit.base.utils.data_structures_utils import isequal_string, generate_region_labels
 from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import calc_fz, calc_fx1, calc_fx1_2d_taylor, \
                                                              calc_x0_val_to_model_x0
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import calc_eq_y1, def_x1lin
-from tvb_fit.plot.base_plotter import BasePlotter
 
+from tvb_utils.data_structures_utils import isequal_string, generate_region_labels
+from tvb_plot.base_plotter import BasePlotter
 
 
 class ModelConfigPlotter(BasePlotter):

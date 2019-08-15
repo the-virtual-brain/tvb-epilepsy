@@ -1,6 +1,7 @@
 import os
-from tvb_fit.plot.plotter import Plotter
+
 from tvb_fit.tests.base import BaseTest
+from tvb_fit.plot.plotter import Plotter
 
 
 class TestPlotter(BaseTest):

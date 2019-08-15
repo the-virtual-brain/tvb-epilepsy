@@ -1,13 +1,15 @@
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
+
 from tvb_fit.base.config import CalculusConfig
-from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.utils.data_structures_utils import dict_str, formal_repr, isequal_string
 from tvb_fit.base.model.probabilistic_models.parameters.transformed_parameters import \
     TransformedProbabilisticParameterBase
 from tvb_fit.base.model.probabilistic_models.parameters.base import ProbabilisticParameterBase
 from tvb_fit.samplers.sampler_base import SamplerBase
+
+from tvb_utils.log_error_utils import initialize_logger
+from tvb_utils.data_structures_utils import dict_str, formal_repr, isequal_string
 
 
 class ProbabilisticSampler(SamplerBase):

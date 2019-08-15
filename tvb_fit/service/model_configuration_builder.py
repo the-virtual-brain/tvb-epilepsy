@@ -2,14 +2,14 @@
 """
 
 """
-
 import importlib
 
 import numpy
 
-from tvb_fit.base.utils.log_error_utils import initialize_logger, warning
-from tvb_fit.base.utils.data_structures_utils import formal_repr
 from tvb_fit.base.model.model_configuration import ModelConfiguration
+
+from tvb_utils.log_error_utils import initialize_logger, warning
+from tvb_utils.data_structures_utils import formal_repr
 
 
 class ModelConfigurationBuilder(object):

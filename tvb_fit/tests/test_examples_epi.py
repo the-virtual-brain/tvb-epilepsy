@@ -1,4 +1,5 @@
 import os
+
 from tvb_fit.tests.base import BaseTest
 from tvb_fit.tvb_epilepsy.top.examples.vep_study import vep_study
 from tvb_fit.tvb_epilepsy.top.examples.main_vep import main_vep

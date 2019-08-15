@@ -2,10 +2,11 @@ from copy import deepcopy
 
 import numpy as np
 
-from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.service.pse.pse_service import ABCPSEService
 from tvb_fit.tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
+
+from tvb_utils.log_error_utils import initialize_logger
 
 
 class PSEService(ABCPSEService):

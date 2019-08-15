@@ -4,9 +4,6 @@ Entry point for working with VEP
 import os
 import numpy as np
 
-from tvb_fit.base.utils.data_structures_utils import assert_equal_objects, isequal_string, ensure_list
-from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.io.tvb_data_reader import TVBReader
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU0_DEF, TAU1_DEF
 from tvb_fit.base.constants import COLORED_NOISE
@@ -15,17 +12,29 @@ from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_fit.tvb_epilepsy.service.simulator.simulator_builder import SimulatorBuilder
-from tvb_fit.tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
-from tvb_fit.tvb_epilepsy.top.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_lsa_hypothesis
 from tvb_fit.tvb_epilepsy.top.scripts.simulation_scripts import compute_seeg_and_write_ts_to_h5
 from tvb_fit.tvb_epilepsy.service.lsa_service import LSAService
 from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_fit.tvb_epilepsy.plot.plotter import Plotter
 
+from tvb_utils.data_structures_utils import assert_equal_objects, isequal_string, ensure_list
+from tvb_utils.log_error_utils import initialize_logger
+from tvb_io.tvb_data_reader import TVBReader
+
+
 PSE_FLAG = True
 SA_PSE_FLAG = False
 SIM_FLAG = True
+
+if PSE_FLAG:
+    from tvb_fit.tvb_epilepsy.top.scripts.pse_scripts import pse_from_lsa_hypothesis
+
+    if SA_PSE_FLAG:
+        from tvb_fit.tvb_epilepsy.top.scripts.sensitivity_analysis_sripts import \
+            sensitivity_analysis_pse_from_lsa_hypothesis
+
+
 EP_NAME = "clinical_hypothesis_preseeg"
 
 
@@ -130,36 +139,36 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_UNSCALED_DEF, ep_ind
                 logger.info("Written and read parameter search results are identical?: " +
                             str(assert_equal_objects(pse_results, reader.read_dictionary(pse_lsa_path), logger=logger)))
 
-        if sa_pse_flag:
-            # --------------Sensitivity Analysis Parameter Search Exploration (PSE)-------------------------------
-            logger.info("\n\nrunning sensitivity analysis PSE LSA...")
-            sa_results, pse_sa_results = \
-                sensitivity_analysis_pse_from_lsa_hypothesis(n_samples, lsa_hypothesis,
-                                                             model_configuration.connectivity,
-                                                             model_config_builder, lsa_service,
-                                                             head.connectivity.region_labels,
-                                                             method="sobol", param_range=0.1,
-                                                             global_coupling=[{"indices": all_regions_indices,
-                                                                               "bounds": [0.0, 2 *
-                                                                                          model_config_builder.K_unscaled[
-                                                                                              0]]}],
-                                                             healthy_regions_parameters=[
-                                                                 {"name": "x0_values", "indices": healthy_indices}],
-                                                             config=config)
-            plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
-                                 lsa_service.eigen_vectors_number, head.connectivity.region_labels, pse_sa_results,
-                                 title="SA PSE Hypothesis Overview")
+            if sa_pse_flag:
+                # --------------Sensitivity Analysis Parameter Search Exploration (PSE)-------------------------------
+                logger.info("\n\nrunning sensitivity analysis PSE LSA...")
+                sa_results, pse_sa_results = \
+                    sensitivity_analysis_pse_from_lsa_hypothesis(n_samples, lsa_hypothesis,
+                                                                 model_configuration.connectivity,
+                                                                 model_config_builder, lsa_service,
+                                                                 head.connectivity.region_labels,
+                                                                 method="sobol", param_range=0.1,
+                                                                 global_coupling=[{"indices": all_regions_indices,
+                                                                                   "bounds": [0.0, 2 *
+                                                                                              model_config_builder.K_unscaled[
+                                                                                                  0]]}],
+                                                                 healthy_regions_parameters=[
+                                                                     {"name": "x0_values", "indices": healthy_indices}],
+                                                                 config=config)
+                plotter.plot_lsa(lsa_hypothesis, model_configuration, lsa_service.weighted_eigenvector_sum,
+                                     lsa_service.eigen_vectors_number, head.connectivity.region_labels, pse_sa_results,
+                                     title="SA PSE Hypothesis Overview")
 
-            sa_pse_path = os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")
-            sa_lsa_path = os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_SA_LSA_results.h5")
-            writer.write_dictionary(pse_sa_results, sa_pse_path)
-            writer.write_dictionary(sa_results, sa_lsa_path)
-            if test_write_read:
-                logger.info("Written and read sensitivity analysis results are identical?: " +
-                            str(assert_equal_objects(sa_results, reader.read_dictionary(sa_lsa_path), logger=logger)))
-                logger.info("Written and read sensitivity analysis parameter search results are identical?: " +
-                            str(assert_equal_objects(pse_sa_results, reader.read_dictionary(sa_pse_path),
-                                                     logger=logger)))
+                sa_pse_path = os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_SA_PSE_LSA_results.h5")
+                sa_lsa_path = os.path.join(config.out.FOLDER_RES, lsa_hypothesis.name + "_SA_LSA_results.h5")
+                writer.write_dictionary(pse_sa_results, sa_pse_path)
+                writer.write_dictionary(sa_results, sa_lsa_path)
+                if test_write_read:
+                    logger.info("Written and read sensitivity analysis results are identical?: " +
+                                str(assert_equal_objects(sa_results, reader.read_dictionary(sa_lsa_path), logger=logger)))
+                    logger.info("Written and read sensitivity analysis parameter search results are identical?: " +
+                                str(assert_equal_objects(pse_sa_results, reader.read_dictionary(sa_pse_path),
+                                                         logger=logger)))
 
         if sim_flag:
             # --------------------------Simulation preparations-----------------------------------

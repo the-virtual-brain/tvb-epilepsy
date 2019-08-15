@@ -1,5 +1,5 @@
 
-from tvb_fit.tvb_epilepsy.base.constants.config import FiguresConfig
+from tvb_fit.base.config import FiguresConfig
 import matplotlib
 matplotlib.use(FiguresConfig().MATPLOTLIB_BACKEND)
 from matplotlib import pyplot, gridspec
@@ -9,11 +9,14 @@ import numpy
 from collections import OrderedDict
 
 from tvb_fit.base.constants import Target_Data_Type
-from tvb_fit.base.utils.log_error_utils import warning
-from tvb_fit.base.utils.data_structures_utils import ensure_list, generate_region_labels, extract_dict_stringkeys
+from tvb_fit.base.constants import Target_Data_Type
 from tvb_fit.base.model.timeseries import Timeseries
 from tvb_fit.samplers.stan.stan_interface import merge_samples
-from tvb_fit.plot.timeseries_plotter import TimeseriesPlotter
+
+from tvb_utils.log_error_utils import warning
+from tvb_utils.data_structures_utils import ensure_list, generate_region_labels, extract_dict_stringkeys
+from tvb_timeseries.model.timeseries import Timeseries
+from tvb_plot.timeseries_plotter import TimeseriesPlotter
 
 
 class ModelInversionPlotter(TimeseriesPlotter):

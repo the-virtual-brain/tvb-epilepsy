@@ -1,9 +1,7 @@
 import os
 from copy import deepcopy
 import numpy as np
-from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.utils.data_structures_utils import isequal_string
-from tvb_fit.base.computations.analyzers_utils import interval_scaling
+
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import calc_eq_z, calc_x0
 from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
@@ -13,7 +11,11 @@ from tvb_fit.tvb_epilepsy.base.model.epileptor_models import EpileptorDP2D
 from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_fit.tvb_epilepsy.service.simulator.simulator_builder import build_simulator_TVB_realistic, \
     build_simulator_TVB_fitting, build_simulator_TVB_default, build_simulator_TVB_paper
-from tvb_fit.service.timeseries_service import TimeseriesService
+
+from tvb_utils.log_error_utils import initialize_logger
+from tvb_utils.data_structures_utils import isequal_string
+from tvb_utils.analyzers_utils import interval_scaling
+from tvb_timeseries.service.timeseries_service import TimeseriesService
 
 
 logger = initialize_logger(__name__)

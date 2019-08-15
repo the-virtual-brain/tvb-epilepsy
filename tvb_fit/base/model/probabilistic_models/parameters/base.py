@@ -5,9 +5,9 @@ import numpy as np
 from tvb_fit.base.config import CalculusConfig
 from tvb_fit.base.model.parameter import Parameter
 from tvb_fit.base.model.probability_distributions.probability_distribution import ProbabilityDistribution
-from tvb_fit.base.utils.data_structures_utils import make_float, get_val_key_for_first_keymatch_in_dict, \
-    linspace_broadcast
-from tvb_fit.base.utils.log_error_utils import raise_not_implemented_error, raise_value_error
+
+from tvb_utils.data_structures_utils import make_float, get_val_key_for_first_keymatch_in_dict, linspace_broadcast
+from tvb_utils.log_error_utils import raise_not_implemented_error, raise_value_error
 
 
 class ProbabilisticParameterBase(Parameter, ProbabilityDistribution):

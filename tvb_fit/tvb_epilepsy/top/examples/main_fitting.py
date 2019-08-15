@@ -4,8 +4,6 @@ import os
 import numpy as np
 
 from tvb_fit.base.constants import PriorsModes
-from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.utils.data_structures_utils import ensure_list, find_labels_inds, join_labels_indices_dict
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU1_DEF, TAU0_DEF
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import TAU1_DEF as TAU1_FIT_DEF
@@ -23,6 +21,9 @@ from tvb_fit.tvb_epilepsy.top.scripts.fitting_scripts import set_model_config_LS
 from tvb_fit.tvb_epilepsy.plot.plotter import Plotter
 from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
+
+from tvb_utils.log_error_utils import initialize_logger
+from tvb_utils.data_structures_utils import ensure_list, find_labels_inds, join_labels_indices_dict
 
 
 def path(name, base_path):

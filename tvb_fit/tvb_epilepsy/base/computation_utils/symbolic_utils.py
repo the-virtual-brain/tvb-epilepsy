@@ -2,11 +2,13 @@
 import numpy as np
 from sympy import Symbol, solve, solveset, lambdify, series, Matrix  # diff, ArraySymbol
 from sympy.tensor.array import Array
-from tvb_fit.base.utils.data_structures_utils import shape_to_size
-from tvb_fit.base.utils.log_error_utils import raise_value_error
+
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import *
 from tvb_fit.tvb_epilepsy.base.computation_utils.equations_utils import eqtn_x0cr_r, eqtn_coupling, eqtn_x0, eqtn_fx1, \
     eqtn_fy1, eqtn_fz, eqtn_fx2, eqtn_fy2, eqtn_fg, eqtn_fx0, eqtn_fslope, eqtn_fIext1, eqtn_fIext2, eqtn_fK
+
+from tvb_utils.data_structures_utils import shape_to_size
+from tvb_utils.log_error_utils import raise_value_error
 
 
 def symbol_vars(n_regions, vars_str, dims=1, ind_str="_", shape=None, output_flag="numpy_array"):

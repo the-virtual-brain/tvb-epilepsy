@@ -8,8 +8,10 @@ import tvb.basic.traits.types_basic as basic
 import tvb.datatypes.arrays as arrays
 from tvb.simulator.common import get_logger
 from tvb.simulator.models import Model
-from tvb_fit.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import *
+
+from tvb_utils.log_error_utils import raise_not_implemented_error
+
 
 LOG = get_logger(__name__)
 

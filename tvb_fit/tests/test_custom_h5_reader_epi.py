@@ -1,8 +1,8 @@
 import os
 import numpy
 
-from tvb_fit.base.config import InputConfig
 from tvb_fit.tests.base import BaseTest
+from tvb_fit.base.config import InputConfig
 
 from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration \
     import EpileptorModelConfiguration as ModelConfiguration

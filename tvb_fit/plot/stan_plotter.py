@@ -1,9 +1,11 @@
 from tvb_fit.base.config import FiguresConfig
 import matplotlib
 matplotlib.use(FiguresConfig().MATPLOTLIB_BACKEND)
-from tvb_fit.base.utils.data_structures_utils import ensure_list, extract_dict_stringkeys
+
 from tvb_fit.samplers.stan.stan_interface import merge_samples
-from tvb_fit.plot.base_plotter import BasePlotter
+
+from tvb_utils.data_structures_utils import ensure_list, extract_dict_stringkeys
+from tvb_plot.base_plotter import BasePlotter
 
 
 class STANplotter(BasePlotter):

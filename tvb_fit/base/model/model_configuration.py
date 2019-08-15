@@ -3,7 +3,7 @@ import importlib
 
 import numpy
 
-from tvb_fit.base.utils.data_structures_utils import formal_repr
+from tvb_utils.data_structures_utils import formal_repr
 
 
 class ModelConfiguration(object):

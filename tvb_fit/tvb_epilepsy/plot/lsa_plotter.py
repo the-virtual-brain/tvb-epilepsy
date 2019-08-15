@@ -1,14 +1,15 @@
 # coding=utf-8
 
-from tvb_fit.base.config import FiguresConfig
+from tvb_fit.tvb_epilepsy.base.constants.config import FiguresConfig
 import matplotlib
 matplotlib.use(FiguresConfig().MATPLOTLIB_BACKEND)
 
 import numpy
 
-from tvb_fit.base.utils.data_structures_utils import dicts_of_lists_to_lists_of_dicts
 from tvb_fit.tvb_epilepsy.service.lsa_service import LSAService
-from tvb_fit.plot.base_plotter import BasePlotter
+
+from tvb_utils.data_structures_utils import dicts_of_lists_to_lists_of_dicts
+from tvb_plot.base_plotter import BasePlotter
 
 
 class LSAPlotter(BasePlotter):

@@ -6,15 +6,17 @@ TODO: it might be useful to store eigenvalues and eigenvectors, as well as the p
 such as eigen_vectors_number and LSAService in a h5 file
 """
 import numpy
+
 from tvb_fit.base.config import CalculusConfig
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import X1EQ_CR_DEF
-from tvb_fit.base.utils.log_error_utils import initialize_logger, raise_value_error, warning
-from tvb_fit.base.utils.data_structures_utils import formal_repr
-from tvb_fit.base.computations.analyzers_utils import interval_scaling
 from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import calc_fz_jac_square_taylor, calc_jac
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import calc_eq_z
-from tvb_fit.base.computations.math_utils import weighted_vector_sum, curve_elbow_point
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
+
+from tvb_utils.log_error_utils import initialize_logger, raise_value_error, warning
+from tvb_utils.data_structures_utils import formal_repr
+from tvb_utils.analyzers_utils import interval_scaling
+from tvb_utils.computations_utils import weighted_vector_sum, curve_elbow_point
 
 
 class LSAService(object):

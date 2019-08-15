@@ -1,12 +1,13 @@
 import numpy as np
 
 from tvb_fit.base.constants import PriorsModes, Target_Data_Type
-from tvb_fit.base.utils.log_error_utils import raise_value_error
-from tvb_fit.base.utils.data_structures_utils import ensure_list
 from tvb_fit.base.model.probabilistic_models.probabilistic_model_base import ProbabilisticModelBase
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import *
 from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration \
     import EpileptorModelConfiguration as ModelConfiguration
+
+from tvb_utils.log_error_utils import raise_value_error
+from tvb_utils.data_structures_utils import ensure_list
 
 
 class EpiProbabilisticModel(ProbabilisticModelBase):

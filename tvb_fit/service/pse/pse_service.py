@@ -3,7 +3,7 @@ from abc import abstractmethod, ABCMeta
 
 import numpy as np
 
-from tvb_fit.base.utils.log_error_utils import initialize_logger, raise_value_error
+from tvb_utils.log_error_utils import initialize_logger, raise_value_error
 
 
 class ABCPSEService(object):

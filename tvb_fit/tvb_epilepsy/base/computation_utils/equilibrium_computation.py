@@ -3,9 +3,11 @@ Module to compute the resting equilibrium point of a Virtual Epileptic Patient m
 """
 
 import numpy
-from tvb_fit.base.utils.log_error_utils import raise_not_implemented_error
 from tvb_fit.tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import *
+
+from tvb_utils.log_error_utils import initialize_logger
+
 
 logger = initialize_logger(__name__)
 

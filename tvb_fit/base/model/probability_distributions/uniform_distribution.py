@@ -3,9 +3,11 @@ import scipy.stats as ss
 import numpy.random as nr
 from collections import OrderedDict
 from tvb_fit.base.model.probability_distributions import ProbabilityDistributionTypes
-from tvb_fit.base.utils.data_structures_utils import make_float, isequal_string
 from tvb_fit.base.model.probability_distributions.continuous_probability_distribution \
     import ContinuousProbabilityDistribution
+
+from tvb_utils.data_structures_utils import make_float, isequal_string
+
 
 DEFAULT_LOW_VALUE = 0.0
 DEFAULT_HIGH_VALUE = 1.0

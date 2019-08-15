@@ -5,12 +5,14 @@ from copy import deepcopy
 import sys
 import time
 import numpy
-from tvb.simulator import integrators, simulator, coupling, noise, monitors
-from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.base.constants import TIME_DELAYS_FLAG
-from tvb_fit.base.model.timeseries import Timeseries, TimeseriesDimensions
-from tvb_fit.service.head_service import HeadService
 from tvb_fit.service.simulator import ABCSimulator
+
+from tvb_utils.log_error_utils import initialize_logger
+from tvb_head.service.head_service import HeadService
+from tvb_timeseries.model.timeseries import Timeseries, TimeseriesDimensions
+
+from tvb.simulator import integrators, simulator, coupling, noise, monitors
 
 
 class SimulatorTVB(ABCSimulator):

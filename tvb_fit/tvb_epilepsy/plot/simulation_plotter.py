@@ -8,7 +8,8 @@ import numpy
 
 from tvb_fit.tvb_epilepsy.base.model.epileptor_models import EpileptorDP2D, EpileptorDPrealistic
 from tvb_fit.tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, PossibleVariables
-from tvb_fit.plot.timeseries_plotter import TimeseriesPlotter
+
+from tvb_plot.timeseries_plotter import TimeseriesPlotter
 
 
 class SimulationPlotter(TimeseriesPlotter):

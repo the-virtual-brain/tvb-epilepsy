@@ -3,11 +3,12 @@ from collections import OrderedDict
 import numpy as np
 
 from tvb_fit.base.constants import PriorsModes, Target_Data_Type
-from tvb_fit.base.utils.data_structures_utils import formal_repr
-from tvb_fit.base.utils.log_error_utils import warning
 from tvb_fit.base.model.probabilistic_models.parameters.base import ProbabilisticParameterBase
 from tvb_fit.base.model.probabilistic_models.parameters.transformed_parameters import \
     TransformedProbabilisticParameterBase
+
+from tvb_utils.data_structures_utils import formal_repr
+from tvb_utils.log_error_utils import warning
 
 
 class ProbabilisticModelBase(object):

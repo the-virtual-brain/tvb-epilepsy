@@ -6,15 +6,17 @@ from abc import ABCMeta, abstractmethod
 from scipy.io import savemat, loadmat
 from scipy.stats import describe
 import numpy as np
+
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
-from tvb_fit.base.utils.log_error_utils import initialize_logger, warning, \
+
+from tvb_utils.log_error_utils import initialize_logger, warning, \
                                                     raise_value_error, raise_not_implemented_error
-from tvb_fit.base.utils.data_structures_utils import isequal_string, ensure_list, sort_dict, \
+from tvb_utils.data_structures_utils import isequal_string, ensure_list, sort_dict, \
     format_all_numbers_in_strings, list_of_dicts_to_dicts_of_ndarrays, switch_levels_of_dicts_of_dicts
-from tvb_fit.io.r_file_io import rdump, rload
-from tvb_fit.io.csv import parse_csv
-from tvb_fit.io.h5_reader import H5Reader
-from tvb_fit.io.h5_writer import H5Writer
+from tvb_io.r_file_io import rdump, rload
+from tvb_io.csv import parse_csv
+from tvb_io.h5_reader import H5Reader
+from tvb_io.h5_writer import H5Writer
 
 
 class StanInterface(object):

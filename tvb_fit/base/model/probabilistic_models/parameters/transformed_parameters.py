@@ -2,8 +2,9 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 
 from tvb_fit.base.model.probabilistic_models.parameters.base import get_x_arg_for_param_distrib
-from tvb_fit.base.utils.data_structures_utils import formal_repr
-from tvb_fit.base.utils.log_error_utils import raise_not_implemented_error
+
+from tvb_utils.data_structures_utils import formal_repr
+from tvb_utils.log_error_utils import raise_not_implemented_error
 
 TransformedProbabilisticParameterBaseAttributes = ["name", "type", "low", "high", "mean", "median", "mode",
                                                 "var", "std", "skew", "kurt", "star"]

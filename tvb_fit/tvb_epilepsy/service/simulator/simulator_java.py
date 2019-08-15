@@ -9,13 +9,15 @@ import json
 import numpy
 import subprocess
 from copy import copy
+
 from tvb_fit.base.config import GenericConfig
-from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.utils.data_structures_utils import obj_to_dict, assert_arrays
-from tvb_fit.io.h5_reader import H5Reader
 from tvb_fit.service.simulator import ABCSimulator
 from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import calc_x0_val_to_model_x0
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import compute_initial_conditions_from_eq_point
+
+from tvb_utils.log_error_utils import initialize_logger
+from tvb_utils.data_structures_utils import obj_to_dict, assert_arrays
+from tvb_io.h5_reader import H5Reader
 
 
 class Settings(object):

@@ -1,15 +1,18 @@
 from collections import OrderedDict
 
 import numpy as np
-from tvb_fit.base.utils.log_error_utils import initialize_logger, warning, raise_error
-from tvb_fit.base.utils.data_structures_utils import formal_repr, ensure_list, isequal_string, generate_region_labels
-from tvb_fit.base.computations.math_utils import select_greater_values_array_inds
-from tvb_fit.service.head_service import HeadService
-from tvb_fit.service.timeseries_service import TimeseriesService
+
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import BIPOLAR, OBSERVATION_MODELS
+
+from tvb_utils.log_error_utils import initialize_logger, warning, raise_error
+from tvb_utils.data_structures_utils import formal_repr, ensure_list, isequal_string, generate_region_labels
+from tvb_utils.computations_utils import select_greater_values_array_inds
+from tvb_head.service.head_service import HeadService
+from tvb_timeseries.service.timeseries_service import TimeseriesService
 
 
 #TODO: Would it make sense to have this in tvb_fit?
+
 class ModelInversionService(object):
 
     logger = initialize_logger(__name__)
