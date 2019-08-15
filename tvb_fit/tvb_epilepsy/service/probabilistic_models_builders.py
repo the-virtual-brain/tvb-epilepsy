@@ -17,7 +17,6 @@ from tvb_fit.tvb_epilepsy.base.model.epileptor_probabilistic_models \
 from tvb_utils.log_error_utils import initialize_logger, warning, raise_value_error
 from tvb_utils.data_structures_utils import formal_repr, ensure_list
 from tvb_timeseries.model.timeseries import Timeseries as TargetDataTimeseries
-from tvb_timeseries.service.timeseries_service import compute_seeg_exp, compute_seeg_lin
 
 
 x0_def = {"def": X0_DEF, "min": X0_MIN, "max": X0_MAX, }

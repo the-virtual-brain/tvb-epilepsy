@@ -5,8 +5,8 @@ from scipy.optimize import root
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import *
 from tvb_fit.tvb_epilepsy.base.computation_utils.equations_utils import *
 
-from tvb_utils.data_structures_utils import assert_arrays, shape_to_size
 from tvb_utils.log_error_utils import initialize_logger, raise_import_error, raise_value_error
+from tvb_utils.data_structures_utils import assert_arrays, shape_to_size
 
 
 logger = initialize_logger(__name__)

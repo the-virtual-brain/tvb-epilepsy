@@ -12,7 +12,6 @@ from tvb_utils.log_error_utils import raise_value_error, raise_error
 from tvb_utils.file_utils import change_filename_or_overwrite, write_metadata
 
 
-
 class H5Writer(H5WriterBase):
 
     def write_hypothesis(self, hypothesis, path):
