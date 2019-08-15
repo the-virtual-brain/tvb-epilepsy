@@ -1,19 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import os
 import h5py
 from collections import OrderedDict
-import numpy
-from tvb_fit.base.datatypes.dot_dicts import DictDot, OrderedDictDot
+
 from tvb_fit.base.model.probabilistic_models.probabilistic_model_base import ProbabilisticModelBase
-from tvb_fit.base.utils.log_error_utils import initialize_logger, raise_value_error
-from tvb_fit.base.utils.data_structures_utils import isequal_string, ensure_list
-from tvb_fit.base.model.virtual_patient.connectivity import Connectivity, ConnectivityH5Field
-from tvb_fit.base.model.virtual_patient.head import Head
-from tvb_fit.base.model.virtual_patient.sensors import Sensors, SensorTypes, SensorsH5Field
-from tvb_fit.base.model.virtual_patient.surface import Surface, SurfaceH5Field
 from tvb_fit.base.model.model_configuration import ModelConfiguration
-from tvb_fit.base.model.timeseries import TimeseriesDimensions, Timeseries
 from tvb_fit.base.model.simulation_settings import SimulationSettings
 from tvb_fit.base.model.parameter import Parameter
 from tvb_fit.service.model_configuration_builder import ModelConfigurationBuilder
@@ -21,24 +12,19 @@ from tvb_fit.service.probabilistic_parameter_builder import generate_probabilist
     generate_negative_lognormal_parameter
 from tvb_fit.io.h5_writer import H5Writer
 
+from tvb_utils.log_error_utils import initialize_logger, raise_value_error
+from tvb_utils.data_structures_utils import ensure_list
+from tvb_io.h5_reader import H5Reader as H5ReaderBase
+from tvb_io.h5_reader import H5GroupHandlers as H5GroupHandlersBase
+
 
 H5_TYPE_ATTRIBUTE = H5Writer().H5_TYPE_ATTRIBUTE
 H5_SUBTYPE_ATTRIBUTE = H5Writer().H5_SUBTYPE_ATTRIBUTE
 H5_TYPES_ATTRUBUTES = [H5_TYPE_ATTRIBUTE, H5_SUBTYPE_ATTRIBUTE]
 
 
-class H5Reader(object):
+class H5Reader(H5ReaderBase):
     logger = initialize_logger(__name__)
-
-    connectivity_filename = "Connectivity.h5"
-    cortical_surface_filename = "CorticalSurface.h5"
-    subcortical_surface_filename = "SubcorticalSurface.h5"
-    cortical_region_mapping_filename = "RegionMapping.h5"
-    subcortical_region_mapping_filename = "RegionMappingSubcortical.h5"
-    volume_mapping_filename = "VolumeMapping.h5"
-    structural_mri_filename = "StructuralMRI.h5"
-    sensors_filename_prefix = "Sensors"
-    sensors_filename_separator = "_"
 
     def read_simulator_model(self, path, model_builder_fun):
         """
@@ -54,194 +40,6 @@ class H5Reader(object):
             raise_value_error("No model read from model configuration file!: %s" % str(path))
 
         return H5GroupHandlers().read_simulator_model_group(h5_file, model, "/")
-
-    def read_connectivity(self, path):
-        """
-        :param path: Path towards a custom Connectivity H5 file
-        :return: Connectivity object
-        """
-        self.logger.info("Starting to read a Connectivity from: %s" % path)
-        h5_file = h5py.File(path, 'r', libver='latest')
-
-        weights = h5_file['/' + ConnectivityH5Field.WEIGHTS][()]
-        tract_lengths = h5_file['/' + ConnectivityH5Field.TRACTS][()]
-        region_centres = h5_file['/' + ConnectivityH5Field.CENTERS][()]
-        region_labels = h5_file['/' + ConnectivityH5Field.REGION_LABELS][()]
-        orientations = h5_file['/' + ConnectivityH5Field.ORIENTATIONS][()]
-        hemispheres = h5_file['/' + ConnectivityH5Field.HEMISPHERES][()]
-
-        h5_file.close()
-
-        conn = Connectivity(path, weights, tract_lengths, region_labels, region_centres, hemispheres, orientations)
-        self.logger.info("Successfully read connectvity from: %s" % path)
-
-        return conn
-
-    def read_surface(self, path):
-        """
-        :param path: Path towards a custom Surface H5 file
-        :return: Surface object
-        """
-        if not os.path.isfile(path):
-            self.logger.warning("Surface file %s does not exist" % path)
-            return None
-
-        self.logger.info("Starting to read Surface from: %s" % path)
-        h5_file = h5py.File(path, 'r', libver='latest')
-
-        vertices = h5_file['/' + SurfaceH5Field.VERTICES][()]
-        triangles = h5_file['/' + SurfaceH5Field.TRIANGLES][()]
-        vertex_normals = h5_file['/' + SurfaceH5Field.VERTEX_NORMALS][()]
-
-        h5_file.close()
-
-        surface = Surface(vertices, triangles, vertex_normals)
-        self.logger.info("Successfully read surface from: %s" % path)
-
-        return surface
-
-    def read_sensors(self, path):
-        """
-        :param path: Path towards a custom head folder
-        :return: 3 lists with all sensors from Path by type
-        """
-        sensors_seeg = OrderedDict()
-        sensors_eeg = OrderedDict()
-        sensors_meg = OrderedDict()
-
-        self.logger.info("Starting to read all Sensors from: %s" % path)
-
-        all_head_files = os.listdir(path)
-        for head_file in all_head_files:
-            str_head_file = str(head_file)
-            if not str_head_file.startswith(self.sensors_filename_prefix):
-                continue
-            name = str_head_file.split(".")[0]
-            type = str_head_file[len(self.sensors_filename_prefix):str_head_file.index(self.sensors_filename_separator)]
-            if type.upper() == SensorTypes.TYPE_SEEG.value:
-                sensors_seeg[name] = \
-                    self.read_sensors_of_type(os.path.join(path, head_file), SensorTypes.TYPE_SEEG, name)
-            if type.upper() == SensorTypes.TYPE_EEG.value:
-                sensors_eeg[name] = \
-                    self.read_sensors_of_type(os.path.join(path, head_file), SensorTypes.TYPE_EEG, name)
-            if type.upper() == SensorTypes.TYPE_MEG.value:
-                sensors_meg[name] = \
-                    self.read_sensors_of_type(os.path.join(path, head_file), SensorTypes.TYPE_MEG, name)
-
-        self.logger.info("Successfuly read all sensors from: %s" % path)
-
-        return sensors_seeg, sensors_eeg, sensors_meg
-
-    def read_sensors_of_type(self, sensors_file, type, name):
-        """
-        :param
-            sensors_file: Path towards a custom Sensors H5 file
-            type: Senors type
-        :return: Sensors object
-        """
-        if not os.path.exists(sensors_file):
-            self.logger.warning("Senors file %s does not exist!" % sensors_file)
-            return []
-
-        self.logger.info("Starting to read sensors of type %s from: %s" % (type.value, sensors_file))
-        h5_file = h5py.File(sensors_file, 'r', libver='latest')
-
-        labels = h5_file['/' + SensorsH5Field.LABELS][()]
-        locations = h5_file['/' + SensorsH5Field.LOCATIONS][()]
-
-        if '/' + SensorsH5Field.GAIN_MATRIX in h5_file:
-            gain_matrix = h5_file['/' + SensorsH5Field.GAIN_MATRIX][()]
-        else:
-            gain_matrix = None
-
-        h5_file.close()
-
-        sensors = Sensors(labels, locations, gain_matrix=gain_matrix, s_type=type, name=name)
-        self.logger.info("Successfully read sensors from: %s" % sensors_file)
-
-        return sensors
-
-    def read_volume_mapping(self, path):
-        """
-        :param path: Path towards a custom VolumeMapping H5 file
-        :return: volume mapping in a numpy array
-        """
-        if not os.path.isfile(path):
-            self.logger.warning("VolumeMapping file %s does not exist" % path)
-            return numpy.array([])
-
-        self.logger.info("Starting to read VolumeMapping from: %s" % path)
-        h5_file = h5py.File(path, 'r', libver='latest')
-
-        data = h5_file['/data'][()]
-
-        h5_file.close()
-        self.logger.info("Successfully read volume mapping!")  #: %s" % data)
-
-        return data
-
-    def read_region_mapping(self, path):
-        """
-        :param path: Path towards a custom RegionMapping H5 file
-        :return: region mapping in a numpy array
-        """
-        if not os.path.isfile(path):
-            self.logger.warning("RegionMapping file %s does not exist" % path)
-            return numpy.array([])
-
-        self.logger.info("Starting to read RegionMapping from: %s" % path)
-        h5_file = h5py.File(path, 'r', libver='latest')
-
-        data = h5_file['/data'][()]
-
-        h5_file.close()
-        self.logger.info("Successfully read region mapping!")  #: %s" % data)
-
-        return data
-
-    def read_t1(self, path):
-        """
-        :param path: Path towards a custom StructuralMRI H5 file
-        :return: structural MRI in a numpy array
-        """
-        if not os.path.isfile(path):
-            self.logger.warning("StructuralMRI file %s does not exist" % path)
-            return numpy.array([])
-
-        self.logger.info("Starting to read StructuralMRI from: %s" % path)
-        h5_file = h5py.File(path, 'r', libver='latest')
-
-        data = h5_file['/data'][()]
-
-        h5_file.close()
-        self.logger.info("Successfully read structural MRI from: %s" % path)
-
-        return data
-
-    def read_head(self, path, atlas="default"):
-        """
-        :param path: Path towards a custom head folder
-        :return: Head object
-        """
-        self.logger.info("Starting to read Head from: %s" % path)
-        conn = self.read_connectivity(os.path.join(path, self.connectivity_filename))
-        cort_srf = self.read_surface(os.path.join(path, self.cortical_surface_filename))
-        subcort_srf = self.read_surface(os.path.join(path, self.subcortical_surface_filename))
-        cort_rm = self.read_region_mapping(os.path.join(path, self.cortical_region_mapping_filename))
-        subcort_rm = self.read_region_mapping(os.path.join(path, self.subcortical_region_mapping_filename))
-        vm = self.read_volume_mapping(os.path.join(path, self.volume_mapping_filename))
-        t1 = self.read_t1(os.path.join(path, self.structural_mri_filename))
-        sensorsSEEG, sensorsEEG, sensorsMEG = self.read_sensors(path)
-
-        if len(atlas) > 0:
-            name = atlas
-        else:
-            name = path
-        head = Head(conn, cort_srf, subcort_srf, cort_rm, subcort_rm, vm, t1, name,
-                    sensorsSEEG=sensorsSEEG, sensorsEEG=sensorsEEG, sensorsMEG=sensorsMEG)
-        self.logger.info("Successfully read Head from: %s" % path)
-
-        return head
 
     def read_model_configuration_builder(self, path, default_model="Epileptor",
                                          model_configuration_builder=ModelConfigurationBuilder):
@@ -315,74 +113,6 @@ class H5Reader(object):
         h5_file.close()
         return sim_settings
 
-    def read_ts(self, path):
-        """
-        :param path: Path towards a valid TimeSeries H5 file
-        :return: Timeseries data and time in 2 numpy arrays
-        """
-        self.logger.info("Starting to read TimeSeries from: %s" % path)
-        h5_file = h5py.File(path, 'r', libver='latest')
-
-        data = h5_file['/data'][()]
-        total_time = int(h5_file["/"].attrs["Simulated_period"][0])
-        nr_of_steps = int(h5_file["/data"].attrs["Number_of_steps"][0])
-        start_time = float(h5_file["/data"].attrs["Start_time"][0])
-        time = numpy.linspace(start_time, total_time, nr_of_steps)
-
-        self.logger.info("First Channel sv sum: " + str(numpy.sum(data[:, 0])))
-        self.logger.info("Successfully read timeseries!")  #: %s" % data)
-        h5_file.close()
-
-        return time, data
-
-    def read_timeseries(self, path, timeseries=Timeseries):
-        """
-        :param path: Path towards a valid TimeSeries H5 file
-        :return: Timeseries data and time in 2 numpy arrays
-        """
-        self.logger.info("Starting to read TimeSeries from: %s" % path)
-        h5_file = h5py.File(path, 'r', libver='latest')
-
-        data = h5_file['/data'][()]
-        time = h5_file['/time'][()]
-        labels = h5_file['/labels'][()]
-        variables = h5_file['/variables'][()]
-        time_unit = h5_file.attrs["time_unit"]
-        self.logger.info("First Channel sv sum: " + str(numpy.sum(data[:, 0])))
-        self.logger.info("Successfully read Timeseries!")  #: %s" % data)
-        h5_file.close()
-
-        return timeseries(data, {TimeseriesDimensions.SPACE.value: labels,
-                                 TimeseriesDimensions.VARIABLES.value: variables},
-                          time[0], numpy.mean(numpy.diff(time)), time_unit)
-
-    def read_dictionary(self, path, type=None):
-        """
-        :param path: Path towards a dictionary H5 file
-        :return: dict
-        """
-        self.logger.info("Starting to read a dictionary from: %s" % path)
-        h5_file = h5py.File(path, 'r', libver='latest')
-        dictionary = H5GroupHandlers().read_dictionary_from_group(h5_file, type)
-        h5_file.close()
-        return dictionary
-
-    def read_list_of_dicts(self, path, type=None):
-        self.logger.info("Starting to read a list of dictionaries from: %s" % path)
-        h5_file = h5py.File(path, 'r', libver='latest')
-        list_of_dicts = []
-        id = 0
-        h5_group_handlers = H5GroupHandlers()
-        while 1:
-            try:
-                dict_group = h5_file[str(id)]
-            except:
-                break
-            list_of_dicts.append(h5_group_handlers.read_dictionary_from_group(dict_group, type))
-            id += 1
-        h5_file.close()
-        return list_of_dicts
-
     def read_probabilistic_model(self, path):
         h5_file = h5py.File(path, 'r', libver='latest')
         epi_subtype = h5_file.attrs[H5_SUBTYPE_ATTRIBUTE]
@@ -416,22 +146,7 @@ class H5Reader(object):
         return probabilistic_model
 
 
-class H5GroupHandlers(object):
-
-    def read_dictionary_from_group(self, group, type=None):
-        dictionary = dict()
-        for dataset in group.keys():
-            dictionary.update({dataset: group[dataset][()]})
-        for attr in group.attrs.keys():
-            dictionary.update({attr: group.attrs[attr]})
-        if type is None:
-            type = group.attrs[H5_SUBTYPE_ATTRIBUTE]
-        if isequal_string(type, "DictDot"):
-            return DictDot(dictionary)
-        elif isequal_string(type, "OrderedDictDot"):
-            return OrderedDictDot(dictionary)
-        else:
-            return dictionary
+class H5GroupHandlers(H5GroupHandlersBase):
 
     def read_simulator_model_group(self, h5_file, model, group):
         for dataset in h5_file[group].keys():
