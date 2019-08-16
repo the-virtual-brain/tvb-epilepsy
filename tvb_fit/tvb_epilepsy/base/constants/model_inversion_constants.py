@@ -4,6 +4,7 @@ import numpy as np
 
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import X1_DEF, X1EQ_CR_DEF
 
+
 # Model inversion constants
 
 

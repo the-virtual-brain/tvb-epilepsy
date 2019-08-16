@@ -1,11 +1,9 @@
 import os
-from datetime import datetime
 
 from tvb_config.config import Config as ConfigBase
 from tvb_config.config import GenericConfig as GenericConfigBase
 from tvb_config.config import CalculusConfig, FiguresConfig, InputConfig, OutputConfig
 
-import tvb_fit
 
 class GenericConfig(GenericConfigBase):
     _module_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -24,9 +22,6 @@ class GenericConfig(GenericConfigBase):
     MODE_JAVA = "java"
     MODE_TVB = "tvb"
 
-
-class InputConfig(object):
-    _base_input = os.getcwd()
 
 class Config(ConfigBase):
     generic = GenericConfig()

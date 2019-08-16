@@ -7,7 +7,7 @@ such as eigen_vectors_number and LSAService in a h5 file
 """
 import numpy
 
-from tvb_fit.base.config import CalculusConfig
+from tvb_fit.tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import X1EQ_CR_DEF
 from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import calc_fz_jac_square_taylor, calc_jac
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import calc_eq_z

@@ -29,7 +29,7 @@ class Plotter(PlotterBase):
         return SimulationPlotter(self.config).plot_simulated_timeseries(*args, **kwargs)
 
     def plot_active_regions_gain_matrix(self, *args, **kwargs):
-        return HeadPlotter()._plot_gain_matrix(*args, **kwargs)
+        return HeadPlotter()._plot_projection(*args, **kwargs)
 
     def plot_fit_scalar_params_iters(self, *args, **kwargs):
         return ModelInversionPlotter(self.config).plot_fit_scalar_params_iters(*args, **kwargs)

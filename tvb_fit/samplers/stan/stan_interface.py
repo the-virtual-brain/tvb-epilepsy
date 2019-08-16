@@ -15,8 +15,8 @@ from tvb_utils.data_structures_utils import isequal_string, ensure_list, sort_di
     format_all_numbers_in_strings, list_of_dicts_to_dicts_of_ndarrays, switch_levels_of_dicts_of_dicts
 from tvb_io.r_file_io import rdump, rload
 from tvb_io.csv import parse_csv
-from tvb_io.h5_reader import H5Reader
-from tvb_io.h5_writer import H5Writer
+from tvb_fit.io.h5_reader import H5Reader
+from tvb_fit.io.h5_writer import H5Writer
 
 
 class StanInterface(object):

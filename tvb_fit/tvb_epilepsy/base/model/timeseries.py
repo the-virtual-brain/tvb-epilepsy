@@ -28,15 +28,15 @@ class Timeseries(TimeseriesBase):
     logger = initialize_logger(__name__)
 
     def get_source(self):
-        if TimeseriesDimensions.VARIABLES.value not in self.dimension_labels.keys():
+        if TimeseriesDimensions.VARIABLES.value not in self.labels_dimensions.keys():
             self.logger.error("No state variables are defined for this instance!")
             raise ValueError
 
-        if PossibleVariables.SOURCE.value in self.dimension_labels[TimeseriesDimensions.VARIABLES.value]:
+        if PossibleVariables.SOURCE.value in self.labels_dimensions[TimeseriesDimensions.VARIABLES.value]:
             return self.get_state_variable(PossibleVariables.SOURCE.value)
-        if PossibleVariables.X1.value in self.dimension_labels[TimeseriesDimensions.VARIABLES.value]:
+        if PossibleVariables.X1.value in self.labels_dimensions[TimeseriesDimensions.VARIABLES.value]:
             y0_ts = self.get_state_variable(PossibleVariables.X1.value)
-            if PossibleVariables.X2.value in self.dimension_labels[TimeseriesDimensions.VARIABLES.value]:
+            if PossibleVariables.X2.value in self.labels_dimensions[TimeseriesDimensions.VARIABLES.value]:
                 self.logger.info("%s is computed using %s and %s state variables!" % (
                     PossibleVariables.SOURCE.value, PossibleVariables.X1.value, PossibleVariables.X2.value))
                 y2_ts = self.get_state_variable(PossibleVariables.X2.value)
@@ -45,10 +45,13 @@ class Timeseries(TimeseriesBase):
                 self.logger.warn("%s is computed using %s state variable!" % (
                     PossibleVariables.SOURCE.value, PossibleVariables.X1.value))
                 source_data = -y0_ts.data
-            source_dim_labels = OrderedDict(
-                {TimeseriesDimensions.SPACE.value: self.dimension_labels[TimeseriesDimensions.SPACE.value],
-                 TimeseriesDimensions.VARIABLES.value: [PossibleVariables.SOURCE.value]})
-            return Timeseries(source_data, source_dim_labels, self.time_start, self.time_step, self.time_unit)
+            source_dim_labels = {
+                 TimeseriesDimensions.SPACE.value: self.labels_dimensions[TimeseriesDimensions.SPACE.value],
+                 TimeseriesDimensions.VARIABLES.value: [PossibleVariables.SOURCE.value]}
+            return Timeseries(  # substitute with TimeSeriesRegion fot TVB like functionality
+                              source_data, start_time=self.start_time, connectivity=self.connectivity,
+                              labels_ordering=self.labels_ordering, labels_dimensions=source_dim_labels,
+                              sample_period=self.sample_period, sample_period_unit=self.time_unit, ts_type=self.ts_type)
         self.logger.error(
             "%s is not computed and cannot be computed now because state variables %s and %s are not defined!" % (
                 PossibleVariables.SOURCE.value, PossibleVariables.X1.value, PossibleVariables.X2.value))

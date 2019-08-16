@@ -6,6 +6,7 @@ from tvb_fit.base.model.probabilistic_models.parameters.base import get_x_arg_fo
 from tvb_utils.data_structures_utils import formal_repr
 from tvb_utils.log_error_utils import raise_not_implemented_error
 
+
 TransformedProbabilisticParameterBaseAttributes = ["name", "type", "low", "high", "mean", "median", "mode",
                                                 "var", "std", "skew", "kurt", "star"]
 TransformedProbabilisticParameterBaseStarAttributes = ["star_low", "star_high", "star_mean", "star_median", "star_mode",

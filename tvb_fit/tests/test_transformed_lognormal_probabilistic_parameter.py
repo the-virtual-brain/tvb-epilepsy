@@ -3,7 +3,7 @@ import numpy as np
 from tvb_fit.tests.base import BaseTest
 from tvb_fit.service.probabilistic_parameter_builder import generate_negative_lognormal_parameter
 
-from tvb_plot.plotter import Plotter
+from tvb_fit.plot.plotter import Plotter
 
 
 if __name__ == "__main__":

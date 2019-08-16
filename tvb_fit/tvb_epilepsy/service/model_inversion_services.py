@@ -6,7 +6,7 @@ from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import BIPOLA
 
 from tvb_utils.log_error_utils import initialize_logger, warning, raise_error
 from tvb_utils.data_structures_utils import formal_repr, ensure_list, isequal_string, generate_region_labels
-from tvb_utils.computations_utils import select_greater_values_array_inds
+from tvb_utils.computations_utils import select_greater_values_array_inds, select_greater_values_2Darray_inds
 from tvb_head.service.head_service import HeadService
 from tvb_timeseries.service.timeseries_service import TimeseriesService
 
@@ -106,8 +106,8 @@ class ODEModelInversionService(ModelInversionService):
     manual_selection = []
     auto_selection = None  #"rois-power"
     power_th = None
-    gain_matrix_th = None
-    gain_matrix_percentile = 99.0
+    projection_th = None
+    projection_percentile = 99.0
     n_signals_per_roi = None
     normalization = None  # "baseline-maxamplitude"
     normalization_args = {}
@@ -119,33 +119,33 @@ class ODEModelInversionService(ModelInversionService):
         super(ODEModelInversionService, self).__init__()
         self.ts_service = TimeseriesService()
 
-    def update_active_regions_sensors(self, probabilistic_model, sensors, reset=False):
+    def update_active_regions_sensors(self, probabilistic_model, sensors, projection, reset=False):
         if reset:
             probabilistic_model.active_regions = np.array([])
         active_regions = probabilistic_model.active_regions.tolist()
         if sensors is not None:
-            active_regions += sensors.get_stronger_gain_matrix_inds(self.gain_matrix_th,
-                                                                    self.gain_matrix_percentile)[1].tolist()
+            active_regions += select_greater_values_2Darray_inds(self.projection_th,
+                                                                 self.projection_percentile)[1].tolist()
             active_regions = np.unique(active_regions)
             active_regions = self.exclude_regions(active_regions)
             probabilistic_model.update_active_regions(active_regions)
-            probabilistic_model.gain_matrix = sensors.gain_matrix[:, probabilistic_model.active_regions]
+            probabilistic_model.projection = projection[:, probabilistic_model.active_regions]
         else:
             self.logger.warning("No LSA results found (empty propagations_strengths vector)!" +
                                 "\nSkipping of setting active regions according to LSA!")
         return probabilistic_model
 
-    def update_active_regions_target_data(self, target_data, probabilistic_model, sensors, reset=False):
+    def update_active_regions_target_data(self, target_data, probabilistic_model, sensors, projection, reset=False):
         if reset:
             probabilistic_model.active_regions = np.array([])
         if target_data:
             active_regions = probabilistic_model.active_regions.tolist()
-            gain_matrix = np.array(sensors.gain_matrix)
+            projection = np.array(projection)
             signals_inds = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
             if len(signals_inds) != 0:
-                gain_matrix = gain_matrix[signals_inds]
-                for proj in gain_matrix:
-                    active_regions += select_greater_values_array_inds(proj, self.gain_matrix_th,
+                projection = projection[signals_inds]
+                for proj in projection:
+                    active_regions += select_greater_values_array_inds(proj, self.projection_th,
                                                                        self.n_signals_per_roi).tolist()
                 active_regions = np.unique(active_regions)
                 active_regions = self.exclude_regions(active_regions)
@@ -154,7 +154,7 @@ class ODEModelInversionService(ModelInversionService):
                 warning("Skipping active regions setting by seeg power because no data were assigned to sensors!")
         else:
             warning("Skipping active regions setting by seeg power because no target data were provided!")
-        probabilistic_model.gain_matrix = sensors.gain_matrix[signals_inds][:, probabilistic_model.active_regions]
+        probabilistic_model.projection = projection[signals_inds][:, probabilistic_model.active_regions]
         return probabilistic_model
 
     def update_active_regions(self, probabilistic_model, sensors=None, target_data=None, e_values=[], x0_values=[],
@@ -173,7 +173,7 @@ class ODEModelInversionService(ModelInversionService):
                     self.update_active_regions_target_data(target_data, probabilistic_model, sensors, reset=False)
         return probabilistic_model
 
-    def select_target_data_sensors(self, target_data, sensors, rois, power=np.array([]),
+    def select_target_data_sensors(self, target_data, sensors, projection, rois, power=np.array([]),
                                    n_groups=None, members_per_group=None):
         if n_groups is None:
             n_groups = sensors.number_of_electrodes * self.sensors_per_electrode
@@ -187,11 +187,11 @@ class ODEModelInversionService(ModelInversionService):
             if self.auto_selection.find("power"):
                 self.auto_selection = self.auto_selection.replace("power", "")
                 signals_inds = self.ts_service.select_by_power(target_data, power, self.power_th)[1].tolist()
-            if sensors.gain_matrix is not None:
+            if projection is not None:
                 signals_inds_by_label = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
-                gain_matrix = sensors.gain_matrix[signals_inds_by_label][:, rois]
+                projection = projection[signals_inds_by_label][:, rois]
                 signals_inds += \
-                    self.ts_service.select_by_rois_proximity(target_data, gain_matrix.T, self.gain_matrix_th,
+                    self.ts_service.select_by_rois_proximity(target_data, projection.T, self.projection_th,
                                                              n_signals=self.n_signals_per_roi)[1].tolist()
             target_data = target_data.get_subspace_by_index(np.unique(signals_inds))
         if self.auto_selection.find("correlation-power") >= 0 and target_data.number_of_labels > 1:
@@ -204,9 +204,9 @@ class ODEModelInversionService(ModelInversionService):
             if self.group_electrodes:
                 disconnectivity = HeadService().sensors_in_electrodes_disconnectivity(sensors, target_data.space_labels)
             signals_inds_by_label = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
-            gain_matrix = sensors.gain_matrix[signals_inds_by_label][:, rois]
+            projection = projection[signals_inds_by_label][:, rois]
             target_data, _ = \
-                self.ts_service.select_by_gain_matrix_power(target_data, gain_matrix, disconnectivity=disconnectivity,
+                self.ts_service.select_by_projection_power(target_data, projection, disconnectivity=disconnectivity,
                                                             n_groups=n_groups, members_per_group=members_per_group)
         elif self.auto_selection.find("power") >= 0:
             target_data, _ = self.ts_service.select_by_power(target_data, power, self.power_th)
@@ -214,10 +214,10 @@ class ODEModelInversionService(ModelInversionService):
         target_data = target_data.get_subspace_by_index(sensors_inds)
         return target_data
 
-    def set_gain_matrix(self, target_data, probabilistic_model, sensors=None):
+    def set_projection(self, target_data, probabilistic_model, sensors, projection):
         if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
             sensors_inds = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
-            return sensors.gain_matrix[sensors_inds][:, probabilistic_model.active_regions]
+            return projection[sensors_inds][:, probabilistic_model.active_regions]
         else:
             return np.eye(target_data.number_of_labels)
 
@@ -228,7 +228,7 @@ class ODEModelInversionService(ModelInversionService):
                 sensors = sensors.head.get_sensors_by_index(sensor_ids=sensor_id)
             except:
                 if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
-                    raise_error("No sensors instance! Needed for gain_matrix computation!")
+                    raise_error("No sensors instance! Needed for projection computation!")
                 else:
                     pass
         if np.any(np.array(self.cut_target_times_on_off)):
@@ -250,7 +250,7 @@ class ODEModelInversionService(ModelInversionService):
         probabilistic_model.time = target_data.time
         probabilistic_model.time_length = len(probabilistic_model.time)
         probabilistic_model.number_of_target_data = target_data.number_of_labels
-        probabilistic_model.gain_matrix = self.set_gain_matrix(target_data, probabilistic_model, sensors)
+        probabilistic_model.projection = self.set_projection(target_data, probabilistic_model, sensors)
         # if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
         #     signals_inds_by_label = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
         #     target_data.dimension_labels["space"] = generate_region_labels(target_data.number_of_labels,

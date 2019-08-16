@@ -18,12 +18,12 @@ from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_fit.tvb_epilepsy.plot.plotter import Plotter
 
-from tvb_utils.data_structures_utils import assert_equal_objects, isequal_string, ensure_list
 from tvb_utils.log_error_utils import initialize_logger
+from tvb_utils.data_structures_utils import assert_equal_objects, isequal_string, ensure_list
 from tvb_io.tvb_data_reader import TVBReader
 
 
-PSE_FLAG = True
+PSE_FLAG = False
 SA_PSE_FLAG = False
 SIM_FLAG = True
 
@@ -34,13 +34,14 @@ if PSE_FLAG:
         from tvb_fit.tvb_epilepsy.top.scripts.sensitivity_analysis_sripts import \
             sensitivity_analysis_pse_from_lsa_hypothesis
 
+TEST_WRITE_READE = False
 
 EP_NAME = "clinical_hypothesis_preseeg"
 
 
 def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_UNSCALED_DEF, ep_indices=[], hyp_norm=0.99, manual_hypos=[],
              sim_type="paper", pse_flag=PSE_FLAG, sa_pse_flag=SA_PSE_FLAG, sim_flag=SIM_FLAG, n_samples=100,
-             test_write_read=False):
+             test_write_read=TEST_WRITE_READE):
     logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
     # -------------------------------Reading data-----------------------------------
     reader = TVBReader() if config.input.IS_TVB_MODE else H5Reader()
@@ -248,7 +249,8 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_UNSCALED_DEF, ep_ind
                     if not status:
                         logger.warning("\nSimulation failed!")
                     else:
-                        sim_output, seeg = compute_seeg_and_write_ts_to_h5(sim_output, sim.model, head.sensorsSEEG,
+                        sim_output, seeg = compute_seeg_and_write_ts_to_h5(sim_output, sim.model,
+                                                                           head.get_sensors("SEEG"),
                                                                            os.path.join(config.out.FOLDER_RES,
                                                                                         sim_type + "_ts.h5"),
                                                                            seeg_gain_mode="lin", hpf_flag=True,
@@ -262,9 +264,9 @@ def main_vep(config=Config(), ep_name=EP_NAME, K_unscaled=K_UNSCALED_DEF, ep_ind
 
 if __name__ == "__main__":
     head_folder = os.path.join(os.path.expanduser("~"),
-                               'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "Head")
+                               'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", "TVB3", "HeadD")
     output = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "tests")
     config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
-    main_vep(config, "clinical_hypothesis_postseeg", ep_indices=[1, 26],
-             sim_type=[ "paper", "default", "fitting", "reduced"], test_write_read=True)  #",, "realistic"
+    main_vep(config, "preseeg", ep_indices=[1, 26],
+             sim_type=["fitting", "reduced", "paper", "default"], test_write_read=False)  #",, "realistic"
     # main_vep()

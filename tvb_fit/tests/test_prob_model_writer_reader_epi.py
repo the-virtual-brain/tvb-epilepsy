@@ -5,8 +5,8 @@ from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_fit.tvb_epilepsy.service.probabilistic_models_builders import SDEProbabilisticModelBuilder
 
-from tvb_io.h5_writer import H5Writer
-from tvb_io.h5_reader import H5Reader
+from tvb_fit.io.h5_writer import H5Writer
+from tvb_fit.io.h5_reader import H5Reader
 
 
 if __name__ == "__main__":

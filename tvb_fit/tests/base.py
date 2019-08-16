@@ -4,12 +4,12 @@ import os
 import numpy
 
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
+from tvb_fit.io.h5_reader import H5Reader
 
 from tvb_head.model.connectivity import Connectivity
 from tvb_head.model.sensors import Sensors
 from tvb_head.model.surface import Surface
 from tvb_head.model.head import Head
-from tvb_io.h5_reader import H5Reader
 
 
 class BaseTest(object):

@@ -2,7 +2,7 @@ import os
 import numpy
 
 from tvb_fit.tests.base import BaseTest
-from tvb_io.h5_writer import H5Writer
+from tvb_fit.io.h5_writer import H5Writer
 
 
 class TestCustomH5writer(BaseTest):

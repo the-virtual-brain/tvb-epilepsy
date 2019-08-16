@@ -67,7 +67,6 @@ class ModelConfigPlotter(BasePlotter):
                        x2=0.0)  # yc + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
         x1null, = pyplot.plot(x1, zX1, 'b-', label='x1 nullcline', linewidth=1)
         ax = pyplot.gca()
-        ax.axes.hold(True)
         # z nullcines
         # center point (critical equilibrium point) without approximation:
         # zsq0 = yc + Iext1 - x1sq0 ** 3 - 2.0 * x1sq0 ** 2

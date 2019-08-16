@@ -297,12 +297,12 @@ def set_target_timeseries(probabilistic_model, model_inversion, signals, sensors
                                 time_units=target_data.time_unit,
                                 title='Fit-Target Signals', labels=target_data.space_labels)
 
-        HeadPlotter(plotter.config)._plot_gain_matrix(sensors, head.connectivity.region_labels,
-                                                      title="Active regions -> target data projection",
-                                                      show_x_labels=True, show_y_labels=True,
-                                                      x_ticks=sensors. \
-                                                         get_sensors_inds_by_sensors_labels(target_data.space_labels),
-                                                      y_ticks=probabilistic_model.active_regions)
+        HeadPlotter(plotter.config)._plot_projection(sensors, head.connectivity.region_labels,
+                                                     title="Active regions -> target data projection",
+                                                     show_x_labels=True, show_y_labels=True,
+                                                     x_ticks=sensors. \
+                                                     get_sensors_inds_by_sensors_labels(target_data.space_labels),
+                                                     y_ticks=probabilistic_model.active_regions)
 
     if writer:
         writer.write_timeseries(target_data, target_data_file)

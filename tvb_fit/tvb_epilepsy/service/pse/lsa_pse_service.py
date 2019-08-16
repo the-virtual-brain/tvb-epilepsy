@@ -1,5 +1,6 @@
 import numpy
 from copy import deepcopy
+
 from tvb_fit.tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_fit.tvb_epilepsy.service.pse.pse_service import PSEService
 from tvb_fit.tvb_epilepsy.service.lsa_service import LSAService

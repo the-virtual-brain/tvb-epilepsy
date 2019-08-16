@@ -24,10 +24,10 @@ logger = initialize_logger(__name__)
 def _compute_and_write_seeg(source_timeseries, sensors_dict, filename, hpf_flag=False, hpf_low=10.0,
                             hpf_high=256.0, seeg_gain_mode="lin", h5_writer=H5Writer()):
     ts_service = TimeseriesService()
-    fsAVG = 1000.0 / source_timeseries.time_step
+    fsAVG = 1000.0 / source_timeseries.sample_period
 
     if hpf_flag:
-        hpf_low = max(hpf_low, 1000.0 / (source_timeseries.time_end - source_timeseries.time_start))
+        hpf_low = max(hpf_low, 1000.0 / (source_timeseries.end_time - source_timeseries.start_time))
         hpf_high = min(fsAVG / 2.0 - 10.0, hpf_high)
 
     seeg_data = ts_service.compute_seeg(source_timeseries, sensors_dict, sum_mode=seeg_gain_mode)
@@ -37,7 +37,7 @@ def _compute_and_write_seeg(source_timeseries, sensors_dict, filename, hpf_flag=
         else:
             seeg_to_write = seeg
         # TODO: test the case where we save subsequent seeg data from different sensors
-        h5_writer.write_ts_seeg_epi(seeg_to_write, source_timeseries.time_step, filename, sensors_name=s_name)
+        h5_writer.write_ts_seeg_epi(seeg_to_write, source_timeseries.sample_period, filename, sensors_name=s_name)
 
     return seeg_data
 
@@ -46,9 +46,9 @@ def _compute_and_write_seeg(source_timeseries, sensors_dict, filename, hpf_flag=
 def compute_seeg_and_write_ts_to_h5(timeseries, model, sensors_dict, filename, seeg_gain_mode="lin",
                                     hpf_flag=False, hpf_low=10.0, hpf_high=256.0, h5_writer=H5Writer()):
     filename_epi = os.path.splitext(filename)[0] + "_epi.h5"
-    h5_writer.write_ts(timeseries, timeseries.time_step, filename)
+    h5_writer.write_ts(timeseries, timeseries.sample_period, filename)
     source_timeseries = timeseries.get_source()
-    h5_writer.write_ts_epi(timeseries, timeseries.time_step, filename_epi, source_timeseries)
+    h5_writer.write_ts_epi(timeseries, timeseries.sample_period, filename_epi, source_timeseries)
     if isinstance(model, EpileptorDP2D):
         hpf_flag = False
     seeg_ts_all = _compute_and_write_seeg(source_timeseries, sensors_dict, filename_epi, hpf_flag, hpf_low, hpf_high,

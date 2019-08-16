@@ -2,8 +2,8 @@ import numpy as np
 
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import *
 
-from tvb_utils.data_structures_utils import assert_arrays, isequal_string
 from tvb_utils.log_error_utils import raise_value_error
+from tvb_utils.data_structures_utils import assert_arrays, isequal_string
 
 
 def if_ydot0(x1, a, b):

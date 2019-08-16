@@ -55,7 +55,7 @@ class H5Writer(H5WriterBase):
             raise_value_error("Invalid TS data 3D (time, regions, sv) expected", self.logger)
         self.logger.info("Writing a TS at:\n" + path)
         if source_ts is None:
-            source_ts = raw_ts.source
+            source_ts = raw_ts.get_source()
         h5_file = h5py.File(path, 'a', libver='latest')
         h5_file.create_dataset("/data", data=raw_ts.squeezed)
         h5_file.create_dataset("/lfpdata", data=source_ts.squeezed)
@@ -63,10 +63,10 @@ class H5Writer(H5WriterBase):
         write_metadata({KEY_MAX: raw_ts.squeezed.max(), KEY_MIN: raw_ts.squeezed.min(),
                         KEY_STEPS: raw_ts.squeezed.shape[0], KEY_CHANNELS: raw_ts.squeezed.shape[1],
                         KEY_SV: raw_ts.squeezed.shape[2], KEY_SAMPLING: sampling_period,
-                        KEY_START: raw_ts.time_start}, h5_file, KEY_DATE, KEY_VERSION, "/data")
+                        KEY_START: raw_ts.start_time}, h5_file, KEY_DATE, KEY_VERSION, "/data")
         write_metadata({KEY_MAX: source_ts.squeezed.max(), KEY_MIN: source_ts.squeezed.min(),
                         KEY_STEPS: source_ts.squeezed.shape[0], KEY_CHANNELS: source_ts.squeezed.shape[1],
-                        KEY_SV: 1, KEY_SAMPLING: sampling_period, KEY_START: source_ts.time_start}, h5_file, KEY_DATE,
+                        KEY_SV: 1, KEY_SAMPLING: sampling_period, KEY_START: source_ts.start_time}, h5_file, KEY_DATE,
                        KEY_VERSION, "/lfpdata")
         h5_file.close()
 

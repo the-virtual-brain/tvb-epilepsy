@@ -4,7 +4,6 @@ import numpy
 
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
-from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
 
 from tvb_utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_utils.data_structures_utils import ensure_list
@@ -135,8 +134,12 @@ class HypothesisBuilder(object):
                                   "\nThey cannot be more than 2!")
             else:
                 if n_vals < 2:
-                    # Assuming normalization only to a maximum value, keeping the existing minimum one
-                    values = [numpy.min(self.diseased_regions_values)] + values
+                    if len(self.diseased_regions_values) > 0:
+                        # Assuming normalization only to a maximum value, keeping the existing minimum one
+                        min_val = numpy.min(self.diseased_regions_values)
+                    else:
+                        min_val = 0.0
+                    values = [min_val] + values
                 self.normalize_values = values
         return self
 
@@ -173,6 +176,7 @@ class HypothesisBuilder(object):
                                  lsa_propagation_strenghts=self.lsa_propagation_strengths, name=self.name)
 
     def build_hypothesis_from_file(self, hyp_file, e_indices=[]):
+        from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
         self.set_diseased_regions_values(
             H5Reader().read_epileptogenicity(self.config.input.HEAD, name=hyp_file))
         if e_indices:

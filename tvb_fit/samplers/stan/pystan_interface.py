@@ -7,8 +7,8 @@ import pystan as ps
 from tvb_fit.samplers.stan.stan_interface import StanInterface
 from tvb_fit.samplers.stan.stan_factory import STAN_OUTPUT_OPTIONS
 
-from tvb_utils.data_structures_utils import construct_import_path
 from tvb_utils.log_error_utils import raise_not_implemented_error, raise_value_error
+from tvb_utils.data_structures_utils import construct_import_path
 
 
 class PyStanInterface(StanInterface):

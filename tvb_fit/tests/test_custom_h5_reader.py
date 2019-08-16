@@ -4,11 +4,10 @@ import numpy
 from tvb_fit.tests.base import BaseTest
 from tvb_fit.base.config import InputConfig
 from tvb_fit.base.model.simulation_settings import SimulationSettings
+from tvb_fit.io.h5_reader import H5Reader
+from tvb_fit.io.h5_writer import H5Writer
 
 from tvb_head.model.sensors import SensorTypes
-
-from tvb_io.h5_reader import H5Reader
-from tvb_io.h5_writer import H5Writer
 
 
 class TestCustomH5Reader(BaseTest):

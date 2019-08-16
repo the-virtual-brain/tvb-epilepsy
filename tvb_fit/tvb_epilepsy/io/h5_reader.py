@@ -1,6 +1,8 @@
 import os
 import h5py
 
+import numpy
+
 from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration \
     import EpileptorModelConfiguration as ModelConfiguration
 from tvb_fit.tvb_epilepsy.base.model.epileptor_probabilistic_models import EpileptorProbabilisticModels, \
@@ -23,6 +25,58 @@ H5_TYPES_ATTRUBUTES = [H5_TYPE_ATTRIBUTE, H5_SUBTYPE_ATTRIBUTE]
 
 class H5Reader(H5ReaderBase):
     logger = initialize_logger(__name__)
+
+    # TODO: find a better solution than this hack for old files with numpy.array "Sensors_subtype"
+    def read_sensors_of_type(self, sensors_file, name):
+        from tvb_head.model.sensors import \
+            Sensors, SensorTypesToClassesDict, SensorsH5Field, SensorTypesToProjectionDict
+        from tvb.datatypes.projections import ProjectionMatrix
+
+        """
+        :param
+            sensors_file: Path towards a custom Sensors H5 file
+            s_type: Senors s_type
+        :return: Sensors object
+        """
+        if not os.path.exists(sensors_file):
+            self.logger.warning("Senors file %s does not exist!" % sensors_file)
+            return []
+
+        self.logger.info("Starting to read sensors of from: %s" % sensors_file)
+        h5_file = h5py.File(sensors_file, 'r', libver='latest')
+
+        locations = h5_file['/' + SensorsH5Field.LOCATIONS][()]
+        try:
+            labels = h5_file['/' + SensorsH5Field.LABELS][()]
+        except:
+            labels = numpy.array([])
+        try:
+            orientations = h5_file['/' + SensorsH5Field.ORIENTATIONS][()]
+        except:
+            orientations = numpy.array([])
+        name = h5_file.attrs.get("name", name)
+        s_type = ensure_list(h5_file.attrs.get("Sensors_subtype", [""]))[0]
+
+        # TODO: a better solution for old files that use "gain_matrix"
+        for proj_name in [SensorsH5Field.PROJECTION_MATRIX, "gain_matrix"]:
+            if '/' + proj_name in h5_file:
+                proj_matrix = h5_file['/' + proj_name][()]
+                projection = SensorTypesToProjectionDict.get(s_type, ProjectionMatrix())()
+                projection.projection_data = proj_matrix
+                break
+            else:
+                projection = None
+
+        h5_file.close()
+
+        sensors = \
+            SensorTypesToClassesDict.get(s_type, Sensors)(file_path=sensors_file, name=name,
+                                                          labels=labels, locations=locations,
+                                                          orientations=orientations)
+        sensors.configure()
+        self.logger.info("Successfully read sensors from: %s" % sensors_file)
+
+        return sensors, projection
 
     def read_epileptogenicity(self, root_folder, name="ep"):
         """

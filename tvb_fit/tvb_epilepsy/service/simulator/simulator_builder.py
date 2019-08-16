@@ -1,11 +1,7 @@
 from copy import deepcopy
 import numpy
-from tvb.simulator import noise
-from tvb.simulator.models.base import Model
-from tvb.simulator.monitors import Monitor, TemporalAverage
-from tvb.simulator.noise import Noise
-from tvb_fit.base.constants import WHITE_NOISE, COLORED_NOISE, NOISE_SEED
 
+from tvb_fit.base.constants import WHITE_NOISE, COLORED_NOISE, NOISE_SEED
 from tvb_fit.base.model.simulation_settings import SimulationSettings
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import PMODE_DEF
 from tvb_fit.tvb_epilepsy.service.simulator.epileptor_model_factory \
@@ -15,6 +11,12 @@ from tvb_fit.tvb_epilepsy.service.simulator.simulator_tvb import SimulatorTVB
 
 from tvb_utils.log_error_utils import initialize_logger, raise_value_error
 from tvb_utils.data_structures_utils import isequal_string, ensure_list
+
+
+from tvb.simulator import noise
+from tvb.simulator.models.base import Model
+from tvb.simulator.monitors import Monitor, TemporalAverage
+from tvb.simulator.noise import Noise
 
 
 class SimulatorBuilder(object):
