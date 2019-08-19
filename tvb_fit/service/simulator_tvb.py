@@ -122,13 +122,13 @@ class SimulatorTVB(ABCSimulator):
                 return None, status
 
         tavg_time = numpy.array(tavg_time).flatten().astype('f')
-        tavg_data = numpy.swapaxes(tavg_data, 1, 2).astype('f')
+        tavg_data = numpy.array(tavg_data).astype('f')
 
-        return timeseries(# substitute with TimeSeriesRegion fot TVB like functionality
-                          tavg_data, time=tavg_time,
-                          connectivity=self.simTVB.connectivity,
+        return timeseries( # substitute with TimeSeriesRegion for TVB like functionality
+                          tavg_data, time=tavg_time, connectivity=self.simTVB.connectivity,
                           labels_ordering=["Time", TimeseriesDimensions.VARIABLES.value, "Region", "Samples"],
-                          labels_dimensions={TimeseriesDimensions.SPACE.value: self.connectivity.region_labels,
-                                             TimeseriesDimensions.VARIABLES.value: self.get_vois()}, ts_type="Region"), \
+                          labels_dimensions={TimeseriesDimensions.VARIABLES.value: self.get_vois(),
+                                             TimeseriesDimensions.SPACE.value: self.connectivity.region_labels},
+                          ts_type="Region"), \
                status
 

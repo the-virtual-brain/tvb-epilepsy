@@ -188,7 +188,7 @@ class SimulatorJava(ABCSimulator):
                                           initial_states=None, initial_states_shape=None)
         self._save_serialized(custom_config, self.json_config_path)
 
-    def launch_simulation(self):
+    def launch_simulation(self, timeseries=Timeseries):
         from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
         opts = "java -Dncsa.hdf.hdf5lib.H5.hdf5lib=" + os.path.join(GenericConfig.LIB_PATH, GenericConfig.HDF5_LIB) + \
                " " + "-Djava.library.path=" + GenericConfig.LIB_PATH + " " + "-cp" + " " + GenericConfig.JAR_PATH + \
@@ -201,10 +201,13 @@ class SimulatorJava(ABCSimulator):
             status = False
             self.logger.warning("Something went wrong with this simulation...")
         time, data = H5Reader().read_ts(os.path.join(self.head_path, "full-configuration", "ts.h5"))
-        return Timeseries(  # substitute with TimeSeriesRegion fot TVB like functionality
+        # TODO: confirm correct labels_ordering of data that Episense simulator returns!
+        return timeseries(  # substitute with TimeSeriesRegion fot TVB like functionality
                           data, time=time, connectivity=self._vp2tvb_connectivity(TIME_DELAYS_FLAG),
-                          labels_dimensions={TimeseriesDimensions.SPACE.value: self.connectivity.region_labels,
-                                            TimeseriesDimensions.VARIABLES.value: self.get_vois()},ts_type="Region"), \
+                          labels_ordering=["Time", TimeseriesDimensions.VARIABLES.value, "Region", "Samples"],
+                          labels_dimensions={TimeseriesDimensions.VARIABLES.value: self.get_vois(),
+                                             TimeseriesDimensions.SPACE.value: self.connectivity.region_labels},
+                          ts_type="Region"), \
                status
 
     def prepare_epileptor_model_for_json(self, no_regions=88):
