@@ -23,7 +23,7 @@ from tvb_utils.data_structures_utils import assert_equal_objects, isequal_string
 from tvb_io.tvb_data_reader import TVBReader
 
 
-PSE_FLAG = False
+PSE_FLAG = True
 SA_PSE_FLAG = False
 SIM_FLAG = True
 
@@ -34,7 +34,7 @@ if PSE_FLAG:
         from tvb_fit.tvb_epilepsy.top.scripts.sensitivity_analysis_sripts import \
             sensitivity_analysis_pse_from_lsa_hypothesis
 
-TEST_WRITE_READE = False
+TEST_WRITE_READE = True
 
 EP_NAME = "clinical_hypothesis_preseeg"
 
@@ -268,5 +268,5 @@ if __name__ == "__main__":
     output = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "tests")
     config = Config(head_folder=head_folder, output_base=output, separate_by_run=False)
     main_vep(config, "preseeg", ep_indices=[1, 26],
-             sim_type=["fitting", "reduced", "paper", "default"], test_write_read=False)  #",, "realistic"
+             sim_type=["paper", "default", "fitting", "reduced"], test_write_read=False)  #",, "realistic"
     # main_vep()
