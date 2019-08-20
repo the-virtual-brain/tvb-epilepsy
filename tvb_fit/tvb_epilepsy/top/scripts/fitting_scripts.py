@@ -168,17 +168,15 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
         labels = signals[0].space_labels
         for signal in signals[1:]:
             labels = np.intersect1d(labels, signal.space_labels)
-        signals = TimeseriesService().concatenate_in_time(signals, labels)
+        signals = TimeseriesService().concatenate_in_time(signals, labels=labels)
     else:
         signals = signals[0]
     if plotter:
         title_prefix = title_prefix + "MultiseizureEmpiricalSEEG"
-        plotter.plot_raster({"ObservationRaster": signals.squeezed}, signals.time, time_units=signals.time_unit,
-                            special_idx=[], offset=0.1, title='Multiseizure Observation Raster Plot',
-                            figure_name=title_prefix + 'ObservationRasterPlot', labels=signals.space_labels)
-        plotter.plot_timeseries({"Observation": signals.squeezed}, signals.time, time_units=signals.time_unit,
-                                special_idx=[], title='Observation Time Series',
-                                figure_name=title_prefix + 'ObservationTimeSeries', labels=signals.space_labels)
+        plotter.plot_raster(signals, special_idx=[], offset=0.1, title='Multiseizure Observation Raster Plot',
+                            figure_name=title_prefix + 'ObservationRasterPlot')
+        plotter.plot_timeseries(signals, special_idx=[], title='Observation Time Series',
+                                figure_name=title_prefix + 'ObservationTimeSeries')
     move_overwrite_files_to_folder_with_wildcard(os.path.join(plotter.config.out.FOLDER_FIGURES,
                                                               "fitData_EmpiricalSEEG"),
                                                  os.path.join(plotter.config.out.FOLDER_FIGURES,
@@ -290,14 +288,11 @@ def set_target_timeseries(probabilistic_model, model_inversion, signals, sensors
         model_inversion.set_target_data_and_time(signals, probabilistic_model, head=head, sensors=sensors)
 
     if plotter:
-        plotter.plot_raster({'Target Signals': target_data.squeezed}, target_data.time,
-                            time_units=target_data.time_unit, title='Fit-Target Signals raster',
-                            offset=0.1, labels=target_data.space_labels)
-        plotter.plot_timeseries({'Target Signals': target_data.squeezed}, target_data.time,
-                                time_units=target_data.time_unit,
-                                title='Fit-Target Signals', labels=target_data.space_labels)
-
-        HeadPlotter(plotter.config)._plot_projection(sensors, head.connectivity.region_labels,
+        plotter.plot_raster(target_data, title='Fit-Target Signals raster', offset=0.1)
+        plotter.plot_timeseries(target_data, title='Fit-Target Signals')
+        #                                             sensors            projection
+        HeadPlotter(plotter.config)._plot_projection(sensors.keys()[0], sensors.values()[0],
+                                                     head.connectivity.region_labels,
                                                      title="Active regions -> target data projection",
                                                      show_x_labels=True, show_y_labels=True,
                                                      x_ticks=sensors. \
@@ -446,17 +441,17 @@ def samples_to_timeseries(samples, time=None, active_regions=None, target_data=N
         time_unit = "ms"
 
     if time is not None:
-        time_start = time[0]
+        start_time = time[0]
         time_step = np.diff(time).mean()
     else:
-        time_start = 0
+        start_time = 0
         time_step = 1
 
     if isinstance(target_data, np.ndarray):
-        target_data = Timeseries(target_data,
-                                 {TimeseriesDimensions.SPACE.value: target_data_labels,
-                                  TimeseriesDimensions.VARIABLES.value: ["target_data"]},
-                                  time_start=time_start, time_step=time_step)
+        target_data = Timeseries(target_data, labels_dimensions={
+                                                TimeseriesDimensions.SPACE.value: target_data_labels,
+                                                TimeseriesDimensions.VARIABLES.value: ["target_data"]},
+                                  start_time=start_time, sample_period=time_step, sample_period_unit=time_unit)
 
     (n_times, n_regions, n_samples) = samples[0]["x1"].T.shape
     if active_regions is None:
@@ -471,17 +466,20 @@ def samples_to_timeseries(samples, time=None, active_regions=None, target_data=N
             try:
                 if x == "x1":
                     x1 = np.concatenate([x1, sample[x].T], axis=2)
-                sample[x] = Timeseries(np.expand_dims(sample[x].T, 2), {TimeseriesDimensions.SPACE.value: region_labels,
-                                                     TimeseriesDimensions.VARIABLES.value: [x]},
-                                       time_start=time_start, time_step=time_step, time_unit=time_unit)
+                sample[x] = Timeseries(np.expand_dims(sample[x].T, 2),
+                                       labels_dimensions={TimeseriesDimensions.SPACE.value: region_labels,
+                                                          TimeseriesDimensions.VARIABLES.value: [x]},
+                                       start_time=start_time, sample_period=time_step, sample_period_unit=time_unit)
 
             except:
                 pass
         try:
             sample["fit_target_data"] = Timeseries(np.expand_dims(sample["fit_target_data"].T, 2),
-                                                   {TimeseriesDimensions.SPACE.value: target_data_labels,
-                                                    TimeseriesDimensions.VARIABLES.value: ["fit_target_data"]},
-                                                   time_start=time_start, time_step=time_step)
+                                                   labels_dimensions=
+                                                       {TimeseriesDimensions.SPACE.value: target_data_labels,
+                                                        TimeseriesDimensions.VARIABLES.value: ["fit_target_data"]},
+                                                   start_time=start_time, sample_period=time_step,
+                                                   sample_period_unit=time_unit)
         except:
             pass
 
@@ -491,10 +489,10 @@ def samples_to_timeseries(samples, time=None, active_regions=None, target_data=N
 def get_x1_estimates_from_samples(samples, time=None, active_regions=[], region_labels=[], time_unit="ms",
                                   skip_samples=0):
     if time is not None:
-        time_start = time[0]
+        start_time = time[0]
         time_step = np.diff(time).mean()
     else:
-        time_start = 0
+        start_time = 0
         time_step = 1
     if isinstance(samples[0]["x1"], np.ndarray):
         get_x1 = lambda x1: x1.T[:, :, skip_samples:]
@@ -509,12 +507,14 @@ def get_x1_estimates_from_samples(samples, time=None, active_regions=[], region_
     x1 = np.empty((n_times, n_regions, 0))
     for sample in ensure_list(samples):
         x1 = np.concatenate([x1, get_x1(sample["x1"])], axis=2)
-    x1_mean = Timeseries(np.nanmean(x1, axis=2).squeeze(), {TimeseriesDimensions.SPACE.value: region_labels,
-                                                      TimeseriesDimensions.VARIABLES.value: ["x1"]},
-                         time_start=time_start, time_step=time_step, time_unit=time_unit)
-    x1_std = Timeseries(np.nanstd(x1, axis=2).squeeze(), {TimeseriesDimensions.SPACE.value: region_labels,
-                                                            TimeseriesDimensions.VARIABLES.value: ["x1std"]},
-                         time_start=time_start, time_step=time_step, time_unit=time_unit)
+    x1_mean = Timeseries(np.nanmean(x1, axis=2).squeeze(),
+                         labels_dimensions={TimeseriesDimensions.SPACE.value: region_labels,
+                                            TimeseriesDimensions.VARIABLES.value: ["x1"]},
+                         start_time=start_time, sample_period=time_step, sample_period_unit=time_unit)
+    x1_std = Timeseries(np.nanstd(x1, axis=2).squeeze(),
+                        labels_dimensions={TimeseriesDimensions.SPACE.value: region_labels,
+                                           TimeseriesDimensions.VARIABLES.value: ["x1std"]},
+                         start_time=start_time, sample_period=time_step, sample_period_unit=time_unit)
     return x1_mean, x1_std
 
 

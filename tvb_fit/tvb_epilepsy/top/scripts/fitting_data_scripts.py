@@ -32,7 +32,7 @@ def find_interval_of_interest(data, target_time_length, win_len=WIN_LEN, title_p
     # from scipy.signal import convolve
     # power_sum_ts = convolve(power_sum_ts, np.ones((n_kernel_len,)), mode='same')
     if plotter:
-        plotter.plot_timeseries({"TotalPower": power_sum_ts}, data.time, time_units=data.time_unit, special_idx=[],
+        plotter.plot_timeseries({"TotalPower": power_sum_ts}, time=data.time, time_units=data.time_unit, special_idx=[],
                                 title='Total power time series', figure_name=title_prefix + '_TotalPowerTS')
     min_time = data.time_start + win_len
     max_time = data.time_end - win_len
@@ -89,10 +89,10 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
                        np.minimum(data.time_end, on_off_set[1] + 2*win_len)]
         data = data.get_time_window_by_units(temp_on_off[0], temp_on_off[1])
         if plotter:
-            plotter.plot_raster({"PreSelectedTimeInterval": data.squeezed}, data.time, time_units=data.time_unit,
+            plotter.plot_raster({"PreSelectedTimeInterval": data.squeezed}, time=data.time, time_units=data.time_unit,
                                 special_idx=[], title='PreSelected time interval time series', offset=0.1,
                                 figure_name=title_prefix + '_PreSelectedRaster', labels=data.space_labels)
-            # plotter.plot_timeseries({"PreSelectedTimeInterval": data.squeezed}, data.time, time_units=data.time_unit,
+            # plotter.plot_timeseries({"PreSelectedTimeInterval": data.squeezed}, time=data.time, time_units=data.time_unit,
             #                         special_idx=[], title='PreSelected time interval time series',
             #                         figure_name=title_prefix + '_PreSelectedTS', labels=data.space_labels)
     else:
@@ -110,11 +110,11 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
             logger.info("High-pass filtering signals...")
             data = ts_service.filter(data, low_hpf, high_hpf, "bandpass", order=3)
             if plotter:
-                plotter.plot_raster({"High-pass filtering": data.squeezed}, data.time, time_units=data.time_unit,
+                plotter.plot_raster({"High-pass filtering": data.squeezed}, time=data.time, time_units=data.time_unit,
                                     special_idx=[], title='High-pass filtered Time Series', offset=0.1,
                                     figure_name=title_prefix + '_%sHpfRaster' % stri_preproc,
                                     labels=data.space_labels)
-                # plotter.plot_timeseries({"High-pass filtering": data.squeezed}, data.time, time_units=data.time_unit,
+                # plotter.plot_timeseries({"High-pass filtering": data.squeezed}, time=data.time, time_units=data.time_unit,
                 #                         special_idx=[], title='High-pass filtered Time Series',
                 #                         figure_name=title_prefix + '_%sHpfTS' % stri_preproc,
                 #                         labels=data.space_labels)
@@ -131,11 +131,11 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
             data.data = np.array(data.data).astype("float32")
             temp_on_off = [data.time_start, data.time_end]
             if plotter:
-                plotter.plot_raster({"Spectrogram signals": data.squeezed}, data.time, time_units=data.time_unit,
+                plotter.plot_raster({"Spectrogram signals": data.squeezed}, time=data.time, time_units=data.time_unit,
                                     special_idx=[], title='Spectrogram Time Series', offset=0.1,
                                     figure_name=title_prefix + '_%sSpectrogramRaster' % stri_preproc,
                                     labels=data.space_labels)
-                plotter.plot_timeseries({"Spectrogram signals": data.squeezed}, data.time, time_units=data.time_unit,
+                plotter.plot_timeseries({"Spectrogram signals": data.squeezed}, time=data.time, time_units=data.time_unit,
                                         special_idx=[], title='Spectrogram Time Series',
                                         figure_name=title_prefix + '_%sSpectrogramTS' % stri_preproc,
                                         labels=data.space_labels)
@@ -154,12 +154,12 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
                 data = ts_service.abs_envelope(data)
             if plotter:
                 plot_envelop_ = plot_envelope.replace(" ", "_")
-                # plotter.plot_raster({plot_envelop_: data.squeezed}, data.time,
+                # plotter.plot_raster({plot_envelop_: data.squeezed}, time=data.time,
                 #                     time_units=data.time_unit, special_idx=[],
                 #                     title=plot_envelope, offset=0.1,
                 #                     figure_name=title_prefix + "_%s" % stri_preproc + plot_envelop_ + "Raster",
                 #                     labels=data.space_labels)
-                plotter.plot_timeseries({plot_envelop_: data.squeezed}, data.time,
+                plotter.plot_timeseries({plot_envelop_: data.squeezed}, time=data.time,
                                         time_units=data.time_unit, special_idx=[], title=plot_envelope,
                                         figure_name=title_prefix + "_%s" % stri_preproc + plot_envelop_ + "TS",
                                         labels=data.space_labels)
@@ -168,11 +168,11 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
             logger.info("Computing log of signals...")
             data = ts_service.log(data)
             # if plotter:
-            #     plotter.plot_raster({"LogTimeSeries": data.squeezed}, data.time, time_units=data.time_unit,
+            #     plotter.plot_raster({"LogTimeSeries": data.squeezed}, time=data.time, time_units=data.time_unit,
             #                         special_idx=[], title='Log of Time Series', offset=0.1,
             #                         figure_name=title_prefix + '_%sLogRaster' % stri_preproc,
             #                         labels=data.space_labels)
-                # plotter.plot_timeseries({"LogTimeSeries": data.squeezed}, data.time, time_units=data.time_unit,
+                # plotter.plot_timeseries({"LogTimeSeries": data.squeezed}, time=data.time, time_units=data.time_unit,
                 #                         special_idx=[], title='Log of Time Series',
                 #                         figure_name=title_prefix + '_%sLogTS' % stri_preproc,
                 #                         labels=data.space_labels)
@@ -183,13 +183,13 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
             data = ts_service.convolve(data, win_len)
             logger.info("Convolving signals with a square window of " + str_win_len + " ms...")
             if plotter:
-                # plotter.plot_raster({"ConvolutionSmoothing": data.squeezed}, data.time,
+                # plotter.plot_raster({"ConvolutionSmoothing": data.squeezed}, time=data.time,
                 #                     time_units=data.time_unit, special_idx=[], offset=0.1,
                 #                     title='Convolved Time Series with a window of ' + str_win_len + " ms",
                 #                     figure_name=
                 #                        title_prefix + '_%s_%smsWinConvolRaster' % (stri_preproc, str_win_len),
                 #                     labels=data.space_labels)
-                plotter.plot_timeseries({"ConvolutionSmoothing": data.squeezed}, data.time,
+                plotter.plot_timeseries({"ConvolutionSmoothing": data.squeezed}, time=data.time,
                                         time_units=data.time_unit, special_idx=[],
                                         title='Convolved Time Series with a window of ' + str_win_len + " ms",
                                         figure_name=
@@ -201,15 +201,14 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
             logger.info("Low-pass filtering signals...")
             data = ts_service.filter(data, low_lpf, high_lpf, "bandpass", order=3)
             if plotter:
-                # plotter.plot_raster({"Low-pass filtering": data.squeezed}, data.time, time_units=data.time_unit,
+                # plotter.plot_raster({"Low-pass filtering": data.squeezed}, time=data.time, time_units=data.time_unit,
                 #                     special_idx=[], title='Low-pass filtered Time Series', offset=0.1,
                 #                     figure_name=title_prefix + '_%sLpfRaster' % stri_preproc,
                 #                     labels=data.space_labels)
-                plotter.plot_timeseries({"Low-pass filtering": data.squeezed}, data.time,
-                                        time_units=data.time_unit,
-                                        special_idx=[], title='Low-pass filtered Time Series',
-                                        figure_name=title_prefix + '_%sLpfTS' % stri_preproc,
-                                        labels=data.space_labels)
+                plotter.plot_timeseries({"Low-pass filtering": data.squeezed}, time=data.time,
+                                        time_units=data.time_unit, special_idx=[],
+                                        title='Low-pass filtered Time Series',
+                                        figure_name=title_prefix + '_%sLpfTS' % stri_preproc, labels=data.space_labels)
 
    # Find the desired time interval
     if len(on_off_set) != 2:
@@ -234,24 +233,24 @@ def prepare_signal_observable(data, seizure_length=SEIZURE_LENGTH, on_off_set=[]
             logger.info("Decimating signals " + str_decim_ratio + " times...")
             data = ts_service.decimate(data, decim_ratio)
             if plotter:
-                plotter.plot_raster({"ObservationRaster_"+str_decim_ratio + "wiseDecimation": data.squeezed}, data.time,
-                                    time_units=data.time_unit, special_idx=[],
+                plotter.plot_raster({"ObservationRaster_"+str_decim_ratio + "wiseDecimation": data.squeezed},
+                                    time=data.time, time_units=data.time_unit, special_idx=[],
                                     title="Observation Raster with " + str_decim_ratio + " wise Decimation", offset=0.1,
                                     figure_name=
                                       title_prefix + "'ObservationRaster_%s_%sxDecim" % (stri_preproc, str_decim_ratio),
                                     labels=data.space_labels)
-                plotter.plot_timeseries({"ObservationTS_"+str_decim_ratio + "wiseDecimation": data.squeezed}, data.time,
-                                        time_units=data.time_unit, special_idx=[],
+                plotter.plot_timeseries({"ObservationTS_"+str_decim_ratio + "wiseDecimation": data.squeezed},
+                                        time=data.time, time_units=data.time_unit, special_idx=[],
                                         title="Observation TS with " + str_decim_ratio + " wise Decimation",
                                         figure_name=
                                            title_prefix + "ObservationTS_%s_%sxDecim" % (stri_preproc, str_decim_ratio),
                                         labels=data.space_labels)
 
         elif plotter:
-            plotter.plot_raster({"ObservationRaster": data.squeezed}, data.time, time_units=data.time_unit,
+            plotter.plot_raster({"ObservationRaster": data.squeezed}, time=data.time, time_units=data.time_unit,
                                 special_idx=[], offset=0.1, title='Observation Raster Plot',
                                 figure_name=title_prefix + 'ObservationRaster', labels=data.space_labels)
-            plotter.plot_timeseries({"Observation": data.squeezed}, data.time, time_units=data.time_unit,
+            plotter.plot_timeseries({"Observation": data.squeezed}, time=data.time, time_units=data.time_unit,
                                     special_idx=[], title='Observation Time Series',
                                     figure_name=title_prefix + 'ObservationTS', labels=data.space_labels)
     return data
@@ -265,14 +264,14 @@ def prepare_simulated_seeg_observable(data, sensors, seizure_length=SEIZURE_LENG
     logger.info("Computing SEEG signals...")
     data = TimeseriesService().compute_seeg(data, sensors, sum_mode=np.where(log_flag, "exp", "lin"))
     if plotter:
-        plotter.plot_raster({"SEEGData": data.squeezed}, data.time, time_units=data.time_unit,
+        plotter.plot_raster({"SEEGData": data.squeezed}, time=data.time, time_units=data.time_unit,
                             special_idx=[], title='SEEG Time Series', offset=0.1,
                             figure_name=title_prefix + 'SEEGRaster', labels=data.space_labels)
     if bipolar:
         logger.info("Computing bipolar signals...")
         data = data.get_bipolar()
         if plotter:
-            plotter.plot_raster({"BipolarData": data.squeezed}, data.time, time_units=data.time_unit,
+            plotter.plot_raster({"BipolarData": data.squeezed}, time=data.time, time_units=data.time_unit,
                                 special_idx=[], title='Bipolar Time Series', offset=0.1,
                                 figure_name=title_prefix + 'BipolarRaster', labels=data.space_labels)
     return prepare_signal_observable(data, seizure_length, on_off_set, rois, preprocessing, low_hpf, high_hpf,
@@ -289,19 +288,19 @@ def prepare_seeg_observable_from_mne_file(seeg_path, sensors, rois_selection, se
                                   time_units=time_units, exclude_channels=exclude_channels)
     data.data = np.array(data.data).astype("float32")
     if plotter:
-        plotter.plot_raster({"OriginalData": data.squeezed}, data.time, time_units=data.time_unit,
+        plotter.plot_raster({"OriginalData": data.squeezed}, time=data.time, time_units=data.time_unit,
                             special_idx=[], title='Original Empirical Time Series', offset=0.1,
                             figure_name=title_prefix + '_empirical_OriginalRaster', labels=data.space_labels)
     data = TimeseriesService().detrend(data)
     # if plotter:
-    #     plotter.plot_raster({"Detrended": data.squeezed}, data.time, time_units=data.time_unit,
+    #     plotter.plot_raster({"Detrended": data.squeezed}, time=data.time, time_units=data.time_unit,
     #                         special_idx=[], title='Detrended Time Series', offset=0.1,
     #                         figure_name=title_prefix + '_empirical_DetrendRaster', labels=data.space_labels)
     if bipolar:
         logger.info("Computing bipolar signals...")
         data = data.get_bipolar()
         if plotter:
-            plotter.plot_raster({"BipolarData": data.squeezed}, data.time, time_units=data.time_unit,
+            plotter.plot_raster({"BipolarData": data.squeezed}, time=data.time, time_units=data.time_unit,
                                 special_idx=[], title='Bipolar Time Series', offset=0.1,
                                 figure_name=title_prefix + '_BipolarRaster', labels=data.space_labels)
 
