@@ -109,7 +109,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     if ts_file is not None and os.path.isfile(ts_file):
         logger.info("\n\nLoading previously simulated time series from file: " + ts_file)
         sim_output = H5Reader().read_timeseries(ts_file)
-        seeg = TimeseriesService().compute_seeg(sim_output.get_source(), head.sensorsSEEG, sum_mode=seeg_gain_mode)
+        seeg = TimeseriesService().compute_seeg(sim_output.get_source(), head.get_sensors("SEEG"), sum_mode=seeg_gain_mode)
     else:
         logger.info("\n\nSimulating %s..." % sim_type)
         sim_output, status = sim.launch_simulation(report_every_n_monitor_steps=100, timeseries=Timeseries)
@@ -119,7 +119,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
             time = np.array(sim_output.time).astype("f")
             logger.info("\n\nSimulated signal return shape: %s", sim_output.shape)
             logger.info("Time: %s - %s", time[0], time[-1])
-            sim_output, seeg = compute_seeg_and_write_ts_to_h5(sim_output, sim.model, head.sensorsSEEG,
+            sim_output, seeg = compute_seeg_and_write_ts_to_h5(sim_output, sim.model, head.get_sensors("SEEG"),
                                                                ts_file, seeg_gain_mode=seeg_gain_mode,
                                                                hpf_flag=hpf_flag, hpf_low=hpf_low, hpf_high=hpf_high)
 
