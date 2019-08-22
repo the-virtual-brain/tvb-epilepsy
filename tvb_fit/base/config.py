@@ -8,7 +8,7 @@ from tvb_config.config import CalculusConfig, FiguresConfig, InputConfig, Output
 class GenericConfig(GenericConfigBase):
     _module_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     PROBLSTC_MODELS_PATH = os.path.join(_module_path, "samplers", "stan", "models")
-    CMDSTAN_PATH = os.path.join(os.path.expanduser("~"), "ScientificSoftware/git/cmdstan")
+    CMDSTAN_PATH = os.path.join(os.path.expanduser("~"), "ScientificSoftware/git/STAN/cmdstan-precompiled")
     MODEL_COMPARISON_PATH = os.path.join(_module_path, "extern")
     C_COMPILER = "clang++"
 
