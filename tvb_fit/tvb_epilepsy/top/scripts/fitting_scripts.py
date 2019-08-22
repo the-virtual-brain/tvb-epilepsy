@@ -519,7 +519,7 @@ def get_x1_estimates_from_samples(samples, time=None, active_regions=[], region_
 
 
 def reconfigure_model_from_fit_estimates(head, probabilistic_model, base_path, estimates=None,
-                                         samples=None, merge_chains=True, skip_samples=0, writer=None, plotter=None):
+                                         samples=None, merge_chains=False, skip_samples=0, writer=None, plotter=None):
 
     # -------------------------- Reconfigure model after fitting:---------------------------------------------------
 
@@ -541,13 +541,14 @@ def reconfigure_model_from_fit_estimates(head, probabilistic_model, base_path, e
     else:
         estimates = ensure_list(estimates)
         if len(estimates) > 1 and merge_chains:
-            estimates = merge_samples(estimates, 0, flatten=True)
+            estimates = merge_samples(estimates, 0, flatten=False)
 
     model_configuration_fit = []
     for id_est, est in enumerate(ensure_list(estimates)):
-        K = np.mean(est.get("K", np.mean(probabilistic_model.model_config.K)))
-        tau1 = np.mean(est.get("tau1", np.mean(probabilistic_model.model_config.tau1)))
-        tau0 = np.mean(est.get("tau0", np.mean(probabilistic_model.model_config.tau0)))
+        # Assuming those three parameters are scalar
+        K = np.mean(est.get("K", probabilistic_model.model_config.K))
+        tau1 = np.mean(est.get("tau1", probabilistic_model.model_config.tau1))
+        tau0 = np.mean(est.get("tau0", probabilistic_model.model_config.tau0))
         # fit_conn = est.get("MC", model_configuration.connectivity)
         # if fit_conn.shape != model_configuration.connectivity.shape:
         #     temp_conn = model_configuration.connectivity
@@ -559,7 +560,10 @@ def reconfigure_model_from_fit_estimates(head, probabilistic_model, base_path, e
                                       K_unscaled=K * probabilistic_model.model_config.number_of_regions). \
                 set_parameter("tau1", tau1).set_parameter("tau0", tau0)
         x0 = probabilistic_model.model_config.x0
-        x0[probabilistic_model.active_regions] = est["x0"].squeeze()
+        x0est = est["x0"]
+        if x0est.ndim > 1:
+            x0est = np.mean(x0est, axis=0).squeeze()
+        x0[probabilistic_model.active_regions] = x0est
         x0_values_fit = fit_model_configuration_builder._compute_x0_values_from_x0_model(x0)
         hyp_fit = HypothesisBuilder().set_nr_of_regions(head.connectivity.number_of_regions). \
             set_name('fit' + str(id_est + 1)). \
