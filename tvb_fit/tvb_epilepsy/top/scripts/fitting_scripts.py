@@ -28,6 +28,7 @@ from tvb_utils.log_error_utils import initialize_logger, warning
 from tvb_utils.data_structures_utils import ensure_list, generate_region_labels
 from tvb_utils.file_utils import move_overwrite_files_to_folder_with_wildcard
 from tvb_utils.computations_utils import select_greater_values_array_inds
+from tvb_head.model.sensors import SensorTypes
 from tvb_timeseries.service.timeseries_service import TimeseriesService
 from tvb_plot.head_plotter import HeadPlotter
 
@@ -110,7 +111,7 @@ def get_2D_simulation(model_configuration, head, lsa_hypothesis, source2D_file, 
     return source2D_ts
 
 
-def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0, seizure_length=SEIZURE_LENGTH,
+def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_name_or_id=0, seizure_length=SEIZURE_LENGTH,
                        times_on_off=[], time_units="ms", label_strip_fun=None, exclude_seeg=[],
                        preprocessing=TARGET_DATA_PREPROCESSING, low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF,
                        high_lpf=HIGH_LPF, bipolar=BIPOLAR, win_len=WIN_LEN, plotter=None, title_prefix=""):
@@ -121,13 +122,14 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
         if title_prefix.find(seizure_name) < 0:
             title_prefix = title_prefix + seizure_name
         # ... or preprocess empirical data for the first time:
+        sensors = head.get_sensors(s_type=SensorTypes.TYPE_SEEG.value, name_or_index=sensor_name_or_id)[0]
         if len(sensors_lbls) == 0:
-            sensors_lbls = head.get_sensors_by_index(sensor_ids=sensor_id).labels
+            sensors_lbls = sensors.labels
         if len(times_on_off) == 2:
             seizure_duration = np.diff(times_on_off)
         else:
             seizure_duration = times_on_off[0]
-        signals = prepare_seeg_observable_from_mne_file(empirical_file, head.get_sensors_by_index(sensor_ids=sensor_id),
+        signals = prepare_seeg_observable_from_mne_file(empirical_file, sensors,
                                                         sensors_lbls, seizure_length, times_on_off, time_units,
                                                         label_strip_fun, exclude_seeg, preprocessing,
                                                         low_hpf, high_hpf, low_lpf, high_lpf, bipolar, win_len,
@@ -140,7 +142,7 @@ def set_empirical_data(empirical_file, ts_file, head, sensors_lbls, sensor_id=0,
     return signals
 
 
-def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, sensor_id=0,
+def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, sensor_name_or_id=0,
                                 seizure_length=SEIZURE_LENGTH, times_on=[], time_length=32000.0, time_units="ms",
                                 label_strip_fun=None, exclude_seeg=[], preprocessing=TARGET_DATA_PREPROCESSING,
                                 low_hpf=LOW_HPF, high_hpf=HIGH_HPF, low_lpf=LOW_LPF, high_lpf=HIGH_LPF,
@@ -159,7 +161,7 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
     for empirical_file, time_on_off in zip(empirical_files, times_on_off):
         seizure_name = os.path.basename(empirical_file).split(".")[0]
         signals.append(set_empirical_data(empirical_file, "_".join([ts_filename, seizure_name]) + ".h5",
-                                          head, sensors_lbls, sensor_id, seizure_length, time_on_off, time_units,
+                                          head, sensors_lbls, sensor_name_or_id, seizure_length, time_on_off, time_units,
                                           label_strip_fun, exclude_seeg, preprocessing,
                                           low_hpf, high_hpf, low_lpf, high_lpf, bipolar, win_len,
                                           plotter, title_prefix))
@@ -184,7 +186,7 @@ def set_multiple_empirical_data(empirical_files, ts_file, head, sensors_lbls, se
     return signals, n_seizures
 
 
-def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model, sensor_id=0,
+def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model, sensors_name_or_id=0,
                               rescale_x1eq=None, sim_type="paper", times_on_off=[], seizure_length=SEIZURE_LENGTH,
                               preprocessing=TARGET_DATA_PREPROCESSING, low_hpf=LOW_HPF, high_hpf=HIGH_HPF,
                               low_lpf=LOW_LPF, high_lpf=HIGH_LPF, bipolar=BIPOLAR, win_len_ratio=WIN_LEN_RATIO,
@@ -208,13 +210,14 @@ def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model
     probabilistic_model.ground_truth.update({"x1_init": x1[0].squeeze(), "z_init": z[0].squeeze(),})
     del x1, z
     signals = signals["source"].get_source()
-    signals.data = -signals.data  # change sign to fit x1
+    signals = signals.set_data(-signals.data)  # change sign to fit x1
     win_len = np.diff(times_on_off)[0]/win_len_ratio
     if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
         log_flag = probabilistic_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
         # get timeseries to be positive
         title_prefix = title_prefix + "SimSEEG"
-        signals = prepare_simulated_seeg_observable(signals, head.get_sensors_by_index(sensor_ids=sensor_id),
+        sensors, projection = head.get_sensors(s_type=SensorTypes.TYPE_SEEG.value, name_or_index=sensors_name_or_id)
+        signals = prepare_simulated_seeg_observable(signals, sensors, projection,
                                                     seizure_length, log_flag, times_on_off, [],
                                                     preprocessing, low_hpf, high_hpf, low_lpf, high_lpf, bipolar,
                                                     win_len, plotter, title_prefix)
@@ -234,9 +237,10 @@ def set_simulated_target_data(ts_file, head, lsa_hypothesis, probabilistic_model
     return signals, simulator
 
 
-def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_length, sensors_lbls, sensor_id,
-                          observation_model, sim_target_file, empirical_target_file, exclude_seeg=[], sim_source_type="paper",
-                          downsampling=1, preprocessing=[], empirical_files=[], config=Config(), plotter=None):
+def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_length, sensors_lbls, sensor_name_or_id,
+                          observation_model, sim_target_file, empirical_target_file, exclude_seeg=[], 
+                          sim_source_type="paper", downsampling=1, preprocessing=[], empirical_files=[], 
+                          config=Config(), plotter=None):
 
     # Some scripts for settting and preprocessing target signals:
     simulator = None
@@ -252,7 +256,7 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
                 preprocessing = ["hpf", "abs-envelope", "convolve", "decimate"]
         # -------------------------- Get empirical data (preprocess edf if necessary) --------------------------
         signals, probabilistic_model.number_of_seizures = \
-            set_multiple_empirical_data(empirical_files, empirical_target_file, head, sensors_lbls, sensor_id,
+            set_multiple_empirical_data(empirical_files, empirical_target_file, head, sensors_lbls, sensor_name_or_id,
                                         seizure_length, times_on, time_length,
                                         label_strip_fun=lambda s: s.split("POL ")[-1], exclude_seeg=exclude_seeg,
                                         preprocessing=preprocessing, plotter=plotter, title_prefix="")
@@ -261,7 +265,7 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
         # --------------------- Get fitting target simulated data (simulate if necessary) ----------------------
         probabilistic_model.target_data_type = Target_Data_Type.SYNTHETIC.value
         if len(preprocessing) == 0:
-            preprocessin = []
+            preprocessing = []
             if sim_source_type == "paper":
                 preprocessing = ["convolve"] # ["spectrogram", "log"]  #, "convolve" # ["hpf", "mean_center", "abs_envelope", "log"]
         if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
@@ -271,7 +275,7 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
         if np.max(probabilistic_model.model_config.x1eq) > rescale_x1eq:
             rescale_x1eq = False
         signals, simulator = \
-            set_simulated_target_data(sim_target_file, head, hypothesis, probabilistic_model, sensor_id,
+            set_simulated_target_data(sim_target_file, head, hypothesis, probabilistic_model, sensor_name_or_id,
                                       rescale_x1eq=rescale_x1eq, sim_type=sim_source_type,
                                       times_on_off=[times_on[0], times_on[0] + time_length],
                                       seizure_length=seizure_length,
@@ -281,17 +285,16 @@ def get_target_timeseries(probabilistic_model, head, hypothesis, times_on, time_
     return signals, probabilistic_model, simulator
 
 
-def set_target_timeseries(probabilistic_model, model_inversion, signals, sensors, head,
+def set_target_timeseries(probabilistic_model, model_inversion, signals, head, sensor_name_or_id=0,
                           target_data_file="", writer=None, plotter=None):
-
+    sensors, projection = head.get_sensors(s_type=SensorTypes.TYPE_SEEG.value, name_or_index=sensor_name_or_id)
     target_data, probabilistic_model = \
-        model_inversion.set_target_data_and_time(signals, probabilistic_model, head=head, sensors=sensors)
+        model_inversion.set_target_data_and_time(signals, probabilistic_model)
 
     if plotter:
         plotter.plot_raster(target_data, title='Fit-Target Signals raster', offset=0.1)
         plotter.plot_timeseries(target_data, title='Fit-Target Signals')
-        #                                             sensors            projection
-        HeadPlotter(plotter.config)._plot_projection(sensors.keys()[0], sensors.values()[0],
+        HeadPlotter(plotter.config)._plot_projection(sensors, projection.projection_data,
                                                      head.connectivity.region_labels,
                                                      title="Active regions -> target data projection",
                                                      show_x_labels=True, show_y_labels=True,
@@ -460,26 +463,24 @@ def samples_to_timeseries(samples, time=None, active_regions=None, target_data=N
     if len(region_labels) > len(active_regions):
         region_labels = region_labels[active_regions]
 
+    ts_kwargs = {"start_time": float(start_time), "sample_period": float(time_step), "sample_period_unit": time_unit}
     x1 = np.empty((n_times, n_regions, 0))
     for sample in ensure_list(samples):
         for x in params:
             try:
                 if x == "x1":
                     x1 = np.concatenate([x1, sample[x].T], axis=2)
-                sample[x] = Timeseries(np.expand_dims(sample[x].T, 2),
+                sample[x] = Timeseries(np.expand_dims(sample[x].T, 1),
                                        labels_dimensions={TimeseriesDimensions.SPACE.value: region_labels,
-                                                          TimeseriesDimensions.VARIABLES.value: [x]},
-                                       start_time=start_time, sample_period=time_step, sample_period_unit=time_unit)
+                                                          TimeseriesDimensions.VARIABLES.value: [x]}, **ts_kwargs)
 
             except:
                 pass
         try:
-            sample["fit_target_data"] = Timeseries(np.expand_dims(sample["fit_target_data"].T, 2),
-                                                   labels_dimensions=
-                                                       {TimeseriesDimensions.SPACE.value: target_data_labels,
-                                                        TimeseriesDimensions.VARIABLES.value: ["fit_target_data"]},
-                                                   start_time=start_time, sample_period=time_step,
-                                                   sample_period_unit=time_unit)
+            sample["fit_target_data"] = \
+                Timeseries(np.expand_dims(sample["fit_target_data"].T, 1),
+                           labels_dimensions={TimeseriesDimensions.SPACE.value: target_data_labels,
+                                              TimeseriesDimensions.VARIABLES.value: ["fit_target_data"]}, **ts_kwargs)
         except:
             pass
 
@@ -505,16 +506,15 @@ def get_x1_estimates_from_samples(samples, time=None, active_regions=[], region_
     if len(region_labels) > len(active_regions):
         region_labels = np.array(region_labels[active_regions])
     x1 = np.empty((n_times, n_regions, 0))
+    ts_kwargs = {"start_time": float(start_time), "sample_period": float(time_step), "sample_period_unit": time_unit}
     for sample in ensure_list(samples):
         x1 = np.concatenate([x1, get_x1(sample["x1"])], axis=2)
-    x1_mean = Timeseries(np.nanmean(x1, axis=2).squeeze(),
+    x1_mean = Timeseries(np.expand_dims(np.nanmean(x1, axis=2).squeeze(), 1),
                          labels_dimensions={TimeseriesDimensions.SPACE.value: region_labels,
-                                            TimeseriesDimensions.VARIABLES.value: ["x1"]},
-                         start_time=start_time, sample_period=time_step, sample_period_unit=time_unit)
-    x1_std = Timeseries(np.nanstd(x1, axis=2).squeeze(),
+                                            TimeseriesDimensions.VARIABLES.value: ["x1"]}, **ts_kwargs)
+    x1_std = Timeseries(np.expand_dims(np.nanstd(x1, axis=2).squeeze(), 1),
                         labels_dimensions={TimeseriesDimensions.SPACE.value: region_labels,
-                                           TimeseriesDimensions.VARIABLES.value: ["x1std"]},
-                         start_time=start_time, sample_period=time_step, sample_period_unit=time_unit)
+                                           TimeseriesDimensions.VARIABLES.value: ["x1std"]}, **ts_kwargs)
     return x1_mean, x1_std
 
 
@@ -544,10 +544,10 @@ def reconfigure_model_from_fit_estimates(head, probabilistic_model, base_path, e
             estimates = merge_samples(estimates, 0, flatten=True)
 
     model_configuration_fit = []
-    for id_est, est in enumerate(estimates):
-        K = est.get("K", np.mean(probabilistic_model.model_config.K))
-        tau1 = est.get("tau1", np.mean(probabilistic_model.model_config.tau1))
-        tau0 = est.get("tau0", np.mean(probabilistic_model.model_config.tau0))
+    for id_est, est in enumerate(ensure_list(estimates)):
+        K = np.mean(est.get("K", np.mean(probabilistic_model.model_config.K)))
+        tau1 = np.mean(est.get("tau1", np.mean(probabilistic_model.model_config.tau1)))
+        tau0 = np.mean(est.get("tau0", np.mean(probabilistic_model.model_config.tau0)))
         # fit_conn = est.get("MC", model_configuration.connectivity)
         # if fit_conn.shape != model_configuration.connectivity.shape:
         #     temp_conn = model_configuration.connectivity

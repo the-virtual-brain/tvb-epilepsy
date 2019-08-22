@@ -43,14 +43,14 @@ def set_hypotheses(head, config):
     # x0_indices = [6, 15, 52, 53] # [1, 26] #
     # x0_values = 2.5*np.array([0.9, 0.9, 0.5, 0.5])
     x0_indices = [6, 15]  # D, DK,: [1, 26] #
-    x0_values = 2.5*np.array([0.9, 0.9])
+    x0_values = 2.5*np.array([0.99, 0.99])
     hyp_builder.set_x0_hypothesis(x0_indices, x0_values)
 
     # Regions of Model Epileptogenicity hypothesis:
     # e_indices = [6, 15, 52, 53]  # DK: [2, 25]
     e_indices = [52, 53]  # D, DK: [2, 25] #
     # e_values = np.array([0.9, 0.9, 0.5, 0.5])  # np.array([0.99] * 2)
-    e_values = np.array([0.5, 0.5])  # np.array([0.99] * 2)
+    e_values = np.array([0.75, 0.75])  # np.array([0.99] * 2)
     hyp_builder.set_e_hypothesis(e_indices, e_values)
 
     # Regions of Connectivity hypothesis:
@@ -69,7 +69,7 @@ def set_hypotheses(head, config):
 
 
 def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length, sim_times_on_off, sensors_lbls,
-                        normal_flag=False, sim_source_type="fitting",
+                        normal_flag=False, sim_source_type="fitting", sensors_name_or_id = "SensorsSEEG_116_distance",
                         observation_model=OBSERVATION_MODEL_DEF, downsampling=2, exclude_channels=[],
                         preprocessing=[], normalization=None, normalization_args={}, fitmethod="sample",
                         pse_flag=True, fit_flag=True, test_flag=False, config=Config(), **kwargs):
@@ -83,13 +83,7 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
     # Read head
     logger.info("Reading from: " + config.input.HEAD)
     head = reader.read_head(config.input.HEAD)
-    sensors = ensure_list(head.get_sensors_by_name("distance"))[0]
-    if isinstance(sensors, dict):
-        sensors = sensors.values()[0]
-        sensor_id = head.sensors_name_to_id(sensors.name)
-    elif sensors is None:
-        sensors = head.get_sensors_by_index()
-        sensor_id = 0
+
     plotter.plot_head(head)
 
     # Set hypothesis:
@@ -126,6 +120,8 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
     else:
         # Create model inversion service (stateless)
         model_inversion = SDEModelInversionService()
+        model_inversion.head = head
+        model_inversion.sensors_name_or_id = sensors_name_or_id
         model_inversion.normalization = normalization
         model_inversion.normalization_args = normalization_args
         # Exclude ctx-l/rh-unknown regions from fitting
@@ -147,9 +143,9 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
         # time series for fitting
         signals, probabilistic_model, simulator = \
            get_target_timeseries(probabilistic_model, head, lsa_hypothesis, times_on, time_length,
-                                 sensors_lbls, sensor_id, observation_model, sim_target_file, empirical_target_file,
-                                 exclude_channels, sim_source_type, downsampling, preprocessing, empirical_files,
-                                 config, plotter)
+                                 sensors_lbls, sensors_name_or_id, observation_model, sim_target_file, 
+                                 empirical_target_file,  exclude_channels, sim_source_type, downsampling, preprocessing, 
+                                 empirical_files, config, plotter)
 
         # Update active model's active region nodes
         e_values = pse_results.get("e_values_mean", model_configuration.e_values)
@@ -157,12 +153,12 @@ def main_fit_sim_hyplsa(stan_model_name, empirical_files, times_on, time_length,
                                                    lsa_hypothesis.lsa_propagation_strengths)
         model_inversion.active_e_th = 0.05
         probabilistic_model = \
-            model_inversion.update_active_regions(probabilistic_model, sensors=sensors, e_values=e_values,
+            model_inversion.update_active_regions(probabilistic_model, e_values=e_values,
                                                   lsa_propagation_strengths=lsa_propagation_strength, reset=True)
 
         # Select and set the target time series
         target_data, probabilistic_model, model_inversion = \
-            set_target_timeseries(probabilistic_model, model_inversion, signals, sensors, head,
+            set_target_timeseries(probabilistic_model, model_inversion, signals, head, sensors_name_or_id,
                                   target_data_file, writer, plotter)
 
         #------------------------------------Finally set priors for the parameters--------------------------------------
@@ -210,8 +206,9 @@ if __name__ == "__main__":
 
     user_home = os.path.expanduser("~")
     SUBJECT = "TVB3"
-    head_folder = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "CC", SUBJECT, "HeadD")
-    SEEG_data = os.path.join(os.path.expanduser("~"), 'Dropbox', 'Work', 'VBtech', 'VEP', "data/CC", "seeg", SUBJECT)
+    DROPBOX_HOME = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP')
+    head_folder = os.path.join(DROPBOX_HOME, "results", "CC", SUBJECT, "HeadD")
+    SEEG_data = os.path.join(DROPBOX_HOME, "data/CC", "seeg", SUBJECT)
 
     if user_home == "/home/denis":
         output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results", "INScluster/fit")
@@ -224,12 +221,16 @@ if __name__ == "__main__":
     #     config.generic.CMDSTAN_PATH = "/WORK/episense/cmdstan-2.17.1"
 
     else:
-        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results",
-                              "fit/hmc/simsensor_tests/split")
+        output = os.path.join(user_home, 'Dropbox', 'Work', 'VBtech', 'VEP', "results/tests/fit")
+                              # , "fit/hmc/simsensor_tests/split"
         # _splitHyper, , , _hierarchHyper, _realsplitHyper, _K_tau0_fixed, _K_tau0_params
         config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
-        config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
-    study_repo_path = os.path.join(user_home, "VEPlocal/CC/tvb-epilepsy-cc-study")
+        if os.uname()[1] == 'DionPerdChariteMBP':
+            config.generic.CMDSTAN_PATH = "/Users/dionperd/Software/Science/STAN/cmdstan"
+            study_repo_path = os.path.join(DROPBOX_HOME, "Software/VEPtool_iMac/tvb-epilepsy-cc-study")
+        else:
+            config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
+            study_repo_path = os.path.join(user_home, "VEPlocal/CC/tvb-epilepsy-cc-study")
     config.generic.PROBLSTC_MODELS_PATH = os.path.join(study_repo_path, "tvb_epilepsy/stan")
 
     # TVB3 larger preselection:
@@ -247,6 +248,7 @@ if __name__ == "__main__":
     #  for "fitting" simulations with tau0=30.0
     sim_times_on_off = [70.0, 100.0] # e_hypo, [100, 130] for x0_hypo, and e_x0_hypo
     EMPIRICAL = False
+    sensors_name_or_id = "SensorsSEEG_116_distance"
     sim_source_type = "paper"
     observation_model =  OBSERVATION_MODELS.SEEG_LOGPOWER.value  #OBSERVATION_MODELS.SEEG_POWER.value
     #OBSERVATION_MODELS.SOURCE_POWER.value  #
@@ -265,11 +267,11 @@ if __name__ == "__main__":
         # sensors_filename = "SensorsSEEG_210.h5"
         # times_on_off = [20.0, 100.0]
         normalization = ["mean",  "std"]
-        normalization_args = {"axis": [1, None]}  # "percent": [1, [1, 99]]
+        normalization_args = {"axis": [2, None]}  # "percent": [1, [1, 99]]
     else:
         if observation_model in OBSERVATION_MODELS.SEEG.value:
             normalization = ["mean", "std"]
-            normalization_args = {"axis": [1, None]}  # "percent": [1, [1, 99]]
+            normalization_args = {"axis": [2, None]}  # "percent": [1, [1, 99]]
         else:
             # TODO: clarify normalization for source fitting
             normalization = None
@@ -286,22 +288,22 @@ if __name__ == "__main__":
     preprocessing = []
     downsampling = 2
     normal_flag = False
-    stan_model_name = "vep_sde_logsplitHyper"  # _log, _mulimlogrealsplitHyper, _mulimlogsplitHyper
+    stan_model_name = "vep_sde_log"  # _log, _mulimlogrealsplitHyper, _mulimlogsplitHyper
     fitmethod = "sample"   # ""  # "sample"  # "advi" or "opt"
     pse_flag = True
     fit_flag = "fit"
-    test_flag = False
+    test_flag = True
     if EMPIRICAL:
         main_fit_sim_hyplsa(stan_model_name,
                             [os.path.join(config.input.RAW_DATA_FOLDER, seizure_file)
                                              for seizure_file in seizures_files],
                             times_on, time_length, sim_times_on_off, sensors_lbls,
-                            normal_flag, sim_source_type, observation_model,
+                            normal_flag, sim_source_type, sensors_name_or_id, observation_model,
                             downsampling, exclude_channels, preprocessing, normalization, normalization_args,
                             fitmethod, pse_flag, fit_flag, test_flag, config)
     else:
         main_fit_sim_hyplsa(stan_model_name, [], times_on, time_length, sim_times_on_off, sensors_lbls,
-                            normal_flag, sim_source_type, observation_model,
+                            normal_flag, sim_source_type, sensors_name_or_id, observation_model,
                             downsampling, exclude_channels, preprocessing, normalization, normalization_args,
                             fitmethod, pse_flag, fit_flag, test_flag, config)
 
