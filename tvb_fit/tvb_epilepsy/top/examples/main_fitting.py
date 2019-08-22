@@ -37,7 +37,7 @@ def set_hypotheses(head, config):
     hypotheses = []
 
     # Formulate a VEP hypothesis manually
-    hyp_builder = HypothesisBuilder(head.connectivity.number_of_regions, config) # .set_normalize(1.5)
+    hyp_builder = HypothesisBuilder(head.connectivity.number_of_regions, config) .set_normalize(1.5)
 
     # # Regions of Pathological Excitability hypothesis:
     # x0_indices = [6, 15, 52, 53] # [1, 26] #
@@ -229,7 +229,7 @@ if __name__ == "__main__":
             config.generic.CMDSTAN_PATH = "/Users/dionperd/Software/Science/STAN/cmdstan"
             study_repo_path = os.path.join(DROPBOX_HOME, "Software/VEPtool_iMac/tvb-epilepsy-cc-study")
         else:
-            config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH + "_precompiled"
+            # config.generic.C_COMPILER = "g++"
             study_repo_path = os.path.join(user_home, "VEPlocal/CC/tvb-epilepsy-cc-study")
     config.generic.PROBLSTC_MODELS_PATH = os.path.join(study_repo_path, "tvb_epilepsy/stan")
 
