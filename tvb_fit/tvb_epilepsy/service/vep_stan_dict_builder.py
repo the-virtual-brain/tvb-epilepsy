@@ -73,7 +73,7 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "SOURCE_TARGET_DATA": int(
                     probabilistic_model.observation_model == OBSERVATION_MODELS.SOURCE_POWER.value),
                 "target_data": signals,
-                "gain": probabilistic_model.gain_matrix,
+                "gain": probabilistic_model.projection,
                 "time": set_time(probabilistic_model, time),
                 "active_regions": np.array(probabilistic_model.active_regions),
                 }
