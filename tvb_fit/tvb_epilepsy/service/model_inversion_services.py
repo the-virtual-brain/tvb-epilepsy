@@ -7,7 +7,10 @@ from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import BIPOLA
 from tvb_utils.log_error_utils import initialize_logger, warning, raise_error
 from tvb_utils.data_structures_utils import formal_repr, ensure_list, isequal_string, generate_region_labels
 from tvb_utils.computations_utils import select_greater_values_array_inds, select_greater_values_2Darray_inds
+from tvb_head.model.head import Head
+from tvb_head.model.sensors import SensorTypes
 from tvb_head.service.head_service import HeadService
+from tvb_timeseries.model.timeseries import Timeseries
 from tvb_timeseries.service.timeseries_service import TimeseriesService
 
 
@@ -16,6 +19,8 @@ from tvb_timeseries.service.timeseries_service import TimeseriesService
 class ModelInversionService(object):
 
     logger = initialize_logger(__name__)
+
+    head = None
 
     active_regions_selection_methods = ["E", "LSA", "sensors"]
     active_regions_exlude = []
@@ -101,63 +106,88 @@ class ModelInversionService(object):
 
 class ODEModelInversionService(ModelInversionService):
 
-    active_seeg_th = None
+    sensors_name_or_id = 0
     transform_to_bipolar = False
-    manual_selection = []
-    auto_selection = None  #"rois-power"
-    power_th = None
-    projection_th = None
-    projection_percentile = 99.0
-    n_signals_per_roi = None
     normalization = None  # "baseline-maxamplitude"
     normalization_args = {}
     cut_target_times_on_off = [0, 0]
+    active_seeg_th = None
+    manual_selection = []
+    auto_selection = None  # "rois-power"
+    power_th = None
     sensors_per_electrode = 3
     group_electrodes = True
+    projection_th = None
+    projection_percentile = 99.0
+    n_signals_per_roi = None
 
     def __init__(self):
         super(ODEModelInversionService, self).__init__()
         self.ts_service = TimeseriesService()
 
-    def update_active_regions_sensors(self, probabilistic_model, sensors, projection, reset=False):
+    def _getSensorsAndProjection(self):
+        if isinstance(self.head, Head):
+            try:
+                sensors, projection = self.head.get_sensors(s_type=SensorTypes.TYPE_SEEG.value,
+                                                            name_or_index=self.sensors_name_or_id)
+            except:
+                self.logger.warning("Failed to get sensors %s and their projection from head %s!" %
+                                    (str(self.sensors_name_or_id), str(self.head)))
+                return None, None
+            return sensors, projection.projection_data
+        else:
+            self.logger.warning("Unable to get model inversion sensors! No head defined!")
+            return None, None
+
+    def _getSensors(self):
+        return self._getSensorsAndProjection()[0]
+
+    def _getProjection(self):
+        return self._getSensorsAndProjection()[1]
+
+    def update_active_regions_sensors(self, probabilistic_model, reset=False):
         if reset:
             probabilistic_model.active_regions = np.array([])
         active_regions = probabilistic_model.active_regions.tolist()
-        if sensors is not None:
-            active_regions += select_greater_values_2Darray_inds(self.projection_th,
+        projection = self._getProjection()
+        if projection is not None:
+            active_regions += select_greater_values_2Darray_inds(projection, self.projection_th,
                                                                  self.projection_percentile)[1].tolist()
             active_regions = np.unique(active_regions)
             active_regions = self.exclude_regions(active_regions)
             probabilistic_model.update_active_regions(active_regions)
             probabilistic_model.projection = projection[:, probabilistic_model.active_regions]
         else:
-            self.logger.warning("No LSA results found (empty propagations_strengths vector)!" +
-                                "\nSkipping of setting active regions according to LSA!")
+            self.logger.warning("No sensors' projection found!" +
+                                "\nSkipping of setting active regions according to sensors proximity!")
         return probabilistic_model
 
-    def update_active_regions_target_data(self, target_data, probabilistic_model, sensors, projection, reset=False):
+    def update_active_regions_target_data(self, target_data, probabilistic_model, reset=False):
         if reset:
             probabilistic_model.active_regions = np.array([])
-        if target_data:
+        if isinstance(target_data, Timeseries):
             active_regions = probabilistic_model.active_regions.tolist()
-            projection = np.array(projection)
-            signals_inds = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
-            if len(signals_inds) != 0:
-                projection = projection[signals_inds]
-                for proj in projection:
-                    active_regions += select_greater_values_array_inds(proj, self.projection_th,
-                                                                       self.n_signals_per_roi).tolist()
-                active_regions = np.unique(active_regions)
-                active_regions = self.exclude_regions(active_regions)
-                probabilistic_model.update_active_regions(active_regions)
+            sensors, projection = self._getSensorsAndProjection()
+            if sensors is not None:
+                signals_inds = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
+                if len(signals_inds) != 0:
+                    projection = projection[signals_inds]
+                    for proj in projection:
+                        active_regions += select_greater_values_array_inds(proj, self.projection_th,
+                                                                           self.n_signals_per_roi).tolist()
+                    active_regions = np.unique(active_regions)
+                    active_regions = self.exclude_regions(active_regions)
+                    probabilistic_model.update_active_regions(active_regions)
+                else:
+                    warning("Skipping active regions setting by seeg power because no data were assigned to sensors!")
             else:
-                warning("Skipping active regions setting by seeg power because no data were assigned to sensors!")
+                self.logger.warning("No sensors found!\nSkipping active regions setting by seeg power!")
         else:
-            warning("Skipping active regions setting by seeg power because no target data were provided!")
+            self.logger.warning("Skipping active regions setting by seeg power because no target data were provided!")
         probabilistic_model.projection = projection[signals_inds][:, probabilistic_model.active_regions]
         return probabilistic_model
 
-    def update_active_regions(self, probabilistic_model, sensors=None, target_data=None, e_values=[], x0_values=[],
+    def update_active_regions(self, probabilistic_model, target_data=None, e_values=[], x0_values=[],
                               lsa_propagation_strengths=[], reset=False):
         if reset:
             probabilistic_model.active_regions = np.array([])
@@ -166,71 +196,79 @@ class ODEModelInversionService(ModelInversionService):
                                                                         lsa_propagation_strengths, reset=False)
 
         if "sensors" in self.active_regions_selection_methods:
-            probabilistic_model = self.update_active_regions_sensors(probabilistic_model, sensors, reset=False)
-        if target_data is not None:
+            probabilistic_model = self.update_active_regions_sensors(probabilistic_model, reset=False)
+        if isinstance(target_data, Timeseries):
             if "target_data" in self.active_regions_selection_methods:
                 probabilistic_model = \
-                    self.update_active_regions_target_data(target_data, probabilistic_model, sensors, reset=False)
+                    self.update_active_regions_target_data(target_data, probabilistic_model, reset=False)
         return probabilistic_model
 
-    def select_target_data_sensors(self, target_data, sensors, projection, rois, power=np.array([]),
+    def select_target_data_sensors(self, target_data, rois, power=np.array([]),
                                    n_groups=None, members_per_group=None):
-        if n_groups is None:
-            n_groups = sensors.number_of_electrodes * self.sensors_per_electrode
-        if members_per_group is None:
-            if n_groups > sensors.number_of_electrodes:
-                members_per_group = 1
-            else:
-                members_per_group = self.sensors_per_electrode
-        if self.auto_selection.find("rois") >= 0:
-            signals_inds = []
-            if self.auto_selection.find("power"):
-                self.auto_selection = self.auto_selection.replace("power", "")
-                signals_inds = self.ts_service.select_by_power(target_data, power, self.power_th)[1].tolist()
-            if projection is not None:
-                signals_inds_by_label = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
-                projection = projection[signals_inds_by_label][:, rois]
-                signals_inds += \
-                    self.ts_service.select_by_rois_proximity(target_data, projection.T, self.projection_th,
-                                                             n_signals=self.n_signals_per_roi)[1].tolist()
-            target_data = target_data.get_subspace_by_index(np.unique(signals_inds))
-        if self.auto_selection.find("correlation-power") >= 0 and target_data.number_of_labels > 1:
-            if self.group_electrodes:
-                disconnectivity = HeadService().sensors_in_electrodes_disconnectivity(sensors, target_data.space_labels)
-            target_data, _ = self.ts_service.select_by_correlation_power(target_data, disconnectivity=disconnectivity,
-                                                                         n_groups=n_groups,
-                                                                         members_per_group=members_per_group)
-        elif self.auto_selection.find("gain-power") >= 0 and target_data.number_of_labels > 1:
-            if self.group_electrodes:
-                disconnectivity = HeadService().sensors_in_electrodes_disconnectivity(sensors, target_data.space_labels)
-            signals_inds_by_label = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
-            projection = projection[signals_inds_by_label][:, rois]
-            target_data, _ = \
-                self.ts_service.select_by_projection_power(target_data, projection, disconnectivity=disconnectivity,
-                                                            n_groups=n_groups, members_per_group=members_per_group)
-        elif self.auto_selection.find("power") >= 0:
-            target_data, _ = self.ts_service.select_by_power(target_data, power, self.power_th)
-        sensors_inds = np.argsort(sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels))
-        target_data = target_data.get_subspace_by_index(sensors_inds)
+        sensors, projection = self._getSensorsAndProjection()
+        if sensors is not None:
+            if n_groups is None:
+                n_groups = sensors.number_of_electrodes * self.sensors_per_electrode
+            if members_per_group is None:
+                if n_groups > sensors.number_of_electrodes:
+                    members_per_group = 1
+                else:
+                    members_per_group = self.sensors_per_electrode
+            if self.auto_selection.find("rois") >= 0:
+                signals_inds = []
+                if self.auto_selection.find("power"):
+                    self.auto_selection = self.auto_selection.replace("power", "")
+                    signals_inds = self.ts_service.select_by_power(target_data, power, self.power_th)[1].tolist()
+                if projection is not None:
+                    signals_inds_by_label = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
+                    projection = projection[signals_inds_by_label][:, rois]
+                    signals_inds += \
+                        self.ts_service.select_by_rois_proximity(target_data, projection.T, self.projection_th,
+                                                                 n_signals=self.n_signals_per_roi)[1].tolist()
+                else:
+                    self.logger.warning("No projection found! 'rois' selection is not possible!")
+                target_data = target_data.get_subspace_by_index(np.unique(signals_inds))
+            if self.auto_selection.find("correlation-power") >= 0 and target_data.number_of_labels > 1:
+                if self.group_electrodes:
+                    disconnectivity = \
+                        HeadService().sensors_in_electrodes_disconnectivity(sensors, target_data.space_labels)
+                target_data, _ = self.ts_service.select_by_correlation_power(target_data,
+                                                                             disconnectivity=disconnectivity,
+                                                                             n_groups=n_groups,
+                                                                             members_per_group=members_per_group)
+            elif self.auto_selection.find("gain-power") >= 0 and target_data.number_of_labels > 1:
+                if projection is not None:
+                    if self.group_electrodes:
+                        disconnectivity = \
+                            HeadService().sensors_in_electrodes_disconnectivity(sensors, target_data.space_labels)
+                    signals_inds_by_label = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
+                    projection = projection[signals_inds_by_label][:, rois]
+                    target_data, _ = self.ts_service.select_by_projection_power(target_data, projection,
+                                                                                disconnectivity=disconnectivity,
+                                                                                n_groups=n_groups,
+                                                                                members_per_group=members_per_group)
+                else:
+                    self.logger.warning("No projection found! 'rois' selection is not possible!")
+            elif self.auto_selection.find("power") >= 0:
+                target_data, _ = self.ts_service.select_by_power(target_data, power, self.power_th)
+            sensors_inds = np.argsort(sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels))
+            target_data = target_data.get_subspace_by_index(sensors_inds)
+        else:
+            self.logger.warning("No sensors found! No automatic target data selection is possible!")
         return target_data
 
-    def set_projection(self, target_data, probabilistic_model, sensors, projection):
+    def set_projection(self, target_data, probabilistic_model):
         if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
-            sensors_inds = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
-            return projection[sensors_inds][:, probabilistic_model.active_regions]
+            sensors, projection = self._getSensorsAndProjection()
+            if sensors is not None and projection is not None:
+                sensors_inds = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
+                return projection[sensors_inds][:, probabilistic_model.active_regions]
+            else:
+                raise_error("No sensors and projection found! Unable to set projection!")
         else:
             return np.eye(target_data.number_of_labels)
 
-    def set_target_data_and_time(self, target_data, probabilistic_model, head=None, sensors=None, sensor_id=0,
-                                 power=np.array([])):
-        if sensors is None and head is not None:
-            try:
-                sensors = sensors.head.get_sensors_by_index(sensor_ids=sensor_id)
-            except:
-                if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
-                    raise_error("No sensors instance! Needed for projection computation!")
-                else:
-                    pass
+    def set_target_data_and_time(self, target_data, probabilistic_model, power=np.array([])):
         if np.any(np.array(self.cut_target_times_on_off)):
             target_data = target_data.get_time_window_by_units(self.cut_target_times_on_off[0],
                                                                self.cut_target_times_on_off[1])
@@ -243,14 +281,13 @@ class ODEModelInversionService(ModelInversionService):
             target_data = target_data.get_subspace_by_index(np.unique(self.manual_selection))
         if self.auto_selection:
             if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
-                target_data = self.select_target_data_sensors(target_data, sensors,
-                                                              probabilistic_model.active_regions, power)
+                target_data = self.select_target_data_sensors(target_data, probabilistic_model.active_regions, power)
             else:
                 target_data = target_data.get_subspace_by_index(probabilistic_model.active_regions)
         probabilistic_model.time = target_data.time
         probabilistic_model.time_length = len(probabilistic_model.time)
         probabilistic_model.number_of_target_data = target_data.number_of_labels
-        probabilistic_model.projection = self.set_projection(target_data, probabilistic_model, sensors)
+        probabilistic_model.projection = self.set_projection(target_data, probabilistic_model)
         # if probabilistic_model.observation_model in OBSERVATION_MODELS.SEEG.value:
         #     signals_inds_by_label = sensors.get_sensors_inds_by_sensors_labels(target_data.space_labels)
         #     target_data.dimension_labels["space"] = generate_region_labels(target_data.number_of_labels,
