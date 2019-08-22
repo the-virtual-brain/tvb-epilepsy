@@ -11,7 +11,7 @@ from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation \
     import compute_initial_conditions_from_eq_point
 from tvb_fit.tvb_epilepsy.service.simulator.epileptor_model_factory import EPILEPTOR_MODEL_NVARS
 
-from tvb_utils.data_structures_utils import formal_repr, dicts_of_lists_to_lists_of_dicts
+from tvb_scripts.utils.data_structures_utils import formal_repr, dicts_of_lists_to_lists_of_dicts
 
 
 EPILEPTOR_PARAMS = ["x0", "a", "b", "yc", "d", "Iext1", "Iext2", "slope", "s", "gamma", "tau1", "tau0", "tau2",

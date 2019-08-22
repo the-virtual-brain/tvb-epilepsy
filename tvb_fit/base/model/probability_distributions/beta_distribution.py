@@ -6,7 +6,7 @@ from tvb_fit.base.model.probability_distributions import ProbabilityDistribution
 from tvb_fit.base.model.probability_distributions.continuous_probability_distribution \
     import ContinuousProbabilityDistribution
 
-from tvb_utils.data_structures_utils import isequal_string, make_float
+from tvb_scripts.utils.data_structures_utils import isequal_string, make_float
 
 
 class BetaDistribution(ContinuousProbabilityDistribution):

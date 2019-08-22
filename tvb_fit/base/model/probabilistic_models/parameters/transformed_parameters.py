@@ -3,8 +3,8 @@ from collections import OrderedDict
 
 from tvb_fit.base.model.probabilistic_models.parameters.base import get_x_arg_for_param_distrib
 
-from tvb_utils.data_structures_utils import formal_repr
-from tvb_utils.log_error_utils import raise_not_implemented_error
+from tvb_scripts.utils.log_error_utils import raise_not_implemented_error
+from tvb_scripts.utils.data_structures_utils import formal_repr
 
 
 TransformedProbabilisticParameterBaseAttributes = ["name", "type", "low", "high", "mean", "median", "mode",

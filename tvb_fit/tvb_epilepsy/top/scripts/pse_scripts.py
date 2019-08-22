@@ -8,8 +8,8 @@ from tvb_fit.tvb_epilepsy.service.pse.lsa_pse_service import LSAPSEService
 from tvb_fit.samplers.probabilistic_sampler import ProbabilisticSampler
 from tvb_fit.tvb_epilepsy.top.scripts.hypothesis_scripts import start_lsa_run
 
-from tvb_utils.log_error_utils import initialize_logger
-from tvb_utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
     dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
 
 

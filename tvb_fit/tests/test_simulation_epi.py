@@ -8,7 +8,7 @@ from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_fit.tvb_epilepsy.service.simulator.simulator_builder import SimulatorBuilder
 
-from tvb_io.tvb_data_reader import TVBReader
+from tvb_scripts.io.tvb_data_reader import TVBReader
 
 
 class TestSimulationRun(BaseTest):

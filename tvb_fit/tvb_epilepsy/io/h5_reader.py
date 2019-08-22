@@ -14,8 +14,13 @@ from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfig
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_fit.io.h5_reader import H5Reader as H5ReaderBase, H5GroupHandlers
 
-from tvb_utils.log_error_utils import initialize_logger, raise_value_error
-from tvb_utils.data_structures_utils import ensure_list
+from tvb_scripts.utils.log_error_utils import initialize_logger, raise_value_error
+from tvb_scripts.utils.data_structures_utils import ensure_list
+
+# TODO: find a better solution than this hack for old files with numpy.array "Sensors_subtype"
+from tvb_scripts.model.virtual_head.sensors import \
+    Sensors, SensorTypesToClassesDict, SensorsH5Field, SensorTypesToProjectionDict
+from tvb.datatypes.projections import ProjectionMatrix
 
 
 H5_TYPE_ATTRIBUTE = H5Writer().H5_TYPE_ATTRIBUTE
@@ -26,11 +31,7 @@ H5_TYPES_ATTRUBUTES = [H5_TYPE_ATTRIBUTE, H5_SUBTYPE_ATTRIBUTE]
 class H5Reader(H5ReaderBase):
     logger = initialize_logger(__name__)
 
-    # TODO: find a better solution than this hack for old files with numpy.array "Sensors_subtype"
     def read_sensors_of_type(self, sensors_file, name):
-        from tvb_head.model.sensors import \
-            Sensors, SensorTypesToClassesDict, SensorsH5Field, SensorTypesToProjectionDict
-        from tvb.datatypes.projections import ProjectionMatrix
 
         """
         :param

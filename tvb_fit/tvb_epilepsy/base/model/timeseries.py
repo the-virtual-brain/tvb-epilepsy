@@ -3,8 +3,8 @@ from enum import Enum
 
 import numpy as np
 
-from tvb_utils.log_error_utils import initialize_logger
-from tvb_timeseries.model.timeseries import Timeseries as TimeseriesBase, TimeseriesDimensions
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.model.timeseries import Timeseries as TimeseriesBase, TimeseriesDimensions
 
 
 class PossibleVariables(Enum):

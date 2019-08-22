@@ -7,9 +7,9 @@ from tvb_fit.io.h5_writer import H5Writer as H5WriterBase
 from tvb_fit.io.h5_writer import KEY_TYPE, KEY_DATE, KEY_VERSION, KEY_MAX, KEY_MIN, KEY_STEPS, \
     KEY_CHANNELS, KEY_SV, KEY_SAMPLING, KEY_START
 
-from tvb_utils.log_error_utils import raise_value_error, raise_error
-from tvb_utils.file_utils import change_filename_or_overwrite, write_metadata
-from tvb_timeseries.model.timeseries import Timeseries
+from tvb_scripts.utils.log_error_utils import raise_value_error, raise_error
+from tvb_scripts.utils.file_utils import change_filename_or_overwrite, write_metadata
+from tvb_scripts.model.timeseries import Timeseries
 
 
 class H5Writer(H5WriterBase):

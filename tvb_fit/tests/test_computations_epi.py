@@ -16,8 +16,8 @@ from tvb_fit.tvb_epilepsy.base.computation_utils.symbolic_utils import \
     symbol_calc_fx1y1_6d_diff_x1, symbol_calc_fz_jac_square_taylor
 from tvb_fit.tvb_epilepsy.base.model.epileptor_models import EpileptorDPrealistic
 
-from tvb_utils.log_error_utils import initialize_logger
-from tvb_utils.data_structures_utils import assert_arrays
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.data_structures_utils import assert_arrays
 
 
 #TODO: Left some commented asserts that need corrections in order to work

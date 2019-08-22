@@ -6,7 +6,7 @@ import numpy
 from tvb_fit.tvb_epilepsy.base.constants.config import CalculusConfig
 from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import *
 
-from tvb_utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.log_error_utils import initialize_logger
 
 
 logger = initialize_logger(__name__)

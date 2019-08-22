@@ -5,7 +5,7 @@
 import os
 import numpy
 from scipy.io import loadmat
-from tvb_head.model.sensors import Sensors
+from tvb_scripts.model.virtual_head.sensors import Sensors
 from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 

@@ -12,10 +12,10 @@ from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_fit.tvb_epilepsy.service.simulator.simulator_builder import build_simulator_TVB_realistic, \
     build_simulator_TVB_fitting, build_simulator_TVB_default, build_simulator_TVB_paper
 
-from tvb_utils.log_error_utils import initialize_logger
-from tvb_utils.data_structures_utils import isequal_string
-from tvb_utils.analyzers_utils import interval_scaling
-from tvb_timeseries.service.timeseries_service import TimeseriesService
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.data_structures_utils import isequal_string
+from tvb_scripts.utils.analyzers_utils import interval_scaling
+from tvb_scripts.service.timeseries_service import TimeseriesService
 
 
 logger = initialize_logger(__name__)

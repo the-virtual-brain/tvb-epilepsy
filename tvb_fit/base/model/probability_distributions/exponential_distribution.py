@@ -5,7 +5,7 @@ from tvb_fit.base.model.probability_distributions import ProbabilityDistribution
 from tvb_fit.base.model.probability_distributions.continuous_probability_distribution \
     import ContinuousProbabilityDistribution
 
-from tvb_utils.data_structures_utils import make_float, isequal_string
+from tvb_scripts.utils.data_structures_utils import make_float, isequal_string
 
 
 class ExponentialDistribution(ContinuousProbabilityDistribution):

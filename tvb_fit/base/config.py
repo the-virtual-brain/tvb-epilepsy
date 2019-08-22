@@ -1,8 +1,8 @@
 import os
 
-from tvb_config.config import Config as ConfigBase
-from tvb_config.config import GenericConfig as GenericConfigBase
-from tvb_config.config import CalculusConfig, FiguresConfig, InputConfig, OutputConfig
+from tvb_scripts.config.config import Config as ConfigBase
+from tvb_scripts.config.config import GenericConfig as GenericConfigBase
+from tvb_scripts.config.config import CalculusConfig, FiguresConfig, InputConfig, OutputConfig
 
 
 class GenericConfig(GenericConfigBase):

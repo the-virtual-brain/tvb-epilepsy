@@ -14,9 +14,9 @@ from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_fit.tvb_epilepsy.base.model.epileptor_probabilistic_models \
     import EpiProbabilisticModel, ODEEpiProbabilisticModel, SDEEpiProbabilisticModel
 
-from tvb_utils.log_error_utils import initialize_logger, warning, raise_value_error
-from tvb_utils.data_structures_utils import formal_repr, ensure_list
-from tvb_timeseries.model.timeseries import Timeseries as TargetDataTimeseries
+from tvb_scripts.utils.log_error_utils import initialize_logger, warning, raise_value_error
+from tvb_scripts.utils.data_structures_utils import formal_repr, ensure_list
+from tvb_scripts.model.timeseries import Timeseries as TargetDataTimeseries
 
 
 x0_def = {"def": X0_DEF, "min": X0_MIN, "max": X0_MAX, }

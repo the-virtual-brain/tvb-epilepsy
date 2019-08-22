@@ -17,8 +17,8 @@ from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import calc_
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import compute_initial_conditions_from_eq_point
 from tvb_fit.tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, Timeseries
 
-from tvb_utils.log_error_utils import initialize_logger
-from tvb_utils.data_structures_utils import obj_to_dict, assert_arrays
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.data_structures_utils import obj_to_dict, assert_arrays
 
 
 class Settings(object):

@@ -9,7 +9,7 @@ from tvb_fit.base.constants import Target_Data_Type
 from tvb_fit.samplers.stan.stan_interface import merge_samples
 from tvb_fit.plot.model_inversion_plotter import ModelInversionPlotter as ModelInversionPlotterBase
 
-from tvb_utils.data_structures_utils import ensure_list, isequal_string, generate_region_labels
+from tvb_scripts.utils.data_structures_utils import ensure_list, isequal_string, generate_region_labels
 
 
 class ModelInversionPlotter(ModelInversionPlotterBase):

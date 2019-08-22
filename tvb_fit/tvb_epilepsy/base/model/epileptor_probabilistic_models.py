@@ -6,8 +6,8 @@ from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import *
 from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration \
     import EpileptorModelConfiguration as ModelConfiguration
 
-from tvb_utils.log_error_utils import raise_value_error
-from tvb_utils.data_structures_utils import ensure_list
+from tvb_scripts.utils.log_error_utils import raise_value_error
+from tvb_scripts.utils.data_structures_utils import ensure_list
 
 
 class EpiProbabilisticModel(ProbabilisticModelBase):

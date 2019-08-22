@@ -10,8 +10,8 @@ from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import calc_
                                                              calc_x0_val_to_model_x0
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import calc_eq_y1, def_x1lin
 
-from tvb_utils.data_structures_utils import isequal_string, generate_region_labels
-from tvb_plot.base_plotter import BasePlotter
+from tvb_scripts.utils.data_structures_utils import isequal_string, generate_region_labels
+from tvb_scripts.plot.base_plotter import BasePlotter
 
 
 class ModelConfigPlotter(BasePlotter):

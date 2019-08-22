@@ -6,8 +6,8 @@ from tvb_fit.base.model.probabilistic_models.parameters.base import Probabilisti
 from tvb_fit.base.model.probabilistic_models.parameters.transformed_parameters import NegativeLognormal
 from tvb_fit.service.probability_distribution_factory import compute_pdf_params, probability_distribution_factory
 
-from tvb_utils.log_error_utils import raise_value_error
-from tvb_utils.data_structures_utils import extract_dict_stringkeys, get_val_key_for_first_keymatch_in_dict
+from tvb_scripts.utils.log_error_utils import raise_value_error
+from tvb_scripts.utils.data_structures_utils import extract_dict_stringkeys, get_val_key_for_first_keymatch_in_dict
 
 
 #TODO: This could be turned into a builder once it is stable

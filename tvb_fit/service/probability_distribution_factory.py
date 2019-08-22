@@ -14,8 +14,8 @@ from tvb_fit.base.model.probability_distributions.normal_distribution import Nor
 from tvb_fit.base.model.probability_distributions.poisson_distribution import PoissonDistribution
 from tvb_fit.base.model.probability_distributions.uniform_distribution import UniformDistribution
 
-from tvb_utils.log_error_utils import raise_value_error, initialize_logger
-from tvb_utils.data_structures_utils import isequal_string, dicts_of_lists_to_lists_of_dicts
+from tvb_scripts.utils.log_error_utils import raise_value_error, initialize_logger
+from tvb_scripts.utils.data_structures_utils import isequal_string, dicts_of_lists_to_lists_of_dicts
 
 
 CONSTRAINT_ABS_TOL = 0.01

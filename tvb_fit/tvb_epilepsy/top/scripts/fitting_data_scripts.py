@@ -4,10 +4,10 @@ import numpy as np
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import \
     SEIZURE_LENGTH, HIGH_HPF, LOW_HPF, LOW_LPF, HIGH_LPF, WIN_LEN, BIPOLAR, TARGET_DATA_PREPROCESSING
 
-from tvb_utils.log_error_utils import initialize_logger, warning
-from tvb_utils.data_structures_utils import isequal_string, ensure_list
-from tvb_timeseries.service.timeseries_service import TimeseriesService, NORMALIZATION_METHODS
-from tvb_io.edf import read_edf_to_Timeseries
+from tvb_scripts.utils.log_error_utils import initialize_logger, warning
+from tvb_scripts.utils.data_structures_utils import isequal_string, ensure_list
+from tvb_scripts.service.timeseries_service import TimeseriesService
+from tvb_scripts.io.edf import read_edf_to_Timeseries
 
 
 logger = initialize_logger(__name__)

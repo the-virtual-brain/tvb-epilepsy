@@ -4,11 +4,11 @@ from tvb_fit.plot.plotter import Plotter
 from tvb_fit.samplers.stan.stan_interface import StanInterface
 from tvb_fit.samplers.stan.stan_factory import *
 
-from tvb_utils.log_error_utils import raise_value_error, warning
-from tvb_utils.data_structures_utils import construct_import_path, ensure_list, isequal_string
-from tvb_utils.command_line_utils import execute_command
-from tvb_utils.file_utils import change_filename_or_overwrite_with_wildcard
-from tvb_io.csv import parse_csv_in_cols
+from tvb_scripts.utils.log_error_utils import raise_value_error, warning
+from tvb_scripts.utils.data_structures_utils import construct_import_path, ensure_list, isequal_string
+from tvb_scripts.utils.command_line_utils import execute_command
+from tvb_scripts.utils.file_utils import change_filename_or_overwrite_with_wildcard
+from tvb_scripts.io.csv import parse_csv_in_cols
 
 
 

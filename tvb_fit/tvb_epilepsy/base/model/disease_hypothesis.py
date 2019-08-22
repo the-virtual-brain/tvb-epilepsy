@@ -9,8 +9,8 @@ TODO: if needed in the future: Generate a richer disease hypothesis as a combina
 from copy import deepcopy
 import numpy as np
 
-from tvb_utils.log_error_utils import initialize_logger, raise_value_error
-from tvb_utils.data_structures_utils import formal_repr, sort_dict, ensure_list, \
+from tvb_scripts.utils.log_error_utils import initialize_logger, raise_value_error
+from tvb_scripts.utils.data_structures_utils import formal_repr, sort_dict, ensure_list, \
     generate_region_labels, dicts_of_lists_to_lists_of_dicts
 
 

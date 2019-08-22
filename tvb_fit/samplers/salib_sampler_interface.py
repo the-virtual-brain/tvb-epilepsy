@@ -6,7 +6,7 @@ from tvb_fit.base.config import CalculusConfig
 from tvb_fit.base.model.parameter import Parameter
 from tvb_fit.samplers.probabilistic_sampler import ProbabilisticSampler
 
-from tvb_utils.log_error_utils import raise_not_implemented_error
+from tvb_scripts.utils.log_error_utils import raise_not_implemented_error
 
 
 class SalibSamplerInterface(ProbabilisticSampler):

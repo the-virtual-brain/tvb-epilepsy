@@ -8,8 +8,8 @@ import numpy
 
 from tvb_fit.tvb_epilepsy.service.lsa_service import LSAService
 
-from tvb_utils.data_structures_utils import dicts_of_lists_to_lists_of_dicts
-from tvb_plot.base_plotter import BasePlotter
+from tvb_scripts.utils.data_structures_utils import dicts_of_lists_to_lists_of_dicts
+from tvb_scripts.plot.base_plotter import BasePlotter
 
 
 class LSAPlotter(BasePlotter):

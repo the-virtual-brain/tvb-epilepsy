@@ -8,8 +8,8 @@ from tvb_fit.base.model.probabilistic_models.parameters.transformed_parameters i
 from tvb_fit.base.model.probabilistic_models.parameters.base import ProbabilisticParameterBase
 from tvb_fit.samplers.sampler_base import SamplerBase
 
-from tvb_utils.log_error_utils import initialize_logger
-from tvb_utils.data_structures_utils import dict_str, formal_repr, isequal_string
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.data_structures_utils import dict_str, formal_repr, isequal_string
 
 
 class ProbabilisticSampler(SamplerBase):

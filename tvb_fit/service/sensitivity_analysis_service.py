@@ -1,8 +1,8 @@
 import numpy as np
 from SALib.analyze import sobol, delta, fast, morris, dgsm, ff
 
-from tvb_utils.log_error_utils import raise_value_error, initialize_logger
-from tvb_utils.data_structures_utils import dict_str, formal_repr, list_of_dicts_to_dicts_of_ndarrays
+from tvb_scripts.utils.log_error_utils import raise_value_error, initialize_logger
+from tvb_scripts.utils.data_structures_utils import dict_str, formal_repr, list_of_dicts_to_dicts_of_ndarrays
 
 METHODS = ["sobol", "latin", "delta", "dgsm", "fast", "fast_sampler", "morris", "ff", "fractional_factorial"]
 

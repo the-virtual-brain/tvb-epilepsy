@@ -12,10 +12,10 @@ from tvb_fit.service.probabilistic_parameter_builder import generate_probabilist
     generate_negative_lognormal_parameter
 from tvb_fit.io.h5_writer import H5Writer
 
-from tvb_utils.log_error_utils import initialize_logger, raise_value_error
-from tvb_utils.data_structures_utils import ensure_list
-from tvb_io.h5_reader import H5Reader as H5ReaderBase
-from tvb_io.h5_reader import H5GroupHandlers as H5GroupHandlersBase
+from tvb_scripts.utils.log_error_utils import initialize_logger, raise_value_error
+from tvb_scripts.utils.data_structures_utils import ensure_list
+from tvb_scripts.io.h5_reader import H5Reader as H5ReaderBase
+from tvb_scripts.io.h5_reader import H5GroupHandlers as H5GroupHandlersBase
 
 
 H5_TYPE_ATTRIBUTE = H5Writer().H5_TYPE_ATTRIBUTE

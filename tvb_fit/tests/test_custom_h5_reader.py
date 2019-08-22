@@ -7,7 +7,7 @@ from tvb_fit.base.model.simulation_settings import SimulationSettings
 from tvb_fit.io.h5_reader import H5Reader
 from tvb_fit.io.h5_writer import H5Writer
 
-from tvb_head.model.sensors import SensorTypes
+from tvb_scripts.model.virtual_head.sensors import SensorTypes
 
 
 class TestCustomH5Reader(BaseTest):

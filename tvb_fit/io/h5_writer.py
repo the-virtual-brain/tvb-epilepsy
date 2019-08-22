@@ -3,8 +3,8 @@
 import h5py
 import numpy
 
-from tvb_utils.file_utils import change_filename_or_overwrite, write_metadata
-from tvb_io.h5_writer import H5Writer as H5WriterBase
+from tvb_scripts.utils.file_utils import change_filename_or_overwrite
+from tvb_scripts.io.h5_writer import H5Writer as H5WriterBase
 
 
 KEY_TYPE = "EPI_Type"

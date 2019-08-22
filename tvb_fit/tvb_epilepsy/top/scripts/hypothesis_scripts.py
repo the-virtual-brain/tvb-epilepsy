@@ -8,8 +8,8 @@ from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_fit.tvb_epilepsy.service.lsa_service import LSAService
 
-from tvb_utils.log_error_utils import initialize_logger
-from tvb_io.tvb_data_reader import TVBReader
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.io.tvb_data_reader import TVBReader
 
 
 logger = initialize_logger(__name__)

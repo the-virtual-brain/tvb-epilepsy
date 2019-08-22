@@ -3,7 +3,7 @@
 import numpy
 import pytest
 
-from tvb_timeseries.model.timeseries import Timeseries, TimeseriesDimensions, PossibleVariables
+from tvb_scripts.model.timeseries import Timeseries, TimeseriesDimensions, PossibleVariables
 
 
 class TestTimeseries(object):

@@ -9,8 +9,8 @@ from tvb_fit.tvb_epilepsy.service.simulator.epileptor_model_factory \
 from tvb_fit.tvb_epilepsy.service.simulator.simulator_java import SimulatorJava
 from tvb_fit.tvb_epilepsy.service.simulator.simulator_tvb import SimulatorTVB
 
-from tvb_utils.log_error_utils import initialize_logger, raise_value_error
-from tvb_utils.data_structures_utils import isequal_string, ensure_list
+from tvb_scripts.utils.log_error_utils import initialize_logger, raise_value_error
+from tvb_scripts.utils.data_structures_utils import isequal_string, ensure_list
 
 
 from tvb.simulator import noise

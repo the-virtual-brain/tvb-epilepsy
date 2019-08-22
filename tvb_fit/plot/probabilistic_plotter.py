@@ -7,9 +7,9 @@ from matplotlib import pyplot
 
 import numpy
 
-from tvb_utils.log_error_utils import raise_value_error
-from tvb_utils.data_structures_utils import linspace_broadcast
-from tvb_plot.base_plotter import BasePlotter
+from tvb_scripts.utils.log_error_utils import raise_value_error
+from tvb_scripts.utils.data_structures_utils import linspace_broadcast
+from tvb_scripts.plot.base_plotter import BasePlotter
 
 
 class ProbabilisticPlotter(BasePlotter):

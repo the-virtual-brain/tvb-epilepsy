@@ -18,9 +18,9 @@ from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_fit.tvb_epilepsy.plot.plotter import Plotter
 
-from tvb_utils.log_error_utils import initialize_logger
-from tvb_utils.data_structures_utils import assert_equal_objects, isequal_string, ensure_list
-from tvb_io.tvb_data_reader import TVBReader
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.data_structures_utils import assert_equal_objects, isequal_string, ensure_list
+from tvb_scripts.io.tvb_data_reader import TVBReader
 
 
 PSE_FLAG = True

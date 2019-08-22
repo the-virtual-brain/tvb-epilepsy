@@ -6,7 +6,7 @@ from tvb_fit.base.model.probability_distributions import ProbabilityDistribution
 from tvb_fit.base.model.probability_distributions.discrete_probability_distribution \
     import DiscreteProbabilityDistribution
 
-from tvb_utils.data_structures_utils import make_float, make_int
+from tvb_scripts.utils.data_structures_utils import make_float, make_int
 
 
 class BinomialDistribution(DiscreteProbabilityDistribution):

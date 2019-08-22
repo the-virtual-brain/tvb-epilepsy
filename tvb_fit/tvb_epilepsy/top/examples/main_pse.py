@@ -10,7 +10,7 @@ from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader as Reader
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_fit.tvb_epilepsy.plot.plotter import Plotter
 
-from tvb_utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.log_error_utils import initialize_logger
 
 
 def main_pse(config=Config()):

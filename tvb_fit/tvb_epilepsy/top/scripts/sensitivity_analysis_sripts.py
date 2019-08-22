@@ -10,8 +10,8 @@ from tvb_fit.service.sensitivity_analysis_service import SensitivityAnalysisServ
 from tvb_fit.tvb_epilepsy.top.scripts.hypothesis_scripts import start_lsa_run
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 
-from tvb_utils.log_error_utils import initialize_logger, raise_value_error
-from tvb_utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
+from tvb_scripts.utils.log_error_utils import initialize_logger, raise_value_error
+from tvb_scripts.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays, \
     dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
 
 

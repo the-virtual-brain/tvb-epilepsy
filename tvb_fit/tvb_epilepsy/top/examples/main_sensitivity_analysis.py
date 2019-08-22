@@ -12,7 +12,7 @@ from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.top.scripts.sensitivity_analysis_sripts import sensitivity_analysis_pse_from_hypothesis
 from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader as Reader
 
-from tvb_utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.log_error_utils import initialize_logger
 
 
 logger = initialize_logger(__name__)

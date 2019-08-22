@@ -7,7 +7,7 @@ import numpy
 
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import *
 
-from tvb_utils.log_error_utils import raise_not_implemented_error
+from tvb_scripts.utils.log_error_utils import raise_not_implemented_error
 
 import tvb.basic.traits.types_basic as basic
 import tvb.datatypes.arrays as arrays

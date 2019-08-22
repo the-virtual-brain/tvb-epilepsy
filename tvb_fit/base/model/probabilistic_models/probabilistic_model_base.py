@@ -7,8 +7,8 @@ from tvb_fit.base.model.probabilistic_models.parameters.base import Probabilisti
 from tvb_fit.base.model.probabilistic_models.parameters.transformed_parameters import \
     TransformedProbabilisticParameterBase
 
-from tvb_utils.log_error_utils import warning
-from tvb_utils.data_structures_utils import formal_repr
+from tvb_scripts.utils.log_error_utils import warning
+from tvb_scripts.utils.data_structures_utils import formal_repr
 
 
 class ProbabilisticModelBase(object):

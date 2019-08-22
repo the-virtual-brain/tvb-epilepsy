@@ -13,10 +13,10 @@ from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import calc_
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import calc_eq_z
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 
-from tvb_utils.log_error_utils import initialize_logger, raise_value_error, warning
-from tvb_utils.data_structures_utils import formal_repr
-from tvb_utils.analyzers_utils import interval_scaling
-from tvb_utils.computations_utils import weighted_vector_sum, curve_elbow_point
+from tvb_scripts.utils.log_error_utils import initialize_logger, raise_value_error, warning
+from tvb_scripts.utils.data_structures_utils import formal_repr
+from tvb_scripts.utils.computations_utils import weighted_vector_sum, curve_elbow_point
+from tvb_scripts.utils.analyzers_utils import interval_scaling
 
 
 class LSAService(object):

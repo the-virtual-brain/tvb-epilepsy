@@ -12,7 +12,7 @@ import numpy
 from tvb_fit.tvb_epilepsy.service.simulator.simulator_java import JavaEpileptor
 from tvb_fit.tvb_epilepsy.base.model.epileptor_models import EpileptorDP2D, EpileptorDP, EpileptorDPrealistic
 
-from tvb_utils.log_error_utils import raise_value_error
+from tvb_scripts.utils.log_error_utils import raise_value_error
 
 from tvb.simulator.models import Epileptor
 

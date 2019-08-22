@@ -8,11 +8,9 @@ from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import K_UNSCALED_DEF, TAU1_DEF, TAU0_DEF
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import TAU1_DEF as TAU1_FIT_DEF
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import TAU0_DEF as TAU0_FIT_DEF
-from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import XModes, SDE_MODES, \
-    OBSERVATION_MODELS, OBSERVATION_MODEL_DEF
+from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import XModes, OBSERVATION_MODELS, OBSERVATION_MODEL_DEF
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
-from tvb_fit.tvb_epilepsy.service.probabilistic_models_builders import SDEProbabilisticModelBuilder, \
-    ODEProbabilisticModelBuilder
+from tvb_fit.tvb_epilepsy.service.probabilistic_models_builders import SDEProbabilisticModelBuilder
 from tvb_fit.tvb_epilepsy.service.model_inversion_services import SDEModelInversionService
 from tvb_fit.tvb_epilepsy.service.vep_stan_dict_builder import build_stan_model_data_dict
 from tvb_fit.tvb_epilepsy.top.scripts.fitting_scripts import set_model_config_LSA, get_2D_simulation, \
@@ -22,8 +20,8 @@ from tvb_fit.tvb_epilepsy.plot.plotter import Plotter
 from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 
-from tvb_utils.log_error_utils import initialize_logger
-from tvb_utils.data_structures_utils import ensure_list, find_labels_inds, join_labels_indices_dict
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.data_structures_utils import find_labels_inds, join_labels_indices_dict
 
 
 def path(name, base_path):

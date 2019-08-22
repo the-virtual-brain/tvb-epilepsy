@@ -24,13 +24,13 @@ from tvb_fit.tvb_epilepsy.top.scripts.fitting_data_scripts import prepare_seeg_o
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
 
-from tvb_utils.log_error_utils import initialize_logger, warning
-from tvb_utils.data_structures_utils import ensure_list, generate_region_labels
-from tvb_utils.file_utils import move_overwrite_files_to_folder_with_wildcard
-from tvb_utils.computations_utils import select_greater_values_array_inds
-from tvb_head.model.sensors import SensorTypes
-from tvb_timeseries.service.timeseries_service import TimeseriesService
-from tvb_plot.head_plotter import HeadPlotter
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.data_structures_utils import ensure_list, generate_region_labels
+from tvb_scripts.utils.file_utils import move_overwrite_files_to_folder_with_wildcard
+from tvb_scripts.utils.computations_utils import select_greater_values_array_inds
+from tvb_scripts.model.virtual_head.sensors import SensorTypes
+from tvb_scripts.service.timeseries_service import TimeseriesService
+from tvb_scripts.plot.head_plotter import HeadPlotter
 
 
 logger = initialize_logger(__name__)

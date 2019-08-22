@@ -2,16 +2,16 @@ from collections import OrderedDict
 
 import numpy as np
 
-from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import BIPOLAR, OBSERVATION_MODELS
+from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import OBSERVATION_MODELS
 
-from tvb_utils.log_error_utils import initialize_logger, warning, raise_error
-from tvb_utils.data_structures_utils import formal_repr, ensure_list, isequal_string, generate_region_labels
-from tvb_utils.computations_utils import select_greater_values_array_inds, select_greater_values_2Darray_inds
-from tvb_head.model.head import Head
-from tvb_head.model.sensors import SensorTypes
-from tvb_head.service.head_service import HeadService
-from tvb_timeseries.model.timeseries import Timeseries
-from tvb_timeseries.service.timeseries_service import TimeseriesService
+from tvb_scripts.utils.log_error_utils import initialize_logger, warning, raise_error
+from tvb_scripts.utils.data_structures_utils import formal_repr, ensure_list, isequal_string
+from tvb_scripts.utils.computations_utils import select_greater_values_array_inds, select_greater_values_2Darray_inds
+from tvb_scripts.model.virtual_head.head import Head
+from tvb_scripts.model.virtual_head.sensors import SensorTypes
+from tvb_scripts.model.timeseries import Timeseries
+from tvb_scripts.service.head_service import HeadService
+from tvb_scripts.service.timeseries_service import TimeseriesService
 
 
 #TODO: Would it make sense to have this in tvb_fit?

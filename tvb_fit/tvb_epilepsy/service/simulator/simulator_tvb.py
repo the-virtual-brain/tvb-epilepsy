@@ -11,7 +11,7 @@ from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import 
 from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_fit.tvb_epilepsy.service.simulator.epileptor_model_factory import model_builder_from_model_config_fun, VOIS
 
-from tvb_utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.log_error_utils import initialize_logger
 
 from tvb.simulator import integrators, simulator, coupling  # , noise, monitors
 

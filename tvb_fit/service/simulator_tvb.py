@@ -9,8 +9,8 @@ import numpy
 from tvb_fit.base.constants import TIME_DELAYS_FLAG
 from tvb_fit.service.simulator import ABCSimulator
 
-from tvb_utils.log_error_utils import initialize_logger
-from tvb_timeseries.model.timeseries import Timeseries, TimeseriesDimensions
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.model.timeseries import Timeseries, TimeseriesDimensions
 
 from tvb.simulator import integrators, simulator, coupling, noise, monitors
 

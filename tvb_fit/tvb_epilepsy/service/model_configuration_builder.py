@@ -16,10 +16,10 @@ from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration \
 from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration import EPILEPTOR_PARAMS
 from tvb_fit.tvb_epilepsy.service.simulator.epileptor_model_factory import EPILEPTOR_MODEL_NVARS
 
-from tvb_utils.log_error_utils import initialize_logger, warning, raise_value_error
-from tvb_utils.data_structures_utils import formal_repr, ensure_list
-from tvb_utils.computations_utils import normalize_weights
-from tvb_head.model.connectivity import Connectivity
+from tvb_scripts.utils.log_error_utils import initialize_logger, warning, raise_value_error
+from tvb_scripts.utils.data_structures_utils import formal_repr, ensure_list
+from tvb_scripts.utils.computations_utils import normalize_weights
+from tvb_scripts.model.virtual_head.connectivity import Connectivity
 
 from tvb.simulator.models.base import Model
 from tvb.simulator.simulator import Simulator

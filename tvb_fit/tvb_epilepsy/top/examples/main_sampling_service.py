@@ -11,8 +11,8 @@ from tvb_fit.samplers.deterministic_sampler import DeterministicSampler
 from tvb_fit.samplers.salib_sampler_interface import SalibSamplerInterface
 from tvb_fit.samplers.probabilistic_sampler import ProbabilisticSampler
 
-from tvb_utils.log_error_utils import initialize_logger
-from tvb_utils.data_structures_utils import isequal_string
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.data_structures_utils import isequal_string
 
 
 def main_sampling_service(config=Config()):

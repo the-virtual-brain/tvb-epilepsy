@@ -4,8 +4,8 @@ from collections import OrderedDict
 
 import numpy as np
 
-from tvb_utils.log_error_utils import raise_value_error, initialize_logger
-from tvb_utils.data_structures_utils import formal_repr, isequal_string, shape_to_size, squeeze_array_to_scalar
+from tvb_scripts.utils.log_error_utils import raise_value_error, initialize_logger
+from tvb_scripts.utils.data_structures_utils import formal_repr, isequal_string, shape_to_size, squeeze_array_to_scalar
 
 
 class ProbabilityDistribution(object):
