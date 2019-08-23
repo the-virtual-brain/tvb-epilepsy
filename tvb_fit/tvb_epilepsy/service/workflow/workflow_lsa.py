@@ -12,9 +12,11 @@ from tvb_fit.tvb_epilepsy.service.lsa_service import LSAService
 from tvb_fit.tvb_epilepsy.service.pse.lsa_pse_service import LSAPSEService
 from tvb_fit.tvb_epilepsy.service.workflow.workflow_configure_model import WorkflowConfigureModel
 
+from tvb_scripts.utils.log_error_utils import initialize_logger
 from tvb_scripts.utils.file_utils import wildcardit, move_overwrite_files_to_folder_with_wildcard
 from tvb_scripts.utils.data_structures_utils import \
     list_of_dicts_to_dicts_of_ndarrays, dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
+
 
 class WorkflowLSA(WorkflowConfigureModel):
 
@@ -31,7 +33,7 @@ class WorkflowLSA(WorkflowConfigureModel):
         self._lsa_pse_sampler = None
         self._lsa_pse_service = None
         self._lsa_pse_results = {}
-        self._lsa_pse_path = "'"
+        self._lsa_pse_path = ""
 
     @property
     def _lsa_done(self):
@@ -67,9 +69,9 @@ class WorkflowLSA(WorkflowConfigureModel):
         else:
             plotter = None
         self._hypothesis, self._lsa_service = \
-            run_lsa(self.hypothesis, self.modelconfig, self._config, writer, self.hypo_path,
-                    plotter, self._add_prefix("LSA", self.hypo_prefix), self.hypo_figsfolder, self.region_labels, None,
-                    **self._lsa_params)
+            run_lsa(self.hypothesis, self.modelconfig,  None, self.region_labels,
+                    self.hypo_path, self._add_prefix("LSA", self.hypo_prefix), self.hypo_figsfolder,
+                    writer, plotter, self._config, **self._lsa_params)
 
     def run_lsa_pse(self, write_pse_results=True, plot_lsa_pse=True):
         if not self._lsa_done:
@@ -85,10 +87,10 @@ class WorkflowLSA(WorkflowConfigureModel):
         else:
             plotter = None
         self._lsa_pse_results, self._lsa_pse_service, self._lsa_pse_sampler = \
-            run_lsa_pse(self.hypothesis, self.modelconfig, self._modelconfig_builder, self.lsa_service,
-                        self.region_labels, self._random_seed, self._config, self._logger, writer, self.lsa_pse_path,
-                        plotter, self._add_prefix("LSA_PSE", self.hypo_prefix), self.hypo_figsfolder,
-                        **self._lsa_pse_params)
+            run_lsa_pse(self.hypothesis, self.modelconfig, self._modelconfig_builder,
+                        self.lsa_service, self.region_labels, self._random_seed,
+                        self.lsa_pse_path, self._add_prefix("LSA_PSE", self.hypo_prefix), self.hypo_figsfolder,
+                        writer, plotter, self._logger, self._config, **self._lsa_pse_params)
 
     @property
     def lsa_service(self):
@@ -116,8 +118,9 @@ def lsa_done(hypothesis=None):
     return lsa_done_flag
 
 
-def run_lsa(hypothesis, modelconfig, config=Config(), writer=True, hypo_path="",
-            plotter=True, figure_name="", hypo_figsfolder="", region_labels=[], lsa_service=None, **lsa_params):
+def run_lsa(hypothesis, modelconfig, lsa_service=None, region_labels=[],
+            hypo_path="", figname="", hypo_figsfolder="",
+            writer=True, plotter=True, config=Config(), **lsa_params):
     if not isinstance(lsa_service, LSAService):
         lsa_service = LSAService(**lsa_params)
     hypothesis = lsa_service.run_lsa(hypothesis, modelconfig)
@@ -125,7 +128,7 @@ def run_lsa(hypothesis, modelconfig, config=Config(), writer=True, hypo_path="",
         plotter.plot_lsa(hypothesis, modelconfig,
                          lsa_service.weighted_eigenvector_sum,
                          lsa_service.eigen_vectors_number, region_labels, None,
-                         figure_name=figure_name, lsa_service=lsa_service)
+                         title=figname, lsa_service=lsa_service)
         if os.path.isdir(hypo_figsfolder) and (hypo_figsfolder != config.out.FOLDER_FIGURES):
             move_overwrite_files_to_folder_with_wildcard(hypo_figsfolder,
                                                          os.path.join(config.out.FOLDER_FIGURES,
@@ -140,18 +143,15 @@ def run_lsa(hypothesis, modelconfig, config=Config(), writer=True, hypo_path="",
 
 
 def run_lsa_pse(hypothesis, modelconfig, modelconfig_builder, lsa_service, region_labels, random_seed=0,
-                config=Config(), logger=None, writer=None, lsa_pse_path="",
-                plotter=None, figure_name="", hypo_figsfolder="", **lsa_pse_params):
+                lsa_pse_path="", figname="", hypo_figsfolder="",
+                writer=None, plotter=None, logger=None, config=Config(), **lsa_pse_params):
     if not lsa_done(hypothesis):
         from tvb_fit.tvb_epilepsy.service.workflow.workflow_configure_model import hypo_prefix
         hypo_prfx = hypo_prefix(hypothesis.name, hypothesis.type) + "_"
         hypo_path = os.path.join(os.path.dirname(lsa_pse_path), hypo_prfx + ".h5")
-        hypothesis, lsa_service = run_lsa(hypothesis, modelconfig, config, writer, hypo_path,
-                                          plotter, hypo_prfx+"LSA", hypo_figsfolder, region_labels, lsa_service)
-    from tvb_fit.base.utils.file_utils import wildcardit
-    if not logger:
-        from tvb_fit.base.utils.log_error_utils import initialize_logger
-        logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
+        hypothesis, lsa_service = run_lsa(hypothesis, modelconfig, lsa_service, region_labels,
+                                          hypo_path, hypo_prfx+"LSA", hypo_figsfolder,
+                                          writer, plotter, config)
     n_samples = lsa_pse_params.get("n_samples", 100)
     param_range = lsa_pse_params.get("param_range", 0.1)
     all_regions_indices = np.arange(hypothesis.number_of_regions)
@@ -243,7 +243,7 @@ def run_lsa_pse(hypothesis, modelconfig, modelconfig_builder, lsa_service, regio
         plotter.plot_lsa(hypothesis, modelconfig,
                          lsa_service.weighted_eigenvector_sum,
                          lsa_service.eigen_vectors_number, region_labels, lsa_pse_results,
-                         figure_name=figure_name, lsa_service=lsa_service)
+                         title=figname, lsa_service=lsa_service)
         if os.path.isdir(hypo_figsfolder) and (hypo_figsfolder != config.out.FOLDER_FIGURES):
             move_overwrite_files_to_folder_with_wildcard(hypo_figsfolder,
                                                          os.path.join(config.out.FOLDER_FIGURES,

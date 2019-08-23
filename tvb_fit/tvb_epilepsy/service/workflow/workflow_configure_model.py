@@ -30,7 +30,7 @@ class WorkflowConfigureModel(WorkflowEpilepsyBase):
         self._hypo_manual = \
             {"x0_indices": [], "x0_values": [], "e_indices": [], "e_values": [], "w_indices": [], "w_values": []}
         self._modelconfig = None
-        self._model_type = "EpileptorDP"
+        self._model_name = "EpileptorDP"
         self._modelconfig_builder = None
         self._modelconfig_path = ""
         self._model_params = {}
@@ -114,8 +114,8 @@ class WorkflowConfigureModel(WorkflowEpilepsyBase):
         else:
             writer = None
         self._hypothesis, self._hypo_builder, self._hypo_name, self._hypo_path = \
-           set_hypothesis(self.number_of_regions, self._hypo_manual, self._hypo_name, self.hypo_folder,
-                          self._hypothesis, self._epi_name, self.epi_path, self._config, writer, **self._hypo_params)
+           set_hypothesis(self.number_of_regions, self._hypothesis, self._hypo_manual, self._hypo_name, self.hypo_folder,
+                          self._epi_name, self.epi_path, writer, self._config, **self._hypo_params)
 
     def configure_model(self, write_modelconfig=True, plot_state_space=True, **model_params):
         if self._write_flag(write_modelconfig):
@@ -130,9 +130,10 @@ class WorkflowConfigureModel(WorkflowEpilepsyBase):
             plotter = None
         self._model_params.update(model_params)
         self._modelconfig, self._modelconfig_builder = \
-            configure_model(self.hypothesis, self.normalized_weights, self._model_type,
-                            self._modelconfig_builder, self._modelconfig, writer, self.modelconfig_path,
-                            plotter, "StateSpace", self.hypo_figsfolder, self.region_labels, **self._model_params)
+            configure_model(self.hypothesis, self.normalized_weights, self._model_name,
+                            self._modelconfig_builder, self._modelconfig,  self.region_labels,
+                            self.modelconfig_path,  "StateSpace", self.hypo_figsfolder,
+                            writer,plotter, self._config, **self._model_params)
 
     @property
     def hypothesis(self):
@@ -157,7 +158,7 @@ class WorkflowConfigureModel(WorkflowEpilepsyBase):
         if not isinstance(self._modelconfig, ModelConfiguration):
             try:
                 self._modelconfig = \
-                    self._reader.read_modelconfig(self.modelconfig_path, self._model_type)
+                    self._reader.read_modelconfig(self.modelconfig_path, self._model_name)
             except:
                 self.configure_model()
         return self._modelconfig
@@ -182,8 +183,8 @@ def hypo_prefix(hypo_name="", hypo_type=""):
     return "_".join(prefix)
 
 
-def set_hypothesis(number_of_regions, hypo_manual={}, hypo_name="", hypo_folder="", hypothesis=None,
-                   epi_name="", epi_path="", config=Config(), writer=None, **hypo_params):
+def set_hypothesis(number_of_regions, hypothesis=None, hypo_manual={}, hypo_name="", hypo_folder="",
+                   epi_name="", epi_path="", writer=None, config=Config(), **hypo_params):
     _hypo_params = {"normalize_disease_values": [], "scale_x0": 1.0}
     _hypo_params.update(hypo_params)
     _hypo_manual = \
@@ -235,16 +236,16 @@ def set_hypothesis(number_of_regions, hypo_manual={}, hypo_name="", hypo_folder=
     return hypothesis, hypo_builder, hypo_name, hypo_path
 
 
-def configure_model(hypothesis, normalized_weights, model_type, modelconfig_builder=None, modelconfig=None,
-                    config=Config(), writer=None, modelconfig_path="",
-                    plotter=None, figure_name="", hypo_figsfolder="", region_labels=[], **model_params):
+def configure_model(hypothesis, normalized_weights, model_name, modelconfig_builder=None, modelconfig=None,
+                    region_labels=[], modelconfig_path="", figure_name="", hypo_figsfolder="",
+                    writer=None, plotter=None, config=Config(), **model_params):
     if isinstance(modelconfig, ModelConfiguration):
         # Build modelconfig from another model configuration
         modelconfig = ModelConfigurationBuilder().build_model_config_from_model_config(modelconfig)
     else:
         # Build model configuration from hypothesis
         if not(isinstance(modelconfig_builder, ModelConfigurationBuilder)):
-            modelconfig_builder = ModelConfigurationBuilder(model_type, normalized_weights, **model_params)
+            modelconfig_builder = ModelConfigurationBuilder(model_name, normalized_weights, **model_params)
         if hypothesis.type == "e":
             modelconfig = modelconfig_builder.build_model_from_E_hypothesis(hypothesis)
         else:

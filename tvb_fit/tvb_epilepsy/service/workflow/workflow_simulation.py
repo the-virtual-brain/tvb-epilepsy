@@ -19,6 +19,7 @@ from tvb_scripts.utils.log_error_utils import initialize_logger, warning
 from tvb_scripts.utils.data_structures_utils import isequal_string
 from tvb_scripts.utils.file_utils import wildcardit, move_overwrite_files_to_folder_with_wildcard
 from tvb_scripts.utils.analyzers_utils import interval_scaling
+from tvb_scripts.model.virtual_head.sensors import SensorTypes
 from tvb_scripts.service.timeseries_service import TimeseriesService
 
 
@@ -28,7 +29,7 @@ class WorkflowSimulate(WorkflowConfigureModel):
         super(WorkflowSimulate, self).__init__(config, reader, writer, plotter)
         self._sim_folder = ""
         self._sim_title_prefix = ""
-        self._sim_params = {"type": "paper", "rescale_x1eq": None, "seeg_gain_mode": "lin",
+        self._sim_params = {"type": "paper", "x1eq_rescale": None, "seeg_gain_mode": "lin",
                             "hpf_flag": False, "hpf_low": 10.0, "hpf_high": 256.0,
                             "spectral_options": {"log_scale": True}}
         self._ts_filename = "SimTS"
@@ -81,8 +82,8 @@ class WorkflowSimulate(WorkflowConfigureModel):
         else:
             writer = None
         self._simulator, self._sim_settings = \
-            configure_simulator(self.modelconfig, self.connectivity, self._sim_params.get("rescale_x1eq", None),
-                                self.sim_type, self._config, self._logger, writer, self.sim_model_path)
+            configure_simulator(self.modelconfig, self.connectivity, self._sim_params.get("x1eq_rescale", None),
+                                self.sim_type, self.sim_model_path, writer, self._logger, self._config)
 
     @property
     def simulator(self):
@@ -91,7 +92,7 @@ class WorkflowSimulate(WorkflowConfigureModel):
         return self._simulator
 
     def _rescale_x1eq(self, model_config):
-        return rescale_x1eq(model_config, self._sim_params["rescale_x1eq"])
+        return rescale_x1eq(model_config, self._sim_params["x1eq_rescale"])
 
     def simulate(self,  write_ts=True, write_ts_epi=True, plot_sim=True, plot_spectral_raster=False):
         if self._write_flag(write_ts or write_ts_epi):
@@ -108,10 +109,9 @@ class WorkflowSimulate(WorkflowConfigureModel):
         else:
             plotter = None
         self._logger.info("\n\nSimulating...")
-        return simulate(self.simulator, self.head, self._config, self._logger, self._reader,
-                        writer, self.ts_filepath, self.ts_epi_filepath,
-                        plotter, self.hypothesis.all_disease_indices, self.sim_figsfolder, self._sim_title_prefix,
-                        plot_spectral_raster, **self._sim_params)
+        return simulate(self.simulator, self.head, self.hypothesis.all_disease_indices, plot_spectral_raster,
+                        self.ts_filepath, self.ts_epi_filepath, self.sim_figsfolder, self._sim_title_prefix,
+                        self._reader, writer, plotter, self._logger,  self._config, **self._sim_params)
 
     @property
     def simulated_ts(self):
@@ -121,7 +121,8 @@ class WorkflowSimulate(WorkflowConfigureModel):
             if self.ts_filepath is not None and os.path.isfile(self.ts_filepath):
                 self._logger.info("\n\nLoading previously simulated time series from file: " + self.ts_filepath)
                 sim_output = self._reader.read_timeseries(self.ts_filepath)
-                seeg = TimeseriesService().compute_seeg(sim_output.get_source(), self.head.sensorsSEEG,
+                seeg = TimeseriesService().compute_seeg(sim_output.get_source(),
+                                                        self.head.get_sensors(s_type=SensorTypes.TYPE_SEEG.value),
                                                         sum_mode=self._sim_params["seeg_gain_mode"])
                 self._sim_ts = {"source": sim_output, "seeg": seeg}
             else:
@@ -142,8 +143,8 @@ def rescale_x1eq(model_config, rescale_x1eq):
     return model_config
 
 
-def configure_simulator(input_modelconfig, connectivity, rescale_x1eq=None, sim_type="paper",
-                        config=Config(), logger=None, writer=None, sim_model_path=""):
+def configure_simulator(input_modelconfig, connectivity, x1eq_rescale=None, sim_type="paper",
+                        sim_model_path="", writer=None, logger=None, config=Config()):
     if logger is None:
         initialize_logger(__name__, config.out.FOLDER_LOGS)
     # Choose model
@@ -156,8 +157,8 @@ def configure_simulator(input_modelconfig, connectivity, rescale_x1eq=None, sim_
     #      -multiplicative correlated noise is also used
     # Optional variations:
     model_config = deepcopy(input_modelconfig)
-    if rescale_x1eq:
-        model_config = rescale_x1eq(model_config, rescale_x1eq)
+    if x1eq_rescale:
+        model_config = rescale_x1eq(model_config, x1eq_rescale)
     logger.info("\n\nConfiguring simulation...")
     if isequal_string(sim_type, "realistic"):
         simulator, sim_settings = build_simulator_TVB_realistic(model_config, connectivity)
@@ -168,22 +169,22 @@ def configure_simulator(input_modelconfig, connectivity, rescale_x1eq=None, sim_
     else:
         simulator, sim_settings = build_simulator_TVB_default(model_config, connectivity)
     if writer:
-        if not os.path.isdir(os.path.dirname):
-            sim_model_path = os.path.join(config.out.FOLDER_RES, "SimModel"+simulator.model._ui_name + ".h5")
+        if not os.path.isdir(os.path.dirname(sim_model_path)):
+            sim_model_path = os.path.join(config.out.FOLDER_RES, "SimModel" + simulator.model._ui_name + ".h5")
         else:
-            sim_model_path = sim_model_path.replace("Model", "Model"+simulator.model._ui_name)
+            sim_model_path = sim_model_path.replace("Model", "Model" + simulator.model._ui_name)
         writer.write_simulator_model(simulator.model, sim_model_path, simulator.connectivity.number_of_regions)
     return simulator, sim_settings
 
 
-def compute_and_write_seeg(source_timeseries, simulator, sensors_dict, writer=None, ts_epi_filepath="", **sim_params):
+def compute_and_write_seeg(source_timeseries, simulator, sensors_dict,  ts_epi_filepath="", writer=None, **sim_params):
     ts_service = TimeseriesService()
-    fsAVG = 1000.0 / source_timeseries.time_step
+    fsAVG = 1000.0 / source_timeseries.sample_period
     if isinstance(simulator.model, EpileptorDP2D):
         sim_params["hpf_flag"] = False
     if sim_params.get("hpf_flag", False):
         sim_params["hpf_low"] = max(sim_params.get("hpf_low", 10.0),
-                                     1000.0 / (source_timeseries.time_end - source_timeseries.time_start))
+                                     1000.0 / (source_timeseries.end_time - source_timeseries.start_time))
         sim_params["hpf_high"] = min(fsAVG / 2.0 - 10.0, sim_params.get("hpf_high"))
 
     seeg_data = \
@@ -196,7 +197,7 @@ def compute_and_write_seeg(source_timeseries, simulator, sensors_dict, writer=No
             seeg_data[s_name] = seeg
         if writer and os.path.isfile(ts_epi_filepath):
             try:
-                writer.write_ts_seeg_epi(seeg_data[s_name], source_timeseries.time_step,
+                writer.write_ts_seeg_epi(seeg_data[s_name], source_timeseries.sample_period,
                                          ts_epi_filepath, sensors_name=s_name)
             except:
                 warning("Failed to write simulated SEEG timeseries to epi file %s!" % ts_epi_filepath)
@@ -204,33 +205,33 @@ def compute_and_write_seeg(source_timeseries, simulator, sensors_dict, writer=No
 
 
 def compute_seeg_and_write_ts_to_h5(timeseries, simulator, sensors_dict,
-                                    writer=None, ts_filepath="", ts_epi_filepath=""):
+                                    ts_filepath="", ts_epi_filepath="", writer=None):
     source_timeseries = timeseries.get_source()
     if writer:
         try:
-            writer.write_ts(timeseries, timeseries.time_step, ts_filepath)
+            writer.write_ts(timeseries, timeseries.sample_period, ts_filepath)
         except:
             warning("Failed to write simulated timeseries to file %s!" % ts_filepath)
         if os.path.isdir(os.path.dirname(ts_epi_filepath)):
             try:
-                writer.write_ts_epi(timeseries, timeseries.time_step, ts_epi_filepath, source_timeseries)
+                writer.write_ts_epi(timeseries, timeseries.sample_period, ts_epi_filepath, source_timeseries)
             except:
                 warning("Failed to write simulated timeseries to epi file %s!" % ts_epi_filepath)
-    seeg_ts_all = compute_and_write_seeg(source_timeseries, simulator, sensors_dict, writer, ts_epi_filepath)
+    seeg_ts_all = compute_and_write_seeg(source_timeseries, simulator, sensors_dict, ts_epi_filepath, writer)
     return timeseries, seeg_ts_all
 
 
-def simulate(simulator, head, config=Config(), logger=None,
-             reader=None, writer=None, ts_filepath="", ts_epi_filepath="",
-             plotter=None, all_disease_indices=[], sim_figsfolder="", title_prefix="", plot_spectral_raster=False,
-             **sim_params):
+def simulate(simulator, head,  all_disease_indices=[], plot_spectral_raster=False,
+             ts_filepath="", ts_epi_filepath="", sim_figsfolder="", title_prefix="",
+             reader=None, writer=None, plotter=None, logger=None, config=Config(), **sim_params):
     if logger is None:
         logger = initialize_logger(__name__, config.out.FOLDER_LOGS)
     seeg = []
     if reader and os.path.isfile(ts_filepath):
         logger.info("\n\nLoading previously simulated time series from file: " + ts_filepath)
         sim_output = reader.read_timeseries(ts_filepath)
-        seeg = TimeseriesService().compute_seeg(sim_output.get_source(), head.sensorsSEEG,
+        seeg = TimeseriesService().compute_seeg(sim_output.get_source(),
+                                                head.get_sensors(s_type=SensorTypes.TYPE_SEEG.value),
                                                 sum_mode=sim_params.get("seeg_gain_mode", "lin"))
     else:
         logger.info("\n\nSimulating %s..." % sim_params.get("type", "paper"))
@@ -241,8 +242,9 @@ def simulate(simulator, head, config=Config(), logger=None,
             time = np.array(sim_output.time).astype("f")
             logger.info("\n\nSimulated signal return shape: %s", sim_output.shape)
             logger.info("Time: %s - %s", time[0], time[-1])
-            sim_output, seeg = compute_seeg_and_write_ts_to_h5(sim_output, simulator, head.sensorsSEEG,
-                                                               writer, ts_filepath, ts_epi_filepath)
+            sim_output, seeg = compute_seeg_and_write_ts_to_h5(sim_output, simulator,
+                                                               head.get_sensors(SensorTypes.TYPE_SEEG.value),
+                                                               ts_filepath, ts_epi_filepath, writer)
 
     sim_ts = {"source": sim_output, "seeg": seeg}
 

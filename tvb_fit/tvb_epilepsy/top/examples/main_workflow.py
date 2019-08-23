@@ -14,7 +14,6 @@ if __name__ == "__main__":
     SEEG_data = os.path.join(DROPBOX_HOME, "data/CC", "seeg", SUBJECT)
     output = os.path.join(user_home, 'Dropbox/Work/VBtech/VEP/results/tests/workflow')
     config = Config(head_folder=head_folder, raw_data_folder=SEEG_data, output_base=output, separate_by_run=False)
-    config.generic.CMDSTAN_PATH = config.generic.CMDSTAN_PATH
 
     wf = Workflow(config)
     wf.read_head()
@@ -23,5 +22,5 @@ if __name__ == "__main__":
     wf.set_hypothesis()
     wf.run_lsa()
     wf.run_lsa_pse()
-    wf._sim_params["rescale_x1eq"] = -1.3
+    wf._sim_params["x1eq_rescale"] = -1.3
     simTS = wf.simulate()
