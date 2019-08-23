@@ -69,7 +69,7 @@ class ProbabilisticSampler(SamplerBase):
                 self.sampler = getattr(ss, prob_distr)(*parameter, **kwargs)
                 samples = self._truncated_distribution_sampling({"low": low, "high": high}, out_shape) * scale + loc
             elif isinstance(prob_distr, (ProbabilisticParameterBase, TransformedProbabilisticParameterBase)):
-                self.sampler = prob_distr.scipy()
+                self.sampler = prob_distr.scipy
                 samples = self._truncated_distribution_sampling({"low": low, "high": high}, out_shape)
         elif self.sampling_module.find("scipy") >= 0:
             if isinstance(prob_distr, basestring):
