@@ -1,10 +1,12 @@
 import numpy
 from copy import deepcopy
+
 from tvb_fit.tvb_epilepsy.base.constants.config import CalculusConfig
-from tvb_fit.base.utils.log_error_utils import raise_not_implemented_error
-from tvb_fit.base.utils.data_structures_utils import formal_repr
 from tvb_fit.tvb_epilepsy.service.pse.pse_service import PSEService
 from tvb_fit.tvb_epilepsy.service.lsa_service import LSAService
+
+from tvb_scripts.utils.log_error_utils import raise_not_implemented_error
+from tvb_scripts.utils.data_structures_utils import formal_repr
 
 
 class LSAPSEService(PSEService):

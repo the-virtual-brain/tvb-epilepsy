@@ -1,9 +1,11 @@
 import numpy
 from copy import deepcopy
-from tvb_fit.base.utils.log_error_utils import raise_not_implemented_error
-from tvb_fit.base.utils.data_structures_utils import formal_repr
+
 from tvb_fit.service.pse.pse_service import ABCPSEService
 from tvb_fit.service.model_configuration_builder import ModelConfigurationBuilder
+
+from tvb_scripts.utils.log_error_utils import raise_not_implemented_error
+from tvb_scripts.utils.data_structures_utils import formal_repr
 
 
 class SimulationPSEService(ABCPSEService):

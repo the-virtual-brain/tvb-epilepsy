@@ -5,12 +5,14 @@ from copy import deepcopy
 import sys
 import time
 import numpy
-from tvb.simulator import integrators, simulator, coupling, noise, monitors
-from tvb_fit.base.utils.log_error_utils import initialize_logger
+
 from tvb_fit.base.constants import TIME_DELAYS_FLAG
-from tvb_fit.base.model.timeseries import Timeseries, TimeseriesDimensions
-from tvb_fit.service.head_service import HeadService
 from tvb_fit.service.simulator import ABCSimulator
+
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.model.timeseries import Timeseries, TimeseriesDimensions
+
+from tvb.simulator import integrators, simulator, coupling, noise, monitors
 
 
 class SimulatorTVB(ABCSimulator):
@@ -25,10 +27,6 @@ class SimulatorTVB(ABCSimulator):
     def __init__(self, model_configuration, connectivity, settings):
         super(SimulatorTVB, self).__init__(model_configuration, connectivity, settings)
         self.simTVB = None
-
-    def _vp2tvb_connectivity(self, time_delays_flag=True):
-        return HeadService().vp2tvb_connectivity(self.connectivity, self.model_configuration.connectivity,
-                                                 time_delays_flag)
 
     def get_vois(self, model_vois=None):
         if model_vois is None:
@@ -124,10 +122,13 @@ class SimulatorTVB(ABCSimulator):
                 return None, status
 
         tavg_time = numpy.array(tavg_time).flatten().astype('f')
-        tavg_data = numpy.swapaxes(tavg_data, 1, 2).astype('f')
-        # Variables of interest in a dictionary:
-        sim_output = timeseries(tavg_data, {TimeseriesDimensions.SPACE.value: self.connectivity.region_labels,
-                                            TimeseriesDimensions.VARIABLES.value: self.get_vois()},
-                                tavg_time[0], numpy.diff(tavg_time).mean(), "ms")
-        return sim_output, status
+        tavg_data = numpy.array(tavg_data).astype('f')
+
+        return timeseries( # substitute with TimeSeriesRegion for TVB like functionality
+                          tavg_data, time=tavg_time, connectivity=self.simTVB.connectivity,
+                          labels_ordering=["Time", TimeseriesDimensions.VARIABLES.value, "Region", "Samples"],
+                          labels_dimensions={TimeseriesDimensions.VARIABLES.value: self.get_vois(),
+                                             TimeseriesDimensions.SPACE.value: self.connectivity.region_labels},
+                          ts_type="Region"), \
+               status
 

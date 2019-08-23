@@ -1,14 +1,12 @@
 
 import numpy as np
 
-from scipy.stats import zscore
-
-from tvb_fit.base.utils.log_error_utils import warning
-from tvb_fit.base.utils.data_structures_utils import ensure_list
-
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants\
     import XModes, OBSERVATION_MODELS, X1EQ_CR, X1EQ_DEF
 from tvb_fit.tvb_epilepsy.base.model.epileptor_probabilistic_models import SDEEpiProbabilisticModel
+
+from tvb_scripts.utils.log_error_utils import warning
+from tvb_scripts.utils.data_structures_utils import ensure_list
 
 
 def set_time(probabilistic_model, time=None):
@@ -75,7 +73,7 @@ def build_stan_model_data_dict(probabilistic_model, signals, connectivity_matrix
                 "SOURCE_TARGET_DATA": int(
                     probabilistic_model.observation_model == OBSERVATION_MODELS.SOURCE_POWER.value),
                 "target_data": signals,
-                "gain": probabilistic_model.gain_matrix,
+                "gain": probabilistic_model.projection,
                 "time": set_time(probabilistic_model, time),
                 "active_regions": np.array(probabilistic_model.active_regions),
                 }

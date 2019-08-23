@@ -3,9 +3,10 @@ import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
 from tvb_fit.base.model.probability_distributions import ProbabilityDistributionTypes
-from tvb_fit.base.utils.data_structures_utils import make_float, make_int
 from tvb_fit.base.model.probability_distributions.discrete_probability_distribution \
     import DiscreteProbabilityDistribution
+
+from tvb_scripts.utils.data_structures_utils import make_float, make_int
 
 
 class BinomialDistribution(DiscreteProbabilityDistribution):

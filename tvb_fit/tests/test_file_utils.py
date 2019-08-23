@@ -1,7 +1,9 @@
 import os
-from tvb_fit.base.utils.file_utils import change_filename_or_overwrite
-from tvb_fit.io.h5_writer import H5Writer
+
 from tvb_fit.tests.base import BaseTest
+from tvb_fit.io.h5_writer import H5Writer
+
+from tvb_scripts.utils.file_utils import change_filename_or_overwrite
 
 
 class TestFileUtils(BaseTest):

@@ -1,7 +1,9 @@
 import os
 from collections import OrderedDict
 import numpy as np
-from tvb_fit.base.utils.data_structures_utils import sort_dict, isequal_string
+
+from tvb_scripts.utils.data_structures_utils import sort_dict, isequal_string
+
 
 STAN_STATIC_OPTIONS = sort_dict({"int_time": 2 * np.pi})  # int_time > 0
 

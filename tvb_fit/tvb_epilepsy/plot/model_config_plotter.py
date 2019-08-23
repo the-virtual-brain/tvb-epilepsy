@@ -6,12 +6,12 @@ from matplotlib import pyplot
 import numpy
 
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import X1EQ_CR_DEF, X1_DEF, X0_CR_DEF, X0_DEF
-from tvb_fit.base.utils.data_structures_utils import isequal_string, generate_region_labels
 from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import calc_fz, calc_fx1, calc_fx1_2d_taylor, \
                                                              calc_x0_val_to_model_x0
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import calc_eq_y1, def_x1lin
-from tvb_fit.plot.base_plotter import BasePlotter
 
+from tvb_scripts.utils.data_structures_utils import isequal_string, generate_region_labels
+from tvb_scripts.plot.base_plotter import BasePlotter
 
 
 class ModelConfigPlotter(BasePlotter):
@@ -67,7 +67,6 @@ class ModelConfigPlotter(BasePlotter):
                        x2=0.0)  # yc + Iext1 - x1 ** 3 - 2.0 * x1 ** 2
         x1null, = pyplot.plot(x1, zX1, 'b-', label='x1 nullcline', linewidth=1)
         ax = pyplot.gca()
-        ax.axes.hold(True)
         # z nullcines
         # center point (critical equilibrium point) without approximation:
         # zsq0 = yc + Iext1 - x1sq0 ** 3 - 2.0 * x1sq0 ** 2

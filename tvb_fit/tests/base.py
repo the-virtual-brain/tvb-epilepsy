@@ -2,12 +2,14 @@
 
 import os
 import numpy
+
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
-from tvb_fit.base.model.virtual_patient.connectivity import Connectivity
-from tvb_fit.base.model.virtual_patient.head import Head
-from tvb_fit.base.model.virtual_patient.sensors import Sensors
-from tvb_fit.base.model.virtual_patient.surface import Surface
 from tvb_fit.io.h5_reader import H5Reader
+
+from tvb_scripts.model.virtual_head.connectivity import Connectivity
+from tvb_scripts.model.virtual_head.sensors import Sensors
+from tvb_scripts.model.virtual_head.surface import Surface
+from tvb_scripts.model.virtual_head.head import Head
 
 
 class BaseTest(object):

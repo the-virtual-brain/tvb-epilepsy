@@ -1,9 +1,7 @@
 import os
 from copy import deepcopy
 import numpy as np
-from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.utils.data_structures_utils import isequal_string
-from tvb_fit.base.computations.analyzers_utils import interval_scaling
+
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import calc_eq_z, calc_x0
 from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
@@ -13,7 +11,11 @@ from tvb_fit.tvb_epilepsy.base.model.epileptor_models import EpileptorDP2D
 from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_fit.tvb_epilepsy.service.simulator.simulator_builder import build_simulator_TVB_realistic, \
     build_simulator_TVB_fitting, build_simulator_TVB_default, build_simulator_TVB_paper
-from tvb_fit.service.timeseries_service import TimeseriesService
+
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.data_structures_utils import isequal_string
+from tvb_scripts.utils.analyzers_utils import interval_scaling
+from tvb_scripts.service.timeseries_service import TimeseriesService
 
 
 logger = initialize_logger(__name__)
@@ -22,10 +24,10 @@ logger = initialize_logger(__name__)
 def _compute_and_write_seeg(source_timeseries, sensors_dict, filename, hpf_flag=False, hpf_low=10.0,
                             hpf_high=256.0, seeg_gain_mode="lin", h5_writer=H5Writer()):
     ts_service = TimeseriesService()
-    fsAVG = 1000.0 / source_timeseries.time_step
+    fsAVG = 1000.0 / source_timeseries.sample_period
 
     if hpf_flag:
-        hpf_low = max(hpf_low, 1000.0 / (source_timeseries.time_end - source_timeseries.time_start))
+        hpf_low = max(hpf_low, 1000.0 / (source_timeseries.end_time - source_timeseries.start_time))
         hpf_high = min(fsAVG / 2.0 - 10.0, hpf_high)
 
     seeg_data = ts_service.compute_seeg(source_timeseries, sensors_dict, sum_mode=seeg_gain_mode)
@@ -35,7 +37,7 @@ def _compute_and_write_seeg(source_timeseries, sensors_dict, filename, hpf_flag=
         else:
             seeg_to_write = seeg
         # TODO: test the case where we save subsequent seeg data from different sensors
-        h5_writer.write_ts_seeg_epi(seeg_to_write, source_timeseries.time_step, filename, sensors_name=s_name)
+        h5_writer.write_ts_seeg_epi(seeg_to_write, source_timeseries.sample_period, filename, sensors_name=s_name)
 
     return seeg_data
 
@@ -44,9 +46,9 @@ def _compute_and_write_seeg(source_timeseries, sensors_dict, filename, hpf_flag=
 def compute_seeg_and_write_ts_to_h5(timeseries, model, sensors_dict, filename, seeg_gain_mode="lin",
                                     hpf_flag=False, hpf_low=10.0, hpf_high=256.0, h5_writer=H5Writer()):
     filename_epi = os.path.splitext(filename)[0] + "_epi.h5"
-    h5_writer.write_ts(timeseries, timeseries.time_step, filename)
+    h5_writer.write_ts(timeseries, timeseries.sample_period, filename)
     source_timeseries = timeseries.get_source()
-    h5_writer.write_ts_epi(timeseries, timeseries.time_step, filename_epi, source_timeseries)
+    h5_writer.write_ts_epi(timeseries, timeseries.sample_period, filename_epi, source_timeseries)
     if isinstance(model, EpileptorDP2D):
         hpf_flag = False
     seeg_ts_all = _compute_and_write_seeg(source_timeseries, sensors_dict, filename_epi, hpf_flag, hpf_low, hpf_high,
@@ -107,7 +109,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
     if ts_file is not None and os.path.isfile(ts_file):
         logger.info("\n\nLoading previously simulated time series from file: " + ts_file)
         sim_output = H5Reader().read_timeseries(ts_file)
-        seeg = TimeseriesService().compute_seeg(sim_output.get_source(), head.sensorsSEEG, sum_mode=seeg_gain_mode)
+        seeg = TimeseriesService().compute_seeg(sim_output.get_source(), head.get_sensors("SEEG"), sum_mode=seeg_gain_mode)
     else:
         logger.info("\n\nSimulating %s..." % sim_type)
         sim_output, status = sim.launch_simulation(report_every_n_monitor_steps=100, timeseries=Timeseries)
@@ -117,7 +119,7 @@ def from_model_configuration_to_simulation(model_configuration, head, lsa_hypoth
             time = np.array(sim_output.time).astype("f")
             logger.info("\n\nSimulated signal return shape: %s", sim_output.shape)
             logger.info("Time: %s - %s", time[0], time[-1])
-            sim_output, seeg = compute_seeg_and_write_ts_to_h5(sim_output, sim.model, head.sensorsSEEG,
+            sim_output, seeg = compute_seeg_and_write_ts_to_h5(sim_output, sim.model, head.get_sensors("SEEG"),
                                                                ts_file, seeg_gain_mode=seeg_gain_mode,
                                                                hpf_flag=hpf_flag, hpf_low=hpf_low, hpf_high=hpf_high)
 

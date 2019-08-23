@@ -1,8 +1,10 @@
-
+from copy import deepcopy
 from enum import Enum
-from collections import OrderedDict
-from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.model.timeseries import Timeseries as TimeseriesBase, TimeseriesDimensions
+
+import numpy as np
+
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.model.timeseries import Timeseries as TimeseriesBase, TimeseriesDimensions
 
 
 class PossibleVariables(Enum):
@@ -27,27 +29,27 @@ class Timeseries(TimeseriesBase):
     logger = initialize_logger(__name__)
 
     def get_source(self):
-        if TimeseriesDimensions.VARIABLES.value not in self.dimension_labels.keys():
+        if TimeseriesDimensions.VARIABLES.value not in self.labels_dimensions.keys():
             self.logger.error("No state variables are defined for this instance!")
             raise ValueError
 
-        if PossibleVariables.SOURCE.value in self.dimension_labels[TimeseriesDimensions.VARIABLES.value]:
-            return self.get_state_variable(PossibleVariables.SOURCE.value)
-        if PossibleVariables.X1.value in self.dimension_labels[TimeseriesDimensions.VARIABLES.value]:
-            y0_ts = self.get_state_variable(PossibleVariables.X1.value)
-            if PossibleVariables.X2.value in self.dimension_labels[TimeseriesDimensions.VARIABLES.value]:
+        if PossibleVariables.SOURCE.value in self.labels_dimensions[TimeseriesDimensions.VARIABLES.value]:
+            return self.get_variables(PossibleVariables.SOURCE.value)
+        if PossibleVariables.X1.value in self.labels_dimensions[TimeseriesDimensions.VARIABLES.value]:
+            y0_ts = self.get_variables(PossibleVariables.X1.value)
+            if PossibleVariables.X2.value in self.labels_dimensions[TimeseriesDimensions.VARIABLES.value]:
                 self.logger.info("%s is computed using %s and %s state variables!" % (
                     PossibleVariables.SOURCE.value, PossibleVariables.X1.value, PossibleVariables.X2.value))
-                y2_ts = self.get_state_variable(PossibleVariables.X2.value)
+                y2_ts = self.get_variables(PossibleVariables.X2.value)
                 source_data = y2_ts.data - y0_ts.data
             else:
                 self.logger.warn("%s is computed using %s state variable!" % (
                     PossibleVariables.SOURCE.value, PossibleVariables.X1.value))
                 source_data = -y0_ts.data
-            source_dim_labels = OrderedDict(
-                {TimeseriesDimensions.SPACE.value: self.dimension_labels[TimeseriesDimensions.SPACE.value],
-                 TimeseriesDimensions.VARIABLES.value: [PossibleVariables.SOURCE.value]})
-            return Timeseries(source_data, source_dim_labels, self.time_start, self.time_step, self.time_unit)
+            source_dim_labels = deepcopy(self.labels_dimensions)
+            source_dim_labels[self.labels_ordering[1]] = np.array([PossibleVariables.SOURCE.value])
+            return self.duplicate(data=source_data, labels_dimensions=source_dim_labels)
+
         self.logger.error(
             "%s is not computed and cannot be computed now because state variables %s and %s are not defined!" % (
                 PossibleVariables.SOURCE.value, PossibleVariables.X1.value, PossibleVariables.X2.value))

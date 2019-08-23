@@ -1,7 +1,8 @@
 import numpy
 
 from tvb_fit.base.constants import WHITE_NOISE, NOISE_SEED
-from tvb_fit.base.utils.data_structures_utils import formal_repr
+
+from tvb_scripts.utils.data_structures_utils import formal_repr
 
 
 class SimulationSettings(object):

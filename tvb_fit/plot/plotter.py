@@ -1,9 +1,10 @@
 # coding=utf-8
 
-from tvb_fit.plot.head_plotter import HeadPlotter
-from tvb_fit.plot.timeseries_plotter import TimeseriesPlotter
 from tvb_fit.plot.probabilistic_plotter import ProbabilisticPlotter
 from tvb_fit.plot.stan_plotter import STANplotter
+
+from tvb_scripts.plot.head_plotter import HeadPlotter
+from tvb_scripts.plot.timeseries_plotter import TimeseriesPlotter
 
 
 class Plotter(object):

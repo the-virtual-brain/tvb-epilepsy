@@ -2,15 +2,17 @@
 
 import numpy as np
 from copy import deepcopy
+
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
-from tvb_fit.base.utils.data_structures_utils import isequal_string
-from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.base.model.probability_distributions import ProbabilityDistributionTypes
 from tvb_fit.service.probabilistic_parameter_builder import set_parameter, set_parameter_defaults, \
     generate_probabilistic_parameter
 from tvb_fit.samplers.deterministic_sampler import DeterministicSampler
 from tvb_fit.samplers.salib_sampler_interface import SalibSamplerInterface
 from tvb_fit.samplers.probabilistic_sampler import ProbabilisticSampler
+
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.data_structures_utils import isequal_string
 
 
 def main_sampling_service(config=Config()):

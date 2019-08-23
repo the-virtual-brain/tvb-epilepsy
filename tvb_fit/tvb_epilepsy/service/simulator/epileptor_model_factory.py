@@ -8,10 +8,13 @@ Also, dictionaries to keep noise intensity and type for each model type.
 # Build TVB Epileptor
 ###
 import numpy
-from tvb.simulator.models import Epileptor
-from tvb_fit.base.utils.log_error_utils import raise_value_error
+
 from tvb_fit.tvb_epilepsy.service.simulator.simulator_java import JavaEpileptor
 from tvb_fit.tvb_epilepsy.base.model.epileptor_models import EpileptorDP2D, EpileptorDP, EpileptorDPrealistic
+
+from tvb_scripts.utils.log_error_utils import raise_value_error
+
+from tvb.simulator.models import Epileptor
 
 
 AVAILABLE_DYNAMICAL_MODELS = (Epileptor, JavaEpileptor, EpileptorDP2D, EpileptorDP, EpileptorDPrealistic)

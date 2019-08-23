@@ -1,13 +1,15 @@
 import os
+
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
-from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.io.tvb_data_reader import TVBReader
 from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_fit.tvb_epilepsy.plot.plotter import Plotter
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_fit.tvb_epilepsy.service.lsa_service import LSAService
+
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.io.tvb_data_reader import TVBReader
 
 
 logger = initialize_logger(__name__)

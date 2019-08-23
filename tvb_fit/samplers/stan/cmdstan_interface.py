@@ -1,12 +1,15 @@
 from shutil import copyfile
-from tvb_fit.base.utils.log_error_utils import raise_value_error, warning
-from tvb_fit.base.utils.data_structures_utils import construct_import_path, ensure_list
-from tvb_fit.base.utils.command_line_utils import execute_command
-from tvb_fit.base.utils.file_utils import change_filename_or_overwrite_with_wildcard
-from tvb_fit.io.csv import parse_csv_in_cols
+
 from tvb_fit.plot.plotter import Plotter
 from tvb_fit.samplers.stan.stan_interface import StanInterface
 from tvb_fit.samplers.stan.stan_factory import *
+
+from tvb_scripts.utils.log_error_utils import raise_value_error, warning
+from tvb_scripts.utils.data_structures_utils import construct_import_path, ensure_list, isequal_string
+from tvb_scripts.utils.command_line_utils import execute_command
+from tvb_scripts.utils.file_utils import change_filename_or_overwrite_with_wildcard
+from tvb_scripts.io.csv import parse_csv_in_cols
+
 
 
 class CmdStanInterface(StanInterface):
@@ -183,7 +186,7 @@ class CmdStanInterface(StanInterface):
 def compute_stan_summary(output_filepath, summary_filepath, cwd_path, overwrite_summary_file=False):
     summary_filepath = change_filename_or_overwrite_with_wildcard(summary_filepath.split(".csv")[0],
                                                                   overwrite_summary_file) + ".csv"
-    command = "bin/stansummary " + output_filepath + " --csv_file=" + summary_filepath
+    command = cwd_path + "/" + "bin/stansummary " + output_filepath + " --csv_file=" + summary_filepath
     execute_command(command, cwd=cwd_path, shell=True)
 
 def stan_summary(output_filepath, summary_filepath, cwd_path):

@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from copy import deepcopy
 
 
 class ABCSimulator(object):
@@ -29,6 +30,11 @@ class ABCSimulator(object):
     # def launch_pse(self, hypothesis, head):
     #     pass
 
+    def _vp2tvb_connectivity(self, time_delays_flag=True):
+        tvb_connectivity = deepcopy(self.connectivity._tvb)
+        tvb_connectivity.weights = self.model_configuration.connectivity
+        tvb_connectivity.tract_lengths *= time_delays_flag
+        return tvb_connectivity
 
 
 

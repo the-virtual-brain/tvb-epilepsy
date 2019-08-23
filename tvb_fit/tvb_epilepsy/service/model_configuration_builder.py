@@ -5,14 +5,6 @@ Service to create a model configuration, starting from a disease hypothesis and/
 
 import numpy as np
 
-from tvb.simulator.models.base import Model
-from tvb.simulator.simulator import Simulator
-from tvb.datatypes.connectivity import Connectivity as TVBConnectivity
-
-from tvb_fit.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
-from tvb_fit.base.utils.data_structures_utils import formal_repr, ensure_list
-from tvb_fit.base.computations.math_utils import normalize_weights
-from tvb_fit.base.model.virtual_patient.connectivity import Connectivity
 from tvb_fit.service.model_configuration_builder import ModelConfigurationBuilder as ModelConfigurationBuilderBase
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import *
 from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import calc_x0cr_r, calc_coupling, calc_x0, \
@@ -23,6 +15,15 @@ from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration \
     import EpileptorModelConfiguration as ModelConfiguration
 from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration import EPILEPTOR_PARAMS
 from tvb_fit.tvb_epilepsy.service.simulator.epileptor_model_factory import EPILEPTOR_MODEL_NVARS
+
+from tvb_scripts.utils.log_error_utils import initialize_logger, warning, raise_value_error
+from tvb_scripts.utils.data_structures_utils import formal_repr, ensure_list
+from tvb_scripts.utils.computations_utils import normalize_weights
+from tvb_scripts.model.virtual_head.connectivity import Connectivity
+
+from tvb.simulator.models.base import Model
+from tvb.simulator.simulator import Simulator
+from tvb.datatypes.connectivity import Connectivity as TVBConnectivity
 
 
 class ModelConfigurationBuilder(ModelConfigurationBuilderBase):

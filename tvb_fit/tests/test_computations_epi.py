@@ -1,8 +1,6 @@
 import numpy
 from sympy import Matrix
 
-from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.utils.data_structures_utils import assert_arrays
 from tvb_fit.tests.base import BaseTest
 
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import *
@@ -17,6 +15,9 @@ from tvb_fit.tvb_epilepsy.base.computation_utils.symbolic_utils import \
     symbol_calc_coupling_diff, symbol_eqtn_fx1z, symbol_eqtn_fx1z_diff, symbol_eqtn_fx2y2, symbol_calc_2d_taylor, \
     symbol_calc_fx1y1_6d_diff_x1, symbol_calc_fz_jac_square_taylor
 from tvb_fit.tvb_epilepsy.base.model.epileptor_models import EpileptorDPrealistic
+
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.data_structures_utils import assert_arrays
 
 
 #TODO: Left some commented asserts that need corrections in order to work

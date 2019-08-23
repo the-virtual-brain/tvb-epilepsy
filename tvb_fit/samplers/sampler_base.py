@@ -3,8 +3,9 @@ import numpy as np
 import scipy as scp
 import scipy.stats as ss
 from tvb_fit.tvb_epilepsy.base.constants.config import CalculusConfig
-from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.utils.data_structures_utils import dict_str, formal_repr, shape_to_size
+
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.data_structures_utils import dict_str, formal_repr, shape_to_size
 
 
 class SamplerBase(object):

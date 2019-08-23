@@ -4,14 +4,16 @@ Service for launching TVB simulations.
 from copy import deepcopy
 import numpy
 
-from tvb.simulator import integrators, simulator, coupling  # , noise, monitors
-
-from tvb_fit.base.utils.log_error_utils import initialize_logger
 from tvb_fit.service.simulator_tvb import SimulatorTVB as SimulatorTVBBase
 
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import TIME_DELAYS_FLAG
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import compute_initial_conditions_from_eq_point
+from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_fit.tvb_epilepsy.service.simulator.epileptor_model_factory import model_builder_from_model_config_fun, VOIS
+
+from tvb_scripts.utils.log_error_utils import initialize_logger
+
+from tvb.simulator import integrators, simulator, coupling  # , noise, monitors
 
 
 class SimulatorTVB(SimulatorTVBBase):
@@ -73,3 +75,6 @@ class SimulatorTVB(SimulatorTVBBase):
                 compute_initial_conditions_from_eq_point(self.model_configuration,
                                                          history_length=self.simTVB.good_history_shape[0],
                                                          simulation_shape=True, epileptor_model=self.simTVB.model)
+
+    def launch_simulation(self, report_every_n_monitor_steps=None, timeseries=Timeseries):
+        return super(SimulatorTVB, self).launch_simulation(report_every_n_monitor_steps, timeseries)

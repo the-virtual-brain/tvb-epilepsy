@@ -1,5 +1,5 @@
 
-from tvb_fit.tvb_epilepsy.base.constants.config import FiguresConfig
+from tvb_fit.base.config import FiguresConfig
 import matplotlib
 matplotlib.use(FiguresConfig().MATPLOTLIB_BACKEND)
 from matplotlib import pyplot, gridspec
@@ -9,11 +9,12 @@ import numpy
 from collections import OrderedDict
 
 from tvb_fit.base.constants import Target_Data_Type
-from tvb_fit.base.utils.log_error_utils import warning
-from tvb_fit.base.utils.data_structures_utils import ensure_list, generate_region_labels, extract_dict_stringkeys
-from tvb_fit.base.model.timeseries import Timeseries
 from tvb_fit.samplers.stan.stan_interface import merge_samples
-from tvb_fit.plot.timeseries_plotter import TimeseriesPlotter
+
+from tvb_scripts.utils.log_error_utils import warning
+from tvb_scripts.utils.data_structures_utils import ensure_list, generate_region_labels, extract_dict_stringkeys
+from tvb_scripts.model.timeseries import Timeseries
+from tvb_scripts.plot.timeseries_plotter import TimeseriesPlotter
 
 
 class ModelInversionPlotter(TimeseriesPlotter):
@@ -298,7 +299,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
                                       str(numpy.where(len(scalar_str) > 0, "\n" + scalar_str, ""))]
                     labels_dWt.append(stats_region_labels_dWt.get(d_str, region_labels))
 
-                    # figs.append(self.plot_raster(dWt, ts.time, time_units=ts.time_unit, special_idx=special_idx,
+                    # figs.append(self.plot_raster(dWt, time=ts.time, time_units=ts.time_unit, special_idx=special_idx,
                     #                              title=name + ": Hidden states random walk rasterplot " + d_str,
                     #                              subtitles=[subtitle], offset=1.0,
                     #                              labels=stats_region_labels_dWt.get(d_str, region_labels),
@@ -323,7 +324,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
                     subtitles += ['hidden state ' + x_str + stats_string[x_str]]
                     labels.append(region_labels)
                     # figs.append(
-                    #     self.plot_raster(this_x, ts.time, special_idx=special_idx, time_units=ts.time_unit,
+                    #     self.plot_raster(this_x, time=ts.time, special_idx=special_idx, time_units=ts.time_unit,
                     #                      title=name + ": Hidden states fit rasterplot " + x_str,
                     #                      subtitles=subtitles, offset=0.5,
                     #                      labels=region_labels,  #stats_region_labels_x.get(x_str, region_labels),
@@ -340,7 +341,7 @@ class ModelInversionPlotter(TimeseriesPlotter):
             x = dWt
             subtitles = subtitles_dWt + subtitles
             labels = labels_dWt + [cut_labels_to_index(lbls) for lbls in labels]
-            figs.append(self.plot_raster(x, ts.time, time_units=ts.time_unit, special_idx=special_idx,
+            figs.append(self.plot_raster(x, time=ts.time, time_units=ts.time_unit, special_idx=special_idx,
                                          title=name + ": Fit hidden states and random walk rasterplots",
                                          subtitles=subtitles, offset=0.5, labels=labels,
                                          figsize=FiguresConfig.VERY_LARGE_SIZE))
@@ -359,13 +360,13 @@ class ModelInversionPlotter(TimeseriesPlotter):
                     chain_observation_dict.update(
                         {chain_key: thin_ts_samples(ts.data[:, :, :, skip_samples:]).squeeze()})
                 figs.append(
-                    self.plot_raster(chain_observation_dict, ts.time, special_idx=[], time_units=ts.time_unit,
+                    self.plot_raster(chain_observation_dict, time=ts.time, special_idx=[], time_units=ts.time_unit,
                                      title=name + " Observation target vs fit time series",
                                      figure_name=name + "ObservationTarget_VS_FitRasterPlot",
                                      offset=0.5, labels=[stats_target_data_labels, target_data_labels],
                                      figsize=FiguresConfig.VERY_LARGE_SIZE))
                 figs.append(
-                    self.plot_timeseries(chain_observation_dict, ts.time, special_idx=[], time_units=ts.time_unit,
+                    self.plot_timeseries(chain_observation_dict, time=ts.time, special_idx=[], time_units=ts.time_unit,
                                          title=name + " Observation target vs fit time series",
                                          figure_name=name + "ObservationTarget_VS_FitTimeSeries",
                                          labels=stats_target_data_labels, figsize=FiguresConfig.VERY_LARGE_SIZE))

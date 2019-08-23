@@ -3,14 +3,8 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from copy import deepcopy
 
-from scipy.stats import zscore
-
 from tvb_fit.base.constants import PriorsModes, Target_Data_Type
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants import *
-from tvb_fit.base.utils.log_error_utils import initialize_logger, warning, raise_value_error
-from tvb_fit.base.utils.data_structures_utils import formal_repr, ensure_list
-from tvb_fit.base.model.timeseries import Timeseries as TargetDataTimeseries
-from tvb_fit.service.timeseries_service import compute_seeg_exp, compute_seeg_lin
 from tvb_fit.service.probabilistic_parameter_builder\
     import generate_lognormal_parameter, generate_negative_lognormal_parameter, generate_normal_parameter
 
@@ -19,6 +13,10 @@ from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration import Epilep
 from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_fit.tvb_epilepsy.base.model.epileptor_probabilistic_models \
     import EpiProbabilisticModel, ODEEpiProbabilisticModel, SDEEpiProbabilisticModel
+
+from tvb_scripts.utils.log_error_utils import initialize_logger, warning, raise_value_error
+from tvb_scripts.utils.data_structures_utils import formal_repr, ensure_list
+from tvb_scripts.model.timeseries import Timeseries as TargetDataTimeseries
 
 
 x0_def = {"def": X0_DEF, "min": X0_MIN, "max": X0_MAX, }
@@ -249,7 +247,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
     scale = SCALE_DEF
     offset = OFFSET_DEF
     observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
-    gain_matrix = np.eye(len(active_regions))
+    projection = np.eye(len(active_regions))
     number_of_target_data = 1
     number_of_seizures = 1
     time_length = SEIZURE_LENGTH
@@ -259,12 +257,12 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
     x1_scale = 1.0
     x1_offset = 0.0
     def __init__(self, model=None, model_config=EpileptorModelConfiguration("EpileptorDP2D"),
-                 number_of_target_data=1, number_of_seizures=1, gain_matrix=None):
+                 number_of_target_data=1, number_of_seizures=1, projection=None):
         super(ODEProbabilisticModelBuilder, self).__init__(model, model_config) # MC_direction_split
         if isinstance(model, ODEEpiProbabilisticModel):
             for attr in ["sigma_init", "tau1", "tau0", "scale", "offset", "epsilon", "x1_scale", "x1_offset",
                          "observation_model", "number_of_target_data", "time_length", "dt", "active_regions",
-                         "upsample", "x1_prior_weight", "gain_matrix", "number_of_seizures"]:
+                         "upsample", "x1_prior_weight", "projection", "number_of_seizures"]:
                 setattr(self, attr, getattr(self.model, attr))
         else:
             self.active_regions = np.array(range(self.number_of_regions))
@@ -275,9 +273,9 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
             self.scale = SCALE_DEF
             self.offset = OFFSET_DEF
             self.observation_model = OBSERVATION_MODELS.SEEG_LOGPOWER.value
-            self.gain_matrix = gain_matrix
-            if self.gain_matrix is None:
-                self.gain_matrix = np.eye(self.number_of_active_regions)
+            self.projection = projection
+            if self.projection is None:
+                self.projection = np.eye(self.number_of_active_regions)
             self.number_of_target_data = number_of_target_data
             self.number_of_seizures = number_of_seizures
             self.time_length = self.compute_seizure_length()
@@ -438,11 +436,11 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                isinstance(getattr(model_source_ts, "x1", None), Timeseries) and \
                isinstance(target_data, TargetDataTimeseries):
                 # model_out_ts = model_source_ts.x1.squeezed[:, self.active_regions] - self.x1eq_def
-                # if self.observation_model in OBSERVATION_MODELS.SEEG.value and isinstance(self.gain_matrix, np.ndarray):
+                # if self.observation_model in OBSERVATION_MODELS.SEEG.value and isinstance(self.projection, np.ndarray):
                 #     if self.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value:
-                #         model_out_ts = compute_seeg_exp(model_out_ts, self.gain_matrix)
+                #         model_out_ts = compute_seeg_exp(model_out_ts, self.projection)
                 #     else:
-                #         model_out_ts = compute_seeg_lin(model_out_ts, self.gain_matrix)
+                #         model_out_ts = compute_seeg_lin(model_out_ts, self.projection)
                 # self.scale = np.max(np.percentile(target_data.data, 99, axis=0) -
                 #                     np.percentile(target_data.data, 1, axis=0)) / \
                 #              np.max(np.percentile(model_out_ts, 99, axis=0) -
@@ -537,7 +535,7 @@ class ODEProbabilisticModelBuilder(ProbabilisticModelBuilder):
                                               self.tau1, self.tau0,
                                               self.epsilon, self.scale, self.offset, self.x1_scale, self.x1_offset,
                                               self.number_of_target_data, self.time_length, self.dt, self.upsample,
-                                              self.active_regions, self.gain_matrix, self.number_of_seizures)
+                                              self.active_regions, self.projection, self.number_of_seizures)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')
         return self.model
@@ -550,9 +548,9 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
     sigma_init=SIGMA_DEF
 
     def __init__(self, model=None, model_config=EpileptorModelConfiguration("EpileptorDP2D"),
-                 number_of_target_data=1, number_of_seizures=1, gain_matrix=None):
+                 number_of_target_data=1, number_of_seizures=1, projection=None):
         super(SDEProbabilisticModelBuilder, self).__init__(model, model_config, number_of_target_data,
-                                                           number_of_seizures, gain_matrix)
+                                                           number_of_seizures, projection)
         if isinstance(model, SDEEpiProbabilisticModel):
             for attr in ["sigma_init", "sde_mode", "sigma"]:
                 setattr(self, attr, getattr(self.model, attr))
@@ -638,7 +636,7 @@ class SDEProbabilisticModelBuilder(ODEProbabilisticModelBuilder):
                                               self.tau1, self.tau0,
                                               self.epsilon, self.scale, self.offset, self.x1_scale, self.x1_offset,
                                               self.number_of_target_data, self.time_length, self.dt, self.upsample,
-                                              self.active_regions, self.gain_matrix, self.number_of_seizures,
+                                              self.active_regions, self.projection, self.number_of_seizures,
                                               self.sde_mode)
         self.logger.info(self.__class__.__name__  + " took " +
                          str(time.time() - tic) + ' sec for model generation')

@@ -1,8 +1,9 @@
 from collections import OrderedDict
 
 from tvb_fit.base.config import CalculusConfig
-from tvb_fit.base.utils.log_error_utils import raise_value_error
-from tvb_fit.base.utils.data_structures_utils import formal_repr, sort_dict
+
+from tvb_scripts.utils.log_error_utils import raise_value_error
+from tvb_scripts.utils.data_structures_utils import formal_repr
 
 
 class Parameter(object):

@@ -1,13 +1,15 @@
 import numpy as np
 import numpy.random as nr
 import scipy.stats as ss
+
 from tvb_fit.base.config import CalculusConfig
-from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.utils.data_structures_utils import dict_str, formal_repr, isequal_string
 from tvb_fit.base.model.probabilistic_models.parameters.transformed_parameters import \
     TransformedProbabilisticParameterBase
 from tvb_fit.base.model.probabilistic_models.parameters.base import ProbabilisticParameterBase
 from tvb_fit.samplers.sampler_base import SamplerBase
+
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.data_structures_utils import dict_str, formal_repr, isequal_string
 
 
 class ProbabilisticSampler(SamplerBase):
@@ -67,7 +69,7 @@ class ProbabilisticSampler(SamplerBase):
                 self.sampler = getattr(ss, prob_distr)(*parameter, **kwargs)
                 samples = self._truncated_distribution_sampling({"low": low, "high": high}, out_shape) * scale + loc
             elif isinstance(prob_distr, (ProbabilisticParameterBase, TransformedProbabilisticParameterBase)):
-                self.sampler = prob_distr.scipy()
+                self.sampler = prob_distr.scipy
                 samples = self._truncated_distribution_sampling({"low": low, "high": high}, out_shape)
         elif self.sampling_module.find("scipy") >= 0:
             if isinstance(prob_distr, basestring):

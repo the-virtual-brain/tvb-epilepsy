@@ -1,5 +1,6 @@
-from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
+
 from tvb_fit.tests.base import BaseTest
+from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 
 
 class TestHypothesisBuilder(BaseTest):

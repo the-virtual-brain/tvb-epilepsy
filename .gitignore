@@ -11,3 +11,6 @@ vep_test_out
 build
 dist
 tvb_epilepsy.egg-info
+/extern/tvb-data/
+/extern/tvb-geodesic/
+/extern/tvb-library/

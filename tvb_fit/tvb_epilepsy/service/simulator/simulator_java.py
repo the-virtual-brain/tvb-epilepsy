@@ -9,13 +9,16 @@ import json
 import numpy
 import subprocess
 from copy import copy
+
 from tvb_fit.base.config import GenericConfig
-from tvb_fit.base.utils.log_error_utils import initialize_logger
-from tvb_fit.base.utils.data_structures_utils import obj_to_dict, assert_arrays
-from tvb_fit.io.h5_reader import H5Reader
+from tvb_fit.tvb_epilepsy.base.constants.model_constants import TIME_DELAYS_FLAG
 from tvb_fit.service.simulator import ABCSimulator
 from tvb_fit.tvb_epilepsy.base.computation_utils.calculations_utils import calc_x0_val_to_model_x0
 from tvb_fit.tvb_epilepsy.base.computation_utils.equilibrium_computation import compute_initial_conditions_from_eq_point
+from tvb_fit.tvb_epilepsy.base.model.timeseries import TimeseriesDimensions, Timeseries
+
+from tvb_scripts.utils.log_error_utils import initialize_logger
+from tvb_scripts.utils.data_structures_utils import obj_to_dict, assert_arrays
 
 
 class Settings(object):
@@ -133,22 +136,18 @@ class SimulatorJava(ABCSimulator):
     To run a simulation, we can also open a GUI and import the resulted JSON file.
     """
     logger = initialize_logger(__name__)
-    reader = H5Reader()
     json_custom_config_file = "SimulationConfiguration.json"
 
     def __init__(self, model_configuration, connectivity, settings):
         super(SimulatorJava, self).__init__(model_configuration, connectivity, settings)
         self.model = None
         self.head_path = os.path.dirname(self.connectivity.file_path)
+        self.connectivity = connectivity
         self.json_config_path = os.path.join(self.head_path, self.json_custom_config_file)
         self.configure_model()
 
     def get_vois(self):
         return self.model.vois
-
-    @property
-    def connectivity(self):
-        return self.model_configuration.connectivity
 
     @staticmethod
     def _save_serialized(ep_full_config, result_path):
@@ -189,7 +188,8 @@ class SimulatorJava(ABCSimulator):
                                           initial_states=None, initial_states_shape=None)
         self._save_serialized(custom_config, self.json_config_path)
 
-    def launch_simulation(self):
+    def launch_simulation(self, timeseries=Timeseries):
+        from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
         opts = "java -Dncsa.hdf.hdf5lib.H5.hdf5lib=" + os.path.join(GenericConfig.LIB_PATH, GenericConfig.HDF5_LIB) + \
                " " + "-Djava.library.path=" + GenericConfig.LIB_PATH + " " + "-cp" + " " + GenericConfig.JAR_PATH + \
                " " + GenericConfig.JAVA_MAIN_SIM + " " + os.path.abspath(self.json_config_path) + " " + \
@@ -200,8 +200,15 @@ class SimulatorJava(ABCSimulator):
         except:
             status = False
             self.logger.warning("Something went wrong with this simulation...")
-        time, data = self.reader.read_ts(os.path.join(self.head_path, "full-configuration", "ts.h5"))
-        return time, data, status
+        time, data = H5Reader().read_ts(os.path.join(self.head_path, "full-configuration", "ts.h5"))
+        # TODO: confirm correct labels_ordering of data that Episense simulator returns!
+        return timeseries(  # substitute with TimeSeriesRegion fot TVB like functionality
+                          data, time=time, connectivity=self._vp2tvb_connectivity(TIME_DELAYS_FLAG),
+                          labels_ordering=["Time", TimeseriesDimensions.VARIABLES.value, "Region", "Samples"],
+                          labels_dimensions={TimeseriesDimensions.VARIABLES.value: self.get_vois(),
+                                             TimeseriesDimensions.SPACE.value: self.connectivity.region_labels},
+                          ts_type="Region"), \
+               status
 
     def prepare_epileptor_model_for_json(self, no_regions=88):
         epileptor_params_list = []

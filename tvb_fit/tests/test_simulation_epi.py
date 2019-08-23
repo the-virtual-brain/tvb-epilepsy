@@ -2,14 +2,13 @@
 
 import numpy as np
 
-from tvb_fit.io.tvb_data_reader import TVBReader
 from tvb_fit.tests.base import BaseTest
-
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import ZMODE_DEF
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_fit.tvb_epilepsy.service.simulator.simulator_builder import SimulatorBuilder
 
+from tvb_scripts.io.tvb_data_reader import TVBReader
 
 
 class TestSimulationRun(BaseTest):

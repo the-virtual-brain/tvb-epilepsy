@@ -1,8 +1,7 @@
 import numpy as np
 from scipy.optimize import minimize
 from collections import OrderedDict
-from tvb_fit.base.utils.log_error_utils import raise_value_error, initialize_logger
-from tvb_fit.base.utils.data_structures_utils import isequal_string, dicts_of_lists_to_lists_of_dicts
+
 from tvb_fit.base.model.probability_distributions import ProbabilityDistributionTypes
 from tvb_fit.base.model.probability_distributions.bernoulli_distribution import BernoulliDistribution
 from tvb_fit.base.model.probability_distributions.beta_distribution import BetaDistribution
@@ -14,6 +13,9 @@ from tvb_fit.base.model.probability_distributions.lognormal_distribution import 
 from tvb_fit.base.model.probability_distributions.normal_distribution import NormalDistribution
 from tvb_fit.base.model.probability_distributions.poisson_distribution import PoissonDistribution
 from tvb_fit.base.model.probability_distributions.uniform_distribution import UniformDistribution
+
+from tvb_scripts.utils.log_error_utils import raise_value_error, initialize_logger
+from tvb_scripts.utils.data_structures_utils import isequal_string, dicts_of_lists_to_lists_of_dicts
 
 
 CONSTRAINT_ABS_TOL = 0.01
