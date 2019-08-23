@@ -4,11 +4,7 @@ from copy import deepcopy
 
 import numpy as np
 
-from tvb_fit.base.utils.log_error_utils import initialize_logger, warning
-from tvb_fit.base.utils.data_structures_utils import isequal_string
-from tvb_fit.base.utils.file_utils import wildcardit, move_overwrite_files_to_folder_with_wildcard
-from tvb_fit.base.computations.analyzers_utils import interval_scaling
-from tvb_fit.service.timeseries_service import TimeseriesService
+
 from tvb_fit.service.simulator import ABCSimulator
 
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
@@ -18,6 +14,12 @@ from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_fit.tvb_epilepsy.service.simulator.simulator_builder import build_simulator_TVB_realistic, \
     build_simulator_TVB_fitting, build_simulator_TVB_default, build_simulator_TVB_paper
 from tvb_fit.tvb_epilepsy.service.workflow.workflow_configure_model import WorkflowConfigureModel
+
+from tvb_scripts.utils.log_error_utils import initialize_logger, warning
+from tvb_scripts.utils.data_structures_utils import isequal_string
+from tvb_scripts.utils.file_utils import wildcardit, move_overwrite_files_to_folder_with_wildcard
+from tvb_scripts.utils.analyzers_utils import interval_scaling
+from tvb_scripts.service.timeseries_service import TimeseriesService
 
 
 class WorkflowSimulate(WorkflowConfigureModel):

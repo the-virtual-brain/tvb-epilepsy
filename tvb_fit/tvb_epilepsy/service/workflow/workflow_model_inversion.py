@@ -4,9 +4,7 @@ from copy import deepcopy
 
 import numpy as np
 
-from tvb_fit.base.constants import from tvb_fit.base.constants import PriorsModes, Target_Data_Type
-from tvb_fit.base.utils.data_structures_utils import isequal_string, find_labels_inds, ensure_list
-from tvb_fit.base.utils.file_utils import wildcardit, move_overwrite_files_to_folder_with_wildcard
+from tvb_fit.base.constants import PriorsModes, Target_Data_Type
 
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants \
     import XModes, OBSERVATION_MODELS, compute_upsample, compute_seizure_length, TAU1_DEF, TAU0_DEF
@@ -20,6 +18,9 @@ from tvb_fit.tvb_epilepsy.service.probabilistic_models_builders import \
     ProbabilisticModelBuilder, ODEProbabilisticModelBuilder, SDEProbabilisticModelBuilder
 from tvb_fit.tvb_epilepsy.service.workflow.workflow_lsa import WorkflowLSA
 from tvb_fit.tvb_epilepsy.service.workflow.workflow_simulation import configure_simulator, simulate
+
+from tvb_scripts.utils.data_structures_utils import isequal_string, find_labels_inds, ensure_list
+from tvb_scripts.utils.file_utils import wildcardit, move_overwrite_files_to_folder_with_wildcard
 
 
 class WorkflowInvertModel(WorkflowLSA):

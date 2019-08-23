@@ -3,17 +3,18 @@ import os
 
 import numpy as np
 
-from tvb_fit.base.utils.file_utils import wildcardit, move_overwrite_files_to_folder_with_wildcard
-from tvb_fit.base.utils.data_structures_utils import list_of_dicts_to_dicts_of_ndarrays
-from tvb_fit.base.utils.data_structures_utils import dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
+from tvb_fit.samplers.probabilistic_sampler import ProbabilisticSampler
+
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import MAX_DISEASE_VALUE
 from tvb_fit.tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_fit.tvb_epilepsy.service.lsa_service import LSAService
 from tvb_fit.tvb_epilepsy.service.pse.lsa_pse_service import LSAPSEService
-from tvb_fit.samplers.probabilistic_sampler import ProbabilisticSampler
 from tvb_fit.tvb_epilepsy.service.workflow.workflow_configure_model import WorkflowConfigureModel
 
+from tvb_scripts.utils.file_utils import wildcardit, move_overwrite_files_to_folder_with_wildcard
+from tvb_scripts.utils.data_structures_utils import \
+    list_of_dicts_to_dicts_of_ndarrays, dicts_of_lists_to_lists_of_dicts, linear_index_to_coordinate_tuples
 
 class WorkflowLSA(WorkflowConfigureModel):
 

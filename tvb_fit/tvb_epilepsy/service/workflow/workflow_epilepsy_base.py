@@ -1,12 +1,13 @@
 from abc import ABCMeta  # abstractmethod,
 
-from tvb_fit.io.tvb_data_reader import TVBReader
 from tvb_fit.service.workflow_service_base import WorkflowServiceBase
 
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.io.h5_reader import H5Reader
 from tvb_fit.tvb_epilepsy.io.h5_writer import H5Writer
 from tvb_fit.tvb_epilepsy.plot.plotter import Plotter
+
+from tvb_scripts.io.tvb_data_reader import TVBReader
 
 
 class WorkflowEpilepsyBase(WorkflowServiceBase):

@@ -5,13 +5,15 @@ import os
 import numpy as np
 
 from tvb_fit.base.config import Config
-from tvb_fit.base.utils.log_error_utils import initialize_logger, raise_value_error, warning
-from tvb_fit.base.utils.file_utils import wildcardit, ensure_folder
-from tvb_fit.base.model.virtual_patient.head import Head
+
 from tvb_fit.io.h5_reader import H5Reader
-from tvb_fit.io.tvb_data_reader import TVBReader
 from tvb_fit.io.h5_writer import H5Writer
 from tvb_fit.plot.plotter import Plotter
+
+from tvb_scripts.utils.log_error_utils import initialize_logger, raise_value_error, warning
+from tvb_scripts.utils.file_utils import wildcardit
+from tvb_scripts.model.virtual_head.head import Head
+from tvb_scripts.io.tvb_data_reader import TVBReader
 
 
 class WorkflowServiceBase(object):

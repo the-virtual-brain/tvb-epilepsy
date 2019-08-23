@@ -3,7 +3,6 @@ import os
 
 import numpy as np
 
-from tvb_fit.base.utils.file_utils import wildcardit, move_overwrite_files_to_folder_with_wildcard
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.model.disease_hypothesis import DiseaseHypothesis
 from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration \
@@ -11,6 +10,9 @@ from tvb_fit.tvb_epilepsy.base.model.epileptor_model_configuration \
 from tvb_fit.tvb_epilepsy.service.hypothesis_builder import HypothesisBuilder
 from tvb_fit.tvb_epilepsy.service.model_configuration_builder import ModelConfigurationBuilder
 from tvb_fit.tvb_epilepsy.service.workflow.workflow_epilepsy_base import WorkflowEpilepsyBase
+
+
+from tvb_scripts.utils.file_utils import wildcardit, move_overwrite_files_to_folder_with_wildcard
 
 
 class WorkflowConfigureModel(WorkflowEpilepsyBase):
