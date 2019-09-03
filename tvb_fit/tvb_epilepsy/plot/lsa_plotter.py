@@ -37,7 +37,7 @@ class LSAPlotter(BasePlotter):
             eig_vec = lambda v: v
             name_fun = lambda ii: ["LSA eigenvectror " + str(ii + 1)]
         indices = [[]]
-        for ii in range(lsa_service.eigen_vectors_number):
+        for ii in range(numpy.minimum(lsa_service.eigen_vectors_number, 8)):
             names += name_fun(ii)
             data += [eig_vec(lsa_service.eigen_vectors[:, ii])]
             indices += [index_doubling(lsa_hypothesis.lsa_propagation_indices)]
