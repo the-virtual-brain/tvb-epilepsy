@@ -16,7 +16,7 @@ from tvb_scripts.model.virtual_head.head import Head
 from tvb_scripts.io.tvb_data_reader import TVBReader
 
 
-class WorkflowServiceBase(object):
+class WorkflowService(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, config=Config(), reader=None, writer=None, plotter=None):

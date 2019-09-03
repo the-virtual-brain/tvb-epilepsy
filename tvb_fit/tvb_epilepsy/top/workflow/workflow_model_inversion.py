@@ -7,7 +7,8 @@ import numpy as np
 from tvb_fit.base.constants import PriorsModes, Target_Data_Type
 
 from tvb_fit.tvb_epilepsy.base.constants.model_inversion_constants \
-    import XModes, OBSERVATION_MODELS, compute_upsample, compute_seizure_length, TAU1_DEF, TAU0_DEF
+    import XModes, OBSERVATION_MODELS, compute_upsample, compute_seizure_length, SEIZURE_LENGTH, TAU1_DEF, TAU0_DEF, \
+           TARGET_DATA_PREPROCESSING, LOW_HPF, HIGH_HPF, LOW_LPF, HIGH_LPF, BIPOLAR, WIN_LEN
 from tvb_fit.tvb_epilepsy.base.constants.config import Config
 from tvb_fit.tvb_epilepsy.base.model.timeseries import Timeseries
 from tvb_fit.tvb_epilepsy.base.model.epileptor_probabilistic_models \
@@ -16,11 +17,13 @@ from tvb_fit.tvb_epilepsy.service.model_inversion_services import \
     ModelInversionService, ODEModelInversionService, SDEModelInversionService
 from tvb_fit.tvb_epilepsy.service.probabilistic_models_builders import \
     ProbabilisticModelBuilder, ODEProbabilisticModelBuilder, SDEProbabilisticModelBuilder
-from tvb_fit.tvb_epilepsy.service.workflow.workflow_lsa import WorkflowLSA
-from tvb_fit.tvb_epilepsy.service.workflow.workflow_simulation import configure_simulator, simulate
+from tvb_fit.tvb_epilepsy.top.workflow.workflow_lsa import WorkflowLSA
+from tvb_fit.tvb_epilepsy.top.scripts.simulation_scripts import configure_simulator, simulate
 
 from tvb_scripts.utils.data_structures_utils import isequal_string, find_labels_inds, ensure_list
 from tvb_scripts.utils.file_utils import wildcardit, move_overwrite_files_to_folder_with_wildcard
+from tvb_scripts.model.virtual_head.sensors import SensorTypes
+from tvb_script.service.timeseries_service import TimeseriesService
 
 
 class WorkflowInvertModel(WorkflowLSA):
@@ -32,7 +35,7 @@ class WorkflowInvertModel(WorkflowLSA):
         self._fit_target_data_filename = "FitTargetData"
         self._probabilistic_model_filename = "ProblstcModel"
         self._fit_model_data_filename = "FitModelData"
-        self._fit_sensors_id = 0
+        self._fit_sensors_name_or_index = 0
         self._fit_model_type = "SDE"
         self._fit_model_params = {"tau1": TAU1_DEF, "tau0": TAU0_DEF}
         self._fit_standard_source2D_ts = None
@@ -89,7 +92,7 @@ class WorkflowInvertModel(WorkflowLSA):
 
     @property
     def fit_sensors(self):
-        return self.head.get_sensors_by_index(self._fit_sensors_id)
+        return self.head.get_sensors(s_type=SensorTypes.SEEG.value, name_or_index=self._fit_sensors_name_or_index)
 
     @property
     def standard_source2D_ts_path(self):
@@ -131,10 +134,9 @@ class WorkflowInvertModel(WorkflowLSA):
             plotter = None
             sim_figsfolder = ""
         return simulate_standard_source2D(self.modelconfig, self.head, self._fit_data_settings["sim_times_on_off"],
-                                          self._config, self._logger, self._reader, writer=writer,
-                                          standard_source2D_ts_path=self.standard_source2D_ts_path,
-                                          plotter=plotter, sim_figsfolder=sim_figsfolder,
-                                          all_disease_indices=self.hypothesis.all_disease_indices)
+                                          self.hypothesis.all_disease_indices,
+                                          self.standard_source2D_ts_path, sim_figsfolder,
+                                          self._reader, writer, plotter, self._logger, self._config)
 
     @property
     def fit_standard_source2D_ts(self):
@@ -218,7 +220,7 @@ class WorkflowInvertModel(WorkflowLSA):
             try:
                 self._fit_signals = self._reader.read_timeseries(self.fit_signals_filepath)
             except:
-                self._fit_signals, self._probabilistic_model = self.set_target_timeseries()
+                self._fit_signals, self._probabilistic_model = self.set_target_data()
             return self._fit_signals
 
     def set_target_data(self, write_target_data=True, plot_target_data=True):
@@ -275,9 +277,9 @@ class WorkflowInvertModel(WorkflowLSA):
                                           self.probabilistic_model_filepath)
 
 
-def simulate_standard_source2D(modelconfig, head, sim_times_on_off, config=Config(), logger=None, reader=None,
-                               writer=None, standard_source2D_ts_path="",
-                               plotter=None, sim_figsfolder="", all_disease_indices=[]):
+def simulate_standard_source2D(modelconfig, head, sim_times_on_off, all_disease_indices=[],
+                               standard_source2D_ts_path="", sim_figsfolder="",
+                               reader=None, writer=None, plotter=None, logger=None, config=Config()):
     sim_folder = os.path.dirname(standard_source2D_ts_path)
     sim_model_path = os.path.join(sim_folder, "SimModelEpileptorDP2D")
     simulator, sim_settings =\
@@ -335,7 +337,7 @@ def generate_probabilistic_model(input_modelconfig, fit_model_params={}, fit_mod
     return probabilistic_model
 
 
-def get_preprocesing(probabilistic_model, sim_type="paper" ):
+def get_preprocesing(probabilistic_model, sim_type="paper"):
     log_flag = probabilistic_model.observation_model == OBSERVATION_MODELS.SEEG_LOGPOWER.value
     if probabilistic_model.target_data_type == Target_Data_Type.EMPIRICAL.value:
         preprocessing = ["hpf", "abs-envelope", "convolve", "decimate"]
@@ -356,7 +358,7 @@ def concatenate_seizures(signals):
     labels = signals[0].space_labels
     for signal in signals[1:]:
         labels = np.intersect1d(labels, signal.space_labels)
-    signals = TimeseriesService().concatenate_in_time(signals, labels)
+    signals = TimeseriesService().concatenate_in_time(signals, labels=labels)
     return signals
 
 

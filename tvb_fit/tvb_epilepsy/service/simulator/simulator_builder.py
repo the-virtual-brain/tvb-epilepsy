@@ -1,3 +1,5 @@
+# coding=utf-8
+
 from copy import deepcopy
 import numpy
 
@@ -212,7 +214,7 @@ def build_simulator_TVB_realistic(model_configuration, connectivity, **kwargs):
     sim_builder.model_config.tau0 = 60000.0
     sim_builder.model_config.tau1 = 0.2
     sim_builder.model_config.slope = 0.25
-    sim_builder.model_config.pmode = numpy.array(kwargs.pop("pmode", numpy.array[PMODE_DEF]))
+    sim_builder.model_config.pmode = numpy.array(kwargs.pop("pmode", PMODE_DEF))
     sim_settings = sim_builder.build_sim_settings()
     sim_settings.noise_type = COLORED_NOISE
     sim_settings.noise_ntau = 20
