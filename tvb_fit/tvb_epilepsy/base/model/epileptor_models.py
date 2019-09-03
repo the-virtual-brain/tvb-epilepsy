@@ -8,6 +8,7 @@ import numpy
 from tvb_fit.tvb_epilepsy.base.constants.model_constants import *
 
 from tvb_scripts.utils.log_error_utils import raise_not_implemented_error
+from tvb_scripts.utils.analyzers_utils import interval_scaling
 
 import tvb.basic.traits.types_basic as basic
 import tvb.datatypes.arrays as arrays
@@ -608,8 +609,6 @@ class EpileptorDPrealistic(Model):
 
     @staticmethod
     def fun_slope_Iext2(z, g, pmode, slope, Iext2):
-
-        from tvb_fit.base.computations.analyzers_utils import interval_scaling
 
         iz = numpy.ones(z.shape)
         pmode = numpy.array(pmode) * iz
